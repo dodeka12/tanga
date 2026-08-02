@@ -8,6 +8,8 @@ permissions:
 
 jobs:
   promote:
+    outputs:
+      version: ${{ steps.promote.outputs.version }}
     name: Promote latest RC to stable release
     runs-on: ubuntu-24.04
     steps:
@@ -23,6 +25,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Find and promote latest RC tag
+        id: promote
         run: |
           RC_TAG=$(git tag -l 'v*-rc*' --sort=-v:refname | head -1)
           if [[ -z "$RC_TAG" ]]; then
@@ -35,10 +38,23 @@ jobs:
 
           # Check if the clean tag already exists
           if git rev-parse "$CLEAN_TAG" >/dev/null 2>&1; then
-            echo "Tag $CLEAN_TAG already exists. Skipping."
+            echo "Tag $CLEAN_TAG already exists."
+            echo "version=$CLEAN_TAG" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           git tag -a "$CLEAN_TAG" -m "Release $CLEAN_TAG"
           git push origin "$CLEAN_TAG"
-          echo "Pushed $CLEAN_TAG — publish workflow will build and upload to PyPI."
+          echo "version=$CLEAN_TAG" >> $GITHUB_OUTPUT
+
+  publish-stable:
+    name: Publish stable release to PyPI
+    needs: promote
+    if: success()
+    uses: ./.github/workflows/publish.yml
+    with:
+      is_rc: false
+      version: ${{ needs.promote.outputs.version }}
+    permissions:
+      id-token: write
+      contents: read
