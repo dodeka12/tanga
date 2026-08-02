@@ -112,9 +112,6 @@ jobs:
     name: Publish to PyPI
     needs: [build-pure]
     runs-on: ubuntu-24.04
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -141,4 +138,5 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
+          password: ${{ steps.target.outputs.url == 'https://test.pypi.org/legacy/' && secrets.TESTPYPI_TOKEN || secrets.PYPI_TOKEN }}
           verbose: true
