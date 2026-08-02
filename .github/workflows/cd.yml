@@ -34,6 +34,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -43,8 +45,15 @@ jobs:
       - name: Install Python toolchain
         run: uv sync --group dev
 
+      - name: Get version
+        run: |
+          TANGA_VERSION=$(uv run python -c "from importlib.metadata import version; print(version('tanga-py'))")
+          echo "TANGA_VERSION=$TANGA_VERSION" >> $GITHUB_ENV
+
       - name: Build MkDocs (strict)
         run: uv run mkdocs build --strict
+        env:
+          TANGA_VERSION: ${{ env.TANGA_VERSION }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
