@@ -3,11 +3,11 @@
 The `pytanga.basis` submodule provides four **Basis** subclasses of
 `Algebra` that expose all named basis blades as attributes.  They are the
 recommended starting point for interactive work, scripts, and notebooks.
-[`BasisE3`](bases.md#basise3--euclidean-3d-g3-0) covers Euclidean 3D,
-[`BasisP3`](bases.md#basisp3--projective-3d-g4-0) covers Projective 3D,
-[`BasisN3`](bases.md#basisn3--nullconformal-3d-g5-0textb10000) covers
+[`BasisE3`](bases.md#basise3-euclidean-3d-g3-0) covers Euclidean 3D,
+[`BasisP3`](bases.md#basisp3-projective-3d-g4-0) covers Projective 3D,
+[`BasisN3`](bases.md#basisn3-nullconformal-3d-g5-0textb10000) covers
 conformal/null 3D using the [null‑vector embedding](pga_null_embedding.md),
-and [`BasisPGA3`](bases.md#basispga3--pga-3d) extends `BasisN3` with
+and [`BasisPGA3`](bases.md#basispga3-pga-3d) extends `BasisN3` with
 geometric factory methods for points and vectors.  The
 [Bases](bases.md) page also describes three patterns for accessing named
 blades: explicit assignment, attribute access, and namespace injection.

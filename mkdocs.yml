@@ -120,6 +120,7 @@ nav:
       - Title & annotation: py/viz/title-annotation.md
       - Animation: py/viz/animation.md
       - Export & capture: py/viz/export.md
+      - Interactive Controls: py/viz/interactive.md
       - Jupyter notebooks: py/viz/jupyter.md
 
   - Developer Documentation:
