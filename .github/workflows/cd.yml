@@ -34,9 +34,6 @@ jobs:
     uses: ./.github/workflows/publish.yml
     with:
       is_rc: true
-    permissions:
-      id-token: write
-      contents: read
 
   docs-deploy:
     name: Build & deploy docs
