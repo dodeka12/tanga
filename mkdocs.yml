@@ -13,6 +13,7 @@ theme:
     - search.highlight
     - search.suggest
     - content.code.copy
+    - announce.dismiss
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -49,6 +50,11 @@ extra_javascript:
 
 plugins:
   - search
+
+hooks:
+  - docs/_hooks/inject_version.py
+
+custom_dir: docs/overrides
 
 docs_dir: docs
 

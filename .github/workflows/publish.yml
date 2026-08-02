@@ -1,0 +1,132 @@
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build-pure:
+    name: Build pure wheel
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Clean precompiled artifacts
+        run: uv run python tools/clean-precompiled.py
+
+      - name: Build wheel
+        run: uv build --wheel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-pure
+          path: dist/*.whl
+
+  build-linux:
+    name: Build Linux wheel (manylinux_x86_64)
+    runs-on: ubuntu-24.04
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup environment
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "/opt/python/cp312-cp312/bin" >> $GITHUB_PATH
+          echo "UV_PYTHON=/opt/python/cp312-cp312/bin/python3.12" >> $GITHUB_ENV
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+
+      - name: Build wheel
+        run: uv build --wheel
+
+      - name: Auditwheel repair
+        run: |
+          /opt/python/cp312-cp312/bin/pip install auditwheel
+          /opt/python/cp312-cp312/bin/auditwheel repair dist/*.whl -w dist/
+          rm dist/*-none-any.whl
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux
+          path: dist/*.whl
+
+  build-macos:
+    name: Build macOS wheel (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [macos-13, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+
+      - name: Build wheel and fix tag
+        run: uv run bash tools/build-precompiled-wheel.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-${{ matrix.os }}
+          path: dist/*.whl
+
+  publish:
+    name: Publish to PyPI
+    needs: [build-pure, build-linux, build-macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: List wheels
+        run: ls -la dist/
+
+      - name: Determine target repository
+        id: target
+        run: |
+          if [[ "${{ github.ref_name }}" == *-rc* ]]; then
+            echo "url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.3
+        with:
+          packages-dir: dist/
+          repository-url: ${{ steps.target.outputs.url }}
