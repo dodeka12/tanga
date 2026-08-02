@@ -8,3 +8,7 @@
     {{ config.site_name }} (v{{ config.extra.version }})
 </title>
 {% endblock %}
+
+{% block site_name %}
+{{ config.site_name }} v{{ config.extra.version }}
+{% endblock %}
