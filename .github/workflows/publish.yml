@@ -76,38 +76,39 @@ jobs:
           name: wheels-linux
           path: dist/*.whl
 
-  build-macos:
-    name: Build macOS wheel (${{ matrix.os }})
-    strategy:
-      matrix:
-        os: [macos-13, macos-14]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Sync dependencies
-        run: uv sync --group dev
-
-      - name: Build precompiled
-        run: uv run python tools/build-precompiled.py
-
-      - name: Build wheel and fix tag
-        run: uv run bash tools/build-precompiled-wheel.sh
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheels-macos-${{ matrix.os }}
-          path: dist/*.whl
+  # -- macOS build disabled until precompiled compilation is fixed --
+  # build-macos:
+  #   name: Build macOS wheel (${{ matrix.os }})
+  #   strategy:
+  #     matrix:
+  #       os: [macos-13, macos-14]
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #
+  #     - uses: astral-sh/setup-uv@v5
+  #       with:
+  #         enable-cache: true
+  #
+  #     - name: Sync dependencies
+  #       run: uv sync --group dev
+  #
+  #     - name: Build precompiled
+  #       run: uv run python tools/build-precompiled.py
+  #
+  #     - name: Build wheel and fix tag
+  #       run: uv run bash tools/build-precompiled-wheel.sh
+  #
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: wheels-macos-${{ matrix.os }}
+  #         path: dist/*.whl
 
   publish:
     name: Publish to PyPI
-    needs: [build-pure, build-linux, build-macos]
+    needs: [build-pure, build-linux]
     runs-on: ubuntu-24.04
     permissions:
       id-token: write
