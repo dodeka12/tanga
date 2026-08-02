@@ -28,6 +28,16 @@ jobs:
       - name: Run version-tag.sh
         run: ./tools/version-tag.sh --rc --push
 
+  publish-wheels:
+    name: Build & publish wheels to Test PyPI
+    needs: version-bump
+    uses: ./.github/workflows/publish.yml
+    with:
+      is_rc: true
+    permissions:
+      id-token: write
+      contents: read
+
   docs-deploy:
     name: Build & deploy docs
     runs-on: ubuntu-24.04
