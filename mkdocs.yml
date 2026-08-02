@@ -6,6 +6,7 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
+  custom_dir: docs/overrides
   features:
     - navigation.sections
     - navigation.expand
@@ -53,8 +54,6 @@ plugins:
 
 hooks:
   - docs/_hooks/inject_version.py
-
-custom_dir: docs/overrides
 
 docs_dir: docs
 
