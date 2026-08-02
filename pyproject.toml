@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tanga-py"
+dynamic = ["version"]
+description = "Python bindings for the TanGA geometric algebra library"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.14.3",
+    "numpy>=2.5.1",
+    "rich>=13.0",
+]          # runtime deps are zero; pybind11 is build-only
+
+[project.optional-dependencies]
+compile = [
+    "pybind11>=2.11",
+    "cmake>=3.18",
+    "ninja",
+]
+examples = [
+    "scipy>=1.13",
+    "ipykernel>=6.29",
+    "jupyter>=1.0",
+    "ipython>=8.30",
+]
+
+[tool.ruff]
+# Keep reporting unused imports, but do not automatically delete them
+unfixable = ["F401"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["py/pytanga"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"cpp/Tan.GA" = "pytanga/_ga_src/Tan.GA"
+"cpp/Tan.Math" = "pytanga/_ga_src/Tan.Math"
+"cpp/Tan.Core" = "pytanga/_ga_src/Tan.Core"
+"precompiled" = "pytanga/precompiled"
+"docs/py" = "pytanga/_docs/py"
+"docs/cpp" = "pytanga/_docs/cpp"
+"docs/dev" = "pytanga/_docs/dev"
+"docs/index.md" = "pytanga/_docs/index.md"
+
+[dependency-groups]
+dev = [
+    "mkdocs-material>=9.7.7",
+    "pytest>=9.1.1",
+    "ruff>=0.14.0",
+    "tanga-py[compile,examples]",
+    "twine>=6.0",
+]
+
+[tool.pytest.ini_options]
+testpaths  = ["py/tests"]
+pythonpath = ["py"]

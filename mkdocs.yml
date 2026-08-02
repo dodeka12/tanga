@@ -1,0 +1,140 @@
+site_name: TanGA Documentation
+site_url: https://dodeka12.github.io/tanga/
+repo_url: https://github.com/dodeka12/tanga
+repo_name: dodeka12/tanga
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - admonition
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+
+docs_dir: docs
+
+nav:
+  - Home: index.md
+
+  - C++ Documentation:
+    - Overview: cpp/index.md
+    - Fixed-space multivectors: cpp/multivectors-e3-p3-n3.md
+    - Subspace multivectors: cpp/subspace-multivectors.md
+    - Dynamic multivectors: cpp/dynamic-multivectors.md
+    - Matrix mapping & equations: cpp/matrix-mapping-and-equations.md
+    - Product matrices: cpp/product-matrices.md
+    - Congruence maps: cpp/congruence.md
+    - Duals: cpp/duals.md
+
+  - Python Documentation:
+    - Overview: py/index.md
+    - Environment & Setup:
+      - Overview: py/env/index.md
+      - Installation: py/env/installation.md
+      - Compile & binding: py/env/compile-and-binding.md
+    - Algebra:
+      - Overview: py/algebra/index.md
+      - Algebra class: py/algebra/algebra.md
+      - MV class: py/algebra/mv.md
+      - Duals: py/algebra/duals.md
+      - Modulus arithmetic: py/algebra/modulus.md
+    - Basis Classes:
+      - Overview: py/basis/index.md
+      - Bases (E3, P3, N3, PGA3): py/basis/bases.md
+      - Null-vector embedding: py/basis/pga_null_embedding.md
+      - BasisPGA3: py/basis/basis_pga3.md
+    - BladeMask:
+      - Overview: py/blade-mask/index.md
+      - Construction: py/blade-mask/construction.md
+      - Properties & operations: py/blade-mask/properties-and-ops.md
+      - Usage in pipelines: py/blade-mask/usage.md
+      - Inverse blade mask: py/blade-mask/inverse-blade-mask.md
+    - Matrix Operations:
+      - Overview: py/matrix/index.md
+      - MVMatrix: py/matrix/mvmatrix.md
+      - MVProductMatrix: py/matrix/mvproductmatrix.md
+    - Equation Solving:
+      - Overview: py/solver/index.md
+      - Solvers: py/solver/solve.md
+      - Blade mask pipeline: py/solver/blade-mask-pipeline.md
+      - Matrix primitives: py/solver/matrix-primitives.md
+      - Enums & coercion: py/solver/enums.md
+    - Tensor Operations:
+      - Overview: py/tensors/index.md
+      - MVTensor: py/tensors/mvtensor.md
+      - Labeled tensors: py/tensors/labeled-tensor.md
+      - Label iterator: py/tensors/iterator.md
+      - Product tensor: py/tensors/product-tensor.md
+    - Geometry:
+      - Overview: py/geometry/index.md
+      - Entities: py/geometry/entities.md
+      - Operators: py/geometry/operators.md
+      - Analysis pipeline: py/geometry/analysis.md
+      - Creation pipeline: py/geometry/create.md
+      - Round-trip examples: py/geometry/round-trip.md
+    - 3D Visualization:
+      - Overview: py/viz/index.md
+      - Visualizer API: py/viz/visualizer.md
+      - Camera & Controls: py/viz/camera.md
+      - Style system: py/viz/styles.md
+      - Labels: py/viz/labels.md
+      - Title & annotation: py/viz/title-annotation.md
+      - Animation: py/viz/animation.md
+      - Export & capture: py/viz/export.md
+      - Jupyter notebooks: py/viz/jupyter.md
+
+  - Developer Documentation:
+    - Overview: dev/index.md
+    - Architecture:
+      - System overview: dev/architecture/system-overview.md
+      - Type system & storage: dev/architecture/type-system-and-storage.md
+    - GA Pipeline:
+      - Operation pipeline: dev/ga/operation-pipeline.md
+    - Guides:
+      - C++ coding style: dev/guides/cpp-coding-style-guide.md
+      - Python coding style: dev/guides/py-coding-style-guide.md
+    - Workflows:
+      - Build, test & navigation: dev/workflows/build-test-and-navigation.md
+      - Precompiled wheels: dev/workflows/precompiled-wheels.md
+      - Use-case examples: dev/workflows/use-case-examples.md
+      - Version tagging: dev/workflows/version-tagging.md
+      - MkDocs publishing: dev/workflows/mkdocs-publishing.md

@@ -1,0 +1,55 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+build
+bin
+*.vcxproj
+*.vcxproj.*
+*.sln
+
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# python
+__pycache__/
+*.py[cod]
+
+# aider
+.aider*
+
+# Precompiled bindings (build artifact, not tracked)
+precompiled/*
+!precompiled/.gitkeep
+
+# development artefacts
+_input/
+_output/
+site/
+.dep-docs/

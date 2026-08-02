@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanga 3D Viewer — Export</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: #666;
+            font-family: monospace;
+            font-size: 11px;
+        }
+    </style>
+</head>
+
+<body>
+    __CDN_CHECK_SCRIPT__
+    __LOADING_OVERLAY__
+    <div id="info">Tanga 3D Scene</div>
+
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- KaTeX for math formulas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+    <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+
+    <script type="application/json" id="tanga-scene-data">__SCENE_DATA_JSON__</script>
+    <script type="application/json" id="tanga-scene-config">__SCENE_CONFIG_JSON__</script>
+
+    <script type="module">
+        __BOOTSTRAP_JS__
+    </script>
+</body>
+
+</html>

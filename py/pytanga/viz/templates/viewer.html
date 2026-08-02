@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanga 3D Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #viewer-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f44;
+            pointer-events: none;
+            transition: background 0.3s;
+            z-index: 10;
+        }
+
+        #status.connected {
+            background: #4f4;
+        }
+
+        #status.disconnected {
+            background: #f44;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="tanga-loading"
+        style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,26,46,0.95);z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:#ccc;font-size:14px;transition:opacity 0.3s;">
+        <div
+            style="width:32px;height:32px;border:3px solid rgba(255,255,255,0.2);border-top:3px solid #fff;border-radius:50%;animation:tanga-spin 0.8s linear infinite;margin-bottom:12px;">
+        </div>Loading 3D Viewer<style>
+            @keyframes tanga-spin {
+                to {
+                    transform: rotate(360deg)
+                }
+            }
+        </style>
+    </div>
+    <script>
+        (function () {
+            var ESSENTIAL_FAILED = false;
+            var OPTIONAL_SEEN = {};
+            var OPTIONAL_MISSING = [];
+
+            window.addEventListener('error', function (e) {
+                var src = (e.target && e.target.src) || '';
+                if (!src) {
+                    ESSENTIAL_FAILED = true;
+                } else if (/marked/.test(src) && !OPTIONAL_SEEN.marked) {
+                    OPTIONAL_SEEN.marked = true;
+                    OPTIONAL_MISSING.push('marked (Markdown rendering)');
+                } else if (/katex/.test(src) && !OPTIONAL_SEEN.katex) {
+                    OPTIONAL_SEEN.katex = true;
+                    OPTIONAL_MISSING.push('KaTeX (LaTeX math)');
+                } else if (/html2canvas/.test(src) && !OPTIONAL_SEEN.html2canvas) {
+                    OPTIONAL_SEEN.html2canvas = true;
+                    OPTIONAL_MISSING.push('html2canvas (screenshot overlays)');
+                } else if (/three/.test(src)) {
+                    ESSENTIAL_FAILED = true;
+                }
+            }, true);
+
+            var _pollCount = 0;
+            var _slowNotice = null;
+            var _resultsShown = false;
+            function _pollReady() {
+                _pollCount++;
+                if (window.__tanga_ready) {
+                    var loadingEl = document.getElementById('tanga-loading');
+                    if (loadingEl) {
+                        loadingEl.style.opacity = '0';
+                        setTimeout(function () {
+                            if (loadingEl.parentNode) loadingEl.remove();
+                        }, 300);
+                    }
+                    if (_slowNotice) { _slowNotice.remove(); _slowNotice = null; }
+                    return;
+                }
+                if (ESSENTIAL_FAILED) {
+                    if (!_resultsShown) _showError();
+                } else if (_pollCount >= 50 && !_slowNotice) {
+                    _slowNotice = document.createElement('div');
+                    _slowNotice.style.position = 'fixed';
+                    _slowNotice.style.top = '0';
+                    _slowNotice.style.left = '0';
+                    _slowNotice.style.right = '0';
+                    _slowNotice.style.zIndex = '99998';
+                    _slowNotice.style.background = '#cc8800';
+                    _slowNotice.style.color = '#fff';
+                    _slowNotice.style.fontFamily = 'sans-serif';
+                    _slowNotice.style.fontSize = '13px';
+                    _slowNotice.style.padding = '8px 16px';
+                    _slowNotice.style.textAlign = 'center';
+                    _slowNotice.style.lineHeight = '1.5';
+                    _slowNotice.innerHTML =
+                        '<strong>Slow connection.</strong> ' +
+                        'Libraries are still loading. This may take a while on a slow ' +
+                        'network connection. The viewer will appear once loading completes.';
+                    document.body.insertBefore(_slowNotice, document.body.firstChild);
+                }
+                if (!ESSENTIAL_FAILED) {
+                    setTimeout(_pollReady, 300);
+                }
+            }
+            setTimeout(_pollReady, 500);
+
+            function _showError() {
+                _resultsShown = true;
+                var loadingEl = document.getElementById('tanga-loading');
+                if (loadingEl) {
+                    loadingEl.style.opacity = '0';
+                    setTimeout(function () {
+                        if (loadingEl.parentNode) loadingEl.remove();
+                    }, 300);
+                }
+                if (_slowNotice) { _slowNotice.remove(); _slowNotice = null; }
+                if (ESSENTIAL_FAILED) {
+                    var banner = document.createElement('div');
+                    banner.style.position = 'fixed';
+                    banner.style.top = '0';
+                    banner.style.left = '0';
+                    banner.style.right = '0';
+                    banner.style.zIndex = '99999';
+                    banner.style.background = '#cc2222';
+                    banner.style.color = '#fff';
+                    banner.style.fontFamily = 'sans-serif';
+                    banner.style.fontSize = '14px';
+                    banner.style.padding = '12px 20px';
+                    banner.style.textAlign = 'center';
+                    banner.style.lineHeight = '1.5';
+                    banner.innerHTML =
+                        '<strong>Failed to load Three.js.</strong> ' +
+                        'The 3D viewer cannot start. Please check your internet connection, ' +
+                        'firewall, or corporate proxy settings. Three.js loads from CDN ' +
+                        '(cdn.jsdelivr.net).';
+                    document.body.insertBefore(banner, document.body.firstChild);
+                }
+                if (OPTIONAL_MISSING.length > 0) {
+                    var warning = document.createElement('div');
+                    warning.style.position = 'fixed';
+                    warning.style.top = ESSENTIAL_FAILED ? '52px' : '0';
+                    warning.style.left = '0';
+                    warning.style.right = '0';
+                    warning.style.zIndex = '99998';
+                    warning.style.background = '#cc8800';
+                    warning.style.color = '#fff';
+                    warning.style.fontFamily = 'sans-serif';
+                    warning.style.fontSize = '13px';
+                    warning.style.padding = '8px 16px';
+                    warning.style.textAlign = 'center';
+                    warning.style.transition = 'opacity 1s';
+                    warning.innerHTML =
+                        '<strong>Optional libraries unavailable:</strong> ' +
+                        OPTIONAL_MISSING.join(', ') +
+                        '. Some features will be degraded.';
+                    document.body.insertBefore(warning, document.body.firstChild);
+                    setTimeout(function () {
+                        warning.style.opacity = '0';
+                        setTimeout(function () { if (warning.parentNode) warning.remove(); }, 1000);
+                    }, 8000);
+                }
+            }
+        })();
+    </script>
+    <div id="viewer-container">
+        <div id="status" class="disconnected"></div>
+    </div>
+
+    <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
+    }
+  }
+  </script>
+
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- KaTeX for math formulas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+    <!-- html2canvas for DOM overlay capture (title, annotation) -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <script type="module" src="viewer.js"></script>
+    <script type="module" src="controls-panel.js"></script>
+    <script type="module" src="controls-attached.js"></script>
+</body>
+
+</html>

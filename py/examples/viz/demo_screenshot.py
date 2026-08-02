@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""demo_screenshot.py — Programmatic PNG screenshot at custom resolution.
+
+Run with:  uv run python py/examples/viz/demo_screenshot.py
+"""
+
+from pytanga.geometry import Direction, Plane, Point, Sphere
+from pytanga.viz import SceneExporter, Visualizer
+
+viz = Visualizer(title="Tanga — Screenshot")
+viz.start()
+
+viz.add(Point(2, 0, 0), color="#ff4444", size=0.15, label="P₁")
+viz.add(Point(0, 2, 0), color="#44ff44", size=0.15, label="P₂")
+viz.add(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.3)
+viz.add(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.25)
+viz.flush()
+
+exporter = SceneExporter(viz)
+exporter.screenshot("figure.png")
+print("Screenshot saved to figure.png")
+
+exporter.screenshot("figure_hd.png", width=1920, height=1080)
+print("HD screenshot saved to figure_hd.png")
+
+viz.stop()
