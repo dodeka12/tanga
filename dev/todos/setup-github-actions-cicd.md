@@ -4,7 +4,7 @@
 
 Replace the manual/local-only workflows (post-merge hook for versioning, manual `mkdocs gh-deploy`) with automated GitHub Actions pipelines.
 
----
+----
 
 ## 1. Branch Protection (Manual GitHub Settings)
 
