@@ -110,7 +110,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build-pure]
+    needs: [build-pure, build-linux]
     runs-on: ubuntu-24.04
     permissions:
       id-token: write
