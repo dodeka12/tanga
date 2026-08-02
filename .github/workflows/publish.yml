@@ -1,8 +1,6 @@
 name: Publish
 
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -10,6 +8,10 @@ on:
         type: boolean
         default: true
         description: 'Whether this is a release candidate (uses Test PyPI)'
+      version:
+        type: string
+        default: ''
+        description: 'Forced version tag (e.g. v0.2.0). Strips v prefix for SETUPTOOLS_SCM_PRETEND_VERSION.'
 
 permissions:
   contents: read
@@ -34,7 +36,14 @@ jobs:
         run: uv run python tools/clean-precompiled.py
 
       - name: Build wheel
+        if: inputs.version == ''
         run: uv build --wheel
+
+      - name: Build wheel (forced version)
+        if: inputs.version != ''
+        run: SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}" uv build --wheel
+        env:
+          VERSION: ${{ inputs.version }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -63,9 +72,16 @@ jobs:
   
       - name: Build precompiled
         run: uv run python tools/build-precompiled.py
-  
+
       - name: Build wheel
+        if: inputs.version == ''
         run: uv build --wheel
+
+      - name: Build wheel (forced version)
+        if: inputs.version != ''
+        run: SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}" uv build --wheel
+        env:
+          VERSION: ${{ inputs.version }}
   
       - name: Auditwheel repair
         run: |
