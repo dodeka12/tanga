@@ -133,10 +133,20 @@ jobs:
             echo "url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
           fi
 
-      - name: Publish to PyPI
+      - name: Publish to Test PyPI
+        if: steps.target.outputs.url == 'https://test.pypi.org/legacy/'
         uses: pypa/gh-action-pypi-publish@v1.12.3
         with:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
-          password: ${{ steps.target.outputs.url == 'https://test.pypi.org/legacy/' && secrets.TESTPYPI_TOKEN || secrets.PYPI_TOKEN }}
+          password: ${{ secrets.TESTPYPI_TOKEN }}
+          verbose: true
+
+      - name: Publish to PyPI
+        if: steps.target.outputs.url == 'https://upload.pypi.org/legacy/'
+        uses: pypa/gh-action-pypi-publish@v1.12.3
+        with:
+          packages-dir: dist/
+          repository-url: ${{ steps.target.outputs.url }}
+          password: ${{ secrets.PYPI_TOKEN }}
           verbose: true
