@@ -40,41 +40,42 @@ jobs:
           name: wheels-pure
           path: dist/*.whl
 
-  build-linux:
-    name: Build Linux wheel (manylinux_x86_64)
-    runs-on: ubuntu-24.04
-    container: quay.io/pypa/manylinux_2_28_x86_64
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup environment
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          echo "/opt/python/cp312-cp312/bin" >> $GITHUB_PATH
-          echo "UV_PYTHON=/opt/python/cp312-cp312/bin/python3.12" >> $GITHUB_ENV
-
-      - name: Sync dependencies
-        run: uv sync --group dev
-
-      - name: Build precompiled
-        run: uv run python tools/build-precompiled.py
-
-      - name: Build wheel
-        run: uv build --wheel
-
-      - name: Auditwheel repair
-        run: |
-          /opt/python/cp312-cp312/bin/pip install auditwheel
-          /opt/python/cp312-cp312/bin/auditwheel repair dist/*.whl -w dist/
-          rm dist/*-none-any.whl
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheels-linux
-          path: dist/*.whl
+  # -- Linux precompiled build disabled temporarily for faster testing --
+  # build-linux:
+  #   name: Build Linux wheel (manylinux_x86_64)
+  #   runs-on: ubuntu-24.04
+  #   container: quay.io/pypa/manylinux_2_28_x86_64
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #
+  #     - name: Setup environment
+  #       run: |
+  #         curl -LsSf https://astral.sh/uv/install.sh | sh
+  #         echo "$HOME/.local/bin" >> $GITHUB_PATH
+  #         echo "/opt/python/cp312-cp312/bin" >> $GITHUB_PATH
+  #         echo "UV_PYTHON=/opt/python/cp312-cp312/bin/python3.12" >> $GITHUB_ENV
+  #
+  #     - name: Sync dependencies
+  #       run: uv sync --group dev
+  #
+  #     - name: Build precompiled
+  #       run: uv run python tools/build-precompiled.py
+  #
+  #     - name: Build wheel
+  #       run: uv build --wheel
+  #
+  #     - name: Auditwheel repair
+  #       run: |
+  #         /opt/python/cp312-cp312/bin/pip install auditwheel
+  #         /opt/python/cp312-cp312/bin/auditwheel repair dist/*.whl -w dist/
+  #         rm dist/*-none-any.whl
+  #
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: wheels-linux
+  #         path: dist/*.whl
 
   # -- macOS build disabled until precompiled compilation is fixed --
   # build-macos:
@@ -108,7 +109,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build-pure, build-linux]
+    needs: [build-pure]
     runs-on: ubuntu-24.04
     permissions:
       id-token: write
@@ -139,3 +140,4 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
+          verbose: true
