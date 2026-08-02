@@ -141,7 +141,9 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
+          password: ${{ secrets.TESTPYPI_TOKEN }}
           verbose: true
+          attestations: false
 
       - name: Publish to PyPI
         if: steps.target.outputs.url == 'https://upload.pypi.org/legacy/'
@@ -149,4 +151,6 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
+          password: ${{ secrets.PYPI_TOKEN }}
           verbose: true
+          attestations: false
