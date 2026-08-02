@@ -125,9 +125,8 @@ jobs:
       - name: Determine target repository
         id: target
         run: |
-          # When called via workflow_call, use `is_rc` input.
-          # When triggered by tag push, check if tag contains '-rc'.
-          if [[ "${{ inputs.is_rc }}" == "true" ]] || [[ "${{ github.ref_name }}" == *-rc* ]]; then
+          # Determine target: default to Test PyPI for RC tags and manual dispatch
+          if [[ "${{ inputs.is_rc }}" == "true" ]] || [[ "${{ github.ref_name }}" == *-rc* ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
           else
             echo "url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
@@ -141,6 +140,7 @@ jobs:
           repository-url: ${{ steps.target.outputs.url }}
           password: ${{ secrets.TESTPYPI_TOKEN }}
           verbose: true
+          attestations: false
 
       - name: Publish to PyPI
         if: steps.target.outputs.url == 'https://upload.pypi.org/legacy/'
@@ -150,3 +150,4 @@ jobs:
           repository-url: ${{ steps.target.outputs.url }}
           password: ${{ secrets.PYPI_TOKEN }}
           verbose: true
+          attestations: false
