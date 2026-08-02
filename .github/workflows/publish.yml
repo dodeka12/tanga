@@ -142,6 +142,7 @@ jobs:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
           verbose: true
+          attestations: false
 
       - name: Publish to PyPI
         if: steps.target.outputs.url == 'https://upload.pypi.org/legacy/'
@@ -150,3 +151,4 @@ jobs:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
           verbose: true
+          attestations: false
