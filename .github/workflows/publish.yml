@@ -144,8 +144,7 @@ jobs:
       - name: Determine target repository
         id: target
         run: |
-          # Determine target: default to Test PyPI for RC tags and manual dispatch
-          if [[ "${{ inputs.is_rc }}" == "true" ]] || [[ "${{ github.ref_name }}" == *-rc* ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ inputs.is_rc }}" == "true" ]]; then
             echo "url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
           else
             echo "url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
