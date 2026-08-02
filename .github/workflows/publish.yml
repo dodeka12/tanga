@@ -141,6 +141,7 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
+          password: ${{ secrets.TESTPYPI_TOKEN }}
           verbose: true
           attestations: false
 
@@ -150,5 +151,6 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: ${{ steps.target.outputs.url }}
+          password: ${{ secrets.PYPI_TOKEN }}
           verbose: true
           attestations: false
