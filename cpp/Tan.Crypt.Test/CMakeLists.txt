@@ -21,9 +21,12 @@ target_include_directories(tan.crypt.test.func PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 
 add_executable(Test_Crypt_02 Test_Crypt_02.cpp)
 target_link_libraries(Test_Crypt_02 PRIVATE tan.crypt.test.func)
+add_test(NAME Test_Crypt_02 COMMAND Test_Crypt_02)
 
 add_executable(Test_Crypt_03 Test_Crypt_03.cpp)
 target_link_libraries(Test_Crypt_03 PRIVATE tan.crypt.test.func)
+add_test(NAME Test_Crypt_03 COMMAND Test_Crypt_03)
 
 add_executable(Test_Crypt_04 Test_Crypt_04.cpp)
 target_link_libraries(Test_Crypt_04 PRIVATE tan.crypt.test.func)
+add_test(NAME Test_Crypt_04 COMMAND Test_Crypt_04)

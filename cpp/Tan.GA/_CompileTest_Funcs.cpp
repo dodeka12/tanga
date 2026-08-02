@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 // <<licence: start>>
 //
-// This file is part of the TANGA library, 
+// This file is part of the TANGA library,
 // a template library that implements geometric algebra.
 //
 // Copyright 2022 Christian Perwass
@@ -20,7 +20,6 @@
 //
 // <<licence: end>>
 //////////////////////////////////////////////////////////////////////////////////
-
 
 #include "Tan.Math/Matrix.h"
 
@@ -48,7 +47,6 @@
 
 using namespace Tan;
 
-
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Typedefs for functions
 typedef double TValue;
@@ -68,167 +66,167 @@ typedef GA::CMultivectorStyle<TValue, TBlade> TStyle;
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions MapToBladeMask
-template void GA::EvalBladeMask(TBladeMask& xBladeMask, const TMultivector& wA, bool bOnlyNonZeroComps);
+template void GA::EvalBladeMask(TBladeMask &xBladeMask, const TMultivector &wA, bool bOnlyNonZeroComps);
 
-template void GA::EvalProductBladeMask_GP(TBladeMask& xMaskC, const TMultivector& wA, const TBladeMask& xMaskB, bool bLeftToRight, bool bComplete);
+template void GA::EvalProductBladeMask_GP(TBladeMask &xMaskC, const TMultivector &wA, const TBladeMask &xMaskB, bool bLeftToRight, bool bComplete);
 
-template void GA::EvalProductBladeMask_IP(TBladeMask& xMaskC, const TMultivector& wA, const TBladeMask& xMaskB, bool bLeftToRight, bool bComplete);
+template void GA::EvalProductBladeMask_IP(TBladeMask &xMaskC, const TMultivector &wA, const TBladeMask &xMaskB, bool bLeftToRight, bool bComplete);
 
-template void GA::EvalProductBladeMask_OP(TBladeMask& xMaskC, const TMultivector& wA, const TBladeMask& xMaskB, bool bLeftToRight, bool bComplete);
+template void GA::EvalProductBladeMask_OP(TBladeMask &xMaskC, const TMultivector &wA, const TBladeMask &xMaskB, bool bLeftToRight, bool bComplete);
 
-template void GA::ToMatrix(TMatrix& matA, const TMultivector& wA, const TBladeMask& xMask);
-template void GA::ToMultivector(TMultivector& wA, const TMatrix& matA, const TBladeMask& xMask);
+template void GA::ToMatrix(TMatrix &matA, const TMultivector &wA, const TBladeMask &xMask);
+template void GA::ToMultivector(TMultivector &wA, const TMatrix &matA, const TBladeMask &xMask);
 
-template void GA::EvalProductMatrix_GP(TMatrix& matA, const TMultivector& wA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
-template void GA::EvalProductMatrixArray_GP(TMatrix& matA, const std::vector<TMultivector>& wListA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
-template void GA::EvalProductMatrix_GP(TMatrix& matA, const TMultivector& wA, const TBladeMask& xMaskA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
+template void GA::EvalProductMatrix_GP(TMatrix &matA, const TMultivector &wA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
+template void GA::EvalProductMatrixArray_GP(TMatrix &matA, const std::vector<TMultivector> &wListA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
+template void GA::EvalProductMatrix_GP(TMatrix &matA, const TMultivector &wA, const TBladeMask &xMaskA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
 
-template void GA::EvalProductMatrix_IP(TMatrix& matA, const TMultivector& wA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
-template void GA::EvalProductMatrixArray_IP(TMatrix& matA, const std::vector<TMultivector>& wListA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
-template void GA::EvalProductMatrix_IP(TMatrix& matA, const TMultivector& wA, const TBladeMask& xMaskA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
+template void GA::EvalProductMatrix_IP(TMatrix &matA, const TMultivector &wA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
+template void GA::EvalProductMatrixArray_IP(TMatrix &matA, const std::vector<TMultivector> &wListA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
+template void GA::EvalProductMatrix_IP(TMatrix &matA, const TMultivector &wA, const TBladeMask &xMaskA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
 
-template void GA::EvalProductMatrix_OP(TMatrix& matA, const TMultivector& wA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
-template void GA::EvalProductMatrixArray_OP(TMatrix& matA, const std::vector<TMultivector>& wListA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
-template void GA::EvalProductMatrix_OP(TMatrix& matA, const TMultivector& wA, const TBladeMask& xMaskA, const TBladeMask& xMaskB, const TBladeMask& xMaskC, bool bLeftToRight);
+template void GA::EvalProductMatrix_OP(TMatrix &matA, const TMultivector &wA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
+template void GA::EvalProductMatrixArray_OP(TMatrix &matA, const std::vector<TMultivector> &wListA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
+template void GA::EvalProductMatrix_OP(TMatrix &matA, const TMultivector &wA, const TBladeMask &xMaskA, const TBladeMask &xMaskB, const TBladeMask &xMaskC, bool bLeftToRight, GA::EInv, GA::EInv);
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions MapToSubspace
-template void GA::EvalBladeMask(TBladeMask& xBladeMask, const TSubspaceBasis& xSubspace);
+template void GA::EvalBladeMask(TBladeMask &xBladeMask, const TSubspaceBasis &xSubspace);
 // template void GA::EvalBladeList(tvec<TBlade, TBlade::VectorSpaceDimension>& vBladeList, const TSubspaceBasis& xSubspace);
 
-template void GA::EvalProductSubspaceMask_GP(TSubspaceMask& xMaskC, const TSubspaceMask& xMaskA, const TSubspaceMask& xMaskB, const TStyle& xAlgebraBasis);
-template void GA::EvalProductSubspaceMask_IP(TSubspaceMask& xMaskC, const TSubspaceMask& xMaskA, const TSubspaceMask& xMaskB, const TStyle& xAlgebraBasis);
-template void GA::EvalProductSubspaceMask_OP(TSubspaceMask& xMaskC, const TSubspaceMask& xMaskA, const TSubspaceMask& xMaskB, const TStyle& xAlgebraBasis);
+template void GA::EvalProductSubspaceMask_GP(TSubspaceMask &xMaskC, const TSubspaceMask &xMaskA, const TSubspaceMask &xMaskB, const TStyle &xAlgebraBasis);
+template void GA::EvalProductSubspaceMask_IP(TSubspaceMask &xMaskC, const TSubspaceMask &xMaskA, const TSubspaceMask &xMaskB, const TStyle &xAlgebraBasis);
+template void GA::EvalProductSubspaceMask_OP(TSubspaceMask &xMaskC, const TSubspaceMask &xMaskA, const TSubspaceMask &xMaskB, const TStyle &xAlgebraBasis);
 
-template void GA::ToMatrix(TMatrix& matA, const TMultivector& wA, const TSubspaceMask& xMask, const TSubspaceBasis& xAlgebraBasis);
-template void GA::ToMatrix(TMatrix& matA, const std::vector<TMultivector>& vecwListA, const TSubspaceMask& xMask, const TSubspaceBasis& xAlgebraBasis);
+template void GA::ToMatrix(TMatrix &matA, const TMultivector &wA, const TSubspaceMask &xMask, const TSubspaceBasis &xAlgebraBasis);
+template void GA::ToMatrix(TMatrix &matA, const std::vector<TMultivector> &vecwListA, const TSubspaceMask &xMask, const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::ToMultivector(TMultivector& wA, const TMatrix& matA, const TSubspaceMask& xMask, const TSubspaceBasis& xAlgebraBasis);
-template void GA::ToMultivector(std::vector<TMultivector>& vecwListA, const TMatrix& matA, const TSubspaceMask& xMask, const TSubspaceBasis& xAlgebraBasis);
+template void GA::ToMultivector(TMultivector &wA, const TMatrix &matA, const TSubspaceMask &xMask, const TSubspaceBasis &xAlgebraBasis);
+template void GA::ToMultivector(std::vector<TMultivector> &vecwListA, const TMatrix &matA, const TSubspaceMask &xMask, const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_GP_Reverse(TMatrix& matA,
-		const TMultivector& wA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_GP_Reverse(TMatrix &matA,
+											   const TMultivector &wA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_GP_Reverse(TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TMultivector& wB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_GP_Reverse(TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TMultivector &wB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_GP_Reverse(TMatrix& matA,
-		const std::vector<TMultivector>& wListA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_GP_Reverse(TMatrix &matA,
+											   const std::vector<TMultivector> &wListA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_GP_Reverse(TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const std::vector<TMultivector>& wListB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_GP_Reverse(TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const std::vector<TMultivector> &wListB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_GP_Reverse(TMatrix& matProduct,
-		const TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TStyle& xAlgebraBasis);
+template void GA::EvalProductMatrix_GP_Reverse(TMatrix &matProduct,
+											   const TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TStyle &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_GP_Reverse(TMatrix& matProduct,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TMatrix& matB,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TStyle& xAlgebraBasis);
+template void GA::EvalProductMatrix_GP_Reverse(TMatrix &matProduct,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TMatrix &matB,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TStyle &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_OP_Reverse(TMatrix& matA,
-		const TMultivector& wA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_OP_Reverse(TMatrix &matA,
+											   const TMultivector &wA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_OP_Reverse(TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TMultivector& wB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_OP_Reverse(TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TMultivector &wB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_OP_Reverse(TMatrix& matA,
-		const std::vector<TMultivector>& wListA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_OP_Reverse(TMatrix &matA,
+											   const std::vector<TMultivector> &wListA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_OP_Reverse(TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const std::vector<TMultivector>& wListB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_OP_Reverse(TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const std::vector<TMultivector> &wListB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_OP_Reverse(TMatrix& matProduct,
-		const TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TStyle& xAlgebraBasis);
+template void GA::EvalProductMatrix_OP_Reverse(TMatrix &matProduct,
+											   const TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TStyle &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_OP_Reverse(TMatrix& matProduct,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TMatrix& matB,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TStyle& xAlgebraBasis);
+template void GA::EvalProductMatrix_OP_Reverse(TMatrix &matProduct,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TMatrix &matB,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TStyle &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_IP_Reverse(TMatrix& matA,
-		const TMultivector& wA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_IP_Reverse(TMatrix &matA,
+											   const TMultivector &wA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_IP_Reverse(TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TMultivector& wB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_IP_Reverse(TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TMultivector &wB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_IP_Reverse(TMatrix& matA,
-		const std::vector<TMultivector>& wListA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TSubspaceBasis& xAlgebraBasis);
+template void GA::EvalProductMatrix_IP_Reverse(TMatrix &matA,
+											   const std::vector<TMultivector> &wListA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TSubspaceBasis &xAlgebraBasis);
 
 // template void GA::EvalProductMatrix_GP_Reverse(TMatrix& matA,
 // 		const TSubspaceMask& xMaskA,
@@ -238,21 +236,20 @@ template void GA::EvalProductMatrix_IP_Reverse(TMatrix& matA,
 // 		const TSubspaceMask& xMaskC,
 // 		const TSubspaceBasis& xAlgebraBasis);
 
-template void GA::EvalProductMatrix_IP_Reverse(TMatrix& matProduct,
-		const TMatrix& matA,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TStyle& xAlgebraBasis);
+template void GA::EvalProductMatrix_IP_Reverse(TMatrix &matProduct,
+											   const TMatrix &matA,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TStyle &xAlgebraBasis);
 
-template void GA::EvalProductMatrix_IP_Reverse(TMatrix& matProduct,
-		const TSubspaceMask& xMaskA,
-		const bool bReverseA,
-		const TMatrix& matB,
-		const TSubspaceMask& xMaskB,
-		const bool bReverseB,
-		const TSubspaceMask& xMaskC,
-		const TStyle& xAlgebraBasis);
-
+template void GA::EvalProductMatrix_IP_Reverse(TMatrix &matProduct,
+											   const TSubspaceMask &xMaskA,
+											   const bool bReverseA,
+											   const TMatrix &matB,
+											   const TSubspaceMask &xMaskB,
+											   const bool bReverseB,
+											   const TSubspaceMask &xMaskC,
+											   const TStyle &xAlgebraBasis);

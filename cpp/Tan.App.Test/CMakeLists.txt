@@ -34,20 +34,33 @@ else()
 endif()
 
 add_executable(Test_Math_01 Test_Math_01.cpp)
+add_test(NAME Test_Math_01 COMMAND Test_Math_01)
 
 add_executable(Test_Array Test_Array.cpp)
+add_test(NAME Test_Array COMMAND Test_Array)
 
 add_executable(Test_Basics_01 Test_Basics_01.cpp)
 target_link_libraries(Test_Basics_01 PRIVATE tan.crypt.test.func)
+add_test(NAME Test_Basics_01 COMMAND Test_Basics_01)
 
 add_executable(Test_Basics_02 Test_Basics_02.cpp)
 target_link_libraries(Test_Basics_02 PRIVATE tan.crypt.test.func)
+add_test(NAME Test_Basics_02 COMMAND Test_Basics_02)
 
 add_executable(Test_Matrix_01 Test_Matrix_01.cpp)
+add_test(NAME Test_Matrix_01 COMMAND Test_Matrix_01)
+
 add_executable(Test_Matrix_GE_01 Test_Matrix_GE_01.cpp)
+add_test(NAME Test_Matrix_GE_01 COMMAND Test_Matrix_GE_01)
+
 add_executable(Test_Matrix_GE_02 Test_Matrix_GE_02.cpp)
+add_test(NAME Test_Matrix_GE_02 COMMAND Test_Matrix_GE_02)
+
 add_executable(Test_ModMVRing Test_ModMVRing.cpp)
+add_test(NAME Test_ModMVRing COMMAND Test_ModMVRing)
+
 add_executable(Test_MV_Blade_Ops Test_MV_Blade_Ops.cpp)
+add_test(NAME Test_MV_Blade_Ops COMMAND Test_MV_Blade_Ops)
 
 
 
