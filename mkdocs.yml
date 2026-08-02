@@ -136,6 +136,7 @@ nav:
     - GA Pipeline:
       - Operation pipeline: dev/ga/operation-pipeline.md
     - Guides:
+      - Contributing: dev/guides/contributing.md
       - C++ coding style: dev/guides/cpp-coding-style-guide.md
       - Python coding style: dev/guides/py-coding-style-guide.md
     - Workflows:
