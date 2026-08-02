@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
-{% block announce %}
-<span style="opacity:0.7">v{{ config.extra.version }}</span>
+{% block htmltitle %}
+<title>
+    {% if page.title and not page.is_homepage %}
+    {{ page.title }} -
+    {% endif %}
+    {{ config.site_name }} (v{{ config.extra.version }})
+</title>
 {% endblock %}
