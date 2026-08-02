@@ -3,6 +3,12 @@ name: Publish
 on:
   push:
     tags: ['v*']
+  workflow_call:
+    inputs:
+      is_rc:
+        type: boolean
+        default: true
+        description: 'Whether this is a release candidate (uses Test PyPI)'
 
 permissions:
   contents: read
@@ -119,7 +125,9 @@ jobs:
       - name: Determine target repository
         id: target
         run: |
-          if [[ "${{ github.ref_name }}" == *-rc* ]]; then
+          # When called via workflow_call, use `is_rc` input.
+          # When triggered by tag push, check if tag contains '-rc'.
+          if [[ "${{ inputs.is_rc }}" == "true" ]] || [[ "${{ github.ref_name }}" == *-rc* ]]; then
             echo "url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
           else
             echo "url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
