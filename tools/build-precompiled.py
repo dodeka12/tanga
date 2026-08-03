@@ -19,8 +19,10 @@ from pathlib import Path
 
 ALGEBRAS = [
     # (dim, sig, dtype, description)
-    (3, 0, "float64", "E3"),
+    (2, 0, "float64", "E2"),
+    (3, 0, "float64", "E3/P2"),
     (4, 0, "float64", "P3"),
+    (4, 8, "float64", "N2/PGA2"),
     (5, 16, "float64", "N3/PGA3"),
     (3, 0, "int64", "E3 (modular)"),
     (10, 0, "int64", "Sparse high-dim"),

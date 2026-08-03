@@ -43,7 +43,9 @@ class Algebra:
     }
 
     # Names that have a dedicated Basis class (checked before _NAMED_ALGEBRAS)
-    _BASIS_CLASS_NAMES: frozenset = frozenset({"E3", "P3", "N3", "PGA3"})
+    _BASIS_CLASS_NAMES: frozenset = frozenset(
+        {"E2", "E3", "N2", "N3", "P2", "P3", "PGA2", "PGA3"}
+    )
 
     @classmethod
     def from_name(cls, name: str, dtype: str = "float64", **kwargs) -> Algebra:
