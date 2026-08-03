@@ -51,6 +51,10 @@ extra_javascript:
 plugins:
   - search
 
+extra:
+  version:
+    provider: mike
+
 hooks:
   - docs/_hooks/inject_version.py
 

@@ -16,7 +16,6 @@ import os
 def on_config(config):
     version = os.environ.get("TANGA_VERSION") or _resolve_version()
     config.extra["version"] = version
-    config.site_name = f"{config.site_name} v{version}"
 
 
 def _resolve_version() -> str:
