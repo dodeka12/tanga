@@ -10,8 +10,40 @@ permissions:
 
 jobs:
   version-bump:
-    name: Version bump
-    if: github.event_name != 'workflow_dispatch'
+    name: Determine next RC version
+    if: github.event_name != 'workflow_dispatch' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Determine next RC tag
+        id: tag
+        run: |
+          NEXT_TAG=$(./tools/version-tag.sh --rc --dry-run | grep '^Next RC version:' | sed 's/Next RC version: \([^ ]*\).*/\1/')
+          echo "tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+          echo "Next RC tag: $NEXT_TAG"
+
+  publish-wheels:
+    name: Build & publish wheels to Test PyPI
+    needs: version-bump
+    uses: ./.github/workflows/publish.yml
+    with:
+      is_rc: true
+      version: ${{ needs.version-bump.outputs.tag }}
+    permissions:
+      id-token: write
+      contents: read
+
+  push-tag:
+    name: Push RC tag
+    needs: [version-bump, publish-wheels]
+    if: needs.version-bump.result == 'success' && needs.publish-wheels.result == 'success'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -25,18 +57,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Run version-tag.sh
-        run: ./tools/version-tag.sh --rc --push
-
-  publish-wheels:
-    name: Build & publish wheels to Test PyPI
-    needs: version-bump
-    uses: ./.github/workflows/publish.yml
-    with:
-      is_rc: true
-    permissions:
-      id-token: write
-      contents: read
+      - name: Create and push tag
+        env:
+          TAG: ${{ needs.version-bump.outputs.tag }}
+        run: |
+          git tag -a "$TAG" -m "Release $TAG (auto)"
+          git push origin "$TAG"
+          echo "Pushed tag $TAG to origin."
 
   docs-deploy:
     name: Build & deploy docs
