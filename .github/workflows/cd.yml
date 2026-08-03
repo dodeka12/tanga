@@ -67,7 +67,7 @@ jobs:
 
   docs-deploy:
     name: Build & deploy versioned docs
-    needs: push-tag
+    needs: [push-tag, version-bump]
     if: needs.push-tag.result == 'success'
     runs-on: ubuntu-24.04
     steps:
