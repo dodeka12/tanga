@@ -1,0 +1,47 @@
+name: Docs Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-preview:
+    name: Deploy branch docs preview
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python toolchain
+        run: uv sync --group dev
+
+      - name: Deploy preview docs
+        env:
+          SAFE_ALIAS: dev-${{ github.ref_name }}
+        run: |
+          # Sanitize branch name: replace / with - for safe URL paths
+          ALIAS=$(echo "$SAFE_ALIAS" | tr '/' '-')
+          export TANGA_VERSION="$ALIAS"
+          mike deploy --push --alias "$ALIAS" "$ALIAS"
+
+      - name: Print preview URL
+        run: |
+          ALIAS=$(echo "dev-${{ github.ref_name }}" | tr '/' '-')
+          echo ""
+          echo "📄 Docs preview deployed!"
+          echo "   https://dodeka12.github.io/tanga/$ALIAS/"
+          echo ""

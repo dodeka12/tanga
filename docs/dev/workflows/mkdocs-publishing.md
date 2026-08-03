@@ -1,219 +1,149 @@
-# MkDocs Publishing — Manual Build & Deploy Guide
+# MkDocs Publishing with Mike
 
-This guide covers how to build the TanGA documentation site locally and how
-to publish it to GitHub Pages.  **No GitHub Actions or CI/CD is required** —
-everything is done with a single `mkdocs gh-deploy` command from your local
-machine.
+TanGA uses [mike](https://github.com/jimporter/mike) to manage versioned
+documentation on the `gh-pages` branch. Mike builds the site with MkDocs and
+organises each version into its own subdirectory, enabling:
 
-## Prerequisites
+- Clean versioned URLs: `https://dodeka12.github.io/tanga/v0.2.3-rc1/`
+- A version selector dropdown in the page header
+- Aliases like `latest` that point to the current stable release
+- Branch-based preview deploys for testing before merging
 
-- Python environment with `mkdocs-material` installed:
-  ```bash
-  uv sync
-  ```
-- Push (write) access to `dodeka12/tanga` on GitHub.
-  Verify with:
-  ```bash
-  git push --dry-run origin main
-  ```
+## What Mike Does
 
-## One-Time GitHub Setup
+| Command | Result |
+|---|---|
+| `mike deploy v0.2.3` | Builds docs and pushes them to `gh-pages` under `v0.2.3/` |
+| `mike deploy --update-aliases v0.2.3 latest` | Builds **and** moves the `latest` alias to this version |
+| `mike set-default --push latest` | Makes `latest` the default (root URL redirects to it) |
+| `mike list` | Lists all published versions and their aliases |
+| `mike delete dev-old-branch --push` | Removes a preview version from `gh-pages` |
 
-Before the first deployment, GitHub must be configured to serve the
-`gh-pages` branch as a website. This is a **one-time** operation.
-
-### Step 1: Verify Push Access
-
-```bash
-git push --dry-run origin main
-```
-
-If this fails, you do not have write access to the repository. Ask the
-repository owner to add you as a collaborator.
-
-### Step 2: Navigate to Pages Settings
-
-1. Go to the repository on GitHub: https://github.com/dodeka12/tanga
-2. Click the **Settings** tab (top-level tab in the repository header,
-   not the navbar inside the repo view).
-3. In the left sidebar, under "Code and automation", click **Pages**.
-
-Shortcut URL:
-```
-https://github.com/dodeka12/tanga/settings/pages
-```
-
-### Step 3: Configure the Source
-
-| Setting | Value |
-|---------|-------|
-| **Source** | Deploy from a branch |
-| **Branch** | `gh-pages` |
-| **Folder** | `/ (root)` |
-
-If `gh-pages` does not appear in the branch dropdown yet, run the first
-deployment (`mkdocs gh-deploy`, see below) — it creates the branch. Then
-return to this page and select it.
-
-### Step 4: Save and Verify
-
-Click **Save**. GitHub displays a blue banner:
-
-> ✅ Your site is ready to be published at https://dodeka12.github.io/tanga/.
-
-### Step 5: Enforce HTTPS (Recommended)
-
-On the same Settings → Pages page, check **Enforce HTTPS**. This redirects
-all HTTP traffic to `https://`. Certificate provisioning (Let's Encrypt)
-may take a few minutes.
-
-### Step 6: Custom Domain (Optional)
-
-If you want to use a custom domain (e.g. `docs.tanga.dev`):
-
-1. Enter the domain in the "Custom domain" field.
-2. Click **Save**. GitHub creates a `CNAME` file in the `gh-pages` branch.
-3. At your DNS provider, add a `CNAME` record pointing to
-   `dodeka12.github.io`.
-4. Wait for DNS propagation (can take up to 24 hours, usually minutes).
-5. Check **Enforce HTTPS** once the domain is verified.
-
-This step is **not required** for the default `*.github.io` URL.
+Mike stores metadata in `versions.json` on the `gh-pages` branch. Each
+deployed version lives in its own directory — they never overwrite each other.
 
 ## Local Preview
 
-Start a live-reload development server:
+Start a live-reload development server (unchanged from standard MkDocs):
 
 ```bash
+uv sync --group dev
 mkdocs serve
 ```
 
-Open http://localhost:8000 in your browser. Changes to Markdown files are
-reflected instantly. Press `Ctrl+C` to stop.
+Open http://localhost:8000. Press `Ctrl+C` to stop.
 
-## Build (Dry Run)
+## Local Deploy with Mike
 
-Build the static site into the `site/` directory without deploying:
-
-```bash
-mkdocs build --strict
-```
-
-The `--strict` flag treats warnings as errors — use it to catch broken
-links, missing pages, and invalid configuration. The `site/` directory is
-git-ignored and should never be committed.
-
-## Deploy to GitHub Pages
-
-Run from the repository root:
+To publish docs from your local machine to `gh-pages`:
 
 ```bash
-mkdocs gh-deploy
+# Ensure dev deps are installed
+uv sync --group dev
+
+# Deploy a test version (your current branch)
+export ALIAS="dev-$(git branch --show-current | tr '/' '-')"
+mike deploy --push --alias "$ALIAS" "$ALIAS"
 ```
 
-This command:
-
-1. Builds the site (`mkdocs build`)
-2. Force-pushes the contents of `site/` to the `gh-pages` branch
-3. Prints the URL: `https://dodeka12.github.io/tanga/`
-
-No other steps are needed. GitHub automatically rebuilds the Pages site
-when the `gh-pages` branch is updated (this usually takes 1–2 minutes).
-
-## Updating the Documentation
-
-The typical workflow for updating docs:
+To publish an official version tag:
 
 ```bash
-# 1. Edit Markdown files in docs/ or dev/docs/
-vim docs/py/algebra/index.md
-
-# 2. Preview changes
-mkdocs serve
-
-# 3. Commit your changes to the main branch
-git add docs/
-git commit -m "Update algebra docs"
-git push origin main
-
-# 4. Deploy to GitHub Pages
-mkdocs gh-deploy
+# Deploy a tagged version (e.g. v0.2.3-rc1)
+mike deploy --push v0.2.3-rc1
 ```
 
-## Adding New Pages
+To promote a version to `latest`:
 
-1. Create the new Markdown file under `docs/` or `dev/docs/`.
-2. Add the page to the `nav` section in `mkdocs.yml`.
-3. Run `mkdocs serve` to verify the navigation and links.
-4. Commit both the new file and the updated `mkdocs.yml`.
-5. Run `mkdocs gh-deploy`.
+```bash
+mike deploy --push --update-aliases v0.2.3 latest
+```
 
-The nav is **explicit** — pages do not appear automatically. This prevents
-orphaned documents and gives full control over ordering.
+## Managing Versions
+
+```bash
+# List all published versions
+mike list
+
+# Set the default version (which the root URL redirects to)
+mike set-default --push latest
+
+# Delete an old preview version
+mike delete dev-old-feature --push
+
+# Rebuild an existing version locally (for testing)
+mike serve          # serves the currently-checked-out version via mike
+mike serve -a       # serves all versions
+```
+
+## CI/CD Automation
+
+Docs are also deployed automatically via GitHub Actions:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `cd.yml` → `docs-deploy` | Push to `main` | Builds and deploys docs for the RC tag (e.g. `v0.2.3-rc1`) |
+| `promote.yml` → `docs-stable` | Manual (`workflow_dispatch`) | Deploys stable version and moves `latest` alias |
+| `docs-preview.yml` | Manual (`workflow_dispatch`) | Deploys docs from any branch under `dev-<branch>/` |
+
+See [Docs Publishing Workflows](docs-publishing-workflows.md) for a detailed
+walkthrough of each workflow and manual branch publishing instructions.
+
+## gh-pages Branch Structure
+
+Mike organises the `gh-pages` branch as follows:
+
+```
+gh-pages/
+├── versions.json          # Mike metadata: version list, aliases, default
+├── v0.2.2/                # Version subdirectory
+│   └── index.html
+├── v0.2.3-rc1/            # RC version subdirectory
+│   └── index.html
+├── v0.2.3/                # Stable version subdirectory
+│   └── index.html
+├── dev-my-feature/        # Branch preview subdirectory
+│   └── index.html
+└── index.html             # Redirect page to the default version
+```
 
 ## Troubleshooting
 
-### `gh-pages` branch does not appear
+### 404 on the root URL
+
+- Run `mike set-default --push latest` to ensure the root redirect exists.
+- Check GitHub Pages settings: **Source** must be "Deploy from a branch",
+  **Branch** = `gh-pages`, **Folder** = `/ (root)`.
+
+### Version selector missing
+
+- Mike injects the version selector via the `versions.json` file. Ensure
+  `mike` is used for deployment (not raw `mkdocs gh-deploy`).
+
+### mike: command not found
 
 ```bash
-git branch -r | grep gh-pages
+uv sync --group dev    # installs mike via the dev dependency group
 ```
-
-If the branch does not exist, run `mkdocs gh-deploy` — it creates the branch
-on the first deployment.
-
-### 404 on `https://dodeka12.github.io/tanga/`
-
-- The initial Pages build can take up to 5 minutes.
-- Check Settings → Pages for the build status indicator.
-- Ensure the source is set to "Deploy from a branch" with `gh-pages` / root.
-
-### Pages not updating after `mkdocs gh-deploy`
-
-- Wait 1–2 minutes for GitHub's Pages rebuild to complete.
-- Hard-refresh the browser (`Ctrl+Shift+R`).
-- Check Settings → Pages for build errors.
-
-### HTTPS not working
-
-- After enabling "Enforce HTTPS", Let's Encrypt certificate provisioning
-  can take several minutes.
-- If it fails, try disabling and re-enabling "Enforce HTTPS".
-- For custom domains, ensure the DNS `CNAME` record is correctly set.
 
 ### Broken links in the built site
 
-Run `mkdocs build --strict` locally before deploying. This catches:
-
-- Missing pages referenced in `mkdocs.yml`
-- Dead internal links (`[link](nonexistent.md)`)
-- Invalid YAML syntax in `mkdocs.yml`
-
-### `mkdocs: command not found`
-
-```bash
-uv sync    # installs mkdocs-material (which depends on mkdocs)
-```
-
-Or activate the virtual environment manually:
-
-```bash
-source .venv/bin/activate
-```
+Run `mkdocs build --strict` locally before deploying. Mike also uses the
+same MkDocs build pipeline, so any errors caught locally will also fail in CI.
 
 ## Files Involved
 
 | File | Role |
-|------|------|
+|---|---|
 | `mkdocs.yml` | Site configuration, theme, navigation, extensions |
 | `docs/` | User-facing documentation (C++ and Python) |
-| `dev/docs/` | Developer documentation (architecture, workflows, guides) |
-| `docs/javascripts/mathjax.js` | MathJax 3 configuration for LaTeX rendering |
-| `site/` | Build output directory (git-ignored, temporary) |
-| `gh-pages` branch | Deployment target (created by `mkdocs gh-deploy`) |
+| `docs/_hooks/inject_version.py` | Reads `TANGA_VERSION` env var to set the site banner version |
+| `gh-pages` branch | Deployment target managed by mike (`versions.json` + subdirectories) |
+| `pyproject.toml` | Dev dependency group includes `mike>=2.0` |
 
 ## Reference
 
 - [MkDocs Documentation](https://www.mkdocs.org/)
 - [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
+- [mike on GitHub](https://github.com/jimporter/mike)
 - [GitHub Pages Docs](https://docs.github.com/en/pages)

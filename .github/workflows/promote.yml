@@ -58,3 +58,42 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
+  docs-stable:
+    name: Deploy stable docs
+    needs: [promote, publish-stable]
+    if: success()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python toolchain
+        run: uv sync --group dev
+
+      - name: Deploy stable docs
+        env:
+          VERSION: ${{ needs.promote.outputs.version }}
+        run: |
+          export TANGA_VERSION="$VERSION"
+          mike deploy --push --update-aliases "$VERSION" latest
+
+      - name: Print stable docs URL
+        run: |
+          echo ""
+          echo "📄 Stable docs deployed!"
+          echo "   https://dodeka12.github.io/tanga/${{ needs.promote.outputs.version }}/"
+          echo ""

@@ -66,13 +66,21 @@ jobs:
           echo "Pushed tag $TAG to origin."
 
   docs-deploy:
-    name: Build & deploy docs
+    name: Build & deploy versioned docs
+    needs: push-tag
+    if: needs.push-tag.result == 'success'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -82,19 +90,16 @@ jobs:
       - name: Install Python toolchain
         run: uv sync --group dev
 
-      - name: Get version
-        run: |
-          TANGA_VERSION=$(uv run python -c "from importlib.metadata import version; print(version('tanga-py'))")
-          echo "TANGA_VERSION=$TANGA_VERSION" >> $GITHUB_ENV
+      - name: Fetch pushed tag
+        run: git fetch origin tag ${{ needs.version-bump.outputs.tag }}
 
-      - name: Build MkDocs (strict)
-        run: uv run mkdocs build --strict
+      - name: Deploy docs with mike
         env:
-          TANGA_VERSION: ${{ env.TANGA_VERSION }}
+          TAG: ${{ needs.version-bump.outputs.tag }}
+        run: |
+          export TANGA_VERSION="$TAG"
+          mike deploy --push "$TAG"
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          destination_dir: .
+      - name: Set latest as default alias
+        run: |
+          mike set-default --push latest
