@@ -21,8 +21,8 @@ GitHub Actions workflow.
 - [ ] Step 5: `tools/build-precompiled.py` — MSVC detection + `.pyd` handling
 - [ ] Step 6: `.github/workflows/ci.yml` — add `windows-latest` test job
 - [ ] Step 7: `.github/workflows/publish.yml` — add `build-windows` wheel job
-- [ ] Step 8: Update existing docs — compiler references in `compile-and-binding.md` and `installation.md`
-- [ ] Step 9: Add compiler installation guide — new doc section with per-platform setup commands
+- [ ] Step 8: Update existing docs — per-file changes detailed below
+- [ ] Step 9: Add compiler installation guide — new `## Compiler Setup` section in `installation.md`
 
 ---
 
@@ -52,6 +52,8 @@ conventions throughout:
 
 7. **Documentation** — says "The compiler is g++" and "GCC ≥ 13" with no
    mention of MSVC.  No installation instructions for Windows or macOS compilers.
+   The precompiled-wheels doc and the setup-pypi-publishing todo both imply
+   Windows is unsupported ("No Windows — assumes a Unix toolchain").
 
 ---
 
@@ -256,36 +258,113 @@ Update the `publish` job's `needs` to include `build-windows`:
     needs: [build-pure, build-linux, build-windows]
 ```
 
-### Step 8 — Update Existing Docs: Compiler References
+### Step 8 — Update Existing Documentation
 
-**File:** `docs/py/env/compile-and-binding.md` line 65
+Five files need updates to reflect multi-platform support.
+
+#### 8a. `docs/py/env/installation.md`
+
+**Line 10** — `## Prerequisites`:
+
+Change:
+> - **GCC ≥ 13** (only needed when pytanga must compile its C++ binding from source)
+
+To:
+> - **C++ compiler** — only needed when pytanga must compile its C++ binding
+>   from source (i.e. when no pre-compiled wheel exists for your platform or
+>   you use a custom algebra).  See [Compiler Setup](#compiler-setup) below
+>   for per-platform installation instructions.
+
+**Line 52** — `### Pre-Compiled Wheels` heading:
+
+Change:
+> ### Pre-Compiled Wheels (recommended for Linux x86_64)
+
+To:
+> ### Pre-Compiled Wheels (recommended)
+
+(Now that we ship Windows wheels too.)
+
+**Line 71** — `### Source Compilation (all platforms)`:
+
+Add a sentence directing readers to the Compiler Setup section:
+> This pulls in cmake, ninja, and pybind11 for on-the-fly compilation.
+> You also need a C++ compiler — see [Compiler Setup](#compiler-setup).
+
+#### 8b. `docs/py/env/compile-and-binding.md`
+
+**Line 65**:
 
 Change:
 > The compiler is `g++` and the build type is `Release`.
 
 To:
 > The compiler is `g++` (Linux), `clang++` (macOS), or `cl.exe` (Windows/MSVC),
-> and the build type is `Release`.  See the [installation guide](installation.md)
+> and the build type is `Release`.  See the [installation guide](installation.md#compiler-setup)
 > for per-platform compiler setup.
 
-**File:** `docs/py/env/installation.md` — Prerequisites section
+#### 8c. `docs/dev/workflows/precompiled-wheels.md`
 
-Change the prerequisites bullet from:
-> - **GCC ≥ 13** (only needed when pytanga must compile its C++ binding from source)
+This file uses "`.so`" throughout as a generic term for compiled extensions and
+references platform-specific scripts.  Update to acknowledge `.pyd` on Windows:
 
-To a multi-platform list:
-> - **C++ compiler** — only needed when pytanga must compile its C++ binding
->   from source (i.e. when no pre-compiled wheel exists for your platform or
->   you use a custom algebra).  See the per-platform setup instructions below.
+**Line 4**: "precompiled `.so` files" → "precompiled extension modules (`.so` / `.pyd`)"
 
-Then replace the existing "Prerequisites" section with a cross-reference to
-the new compiler setup section (Step 9).
+**Line 12**: "harvest `.so` files" → "harvest compiled extension files"
+
+**Line 43**: "with precompiled `.so` files" → "with precompiled extension modules"
+
+**Line 53**: Add a note:
+> On Windows, the compiled extensions use the `.pyd` suffix. The tools
+> handle this platform difference automatically.
+
+**Line 66**: "compiled `.so`" → "compiled extension"
+
+**Line 68**: "copies each `.so`" → "copies each compiled extension"
+
+**Line 118**: "precompiled `.so` files" → "precompiled extension modules"
+
+**Line 132**: "`.so` already exists" → "compiled extension already exists"
+
+**Line 135**: "copy the `.so`" → "copy the extension"
+
+**Line 149-166** (Directory Layout): Add a note that on Windows the files would
+be `.pyd` instead of `.so`.
+
+#### 8d. `dev/todos/setup-pypi-publishing.md`
+
+**Lines 66-67**:
+
+Change:
+> **No Windows** — the JIT compilation pipeline (`build-precompiled.py`) assumes a Unix
+> toolchain (g++/clang++ via CMake).
+
+To:
+> **Windows** — supported via `windows-latest` runner.  The JIT compilation
+> pipeline uses MSVC (`cl.exe`) on Windows.  Precompiled `.pyd` files are
+> bundled into `win_amd64` wheels.
+
+Also add a row to the Wheel Build Matrix table (line 59-64):
+> | `build-platform` | `windows-latest` | `cp312-cp312-win_amd64` |
+
+#### 8e. `docs/py/viz/visualizer.md`
+
+**Line 273**:
+
+Change:
+> Under WSL or headless environments where automatic browser open is unsupported,
+
+To:
+> Under WSL, native Windows, or headless environments where automatic browser
+> open is unsupported,
+
+(This makes it clear Windows users can run natively, not only via WSL.)
 
 ### Step 9 — New Doc Section: Per-Platform Compiler Installation
 
 **File:** `docs/py/env/installation.md`
 
-Add a new `## Compiler Setup` section after the prerequisites that gives
+Add a new `## Compiler Setup` section after the Prerequisites section that gives
 concrete, copy-paste installation commands for each platform:
 
 ```markdown
@@ -385,6 +464,20 @@ cl   :: should print the Microsoft C/C++ compiler version
 > **Important:** CMake on Windows must be run from a terminal that has MSVC in
 > its `PATH`.  The "Developer Command Prompt" configures this automatically.
 > Without it, `cmake` will report `No CMAKE_CXX_COMPILER could be found`.
+
+### Alternative: WSL (Windows Subsystem for Linux)
+
+If you prefer a Linux toolchain on Windows, install WSL and a Linux distribution
+(Ubuntu recommended), then follow the Linux instructions above inside the WSL
+terminal.
+
+```powershell
+# From an Administrator PowerShell:
+wsl --install -d Ubuntu
+```
+
+After installation, open the Ubuntu terminal and follow the [Linux](#linux)
+instructions.
 ```
 
 ---
@@ -393,11 +486,11 @@ cl   :: should print the Microsoft C/C++ compiler version
 
 | Risk | Likelihood | Mitigation |
 |------|-----------|------------|
-| `cl.exe` not in PATH on user machines (MSVC requires Developer Command Prompt) | Medium | GitHub runners have MSVC pre-configured. For end users, document the requirement in the new Compiler Setup section (Step 9); CMake will produce a clear error if no compiler is found. |
+| `cl.exe` not in PATH on user machines (MSVC requires Developer Command Prompt) | Medium | GitHub runners have MSVC pre-configured. For end users, documented in Compiler Setup section with three installation options + the Developer Command Prompt requirement prominently called out. |
 | Ninja not installed on Windows | Low | `ninja` is in the `compile` extra (`pyproject.toml` line 24) and is available on PyPI for Windows. |
 | `/bigobj` flag breaks older MSVC versions | Very low | `/bigobj` is supported since VS 2005; we document MSVC ≥ 2019 as the minimum. |
 | Precompiled `.pyd` not compatible across Python versions | Medium | Manifest already records `python_abi`; cache invalidation handles it. The `build-precompiled.py` step runs on the same Python version as the wheel target. |
-| Windows wheel tag (`win_amd64`) not set automatically | Low | `hatchling` + `hatch-vcs` should auto-detect the platform tag when the wheel contains compiled extensions. Verify after Step 7. |
+| Windows wheel tag (`win_amd64`) not set automatically | Low | `hatchling` + `hatch-vcs` auto-detect the platform tag when the wheel contains compiled extensions. `fix-wheel-tag.py` already has a `Windows` → `win_amd64` branch. Verify after Step 7. |
 | macOS precompiled still commented out | — | Out of scope for this plan; addressed in a future macOS-specific plan. |
 
 ---
@@ -413,7 +506,7 @@ cl   :: should print the Microsoft C/C++ compiler version
 | 5  | `tools/build-precompiled.py` | 15 min | 1, 2 |
 | 6  | `ci.yml` | 10 min | 1–4 |
 | 7  | `publish.yml` | 15 min | 5 |
-| 8  | `compile-and-binding.md`, `installation.md` | 5 min | — |
+| 8  | 5 doc files (see 8a–8e) | 25 min | — |
 | 9  | `installation.md` (new section) | 20 min | — |
 
-**Total: ~100 minutes.**
+**Total: ~120 minutes.**
