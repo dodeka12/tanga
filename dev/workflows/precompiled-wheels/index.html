@@ -28,7 +28,7 @@
     
     Precompiled wheels -
     
-    TanGA Documentation v0.2.4.dev3+gcbdb7e70e
+    TanGA Documentation v0.2.5.dev9+g02da6df2a
 </title>
 
     
@@ -99,7 +99,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="TanGA Documentation v0.2.4.dev3+gcbdb7e70e" class="md-header__button md-logo" aria-label="TanGA Documentation v0.2.4.dev3+gcbdb7e70e" data-md-component="logo">
+    <a href="../../.." title="TanGA Documentation v0.2.5.dev9+g02da6df2a" class="md-header__button md-logo" aria-label="TanGA Documentation v0.2.5.dev9+g02da6df2a" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -113,7 +113,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            TanGA Documentation v0.2.4.dev3+gcbdb7e70e
+            TanGA Documentation v0.2.5.dev9+g02da6df2a
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -237,13 +237,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="TanGA Documentation v0.2.4.dev3+gcbdb7e70e" class="md-nav__button md-logo" aria-label="TanGA Documentation v0.2.4.dev3+gcbdb7e70e" data-md-component="logo">
+    <a href="../../.." title="TanGA Documentation v0.2.5.dev9+g02da6df2a" class="md-nav__button md-logo" aria-label="TanGA Documentation v0.2.5.dev9+g02da6df2a" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    TanGA Documentation v0.2.4.dev3+gcbdb7e70e
+    TanGA Documentation v0.2.5.dev9+g02da6df2a
   </label>
   
     <div class="md-nav__source">
@@ -3428,9 +3428,9 @@
 
 <h1 id="precompiled-wheels">Precompiled Wheels<a class="headerlink" href="#precompiled-wheels" title="Permanent link">&para;</a></h1>
 <p>pytanga compiles C++ binding modules on demand via JIT compilation. For
-users without a C++ compiler, precompiled <code>.so</code> files can be bundled into
-platform-specific wheels. This document covers the tooling and workflows
-for building, cleaning, and uploading precompiled wheels.</p>
+users without a C++ compiler, precompiled extension modules (<code>.so</code> / <code>.pyd</code>)
+can be bundled into platform-specific wheels. This document covers the tooling
+and workflows for building, cleaning, and uploading precompiled wheels.</p>
 <h2 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3442,7 +3442,7 @@ for building, cleaning, and uploading precompiled wheels.</p>
 <tbody>
 <tr>
 <td><code>tools/build-precompiled.py</code></td>
-<td>Compile the five common algebras and harvest <code>.so</code> files into <code>precompiled/</code></td>
+<td>Compile the five common algebras and harvest compiled extension files into <code>precompiled/</code></td>
 </tr>
 <tr>
 <td><code>tools/clean-precompiled.py</code></td>
@@ -3477,15 +3477,16 @@ for building, cleaning, and uploading precompiled wheels.</p>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># 4. Verify</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>tools/upload-pypi.py<span class="w"> </span>--check
 </span></code></pre></div>
-<p><strong>Output:</strong> A platform-specific wheel (e.g. <code>cp312-cp312-manylinux_2_35_x86_64</code>)
-with precompiled <code>.so</code> files for: E3, P3/PGA3, N3 (float64), E3 modular (int64),
-and G(10,0) sparse (int64).</p>
+<p><strong>Output:</strong> A platform-specific wheel (e.g. <code>cp312-cp312-manylinux_2_35_x86_64</code>
+for Linux, <code>cp312-cp312-win_amd64</code> for Windows)
+with precompiled extension modules for: E3, P3/PGA3, N3 (float64), E3 modular
+(int64), and G(10,0) sparse (int64).</p>
 <p>The helper scripts <code>tools/build-precompiled-wheel.sh</code> (Linux/macOS) and
 <code>tools/build-precompiled-wheel.ps1</code> (Windows) build to a temp directory,
 fix the platform tag via <code>fix-wheel-tag.py</code>, move the result to <code>dist/</code>,
 and clean up — all in one step.</p>
 <h3 id="about-the-wheel-tag">About the Wheel Tag<a class="headerlink" href="#about-the-wheel-tag" title="Permanent link">&para;</a></h3>
-<p>hatchling produces <code>py3-none-any</code> because the <code>.so</code> files in <code>precompiled/</code>
+<p>hatchling produces <code>py3-none-any</code> because the extension files in <code>precompiled/</code>
 are not recognized as Python extension modules. <code>build-precompiled-wheel.sh</code>
 runs <code>fix-wheel-tag.py</code> automatically after the build.</p>
 <p>For official manylinux compliance, use <code>auditwheel</code> in a manylinux Docker
@@ -3496,9 +3497,9 @@ ad-hoc builds.</p>
 <li>Calls <code>pytanga.codegen._cache.get_or_build()</code> for each of the five algebras.
    This triggers the same JIT compilation pipeline that users would normally
    pay on first import — but once, at build time.</li>
-<li>Walks the cache directory (<code>~/.cache/pytanga/</code>) to find the compiled <code>.so</code>
-   for each module name.</li>
-<li>Copies each <code>.so</code> into <code>precompiled/</code> at the repo root.</li>
+<li>Walks the cache directory (<code>~/.cache/pytanga/</code>) to find the compiled
+   extension for each module name.</li>
+<li>Copies each compiled extension into <code>precompiled/</code> at the repo root.</li>
 <li>Writes <code>precompiled/manifest.json</code> recording platform, ABI, compiler info,
    and a <strong>cache key</strong> (SHA-256 hash of all C++ headers and codegen Python
    files) for each algebra.</li>
@@ -3536,7 +3537,7 @@ build produces a pure wheel.</p>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>tools/upload-pypi.py<span class="w"> </span>--repo<span class="w"> </span>testpypi
 </span></code></pre></div>
 <p><code>upload-pypi.py</code> inspects the newest wheel in <code>dist/</code>, reports whether it
-is a pure wheel or contains precompiled <code>.so</code> files, and prompts for
+is a pure wheel or contains precompiled extension modules, and prompts for
 confirmation before running <code>twine upload</code>.</p>
 <p><strong>Prerequisites:</strong> <code>twine</code> must be installed and PyPI credentials configured.
 Add twine via <code>uv add --group dev twine</code>, then set up a PyPI API token in
@@ -3546,10 +3547,10 @@ Add twine via <code>uv add --group dev twine</code>, then set up a PyPI API toke
 <p>When a user imports an algebra (e.g. <code>pytanga.Algebra(3, 0)</code>), the cache
 layer runs this priority chain:</p>
 <ol>
-<li><strong>Cache hit</strong> — <code>.so</code> already exists in <code>~/.cache/pytanga/&lt;key&gt;/</code> → load instantly.</li>
+<li><strong>Cache hit</strong> — compiled extension already exists in <code>~/.cache/pytanga/&lt;key&gt;/</code> → load instantly.</li>
 <li><strong>Precompiled check</strong> — Look for a matching entry in <code>pytanga/precompiled/manifest.json</code>.
    If found, compare the cache key. If the key matches (C++ headers haven't
-   changed since the wheel was built), copy the <code>.so</code> into the cache and load
+   changed since the wheel was built), copy the extension into the cache and load
    it. If the key doesn't match, skip the precompiled binary.</li>
 <li><strong>JIT compilation</strong> — Generate, compile, and load the binding. This requires
    the <code>[compile]</code> extras (cmake, ninja, pybind11) and a C++ compiler.</li>
@@ -3569,9 +3570,10 @@ compilation produces a correct binding.</p>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├── binding_dim3_sig0_int64.cpython-312-x86_64-linux-gnu.so
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>└── binding_dim10_sig0_int64.cpython-312-x86_64-linux-gnu.so
 </span></code></pre></div>
-<p>The <code>.so</code> filenames include Python ABI tags (e.g. <code>.cpython-312-x86_64-linux-gnu.so</code>),
-which pip uses to determine platform compatibility. The runtime loader matches
-files by module name prefix, ignoring the ABI suffix.</p>
+<p>The extension filenames include Python ABI tags (e.g. <code>.cpython-312-x86_64-linux-gnu.so</code>
+on Linux, <code>.cp312-win_amd64.pyd</code> on Windows), which pip uses to determine platform
+compatibility. The runtime loader matches files by module name prefix, ignoring
+the ABI suffix.</p>
 <p>The <code>pyproject.toml</code> force-include maps <code>precompiled/</code> into the wheel at
 <code>pytanga/precompiled/</code>. In a dev checkout, the loader also checks the
 repo-root <code>precompiled/</code> directory (for testing before building the wheel).</p>
@@ -3676,7 +3678,7 @@ in the <code>codegen/</code> package.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.indexes", "search.highlight", "search.suggest", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": "0.2.4.dev3+gcbdb7e70e"}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.indexes", "search.highlight", "search.suggest", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": "0.2.5.dev9+g02da6df2a"}</script>
     
     
       <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
