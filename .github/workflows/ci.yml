@@ -21,6 +21,9 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Install Python toolchain
         run: uv sync --group dev
 
