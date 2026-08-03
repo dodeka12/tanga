@@ -43,7 +43,7 @@ uv sync --group dev
 
 # Deploy a test version (your current branch)
 export ALIAS="dev-$(git branch --show-current | tr '/' '-')"
-mike deploy --push --alias "$ALIAS" "$ALIAS"
+uv run mike deploy --push "$ALIAS"
 ```
 
 To publish an official version tag:
