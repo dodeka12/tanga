@@ -78,7 +78,7 @@ def main() -> int:
         )
         if "none-any" in wheel.name:
             print(
-                "\n⚠️  WARNING: Wheel tag is still 'py3-none-any'!"
+                "\n!!  WARNING: Wheel tag is still 'py3-none-any'!"
                 " Run 'uv run python tools/fix-wheel-tag.py' before uploading."
             )
     else:
