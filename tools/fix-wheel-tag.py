@@ -80,7 +80,7 @@ def main() -> int:
     # Remove the original (untagged) wheel
     wheel.unlink()
 
-    print(f"  {wheel.name}  →  {new_name}")
+    print(f"  {wheel.name}  ->  {new_name}")
     print(f"Platform tag: {tag}")
     return 0
 
