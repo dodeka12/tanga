@@ -56,7 +56,7 @@ target_include_directories(${MODULE_NAME} PRIVATE "${TANGA_SOURCE}")
 # Compiler flags — mirror the existing tanga CMakeLists.txt
 # ---------------------------------------------------------------------------
 if(MSVC)
-    target_compile_options(${MODULE_NAME} PRIVATE /bigobj /arch:SSE4.1 /O2)
+    target_compile_options(${MODULE_NAME} PRIVATE /bigobj /O2)
 else()
     target_compile_options(${MODULE_NAME} PRIVATE -msse4.1 -mpopcnt -O3)
 endif()

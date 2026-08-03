@@ -67,8 +67,8 @@ def build_binding(
         str(_CMAKE_SOURCE_DIR),
         "-B",
         str(build_dir),
-        f"-DBINDING_CPP={binding_cpp}",
-        f"-DTANGA_SOURCE={tanga_source}",
+        f"-DBINDING_CPP={_cmake_path(binding_cpp)}",
+        f"-DTANGA_SOURCE={_cmake_path(tanga_source)}",
         f"-DMODULE_NAME={module_name}",
         f"-Dpybind11_DIR={pybind11.get_cmake_dir()}",
         "-DCMAKE_BUILD_TYPE=Release",
@@ -151,6 +151,11 @@ _DEFAULT_COMPILER: dict[str, str] = {
 }
 
 
+def _cmake_path(p: Path) -> str:
+    """Convert a Path to a CMake-safe string (forward slashes, no escape issues)."""
+    return p.as_posix()
+
+
 def _detect_default_compiler() -> str:
     """Return the default C++ compiler for the current platform."""
     return _DEFAULT_COMPILER.get(_SYSTEM, "g++")
@@ -180,6 +185,8 @@ def _run(cmd: list[str], verbose: bool) -> None:
         stdout=None if verbose else subprocess.PIPE,
         stderr=None if verbose else subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if result.returncode != 0:
         output = result.stdout or ""

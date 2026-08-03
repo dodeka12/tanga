@@ -24,6 +24,7 @@
 #pragma once
 
 #include <map>
+#include <type_traits>
 
 #include "Tan.Math/Matrix.h"
 
@@ -189,7 +190,8 @@ namespace Tan
 		/// <param name="bComplete">		<c>true</c>: iterate to the fixed-point sub-algebra closure. </param>
 		/// <param name="xFuncOp">		Product-specific sign/blade function (GP, IP, or OP). </param>
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		template <typename TMultivector, typename FuncOp>
+		template <typename TMultivector, typename FuncOp,
+				  std::enable_if_t<!std::is_same_v<TMultivector, GA::CBladeMask<typename TMultivector::TBlade>>, int> = 0>
 		void _EvalProductBladeMask(GA::CBladeMask<typename TMultivector::TBlade> &xMaskC,
 								   const TMultivector &wA,
 								   const GA::CBladeMask<typename TMultivector::TBlade> &xMaskB,
@@ -339,7 +341,8 @@ namespace Tan
 		/// <param name="bLeftToRight">	<c>true</c>: A * X.  <c>false</c>: X * A. </param>
 		/// <param name="bComplete">		<c>true</c>: iterate to the fixed-point sub-algebra closure. </param>
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		template <typename TMultivector>
+		template <typename TMultivector,
+				  std::enable_if_t<!std::is_same_v<TMultivector, GA::CBladeMask<typename TMultivector::TBlade>>, int> = 0>
 		void EvalProductBladeMask_GP(GA::CBladeMask<typename TMultivector::TBlade> &xMaskC,
 									 const TMultivector &wA,
 									 const GA::CBladeMask<typename TMultivector::TBlade> &xMaskB,
@@ -402,7 +405,8 @@ namespace Tan
 		/// <param name="bLeftToRight">	<c>true</c>: A | X.  <c>false</c>: X | A. </param>
 		/// <param name="bComplete">		<c>true</c>: iterate to the fixed-point sub-algebra closure. </param>
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		template <typename TMultivector>
+		template <typename TMultivector,
+				  std::enable_if_t<!std::is_same_v<TMultivector, GA::CBladeMask<typename TMultivector::TBlade>>, int> = 0>
 		void EvalProductBladeMask_IP(GA::CBladeMask<typename TMultivector::TBlade> &xMaskC,
 									 const TMultivector &wA,
 									 const GA::CBladeMask<typename TMultivector::TBlade> &xMaskB,
@@ -464,7 +468,8 @@ namespace Tan
 		/// <param name="bLeftToRight">	<c>true</c>: A ^ X.  <c>false</c>: X ^ A. </param>
 		/// <param name="bComplete">		<c>true</c>: iterate to the fixed-point sub-algebra closure. </param>
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		template <typename TMultivector>
+		template <typename TMultivector,
+				  std::enable_if_t<!std::is_same_v<TMultivector, GA::CBladeMask<typename TMultivector::TBlade>>, int> = 0>
 		void EvalProductBladeMask_OP(GA::CBladeMask<typename TMultivector::TBlade> &xMaskC,
 									 const TMultivector &wA,
 									 const GA::CBladeMask<typename TMultivector::TBlade> &xMaskB,
