@@ -1,15 +1,15 @@
 # Precompiled Wheels
 
 pytanga compiles C++ binding modules on demand via JIT compilation. For
-users without a C++ compiler, precompiled `.so` files can be bundled into
-platform-specific wheels. This document covers the tooling and workflows
-for building, cleaning, and uploading precompiled wheels.
+users without a C++ compiler, precompiled extension modules (`.so` / `.pyd`)
+can be bundled into platform-specific wheels. This document covers the tooling
+and workflows for building, cleaning, and uploading precompiled wheels.
 
 ## Tools
 
 | Script | Purpose |
 |--------|---------|
-| `tools/build-precompiled.py` | Compile the five common algebras and harvest `.so` files into `precompiled/` |
+| `tools/build-precompiled.py` | Compile the five common algebras and harvest compiled extension files into `precompiled/` |
 | `tools/clean-precompiled.py` | Remove precompiled artifacts to restore a pure Python wheel build |
 | `tools/fix-wheel-tag.py` | Rewrite the wheel filename and metadata with the correct platform tag |
 | `tools/upload-pypi.py` | Inspect a wheel and upload it to PyPI via twine |
@@ -39,9 +39,10 @@ uv run powershell tools/build-precompiled-wheel.ps1
 uv run python tools/upload-pypi.py --check
 ```
 
-**Output:** A platform-specific wheel (e.g. `cp312-cp312-manylinux_2_35_x86_64`)
-with precompiled `.so` files for: E3, P3/PGA3, N3 (float64), E3 modular (int64),
-and G(10,0) sparse (int64).
+**Output:** A platform-specific wheel (e.g. `cp312-cp312-manylinux_2_35_x86_64`
+for Linux, `cp312-cp312-win_amd64` for Windows)
+with precompiled extension modules for: E3, P3/PGA3, N3 (float64), E3 modular
+(int64), and G(10,0) sparse (int64).
 
 The helper scripts `tools/build-precompiled-wheel.sh` (Linux/macOS) and
 `tools/build-precompiled-wheel.ps1` (Windows) build to a temp directory,
@@ -50,7 +51,7 @@ and clean up — all in one step.
 
 ### About the Wheel Tag
 
-hatchling produces `py3-none-any` because the `.so` files in `precompiled/`
+hatchling produces `py3-none-any` because the extension files in `precompiled/`
 are not recognized as Python extension modules. `build-precompiled-wheel.sh`
 runs `fix-wheel-tag.py` automatically after the build.
 
@@ -63,9 +64,9 @@ ad-hoc builds.
 1. Calls `pytanga.codegen._cache.get_or_build()` for each of the five algebras.
    This triggers the same JIT compilation pipeline that users would normally
    pay on first import — but once, at build time.
-2. Walks the cache directory (`~/.cache/pytanga/`) to find the compiled `.so`
-   for each module name.
-3. Copies each `.so` into `precompiled/` at the repo root.
+2. Walks the cache directory (`~/.cache/pytanga/`) to find the compiled
+   extension for each module name.
+3. Copies each compiled extension into `precompiled/` at the repo root.
 4. Writes `precompiled/manifest.json` recording platform, ABI, compiler info,
    and a **cache key** (SHA-256 hash of all C++ headers and codegen Python
    files) for each algebra.
@@ -115,7 +116,7 @@ uv run python tools/upload-pypi.py --repo testpypi
 ```
 
 `upload-pypi.py` inspects the newest wheel in `dist/`, reports whether it
-is a pure wheel or contains precompiled `.so` files, and prompts for
+is a pure wheel or contains precompiled extension modules, and prompts for
 confirmation before running `twine upload`.
 
 **Prerequisites:** `twine` must be installed and PyPI credentials configured.
@@ -129,10 +130,10 @@ Add twine via `uv add --group dev twine`, then set up a PyPI API token in
 When a user imports an algebra (e.g. `pytanga.Algebra(3, 0)`), the cache
 layer runs this priority chain:
 
-1. **Cache hit** — `.so` already exists in `~/.cache/pytanga/<key>/` → load instantly.
+1. **Cache hit** — compiled extension already exists in `~/.cache/pytanga/<key>/` → load instantly.
 2. **Precompiled check** — Look for a matching entry in `pytanga/precompiled/manifest.json`.
    If found, compare the cache key. If the key matches (C++ headers haven't
-   changed since the wheel was built), copy the `.so` into the cache and load
+   changed since the wheel was built), copy the extension into the cache and load
    it. If the key doesn't match, skip the precompiled binary.
 3. **JIT compilation** — Generate, compile, and load the binding. This requires
    the `[compile]` extras (cmake, ninja, pybind11) and a C++ compiler.
@@ -157,9 +158,10 @@ precompiled/                          # ← at repo root, git-ignored except .gi
 └── binding_dim10_sig0_int64.cpython-312-x86_64-linux-gnu.so
 ```
 
-The `.so` filenames include Python ABI tags (e.g. `.cpython-312-x86_64-linux-gnu.so`),
-which pip uses to determine platform compatibility. The runtime loader matches
-files by module name prefix, ignoring the ABI suffix.
+The extension filenames include Python ABI tags (e.g. `.cpython-312-x86_64-linux-gnu.so`
+on Linux, `.cp312-win_amd64.pyd` on Windows), which pip uses to determine platform
+compatibility. The runtime loader matches files by module name prefix, ignoring
+the ABI suffix.
 
 The `pyproject.toml` force-include maps `precompiled/` into the wheel at
 `pytanga/precompiled/`. In a dev checkout, the loader also checks the

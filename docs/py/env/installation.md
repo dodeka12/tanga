@@ -7,7 +7,135 @@ pytanga as a dependency in your own project.
 
 - **Python ≥ 3.12**
 - **uv** (Python package manager and virtual‑environment tool)
-- **GCC ≥ 13** (only needed when pytanga must compile its C++ binding from source)
+- **C++ compiler** — **not needed for most users**. pip / uv install
+  precompiled wheels that work out of the box on Linux and Windows.
+  A compiler is only required if you need an algebra configuration not
+  covered by the precompiled set (e.g. a custom dimension or signature).
+  See [Compiler Setup](#compiler-setup) for per-platform instructions.
+
+
+## Compiler Setup
+
+pytanga compiles its C++ binding on-demand using CMake and a C++17 compiler.
+The `[compile]` extra (`pip install "tanga-py[compile]"`) pulls in `cmake`,
+`ninja`, and `pybind11` via pip — but **you must provide the C++ compiler**
+separately.
+
+Choose your platform below.
+
+### Linux
+
+Install GCC (recommended) or Clang via your package manager:
+
+```bash
+# Ubuntu / Debian
+sudo apt install build-essential g++-13
+
+# Fedora
+sudo dnf install gcc-c++
+
+# Arch
+sudo pacman -S gcc
+```
+
+Verify:
+
+```bash
+g++ --version   # should show ≥ 13.x
+```
+
+Alternatively, install Clang:
+
+```bash
+# Ubuntu / Debian
+sudo apt install clang-14
+
+# Fedora
+sudo dnf install clang
+```
+
+### macOS
+
+Install the Xcode Command Line Tools (provides `clang++`):
+
+```bash
+xcode-select --install
+```
+
+Or install GCC via Homebrew:
+
+```bash
+brew install gcc
+```
+
+Verify:
+
+```bash
+clang++ --version   # should show ≥ 14.x
+```
+
+### Windows
+
+You need the **Microsoft Visual C++ (MSVC)** toolchain.  There are several
+ways to get it — pick whichever fits your setup:
+
+#### Option A: Visual Studio Build Tools (recommended — lightest install)
+
+The Build Tools are a standalone, IDE-free package that supplies just the
+MSVC compiler, linker, and headers (~2–3 GB).  This is all pytanga needs.
+
+1. Go to the [Visual Studio downloads page](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022).
+   > **Note:** the page prominently shows full IDE editions (Community,
+   > Professional, Enterprise) at the top.  Scroll down past those to the
+   > **"Tools for Visual Studio"** section — you'll find **"Build Tools for
+   > Visual Studio 2022"** there with its own download button.
+2. Run the installer and select the **"Desktop development with C++"** workload.
+3. After installation, open the **"Developer Command Prompt for VS 2022"**
+   from the Start Menu and run all `pip` / `uv` commands from that terminal.
+
+#### Option B: Full Visual Studio IDE (Community / Professional / Enterprise)
+
+If you already have Visual Studio installed for other development work, or
+prefer the full IDE, any edition works — just make sure the
+**"Desktop development with C++"** workload is selected during installation
+(or added afterwards via the Visual Studio Installer).
+
+The free **Community Edition** is available at
+[visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/).
+
+Once installed, use the **"Developer Command Prompt for VS 2022"** or launch
+VS Code from it (`code .`).
+
+#### Option C: VS Code with C++ Extension
+
+1. Install the **C/C++** extension (`ms-vscode.cpptools`) in VS Code.
+2. Install the Build Tools from Option A (or the full IDE from Option B).
+3. Open your project folder; VS Code should detect MSVC automatically.
+
+Verify (from the Developer Command Prompt):
+
+```cmd
+cl   :: should print the Microsoft C/C++ compiler version
+```
+
+> **Important:** CMake on Windows must be run from a terminal that has MSVC in
+> its `PATH`.  The "Developer Command Prompt" configures this automatically.
+> Without it, `cmake` will report `No CMAKE_CXX_COMPILER could be found`.
+
+### Alternative: WSL (Windows Subsystem for Linux)
+
+If you prefer a Linux toolchain on Windows, install WSL and a Linux distribution
+(Ubuntu recommended), then follow the Linux instructions above inside the WSL
+terminal.
+
+```powershell
+# From an Administrator PowerShell:
+wsl --install -d Ubuntu
+```
+
+After installation, open the Ubuntu terminal and follow the [Linux](#linux)
+instructions.
+
 
 ## Development Setup
 
@@ -49,7 +177,7 @@ uv run python py/examples/solver_rotor_estimation.py
 
 ## Using pytanga as a Dependency
 
-### Pre-Compiled Wheels (recommended for Linux x86_64)
+### Pre-Compiled Wheels (recommended)
 
 If a pre-compiled wheel exists for your platform, simply:
 
@@ -63,21 +191,27 @@ bindings for the five most common algebra configurations:
 | Algebra | dim | sig | dtype |
 |---------|-----|-----|-------|
 | E3 (Euclidean) | 3 | 0 | float64 |
-| P3 / PGA3 (Projective) | 4 | 8 | float64 |
-| N3 (Conformal) | 5 | 16 | float64 |
+| P3 (Projective) | 4 | 0 | float64 |
+| N3 / PGA3 (Conformal/Plane-based) | 5 | 16 | float64 |
 | E3 modular (crypto) | 3 | 0 | int64 |
 | Sparse high-dim (crypto) | 10 | 0 | int64 |
 
-### Source Compilation (all platforms)
+### Source Compilation (custom algebras)
 
-If no pre-compiled wheel is available for your platform, or if you need
-an algebra not covered by the precompiled set, add the `compile` extra:
+If you need an algebra not covered by the precompiled set (e.g. a custom
+dimension, signature, or dtype), add the `compile` extra:
 
 ```bash
 pip install "tanga-py[compile]"
 ```
 
 This pulls in cmake, ninja, and pybind11 for on-the-fly compilation.
+You also need a C++ compiler — see [Compiler Setup](#compiler-setup).
+
+**Note:** precompiled wheels are available for Linux (x86_64) and Windows
+(win_amd64). If you are on one of these platforms and only need the five
+standard algebra configurations, you do **not** need the `compile` extra
+or a C++ compiler.
 
 For the example scripts and iterative solvers, add the `examples` extra as
 well:

@@ -62,8 +62,10 @@ generated `.cpp` against:
   from the repo `cpp/` tree in development mode)
 - pybind11
 
-The compiler is `g++` and the build type is `Release`.  If Ninja is available
-it is used instead of Make.
+The compiler is `g++` (Linux), `clang++` (macOS), or `cl.exe` (Windows/MSVC),
+and the build type is `Release`.  If Ninja is available it is used instead of
+Make.  See the [installation guide](installation.md#compiler-setup) for
+per-platform compiler setup.
 
 Environment variable `PYTANGA_TANGA_SOURCE` overrides the path to the C++
 headers. The default resolution order is: environment variable → bundled

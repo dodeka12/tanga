@@ -67,15 +67,19 @@ def build_binding(
         str(_CMAKE_SOURCE_DIR),
         "-B",
         str(build_dir),
-        f"-DBINDING_CPP={binding_cpp}",
-        f"-DTANGA_SOURCE={tanga_source}",
+        f"-DBINDING_CPP={_cmake_path(binding_cpp)}",
+        f"-DTANGA_SOURCE={_cmake_path(tanga_source)}",
         f"-DMODULE_NAME={module_name}",
         f"-Dpybind11_DIR={pybind11.get_cmake_dir()}",
         "-DCMAKE_BUILD_TYPE=Release",
-        "-DCMAKE_CXX_COMPILER=g++",
     ]
-    if _ninja_available():
-        configure_cmd += ["-G", "Ninja"]
+
+    compiler = os.environ.get("PYTANGA_CXX_COMPILER", _detect_default_compiler())
+    configure_cmd.append(f"-DCMAKE_CXX_COMPILER={compiler}")
+
+    gen = _resolve_generator()
+    if gen:
+        configure_cmd += ["-G", gen]
 
     _run(configure_cmd, verbose=verbose)
 
@@ -131,6 +135,49 @@ def build_and_load(
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Per-platform mappings
+_SYSTEM = platform.system()
+
+_EXT_MAP: dict[str, list[str]] = {
+    "Windows": [".pyd"],
+    "Darwin": [".so", ".dylib"],
+    "Linux": [".so"],
+}
+
+_DEFAULT_COMPILER: dict[str, str] = {
+    "Windows": "cl.exe",
+    "Darwin": "clang++",
+    "Linux": "g++",
+}
+
+
+def _cmake_path(p: Path) -> str:
+    """Convert a Path to a CMake-safe string (forward slashes, no escape issues)."""
+    return p.as_posix()
+
+
+def _detect_default_compiler() -> str:
+    """Return the default C++ compiler for the current platform."""
+    return _DEFAULT_COMPILER.get(_SYSTEM, "g++")
+
+
+def _resolve_generator() -> str | None:
+    """Return an explicit CMake generator if one should be used, else None.
+
+    Precedence:
+    1. ``PYTANGA_CMAKE_GENERATOR`` env var (explicit override).
+    2. Windows + MSVC compiler → ``"Ninja"`` if ninja is available.
+    3. Otherwise → ``None`` (let CMake auto-detect).
+    """
+    gen = os.environ.get("PYTANGA_CMAKE_GENERATOR")
+    if gen:
+        return gen
+    compiler = os.environ.get("PYTANGA_CXX_COMPILER", _detect_default_compiler())
+    if _SYSTEM == "Windows" and compiler in ("cl.exe", "cl"):
+        if _ninja_available():
+            return "Ninja"
+    return None
+
 
 def _run(cmd: list[str], verbose: bool) -> None:
     result = subprocess.run(
@@ -138,6 +185,8 @@ def _run(cmd: list[str], verbose: bool) -> None:
         stdout=None if verbose else subprocess.PIPE,
         stderr=None if verbose else subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if result.returncode != 0:
         output = result.stdout or ""
@@ -159,8 +208,8 @@ def _ninja_available() -> bool:
 
 def _find_extension(build_dir: Path, module_name: str) -> Path:
     """Locate the compiled extension in *build_dir*."""
-    suffixes = [".pyd"] if platform.system() == "Windows" else [".so"]
+    suffixes = _EXT_MAP.get(_SYSTEM, [".so"])
     for path in sorted(build_dir.rglob(f"{module_name}*")):
-        if path.suffix in suffixes or ".so" in path.name:
+        if path.suffix in suffixes:
             return path
     raise FileNotFoundError(f"Extension for {module_name!r} not found in {build_dir}")

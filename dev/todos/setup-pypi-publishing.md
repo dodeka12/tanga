@@ -60,11 +60,13 @@ it creates `vX.Y.Z-rc1`.
 |-----|--------|------------|
 | `build-pure` | `ubuntu-24.04` | `py3-none-any` |
 | `build-platform` | `quay.io/pypa/manylinux_2_28_x86_64` (container) | `cp312-cp312-manylinux_2_28_x86_64` |
+| `build-platform` | `windows-latest` | `cp312-cp312-win_amd64` |
 | `build-platform` | `macos-13` (Intel) | `cp312-cp312-macosx_13_0_x86_64` |
 | `build-platform` | `macos-14` (Apple Silicon) | `cp312-cp312-macosx_14_0_arm64` |
 
-**No Windows** — the JIT compilation pipeline (`build-precompiled.py`) assumes a Unix
-toolchain (g++/clang++ via CMake).
+**Windows** — supported via `windows-latest` runner.  The JIT compilation
+pipeline uses MSVC (`cl.exe`) on Windows.  Precompiled `.pyd` files are
+bundled into `win_amd64` wheels.
 
 The Linux build runs inside the `manylinux_2_28` Docker container to ensure the wheel
 is installable on any Linux with glibc ≥ 2.28 (Ubuntu 20.04+, RHEL 8+, etc.).
