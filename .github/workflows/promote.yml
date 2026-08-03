@@ -89,7 +89,7 @@ jobs:
           VERSION: ${{ needs.promote.outputs.version }}
         run: |
           export TANGA_VERSION="$VERSION"
-          mike deploy --push --update-aliases "$VERSION" latest
+          uv run mike deploy --push --update-aliases "$VERSION" latest
 
       - name: Print stable docs URL
         run: |
