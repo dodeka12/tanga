@@ -7,10 +7,11 @@ pytanga as a dependency in your own project.
 
 - **Python ≥ 3.12**
 - **uv** (Python package manager and virtual‑environment tool)
-- **C++ compiler** — only needed when pytanga must compile its C++ binding
-  from source (i.e. when no pre-compiled wheel exists for your platform or
-  you use a custom algebra).  See [Compiler Setup](#compiler-setup) below
-  for per-platform installation instructions.
+- **C++ compiler** — **not needed for most users**. pip / uv install
+  precompiled wheels that work out of the box on Linux and Windows.
+  A compiler is only required if you need an algebra configuration not
+  covered by the precompiled set (e.g. a custom dimension or signature).
+  See [Compiler Setup](#compiler-setup) for per-platform instructions.
 
 
 ## Compiler Setup
@@ -190,15 +191,15 @@ bindings for the five most common algebra configurations:
 | Algebra | dim | sig | dtype |
 |---------|-----|-----|-------|
 | E3 (Euclidean) | 3 | 0 | float64 |
-| P3 / PGA3 (Projective) | 4 | 8 | float64 |
-| N3 (Conformal) | 5 | 16 | float64 |
+| P3 (Projective) | 4 | 0 | float64 |
+| N3 / PGA3 (Conformal/Plane-based) | 5 | 16 | float64 |
 | E3 modular (crypto) | 3 | 0 | int64 |
 | Sparse high-dim (crypto) | 10 | 0 | int64 |
 
-### Source Compilation (all platforms)
+### Source Compilation (custom algebras)
 
-If no pre-compiled wheel is available for your platform, or if you need
-an algebra not covered by the precompiled set, add the `compile` extra:
+If you need an algebra not covered by the precompiled set (e.g. a custom
+dimension, signature, or dtype), add the `compile` extra:
 
 ```bash
 pip install "tanga-py[compile]"
@@ -206,6 +207,11 @@ pip install "tanga-py[compile]"
 
 This pulls in cmake, ninja, and pybind11 for on-the-fly compilation.
 You also need a C++ compiler — see [Compiler Setup](#compiler-setup).
+
+**Note:** precompiled wheels are available for Linux (x86_64) and Windows
+(win_amd64). If you are on one of these platforms and only need the five
+standard algebra configurations, you do **not** need the `compile` extra
+or a C++ compiler.
 
 For the example scripts and iterative solvers, add the `examples` extra as
 well:
