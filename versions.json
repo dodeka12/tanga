@@ -1,5 +1,10 @@
 [
   {
+    "version": "dev-mike-docs",
+    "title": "dev-mike-docs",
+    "aliases": []
+  },
+  {
     "version": "v0.4.0",
     "title": "v0.4.0",
     "aliases": [
