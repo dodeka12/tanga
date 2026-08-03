@@ -126,6 +126,9 @@ jobs:
           $env:SETUPTOOLS_SCM_PRETEND_VERSION = "${{ inputs.version }}".TrimStart('v')
           uv build --wheel
 
+      - name: Fix wheel platform tag
+        run: uv run python tools/fix-wheel-tag.py
+
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-windows
@@ -196,6 +199,7 @@ jobs:
           password: ${{ secrets.TESTPYPI_TOKEN }}
           verbose: true
           attestations: false
+          skip-existing: true
 
       - name: Publish to PyPI
         if: steps.target.outputs.url == 'https://upload.pypi.org/legacy/'
