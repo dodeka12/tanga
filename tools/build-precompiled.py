@@ -47,7 +47,7 @@ def main() -> int:
         print(f"Compiling {desc} (dim={dim}, sig={sig}, dtype={dtype})...")
         cache_mod.get_or_build(dim, sig, dtype, verbose=False)
 
-        # Find the .so in cache
+        # Find the compiled extension in cache
         from pytanga.codegen._cache import _make_key
         from pytanga.codegen._generator import module_name
 
@@ -55,7 +55,7 @@ def main() -> int:
         key = _make_key(dim, sig, dtype)
         cache_root = cache_mod.cache_root()
 
-        # Walk cache dirs looking for the matching .so
+        # Walk cache dirs looking for the matching extension
         so_copied = False
         for cache_dir in cache_root.iterdir():
             if not cache_dir.is_dir():
@@ -80,13 +80,13 @@ def main() -> int:
                 break
 
         if not so_copied:
-            print(f"  WARNING: .so not found in cache for {mod_name}")
+            print(f"  WARNING: extension not found in cache for {mod_name}")
 
     # Write manifest
     manifest_path = PRECOMPILED_DIR / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
     print(f"\nManifest written to {manifest_path}")
-    print(f"Precompiled .so files in {PRECOMPILED_DIR}:")
+    print(f"Precompiled extensions in {PRECOMPILED_DIR}:")
     for f in sorted(PRECOMPILED_DIR.iterdir()):
         if f.name != "manifest.json":
             print(f"  {f.name}")
@@ -97,6 +97,18 @@ def main() -> int:
 def _detect_compiler() -> str:
     import subprocess
 
+    # On Windows, probe MSVC first
+    if platform.system() == "Windows":
+        try:
+            out = subprocess.run(["cl"], capture_output=True, text=True, timeout=5)
+            # cl prints banner to stdout even without args
+            if out.returncode == 0 or out.stdout:
+                return out.stdout.splitlines()[0] if out.stdout else "MSVC"
+            return "unknown"
+        except Exception:
+            pass
+
+    # Linux / macOS / fallback
     try:
         out = subprocess.run(
             ["g++", "--version"], capture_output=True, text=True, timeout=5

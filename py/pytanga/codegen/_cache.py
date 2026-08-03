@@ -103,7 +103,7 @@ def lookup(dim: int, sig: int, dtype: str) -> Path | None:
 
 
 def _load_precompiled(dim: int, sig: int, dtype: str, key: str, entry_dir: Path):
-    """Try to use a precompiled .so from pytanga/precompiled/.
+    """Try to use a precompiled extension from pytanga/precompiled/.
 
     Returns the loaded module on success, or None if no matching
     precompiled binary exists (or if it is incompatible).
@@ -130,20 +130,20 @@ def _load_precompiled(dim: int, sig: int, dtype: str, key: str, entry_dir: Path)
     if entry is None:
         return None
 
-    # Find the .so file by prefix (handles ABI tags like .cpython-312-x86_64-linux-gnu.so)
-    so_path = None
+    # Find the extension file by prefix (handles ABI tags like .cpython-312-x86_64-linux-gnu.so)
+    ext_path = None
     prefix = f"{mod_name}."
     for candidate in precompiled_dir.iterdir():
         if candidate.name.startswith(prefix) and candidate.suffix in (".so", ".pyd"):
-            so_path = candidate
+            ext_path = candidate
             break
-    if so_path is None:
+    if ext_path is None:
         return None
 
-    so_name = so_path.name
+    ext_name = ext_path.name
 
-    # Precompiled key — the cache key computed when the .so was built.
-    # If the current source headers differ from when the precompiled .so
+    # Precompiled key — the cache key computed when the extension was built.
+    # If the current source headers differ from when the precompiled extension
     # was built, skip it and fall through to JIT compilation.
     precompiled_key = entry.get("key", "")
     if precompiled_key and precompiled_key != key:
@@ -153,16 +153,16 @@ def _load_precompiled(dim: int, sig: int, dtype: str, key: str, entry_dir: Path)
     import shutil
 
     try:
-        dest = entry_dir / so_name
-        shutil.copy2(so_path, dest)
-        rel_so = Path(so_name)
+        dest = entry_dir / ext_name
+        shutil.copy2(ext_path, dest)
+        rel_ext = Path(ext_name)
         meta = {
             "dim": dim,
             "sig": sig,
             "dtype": dtype,
             "key": key,
             "module_name": mod_name,
-            "so_path": rel_so.as_posix(),
+            "so_path": rel_ext.as_posix(),
             "timestamp": datetime.now(UTC).isoformat(),
             "source": "precompiled",
         }

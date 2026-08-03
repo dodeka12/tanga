@@ -94,6 +94,40 @@ jobs:
           name: wheels-linux
           path: dist/*.whl
 
+  # -- Windows build --
+  build-windows:
+    name: Build Windows wheel (win_amd64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+
+      - name: Build wheel
+        if: inputs.version == ''
+        run: uv build --wheel
+
+      - name: Build wheel (forced version)
+        if: inputs.version != ''
+        run: |
+          $env:SETUPTOOLS_SCM_PRETEND_VERSION = "${{ inputs.version }}".TrimStart('v')
+          uv build --wheel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows
+          path: dist/*.whl
+
   # -- macOS build disabled until precompiled compilation is fixed --
   # build-macos:
   #   name: Build macOS wheel (${{ matrix.os }})
@@ -126,7 +160,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build-pure, build-linux]
+    needs: [build-pure, build-linux, build-windows]
     runs-on: ubuntu-24.04
     permissions:
       id-token: write

@@ -270,8 +270,9 @@ viz.add(Point(1, 2, 3), color="#ff4444")
 viz.run()  # waits for browser, opens it, blocks until Ctrl+C
 ```
 
-Under WSL or headless environments where automatic browser open is unsupported,
-`run()` prints the viewer URL and waits for you to open it manually:
+Under WSL, native Windows, or headless environments where automatic browser
+open is unsupported, `run()` prints the viewer URL and waits for you to open
+it manually:
 
 ```
 Waiting for browser to connect at http://localhost:8765 ...

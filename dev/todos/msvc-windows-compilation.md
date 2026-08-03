@@ -14,15 +14,15 @@ GitHub Actions workflow.
 
 ## Implementation Checklist
 
-- [ ] Step 1: `_build.py` — compiler detection and CMake configure
-- [ ] Step 2: `_build.py` — tighten `_find_extension()` per-platform suffix matching
-- [ ] Step 3: `codegen/CMakeLists.txt` — add `/bigobj` for MSVC
-- [ ] Step 4: `_cache.py` — `_load_precompiled()` uses platform-aware extension
-- [ ] Step 5: `tools/build-precompiled.py` — MSVC detection + `.pyd` handling
-- [ ] Step 6: `.github/workflows/ci.yml` — add `windows-latest` test job
-- [ ] Step 7: `.github/workflows/publish.yml` — add `build-windows` wheel job
-- [ ] Step 8: Update existing docs — per-file changes detailed below
-- [ ] Step 9: Add compiler installation guide — new `## Compiler Setup` section in `installation.md`
+- [x] Step 1: `_build.py` — compiler detection and CMake configure
+- [x] Step 2: `_build.py` — tighten `_find_extension()` per-platform suffix matching
+- [x] Step 3: `codegen/CMakeLists.txt` — add `/bigobj` for MSVC
+- [x] Step 4: `_cache.py` — `_load_precompiled()` uses platform-aware extension
+- [x] Step 5: `tools/build-precompiled.py` — MSVC detection + `.pyd` handling
+- [x] Step 6: `.github/workflows/ci.yml` — add `windows-latest` test job
+- [x] Step 7: `.github/workflows/publish.yml` — add `build-windows` wheel job
+- [x] Step 8: Update existing docs — per-file changes detailed below
+- [x] Step 9: Add compiler installation guide — new `## Compiler Setup` section in `installation.md`
 
 ---
 
