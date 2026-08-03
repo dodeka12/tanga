@@ -98,8 +98,8 @@ jobs:
           TAG: ${{ needs.version-bump.outputs.tag }}
         run: |
           export TANGA_VERSION="$TAG"
-          mike deploy --push "$TAG"
+          uv run mike deploy --push "$TAG"
 
       - name: Set latest as default alias
         run: |
-          mike set-default --push latest
+          uv run mike set-default --push latest
