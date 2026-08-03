@@ -75,29 +75,40 @@ clang++ --version   # should show ≥ 14.x
 
 ### Windows
 
-You need the **Microsoft Visual C++ (MSVC)** toolchain.  There are three
-options:
+You need the **Microsoft Visual C++ (MSVC)** toolchain.  There are several
+ways to get it — pick whichever fits your setup:
 
-#### Option A: Visual Studio Build Tools (recommended)
+#### Option A: Visual Studio Build Tools (recommended — lightest install)
 
-1. Download the **Build Tools for Visual Studio 2022** from
-   [visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
+The Build Tools are a standalone, IDE-free package that supplies just the
+MSVC compiler, linker, and headers (~2–3 GB).  This is all pytanga needs.
+
+1. Go to the [Visual Studio downloads page](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022).
+   > **Note:** the page prominently shows full IDE editions (Community,
+   > Professional, Enterprise) at the top.  Scroll down past those to the
+   > **"Tools for Visual Studio"** section — you'll find **"Build Tools for
+   > Visual Studio 2022"** there with its own download button.
 2. Run the installer and select the **"Desktop development with C++"** workload.
 3. After installation, open the **"Developer Command Prompt for VS 2022"**
    from the Start Menu and run all `pip` / `uv` commands from that terminal.
 
-#### Option B: Full Visual Studio 2022 Community Edition
+#### Option B: Full Visual Studio IDE (Community / Professional / Enterprise)
 
-1. Download **Visual Studio 2022 Community** (free) from
-   [visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/)
-2. During installation, select the **"Desktop development with C++"** workload.
-3. Use the **"Developer Command Prompt for VS 2022"** or launch VS Code from
-   the Developer Command Prompt (`code .`).
+If you already have Visual Studio installed for other development work, or
+prefer the full IDE, any edition works — just make sure the
+**"Desktop development with C++"** workload is selected during installation
+(or added afterwards via the Visual Studio Installer).
+
+The free **Community Edition** is available at
+[visualstudio.microsoft.com/vs/community/](https://visualstudio.microsoft.com/vs/community/).
+
+Once installed, use the **"Developer Command Prompt for VS 2022"** or launch
+VS Code from it (`code .`).
 
 #### Option C: VS Code with C++ Extension
 
 1. Install the **C/C++** extension (`ms-vscode.cpptools`) in VS Code.
-2. Install the Build Tools from Option A.
+2. Install the Build Tools from Option A (or the full IDE from Option B).
 3. Open your project folder; VS Code should detect MSVC automatically.
 
 Verify (from the Developer Command Prompt):
