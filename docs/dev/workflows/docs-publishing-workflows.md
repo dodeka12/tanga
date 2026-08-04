@@ -77,7 +77,7 @@ sanitised (`/` replaced with `-`) and used as a `dev-<branch>` alias.
 1. **Checkout** — full history of the selected branch
 2. **Configure git** — bot identity
 3. **Install toolchain** — `uv sync --group dev`
-4. **Deploy preview** — `mike deploy --push --alias "dev-<branch>" "dev-<branch>"`
+4. **Deploy preview** — `mike deploy --push "dev-<branch>"`
 5. **Print URL** — outputs the preview URL for easy access
 
 **Usage:** Go to GitHub → Actions → "Docs Preview" → "Run workflow" →
@@ -111,7 +111,7 @@ uv sync --group dev
 export TANGA_VERSION="dev-$(git branch --show-current | tr '/' '-')"
 
 # 3. Deploy with mike (builds + pushes to gh-pages)
-mike deploy --push --alias "$TANGA_VERSION" "$TANGA_VERSION"
+uv run mike deploy --push "$TANGA_VERSION"
 
 # 4. Preview URL
 echo "https://dodeka12.github.io/tanga/$TANGA_VERSION/"
