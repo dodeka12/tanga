@@ -11,7 +11,7 @@ import { createEntityMesh, removeEntityMesh } from './renderers/factory.js';
 import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
-import { createCamera, configureControls, fitCamera, handleResize, applyOverlayDrawOrder } from './view_mode.js';
+import { createCamera, configureControls, fitCamera, handleResize, applyOverlayDrawOrder, switchToCamera, createGrid } from './view_mode.js';
 
 // ── State ───────────────────────────────────────────────────
 const sceneObjects = new Map();   // id → {obj, layer, el?}
@@ -205,15 +205,14 @@ function applySceneConfig(config) {
     }
     const extent = config.space_extent || 10;
 
-    // Grid
+    // Grid — delegates to view_mode.js for XY-plane (2D) vs XZ-plane (3D)
     if (window._gridHelper) {
         scene.remove(window._gridHelper);
         window._gridHelper.geometry.dispose();
         window._gridHelper.material.dispose();
     }
     if (config.show_grid !== false) {
-        const gs = extent * 2;
-        window._gridHelper = new THREE.GridHelper(gs, Math.max(gs, 20), 0x444466, 0x222244);
+        window._gridHelper = createGrid(scene, extent, spaceDim);
         scene.add(window._gridHelper);
     }
 
@@ -227,6 +226,11 @@ function applySceneConfig(config) {
         window._axesHelper = new THREE.AxesHelper(extent);
         scene.add(window._axesHelper);
     }
+
+    // Switch to 2D orthographic camera if needed — must happen before
+    // user-configured camera overrides (cc.position etc.) because
+    // switchToCamera replaces the camera object entirely.
+    camera = switchToCamera(camera, controls, spaceDim, extent);
 
     // Camera (user-configured)
     const cc = config.camera;

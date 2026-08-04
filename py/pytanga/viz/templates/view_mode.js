@@ -13,26 +13,67 @@ import * as THREE from 'three';
  * @returns {THREE.Camera}
  */
 export function createCamera(spaceDim, aspect, extent = 10) {
-    if (spaceDim === 2) {
-        const frustumSize = extent * 2;
-        const camera = new THREE.OrthographicCamera(
-            frustumSize * aspect / -2,
-            frustumSize * aspect / 2,
-            frustumSize / 2,
-            frustumSize / -2,
-            0.1,
-            1000
-        );
-        camera.position.set(0, 0, 20);
-        camera.lookAt(0, 0, 0);
-        return camera;
-    }
-
-    // 3D default
+    // Always start with 3D perspective — switchToCamera() is called
+    // from applySceneConfig() once sceneConfig arrives.
     const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
     camera.position.set(8, 6, 10);
     camera.lookAt(0, 0, 0);
     return camera;
+}
+
+/**
+ * Switch the camera and/or grid from the current mode to 2D orthographic.
+ * Called from applySceneConfig() when space_dim is 2.
+ *
+ * @param {THREE.Camera} camera    — will be replaced with OrthographicCamera
+ * @param {THREE.OrbitControls} controls
+ * @param {number} extent          space_extent from scene config
+ * @returns {THREE.Camera}         the new (or same) camera
+ */
+export function switchToCamera(camera, controls, spaceDim, extent) {
+    if (spaceDim !== 2 || camera.isOrthographicCamera) {
+        return camera;
+    }
+
+    const frustumSize = extent * 2;
+    const aspect = window.innerWidth / window.innerHeight;
+    const newCam = new THREE.OrthographicCamera(
+        frustumSize * aspect / -2,
+        frustumSize * aspect / 2,
+        frustumSize / 2,
+        frustumSize / -2,
+        0.1,
+        1000
+    );
+    newCam.position.set(0, 0, 20);
+    newCam.lookAt(0, 0, 0);
+    controls.object = newCam;
+    return newCam;
+}
+
+/**
+ * Create a grid helper appropriate for the given space dimension.
+ * 2D: XY-plane grid (rotated GridHelper), 3D: XZ-plane grid.
+ *
+ * @param {THREE.Scene} scene
+ * @param {number} extent  space_extent from scene config
+ * @param {number} spaceDim  2 or 3
+ * @returns {THREE.GridHelper|THREE.Group}
+ */
+export function createGrid(scene, extent, spaceDim) {
+    const size = extent * 2;
+    const divisions = Math.max(size, 20);
+
+    if (spaceDim === 2) {
+        // GridHelper makes XZ-plane grid (normal=Y). Rotate it so
+        // the grid lies in the XY plane (normal=Z) for top‑down view.
+        const grid = new THREE.GridHelper(size, divisions, 0x444466, 0x222244);
+        grid.rotation.x = Math.PI / 2;  // XZ → XY
+        return grid;
+    }
+
+    // 3D: XZ plane (default)
+    return new THREE.GridHelper(size, divisions, 0x444466, 0x222244);
 }
 
 /**
