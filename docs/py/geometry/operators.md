@@ -6,6 +6,11 @@ versors (geometric transformations). They can be used as input to
 
 All classes are imported from `pytanga.geometry` (defined in `pytanga.geometry.operators`).
 
+!!! tip "2D usage"
+    2D operators use the same classes as 3D. `Rotor(angle, Direction(0, 0, 1))`
+    always rotates in the XY plane — the only rotation plane in 2D.
+    For translations in 2D, use `Translator(vector=Direction(dx, dy, 0))`.
+
 ## Reflection (ReflectionPlane)
 
 Reflection in a plane through the origin. ``Reflection`` is an alias for
@@ -162,15 +167,15 @@ gd = GeneralDilator(
 
 ## Operator Coverage Matrix
 
-| Operator | E3 | P3 | PGA3 | N3 |
-|----------|:--:|:--:|:----:|:--:|
-| ReflectionPlane | ✓ | ✓ | ✓ | ✓ |
-| ReflectionLine | ✓ | ✓ | ✓ | ✓ |
-| ReflectionOrigin | — | ✓ | ✓ | ✓ |
-| Inversion | — | — | — | ✓ |
-| Rotor | ✓ | ✓ | ✓ | ✓ |
-| Translator | — | — | ✓ | ✓ |
-| Dilator | — | — | — | ✓ |
-| GeneralDilator | — | — | — | ✓ |
-| Motor | — | — | ✓ | ✓ |
-| GeneralRotor | — | — | ✓ | ✓ |
+| Operator | E3 | P3 | PGA3 | N3 | E2 | P2 | PGA2 | N2 |
+|----------|:--:|:--:|:----:|:--:|:--:|:--:|:----:|:--:|
+| ReflectionPlane | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| ReflectionLine | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| ReflectionOrigin | — | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| Inversion | — | — | — | ✓ | — | — | — | ✓ |
+| Rotor | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Translator | — | — | ✓ | ✓ | — | — | — | ✓ |
+| Dilator | — | — | — | ✓ | — | — | — | ✓ |
+| GeneralDilator | — | — | — | ✓ | — | — | — | ✓ |
+| Motor | — | — | ✓ | ✓ | — | — | — | ✓ |
+| GeneralRotor | — | — | ✓ | ✓ | — | — | — | ✓ |

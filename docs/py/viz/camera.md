@@ -62,9 +62,50 @@ viz = Visualizer(camera=CameraConfig(position=(10, 3, 0)))
 viz = Visualizer(camera=CameraConfig(position=(0, 15, 0), fov=30))
 ```
 
+## 2D Camera (Orthographic)
+
+When `space_dim=2`, the viewer uses an **orthographic camera** with a
+top-down view.  This is set automatically — no explicit `CameraConfig`
+is needed.
+
+```python
+from pytanga.viz import Visualizer
+
+viz = Visualizer(space_dim=2)  # orthographic top-down camera
+```
+
+**Default configuration:**
+
+| Property | Value |
+|----------|-------|
+| Camera type | Orthographic |
+| Position | `(0, 0, 20)` — looking straight down |
+| Target | `(0, 0, 0)` |
+| `fov` (from `CameraConfig`) | Ignored for orthographic cameras |
+
+**Auto-fit** uses the 2D bounding box (x‑y extent only), so entities are
+sized appropriately for the viewport.
+
+**Explicit `CameraConfig`** still works, but `fov` is ignored for
+orthographic cameras:
+
+```python
+from pytanga.viz import Visualizer, CameraConfig
+
+viz = Visualizer(
+    space_dim=2,
+    camera=CameraConfig(
+        position=(0, 0, 30),   # higher up
+        target=(5, 5, 0),      # centered on a different point
+    ),
+)
+```
+
 ## Orbit Controls
 
-The Three.js viewer uses standard orbit controls:
+The Three.js viewer uses camera‑mode‑aware controls:
+
+### 3D Mode (`space_dim=3`, default)
 
 | Action | Input |
 |--------|-------|
@@ -72,7 +113,15 @@ The Three.js viewer uses standard orbit controls:
 | Pan | Middle mouse drag / Shift + left drag |
 | Zoom | Scroll wheel / Right mouse drag |
 
-Orbit controls remain active during animation playback — you can rotate and
+### 2D Mode (`space_dim=2`)
+
+| Action | Input |
+|--------|-------|
+| Pan | Left mouse drag *or* right mouse drag |
+| Zoom | Scroll wheel |
+| Rotate | Disabled (orbit rotation locked) |
+
+Orbit controls remain active during animation playback — you can pan and
 zoom while entities move.
 
 ## Keyboard Shortcuts

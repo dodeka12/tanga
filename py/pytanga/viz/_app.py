@@ -59,6 +59,7 @@ class VisualizerApp:
         show_axes: bool = True,
         background_color: str = "#1a1a2e",
         camera: CameraConfig | None = None,
+        space_dim: int = 3,  # 2 or 3
     ) -> None:
         """Create the app and the underlying :class:`~pytanga.viz.Visualizer`.
 
@@ -80,6 +81,7 @@ class VisualizerApp:
             show_axes=show_axes,
             background_color=background_color,
             camera=camera,
+            space_dim=space_dim,
         )
 
     # ── lifecycle hooks (override in subclass) ──────────────

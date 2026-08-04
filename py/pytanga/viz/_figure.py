@@ -31,6 +31,7 @@ class FigureConfig:
     background: str = "#1a1a2e"  # CSS background for the figure container
     browser_width: int | None = None  # standalone browser window width (px)
     browser_height: int | None = None  # standalone browser window height (px)
+    space_dim: int = 3  # 2 or 3
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -38,6 +39,7 @@ class FigureConfig:
             "title": self.title,
             "target": self.target,
             "background": self.background,
+            "space_dim": self.space_dim,
         }
         if self.annotation is not None:
             result["annotation"] = self.annotation

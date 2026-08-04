@@ -1,5 +1,6 @@
-// Tanga 3D Viewer — Main entry point
+// Tanga Viewer — Main entry point
 // Sets up Three.js scene, WebSocket client, entity registry, and render loop.
+// All dimension‑specific logic lives in view_mode.js.
 
 window.__tanga_ready = true;
 
@@ -10,6 +11,7 @@ import { createEntityMesh, removeEntityMesh } from './renderers/factory.js';
 import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
+import { createCamera, configureControls, fitCamera, handleResize, applyOverlayDrawOrder, switchToCamera, createGrid } from './view_mode.js';
 
 // ── State ───────────────────────────────────────────────────
 const sceneObjects = new Map();   // id → {obj, layer, el?}
@@ -26,7 +28,6 @@ let _savedPixelRatio = null;     // saved during screenshot capture
 let _savedStatusDisplay = null;  // saved during screenshot capture
 
 // ── Scene & browser identity ──────────────────────────────────
-// Scene name from URL path: "/" → "", "/scene1" → "scene1"
 let _myScene = (() => {
     const path = window.location.pathname.replace(/\/+$/, '');
     return path === '' ? '' : path.replace(/^\//, '');
@@ -40,19 +41,16 @@ let _availableScenes = [];
 
 // ── Scene Setup ──────────────────────────────────────────────
 function initScene() {
-    // ── Viewer container ── all DOM elements go inside this div
-    // so we can resize it for capture without affecting the viewport.
     window._viewerContainer = document.getElementById('viewer-container');
 
-    // WebGL Renderer — preserveDrawingBuffer:true so html2canvas can
-    // read the framebuffer for DOM overlay capture.
+    // WebGL Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = false;
     window._viewerContainer.appendChild(renderer.domElement);
 
-    // CSS2D Renderer — for entity labels
+    // CSS2D Renderer
     window._labelRenderer = new CSS2DRenderer();
     window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
     window._labelRenderer.domElement.style.position = 'absolute';
@@ -64,10 +62,12 @@ function initScene() {
     scene = new THREE.Scene();
     scene.fog = null;
 
-    // Camera (defaults, overridden by scene_config)
-    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(8, 6, 10);
-    camera.lookAt(0, 0, 0);
+    // Camera — delegates to view_mode.js for 2D/3D creation
+    camera = createCamera(
+        sceneConfig?.space_dim || 3,
+        window.innerWidth / window.innerHeight,
+        sceneConfig?.space_extent || 10
+    );
 
     // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
@@ -88,7 +88,7 @@ function initScene() {
     controls = setupControls(camera, renderer);
     window.addEventListener('resize', onResize);
 
-    // ── Ctrl+S screenshot shortcut ──────────────────────────
+    // Ctrl+S screenshot shortcut
     window.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
@@ -104,36 +104,30 @@ function initScene() {
 }
 
 function onResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    if (window._labelRenderer) {
-        window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    // Restore container to full viewport
-    if (window._viewerContainer) {
-        window._viewerContainer.style.width = '100%';
-        window._viewerContainer.style.height = '100%';
-    }
+    handleResize(
+        camera,
+        renderer,
+        window._labelRenderer,
+        window._viewerContainer,
+        sceneConfig?.space_dim || 3
+    );
 }
 
 // ── WebSocket Client ────────────────────────────────────────
 let _reconnectAttempts = 0;
-let _savedTitle = document.title || 'Tanga 3D Viewer';
+let _savedTitle = document.title || 'Tanga Viewer';
 
 function connectWebSocket() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${location.host}/ws`;
 
     _reconnectAttempts++;
-    console.log('[tanga] connecting to ' + url + ' (attempt ' + _reconnectAttempts + ')');
     updateStatusIndicator('connecting', _reconnectAttempts);
     document.title = 'Connecting… — ' + _savedTitle;
 
     ws = new WebSocket(url);
 
     ws.onopen = () => {
-        console.log('[tanga] connected to ' + url);
         setStatus('connected');
         setWebSocket(ws);
         if (reconnectTimer) {
@@ -143,7 +137,6 @@ function connectWebSocket() {
         _reconnectAttempts = 0;
         updateStatusIndicator('connected');
         document.title = _savedTitle;
-        // Send ready with scene name, optional browser_id, and viewer_name
         const readyPayload = { type: 'ready', scene: _myScene };
         if (_browserId) readyPayload.browser_id = _browserId;
         if (_viewerName) readyPayload.viewer_name = _viewerName;
@@ -152,8 +145,7 @@ function connectWebSocket() {
 
     ws.onmessage = (event) => {
         try {
-            const msg = JSON.parse(event.data);
-            handleMessage(msg);
+            handleMessage(JSON.parse(event.data));
         } catch (e) {
             console.error('Failed to parse WebSocket message:', e);
         }
@@ -176,15 +168,11 @@ function setStatus(cls) {
     el.className = cls;
 }
 
-/**
- * Update the status dot and optional attempt counter label.
- */
 function updateStatusIndicator(state, attempts) {
     const el = document.getElementById('status');
     if (!el) return;
     el.className = state === 'connected' ? 'connected' : 'disconnected';
 
-    // Show attempt count as a small label next to the dot
     let labelEl = document.getElementById('status-label');
     if (state === 'connecting' && attempts > 0) {
         if (!labelEl) {
@@ -210,20 +198,21 @@ function updateStatusIndicator(state, attempts) {
 // ── Scene Config ─────────────────────────────────────────────
 function applySceneConfig(config) {
     sceneConfig = config;
+    const spaceDim = config.space_dim || 3;
+
     if (config.background_color) {
         scene.background = new THREE.Color(config.background_color);
     }
     const extent = config.space_extent || 10;
 
-    // Grid
+    // Grid — delegates to view_mode.js for XY-plane (2D) vs XZ-plane (3D)
     if (window._gridHelper) {
         scene.remove(window._gridHelper);
         window._gridHelper.geometry.dispose();
         window._gridHelper.material.dispose();
     }
     if (config.show_grid !== false) {
-        const gs = extent * 2;
-        window._gridHelper = new THREE.GridHelper(gs, Math.max(gs, 20), 0x444466, 0x222244);
+        window._gridHelper = createGrid(scene, extent, spaceDim);
         scene.add(window._gridHelper);
     }
 
@@ -238,7 +227,12 @@ function applySceneConfig(config) {
         scene.add(window._axesHelper);
     }
 
-    // Camera
+    // Switch to 2D orthographic camera if needed — must happen before
+    // user-configured camera overrides (cc.position etc.) because
+    // switchToCamera replaces the camera object entirely.
+    camera = switchToCamera(camera, controls, spaceDim, extent);
+
+    // Camera (user-configured)
     const cc = config.camera;
     if (cc) {
         if (cc.position) camera.position.set(cc.position[0], cc.position[1], cc.position[2]);
@@ -249,12 +243,15 @@ function applySceneConfig(config) {
         controls.update();
     }
 
-    // ── Title ──
+    // Controls & renderer — delegates to view_mode.js
+    configureControls(controls, renderer, spaceDim);
+
+    // Title
     if (config.title !== undefined) {
         renderTitle(config.title);
     }
 
-    // ── Annotation (from scene_config, no style — uses defaults) ──
+    // Annotation
     if (config.annotation) {
         renderAnnotation(config.annotation, null);
     } else if (config.annotation === '') {
@@ -296,14 +293,12 @@ function renderAnnotation(mdText, styleData) {
 
     const container = document.createElement('div');
 
-    // Render markdown to HTML
     if (typeof marked !== 'undefined') {
         container.innerHTML = marked.parse(mdText);
     } else {
         container.textContent = mdText;
     }
 
-    // Render KaTeX formulas
     if (typeof renderMathInElement !== 'undefined') {
         try {
             renderMathInElement(container, {
@@ -318,7 +313,6 @@ function renderAnnotation(mdText, styleData) {
         }
     }
 
-    // Apply style properties from the overlay message, falling back to defaults
     container.style.position = 'absolute';
     container.style.bottom = '0px';
     container.style.left = '50%';
@@ -337,7 +331,6 @@ function renderAnnotation(mdText, styleData) {
     container.style.lineHeight = '1.5';
     container.className = 'annotation-container';
 
-    // Inject scoped CSS for rendered content
     const linkColor = s.link_color || '#88ccff';
     const codeBg = s.code_background || 'rgba(255,255,255,0.1)';
     const styleEl = document.createElement('style');
@@ -360,7 +353,6 @@ function renderAnnotation(mdText, styleData) {
         .annotation-container hr {
             border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5em 0;
         }
-        .annotation-container .katex { font-size: 1.05em; }
     `;
     container.appendChild(styleEl);
 
@@ -376,26 +368,7 @@ function removeAnnotation() {
 }
 
 function fitCameraToScene() {
-    if (entityMeshes.size === 0) return;
-    const box = new THREE.Box3();
-    entityMeshes.forEach(m => box.expandByObject(m));
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z, 1);
-    const distance = maxDim * 1.5 + 2;
-
-    const cc = sceneConfig?.camera;
-    if (!cc || !cc.target) controls.target.copy(center);
-    if (!cc || !cc.position) {
-        camera.position.set(center.x + distance * 0.6, center.y + distance * 0.5, center.z + distance * 0.7);
-        camera.lookAt(controls.target);
-    }
-    if (!cc || !cc.near) camera.near = Math.max(0.01, distance * 0.001);
-    if (!cc || !cc.far) camera.far = distance * 10;
-    camera.updateProjectionMatrix();
-    controls.update();
+    fitCamera(entityMeshes, camera, controls, sceneConfig?.space_dim || 3);
 }
 
 // ── Helper: rotate mesh to point along a direction vector ───
@@ -416,9 +389,10 @@ function inPlaceUpdate(ent) {
     // Position update
     if (ent.position) {
         mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
+        applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
     }
 
-    // Direction/vector update (for arrows, lines, etc.)
+    // Direction/vector update
     if (ent.vector || ent.direction) {
         const vec = ent.vector || ent.direction;
         const origin = ent.origin || [0, 0, 0];
@@ -426,7 +400,7 @@ function inPlaceUpdate(ent) {
         mesh.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
     }
 
-    // Center update (for spheres, circles)
+    // Center update
     if (ent.center) {
         mesh.position.set(ent.center[0], ent.center[1], ent.center[2]);
     }
@@ -459,7 +433,7 @@ function inPlaceUpdate(ent) {
         mesh.scale.set(ent.scale[0], ent.scale[1], ent.scale[2]);
     }
 
-    // Check if structural change requires full rebuild
+    // Structural changes require full rebuild
     if (ent.radius !== undefined && ent.radius !== previous?.radius) return false;
     if (ent.extent !== undefined && ent.extent !== previous?.extent) return false;
     if (ent.length !== undefined && ent.length !== previous?.length) return false;
@@ -469,24 +443,13 @@ function inPlaceUpdate(ent) {
 }
 
 // ── Message Handler ─────────────────────────────────────────
-/** Attach browser_id to an outgoing message payload. */
-function _withBrowserId(payload) {
-    if (_browserId) payload.browser_id = _browserId;
-    return payload;
-}
-
-/** Check if a scene-scoped message targets this browser's scene. */
 function _forMyScene(msg) {
-    // If no scene field, or scene matches ours, it's for us
     return !msg.scene || msg.scene === _myScene;
 }
 
 function handleMessage(msg) {
-    // ── Global messages (always processed) ──
     if (msg.type === 'browser_id') {
         _browserId = msg.browser_id;
-        console.log('[tanga] browser_id = ' + _browserId);
-        if (_viewerName) console.log('[tanga] viewer_name = ' + _viewerName);
         return;
     }
     if (msg.type === 'navigate') {
@@ -495,17 +458,14 @@ function handleMessage(msg) {
         if (_viewerName) {
             newUrl += '?viewer=' + encodeURIComponent(_viewerName);
         }
-        console.log('[tanga] navigating to ' + newUrl);
         window.location.href = newUrl;
         return;
     }
     if (msg.type === 'scene_list') {
         _availableScenes = msg.scenes || [];
-        console.log('[tanga] available scenes: ' + _availableScenes.join(', '));
         return;
     }
 
-    // ── Scene-scoped messages: filter by scene ──
     if (msg.type === 'scene_config' || msg.type === 'scene_update') {
         if (!_forMyScene(msg)) return;
     }
@@ -514,7 +474,6 @@ function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
-        // Remove all scene objects (handles reconnect with a new server session)
         entityMeshes.forEach((mesh) => removeEntityMesh(mesh));
         entityMeshes.clear();
         entityData.clear();
@@ -541,10 +500,8 @@ function handleMessage(msg) {
     } else if (msg.type === 'scene_update') {
         if (msg.removed) {
             for (const id of msg.removed) {
-                // Clean up from all registries
                 const mesh = entityMeshes.get(id);
                 if (mesh) {
-                    // Clean up attached control groups before removing the mesh
                     if (mesh.userData._attachedGroups) {
                         for (const groupId of mesh.userData._attachedGroups) {
                             detachGroup(groupId);
@@ -572,14 +529,12 @@ function handleMessage(msg) {
         if (msg.objects) {
             for (const obj of msg.objects) {
                 if (obj.layer === 'scene' && entityMeshes.has(obj.id)) {
-                    // In-place update: preserves attached labels, avoids mesh recreation
                     updateEntity(obj);
                 } else {
                     upsertObject(obj);
                 }
             }
         }
-        // Backward compat: old format with separate entities/labels arrays
         if (msg.entities) {
             for (const ent of msg.entities) {
                 updateEntity(ent);
@@ -600,92 +555,24 @@ function handleMessage(msg) {
     } else if (msg.type === 'timeline') {
         handleTimeline(msg);
     } else if (msg.type === 'screenshot') {
-        // Programmatic screenshot request from Python.
-        // Resize the renderer + CSS2D renderer to target dimensions
-        // with pixelRatio=1 for exact-pixel output.
-        // Hide status indicator during capture
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            _savedStatusDisplay = statusEl.style.display;
-            statusEl.style.display = 'none';
-        }
-
-        if (msg.width && msg.height) {
-            const w = msg.width, h = msg.height;
-            _savedPixelRatio = renderer.getPixelRatio();
-            renderer.setPixelRatio(1);
-            renderer.setSize(w, h);
-            camera.aspect = w / h;
-            camera.updateProjectionMatrix();
-            if (window._labelRenderer) {
-                window._labelRenderer.setSize(w, h);
-            }
-            if (window._viewerContainer) {
-                window._viewerContainer.style.width = w + 'px';
-                window._viewerContainer.style.height = h + 'px';
-            }
-        }
-        // Force a render at the current size
-        renderer.render(scene, camera);
-        if (window._labelRenderer) {
-            window._labelRenderer.render(scene, camera);
-        }
-        const w = renderer.domElement.width;
-        const h = renderer.domElement.height;
-
-        // Capture container contents at exact renderer size.
-        // html2canvas (with preserveDrawingBuffer=true) renders the
-        // WebGL canvas + labels + title + annotation in one pass.
-        if (typeof html2canvas !== 'undefined') {
-            html2canvas(window._viewerContainer, {
-                width: w,
-                height: h,
-                windowWidth: w,
-                windowHeight: h,
-                backgroundColor: null,
-                scale: 1,
-            }).then(domCanvas => {
-                ws.send(JSON.stringify({
-                    type: 'screenshot:data',
-                    request_id: msg.request_id,
-                    data: domCanvas.toDataURL('image/png'),
-                }));
-            }).catch(err => {
-                console.warn('html2canvas failed, falling back to webgl only:', err);
-                ws.send(JSON.stringify({
-                    type: 'screenshot:data',
-                    request_id: msg.request_id,
-                    data: renderer.domElement.toDataURL('image/png'),
-                }));
-            });
-        } else {
-            // Fallback: WebGL only
-            ws.send(JSON.stringify({
-                type: 'screenshot:data',
-                request_id: msg.request_id,
-                data: renderer.domElement.toDataURL('image/png'),
-            }));
-        }
+        handleScreenshot(msg);
     } else if (msg.type === 'controls_define') {
         handleControlsDefine(msg);
-        // Route attached groups to the CSS2DRenderer module
-        const controls = msg.controls || [];
+        const controls2 = msg.controls || [];
         const groups = msg.groups || [];
         for (const g of groups) {
             if (g.parentId) {
-                attachGroup(g, controls, entityMeshes);
+                attachGroup(g, controls2, entityMeshes);
             }
         }
     } else if (msg.type === 'controls_clear') {
         handleControlsClear();
         detachAll();
     } else if (msg.type === 'restore_size') {
-        // Restore renderer to fill the browser window after capture
         if (_savedPixelRatio !== null) {
             renderer.setPixelRatio(_savedPixelRatio);
             _savedPixelRatio = null;
         }
-        // Restore status indicator
         const statusEl2 = document.getElementById('status');
         if (statusEl2) {
             statusEl2.style.display = _savedStatusDisplay || 'block';
@@ -695,17 +582,75 @@ function handleMessage(msg) {
     }
 }
 
+function handleScreenshot(msg) {
+    const statusEl = document.getElementById('status');
+    if (statusEl) {
+        _savedStatusDisplay = statusEl.style.display;
+        statusEl.style.display = 'none';
+    }
+
+    if (msg.width && msg.height) {
+        const w = msg.width, h = msg.height;
+        _savedPixelRatio = renderer.getPixelRatio();
+        renderer.setPixelRatio(1);
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        if (window._labelRenderer) {
+            window._labelRenderer.setSize(w, h);
+        }
+        if (window._viewerContainer) {
+            window._viewerContainer.style.width = w + 'px';
+            window._viewerContainer.style.height = h + 'px';
+        }
+    }
+    renderer.render(scene, camera);
+    if (window._labelRenderer) {
+        window._labelRenderer.render(scene, camera);
+    }
+    const w = renderer.domElement.width;
+    const h = renderer.domElement.height;
+
+    if (typeof html2canvas !== 'undefined') {
+        html2canvas(window._viewerContainer, {
+            width: w,
+            height: h,
+            windowWidth: w,
+            windowHeight: h,
+            backgroundColor: null,
+            scale: 1,
+        }).then(domCanvas => {
+            ws.send(JSON.stringify({
+                type: 'screenshot:data',
+                request_id: msg.request_id,
+                data: domCanvas.toDataURL('image/png'),
+            }));
+        }).catch(err => {
+            console.warn('html2canvas failed, falling back to webgl only:', err);
+            ws.send(JSON.stringify({
+                type: 'screenshot:data',
+                request_id: msg.request_id,
+                data: renderer.domElement.toDataURL('image/png'),
+            }));
+        });
+    } else {
+        ws.send(JSON.stringify({
+            type: 'screenshot:data',
+            request_id: msg.request_id,
+            data: renderer.domElement.toDataURL('image/png'),
+        }));
+    }
+}
+
 // ── Unified Object Management ──────────────────────────────
 
 function upsertObject(msg) {
-    // Remove previous instance
     const old = sceneObjects.get(msg.id);
     if (old) {
         if (old.obj && old.obj.removeFromParent) old.obj.removeFromParent();
         if (old.el) old.el.remove();
         sceneObjects.delete(msg.id);
     }
-    // Also clean legacy maps
     entityMeshes.delete(msg.id);
     entityData.delete(msg.id);
     labelObjects.delete(msg.id);
@@ -713,17 +658,18 @@ function upsertObject(msg) {
     if (msg.layer === 'scene') {
         const mesh = createEntityMesh(msg);
         if (mesh) {
+            if (msg.position) {
+                applyOverlayDrawOrder(mesh, msg.position[2] || 0, sceneConfig?.space_dim || 3);
+            }
             scene.add(mesh);
             sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
             entityMeshes.set(msg.id, mesh);
             entityData.set(msg.id, { ...msg });
         }
     } else if (msg.layer === 'overlay') {
-        // Annotations handle everything themselves (fixed-position, appended to body)
         if (msg.kind === 'annotation') {
             if (!msg.text) return;
             renderAnnotation(msg.text, msg.style || null);
-            // Track the panel element in sceneObjects so it gets cleaned up on removal
             if (annotationPanel) {
                 sceneObjects.set(msg.id, { obj: null, el: annotationPanel, layer: 'overlay' });
             }
@@ -735,16 +681,11 @@ function upsertObject(msg) {
 
         let css2d = null;
         if (msg.parentId) {
-            // Wrap label in a container. CSS2DRenderer positions the OUTER
-            // (container) element. We apply offset_2d and alignment on the
-            // INNER element (the label div from buildOverlayElement).
             const container = document.createElement('div');
             container.appendChild(el);
             css2d = new CSS2DObject(container);
             const pos = msg.position || [0, 0, 0];
             css2d.position.set(pos[0], pos[1], pos[2]);
-            // CSS2DRenderer centers the container: translate(-50%,-50%) translate(Xpx, Ypx)
-            // We counter that centering with align and add pixel offset on el:
             const off2d = msg.style?.offset_2d || [0, 0];
             const align = msg.style?.align || [0.5, 0.5];
             const tx = (0.5 - align[0]) * 100;
@@ -753,7 +694,6 @@ function upsertObject(msg) {
             const parentObj = sceneObjects.get(msg.parentId);
             if (parentObj && parentObj.obj) {
                 parentObj.obj.add(css2d);
-                // Track label on parent so it can be re-attached after rebuild
                 parentObj.obj.userData._labels = parentObj.obj.userData._labels || [];
                 parentObj.obj.userData._labels.push(msg.id);
                 css2d.userData._parentId = msg.parentId;
@@ -762,7 +702,6 @@ function upsertObject(msg) {
             }
             labelObjects.set(msg.id, css2d);
         } else {
-            // Fixed positioning: absolute DOM
             el.style.position = 'absolute';
             const off = msg.offset || [10, 10];
             el.style.top = off[1] + 'px';
@@ -792,7 +731,6 @@ function buildOverlayElement(msg) {
             div.style.borderRadius = '3px';
             div.style.userSelect = 'none';
             div.style.whiteSpace = 'nowrap';
-            // Render KaTeX formulas in label text ($...$ and $$...$$)
             if (typeof renderMathInElement !== 'undefined') {
                 try {
                     renderMathInElement(div, {
@@ -810,9 +748,8 @@ function buildOverlayElement(msg) {
         }
         case 'annotation': {
             if (!msg.text) return null;
-            // Delegate to the shared renderAnnotation function with style
             renderAnnotation(msg.text, msg.style || null);
-            return annotationPanel;  // return the existing panel element
+            return annotationPanel;
         }
         default:
             console.warn('Unknown overlay kind: ' + msg.kind);
@@ -820,12 +757,9 @@ function buildOverlayElement(msg) {
     }
 }
 
-// ── Label Management (backward compat) ─────────────────────
-
 function upsertLabel(lbl) {
     if (!lbl.text) return;
 
-    // Remove existing label with this id
     const existing = labelObjects.get(lbl.id);
     if (existing) {
         existing.removeFromParent();
@@ -845,7 +779,6 @@ function upsertLabel(lbl) {
     div.style.userSelect = 'none';
     div.style.whiteSpace = 'nowrap';
 
-    // Render KaTeX formulas in label text ($...$ and $$...$$)
     if (typeof renderMathInElement !== 'undefined') {
         try {
             renderMathInElement(div, {
@@ -868,7 +801,6 @@ function upsertLabel(lbl) {
     if (lbl.parentId && entityMeshes.has(lbl.parentId)) {
         const parentMesh = entityMeshes.get(lbl.parentId);
         parentMesh.add(labelObj);
-        // Track label on parent so it can be re-attached after rebuild
         parentMesh.userData._labels = parentMesh.userData._labels || [];
         parentMesh.userData._labels.push(lbl.id);
         labelObj.userData._parentId = lbl.parentId;
@@ -886,6 +818,9 @@ function updateEntity(ent) {
     if (!existing) {
         const mesh = createEntityMesh(ent);
         if (mesh) {
+            if (ent.position) {
+                applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
+            }
             scene.add(mesh);
             entityMeshes.set(id, mesh);
         }
@@ -893,23 +828,23 @@ function updateEntity(ent) {
         return;
     }
 
-    // Try in-place update first (for frame streaming performance)
     if (inPlaceUpdate(ent)) {
-        // Update stored data with merged properties
         entityData.set(id, { ...existing, ...ent });
         return;
     }
 
-    // Full rebuild for structural changes (radius, extent, kind change)
     const oldMesh = entityMeshes.get(id);
     const attachedLabels = oldMesh ? (oldMesh.userData._labels || []).slice() : [];
     if (oldMesh) removeEntityMesh(oldMesh);
     entityMeshes.delete(id);
     const mesh = createEntityMesh({ ...existing, ...ent });
     if (mesh) {
+        const pos = ent.position || existing?.position;
+        if (pos) {
+            applyOverlayDrawOrder(mesh, pos[2] || 0, sceneConfig?.space_dim || 3);
+        }
         scene.add(mesh);
         entityMeshes.set(id, mesh);
-        // Re-attach labels that were orphaned by the old mesh removal
         mesh.userData._labels = [];
         for (const lblId of attachedLabels) {
             const labelObj = labelObjects.get(lblId);
@@ -938,7 +873,7 @@ function handleAnimate(msg) {
 function handleTimeline(msg) {
     if (!msg.steps) return;
     for (const step of msg.steps) {
-        const delay = (step.at || 0) * 1000; // seconds → milliseconds
+        const delay = (step.at || 0) * 1000;
         setTimeout(() => {
             handleAnimate({ animations: [step.animate] });
         }, delay);

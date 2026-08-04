@@ -165,3 +165,10 @@ approach:
 
 The algebraic behaviour is identical to that of an explicitly null‑based
 algebra.
+
+This technique is used in all of TanGA's null-vector algebras:
+
+| Algebra | Dim | Sig | Null vector | Embedding |
+|---------|-----|-----|-------------|-----------|
+| `BasisN3` / `BasisPGA3` | 5 | `0b10000` | `einf = ep + em`, `eo = −½ep + ½em` | $e_4$ ($e_p^2=+1$), $e_5$ ($e_m^2=-1$) |
+| `BasisN2` / `BasisPGA2` | 4 | `0b1000` | `einf = ep + em`, `eo = −½ep + ½em` (N2) / `e0 = ep + em` (PGA2) | $e_3$ ($e_p^2=+1$), $e_4$ ($e_m^2=-1$) |
