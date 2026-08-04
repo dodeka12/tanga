@@ -44,12 +44,17 @@ if TYPE_CHECKING:
 
 
 def _detect(basis) -> str:
-    """Return ``'e3'``, ``'p3'``, ``'pga3'``, or ``'n3'`` for a basis instance."""
+    """Return ``'e2'``, ``'p2'``, ``'pga2'``, ``'n2'``, ``'e3'``, ``'p3'``, ``'pga3'``, or ``'n3'`` for a basis instance."""
+    from pytanga.basis.e2 import BasisE2
     from pytanga.basis.e3 import BasisE3
+    from pytanga.basis.n2 import BasisN2
     from pytanga.basis.n3 import BasisN3
+    from pytanga.basis.p2 import BasisP2
     from pytanga.basis.p3 import BasisP3
+    from pytanga.basis.pga2 import BasisPGA2
     from pytanga.basis.pga3 import BasisPGA3
 
+    # 3D algebras
     if isinstance(basis, BasisPGA3):
         return "pga3"
     elif isinstance(basis, BasisN3):
@@ -58,6 +63,15 @@ def _detect(basis) -> str:
         return "p3"
     elif isinstance(basis, BasisE3):
         return "e3"
+    # 2D algebras — PGA2 before N2 (inheritance)
+    elif isinstance(basis, BasisPGA2):
+        return "pga2"
+    elif isinstance(basis, BasisN2):
+        return "n2"
+    elif isinstance(basis, BasisP2):
+        return "p2"
+    elif isinstance(basis, BasisE2):
+        return "e2"
     else:
         raise ValueError(f"Unknown basis type: {type(basis).__name__}")
 
@@ -85,9 +99,27 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
     MV
         The multivector representation.
     """
-    from . import create_e3, create_n3, create_p3, create_pga3
+    from . import (
+        create_e2,
+        create_e3,
+        create_n2,
+        create_n3,
+        create_p2,
+        create_p3,
+        create_pga2,
+        create_pga3,
+    )
 
-    modules = {"e3": create_e3, "p3": create_p3, "pga3": create_pga3, "n3": create_n3}
+    modules = {
+        "e2": create_e2,
+        "e3": create_e3,
+        "n2": create_n2,
+        "n3": create_n3,
+        "p2": create_p2,
+        "p3": create_p3,
+        "pga2": create_pga2,
+        "pga3": create_pga3,
+    }
     mod = modules[_detect(basis)]
 
     if isinstance(entity, Point):
@@ -188,9 +220,27 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
     MV
         The multivector representation.
     """
-    from . import create_e3, create_n3, create_p3, create_pga3
+    from . import (
+        create_e2,
+        create_e3,
+        create_n2,
+        create_n3,
+        create_p2,
+        create_p3,
+        create_pga2,
+        create_pga3,
+    )
 
-    modules = {"e3": create_e3, "p3": create_p3, "pga3": create_pga3, "n3": create_n3}
+    modules = {
+        "e2": create_e2,
+        "e3": create_e3,
+        "n2": create_n2,
+        "n3": create_n3,
+        "p2": create_p2,
+        "p3": create_p3,
+        "pga2": create_pga2,
+        "pga3": create_pga3,
+    }
     mod = modules[_detect(basis)]
 
     if isinstance(operator, ReflectionLine):
