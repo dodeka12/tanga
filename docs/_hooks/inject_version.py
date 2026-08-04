@@ -15,7 +15,11 @@ import os
 
 def on_config(config):
     version = os.environ.get("TANGA_VERSION") or _resolve_version()
-    config.extra["version"] = version
+    # Preserve existing version config (e.g. provider: mike) and only set the version string
+    if isinstance(config.extra.get("version"), dict):
+        config.extra["version"]["version"] = version
+    else:
+        config.extra["version"] = version
 
 
 def _resolve_version() -> str:
