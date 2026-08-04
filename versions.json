@@ -1,10 +1,5 @@
 [
   {
-    "version": "dev-test-selector",
-    "title": "dev-test-selector",
-    "aliases": []
-  },
-  {
     "version": "dev-mike-docs",
     "title": "dev-mike-docs",
     "aliases": []
