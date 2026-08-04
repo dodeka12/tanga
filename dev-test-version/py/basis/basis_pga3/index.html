@@ -1,0 +1,4379 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://dodeka12.github.io/tanga/dev-test-version/py/basis/basis_pga3/">
+      
+      
+        <link rel="prev" href="../pga_null_embedding/">
+      
+      
+        <link rel="next" href="../../blade-mask/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+<title>
+    
+    BasisPGA3 -
+    
+    TanGA Documentation
+</title>
+
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#basispga3-projective-geometric-algebra-in-3d" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="TanGA Documentation" class="md-header__button md-logo" aria-label="TanGA Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TanGA Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              BasisPGA3
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/dodeka12/tanga" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    dodeka12/tanga
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="TanGA Documentation" class="md-nav__button md-logo" aria-label="TanGA Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    TanGA Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/dodeka12/tanga" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    dodeka12/tanga
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../cpp/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ Documentation
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    C++ Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cpp/multivectors-e3-p3-n3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fixed-space multivectors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cpp/subspace-multivectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Subspace multivectors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cpp/dynamic-multivectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dynamic multivectors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cpp/matrix-mapping-and-equations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Matrix mapping & equations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cpp/product-matrices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product matrices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cpp/congruence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Congruence maps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cpp/duals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Duals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Documentation
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../env/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment & Setup
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Environment & Setup
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../env/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../env/compile-and-binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compile & binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../algebra/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algebra
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Algebra
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../algebra/algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algebra class
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../algebra/mv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MV class
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../algebra/duals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Duals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../algebra/modulus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modulus arithmetic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Basis Classes
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Basis Classes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bases (E3, P3, N3, PGA3)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pga_null_embedding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Null-vector embedding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BasisPGA3
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BasisPGA3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-the-gunndorst-4d-pga-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The Gunn/Dorst 4D PGA Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. The Gunn/Dorst 4D PGA Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-key-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Key References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-our-implementation-5d-nullvector-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Our Implementation — 5D Null‑Vector Embedding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Our Implementation — 5D Null‑Vector Embedding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-class-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Class Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-point-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Point Representation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-plane-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Plane Representation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-entity-representations-gunndorst-opns-grades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Entity Representations (Gunn/Dorst OPNS Grades)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Entity Representations (Gunn/Dorst OPNS Grades)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-ipns-interpretation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 IPNS Interpretation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-operator-representations-versors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Operator Representations (Versors)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Operator Representations (Versors)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-rotor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Rotor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-translator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Translator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-generalrotor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 GeneralRotor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-motor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Motor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-entity-operator-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Entity &amp; Operator Coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-design-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Design Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Design Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-weight-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Weight Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-bladeness-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Blade‑ness Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gunndorst-4d-pga-our-implementation-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gunn/Dorst 4D PGA (our implementation target)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nullvector-embedding-technique" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Null‑vector embedding technique
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#general-ga-theory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General GA theory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../blade-mask/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BladeMask
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    BladeMask
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blade-mask/construction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Construction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blade-mask/properties-and-ops/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Properties & operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blade-mask/usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage in pipelines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blade-mask/inverse-blade-mask/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inverse blade mask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../matrix/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Matrix Operations
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Matrix Operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../matrix/mvmatrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MVMatrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../matrix/mvproductmatrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MVProductMatrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../solver/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Equation Solving
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Equation Solving
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solver/solve/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Solvers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solver/blade-mask-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blade mask pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solver/matrix-primitives/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Matrix primitives
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../solver/enums/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Enums & coercion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tensors/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensor Operations
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tensor Operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tensors/mvtensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MVTensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tensors/labeled-tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Labeled tensors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tensors/iterator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Label iterator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tensors/product-tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Product tensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../geometry/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Geometry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../geometry/entities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../geometry/operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../geometry/analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../geometry/create/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creation pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../geometry/round-trip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Round-trip examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../viz/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3D Visualization
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    3D Visualization
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/visualizer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualizer API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/camera/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camera & Controls
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/styles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style system
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/labels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/title-annotation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Title & annotation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/animation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Animation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export & capture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/interactive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Controls
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../viz/jupyter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jupyter notebooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../dev/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Documentation
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/architecture/system-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/architecture/type-system-and-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Type system & storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GA Pipeline
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    GA Pipeline
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/ga/operation-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operation pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/guides/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/guides/cpp-coding-style-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ coding style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/guides/py-coding-style-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python coding style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Workflows
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/workflows/build-test-and-navigation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build, test & navigation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/workflows/precompiled-wheels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Precompiled wheels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/workflows/use-case-examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Use-case examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/workflows/version-tagging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Version tagging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/workflows/mkdocs-publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MkDocs publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dev/workflows/docs-publishing-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs publishing workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-the-gunndorst-4d-pga-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The Gunn/Dorst 4D PGA Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. The Gunn/Dorst 4D PGA Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-key-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Key References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-our-implementation-5d-nullvector-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Our Implementation — 5D Null‑Vector Embedding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Our Implementation — 5D Null‑Vector Embedding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-class-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Class Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-point-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Point Representation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-plane-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Plane Representation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-entity-representations-gunndorst-opns-grades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Entity Representations (Gunn/Dorst OPNS Grades)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Entity Representations (Gunn/Dorst OPNS Grades)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-ipns-interpretation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 IPNS Interpretation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-operator-representations-versors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Operator Representations (Versors)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Operator Representations (Versors)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-rotor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Rotor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-translator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Translator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-generalrotor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 GeneralRotor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-motor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Motor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-entity-operator-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Entity &amp; Operator Coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-design-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Design Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Design Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-weight-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Weight Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-bladeness-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Blade‑ness Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gunndorst-4d-pga-our-implementation-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gunn/Dorst 4D PGA (our implementation target)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nullvector-embedding-technique" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Null‑vector embedding technique
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#general-ga-theory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General GA theory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="basispga3-projective-geometric-algebra-in-3d">BasisPGA3 — Projective Geometric Algebra in 3D<a class="headerlink" href="#basispga3-projective-geometric-algebra-in-3d" title="Permanent link">&para;</a></h1>
+<p>This document describes the mathematical foundation of the <code>BasisPGA3</code> class
+and its implementation of the <strong>Gunn/Dorst plane‑based PGA</strong> model within
+TANGA's 5D null‑vector embedding.</p>
+<p><strong>Related reading:</strong>
+- <a href="../pga_null_embedding/">pga_null_embedding.md</a> — the general null‑vector
+  embedding technique
+- <a href="../bases/">bases.md</a> — brief overview of all four basis classes</p>
+<hr />
+<h2 id="1-the-gunndorst-4d-pga-model">1. The Gunn/Dorst 4D PGA Model<a class="headerlink" href="#1-the-gunndorst-4d-pga-model" title="Permanent link">&para;</a></h2>
+<p><code>BasisPGA3</code> implements the <strong>plane‑based projective geometric algebra</strong>
+(PGA) described by Charles Gunn and Leo Dorst. In this model:</p>
+<ul>
+<li><strong>Planes</strong> are grade‑1 vectors: a plane with unit normal <code>n</code> and signed
+  distance <code>d</code> from the origin is <code>n + d·e₀</code>.</li>
+<li><strong>Lines</strong> are grade‑2 bivectors: the intersection of two planes.</li>
+<li><strong>Points</strong> are grade‑3 trivectors: the intersection of three planes.
+  The dual of a point trivector is a grade‑1 vector
+  <code>x·e₁ + y·e₂ + z·e₃ + e₀</code>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Dim</th>
+<th>Point</th>
+<th>Plane</th>
+<th>Line</th>
+<th>Null vector</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gunn/Dorst PGA</strong></td>
+<td>4</td>
+<td>Grade 3 (or dual grade 1)</td>
+<td>Grade 1</td>
+<td>Grade 2</td>
+<td><code>e₀</code> (true null, <code>e₀² = 0</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The algebra is <strong>G(3, 0, 1)</strong> — three basis vectors squaring to +1, and one
+null basis vector <code>e₀</code> with <code>e₀² = 0</code>.</p>
+<h3 id="11-key-references">1.1 Key References<a class="headerlink" href="#11-key-references" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Charles Gunn</strong> — <em>Geometric algebras for Euclidean geometry</em>
+  (arXiv:1411.6502, 2016). The definitive modern treatment of 4D PGA
+  (also called "rigid geometric algebra" or RGA).</li>
+<li><strong>Leo Dorst</strong> — <em>A Guided Tour to the Plane‑Based Geometric Algebra PGA</em>
+  (bivector.net/PGA4CS.html, 2020). An accessible tutorial for CS
+  practitioners.</li>
+</ul>
+<hr />
+<h2 id="2-our-implementation-5d-nullvector-embedding">2. Our Implementation — 5D Null‑Vector Embedding<a class="headerlink" href="#2-our-implementation-5d-nullvector-embedding" title="Permanent link">&para;</a></h2>
+<p>TANGA's Clifford algebra only supports metric signatures where every basis
+vector squares to ±1. A true null vector (squaring to 0) cannot be
+represented natively. We therefore <strong>embed</strong> the 4D PGA into a 5D algebra
+via the null‑vector embedding:</p>
+<div class="arithmatex">\[
+e₀ → e_p + e_m \qquad e_p² = +1,\; e_m² = -1
+\]</div>
+<p>The pair <code>(e_p, e_m)</code> generates the 5‑dimensional algebra
+<strong>G(5, 0b10000)</strong>. The subspace <code>{e₁, e₂, e₃, e₀}</code> where
+<code>e₀ = e_p + e_m</code> is algebraically isomorphic to the Gunn/Dorst 4D PGA.</p>
+<p>The inverse of the null vector is:</p>
+<div class="arithmatex">\[
+e₀^{\text{inv}} = \tfrac{1}{2}\,e_p - \tfrac{1}{2}\,e_m
+\qquad
+\langle e₀ \cdot e₀^{\text{inv}} \rangle_0 = 1
+\]</div>
+<p>This embedding technique is fully documented in
+<a href="../pga_null_embedding/">pga_null_embedding.md</a>.</p>
+<h3 id="21-class-hierarchy">2.1 Class Hierarchy<a class="headerlink" href="#21-class-hierarchy" title="Permanent link">&para;</a></h3>
+<p><code>BasisPGA3</code> extends <code>Algebra</code> <strong>directly</strong> (not <code>BasisN3</code>). It is
+a standalone algebra class that does <strong>not</strong> inherit the N3 conformal
+model. The names <code>einf</code> and <code>eo</code> (which belong to N3) are <strong>not
+exposed</strong> on <code>BasisPGA3</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pytanga.basis</span><span class="w"> </span><span class="kn">import</span> <span class="n">BasisPGA3</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">pga</span> <span class="o">=</span> <span class="n">BasisPGA3</span><span class="p">()</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Basis vectors</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">pga</span><span class="o">.</span><span class="n">e1</span>      <span class="c1"># e₁, blade ID 1</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">pga</span><span class="o">.</span><span class="n">e2</span>      <span class="c1"># e₂, blade ID 2</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">pga</span><span class="o">.</span><span class="n">e3</span>      <span class="c1"># e₃, blade ID 4</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">pga</span><span class="o">.</span><span class="n">e0</span>      <span class="c1"># e₀ = ep + em, the Gunn/Dorst null vector</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">pga</span><span class="o">.</span><span class="n">e0_inv</span>  <span class="c1"># inverse of e₀ = 0.5·ep − 0.5·em</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Internal embedding vectors (private; prefer e0)</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">pga</span><span class="o">.</span><span class="n">ep</span>      <span class="c1"># e₄, blade ID 8, ep² = +1</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">pga</span><span class="o">.</span><span class="n">em</span>      <span class="c1"># e₅, blade ID 16, em² = -1</span>
+</span></code></pre></div>
+<h3 id="22-point-representation">2.2 Point Representation<a class="headerlink" href="#22-point-representation" title="Permanent link">&para;</a></h3>
+<p>A finite point at position <code>(x, y, z)</code> is represented in <strong>IPNS (dual)
+form</strong> as a grade‑1 vector:</p>
+<div class="arithmatex">\[
+P_{\text{IPNS}} = x \cdot e₁ + y \cdot e₂ + z \cdot e₃ + e₀
+\]</div>
+<p>which in raw blade terms is:</p>
+<div class="arithmatex">\[
+P_{\text{IPNS}} = x \cdot e₁ + y \cdot e₂ + z \cdot e₃
+    + e_p + e_m
+\]</div>
+<p>The <strong>OPNS form</strong> (grade‑3 trivector) is obtained by dualizing:</p>
+<div class="arithmatex">\[
+P_{\text{OPNS}} = \text{dual}(P_{\text{IPNS}})
+    = (e₁ - x·e₀) \wedge (e₂ - y·e₀) \wedge (e₃ - z·e₀)
+\]</div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">p</span> <span class="o">=</span> <span class="n">pga</span><span class="o">.</span><span class="n">point</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># IPNS:  {e1:3, e2:4, e3:5, ep:1.0, em:1.0}</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># OPNS:  dual → grade-3 trivector</span>
+</span></code></pre></div>
+<p>An ideal point (direction at infinity) has <strong>no e₀ component</strong>:</p>
+<div class="arithmatex">\[
+D_{\text{IPNS}} = x \cdot e₁ + y \cdot e₂ + z \cdot e₃
+\]</div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">d</span> <span class="o">=</span> <span class="n">pga</span><span class="o">.</span><span class="n">direction</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># {e1:1}</span>
+</span></code></pre></div>
+<h3 id="23-plane-representation">2.3 Plane Representation<a class="headerlink" href="#23-plane-representation" title="Permanent link">&para;</a></h3>
+<p>A plane with unit normal <code>n = (n_x, n_y, n_z)</code> and signed distance <code>d</code>
+from the origin is a grade‑1 vector:</p>
+<div class="arithmatex">\[
+\Pi = n_x \cdot e₁ + n_y \cdot e₂ + n_z \cdot e₃ + d \cdot e₀
+\]</div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Plane at z = 3, normal pointing in +z direction</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">plane</span> <span class="o">=</span> <span class="n">pga</span><span class="o">.</span><span class="n">plane</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</span></code></pre></div>
+<hr />
+<h2 id="3-entity-representations-gunndorst-opns-grades">3. Entity Representations (Gunn/Dorst OPNS Grades)<a class="headerlink" href="#3-entity-representations-gunndorst-opns-grades" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Grade</th>
+<th>OPNS Representation</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plane</td>
+<td>1</td>
+<td><code>n + d·e₀</code></td>
+<td>Direct plane vector</td>
+</tr>
+<tr>
+<td>Line</td>
+<td>2</td>
+<td>Intersection of 2 planes</td>
+<td>Bivector: <code>Π₁ ∧ Π₂</code></td>
+</tr>
+<tr>
+<td>Point</td>
+<td>3</td>
+<td>Intersection of 3 planes</td>
+<td>Trivector: <code>Π₁ ∧ Π₂ ∧ Π₃</code></td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>3</td>
+<td>Dual has no e₀ component</td>
+<td>Ideal point at infinity</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>4</td>
+<td><code>e₁ ∧ e₂ ∧ e₃ ∧ e₀</code></td>
+<td>4D pseudoscalar <code>I₄</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="31-ipns-interpretation">3.1 IPNS Interpretation<a class="headerlink" href="#31-ipns-interpretation" title="Permanent link">&para;</a></h3>
+<p>In IPNS (dual) form, the grades are swapped:</p>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>IPNS Grade</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Point</td>
+<td>1</td>
+<td><code>x·e₁ + y·e₂ + z·e₃ + e₀</code></td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>1</td>
+<td><code>x·e₁ + y·e₂ + z·e₃</code> (no e₀)</td>
+</tr>
+<tr>
+<td>Line</td>
+<td>2</td>
+<td>Grade-2 bivector (self‑dual in 4D sense)</td>
+</tr>
+<tr>
+<td>Plane</td>
+<td>3</td>
+<td>Grade-3 trivector, dual of a plane vector</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>5</td>
+<td>Pseudoscalar <code>I₅</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-operator-representations-versors">4. Operator Representations (Versors)<a class="headerlink" href="#4-operator-representations-versors" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Factor Count</th>
+<th>Structure</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reflection</td>
+<td>1</td>
+<td><code>R = n</code></td>
+<td>Single reflector (plane normal), no null</td>
+</tr>
+<tr>
+<td>Rotor</td>
+<td>2</td>
+<td><code>R = n₁·n₂</code></td>
+<td>Two Euclidean reflectors → 3D rotation</td>
+</tr>
+<tr>
+<td>Translator</td>
+<td>2</td>
+<td><code>T = 1 − ½∑ d_i·(e_i∧e₀)</code></td>
+<td>Two null reflectors → translation</td>
+</tr>
+<tr>
+<td>GeneralRotor</td>
+<td>2</td>
+<td><code>G = T·R·T̃</code></td>
+<td>Rotation about displaced axis, grades {0, 2}</td>
+</tr>
+<tr>
+<td>Motor</td>
+<td>4</td>
+<td><code>M = T·R</code></td>
+<td>Rotation + translation (rigid body motion)</td>
+</tr>
+<tr>
+<td>ReflectionLine</td>
+<td>2</td>
+<td><code>d∧e₀</code></td>
+<td>Reflection about a line through origin</td>
+</tr>
+<tr>
+<td>ReflectionOrigin</td>
+<td>3</td>
+<td><code>e₁∧e₂∧e₃</code></td>
+<td>Reflection about the origin</td>
+</tr>
+</tbody>
+</table>
+<h3 id="41-rotor">4.1 Rotor<a class="headerlink" href="#41-rotor" title="Permanent link">&para;</a></h3>
+<p>Same Euclidean bivector basis as in E3/P3:</p>
+<div class="arithmatex">\[
+R = \cos\frac{\theta}{2}
+    + \sin\frac{\theta}{2}
+      \big( a_x·e_{23} + a_y·e_{31} + a_z·e_{12} \big)
+\]</div>
+<p><strong>Blade basis:</strong> <code>{1, e23(6), e31(5), e12(3)}</code> — 4 blades, grades 0 and 2.</p>
+<h3 id="42-translator">4.2 Translator<a class="headerlink" href="#42-translator" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[
+T = 1 - \frac{1}{2} \big(
+       d_x·(e_1∧e₀)
+     + d_y·(e_2∧e₀)
+     + d_z·(e_3∧e₀) \big)
+\]</div>
+<p>where <code>e_1∧e₀ = e_1∧e_p + e_1∧e_m</code> (blades 9 and 17).</p>
+<p><strong>Extraction:</strong> <code>d_x = -2·coeff[9]</code>, <code>d_y = -2·coeff[10]</code>,
+<code>d_z = -2·coeff[12]</code> (read directly from bivector coefficients).</p>
+<h3 id="43-generalrotor">4.3 GeneralRotor<a class="headerlink" href="#43-generalrotor" title="Permanent link">&para;</a></h3>
+<p>A general rotor applies a rotation about an axis that does <strong>not</strong> pass
+through the origin. It is constructed by conjugating a rotor with a
+translator:</p>
+<div class="arithmatex">\[
+G = T \cdot R \cdot \tilde{T}
+\]</div>
+<p>The result has grades {0, 2} (scalar + bivector), distinguishing it from a
+Motor which also has a grade‑4 term.</p>
+<p><strong>Analysis</strong>: The Euclidean bivector part yields the rotation angle and axis;
+the null bivector part encodes the axis displacement.</p>
+<h3 id="44-motor">4.4 Motor<a class="headerlink" href="#44-motor" title="Permanent link">&para;</a></h3>
+<p>A motor is the geometric product of a translator and a rotor:</p>
+<div class="arithmatex">\[
+M = T \cdot R
+\]</div>
+<p>In versor factorization, a motor produces 4 reflector factors
+(2 Euclidean + 2 null). The analysis separates these into rotor (from
+Euclidean factors) and translator (from versor coefficients).</p>
+<hr />
+<h2 id="5-entity-operator-coverage">5. Entity &amp; Operator Coverage<a class="headerlink" href="#5-entity-operator-coverage" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>PGA3</th>
+<th>N3</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Point</td>
+<td>✓</td>
+<td>✓</td>
+<td>Gunn/Dorst grade 3 (OPNS)</td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>✓</td>
+<td>✓</td>
+<td>Ideal point, no e₀ component</td>
+</tr>
+<tr>
+<td>Line</td>
+<td>✓</td>
+<td>✓</td>
+<td>Grade 2 (intersection of 2 planes)</td>
+</tr>
+<tr>
+<td>Plane</td>
+<td>✓</td>
+<td>✓</td>
+<td>Grade 1 vector</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>✓</td>
+<td>✓</td>
+<td>Grade 4 pseudoscalar</td>
+</tr>
+<tr>
+<td>PointPair</td>
+<td>✗</td>
+<td>✓</td>
+<td>Requires full conformal structure</td>
+</tr>
+<tr>
+<td>Circle</td>
+<td>✗</td>
+<td>✓</td>
+<td>Requires full conformal structure</td>
+</tr>
+<tr>
+<td>Sphere</td>
+<td>✗</td>
+<td>✓</td>
+<td>Requires full conformal structure</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>PGA3</th>
+<th>N3</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reflection</td>
+<td>✓</td>
+<td>✓</td>
+<td></td>
+</tr>
+<tr>
+<td>ReflectionLine</td>
+<td>✓</td>
+<td>✓</td>
+<td></td>
+</tr>
+<tr>
+<td>ReflectionOrigin</td>
+<td>✓</td>
+<td>✓</td>
+<td></td>
+</tr>
+<tr>
+<td>Rotor</td>
+<td>✓</td>
+<td>✓</td>
+<td></td>
+</tr>
+<tr>
+<td>Translator</td>
+<td>✓</td>
+<td>✓</td>
+<td></td>
+</tr>
+<tr>
+<td>GeneralRotor</td>
+<td>✓</td>
+<td>✓</td>
+<td>Rotation about displaced axis</td>
+</tr>
+<tr>
+<td>Motor</td>
+<td>✓</td>
+<td>✓</td>
+<td></td>
+</tr>
+<tr>
+<td>Inversion</td>
+<td>✗</td>
+<td>✓</td>
+<td>Requires eo as independent element</td>
+</tr>
+<tr>
+<td>Dilator</td>
+<td>✗</td>
+<td>✓</td>
+<td>Requires <code>E = e₀ ∧ e₀^{\text{inv}}</code></td>
+</tr>
+<tr>
+<td>GeneralDilator</td>
+<td>✗</td>
+<td>✓</td>
+<td>Requires full conformal structure</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-design-notes">6. Design Notes<a class="headerlink" href="#6-design-notes" title="Permanent link">&para;</a></h2>
+<h3 id="61-weight-normalization">6.1 Weight Normalization<a class="headerlink" href="#61-weight-normalization" title="Permanent link">&para;</a></h3>
+<p>Point extraction in analysis uses algebraic weight normalization. For a
+grade‑1 IPNS point vector <code>P = x·e₁ + y·e₂ + z·e₃ + α·e₀</code>, the
+homogeneous weight <code>α</code> is extracted via:</p>
+<div class="arithmatex">\[
+\alpha = \langle P \cdot e₀^{\text{inv}} \rangle_0
+\]</div>
+<p>The Euclidean coordinates are then <code>(x/α, y/α, z/α)</code>. This handles
+arbitrary scaling (centroids, interpolated points, versor‑transformed
+points) correctly.</p>
+<h3 id="62-bladeness-validation">6.2 Blade‑ness Validation<a class="headerlink" href="#62-bladeness-validation" title="Permanent link">&para;</a></h3>
+<p>Before factorizing a bivector as a line, the analysis checks that the
+bivector is a simple blade (<code>B ∧ B = 0</code>). A non‑simple bivector
+(a screw/motor bivector) raises <code>ValueError</code> with guidance to use
+<code>analyze_operator</code> instead.</p>
+<h3 id="63-limitations">6.3 Limitations<a class="headerlink" href="#63-limitations" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>5D embedding overhead.</strong> The 4D Gunn/Dorst algebra is embedded in a 5D
+   algebra, which means there are extra degrees of freedom (<code>ep</code> and <code>em</code>
+   blades) that must be handled consistently.</li>
+<li><strong>Motor decomposition</strong> is non‑unique — the same motor can be factored
+   in multiple ways.</li>
+<li><strong>No native null vector.</strong> A true G(3, 0, 1) implementation with a
+   proper null basis vector may be considered in a future release.</li>
+</ol>
+<hr />
+<h2 id="7-references">7. References<a class="headerlink" href="#7-references" title="Permanent link">&para;</a></h2>
+<h3 id="gunndorst-4d-pga-our-implementation-target">Gunn/Dorst 4D PGA (our implementation target)<a class="headerlink" href="#gunndorst-4d-pga-our-implementation-target" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Publication</th>
+<th>Authors</th>
+<th>Year</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Geometric algebras for Euclidean geometry</em></td>
+<td>Charles Gunn</td>
+<td>2016</td>
+</tr>
+<tr>
+<td><em>On the Homogeneous Model of Euclidean Geometry</em> (in <em>Guide to GA in Practice</em>)</td>
+<td>Charles Gunn</td>
+<td>2011</td>
+</tr>
+<tr>
+<td><em>A Guided Tour to the Plane‑Based Geometric Algebra PGA</em></td>
+<td>Leo Dorst</td>
+<td>2020</td>
+</tr>
+</tbody>
+</table>
+<h3 id="nullvector-embedding-technique">Null‑vector embedding technique<a class="headerlink" href="#nullvector-embedding-technique" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Publication</th>
+<th>Authors</th>
+<th>Year</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Geometric Algebra with Applications in Engineering</em> (esp. §4.2–4.3)</td>
+<td>Christian Perwass</td>
+<td>2009</td>
+</tr>
+<tr>
+<td><a href="../pga_null_embedding/">pga_null_embedding.md</a></td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="general-ga-theory">General GA theory<a class="headerlink" href="#general-ga-theory" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Publication</th>
+<th>Authors</th>
+<th>Year</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Geometric Algebra for Computer Science</em></td>
+<td>Dorst, Fontijne, Mann</td>
+<td>2007</td>
+</tr>
+<tr>
+<td><em>Clifford algebras and spinors</em> (esp. §17.3)</td>
+<td>Pertti Lounesto</td>
+<td>2001</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.indexes", "search.highlight", "search.suggest", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike", "version": "0.4.0rc4.dev5+g3dfa9903b"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
