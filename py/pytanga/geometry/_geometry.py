@@ -13,7 +13,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from . import analysis, create
+from .analysis import analyze_entity, analyze_operator
+from .create import create
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -67,7 +68,7 @@ class Geometry:
         MV
             The multivector representation.
         """
-        return create.create(self._algebra, obj, opns=self._opns(opns))
+        return create(self._algebra, obj, opns=self._opns(opns))
 
     def which_entity(self, mv: MV, *, opns: bool | None = None) -> Entity:
         """Determine which geometric entity an MV represents.
@@ -85,7 +86,7 @@ class Geometry:
         Entity
             The :class:`~.entities.Entity` dataclass.
         """
-        return analysis.analyze_entity(mv, opns=self._opns(opns))
+        return analyze_entity(mv, opns=self._opns(opns))
 
     def which_operator(self, mv: MV) -> Operator:
         """Determine which versor / operator an MV represents.
@@ -105,7 +106,7 @@ class Geometry:
         Operators (versors) are independent of the OPNS/IPNS flag;
         this method does not accept an *opns* argument.
         """
-        return analysis.analyze_operator(mv)
+        return analyze_operator(mv)
 
     # ── helpers ────────────────────────────────────────────────
 
