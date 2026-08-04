@@ -104,6 +104,15 @@ function initScene() {
 }
 
 function onResize() {
+    // 2D orthographic: adjust frustum for new aspect ratio
+    if (sceneConfig && sceneConfig.space_dim === 2 && camera.isOrthographicCamera) {
+        const frustumSize = (Math.abs(camera.right - camera.left) + Math.abs(camera.top - camera.bottom)) / 2;
+        const aspect = window.innerWidth / window.innerHeight;
+        camera.left = frustumSize * aspect / -2;
+        camera.right = frustumSize * aspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = frustumSize / -2;
+    }
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -238,6 +247,23 @@ function applySceneConfig(config) {
         scene.add(window._axesHelper);
     }
 
+    // ── 2D mode: switch to orthographic camera (top-down) ──
+    if (config.space_dim === 2 && !(camera.isOrthographicCamera)) {
+        const frustumSize = extent * 2;
+        const aspect = window.innerWidth / window.innerHeight;
+        camera = new THREE.OrthographicCamera(
+            frustumSize * aspect / -2,
+            frustumSize * aspect / 2,
+            frustumSize / 2,
+            frustumSize / -2,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 0, 20);
+        camera.lookAt(0, 0, 0);
+        controls.object = camera;
+    }
+
     // Camera
     const cc = config.camera;
     if (cc) {
@@ -259,6 +285,17 @@ function applySceneConfig(config) {
         renderAnnotation(config.annotation, null);
     } else if (config.annotation === '') {
         removeAnnotation();
+    }
+
+    // ── 2D mode: configure controls and renderer ──
+    if (config.space_dim === 2) {
+        controls.enableRotate = false;
+        controls.mouseButtons = {
+            LEFT: null,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.PAN
+        };
+        renderer.sortObjects = false;
     }
 }
 
@@ -383,6 +420,24 @@ function fitCameraToScene() {
     box.getCenter(center);
     const size = new THREE.Vector3();
     box.getSize(size);
+
+    // ── 2D mode: orthographic auto-fit ──
+    if (sceneConfig && sceneConfig.space_dim === 2) {
+        const frustumSize = Math.max(size.x, size.y, 1) * 1.2;
+        const aspect = window.innerWidth / window.innerHeight;
+        camera.left = frustumSize * aspect / -2;
+        camera.right = frustumSize * aspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = frustumSize / -2;
+        camera.position.set(center.x, center.y, 20);
+        camera.lookAt(center.x, center.y, 0);
+        camera.updateProjectionMatrix();
+        controls.target.set(center.x, center.y, 0);
+        controls.update();
+        return;
+    }
+
+    // ── 3D mode: existing behavior ──
     const maxDim = Math.max(size.x, size.y, size.z, 1);
     const distance = maxDim * 1.5 + 2;
 
@@ -416,6 +471,17 @@ function inPlaceUpdate(ent) {
     // Position update
     if (ent.position) {
         mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
+        // 2D overlay draw order: z-coordinate controls stack order
+        if (sceneConfig && sceneConfig.space_dim === 2) {
+            mesh.renderOrder = Math.round(ent.position[2] * 100);
+            mesh.traverse(child => {
+                if (child.material) {
+                    child.material.depthTest = false;
+                    child.material.depthWrite = false;
+                    child.material.needsUpdate = true;
+                }
+            });
+        }
     }
 
     // Direction/vector update (for arrows, lines, etc.)
@@ -466,6 +532,18 @@ function inPlaceUpdate(ent) {
     if (ent.kind !== undefined && ent.kind !== previous?.kind) return false;
 
     return true;
+}
+
+// ── 2D overlay draw order helper ─────────────────────────────
+function _applyOverlayDrawOrder(mesh, z) {
+    mesh.renderOrder = Math.round(z * 100);
+    mesh.traverse(child => {
+        if (child.material) {
+            child.material.depthTest = false;
+            child.material.depthWrite = false;
+            child.material.needsUpdate = true;
+        }
+    });
 }
 
 // ── Message Handler ─────────────────────────────────────────
@@ -713,6 +791,10 @@ function upsertObject(msg) {
     if (msg.layer === 'scene') {
         const mesh = createEntityMesh(msg);
         if (mesh) {
+            // 2D overlay draw order for new meshes
+            if (sceneConfig && sceneConfig.space_dim === 2 && msg.position) {
+                _applyOverlayDrawOrder(mesh, msg.position[2] || 0);
+            }
             scene.add(mesh);
             sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
             entityMeshes.set(msg.id, mesh);
@@ -886,6 +968,10 @@ function updateEntity(ent) {
     if (!existing) {
         const mesh = createEntityMesh(ent);
         if (mesh) {
+            // 2D overlay draw order for new meshes
+            if (sceneConfig && sceneConfig.space_dim === 2 && ent.position) {
+                _applyOverlayDrawOrder(mesh, ent.position[2] || 0);
+            }
             scene.add(mesh);
             entityMeshes.set(id, mesh);
         }
@@ -907,6 +993,11 @@ function updateEntity(ent) {
     entityMeshes.delete(id);
     const mesh = createEntityMesh({ ...existing, ...ent });
     if (mesh) {
+        // 2D overlay draw order for rebuilt meshes
+        const pos = ent.position || existing?.position;
+        if (sceneConfig && sceneConfig.space_dim === 2 && pos) {
+            _applyOverlayDrawOrder(mesh, pos[2] || 0);
+        }
         scene.add(mesh);
         entityMeshes.set(id, mesh);
         // Re-attach labels that were orphaned by the old mesh removal
