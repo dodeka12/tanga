@@ -66,6 +66,7 @@ class SceneConfig:
     title: str = "Tanga 3D Viewer"  # viewport title overlay
     annotation: str | None = None  # markdown annotation text
     name: str = ""  # scene name (empty string = main scene)
+    space_dim: int = 3  # 2 or 3 — controls camera mode, controls, and rendering
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-compatible dict."""
@@ -77,6 +78,7 @@ class SceneConfig:
             "background_color": self.background_color,
             "title": self.title,
             "name": self.name,
+            "space_dim": self.space_dim,
         }
         if self.camera is not None:
             cam = self.camera.to_dict()

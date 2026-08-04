@@ -88,7 +88,10 @@ class Visualizer(_JupyterDisplayMixin):
         background_color: str = "#1a1a2e",
         # Camera configuration (None = auto-fit from entities)
         camera: CameraConfig | None = None,
+        space_dim: int = 3,  # 2 or 3
     ) -> None:
+        if space_dim == 2 and title == "Tanga 3D Viewer":
+            title = "Tanga 2D Viewer"
         self._config = SceneConfig(
             space_extent=space_extent,
             show_grid=show_grid,
@@ -98,6 +101,7 @@ class Visualizer(_JupyterDisplayMixin):
             title=title,
             annotation=annotation,
             name="",
+            space_dim=space_dim,
         )
         self._port = port
         self._host = host
@@ -153,6 +157,7 @@ class Visualizer(_JupyterDisplayMixin):
                 camera=None,
                 title=name or self._config.title,
                 name=name,
+                space_dim=self._config.space_dim,
             )
             self._scenes[name] = Scene(cfg, name=name)
         return VizSceneHandle(self, name)
