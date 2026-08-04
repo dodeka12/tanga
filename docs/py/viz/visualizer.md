@@ -30,13 +30,53 @@ Visualizer(
 | `open_browser` | `bool \| None` | auto | Open viewer URL on start |
 | `reuse_existing` | `bool` | `True` | Wait for existing browser tab to reconnect before opening a new one |
 | `opns` | `bool` | `True` | Default MV interpretation (OPNS/IPNS) |
-| `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene) |
+| `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
-| `space_extent` | `float` | `10.0` | Half-extent of visible 3D space |
+| `space_dim` | `int` | `3` | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer (see below) |
+| `space_extent` | `float` | `10.0` | Half-extent of visible space |
 | `show_grid` | `bool` | `True` | Show ground grid |
 | `show_axes` | `bool` | `True` | Show RGB axes helper |
 | `background_color` | `str` | `"#1a1a2e"` | CSS background color |
 | `camera` | `CameraConfig \| None` | `None` | Explicit camera settings |
+
+## 2D Visualization
+
+Activate 2D mode with `space_dim=2`:
+
+```python
+from pytanga.viz import Visualizer
+from pytanga.geometry import Point
+
+viz = Visualizer(space_dim=2)
+viz.add(Point(3, 4, 0))
+viz.run()
+```
+
+When `space_dim=2`:
+
+- The default title becomes `"Tanga 2D Viewer"` instead of `"Tanga 3D Viewer"`.
+- The camera switches to an **orthographic top-down view** looking down from
+  `(0, 0, 20)` toward `(0, 0, 0)`.
+- Mouse controls adjust for 2D interaction:
+    - **Pan:** left-click drag *or* right-click drag
+    - **Zoom:** scroll wheel
+    - No orbit rotation (rotation around the view axis is locked).
+- The grid renders as a flat XY plane instead of a ground plane.
+- **Full 3D entities render in 2D mode.** Any 3D entity (e.g. `Sphere`,
+  `Plane`, `Circle` with non‑zero `z`) can be added and renders correctly
+  from the orthographic top‑down perspective. This works out of the box
+  with no additional code — the camera change alone handles it.
+- **Z‑coordinate = render order:** In 2D mode, the `z` field of entity
+  dataclasses controls draw order, not camera depth. Entities with larger
+  positive `z` render on top of those with smaller `z` (e.g.
+  `Point(3, 4, 10)` appears above `Point(3, 4, 0)`). This uses
+  `renderOrder` with `depthTest=false` on the Three.js materials.
+- `SceneConfig`'s `space_dim` property is set to 2, and any sub‑scenes
+  created from the main scene inherit this value.
+
+See [Camera & Controls](camera.md) for details on 2D camera behavior and
+[`2d_demo.py`](https://github.com/dodeka12/tanga/blob/main/dev/src/viz_2d_demo.py)
+for a complete example.
 
 ## Adding Entities — `add()`
 

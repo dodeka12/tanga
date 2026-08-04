@@ -1,10 +1,15 @@
 # Entity Data Classes
 
 Entity data classes are algebra-independent `@dataclass` types that represent
-geometric primitives in Euclidean 3D space. They can be used as input to
+geometric primitives in Euclidean 2D and 3D space. They can be used as input to
 [`create()`](create.md) and as output from [`analyze_entity()`](analysis.md).
 
 All classes are imported from `pytanga.geometry` (defined in `pytanga.geometry.entities`).
+
+!!! tip "2D usage"
+    When working with 2D algebras (E2, P2, N2, PGA2), all entities still use
+    3D data fields. The `z` component is always 0. For example, `Point(3, 4, 0)`
+    represents the point at (3, 4) in 2D space.
 
 ## Point
 
@@ -204,16 +209,16 @@ space = Space()
 
 ## Entity Coverage Matrix
 
-| Entity | E3 | P3 | PGA3 | N3 |
-|--------|:--:|:--:|:----:|:--:|
-| Point | ✓ | ✓ | ✓ | ✓ |
-| Direction | — | ✓ | ✓ | ✓ |
-| PointPair | — | — | — | ✓ |
-| ImagPointPair | — | — | — | ✓ |
-| Line | — | ✓ | ✓ | ✓ |
-| Circle | — | — | — | ✓ |
-| ImagCircle | — | — | — | ✓ |
-| Plane | ✓ | ✓ | ✓ | ✓ |
-| Sphere | — | — | — | ✓ |
-| ImagSphere | — | — | — | ✓ |
-| Space | ✓ | ✓ | ✓ | ✓ |
+| Entity | E3 | P3 | PGA3 | N3 | E2 | P2 | PGA2 | N2 |
+|--------|:--:|:--:|:----:|:--:|:--:|:--:|:----:|:--:|
+| Point | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| Direction | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| PointPair | — | — | — | ✓ | — | — | — | ✓ |
+| ImagPointPair | — | — | — | ✓ | — | — | — | ✓ |
+| Line | — | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| Circle | — | — | — | ✓ | — | — | — | ✓ |
+| ImagCircle | — | — | — | ✓ | — | — | — | ✓ |
+| Plane | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | — |
+| Sphere | — | — | — | ✓ | — | — | — | ✓ |
+| ImagSphere | — | — | — | ✓ | — | — | — | ✓ |
+| Space | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |

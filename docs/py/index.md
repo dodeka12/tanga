@@ -3,19 +3,24 @@
 This section describes the public Python API of **pytanga** — the Python
 interface to TanGA's geometric algebra engine.
 
+!!! info "2D + 3D algebras"
+    TANGA supports both 2D and 3D geometric algebras. Use `Algebra.from_name("E2")`,
+    `"P2"`, `"N2"`, or `"PGA2"` for 2D; `"E3"`, `"P3"`, `"N3"`, or `"PGA3"`
+    for 3D. The visualizer supports both modes via `Visualizer(space_dim=2)`.
+
 ## Topics
 
 | Guide | What you will learn |
 |-------|---------------------|
 | [Environment & Setup](env/index.md) | Installation prerequisites, uv environment, automatic C++ compilation and caching |
 | [Algebra submodule](algebra/index.md) | `Algebra`, `MV`, duals, modulus arithmetic — the core GA types and operations |
-| [Basis classes](basis/index.md) | How `BasisE3`, `BasisP3`, `BasisN3`, `BasisPGA3` expose named blades and factory methods |
+| [Basis classes](basis/index.md) | How `BasisE2`, `BasisP2`, `BasisN2`, `BasisPGA2` (2D) and `BasisE3`, `BasisP3`, `BasisN3`, `BasisPGA3` (3D) expose named blades and factory methods |
 | [BladeMask](blade-mask/index.md) | Construction, properties, set operations — the foundational type labelling all matrix and tensor axes |
 | [Matrix Operations](matrix/index.md) | `MVMatrix`, `MVProductMatrix` — product‑matrix and blade‑mask pipeline |
 | [Equation Solving](solver/index.md) | `solve`, `solve_lsq`, `solve_mod` — automatic blade‑mask derivation and linear system solving via free functions |
 | [Tensor Operations](tensors/index.md) | `MVTensor`, `MVLabeledTensor`, `product_tensor()` — label‑driven tensor contractions, broadcasts, and slicing |
-| [Geometry Submodule](geometry/index.md) | `Point`, `Line`, `Plane`, `Rotor`, `Motor` — algebra-independent entity/operator types, `analyze()` and `create()` pipelines |
-| [3D Visualizer](viz/index.md) | Interactive Three.js visualization in the browser — add entities, apply styles, animate, export to HTML/glTF/MP4 |
+| [Geometry Submodule](geometry/index.md) | `Point`, `Line`, `Plane`, `Rotor`, `Motor` — algebra-independent entity/operator types usable in 2D and 3D, `analyze()` and `create()` pipelines |
+| [3D & 2D Visualizer](viz/index.md) | Interactive Three.js visualization in the browser — 3D viewer (default) and 2D viewer (`space_dim=2`), add entities, apply styles, animate, export to HTML/glTF/MP4 |
 
 ## Quick Start
 
@@ -94,5 +99,5 @@ uv run python py/examples/<script>.py
 ## Background
 
 For the mathematical background of the null-vector embedding used in
-`BasisN3` and `BasisPGA3`, see
+`BasisN3`, `BasisPGA3`, `BasisN2`, and `BasisPGA2`, see
 [pga_null_embedding.md](basis/pga_null_embedding.md).
