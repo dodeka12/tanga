@@ -55,9 +55,6 @@ extra:
   version:
     provider: mike
 
-hooks:
-  - docs/_hooks/inject_version.py
-
 docs_dir: docs
 
 nav:
