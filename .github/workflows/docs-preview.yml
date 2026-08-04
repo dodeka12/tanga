@@ -36,7 +36,7 @@ jobs:
           # Sanitize branch name: replace / with - for safe URL paths
           ALIAS=$(echo "$SAFE_ALIAS" | tr '/' '-')
           export TANGA_VERSION="$ALIAS"
-          uv run mike deploy --push --alias "$ALIAS" "$ALIAS"
+          uv run mike deploy --push "$ALIAS"
 
       - name: Print preview URL
         run: |

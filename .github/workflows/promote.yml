@@ -91,6 +91,10 @@ jobs:
           export TANGA_VERSION="$VERSION"
           uv run mike deploy --push --update-aliases "$VERSION" latest
 
+      - name: Set latest as default
+        run: |
+          uv run mike set-default --push latest
+
       - name: Print stable docs URL
         run: |
           echo ""
