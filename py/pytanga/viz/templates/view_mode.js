@@ -88,7 +88,7 @@ export function configureControls(controls, renderer, spaceDim) {
     if (spaceDim === 2) {
         controls.enableRotate = false;
         controls.mouseButtons = {
-            LEFT: null,
+            LEFT: THREE.MOUSE.PAN,
             MIDDLE: THREE.MOUSE.DOLLY,
             RIGHT: THREE.MOUSE.PAN
         };
