@@ -31,8 +31,8 @@ from ._pga3_utils import (
     EP,
     _get_e0,
 )
-from .entities import Direction, Plane, Point
-from .operators import GeneralRotor, ReflectionLine, ReflectionOrigin, Rotor, Translator
+from .entities import Direction, Line, Plane, Point
+from .operators import GeneralRotor, ReflectionLine, Rotor, Translator
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra

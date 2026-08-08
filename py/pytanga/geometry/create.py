@@ -32,7 +32,6 @@ from .operators import (
     Motor,
     Operator,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPlane,
     ReflectionPoint,
     Rotor,
@@ -268,14 +267,12 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
         return mod.create_reflection_plane(basis, operator.plane.normal)
     elif isinstance(operator, ReflectionPoint):
         alg_type = _detect(basis)
-        if alg_type not in ("n3", "n2", "pga3", "pga2"):
+        if alg_type not in ("n3", "n2", "pga3", "pga2", "p3", "p2"):
             raise TypeError(
                 f"ReflectionPoint operator requires conformal model (N3/N2); "
                 f"not supported in {alg_type.upper()}."
             )
         return mod.create_reflection_point(basis, operator.point)
-    elif isinstance(operator, ReflectionOrigin):
-        return mod.create_reflection_origin(basis)
     elif isinstance(operator, HDirection):
         alg_type = _detect(basis)
         if alg_type not in ("n3", "n2"):

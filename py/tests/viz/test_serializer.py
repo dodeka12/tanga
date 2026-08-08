@@ -24,7 +24,6 @@ from pytanga.geometry.operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -180,9 +179,7 @@ class TestSerializeOperators:
         assert d["color"] == "#aaccff"
 
     def test_reflection_origin(self):
-        r = ReflectionOrigin()
         d = _serialize(r)
-        assert d["kind"] == "ReflectionOrigin"
         assert d["origin"] == [0, 0, 0]
         assert d["color"] == "#ffffff"
 

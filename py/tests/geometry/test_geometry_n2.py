@@ -31,7 +31,6 @@ from pytanga.geometry.operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPoint,
     Rotor,
     Translator,

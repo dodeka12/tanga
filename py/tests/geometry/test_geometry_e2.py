@@ -15,7 +15,7 @@ from pytanga.basis import BasisE2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create, create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Point, Space
-from pytanga.geometry.operators import ReflectionLine, ReflectionOrigin, Rotor
+from pytanga.geometry.operators import ReflectionLine, ReflectionPoint, Rotor
 
 
 @pytest.fixture(scope="module")
@@ -149,16 +149,9 @@ def test_n2_operator_creation_raises_motor(basis_e2):
 
 
 def test_n2_operator_creation_raises_origin_reflection(basis_e2):
-    """E2 doesn't have e₃, so ReflectionOrigin raises."""
-    with pytest.raises(ValueError, match="Reflection about the origin"):
-        create_operator(basis_e2, ReflectionOrigin())
-
-
-# ═══════════════════════════════════════════════════════════════
-# Rotor
-# ═══════════════════════════════════════════════════════════════
-
-
+    """E2 raises TypeError for ReflectionPoint."""
+    with pytest.raises(TypeError):
+        create_operator(basis_e2, ReflectionPoint(Point(0, 0, 0)))
 def test_rotor_sign_convention_90_deg_z(basis_e2):
     """Rotor of +π/2 about z-axis applied to e₁ gives −e₂ (clockwise).
 

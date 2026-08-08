@@ -265,8 +265,7 @@ class _GltfBuilder:
                     8,
                 )
             ]
-        elif kind == "ReflectionOrigin":
-            return [_prims.box_edges(self._style_val(ent, "extent", 1.0) * 0.7)]
+        
         elif kind == "GeneralDilator":
             n = int(self._style_val(ent, "ring_count", 4))
             mx = self._style_val(ent, "max_radius", 3.0)
@@ -296,7 +295,6 @@ class _GltfBuilder:
             "GeneralRotor",
             "GeneralDilator",
             "Dilator",
-            "ReflectionOrigin",
         ):
             return tuple(ent.get("origin", [0, 0, 0]))  # type: ignore[return-value]
         return (0.0, 0.0, 0.0)

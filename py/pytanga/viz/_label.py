@@ -30,7 +30,7 @@ from pytanga.geometry.operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
+    ReflectionPoint,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -50,7 +50,7 @@ EntityLike = (
     | Space
     | ReflectionLine
     | ReflectionPlane
-    | ReflectionOrigin
+    | ReflectionPoint
     | Inversion
     | Rotor
     | Translator

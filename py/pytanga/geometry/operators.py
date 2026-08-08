@@ -105,22 +105,6 @@ class ReflectionPoint:
         return f"ReflPoint(pt={self.point})"
 
 
-# ReflectionOrigin is kept for PGA/P modules — deferred to PGA follow-up plan.
-# N3/N2 use ReflectionPoint(Point(0,0,0)) instead.
-
-
-@dataclass(frozen=True)
-class ReflectionOrigin:
-    """Reflection about the origin.
-
-    Used by P3, PGA3, P2, PGA2.  In N3/N2, use
-    ``ReflectionPoint(Point(0,0,0))`` instead.
-    """
-
-    def __repr__(self) -> str:
-        return "ReflOrigin"
-
-
 @dataclass(frozen=True)
 class Inversion:
     """Inversion in a sphere.

@@ -249,20 +249,9 @@ def create_reflection_plane(basis: Algebra, normal: Direction) -> MV:
     return basis.multivector({E1: normal.x, E2: normal.y, E3: normal.z})
 
 
-def create_reflection_origin(basis: Algebra) -> MV:
-    """Reflection about the origin.
-
-    Returns ``e₄`` (grade-1 vector).  Applying ``e₄·A·e₄`` to a
-    homogeneous point Hop(a) = a + e₄ gives −a + e₄, which projects
-    to −a (Perwass: reflection about origin).
-    """
-    return basis.multivector({E4: 1.0})
-
-
-# ═══════════════════════════════════════════════════════════════
-# N3-only operator stubs — raise ValueError
-# ═══════════════════════════════════════════════════════════════
-
+def create_reflection_point(basis: Algebra, point: Point) -> MV:
+    """Reflection in a point."""
+    return create_point(basis, point.x, point.y, point.z, opns=True)
 
 def create_translator(basis: Algebra, x: float, y: float, z: float) -> MV:
     raise ValueError(

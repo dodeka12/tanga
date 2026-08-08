@@ -54,22 +54,6 @@ class ReflectionPlaneStyle(VizStyle):
 
 
 @dataclass
-class ReflectionOriginStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.ReflectionOrigin`."""
-
-    color: str | None = None
-    opacity: float | None = None
-    extent: float | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "ReflectionOriginStyle"}
-        if self.color is not None:
-            result["color"] = self.color
-        if self.opacity is not None:
-            result["opacity"] = self.opacity
-        if self.extent is not None:
-            result["extent"] = self.extent
-        return result
 
 
 @dataclass

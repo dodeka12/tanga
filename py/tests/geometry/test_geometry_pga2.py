@@ -16,9 +16,9 @@ from pytanga.geometry.operators import (
     GeneralRotor,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
     Rotor,
     Translator,
+    ReflectionPoint,
 )
 
 
@@ -105,9 +105,9 @@ def test_reflection_line_round_trip(b):
 
 
 def test_reflection_origin_round_trip(b):
-    mv = create_operator(b, ReflectionOrigin())
+    mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
-    assert isinstance(r, (ReflectionOrigin, Rotor, GeneralRotor))
+    assert isinstance(r, (ReflectionPoint, Rotor, GeneralRotor))
 
 
 def test_general_rotor_round_trip(b):

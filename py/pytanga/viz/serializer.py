@@ -29,7 +29,7 @@ from pytanga.geometry.operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
+    ReflectionPoint,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -105,7 +105,7 @@ def serialize_entity(
         result.update(
             _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
         )
-    elif isinstance(entity, ReflectionOrigin):
+    elif isinstance(entity, ReflectionPoint):
         result.update(
             _serialize_reflection_origin(
                 entity, props, kind=kind, styles_map=styles_map
@@ -465,7 +465,7 @@ def _serialize_reflection_plane(
 
 
 def _serialize_reflection_origin(
-    ent: ReflectionOrigin,
+    ent: ReflectionPoint,
     props: Dict[str, Any],
     *,
     kind: str,

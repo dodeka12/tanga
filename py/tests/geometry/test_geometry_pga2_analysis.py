@@ -22,7 +22,6 @@ from pytanga.geometry.operators import (
     GeneralRotor,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPoint,
     Rotor,
     Translator,

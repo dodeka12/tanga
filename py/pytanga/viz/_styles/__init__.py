@@ -39,7 +39,7 @@ from pytanga.geometry.operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
+    ReflectionPoint,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -71,7 +71,7 @@ from ._operator_styles import (
     InversionStyle,
     MotorStyle,
     ReflectionLineStyle,
-    ReflectionOriginStyle,
+    ReflectionPointStyle,
     ReflectionPlaneStyle,
     RotorStyle,
     TranslatorStyle,
@@ -98,7 +98,7 @@ ObjVizStyle: TypeAlias = Union[
     SpaceStyle,
     ReflectionLineStyle,
     ReflectionPlaneStyle,
-    ReflectionOriginStyle,
+    ReflectionPointStyle,
     InversionStyle,
     RotorStyle,
     TranslatorStyle,
@@ -129,7 +129,7 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
         color="#aaccff", opacity=0.6, length=5.0, thickness=0.04
     ),
     "ReflectionPlane": ReflectionPlaneStyle(color="#88ccff", opacity=0.35, extent=5.0),
-    "ReflectionOrigin": ReflectionOriginStyle(color="#ffffff", opacity=0.5, extent=1.0),
+    "ReflectionPoint": ReflectionPointStyle(color="#ffffff", opacity=0.5, extent=1.0),
     "Inversion": InversionStyle(color="#cc88ff", opacity=0.4),
     "Rotor": RotorStyle(color="#ff8844", opacity=0.7, disc_radius=1.5),
     "Translator": TranslatorStyle(color="#44aaff", opacity=0.9, length=3.0),
@@ -186,7 +186,7 @@ def _default_style_for(
         | Space
         | ReflectionLine
         | ReflectionPlane
-        | ReflectionOrigin
+        | ReflectionPoint
         | Inversion
         | Rotor
         | Translator

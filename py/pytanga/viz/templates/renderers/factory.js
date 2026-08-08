@@ -18,7 +18,6 @@ import { createMotor } from './operators/motor.js';
 import { createGeneralRotor } from './operators/general_rotor.js';
 import { createReflectionLine } from './operators/reflection_line.js';
 import { createReflectionPlane } from './operators/reflection_plane.js';
-import { createReflectionOrigin } from './operators/reflection_origin.js';
 import { createGeneralDilator } from './operators/general_dilator.js';
 import { tagEntity } from './utils.js';
 
@@ -86,8 +85,6 @@ export function createEntityMesh(ent) {
         case 'ReflectionPlane':
             mesh = createReflectionPlane(ent);
             break;
-        case 'ReflectionOrigin':
-            mesh = createReflectionOrigin(ent);
             break;
         case 'GeneralDilator':
             mesh = createGeneralDilator(ent);
