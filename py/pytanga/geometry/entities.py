@@ -344,6 +344,23 @@ class ImagSphere(Sphere):
 
 
 @dataclass(frozen=True)
+class HDirection:
+    """A homogeneous direction (point at infinity).
+
+    Represented by ``d∧e∞`` in the conformal model, where *d* is a
+    Euclidean direction vector.  Useful as a reflection operator
+    (reflect in a point at infinity → maps to e∞).
+
+    Supported algebras: N3/N2 (needs e∞)
+    """
+
+    direction: Direction
+
+    def __repr__(self) -> str:
+        return f"HDirection(dir={self.direction})"
+
+
+@dataclass(frozen=True)
 class Space:
     """The entire 3D volume (pseudoscalar).
 
@@ -360,6 +377,7 @@ Entity = (
     Point
     | Direction
     | HPoint
+    | HDirection
     | PointPair
     | ImagPointPair
     | Line

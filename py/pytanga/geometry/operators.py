@@ -16,51 +16,105 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
-from .entities import Direction, Plane, Point
+from .entities import Direction, HDirection, Line, Plane, Point
 
 
 @dataclass(frozen=True)
 class ReflectionLine:
-    """Reflection on a line through the origin.
+    """Reflection across a line (not necessarily through origin).
 
-    Uses a grade-1 vector (the line direction) as versor.
-    Applying ``d a d⁻¹`` keeps the component parallel to d unchanged
-    and flips the perpendicular component.
+    The versor is ``Cop(a)∧Cop(b)∧e∞`` for two points a, b on the line.
+    Equivalent to the OPNS line entity blade.
 
-    Supported algebras: E3, P3, N3/PGA3
+    Can be constructed with either a :class:`Line` (new, full line) or a
+    :class:`Direction` (backward-compat, origin-only line).
+
+    Supported algebras: E3, P3, N3/PGA3 (origin-only via Direction),
+                       N3/N2 (full entity blade)
     """
 
-    direction: Direction
+    line: Line
+
+    def __init__(self, line_or_direction: Line | Direction = None, /, **kwargs):
+        # Accept keyword 'line' for new style
+        if line_or_direction is None and "line" in kwargs:
+            line_or_direction = kwargs["line"]
+        # Backward-compat: accept Direction → Line through origin
+        if isinstance(line_or_direction, Direction):
+            line_or_direction = Line(Point(0, 0, 0), line_or_direction)
+        # Backward-compat: accept direction= keyword
+        if line_or_direction is None and "direction" in kwargs:
+            line_or_direction = Line(Point(0, 0, 0), kwargs["direction"])
+        if line_or_direction is None:
+            raise TypeError("ReflectionLine requires a Line or Direction")
+        object.__setattr__(self, "line", line_or_direction)
 
     def __repr__(self) -> str:
-        return f"ReflLine(d={self.direction})"
+        return f"ReflLine(line={self.line})"
 
 
 @dataclass(frozen=True)
 class ReflectionPlane:
-    """Reflection in a plane through the origin.
+    """Reflection across a plane (not necessarily through origin).
 
-    Uses a grade-2 bivector (``n·I⁻¹``) as versor, where *n* is the
-    plane normal.  Applying ``−B a B̃`` keeps the in-plane component
-    unchanged and flips the normal component.
+    The versor is ``Cop(a)∧Cop(b)∧Cop(c)∧e∞`` for three non-collinear
+    points a, b, c on the plane.  Equivalent to the OPNS plane entity blade.
 
-    Supported algebras: E3, P3, N3/PGA3
+    Can be constructed with either a :class:`Plane` (new, full plane) or a
+    :class:`Direction` (backward-compat, origin-only plane).
+
+    Supported algebras: E3, P3, N3/PGA3 (origin-only via Direction),
+                       N3/N2 (full entity blade)
     """
 
-    normal: Direction
+    plane: Plane
+
+    def __init__(self, plane_or_normal: Plane | Direction = None, /, **kwargs):
+        # Accept keyword 'plane' for new style
+        if plane_or_normal is None and "plane" in kwargs:
+            plane_or_normal = kwargs["plane"]
+        # Backward-compat: accept Direction → Plane through origin
+        if isinstance(plane_or_normal, Direction):
+            plane_or_normal = Plane(Point(0, 0, 0), plane_or_normal)
+        # Backward-compat: accept normal= keyword
+        if plane_or_normal is None and "normal" in kwargs:
+            plane_or_normal = Plane(Point(0, 0, 0), kwargs["normal"])
+        if plane_or_normal is None:
+            raise TypeError("ReflectionPlane requires a Plane or Direction")
+        object.__setattr__(self, "plane", plane_or_normal)
 
     def __repr__(self) -> str:
-        return f"ReflPlane(n={self.normal})"
+        return f"ReflPlane(plane={self.plane})"
+
+
+@dataclass(frozen=True)
+class ReflectionPoint:
+    """Reflection in a point.
+
+    The versor is ``Cop(p)∧e∞`` — the HPoint blade used as a versor.
+    Applying the sandwich reflects points across *p*: ``q → 2p − q``.
+
+    Reflection in the origin is ``ReflectionPoint(Point(0,0,0))``.
+
+    Supported algebras: N3/N2 (needs e∞)
+    """
+
+    point: Point
+
+    def __repr__(self) -> str:
+        return f"ReflPoint(pt={self.point})"
+
+
+# ReflectionOrigin is kept for PGA/P modules — deferred to PGA follow-up plan.
+# N3/N2 use ReflectionPoint(Point(0,0,0)) instead.
 
 
 @dataclass(frozen=True)
 class ReflectionOrigin:
     """Reflection about the origin.
 
-    Uses e₄ as versor in P3: applying ``e₄ A e₄`` where A = Hop(a)
-    gives ``−a + e₄``, which projects to ``−a``.
-
-    Supported algebras: P3, N3/PGA3
+    Used by P3, PGA3, P2, PGA2.  In N3/N2, use
+    ``ReflectionPoint(Point(0,0,0))`` instead.
     """
 
     def __repr__(self) -> str:
@@ -205,7 +259,8 @@ Reflection = ReflectionPlane  # deprecated; use ReflectionLine/ReflectionPlane
 Operator = (
     ReflectionLine
     | ReflectionPlane
-    | ReflectionOrigin
+    | ReflectionPoint
+    | HDirection
     | Inversion
     | Rotor
     | Translator

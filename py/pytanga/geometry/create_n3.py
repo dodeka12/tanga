@@ -81,6 +81,21 @@ def create_homogeneous_point(
     return mv
 
 
+def create_homogeneous_direction(
+    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
+) -> MV:
+    """OPNS: ``d∧e∞`` (grade 2) where d is a Euclidean direction.
+
+    IPNS: dual of OPNS.
+    """
+    d = basis.multivector({E1: x, E2: y, E3: z})
+    einf = get_einf(basis)
+    mv = d.op(einf)
+    if not opns:
+        mv = mv.dual()
+    return mv
+
+
 def create_point_pair(basis: Algebra, a: Point, b: Point, *, opns: bool = True) -> MV:
     """OPNS: ``Cop(a) ∧ Cop(b)`` (grade-2)."""
     cp1 = _cop(basis, a.x, a.y, a.z)
@@ -308,13 +323,14 @@ def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
     return t.gp(r)
 
 
-def create_reflection_plane(basis: Algebra, normal: Direction) -> MV:
-    """Reflection in a plane through the origin (normal *n*, distance 0).
+def create_reflection_plane(basis: Algebra, plane: Plane) -> MV:
+    """Reflection in a plane (not necessarily through the origin).
 
-    Returns grade-1 vector ``n.x·e₁ + n.y·e₂ + n.z·e₃`` (e∞ = e₀ = 0).
-    For a plane at distance α, the IPNS is ``â + α·e∞``.
+    OPNS: ``Cop(a)∧Cop(b)∧Cop(c)∧e∞`` where a, b, c are three
+    non-collinear points on the plane.  Equivalent to creating the
+    plane entity OPNS.
     """
-    return basis.multivector({E1: normal.x, E2: normal.y, E3: normal.z})
+    return create_plane(basis, plane, opns=True)
 
 
 def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
@@ -327,15 +343,29 @@ def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     return create_sphere(basis, center, radius, opns=False)
 
 
-def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
-    """Reflection on a *line* through the origin."""
-    d = basis.multivector({E1: direction.x, E2: direction.y, E3: direction.z})
-    return d.op(get_einf(basis))
+def create_reflection_line(basis: Algebra, line: Line) -> MV:
+    """Reflection across a line (not necessarily through the origin).
+
+    OPNS: ``Cop(a)∧Cop(b)∧e∞`` where a, b are two points on the line.
+    This is the same MV as the line entity itself.
+    """
+    a = _cop(basis, line.origin.x, line.origin.y, line.origin.z)
+    b = _cop(
+        basis,
+        line.origin.x + line.direction.x,
+        line.origin.y + line.direction.y,
+        line.origin.z + line.direction.z,
+    )
+    return a.op(b).op(get_einf(basis))
 
 
-def create_reflection_origin(basis: Algebra) -> MV:
-    """Reflection about the origin (versor = e₀)."""
-    return get_eo(basis)
+def create_reflection_point(basis: Algebra, point: Point) -> MV:
+    """Reflection in a point.
+
+    OPNS: ``Cop(p)∧e∞`` — the HPoint blade used as a versor.
+    This is identical to the OPNS HPoint entity with weight=1.
+    """
+    return create_homogeneous_point(basis, point, weight=1.0, opns=True)
 
 
 def create_general_rotor(

@@ -247,38 +247,101 @@ def test_operator_translator_round_trip(b):
 # --- O3. ReflectionLine ---
 
 
-def test_operator_reflection_line_round_trip(b):
-    """O3: create ReflectionLine(direction=(1,2,0)) → analyze → assert direction."""
-    mv = create_operator(b, ReflectionLine(Direction(1, 2, 0)))
+def test_operator_reflection_line_through_origin_round_trip(b):
+    """O3: create ReflectionLine(x-axis through origin) → analyze → assert line."""
+    line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+    mv = create_operator(b, ReflectionLine(line))
     r = analyze_operator(mv)
     assert isinstance(r, ReflectionLine), f"Got {type(r).__name__}"
-    unit = Direction(1, 2, 0).norm()
-    assert r.direction.x == pytest.approx(unit.x)
-    assert r.direction.y == pytest.approx(unit.y)
-    assert r.direction.z == pytest.approx(unit.z)
+    # Direction may have sign flip — normalize to compare
+    d = r.line.direction
+    assert abs(d.x) == pytest.approx(1, abs=1e-6)
+    assert abs(d.y) == pytest.approx(0, abs=1e-6)
+    assert abs(d.z) == pytest.approx(0, abs=1e-6)
+    # Origin must lie on the line (some point on line through origin)
+    # Check origin is collinear with direction
+    cross_y = r.line.direction.z * r.line.origin.x - r.line.direction.x * r.line.origin.z
+    cross_x = r.line.direction.y * r.line.origin.z - r.line.direction.z * r.line.origin.y
+    assert cross_x == pytest.approx(0, abs=1e-6)
+    assert cross_y == pytest.approx(0, abs=1e-6)
+
+
+def test_operator_reflection_line_offset_round_trip(b):
+    """O3b: create ReflectionLine(off-origin line) → analyze → assertion."""
+    line = Line(origin=Point(1, 2, 0), direction=Direction(1, 0, 0))
+    mv = create_operator(b, ReflectionLine(line))
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionLine), f"Got {type(r).__name__}"
+    # Direction may have sign flip
+    d = r.line.direction
+    assert abs(d.x) == pytest.approx(1, abs=1e-6)
+    # Origin should be on/near the line — verify via cross product
+    cross_x = r.line.direction.y * r.line.origin.z - r.line.direction.z * r.line.origin.y
+    cross_y = r.line.direction.z * r.line.origin.x - r.line.direction.x * r.line.origin.z
+    assert cross_x == pytest.approx(0, abs=1e-6)
+    assert cross_y == pytest.approx(0, abs=1e-6)
 
 
 # --- O4. ReflectionPlane ---
 
 
-def test_operator_reflection_plane_round_trip(b):
-    """O4: create ReflectionPlane(normal=(0,0,1)) → analyze → assert normal."""
-    mv = create_operator(b, ReflectionPlane(Direction(0, 0, 1)))
+def test_operator_reflection_plane_through_origin_round_trip(b):
+    """O4: create ReflectionPlane(xy-plane through origin) → analyze → assert."""
+    plane = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
+    mv = create_operator(b, ReflectionPlane(plane))
     r = analyze_operator(mv)
     assert isinstance(r, ReflectionPlane), f"Got {type(r).__name__}"
-    assert r.normal.x == pytest.approx(0)
-    assert r.normal.y == pytest.approx(0)
-    assert r.normal.z == pytest.approx(1)
+    # Normal should be unit z
+    assert r.plane.normal.z == pytest.approx(1, abs=1e-6)
 
 
-# --- O5. ReflectionOrigin ---
-
-
-def test_operator_reflection_origin_round_trip(b):
-    """O5: create ReflectionOrigin → analyze → assert type (no fields)."""
-    mv = create_operator(b, ReflectionOrigin())
+def test_operator_reflection_plane_offset_round_trip(b):
+    """O4b: create ReflectionPlane(z=5 plane) → analyze → assert."""
+    plane = Plane(point=Point(0, 0, 5), normal=Direction(0, 0, 1))
+    mv = create_operator(b, ReflectionPlane(plane))
     r = analyze_operator(mv)
-    assert isinstance(r, ReflectionOrigin), f"Got {type(r).__name__}"
+    assert isinstance(r, ReflectionPlane), f"Got {type(r).__name__}"
+    assert r.plane.normal.z == pytest.approx(1, abs=1e-6)
+    # The point should be on the z=5 plane
+    assert r.plane.point.z == pytest.approx(5, abs=1e-6)
+
+
+# --- O5. ReflectionPoint ---
+
+
+def test_operator_reflection_point_round_trip(b):
+    """O5: create ReflectionPoint(Point(2,-1,3)) → analyze → assert."""
+    mv = create_operator(b, ReflectionPoint(Point(2, -1, 3)))
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionPoint), f"Got {type(r).__name__}"
+    assert r.point.x == pytest.approx(2)
+    assert r.point.y == pytest.approx(-1)
+    assert r.point.z == pytest.approx(3)
+
+
+def test_operator_reflection_point_origin_round_trip(b):
+    """O5b: create ReflectionPoint(Point(0,0,0)) → analyze → assert (origin case)."""
+    mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionPoint), f"Got {type(r).__name__}"
+    assert r.point.x == pytest.approx(0)
+    assert r.point.y == pytest.approx(0)
+    assert r.point.z == pytest.approx(0)
+
+
+# --- O5c. HDirection operator ---
+
+
+def test_operator_hdirection_round_trip(b):
+    """O5c: create HDirection(Dir(1,2,3)) as operator → analyze → assert."""
+    d = Direction(1, 2, 3)
+    mv = create_operator(b, HDirection(d))
+    r = analyze_operator(mv)
+    assert isinstance(r, HDirection), f"Got {type(r).__name__}"
+    n = math.sqrt(14)
+    assert r.direction.x == pytest.approx(1 / n)
+    assert r.direction.y == pytest.approx(2 / n)
+    assert r.direction.z == pytest.approx(3 / n)
 
 
 # --- O6. Inversion ---
@@ -395,6 +458,164 @@ def test_apply_rotor_point_rotation_z(b):
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
     assert r.z == pytest.approx(0)
+
+
+# --- A3. ReflectionLine (through origin) ---
+
+
+def test_apply_reflection_line_point_mirror_x(b):
+    """A3: ReflectionLine(x-axis) on (3,1,0) → Point(3,-1,0)."""
+    p = create_entity(b, Point(3, 1, 0))
+    L = create_operator(b, ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0))))
+    result = L.gp(p).gp(L.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(3, abs=1e-6)
+    assert r.y == pytest.approx(-1, abs=1e-6)
+    assert r.z == pytest.approx(0, abs=1e-6)
+
+
+# --- A3b. ReflectionLine (off-origin) ---
+
+
+def test_apply_reflection_line_off_origin(b):
+    """A3b: ReflectionLine(y-axis at x=2) on (4,1,0) → Point(0,1,0)."""
+    p = create_entity(b, Point(4, 1, 0))
+    L = create_operator(b, ReflectionLine(Line(Point(2, 0, 0), Direction(0, 1, 0))))
+    result = L.gp(p).gp(L.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(0, abs=1e-6)
+    assert r.y == pytest.approx(1, abs=1e-6)
+    assert r.z == pytest.approx(0, abs=1e-6)
+
+
+# --- A4. ReflectionPlane (through origin) ---
+
+
+def test_apply_reflection_plane_point_mirror(b):
+    """A4: ReflectionPlane(z=0) on (1,2,5) → Point(1,2,-5)."""
+    p = create_entity(b, Point(1, 2, 5))
+    F = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1))))
+    result = F.gp(p).gp(F.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(1, abs=1e-6)
+    assert r.y == pytest.approx(2, abs=1e-6)
+    assert r.z == pytest.approx(-5, abs=1e-6)
+
+
+# --- A4b. ReflectionPlane (off-origin) ---
+
+
+def test_apply_reflection_plane_off_origin(b):
+    """A4b: ReflectionPlane(z=5) on (0,0,8) → Point(0,0,2)."""
+    p = create_entity(b, Point(0, 0, 8))
+    F = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 5), Direction(0, 0, 1))))
+    result = F.gp(p).gp(F.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(0, abs=1e-6)
+    assert r.y == pytest.approx(0, abs=1e-6)
+    assert r.z == pytest.approx(2, abs=1e-6)
+
+
+# --- A5. ReflectionPoint (origin) ---
+
+
+def test_apply_reflection_point_origin_negation(b):
+    """A5: ReflectionPoint(0,0,0) on (5,-3,2) → Point(-5,3,-2)."""
+    p = create_entity(b, Point(5, -3, 2))
+    O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
+    result = O.gp(p).gp(O.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(-5, abs=1e-6)
+    assert r.y == pytest.approx(3, abs=1e-6)
+    assert r.z == pytest.approx(-2, abs=1e-6)
+
+
+# --- A5b. ReflectionPoint (general) ---
+
+
+def test_apply_reflection_point_general(b):
+    """A5b: ReflectionPoint(2,0,0) on (5,0,0) → Point(-1,0,0)."""
+    p = create_entity(b, Point(5, 0, 0))
+    R = create_operator(b, ReflectionPoint(Point(2, 0, 0)))
+    result = R.gp(p).gp(R.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(-1, abs=1e-6)
+    assert r.y == pytest.approx(0, abs=1e-6)
+    assert r.z == pytest.approx(0, abs=1e-6)
+
+
+# --- A5c. HDirection application ---
+
+
+def test_apply_hdirection_maps_to_infinity(b):
+    """A5c: HDirection(d) on Cop(q) → maps toward e∞ (ideal point)."""
+    p = create_entity(b, Point(1, 2, 3))
+    H = create_operator(b, HDirection(Direction(1, 0, 0)))
+    result = H.gp(p).gp(H.rev())
+    r = analyze_entity(result, opns=True)
+    # HDirection operator maps result toward infinity
+    # Result may be a Direction (ideal point) or None
+    assert not isinstance(r, Point) if r is not None else True
+
+
+# ═══════════════════════════════════════════════════════════════
+# Dual-role tests (Entity ↔ Operator)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_dual_role_hpoint_as_operator_sandwich(b):
+    """HPoint entity MV used as operator → reflection in point."""
+    hp_entity = create_entity(b, HPoint(Point(2, 0, 0), weight=1.0))
+    p = create_entity(b, Point(5, 0, 0))
+    result = hp_entity.gp(p).gp(hp_entity.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(-1, abs=1e-6)
+    assert r.y == pytest.approx(0, abs=1e-6)
+
+
+def test_dual_role_hpoint_entity_vs_operator(b):
+    """Same MV: analyze_entity → HPoint, analyze_operator → ReflectionPoint."""
+    hp_mv = create_entity(b, HPoint(Point(2, -1, 3), weight=1.0))
+    e = analyze_entity(hp_mv, opns=True)
+    assert isinstance(e, HPoint)
+    assert e.point.x == pytest.approx(2)
+    o = analyze_operator(hp_mv)
+    assert isinstance(o, ReflectionPoint)
+    assert o.point.x == pytest.approx(2)
+
+
+def test_dual_role_hdirection_entity_vs_operator(b):
+    """Same MV: analyze_entity → HDirection, analyze_operator → HDirection."""
+    hd_mv = create_entity(b, HDirection(Direction(1, 2, 3)))
+    e = analyze_entity(hd_mv, opns=True)
+    assert isinstance(e, HDirection)
+    o = analyze_operator(hd_mv)
+    assert isinstance(o, HDirection)
+
+
+def test_dual_role_operator_creates_entity_mv(b):
+    """create_operator(ReflectionPoint(p)) → MV valid as HPoint entity."""
+    op_mv = create_operator(b, ReflectionPoint(Point(3, 1, 4)))
+    e = analyze_entity(op_mv, opns=True)
+    assert isinstance(e, HPoint)
+    assert e.point.x == pytest.approx(3)
+
+
+def test_dual_role_weight_insensitivity(b):
+    """HPoint w=2.5 as operator → same reflection (weight cancels)."""
+    hp_w25 = create_entity(b, HPoint(Point(2, 0, 0), weight=2.5))
+    p = create_entity(b, Point(5, 0, 0))
+    result = hp_w25.gp(p).gp(hp_w25.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(-1, abs=1e-6)
 
 
 # --- A6. Inversion ---

@@ -40,6 +40,7 @@ from ._n3_helpers import (
 from .entities import (
     Circle,
     Direction,
+    HDirection,
     HPoint,
     Line,
     Plane,
@@ -54,8 +55,8 @@ from .operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
     VersorFactors,
@@ -80,6 +81,7 @@ def analyze_entity(
     | Direction
     | PointPair
     | HPoint
+    | HDirection
     | Line
     | Circle
     | Plane
@@ -106,6 +108,7 @@ def _analyze_entity_opns(
     | Direction
     | PointPair
     | HPoint
+    | HDirection
     | Line
     | Circle
     | Plane
@@ -173,11 +176,11 @@ def _point_or_direction_n3(mv: MV) -> Point | Direction | None:
 # ── Grade 2: PointPair / HPoint ────────────────────
 
 
-def _decompose_grade2(mv: MV) -> PointPair | HPoint | None:
+def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection | None:
     """Analyze a grade‑2 OPNS blade.
 
     Perwass, GAConfSpc_Ana.tex §PointPair:
-      - Check whether Q·e∞ = 0 (has pure-e∞ factor) → HPoint.
+      - Check whether Q·e∞ = 0 (has pure-e∞ factor) → HPoint or HDirection.
       - Otherwise:
           L = Q ∧ e∞                         → line through the points (grade 3)
           P* = Q · e∞                         → IPNS of the perpendicular bisector plane
@@ -191,12 +194,23 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint | None:
     einf = get_einf(alg)
     eo = get_eo(alg)
 
-    # ── HPoint check: Q = P∧e∞ → Q∧e∞ = 0 ──
+    # ── HPoint / HDirection check: Q = P∧e∞ → Q∧e∞ = 0 ──
     if mv.op(einf).is_zero:
-        # H = w·a∧e∞ + w·e₀∧e∞, E = e∞∧e₀, E² = -1
-        # w = -H·E  (since H·E = -w)
-        weight = -float(mv.sp(einf.op(eo)))
-        return HPoint(point=_factor_to_point(mv, alg), weight=weight)
+        # Check for E = e∞∧e₀ component to distinguish HPoint from HDirection
+        E = einf.op(eo)
+        E_coeff = float(mv.sp(E))
+        if abs(E_coeff) > 1e-10:
+            # HPoint: has e₀∧e∞ component
+            weight = -E_coeff  # H·E = -w
+            return HPoint(point=_factor_to_point(mv, alg), weight=weight)
+        else:
+            # HDirection: d∧e∞, no e₀∧e∞ component
+            inner = mv.ip(eo)  # (d∧e∞)·e₀ = -d
+            dx, dy, dz = -float(inner[E1]), -float(inner[E2]), -float(inner[E3])
+            d_norm = math.sqrt(dx * dx + dy * dy + dz * dz)
+            if d_norm < 1e-15:
+                return None  # degenerate
+            return HDirection(direction=Direction(dx / d_norm, dy / d_norm, dz / d_norm))
 
     # ── 1. Line through the point pair ──
     L = mv.op(einf)  # grade 3 OPNS
@@ -429,7 +443,8 @@ def analyze_operator(
 ) -> (
     ReflectionLine
     | ReflectionPlane
-    | ReflectionOrigin
+    | ReflectionPoint
+    | HDirection
     | Inversion
     | Rotor
     | Translator
@@ -441,10 +456,10 @@ def analyze_operator(
     """Analyze an MV in N3 as a versor.
 
     Classification:
-    - Single-grade → Reflection/ReflectionOrigin/Inversion
+    - Pure-grade blade → dualization+grade-1/2 classifiers
     - Grades {0,2}, E-only → Dilator
     - Grades {0,2}, t-only → Translator
-    - Grades {0,2}, E+t → GeneralDilator
+    - Grades {0,2}, E+t → Dilator (general, displaced origin)
     - Grades {0,2} or {0,2,4} → delegated to :func:`ana_versor_generic`
     - Fallback → :class:`VersorFactors`
     """
@@ -476,62 +491,138 @@ def analyze_operator(
 
 
 def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
-    """Pure-grade blade: distinguish by algebraic components.
+    """Pure-grade blade: dualize high grades, then classify at grade 1 or 2.
 
-    Perwass (table in GAConfSpc_Op.tex):
-    - Reflection: basis e₁, e₂, e₃, e∞ (plane IPNS, NO e₀)
-    - Inversion:  basis e₁, e₂, e₃, e∞, e₀ (sphere IPNS, HAS e₀)
-
-    So the e₀ component discriminates:
-      - eo_c ≈ 0  → plane  → ReflectionPlane (any distance from origin)
-      - eo_c ≠ 0  → sphere → Inversion or ReflectionOrigin
-
-    ReflectionOrigin is the special case: e₀ only, no Euclidean, no e∞.
+    Dualization principle: the dual has the same operator effect (up to sign).
+    For N3 (dim=5):
+      - v_grade 1 or 2 → classify directly
+      - v_grade 3      → dualize → grade 2
+      - v_grade 4      → dualize → grade 1
     """
-    grades = _get_grades(mv)
-    max_grade = max(grades)
+    v_scale, v_factors = mv.blade_factorize_versor()
+    v_grade = len(v_factors)
 
-    if max_grade == 1:
-        ex, ey, ez = eucl_part(mv, einf, eo)
-        eucl_norm = math.sqrt(ex * ex + ey * ey + ez * ez)
-        einf_c = einf_coeff(mv, eo)
-        eo_c = eo_coeff(mv, einf)
+    if v_grade >= 3:
+        op = mv.dual()
+        v_grade = 5 - v_grade
+    else:
+        op = mv
 
-        if eucl_norm < 1e-10 and abs(eo_c) < 1e-10 and abs(einf_c) < 1e-10:
-            raise ValueError("Zero versor")
+    if v_grade == 1:
+        return _classify_grade1_operator(op, einf, eo)
+    elif v_grade == 2:
+        return _classify_grade2_operator(op, einf, eo)
+    raise ValueError(f"Unexpected versor grade {v_grade} after dualization")
 
-        # Has e₀ component → sphere IPNS → Inversion or ReflectionOrigin
-        if abs(eo_c) > 1e-10:
-            # ReflectionOrigin: only e₀, no Euclidean, no e∞
-            if eucl_norm < 1e-10 and abs(einf_c) < 1e-10:
-                return ReflectionOrigin()
-            # Inversion: sphere IPNS S = Cop(c) − ½r²·e∞
-            f_eo = eo_c
-            px = ex / f_eo if abs(f_eo) > 1e-10 else 0.0
-            py = ey / f_eo if abs(f_eo) > 1e-10 else 0.0
-            pz = ez / f_eo if abs(f_eo) > 1e-10 else 0.0
-            r_sq = float(mv.sp(mv))
-            radius = math.sqrt(abs(r_sq)) if abs(r_sq) > 1e-10 else 1.0
-            return Inversion(center=Point(px, py, pz), radius=radius)
 
-        # No e₀ → plane IPNS → ReflectionPlane (any distance)
-        if eucl_norm < 1e-10:
-            raise ValueError("Zero normal in reflection versor")
-        return ReflectionPlane(
-            normal=Direction(ex / eucl_norm, ey / eucl_norm, ez / eucl_norm)
-        )
-    elif max_grade == 2:
-        # ReflectionLine: mv = d∧e∞ where d is a Euclidean direction.
-        # d = -mv·e₀  (algebraic identity: (eᵢ∧e∞)·e₀ = -eᵢ)
-        inner = mv.ip(eo)  # grade-1, purely Euclidean
-        dx, dy, dz = -float(inner[E1]), -float(inner[E2]), -float(inner[E3])
-        d_norm = math.sqrt(dx * dx + dy * dy + dz * dz)
-        if d_norm < 1e-15:
-            raise ValueError("Zero direction in ReflectionLine versor")
-        return ReflectionLine(
-            direction=Direction(dx / d_norm, dy / d_norm, dz / d_norm)
-        )
-    raise ValueError(f"Unexpected single-grade versor grade {max_grade}")
+# ── Grade-1 operator classification ─────────────────────────────
+
+
+def _classify_grade1_operator(op, einf, eo):
+    """Classify a grade-1 blade after dualization as Inversion or ReflectionPlane."""
+    ex, ey, ez = eucl_part(op, einf, eo)
+    eucl_norm = math.sqrt(ex * ex + ey * ey + ez * ez)
+    einf_c = einf_coeff(op, eo)
+    eo_c = eo_coeff(op, einf)
+
+    if eucl_norm < 1e-10 and abs(eo_c) < 1e-10 and abs(einf_c) < 1e-10:
+        raise ValueError("Zero versor")
+
+    # Has e₀ component → sphere IPNS → Inversion
+    if abs(eo_c) > 1e-10:
+        return _inversion_from_ipns(op, einf, eo)
+
+    # No e₀ → plane IPNS → ReflectionPlane
+    if eucl_norm < 1e-10:
+        raise ValueError("Zero normal in reflection versor")
+    return _plane_from_ipns_operator(op, einf, eo)
+
+
+# ── Grade-2 operator classification ─────────────────────────────
+
+
+def _classify_grade2_operator(op, einf, eo):
+    """Classify a grade-2 blade (direct or dualized) as
+    ReflectionPoint, ReflectionLine, or HDirection."""
+    E = einf.op(eo)
+
+    # Check for E = e∞∧e₀ component → ReflectionPoint
+    e_scalar = float(op.ip(E)[0])
+    if abs(e_scalar) > 1e-10:
+        return _reflection_point_from_hpoint(op, einf, eo)
+
+    # Check for Euclidean bivector → ReflectionLine (IPNS line)
+    if _has_euclidean_bivector(op):
+        return _reflection_line_from_ipns(op, einf, eo)
+
+    # Pure d∧e∞ → HDirection
+    return _hdirection_from_blade(op, einf, eo)
+
+
+# ── Helper: Inversion from IPNS sphere ──────────────────────────
+
+
+def _inversion_from_ipns(op, einf, eo):
+    """Extract Inversion from IPNS sphere blade (grade 1)."""
+    sphere = _sphere_from_ipns(op, einf, eo)
+    return Inversion(center=sphere.center, radius=sphere.radius)
+
+
+# ── Helper: ReflectionPlane from IPNS plane ─────────────────────
+
+
+def _plane_from_ipns_operator(op, einf, eo):
+    """Extract ReflectionPlane from IPNS plane blade (grade 1)."""
+    plane = _plane_from_ipns(op, einf, eo)
+    return ReflectionPlane(plane=plane)
+
+
+# ── Helper: ReflectionPoint from HPoint blade ───────────────────
+
+
+def _reflection_point_from_hpoint(op, einf, eo):
+    """Extract ReflectionPoint from an OPNS HPoint blade (grade 2)."""
+    alg = op.algebra
+    point = _factor_to_point(op, alg)
+    return ReflectionPoint(point=point)
+
+
+# ── Helper: ReflectionLine from IPNS bivector ───────────────────
+
+
+def _reflection_line_from_ipns(op, einf, eo):
+    """Extract ReflectionLine from an IPNS line bivector (grade 2).
+
+    Dualizes back to OPNS and uses existing line decomposition.
+    """
+    line_opns = op.dual()
+    line = _decompose_line(line_opns)
+    if line is None:
+        raise ValueError("Degenerate line in ReflectionLine operator")
+    return ReflectionLine(line=line)
+
+
+# ── Helper: HDirection from blade ───────────────────────────────
+
+
+def _hdirection_from_blade(op, einf, eo):
+    """Extract HDirection from a pure d∧e∞ blade (grade 2)."""
+    inner = op.ip(eo)  # (d∧e∞)·e₀ = -d
+    dx, dy, dz = -float(inner[E1]), -float(inner[E2]), -float(inner[E3])
+    d_norm = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if d_norm < 1e-15:
+        raise ValueError("Zero direction in HDirection blade")
+    return HDirection(direction=Direction(dx / d_norm, dy / d_norm, dz / d_norm))
+
+
+# ── Helper: Has Euclidean bivector ───────────────────────────────
+
+
+def _has_euclidean_bivector(op):
+    """True if the blade has E12, E23, or E13 bivector components."""
+    return (
+        abs(float(op[E12])) + abs(float(op[E23])) + abs(float(op[E13])) > 1e-15
+    )
 
 
 def _classify_single_reflector(n: MV, einf: MV, eo: MV):

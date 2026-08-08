@@ -210,8 +210,8 @@ def test_reflection_line_round_trip(basis_e2):
     mv = create_operator(basis_e2, rl)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionLine)
-    assert result.direction.x == pytest.approx(0)
-    assert abs(result.direction.y) == pytest.approx(1)
+    assert result.line.direction.x == pytest.approx(0)
+    assert abs(result.line.direction.y) == pytest.approx(1)
 
 
 def test_reflection_line_application(basis_e2):

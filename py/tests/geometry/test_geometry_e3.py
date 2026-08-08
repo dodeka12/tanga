@@ -294,9 +294,9 @@ def test_reflection_line_round_trip_e3(basis_e3):
     mv = create_operator(basis_e3, rl)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionLine)
-    assert result.direction.x == pytest.approx(0)
-    assert result.direction.y == pytest.approx(0)
-    assert abs(result.direction.z) == pytest.approx(1)
+    assert result.line.direction.x == pytest.approx(0)
+    assert result.line.direction.y == pytest.approx(0)
+    assert abs(result.line.direction.z) == pytest.approx(1)
 
 
 def test_reflection_line_e3_application(basis_e3):
@@ -340,9 +340,9 @@ def test_reflection_plane_round_trip_e3(basis_e3):
     mv = create_operator(basis_e3, rp)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionPlane)
-    assert result.normal.x == pytest.approx(0.6)
-    assert result.normal.y == pytest.approx(0.0)
-    assert result.normal.z == pytest.approx(0.8)
+    assert result.plane.normal.x == pytest.approx(0.6)
+    assert result.plane.normal.y == pytest.approx(0.0)
+    assert result.plane.normal.z == pytest.approx(0.8)
 
 
 def test_reflection_plane_e3_application(basis_e3):
@@ -396,7 +396,7 @@ def test_reflection_alias_is_reflection_plane():
 
     r = PRefl(normal=Direction(1, 0, 0))
     assert isinstance(r, ReflectionPlane)
-    assert r.normal.x == 1
+    assert r.plane.normal.x == 1
 
 
 # ═══════════════════════════════════════════════════════════════

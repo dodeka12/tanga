@@ -26,7 +26,7 @@ from ._n2_helpers import (
     get_einf,
     get_eo,
 )
-from .entities import Direction, Point
+from .entities import Direction, Line, Point
 from .operators import Rotor, Translator
 
 if TYPE_CHECKING:
@@ -73,6 +73,21 @@ def create_homogeneous_point(
     a = _cop(basis, point.x, point.y)
     einf = get_einf(basis)
     mv = a.op(einf) * weight
+    if not opns:
+        mv = mv.dual()
+    return mv
+
+
+def create_homogeneous_direction(
+    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
+) -> MV:
+    """OPNS: ``d∧e∞`` (grade 2) where d is a 2D Euclidean direction.
+
+    IPNS: dual of OPNS.  The *z* parameter is ignored (2D).
+    """
+    d = basis.multivector({E1: x, E2: y})
+    einf = get_einf(basis)
+    mv = d.op(einf)
     if not opns:
         mv = mv.dual()
     return mv
@@ -271,18 +286,27 @@ def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     return create_sphere(basis, center, radius, opns=False)
 
 
-def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
-    """Reflection across a *line* through the origin with direction *d*.
+def create_reflection_line(basis: Algebra, line: Line) -> MV:
+    """Reflection across a *line* (not necessarily through origin).
 
-    Returns the bivector ``d∧e∞`` = d.x·e₁∧e∞ + d.y·e₂∧e∞ (grade-2).
+    OPNS: ``Cop(a)∧Cop(b)∧e∞`` where a, b are two points on the line.
     """
-    d = basis.multivector({E1: direction.x, E2: direction.y})
-    return d.op(get_einf(basis))
+    a = _cop(basis, line.origin.x, line.origin.y)
+    b = _cop(
+        basis,
+        line.origin.x + line.direction.x,
+        line.origin.y + line.direction.y,
+    )
+    return a.op(b).op(get_einf(basis))
 
 
-def create_reflection_origin(basis: Algebra) -> MV:
-    """Reflection about the origin (versor = e₀)."""
-    return get_eo(basis)
+def create_reflection_point(basis: Algebra, point: Point) -> MV:
+    """Reflection in a point.
+
+    OPNS: ``Cop(p)∧e∞`` — the HPoint blade used as a versor.
+    This is identical to the OPNS HPoint entity with weight=1.
+    """
+    return create_homogeneous_point(basis, point, weight=1.0, opns=True)
 
 
 def create_general_rotor(

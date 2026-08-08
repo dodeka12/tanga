@@ -16,6 +16,7 @@ from .entities import (
     Circle,
     Direction,
     Entity,
+    HDirection,
     HPoint,
     Line,
     Plane,
@@ -33,6 +34,7 @@ from .operators import (
     ReflectionLine,
     ReflectionOrigin,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
 )
@@ -128,6 +130,16 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
     elif isinstance(entity, HPoint):
         return mod.create_homogeneous_point(
             basis, entity.point, entity.weight, opns=opns
+        )
+    elif isinstance(entity, HDirection):
+        alg_type = _detect(basis)
+        if alg_type not in ("n3", "n2"):
+            raise TypeError(
+                f"HDirection entity requires conformal model (N3/N2); "
+                f"not supported in {alg_type.upper()}."
+            )
+        return mod.create_homogeneous_direction(
+            basis, entity.direction.x, entity.direction.y, entity.direction.z, opns=opns
         )
     elif isinstance(entity, PointPair):
         if entity.is_imaginary and _detect(basis) in ("n3", "pga3"):
@@ -243,11 +255,38 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
     mod = modules[_detect(basis)]
 
     if isinstance(operator, ReflectionLine):
-        return mod.create_reflection_line(basis, operator.direction)
+        alg_type = _detect(basis)
+        if alg_type in ("n3", "n2"):
+            return mod.create_reflection_line(basis, operator.line)
+        # PGA/E/P modules — use direction from line (origin-only)
+        return mod.create_reflection_line(basis, operator.line.direction)
     elif isinstance(operator, ReflectionPlane):
-        return mod.create_reflection_plane(basis, operator.normal)
+        alg_type = _detect(basis)
+        if alg_type in ("n3", "n2"):
+            return mod.create_reflection_plane(basis, operator.plane)
+        # PGA/E/P modules — use normal from plane (origin-only)
+        return mod.create_reflection_plane(basis, operator.plane.normal)
+    elif isinstance(operator, ReflectionPoint):
+        alg_type = _detect(basis)
+        if alg_type not in ("n3", "n2"):
+            raise TypeError(
+                f"ReflectionPoint operator requires conformal model (N3/N2); "
+                f"not supported in {alg_type.upper()}."
+            )
+        return mod.create_reflection_point(basis, operator.point)
     elif isinstance(operator, ReflectionOrigin):
+        # Still used by PGA/E modules
         return mod.create_reflection_origin(basis)
+    elif isinstance(operator, HDirection):
+        alg_type = _detect(basis)
+        if alg_type not in ("n3", "n2"):
+            raise TypeError(
+                f"HDirection (as operator) requires conformal model (N3/N2); "
+                f"not supported in {alg_type.upper()}."
+            )
+        return mod.create_homogeneous_direction(
+            basis, operator.direction.x, operator.direction.y, operator.direction.z
+        )
     elif isinstance(operator, Inversion):
         return mod.create_inversion(basis, operator.center, operator.radius)
     elif isinstance(operator, Rotor):
@@ -257,7 +296,10 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
             basis, operator.vector.x, operator.vector.y, operator.vector.z
         )
     elif isinstance(operator, Dilator):
-        return mod.create_dilator(basis, operator.factor, origin=operator.origin)
+        alg_type = _detect(basis)
+        if alg_type in ("n3", "n2"):
+            return mod.create_dilator(basis, operator.factor, origin=operator.origin)
+        return mod.create_dilator(basis, operator.factor)
     elif isinstance(operator, Motor):
         return mod.create_motor(basis, operator.rotor, operator.translator)
     elif isinstance(operator, GeneralRotor):
