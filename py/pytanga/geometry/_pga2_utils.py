@@ -5,11 +5,13 @@
 
 PGA2 is modelled via the 4D null‑vector embedding (dim=4).
 Blade IDs are sourced from ``BasisPGA2`` as the single source of truth.
+
+The 3D PGA complement dual (J‑map / Hodge star) is defined in
+``BasisPGA2.dual()`` — geometry modules should use
+``mv.algebra.dual(mv)`` or simply ``mv.dual()``.
 """
 
 from __future__ import annotations
-
-from functools import cache
 
 from pytanga.algebra._algebra import Algebra
 from pytanga.algebra._mv import MV
@@ -33,24 +35,6 @@ def _get_e0(alg: Algebra) -> MV:
     if hasattr(alg, "e0"):
         return alg.e0
     return alg.multivector({EP: 1.0, EM: 1.0})
-
-
-@cache
-def _pga2_pinv(alg: Algebra) -> MV:
-    """Pseudo‑inverse of the 3D PGA pseudoscalar I₃ = e₁∧e₂∧e₀."""
-    I3 = alg.e1.op(alg.e2).op(_get_e0(alg))
-    return I3.blade_pseudo_inverse()
-
-
-def _pga2_dual(mv: MV) -> MV:
-    """3D PGA dual using pseudo‑inverse of the PGA pseudoscalar.
-
-    In PGA2 (2D Euclidean + 1D projective), the pseudoscalar is
-    I₃ = e₁∧e₂∧e₀ (grade 3).  The dual maps:
-      - grade-1 points (IPNS) → grade-2 bivectors (OPNS) and vice versa
-      - grade-0 scalars → grade-3 trivectors (pseudoscalar) and vice versa
-    """
-    return mv.ip(_pga2_pinv(mv.algebra))
 
 
 def _get_e0_coeff(mv: MV) -> float:

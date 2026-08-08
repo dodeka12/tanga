@@ -17,6 +17,7 @@ from .geometry import (
     Sphere,
 )
 from .install_docs import install_docs
+from .install_examples import install_examples
 from .matrix import MVMatrix, MVProductMatrix
 from .tensor import MVTensor
 
@@ -24,6 +25,7 @@ __all__ = [
     "Algebra",
     "BladeMask",
     "install_docs",
+    "install_examples",
     "Circle",
     "Direction",
     "EInv",

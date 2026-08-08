@@ -4,7 +4,7 @@ This section describes the public Python API of **pytanga** — the Python
 interface to TanGA's geometric algebra engine.
 
 !!! info "2D + 3D algebras"
-    TANGA supports both 2D and 3D geometric algebras. Use `Algebra.from_name("E2")`,
+    TANGA supports both 2D and 3D geometric algebras. Use `BasisE2()`,
     `"P2"`, `"N2"`, or `"PGA2"` for 2D; `"E3"`, `"P3"`, `"N3"`, or `"PGA3"`
     for 3D. The visualizer supports both modes via `Visualizer(space_dim=2)`.
 
@@ -54,21 +54,28 @@ print(v * w)
 
 ## AI-Tool Documentation Access
 
-When pytanga is installed as a dependency, the markdown documentation is
-packaged with the wheel. AI coding tools can make the docs available via:
+When pytanga is installed as a dependency, the markdown documentation and
+example scripts are packaged with the wheel. AI coding tools can make them
+available via:
 
 ```python
 import pytanga
-pytanga.install_docs()
+
+pytanga.install_docs()     # copies docs to .dep-docs/pytanga/
+pytanga.install_examples() # copies examples to .dep-examples/pytanga/
 ```
 
-This creates a symlink at `.dep-docs/pytanga/` in the current repository
-root, pointing to the packaged `_docs/` directory (or the local `docs/`
-in a source checkout). AI tools can then read e.g.
-`.dep-docs/pytanga/py/geometry/entities.md` without needing the full
-tanga source.
+`install_docs()` copies the packaged `_docs/` directory (or the local
+`docs/` in a source checkout) to `.dep-docs/pytanga/`. AI tools can then
+read e.g. `.dep-docs/pytanga/py/geometry/entities.md` without needing the
+full tanga source.
 
-The function is idempotent — call it again to repair a broken symlink.
+`install_examples()` copies the packaged `_examples/` directory (or the
+local `py/examples/` in a source checkout) to `.dep-examples/pytanga/`.
+AI tools can then reference e.g.
+`.dep-examples/pytanga/geometry/e3_entities.py` for usage examples.
+
+Both functions are idempotent — call them again to refresh the copies.
 
 ## Example Scripts
 

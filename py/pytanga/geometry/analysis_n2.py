@@ -19,6 +19,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+from ._ana_versor_generic import ana_versor_generic
 from ._n2_helpers import (
     E1,
     E2,
@@ -46,7 +47,6 @@ from .entities import (
 )
 from .operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
@@ -54,6 +54,7 @@ from .operators import (
     ReflectionOrigin,
     Rotor,
     Translator,
+    VersorFactors,
 )
 
 if TYPE_CHECKING:
@@ -70,8 +71,11 @@ def analyze_entity(
     mv: MV,
     *,
     opns: bool = True,
-) -> Point | Direction | PointPair | HPoint | Line | Circle | Sphere | Space:
+) -> Point | Direction | PointPair | HPoint | Line | Circle | Sphere | Space | None:
     """Analyze an MV in N2 as a geometric entity.
+
+    Returns ``None`` if the null-space of the MV (in the requested OPNS/IPNS
+    interpretation) is empty.
 
     In 2D conformal geometry, a "sphere" is a circle and a "plane" is a
     line.  Entity naming follows what the entity looks like in 2D.
@@ -84,7 +88,7 @@ def analyze_entity(
 
 def _analyze_entity_opns(
     mv: MV,
-) -> Point | Direction | PointPair | HPoint | Line | Circle | Sphere | Space:
+) -> Point | Direction | PointPair | HPoint | Line | Circle | Sphere | Space | None:
     if mv.is_zero:
         raise ValueError("Zero MV is not a geometric entity")
     if mv.is_scalar:
@@ -111,12 +115,31 @@ def _analyze_entity_opns(
 # ── Grade 1: Point / Direction ────────────────────────────────
 
 
-def _point_or_direction_n2(mv: MV) -> Point | Direction:
+def _point_or_direction_n2(mv: MV) -> Point | Direction | None:
+    """Analyze a grade-1 OPNS blade as a conformal point or direction.
+
+    An OPNS point blade has the form ``Cop(p) = p + ½‖p‖²·e∞ + e₀``.
+    After normalizing by the e₀ coefficient, the e∞ coefficient must
+    equal ``½‖p‖²``.  If this constraint is violated, the blade does
+    not represent a valid OPNS point (null-space is empty) and
+    ``None`` is returned.
+    """
     einf = get_einf(mv.algebra)
+    eo = get_eo(mv.algebra)
     f_eo = eo_coeff(mv, einf)
     if abs(f_eo) < 1e-10:
         return Direction(x=float(mv[E1]), y=float(mv[E2]), z=0.0)
-    return Point(x=float(mv[E1]) / f_eo, y=float(mv[E2]) / f_eo, z=0.0)
+
+    px = float(mv[E1]) / f_eo
+    py = float(mv[E2]) / f_eo
+
+    # Validate: normalized blade must have einf coeff = ½‖p‖²
+    einf_c = einf_coeff(mv, eo) / f_eo
+    expected_einf = 0.5 * (px * px + py * py)
+    if abs(einf_c - expected_einf) > 1e-10:
+        return None
+
+    return Point(x=px, y=py, z=0.0)
 
 
 # ── Grade 2: PointPair / HPoint ────────────────────
@@ -216,12 +239,18 @@ def _decompose_line(mv: MV) -> Line:
     if d.is_zero:
         raise ValueError("Line direction is zero")
 
+    # Normalize direction
+    dx, dy = float(d[E1]), float(d[E2])
+    d_norm = math.sqrt(dx * dx + dy * dy)
+    if d_norm < 1e-15:
+        raise ValueError("Line direction is zero")
+
     # Closest point to origin: X = d·L  (grade 1 homogeneous point)
     X = d.ip(mv)
     pt = _factor_to_point(X, alg)
     return Line(
         origin=pt,
-        direction=Direction(float(d[E1]), float(d[E2]), 0.0),
+        direction=Direction(dx / d_norm, dy / d_norm, 0.0),
     )
 
 
@@ -347,7 +376,6 @@ def analyze_operator(
     | Rotor
     | Translator
     | Dilator
-    | GeneralDilator
     | Motor
     | GeneralRotor
 ):
@@ -387,7 +415,7 @@ def analyze_operator(
     elif n == 4:
         return _classify_quad_reflector(mv, einf, eo, factors)
     else:
-        raise ValueError(f"Unexpected {n} factors for N2 versor")
+        return VersorFactors(factors=tuple(factors))
 
 
 def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
@@ -437,46 +465,40 @@ def _classify_single_reflector(n: MV, einf: MV, eo: MV):
 
 
 def _classify_double_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
-    """Classify 2-factor versor by blade components (Perwass table)."""
-    has_t = has_translator_components(mv, mv.algebra)
+    """Classify 2-factor versor by blade components.
+
+    - E-only (e∞∧e₀) → Dilator (possibly with origin)
+    - Everything else → delegated to :func:`ana_versor_generic`
+      (handles Rotor / Translator / GeneralRotor).
+    """
     has_E = has_E_component(mv, mv.algebra)
 
-    if not has_t and not has_E:
-        return _rotor_from_factors(factors[0], factors[1])
-    elif has_t and not has_E:
-        return _translator_from_versor(mv)
-    elif has_E and not has_t:
+    if has_E:
         return _dilator_from_versor(mv)
     else:
-        # GeneralDilator: T·D·T̃ — has both eᵢ∧e∞ and e∞∧e₀
-        dilator = _dilator_from_versor(mv)
-        tx, ty = translator_coeffs(mv, mv.algebra)
-        translator = Translator(vector=Direction(tx, ty, 0.0))
-        return GeneralDilator(factor=dilator.factor, translator=translator)
+        # Rotor, Translator, or GeneralRotor
+        return ana_versor_generic(
+            mv,
+            einf_like=einf,
+            e0_inv_like=-eo,
+            blade_order_sign=-1,
+            is_2d=True,
+        )
 
 
 def _classify_quad_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
-    """Classify a 4-factor versor: Motor or GeneralRotor."""
-    eucl = [f for f in factors if not bivec_has_null(f, einf, eo)]
-    null_factors = [f for f in factors if bivec_has_null(f, einf, eo)]
+    """Classify a 4-factor versor: Motor or GeneralRotor.
 
-    # Extract rotor from the Euclidean factors
-    if len(eucl) == 2:
-        rotor = _rotor_from_factors(eucl[0], eucl[1])
-    else:
-        rotor = Rotor(0.0, Direction(0, 0, 1))
-
-    # Extract translator from the null factors' product
-    if len(null_factors) >= 2:
-        T_part = null_factors[0].gp(null_factors[1])
-        translator = _translator_from_versor(T_part)
-    else:
-        translator = _translator_from_versor(mv)
-
-    # Grade‑3 component distinguishes Motor (dim=4, max grade=3) from GeneralRotor
-    if len(eucl) == 2:
-        return Motor(rotor=rotor, translator=translator)
-    return GeneralRotor(rotor=rotor, translator=translator)
+    Delegates to :func:`ana_versor_generic` which classifies by grade
+    content (grade-3 → Motor in 2D, no grade-3 → GeneralRotor).
+    """
+    return ana_versor_generic(
+        mv,
+        einf_like=einf,
+        e0_inv_like=-eo,
+        blade_order_sign=-1,
+        is_2d=True,
+    )
 
 
 # ── Operator helpers ──────────────────────────────────────────
@@ -496,16 +518,42 @@ def _translator_from_versor(mv: MV) -> Translator:
 
 
 def _dilator_from_versor(mv: MV) -> Dilator:
-    """Perwass: D = a0 + aE·E, d = (a0 − aE)/(a0 + aE)."""
-    a0 = float(mv[0])
-    aE = E_coefficient(mv, mv.algebra)
-    denom = a0 + aE
-    if abs(denom) < 1e-15:
-        raise ValueError("Degenerate dilator: a0 + aE ≈ 0")
-    factor = (a0 - aE) / denom
+    """Extract factor and origin from a dilator MV via algebraic extraction.
+
+    Uses left-contraction with E = e∞∧e₀ and ip-op-op-ip chain
+    (see dev/src/entities_04.py).  No blade factorization needed.
+
+    Pure dilator:   origin defaults to (0,0,0).
+    General dilator (T·D·T̃): origin extracted from translator part.
+    """
+    alg = mv.algebra
+    einf = get_einf(alg)
+    eo = get_eo(alg)
+    E = einf.op(eo)  # e∞∧e₀
+
+    # Extract scalar D part: d_part = mv | E
+    d_part = mv.ip(E)
+    D_val = float(d_part[0])
+    if abs(D_val) < 1e-15:
+        raise ValueError("Degenerate dilator: D coefficient is zero")
+
+    # Extract translator part: t_part = mv.ip(eo).op(eo).ip(einf)
+    t_part = mv.ip(eo).op(eo).ip(einf)
+    t_euc = t_part * (-1.0 / D_val)
+
+    factor = (1.0 - D_val) / (1.0 + D_val)
     if factor <= 0:
         raise ValueError(f"Dilator factor must be positive, got {factor}")
-    return Dilator(factor=factor)
+
+    # Determine if general dilator (has non-zero translator part)
+    tx = float(t_euc[E1])
+    ty = float(t_euc[E2])
+    t_norm = math.sqrt(tx * tx + ty * ty)
+
+    if t_norm < 1e-10:
+        return Dilator(factor=factor)
+    else:
+        return Dilator(factor=factor, origin=Point(tx, ty, 0.0))
 
 
 # ═══════════════════════════════════════════════════════════════

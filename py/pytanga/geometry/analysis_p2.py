@@ -39,7 +39,9 @@ E123 = BasisP2.E123
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(mv: MV, *, opns: bool = True) -> Point | Direction | Line | Space:
+def analyze_entity(
+    mv: MV, *, opns: bool = True
+) -> Point | Direction | Line | Space | None:
     """Analyze an MV in P2 as a geometric entity.
 
     Parameters
@@ -64,7 +66,7 @@ def analyze_entity(mv: MV, *, opns: bool = True) -> Point | Direction | Line | S
 
 def _analyze_entity_opns(
     mv: MV,
-) -> Point | Direction | Line | Space:
+) -> Point | Direction | Line | Space | None:
     """OPNS entity analysis."""
     if mv.is_zero:
         raise ValueError("Zero MV does not represent a geometric entity")

@@ -15,6 +15,7 @@ the algebra. No sign changes are applied to coefficients:
 
 ```python
 from pytanga import Algebra
+from pytanga.basis import BasisE3
 
 alg = Algebra(3, 0)  # E3
 a = alg({"e1": 2.0, "e12": 3.0})

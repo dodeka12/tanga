@@ -5,11 +5,12 @@
 
 Public API
 ----------
-build_display_basis(generators, algebra, null_swap) → list[(name, blade, dual)]
+build_display_basis(generators, algebra) → list[(name, blade, pinv, blade_id)]
     Build a complete named display basis from a list of grade-1 generators by
     taking every outer-product subset.  Each entry satisfies
-    ``algebra.ip(blade, dual)[0] == 1``.
+    ``algebra.ip(blade, pinv)[0] == 1``.
 """
+
 from __future__ import annotations
 
 import re
@@ -17,8 +18,8 @@ from itertools import combinations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ._mv import MV
     from ._algebra import Algebra
+    from ._mv import MV
 
 _ZERO_THRESHOLD = 1e-10
 
@@ -29,6 +30,7 @@ __all__ = ["build_display_basis"]
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _to_int_dict(mv: "MV", algebra: "Algebra") -> dict[int, float]:
     """Return the mv coefficient dict with integer blade-ID keys."""
     out: dict[int, float] = {}
@@ -36,13 +38,6 @@ def _to_int_dict(mv: "MV", algebra: "Algebra") -> dict[int, float]:
         bid = 0 if name == "s" else algebra.blade_id(name)
         out[bid] = val
     return out
-
-
-def _scale(mv: "MV", s: float, algebra: "Algebra") -> "MV":
-    """Return *s* * *mv* by scaling every coefficient."""
-    return algebra.multivector(
-        {k: v * s for k, v in _to_int_dict(mv, algebra).items()}
-    )
 
 
 def _op_chain(blades: list["MV"], algebra: "Algebra") -> "MV":
@@ -55,8 +50,19 @@ def _op_chain(blades: list["MV"], algebra: "Algebra") -> "MV":
     return result
 
 
-def _make_blade_name(subset_names: tuple[str, ...], pseudo_id: int,
-                     algebra: "Algebra", blade: "MV") -> str:
+def _simple_blade_id(blade: "MV", algebra: "Algebra") -> int | None:
+    """If *blade* is exactly one primitive basis blade with coefficient 1.0,
+    return its integer blade ID.  Otherwise return None."""
+    raw = _to_int_dict(blade, algebra)
+    nz = [(bid, v) for bid, v in raw.items() if abs(v) > _ZERO_THRESHOLD]
+    if len(nz) == 1 and abs(nz[0][1] - 1.0) < _ZERO_THRESHOLD:
+        return nz[0][0]
+    return None
+
+
+def _make_blade_name(
+    subset_names: tuple[str, ...], pseudo_id: int, algebra: "Algebra", blade: "MV"
+) -> str:
     """Produce a human-readable name for a subset of display generators.
 
     Rules
@@ -89,77 +95,56 @@ def _make_blade_name(subset_names: tuple[str, ...], pseudo_id: int,
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def build_display_basis(
     generators: list[tuple[str, "MV"]],
     algebra: "Algebra",
-    null_swap: dict[str, str] | None = None,
-) -> list[tuple[str, "MV", "MV"]]:
+) -> list[tuple[str, "MV", "MV | None", int | None]]:
     """Build a complete named display basis from grade-1 generators.
 
     Enumerates all 2^n outer-product subsets of *generators* (by grade then by
-    natural ordering) and computes, for each resulting blade *B*, a dual blade
-    *B'* such that ``algebra.ip(B, B')[0] == 1``.
+    natural ordering) and computes, for each resulting blade *B*, a
+    pseudoinverse *B⁺* such that ``algebra.ip(B, B⁺)[0] == 1``.
 
-    For non-null blades (``ip(B, B) ≠ 0``), the dual is ``B / ip(B, B)``.
-
-    For null blades (``ip(B, B) ≈ 0``), the dual is obtained by swapping
-    each generator name according to *null_swap* (e.g. ``"einf" ↔ "eo"``)
-    and scaling by the cross-inner-product.
+    For simple blades (exactly one primitive blade with coefficient 1.0), the
+    ``blade_id`` is populated so that coefficient extraction can use the fast
+    ``mv[blade_id]`` path instead of ``ip(mv, pinv)``.
 
     Parameters
     ----------
     generators : ordered ``[(name, mv), ...]`` for the display grade-1 vectors.
-    algebra    : Algebra instance (provides ip / op / multivector).
-    null_swap  : ``{name: partner_name}`` for cross-dual resolution of null
-                 blades.  Example: ``{"einf": "eo", "eo": "einf"}``.
+    algebra    : Algebra instance (provides ip / op / blade_pseudo_inverse).
 
     Returns
     -------
-    list of ``(name, blade, dual)`` covering all blades in the span.
-    ``dual`` is ``None`` for the scalar entry (grade 0).
+    list of ``(name, blade, pinv, blade_id)`` covering all blades in the span.
+    ``pinv`` and ``blade_id`` are ``None`` only for the scalar entry (grade 0).
     """
-    null_swap = null_swap or {}
-    gen_map: dict[str, "MV"] = {nm: mv for nm, mv in generators}
     pseudo_id = algebra.pseudoscalar_id
-    entries: list[tuple[str, "MV", "MV | None"]] = []
+    entries: list[tuple[str, "MV", "MV | None", int | None]] = []
 
     n = len(generators)
     for k in range(n + 1):
         for idx_tuple in combinations(range(n), k):
-            sub_names  = tuple(generators[i][0] for i in idx_tuple)
+            sub_names = tuple(generators[i][0] for i in idx_tuple)
             sub_blades = [generators[i][1] for i in idx_tuple]
             blade = _op_chain(sub_blades, algebra)
 
             # skip zero outer products (linearly dependent generators)
-            if not any(abs(v) > _ZERO_THRESHOLD
-                       for v in _to_int_dict(blade, algebra).values()):
+            if not any(
+                abs(v) > _ZERO_THRESHOLD for v in _to_int_dict(blade, algebra).values()
+            ):
                 continue
 
             name = _make_blade_name(sub_names, pseudo_id, algebra, blade)
 
             if not idx_tuple:
-                # Scalar entry (grade 0).  ip(scalar, scalar) returns {} in the
-                # C++ left-contraction implementation (requires grade(right) >
-                # grade(left) for non-zero result).  We mark the entry with
-                # dual=None; show_str reads mv[0] directly for "s".
-                entries.append((name, blade, None))
+                # Scalar entry (grade 0).  ``mv[0]`` gives the scalar.
+                entries.append((name, blade, None, 0))
                 continue
 
-            ip_self  = algebra.ip(blade, blade)[0]
-
-            if abs(ip_self) > _ZERO_THRESHOLD:
-                # non-null: dual = blade / ip(blade, blade)
-                dual = _scale(blade, 1.0 / ip_self, algebra)
-            else:
-                # null blade: swap generator names and use cross-inner-product
-                swapped_names  = tuple(null_swap.get(nm, nm) for nm in sub_names)
-                swapped_blades = [gen_map[nm] for nm in swapped_names]
-                swapped        = _op_chain(swapped_blades, algebra)
-                ip_cross       = algebra.ip(blade, swapped)[0]
-                if abs(ip_cross) < _ZERO_THRESHOLD:
-                    continue  # degenerate; skip
-                dual = _scale(swapped, 1.0 / ip_cross, algebra)
-
-            entries.append((name, blade, dual))
+            pinv = algebra.blade_pseudo_inverse(blade)
+            blade_id = _simple_blade_id(blade, algebra)
+            entries.append((name, blade, pinv, blade_id))
 
     return entries

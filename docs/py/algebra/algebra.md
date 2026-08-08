@@ -13,8 +13,8 @@ from pytanga.algebra import Algebra
 ## Construction
 
 An `Algebra` is created by specifying the vector-space dimension, the
-signature, and the data type.  For convenience, several named algebras with
-pre-configured dimensions and signatures are available via `from_name`.
+signature, and the data type.  For convenience, dedicated `Basis` subclasses expose named blades and
+factory methods for common geometries.
 
 ```python
 # G(3,0) — 3D Euclidean
@@ -27,22 +27,20 @@ alg = Algebra(4, 0b10000, "float64")
 # PGA3 — 5D with null-vector embedding
 alg = Algebra(5, 0b10000, "float64")
 
-# From a short name
-alg = Algebra.from_name("E3", "float64")
-alg = Algebra.from_name("P3", "float64")
-alg = Algebra.from_name("PGA3", "float64")
+# From a Basis subclass (named blades + factory methods)
+from pytanga.basis import BasisE3, BasisP3, BasisPGA3
+alg = BasisE3("float64")
+alg = BasisP3("float64")
+alg = BasisPGA3("float64")
 ```
 
 The signature bitmask encodes which basis vectors square to $-1$: bit `k`
 set means $e_{k+1}^2 = -1$.  A signature can also be passed as a tuple of
 1-based indices, e.g. `(1, 4, 5)` has the same effect as `0b11001`.
 
-Available named algebras: `"E3"`, `"P3"`, `"N3"`, `"PGA3"`, `"G2"`, `"G3"`,
-`"PGA2"`, `"CGA3"`, `"STA"`.
-
-When a name maps to a `Basis` subclass (`"E3"`, `"P3"`, `"N3"`, `"PGA3"`),
-`from_name` returns the appropriate subclass (e.g. `BasisE3`) which exposes
-named blades as attributes.
+Available Basis subclasses: `BasisE2`, `BasisE3`, `BasisP2`, `BasisP3`,
+`BasisN2`, `BasisN3`, `BasisPGA2`, `BasisPGA3`. These expose named blades
+as attributes and provide convenience factory methods.
 
 ## Properties
 

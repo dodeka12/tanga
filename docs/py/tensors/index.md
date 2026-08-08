@@ -27,10 +27,11 @@ from pytanga.tensor import MVTensor, MVLabeledTensor
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 from pytanga.tensor import MVTensor
 from pytanga.tensor.product import product_tensor
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 mask = BladeMask.full(alg)       # 8 blades
 
 # A rank-1 tensor holding one multivector

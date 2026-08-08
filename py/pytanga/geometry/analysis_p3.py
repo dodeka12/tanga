@@ -45,7 +45,7 @@ E34 = BasisP3.E34
 
 def analyze_entity(
     mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Plane | Space:
+) -> Point | Direction | Line | Plane | Space | None:
     """Analyze an MV in P3 as a geometric entity.
 
     Parameters
@@ -71,7 +71,7 @@ def analyze_entity(
 
 def _analyze_entity_opns(
     mv: MV,
-) -> Point | Direction | Line | Plane | Space:
+) -> Point | Direction | Line | Plane | Space | None:
     """OPNS entity analysis."""
     if mv.is_zero:
         raise ValueError("Zero MV does not represent a geometric entity")

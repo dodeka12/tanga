@@ -39,7 +39,6 @@ from .entities import (
 )
 from .operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
@@ -50,6 +49,7 @@ from .operators import (
     ReflectionPlane,
     Rotor,
     Translator,
+    TripleReflection,
 )
 
 __all__ = [
@@ -69,7 +69,6 @@ __all__ = [
     "Sphere",
     # Operators
     "Dilator",
-    "GeneralDilator",
     "GeneralRotor",
     "Inversion",
     "Motor",
@@ -80,6 +79,7 @@ __all__ = [
     "ReflectionPlane",
     "Rotor",
     "Translator",
+    "TripleReflection",
     # Geometry facade
     "Geometry",
     # Analysis

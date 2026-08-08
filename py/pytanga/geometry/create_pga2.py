@@ -30,7 +30,6 @@ from ._pga2_utils import (
     EM,
     EP,
     _get_e0,
-    _pga2_dual,
 )
 from .entities import Direction, Point
 from .operators import GeneralRotor, ReflectionLine, ReflectionOrigin, Rotor, Translator
@@ -53,14 +52,11 @@ def create_point(
 
     *opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + e₀``.
     """
+    p_ipns = basis.multivector({E1: -x, E2: -y, EP: -1.0, EM: -1.0})
     if not opns:
-        # IPNS (dual) form
-        return basis.multivector({E1: x, E2: y, EP: 1.0, EM: 1.0})
+        return p_ipns
 
-    # OPNS: two orthogonal lines through the point
-    l1 = basis.multivector({E1: 1.0, EP: -x, EM: -x})
-    l2 = basis.multivector({E2: 1.0, EP: -y, EM: -y})
-    return l1.op(l2)
+    return p_ipns.dual()
 
 
 def create_direction(
@@ -80,7 +76,7 @@ def create_direction(
     # Its OPNS form is the PGA dual of this, producing a grade‑2 bivector
     # whose dual has zero e₀ coefficient (ideal point at infinity).
     ipns = basis.multivector({E1: x, E2: y})
-    return _pga2_dual(ipns)
+    return basis.dual(ipns)
 
 
 def create_line(
@@ -140,7 +136,7 @@ def create_rotor(basis: Algebra, angle: float, axis: Direction) -> MV:
     return basis.multivector(
         {
             0: math.cos(half),
-            E12: math.sin(half),
+            E12: -math.sin(half),
         }
     )
 
@@ -150,10 +146,10 @@ def create_translator(basis: Algebra, dx: float, dy: float, dz: float) -> MV:
     return basis.multivector(
         {
             0: 1.0,
-            5: -0.5 * dx,  # e1∧ep
-            9: -0.5 * dx,  # e1∧em
-            6: -0.5 * dy,  # e2∧ep
-            10: -0.5 * dy,  # e2∧em
+            5: 0.5 * dx,  # e1∧ep
+            9: 0.5 * dx,  # e1∧em
+            6: 0.5 * dy,  # e2∧ep
+            10: 0.5 * dy,  # e2∧em
         }
     )
 
@@ -165,32 +161,32 @@ def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
     return t_mv.gp(r_mv)
 
 
-def create_general_rotor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
-    """General rotor: rotation about a point NOT at the origin.
+def create_general_rotor(
+    basis: Algebra, angle: float, axis: Direction, origin: Point
+) -> MV:
+    """General rotor: rotation about an arbitrary origin point.
 
     ``G = T · R · T̃`` — the conjugation cancels the translator's effect on
-    position, leaving a pure rotation about a displaced point.
+    position, leaving a pure rotation about the origin point.
 
     The result has grades {0, 2} (scalar + bivector), distinguishing it from
     a Motor which also has a grade‑3 term.
     """
-    t_mv = create_translator(basis, translator.vector.x, translator.vector.y, 0.0)
-    r_mv = create_rotor(basis, rotor.angle, rotor.axis)
+    t_mv = create_translator(basis, origin.x, origin.y, 0.0)
+    r_mv = create_rotor(basis, angle, axis)
     return t_mv.gp(r_mv).gp(t_mv.rev())
 
 
 def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
-    """Reflection across a line through the origin, given its direction *d*.
+    """Reflection across a line through the origin (DISABLED).
 
-    In 2D PGA, this is a bivector ``d∧e₀`` (grade 2).
+    A pure null bivector ``d∧e₀`` squares to zero because e₀ is null,
+    so the sandwich ``L·p·L.rev()`` always produces zero.  The correct
+    construction needs to be verified.
     """
-    return basis.multivector(
-        {
-            5: direction.x,
-            9: direction.x,  # e1∧ep, e1∧em
-            6: direction.y,
-            10: direction.y,  # e2∧ep, e2∧em
-        }
+    raise NotImplementedError(
+        "ReflectionLine in PGA2 is disabled: pure null bivector d∧e₀ "
+        "squares to zero (e₀²=0).  The correct construction is TBD."
     )
 
 
@@ -249,10 +245,4 @@ def create_dilator(basis: Algebra, factor: float) -> MV:
 def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     raise ValueError(
         "Inversions require conformal embedding (N2); not available in PGA2."
-    )
-
-
-def create_general_dilator(basis: Algebra, factor: float, translator=None) -> MV:
-    raise ValueError(
-        "General dilators require conformal embedding (N2); not available in PGA2."
     )

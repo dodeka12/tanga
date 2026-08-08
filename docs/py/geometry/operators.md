@@ -2,7 +2,9 @@
 
 Operator data classes are algebra-independent `@dataclass` types that represent
 versors (geometric transformations). They can be used as input to
-[`create()`](create.md) and as output from [`analyze_operator()`](analysis.md).
+[`Geometry.create()`](create.md) (or the plain [`create()`](create.md) function)
+and as output from [`Geometry.which_operator()`](analysis.md) (or the plain
+[`analyze_operator()`](analysis.md) function).
 
 All classes are imported from `pytanga.geometry` (defined in `pytanga.geometry.operators`).
 

@@ -247,9 +247,3 @@ def create_reflection_origin(basis: Algebra) -> MV:
         "Reflection about the origin requires projective (P3) embedding; "
         "not available in E3 (no e₄ dimension)."
     )
-
-
-def create_general_dilator(basis: Algebra, factor: float, translator=None) -> MV:
-    raise ValueError(
-        "General dilators require conformal embedding (N3); not available in E3."
-    )

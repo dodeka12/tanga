@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisE3
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create, create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Plane, Point, Space
@@ -21,7 +21,7 @@ from pytanga.geometry.operators import ReflectionLine, ReflectionPlane, Rotor
 @pytest.fixture(scope="module")
 def basis_e3():
     """E3 basis — cached for the whole test module."""
-    return Algebra.from_name("E3")
+    return BasisE3()
 
 
 # ═══════════════════════════════════════════════════════════════

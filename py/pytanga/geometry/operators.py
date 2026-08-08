@@ -13,10 +13,10 @@ analysis and create modules.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
-from .entities import Direction, Point
+from .entities import Direction, Plane, Point
 
 
 @dataclass(frozen=True)
@@ -114,15 +114,25 @@ class Translator:
 
 @dataclass(frozen=True)
 class Dilator:
-    """A uniform dilation (scaling) about the origin.
+    """A uniform dilation (scaling) about an origin point.
 
-    Supported algebras: N3 only (needs E = einfi∧eo)
+    Form: ``D_t = T · D · T̃`` where T translates from the global origin
+    to the dilation center and ``D = 1 + (1−d)/(1+d)·E`` is the
+    origin‑centered dilator (E = e∞∧e₀, Perwass).
+
+    When ``origin=(0,0,0)``, this is a pure dilator about the origin:
+    ``D = 1 + (1−d)/(1+d)·E``, sandwich ``D·p·D̃`` scales p by factor d.
+
+    Supported algebras: N3/N2 only (needs E = e∞∧e₀)
     """
 
     factor: float
+    origin: Point = field(default_factory=lambda: Point(0, 0, 0))
 
     def __repr__(self) -> str:
-        return f"Dilator(×{self.factor:.2f})"
+        if self.origin.x == 0 and self.origin.y == 0 and self.origin.z == 0:
+            return f"Dilator(×{self.factor:.2f})"
+        return f"Dilator(×{self.factor:.2f} at {self.origin})"
 
 
 @dataclass(frozen=True)
@@ -141,33 +151,51 @@ class Motor:
 
 @dataclass(frozen=True)
 class GeneralRotor:
-    """A general even-grade versor with rotor + translator bivector parts.
+    """A rotation about an arbitrary origin point.
 
-    Like a Motor but without the e123i (pseudoscalar-like) term.
+    The underlying MV is ``G = T · R · T̃`` where *T* translates from
+    the global origin to the rotation center and *R* is the rotor.
 
-    Supported algebras: N3 only (needs eo for full versor analysis)
+    In 2D the axis is always ``Dir(0, 0, 1)`` and origin z=0.
     """
 
-    rotor: Rotor
-    translator: Translator
+    angle: float
+    axis: Direction
+    origin: Point = field(default_factory=lambda: Point(0, 0, 0))
 
     def __repr__(self) -> str:
-        return f"GenRotor({self.rotor}, {self.translator})"
+        deg = math.degrees(self.angle)
+        return f"GenRotor({deg:.1f}° about {self.axis} at {self.origin})"
 
 
 @dataclass(frozen=True)
-class GeneralDilator:
-    """A general dilation with optional translation components.
+class TripleReflection:
+    """Three successive plane reflections — reflection × rotor/translator.
 
-    Supported algebras: N3 only (needs E = einfi∧eo)
+    Because three reflections can be grouped as (rotor + reflection)
+    or (translator + reflection) or (general rotor + reflection) in
+    multiple ways, the decomposition into rotor+translator is not unique.
+    This class preserves the raw plane information for downstream use.
     """
 
-    factor: float
-    translator: Optional[Translator] = None
+    planes: tuple[Plane, Plane, Plane]
 
     def __repr__(self) -> str:
-        t = f", {self.translator}" if self.translator is not None else ""
-        return f"GenDilator(×{self.factor:.2f}{t})"
+        return f"TripleRefl({self.planes[0]}, {self.planes[1]}, {self.planes[2]})"
+
+
+@dataclass(frozen=True)
+class VersorFactors:
+    """Unclassified versor — raw grade-1 factors from blade factorization.
+
+    Used as a fallback when a versor cannot be classified as a specific
+    operator (e.g. mixed dilator+rotor combinations in N3/N2).
+    """
+
+    factors: tuple = ()  # tuple of MV (grade-1 vectors)
+
+    def __repr__(self) -> str:
+        return f"VersorFactors({len(self.factors)} factors)"
 
 
 # Backward-compatibility alias: Reflection → ReflectionPlane
@@ -184,5 +212,6 @@ Operator = (
     | Dilator
     | Motor
     | GeneralRotor
-    | GeneralDilator
+    | TripleReflection
+    | VersorFactors
 )

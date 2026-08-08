@@ -6,12 +6,12 @@
 Run with:  uv run python py/examples/viz/demo_mv_visualization.py
 """
 
-from pytanga.algebra import Algebra
+from pytanga.basis import BasisN3, BasisPGA3
 from pytanga.geometry import Direction, Point, analyze
 from pytanga.viz import Visualizer
 
-pga = Algebra.from_name("PGA3")
-n3 = Algebra.from_name("N3")
+pga = BasisPGA3()
+n3 = BasisN3()
 viz = Visualizer(title="Tanga — MV → Entity Pipeline")
 
 # ── PGA3 ─────────────────────────────────────────────────

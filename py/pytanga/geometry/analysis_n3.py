@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+from ._ana_versor_generic import ana_versor_generic
 from ._n3_helpers import (
     E1,
     E2,
@@ -49,7 +50,6 @@ from .entities import (
 )
 from .operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
@@ -58,6 +58,7 @@ from .operators import (
     ReflectionPlane,
     Rotor,
     Translator,
+    VersorFactors,
 )
 
 if TYPE_CHECKING:
@@ -74,8 +75,24 @@ def analyze_entity(
     mv: MV,
     *,
     opns: bool = True,
-) -> Point | Direction | PointPair | HPoint | Line | Circle | Plane | Sphere | Space:
-    """Analyze an MV in N3 as a geometric entity."""
+) -> (
+    Point
+    | Direction
+    | PointPair
+    | HPoint
+    | Line
+    | Circle
+    | Plane
+    | Sphere
+    | Space
+    | None
+):
+    """Analyze an MV in N3 as a geometric entity.
+
+    Returns ``None`` if the null-space of the MV (in the requested OPNS/IPNS
+    interpretation) is empty — i.e., no real Euclidean points satisfy
+    the entity equation.
+    """
     if not opns:
         dual = mv.dual()
         return _analyze_entity_opns(dual)
@@ -84,7 +101,18 @@ def analyze_entity(
 
 def _analyze_entity_opns(
     mv: MV,
-) -> Point | Direction | PointPair | HPoint | Line | Circle | Plane | Sphere | Space:
+) -> (
+    Point
+    | Direction
+    | PointPair
+    | HPoint
+    | Line
+    | Circle
+    | Plane
+    | Sphere
+    | Space
+    | None
+):
     if mv.is_zero:
         raise ValueError("Zero MV is not a geometric entity")
     if mv.is_scalar:
@@ -114,18 +142,38 @@ def _analyze_entity_opns(
 # ── Grade 1: Point / Direction ────────────────────────────────
 
 
-def _point_or_direction_n3(mv: MV) -> Point | Direction:
+def _point_or_direction_n3(mv: MV) -> Point | Direction | None:
+    """Analyze a grade-1 OPNS blade as a conformal point or direction.
+
+    An OPNS point blade has the form ``Cop(p) = p + ½‖p‖²·e∞ + e₀``.
+    After normalizing by the e₀ coefficient, the e∞ coefficient must
+    equal ``½‖p‖²``.  If this constraint is violated, the blade does
+    not represent a valid OPNS point (null-space is empty) and
+    ``None`` is returned.
+    """
     einf = get_einf(mv.algebra)
+    eo = get_eo(mv.algebra)
     f_eo = eo_coeff(mv, einf)
     if abs(f_eo) < 1e-10:
         return Direction(x=float(mv[E1]), y=float(mv[E2]), z=float(mv[E3]))
-    return Point(x=float(mv[E1]) / f_eo, y=float(mv[E2]) / f_eo, z=float(mv[E3]) / f_eo)
+
+    px = float(mv[E1]) / f_eo
+    py = float(mv[E2]) / f_eo
+    pz = float(mv[E3]) / f_eo
+
+    # Validate: normalized blade must have einf coeff = ½‖p‖²
+    einf_c = einf_coeff(mv, eo) / f_eo
+    expected_einf = 0.5 * (px * px + py * py + pz * pz)
+    if abs(einf_c - expected_einf) > 1e-10:
+        return None
+
+    return Point(x=px, y=py, z=pz)
 
 
 # ── Grade 2: PointPair / HPoint ────────────────────
 
 
-def _decompose_grade2(mv: MV) -> PointPair | HPoint:
+def _decompose_grade2(mv: MV) -> PointPair | HPoint | None:
     """Analyze a grade‑2 OPNS blade.
 
     Perwass, GAConfSpc_Ana.tex §PointPair:
@@ -147,18 +195,18 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint:
     if mv.op(einf).is_zero:
         # H = w·a∧e∞ + w·e₀∧e∞, E = e∞∧e₀, E² = -1
         # w = -H·E  (since H·E = -w)
-        weight = float(mv.sp(einf.op(eo)))
+        weight = -float(mv.sp(einf.op(eo)))
         return HPoint(point=_factor_to_point(mv, alg), weight=weight)
 
     # ── 1. Line through the point pair ──
     L = mv.op(einf)  # grade 3 OPNS
     if L.is_zero:
-        raise ValueError("Degenerate point pair line")
+        return None
 
     # ── 2. Perpendicular bisector plane: P* = Q·e∞ ──
     P_star = mv.ip(einf)  # grade 1 IPNS plane
     if P_star.is_zero:
-        raise ValueError("Degenerate point pair plane")
+        return None
 
     # ── 3. Midpoint: X = P*·L ──
     X = P_star.ip(L)
@@ -168,8 +216,12 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint:
     E = einf.op(eo)  # e∞∧e₀ (grade 2)
     d = L.ip(E)  # grade 1 direction
     if d.is_zero:
-        raise ValueError("Point pair direction is zero")
-    direction = Direction(float(d[E1]), float(d[E2]), float(d[E3]))
+        return None
+    dx, dy, dz = float(d[E1]), float(d[E2]), float(d[E3])
+    d_norm = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if d_norm < 1e-15:
+        return None
+    direction = Direction(dx / d_norm, dy / d_norm, dz / d_norm)
 
     # ── 5. Point separation: S* = Q·L⁻¹ ──
     L_inv = L.inv()
@@ -200,12 +252,14 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint:
 # ── Grade 3: Line / Circle ────────────────────────────────────
 
 
-def _line_or_circle_n3(mv: MV) -> Line | Circle:
+def _line_or_circle_n3(mv: MV) -> Line | Circle | None:
     """Distinguish Line vs Circle via C∧e∞.
 
     For a grade‑3 OPNS blade *C*:
       - *C*∧*e∞* = 0  → the entity is a **line** (contains *e∞*).
-      - *C*∧*e∞* ≠ 0  → the entity is a **circle**.
+      - *C*∧*e∞* ≠ 0  → the entity is a **circle*.
+
+    Returns ``None`` if the blade is degenerate (null-space is empty).
     """
     einf = get_einf(mv.algebra)
     if mv.op(einf).is_zero:
@@ -213,12 +267,14 @@ def _line_or_circle_n3(mv: MV) -> Line | Circle:
     return _decompose_circle(mv)
 
 
-def _decompose_line(mv: MV) -> Line:
+def _decompose_line(mv: MV) -> Line | None:
     """Line parameter extraction (Perwass, GAConfSpc_Ana.tex §Line).
 
     Given an OPNS line L (grade 3):
        d = L · (e∞∧e₀)                       → direction vector (grade 1)
        X = d · L                              → point on line closest to origin
+
+    Returns ``None`` if the direction is zero (null-space is empty).
     """
     alg = mv.algebra
     einf = get_einf(alg)
@@ -228,18 +284,24 @@ def _decompose_line(mv: MV) -> Line:
     E = einf.op(eo)  # grade 2   (e∞∧e₀)
     d = mv.ip(E)  # grade 1   direction
     if d.is_zero:
-        raise ValueError("Line direction is zero")
+        return None
+
+    # Normalize direction
+    dx, dy, dz = float(d[E1]), float(d[E2]), float(d[E3])
+    d_norm = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if d_norm < 1e-15:
+        return None
 
     # Closest point to origin: X = d·L  (grade 1 homogeneous point)
     X = d.ip(mv)
     pt = _factor_to_point(X, alg)
     return Line(
         origin=pt,
-        direction=Direction(float(d[E1]), float(d[E2]), float(d[E3])),
+        direction=Direction(dx / d_norm, dy / d_norm, dz / d_norm),
     )
 
 
-def _decompose_circle(mv: MV) -> Circle:
+def _decompose_circle(mv: MV) -> Circle | None:
     """Circle parameter extraction (Perwass, GAConfSpc_Ana.tex §Circle).
 
     Given an OPNS circle C (grade 3):
@@ -250,6 +312,8 @@ def _decompose_circle(mv: MV) -> Circle:
        S* = C  ·  P⁻¹                           → IPNS sphere at the centre (grade 1)
        r² = S* · S*                             → squared radius (may be negative)
        normal = Euclidean part of P* / |normal|
+
+    Returns ``None`` if the blade is degenerate (null-space is empty).
     """
     alg = mv.algebra
     einf = get_einf(alg)
@@ -257,7 +321,7 @@ def _decompose_circle(mv: MV) -> Circle:
     # ── 1. Plane of circle ──
     P = mv.op(einf)  # grade 4
     if P.is_zero:
-        raise ValueError("Degenerate circle plane")
+        return None
 
     # ── 2. IPNS circle ──
     C_star = mv.dual()  # grade 2
@@ -265,7 +329,7 @@ def _decompose_circle(mv: MV) -> Circle:
     # ── 3. Line through sphere centres ──
     L = C_star.op(einf)  # grade 3
     if L.is_zero:
-        raise ValueError("Degenerate circle line")
+        return None
 
     # ── 4. Centre point: U = P*·L ──
     P_star = P.dual()  # grade 1  IPNS plane
@@ -279,10 +343,10 @@ def _decompose_circle(mv: MV) -> Circle:
     radius = math.sqrt(abs(r_sq))
 
     # ── 6. Normal (Euclidean part of P*) ──
-    nx, ny, nz = float(P_star[E1]), float(P_star[E2]), float(P_star[E3])
+    nx, ny, nz = -float(P_star[E1]), -float(P_star[E2]), -float(P_star[E3])
     n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
     if n_norm < 1e-15:
-        raise ValueError("Zero normal in circle plane")
+        return None
     normal = Direction(nx / n_norm, ny / n_norm, nz / n_norm)
 
     return Circle(center=pt, normal=normal, radius=radius, is_imaginary=is_imaginary)
@@ -318,13 +382,13 @@ def _plane_from_ipns(ipns: MV, einf: MV, eo: MV) -> Plane:
     Uses Euclidean coefficients directly (einf/eo have zero E1/E2/E3).
     The sdual may introduce a global sign flip, so we use ratios.
     """
-    ex, ey, ez = float(ipns[E1]), float(ipns[E2]), float(ipns[E3])
+    ex, ey, ez = -float(ipns[E1]), -float(ipns[E2]), -float(ipns[E3])
     n_norm = math.sqrt(ex * ex + ey * ey + ez * ez)
     if n_norm < 1e-15:
         raise ValueError("Zero normal in dual plane")
     ux, uy, uz = ex / n_norm, ey / n_norm, ez / n_norm
-    # e∞ coefficient = sp(ipns, eo) (via reciprocal: −ipns·e₀ gives e∞ coeff)
-    einf_c = -float(ipns.sp(eo))
+    # e∞ coefficient = sp(ipns, eo) — sign adjusted for dual negated normal
+    einf_c = float(ipns.sp(eo))
     d = einf_c / n_norm
     # Point on plane: −d·â (signed distance from origin along normal)
     point = Point(ux * d, uy * d, uz * d)
@@ -370,22 +434,19 @@ def analyze_operator(
     | Rotor
     | Translator
     | Dilator
-    | GeneralDilator
     | Motor
     | GeneralRotor
+    | VersorFactors
 ):
     """Analyze an MV in N3 as a versor.
 
-    Classification follows Perwass table (GAConfSpc_Op.tex, §Summary):
-    - Reflection: grade-1, only Euclidean
-    - ReflectionOrigin: grade-1, only e₀
-    - Inversion: grade-1, Euclidean + e₀ + e∞ (sphere IPNS)
-    - Rotor: grades {0,2}, only Euclidean bivectors
-    - Translator: grades {0,2}, eᵢ∧e∞ bivectors
-    - Dilator: grades {0,2}, only e∞∧e₀
-    - GeneralDilator: grades {0,2}, eᵢ∧e∞ AND e∞∧e₀
-    - Motor: grades {0,2,4}
-    - GeneralRotor: grades {0,2} with eᵢ∧e∞
+    Classification:
+    - Single-grade → Reflection/ReflectionOrigin/Inversion
+    - Grades {0,2}, E-only → Dilator
+    - Grades {0,2}, t-only → Translator
+    - Grades {0,2}, E+t → GeneralDilator
+    - Grades {0,2} or {0,2,4} → delegated to :func:`ana_versor_generic`
+    - Fallback → :class:`VersorFactors`
     """
     if mv.is_zero:
         raise ValueError("Zero MV is not a valid versor")
@@ -410,7 +471,8 @@ def analyze_operator(
     elif n == 4:
         return _classify_quad_reflector(mv, einf, eo, factors)
     else:
-        raise ValueError(f"Unexpected {n} factors for N3 versor")
+        # Unhandled factor count → fallback
+        return VersorFactors(factors=tuple(factors))
 
 
 def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
@@ -477,55 +539,40 @@ def _classify_single_reflector(n: MV, einf: MV, eo: MV):
 
 
 def _classify_double_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
-    """Classify 2-factor versor by blade components (Perwass table)."""
-    has_t = has_translator_components(mv, mv.algebra)
+    """Classify 2-factor versor by blade components.
+
+    - E-only (e∞∧e₀) → Dilator (possibly with origin)
+    - Everything else → delegated to :func:`ana_versor_generic`
+      (handles Rotor / Translator / GeneralRotor).
+    """
     has_E = has_E_component(mv, mv.algebra)
 
-    if not has_t and not has_E:
-        return _rotor_from_factors(factors[0], factors[1])
-    elif has_t and not has_E:
-        return _translator_from_versor(mv)
-    elif has_E and not has_t:
+    if has_E:
         return _dilator_from_versor(mv)
     else:
-        # GeneralDilator: T·D·T̃ — has both eᵢ∧e∞ and e∞∧e₀
-        dilator = _dilator_from_versor(mv)
-        tx, ty, tz = translator_coeffs(mv, mv.algebra)
-        translator = Translator(vector=Direction(tx, ty, tz))
-        return GeneralDilator(factor=dilator.factor, translator=translator)
+        # Rotor, Translator, or GeneralRotor
+        return ana_versor_generic(
+            mv,
+            einf_like=einf,
+            e0_inv_like=-eo,
+            blade_order_sign=-1,
+            is_2d=False,
+        )
 
 
 def _classify_quad_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
     """Classify a 4-factor versor: Motor or GeneralRotor.
 
-    Perwass table:
-    - Motor:      grades {0,2,4}, 4 factors (2 Euclidean + 2 null = T·R)
-    - GenRotor:   grades {0,2},   4 factors (T·R·T̃)
-
-    Extract the rotor from Euclidean factors and the translator
-    from the null factors' product (not the full motor), to avoid
-    contamination from the rotor's bivector components.
+    Delegates to :func:`ana_versor_generic` which classifies by grade
+    content (grade-4 → Motor, no grade-4 → GeneralRotor).
     """
-    eucl = [f for f in factors if not bivec_has_null(f, einf, eo)]
-    null_factors = [f for f in factors if bivec_has_null(f, einf, eo)]
-
-    # Extract rotor from the Euclidean factors
-    if len(eucl) == 2:
-        rotor = _rotor_from_factors(eucl[0], eucl[1])
-    else:
-        rotor = Rotor(0.0, Direction(1, 0, 0))
-
-    # Extract translator from the null factors' product (not the full motor)
-    if len(null_factors) >= 2:
-        T_part = null_factors[0].gp(null_factors[1])
-        translator = _translator_from_versor(T_part)
-    else:
-        translator = _translator_from_versor(mv)
-
-    # Grade-4 component distinguishes Motor from GeneralRotor
-    if len(eucl) == 2:
-        return Motor(rotor=rotor, translator=translator)
-    return GeneralRotor(rotor=rotor, translator=translator)
+    return ana_versor_generic(
+        mv,
+        einf_like=einf,
+        e0_inv_like=-eo,
+        blade_order_sign=-1,
+        is_2d=False,
+    )
 
 
 # ── Operator helpers ──────────────────────────────────────────
@@ -557,16 +604,43 @@ def _translator_from_versor(mv: MV) -> Translator:
 
 
 def _dilator_from_versor(mv: MV) -> Dilator:
-    """Perwass: D = a0 + aE·E, d = (a0 − aE)/(a0 + aE)."""
-    a0 = float(mv[0])
-    aE = E_coefficient(mv, mv.algebra)
-    denom = a0 + aE
-    if abs(denom) < 1e-15:
-        raise ValueError("Degenerate dilator: a0 + aE ≈ 0")
-    factor = (a0 - aE) / denom
+    """Extract factor and origin from a dilator MV via algebraic extraction.
+
+    Uses left-contraction with E = e∞∧e₀ and ip-op-op-ip chain
+    (see dev/src/entities_04.py).  No blade factorization needed.
+
+    Pure dilator:   origin defaults to (0,0,0).
+    General dilator (T·D·T̃): origin extracted from translator part.
+    """
+    alg = mv.algebra
+    einf = get_einf(alg)
+    eo = get_eo(alg)
+    E = einf.op(eo)  # e∞∧e₀
+
+    # Extract scalar D part: d_part = mv | E
+    d_part = mv.ip(E)
+    D_val = float(d_part[0])
+    if abs(D_val) < 1e-15:
+        raise ValueError("Degenerate dilator: D coefficient is zero")
+
+    # Extract translator part: t_part = mv.ip(eo).op(eo).ip(einf)
+    t_part = mv.ip(eo).op(eo).ip(einf)
+    t_euc = t_part * (-1.0 / D_val)
+
+    factor = (1.0 - D_val) / (1.0 + D_val)
     if factor <= 0:
         raise ValueError(f"Dilator factor must be positive, got {factor}")
-    return Dilator(factor=factor)
+
+    # Determine if general dilator (has non-zero translator part)
+    tx = float(t_euc[E1])
+    ty = float(t_euc[E2])
+    tz = float(t_euc[E3])
+    t_norm = math.sqrt(tx * tx + ty * ty + tz * tz)
+
+    if t_norm < 1e-10:
+        return Dilator(factor=factor)
+    else:
+        return Dilator(factor=factor, origin=Point(tx, ty, tz))
 
 
 # ═══════════════════════════════════════════════════════════════

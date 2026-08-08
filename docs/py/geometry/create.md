@@ -3,61 +3,71 @@
 The creation pipeline constructs multivectors from geometric entity/operator
 dataclasses. It is the inverse of the [analysis pipeline](analysis.md).
 
-```python
+The recommended API is a bound [`Geometry`](_geometry.py) instance:
 
-from pytanga.geometry import create, create_entity, create_operator
+```python
+from pytanga.geometry import Geometry
 ```
 
-## `create(basis, obj) → MV`
+## `geo.create(obj) → MV`
 
-Convenience function that accepts either an `Entity` or `Operator` and
-dispatches accordingly.
+Convenience method that accepts either an `Entity` or `Operator` and
+constructs the corresponding MV.
 
 ```python
 from pytanga.algebra import Algebra
-from pytanga.geometry import Point, Rotor, Direction, create
+from pytanga.geometry import Geometry, Point, Rotor, Direction
 import math
 
-e3 = Algebra.from_name('E3')
-pga = Algebra.from_name('PGA3')
+e3 = BasisE3()
+pga = BasisPGA3()
+
+geom_e3 = Geometry(e3)
+geom_pga = Geometry(pga)
 
 # Create a point in E3
-mv = create(e3, Point(1, 2, 3))
+mv = geom_e3.create(Point(1, 2, 3))
 print(mv)  # 1 e1 + 2 e2 + 3 e3
 
 # Create a rotor in PGA3
 r = Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1))
-mv = create(pga, r)
+mv = geom_pga.create(r)
 ```
 
-## `create_entity(basis, entity) → MV`
+## OPNS / IPNS
 
-Creates an MV from an `Entity` dataclass. The algebra determines the
-representation:
+The default `Geometry(algebra)` uses OPNS.  To switch to IPNS, pass `opns=False`
+at construction time, or override per call:
 
 ```python
 from pytanga.algebra import Algebra
-from pytanga.geometry import Point, create_entity
+from pytanga.geometry import Geometry, Point
 
-e3 = Algebra.from_name('E3')
-pga = Algebra.from_name('PGA3')
+n3 = BasisN3()
 
-# Same point, different MVs in different algebras
-mv_e3 = create_entity(e3, Point(1, 2, 3))
-mv_pga = create_entity(pga, Point(1, 2, 3))
+# Default OPNS (recommended for most uses)
+geo = Geometry(n3, opns=True)
+mv = geo.create(Point(1, 0, 0))         # OPNS point
+
+# Override to IPNS for a single call
+mv_ipns = geo.create(Point(1, 0, 0), opns=False)
+
+# Or create an IPNS-bound instance
+geom_ipns = Geometry(n3, opns=False)
+mv = geom_ipns.create(Point(1, 0, 0))    # IPNS point
 ```
 
-## `create_operator(basis, operator) → MV`
+## Plain Functions
 
-Creates an MV from an `Operator` dataclass:
+The underlying plain functions are available directly.  They require the
+algebra and OPNS flag to be passed explicitly:
 
 ```python
-from pytanga.algebra import Algebra
-from pytanga.geometry import Translator, Direction, create_operator
+from pytanga.geometry import create, create_entity, create_operator
 
-pga = Algebra.from_name('PGA3')
-t = Translator(vector=Direction(1, 0, 0))
-mv = create_operator(pga, t)
+mv = create(algebra, obj, opns=True)            # Entity or Operator
+mv = create_entity(algebra, entity, opns=True)  # Entity only
+mv = create_operator(algebra, operator)          # Operator only
 ```
 
 ## Algebra-Specific Entity Representations

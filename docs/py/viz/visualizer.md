@@ -225,7 +225,7 @@ detail.display(viewer_name="presenter-laptop")
 ```python
 from pytanga.algebra import Algebra
 
-pga = Algebra.from_name("PGA3")
+pga = BasisPGA3()
 viz = Visualizer(opns=True)
 
 # MV → analyze(opns=True) → Entity
@@ -287,10 +287,64 @@ a new tab immediately.
 
 ```
 Waiting for existing browser to reconnect ...
-✓ Browser connected  (127.0.0.1).
+No existing browser connected — opening new tab.
+Browser at 127.0.0.1 loaded page (token: a1b2c3d4).
+✓ Browser connected  (id=e5f6g7h8, token=a1b2c3d4, ip=127.0.0.1).
 ```
 
-Browser connect and disconnect events are printed with the remote address.
+### Connection Logging
+
+Every browser connection produces two log lines:
+
+1. **Page load** (dim): printed when the browser fetches `viewer.html`, showing
+   the remote address and a unique page token that correlates the HTTP request
+   with the expected WebSocket connection.
+
+2. **WebSocket connected** (green): printed after the browser completes the
+   WebSocket handshake and sends its ``ready`` message.  Includes all available
+   identifiers: browser ``id``, page ``token``, optional ``viewer`` name (from
+   the ``?viewer=`` URL parameter), and remote ``ip``.
+
+```
+Browser at 192.168.1.10 loaded page (token: abc12345).
+✓ Browser connected  (id=def67890, token=abc12345, viewer=my-tab, ip=192.168.1.10).
+```
+
+### WebSocket Reachability Diagnostics
+
+On startup, the server prints only the HTTP URL:
+
+```
+http://localhost:8765
+Waiting for browser to connect at http://localhost:8765 ...
+```
+
+The WebSocket URL (`ws://localhost:8765/ws`) and a reachability note only appear
+if something goes wrong — either in a stale-token warning (below) or after a
+`wait_for_browser()` timeout.  This keeps the normal output clean.
+
+### Stale-Token Warning
+
+After a browser first loads the page, the server waits for the WebSocket
+``ready`` message.  If a page token remains unmatched after a grace period
+(default 10 s), the server prints a warning:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ╔══════════════════════════════════════════════════════════════╗ │
+│ ║  WebSocket connection failed                                 ║ │
+│ ║  Browser at 192.168.1.10 loaded the page via HTTP but the    ║ │
+│ ║  WebSocket never connected.                                  ║ │
+│ ║  Check that the following URL is reachable:                  ║ │
+│ ║  ws://localhost:8765/ws                                      ║ │
+│ ╚══════════════════════════════════════════════════════════════╝ │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+This pinpoints the exact scenario where a port forward or reverse proxy
+delivers the HTML page but strips WebSocket upgrade headers — the browser shows
+the initial 3D viewport but never receives any geometry.
+
 Controls and scene state are automatically pushed to all connected tabs.
 
 ### Multi-Tab Support

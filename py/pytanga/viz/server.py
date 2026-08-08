@@ -71,6 +71,7 @@ class VizServer:
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
         self._pending_screenshots: dict[str, asyncio.Future[Any]] = {}
+        self._pending_page_tokens: dict[str, dict[str, Any]] = {}
 
     # ── Lifecycle ───────────────────────────────────────────
 
@@ -85,6 +86,7 @@ class VizServer:
         push_controls: PushControlsCallback | None = None,
         scene_config_callback: SceneConfigCallback | None = None,
         scene_list_callback: SceneListCallback | None = None,
+        on_ready: Callable[[], None] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
         self._flush_callback = flush_callback
@@ -95,6 +97,7 @@ class VizServer:
         self._on_connect = on_connect
         self._on_disconnect = on_disconnect
         self._push_controls_cb = push_controls
+        self._on_ready = on_ready
         self._app = self._build_app()
 
         self._runner = web.AppRunner(self._app)
@@ -265,21 +268,52 @@ class VizServer:
         app.router.add_get("/{name:.*}", self._catch_all_handler)
         return app
 
-    async def _catch_all_handler(self, request: web.Request) -> web.FileResponse:
+    async def _catch_all_handler(self, request: web.Request) -> web.StreamResponse:
         """Serve a static file if it exists, otherwise serve viewer.html.
 
         This handles both static assets (JS modules, CSS, renderers) and
         scene-URL routing (/, /scene1, /group/sub).  When the requested
         path maps to a file in the templates directory, it is served
         directly (with the correct MIME type).  Otherwise, viewer.html
-        is served so the SPA can read the scene name from the URL path.
+        is served with an injected page token for WebSocket connectivity
+        diagnostics.
         """
         rel_path = request.match_info.get("name", "")
         if rel_path:
             file_path = self._static_dir / rel_path
             if file_path.is_file():
                 return web.FileResponse(file_path)
-        return web.FileResponse(self._static_dir / "viewer.html")
+
+        # Inject a page token for WS connectivity correlation
+        viewer_path = self._static_dir / "viewer.html"
+        page_token = uuid4().hex[:8]
+        remote_addr = request.remote or "unknown"
+        self._pending_page_tokens[page_token] = {
+            "remote_addr": remote_addr,
+            "timestamp": asyncio.get_running_loop().time(),
+        }
+
+        # Print initial page-load note
+        self._print_page_load(remote_addr, page_token)
+
+        html = viewer_path.read_text(encoding="utf-8")
+        token_script = f'<script>window.__tanga_page_token = "{page_token}";</script>'
+        # Inject after <head> or at start of file
+        if "</head>" in html:
+            html = html.replace("</head>", f"{token_script}\n</head>")
+        else:
+            html = token_script + "\n" + html
+
+        resp = web.StreamResponse(
+            status=200,
+            reason="OK",
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+        resp.content_length = len(html.encode("utf-8"))
+        await resp.prepare(request)
+        await resp.write(html.encode("utf-8"))
+        await resp.write_eof()
+        return resp
 
     async def _ws_handler(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse()
@@ -321,6 +355,17 @@ class VizServer:
 
                         if msg_type == "ready":
                             scene_name = data.get("scene", "")
+                            # Correlate page token if present (HTTP→WS round-trip diagnostic)
+                            page_token = data.get("page_token")
+                            if page_token:
+                                self._pending_page_tokens.pop(page_token, None)
+                            # Print comprehensive connection summary
+                            self._print_ws_connected(
+                                remote_addr,
+                                page_token,
+                                msg_browser_id,
+                                data.get("viewer_name"),
+                            )
                             # Validate scene exists
                             if self._scene_list_callback is not None:
                                 available = self._scene_list_callback()
@@ -339,6 +384,8 @@ class VizServer:
                             await self._push_full_state(ws, scene_name=scene_name)
                             if self._push_controls_cb is not None:
                                 await self._push_controls_cb(scene_name)
+                            if self._on_ready is not None:
+                                self._on_ready()
 
                         elif msg_type == "screenshot:data":
                             rid = data.get("request_id")
@@ -451,6 +498,123 @@ class VizServer:
         """The HTTP URL of the viewer."""
         return f"http://{self._host}:{self._port}"
 
+    def _print_page_load(self, remote_addr: str, page_token: str) -> None:
+        """Print an initial note when a browser loads the HTML page."""
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(
+                Text.assemble(
+                    "Browser at ",
+                    Text(remote_addr, style="cyan"),
+                    " loaded page (token: ",
+                    Text(page_token, style="dim"),
+                    ")",
+                    style="dim",
+                )
+            )
+        except ImportError:
+            print(f"Browser at {remote_addr} loaded page (token: {page_token}).")
+
+    def _print_ws_connected(
+        self,
+        remote_addr: str,
+        page_token: str | None,
+        browser_id: str,
+        viewer_name: str | None,
+    ) -> None:
+        """Print a final note when the WebSocket round-trip completes."""
+        parts = [f"id={browser_id}"]
+        if page_token:
+            parts.append(f"token={page_token}")
+        if viewer_name:
+            parts.append(f"viewer={viewer_name}")
+        parts.append(f"ip={remote_addr}")
+        detail = ", ".join(parts)
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(
+                Text(f"✓ Browser connected  ({detail})", style="bold green")
+            )
+        except ImportError:
+            print(f"✓ Browser connected  ({detail})")
+
+    def _print_ws_reachability_note(self) -> None:
+        """Print a note about WebSocket reachability for port forwarding setups."""
+        ws_url = f"ws://{self._host}:{self._port}/ws"
+        note = (
+            "Note: the WebSocket connection ("
+            + ws_url
+            + ") must also be reachable from the\n"
+            "browser. If using port forwarding or a reverse proxy, ensure WebSocket\n"
+            "upgrade requests are forwarded — otherwise the viewer will render an\n"
+            "empty 3D scene.\n"
+        )
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(Text(note, style="dim"))
+        except ImportError:
+            print(note)
+
+    async def check_page_tokens(
+        self, delay: float = 5.0, token_timeout: float = 10.0
+    ) -> None:
+        """After *delay* seconds, warn about page loads that never opened a WebSocket.
+
+        For each page token that was served in ``viewer.html`` but hasn't been
+        matched by a ``ready`` WebSocket message within *token_timeout* seconds,
+        print a diagnostic warning.
+
+        Args:
+            delay: Seconds to wait before the first check.
+            token_timeout: Maximum age of a pending token before warning.
+        """
+        await asyncio.sleep(delay)
+
+        now = asyncio.get_running_loop().time()
+        stale: list[dict[str, Any]] = []
+        for token, info in list(self._pending_page_tokens.items()):
+            if now - info["timestamp"] > token_timeout:
+                stale.append(info)
+                del self._pending_page_tokens[token]
+
+        if not stale:
+            return
+
+        ws_url = f"ws://{self._host}:{self._port}/ws"
+        try:
+            from rich.console import Console
+            from rich.panel import Panel
+            from rich.text import Text
+
+            console = Console()
+            for info in stale:
+                panel = Panel(
+                    Text.assemble(
+                        "[bold red]WebSocket connection failed[/bold red]\n",
+                        f"Browser at [cyan]{info['remote_addr']}[/cyan] loaded the "
+                        "page via HTTP but the WebSocket never connected.\n"
+                        "Check that the following URL is reachable:\n",
+                        Text(ws_url, style="bold cyan underline"),
+                    ),
+                    border_style="red",
+                    padding=(1, 2),
+                )
+                console.print(panel)
+        except ImportError:
+            for info in stale:
+                print(
+                    f"WARNING: Browser at {info['remote_addr']} loaded the page "
+                    f"but WebSocket never connected. "
+                    f"Check that {ws_url} is reachable "
+                    f"(port forwarding/proxy must support WebSocket upgrades)."
+                )
+
     def open_browser(self) -> None:
         """Open the viewer URL in the default browser with graceful fallback."""
         try:
@@ -478,9 +642,11 @@ class VizServer:
                 padding=(1, 2),
             )
             console.print(panel)
+            self._print_ws_reachability_note()
         except ImportError:
             print("Could not open browser automatically.")
             print(f"Open {self.url} manually to view the scene.")
+            self._print_ws_reachability_note()
 
     async def wait_for_client(self, timeout: float = 30.0) -> bool:
         """Wait until at least one WebSocket client connects.

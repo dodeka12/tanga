@@ -5,11 +5,13 @@
 
 PGA3 is modelled via the 5D null‑vector embedding (dim=5).
 Blade IDs are sourced from ``BasisPGA3`` as the single source of truth.
+
+The 4D PGA complement dual (J‑map / Hodge star) is defined in
+``BasisPGA3.dual()`` — geometry modules should use
+``mv.algebra.dual(mv)`` or simply ``mv.dual()``.
 """
 
 from __future__ import annotations
-
-from functools import cache
 
 from pytanga.algebra._algebra import Algebra
 from pytanga.algebra._mv import MV
@@ -37,18 +39,6 @@ def _get_e0(alg: Algebra) -> MV:
     if hasattr(alg, "e0"):
         return alg.e0
     return alg.multivector({EP: 1.0, EM: 1.0})
-
-
-@cache
-def _pga3_pinv(alg: Algebra) -> MV:
-    """Pseudo‑inverse of the 4D PGA pseudoscalar I₄ = e₁∧e₂∧e₃∧e₀."""
-    I4 = alg.e1.op(alg.e2).op(alg.e3).op(_get_e0(alg))
-    return I4.blade_pseudo_inverse()
-
-
-def _pga3_dual(mv: MV) -> MV:
-    """4D PGA dual using pseudo‑inverse of the PGA pseudoscalar."""
-    return mv.ip(_pga3_pinv(mv.algebra))
 
 
 def _get_e0_coeff(mv: MV) -> float:

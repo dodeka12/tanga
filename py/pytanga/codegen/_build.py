@@ -166,16 +166,14 @@ def _resolve_generator() -> str | None:
 
     Precedence:
     1. ``PYTANGA_CMAKE_GENERATOR`` env var (explicit override).
-    2. Windows + MSVC compiler → ``"Ninja"`` if ninja is available.
+    2. ``"Ninja"`` if ninja is available on any platform.
     3. Otherwise → ``None`` (let CMake auto-detect).
     """
     gen = os.environ.get("PYTANGA_CMAKE_GENERATOR")
     if gen:
         return gen
-    compiler = os.environ.get("PYTANGA_CXX_COMPILER", _detect_default_compiler())
-    if _SYSTEM == "Windows" and compiler in ("cl.exe", "cl"):
-        if _ninja_available():
-            return "Ninja"
+    if _ninja_available():
+        return "Ninja"
     return None
 
 

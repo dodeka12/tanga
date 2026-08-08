@@ -229,13 +229,30 @@ def create_translator(basis: Algebra, dx: float, dy: float, dz: float) -> MV:
     )
 
 
-def create_dilator(basis: Algebra, factor: float) -> MV:
-    """``D = 1 + (1−d)/(1+d)·E`` where E = e∞∧e₀ (Perwass)."""
+def create_dilator(
+    basis: Algebra,
+    factor: float,
+    *,
+    origin: Point | None = None,
+) -> MV:
+    """Dilator about an origin point.
+
+    ``D = 1 + (1−d)/(1+d)·E`` where E = e∞∧e₀ (Perwass).
+
+    If *origin* is given, returns ``D_t = T·D·T̃`` where T translates
+    from the global origin to the dilation center (general dilator).
+    """
     if factor <= 0:
         raise ValueError(f"Dilator factor must be positive, got {factor}")
     coeff = (1.0 - factor) / (1.0 + factor)
     E = get_einf(basis).op(get_eo(basis))
-    return basis.multivector({0: 1.0}) + E * coeff
+    d = basis.multivector({0: 1.0}) + E * coeff
+
+    if origin is None:
+        return d
+
+    t = create_translator(basis, origin.x, origin.y, 0.0)
+    return t.gp(d).gp(t.rev())
 
 
 def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
@@ -268,22 +285,15 @@ def create_reflection_origin(basis: Algebra) -> MV:
     return get_eo(basis)
 
 
-def create_general_rotor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
+def create_general_rotor(
+    basis: Algebra, angle: float, axis: Direction, origin: Point
+) -> MV:
     """General rotor: ``G = T·R·T̃`` (Perwass).
 
-    Represents a rotation about an axis (point in 2D) that does NOT pass
-    through the origin.
+    Represents a rotation about *axis* through *origin* (a point in 2D).
+    The result has 5 components (scalar + 4 bivectors),
+    with no 3-vector term (distinguishes it from Motor).
     """
-    t = create_translator(basis, translator.vector.x, translator.vector.y, 0.0)
-    r = create_rotor(basis, rotor.angle, rotor.axis)
+    t = create_translator(basis, origin.x, origin.y, 0.0)
+    r = create_rotor(basis, angle, axis)
     return t.gp(r).gp(t.rev())
-
-
-def create_general_dilator(basis: Algebra, factor: float, translator: Translator) -> MV:
-    """General dilator: ``D_t = T·D·T̃`` (Perwass).
-
-    Represents a dilation about an arbitrary point *t*.
-    """
-    t = create_translator(basis, translator.vector.x, translator.vector.y, 0.0)
-    d = create_dilator(basis, factor)
-    return t.gp(d).gp(t.rev())

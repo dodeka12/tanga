@@ -83,7 +83,7 @@ def _detect(alg: Algebra) -> str:
 # ── entity analysis ─────────────────────────────────────────────
 
 
-def analyze_entity(mv: MV, *, opns: bool = True) -> Entity:
+def analyze_entity(mv: MV, *, opns: bool = True) -> Entity | None:
     """Determine which geometric entity an MV represents.
 
     Parameters
@@ -96,15 +96,15 @@ def analyze_entity(mv: MV, *, opns: bool = True) -> Entity:
 
     Returns
     -------
-    Entity
+    Entity or None
         A :term:`dataclass` (:class:`~pytanga.geometry.entities.Point`,
         :class:`Line`, :class:`Plane`, :class:`Circle`,
-        :class:`Sphere`, …).
+        :class:`Sphere`, …).  Returns ``None`` if the null-space is empty.
 
     Raises
     ------
     ValueError
-        If the MV cannot be identified as a known entity type.
+        If the MV is malformed (e.g., zero MV, mixed grades).
     """
     alg_type = _detect(mv._alg)
     if alg_type == "e3":
@@ -128,7 +128,7 @@ def analyze_entity(mv: MV, *, opns: bool = True) -> Entity:
 # ── operator analysis ───────────────────────────────────────────
 
 
-def analyze_operator(mv: MV) -> Operator:
+def analyze_operator(mv: MV) -> Operator | None:
     """Determine which versor / operator an MV represents.
 
     Parameters
@@ -138,14 +138,15 @@ def analyze_operator(mv: MV) -> Operator:
 
     Returns
     -------
-    Operator
+    Operator or None
         A :term:`dataclass` (:class:`~pytanga.geometry.operators.Rotor`,
         :class:`Translator`, :class:`Motor`, …).
+        Returns ``None`` if the MV does not represent a known operator.
 
     Raises
     ------
     ValueError
-        If the MV cannot be identified as a known operator type.
+        If the MV is malformed (e.g., zero MV).
     """
     alg_type = _detect(mv._alg)
     if alg_type == "e3":
@@ -169,7 +170,7 @@ def analyze_operator(mv: MV) -> Operator:
 # ── combined fallback ───────────────────────────────────────────
 
 
-def analyze(mv: MV, *, opns: bool = True) -> Entity | Operator:
+def analyze(mv: MV, *, opns: bool = True) -> Entity | Operator | None:
     """Try to analyze an MV as either an entity or an operator.
 
     Tries entity analysis first, then operator analysis.
@@ -185,23 +186,27 @@ def analyze(mv: MV, *, opns: bool = True) -> Entity | Operator:
 
     Returns
     -------
-    Entity or Operator
+    Entity, Operator, or None
         Either an :class:`Entity` or an :class:`Operator` dataclass.
+        Returns ``None`` if the MV cannot be identified as either
+        (null-space is empty for both interpretations).
 
     Raises
     ------
     ValueError
-        If the MV cannot be identified as either an entity or an operator.
+        If the MV is malformed (e.g., zero MV, mixed grades).
     """
+    result = None
     try:
-        return analyze_entity(mv, opns=opns)
+        result = analyze_entity(mv, opns=opns)
     except (ValueError, NotImplementedError):
         pass
+    if result is not None:
+        return result
+
+    result = None
     try:
-        return analyze_operator(mv)
+        result = analyze_operator(mv)
     except (ValueError, NotImplementedError):
         pass
-    raise ValueError(
-        f"Could not identify MV as entity or operator "
-        f"in algebra {type(mv._alg).__name__}"
-    )
+    return result

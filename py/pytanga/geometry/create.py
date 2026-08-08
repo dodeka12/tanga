@@ -26,7 +26,6 @@ from .entities import (
 )
 from .operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
@@ -87,7 +86,7 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
     Parameters
     ----------
     basis : Algebra
-        An algebra instance (e.g. ``Algebra.from_name('E3')``).
+        An algebra instance (e.g. ``BasisE3()``).
     entity : Entity
         An :class:`~.entities.Entity` dataclass.
     opns : bool, optional
@@ -258,13 +257,13 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
             basis, operator.vector.x, operator.vector.y, operator.vector.z
         )
     elif isinstance(operator, Dilator):
-        return mod.create_dilator(basis, operator.factor)
-    elif isinstance(operator, GeneralDilator):
-        return mod.create_general_dilator(basis, operator.factor, operator.translator)
+        return mod.create_dilator(basis, operator.factor, origin=operator.origin)
     elif isinstance(operator, Motor):
         return mod.create_motor(basis, operator.rotor, operator.translator)
     elif isinstance(operator, GeneralRotor):
-        return mod.create_general_rotor(basis, operator.rotor, operator.translator)
+        return mod.create_general_rotor(
+            basis, operator.angle, operator.axis, operator.origin
+        )
     else:
         raise TypeError(
             f"Operator type {type(operator).__name__} not supported in {_detect(basis)}"

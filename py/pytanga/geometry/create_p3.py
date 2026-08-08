@@ -288,9 +288,3 @@ def create_general_rotor(basis: Algebra, rotor, translator) -> MV:
     raise ValueError(
         "General rotors require conformal embedding (N3); not available in P3."
     )
-
-
-def create_general_dilator(basis: Algebra, factor: float, translator=None) -> MV:
-    raise ValueError(
-        "General dilators require conformal embedding (N3); not available in P3."
-    )

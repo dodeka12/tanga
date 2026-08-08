@@ -30,52 +30,6 @@ class Algebra:
     compiled (~5–20 s). Subsequent constructions load the cached binary (~ms).
     """
 
-    _NAMED_ALGEBRAS: dict[str, tuple[int, int]] = {
-        "G2": (2, 0b00),
-        "G3": (3, 0b000),
-        # PGA2 / PGA3 are modelled via the null‑vector embedding
-        # (see docs/py/pga_null_embedding.md). Two extra basis vectors are
-        # added: one with +1, one with -1 metric.
-        "PGA2": (4, 0b1000),  # dim=4, e4 squares to -1; null vector = e3 + e4
-        "PGA3": (5, 0b10000),  # dim=5, e5 squares to -1; null vector = e4 + e5
-        "CGA3": (5, 0b10000),  # conformal 3D: e5 squares to -1
-        "STA": (4, 0b1110),  # spacetime algebra: e2, e3, e4 square to -1
-    }
-
-    # Names that have a dedicated Basis class (checked before _NAMED_ALGEBRAS)
-    _BASIS_CLASS_NAMES: frozenset = frozenset(
-        {"E2", "E3", "N2", "N3", "P2", "P3", "PGA2", "PGA3"}
-    )
-
-    @classmethod
-    def from_name(cls, name: str, dtype: str = "float64", **kwargs) -> Algebra:
-        """
-        Create an Algebra (or Basis) instance from a short name.
-
-        Parameters
-        ----------
-        name : str
-            One of 'E3', 'P3', 'N3', 'PGA3',
-            'G2', 'G3', 'PGA2', 'CGA3', 'STA'.
-        dtype : str, optional
-            Value type to use (default 'float64').
-        **kwargs
-            Passed through to the constructor, e.g. verbose.
-
-        Returns
-        -------
-        Algebra or a BasisXxx subclass
-        """
-        if name in cls._BASIS_CLASS_NAMES:
-            from pytanga.basis import _CLASS_MAP
-
-            return _CLASS_MAP[name](dtype=dtype, **kwargs)
-        if name not in cls._NAMED_ALGEBRAS:
-            known = ", ".join(list(cls._BASIS_CLASS_NAMES) + list(cls._NAMED_ALGEBRAS))
-            raise ValueError(f"Unknown algebra name {name!r}. Known: {known}")
-        dim, sig = cls._NAMED_ALGEBRAS[name]
-        return cls(dim, sig, dtype, **kwargs)
-
     def __init__(
         self,
         dim: int,
@@ -189,7 +143,17 @@ class Algebra:
         if coeffs is None:
             pass
         elif isinstance(coeffs, str):
-            for bid, val in _parse_mv_string(coeffs, self._dim).items():
+            # Build a named-basis dict for composite blades (e.g. e0 = ep + em in PGA3)
+            # that cannot be resolved via the primitive blade_id() function.
+            named_basis: dict[str, dict[int, float]] = {}
+            for name, mv in self.blades().items():
+                raw = mv._impl.to_dict()
+                # A composite blade has more than one non-zero primitive blade
+                if len(raw) > 1:
+                    named_basis[name] = raw
+            for bid, val in _parse_mv_string(
+                coeffs, self._dim, named_basis or None
+            ).items():
                 impl.set(bid, val)
         else:
             for key, val in coeffs.items():
@@ -571,9 +535,10 @@ class Algebra:
         label         : optional label printed left-aligned before the sum
         fmt           : Python format spec for coefficients (default None, uses algebra's print_fmt)
         align_col     : column to align the label (default 30)
-        display_basis : optional list of ``(name, blade, dual)`` tuples.
+        display_basis : optional list of ``(name, blade, pinv, blade_id)`` tuples.
                         When provided, coefficients are extracted via
-                        ``ip(mv, dual)``; otherwise the primitive blade
+                        ``mv[blade_id]`` for simple blades, or ``ip(mv, pinv)``
+                        for composite blades; otherwise the primitive blade
                         basis (``mv.to_dict()``) is used.
         """
         if fmt is None:
@@ -586,8 +551,11 @@ class Algebra:
         if display_basis is not None:
             # Coefficient extraction via ip(mv, dual) for each display blade.
             terms: list[tuple[float, str]] = []
-            for name, _blade, dual in display_basis:
-                coeff = mv[0] if dual is None else self.ip(mv, dual)[0]
+            for name, _blade, pinv, blade_id in display_basis:
+                if blade_id is not None:
+                    coeff = mv[blade_id]
+                else:
+                    coeff = self.ip(mv, pinv)[0]
                 if abs(coeff) < tol:
                     continue
                 if abs(coeff - round(coeff)) < tol:
@@ -660,8 +628,11 @@ class Algebra:
         tol = 1e-10
         if display_basis is not None:
             terms: list[tuple[float, str]] = []
-            for name, _blade, dual in display_basis:
-                coeff = mv[0] if dual is None else self.ip(mv, dual)[0]
+            for name, _blade, pinv, blade_id in display_basis:
+                if blade_id is not None:
+                    coeff = mv[blade_id]
+                else:
+                    coeff = self.ip(mv, pinv)[0]
                 if abs(coeff) < tol:
                     continue
                 if abs(coeff - round(coeff)) < tol:

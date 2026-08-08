@@ -28,9 +28,10 @@ from pytanga.solver.solve import solve, solve_lsq, solve_mod
 
 ```python
 from pytanga import Algebra
+from pytanga.basis import BasisE3
 from pytanga.solver.solve import solve
 
-alg = Algebra.from_name("E3", dtype="float64")
+alg = BasisE3(dtype="float64")
 
 # Solve A * X = 1 (multiplicative inverse)
 A = alg.random_mv(rng=42)

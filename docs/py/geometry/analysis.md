@@ -2,52 +2,73 @@
 
 The analysis pipeline extracts geometric meaning from multivectors.
 
+The recommended API is a bound [`Geometry`](_geometry.py) instance:
+
 ```python
-from pytanga.geometry import analyze, analyze_entity, analyze_operator
+from pytanga.geometry import Geometry
 ```
 
-## `analyze(mv) → Entity | Operator`
+## `geo.analyze(mv) → Entity | Operator`
 
 Tries entity analysis first, then operator analysis. Returns the first
 successful match.
 
 ```python
 from pytanga.algebra import Algebra
-from pytanga.geometry import analyze, Point
+from pytanga.geometry import Geometry, Point
 
-e3 = Algebra.from_name('E3')
+e3 = BasisE3()
+geo = Geometry(e3)
+
 point_mv = e3.vector(1, 2, 3)
-result = analyze(point_mv)
+result = geo.analyze(point_mv)
 print(result)  # Point(x=1.0, y=2.0, z=3.0)
 ```
 
-## `analyze_entity(mv) → Entity`
+## `geo.which_entity(mv) → Entity`
 
 Determines which geometric entity a multivector represents.
 
 ```python
 from pytanga.algebra import Algebra
-from pytanga.geometry import analyze_entity, Plane
+from pytanga.geometry import Geometry, Plane
 
-e3 = Algebra.from_name('E3')
+e3 = BasisE3()
+geo = Geometry(e3)
+
 # A grade-2 bivector in E3 = a plane
 plane_mv = e3.e12  # bivector e1∧e2
-result = analyze_entity(plane_mv)
+result = geo.which_entity(plane_mv)
 print(result)  # Plane(point=Point(0,0,0), normal=Direction(0,0,1))
 ```
 
-## `analyze_operator(mv) → Operator`
+## `geo.which_operator(mv) → Operator`
 
 Determines which versor/operator a multivector represents.
 
 ```python
 from pytanga.algebra import Algebra
-from pytanga.geometry import analyze_operator, Rotor
+from pytanga.geometry import Geometry, Rotor
 
-e3 = Algebra.from_name('E3')
+e3 = BasisE3()
+geo = Geometry(e3)
+
 rotor_mv = e3.rotor(1.57, e3.e3)
-result = analyze_operator(rotor_mv)
+result = geo.which_operator(rotor_mv)
 print(result)  # Rotor(angle=1.57, axis=Direction(0,0,1))
+```
+
+## Plain Functions
+
+The underlying plain functions are also importable directly — they require
+the algebra and OPNS flag to be passed explicitly:
+
+```python
+from pytanga.geometry import analyze, analyze_entity, analyze_operator
+
+result = analyze(point_mv)               # Entity or Operator
+result = analyze_entity(mv, opns=True)   # Entity only
+result = analyze_operator(mv)            # Operator only
 ```
 
 ## How It Works

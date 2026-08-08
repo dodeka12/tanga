@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisP3
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Plane, Point, Space
@@ -25,7 +25,7 @@ from pytanga.geometry.operators import (
 
 @pytest.fixture(scope="module")
 def basis_p3():
-    return Algebra.from_name("P3")
+    return BasisP3()
 
 
 # ═══════════════════════════════════════════════════════════════

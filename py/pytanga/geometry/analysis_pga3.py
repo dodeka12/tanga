@@ -30,6 +30,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+from ._ana_versor_generic import ana_versor_generic
 from ._pga3_utils import (
     E1,
     E2,
@@ -42,11 +43,16 @@ from ._pga3_utils import (
     EP,
     # _get_e0,
     _get_e0_coeff,
-    _pga3_dual,
-    # _pga3_pinv,
 )
 from .entities import Direction, Line, Plane, Point, Space
-from .operators import GeneralRotor, Motor, Reflection, Rotor, Translator
+from .operators import (
+    GeneralRotor,
+    Motor,
+    Reflection,
+    Rotor,
+    Translator,
+    TripleReflection,
+)
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -60,7 +66,7 @@ if TYPE_CHECKING:
 
 def analyze_entity(
     mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Plane | Space:
+) -> Point | Direction | Line | Plane | Space | None:
     """Analyze an MV in PGA3 as a geometric entity.
 
     Parameters
@@ -83,7 +89,7 @@ def analyze_entity(
     return _analyze_entity_opns(mv)
 
 
-def _analyze_entity_opns(mv: MV) -> Point | Direction | Line | Plane | Space:
+def _analyze_entity_opns(mv: MV) -> Point | Direction | Line | Plane | Space | None:
     """OPNS entity analysis (Gunn/Dorst grades)."""
     if mv.is_zero:
         raise ValueError("Zero MV does not represent a geometric entity")
@@ -111,7 +117,7 @@ def _analyze_entity_opns(mv: MV) -> Point | Direction | Line | Plane | Space:
         raise ValueError(f"Unexpected grade {max_grade} in PGA3 OPNS")
 
 
-def _analyze_entity_ipns(mv: MV) -> Point | Direction | Line | Plane | Space:
+def _analyze_entity_ipns(mv: MV) -> Point | Direction | Line | Plane | Space | None:
     """IPNS entity analysis.
 
     IPNS grades in Gunn/Dorst:
@@ -138,7 +144,7 @@ def _analyze_entity_ipns(mv: MV) -> Point | Direction | Line | Plane | Space:
         return _line_from_bivector(mv)  # lines are self‑dual in the 4D sense
     elif max_grade == 3:
         # IPNS trivector → dual → OPNS grade-1 vector → plane
-        opns = _pga3_dual(mv)
+        opns = mv.dual()
         return _plane_from_vector(opns)
     elif max_grade == 5:
         scale, _ = mv.blade_factorize_versor()
@@ -278,7 +284,7 @@ def _point_from_trivector(mv: MV) -> Point | Direction:
     The dual of a point trivector is ``x·e₁ + y·e₂ + z·e₃ + α·e₀``
     for a finite point, or ``x·e₁ + y·e₂ + z·e₃`` for a direction.
     """
-    dual = -_pga3_dual(mv)  # grade‑1 vector; negate for correct sign
+    dual = mv.dual()  # grade‑1 vector (global sign divides out)
 
     x = float(dual[E1])
     y = float(dual[E2])
@@ -323,143 +329,83 @@ def make_plane(alg: Algebra, nx: float, ny: float, nz: float, d: float = 0.0) ->
 
 
 # ═══════════════════════════════════════════════════════════════
-# Operator detection (unchanged)
+# Operator detection
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_operator(mv: MV) -> Reflection | Rotor | Translator | Motor | GeneralRotor:
+def analyze_operator(
+    mv: MV,
+) -> Reflection | Rotor | Translator | Motor | GeneralRotor | TripleReflection:
     """Analyze an MV in PGA3 as a versor.
 
-    Classification by factor count and null‑vector content (e₀):
+    Classification by grade content (not blade factorization):
 
-    - 1 factor, no null   → :class:`Reflection`
-    - 2 factors, no null  → :class:`Rotor`
-    - 2 factors, with null → :class:`Translator`
-    - 2 factors, mixed    → :class:`GeneralRotor`
-    - 4 factors           → :class:`Motor`
+    - 1 factor                → :class:`Reflection`
+    - 3 factors               → :class:`TripleReflection`
+    - All others              → delegated to :func:`_ana_versor` which
+      classifies by grade content (grade-4 → Motor, no Euclidean bivector
+      → Translator, etc.)
     """
     if mv.is_zero:
         raise ValueError("Zero MV is not a valid versor")
 
-    scale, factors = mv.blade_factorize_versor()
+    try:
+        scale, factors = mv.blade_factorize_versor()
+    except Exception as exc:
+        raise ValueError(
+            "MV is not a versor — cannot be factorized into grade-1 vectors"
+        ) from exc
+
     _ = scale
     n = len(factors)
-    has_null_flags = [_has_null(f) for f in factors]
 
     if n == 1:
         return _reflection_from_factor(factors[0])
-    elif n == 2:
-        if any(has_null_flags) and not all(has_null_flags):
-            # Mixed null + Euclidean → GeneralRotor
-            return _general_rotor_from_versor(mv)
-        elif any(has_null_flags):
-            return _translator_from_versor(mv)
-        else:
-            return _rotor_from_factors(factors[0], factors[1])
-    elif n == 4:
-        return _motor_from_factors(mv, factors)
+    elif n == 3:
+        return _triple_reflection_from_factors(factors)
     else:
-        raise ValueError(f"Unexpected {n} factors for PGA3 versor")
+        # 2 or 4+ factors: classify by grade content
+        return _ana_versor(mv)
+
+
+def _triple_reflection_from_factors(factors: list[MV]) -> TripleReflection:
+    """Three plane reflections → TripleReflection.
+
+    The three factors are grade-1 vectors encoding planes.
+    We convert them to Plane entities and return the triple reflection.
+    """
+    planes = tuple(_plane_from_vector(f) for f in factors)
+    return TripleReflection(planes=planes)  # type: ignore[arg-type]
 
 
 def _reflection_from_factor(n: MV) -> Reflection:
     return Reflection(normal=Direction(float(n[E1]), float(n[E2]), float(n[E3])))
 
 
-def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:
-    """Two Euclidean reflectors → rotation."""
-    n1_dot_n2 = float(n1.sp(n2))
-    angle = 2.0 * math.acos(max(-1.0, min(1.0, n1_dot_n2)))
+def _ana_versor(
+    mv: MV,
+) -> Rotor | Translator | Motor | GeneralRotor:
+    """Analyze a PGA3 versor by grade content.
 
-    bivector = n1.op(n2)
-    bx = float(bivector[E23])
-    by = float(bivector[E13])
-    bz = float(bivector[E12])
-
-    bv_norm = math.sqrt(bx * bx + by * by + bz * bz)
-    if bv_norm < 1e-15:
-        axis = Direction(1, 0, 0)
-    else:
-        axis = Direction(bx / bv_norm, by / bv_norm, bz / bv_norm)
-
-    return Rotor(angle=angle, axis=axis)
-
-
-def _translator_from_versor(mv: MV) -> Translator:
-    """Extract translator directly from versor coefficients.
-
-    ``T = 1 - 0.5·(dx·e₁∧e₀ + dy·e₂∧e₀ + dz·e₃∧e₀)`` where
-    ``e₁∧e₀`` is blades 9 and 17.
+    Delegates to the generic :func:`ana_versor_generic` with PGA3 parameters:
+    ``einf_like = e0``, ``e0_inv_like = e0_inv``.
     """
-    dx = -2.0 * float(mv[9])  # e1∧ep
-    dy = -2.0 * float(mv[10])  # e2∧ep
-    dz = -2.0 * float(mv[12])  # e3∧ep
-    return Translator(vector=Direction(dx, dy, dz))
-
-
-def _motor_from_factors(mv: MV, factors: list[MV]) -> Motor:
-    """Four reflectors → Motor (rotation + translation)."""
-    eucl = [f for f in factors if not _has_null(f)]
-    null = [f for f in factors if _has_null(f)]
-
-    if len(eucl) == 2:
-        rotor = _rotor_from_factors(eucl[0], eucl[1])
-    else:
-        rotor = Rotor(0.0, Direction(1, 0, 0))
-
-    translator = _translator_from_versor(mv)
-    return Motor(rotor=rotor, translator=translator)
-
-
-def _general_rotor_from_versor(mv: MV) -> GeneralRotor:
-    """Extract a GeneralRotor from a 2‑factor versor with mixed components.
-
-    G = T·R·T̃ has both Euclidean and null bivector parts but no grade-4.
-    The Euclidean part gives the rotation angle and axis; the null part
-    encodes the displacement of the rotation axis from the origin.
-    """
-    # Extract rotor from Euclidean bivector components
-    bx = float(mv[E23])
-    by = float(mv[E13])
-    bz = float(mv[E12])
-    b_norm = math.sqrt(bx * bx + by * by + bz * bz)
-
-    if b_norm < 1e-15:
-        raise ValueError("GeneralRotor has zero Euclidean bivector part")
-
-    scal = float(mv[0])
-    if abs(scal) < 1e-15:
-        raise ValueError("GeneralRotor has zero scalar component")
-
-    angle = 2.0 * math.atan2(b_norm, scal)
-    axis = Direction(bx / b_norm, by / b_norm, bz / b_norm)
-
-    # Extract translator from null bivector components
-    dx = -2.0 * float(mv[9]) / scal  # e1∧ep
-    dy = -2.0 * float(mv[10]) / scal  # e2∧ep
-    dz = -2.0 * float(mv[12]) / scal  # e3∧ep
-
-    return GeneralRotor(
-        rotor=Rotor(angle=angle, axis=axis),
-        translator=Translator(vector=Direction(dx, dy, dz)),
+    alg = mv._alg
+    e0 = alg.e0 if hasattr(alg, "e0") else alg.multivector({EP: 1.0, EM: 1.0})
+    e0_inv = (
+        alg.e0_inv if hasattr(alg, "e0_inv") else alg.multivector({EP: 0.5, EM: -0.5})
+    )
+    return ana_versor_generic(
+        mv,
+        einf_like=e0,
+        e0_inv_like=e0_inv,
+        is_2d=False,
     )
 
 
 # ═══════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════
-
-
-def _has_euclidean(factor: MV) -> bool:
-    return (
-        abs(float(factor[E1])) > 1e-15
-        or abs(float(factor[E2])) > 1e-15
-        or abs(float(factor[E3])) > 1e-15
-    )
-
-
-def _has_null(factor: MV) -> bool:
-    return abs(float(factor[EP])) > 1e-15 or abs(float(factor[EM])) > 1e-15
 
 
 def _get_grades(mv: MV) -> set[int]:

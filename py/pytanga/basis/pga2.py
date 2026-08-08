@@ -49,6 +49,43 @@ class BasisPGA2(Algebra):
     EM: int = 8  # em = e4,  em² = -1 (internal embedding)
     E12: int = 3
 
+    # ══════════════════════════════════════════════════════════════
+    # J‑map / Hodge star — complement dual for the 3D PGA subspace
+    # ══════════════════════════════════════════════════════════════
+    #
+    # The 3D pseudoscalar I₃ = e₀∧e₁∧e₂ is null (I₃² = 0), so the
+    # metric dual A·I⁻¹ does not exist.  Instead we use a complement
+    # map satisfying  e_A ∧ J(e_A) = +I₃ .
+    #
+    # In the 4D embedding e₀ = ep + em, each 3D blade containing e₀
+    # splits into two 4D blades (one with ep, one with em).
+    #
+    #   J(1)     = e₀₁₂       J(e₀₁₂)  = 1
+    #   J(e₀)    = e₁₂         J(e₁₂)   = e₀
+    #   J(e₁)    = -e₀₂        J(e₀₂)   = e₁
+    #   J(e₂)    = e₀₁         J(e₀₁)   = -e₂
+
+    _DUAL_MAP: dict[int, dict[int, float]] = {
+        # Grade 0 (scalar)
+        0: {7: 1.0, 11: 1.0},  # J(1) = I₃ = ep∧e₁₂ + em∧e₁₂
+        # Grade 1 — pure Euclidean lines
+        1: {6: -1.0, 10: -1.0},  # J(e₁) = -e₀₂
+        2: {5: 1.0, 9: 1.0},  # J(e₂) = e₀₁
+        # Grade 1 — e₀ halves (ep, em)
+        4: {3: -0.5},  # J(ep) = J(e₀)/2 = -e₁₂/2
+        8: {3: -0.5},  # J(em) = J(e₀)/2 = -e₁₂/2
+        # Grade 2 — pure Euclidean bivector
+        3: {4: -1.0, 8: -1.0},  # J(e₁₂) = -e₀  (PGA4CS convention)
+        # Grade 2 — vanishing line halves
+        5: {2: 0.5},  # J(ep∧e₁) = e₂/2
+        9: {2: 0.5},  # J(em∧e₁) = e₂/2
+        6: {1: -0.5},  # J(ep∧e₂) = -e₁/2
+        10: {1: -0.5},  # J(em∧e₂) = -e₁/2
+        # Grade 3 — pseudoscalar halves
+        7: {0: 0.5},  # J(ep∧e₁₂) = 1/2
+        11: {0: 0.5},  # J(em∧e₁₂) = 1/2
+    }
+
     def __init__(self, dtype: str = "float64", **kw) -> None:
         super().__init__(4, 0b1000, dtype, **kw)
         mv = self.multivector
@@ -61,12 +98,34 @@ class BasisPGA2(Algebra):
         # e0_inv = 0.5·ep − 0.5·em  →  ⟨e0·e0_inv⟩₀ = 1
         self.e0_inv = mv({self.EP: 0.5, self.EM: -0.5})
 
+    # ── PGA‑specific dual ─────────────────────────────────────────
+
+    def dual(self, a: MV) -> MV:
+        """3D PGA complement dual (J‑map / Hodge star).
+
+        Overrides ``Algebra.dual()`` which computes ``★A = A·I⁻¹`` using
+        the 4D pseudoscalar.  In PGA the 3D pseudoscalar ``I₃ = e₀∧e₁∧e₂``
+        is null (``I₃² = 0``), so the metric dual does not exist.  Instead
+        we use a combinatorial complement map.
+
+        The 4D embedding ``e₀ = ep + em`` is handled by splitting each
+        3D blade into halves.
+        """
+        result: dict[int, float] = {}
+        for blade_id, coeff in a._impl.to_dict().items():
+            dm = self._DUAL_MAP.get(blade_id)
+            if dm is None:
+                continue
+            for dual_id, factor in dm.items():
+                result[dual_id] = result.get(dual_id, 0.0) + coeff * factor
+        return self.multivector(result)
+
     # ── convenience constructors ──────────────────────────────────
 
     def point(self, x: float, y: float) -> MV:
         """Point in IPNS / dual form: ``x·e₁ + y·e₂ + e₀``.
 
-        The OPNS form (grade‑2 bivector) is obtained via ``_pga2_dual(mv)``
+        The OPNS form (grade‑2 bivector) is obtained via ``.dual()``
         or by wedging two orthogonal lines (planes in 2D) through the point.
         """
         return self.multivector({1: x, 2: y, self.EP: 1.0, self.EM: 1.0})
@@ -87,10 +146,45 @@ class BasisPGA2(Algebra):
 
     @cached_property
     def _display_basis(self) -> list:
-        """Lazily built display basis — e₀ as the null generator."""
-        from pytanga.algebra._display_basis import build_display_basis
+        """Explicit display basis — e₀ first, PGA4CS convention.
 
-        return build_display_basis(
-            [("e1", self.e1), ("e2", self.e2), ("e0", self.e0)],
-            self,
-        )
+        Each entry is ``(name, blade, pinv, blade_id | None)``.
+        """
+        e0, e1, e2, e0i = self.e0, self.e1, self.e2, self.e0_inv
+
+        def _entry(name, blade):
+            pinv = self.blade_pseudo_inverse(blade)
+            bid = None
+            raw = {
+                k: v
+                for bn, v in blade.to_dict().items()
+                for k in [0 if bn == "s" else self.blade_id(bn)]
+            }
+            nz = [(k, v) for k, v in raw.items() if abs(v) > 1e-10]
+            if len(nz) == 1 and abs(nz[0][1] - 1.0) < 1e-10:
+                bid = nz[0][0]
+            return (name, blade, pinv, bid)
+
+        return [
+            # Grade 0
+            ("s", self.multivector({0: 1.0}), None, 0),
+            # Grade 1 — vectors
+            _entry("e0", e0),
+            _entry("e1", e1),
+            _entry("e2", e2),
+            # this is not in PGA2 and should not occur
+            _entry("ei", e0i),
+            # Grade 2 — bivectors
+            _entry("e10", e1.op(e0)),
+            _entry("e20", e2.op(e0)),
+            _entry("e12", e1.op(e2)),
+            # this is not in PGA2 and should not occur
+            _entry("ei1", e0i.op(e1)),
+            _entry("ei2", e0i.op(e2)),
+            _entry("E", e0.op(e0i)),
+            # Grade 3 — pseudoscalar
+            _entry("I", e0.op(e1).op(e2)),
+            # this is not in PGA2 and should not occur
+            _entry("Ii", e0i.op(e1).op(e2)),
+            _entry("I4", e0.op(e0i).op(e1).op(e2)),
+        ]

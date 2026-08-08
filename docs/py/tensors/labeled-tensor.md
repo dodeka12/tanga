@@ -268,12 +268,13 @@ compatible with any other `None` mask.
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 from pytanga.tensor import MVTensor, MVLabeledTensor
 from pytanga.tensor.product import product_tensor
 from pytanga.tensor.convert import to_tensor
 from pytanga.mv_utils import _as_mv
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 mask = BladeMask.full(alg)
 
 # Product tensor Ô_{kij}

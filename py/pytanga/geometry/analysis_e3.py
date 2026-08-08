@@ -42,7 +42,9 @@ E123 = BasisE3.E123
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(mv: MV, *, opns: bool = True) -> Direction | Plane | Space | Line:
+def analyze_entity(
+    mv: MV, *, opns: bool = True
+) -> Direction | Plane | Space | Line | None:
     """Analyze an MV in E3 as a geometric entity.
 
     Parameters
@@ -81,7 +83,7 @@ def analyze_entity(mv: MV, *, opns: bool = True) -> Direction | Plane | Space | 
     return _analyze_entity_opns(mv)
 
 
-def _analyze_entity_opns(mv: MV) -> Direction | Plane | Space:
+def _analyze_entity_opns(mv: MV) -> Direction | Plane | Space | None:
     """OPNS entity analysis.
 
     In E3, grade-1 blades are lines through the origin (Direction),
@@ -109,7 +111,7 @@ def _analyze_entity_opns(mv: MV) -> Direction | Plane | Space:
         raise ValueError(f"Unexpected grade {max_grade} in E3")
 
 
-def _analyze_entity_ipns(mv: MV) -> Plane | Line:
+def _analyze_entity_ipns(mv: MV) -> Plane | Line | None:
     """IPNS analysis via blade grades of the original MV.
 
     Classifies directly based on the grade of the IPNS blade

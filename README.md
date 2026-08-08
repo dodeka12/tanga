@@ -58,9 +58,14 @@ for per-platform compiler setup instructions.
 
 ## AI Tool Documentation Access
 
-When pytanga is installed, the markdown documentation is packaged inside the
-wheel. AI coding tools can expose it by calling `pytanga.install_docs()`, which
-creates a symlink at `.dep-docs/pytanga/` in the current repository root.
+When pytanga is installed, the markdown documentation and example scripts are
+packaged inside the wheel. AI coding tools can expose them by calling:
+
+```python
+import pytanga
+pytanga.install_docs()     # copies docs to .dep-docs/pytanga/
+pytanga.install_examples() # copies examples to .dep-examples/pytanga/
+```
 
 ---
 

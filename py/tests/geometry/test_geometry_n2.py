@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisN2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
 from pytanga.geometry.entities import (
@@ -40,7 +40,7 @@ from pytanga.geometry.operators import (
 
 @pytest.fixture(scope="module")
 def b():
-    return Algebra.from_name("N2")
+    return BasisN2()
 
 
 # ═══════ Entity tests ═══════

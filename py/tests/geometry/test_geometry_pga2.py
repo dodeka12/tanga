@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisPGA2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Point, Space
@@ -24,7 +24,7 @@ from pytanga.geometry.operators import (
 
 @pytest.fixture(scope="module")
 def b():
-    return Algebra.from_name("PGA2")
+    return BasisPGA2()
 
 
 # ═══════ Entity round‑trips ═══════
@@ -124,11 +124,4 @@ def test_pga2_is_not_n2():
     from pytanga.basis import BasisN2, BasisPGA2
 
     b2 = BasisPGA2()
-    assert not isinstance(b2, BasisN2)
-
-
-def test_from_name_pga2_is_not_n2():
-    b2 = Algebra.from_name("PGA2")
-    from pytanga.basis import BasisN2
-
     assert not isinstance(b2, BasisN2)

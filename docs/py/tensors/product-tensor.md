@@ -45,11 +45,12 @@ per mask combination.
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 from pytanga.tensor import MVTensor
 from pytanga.tensor.product import product_tensor
 from pytanga.enums import EProduct
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 full = BladeMask.full(alg)                         # 8 blades
 
 # Geometric product tensor
@@ -116,11 +117,12 @@ A_rev = contract("ij,j->i", R_rev, A)     # Ã
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 from pytanga.tensor.product import product_tensor
 from pytanga.tensor.convert import to_tensor
 from pytanga.mv_utils import _as_mv
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 full = BladeMask.full(alg)
 
 O = product_tensor(full, full)                     # Ô_{kij}

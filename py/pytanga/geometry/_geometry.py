@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .analysis import analyze as _analyze
 from .analysis import analyze_entity, analyze_operator
 from .create import create
 
@@ -30,7 +31,7 @@ class Geometry:
     Parameters
     ----------
     algebra : Algebra
-        The algebra instance (e.g. ``Algebra.from_name("N3")``).
+        The algebra instance (e.g. ``BasisN3()``).
         Stored immutably; access via the :attr:`algebra` property.
     opns : bool, optional
         Default OPNS/IPNS flag for :meth:`create` and :meth:`which_entity`.
@@ -107,6 +108,26 @@ class Geometry:
         this method does not accept an *opns* argument.
         """
         return analyze_operator(mv)
+
+    def analyze(self, mv: MV, *, opns: bool | None = None) -> Entity | Operator | None:
+        """Try to analyze an MV as either an entity or an operator.
+
+        Tries entity analysis first, then operator analysis.
+        Returns the first successful match.
+
+        Parameters
+        ----------
+        mv : MV
+            A multivector to analyze.
+        opns : bool or None, optional
+            *True* → OPNS, *False* → IPNS. Only passed to entity analysis;
+            operators are unaffected.  If *None* (default), uses ``self.opns``.
+
+        Returns
+        -------
+        Entity, Operator, or None
+        """
+        return _analyze(mv, opns=self._opns(opns))
 
     # ── helpers ────────────────────────────────────────────────
 

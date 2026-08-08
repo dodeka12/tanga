@@ -25,11 +25,12 @@ from pytanga.matrix import MVMatrix, MVProductMatrix
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 from pytanga.matrix import MVMatrix
 from pytanga.matrix.product import product_matrix
 import numpy as np
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 full = BladeMask.full(alg)             # all 8 blades
 
 # Create a column vector for one multivector
