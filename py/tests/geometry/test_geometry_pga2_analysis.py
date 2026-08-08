@@ -23,6 +23,7 @@ from pytanga.geometry.operators import (
     Motor,
     ReflectionLine,
     ReflectionOrigin,
+    ReflectionPoint,
     Rotor,
     Translator,
     TripleReflection,
@@ -110,22 +111,11 @@ def test_operator_motor_round_trip(b):
     )
 
 
-def test_operator_reflection_origin_round_trip(b):
-    """O5: create ReflectionOrigin → analyze → assert (geometrically a 180° rot).
-
-    In 2D, reflection about the origin (x,y)→(-x,-y) is identical to a
-    180° rotation.  The versor is a pure Euclidean bivector with no
-    scalar, which _ana_versor classifies as Rotor(angle=π).
-    """
-    mv = create_operator(b, ReflectionOrigin())
+def test_operator_reflection_point_origin_round_trip(b):
+    """O5: create ReflectionPoint(0,0,0) -> analyze -> assert."""
+    mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
-    # Accept Rotor(π) — geometrically equivalent to point reflection
-    assert isinstance(r, (ReflectionOrigin, Rotor)), (
-        f"Expected ReflectionOrigin or Rotor, got {type(r).__name__}"
-    )
-    if isinstance(r, Rotor):
-        assert r.angle == pytest.approx(math.pi, abs=1e-6)
-        assert r.axis.z == pytest.approx(1)
+    assert isinstance(r, ReflectionPoint), f"Expected ReflectionPoint, got {type(r).__name__}"
 
 
 def test_operator_general_rotor_round_trip(b):
@@ -194,10 +184,10 @@ def test_apply_motor_point_motion(b):
     assert r.y == pytest.approx(0, abs=1e-6)
 
 
-def test_apply_reflection_origin_point_reflection(b):
-    """A5: ReflectionOrigin applied to (5,-3) → assert (-5,3)."""
+def test_apply_reflection_point_origin_reflection(b):
+    """A5: ReflectionPoint(0,0,0) on (5,-3,0) -> Point(-5,3,0)."""
     p = create_entity(b, Point(5, -3, 0))
-    O = create_operator(b, ReflectionOrigin())
+    O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     pt = O * p * O.rev()
     r = analyze_entity(pt, opns=True)
     assert isinstance(r, Point)
@@ -222,3 +212,28 @@ def test_apply_general_rotor_point_displaced_rotation(b):
     # (3,0) relative to center (1,0) is (2,0).  Rotate 90° → (0,2).  Add center → (1,2).
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(2, abs=1e-6)
+
+
+# --- O5b. ReflectionLine ---
+
+
+def test_operator_reflection_line_round_trip(b):
+    """O5b: create ReflectionLine(x-axis) -> analyze -> assert."""
+    line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+    mv = create_operator(b, ReflectionLine(line))
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionLine), f"Got {type(r).__name__}"
+    d = r.line.direction
+    assert abs(d.x) == pytest.approx(1, abs=1e-6)
+
+
+def test_apply_reflection_line_point_mirror_x(b):
+    """A5b: ReflectionLine(x-axis) on (3,1,0) -> Point(3,-1,0)."""
+    p = create_entity(b, Point(3, 1, 0))
+    L = create_operator(b, ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0))))
+    result = L * p * L.rev()
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point)
+    assert r.x == pytest.approx(3, abs=1e-6)
+    assert r.y == pytest.approx(-1, abs=1e-6)
+

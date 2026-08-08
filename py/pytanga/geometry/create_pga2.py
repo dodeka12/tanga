@@ -177,27 +177,21 @@ def create_general_rotor(
     return t_mv.gp(r_mv).gp(t_mv.rev())
 
 
-def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
-    """Reflection across a line through the origin (DISABLED).
+def create_reflection_line(basis: Algebra, line: Line) -> MV:
+    """Reflection across a line — same blade as the line entity OPNS.
 
-    A pure null bivector ``d∧e₀`` squares to zero because e₀ is null,
-    so the sandwich ``L·p·L.rev()`` always produces zero.  The correct
-    construction needs to be verified.
+    In PGA2, a line is a grade-1 vector.
     """
-    raise NotImplementedError(
-        "ReflectionLine in PGA2 is disabled: pure null bivector d∧e₀ "
-        "squares to zero (e₀²=0).  The correct construction is TBD."
-    )
+    return create_line(basis, line.origin, line.direction, opns=True)
 
 
-def create_reflection_origin(basis: Algebra) -> MV:
-    """Reflection about the origin.
+def create_reflection_point(basis: Algebra, point: Point) -> MV:
+    """Reflection in a point — same blade as the point entity OPNS.
 
-    In 2D PGA, this is the bivector ``e₁∧e₂`` (grade 2).
+    In PGA2, a point is a grade-2 bivector.
+    Reflection in the origin is ``ReflectionPoint(Point(0,0,0))``.
     """
-    if hasattr(basis, "e1"):
-        return basis.e1.op(basis.e2)
-    return basis.multivector({E12: 1.0}).grade(2)
+    return create_point(basis, point.x, point.y, 0.0, opns=True)
 
 
 # ═══════════════════════════════════════════════════════════════

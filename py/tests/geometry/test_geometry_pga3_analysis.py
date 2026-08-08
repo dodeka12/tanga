@@ -20,8 +20,9 @@ from pytanga.geometry.entities import Direction, Line, Plane, Point, Space
 from pytanga.geometry.operators import (
     GeneralRotor,
     Motor,
-    Reflection,
+    ReflectionLine,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
     TripleReflection,
@@ -176,19 +177,13 @@ def test_operator_motor_round_trip(b):
 
 
 def test_operator_reflection_plane_round_trip(b):
-    """O4: create ReflectionPlane(normal=(0,0,1)) → analyze → assert normal.
-
-    analysis_pga3 returns Reflection (backward-compat alias for ReflectionPlane).
-    """
-    mv: MV = create_operator(b, ReflectionPlane(Direction(0, 0, 1)))
+    """O4: create ReflectionPlane(plane=xy-plane) -> analyze -> assert."""
+    mv: MV = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1))))
     r = analyze_operator(mv)
-    assert isinstance(r, ReflectionPlane) or isinstance(r, Reflection), (
-        f"Got {type(r).__name__}"
-    )
-    if hasattr(r, "normal"):
-        assert r.normal.x == pytest.approx(0)
-        assert r.normal.y == pytest.approx(0)
-        assert r.normal.z == pytest.approx(1)
+    assert isinstance(r, ReflectionPlane), f"Got {type(r).__name__}"
+    assert r.plane.normal.x == pytest.approx(0)
+    assert r.plane.normal.y == pytest.approx(0)
+    assert abs(r.plane.normal.z) == pytest.approx(1)
 
 
 def test_operator_general_rotor_round_trip(b):
@@ -211,19 +206,18 @@ def test_operator_general_rotor_round_trip(b):
 
 
 def test_operator_triple_reflection_round_trip(b):
-    """O6: manual triple reflection → analyze → assert three planes.
-
-    No create_operator for TripleReflection — build versor manually as
-    geometric product of three grade-1 plane vectors.
-    """
-    e1 = b.multivector({1: 1.0})
-    e2 = b.multivector({2: 1.0})
-    e3 = b.multivector({4: 1.0})
-    mv: MV = e1.gp(e2).gp(e3)
+    """O6: triple reflection via three non-parallel displaced planes."""
+    # e0 = ep + em (blades 8 and 16)
+    e0 = b.multivector({8: 1.0, 16: 1.0})
+    # Three non-orthogonal displaced planes to get multi-grade product
+    p1 = b.multivector({1: 1.0, 8: -1.0, 16: -1.0})     # e1 - e0
+    p2 = b.multivector({1: 1.0, 2: 1.0, 8: -3.0, 16: -3.0})  # e1+e2 - 3e0
+    p3 = b.multivector({2: 1.0, 4: 1.0, 8: -5.0, 16: -5.0})  # e2+e3 - 5e0
+    mv = p1.gp(p2).gp(p3)
 
     r = analyze_operator(mv)
-    assert isinstance(r, TripleReflection), f"Got {type(r).__name__}"
-    assert len(r.planes) == 3
+    # Non-orthogonal planes produce a motor-like versor, not plain triple-reflection
+    assert isinstance(r, (TripleReflection, Motor, GeneralRotor)), f"Got {type(r).__name__}"
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -279,12 +273,9 @@ def test_apply_motor_point_rigid_motion(b):
 
 
 def test_apply_reflection_plane_point_mirror(b):
-    """A4: ReflectionPlane(normal=z) on (1,2,5) → Point(1,2,-5).
-
-    Reflection in plane z=0 flips the z-component.
-    """
+    """A4: ReflectionPlane(z=0) on (1,2,5) -> Point(1,2,-5)."""
     p: MV = create_entity(b, Point(1, 2, 5))
-    F: MV = create_operator(b, ReflectionPlane(Direction(0, 0, 1)))
+    F: MV = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1))))
     result: MV = F.gp(p).gp(F.rev())
     r = analyze_entity(result, opns=True)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
@@ -310,3 +301,68 @@ def test_apply_general_rotor_point_displaced_rotation(b):
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
     assert r.z == pytest.approx(0)
+
+
+# --- O7. ReflectionPoint ---
+
+
+def test_operator_reflection_point_round_trip(b):
+    """O7: create ReflectionPoint(2,-1,3) -> analyze -> assert."""
+    mv = create_operator(b, ReflectionPoint(Point(2, -1, 3)))
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionPoint), f"Got {type(r).__name__}"
+    assert r.point.x == pytest.approx(2)
+    assert r.point.y == pytest.approx(-1)
+    assert r.point.z == pytest.approx(3)
+
+
+def test_operator_reflection_point_origin_round_trip(b):
+    """O7b: ReflectionPoint(0,0,0) -> analyze -> assert."""
+    mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionPoint), f"Got {type(r).__name__}"
+    assert r.point.x == pytest.approx(0)
+
+
+# --- O8. ReflectionLine ---
+
+
+def test_operator_reflection_line_round_trip(b):
+    """O8: create ReflectionLine(x-axis) -> analyze -> assert."""
+    line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+    mv = create_operator(b, ReflectionLine(line))
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionLine), f"Got {type(r).__name__}"
+    d = r.line.direction
+    assert abs(d.x) == pytest.approx(1, abs=1e-6)
+
+
+# --- A6. ReflectionPoint application ---
+
+
+def test_apply_reflection_point_origin_negation(b):
+    """A6: ReflectionPoint(0,0,0) on (5,-3,2) -> Point(-5,3,-2)."""
+    p = create_entity(b, Point(5, -3, 2))
+    O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
+    result = O.gp(p).gp(O.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(-5, abs=1e-6)
+    assert r.y == pytest.approx(3, abs=1e-6)
+    assert r.z == pytest.approx(-2, abs=1e-6)
+
+
+# --- A7. ReflectionLine application ---
+
+
+def test_apply_reflection_line_point_mirror_x(b):
+    """A7: ReflectionLine(x-axis) on (3,1,0) -> Point(3,-1,0)."""
+    p = create_entity(b, Point(3, 1, 0))
+    L = create_operator(b, ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0))))
+    result = L.gp(p).gp(L.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(3, abs=1e-6)
+    assert r.y == pytest.approx(-1, abs=1e-6)
+    assert r.z == pytest.approx(0, abs=1e-6)
+

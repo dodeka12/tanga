@@ -48,7 +48,9 @@ from .entities import Direction, Line, Plane, Point, Space
 from .operators import (
     GeneralRotor,
     Motor,
-    Reflection,
+    ReflectionLine,
+    ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
     TripleReflection,
@@ -335,51 +337,65 @@ def make_plane(alg: Algebra, nx: float, ny: float, nz: float, d: float = 0.0) ->
 
 def analyze_operator(
     mv: MV,
-) -> Reflection | Rotor | Translator | Motor | GeneralRotor | TripleReflection:
+) -> (
+    ReflectionLine
+    | ReflectionPlane
+    | ReflectionPoint
+    | Rotor
+    | Translator
+    | Motor
+    | GeneralRotor
+    | TripleReflection
+):
     """Analyze an MV in PGA3 as a versor.
 
-    Classification by grade content (not blade factorization):
+    Single-grade pure blades are the entity OPNS blades themselves:
+    - Grade 1 -> Plane  -> ReflectionPlane
+    - Grade 2 -> Line   -> ReflectionLine
+    - Grade 3 -> Point  -> ReflectionPoint
 
-    - 1 factor                → :class:`Reflection`
-    - 3 factors               → :class:`TripleReflection`
-    - All others              → delegated to :func:`_ana_versor` which
-      classifies by grade content (grade-4 → Motor, no Euclidean bivector
-      → Translator, etc.)
+    Multi-grade versors are classified by factorization.
     """
     if mv.is_zero:
         raise ValueError("Zero MV is not a valid versor")
 
+    grades = _get_grades(mv)
+
+    # Single-grade pure blade -> entity -> operator wrapper
+    if len(grades) == 1:
+        entity = _analyze_entity_opns(mv)
+        return _entity_to_operator(entity)
+
+    # Multi-grade versor -> factorization
     try:
         scale, factors = mv.blade_factorize_versor()
-    except Exception as exc:
-        raise ValueError(
-            "MV is not a versor — cannot be factorized into grade-1 vectors"
-        ) from exc
+    except Exception:
+        raise ValueError("MV is not a valid versor")
 
-    _ = scale
     n = len(factors)
-
-    if n == 1:
-        return _reflection_from_factor(factors[0])
-    elif n == 3:
+    if n == 3:
         return _triple_reflection_from_factors(factors)
     else:
-        # 2 or 4+ factors: classify by grade content
         return _ana_versor(mv)
 
 
-def _triple_reflection_from_factors(factors: list[MV]) -> TripleReflection:
-    """Three plane reflections → TripleReflection.
+def _entity_to_operator(entity):
+    """Wrap an entity as its corresponding reflection operator."""
+    if isinstance(entity, Plane):
+        return ReflectionPlane(plane=entity)
+    elif isinstance(entity, Line):
+        return ReflectionLine(line=entity)
+    elif isinstance(entity, Point):
+        return ReflectionPoint(point=entity)
+    raise ValueError(
+        f"Entity type {type(entity).__name__} has no reflection operator"
+    )
 
-    The three factors are grade-1 vectors encoding planes.
-    We convert them to Plane entities and return the triple reflection.
-    """
+
+def _triple_reflection_from_factors(factors):
+    """Three plane reflections -> TripleReflection."""
     planes = tuple(_plane_from_vector(f) for f in factors)
-    return TripleReflection(planes=planes)  # type: ignore[arg-type]
-
-
-def _reflection_from_factor(n: MV) -> Reflection:
-    return Reflection(normal=Direction(float(n[E1]), float(n[E2]), float(n[E3])))
+    return TripleReflection(planes=planes)
 
 
 def _ana_versor(

@@ -256,26 +256,25 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
 
     if isinstance(operator, ReflectionLine):
         alg_type = _detect(basis)
-        if alg_type in ("n3", "n2"):
+        if alg_type in ("n3", "n2", "pga2", "pga3"):
             return mod.create_reflection_line(basis, operator.line)
         # PGA/E/P modules — use direction from line (origin-only)
         return mod.create_reflection_line(basis, operator.line.direction)
     elif isinstance(operator, ReflectionPlane):
         alg_type = _detect(basis)
-        if alg_type in ("n3", "n2"):
+        if alg_type in ("n3", "n2", "pga3"):
             return mod.create_reflection_plane(basis, operator.plane)
         # PGA/E/P modules — use normal from plane (origin-only)
         return mod.create_reflection_plane(basis, operator.plane.normal)
     elif isinstance(operator, ReflectionPoint):
         alg_type = _detect(basis)
-        if alg_type not in ("n3", "n2"):
+        if alg_type not in ("n3", "n2", "pga3", "pga2"):
             raise TypeError(
                 f"ReflectionPoint operator requires conformal model (N3/N2); "
                 f"not supported in {alg_type.upper()}."
             )
         return mod.create_reflection_point(basis, operator.point)
     elif isinstance(operator, ReflectionOrigin):
-        # Still used by PGA/E modules
         return mod.create_reflection_origin(basis)
     elif isinstance(operator, HDirection):
         alg_type = _detect(basis)

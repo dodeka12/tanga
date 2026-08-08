@@ -38,6 +38,7 @@ from .operators import (
     GeneralRotor,
     Motor,
     ReflectionLine,
+    ReflectionPoint,
     Rotor,
     Translator,
     TripleReflection,
@@ -299,67 +300,61 @@ def make_line(alg: Algebra, nx: float, ny: float, d: float = 0.0) -> MV:
 
 def analyze_operator(
     mv: MV,
-) -> ReflectionLine | Rotor | Translator | Motor | GeneralRotor | TripleReflection:
+) -> (
+    ReflectionLine
+    | ReflectionPoint
+    | Rotor
+    | Translator
+    | Motor
+    | GeneralRotor
+    | TripleReflection
+):
     """Analyze an MV in PGA2 as a versor.
 
-    Classification by grade content (not blade factorization):
+    Single-grade pure blades are the entity OPNS blades themselves:
+    - Grade 1 -> Line  -> ReflectionLine
+    - Grade 2 -> Point -> ReflectionPoint
 
-    - 1 factor  → :class:`ReflectionLine`
-    - 3 factors → :class:`TripleReflection`
-    - All others → delegated to :func:`_ana_versor` which classifies by
-      grade content (no Euclidean bivector → Translator, Euclidean only
-      → Rotor, both → GeneralRotor).
-
-    Note: in 2D PGA there is no Motor because translations are always
-    in the rotation plane.
+    Multi-grade versors are classified by factorization.
     """
     if mv.is_zero:
         raise ValueError("Zero MV is not a valid versor")
 
+    grades = _get_grades(mv)
+
+    # Single-grade pure blade -> entity -> operator wrapper
+    if len(grades) == 1:
+        entity = _analyze_entity_opns(mv)
+        return _entity_to_operator(entity)
+
+    # Multi-grade versor -> factorization
     try:
         scale, factors = mv.blade_factorize_versor()
-    except Exception as exc:
-        raise ValueError(
-            "MV is not a versor — cannot be factorized into grade-1 vectors"
-        ) from exc
+    except Exception:
+        raise ValueError("MV is not a valid versor")
 
-    _ = scale
     n = len(factors)
-
-    if n == 1:
-        return _reflection_from_factor(factors[0])
-    elif n == 3:
+    if n == 3:
         return _triple_reflection_from_factors(factors)
     else:
-        # Pre-filter: pure bivector with no scalar → ReflectionLine (d∧e₀)
-        # This has null bivector content but no Euclidean bivector and no scalar
-        s_val = float(mv[0]) if not mv.grade(0).is_zero else 0.0
-        if abs(s_val) < 1e-15:
-            has_null = _versor_has_null_part(mv)
-            has_eucl = _versor_has_euclidean_bivector(mv)
-            if has_null and not has_eucl:
-                return _reflection_line_from_bivector(mv)
-            # Pure Euclidean bivector (no scalar, no null) → 180° rotation
-            if has_eucl and not has_null:
-                return Rotor(angle=math.pi, axis=Direction(0, 0, 1))
-            raise ValueError("Unrecognized pure‑bivector versor in PGA2")
-        # 2 or 4+ factors with scalar: classify by grade content
         return _ana_versor(mv)
 
 
-def _triple_reflection_from_factors(factors: list[MV]) -> TripleReflection:
-    """Three line reflections → TripleReflection.
+def _entity_to_operator(entity):
+    """Wrap an entity as its corresponding reflection operator."""
+    if isinstance(entity, Line):
+        return ReflectionLine(line=entity)
+    elif isinstance(entity, Point):
+        return ReflectionPoint(point=entity)
+    raise ValueError(
+        f"Entity type {type(entity).__name__} has no reflection operator"
+    )
 
-    The three factors are grade-1 vectors encoding lines.
-    We convert them to Line entities and return the triple reflection.
-    """
+
+def _triple_reflection_from_factors(factors):
+    """Three line reflections -> TripleReflection."""
     lines = tuple(_line_from_vector(f) for f in factors)
-    return TripleReflection(planes=lines)  # type: ignore[arg-type]
-
-
-def _reflection_from_factor(n: MV) -> ReflectionLine:
-    return ReflectionLine(direction=Direction(float(n[E1]), float(n[E2]), 0.0))
-
+    return TripleReflection(planes=lines)
 
 def _ana_versor(
     mv: MV,
@@ -385,40 +380,6 @@ def _ana_versor(
 # ═══════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════
-
-
-def _versor_has_null_part(mv: MV) -> bool:
-    """Return True if V · e0_inv contains Euclidean vector parts (E1/E2)."""
-    e0_inv = (
-        mv._alg.e0_inv
-        if hasattr(mv._alg, "e0_inv")
-        else mv._alg.multivector({EP: 0.5, EM: -0.5})
-    )
-    result = mv.ip(e0_inv)
-    return abs(float(result[E1])) > 1e-15 or abs(float(result[E2])) > 1e-15
-
-
-def _versor_has_euclidean_bivector(mv: MV) -> bool:
-    """Return True if V ^ e0 contains grade > 1 content."""
-    e0 = (
-        mv._alg.e0
-        if hasattr(mv._alg, "e0")
-        else mv._alg.multivector({EP: 1.0, EM: 1.0})
-    )
-    wedge = mv.op(e0)
-    grades = _get_grades(wedge)
-    return any(g > 1 for g in grades)
-
-
-def _reflection_line_from_bivector(mv: MV) -> ReflectionLine:
-    """Extract ReflectionLine from a pure null bivector ``d∧e₀``.
-
-    The bivector has no scalar part; components are e1∧ep (blade 5),
-    e1∧em (blade 9), e2∧ep (blade 6), e2∧em (blade 10).
-    """
-    dx = float(mv[5])  # e1∧ep
-    dy = float(mv[6])  # e2∧ep
-    return ReflectionLine(direction=Direction(dx, dy, 0.0))
 
 
 def _get_grades(mv: MV) -> set[int]:

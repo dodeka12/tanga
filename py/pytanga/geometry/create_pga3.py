@@ -197,13 +197,29 @@ def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
     return t_mv.gp(r_mv)
 
 
-def create_reflection(basis: Algebra, normal: Direction) -> MV:
-    """Grade‑1 reflection vector (Euclidean)."""
-    return basis.multivector({E1: normal.x, E2: normal.y, E3: normal.z})
+def create_reflection_line(basis: Algebra, line: Line) -> MV:
+    """Reflection across a line — same blade as the line entity OPNS.
+
+    In PGA3, a line is a grade-2 bivector (intersection of two planes).
+    """
+    return create_line(basis, line.origin, line.direction, opns=True)
 
 
-# Alias: the create.py dispatcher calls create_reflection_plane
-create_reflection_plane = create_reflection
+def create_reflection_plane(basis: Algebra, plane: Plane) -> MV:
+    """Reflection across a plane — same blade as the plane entity OPNS.
+
+    In PGA3, a plane is a grade-1 vector.
+    """
+    return create_plane(basis, plane, opns=True)
+
+
+def create_reflection_point(basis: Algebra, point: Point) -> MV:
+    """Reflection in a point — same blade as the point entity OPNS.
+
+    In PGA3, a point is a grade-3 trivector.
+    Reflection in the origin is ``ReflectionPoint(Point(0,0,0))``.
+    """
+    return create_point(basis, point.x, point.y, point.z, opns=True)
 
 
 def create_general_rotor(
@@ -220,30 +236,3 @@ def create_general_rotor(
     t_mv = create_translator(basis, origin.x, origin.y, origin.z)
     r_mv = create_rotor(basis, angle, axis)
     return t_mv.gp(r_mv).gp(t_mv.rev())
-
-
-def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
-    """Reflection on a line through the origin.
-
-    In PGA3, this is a bivector ``d∧e₀`` (grade 2).
-    """
-    return basis.multivector(
-        {
-            9: direction.x,
-            17: direction.x,  # e1∧ep, e1∧em
-            10: direction.y,
-            18: direction.y,  # e2∧ep, e2∧em
-            12: direction.z,
-            20: direction.z,  # e3∧ep, e3∧em
-        }
-    )
-
-
-def create_reflection_origin(basis: Algebra) -> MV:
-    """Reflection about the origin.
-
-    In PGA3, this is the trivector ``e₁∧e₂∧e₃`` (grade 3).
-    """
-    if hasattr(basis, "e1"):
-        return basis.e1.op(basis.e2).op(basis.e3)
-    return basis.multivector({E123: 1.0}).grade(3)
