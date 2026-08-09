@@ -295,6 +295,21 @@ class MV:
         """Extract the odd‑grade part (grades 1, 3, 5, …)."""
         return self._alg.odd(self)
 
+    # -----------------------------------------------------------------------
+    # Phase B — Norm & exponentiation
+    # -----------------------------------------------------------------------
+    def norm2(self) -> float:
+        """Quadratic-form-based squared norm: ``|scalar_part(rev(A) * A)|``."""
+        return self._alg.norm2(self)
+
+    def norm(self) -> float:
+        """Quadratic-form-based norm: ``sqrt(norm2(A))``."""
+        return self._alg.norm(self)
+
+    def exp(self) -> "MV":
+        """Exponential of a multivector whose square is a scalar."""
+        return self._alg.exp(self)
+
     # Phase D: GP/IP/OP with reverse/conjugate flags
     def gp_rev(
         self, other: "MV", rev_self: bool = False, rev_other: bool = False

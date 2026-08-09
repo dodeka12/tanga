@@ -398,6 +398,72 @@ class Algebra:
         """Scalar product (scalar part of a * b)."""
         return self._mod.sp(a._impl, b._impl)
 
+    # -----------------------------------------------------------------------
+    # Phase B — Norm (quadratic‑form based)
+    # -----------------------------------------------------------------------
+    def norm2(self, a: MV) -> float:
+        """Quadratic-form-based squared norm: ``|scalar_part(rev(A) * A)|``.
+
+        In Euclidean algebras this equals ``mag2(A)``.  In non‑Euclidean
+        algebras it gives the absolute value of the quadratic form, which
+        may differ from the sum-of-squares magnitude.
+        """
+        return abs(self.qform(a))
+
+    def norm(self, a: MV) -> float:
+        """Quadratic-form-based norm: ``sqrt(norm2(A))``.
+
+        The square root of ``|scalar_part(rev(A) * A)|``.
+        """
+        import math
+
+        return math.sqrt(self.norm2(a))
+
+    # -----------------------------------------------------------------------
+    # Phase B — Exponential of a multivector
+    # -----------------------------------------------------------------------
+    def exp(self, a: MV) -> MV:
+        """Exponential of a multivector whose square is a scalar.
+
+        For a multivector ``A`` with ``A² = s ∈ ℝ``:
+
+        - ``s > 0``: ``exp(A) = cosh(√s) + (sinh(√s)/√s) · A``
+        - ``s = 0``: ``exp(A) = 1 + A``
+        - ``s < 0``: ``exp(A) = cos(√|s|) + (sin(√|s|)/√|s|) · A``
+
+        Raises ``ValueError`` if ``A²`` is not a scalar (i.e. ``A`` is not
+        a "blade‑like" element).
+        """
+        import math
+
+        a_sq = self.gp(a, a)
+        if not self.is_scalar(a_sq):
+            raise ValueError(
+                "exp() requires A² to be a scalar; "
+                "the multivector is not blade‑like."
+            )
+        s = self.scalar(a_sq)
+
+        if s == 0:
+            # exp(0) = 1 + A
+            return self.add(self.multivector({0: 1.0}), a)
+        elif s > 0:
+            sqrt_s = math.sqrt(s)
+            cosh_val = math.cosh(sqrt_s)
+            sinc_val = math.sinh(sqrt_s) / sqrt_s
+            return self.add(
+                self.multivector({0: cosh_val}),
+                self.scale(a, sinc_val),
+            )
+        else:  # s < 0
+            sqrt_abs_s = math.sqrt(-s)
+            cos_val = math.cos(sqrt_abs_s)
+            sinc_val = math.sin(sqrt_abs_s) / sqrt_abs_s
+            return self.add(
+                self.multivector({0: cos_val}),
+                self.scale(a, sinc_val),
+            )
+
     def magnitude_sq(self, a: MV) -> float | int:
         """Sum of squared coefficients."""
         return self._mod.magnitude_sq(a._impl)
