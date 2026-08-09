@@ -35,6 +35,11 @@ API guides, architecture overview, notebooks, and developer workflows.
 - **Interactive 3D visualization** — Live WebSocket-driven Three.js visualizer
   in the browser. Export to standalone HTML, glTF/GLB, PNG, or MP4.
 
+- **galgebra interoperability** — Bidirectional conversion between
+  [galgebra](https://github.com/pygae/galgebra) (sympy‑based) and tanga
+  (numeric) multivectors via `GalgebraBridge`. Symbolic derivation → numeric
+  computation → visualization, with support for non‑orthogonal bases.
+
 → [Full feature details](https://dodeka12.github.io/tanga/)
 
 ---

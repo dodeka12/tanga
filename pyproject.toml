@@ -23,6 +23,7 @@ compile = [
     "cmake>=3.18",
     "ninja",
 ]
+galgebra = ["galgebra>=0.5.0"]
 examples = [
     "scipy>=1.13",
     "ipykernel>=6.29",

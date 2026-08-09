@@ -160,8 +160,13 @@ class MV:
         return {blade_name(k, dim): v for k, v in self._impl.to_dict().items()}
 
     def prune(self) -> "MV":
-        """Remove near-zero coefficients in-place and return self."""
-        self._impl.prune()
+        """Remove coefficients with ``abs(coeff) < algebra.precision`` in-place and return self."""
+        tol = self._alg._precision
+        d = self._impl.to_dict()
+        self._impl.reset()
+        for blade_id, v in d.items():
+            if abs(v) >= tol:
+                self._impl.set(blade_id, v)
         return self
 
     def normalized(self) -> "MV":
@@ -220,8 +225,8 @@ class MV:
         """Normalized versor product: self * b * inverse(self)."""
         return self._alg.nvp(self, b)
 
-    def grade(self, k: int) -> "MV":
-        """Extract grade-k part ⟨self⟩_k."""
+    def grade(self, k: int | list[int]) -> "MV":
+        """Extract grade-k part ⟨self⟩_k, or sum of grade parts for a list."""
         return self._alg.grade_proj(self, k)
 
     def complement(self) -> "MV":
@@ -255,9 +260,87 @@ class MV:
         """Scalar product (scalar part of self * other)."""
         return self._alg.sp(self, other)
 
-    def project_to(self, other: "MV") -> "MV":
-        """Restrict self to the blade set of other (retain only blades present in other)."""
+    def project_to(self, other: "MV | int | list[int]") -> "MV":
+        """Restrict self to blade set of *other*.
+
+        - ``MV`` — retain only blades present in *other*.
+        - ``int`` — blade mask; retain blades whose mask is a subset.
+        - ``list[int]`` — blade IDs; retain only those exact blades.
+        """
         return self._alg.project_to(self, other)
+
+    # -----------------------------------------------------------------------
+    # Phase A — Grade‑based involution & conjugation
+    # -----------------------------------------------------------------------
+    def grade_involution(self) -> "MV":
+        """Grade involution: negate odd-grade parts. ``ginvol(⟨A⟩_k) = (−1)^k · ⟨A⟩_k``."""
+        return self._alg.grade_involution(self)
+
+    def grade_conj(self) -> "MV":
+        """Grade‑based Clifford conjugate. ``grade_conj(⟨A⟩_k) = (−1)^{k(k+1)/2} · ⟨A⟩_k``."""
+        return self._alg.grade_conj(self)
+
+    def scalar_product(self, other: "MV", *, rev: bool = False) -> float | int:
+        """Scalar product with optional reverse of self.
+
+        ``rev=True`` computes ``scalar_part(rev(self) * other)``.
+        ``rev=False`` (default) is ``sp(self, other)``.
+        """
+        return self._alg.scalar_product(self, other, rev=rev)
+
+    def qform(self) -> float | int:
+        """Quadratic form: ``scalar_part(rev(A) * A)``."""
+        return self._alg.qform(self)
+
+    def even(self) -> "MV":
+        """Extract the even‑grade part (grades 0, 2, 4, …)."""
+        return self._alg.even(self)
+
+    def odd(self) -> "MV":
+        """Extract the odd‑grade part (grades 1, 3, 5, …)."""
+        return self._alg.odd(self)
+
+    # -----------------------------------------------------------------------
+    # Phase B — Norm & exponentiation
+    # -----------------------------------------------------------------------
+    def norm2(self) -> float:
+        """Quadratic-form-based squared norm: ``|scalar_part(rev(A) * A)|``."""
+        return self._alg.norm2(self)
+
+    def norm(self) -> float:
+        """Quadratic-form-based norm: ``sqrt(norm2(A))``."""
+        return self._alg.norm(self)
+
+    def exp(self) -> "MV":
+        """Exponential of a multivector whose square is a scalar."""
+        return self._alg.exp(self)
+
+    # -----------------------------------------------------------------------
+    # Phase D — Duals & products
+    # -----------------------------------------------------------------------
+    def undual(self) -> "MV":
+        """Inverse of the signed dual: ``A * I``."""
+        return self._alg.undual(self)
+
+    def cp(self, other: "MV") -> "MV":
+        """Commutator: ``(A * B − B * A) / 2``."""
+        return self._alg.cp(self, other)
+
+    def acp(self, other: "MV") -> "MV":
+        """Anti‑commutator: ``(A * B + B * A) / 2``."""
+        return self._alg.acp(self, other)
+
+    def rc(self, other: "MV") -> "MV":
+        """Right contraction ``A ⌊ B``."""
+        return self._alg.rc(self, other)
+
+    def gp_min(self, other: "MV") -> "MV":
+        """Hestenes inner product for pure blades: ``⟨AB⟩_{|k−j|}``."""
+        return self._alg.gp_min(self, other)
+
+    def gp_max(self, other: "MV") -> "MV":
+        """Outermost grade product for pure blades: ``⟨AB⟩_{k+j}``."""
+        return self._alg.gp_max(self, other)
 
     # Phase D: GP/IP/OP with reverse/conjugate flags
     def gp_rev(
@@ -307,6 +390,42 @@ class MV:
     ) -> None:
         """Print this multivector in the algebra's display basis."""
         self._alg.show(self, label, fmt, align_col=align_col)
+
+    # -----------------------------------------------------------------------
+    # Phase E — Type checks & coefficients
+    # -----------------------------------------------------------------------
+    @property
+    def is_vector(self) -> bool:
+        """True if only grade‑1 blades have non‑zero coefficients."""
+        return self._alg.is_vector(self)
+
+    @property
+    def is_base(self) -> bool:
+        """True if this is exactly one basis blade with coefficient 1."""
+        return self._alg.is_base(self)
+
+    @property
+    def is_blade(self) -> bool:
+        """True if this is a simple r‑vector (blade)."""
+        return self._alg.is_blade(self)
+
+    @property
+    @property
+    def is_versor(self) -> bool:
+        """True if this is a versor (product of invertible vectors)."""
+        return self._alg.is_versor(self)
+
+    def blade_coefs(self, blade_lst: list["MV"] | None = None) -> list[float]:
+        """Coefficients for each blade in *blade_lst* (or all blades)."""
+        return self._alg.blade_coefs(self, blade_lst)
+
+    def components(self) -> list["MV"]:
+        """Decompose into a list of single‑blade MVs."""
+        return self._alg.components(self)
+
+    def get_coefs(self, k: int) -> list[float]:
+        """Grade‑*k* coefficients in canonical blade order."""
+        return self._alg.get_coefs(self, k)
 
     # -----------------------------------------------------------------------
     # Blade operations (Phase E)

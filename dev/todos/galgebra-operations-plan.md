@@ -375,32 +375,32 @@ The new `Algebra._precision` attribute requires changes in:
 
 ## 8. Order of work (recommended)
 
-### Phase 0 — Foundation
-- Add `Algebra.precision` property and integrate into `prune`, `is_zero`, `is_scalar`.
+### Phase 0 — Foundation ✅
+- [x] Add `Algebra.precision` property and integrate into `prune`, `is_zero`, `is_scalar`.
 
-### Phase A — Pure Python, high impact
+### Phase A — Pure Python, high impact ✅
 - G1: `grade_involution`  
 - G2: `grade_conj`  
 - G3: `scalar_product` (with `rev` kwarg)  
 - G5: `qform`  
 - G6: `even` / `odd`
 
-### Phase B — Norm & exponentiation
-- G4: `norm` / `norm2`  
-- G7: `exp`
+### Phase B — Norm & exponentiation ✅
+- [x] G4: `norm` / `norm2`  
+- [x] G7: `exp`
 
-### Phase C — Extend existing methods
+### Phase C — Extend existing methods ✅
 - Extend `project_to` to accept `int` / `list[int]`
 - Extend `grade_proj` to accept `list[int]`
 
-### Phase D — Duals & products
+### Phase D — Duals & products ✅
 - G8: `undual` (with algebra-specific overrides in `BasisPGA3`, `BasisPGA2`)
 - G9: `cp` / `acp` (commutator + anti-commutator)
 - G10: `rc` / `right_contraction`
 - G11: `gp_min` (Hestenes inner product)
 - G12: `gp_max` (outermost grade product)
 
-### Phase E — Type checks & coefficients
+### Phase E — Type checks & coefficients ✅
 - G13–G20: `pure_grade`, `is_vector`, `is_blade`, `is_versor`, `is_base`, `blade_coefs`, `components`, `get_coefs`
 
 ---

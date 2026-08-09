@@ -39,6 +39,7 @@ class Algebra:
         verbose: bool = False,
         modulus: int | None = None,
         print_fmt: str = ".4g",
+        precision: float = 1e-10,
         seed: int | None = None,
     ) -> None:
         from pytanga.codegen import get_or_build
@@ -72,6 +73,7 @@ class Algebra:
         self._dtype = dtype
         self._modulus = modulus
         self._print_fmt = print_fmt
+        self._precision = precision
         self._mod = get_or_build(dim, sig, dtype, verbose=verbose)
         self._rng = np.random.default_rng(seed)
 
@@ -108,6 +110,15 @@ class Algebra:
     def rng(self) -> np.random.Generator:
         """NumPy random number generator instance belonging to this algebra."""
         return self._rng
+
+    @property
+    def precision(self) -> float:
+        """Numerical zero tolerance for ``prune()``, ``is_zero()``, ``is_scalar()``."""
+        return self._precision
+
+    @precision.setter
+    def precision(self, value: float) -> None:
+        self._precision = float(value)
 
     @property
     def print_fmt(self) -> str:
@@ -283,8 +294,18 @@ class Algebra:
         inv_versor = self.inv(versor)
         return self.gp(self.gp(versor, b), inv_versor)
 
-    def grade_proj(self, a: MV, grade: int) -> MV:
-        """Extract grade-k part ⟨A⟩_k."""
+    def grade_proj(self, a: MV, grade: int | list[int]) -> MV:
+        """Extract grade-k part ⟨A⟩_k, or sum of grade parts for a list.
+
+        - ``int`` — extract grade‑*k* part (existing behaviour).
+        - ``list[int]`` — extract sum of those grade parts, e.g.
+          ``grade_proj([0, 2])`` returns the scalar + bivector part.
+        """
+        if isinstance(grade, list):
+            result = self.multivector()
+            for k in grade:
+                result = self.add(result, self.grade_proj(a, k))
+            return result
         return MV(self._mod.grade_proj(a._impl, grade), self)
 
     def scalar(self, a: MV) -> float | int:
@@ -318,29 +339,387 @@ class Algebra:
         directly with no pseudoinverse."""
         return MV(self._mod.ldual(a._impl), self)
 
+    # -----------------------------------------------------------------------
+    # Phase A — Grade‑based involution & conjugation
+    # -----------------------------------------------------------------------
+    def grade_involution(self, a: MV) -> MV:
+        """Grade involution: negate odd-grade parts.
+
+        ``ginvol(⟨A⟩_k) = (−1)^k · ⟨A⟩_k``.
+        """
+        return self.even(a) - self.odd(a)
+
+    def grade_conj(self, a: MV) -> MV:
+        """Grade‑based Clifford conjugate (galgebra ``ccon``, metric‑independent).
+
+        ``grade_conj(⟨A⟩_k) = (−1)^{k(k+1)/2} · ⟨A⟩_k``.
+        Equivalent to ``grade_involution(self).rev()``.
+        """
+        return self.rev(self.grade_involution(a))
+
+    # -----------------------------------------------------------------------
+    # Phase A — Scalar product with optional reverse
+    # -----------------------------------------------------------------------
+    def scalar_product(self, a: MV, b: MV, *, rev: bool = False) -> float | int:
+        """Scalar product with optional reverse of *a*.
+
+        - ``rev=False`` (default): ``scalar_part(a * b)`` — same as ``sp(a, b)``.
+        - ``rev=True``: ``scalar_part(rev(a) * b)``.
+
+        This is galgebra's full ``sp(a, b, switch='rev')``.
+        """
+        if rev:
+            a = self.rev(a)
+        return self.sp(a, b)
+
+    # -----------------------------------------------------------------------
+    # Phase A — Quadratic form
+    # -----------------------------------------------------------------------
+    def qform(self, a: MV) -> float | int:
+        """Quadratic form: ``scalar_part(rev(A) * A)``.
+
+        In Euclidean algebra this equals ``mag2(A)``.  In non‑Euclidean
+        algebras it may differ due to sign contributions from negative‑metric
+        basis vectors.
+        """
+        return self.sp(self.rev(a), a)
+
+    # -----------------------------------------------------------------------
+    # Phase A — Even / odd grade extraction
+    # -----------------------------------------------------------------------
+    def even(self, a: MV) -> MV:
+        """Extract the even‑grade part (grades 0, 2, 4, …)."""
+        result = self.multivector()
+        for k in range(0, self._dim + 1, 2):
+            result = self.add(result, self.grade_proj(a, k))
+        return result
+
+    def odd(self, a: MV) -> MV:
+        """Extract the odd‑grade part (grades 1, 3, 5, …)."""
+        result = self.multivector()
+        for k in range(1, self._dim + 1, 2):
+            result = self.add(result, self.grade_proj(a, k))
+        return result
+
+    # -----------------------------------------------------------------------
+    # Scalar product (original — kept unchanged)
+    # -----------------------------------------------------------------------
     def sp(self, a: MV, b: MV) -> float | int:
         """Scalar product (scalar part of a * b)."""
         return self._mod.sp(a._impl, b._impl)
 
+    # -----------------------------------------------------------------------
+    # Phase B — Norm (quadratic‑form based)
+    # -----------------------------------------------------------------------
+    def norm2(self, a: MV) -> float:
+        """Quadratic-form-based squared norm: ``|scalar_part(rev(A) * A)|``.
+
+        In Euclidean algebras this equals ``mag2(A)``.  In non‑Euclidean
+        algebras it gives the absolute value of the quadratic form, which
+        may differ from the sum-of-squares magnitude.
+        """
+        return abs(self.qform(a))
+
+    def norm(self, a: MV) -> float:
+        """Quadratic-form-based norm: ``sqrt(norm2(A))``.
+
+        The square root of ``|scalar_part(rev(A) * A)|``.
+        """
+        import math
+
+        return math.sqrt(self.norm2(a))
+
+    # -----------------------------------------------------------------------
+    # Phase B — Exponential of a multivector
+    # -----------------------------------------------------------------------
+    def exp(self, a: MV) -> MV:
+        """Exponential of a multivector whose square is a scalar.
+
+        For a multivector ``A`` with ``A² = s ∈ ℝ``:
+
+        - ``s > 0``: ``exp(A) = cosh(√s) + (sinh(√s)/√s) · A``
+        - ``s = 0``: ``exp(A) = 1 + A``
+        - ``s < 0``: ``exp(A) = cos(√|s|) + (sin(√|s|)/√|s|) · A``
+
+        Raises ``ValueError`` if ``A²`` is not a scalar (i.e. ``A`` is not
+        a "blade‑like" element).
+        """
+        import math
+
+        a_sq = self.gp(a, a)
+        if not self.is_scalar(a_sq):
+            raise ValueError(
+                "exp() requires A² to be a scalar; "
+                "the multivector is not blade‑like."
+            )
+        s = self.scalar(a_sq)
+
+        if s == 0:
+            # exp(0) = 1 + A
+            return self.add(self.multivector({0: 1.0}), a)
+        elif s > 0:
+            sqrt_s = math.sqrt(s)
+            cosh_val = math.cosh(sqrt_s)
+            sinc_val = math.sinh(sqrt_s) / sqrt_s
+            return self.add(
+                self.multivector({0: cosh_val}),
+                self.scale(a, sinc_val),
+            )
+        else:  # s < 0
+            sqrt_abs_s = math.sqrt(-s)
+            cos_val = math.cos(sqrt_abs_s)
+            sinc_val = math.sin(sqrt_abs_s) / sqrt_abs_s
+            return self.add(
+                self.multivector({0: cos_val}),
+                self.scale(a, sinc_val),
+            )
+
     def magnitude_sq(self, a: MV) -> float | int:
         """Sum of squared coefficients."""
         return self._mod.magnitude_sq(a._impl)
+
+    # -----------------------------------------------------------------------
+    # Phase D — Undual (algebra‑specific, can be overridden in subclasses)
+    # -----------------------------------------------------------------------
+    def undual(self, a: MV) -> MV:
+        """Inverse of the signed dual: multiply by pseudoscalar I.
+
+        In algebras with an invertible pseudoscalar (E3, P3, N3):
+        ``undual(A) = A * I``, satisfying ``dual(undual(A)) == A``.
+
+        Subclasses (BasisPGA3, BasisPGA2) override this for the J‑map.
+        """
+        I = self.multivector({self.pseudoscalar_id: 1.0})
+        return self.gp(a, I)
+
+    # -----------------------------------------------------------------------
+    # Phase D — Commutator and anti‑commutator
+    # -----------------------------------------------------------------------
+    def cp(self, a: MV, b: MV) -> MV:
+        """Commutator: ``(a * b - b * a) / 2``."""
+        return self.scale(self.sub(self.gp(a, b), self.gp(b, a)), 0.5)
+
+    def acp(self, a: MV, b: MV) -> MV:
+        """Anti‑commutator: ``(a * b + b * a) / 2``."""
+        return self.scale(self.add(self.gp(a, b), self.gp(b, a)), 0.5)
+
+    # -----------------------------------------------------------------------
+    # Phase D — Right contraction
+    # -----------------------------------------------------------------------
+    def rc(self, a: MV, b: MV) -> MV:
+        """Right contraction ``A ⌊ B``.
+
+        For pure-grade operands: ``grade(A) ≥ grade(B)`` keeps the parts
+        yielding ``grade(A) − grade(B)``; otherwise zero.
+
+        For general multivectors, decomposes into grade parts and sums.
+        ``rc(A, B) = ip(B, A) * (−1)^{j·(k−j)}`` per grade-pair.
+        """
+        result = self.multivector()
+        d_a = a._impl.to_dict()
+        d_b = b._impl.to_dict()
+        for bid_a, ca in d_a.items():
+            ga = bin(bid_a).count("1")
+            for bid_b, cb in d_b.items():
+                gb = bin(bid_b).count("1")
+                if ga < gb:
+                    continue
+                # rc = ip(B,A) * (−1)^{j·(k−j)}
+                blade_a = self.multivector({bid_a: ca})
+                blade_b = self.multivector({bid_b: cb})
+                ip_ba = self.ip(blade_b, blade_a)
+                sign = 1 if (ga * (gb - ga)) % 2 == 0 else -1
+                result = self.add(result, self.scale(ip_ba, sign))
+        return result
+
+    # -----------------------------------------------------------------------
+    # Phase D — gp_min (Hestenes inner product) and gp_max
+    # -----------------------------------------------------------------------
+    def gp_min(self, a: MV, b: MV) -> MV:
+        """Hestenes inner product for pure blades: ``⟨AB⟩_{|k−j|}``.
+
+        Both operands must be pure blades (single non‑zero grade).
+        Raises ``ValueError`` otherwise.
+        """
+        if not self._is_pure_blade(a):
+            raise ValueError("gp_min requires a pure blade as first operand")
+        if not self._is_pure_blade(b):
+            raise ValueError("gp_min requires a pure blade as second operand")
+        ga = self._blade_grade(a)
+        gb = self._blade_grade(b)
+        gp_ab = self.gp(a, b)
+        return self.grade_proj(gp_ab, abs(ga - gb))
+
+    def gp_max(self, a: MV, b: MV) -> MV:
+        """Outermost grade product for pure blades: ``⟨AB⟩_{k+j}``.
+
+        Both operands must be pure blades (single non‑zero grade).
+        Raises ``ValueError`` otherwise.
+        For vectors this coincides with the outer product ``a ^ b``.
+        """
+        if not self._is_pure_blade(a):
+            raise ValueError("gp_max requires a pure blade as first operand")
+        if not self._is_pure_blade(b):
+            raise ValueError("gp_max requires a pure blade as second operand")
+        ga = self._blade_grade(a)
+        gb = self._blade_grade(b)
+        gp_ab = self.gp(a, b)
+        return self.grade_proj(gp_ab, ga + gb)
+
+    def _is_pure_blade(self, a: MV) -> bool:
+        """True if *a* is a pure blade (all non‑zero coefficients share one grade)."""
+        grades = set()
+        for bid, v in a._impl.to_dict().items():
+            if abs(v) >= self._precision:
+                grades.add(bin(bid).count("1"))
+                if len(grades) > 1:
+                    return False
+        return len(grades) == 1
+
+    def _blade_grade(self, a: MV) -> int:
+        """Return the single grade of a pure blade.  Assumes pure blade."""
+        for bid, v in a._impl.to_dict().items():
+            if abs(v) >= self._precision:
+                return bin(bid).count("1")
+        return 0
+
+    # -----------------------------------------------------------------------
+    # Phase E — Type checks & coefficients
+    # -----------------------------------------------------------------------
+    def is_vector(self, a: MV) -> bool:
+        """True if only grade‑1 blades have non‑zero coefficients."""
+        tol = self._precision
+        for bid, v in a._impl.to_dict().items():
+            if abs(v) >= tol and bin(bid).count("1") != 1:
+                return False
+        has_vector = any(
+            abs(v) >= tol and bin(bid).count("1") == 1
+            for bid, v in a._impl.to_dict().items()
+        )
+        return has_vector
+
+    def is_base(self, a: MV) -> bool:
+        """True if *a* is exactly one basis blade with coefficient 1."""
+        d = {bid: v for bid, v in a._impl.to_dict().items() if abs(v) >= self._precision}
+        return len(d) == 1 and abs(next(iter(d.values())) - 1.0) < self._precision
+
+    def is_blade(self, a: MV) -> bool:
+        """True if *a* is a simple r‑vector (blade factorizable into vectors)."""
+        if self.is_scalar(a):
+            return True
+        tol = self._precision
+        # A pure‑grade MV that can be factored into grade‑1 vectors
+        if not self._is_pure_blade(a):
+            return False
+        # For grades 0 and 1, pure grade implies blade
+        g = self._blade_grade(a)
+        if g <= 1:
+            return True
+        # For higher grades, the C++ blade_factorize can check
+        try:
+            self.blade_factorize(a)
+            return True
+        except Exception:
+            return False
+
+    def is_versor(self, a: MV) -> bool:
+        """True if *a* is a versor (geometric product of invertible vectors)."""
+        if self.is_scalar(a):
+            return True
+        # A versor must be an even or odd product of invertible vectors.
+        # In GAs with all-positive or mixed signatures with invertible vectors,
+        # the blade_factorize_versor C++ function handles this.
+        try:
+            self.blade_factorize_versor(a)
+            return True
+        except Exception:
+            return False
+
+    def blade_coefs(self, a: MV, blade_lst: list[MV] | None = None) -> list[float]:
+        """Coefficients for each blade in the given list (or all blades if None)."""
+        d = a._impl.to_dict()
+        tol = self._precision
+        if blade_lst is None:
+            return [d.get(bid, 0.0) for bid in self.all_blades()]
+        result = []
+        for blade in blade_lst:
+            val = 0.0
+            for bid, v in blade._impl.to_dict().items():
+                if abs(v) >= tol:
+                    val = d.get(bid, 0.0)
+                    break
+            result.append(val)
+        return result
+
+    def components(self, a: MV) -> list[MV]:
+        """Decompose *a* into a list of single‑blade MVs."""
+        tol = self._precision
+        return [
+            self.multivector({bid: v})
+            for bid, v in a._impl.to_dict().items()
+            if abs(v) >= tol
+        ]
+
+    def get_coefs(self, a: MV, k: int) -> list[float]:
+        """Grade‑*k* coefficients in canonical blade order."""
+        return [
+            a._impl.to_dict().get(bid, 0.0)
+            for bid in self.all_blades()
+            if bin(bid).count("1") == k
+        ]
 
     def magnitude(self, a: MV) -> float:
         """sqrt(sum of squared coefficients)."""
         return self._mod.magnitude(a._impl)
 
     def is_zero(self, a: MV) -> bool:
-        """True if all coefficients are zero."""
-        return self._mod.is_zero(a._impl)
+        """True if all coefficients are within ``precision`` of zero."""
+        tol = self._precision
+        return all(abs(v) < tol for v in a._impl.to_dict().values())
 
     def is_scalar(self, a: MV) -> bool:
-        """True if only the scalar blade is non-zero."""
-        return self._mod.is_scalar(a._impl)
+        """True if all non-scalar coefficients are within ``precision`` of zero."""
+        tol = self._precision
+        return all(
+            abs(v) < tol
+            for blade_id, v in a._impl.to_dict().items()
+            if blade_id != 0
+        )
 
-    def project_to(self, a: MV, b: MV) -> MV:
-        """Restrict a to the blade set of b (retain only blades present in b)."""
-        return MV(self._mod.project_to(a._impl, b._impl), self)
+    def project_to(self, a: MV, other: MV | int | list[int]) -> MV:
+        """Restrict *a* to a blade set.
+
+        - ``MV`` — retain only blades present in *other* (existing behaviour).
+        - ``int`` — treat as a blade mask; retain only blades whose mask is
+          a subset of this mask.
+        - ``list[int]`` — treat as a list of blade IDs; retain only those
+          exact blades.
+        """
+        if isinstance(other, MV):
+            return MV(self._mod.project_to(a._impl, other._impl), self)
+        if isinstance(other, int):
+            mask = other
+            result = self.multivector()
+            d = a._impl.to_dict()
+            for blade_id, v in d.items():
+                if blade_id & ~mask == 0:
+                    result = self.add(
+                        result, self.scale(self.multivector({blade_id: 1.0}), v)
+                    )
+            return result
+        if isinstance(other, list):
+            result = self.multivector()
+            d = a._impl.to_dict()
+            for blade_id in other:
+                v = d.get(blade_id, 0)
+                if abs(v) > 0:
+                    result = self.add(
+                        result, self.scale(self.multivector({blade_id: 1.0}), v)
+                    )
+            return result
+        raise TypeError(
+            f"project_to expects MV, int, or list[int], got {type(other).__name__}"
+        )
 
     # Phase D: GP/IP/OP with reverse/conjugate flags
     def gp_rev(self, a: MV, b: MV, rev_a: bool = False, rev_b: bool = False) -> MV:
@@ -625,7 +1004,7 @@ class Algebra:
         self, mv: MV, display_basis: list | None
     ) -> list[tuple[float, str]]:
         """Extract non-zero (coefficient, blade_name) pairs from *mv*."""
-        tol = 1e-10
+        tol = self._precision
         if display_basis is not None:
             terms: list[tuple[float, str]] = []
             for name, _blade, pinv, blade_id in display_basis:

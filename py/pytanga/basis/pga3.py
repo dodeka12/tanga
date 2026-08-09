@@ -151,6 +151,12 @@ class BasisPGA3(Algebra):
                 result[dual_id] = result.get(dual_id, 0.0) + coeff * factor
         return self.multivector(result)
 
+    def undual(self, a: MV) -> MV:
+        """Inverse of the signed dual.  In PGA the J‑map is its own inverse,
+        so ``undual == dual``.
+        """
+        return self.dual(a)
+
     # ── convenience constructors ──────────────────────────────────
 
     def point(self, x: float, y: float, z: float) -> MV:
