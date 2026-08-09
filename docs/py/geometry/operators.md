@@ -142,16 +142,17 @@ m = Motor(
 
 ## GeneralRotor
 
-A general even-grade versor with rotor + translator bivector parts
-(like a Motor but without the grade‑4 term). Represents a rotation about
-an axis that does **not** pass through the origin.
+A rotation about an axis that does **not** pass through the origin. Takes
+the rotation angle, axis direction, and an origin point on the axis.
 
 ```python
-from pytanga.geometry import GeneralRotor, Rotor, Translator, Direction
+from pytanga.geometry import GeneralRotor, Direction, Point
+import math
 
 gr = GeneralRotor(
-    rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
-    translator=Translator(vector=Direction(1, 0, 0)),
+    angle=0.5,
+    axis=Direction(0, 0, 1),
+    origin=Point(1, 0, 0),
 )
 ```
 
