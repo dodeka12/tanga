@@ -226,12 +226,12 @@ def create_imag_circle(
 
 
 def create_rotor(basis: Algebra, angle: float, axis: Direction) -> MV:
-    """``cos(θ/2) + sin(θ/2)·e₁₂``."""
+    """``cos(θ/2) − sin(θ/2)·e₁₂`` (Perwass, CCW for positive angle)."""
     half = angle / 2.0
     return basis.multivector(
         {
             0: math.cos(half),
-            E12: math.sin(half),
+            E12: -math.sin(half),
         }
     )
 

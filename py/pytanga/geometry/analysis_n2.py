@@ -108,6 +108,11 @@ def _analyze_entity_opns(
     elif max_grade == 3:
         return _line_or_circle_n2(mv)
     elif max_grade == 4:
+        # Pseudoscalar → Space
+        if mv.grade(4).mag > 0 and mv.grade(0).mag < 1e-15 and len(grades) == 1:
+            # Pure grade-4 blade could be Space, IPNS line, or OPNS sphere
+            # Check if it's the pseudoscalar (all unit components) → Space
+            return _sphere_or_line_or_space_n2(mv)
         return _sphere_or_line_n2(mv)
     else:
         raise ValueError(f"Unexpected grade {max_grade} in N2")
@@ -197,8 +202,8 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection:
     # ── 5. Point separation: S* = Q·L⁻¹ ──
     L_inv = L.inv()
     S_star = mv.ip(L_inv)
-    r_sq = float(S_star.sp(S_star))  # (d/2)², may be negative
-    separation = 2.0 * math.sqrt(abs(r_sq))
+    r_sq = float(S_star.sp(S_star))  # separation², may be negative
+    separation = math.sqrt(abs(r_sq))
     is_imaginary = r_sq < 0
 
     half_dist = separation * 0.5
@@ -304,6 +309,26 @@ def _decompose_circle(mv: MV) -> Circle:
 
 
 # ── Grade 4: Sphere (circle) / Line (IPNS dual) ────────────────
+
+
+def _sphere_or_line_or_space_n2(mv: MV) -> Space | Sphere | Line:
+    """Distinguish Space / Circle (Sphere) / Line from grade-4 OPNS blade."""
+    ipns = mv.dual()
+    if ipns.is_zero:
+        raise ValueError("Zero dual – not a valid entity")
+
+    einf = get_einf(mv.algebra)
+    eo = get_eo(mv.algebra)
+
+    # Space detection: pseudoscalar → dual is a scalar
+    if ipns.is_scalar:
+        return Space(scale=float(ipns[0]))
+
+    eo_c = eo_coeff(ipns, einf)
+    if abs(eo_c) > 1e-10:
+        return _sphere_from_ipns(ipns, einf, eo)
+    else:
+        return _line_from_ipns_opns(mv, ipns, einf, eo)
 
 
 def _sphere_or_line_n2(mv: MV) -> Sphere | Line:
@@ -438,12 +463,23 @@ def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
     Dualization principle: the dual has the same operator effect (up to sign).
     For N2 (dim=4):
       - v_grade 1 or 2 → classify directly
-      - v_grade 3      → dualize → grade 1
+      - v_grade 3      → handle directly if OPNS line, else dualize → grade 1
     """
     v_scale, v_factors = mv.blade_factorize_versor()
     v_grade = len(v_factors)
 
-    if v_grade >= 3:
+    if v_grade == 3:
+        # Grade-3 blade: if it contains e∞ it's an OPNS line (ReflectionLine)
+        if mv.op(einf).is_zero:
+            line = _decompose_line(mv)
+            if line is None:
+                raise ValueError("Degenerate line in ReflectionLine operator")
+            return ReflectionLine(line=line)
+        # Otherwise dualize (e.g. imaginary circle → inversion via dual)
+        op = mv.dual()
+        return _classify_grade1_operator(op, einf, eo)
+
+    if v_grade >= 4:
         op = mv.dual()
         v_grade = 4 - v_grade
     else:
@@ -518,23 +554,14 @@ def _inversion_from_ipns(op, einf, eo):
 def _reflection_line_from_ipns_grade1(op, einf, eo):
     """Extract ReflectionLine from an IPNS grade-1 line blade (2D).
 
-    The IPNS form is â + α·e∞ (like a plane IPNS in 3D).
+    A ReflectionLine IS a Line — re-dualize back to OPNS and use the
+    same decomposition as the entity path.
     """
-    ex, ey = -float(op[E1]), -float(op[E2])
-    n_norm = math.sqrt(ex * ex + ey * ey)
-    if n_norm < 1e-15:
-        raise ValueError("Zero normal in IPNS line operator")
-    ux, uy = ex / n_norm, ey / n_norm
-
-    einf_c = float(op.sp(eo))
-    d = einf_c / n_norm
-
-    # Point on line (closest to origin)
-    origin = Point(ux * d, uy * d, 0.0)
-    # Direction perpendicular to normal
-    direction = Direction(-uy, ux, 0.0)
-
-    return ReflectionLine(line=Line(origin=origin, direction=direction))
+    line_opns = op.dual()  # grade-1 IPNS → grade-3 OPNS
+    line = _decompose_line(line_opns)
+    if line is None:
+        raise ValueError("Degenerate line in ReflectionLine operator")
+    return ReflectionLine(line=line)
 
 
 # ── Helper: ReflectionPoint from HPoint blade ───────────────────
