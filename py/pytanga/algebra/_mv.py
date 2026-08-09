@@ -264,6 +264,37 @@ class MV:
         """Restrict self to the blade set of other (retain only blades present in other)."""
         return self._alg.project_to(self, other)
 
+    # -----------------------------------------------------------------------
+    # Phase A — Grade‑based involution & conjugation
+    # -----------------------------------------------------------------------
+    def grade_involution(self) -> "MV":
+        """Grade involution: negate odd-grade parts. ``ginvol(⟨A⟩_k) = (−1)^k · ⟨A⟩_k``."""
+        return self._alg.grade_involution(self)
+
+    def grade_conj(self) -> "MV":
+        """Grade‑based Clifford conjugate. ``grade_conj(⟨A⟩_k) = (−1)^{k(k+1)/2} · ⟨A⟩_k``."""
+        return self._alg.grade_conj(self)
+
+    def scalar_product(self, other: "MV", *, rev: bool = False) -> float | int:
+        """Scalar product with optional reverse of self.
+
+        ``rev=True`` computes ``scalar_part(rev(self) * other)``.
+        ``rev=False`` (default) is ``sp(self, other)``.
+        """
+        return self._alg.scalar_product(self, other, rev=rev)
+
+    def qform(self) -> float | int:
+        """Quadratic form: ``scalar_part(rev(A) * A)``."""
+        return self._alg.qform(self)
+
+    def even(self) -> "MV":
+        """Extract the even‑grade part (grades 0, 2, 4, …)."""
+        return self._alg.even(self)
+
+    def odd(self) -> "MV":
+        """Extract the odd‑grade part (grades 1, 3, 5, …)."""
+        return self._alg.odd(self)
+
     # Phase D: GP/IP/OP with reverse/conjugate flags
     def gp_rev(
         self, other: "MV", rev_self: bool = False, rev_other: bool = False

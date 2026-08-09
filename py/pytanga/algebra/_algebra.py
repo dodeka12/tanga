@@ -329,6 +329,71 @@ class Algebra:
         directly with no pseudoinverse."""
         return MV(self._mod.ldual(a._impl), self)
 
+    # -----------------------------------------------------------------------
+    # Phase A — Grade‑based involution & conjugation
+    # -----------------------------------------------------------------------
+    def grade_involution(self, a: MV) -> MV:
+        """Grade involution: negate odd-grade parts.
+
+        ``ginvol(⟨A⟩_k) = (−1)^k · ⟨A⟩_k``.
+        """
+        return self.even(a) - self.odd(a)
+
+    def grade_conj(self, a: MV) -> MV:
+        """Grade‑based Clifford conjugate (galgebra ``ccon``, metric‑independent).
+
+        ``grade_conj(⟨A⟩_k) = (−1)^{k(k+1)/2} · ⟨A⟩_k``.
+        Equivalent to ``grade_involution(self).rev()``.
+        """
+        return self.rev(self.grade_involution(a))
+
+    # -----------------------------------------------------------------------
+    # Phase A — Scalar product with optional reverse
+    # -----------------------------------------------------------------------
+    def scalar_product(self, a: MV, b: MV, *, rev: bool = False) -> float | int:
+        """Scalar product with optional reverse of *a*.
+
+        - ``rev=False`` (default): ``scalar_part(a * b)`` — same as ``sp(a, b)``.
+        - ``rev=True``: ``scalar_part(rev(a) * b)``.
+
+        This is galgebra's full ``sp(a, b, switch='rev')``.
+        """
+        if rev:
+            a = self.rev(a)
+        return self.sp(a, b)
+
+    # -----------------------------------------------------------------------
+    # Phase A — Quadratic form
+    # -----------------------------------------------------------------------
+    def qform(self, a: MV) -> float | int:
+        """Quadratic form: ``scalar_part(rev(A) * A)``.
+
+        In Euclidean algebra this equals ``mag2(A)``.  In non‑Euclidean
+        algebras it may differ due to sign contributions from negative‑metric
+        basis vectors.
+        """
+        return self.sp(self.rev(a), a)
+
+    # -----------------------------------------------------------------------
+    # Phase A — Even / odd grade extraction
+    # -----------------------------------------------------------------------
+    def even(self, a: MV) -> MV:
+        """Extract the even‑grade part (grades 0, 2, 4, …)."""
+        result = self.multivector()
+        for k in range(0, self._dim + 1, 2):
+            result = self.add(result, self.grade_proj(a, k))
+        return result
+
+    def odd(self, a: MV) -> MV:
+        """Extract the odd‑grade part (grades 1, 3, 5, …)."""
+        result = self.multivector()
+        for k in range(1, self._dim + 1, 2):
+            result = self.add(result, self.grade_proj(a, k))
+        return result
+
+    # -----------------------------------------------------------------------
+    # Scalar product (original — kept unchanged)
+    # -----------------------------------------------------------------------
     def sp(self, a: MV, b: MV) -> float | int:
         """Scalar product (scalar part of a * b)."""
         return self._mod.sp(a._impl, b._impl)
