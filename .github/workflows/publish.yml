@@ -17,8 +17,43 @@ permissions:
   contents: read
 
 jobs:
+  # -- Compute a valid PEP 440 version for the build ----------------------------
+  #    setuptools-scm generates versions like 0.1.0.dev5+gabcdef from branches,
+  #    but the +g{hash} local identifier is rejected by PyPI.  This job strips
+  #    the local part so the version is always valid for wheel building.
+  compute-version:
+    name: Compute build version
+    runs-on: ubuntu-24.04
+    outputs:
+      pretend_version: ${{ steps.compute.outputs.pretend_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version
+        id: compute
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            # User-provided version (e.g. v0.2.0-rc1) — strip v prefix
+            PRETEND="${VERSION#v}"
+          else
+            # Auto-derive from git: v0.1.0-5-ga1b2c3d → 0.1.0.dev5
+            RAW=$(git describe --tags 2>/dev/null || echo "v0.0.0-0-g0000000")
+            if echo "$RAW" | grep -q '\-'; then
+              PRETEND=$(echo "$RAW" | sed -E 's/^v//; s/-([0-9]+)-g[0-9a-f]+$/.dev\1/')
+            else
+              PRETEND="${RAW#v}"
+            fi
+          fi
+          echo "pretend_version=$PRETEND" >> $GITHUB_OUTPUT
+          echo "Build version: $PRETEND"
+        env:
+          VERSION: ${{ inputs.version }}
+
   build-pure:
     name: Build pure wheel
+    needs: [compute-version]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -36,14 +71,9 @@ jobs:
         run: uv run python tools/clean-precompiled.py
 
       - name: Build wheel
-        if: inputs.version == ''
-        run: uv build --wheel
-
-      - name: Build wheel (forced version)
-        if: inputs.version != ''
-        run: SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}" uv build --wheel
+        run: SETUPTOOLS_SCM_PRETEND_VERSION="$PRETEND_VERSION" uv build --wheel
         env:
-          VERSION: ${{ inputs.version }}
+          PRETEND_VERSION: ${{ needs.compute-version.outputs.pretend_version }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -52,9 +82,13 @@ jobs:
 
   # -- Linux precompiled build disabled temporarily for faster testing --
   build-linux:
-    name: Build Linux wheel (manylinux_x86_64)
+    name: Build Linux wheel (${{ matrix.python-version }}, manylinux_x86_64)
+    needs: [compute-version]
     runs-on: ubuntu-24.04
     container: quay.io/pypa/manylinux_2_28_x86_64
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,10 +96,12 @@ jobs:
   
       - name: Setup environment
         run: |
+          PY_ABI="cp${{ matrix.python-version }}"
+          PY_ABI="${PY_ABI//.}"
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-          echo "/opt/python/cp312-cp312/bin" >> $GITHUB_PATH
-          echo "UV_PYTHON=/opt/python/cp312-cp312/bin/python3.12" >> $GITHUB_ENV
+          echo "/opt/python/${PY_ABI}-${PY_ABI}/bin" >> $GITHUB_PATH
+          echo "UV_PYTHON=/opt/python/${PY_ABI}-${PY_ABI}/bin/python${{ matrix.python-version }}" >> $GITHUB_ENV
   
       - name: Sync dependencies
         run: uv sync --group dev
@@ -74,34 +110,43 @@ jobs:
         run: uv run python tools/build-precompiled.py
 
       - name: Build wheel
-        if: inputs.version == ''
-        run: uv build --wheel
-
-      - name: Build wheel (forced version)
-        if: inputs.version != ''
-        run: SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}" uv build --wheel
+        run: SETUPTOOLS_SCM_PRETEND_VERSION="$PRETEND_VERSION" uv build --wheel
         env:
-          VERSION: ${{ inputs.version }}
+          PRETEND_VERSION: ${{ needs.compute-version.outputs.pretend_version }}
   
       - name: Auditwheel repair
         run: |
-          /opt/python/cp312-cp312/bin/pip install auditwheel
-          /opt/python/cp312-cp312/bin/auditwheel repair dist/*.whl -w dist/
+          PY_ABI="cp${{ matrix.python-version }}"
+          PY_ABI="${PY_ABI//.}"
+          /opt/python/${PY_ABI}-${PY_ABI}/bin/pip install auditwheel
+          /opt/python/${PY_ABI}-${PY_ABI}/bin/auditwheel repair dist/*.whl -w dist/
           rm dist/*-none-any.whl
   
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux
+          name: wheels-linux-${{ matrix.python-version }}
           path: dist/*.whl
 
   # -- Windows build --
   build-windows:
-    name: Build Windows wheel (win_amd64)
+    name: Build Windows wheel (${{ matrix.python-version }}, win_amd64)
+    needs: [compute-version]
     runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set UV_PYTHON
+        run: echo "UV_PYTHON=${{ steps.setup-python.outputs.python-path }}" >> $GITHUB_ENV
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -117,13 +162,8 @@ jobs:
         run: uv run python tools/build-precompiled.py
 
       - name: Build wheel
-        if: inputs.version == ''
-        run: uv build --wheel
-
-      - name: Build wheel (forced version)
-        if: inputs.version != ''
         run: |
-          $env:SETUPTOOLS_SCM_PRETEND_VERSION = "${{ inputs.version }}".TrimStart('v')
+          $env:SETUPTOOLS_SCM_PRETEND_VERSION = "${{ needs.compute-version.outputs.pretend_version }}"
           uv build --wheel
 
       - name: Fix wheel platform tag
@@ -131,7 +171,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows
+          name: wheels-windows-${{ matrix.python-version }}
           path: dist/*.whl
 
   # -- macOS build disabled until precompiled compilation is fixed --
