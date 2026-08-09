@@ -460,6 +460,36 @@ def test_apply_rotor_point_rotation_z(b):
     assert r.z == pytest.approx(0)
 
 
+def test_apply_rotor_point_rotation_x(b):
+    """A2b: Rotor(90°, x) on (0,1,0) → Point(0,0,1).
+
+    +90° about x-axis (right‑hand rule): e₂ → e₃.
+    """
+    p = create_entity(b, Point(0, 1, 0))
+    R = create_operator(b, Rotor(math.pi / 2, Direction(1, 0, 0)))
+    result = R.gp(p).gp(R.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(0, abs=1e-6)
+    assert r.y == pytest.approx(0, abs=1e-6)
+    assert r.z == pytest.approx(1)
+
+
+def test_apply_rotor_point_rotation_y(b):
+    """A2c: Rotor(90°, y) on (0,0,1) → Point(1,0,0).
+
+    +90° about y-axis (right‑hand rule): e₃ → e₁.
+    """
+    p = create_entity(b, Point(0, 0, 1))
+    R = create_operator(b, Rotor(math.pi / 2, Direction(0, 1, 0)))
+    result = R.gp(p).gp(R.rev())
+    r = analyze_entity(result, opns=True)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(1, abs=1e-6)
+    assert r.y == pytest.approx(0, abs=1e-6)
+    assert r.z == pytest.approx(0)
+
+
 # --- A3. ReflectionLine (through origin) ---
 
 

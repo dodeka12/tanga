@@ -236,17 +236,6 @@ def test_apply_reflection_point_origin_negation(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-@pytest.mark.skip(reason="Limitation: All bivectors in Cl(3)/P2 are simple (no grade-4 for B∧B ≠ 0)")
-def test_analyze_non_simple_bivector_raises(b):
-    """Non‑simple bivector (B∧B ≠ 0) must raise ValueError.
-
-    Skipped: In P2 (Cl(3), dim=8), the maximum grade is 3.  B∧B
-    for any bivector is always 0 because there is no grade-4 subspace.
-    Non-simple bivector detection is only meaningful in Cl(4)+.
-    """
-    pass
-
-
 def test_create_direction_zero_norm_raises(b):
     """create_entity(Direction(0,0,0)) must raise ValueError."""
     with pytest.raises(ValueError, match="Zero.*norm"):

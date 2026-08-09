@@ -132,7 +132,7 @@ def create_rotor(basis: Algebra, angle: float, axis: Direction) -> MV:
     return basis.multivector(
         {
             0: math.cos(half),
-            E12: math.sin(half),
+            E12: -math.sin(half),
         }
     )
 

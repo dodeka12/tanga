@@ -135,13 +135,6 @@ def test_operator_general_rotor_round_trip(b):
     assert r.origin.y == pytest.approx(0)
 
 
-@pytest.mark.skip(
-    reason="No reliable way to construct a 3-factor PGA2 versor — e0 embedding splits factors"
-)
-def test_operator_triple_reflection_round_trip(b):
-    """O7: TripleReflection code path exists but cannot construct testable input."""
-    pass
-
 
 # ═══════════════════════════════════════════════════════════════
 # Operator application tests

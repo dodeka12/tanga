@@ -186,17 +186,43 @@ def test_operator_reflection_plane_round_trip(b):
 
 
 def test_apply_rotor_vector_rotation_z(b):
-    """A1: Rotor(90°, z) on e₁ → result is −e₂ (clockwise).
+    """A1: Rotor(90°, z) on e₁ → result is e₂ (counter‑clockwise).
 
     First-principles: E3 sign convention — +90° about z rotates
-    e₁ to −e₂ (clockwise looking from +z).  See existing test
+    e₁ to e₂ (counter‑clockwise looking from +z).  See existing test
     test_rotor_sign_convention_90_deg_z for confirmation.
     """
     R = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
     v = b.multivector({b.E1: 1.0})
     result = R.gp(v).gp(R.rev())
     assert float(result[b.E1]) == pytest.approx(0, abs=1e-10)
-    assert float(result[b.E2]) == pytest.approx(-1, abs=1e-10)
+    assert float(result[b.E2]) == pytest.approx(1, abs=1e-10)
+    assert float(result[b.E3]) == pytest.approx(0, abs=1e-10)
+
+
+def test_apply_rotor_vector_rotation_x(b):
+    """A1b: Rotor(90°, x) on e₂ → result is e₃ (counter‑clockwise).
+
+    +90° about x-axis (right‑hand rule): e₂ → e₃, e₃ → −e₂.
+    """
+    R = create_operator(b, Rotor(math.pi / 2, Direction(1, 0, 0)))
+    v = b.multivector({b.E2: 1.0})
+    result = R.gp(v).gp(R.rev())
+    assert float(result[b.E1]) == pytest.approx(0, abs=1e-10)
+    assert float(result[b.E2]) == pytest.approx(0, abs=1e-10)
+    assert float(result[b.E3]) == pytest.approx(1, abs=1e-10)
+
+
+def test_apply_rotor_vector_rotation_y(b):
+    """A1c: Rotor(90°, y) on e₃ → result is e₁ (counter‑clockwise).
+
+    +90° about y-axis (right‑hand rule): e₃ → e₁, e₁ → −e₃.
+    """
+    R = create_operator(b, Rotor(math.pi / 2, Direction(0, 1, 0)))
+    v = b.multivector({b.E3: 1.0})
+    result = R.gp(v).gp(R.rev())
+    assert float(result[b.E1]) == pytest.approx(1, abs=1e-10)
+    assert float(result[b.E2]) == pytest.approx(0, abs=1e-10)
     assert float(result[b.E3]) == pytest.approx(0, abs=1e-10)
 
 

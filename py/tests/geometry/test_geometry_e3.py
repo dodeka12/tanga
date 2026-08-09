@@ -236,26 +236,26 @@ def test_n3_operator_creation_raises_motor(basis_e3):
 
 
 def test_rotor_sign_convention_90_deg_z(basis_e3):
-    """Rotor of +π/2 about z-axis applied to e₁ gives −e₂ (clockwise).
+    """Rotor of +π/2 about z-axis applied to e₁ gives e₂ (counter‑clockwise).
 
     Perwass convention: R = cos(θ/2) − sin(θ/2)·N₂ with rotor axis form
     via r = dual(N₂) giving R = cos(θ/2) + sin(θ/2)·axis_bivector.
     The code uses the axis form.  Application: R * v * R.rev().
-    +90° about z rotates e₁ to −e₂ (clockwise looking from +z).
+    +90° about z rotates e₁ to e₂ (counter‑clockwise looking from +z).
     """
     rotor = create_operator(basis_e3, Rotor(math.pi / 2, Direction(0, 0, 1)))
     e1 = basis_e3.e1
     result = rotor * e1 * rotor.rev()
-    assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(-1.0, abs=1e-10)
+    assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(1.0, abs=1e-10)
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(0.0, abs=1e-10)
 
 
 def test_rotor_sign_convention_90_deg_z_y_to_x(basis_e3):
-    """Rotor of +π/2 about z-axis applied to e₂ gives e₁."""
+    """Rotor of +π/2 about z-axis applied to e₂ gives −e₁ (counter‑clockwise)."""
     rotor = create_operator(basis_e3, Rotor(math.pi / 2, Direction(0, 0, 1)))
     e2 = basis_e3.e2
     result = rotor * e2 * rotor.rev()
-    assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(1.0, abs=1e-10)
+    assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(-1.0, abs=1e-10)
     assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(0.0, abs=1e-10)
 
 
