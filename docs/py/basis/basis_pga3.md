@@ -179,7 +179,7 @@ In IPNS (dual) form, the grades are swapped:
 | GeneralRotor | 2 | ``G = T·R·T̃`` | Rotation about displaced axis, grades {0, 2} |
 | Motor | 4 | ``M = T·R`` | Rotation + translation (rigid body motion) |
 | ReflectionLine | 2 | ``d∧e₀`` | Reflection about a line through origin |
-| ReflectionOrigin | 3 | ``e₁∧e₂∧e₃`` | Reflection about the origin |
+| ReflectionPoint | 3 | ``e₁∧e₂∧e₃`` | Reflection about the origin |
 
 ### 4.1 Rotor
 
@@ -254,7 +254,7 @@ Euclidean factors) and translator (from versor coefficients).
 |---|---|---|---|
 | Reflection | ✓ | ✓ | |
 | ReflectionLine | ✓ | ✓ | |
-| ReflectionOrigin | ✓ | ✓ | |
+| ReflectionPoint | ✓ | ✓ | |
 | Rotor | ✓ | ✓ | |
 | Translator | ✓ | ✓ | |
 | GeneralRotor | ✓ | ✓ | Rotation about displaced axis |

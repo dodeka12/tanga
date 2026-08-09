@@ -99,7 +99,7 @@ add(
 - **Geometry entities:** `Point`, `Direction`, `HPoint`, `PointPair`, `Line`,
   `Plane`, `Circle`, `Sphere`, `Space`
 - **Operators:** `Rotor`, `Translator`, `Motor`, `Dilator`, `GeneralRotor`,
-  `GeneralDilator`, `ReflectionLine`, `ReflectionPlane`, `ReflectionOrigin`,
+  `GeneralDilator`, `ReflectionLine`, `ReflectionPlane`, `ReflectionPoint`,
   `Inversion`
 - **Multivectors (MVs):** Objects from `pytanga.algebra` — analyzed internally
   via `pytanga.geometry.analyze()`

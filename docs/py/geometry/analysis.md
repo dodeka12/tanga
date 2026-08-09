@@ -108,5 +108,5 @@ In N3, some grades contain multiple entity types:
 |---------|-------------------|-------------------|
 | E3 | Point, Plane, Space | Reflection, Rotor |
 | P3 | Point, Direction, Line, Plane, Space | Reflection, Rotor |
-| PGA3 | Point, Direction, Line, Plane, Space (Gunn/Dorst grade mapping: Plane = 1, Line = 2, Point = 3) | Reflection, ReflectionLine, ReflectionOrigin, Rotor, Translator, Motor, GeneralRotor |
+| PGA3 | Point, Direction, Line, Plane, Space (Gunn/Dorst grade mapping: Plane = 1, Line = 2, Point = 3) | Reflection, ReflectionLine, ReflectionPoint, Rotor, Translator, Motor, GeneralRotor |
 | N3 | Point, Direction, PointPair, Line, Circle, Plane, Sphere, Space | Reflection, Inversion, Rotor, Translator, Dilator, GeneralDilator, Motor, GeneralRotor |

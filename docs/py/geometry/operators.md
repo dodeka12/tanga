@@ -42,19 +42,24 @@ refl_line = ReflectionLine(direction=Direction(0, 0, 1))
 |---------|-----------|
 | E3, P3, PGA3, N3 | ✓ |
 
-## ReflectionOrigin
+## ReflectionPoint
 
-Reflection about the origin (trivector ``e₁∧e₂∧e₃``).
+Reflection about the origin (trivector ``e₁∧e₂∧e₃``) — equivalent to
+`ReflectionPoint(Point(0, 0, 0))`.
 
 ```python
-from pytanga.geometry import ReflectionOrigin
+from pytanga.geometry import ReflectionPoint, Point
 
-refl_origin = ReflectionOrigin()
+refl_origin = ReflectionPoint(Point(0, 0, 0))
 ```
 
 | Algebra | Supported |
 |---------|-----------|
 | P3, PGA3, N3 | ✓ |
+
+!!! note
+    ``ReflectionPoint`` is the general point-reflection operator — pass any
+    ``Point`` to reflect about an arbitrary center.
 
 ## Inversion (N3 only)
 
@@ -173,7 +178,7 @@ gd = GeneralDilator(
 |----------|:--:|:--:|:----:|:--:|:--:|:--:|:----:|:--:|
 | ReflectionPlane | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | ReflectionLine | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| ReflectionOrigin | — | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| ReflectionPoint | — | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | Inversion | — | — | — | ✓ | — | — | — | ✓ |
 | Rotor | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Translator | — | — | ✓ | ✓ | — | — | — | ✓ |

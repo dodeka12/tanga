@@ -60,7 +60,7 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 | `SpaceStyle` | `Space` | `color`, `opacity`, `extent` |
 | `ReflectionLineStyle` | `ReflectionLine` | `color`, `opacity`, `length`, `thickness` |
 | `ReflectionPlaneStyle` | `ReflectionPlane` | `color`, `opacity`, `extent` |
-| `ReflectionOriginStyle` | `ReflectionOrigin` | `color`, `opacity`, `extent` |
+| `ReflectionPointStyle` | `ReflectionPoint` | `color`, `opacity`, `extent` |
 | `InversionStyle` | `Inversion` | `color`, `opacity` |
 | `RotorStyle` | `Rotor` | `color`, `opacity`, `disc_radius` |
 | `TranslatorStyle` | `Translator` | `color`, `opacity`, `length` |
@@ -89,7 +89,7 @@ and usage.
 | Space | `#888888` (grey) |
 | ReflectionLine | `#aaccff` (light blue) |
 | ReflectionPlane | `#88ccff` (light blue) |
-| ReflectionOrigin | `#ffffff` (white) |
+| ReflectionPoint | `#ffffff` (white) |
 | Inversion | `#cc88ff` (lavender) |
 | Rotor | `#ff8844` (orange) |
 | Translator | `#44aaff` (blue) |
