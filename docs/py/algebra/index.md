@@ -25,6 +25,7 @@ from pytanga.algebra import Algebra, MV, EProduct
 | `MV` class — initialization, coefficient access, operators, utility methods | [`MV`](mv.md) |
 | Duals — complement, signed `dual`, and left `ldual` operations | [Duals](duals.md) |
 | Modulus arithmetic — integer algebras, `hmod`, multi-modulus pattern | [Modulus](modulus.md) |
+| Galgebra bridge — bidirectional conversion between galgebra (sympy) and tanga (numeric) MVs | [Galgebra Bridge](galgebra_bridge.md) |
 
 ## Quick start
 

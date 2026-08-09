@@ -86,15 +86,15 @@ the scalar is automatically promoted to a scalar multivector.
 | `a.ip(b)` | `a \| b` | Inner (left-contraction) product |
 | `a.inv()` | — | Multiplicative inverse |
 | `a.rev()` | — | Reverse $\tilde{a}$: reverses blade factor order |
-| `a.conj()` | — | Clifford conjugate |
+| `a.conj()` | — | Clifford conjugate (metric‑aware, includes $(−1)^r$) |
 | `a.vp(b)` | — | Versor product: $a \cdot b \cdot \tilde{a}$ |
 | `a.nvp(b)` | — | Normalized versor product: $a \cdot b \cdot a^{-1}$ |
-| `a.grade(k)` | — | Grade projection: extract ⟨a⟩ₖ |
+| `a.grade(k)` | — | Grade projection: extract ⟨a⟩ₖ (also accepts `list[int]`) |
 | `a.complement()` | — | Unsigned complement — see [Duals](duals.md) |
 | `a.dual()` | — | Signed dual ★A = A · I⁺ — see [Duals](duals.md) |
 | `a.ldual()` | — | Left dual I · A — see [Duals](duals.md) |
 | `a.sp(b)` | — | Scalar product: scalar part of a * b |
-| `a.project_to(b)` | — | Restrict a to the blade set of b |
+| `a.project_to(b)` | — | Restrict a to the blade set of b (also accepts `int` mask / `list[int]`) |
 | `a.blade_inverse()` | — | Proper blade inverse $A^{-1} = \tilde{A} / \mathrm{IP}(A, \tilde{A})$ |
 | `a.blade_pseudo_inverse()` | — | Pseudo-inverse of a blade (uses conjugate instead of reverse) |
 | `a.blade_factorize()` | — | Factorize blade into $k$ normalized grade-1 vectors |
@@ -103,6 +103,52 @@ the scalar is automatically promoted to a scalar multivector.
 | `a.project(blade)` | — | Project multivector onto a blade: $\mathrm{proj}_N(A)$ |
 | `a.reject(blade)` | — | Reject multivector from a blade: $A - \mathrm{proj}_N(A)$ |
 | `a.show(label, fmt)` | — | Print in algebra display basis |
+
+### Grade‑based Involutions
+
+| Method | Description |
+|--------|-------------|
+| `a.grade_involution()` | Grade involution: negate odd‑grade parts. $\mathrm{ginvol}(⟨A⟩_k) = (−1)^k · ⟨A⟩_k$ |
+| `a.grade_conj()` | Grade‑based Clifford conjugate (galgebra `ccon`, metric‑independent). $\mathrm{grade\_conj}(⟨A⟩_k) = (−1)^{k(k+1)/2} · ⟨A⟩_k$. Equivalent to `grade_involution().rev()` |
+| `a.conj()` | Metric‑aware Clifford conjugate (existing — see [§2 distinction below](#clifford-conjugates)) |
+
+### Grade Extraction
+
+| Method | Description |
+|--------|-------------|
+| `a.even()` | Extract even‑grade part (grades 0, 2, 4, …) |
+| `a.odd()` | Extract odd‑grade part (grades 1, 3, 5, …) |
+| `a.grade(k)` | Extract grade‑k part ⟨a⟩ₖ. Also accepts `list[int]` for multi‑grade projection |
+| `a.grade_proj(k)` | Alias for `grade(k)` (on `Algebra`) |
+
+### Norms and Exponential
+
+| Method | Description |
+|--------|-------------|
+| `a.norm2()` | Quadratic‑form‑based squared norm: $|\mathrm{scalar\_part}(\tilde{A} · A)|$. In Euclidean: same as `mag2` |
+| `a.norm()` | Quadratic‑form‑based norm: $\sqrt{\mathrm{norm2}(A)}$ |
+| `a.qform()` | Quadratic form: $\mathrm{scalar\_part}(\tilde{A} · A)$ |
+| `a.exp()` | Exponential. Requires $A² ∈ ℝ$ (blade‑like); raises `ValueError` otherwise. Formula: $\cosh(√s) + (\sinh(√s)/√s)A$ for $s>0$, $1+A$ for $s=0$, $\cos(√|s|) + (\sin(√|s|)/√|s|)A$ for $s<0$ |
+
+### Duals
+
+| Method | Description |
+|--------|-------------|
+| `a.undual()` | Inverse of the signed dual. $A·I$ in E3/P3/N3; J‑map (same as `dual()`) in PGA |
+| `a.duals_inverse()` | Synonym for `undual()` |
+
+See [Duals](duals.md) for `dual()`, `complement()`, `ldual()`.
+
+### Products
+
+| Method | Description |
+|--------|-------------|
+| `a.scalar_product(b, *, rev=False)` | Scalar product with optional reverse. `rev=True` computes $\mathrm{scalar\_part}(\tilde{A}·B)$ |
+| `a.cp(b)` | Commutator: $(A·B − B·A)/2$ |
+| `a.acp(b)` | Anti‑commutator: $(A·B + B·A)/2$ |
+| `a.rc(b)` | Right contraction $A ⌊ B$. Vanishes when $\mathrm{grade}(A) < \mathrm{grade}(B)$ |
+| `a.gp_min(b)` | Hestenes inner product for pure blades: $⟨AB⟩_{\|k−j\|}$. Raises `ValueError` if not pure blades |
+| `a.gp_max(b)` | Outermost grade product for pure blades: $⟨AB⟩_{k+j}$. For vectors = outer product. Raises `ValueError` if not pure blades |
 
 ## Modular Arithmetic Methods
 
@@ -126,7 +172,7 @@ algebra construction.
 | Method | Description |
 |--------|-------------|
 | `a.to_dict()` | Returns `{blade_name: coeff}` for all non-zero blades |
-| `a.prune()` | Removes near-zero coefficients in-place; returns `self` |
+| `a.prune()` | Removes coefficients `abs(coeff) < algebra.precision` in-place; returns `self` |
 | `repr(a)` | Produces a human-readable expression string |
 
 ## Properties
@@ -136,8 +182,22 @@ algebra construction.
 | `a.scalar` | `float \| int` | Scalar coefficient |
 | `a.mag2` | `float \| int` | Sum of squared coefficients |
 | `a.mag` | `float` | sqrt of mag2 |
-| `a.is_zero` | `bool` | True if all blades are zero |
-| `a.is_scalar` | `bool` | True if only scalar blade is non-zero |
+| `a.is_zero` | `bool` | True if all coefficients within `algebra.precision` of zero |
+| `a.is_scalar` | `bool` | True if all non‑scalar coefficients within `algebra.precision` of zero |
+| `a.is_vector` | `bool` | True if only grade‑1 blades have non‑zero coefficients |
+| `a.is_base` | `bool` | True if exactly one basis blade with coefficient 1 |
+| `a.is_blade` | `bool` | True if a simple r‑vector (blade factorizable) |
+| `a.is_versor` | `bool` | True if a versor (product of invertible vectors) |
+| `a.grades` | `list[int]` | List of grades that have non‑zero coefficients |
+| `a.algebra` | `Algebra` | The parent Algebra instance |
+
+## Coefficient Methods
+
+| Method | Description |
+|--------|-------------|
+| `a.blade_coefs(blade_lst=None)` | Coefficients for each blade in `blade_lst` (or all blades if `None`) |
+| `a.components()` | Decompose into list of single‑blade MVs |
+| `a.get_coefs(k)` | Grade‑*k* coefficients in canonical blade order |
 
 ### `to_dict()` example
 
@@ -166,3 +226,30 @@ bitmask `7` (`0b111`).
 String names follow the pattern `e<indices>` where indices are either
 concatenated (compact form for dim ≤ 9) or comma-separated.
 The scalar blade is named `s`.
+
+## Clifford Conjugates
+
+Tanga provides two distinct Clifford conjugates:
+
+| Method | Definition | Metric-dependent? |
+|--------|------------|-------------------|
+| `a.conj()` | $\mathrm{rev}(B_k) · (−1)^r$ where $r$ = count of negative‑metric basis vectors | **Yes** |
+| `a.grade_conj()` | $g\_\mathrm{invol}(B_k).\mathrm{rev}() = (−1)^{k(k+1)/2} · B_k$ | **No** — purely grade‑based |
+
+`conj()` is tanga's original metric‑aware Clifford conjugate.  
+`grade_conj()` is the galgebra‑style `ccon`, added for compatibility.
+
+## Precision
+
+The `Algebra` class has a `precision` property (default `1e-10`, settable at
+construction or via assignment) that controls the numerical zero threshold for:
+
+- `prune()` — removes coefficients with `abs(coeff) < precision`
+- `is_zero()` — returns `True` when all `abs(coeff) < precision`
+- `is_scalar()` — ignores non‑scalar blades whose `abs(coeff) < precision`
+
+```python
+alg = Algebra(3, precision=1e-8)
+alg.precision   # → 1e-8
+alg.precision = 1e-12
+```

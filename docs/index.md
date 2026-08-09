@@ -59,6 +59,13 @@ TanGA is a geometric algebra library with a C++ core and a Python interface
 
   → [3D Visualization](py/viz/index.md)
 
+- **galgebra interoperability** — `GalgebraBridge` provides bidirectional
+  conversion between galgebra (sympy‑based, symbolic) and tanga (numeric)
+  multivectors.  Derive symbolically, compute numerically, visualize — or
+  work the other way.  Handles both orthogonal and non‑orthogonal bases
+  via automatic metric diagonalization.
+  → [Galgebra Bridge](py/algebra/galgebra_bridge.md)
+
 ---
 
 ## Documentation Sections
@@ -66,7 +73,7 @@ TanGA is a geometric algebra library with a C++ core and a Python interface
 | Section | Audience | Contents |
 |---------|----------|----------|
 | [**C++ Documentation**](cpp/index.md) | C++ users | Public C++ API: multivectors, products, matrix equations, congruence maps |
-| [**Python Documentation**](py/index.md) | Python users | pytanga: algebra basics, basis classes, blade masks, matrix/solver/tensor pipelines, geometry, visualization |
+| [**Python Documentation**](py/index.md) | Python users | pytanga: algebra basics, basis classes, blade masks, matrix/solver/tensor pipelines, geometry, visualization, galgebra interop |
 | [**Developer Documentation**](dev/index.md) | Contributors | Architecture overview, type system, GA pipeline internals, coding style guides, build workflows |
 
 ---

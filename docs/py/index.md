@@ -13,7 +13,7 @@ interface to TanGA's geometric algebra engine.
 | Guide | What you will learn |
 |-------|---------------------|
 | [Environment & Setup](env/index.md) | Installation prerequisites, uv environment, automatic C++ compilation and caching |
-| [Algebra submodule](algebra/index.md) | `Algebra`, `MV`, duals, modulus arithmetic — the core GA types and operations |
+| [Algebra submodule](algebra/index.md) | `Algebra`, `MV`, duals, modulus arithmetic, galgebra bridge — the core GA types and operations |
 | [Basis classes](basis/index.md) | How `BasisE2`, `BasisP2`, `BasisN2`, `BasisPGA2` (2D) and `BasisE3`, `BasisP3`, `BasisN3`, `BasisPGA3` (3D) expose named blades and factory methods |
 | [BladeMask](blade-mask/index.md) | Construction, properties, set operations — the foundational type labelling all matrix and tensor axes |
 | [Matrix Operations](matrix/index.md) | `MVMatrix`, `MVProductMatrix` — product‑matrix and blade‑mask pipeline |

@@ -104,7 +104,7 @@ class GalgebraBridge:
         # ── 6. Display basis ──────────────────────────────────────
         generators = [(f"e{i + 1}", self._basis_vecs[i]) for i in range(n)]
         self._display_basis = build_display_basis(generators, self._alg)
-        object.__setattr__(self._alg, '_display_basis', self._display_basis)
+        object.__setattr__(self._alg, "_display_basis", self._display_basis)
 
         # ── 7. Build transformation matrices ────────────────────────
         # Use galgebra's blade ordering: ga.blades.flat / ga.indexes.flat
@@ -153,7 +153,6 @@ class GalgebraBridge:
 
         # ── 8. Store ga ───────────────────────────────────────────
         self._ga = ga
-
 
     # ── Properties ──────────────────────────────────────────────────
 
@@ -296,15 +295,14 @@ class GalgebraBridge:
 
     # ── Display ─────────────────────────────────────────────────────
 
-    def show(self, mv: MV, label: str = "", fmt: str | None = None,
-             align_col: int = 30) -> None:
+    def show(
+        self, mv: MV, label: str = "", fmt: str | None = None, align_col: int = 30
+    ) -> None:
         """Show *mv* using the galgebra display basis."""
         self._alg.show(mv, label, fmt=fmt, align_col=align_col)
 
-    def show_str(self, mv: MV, label: str = "", fmt: str | None = None,
-                 align_col: int = 30) -> str:
+    def show_str(
+        self, mv: MV, label: str = "", fmt: str | None = None, align_col: int = 30
+    ) -> str:
         """Return string repr of *mv* using the galgebra display basis."""
         return self._alg.show_str(mv, label, fmt=fmt, align_col=align_col)
-        for i in idx_tuple:
-            result |= 1 << i
-        return result
