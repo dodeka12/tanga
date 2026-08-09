@@ -160,8 +160,13 @@ class MV:
         return {blade_name(k, dim): v for k, v in self._impl.to_dict().items()}
 
     def prune(self) -> "MV":
-        """Remove near-zero coefficients in-place and return self."""
-        self._impl.prune()
+        """Remove coefficients with ``abs(coeff) < algebra.precision`` in-place and return self."""
+        tol = self._alg._precision
+        d = self._impl.to_dict()
+        self._impl.reset()
+        for blade_id, v in d.items():
+            if abs(v) >= tol:
+                self._impl.set(blade_id, v)
         return self
 
     def normalized(self) -> "MV":

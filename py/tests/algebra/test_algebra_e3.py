@@ -136,6 +136,61 @@ class TestMultivectorTupleKeys:
             alg.multivector({(4,): 1.0})   # dim=3, so e4 doesn't exist
 
 
+class TestPrecision:
+    """Phase 0 — ``precision`` property on Algebra controls is_zero / is_scalar / prune."""
+
+    def test_default_precision(self, alg):
+        assert alg.precision == 1e-10
+
+    def test_custom_precision(self):
+        a = pytanga.Algebra(dim=3, sig=0, precision=1e-8)
+        assert a.precision == 1e-8
+
+    def test_set_precision(self, alg):
+        alg.precision = 1e-12
+        assert alg.precision == 1e-12
+        alg.precision = 1e-10  # restore default for other tests
+
+    def test_is_zero_with_tiny_values(self, alg):
+        mv = alg.multivector({"e1": 1e-13, "e2": 1e-13})
+        # Default precision is 1e-10, so these tiny values should be treated as zero
+        assert mv.is_zero is True
+
+    def test_is_zero_above_precision(self, alg):
+        mv = alg.multivector({"e1": 1e-9})
+        assert mv.is_zero is False
+
+    def test_is_scalar_with_tiny_non_scalar(self, alg):
+        mv = alg.multivector({"s": 5.0, "e1": 1e-13})
+        # Default precision is 1e-10; e1 is tiny, so it is scalar
+        assert mv.is_scalar is True
+
+    def test_is_scalar_with_non_scalar_above_precision(self, alg):
+        mv = alg.multivector({"s": 5.0, "e1": 1e-9})
+        assert mv.is_scalar is False
+
+    def test_prune_removes_tiny_coefficients(self, alg):
+        mv = alg.multivector({"s": 5.0, "e1": 1e-13, "e2": 1e-13})
+        mv.prune()
+        assert mv["s"] == pytest.approx(5.0)
+        assert mv["e1"] == pytest.approx(0.0, abs=1e-15)
+        assert mv["e2"] == pytest.approx(0.0, abs=1e-15)
+
+    def test_prune_keeps_above_precision(self, alg):
+        mv = alg.multivector({"s": 5.0, "e1": 1e-9})
+        mv.prune()
+        assert mv["s"] == pytest.approx(5.0)
+        assert mv["e1"] == pytest.approx(1e-9)
+
+    def test_custom_precision_prune(self):
+        a = pytanga.Algebra(dim=3, sig=0, precision=1e-6)
+        mv = a.multivector({"s": 5.0, "e1": 1e-7})
+        mv.prune()
+        assert mv["s"] == pytest.approx(5.0)
+        # 1e-7 < 1e-6 precision, so e1 should be pruned
+        assert mv["e1"] == pytest.approx(0.0, abs=1e-15)
+
+
 class TestMultivectorStringInput:
     """alg.multivector("coeff e... + ...") — string expression."""
 

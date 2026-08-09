@@ -39,6 +39,7 @@ class Algebra:
         verbose: bool = False,
         modulus: int | None = None,
         print_fmt: str = ".4g",
+        precision: float = 1e-10,
         seed: int | None = None,
     ) -> None:
         from pytanga.codegen import get_or_build
@@ -72,6 +73,7 @@ class Algebra:
         self._dtype = dtype
         self._modulus = modulus
         self._print_fmt = print_fmt
+        self._precision = precision
         self._mod = get_or_build(dim, sig, dtype, verbose=verbose)
         self._rng = np.random.default_rng(seed)
 
@@ -108,6 +110,15 @@ class Algebra:
     def rng(self) -> np.random.Generator:
         """NumPy random number generator instance belonging to this algebra."""
         return self._rng
+
+    @property
+    def precision(self) -> float:
+        """Numerical zero tolerance for ``prune()``, ``is_zero()``, ``is_scalar()``."""
+        return self._precision
+
+    @precision.setter
+    def precision(self, value: float) -> None:
+        self._precision = float(value)
 
     @property
     def print_fmt(self) -> str:
@@ -331,12 +342,18 @@ class Algebra:
         return self._mod.magnitude(a._impl)
 
     def is_zero(self, a: MV) -> bool:
-        """True if all coefficients are zero."""
-        return self._mod.is_zero(a._impl)
+        """True if all coefficients are within ``precision`` of zero."""
+        tol = self._precision
+        return all(abs(v) < tol for v in a._impl.to_dict().values())
 
     def is_scalar(self, a: MV) -> bool:
-        """True if only the scalar blade is non-zero."""
-        return self._mod.is_scalar(a._impl)
+        """True if all non-scalar coefficients are within ``precision`` of zero."""
+        tol = self._precision
+        return all(
+            abs(v) < tol
+            for blade_id, v in a._impl.to_dict().items()
+            if blade_id != 0
+        )
 
     def project_to(self, a: MV, b: MV) -> MV:
         """Restrict a to the blade set of b (retain only blades present in b)."""
@@ -625,7 +642,7 @@ class Algebra:
         self, mv: MV, display_basis: list | None
     ) -> list[tuple[float, str]]:
         """Extract non-zero (coefficient, blade_name) pairs from *mv*."""
-        tol = 1e-10
+        tol = self._precision
         if display_basis is not None:
             terms: list[tuple[float, str]] = []
             for name, _blade, pinv, blade_id in display_basis:
