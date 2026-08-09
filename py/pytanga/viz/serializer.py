@@ -436,8 +436,8 @@ def _serialize_reflection_line(
         {"length": 5.0, "thickness": 0.04},
         styles_map=styles_map,
     ) | {
-        "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
-        "origin": [0.0, 0.0, 0.0],
+        "direction": [ent.line.direction.x, ent.line.direction.y, ent.line.direction.z],
+        "origin": [ent.line.origin.x, ent.line.origin.y, ent.line.origin.z],
     }
 
 
@@ -454,8 +454,8 @@ def _serialize_reflection_plane(
         {"extent": 5.0},
         styles_map=styles_map,
     ) | {
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
-        "origin": [0.0, 0.0, 0.0],
+        "normal": [ent.plane.normal.x, ent.plane.normal.y, ent.plane.normal.z],
+        "origin": [ent.plane.point.x, ent.plane.point.y, ent.plane.point.z],
     }
 
 
@@ -590,16 +590,7 @@ def _serialize_general_rotor(
         {},
         styles_map=styles_map,
     ) | {
-        "rotor": {
-            "angle": ent.rotor.angle,
-            "axis": [ent.rotor.axis.x, ent.rotor.axis.y, ent.rotor.axis.z],
-        },
-        "translator": {
-            "vector": [
-                ent.translator.vector.x,
-                ent.translator.vector.y,
-                ent.translator.vector.z,
-            ],
-        },
-        "origin": [0.0, 0.0, 0.0],
+        "angle": ent.angle,
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
     }
