@@ -225,8 +225,8 @@ class MV:
         """Normalized versor product: self * b * inverse(self)."""
         return self._alg.nvp(self, b)
 
-    def grade(self, k: int) -> "MV":
-        """Extract grade-k part ⟨self⟩_k."""
+    def grade(self, k: int | list[int]) -> "MV":
+        """Extract grade-k part ⟨self⟩_k, or sum of grade parts for a list."""
         return self._alg.grade_proj(self, k)
 
     def complement(self) -> "MV":
@@ -260,8 +260,13 @@ class MV:
         """Scalar product (scalar part of self * other)."""
         return self._alg.sp(self, other)
 
-    def project_to(self, other: "MV") -> "MV":
-        """Restrict self to the blade set of other (retain only blades present in other)."""
+    def project_to(self, other: "MV | int | list[int]") -> "MV":
+        """Restrict self to blade set of *other*.
+
+        - ``MV`` — retain only blades present in *other*.
+        - ``int`` — blade mask; retain blades whose mask is a subset.
+        - ``list[int]`` — blade IDs; retain only those exact blades.
+        """
         return self._alg.project_to(self, other)
 
     # -----------------------------------------------------------------------

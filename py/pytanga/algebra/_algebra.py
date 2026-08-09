@@ -294,8 +294,18 @@ class Algebra:
         inv_versor = self.inv(versor)
         return self.gp(self.gp(versor, b), inv_versor)
 
-    def grade_proj(self, a: MV, grade: int) -> MV:
-        """Extract grade-k part ⟨A⟩_k."""
+    def grade_proj(self, a: MV, grade: int | list[int]) -> MV:
+        """Extract grade-k part ⟨A⟩_k, or sum of grade parts for a list.
+
+        - ``int`` — extract grade‑*k* part (existing behaviour).
+        - ``list[int]`` — extract sum of those grade parts, e.g.
+          ``grade_proj([0, 2])`` returns the scalar + bivector part.
+        """
+        if isinstance(grade, list):
+            result = self.multivector()
+            for k in grade:
+                result = self.add(result, self.grade_proj(a, k))
+            return result
         return MV(self._mod.grade_proj(a._impl, grade), self)
 
     def scalar(self, a: MV) -> float | int:
@@ -486,9 +496,40 @@ class Algebra:
             if blade_id != 0
         )
 
-    def project_to(self, a: MV, b: MV) -> MV:
-        """Restrict a to the blade set of b (retain only blades present in b)."""
-        return MV(self._mod.project_to(a._impl, b._impl), self)
+    def project_to(self, a: MV, other: MV | int | list[int]) -> MV:
+        """Restrict *a* to a blade set.
+
+        - ``MV`` — retain only blades present in *other* (existing behaviour).
+        - ``int`` — treat as a blade mask; retain only blades whose mask is
+          a subset of this mask.
+        - ``list[int]`` — treat as a list of blade IDs; retain only those
+          exact blades.
+        """
+        if isinstance(other, MV):
+            return MV(self._mod.project_to(a._impl, other._impl), self)
+        if isinstance(other, int):
+            mask = other
+            result = self.multivector()
+            d = a._impl.to_dict()
+            for blade_id, v in d.items():
+                if blade_id & ~mask == 0:
+                    result = self.add(
+                        result, self.scale(self.multivector({blade_id: 1.0}), v)
+                    )
+            return result
+        if isinstance(other, list):
+            result = self.multivector()
+            d = a._impl.to_dict()
+            for blade_id in other:
+                v = d.get(blade_id, 0)
+                if abs(v) > 0:
+                    result = self.add(
+                        result, self.scale(self.multivector({blade_id: 1.0}), v)
+                    )
+            return result
+        raise TypeError(
+            f"project_to expects MV, int, or list[int], got {type(other).__name__}"
+        )
 
     # Phase D: GP/IP/OP with reverse/conjugate flags
     def gp_rev(self, a: MV, b: MV, rev_a: bool = False, rev_b: bool = False) -> MV:
