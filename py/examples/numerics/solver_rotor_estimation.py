@@ -64,7 +64,7 @@ angle = math.radians(30)
 # R = cos(θ/2) + sin(θ/2)·e12
 R_true = alg({0: math.cos(angle / 2), "e12": math.sin(angle / 2)})
 print(f"R_true = {R_true}")
-print(f"R_true * ~R_true = {(R_true * alg.rev(R_true)).prune()}")  # should be ~1
+print(f"R_true * ~R_true = {(R_true * ~R_true).prune()}")  # should be ~1
 
 # ---------------------------------------------------------------------------
 # Generate point correspondences (with optional noise)

@@ -99,10 +99,10 @@ x.show("x")
 
 (-x).show("-x  (unary negation)")
 
-# ~ is the multiplicative inverse
+# ~ is the reverse  (same as x.rev())
 xi: MV = ~x
-xi.show("~x  (inverse, same as x.inv())")
-(x * xi).show("x * ~x  (should be scalar 1)")
+xi.show("~x  (reverse)")
+(x * xi).show("x * ~x  (should be mag2 of x)")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

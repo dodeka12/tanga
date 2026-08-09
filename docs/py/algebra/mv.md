@@ -68,7 +68,7 @@ mv[3]   = 2.0      # bitmask 3 = 0b11 → e12
 | `a * b` | Geometric product $ab$ |
 | `a ^ b` | Outer (wedge) product $a \wedge b$ |
 | `a \| b` | Inner (left-contraction) product |
-| `~a` | Multiplicative inverse $a^{-1}$ |
+| `~a` | Reverse $\tilde{a}$: reverses blade factor order |
 | `a / b` | $a \cdot b^{-1}$ (geometric product with inverse of $b$) |
 | `s * a`, `a * s` | Scalar scaling ($s$ is `int` or `float`) |
 | `a / s` | Scalar division |
@@ -84,7 +84,7 @@ the scalar is automatically promoted to a scalar multivector.
 | `a.gp(b)` | `a * b` | Geometric product |
 | `a.op(b)` | `a ^ b` | Outer (wedge) product |
 | `a.ip(b)` | `a \| b` | Inner (left-contraction) product |
-| `a.inv()` | `~a` | Multiplicative inverse |
+| `a.inv()` | — | Multiplicative inverse |
 | `a.rev()` | — | Reverse $\tilde{a}$: reverses blade factor order |
 | `a.conj()` | — | Clifford conjugate |
 | `a.vp(b)` | — | Versor product: $a \cdot b \cdot \tilde{a}$ |
