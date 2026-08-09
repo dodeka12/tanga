@@ -236,7 +236,9 @@ def create_motor(basis: Algebra, rotor, translator) -> MV:
     raise ValueError("Motors require conformal embedding (N3); not available in E3.")
 
 
-def create_general_rotor(basis: Algebra, rotor, translator) -> MV:
+def create_general_rotor(
+    basis: Algebra, angle: float, axis: Direction, origin: Point
+) -> MV:
     raise ValueError(
         "General rotors require conformal embedding (N3); not available in E3."
     )
