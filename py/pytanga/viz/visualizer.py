@@ -138,6 +138,10 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes: dict[str, Scene] = {}
         self._scenes[""] = Scene(self._config, name="")
 
+        # WS ready synchronisation — set when a browser completes the
+        # WebSocket ready round-trip (after _print_ws_connected fires).
+        self._ws_ready_event = threading.Event()
+
     # ── Scene access ─────────────────────────────────────────
 
     def scene(self, name: str) -> VizSceneHandle:
@@ -545,6 +549,7 @@ class Visualizer(_JupyterDisplayMixin):
         from .server import VizServer
 
         self._server = VizServer(host=self._host, port=self._port)
+        self._ws_ready_event.clear()
 
         _boot_done = threading.Event()
 
@@ -563,6 +568,7 @@ class Visualizer(_JupyterDisplayMixin):
                 push_controls=self._push_controls_async,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
+                on_ready=lambda: self._ws_ready_event.set(),
             )
             _boot_done.set()
 
@@ -577,6 +583,10 @@ class Visualizer(_JupyterDisplayMixin):
         if not _boot_done.wait(timeout=5.0):
             raise RuntimeError("Server failed to start within 5s")
 
+        # Print URLs and start WS connectivity diagnostics
+        self._print_startup_urls()
+        asyncio.run_coroutine_threadsafe(self._server.check_page_tokens(), self._loop)
+
         if self._open_browser:
             if self._reuse_existing:
                 if not self._wait_for_client_quiet(timeout=3.0):
@@ -585,8 +595,21 @@ class Visualizer(_JupyterDisplayMixin):
                 self._server.open_browser()
 
         if wait_for_browser:
+            if self._ws_ready_event.is_set():
+                return True
             return self.wait_for_browser(timeout=timeout)
         return True
+
+    def _print_startup_urls(self) -> None:
+        """Print the HTTP URL for the viewer."""
+        http_url = f"http://{self._host}:{self._port}"
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(Text(http_url, style="bold cyan"))
+        except ImportError:
+            print(http_url)
 
     def _scene_config_for(self, scene_name: str) -> dict[str, Any] | None:
         """Callback: return config dict for a named scene, or None if not found."""
@@ -618,72 +641,40 @@ class Visualizer(_JupyterDisplayMixin):
         self._thread = None
 
     def wait_for_browser(self, timeout: float = 30.0) -> bool:
-        """Block until a browser connects to the viewer."""
+        """Block until a browser completes the WebSocket ready round-trip."""
         if self._server is None or self._loop is None:
             raise RuntimeError("Server not started. Call start() first.")
 
         try:
-            from rich.console import Console, Group
-            from rich.live import Live
-            from rich.spinner import Spinner
+            from rich.console import Console
             from rich.text import Text
 
-            console = Console()
-            url_text = Text(self.url, style="bold cyan underline")
-            spinner = Spinner("dots", style="yellow")
+            Console().print(
+                Text.assemble(
+                    "Waiting for browser to connect at ",
+                    Text(self.url, style="bold cyan underline"),
+                    " ...",
+                )
+            )
+        except ImportError:
+            print(f"Waiting for browser to connect at {self.url} ...")
 
-            with Live(
-                Group(
-                    spinner,
-                    Text.assemble(
-                        " Waiting for browser to connect at ",
-                        url_text,
-                        " ...",
-                    ),
-                ),
-                console=console,
-                transient=True,
-                refresh_per_second=10,
-            ) as live:
-                deadline = time.monotonic() + timeout
-                while time.monotonic() < deadline:
-                    if self._server._ws_clients:
-                        live.update(
-                            Text.from_markup(
-                                "[bold green]✓[/bold green] Browser connected."
-                            ),
-                        )
-                        return True
-                    live.update(
-                        Group(
-                            spinner,
-                            Text.assemble(
-                                " Waiting for browser to connect at ",
-                                url_text,
-                                f" ... ({time.monotonic() - (deadline - timeout):.0f}s / {timeout:.0f}s)",
-                            ),
-                        ),
-                    )
-                    time.sleep(0.1)
+        if self._ws_ready_event.wait(timeout=timeout):
+            return True
 
-            console.print(
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(
                 Text.from_markup(
                     f"[bold red]✗[/bold red] No browser connected within {timeout:.0f}s"
                 )
             )
-            return False
         except ImportError:
-            print(f"Waiting for browser to connect at {self.url} ...")
-            future = asyncio.run_coroutine_threadsafe(
-                self._server.wait_for_client(timeout), self._loop
-            )
-            try:
-                connected = future.result(timeout=timeout + 2)
-                if connected:
-                    print("Browser connected.")
-                return connected
-            except TimeoutError:
-                return False
+            pass
+        self._print_ws_timeout_note()
+        return False
 
     def _wait_for_client_quiet(self, timeout: float = 3.0) -> bool:
         """Poll for a WebSocket client with a compact spinner."""
@@ -702,6 +693,28 @@ class Visualizer(_JupyterDisplayMixin):
 
         print("No existing browser connected — opening new tab.")
         return False
+
+    def _print_ws_timeout_note(self) -> None:
+        """Print a note about WebSocket reachability when browser didn't connect."""
+        ws_url = f"ws://{self._host}:{self._port}/ws"
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(
+                Text(
+                    f"If the browser loaded the page but shows an empty scene, "
+                    f"check that\n{ws_url} is reachable "
+                    f"(port forwarding/proxy must support WebSocket upgrades).",
+                    style="dim",
+                )
+            )
+        except ImportError:
+            print(
+                f"If the browser loaded the page but shows an empty scene, "
+                f"check that {ws_url} is reachable "
+                f"(port forwarding/proxy must support WebSocket upgrades)."
+            )
 
     def _print_connect(self, remote_addr: str) -> None:
         try:
@@ -1085,8 +1098,12 @@ class Visualizer(_JupyterDisplayMixin):
                 )
 
     async def _on_client_connect(self, remote_addr: str) -> None:
-        """Push controls state and scene list when a new client connects."""
-        self._print_connect(remote_addr)
+        """Push controls state when a new client connects.
+
+        The comprehensive connection summary (with browser_id, page_token,
+        viewer_name, and IP) is printed by VizServer._print_ws_connected
+        after the browser's ``ready`` WebSocket message arrives.
+        """
         # Push controls for the main scene initially (scene-specific push happens
         # after the ready message tells us which scene the client wants)
         await self._push_controls_async("")

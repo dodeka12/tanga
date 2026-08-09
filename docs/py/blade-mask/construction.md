@@ -5,8 +5,9 @@ which blades of an algebra are relevant to a computation.
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 ```
 
 ## From explicit blade IDs

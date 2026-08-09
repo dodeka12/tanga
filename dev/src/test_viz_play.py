@@ -81,15 +81,15 @@ There are three spheres $S_1$, $S_2$ and $S_3$.
     steps = 100
     off_x = -1.0
     step = 2 / steps
-    # for _ in range(steps):
-    #     off_x += step
-    #     viz.update_label(
-    #         lid,
-    #         text=f"Point Pair offset {off_x:.2f}",
-    #         style=LabelStyle(offset_local=(off_x, 0, 0)),
-    #     )
-    #     viz.flush()
-    #     viz.sleep_ms(100)
+    for _ in range(steps):
+        off_x += step
+        viz.update_label(
+            lid,
+            text=f"Point Pair offset {off_x:.2f}",
+            style=LabelStyle(offset_local=(off_x, 0, 0)),
+        )
+        viz.flush()
+        viz.sleep_ms(100)
 
     SceneExporter(viz).export_html("_output/test_viz.html", overwrite=True)
     # ── Open browser and block until Ctrl+C ────────────────

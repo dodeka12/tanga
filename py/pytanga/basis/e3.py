@@ -35,8 +35,16 @@ class BasisE3(Algebra):
         self.e23 = self.op(self.e2, self.e3)
         self.I = mv({self.pseudoscalar_id: 1})
 
-    def vector(self, x: float, y: float, z: float) -> MV:
-        """Create a 3D vector: x·e1 + y·e2 + z·e3."""
+    def vector(self, x=0.0, y=0.0, z=0.0) -> MV:
+        """Create a 3D vector: x·e1 + y·e2 + z·e3.
+
+        Can also be called with a :class:`~pytanga.geometry.entities.Point`
+        or :class:`~pytanga.geometry.entities.Direction` as a single argument.
+        """
+        from pytanga.geometry.entities import Direction, Point
+
+        if isinstance(x, (Point, Direction)):
+            return self.multivector({1: x.x, 2: x.y, 4: x.z})
         return self.multivector({1: x, 2: y, 4: z})
 
     def rnd_vector(

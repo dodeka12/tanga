@@ -2,7 +2,9 @@
 
 Operator data classes are algebra-independent `@dataclass` types that represent
 versors (geometric transformations). They can be used as input to
-[`create()`](create.md) and as output from [`analyze_operator()`](analysis.md).
+[`Geometry.create()`](create.md) (or the plain [`create()`](create.md) function)
+and as output from [`Geometry.which_operator()`](analysis.md) (or the plain
+[`analyze_operator()`](analysis.md) function).
 
 All classes are imported from `pytanga.geometry` (defined in `pytanga.geometry.operators`).
 
@@ -40,19 +42,24 @@ refl_line = ReflectionLine(direction=Direction(0, 0, 1))
 |---------|-----------|
 | E3, P3, PGA3, N3 | ✓ |
 
-## ReflectionOrigin
+## ReflectionPoint
 
-Reflection about the origin (trivector ``e₁∧e₂∧e₃``).
+Reflection about the origin (trivector ``e₁∧e₂∧e₃``) — equivalent to
+`ReflectionPoint(Point(0, 0, 0))`.
 
 ```python
-from pytanga.geometry import ReflectionOrigin
+from pytanga.geometry import ReflectionPoint, Point
 
-refl_origin = ReflectionOrigin()
+refl_origin = ReflectionPoint(Point(0, 0, 0))
 ```
 
 | Algebra | Supported |
 |---------|-----------|
 | P3, PGA3, N3 | ✓ |
+
+!!! note
+    ``ReflectionPoint`` is the general point-reflection operator — pass any
+    ``Point`` to reflect about an arbitrary center.
 
 ## Inversion (N3 only)
 
@@ -101,15 +108,19 @@ t = Translator(vector=Direction(1, 2, 0))
 
 ## Dilator (N3 only)
 
-A uniform dilation (scaling) about the origin.
+A uniform dilation (scaling) about an origin point.
 
 ```python
-from pytanga.geometry import Dilator
+from pytanga.geometry import Dilator, Point
 
-d = Dilator(factor=2.0)  # double all distances
+d = Dilator(factor=2.0)  # scale about origin (0,0,0)
+d2 = Dilator(factor=3.0, origin=Point(1, 0, 0))  # scale about point (1,0,0)
 ```
 
-The MV representation is `cosh(γ/2) + sinh(γ/2)·E` where γ = ln(factor) and E = einf∧eo.
+The MV representation is ``D = 1 + (1−d)/(1+d)·E`` where d is the dilation
+factor and E = einf∧eo (Perwass formula). For non-origin dilators,
+``D_t = T · D · T̃`` where T translates from global origin to the dilation
+center.
 
 | Algebra | Supported |
 |---------|-----------|
@@ -135,16 +146,17 @@ m = Motor(
 
 ## GeneralRotor
 
-A general even-grade versor with rotor + translator bivector parts
-(like a Motor but without the grade‑4 term). Represents a rotation about
-an axis that does **not** pass through the origin.
+A rotation about an axis that does **not** pass through the origin. Takes
+the rotation angle, axis direction, and an origin point on the axis.
 
 ```python
-from pytanga.geometry import GeneralRotor, Rotor, Translator, Direction
+from pytanga.geometry import GeneralRotor, Direction, Point
+import math
 
 gr = GeneralRotor(
-    rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
-    translator=Translator(vector=Direction(1, 0, 0)),
+    angle=0.5,
+    axis=Direction(0, 0, 1),
+    origin=Point(1, 0, 0),
 )
 ```
 
@@ -152,30 +164,16 @@ gr = GeneralRotor(
 |---------|-----------|
 | PGA3, N3 | ✓ |
 
-## GeneralDilator (N3 only)
-
-A general dilation with optional translation components.
-
-```python
-from pytanga.geometry import GeneralDilator, Translator, Direction
-
-gd = GeneralDilator(
-    factor=2.0,
-    translator=Translator(vector=Direction(1, 0, 0)),
-)
-```
-
 ## Operator Coverage Matrix
 
 | Operator | E3 | P3 | PGA3 | N3 | E2 | P2 | PGA2 | N2 |
 |----------|:--:|:--:|:----:|:--:|:--:|:--:|:----:|:--:|
 | ReflectionPlane | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | ReflectionLine | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| ReflectionOrigin | — | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| ReflectionPoint | — | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | Inversion | — | — | — | ✓ | — | — | — | ✓ |
 | Rotor | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Translator | — | — | ✓ | ✓ | — | — | — | ✓ |
 | Dilator | — | — | — | ✓ | — | — | — | ✓ |
-| GeneralDilator | — | — | — | ✓ | — | — | — | ✓ |
 | Motor | — | — | ✓ | ✓ | — | — | — | ✓ |
 | GeneralRotor | — | — | ✓ | ✓ | — | — | — | ✓ |

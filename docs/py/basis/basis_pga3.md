@@ -176,10 +176,10 @@ In IPNS (dual) form, the grades are swapped:
 | Reflection | 1 | ``R = n`` | Single reflector (plane normal), no null |
 | Rotor | 2 | ``R = n₁·n₂`` | Two Euclidean reflectors → 3D rotation |
 | Translator | 2 | ``T = 1 − ½∑ d_i·(e_i∧e₀)`` | Two null reflectors → translation |
-| GeneralRotor | 2 | ``G = T·R·T̃`` | Rotation about displaced axis, grades {0, 2} |
+| GeneralRotor | 2 | ``G = T·R·T̃`` | Rotation about displaced axis (``angle``, ``axis``, ``origin``), grades {0, 2} |
 | Motor | 4 | ``M = T·R`` | Rotation + translation (rigid body motion) |
 | ReflectionLine | 2 | ``d∧e₀`` | Reflection about a line through origin |
-| ReflectionOrigin | 3 | ``e₁∧e₂∧e₃`` | Reflection about the origin |
+| ReflectionPoint | 3 | ``e₁∧e₂∧e₃`` | Reflection about the origin |
 
 ### 4.1 Rotor
 
@@ -210,15 +210,20 @@ where ``e_1∧e₀ = e_1∧e_p + e_1∧e_m`` (blades 9 and 17).
 ### 4.3 GeneralRotor
 
 A general rotor applies a rotation about an axis that does **not** pass
-through the origin. It is constructed by conjugating a rotor with a
-translator:
+through the origin. It is constructed from an ``angle``, ``axis``
+(``Direction``), and ``origin`` (``Point`` on the axis):
 
-$$
-G = T \cdot R \cdot \tilde{T}
-$$
+```python
+gr = GeneralRotor(
+    angle=0.5,
+    axis=Direction(0, 0, 1),
+    origin=Point(1, 0, 0),
+)
+```
 
-The result has grades {0, 2} (scalar + bivector), distinguishing it from a
-Motor which also has a grade‑4 term.
+Internally, this is built by conjugating a Rotor with a Translator:
+``G = T·R·T̃``. The result has grades {0, 2} (scalar + bivector),
+distinguishing it from a Motor which also has a grade‑4 term.
 
 **Analysis**: The Euclidean bivector part yields the rotation angle and axis;
 the null bivector part encodes the axis displacement.
@@ -254,14 +259,13 @@ Euclidean factors) and translator (from versor coefficients).
 |---|---|---|---|
 | Reflection | ✓ | ✓ | |
 | ReflectionLine | ✓ | ✓ | |
-| ReflectionOrigin | ✓ | ✓ | |
+| ReflectionPoint | ✓ | ✓ | |
 | Rotor | ✓ | ✓ | |
 | Translator | ✓ | ✓ | |
 | GeneralRotor | ✓ | ✓ | Rotation about displaced axis |
 | Motor | ✓ | ✓ | |
 | Inversion | ✗ | ✓ | Requires eo as independent element |
 | Dilator | ✗ | ✓ | Requires ``E = e₀ ∧ e₀^{\text{inv}}`` |
-| GeneralDilator | ✗ | ✓ | Requires full conformal structure |
 
 ---
 

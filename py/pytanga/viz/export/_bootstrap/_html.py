@@ -74,7 +74,6 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "operators" / "dilator.js",
     _RENDERERS_DIR / "operators" / "motor.js",
     _RENDERERS_DIR / "operators" / "general_rotor.js",
-    _RENDERERS_DIR / "operators" / "general_dilator.js",
     _RENDERERS_DIR / "operators" / "reflection_line.js",
     _RENDERERS_DIR / "operators" / "reflection_plane.js",
     _RENDERERS_DIR / "operators" / "reflection_origin.js",

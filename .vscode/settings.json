@@ -1,5 +1,8 @@
 {
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.analysis.extraPaths": [
+        "py"
+    ],
     "python.testing.pytestArgs": [
         "py"
     ],

@@ -64,7 +64,7 @@ class TestInverse:
     def test_mv_times_inv_is_scalar_one(self, alg):
         """a * inv(a) should give scalar 1 (up to precision)."""
         a = alg.multivector({"e1": 1.0, "e2": 2.0, "e12": -1.0})
-        result = a * (~a)
+        result = a * a.inv()
         assert result["s"] == pytest.approx(1.0, abs=1e-9)
         # All non-scalar components should vanish
         for k, v in result._impl.to_dict().items():

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from pytanga.basis.p2 import BasisP2
 
 from .entities import Direction, Line, Point, Space
-from .operators import ReflectionLine, ReflectionOrigin, Rotor
+from .operators import ReflectionLine, ReflectionPoint, Rotor
 
 if TYPE_CHECKING:
     from pytanga.algebra._mv import MV
@@ -39,7 +39,9 @@ E123 = BasisP2.E123
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(mv: MV, *, opns: bool = True) -> Point | Direction | Line | Space:
+def analyze_entity(
+    mv: MV, *, opns: bool = True
+) -> Point | Direction | Line | Space | None:
     """Analyze an MV in P2 as a geometric entity.
 
     Parameters
@@ -64,7 +66,7 @@ def analyze_entity(mv: MV, *, opns: bool = True) -> Point | Direction | Line | S
 
 def _analyze_entity_opns(
     mv: MV,
-) -> Point | Direction | Line | Space:
+) -> Point | Direction | Line | Space | None:
     """OPNS entity analysis."""
     if mv.is_zero:
         raise ValueError("Zero MV does not represent a geometric entity")
@@ -178,12 +180,12 @@ def _line_from_factors(mv: MV) -> Line:
 
 def analyze_operator(
     mv: MV,
-) -> ReflectionLine | ReflectionOrigin | Rotor:
+) -> ReflectionLine | ReflectionPoint | Rotor:
     """Analyze an MV in P2 as a versor / operator.
 
     Reflection detection (by blade grade and e₃ component):
 
-    - Grade 1, only e₃ → :class:`ReflectionOrigin`
+    - Grade 1, only e₃ → :class:`ReflectionPoint`
     - Grade 1, e₃ = 0 → :class:`ReflectionLine` (line through origin)
     - Grade 2, e₃ terms present → :class:`ReflectionLine` (line reflection)
     - 2 factors → :class:`Rotor`
@@ -213,10 +215,10 @@ def analyze_operator(
         raise ValueError(f"Versor has {len(factors)} factors – unexpected for P2")
 
 
-def _classify_grade1_versor(mv: MV) -> ReflectionLine | ReflectionOrigin:
-    """Grade-1 versor: determines ReflectionLine vs ReflectionOrigin.
+def _classify_grade1_versor(mv: MV) -> ReflectionLine | ReflectionPoint:
+    """Grade-1 versor: determines ReflectionLine vs ReflectionPoint.
 
-    - Only e₃ component → ReflectionOrigin.
+    - Only e₃ component → ReflectionPoint.
     - Euclidean components present, e₃ = 0 → ReflectionLine (line direction).
     """
     grade1 = mv.grade(1)
@@ -228,7 +230,7 @@ def _classify_grade1_versor(mv: MV) -> ReflectionLine | ReflectionOrigin:
     if eucl_norm < 1e-15:
         if abs(e3_val) < 1e-15:
             raise ValueError("Zero vector – not a valid versor")
-        return ReflectionOrigin()
+        return ReflectionPoint(Point(0.0, 0.0, 0.0))
     else:
         if abs(e3_val) > 1e-15:
             raise ValueError("Mixed e₃ and Euclidean components – ambiguous P2 versor")

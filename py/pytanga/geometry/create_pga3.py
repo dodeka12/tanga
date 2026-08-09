@@ -30,10 +30,9 @@ from ._pga3_utils import (
     EM,
     EP,
     _get_e0,
-    _pga3_dual,
 )
-from .entities import Direction, Plane, Point
-from .operators import GeneralRotor, ReflectionLine, ReflectionOrigin, Rotor, Translator
+from .entities import Direction, Line, Plane, Point
+from .operators import GeneralRotor, ReflectionLine, Rotor, Translator
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -53,15 +52,12 @@ def create_point(
 
     *opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + z·e₃ + e₀``.
     """
+    p_ipns = basis.multivector({E1: x, E2: y, E3: z, EP: 1.0, EM: 1.0})
     if not opns:
         # IPNS (dual) form
-        return basis.multivector({E1: x, E2: y, E3: z, EP: 1.0, EM: 1.0})
+        return p_ipns
 
-    # OPNS: three orthogonal planes through the point
-    p1 = basis.multivector({E1: 1.0, EP: -x, EM: -x})
-    p2 = basis.multivector({E2: 1.0, EP: -y, EM: -y})
-    p3 = basis.multivector({E3: 1.0, EP: -z, EM: -z})
-    return p1.op(p2).op(p3)
+    return p_ipns.dual()
 
 
 def create_direction(
@@ -74,15 +70,11 @@ def create_direction(
 
     *opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + z·e₃``.
     """
+    d_ipns = basis.multivector({E1: -x, E2: -y, E3: -z})
     if not opns:
-        return basis.multivector({E1: x, E2: y, E3: z})
+        return d_ipns
 
-    # OPNS: dualize the IPNS direction vector using the 4D PGA dual.
-    # A direction's IPNS form is v₁e₁ + v₂e₂ + v₃e₃ (no e₀ component).
-    # Its OPNS form is the 4D dual of this, producing a grade‑3 trivector
-    # whose dual has zero e₀ coefficient (ideal point at infinity).
-    ipns = basis.multivector({E1: x, E2: y, E3: z})
-    return _pga3_dual(ipns)
+    return d_ipns.dual()
 
 
 def create_line(
@@ -174,24 +166,24 @@ def create_rotor(basis: Algebra, angle: float, axis: Direction) -> MV:
     return basis.multivector(
         {
             0: math.cos(half),
-            E23: math.sin(half) * axis.x,
-            E13: -math.sin(half) * axis.y,
-            E12: math.sin(half) * axis.z,
+            E23: -math.sin(half) * axis.x,
+            E13: math.sin(half) * axis.y,
+            E12: -math.sin(half) * axis.z,
         }
     )
 
 
 def create_translator(basis: Algebra, dx: float, dy: float, dz: float) -> MV:
-    """``1 - 0.5·(dx·e₁∧e₀ + dy·e₂∧e₀ + dz·e₃∧e₀)``."""
+    """``T = 1 + 0.5·(dx·e₁∧e₀ + dy·e₂∧e₀ + dz·e₃∧e₀)``."""
     return basis.multivector(
         {
             0: 1.0,
-            9: -0.5 * dx,
-            17: -0.5 * dx,
-            10: -0.5 * dy,
-            18: -0.5 * dy,
-            12: -0.5 * dz,
-            20: -0.5 * dz,
+            9: 0.5 * dx,
+            17: 0.5 * dx,
+            10: 0.5 * dy,
+            18: 0.5 * dy,
+            12: 0.5 * dz,
+            20: 0.5 * dz,
         }
     )
 
@@ -205,49 +197,42 @@ def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
     return t_mv.gp(r_mv)
 
 
-def create_reflection(basis: Algebra, normal: Direction) -> MV:
-    """Grade‑1 reflection vector (Euclidean)."""
-    return basis.multivector({E1: normal.x, E2: normal.y, E3: normal.z})
+def create_reflection_line(basis: Algebra, line: Line) -> MV:
+    """Reflection across a line — same blade as the line entity OPNS.
+
+    In PGA3, a line is a grade-2 bivector (intersection of two planes).
+    """
+    return create_line(basis, line.origin, line.direction, opns=True)
 
 
-def create_general_rotor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
-    """General rotor: rotation about an axis NOT passing through the origin.
+def create_reflection_plane(basis: Algebra, plane: Plane) -> MV:
+    """Reflection across a plane — same blade as the plane entity OPNS.
+
+    In PGA3, a plane is a grade-1 vector.
+    """
+    return create_plane(basis, plane, opns=True)
+
+
+def create_reflection_point(basis: Algebra, point: Point) -> MV:
+    """Reflection in a point — same blade as the point entity OPNS.
+
+    In PGA3, a point is a grade-3 trivector.
+    Reflection in the origin is ``ReflectionPoint(Point(0,0,0))``.
+    """
+    return create_point(basis, point.x, point.y, point.z, opns=True)
+
+
+def create_general_rotor(
+    basis: Algebra, angle: float, axis: Direction, origin: Point
+) -> MV:
+    """General rotor: rotation about an arbitrary origin point.
 
     ``G = T · R · T̃`` — the conjugation cancels the translator's effect on
-    position, leaving a pure rotation about a displaced axis.
+    position, leaving a pure rotation about the origin point.
 
     The result has grades {0, 2} (scalar + bivector), distinguishing it from
     a Motor which also has a grade‑4 term.
     """
-    t_mv = create_translator(
-        basis, translator.vector.x, translator.vector.y, translator.vector.z
-    )
-    r_mv = create_rotor(basis, rotor.angle, rotor.axis)
+    t_mv = create_translator(basis, origin.x, origin.y, origin.z)
+    r_mv = create_rotor(basis, angle, axis)
     return t_mv.gp(r_mv).gp(t_mv.rev())
-
-
-def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
-    """Reflection on a line through the origin.
-
-    In PGA3, this is a bivector ``d∧e₀`` (grade 2).
-    """
-    return basis.multivector(
-        {
-            9: direction.x,
-            17: direction.x,  # e1∧ep, e1∧em
-            10: direction.y,
-            18: direction.y,  # e2∧ep, e2∧em
-            12: direction.z,
-            20: direction.z,  # e3∧ep, e3∧em
-        }
-    )
-
-
-def create_reflection_origin(basis: Algebra) -> MV:
-    """Reflection about the origin.
-
-    In PGA3, this is the trivector ``e₁∧e₂∧e₃`` (grade 3).
-    """
-    if hasattr(basis, "e1"):
-        return basis.e1.op(basis.e2).op(basis.e3)
-    return basis.multivector({E123: 1.0}).grade(3)

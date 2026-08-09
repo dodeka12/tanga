@@ -19,13 +19,12 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
 )
@@ -180,9 +179,8 @@ class TestSerializeOperators:
         assert d["color"] == "#aaccff"
 
     def test_reflection_origin(self):
-        r = ReflectionOrigin()
+        r = ReflectionPoint(point=Point(0, 0, 0))
         d = _serialize(r)
-        assert d["kind"] == "ReflectionOrigin"
         assert d["origin"] == [0, 0, 0]
         assert d["color"] == "#ffffff"
 
@@ -233,48 +231,50 @@ class TestSerializeOperators:
 
     def test_general_rotor(self):
         gr = GeneralRotor(
-            rotor=Rotor(angle=0.5, axis=Direction(0, 1, 0)),
-            translator=Translator(vector=Direction(1, 0, 0)),
+            angle=0.5,
+            axis=Direction(0, 1, 0),
+            origin=Point(1, 0, 0),
         )
         d = _serialize(gr)
         assert d["kind"] == "GeneralRotor"
-        assert d["rotor"]["angle"] == 0.5
-        assert d["rotor"]["axis"] == [0, 1, 0]
-        assert d["translator"]["vector"] == [1, 0, 0]
+        assert d["angle"] == 0.5
+        assert d["axis"] == [0, 1, 0]
+        assert d["origin"] == [1, 0, 0]
         assert d["color"] == "#ff9966"
 
-    def test_general_dilator(self):
-        gd = GeneralDilator(
-            factor=2.0, translator=Translator(vector=Direction(1, 0, 0))
-        )
+    def test_dilator_with_offset_origin(self):
+        gd = Dilator(factor=2.0, origin=Point(1, 2, 3))
         d = _serialize(gd)
-        assert d["kind"] == "GeneralDilator"
+        assert d["kind"] == "Dilator"
         assert d["factor"] == 2.0
-        assert d["translator"]["vector"] == [1, 0, 0]
+        assert d["origin"] == [1.0, 2.0, 3.0]
 
-    def test_general_dilator_no_translator(self):
-        gd = GeneralDilator(factor=3.0, translator=None)
+    def test_dilator_at_origin(self):
+        gd = Dilator(factor=3.0)
         d = _serialize(gd)
-        assert d["kind"] == "GeneralDilator"
+        assert d["kind"] == "Dilator"
         assert d["factor"] == 3.0
-        assert "translator" not in d
+        assert d["origin"] == [0.0, 0.0, 0.0]
 
     def test_all_operators_json_serializable(self):
         ops = [
             ReflectionPlane(normal=Direction(1, 0, 0)),
+            ReflectionLine(direction=Direction(1, 0, 0)),
+            ReflectionPoint(point=Point(0, 0, 0)),
             Inversion(center=Point(0, 0, 0)),
             Rotor(angle=0.5, axis=Direction(0, 0, 1)),
             Translator(vector=Direction(1, 0, 0)),
             Dilator(factor=2.0),
+            Dilator(factor=1.5, origin=Point(1, 0, 0)),
             Motor(
                 rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
                 translator=Translator(vector=Direction(1, 0, 0)),
             ),
             GeneralRotor(
-                rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
-                translator=Translator(vector=Direction(1, 0, 0)),
+                angle=0.5,
+                axis=Direction(0, 0, 1),
+                origin=Point(0, 0, 0),
             ),
-            GeneralDilator(factor=1.5, translator=None),
         ]
         for op in ops:
             d = _serialize(op)

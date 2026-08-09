@@ -177,9 +177,9 @@ def create_rotor(basis: Algebra, angle: float, axis: Direction) -> MV:
     return basis.multivector(
         {
             0: math.cos(half),
-            E23: math.sin(half) * axis.x,
-            E13: -math.sin(half) * axis.y,
-            E12: math.sin(half) * axis.z,
+            E23: -math.sin(half) * axis.x,
+            E13: math.sin(half) * axis.y,
+            E12: -math.sin(half) * axis.z,
         }
     )
 
@@ -236,7 +236,9 @@ def create_motor(basis: Algebra, rotor, translator) -> MV:
     raise ValueError("Motors require conformal embedding (N3); not available in E3.")
 
 
-def create_general_rotor(basis: Algebra, rotor, translator) -> MV:
+def create_general_rotor(
+    basis: Algebra, angle: float, axis: Direction, origin: Point
+) -> MV:
     raise ValueError(
         "General rotors require conformal embedding (N3); not available in E3."
     )
@@ -246,10 +248,4 @@ def create_reflection_origin(basis: Algebra) -> MV:
     raise ValueError(
         "Reflection about the origin requires projective (P3) embedding; "
         "not available in E3 (no e₄ dimension)."
-    )
-
-
-def create_general_dilator(basis: Algebra, factor: float, translator=None) -> MV:
-    raise ValueError(
-        "General dilators require conformal embedding (N3); not available in E3."
     )

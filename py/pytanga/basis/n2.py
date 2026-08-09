@@ -62,5 +62,4 @@ class BasisN2(Algebra):
                 ("eo", self.eo),
             ],
             self,
-            null_swap={"einf": "eo", "eo": "einf"},
         )

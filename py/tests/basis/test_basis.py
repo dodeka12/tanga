@@ -80,43 +80,7 @@ class TestImports:
 
 
 # ---------------------------------------------------------------------------
-# 9.2 — from_name integration
-# ---------------------------------------------------------------------------
-
-
-class TestFromNameNoCompile:
-    """Tests that validate from_name routing without triggering a build."""
-
-    def test_from_name_unknown_raises(self):
-        with pytest.raises(ValueError, match="Unknown"):
-            Algebra.from_name("BOGUS")
-
-
-@_NEEDS_BUILD
-class TestFromName:
-    def test_from_name_pga3_returns_basis(self):
-        b = Algebra.from_name("PGA3")
-        assert isinstance(b, BasisPGA3)
-
-    def test_from_name_n3_returns_basis(self):
-        b = Algebra.from_name("N3")
-        assert isinstance(b, BasisN3)
-
-    def test_from_name_e3_returns_basis(self):
-        b = Algebra.from_name("E3")
-        assert isinstance(b, BasisE3)
-
-    def test_from_name_p3_returns_basis(self):
-        b = Algebra.from_name("P3")
-        assert isinstance(b, BasisP3)
-
-    def test_from_name_g2_returns_plain_algebra(self):
-        a = Algebra.from_name("G2")
-        assert type(a) is Algebra
-
-
-# ---------------------------------------------------------------------------
-# 9.3 — BasisE3 algebra dimensions and named blades
+# 9.2 — BasisE3 algebra dimensions and named blades
 # ---------------------------------------------------------------------------
 
 

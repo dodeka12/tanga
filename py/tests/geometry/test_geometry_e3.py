@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisE3
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create, create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Plane, Point, Space
@@ -21,7 +21,7 @@ from pytanga.geometry.operators import ReflectionLine, ReflectionPlane, Rotor
 @pytest.fixture(scope="module")
 def basis_e3():
     """E3 basis — cached for the whole test module."""
-    return Algebra.from_name("E3")
+    return BasisE3()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -236,26 +236,26 @@ def test_n3_operator_creation_raises_motor(basis_e3):
 
 
 def test_rotor_sign_convention_90_deg_z(basis_e3):
-    """Rotor of +π/2 about z-axis applied to e₁ gives −e₂ (clockwise).
+    """Rotor of +π/2 about z-axis applied to e₁ gives e₂ (counter‑clockwise).
 
     Perwass convention: R = cos(θ/2) − sin(θ/2)·N₂ with rotor axis form
     via r = dual(N₂) giving R = cos(θ/2) + sin(θ/2)·axis_bivector.
     The code uses the axis form.  Application: R * v * R.rev().
-    +90° about z rotates e₁ to −e₂ (clockwise looking from +z).
+    +90° about z rotates e₁ to e₂ (counter‑clockwise looking from +z).
     """
     rotor = create_operator(basis_e3, Rotor(math.pi / 2, Direction(0, 0, 1)))
     e1 = basis_e3.e1
     result = rotor * e1 * rotor.rev()
-    assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(-1.0, abs=1e-10)
+    assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(1.0, abs=1e-10)
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(0.0, abs=1e-10)
 
 
 def test_rotor_sign_convention_90_deg_z_y_to_x(basis_e3):
-    """Rotor of +π/2 about z-axis applied to e₂ gives e₁."""
+    """Rotor of +π/2 about z-axis applied to e₂ gives −e₁ (counter‑clockwise)."""
     rotor = create_operator(basis_e3, Rotor(math.pi / 2, Direction(0, 0, 1)))
     e2 = basis_e3.e2
     result = rotor * e2 * rotor.rev()
-    assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(1.0, abs=1e-10)
+    assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(-1.0, abs=1e-10)
     assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(0.0, abs=1e-10)
 
 
@@ -294,9 +294,9 @@ def test_reflection_line_round_trip_e3(basis_e3):
     mv = create_operator(basis_e3, rl)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionLine)
-    assert result.direction.x == pytest.approx(0)
-    assert result.direction.y == pytest.approx(0)
-    assert abs(result.direction.z) == pytest.approx(1)
+    assert result.line.direction.x == pytest.approx(0)
+    assert result.line.direction.y == pytest.approx(0)
+    assert abs(result.line.direction.z) == pytest.approx(1)
 
 
 def test_reflection_line_e3_application(basis_e3):
@@ -340,9 +340,9 @@ def test_reflection_plane_round_trip_e3(basis_e3):
     mv = create_operator(basis_e3, rp)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionPlane)
-    assert result.normal.x == pytest.approx(0.6)
-    assert result.normal.y == pytest.approx(0.0)
-    assert result.normal.z == pytest.approx(0.8)
+    assert result.plane.normal.x == pytest.approx(0.6)
+    assert result.plane.normal.y == pytest.approx(0.0)
+    assert result.plane.normal.z == pytest.approx(0.8)
 
 
 def test_reflection_plane_e3_application(basis_e3):
@@ -396,7 +396,7 @@ def test_reflection_alias_is_reflection_plane():
 
     r = PRefl(normal=Direction(1, 0, 0))
     assert isinstance(r, ReflectionPlane)
-    assert r.normal.x == 1
+    assert r.plane.normal.x == 1
 
 
 # ═══════════════════════════════════════════════════════════════

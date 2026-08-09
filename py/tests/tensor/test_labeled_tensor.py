@@ -5,25 +5,25 @@
 
 import numpy as np
 import pytest
-
 from pytanga import Algebra, BladeMask, MVTensor
+from pytanga.algebra import _as_mv
+from pytanga.basis import BasisE3
 from pytanga.tensor._labeled import (
     MVLabeledTensor,
     _canonicalise,
-    _raw_names,
-    _mode_at,
     _is_elemwise,
+    _mode_at,
+    _raw_names,
     iter_labels,
 )
 from pytanga.tensor.convert import to_tensor
 from pytanga.tensor.ops import _build_subscript, contract_labeled
 from pytanga.tensor.product import product_tensor
-from pytanga.algebra import _as_mv
 
 
 @pytest.fixture(scope="module")
 def alg():
-    return Algebra.from_name("E3", dtype="float64")
+    return BasisE3(dtype="float64")
 
 
 @pytest.fixture(scope="module")

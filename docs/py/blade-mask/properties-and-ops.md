@@ -97,8 +97,9 @@ new_mask = BladeMask(mask.algebra, mask.ids)
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 full = BladeMask.full(alg)
 
 # Check if a blade is in the mask

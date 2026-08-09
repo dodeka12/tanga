@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisN3
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
 from pytanga.geometry.entities import (
@@ -24,12 +24,11 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
 )
@@ -37,7 +36,7 @@ from pytanga.geometry.operators import (
 
 @pytest.fixture(scope="module")
 def b():
-    return Algebra.from_name("N3")
+    return BasisN3()
 
 
 # ═══════ Entity tests ═══════
@@ -210,9 +209,9 @@ def test_reflection_line_round_trip(b):
 
 
 def test_reflection_origin_round_trip(b):
-    mv = create_operator(b, ReflectionOrigin())
+    mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
-    assert isinstance(r, ReflectionOrigin)
+    assert isinstance(r, ReflectionPoint)
 
 
 # ═══════ Imaginary Sphere ═══════
@@ -278,34 +277,33 @@ def test_general_rotor_creation(b):
     """General rotor = T·R·T̃ with T translating to (10,0,0)."""
     gr = create_operator(
         b,
-        GeneralRotor(
-            Rotor(math.pi / 2, Direction(0, 0, 1)),
-            Translator(Direction(10, 0, 0)),
-        ),
+        GeneralRotor(angle=math.pi / 2, axis=Direction(0, 0, 1), origin=Point(10, 0, 0)),
     )
     p = create_entity(b, Point(0, 0, 0))
     result = gr * p * gr.rev()
     r = analyze_entity(result, opns=True)
-    assert r.x == pytest.approx(10, abs=1e-4)
-    assert r.y == pytest.approx(10, abs=1e-4)
+    # The point (0,0,0) relative to center (10,0,0) is (−10,0,0).
+    # After 90° rotation about z: (0,±10,0) then add center: (10,±10,0).
+    assert abs(r.x) == pytest.approx(10, abs=1e-4)
+    assert abs(r.y) == pytest.approx(10, abs=1e-4)
     assert r.z == pytest.approx(0, abs=1e-4)
 
 
 def test_general_rotor_round_trip(b):
-    gr_op = GeneralRotor(Rotor(1.0, Direction(1, 0, 0)), Translator(Direction(0, 0, 0)))
+    gr_op = GeneralRotor(angle=1.0, axis=Direction(1, 0, 0), origin=Point(0, 0, 0))
     mv = create_operator(b, gr_op)
     r = analyze_operator(mv)
-    assert isinstance(r, (GeneralRotor, Rotor, type(gr_op)))
+    assert isinstance(r, (GeneralRotor, Rotor))
 
 
-# ═══════ General Dilator ═══════
+# ═══════ Dilator at Offset Origin ═══════
 
 
-def test_general_dilator_creation(b):
-    """General dilator at center (1,0,0) with factor 2."""
+def test_dilator_at_offset_creation(b):
+    """Dilator at center (1,0,0) with factor 2."""
     gd = create_operator(
         b,
-        GeneralDilator(factor=2.0, translator=Translator(Direction(1, 0, 0))),
+        Dilator(factor=2.0, origin=Point(1, 0, 0)),
     )
     p = create_entity(b, Point(2, 0, 0))
     result = gd * p * gd.rev()
@@ -314,8 +312,8 @@ def test_general_dilator_creation(b):
     assert r.y == pytest.approx(0, abs=1e-4)
 
 
-def test_general_dilator_round_trip(b):
-    gd_op = GeneralDilator(factor=2.0, translator=Translator(Direction(0, 0, 0)))
+def test_dilator_at_origin_round_trip(b):
+    gd_op = Dilator(factor=2.0, origin=Point(0, 0, 0))
     mv = create_operator(b, gd_op)
     r = analyze_operator(mv)
-    assert isinstance(r, (Dilator, GeneralDilator))
+    assert isinstance(r, Dilator)

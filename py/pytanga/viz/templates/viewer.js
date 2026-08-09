@@ -140,6 +140,7 @@ function connectWebSocket() {
         const readyPayload = { type: 'ready', scene: _myScene };
         if (_browserId) readyPayload.browser_id = _browserId;
         if (_viewerName) readyPayload.viewer_name = _viewerName;
+        if (window.__tanga_page_token) readyPayload.page_token = window.__tanga_page_token;
         ws.send(JSON.stringify(readyPayload));
     };
 

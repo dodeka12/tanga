@@ -21,9 +21,10 @@ from pytanga.solver.solve import solve, solve_lsq, solve_mod
 
 ```python
 from pytanga import Algebra
+from pytanga.basis import BasisE3
 from pytanga.solver.solve import solve
 
-alg = Algebra.from_name("E3", dtype="float64")
+alg = BasisE3(dtype="float64")
 
 X = solve(A, Y, algebra=alg)
 X = solve(A, Y, product='op', left=False, algebra=alg)
@@ -42,9 +43,10 @@ blades of A and Y.  Delegates to `numpy.linalg.solve`.
 
 ```python
 from pytanga import Algebra
+from pytanga.basis import BasisE3
 from pytanga.solver.solve import solve
 
-alg = Algebra.from_name("E3", dtype="float64")
+alg = BasisE3(dtype="float64")
 A = alg.random_mv(rng=42)
 
 X = solve(A, 1.0, algebra=alg)            # solve A * X = 1
@@ -94,7 +96,7 @@ be prime for full invertibility.
 ```python
 from pytanga.solver.solve import solve_mod
 
-alg_i = Algebra.from_name("E3", dtype="int64")
+alg_i = BasisE3(dtype="int64")
 A = alg_i({"e1": 3, "e2": 5, 0: 1})
 
 X = solve_mod(A, 1, modulus=97, algebra=alg_i)   # A * X ≡ 1 (mod 97)

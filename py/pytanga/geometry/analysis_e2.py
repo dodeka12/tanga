@@ -36,7 +36,7 @@ E12 = BasisE2.E12
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(mv: MV, *, opns: bool = True) -> Direction | Space | Line:
+def analyze_entity(mv: MV, *, opns: bool = True) -> Direction | Space | Line | None:
     """Analyze an MV in E2 as a geometric entity.
 
     Parameters
@@ -62,7 +62,7 @@ def analyze_entity(mv: MV, *, opns: bool = True) -> Direction | Space | Line:
     return _analyze_entity_opns(mv)
 
 
-def _analyze_entity_opns(mv: MV) -> Direction | Space:
+def _analyze_entity_opns(mv: MV) -> Direction | Space | None:
     """OPNS entity analysis.
 
     In E2, grade-1 blades are lines through the origin (Direction),

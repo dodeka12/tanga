@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisPGA2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Point, Space
@@ -16,15 +16,15 @@ from pytanga.geometry.operators import (
     GeneralRotor,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
     Rotor,
     Translator,
+    ReflectionPoint,
 )
 
 
 @pytest.fixture(scope="module")
 def b():
-    return Algebra.from_name("PGA2")
+    return BasisPGA2()
 
 
 # ═══════ Entity round‑trips ═══════
@@ -39,11 +39,14 @@ def test_create_point_opns_round_trip(b):
     assert abs(r.y) == pytest.approx(2)
 
 
-def test_create_direction_opns_raises(b):
-    """Direction OPNS in PGA2 triggers blade factorization of a degenerate bivector."""
-    with pytest.raises(ValueError):
-        mv = create_entity(b, Direction(1, 0, 0))
-        analyze_entity(mv, opns=True)
+def test_entity_direction_opns_round_trip(b):
+    """E#: create Direction(1,2) → analyze OPNS → assert exact fields."""
+    mv = create_entity(b, Direction(1, 2, 0))
+    r = analyze_entity(mv, opns=True)
+    assert isinstance(r, Direction), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(1)
+    assert r.y == pytest.approx(2)
+    assert r.z == pytest.approx(0)
 
 
 def test_create_line_opns_round_trip(b):
@@ -82,10 +85,13 @@ def test_rotor_round_trip(b):
 
 
 def test_translator_round_trip(b):
-    """Translator creation works; analysis has known limitation in PGA2."""
+    """create Translator(2,3,0) → analyze → assert vector."""
     t = create_operator(b, Translator(Direction(2, 3, 0)))
-    with pytest.raises(ValueError):
-        analyze_operator(t)
+    r = analyze_operator(t)
+    assert isinstance(r, Translator), f"Got {type(r).__name__}"
+    assert r.vector.x == pytest.approx(2)
+    assert r.vector.y == pytest.approx(3)
+    assert r.vector.z == pytest.approx(0)
 
 
 def test_motor_round_trip(b):
@@ -97,24 +103,33 @@ def test_motor_round_trip(b):
 
 
 def test_reflection_line_round_trip(b):
-    """ReflectionLine creation works; analysis currently raises ValueError (known limitation)."""
+    """create ReflectionLine(x-axis) → analyze → assert ReflectionLine."""
     mv = create_operator(b, ReflectionLine(Direction(1, 0, 0)))
-    # PGA2 reflection line (bivector d∧e₀) triggers same fallback path.
-    with pytest.raises(ValueError):
-        analyze_operator(mv)
+    r = analyze_operator(mv)
+    assert isinstance(r, ReflectionLine), f"Got {type(r).__name__}"
+    # Line is through origin along x: direction perpendicular to normal
+    d = r.line.direction
+    assert abs(d.x) == pytest.approx(1, abs=1e-6)
+    assert abs(d.y) == pytest.approx(0, abs=1e-6)
 
 
 def test_reflection_origin_round_trip(b):
-    mv = create_operator(b, ReflectionOrigin())
+    mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
-    assert isinstance(r, (ReflectionOrigin, Rotor, GeneralRotor))
+    assert isinstance(r, (ReflectionPoint, Rotor, GeneralRotor))
 
 
 def test_general_rotor_round_trip(b):
-    gr = GeneralRotor(Rotor(0.5, Direction(0, 0, 1)), Translator(Direction(1, 0, 0)))
-    mv = create_operator(b, gr)
+    """create GeneralRotor(angle=0.5, z-axis, origin=(1,0,0)) → analyze → assert."""
+    mv = create_operator(
+        b, GeneralRotor(0.5, Direction(0, 0, 1), Point(1, 0, 0))
+    )
     r = analyze_operator(mv)
-    assert isinstance(r, (GeneralRotor, Motor))
+    assert isinstance(r, (GeneralRotor, Motor)), f"Got {type(r).__name__}"
+    if isinstance(r, GeneralRotor):
+        assert r.angle == pytest.approx(0.5, abs=1e-6)
+        assert abs(r.axis.z) == pytest.approx(1)
+        assert r.origin.x == pytest.approx(1, abs=1e-6)
 
 
 # ═══════ Algebra detection ═══════
@@ -124,11 +139,4 @@ def test_pga2_is_not_n2():
     from pytanga.basis import BasisN2, BasisPGA2
 
     b2 = BasisPGA2()
-    assert not isinstance(b2, BasisN2)
-
-
-def test_from_name_pga2_is_not_n2():
-    b2 = Algebra.from_name("PGA2")
-    from pytanga.basis import BasisN2
-
     assert not isinstance(b2, BasisN2)

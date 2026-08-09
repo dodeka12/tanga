@@ -72,10 +72,11 @@ matrix.
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 from pytanga.matrix.product import product_matrix
 from pytanga.enums import EInv
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 full = BladeMask.full(alg)
 vectors = BladeMask(alg, grades=[1])
 

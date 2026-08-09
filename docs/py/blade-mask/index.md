@@ -35,8 +35,9 @@ blade IDs) is enforced at every point where two axes are aligned.
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 
 # All 8 blades
 full = BladeMask.full(alg)

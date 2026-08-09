@@ -2,7 +2,9 @@
 
 Entity data classes are algebra-independent `@dataclass` types that represent
 geometric primitives in Euclidean 2D and 3D space. They can be used as input to
-[`create()`](create.md) and as output from [`analyze_entity()`](analysis.md).
+[`Geometry.create()`](create.md) (or the plain [`create()`](create.md) function)
+and as output from [`Geometry.which_entity()`](analysis.md) (or the plain
+[`analyze_entity()`](analysis.md) function).
 
 All classes are imported from `pytanga.geometry` (defined in `pytanga.geometry.entities`).
 
@@ -27,22 +29,114 @@ print(p)  # Point(x=1.0, y=2.0, z=3.0)
 | PGA3 | IPNS: `x·e1 + y·e2 + z·e3 + e₀` (OPNS: grade‑3 trivector) |
 | N3 | `x·e1 + y·e2 + z·e3 + 0.5(r²-1)·ep + 0.5(r²+1)·em` |
 
+### Construction from a multivector
+
+`Point` can be initialised from a :class:`~pytanga.algebra._mv.MV` (grade‑1 vector
+in a BasisE3 algebra). Only the ``e1``, ``e2`` and ``e3`` components are used:
+
+```python
+from pytanga.basis import BasisE3
+
+e3 = BasisE3()
+mv = e3.vector(3, 4, 5)
+p = Point(mv)   # Point(3.00, 4.00, 5.00)
+```
+
+### Vector arithmetic operators
+
+For simple 3D calculations that do not require geometric algebra, `Point`
+and `Direction` support component‑wise arithmetic operators:
+
+| Expression | Result | Notes |
+|---|---|---|
+| `Point + Point` | `Point` | component‑wise addition |
+| `Point - Point` | `Direction` | vector from right operand to left |
+| `Point + Direction` | `Point` | translate point along direction |
+| `Point - Direction` | `Point` | translate backwards |
+| `scalar * Point` | `Point` | scale by scalar |
+| `Point * scalar` | `Point` | scale by scalar |
+| `Point / scalar` | `Point` | divide by scalar |
+| `-Point` | `Point` | negation |
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `dot(other)` | `float` | Euclidean dot product with another `Point` or `Direction` |
+| `cross(other)` | `Direction` | vector cross product (always returns a `Direction`) |
+| `mag()` | `float` | Euclidean magnitude √(x² + y² + z²) |
+| `norm()` | `Point` | normalised copy (same direction, magnitude 1) |
+
+**Example:**
+
+```python
+from pytanga.geometry import Point, Direction
+
+p1 = Point(3, 0, 0)
+p2 = Point(1, 0, 0)
+d = p1 - p2           # Direction(2.00, 0.00, 0.00)
+d_norm = d.norm()     # Direction(1.00, 0.00, 0.00)
+mid = (p1 + p2) / 2   # Point(2.00, 0.00, 0.00)
+dist = p1.dot(d_norm) # 3.0
+```
+
 ## Direction
 
-An ideal point at infinity (not available in E3).
+A direction vector in 3D space. In E3 a grade‑1 vector represents a line
+through the origin; in P3/N3/PGA3 a direction represents an ideal point
+at infinity.
+
+`Direction` can be initialised from a :class:`~pytanga.algebra._mv.MV` (grade‑1
+vector in a BasisE3 algebra). Only the ``e1``, ``e2`` and ``e3`` components are used.
 
 ```python
 from pytanga.geometry import Direction
 
 d = Direction(x=1.0, y=0.0, z=0.0)
+
+# From an MV
+from pytanga.basis import BasisE3
+e3 = BasisE3()
+mv = e3.vector(1, 2, 3)
+d = Direction(mv)  # Dir(1.00, 2.00, 3.00)
 ```
 
 | Algebra | Supported |
 |---------|-----------|
-| E3 | ✗ |
+| E3 | ✓ (grade‑1 vector) |
 | P3 | ✓ (e4 coefficient = 0) |
 | PGA3 | ✓ (IPNS grade 1, no e₀ component) |
 | N3 | ✓ (SP(point, einf) = 0) |
+
+### Conversion to MV
+
+A `Point` or `Direction` can be passed directly to :meth:`BasisE3.vector`:
+
+```python
+e3.vector(Point(1, 2, 3))     # 1 e1 + 2 e2 + 3 e3
+e3.vector(Direction(1, 0, 0)) # 1 e1
+```
+
+### Vector arithmetic operators
+
+| Expression | Result | Notes |
+|---|---|---|
+| `Direction + Direction` | `Direction` | component‑wise addition |
+| `Direction - Direction` | `Direction` | component‑wise subtraction |
+| `Direction + Point` | `Point` | translate point along direction |
+| `scalar * Direction` | `Direction` | scale by scalar |
+| `Direction * scalar` | `Direction` | scale by scalar |
+| `Direction / scalar` | `Direction` | divide by scalar |
+| `-Direction` | `Direction` | negation |
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `dot(other)` | `float` | Euclidean dot product with another `Point` or `Direction` |
+| `cross(other)` | `Direction` | vector cross product |
+| `mag()` | `float` | Euclidean magnitude √(x² + y² + z²) |
+| `norm()` | `Direction` | normalised copy (same direction, magnitude 1) |
 
 ## Line
 

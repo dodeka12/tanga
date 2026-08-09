@@ -26,7 +26,7 @@ from ._n2_helpers import (
     get_einf,
     get_eo,
 )
-from .entities import Direction, Point
+from .entities import Direction, Line, Point
 from .operators import Rotor, Translator
 
 if TYPE_CHECKING:
@@ -73,6 +73,21 @@ def create_homogeneous_point(
     a = _cop(basis, point.x, point.y)
     einf = get_einf(basis)
     mv = a.op(einf) * weight
+    if not opns:
+        mv = mv.dual()
+    return mv
+
+
+def create_homogeneous_direction(
+    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
+) -> MV:
+    """OPNS: ``d∧e∞`` (grade 2) where d is a 2D Euclidean direction.
+
+    IPNS: dual of OPNS.  The *z* parameter is ignored (2D).
+    """
+    d = basis.multivector({E1: x, E2: y})
+    einf = get_einf(basis)
+    mv = d.op(einf)
     if not opns:
         mv = mv.dual()
     return mv
@@ -211,12 +226,12 @@ def create_imag_circle(
 
 
 def create_rotor(basis: Algebra, angle: float, axis: Direction) -> MV:
-    """``cos(θ/2) + sin(θ/2)·e₁₂``."""
+    """``cos(θ/2) − sin(θ/2)·e₁₂`` (Perwass, CCW for positive angle)."""
     half = angle / 2.0
     return basis.multivector(
         {
             0: math.cos(half),
-            E12: math.sin(half),
+            E12: -math.sin(half),
         }
     )
 
@@ -229,13 +244,30 @@ def create_translator(basis: Algebra, dx: float, dy: float, dz: float) -> MV:
     )
 
 
-def create_dilator(basis: Algebra, factor: float) -> MV:
-    """``D = 1 + (1−d)/(1+d)·E`` where E = e∞∧e₀ (Perwass)."""
+def create_dilator(
+    basis: Algebra,
+    factor: float,
+    *,
+    origin: Point | None = None,
+) -> MV:
+    """Dilator about an origin point.
+
+    ``D = 1 + (1−d)/(1+d)·E`` where E = e∞∧e₀ (Perwass).
+
+    If *origin* is given, returns ``D_t = T·D·T̃`` where T translates
+    from the global origin to the dilation center (general dilator).
+    """
     if factor <= 0:
         raise ValueError(f"Dilator factor must be positive, got {factor}")
     coeff = (1.0 - factor) / (1.0 + factor)
     E = get_einf(basis).op(get_eo(basis))
-    return basis.multivector({0: 1.0}) + E * coeff
+    d = basis.multivector({0: 1.0}) + E * coeff
+
+    if origin is None:
+        return d
+
+    t = create_translator(basis, origin.x, origin.y, 0.0)
+    return t.gp(d).gp(t.rev())
 
 
 def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
@@ -254,36 +286,38 @@ def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     return create_sphere(basis, center, radius, opns=False)
 
 
-def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
-    """Reflection across a *line* through the origin with direction *d*.
+def create_reflection_line(basis: Algebra, line: Line) -> MV:
+    """Reflection across a *line* (not necessarily through origin).
 
-    Returns the bivector ``d∧e∞`` = d.x·e₁∧e∞ + d.y·e₂∧e∞ (grade-2).
+    OPNS: ``Cop(a)∧Cop(b)∧e∞`` where a, b are two points on the line.
     """
-    d = basis.multivector({E1: direction.x, E2: direction.y})
-    return d.op(get_einf(basis))
+    a = _cop(basis, line.origin.x, line.origin.y)
+    b = _cop(
+        basis,
+        line.origin.x + line.direction.x,
+        line.origin.y + line.direction.y,
+    )
+    return a.op(b).op(get_einf(basis))
 
 
-def create_reflection_origin(basis: Algebra) -> MV:
-    """Reflection about the origin (versor = e₀)."""
-    return get_eo(basis)
+def create_reflection_point(basis: Algebra, point: Point) -> MV:
+    """Reflection in a point.
+
+    OPNS: ``Cop(p)∧e∞`` — the HPoint blade used as a versor.
+    This is identical to the OPNS HPoint entity with weight=1.
+    """
+    return create_homogeneous_point(basis, point, weight=1.0, opns=True)
 
 
-def create_general_rotor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
+def create_general_rotor(
+    basis: Algebra, angle: float, axis: Direction, origin: Point
+) -> MV:
     """General rotor: ``G = T·R·T̃`` (Perwass).
 
-    Represents a rotation about an axis (point in 2D) that does NOT pass
-    through the origin.
+    Represents a rotation about *axis* through *origin* (a point in 2D).
+    The result has 5 components (scalar + 4 bivectors),
+    with no 3-vector term (distinguishes it from Motor).
     """
-    t = create_translator(basis, translator.vector.x, translator.vector.y, 0.0)
-    r = create_rotor(basis, rotor.angle, rotor.axis)
+    t = create_translator(basis, origin.x, origin.y, 0.0)
+    r = create_rotor(basis, angle, axis)
     return t.gp(r).gp(t.rev())
-
-
-def create_general_dilator(basis: Algebra, factor: float, translator: Translator) -> MV:
-    """General dilator: ``D_t = T·D·T̃`` (Perwass).
-
-    Represents a dilation about an arbitrary point *t*.
-    """
-    t = create_translator(basis, translator.vector.x, translator.vector.y, 0.0)
-    d = create_dilator(basis, factor)
-    return t.gp(d).gp(t.rev())

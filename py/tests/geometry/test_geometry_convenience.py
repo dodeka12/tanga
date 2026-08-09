@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisN3
 from pytanga.geometry import Geometry
 from pytanga.geometry.entities import Direction, Point, Sphere
 from pytanga.geometry.operators import Rotor
@@ -16,7 +16,7 @@ from pytanga.geometry.operators import Rotor
 
 @pytest.fixture(scope="module")
 def b():
-    return Algebra.from_name("N3")
+    return BasisN3()
 
 
 # ═══ Construction ═══

@@ -11,20 +11,20 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisP2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Point, Space
 from pytanga.geometry.operators import (
     ReflectionLine,
-    ReflectionOrigin,
     Rotor,
+    ReflectionPoint,
 )
 
 
 @pytest.fixture(scope="module")
 def basis_p2():
-    return Algebra.from_name("P2")
+    return BasisP2()
 
 
 # ═══════ Point ═══════
@@ -140,7 +140,7 @@ def test_reflection_line_round_trip(basis_p2):
     mv = create_operator(basis_p2, rl)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionLine)
-    assert abs(result.direction.y) == pytest.approx(1)
+    assert abs(result.line.direction.y) == pytest.approx(1)
 
 
 def test_reflection_line_application(basis_p2):
@@ -153,25 +153,25 @@ def test_reflection_line_application(basis_p2):
     assert float(result[2]) / w == pytest.approx(-2.0)
 
 
-# ═══════ ReflectionOrigin ═══════
+# ═══════ ReflectionPoint ═══════
 
 
 def test_reflection_origin_creation_is_e3(basis_p2):
     from pytanga.basis.p2 import BasisP2
 
-    mv = create_operator(basis_p2, ReflectionOrigin())
+    mv = create_operator(basis_p2, ReflectionPoint(Point(0, 0, 0)))
     assert set(mv.grades) == {1}
     assert float(mv[BasisP2.E3]) == pytest.approx(1)
 
 
 def test_reflection_origin_round_trip(basis_p2):
-    mv = create_operator(basis_p2, ReflectionOrigin())
+    mv = create_operator(basis_p2, ReflectionPoint(Point(0, 0, 0)))
     result = analyze_operator(mv)
-    assert isinstance(result, ReflectionOrigin)
+    assert isinstance(result, ReflectionPoint)
 
 
 def test_reflection_origin_application(basis_p2):
-    ro_mv = create_operator(basis_p2, ReflectionOrigin())
+    ro_mv = create_operator(basis_p2, ReflectionPoint(Point(0, 0, 0)))
     a_hop = basis_p2.multivector({1: 1, 2: 2, 4: 1})
     result = ro_mv * a_hop * ro_mv.rev()
     w = float(result[4])

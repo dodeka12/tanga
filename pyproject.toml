@@ -49,6 +49,7 @@ packages = ["py/pytanga"]
 "docs/cpp" = "pytanga/_docs/cpp"
 "docs/dev" = "pytanga/_docs/dev"
 "docs/index.md" = "pytanga/_docs/index.md"
+"py/examples" = "pytanga/_examples"
 
 [dependency-groups]
 dev = [

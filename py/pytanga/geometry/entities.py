@@ -29,14 +29,89 @@ class Point:
         z: The z-coordinate.
 
     Supported algebras: E3, P3, N3/PGA3
+
+    Can be initialised from a BasisE3 multivector (grade-1),
+    in which case only the e1, e2 and e3 components are used.
     """
 
     x: float
     y: float
     z: float
 
+    def __init__(self, x=0.0, y=0.0, z=0.0):
+        # When called with a single MV argument, extract vector components
+        if hasattr(x, "_alg"):
+            mv = x
+            object.__setattr__(self, "x", float(mv[1]))
+            object.__setattr__(self, "y", float(mv[2]))
+            object.__setattr__(self, "z", float(mv[4]))
+        else:
+            object.__setattr__(self, "x", float(x))
+            object.__setattr__(self, "y", float(y))
+            object.__setattr__(self, "z", float(z))
+
     def __repr__(self) -> str:
         return f"Point{_fmt_v(self.x, self.y, self.z)}"
+
+    def __neg__(self) -> "Point":
+        return Point(-self.x, -self.y, -self.z)
+
+    def __add__(self, other) -> "Point":
+        if isinstance(other, Point):
+            return Point(self.x + other.x, self.y + other.y, self.z + other.z)
+        if isinstance(other, Direction):
+            return Point(self.x + other.x, self.y + other.y, self.z + other.z)
+        return NotImplemented
+
+    def __radd__(self, other) -> "Point":
+        if isinstance(other, Direction):
+            return Point(self.x + other.x, self.y + other.y, self.z + other.z)
+        return NotImplemented
+
+    def __sub__(self, other):
+        if isinstance(other, Point):
+            return Direction(self.x - other.x, self.y - other.y, self.z - other.z)
+        if isinstance(other, Direction):
+            return Point(self.x - other.x, self.y - other.y, self.z - other.z)
+        return NotImplemented
+
+    def __mul__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            return Point(self.x * scalar, self.y * scalar, self.z * scalar)
+        return NotImplemented
+
+    def __rmul__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            return Point(self.x * scalar, self.y * scalar, self.z * scalar)
+        return NotImplemented
+
+    def __truediv__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            return Point(self.x / scalar, self.y / scalar, self.z / scalar)
+        return NotImplemented
+
+    def dot(self, other: "Point | Direction") -> float:
+        """Euclidean dot product with another Point or Direction."""
+        return self.x * other.x + self.y * other.y + self.z * other.z
+
+    def cross(self, other: "Point | Direction") -> "Direction":
+        """Vector cross product.  Always returns a Direction."""
+        return Direction(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
+
+    def mag(self) -> float:
+        """Euclidean magnitude sqrt(x² + y² + z²)."""
+        return (self.x**2 + self.y**2 + self.z**2) ** 0.5
+
+    def norm(self) -> "Point":
+        """Return a normalised copy (same direction, magnitude 1)."""
+        m = self.mag()
+        if m == 0:
+            raise ValueError("Cannot normalise zero-length Point")
+        return Point(self.x / m, self.y / m, self.z / m)
 
 
 @dataclass(frozen=True)
@@ -53,14 +128,87 @@ class Direction:
         z: The z-component of the direction vector.
 
     Supported algebras: E3, P3, N3/PGA3
+
+    Can be initialised from a BasisE3 multivector (grade-1),
+    in which case only the e1, e2 and e3 components are used.
     """
 
     x: float
     y: float
     z: float
 
+    def __init__(self, x=0.0, y=0.0, z=0.0):
+        # When called with a single MV argument, extract vector components
+        if hasattr(x, "_alg"):
+            mv = x
+            object.__setattr__(self, "x", float(mv[1]))
+            object.__setattr__(self, "y", float(mv[2]))
+            object.__setattr__(self, "z", float(mv[4]))
+        else:
+            object.__setattr__(self, "x", float(x))
+            object.__setattr__(self, "y", float(y))
+            object.__setattr__(self, "z", float(z))
+
     def __repr__(self) -> str:
         return f"Dir{_fmt_v(self.x, self.y, self.z)}"
+
+    def __neg__(self) -> "Direction":
+        return Direction(-self.x, -self.y, -self.z)
+
+    def __add__(self, other) -> "Direction":
+        if isinstance(other, Direction):
+            return Direction(self.x + other.x, self.y + other.y, self.z + other.z)
+        if isinstance(other, Point):
+            return Point(self.x + other.x, self.y + other.y, self.z + other.z)
+        return NotImplemented
+
+    def __radd__(self, other) -> "Point":
+        if isinstance(other, Point):
+            return Point(self.x + other.x, self.y + other.y, self.z + other.z)
+        return NotImplemented
+
+    def __sub__(self, other) -> "Direction":
+        if isinstance(other, Direction):
+            return Direction(self.x - other.x, self.y - other.y, self.z - other.z)
+        return NotImplemented
+
+    def __mul__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            return Direction(self.x * scalar, self.y * scalar, self.z * scalar)
+        return NotImplemented
+
+    def __rmul__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            return Direction(self.x * scalar, self.y * scalar, self.z * scalar)
+        return NotImplemented
+
+    def __truediv__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            return Direction(self.x / scalar, self.y / scalar, self.z / scalar)
+        return NotImplemented
+
+    def dot(self, other: "Point | Direction") -> float:
+        """Euclidean dot product with another Point or Direction."""
+        return self.x * other.x + self.y * other.y + self.z * other.z
+
+    def cross(self, other: "Point | Direction") -> "Direction":
+        """Vector cross product.  Always returns a Direction."""
+        return Direction(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
+
+    def mag(self) -> float:
+        """Euclidean magnitude sqrt(x² + y² + z²)."""
+        return (self.x**2 + self.y**2 + self.z**2) ** 0.5
+
+    def norm(self) -> "Direction":
+        """Return a normalised copy (same direction, magnitude 1)."""
+        m = self.mag()
+        if m == 0:
+            raise ValueError("Cannot normalise zero-length Direction")
+        return Direction(self.x / m, self.y / m, self.z / m)
 
 
 @dataclass(frozen=True)
@@ -196,6 +344,23 @@ class ImagSphere(Sphere):
 
 
 @dataclass(frozen=True)
+class HDirection:
+    """A homogeneous direction (point at infinity).
+
+    Represented by ``d∧e∞`` in the conformal model, where *d* is a
+    Euclidean direction vector.  Useful as a reflection operator
+    (reflect in a point at infinity → maps to e∞).
+
+    Supported algebras: N3/N2 (needs e∞)
+    """
+
+    direction: Direction
+
+    def __repr__(self) -> str:
+        return f"HDirection(dir={self.direction})"
+
+
+@dataclass(frozen=True)
 class Space:
     """The entire 3D volume (pseudoscalar).
 
@@ -212,6 +377,7 @@ Entity = (
     Point
     | Direction
     | HPoint
+    | HDirection
     | PointPair
     | ImagPointPair
     | Line

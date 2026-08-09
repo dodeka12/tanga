@@ -11,21 +11,21 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisP3
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Plane, Point, Space
 from pytanga.geometry.operators import (
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPlane,
     Rotor,
+    ReflectionPoint,
 )
 
 
 @pytest.fixture(scope="module")
 def basis_p3():
-    return Algebra.from_name("P3")
+    return BasisP3()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -214,9 +214,9 @@ def test_reflection_line_round_trip(basis_p3):
     mv = create_operator(basis_p3, rl)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionLine)
-    assert result.direction.x == pytest.approx(0)
-    assert result.direction.y == pytest.approx(0)
-    assert abs(result.direction.z) == pytest.approx(1)
+    assert result.line.direction.x == pytest.approx(0)
+    assert result.line.direction.y == pytest.approx(0)
+    assert abs(result.line.direction.z) == pytest.approx(1)
 
 
 def test_reflection_line_application(basis_p3):
@@ -253,7 +253,7 @@ def test_reflection_plane_round_trip(basis_p3):
     mv = create_operator(basis_p3, rp)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionPlane)
-    assert result.normal.z == pytest.approx(1)
+    assert result.plane.normal.z == pytest.approx(1)
 
 
 def test_reflection_plane_application(basis_p3):
@@ -271,28 +271,28 @@ def test_reflection_plane_application(basis_p3):
 
 
 # ═══════════════════════════════════════════════════════════════
-# ReflectionOrigin
+# ReflectionPoint
 # ═══════════════════════════════════════════════════════════════
 
 
 def test_reflection_origin_creation_is_e4(basis_p3):
     """create_reflection_origin returns e₄ (grade 1, only at blade 8)."""
-    mv = create_operator(basis_p3, ReflectionOrigin())
+    mv = create_operator(basis_p3, ReflectionPoint(Point(0, 0, 0)))
     assert set(mv.grades) == {1}
     assert float(mv[8]) == pytest.approx(1)
     assert float(mv[1]) == pytest.approx(0)
 
 
 def test_reflection_origin_round_trip(basis_p3):
-    """create → analyze → ReflectionOrigin."""
-    mv = create_operator(basis_p3, ReflectionOrigin())
+    """create → analyze → ReflectionPoint."""
+    mv = create_operator(basis_p3, ReflectionPoint(Point(0, 0, 0)))
     result = analyze_operator(mv)
-    assert isinstance(result, ReflectionOrigin)
+    assert isinstance(result, ReflectionPoint)
 
 
 def test_reflection_origin_application(basis_p3):
     """e₄·Hop(a)·e₄ → projects to −a."""
-    ro_mv = create_operator(basis_p3, ReflectionOrigin())
+    ro_mv = create_operator(basis_p3, ReflectionPoint(Point(0, 0, 0)))
     a_hop = basis_p3.multivector({1: 1, 2: 2, 4: 3, 8: 1})
     result = ro_mv * a_hop * ro_mv.rev()
     w = float(result[8])

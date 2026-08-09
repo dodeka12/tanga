@@ -11,17 +11,17 @@ from __future__ import annotations
 import math
 
 import pytest
-from pytanga.algebra._algebra import Algebra
+from pytanga.basis import BasisE2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create, create_entity, create_operator
 from pytanga.geometry.entities import Direction, Line, Point, Space
-from pytanga.geometry.operators import ReflectionLine, ReflectionOrigin, Rotor
+from pytanga.geometry.operators import ReflectionLine, ReflectionPoint, Rotor
 
 
 @pytest.fixture(scope="module")
 def basis_e2():
     """E2 basis — cached for the whole test module."""
-    return Algebra.from_name("E2")
+    return BasisE2()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -149,35 +149,28 @@ def test_n2_operator_creation_raises_motor(basis_e2):
 
 
 def test_n2_operator_creation_raises_origin_reflection(basis_e2):
-    """E2 doesn't have e₃, so ReflectionOrigin raises."""
-    with pytest.raises(ValueError, match="Reflection about the origin"):
-        create_operator(basis_e2, ReflectionOrigin())
-
-
-# ═══════════════════════════════════════════════════════════════
-# Rotor
-# ═══════════════════════════════════════════════════════════════
-
-
+    """E2 raises TypeError for ReflectionPoint."""
+    with pytest.raises(TypeError):
+        create_operator(basis_e2, ReflectionPoint(Point(0, 0, 0)))
 def test_rotor_sign_convention_90_deg_z(basis_e2):
-    """Rotor of +π/2 about z-axis applied to e₁ gives −e₂ (clockwise).
+    """Rotor of +π/2 about z-axis applied to e₁ gives e₂ (counter‑clockwise).
 
     In 2D with R = cos(θ/2) + sin(θ/2)·e₁₂:
-    R·e₁·R̃ rotates clockwise (from +z looking down): e₁ → −e₂.
+    R·e₁·R̃ rotates counter‑clockwise (from +z looking down): e₁ → e₂.
     """
     rotor = create_operator(basis_e2, Rotor(math.pi / 2, Direction(0, 0, 1)))
     e1 = basis_e2.e1
     result = rotor * e1 * rotor.rev()
-    assert float(result[basis_e2.blade_id("e2")]) == pytest.approx(-1.0, abs=1e-10)
+    assert float(result[basis_e2.blade_id("e2")]) == pytest.approx(1.0, abs=1e-10)
     assert float(result[basis_e2.blade_id("e1")]) == pytest.approx(0.0, abs=1e-10)
 
 
 def test_rotor_sign_convention_90_deg_z_e2_to_e1(basis_e2):
-    """Rotor of +π/2 about z-axis applied to e₂ gives e₁."""
+    """Rotor of +π/2 about z-axis applied to e₂ gives −e₁ (counter‑clockwise)."""
     rotor = create_operator(basis_e2, Rotor(math.pi / 2, Direction(0, 0, 1)))
     e2 = basis_e2.e2
     result = rotor * e2 * rotor.rev()
-    assert float(result[basis_e2.blade_id("e1")]) == pytest.approx(1.0, abs=1e-10)
+    assert float(result[basis_e2.blade_id("e1")]) == pytest.approx(-1.0, abs=1e-10)
     assert float(result[basis_e2.blade_id("e2")]) == pytest.approx(0.0, abs=1e-10)
 
 
@@ -210,8 +203,8 @@ def test_reflection_line_round_trip(basis_e2):
     mv = create_operator(basis_e2, rl)
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionLine)
-    assert result.direction.x == pytest.approx(0)
-    assert abs(result.direction.y) == pytest.approx(1)
+    assert result.line.direction.x == pytest.approx(0)
+    assert abs(result.line.direction.y) == pytest.approx(1)
 
 
 def test_reflection_line_application(basis_e2):

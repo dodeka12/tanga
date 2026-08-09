@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from pytanga.basis.p3 import BasisP3
 
 from .entities import Direction, Line, Plane, Point, Space
-from .operators import ReflectionLine, ReflectionOrigin, ReflectionPlane, Rotor
+from .operators import ReflectionLine, ReflectionPlane, ReflectionPoint, Rotor
 
 if TYPE_CHECKING:
     from pytanga.algebra._mv import MV
@@ -45,7 +45,7 @@ E34 = BasisP3.E34
 
 def analyze_entity(
     mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Plane | Space:
+) -> Point | Direction | Line | Plane | Space | None:
     """Analyze an MV in P3 as a geometric entity.
 
     Parameters
@@ -71,7 +71,7 @@ def analyze_entity(
 
 def _analyze_entity_opns(
     mv: MV,
-) -> Point | Direction | Line | Plane | Space:
+) -> Point | Direction | Line | Plane | Space | None:
     """OPNS entity analysis."""
     if mv.is_zero:
         raise ValueError("Zero MV does not represent a geometric entity")
@@ -222,12 +222,12 @@ def _plane_from_trivector(mv: MV) -> Plane:
 
 def analyze_operator(
     mv: MV,
-) -> ReflectionLine | ReflectionPlane | ReflectionOrigin | Rotor:
+) -> ReflectionLine | ReflectionPlane | ReflectionPoint | Rotor:
     """Analyze an MV in P3 as a versor / operator.
 
     Reflection detection (by blade grade and e₄ component):
 
-    - Grade 1, only e₄ → :class:`ReflectionOrigin`
+    - Grade 1, only e₄ → :class:`ReflectionPoint`
     - Grade 1, e₄ = 0 → :class:`ReflectionPlane`
     - Grade 2, e₄ terms present → :class:`ReflectionLine`
     - 2 factors → :class:`Rotor`
@@ -257,10 +257,10 @@ def analyze_operator(
         raise ValueError(f"Versor has {len(factors)} factors – unexpected for P3")
 
 
-def _classify_grade1_versor(mv: MV) -> ReflectionPlane | ReflectionOrigin:
-    """Grade-1 versor: determines ReflectionPlane vs ReflectionOrigin.
+def _classify_grade1_versor(mv: MV) -> ReflectionPlane | ReflectionPoint:
+    """Grade-1 versor: determines ReflectionPlane vs ReflectionPoint.
 
-    - Only e₄ component → ReflectionOrigin.
+    - Only e₄ component → ReflectionPoint.
     - Euclidean components present, e₄ = 0 → ReflectionPlane (IPNS normal).
     """
     grade1 = mv.grade(1)
@@ -273,7 +273,7 @@ def _classify_grade1_versor(mv: MV) -> ReflectionPlane | ReflectionOrigin:
     if eucl_norm < 1e-15:
         if abs(e4_val) < 1e-15:
             raise ValueError("Zero vector – not a valid versor")
-        return ReflectionOrigin()
+        return ReflectionPoint(Point(0.0, 0.0, 0.0))
     else:
         if abs(e4_val) > 1e-15:
             raise ValueError("Mixed e₄ and Euclidean components – ambiguous P3 versor")

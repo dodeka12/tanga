@@ -26,6 +26,7 @@ from .entities import (
     Circle,
     Direction,
     Entity,
+    HDirection,
     HPoint,
     ImagCircle,
     ImagPointPair,
@@ -39,17 +40,17 @@ from .entities import (
 )
 from .operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
     Operator,
     Reflection,
     ReflectionLine,
-    ReflectionOrigin,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
+    TripleReflection,
 )
 
 __all__ = [
@@ -57,6 +58,7 @@ __all__ = [
     "Circle",
     "Direction",
     "Entity",
+    "HDirection",
     "HPoint",
     "ImagCircle",
     "ImagPointPair",
@@ -69,17 +71,17 @@ __all__ = [
     "Sphere",
     # Operators
     "Dilator",
-    "GeneralDilator",
     "GeneralRotor",
     "Inversion",
     "Motor",
     "Operator",
     "Reflection",
     "ReflectionLine",
-    "ReflectionOrigin",
     "ReflectionPlane",
+    "ReflectionPoint",
     "Rotor",
     "Translator",
+    "TripleReflection",
     # Geometry facade
     "Geometry",
     # Analysis

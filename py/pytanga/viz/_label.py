@@ -25,12 +25,11 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
+    ReflectionPoint,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -50,14 +49,13 @@ EntityLike = (
     | Space
     | ReflectionLine
     | ReflectionPlane
-    | ReflectionOrigin
+    | ReflectionPoint
     | Inversion
     | Rotor
     | Translator
     | Dilator
     | Motor
     | GeneralRotor
-    | GeneralDilator
 )
 
 

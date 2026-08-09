@@ -142,9 +142,10 @@ operation as a sparse +-1/0 tensor.
 
 ```python
 from pytanga import Algebra, BladeMask
+from pytanga.basis import BasisE3
 from pytanga.tensor import MVTensor
 
-alg = Algebra.from_name("E3")
+alg = BasisE3()
 full = BladeMask.full(alg)
 sub  = BladeMask(alg, [0, 1, 2, 3])  # s, e1, e2, e3
 

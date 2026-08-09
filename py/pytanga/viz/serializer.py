@@ -24,12 +24,11 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
+    ReflectionPoint,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -105,7 +104,7 @@ def serialize_entity(
         result.update(
             _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
         )
-    elif isinstance(entity, ReflectionOrigin):
+    elif isinstance(entity, ReflectionPoint):
         result.update(
             _serialize_reflection_origin(
                 entity, props, kind=kind, styles_map=styles_map
@@ -130,10 +129,6 @@ def serialize_entity(
     elif isinstance(entity, GeneralRotor):
         result.update(
             _serialize_general_rotor(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, GeneralDilator):
-        result.update(
-            _serialize_general_dilator(entity, props, kind=kind, styles_map=styles_map)
         )
 
     else:
@@ -441,8 +436,8 @@ def _serialize_reflection_line(
         {"length": 5.0, "thickness": 0.04},
         styles_map=styles_map,
     ) | {
-        "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
-        "origin": [0.0, 0.0, 0.0],
+        "direction": [ent.line.direction.x, ent.line.direction.y, ent.line.direction.z],
+        "origin": [ent.line.origin.x, ent.line.origin.y, ent.line.origin.z],
     }
 
 
@@ -459,13 +454,13 @@ def _serialize_reflection_plane(
         {"extent": 5.0},
         styles_map=styles_map,
     ) | {
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
-        "origin": [0.0, 0.0, 0.0],
+        "normal": [ent.plane.normal.x, ent.plane.normal.y, ent.plane.normal.z],
+        "origin": [ent.plane.point.x, ent.plane.point.y, ent.plane.point.z],
     }
 
 
 def _serialize_reflection_origin(
-    ent: ReflectionOrigin,
+    ent: ReflectionPoint,
     props: Dict[str, Any],
     *,
     kind: str,
@@ -550,7 +545,7 @@ def _serialize_dilator(
         styles_map=styles_map,
     ) | {
         "factor": ent.factor,
-        "origin": [0.0, 0.0, 0.0],
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
     }
 
 
@@ -595,46 +590,7 @@ def _serialize_general_rotor(
         {},
         styles_map=styles_map,
     ) | {
-        "rotor": {
-            "angle": ent.rotor.angle,
-            "axis": [ent.rotor.axis.x, ent.rotor.axis.y, ent.rotor.axis.z],
-        },
-        "translator": {
-            "vector": [
-                ent.translator.vector.x,
-                ent.translator.vector.y,
-                ent.translator.vector.z,
-            ],
-        },
-        "origin": [0.0, 0.0, 0.0],
+        "angle": ent.angle,
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
     }
-
-
-def _serialize_general_dilator(
-    ent: GeneralDilator,
-    props: Dict[str, Any],
-    *,
-    kind: str,
-    styles_map: Dict[str, Any] | None = None,
-) -> Dict[str, Any]:
-    result = _apply_defaults(
-        props,
-        kind,
-        {"ringCount": 4, "maxRadius": 3.0},
-        styles_map=styles_map,
-    )
-    result.update(
-        {
-            "factor": ent.factor,
-            "origin": [0.0, 0.0, 0.0],
-        }
-    )
-    if ent.translator is not None:
-        result["translator"] = {
-            "vector": [
-                ent.translator.vector.x,
-                ent.translator.vector.y,
-                ent.translator.vector.z,
-            ],
-        }
-    return result

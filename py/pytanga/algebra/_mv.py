@@ -97,7 +97,7 @@ class MV:
         return self._alg.ip(self, other)
 
     def __invert__(self) -> "MV":
-        return self._alg.inv(self)
+        return self._alg.rev(self)
 
     # -----------------------------------------------------------------------
     # Representation

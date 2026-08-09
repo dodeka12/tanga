@@ -4,6 +4,7 @@
 """Install packaged documentation for AI-tool consumption."""
 
 import os
+import shutil
 from pathlib import Path
 
 
@@ -16,16 +17,16 @@ def _find_repo_root(start: Path) -> Path | None:
 
 
 def install_docs() -> Path:
-    """Symlink packaged (or dev) docs into the current project tree.
+    """Copy packaged (or dev) docs into the current project tree.
 
     Target directory: ``<repo-root>/.dep-docs/pytanga/`` (if a repo root is
     found by walking up from the current working directory) or
     ``./.dep-docs/pytanga/`` as fallback.
 
     When the function detects that it is running from an installed wheel (i.e.
-    ``pytanga/_docs`` exists inside the package directory), the symlink will
-    point there.  When running from a source checkout the symlink will point
-    directly at the repository's top-level ``docs/`` directory.
+    ``pytanga/_docs`` exists inside the package directory), the docs will be
+    copied from there.  When running from a source checkout the docs will be
+    copied directly from the repository's top-level ``docs/`` directory.
     """
     cwd = Path.cwd()
     repo = _find_repo_root(cwd)
@@ -38,10 +39,10 @@ def install_docs() -> Path:
     packaged = pkg_dir / "_docs"
 
     if packaged.is_dir():
-        # installed wheel – symlink the packaged copy
+        # installed wheel – copy the packaged docs
         source = packaged
     else:
-        # dev / source checkout – symlink the repo's top-level docs/
+        # dev / source checkout – copy the repo's top-level docs/
         dev_repo = _find_repo_root(pkg_dir)
         if dev_repo is None:
             raise FileNotFoundError(
@@ -52,10 +53,12 @@ def install_docs() -> Path:
         if not source.is_dir():
             raise FileNotFoundError(f"Expected docs directory not found: {source}")
 
-    # ----- create the symlink --------------------------------------------
+    # ----- copy the docs -------------------------------------------------
     target_dir.parent.mkdir(parents=True, exist_ok=True)
-    if target_dir.is_symlink() or target_dir.exists():
+    if target_dir.is_symlink() or target_dir.is_file():
         target_dir.unlink()
-    os.symlink(source, target_dir)
+    elif target_dir.is_dir():
+        shutil.rmtree(target_dir)
+    shutil.copytree(source, target_dir)
 
     return target_dir

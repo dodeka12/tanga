@@ -14,9 +14,8 @@ This script covers:
   2. Dimension         — blade count, practical vs theoretical limits
   3. Signature         — bitmask form and tuple form
   4. Data type         — float32, float64, int32, int64
-  5. Modulus           — integer algebras (brief, with references)
-  6. Named algebras    — Algebra.from_name() shortcut
-  7. Properties        — what you can inspect on an Algebra instance
+   5. Modulus           — integer algebras (brief, with references)
+   6. Properties        — what you can inspect on an Algebra instance
 
 Run with:
     uv run python py/examples/algebra_demo.py
@@ -27,9 +26,9 @@ from pytanga.algebra import Algebra
 
 
 def hr(title: str) -> None:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {title}")
-    print('='*60)
+    print("=" * 60)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -138,8 +137,8 @@ readable; the bitmask form matches the C++ template parameter directly.
 """)
 
 # Demonstrate that bitmask and tuple give the same algebra
-alg_bitmask = Algebra(5, 0b11001)           # e1, e4, e5 square to -1
-alg_tuple   = Algebra(5, (1, 4, 5))         # same, written as a tuple
+alg_bitmask = Algebra(5, 0b11001)  # e1, e4, e5 square to -1
+alg_tuple = Algebra(5, (1, 4, 5))  # same, written as a tuple
 
 assert alg_bitmask._sig == alg_tuple._sig, "signatures should match"
 print(f"  Algebra(5, 0b11001)._sig  = {alg_bitmask._sig:#07b}")
@@ -157,17 +156,17 @@ print("""
 """)
 
 # Quadratic-form check: e_k * e_k should equal +1 or -1
-alg = Algebra(4, (4,))   # e4² = -1
-e4  = alg("e4")
-sq  = e4 * e4
-print(f"  In Algebra(4, (4,)):  e4 * e4 = ", end="")
-sq.show()   # expect -1 scalar
+alg = Algebra(4, (4,))  # e4² = -1
+e4 = alg("e4")
+sq = e4 * e4
+print("  In Algebra(4, (4,)):  e4 * e4 = ", end="")
+sq.show()  # expect -1 scalar
 
-alg2 = Algebra(4)        # all positive
-e4p  = alg2("e4")
-sq2  = e4p * e4p
-print(f"  In Algebra(4, 0):     e4 * e4 = ", end="")
-sq2.show()   # expect +1 scalar
+alg2 = Algebra(4)  # all positive
+e4p = alg2("e4")
+sq2 = e4p * e4p
+print("  In Algebra(4, 0):     e4 * e4 = ", end="")
+sq2.show()  # expect +1 scalar
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -196,7 +195,7 @@ Algebra(3, 0, 'float32') and Algebra(3, 0, 'float64') are independent.
 """)
 
 alg_f32 = Algebra(3, dtype="float32")
-alg_f64 = Algebra(3, dtype="float64")    # same as Algebra(3)
+alg_f64 = Algebra(3, dtype="float64")  # same as Algebra(3)
 alg_i64 = Algebra(3, dtype="int64")
 
 a_f = alg_f64("e1 + 2 e2")
@@ -244,52 +243,17 @@ e1m = alg_mod("e1")
 e2m = alg_mod("e2")
 
 # Show that 60 * (e1 * e1) = 60 is reduced to -41 under mod 101
-large_coeff = alg_mod({1: 60})         # 60 e1
-product = large_coeff * large_coeff    # 60*60 = 3600 e1*e1 = 3600 scalar
+large_coeff = alg_mod({1: 60})  # 60 e1
+product = large_coeff * large_coeff  # 60*60 = 3600 e1*e1 = 3600 scalar
 product.show(f"  (60 e1)² = 3600·s → hmod({MOD})")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Named algebras — Algebra.from_name()
-# ─────────────────────────────────────────────────────────────────────────────
-hr("6. Named algebras — Algebra.from_name()")
-
-print("""
-Common algebras have short names.  Algebra.from_name(name) is a
-convenience constructor that also returns a dedicated Basis subclass
-for the four built-in bases (E3, P3, N3, PGA3):
-
-  Name    dim  sig bitmask   Notes
-  ------  ---  -----------   ----------------------------------------
-  'E3'      3  0b000         Euclidean 3D         (returns BasisE3)
-  'P3'      4  0b1000        Projective 3D / PGA  (returns BasisP3)
-  'N3'      5  0b10000       Null / CGA-like       (returns BasisN3)
-  'PGA3'    5  0b10000       PGA3 (returns BasisPGA3)
-  'G2'      2  0b00          Euclidean 2D
-  'G3'      3  0b000         Euclidean 3D (plain Algebra, no Basis)
-  'PGA2'    4  0b1000        Projective 2D
-  'CGA3'    5  0b10000       Conformal 3D
-  'STA'     4  0b1110        Spacetime algebra (e2,e3,e4 square to -1)
-""")
-
-alg_g3  = Algebra.from_name("G3")
-alg_sta = Algebra.from_name("STA")
-
-print(f"  from_name('G3')  → {alg_g3!r}")
-print(f"  from_name('STA') → {alg_sta!r}")
-
-# Verify STA signature
-e2_sta = alg_sta("e2")
-print(f"\n  In STA, e2 * e2 =", end=" ")
-(e2_sta * e2_sta).show()   # expect -1
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 7. Properties
+# 6. Properties
 # ─────────────────────────────────────────────────────────────────────────────
 hr("7. Algebra properties")
 
-alg = Algebra(4, (4,), dtype="float64")   # G(4, e4²=-1) via tuple sig
+alg = Algebra(4, (4,), dtype="float64")  # G(4, e4²=-1) via tuple sig
 
 print(f"""
   alg = Algebra(4, (4,), dtype='float64')

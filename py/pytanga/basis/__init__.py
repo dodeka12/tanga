@@ -12,17 +12,6 @@ from .p3 import BasisP3
 from .pga2 import BasisPGA2
 from .pga3 import BasisPGA3
 
-_CLASS_MAP = {
-    "E2": BasisE2,
-    "E3": BasisE3,
-    "N2": BasisN2,
-    "N3": BasisN3,
-    "P2": BasisP2,
-    "P3": BasisP3,
-    "PGA2": BasisPGA2,
-    "PGA3": BasisPGA3,
-}
-
 __all__ = [
     "BasisE2",
     "BasisE3",

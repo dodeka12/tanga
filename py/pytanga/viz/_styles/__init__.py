@@ -34,12 +34,11 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
+    ReflectionPoint,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -66,13 +65,12 @@ from ._entity_styles import (
 from ._operator_styles import (
     CrossHairPointStyle,
     DilatorStyle,
-    GeneralDilatorStyle,
     GeneralRotorStyle,
     InversionStyle,
     MotorStyle,
     ReflectionLineStyle,
-    ReflectionOriginStyle,
     ReflectionPlaneStyle,
+    ReflectionPointStyle,
     RotorStyle,
     TranslatorStyle,
 )
@@ -98,14 +96,13 @@ ObjVizStyle: TypeAlias = Union[
     SpaceStyle,
     ReflectionLineStyle,
     ReflectionPlaneStyle,
-    ReflectionOriginStyle,
+    ReflectionPointStyle,
     InversionStyle,
     RotorStyle,
     TranslatorStyle,
     DilatorStyle,
     MotorStyle,
     GeneralRotorStyle,
-    GeneralDilatorStyle,
     CrossHairPointStyle,
 ]
 
@@ -129,16 +126,13 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
         color="#aaccff", opacity=0.6, length=5.0, thickness=0.04
     ),
     "ReflectionPlane": ReflectionPlaneStyle(color="#88ccff", opacity=0.35, extent=5.0),
-    "ReflectionOrigin": ReflectionOriginStyle(color="#ffffff", opacity=0.5, extent=1.0),
+    "ReflectionPoint": ReflectionPointStyle(color="#ffffff", opacity=0.5, extent=1.0),
     "Inversion": InversionStyle(color="#cc88ff", opacity=0.4),
     "Rotor": RotorStyle(color="#ff8844", opacity=0.7, disc_radius=1.5),
     "Translator": TranslatorStyle(color="#44aaff", opacity=0.9, length=3.0),
     "Dilator": DilatorStyle(color="#ffcc44", opacity=0.6, ring_count=4, max_radius=3.0),
     "Motor": MotorStyle(color="#ff66cc", opacity=0.7),
     "GeneralRotor": GeneralRotorStyle(color="#ff9966", opacity=0.6),
-    "GeneralDilator": GeneralDilatorStyle(
-        color="#ffcc88", opacity=0.6, ring_count=4, max_radius=3.0
-    ),
     # Imaginary entity variants
     "ImagPointPair": PointPairStyle(
         color="#ff88ff",
@@ -186,14 +180,13 @@ def _default_style_for(
         | Space
         | ReflectionLine
         | ReflectionPlane
-        | ReflectionOrigin
+        | ReflectionPoint
         | Inversion
         | Rotor
         | Translator
         | Dilator
         | Motor
         | GeneralRotor
-        | GeneralDilator
     ),
 ) -> VizStyle:
     """Return the default style instance for a given entity/operator type."""

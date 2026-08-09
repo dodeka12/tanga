@@ -30,12 +30,11 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionOrigin,
+    ReflectionPoint,
     ReflectionPlane,
     Rotor,
     Translator,
@@ -53,14 +52,13 @@ EntityLike = (
     | Space
     | ReflectionLine
     | ReflectionPlane
-    | ReflectionOrigin
+    | ReflectionPoint
     | Inversion
     | Rotor
     | Translator
     | Dilator
     | Motor
     | GeneralRotor
-    | GeneralDilator
 )
 
 
@@ -264,11 +262,11 @@ def _compute_label_frame(entity: EntityLike) -> LabelFrame:
         y = _cross(z, x)
         return LabelFrame(x, y, z, 1.5)
 
-    # ── Dilator / GeneralDilator ──
-    if isinstance(entity, (Dilator, GeneralDilator)):
+    # ── Dilator ──
+    if isinstance(entity, Dilator):
         return LabelFrame((1, 0, 0), (0, 1, 0), (0, 0, 1), 3.0)
 
-    if isinstance(entity, ReflectionOrigin):
+    if isinstance(entity, ReflectionPoint):
         return LabelFrame((1, 0, 0), (0, 1, 0), (0, 0, 1), 1.0)
 
     # Fallback

@@ -73,11 +73,19 @@ TanGA is a geometric algebra library with a C++ core and a Python interface
 
 ## AI-Tool Documentation Access
 
-When pytanga is installed as a dependency, the markdown documentation is
-packaged inside the wheel. AI coding tools can expose it by calling
-`pytanga.install_docs()`, which creates a symlink at `.dep-docs/pytanga/`
-in the current repository root. In a source checkout, it points directly
-at the local `docs/` directory. See the
+When pytanga is installed as a dependency, the markdown documentation and
+example scripts are packaged inside the wheel. AI coding tools can expose
+them by calling:
+
+```python
+import pytanga
+
+pytanga.install_docs()     # copies docs to .dep-docs/pytanga/
+pytanga.install_examples() # copies examples to .dep-examples/pytanga/
+```
+
+In a source checkout the functions copy from the local `docs/` and
+`py/examples/` directories respectively. See the
 [Python docs](py/index.md#ai-tool-documentation-access) for details.
 
 ---

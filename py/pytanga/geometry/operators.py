@@ -13,58 +13,96 @@ analysis and create modules.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
-from .entities import Direction, Point
+from .entities import Direction, HDirection, Line, Plane, Point
 
 
 @dataclass(frozen=True)
 class ReflectionLine:
-    """Reflection on a line through the origin.
+    """Reflection across a line (not necessarily through origin).
 
-    Uses a grade-1 vector (the line direction) as versor.
-    Applying ``d a d⁻¹`` keeps the component parallel to d unchanged
-    and flips the perpendicular component.
+    The versor is ``Cop(a)∧Cop(b)∧e∞`` for two points a, b on the line.
+    Equivalent to the OPNS line entity blade.
 
-    Supported algebras: E3, P3, N3/PGA3
+    Can be constructed with either a :class:`Line` (new, full line) or a
+    :class:`Direction` (backward-compat, origin-only line).
+
+    Supported algebras: E3, P3, N3/PGA3 (origin-only via Direction),
+                       N3/N2 (full entity blade)
     """
 
-    direction: Direction
+    line: Line
+
+    def __init__(self, line_or_direction: Line | Direction = None, /, **kwargs):
+        # Accept keyword 'line' for new style
+        if line_or_direction is None and "line" in kwargs:
+            line_or_direction = kwargs["line"]
+        # Backward-compat: accept Direction → Line through origin
+        if isinstance(line_or_direction, Direction):
+            line_or_direction = Line(Point(0, 0, 0), line_or_direction)
+        # Backward-compat: accept direction= keyword
+        if line_or_direction is None and "direction" in kwargs:
+            line_or_direction = Line(Point(0, 0, 0), kwargs["direction"])
+        if line_or_direction is None:
+            raise TypeError("ReflectionLine requires a Line or Direction")
+        object.__setattr__(self, "line", line_or_direction)
 
     def __repr__(self) -> str:
-        return f"ReflLine(d={self.direction})"
+        return f"ReflLine(line={self.line})"
 
 
 @dataclass(frozen=True)
 class ReflectionPlane:
-    """Reflection in a plane through the origin.
+    """Reflection across a plane (not necessarily through origin).
 
-    Uses a grade-2 bivector (``n·I⁻¹``) as versor, where *n* is the
-    plane normal.  Applying ``−B a B̃`` keeps the in-plane component
-    unchanged and flips the normal component.
+    The versor is ``Cop(a)∧Cop(b)∧Cop(c)∧e∞`` for three non-collinear
+    points a, b, c on the plane.  Equivalent to the OPNS plane entity blade.
 
-    Supported algebras: E3, P3, N3/PGA3
+    Can be constructed with either a :class:`Plane` (new, full plane) or a
+    :class:`Direction` (backward-compat, origin-only plane).
+
+    Supported algebras: E3, P3, N3/PGA3 (origin-only via Direction),
+                       N3/N2 (full entity blade)
     """
 
-    normal: Direction
+    plane: Plane
+
+    def __init__(self, plane_or_normal: Plane | Direction = None, /, **kwargs):
+        # Accept keyword 'plane' for new style
+        if plane_or_normal is None and "plane" in kwargs:
+            plane_or_normal = kwargs["plane"]
+        # Backward-compat: accept Direction → Plane through origin
+        if isinstance(plane_or_normal, Direction):
+            plane_or_normal = Plane(Point(0, 0, 0), plane_or_normal)
+        # Backward-compat: accept normal= keyword
+        if plane_or_normal is None and "normal" in kwargs:
+            plane_or_normal = Plane(Point(0, 0, 0), kwargs["normal"])
+        if plane_or_normal is None:
+            raise TypeError("ReflectionPlane requires a Plane or Direction")
+        object.__setattr__(self, "plane", plane_or_normal)
 
     def __repr__(self) -> str:
-        return f"ReflPlane(n={self.normal})"
+        return f"ReflPlane(plane={self.plane})"
 
 
 @dataclass(frozen=True)
-class ReflectionOrigin:
-    """Reflection about the origin.
+class ReflectionPoint:
+    """Reflection in a point.
 
-    Uses e₄ as versor in P3: applying ``e₄ A e₄`` where A = Hop(a)
-    gives ``−a + e₄``, which projects to ``−a``.
+    The versor is ``Cop(p)∧e∞`` — the HPoint blade used as a versor.
+    Applying the sandwich reflects points across *p*: ``q → 2p − q``.
 
-    Supported algebras: P3, N3/PGA3
+    Reflection in the origin is ``ReflectionPoint(Point(0,0,0))``.
+
+    Supported algebras: N3/N2 (needs e∞)
     """
 
+    point: Point
+
     def __repr__(self) -> str:
-        return "ReflOrigin"
+        return f"ReflPoint(pt={self.point})"
 
 
 @dataclass(frozen=True)
@@ -114,15 +152,25 @@ class Translator:
 
 @dataclass(frozen=True)
 class Dilator:
-    """A uniform dilation (scaling) about the origin.
+    """A uniform dilation (scaling) about an origin point.
 
-    Supported algebras: N3 only (needs E = einfi∧eo)
+    Form: ``D_t = T · D · T̃`` where T translates from the global origin
+    to the dilation center and ``D = 1 + (1−d)/(1+d)·E`` is the
+    origin‑centered dilator (E = e∞∧e₀, Perwass).
+
+    When ``origin=(0,0,0)``, this is a pure dilator about the origin:
+    ``D = 1 + (1−d)/(1+d)·E``, sandwich ``D·p·D̃`` scales p by factor d.
+
+    Supported algebras: N3/N2 only (needs E = e∞∧e₀)
     """
 
     factor: float
+    origin: Point = field(default_factory=lambda: Point(0, 0, 0))
 
     def __repr__(self) -> str:
-        return f"Dilator(×{self.factor:.2f})"
+        if self.origin.x == 0 and self.origin.y == 0 and self.origin.z == 0:
+            return f"Dilator(×{self.factor:.2f})"
+        return f"Dilator(×{self.factor:.2f} at {self.origin})"
 
 
 @dataclass(frozen=True)
@@ -141,33 +189,51 @@ class Motor:
 
 @dataclass(frozen=True)
 class GeneralRotor:
-    """A general even-grade versor with rotor + translator bivector parts.
+    """A rotation about an arbitrary origin point.
 
-    Like a Motor but without the e123i (pseudoscalar-like) term.
+    The underlying MV is ``G = T · R · T̃`` where *T* translates from
+    the global origin to the rotation center and *R* is the rotor.
 
-    Supported algebras: N3 only (needs eo for full versor analysis)
+    In 2D the axis is always ``Dir(0, 0, 1)`` and origin z=0.
     """
 
-    rotor: Rotor
-    translator: Translator
+    angle: float
+    axis: Direction
+    origin: Point = field(default_factory=lambda: Point(0, 0, 0))
 
     def __repr__(self) -> str:
-        return f"GenRotor({self.rotor}, {self.translator})"
+        deg = math.degrees(self.angle)
+        return f"GenRotor({deg:.1f}° about {self.axis} at {self.origin})"
 
 
 @dataclass(frozen=True)
-class GeneralDilator:
-    """A general dilation with optional translation components.
+class TripleReflection:
+    """Three successive plane reflections — reflection × rotor/translator.
 
-    Supported algebras: N3 only (needs E = einfi∧eo)
+    Because three reflections can be grouped as (rotor + reflection)
+    or (translator + reflection) or (general rotor + reflection) in
+    multiple ways, the decomposition into rotor+translator is not unique.
+    This class preserves the raw plane information for downstream use.
     """
 
-    factor: float
-    translator: Optional[Translator] = None
+    planes: tuple[Plane, Plane, Plane]
 
     def __repr__(self) -> str:
-        t = f", {self.translator}" if self.translator is not None else ""
-        return f"GenDilator(×{self.factor:.2f}{t})"
+        return f"TripleRefl({self.planes[0]}, {self.planes[1]}, {self.planes[2]})"
+
+
+@dataclass(frozen=True)
+class VersorFactors:
+    """Unclassified versor — raw grade-1 factors from blade factorization.
+
+    Used as a fallback when a versor cannot be classified as a specific
+    operator (e.g. mixed dilator+rotor combinations in N3/N2).
+    """
+
+    factors: tuple = ()  # tuple of MV (grade-1 vectors)
+
+    def __repr__(self) -> str:
+        return f"VersorFactors({len(self.factors)} factors)"
 
 
 # Backward-compatibility alias: Reflection → ReflectionPlane
@@ -177,12 +243,14 @@ Reflection = ReflectionPlane  # deprecated; use ReflectionLine/ReflectionPlane
 Operator = (
     ReflectionLine
     | ReflectionPlane
-    | ReflectionOrigin
+    | ReflectionPoint
+    | HDirection
     | Inversion
     | Rotor
     | Translator
     | Dilator
     | Motor
     | GeneralRotor
-    | GeneralDilator
+    | TripleReflection
+    | VersorFactors
 )

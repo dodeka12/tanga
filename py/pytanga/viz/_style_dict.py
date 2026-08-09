@@ -139,14 +139,13 @@ def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:
         "Space": None,
         "ReflectionLine": None,
         "ReflectionPlane": None,
-        "ReflectionOrigin": None,
+        "ReflectionPoint": None,
         "Inversion": None,
         "Rotor": None,
         "Translator": None,
         "Dilator": None,
         "Motor": None,
         "GeneralRotor": None,
-        "GeneralDilator": None,
     }
 
 
@@ -170,14 +169,13 @@ def _kind_to_key(kind: str) -> str:
         "space": "Space",
         "reflection_line": "ReflectionLine",
         "reflection_plane": "ReflectionPlane",
-        "reflection_origin": "ReflectionOrigin",
+        "reflection_origin": "ReflectionPoint",
         "inversion": "Inversion",
         "rotor": "Rotor",
         "translator": "Translator",
         "dilator": "Dilator",
         "motor": "Motor",
         "general_rotor": "GeneralRotor",
-        "general_dilator": "GeneralDilator",
     }
     key = mapping.get(kind.lower())
     if key is None:

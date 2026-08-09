@@ -265,16 +265,6 @@ class _GltfBuilder:
                     8,
                 )
             ]
-        elif kind == "ReflectionOrigin":
-            return [_prims.box_edges(self._style_val(ent, "extent", 1.0) * 0.7)]
-        elif kind == "GeneralDilator":
-            n = int(self._style_val(ent, "ring_count", 4))
-            mx = self._style_val(ent, "max_radius", 3.0)
-            prims = []
-            for i in range(n):
-                t = n > 1 and i / (n - 1) or 0.5
-                prims.append(_prims.torus(0.3 + t * (mx - 0.3), 0.02, 8, 8))
-            return prims
         return []
 
     @staticmethod
@@ -294,9 +284,7 @@ class _GltfBuilder:
             "Rotor",
             "Motor",
             "GeneralRotor",
-            "GeneralDilator",
             "Dilator",
-            "ReflectionOrigin",
         ):
             return tuple(ent.get("origin", [0, 0, 0]))  # type: ignore[return-value]
         return (0.0, 0.0, 0.0)
