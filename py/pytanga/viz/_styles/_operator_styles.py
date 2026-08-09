@@ -54,6 +54,22 @@ class ReflectionPlaneStyle(VizStyle):
 
 
 @dataclass
+class ReflectionPointStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.ReflectionPoint`."""
+
+    color: str | None = None
+    opacity: float | None = None
+    extent: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "ReflectionPointStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.extent is not None:
+            result["extent"] = self.extent
+        return result
 
 
 @dataclass
@@ -170,28 +186,6 @@ class GeneralRotorStyle(VizStyle):
             result["color"] = self.color
         if self.opacity is not None:
             result["opacity"] = self.opacity
-        return result
-
-
-@dataclass
-class GeneralDilatorStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.GeneralDilator`."""
-
-    color: str | None = None
-    opacity: float | None = None
-    ring_count: int | None = None
-    max_radius: float | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "GeneralDilatorStyle"}
-        if self.color is not None:
-            result["color"] = self.color
-        if self.opacity is not None:
-            result["opacity"] = self.opacity
-        if self.ring_count is not None:
-            result["ring_count"] = self.ring_count
-        if self.max_radius is not None:
-            result["max_radius"] = self.max_radius
         return result
 
 

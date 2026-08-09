@@ -108,15 +108,19 @@ t = Translator(vector=Direction(1, 2, 0))
 
 ## Dilator (N3 only)
 
-A uniform dilation (scaling) about the origin.
+A uniform dilation (scaling) about an origin point.
 
 ```python
-from pytanga.geometry import Dilator
+from pytanga.geometry import Dilator, Point
 
-d = Dilator(factor=2.0)  # double all distances
+d = Dilator(factor=2.0)  # scale about origin (0,0,0)
+d2 = Dilator(factor=3.0, origin=Point(1, 0, 0))  # scale about point (1,0,0)
 ```
 
-The MV representation is `cosh(γ/2) + sinh(γ/2)·E` where γ = ln(factor) and E = einf∧eo.
+The MV representation is ``D = 1 + (1−d)/(1+d)·E`` where d is the dilation
+factor and E = einf∧eo (Perwass formula). For non-origin dilators,
+``D_t = T · D · T̃`` where T translates from global origin to the dilation
+center.
 
 | Algebra | Supported |
 |---------|-----------|
@@ -160,19 +164,6 @@ gr = GeneralRotor(
 |---------|-----------|
 | PGA3, N3 | ✓ |
 
-## GeneralDilator (N3 only)
-
-A general dilation with optional translation components.
-
-```python
-from pytanga.geometry import GeneralDilator, Translator, Direction
-
-gd = GeneralDilator(
-    factor=2.0,
-    translator=Translator(vector=Direction(1, 0, 0)),
-)
-```
-
 ## Operator Coverage Matrix
 
 | Operator | E3 | P3 | PGA3 | N3 | E2 | P2 | PGA2 | N2 |
@@ -184,6 +175,5 @@ gd = GeneralDilator(
 | Rotor | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Translator | — | — | ✓ | ✓ | — | — | — | ✓ |
 | Dilator | — | — | — | ✓ | — | — | — | ✓ |
-| GeneralDilator | — | — | — | ✓ | — | — | — | ✓ |
 | Motor | — | — | ✓ | ✓ | — | — | — | ✓ |
 | GeneralRotor | — | — | ✓ | ✓ | — | — | — | ✓ |

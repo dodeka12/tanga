@@ -34,7 +34,6 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
@@ -66,13 +65,12 @@ from ._entity_styles import (
 from ._operator_styles import (
     CrossHairPointStyle,
     DilatorStyle,
-    GeneralDilatorStyle,
     GeneralRotorStyle,
     InversionStyle,
     MotorStyle,
     ReflectionLineStyle,
-    ReflectionPointStyle,
     ReflectionPlaneStyle,
+    ReflectionPointStyle,
     RotorStyle,
     TranslatorStyle,
 )
@@ -105,7 +103,6 @@ ObjVizStyle: TypeAlias = Union[
     DilatorStyle,
     MotorStyle,
     GeneralRotorStyle,
-    GeneralDilatorStyle,
     CrossHairPointStyle,
 ]
 
@@ -136,9 +133,6 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Dilator": DilatorStyle(color="#ffcc44", opacity=0.6, ring_count=4, max_radius=3.0),
     "Motor": MotorStyle(color="#ff66cc", opacity=0.7),
     "GeneralRotor": GeneralRotorStyle(color="#ff9966", opacity=0.6),
-    "GeneralDilator": GeneralDilatorStyle(
-        color="#ffcc88", opacity=0.6, ring_count=4, max_radius=3.0
-    ),
     # Imaginary entity variants
     "ImagPointPair": PointPairStyle(
         color="#ff88ff",
@@ -193,7 +187,6 @@ def _default_style_for(
         | Dilator
         | Motor
         | GeneralRotor
-        | GeneralDilator
     ),
 ) -> VizStyle:
     """Return the default style instance for a given entity/operator type."""

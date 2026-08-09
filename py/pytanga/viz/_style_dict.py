@@ -146,7 +146,6 @@ def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:
         "Dilator": None,
         "Motor": None,
         "GeneralRotor": None,
-        "GeneralDilator": None,
     }
 
 
@@ -177,7 +176,6 @@ def _kind_to_key(kind: str) -> str:
         "dilator": "Dilator",
         "motor": "Motor",
         "general_rotor": "GeneralRotor",
-        "general_dilator": "GeneralDilator",
     }
     key = mapping.get(kind.lower())
     if key is None:

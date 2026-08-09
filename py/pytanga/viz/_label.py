@@ -25,7 +25,6 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
@@ -57,7 +56,6 @@ EntityLike = (
     | Dilator
     | Motor
     | GeneralRotor
-    | GeneralDilator
 )
 
 

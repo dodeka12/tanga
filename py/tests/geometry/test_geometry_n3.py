@@ -296,11 +296,11 @@ def test_general_rotor_round_trip(b):
     assert isinstance(r, (GeneralRotor, Rotor))
 
 
-# ═══════ General Dilator ═══════
+# ═══════ Dilator at Offset Origin ═══════
 
 
-def test_general_dilator_creation(b):
-    """General dilator at center (1,0,0) with factor 2."""
+def test_dilator_at_offset_creation(b):
+    """Dilator at center (1,0,0) with factor 2."""
     gd = create_operator(
         b,
         Dilator(factor=2.0, origin=Point(1, 0, 0)),
@@ -312,7 +312,7 @@ def test_general_dilator_creation(b):
     assert r.y == pytest.approx(0, abs=1e-4)
 
 
-def test_general_dilator_round_trip(b):
+def test_dilator_at_origin_round_trip(b):
     gd_op = Dilator(factor=2.0, origin=Point(0, 0, 0))
     mv = create_operator(b, gd_op)
     r = analyze_operator(mv)

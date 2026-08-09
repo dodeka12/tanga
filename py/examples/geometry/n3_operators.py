@@ -4,8 +4,8 @@
 """n3_operators.py — Full conformal (N3) operators: Rotors, Motors, Inversions.
 
 Showcases all operator (versor) types in the conformal geometric algebra:
-  - 8 operator types: Reflection, Inversion, Rotor, Translator, Dilator,
-    Motor, GeneralRotor, GeneralDilator
+  - 7 operator types: Reflection, Inversion, Rotor, Translator, Dilator,
+    Motor, GeneralRotor
   - Versor decomposition via blade_factorize_versor()
   - Entity/Operator distinction: sphere analyzed as Sphere vs Inversion
   - Factor-count-based classification

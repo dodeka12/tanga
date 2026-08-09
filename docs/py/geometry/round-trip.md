@@ -310,6 +310,5 @@ default OPNS flag so you don't need to repeat them.
 | Rotor | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Translator | — | — | ✓ | ✓ | — | — | — | ✓ |
 | Dilator | — | — | — | ✓ | — | — | — | ✓ |
-| GeneralDilator | — | — | — | ✓ | — | — | — | ✓ |
 | Motor | — | — | ✓ | ✓ | — | — | — | ✓ |
 | GeneralRotor | — | — | ✓ | ✓ | — | — | — | ✓ |

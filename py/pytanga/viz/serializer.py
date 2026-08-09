@@ -24,7 +24,6 @@ from pytanga.geometry.entities import (
 )
 from pytanga.geometry.operators import (
     Dilator,
-    GeneralDilator,
     GeneralRotor,
     Inversion,
     Motor,
@@ -130,10 +129,6 @@ def serialize_entity(
     elif isinstance(entity, GeneralRotor):
         result.update(
             _serialize_general_rotor(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, GeneralDilator):
-        result.update(
-            _serialize_general_dilator(entity, props, kind=kind, styles_map=styles_map)
         )
 
     else:
@@ -550,7 +545,7 @@ def _serialize_dilator(
         styles_map=styles_map,
     ) | {
         "factor": ent.factor,
-        "origin": [0.0, 0.0, 0.0],
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
     }
 
 
@@ -608,33 +603,3 @@ def _serialize_general_rotor(
         },
         "origin": [0.0, 0.0, 0.0],
     }
-
-
-def _serialize_general_dilator(
-    ent: GeneralDilator,
-    props: Dict[str, Any],
-    *,
-    kind: str,
-    styles_map: Dict[str, Any] | None = None,
-) -> Dict[str, Any]:
-    result = _apply_defaults(
-        props,
-        kind,
-        {"ringCount": 4, "maxRadius": 3.0},
-        styles_map=styles_map,
-    )
-    result.update(
-        {
-            "factor": ent.factor,
-            "origin": [0.0, 0.0, 0.0],
-        }
-    )
-    if ent.translator is not None:
-        result["translator"] = {
-            "vector": [
-                ent.translator.vector.x,
-                ent.translator.vector.y,
-                ent.translator.vector.z,
-            ],
-        }
-    return result

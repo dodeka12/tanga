@@ -67,7 +67,6 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 | `DilatorStyle` | `Dilator` | `color`, `opacity`, `ring_count`, `max_radius` |
 | `MotorStyle` | `Motor` | `color`, `opacity` |
 | `GeneralRotorStyle` | `GeneralRotor` | `color`, `opacity` |
-| `GeneralDilatorStyle` | `GeneralDilator` | `color`, `opacity`, `ring_count`, `max_radius` |
 | `FigureStyle` | figure export | `width`, `height`, `background`, `auto_rotate`, `show_grid`, `show_axes`, `show_title`, `show_annotation`, `border_radius`, `responsive` |
 | `AnimStyle` | animated export | `fps`, `loop`, `show_controls`, `compress` |
 
@@ -96,7 +95,6 @@ and usage.
 | Dilator | `#ffcc44` (amber) |
 | Motor | `#ff66cc` (pink) |
 | GeneralRotor | `#ff9966` (salmon) |
-| GeneralDilator | `#ffcc88` (peach) |
 | ImagPointPair | `#ff88ff` (pink) |
 | ImagCircle | `#ff88ff` (pink) |
 | ImagSphere | `#ff8844` (orange) |

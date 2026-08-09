@@ -90,5 +90,5 @@ algebra raises `TypeError`:
 
 - **E3:** `Circle`, `Sphere`, `PointPair`, `Translator`, `Motor`, `Dilator` → `TypeError`
 - **P3:** `Circle`, `Sphere`, `PointPair`, `Translator`, `Motor`, `Dilator` → `TypeError`
-- **PGA3:** `PointPair`, `Circle`, `Sphere`, `Inversion`, `Dilator`, `GeneralDilator` → `TypeError`
-- **N3:** All types supported (except `GeneralDilator`/`GeneralRotor` which raise `TypeError` for now)
+- **PGA3:** `PointPair`, `Circle`, `Sphere`, `Inversion`, `Dilator` → `TypeError`
+- **N3:** All types supported.

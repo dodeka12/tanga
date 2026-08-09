@@ -80,7 +80,7 @@ stored algebra and default OPNS flag.
 | Guide | What you will learn |
 |-------|---------------------|
 | [Entities](entities.md) | `Point`, `Direction`, `Line`, `Plane`, `Circle`, `Sphere`, `PointPair`, `Space` |
-| [Operators](operators.md) | `ReflectionPlane`, `ReflectionLine`, `ReflectionPoint`, `Inversion`, `Rotor`, `Translator`, `Dilator`, `Motor`, `GeneralRotor`, `GeneralDilator` |
+| [Operators](operators.md) | `ReflectionPlane`, `ReflectionLine`, `ReflectionPoint`, `Inversion`, `Rotor`, `Translator`, `Dilator`, `Motor`, `GeneralRotor` |
 | [Analysis Pipeline](analysis.md) | `analyze()`, `analyze_entity()`, `analyze_operator()` — MV → geometry |
 | [Creation Pipeline](create.md) | `create()`, `create_entity()`, `create_operator()` — geometry → MV |
 | [Round-Trip Examples](round-trip.md) | End-to-end examples and algebra coverage matrices |

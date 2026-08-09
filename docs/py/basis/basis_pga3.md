@@ -266,7 +266,6 @@ Euclidean factors) and translator (from versor coefficients).
 | Motor | ✓ | ✓ | |
 | Inversion | ✗ | ✓ | Requires eo as independent element |
 | Dilator | ✗ | ✓ | Requires ``E = e₀ ∧ e₀^{\text{inv}}`` |
-| GeneralDilator | ✗ | ✓ | Requires full conformal structure |
 
 ---
 
