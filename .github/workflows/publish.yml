@@ -121,6 +121,16 @@ jobs:
           /opt/python/${PY_ABI}-${PY_ABI}/bin/pip install auditwheel
           /opt/python/${PY_ABI}-${PY_ABI}/bin/auditwheel repair dist/*.whl -w dist/
           rm dist/*-none-any.whl
+          # auditwheel may produce py3-none-manylinux instead of cp312-cp312-manylinux
+          # when extensions don't link libpython.  Force the correct ABI tag so that
+          # cp312 and cp313 wheels have distinct filenames for artifact merging.
+          for whl in dist/*.whl; do
+            new_name="${whl/-py3-none-/-${PY_ABI}-${PY_ABI}-}"
+            if [ "$whl" != "$new_name" ]; then
+              mv "$whl" "$new_name"
+              echo "Renamed: $(basename "$whl") -> $(basename "$new_name")"
+            fi
+          done
   
       - uses: actions/upload-artifact@v4
         with:
