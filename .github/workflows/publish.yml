@@ -239,7 +239,11 @@ jobs:
       - name: Determine target repository
         id: target
         run: |
-          if [[ "${{ inputs.is_rc }}" == "true" ]]; then
+          if [[ "${{ github.ref_name }}" != "main" ]]; then
+            # Non-main branch: always use Test PyPI
+            echo "url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
+            echo "::warning::Not on main branch (${{ github.ref_name }}). Forcing Test PyPI."
+          elif [[ "${{ inputs.is_rc }}" == "true" ]]; then
             echo "url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
           else
             echo "url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
