@@ -583,6 +583,91 @@ class Algebra:
                 return bin(bid).count("1")
         return 0
 
+    # -----------------------------------------------------------------------
+    # Phase E — Type checks & coefficients
+    # -----------------------------------------------------------------------
+    def is_vector(self, a: MV) -> bool:
+        """True if only grade‑1 blades have non‑zero coefficients."""
+        tol = self._precision
+        for bid, v in a._impl.to_dict().items():
+            if abs(v) >= tol and bin(bid).count("1") != 1:
+                return False
+        has_vector = any(
+            abs(v) >= tol and bin(bid).count("1") == 1
+            for bid, v in a._impl.to_dict().items()
+        )
+        return has_vector
+
+    def is_base(self, a: MV) -> bool:
+        """True if *a* is exactly one basis blade with coefficient 1."""
+        d = {bid: v for bid, v in a._impl.to_dict().items() if abs(v) >= self._precision}
+        return len(d) == 1 and abs(next(iter(d.values())) - 1.0) < self._precision
+
+    def is_blade(self, a: MV) -> bool:
+        """True if *a* is a simple r‑vector (blade factorizable into vectors)."""
+        if self.is_scalar(a):
+            return True
+        tol = self._precision
+        # A pure‑grade MV that can be factored into grade‑1 vectors
+        if not self._is_pure_blade(a):
+            return False
+        # For grades 0 and 1, pure grade implies blade
+        g = self._blade_grade(a)
+        if g <= 1:
+            return True
+        # For higher grades, the C++ blade_factorize can check
+        try:
+            self.blade_factorize(a)
+            return True
+        except Exception:
+            return False
+
+    def is_versor(self, a: MV) -> bool:
+        """True if *a* is a versor (geometric product of invertible vectors)."""
+        if self.is_scalar(a):
+            return True
+        # A versor must be an even or odd product of invertible vectors.
+        # In GAs with all-positive or mixed signatures with invertible vectors,
+        # the blade_factorize_versor C++ function handles this.
+        try:
+            self.blade_factorize_versor(a)
+            return True
+        except Exception:
+            return False
+
+    def blade_coefs(self, a: MV, blade_lst: list[MV] | None = None) -> list[float]:
+        """Coefficients for each blade in the given list (or all blades if None)."""
+        d = a._impl.to_dict()
+        tol = self._precision
+        if blade_lst is None:
+            return [d.get(bid, 0.0) for bid in self.all_blades()]
+        result = []
+        for blade in blade_lst:
+            val = 0.0
+            for bid, v in blade._impl.to_dict().items():
+                if abs(v) >= tol:
+                    val = d.get(bid, 0.0)
+                    break
+            result.append(val)
+        return result
+
+    def components(self, a: MV) -> list[MV]:
+        """Decompose *a* into a list of single‑blade MVs."""
+        tol = self._precision
+        return [
+            self.multivector({bid: v})
+            for bid, v in a._impl.to_dict().items()
+            if abs(v) >= tol
+        ]
+
+    def get_coefs(self, a: MV, k: int) -> list[float]:
+        """Grade‑*k* coefficients in canonical blade order."""
+        return [
+            a._impl.to_dict().get(bid, 0.0)
+            for bid in self.all_blades()
+            if bin(bid).count("1") == k
+        ]
+
     def magnitude(self, a: MV) -> float:
         """sqrt(sum of squared coefficients)."""
         return self._mod.magnitude(a._impl)

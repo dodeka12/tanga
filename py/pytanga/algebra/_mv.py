@@ -392,6 +392,42 @@ class MV:
         self._alg.show(self, label, fmt, align_col=align_col)
 
     # -----------------------------------------------------------------------
+    # Phase E — Type checks & coefficients
+    # -----------------------------------------------------------------------
+    @property
+    def is_vector(self) -> bool:
+        """True if only grade‑1 blades have non‑zero coefficients."""
+        return self._alg.is_vector(self)
+
+    @property
+    def is_base(self) -> bool:
+        """True if this is exactly one basis blade with coefficient 1."""
+        return self._alg.is_base(self)
+
+    @property
+    def is_blade(self) -> bool:
+        """True if this is a simple r‑vector (blade)."""
+        return self._alg.is_blade(self)
+
+    @property
+    @property
+    def is_versor(self) -> bool:
+        """True if this is a versor (product of invertible vectors)."""
+        return self._alg.is_versor(self)
+
+    def blade_coefs(self, blade_lst: list["MV"] | None = None) -> list[float]:
+        """Coefficients for each blade in *blade_lst* (or all blades)."""
+        return self._alg.blade_coefs(self, blade_lst)
+
+    def components(self) -> list["MV"]:
+        """Decompose into a list of single‑blade MVs."""
+        return self._alg.components(self)
+
+    def get_coefs(self, k: int) -> list[float]:
+        """Grade‑*k* coefficients in canonical blade order."""
+        return self._alg.get_coefs(self, k)
+
+    # -----------------------------------------------------------------------
     # Blade operations (Phase E)
     # -----------------------------------------------------------------------
     def blade_inverse(self) -> "MV":
