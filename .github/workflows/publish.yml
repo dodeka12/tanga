@@ -145,9 +145,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set UV_PYTHON
-        run: echo "UV_PYTHON=${{ steps.setup-python.outputs.python-path }}" >> $GITHUB_ENV
-
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -157,17 +154,25 @@ jobs:
 
       - name: Sync dependencies
         run: uv sync --group dev
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
 
       - name: Build precompiled
         run: uv run python tools/build-precompiled.py
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
 
       - name: Build wheel
         run: |
           $env:SETUPTOOLS_SCM_PRETEND_VERSION = "${{ needs.compute-version.outputs.pretend_version }}"
           uv build --wheel
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
 
       - name: Fix wheel platform tag
         run: uv run python tools/fix-wheel-tag.py
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
 
       - uses: actions/upload-artifact@v4
         with:
