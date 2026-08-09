@@ -478,6 +478,111 @@ class Algebra:
         """Sum of squared coefficients."""
         return self._mod.magnitude_sq(a._impl)
 
+    # -----------------------------------------------------------------------
+    # Phase D — Undual (algebra‑specific, can be overridden in subclasses)
+    # -----------------------------------------------------------------------
+    def undual(self, a: MV) -> MV:
+        """Inverse of the signed dual: multiply by pseudoscalar I.
+
+        In algebras with an invertible pseudoscalar (E3, P3, N3):
+        ``undual(A) = A * I``, satisfying ``dual(undual(A)) == A``.
+
+        Subclasses (BasisPGA3, BasisPGA2) override this for the J‑map.
+        """
+        I = self.multivector({self.pseudoscalar_id: 1.0})
+        return self.gp(a, I)
+
+    # -----------------------------------------------------------------------
+    # Phase D — Commutator and anti‑commutator
+    # -----------------------------------------------------------------------
+    def cp(self, a: MV, b: MV) -> MV:
+        """Commutator: ``(a * b - b * a) / 2``."""
+        return self.scale(self.sub(self.gp(a, b), self.gp(b, a)), 0.5)
+
+    def acp(self, a: MV, b: MV) -> MV:
+        """Anti‑commutator: ``(a * b + b * a) / 2``."""
+        return self.scale(self.add(self.gp(a, b), self.gp(b, a)), 0.5)
+
+    # -----------------------------------------------------------------------
+    # Phase D — Right contraction
+    # -----------------------------------------------------------------------
+    def rc(self, a: MV, b: MV) -> MV:
+        """Right contraction ``A ⌊ B``.
+
+        For pure-grade operands: ``grade(A) ≥ grade(B)`` keeps the parts
+        yielding ``grade(A) − grade(B)``; otherwise zero.
+
+        For general multivectors, decomposes into grade parts and sums.
+        ``rc(A, B) = ip(B, A) * (−1)^{j·(k−j)}`` per grade-pair.
+        """
+        result = self.multivector()
+        d_a = a._impl.to_dict()
+        d_b = b._impl.to_dict()
+        for bid_a, ca in d_a.items():
+            ga = bin(bid_a).count("1")
+            for bid_b, cb in d_b.items():
+                gb = bin(bid_b).count("1")
+                if ga < gb:
+                    continue
+                # rc = ip(B,A) * (−1)^{j·(k−j)}
+                blade_a = self.multivector({bid_a: ca})
+                blade_b = self.multivector({bid_b: cb})
+                ip_ba = self.ip(blade_b, blade_a)
+                sign = 1 if (ga * (gb - ga)) % 2 == 0 else -1
+                result = self.add(result, self.scale(ip_ba, sign))
+        return result
+
+    # -----------------------------------------------------------------------
+    # Phase D — gp_min (Hestenes inner product) and gp_max
+    # -----------------------------------------------------------------------
+    def gp_min(self, a: MV, b: MV) -> MV:
+        """Hestenes inner product for pure blades: ``⟨AB⟩_{|k−j|}``.
+
+        Both operands must be pure blades (single non‑zero grade).
+        Raises ``ValueError`` otherwise.
+        """
+        if not self._is_pure_blade(a):
+            raise ValueError("gp_min requires a pure blade as first operand")
+        if not self._is_pure_blade(b):
+            raise ValueError("gp_min requires a pure blade as second operand")
+        ga = self._blade_grade(a)
+        gb = self._blade_grade(b)
+        gp_ab = self.gp(a, b)
+        return self.grade_proj(gp_ab, abs(ga - gb))
+
+    def gp_max(self, a: MV, b: MV) -> MV:
+        """Outermost grade product for pure blades: ``⟨AB⟩_{k+j}``.
+
+        Both operands must be pure blades (single non‑zero grade).
+        Raises ``ValueError`` otherwise.
+        For vectors this coincides with the outer product ``a ^ b``.
+        """
+        if not self._is_pure_blade(a):
+            raise ValueError("gp_max requires a pure blade as first operand")
+        if not self._is_pure_blade(b):
+            raise ValueError("gp_max requires a pure blade as second operand")
+        ga = self._blade_grade(a)
+        gb = self._blade_grade(b)
+        gp_ab = self.gp(a, b)
+        return self.grade_proj(gp_ab, ga + gb)
+
+    def _is_pure_blade(self, a: MV) -> bool:
+        """True if *a* is a pure blade (all non‑zero coefficients share one grade)."""
+        grades = set()
+        for bid, v in a._impl.to_dict().items():
+            if abs(v) >= self._precision:
+                grades.add(bin(bid).count("1"))
+                if len(grades) > 1:
+                    return False
+        return len(grades) == 1
+
+    def _blade_grade(self, a: MV) -> int:
+        """Return the single grade of a pure blade.  Assumes pure blade."""
+        for bid, v in a._impl.to_dict().items():
+            if abs(v) >= self._precision:
+                return bin(bid).count("1")
+        return 0
+
     def magnitude(self, a: MV) -> float:
         """sqrt(sum of squared coefficients)."""
         return self._mod.magnitude(a._impl)

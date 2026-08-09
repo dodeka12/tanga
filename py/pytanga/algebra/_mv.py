@@ -315,6 +315,33 @@ class MV:
         """Exponential of a multivector whose square is a scalar."""
         return self._alg.exp(self)
 
+    # -----------------------------------------------------------------------
+    # Phase D — Duals & products
+    # -----------------------------------------------------------------------
+    def undual(self) -> "MV":
+        """Inverse of the signed dual: ``A * I``."""
+        return self._alg.undual(self)
+
+    def cp(self, other: "MV") -> "MV":
+        """Commutator: ``(A * B − B * A) / 2``."""
+        return self._alg.cp(self, other)
+
+    def acp(self, other: "MV") -> "MV":
+        """Anti‑commutator: ``(A * B + B * A) / 2``."""
+        return self._alg.acp(self, other)
+
+    def rc(self, other: "MV") -> "MV":
+        """Right contraction ``A ⌊ B``."""
+        return self._alg.rc(self, other)
+
+    def gp_min(self, other: "MV") -> "MV":
+        """Hestenes inner product for pure blades: ``⟨AB⟩_{|k−j|}``."""
+        return self._alg.gp_min(self, other)
+
+    def gp_max(self, other: "MV") -> "MV":
+        """Outermost grade product for pure blades: ``⟨AB⟩_{k+j}``."""
+        return self._alg.gp_max(self, other)
+
     # Phase D: GP/IP/OP with reverse/conjugate flags
     def gp_rev(
         self, other: "MV", rev_self: bool = False, rev_other: bool = False
