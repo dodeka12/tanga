@@ -354,6 +354,12 @@ class Visualizer(_JupyterDisplayMixin):
         self, entity_id: str, obj: GeoEntity | Any, *, opns: bool | None = None
     ) -> None:
         """Replace the geometry for an existing entity in the main scene."""
+        from ._point_path import PointPath
+
+        if isinstance(obj, PointPath):
+            self._scenes[""].update_entity(entity_id, obj)
+            return
+
         if opns is None:
             opns = self._opns
         entity = self._resolve(obj, opns=opns)
