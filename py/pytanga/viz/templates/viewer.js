@@ -115,8 +115,8 @@ function initScene() {
 
     window.addEventListener('resize', onResize);
 
-    console.log('[tanga-debug] initScene done — camera.pos:', camera.position.toArray(),
-        'controls:', controls ? { target: controls.target.toArray() } : 'none',
+    console.log('[tanga-debug] initScene done — camera.pos: [', camera.position.toArray().join(', '), ']',
+        'controls:', controls ? ('target: [' + controls.target.toArray().join(', ') + ']') : 'none',
         'renderer:', webglOk ? 'ok' : 'null');
 }
 
@@ -264,8 +264,8 @@ function applySceneConfig(config) {
     // Controls & renderer — delegates to view_mode.js
     configureControls(controls, renderer, spaceDim);
 
-    console.log('[tanga-debug] applySceneConfig — cam.pos:', camera.position.toArray(),
-        'target:', controls ? controls.target.toArray() : 'none',
+    console.log('[tanga-debug] applySceneConfig — cam.pos: [', camera.position.toArray().join(', '), ']',
+        'target:', controls ? ('[' + controls.target.toArray().join(', ') + ']') : 'none',
         'scene:', scene ? 'ok' : 'none');
 
     // Title
@@ -574,14 +574,14 @@ function handleMessage(msg) {
             const cc = sceneConfig?.camera;
             console.log('[tanga-debug] first entity update — entityMeshes:', entityMeshes.size,
                 'cameraPositioned:', cameraPositioned,
-                'cam.pos:', camera.position.toArray(),
-                'controls.target:', controls ? controls.target.toArray() : 'none',
+                'cam.pos: [', camera.position.toArray().join(', '), ']',
+                'controls.target: [', controls ? controls.target.toArray().join(', ') : 'none', ']',
                 'cameraConfig:', cc || 'none');
             if (!cc || (!cc.position && !cc.target)) {
                 console.log('[tanga-debug] calling fitCameraToScene ...');
                 fitCameraToScene();
-                console.log('[tanga-debug] fitCameraToScene done — cam.pos:', camera.position.toArray(),
-                    'controls.target:', controls ? controls.target.toArray() : 'none');
+                console.log('[tanga-debug] fitCameraToScene done — cam.pos: [', camera.position.toArray().join(', '), ']',
+                    'controls.target: [', controls ? controls.target.toArray().join(', ') : 'none', ']');
             }
             cameraPositioned = true;
         }
