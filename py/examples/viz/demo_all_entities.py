@@ -17,14 +17,14 @@ from pytanga.geometry import (
     Space,
     Sphere,
 )
-from pytanga.viz import Visualizer
+from pytanga.viz import PointStyle, SphereStyle, Visualizer
 
 viz = Visualizer(title="Tanga — All Entity Types")
 
 # Points
-viz.add(Point(2, 0, 0), color="#ff4444", size=0.12, label="P₁ (2,0,0)")
-viz.add(Point(0, 2, 0), color="#44ff44", size=0.12, label="P₂ (0,2,0)")
-viz.add(Point(0, 0, 2), color="#4444ff", size=0.12, label="P₃ (0,0,2)")
+viz.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.12), label="P₁ (2,0,0)")
+viz.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.12), label="P₂ (0,2,0)")
+viz.add(Point(0, 0, 2), color="#4444ff", style=PointStyle(size=0.12), label="P₃ (0,0,2)")
 
 # Direction arrow from origin
 viz.add(Direction(1, 1, 0), color="#ffffff", label="d")
@@ -53,7 +53,7 @@ viz.add(
 # Sphere at origin (wireframe)
 viz.add(
     Sphere(Point(0, 0, 0), radius=2.5),
-    wireframe=True,
+    style=SphereStyle(wireframe=True),
     opacity=0.3,
     label="S",
 )
@@ -66,7 +66,7 @@ viz.add(
 )
 
 # Homogeneous point
-viz.add(HPoint(point=Point(-3, -2, 1)), size=0.12, label="H")
+viz.add(HPoint(point=Point(-3, -2, 1)), style=PointStyle(size=0.12), label="H")
 
 # Space — faint bounding outline
 viz.add(Space(), opacity=0.08)

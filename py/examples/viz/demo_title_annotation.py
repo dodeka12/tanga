@@ -7,7 +7,7 @@ Run with:  uv run python py/examples/viz/demo_title_annotation.py
 """
 
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import Visualizer
+from pytanga.viz import PointStyle, SphereStyle, Visualizer
 
 viz = Visualizer(
     title="PGA3 — Sphere Visualization",
@@ -24,6 +24,6 @@ where $o$ is the origin point and $\\infty$ is the point at infinity.
 """,
 )
 
-viz.add(Point(1, 2, 3), color="#ff4444", size=0.12, label="P₁")
-viz.add(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.4)
+viz.add(Point(1, 2, 3), color="#ff4444"style=PointStyle(size=0.12), label="P₁")
+viz.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.4)
 viz.run()

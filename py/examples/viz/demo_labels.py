@@ -9,13 +9,13 @@ Run with:  uv run python py/examples/viz/demo_labels.py
 import time
 
 from pytanga.geometry import Direction, Plane, Point, Sphere
-from pytanga.viz import LabelStyle, Visualizer
+from pytanga.viz import LabelStyle, PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Labels")
 viz.start()
 
 # Default label
-viz.add(Point(1, 2, 0), color="#ff4444", size=0.15, label="P₁")
+viz.add(Point(1, 2, 0), color="#ff4444", style=PointStyle(size=0.15), label="P₁")
 
 # Custom label style
 origin_id = viz.add(

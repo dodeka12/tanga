@@ -7,12 +7,12 @@ Run with:  uv run python py/examples/viz/demo_export_html.py
 """
 
 from pytanga.geometry import Direction, Plane, Point, Sphere
-from pytanga.viz import SceneExporter, Visualizer
+from pytanga.viz import PointStyle, SceneExporter, SphereStyle, Visualizer
 
 viz = Visualizer(title="Tanga — HTML Export")
-viz.add(Point(2, 0, 0), color="#ff4444", size=0.15, label="P₁")
-viz.add(Point(0, 2, 0), color="#44ff44", size=0.15, label="P₂")
-viz.add(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.3)
+viz.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="P₁")
+viz.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="P₂")
+viz.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
 viz.add(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.25)
 
 exporter = SceneExporter(viz)
