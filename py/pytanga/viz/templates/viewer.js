@@ -570,20 +570,10 @@ function handleMessage(msg) {
                 upsertLabel(lbl);
             }
         }
-        if (!cameraPositioned && entityMeshes.size > 0) {
-            const cc = sceneConfig?.camera;
-            console.log('[tanga-debug] first entity update — entityMeshes:', entityMeshes.size,
-                'cameraPositioned:', cameraPositioned,
-                'cam.pos: [', camera.position.toArray().join(', '), ']',
-                'controls.target: [', controls ? controls.target.toArray().join(', ') : 'none', ']',
-                'cameraConfig:', cc || 'none');
-            if (!cc || (!cc.position && !cc.target)) {
-                console.log('[tanga-debug] calling fitCameraToScene ...');
-                fitCameraToScene();
-                console.log('[tanga-debug] fitCameraToScene done — cam.pos: [', camera.position.toArray().join(', '), ']',
-                    'controls.target: [', controls ? controls.target.toArray().join(', ') : 'none', ']');
-            }
-            cameraPositioned = true;
+        if (msg.fit_camera) {
+            fitCameraToScene();
+            console.log('[tanga-debug] fit_camera on flush — cam.pos: [', camera.position.toArray().join(', '), ']',
+                'controls.target: [', controls ? controls.target.toArray().join(', ') : 'none', ']');
         }
     } else if (msg.type === 'animate') {
         handleAnimate(msg);

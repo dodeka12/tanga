@@ -135,6 +135,11 @@ export function fitCamera(entityMeshes, camera, controls, spaceDim) {
     const distance = maxDim * 1.5 + 2;
     // Keep the orbit target at the world origin so rotation always
     // orbits around (0,0,0) regardless of entity placement.
+    console.log('[tanga-debug] fitCamera 3D — center:', center.toArray(),
+        'size:', size.toArray(),
+        'maxDim:', maxDim,
+        'distance:', distance,
+        'setting controls.target to [0,0,0]');
     controls.target.set(0, 0, 0);
     camera.position.set(
         center.x + distance * 0.6,

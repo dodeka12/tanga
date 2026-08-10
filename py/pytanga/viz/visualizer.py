@@ -811,7 +811,7 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             print(f"Browser disconnected ({remote_addr}).")
 
-    async def _flush_scene_async(self, scene_name: str) -> None:
+    async def _flush_scene_async(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Push dirty state for a specific scene (must be called from server's event loop)."""
         if self._server is None:
             return
@@ -819,21 +819,25 @@ class Visualizer(_JupyterDisplayMixin):
         if scene is None:
             return
         entities, removed = scene.flush(styles_map=self._default_styles)
-        if entities or removed:
-            await self._server.push(entities, removed, scene=scene_name)
+        if entities or removed or fit_camera:
+            await self._server.push(entities, removed, scene=scene_name, fit_camera=fit_camera)
 
-    def _flush_scene(self, scene_name: str) -> None:
+    def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe)."""
         if self._loop is not None and self._server is not None:
             asyncio.run_coroutine_threadsafe(
-                self._flush_scene_async(scene_name), self._loop
+                self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
             )
 
-    def flush(self) -> None:
-        """Schedule all dirty scenes to be pushed to the server (thread-safe)."""
+    def flush(self, *, fit_camera: bool = False) -> None:
+        """Schedule all dirty scenes to be pushed to the server (thread-safe).
+
+        If *fit_camera* is ``True``, the frontend will auto‑adjust the
+        camera to encompass all entities after the flush.
+        """
         if self._loop is not None and self._server is not None:
             for name in self._scenes:
-                self._flush_scene(name)
+                self._flush_scene(name, fit_camera=fit_camera)
 
     def run(self, *, wait_for_browser: bool | None = None) -> None:
         """Start the server, open the browser, and block until interrupted.

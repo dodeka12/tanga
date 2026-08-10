@@ -137,7 +137,12 @@ class VizServer:
     # ── Push ──────────────────────────────────────────────
 
     async def push(
-        self, entities: list[dict[str, Any]], removed: list[str], *, scene: str = ""
+        self,
+        entities: list[dict[str, Any]],
+        removed: list[str],
+        *,
+        scene: str = "",
+        fit_camera: bool = False,
     ) -> None:
         """Serialize and broadcast a scene update to all WebSocket clients."""
         from .serializer import serialize_scene_update
@@ -147,6 +152,8 @@ class VizServer:
 
         message = serialize_scene_update(entities, removed)
         message["scene"] = scene
+        if fit_camera:
+            message["fit_camera"] = True
         data = json.dumps(message)
 
         dead: list[web.WebSocketResponse] = []

@@ -170,9 +170,13 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Remove all entities from this scene."""
         self._scene().clear()
 
-    def flush(self) -> None:
-        """Schedule a scene update on the server's event loop (thread-safe)."""
-        self._viz._flush_scene(self._name)
+    def flush(self, *, fit_camera: bool = False) -> None:
+        """Schedule a scene update on the server's event loop (thread-safe).
+
+        If *fit_camera* is ``True``, the frontend will auto‑adjust the
+        camera to encompass all entities after the flush.
+        """
+        self._viz._flush_scene(self._name, fit_camera=fit_camera)
 
     # ── Title & annotation ──────────────────────────────────
 
