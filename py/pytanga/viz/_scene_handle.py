@@ -134,6 +134,12 @@ class VizSceneHandle(_JupyterDisplayMixin):
         self, entity_id: str, obj: GeoEntity | Any, *, opns: bool | None = None
     ) -> None:
         """Replace the geometry for an existing entity."""
+        from ._point_path import PointPath
+
+        if isinstance(obj, PointPath):
+            self._scene().update_entity(entity_id, obj)
+            return
+
         if opns is None:
             opns = self._viz._opns
         entity = self._viz._resolve(obj, opns=opns)
