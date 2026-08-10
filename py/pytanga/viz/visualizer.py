@@ -342,7 +342,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes[""].update(entity_id, **properties)
 
     def update_entity(
-        self, entity_id: str, obj: GeoEntity | Any, *, opns: bool | None = None
+        self, entity_id: str, obj: SceneEntity, *, opns: bool | None = None
     ) -> None:
         """Replace the geometry for an existing entity in the main scene."""
         if opns is None:

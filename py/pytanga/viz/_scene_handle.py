@@ -20,6 +20,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 from ._jupyter import _JupyterDisplayMixin
 from ._timeline import Timeline
+from ._types import SceneEntity
 from .scene import Scene
 
 
@@ -131,7 +132,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         self._scene().update(entity_id, **properties)
 
     def update_entity(
-        self, entity_id: str, obj: GeoEntity | Any, *, opns: bool | None = None
+        self, entity_id: str, obj: SceneEntity, *, opns: bool | None = None
     ) -> None:
         """Replace the geometry for an existing entity."""
         if opns is None:
