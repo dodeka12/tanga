@@ -7,7 +7,7 @@ Run with:  uv run python py/examples/viz/demo_custom_defaults.py
 """
 
 from pytanga.geometry import Direction, Line, Plane, Point, Sphere
-from pytanga.viz import Visualizer
+from pytanga.viz import PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Custom Defaults")
 

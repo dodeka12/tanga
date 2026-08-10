@@ -12,8 +12,6 @@ floats for vector components except at initialisation.
 Run with:  uv run python py/examples/viz/two_body_gravity.py
 """
 
-import math
-
 from pytanga.geometry import Direction, Point
 from pytanga.viz import PointStyle, Visualizer
 

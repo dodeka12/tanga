@@ -24,6 +24,6 @@ where $o$ is the origin point and $\\infty$ is the point at infinity.
 """,
 )
 
-viz.add(Point(1, 2, 3), color="#ff4444"style=PointStyle(size=0.12), label="$P_1$")
+viz.add(Point(1, 2, 3), color="#ff4444", style=PointStyle(size=0.12), label="$P_1$")
 viz.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.4)
 viz.run()
