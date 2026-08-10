@@ -12,8 +12,8 @@ from pytanga.viz import Visualizer
 viz = Visualizer(title="Tanga — Keyframe Timeline")
 viz.start()
 
-p1 = viz.add(Point(0, 0, 0), color="#ff4444", opacity=0.0, label="P₁")
-p2 = viz.add(Point(5, 0, 0), color="#44ff44", opacity=0.0, label="P₂")
+p1 = viz.add(Point(0, 0, 0), color="#ff4444", opacity=0.0, label="$P_1$")
+p2 = viz.add(Point(5, 0, 0), color="#44ff44", opacity=0.0, label="$P_2$")
 sphere_id = viz.add(
     Sphere(Point(0, 0, 0), radius=1.0),
     wireframe=True,
@@ -23,7 +23,7 @@ sphere_id = viz.add(
 plane_id = viz.add(
     Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)),
     opacity=0.0,
-    label="π",
+    label="$\pi$",
 )
 
 viz.flush()

@@ -26,9 +26,9 @@ viz2 = Visualizer(
     camera=CameraConfig(position=(0, 15, 0), target=(0, 0, 0), fov=30),
     space_extent=20,
 )
-viz2.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="P₁")
-viz2.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="P₂")
-viz2.add(Point(0, 0, 2), color="#4444ff", style=PointStyle(size=0.15), label="P₃")
+viz2.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+viz2.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
+viz2.add(Point(0, 0, 2), color="#4444ff", style=PointStyle(size=0.15), label="$P_3$")
 viz2.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
 viz2.run()
 
@@ -38,8 +38,8 @@ viz3 = Visualizer(
     title="Tanga — Partial Camera",
     camera=CameraConfig(position=(10, 3, 0)),
 )
-viz3.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="P₁")
-viz3.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="P₂")
+viz3.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+viz3.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
 viz3.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
 viz3.run()
 

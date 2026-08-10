@@ -30,7 +30,7 @@ viz.add(
 )
 
 # ── N3 ───────────────────────────────────────────────────
-viz.add(n3.point(-3, 2, 0), color="#ff8844", style=PointStyle(size=0.12), label="N3 Pt")
+viz.add(n3.point(-3, 2, 0), color="#ff8844", style=PointStyle(size=0.12), label="N3 Point")
 viz.add(n3.point_pair(-3, 0, 0, 0, 2, 0), color="#8844ff", label="PtPair")
 viz.add(
     n3.line_from_origin_direction(Direction(0, 1, 0)), color="#44ffff", label="N3 L"

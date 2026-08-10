@@ -22,9 +22,9 @@ from pytanga.viz import PointStyle, SphereStyle, Visualizer
 viz = Visualizer(title="Tanga — All Entity Types")
 
 # Points
-viz.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.12), label="P₁ (2,0,0)")
-viz.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.12), label="P₂ (0,2,0)")
-viz.add(Point(0, 0, 2), color="#4444ff", style=PointStyle(size=0.12), label="P₃ (0,0,2)")
+viz.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.12), label="$P_1$ (2,0,0)")
+viz.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.12), label="$P_2$ (0,2,0)")
+viz.add(Point(0, 0, 2), color="#4444ff", style=PointStyle(size=0.12), label="$P_3$ (0,0,2)")
 
 # Direction arrow from origin
 viz.add(Direction(1, 1, 0), color="#ffffff", label="d")
@@ -40,7 +40,7 @@ viz.add(
 viz.add(
     Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)),
     opacity=0.25,
-    label="π (z=3)",
+    label="$\pi$ (z=3)",
 )
 
 # Circle in XY plane

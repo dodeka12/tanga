@@ -15,7 +15,7 @@ viz = Visualizer(title="Tanga — Labels")
 viz.start()
 
 # Default label
-viz.add(Point(1, 2, 0), color="#ff4444", style=PointStyle(size=0.15), label="P₁")
+viz.add(Point(1, 2, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
 
 # Custom label style
 origin_id = viz.add(
@@ -35,7 +35,7 @@ origin_id = viz.add(
 viz.add(
     Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)),
     opacity=0.3,
-    label="π (z=3)",
+    label="$\pi$ (z=3)",
 )
 
 # Label on a sphere — positioned above the surface
@@ -43,7 +43,7 @@ viz.add(
     Sphere(Point(0, 0, 0), radius=2.5),
     wireframe=True,
     opacity=0.4,
-    label="S₁",
+    label="$S_1$",
     label_style=LabelStyle(offset_local=(0.0, 1.05, 0.0)),
 )
 
