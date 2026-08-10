@@ -91,7 +91,7 @@ add(
     style=None,                   # PointStyle, SphereStyle, …
     label=None,                   # shortcut: auto-create a Label
     label_style=None,             # style for the auto-created label
-) → str | list[str] | tuple[str, str]
+) → str | list[str]
 ```
 
 `add()` is the universal entry point for the **main scene**. It accepts:
@@ -112,8 +112,11 @@ add(
 | Entity / Operator | Entity ID (`str`) |
 | MV → single entity | Entity ID (`str`) |
 | MV → multiple entities | List of IDs (`list[str]`) |
-| Entity with `label="…"` shortcut | `(entity_id, label_id)` tuple |
 | `Label` instance | Label ID (`str`) |
+
+The label that is created alongside an entity via the ``label="…"`` shortcut
+can be retrieved with :meth:`get_label_ids(entity_id)`.  This returns a list
+of label IDs attached to the entity.
 
 **Color and opacity priority:**
 
@@ -260,7 +263,7 @@ viz.clear()  # remove all (main scene)
 |--------|-------------|
 | `start(*, wait_for_browser=None, timeout=30.0)` | Start the server in a background daemon thread. In Jupyter, ``wait_for_browser`` defaults to ``False``; outside Jupyter it defaults to ``True``. |
 | `wait_for_browser(timeout=30.0)` | Block until a WebSocket client connects. Returns `True` on success, `False` on timeout. |
-| `flush()` | Push all dirty scenes to connected browsers |
+| `flush(*, fit_camera=False)` | Push all dirty scenes to connected browsers.  Pass ``fit_camera=True`` after all entities are added to have the frontend auto‑adjust the camera to encompass them. |
 | `stop()` | Stop the server and clean up. Waits for graceful WebSocket shutdown before stopping the event loop. |
 | `run(*, wait_for_browser=None)` | Start server, open browser, block until Ctrl+C. In Jupyter, ``wait_for_browser`` defaults to ``False``. |
 | `sleep_ms(ms)` | Convenience: `time.sleep(ms / 1000)` |
