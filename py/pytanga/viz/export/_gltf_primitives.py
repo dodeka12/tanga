@@ -302,6 +302,31 @@ def ring(
     )
 
 
+def lines_from_points(
+    points: list[tuple[float, float, float]],
+) -> _Primitive | None:
+    """Build a ``LINES`` primitive from a list of 3D points.
+
+    Each consecutive pair ``(points[i], points[i+1])`` forms a line segment.
+    Returns ``None`` if fewer than 2 points are provided.
+    """
+    if len(points) < 2:
+        return None
+
+    n = len(points)
+    pos = np.array(points, dtype=np.float32)
+    norms = np.zeros_like(pos)
+
+    # Build segment indices: [0,1, 1,2, 2,3, ...]
+    seg_count = n - 1
+    indices = np.zeros(seg_count * 2, dtype=np.uint16)
+    for i in range(seg_count):
+        indices[i * 2] = i
+        indices[i * 2 + 1] = i + 1
+
+    return _Primitive(positions=pos, normals=norms, indices=indices, mode=1)
+
+
 def helix_tube(
     radius: float,
     tube_radius: float,
