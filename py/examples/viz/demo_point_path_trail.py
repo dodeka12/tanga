@@ -13,7 +13,14 @@ Run with:  uv run python py/examples/viz/demo_point_path_trail.py
 import math
 
 from pytanga.geometry import Point
-from pytanga.viz import PointPath, PointPathStyle, Visualizer, gradient_colors
+from pytanga.viz import (
+    LabelStyle,
+    PointPath,
+    PointPathStyle,
+    PointStyle,
+    Visualizer,
+    gradient_colors,
+)
 
 # ── Setup ──────────────────────────────────────────────────
 viz = Visualizer(title="Tanga — PointPath Trail Demo")
@@ -27,8 +34,9 @@ trail_gradient = gradient_colors("#440000", "#ffaa00", TRAIL_LENGTH)
 # PointPath with anchored colors (pop_colors=False):
 # points shift through a fixed color gradient — the tail is always dark,
 # the head is always bright
-trail = PointPath(max_points=TRAIL_LENGTH, pop_colors=False,
-                  default_colors=trail_gradient)
+trail = PointPath(
+    max_points=TRAIL_LENGTH, pop_colors=False, default_colors=trail_gradient
+)
 
 # Pre-fill the trail with the origin so it draws immediately
 # (otherwise it needs 2+ points to render)
@@ -38,7 +46,13 @@ for _ in range(TRAIL_LENGTH):
 trail_id = viz.add(trail, style=PointPathStyle(line_thickness=0.04))
 
 # The moving object itself
-point_id = viz.add(Point(3, 0, 0), color="#ffaa00", size=0.12, label="object")
+point_id, point_label_id = viz.add(
+    Point(3, 0, 0),
+    color="#ffaa00",
+    label="object",
+    style=PointStyle(size=0.12),
+    label_style=LabelStyle(align=(0, 0)),
+)
 
 viz.flush()
 
