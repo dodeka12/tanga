@@ -224,8 +224,12 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+    ) -> str | list[str]:
         """Add a geometric entity, operator, multivector, or label to the main scene.
+
+        Returns the entity ID (a single ``str``), or a ``list[str]`` when a
+        multivector resolves to multiple entities.  If *label* is provided the
+        label is created alongside the entity and only the entity ID is returned.
 
         See the class docstring for full parameter documentation.
         """
@@ -253,7 +257,7 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+    ) -> str | list[str]:
         """Add an entity to a specific scene."""
         from ._label import Label
         from ._styles import LabelStyle as _LS
@@ -332,8 +336,8 @@ class Visualizer(_JupyterDisplayMixin):
                 parent_id=eid,
                 style=resolved_ls,
             )
-            lid = scene.add_label(lbl)
-            return (eid, lid)
+            scene.add_label(lbl)
+            return eid
 
         return eid
 
@@ -399,6 +403,10 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> None:
         """Update a label's text and/or style in the main scene."""
         self._scenes[""].update_label(object_id, text=text, style=style)
+
+    def get_label_ids(self, entity_id: str) -> list[str]:
+        """Return the IDs of all labels attached to *entity_id* in the main scene."""
+        return self._scenes[""].get_label_ids(entity_id)
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity from the main scene."""
@@ -803,7 +811,7 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             print(f"Browser disconnected ({remote_addr}).")
 
-    async def _flush_scene_async(self, scene_name: str) -> None:
+    async def _flush_scene_async(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Push dirty state for a specific scene (must be called from server's event loop)."""
         if self._server is None:
             return
@@ -811,21 +819,25 @@ class Visualizer(_JupyterDisplayMixin):
         if scene is None:
             return
         entities, removed = scene.flush(styles_map=self._default_styles)
-        if entities or removed:
-            await self._server.push(entities, removed, scene=scene_name)
+        if entities or removed or fit_camera:
+            await self._server.push(entities, removed, scene=scene_name, fit_camera=fit_camera)
 
-    def _flush_scene(self, scene_name: str) -> None:
+    def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe)."""
         if self._loop is not None and self._server is not None:
             asyncio.run_coroutine_threadsafe(
-                self._flush_scene_async(scene_name), self._loop
+                self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
             )
 
-    def flush(self) -> None:
-        """Schedule all dirty scenes to be pushed to the server (thread-safe)."""
+    def flush(self, *, fit_camera: bool = False) -> None:
+        """Schedule all dirty scenes to be pushed to the server (thread-safe).
+
+        If *fit_camera* is ``True``, the frontend will auto‑adjust the
+        camera to encompass all entities after the flush.
+        """
         if self._loop is not None and self._server is not None:
             for name in self._scenes:
-                self._flush_scene(name)
+                self._flush_scene(name, fit_camera=fit_camera)
 
     def run(self, *, wait_for_browser: bool | None = None) -> None:
         """Start the server, open the browser, and block until interrupted.
@@ -839,6 +851,8 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = VizServer(host=self._host, port=self._port)
 
         async def _run() -> None:
+            ws_ready = asyncio.Event()
+
             await self._server.start(
                 lambda scene_name: (
                     self._scenes.get(scene_name, self._scenes[""]).full_state(
@@ -851,11 +865,19 @@ class Visualizer(_JupyterDisplayMixin):
                 on_connect=self._on_client_connect,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
+                on_ready=lambda: ws_ready.set(),
             )
             if self._open_browser:
                 self._server.open_browser()
             if wait_for_browser:
-                await self._server.wait_for_client()
+                try:
+                    await asyncio.wait_for(ws_ready.wait(), timeout=30.0)
+                except asyncio.TimeoutError:
+                    self._print_ws_timeout_note()
+                    raise RuntimeError(
+                        "No browser connected within 30s.  "
+                        f"Open {self.url} manually."
+                    )
             # Flush initial state for the main scene
             await self._flush_scene_async("")
 
@@ -1145,16 +1167,19 @@ class Visualizer(_JupyterDisplayMixin):
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
         """Handle an incoming control event from the frontend."""
+        from ._controls import ControlEvent
+
         cid = payload.get("control_id")
         browser_id = payload.get("browser_id")
+        event = ControlEvent(browser_id=browser_id)
         if cid and (handler := self._handler_registry.get(cid)):
             try:
                 if msg_type == "control:change":
-                    await handler(payload.get("value"), browser_id=browser_id)
+                    await handler(payload.get("value"), event)
                 elif msg_type == "control:click":
-                    await handler(None, browser_id=browser_id)
+                    await handler(None, event)
                 elif msg_type == "control:group_toggle":
-                    await handler(payload.get("value"), browser_id=browser_id)
+                    await handler(payload.get("value"), event)
             except Exception:
                 import logging
 

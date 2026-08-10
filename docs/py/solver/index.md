@@ -41,3 +41,4 @@ X = solve(A, 1.0, algebra=alg)
 check = A * X
 check.prune()
 print(check)   # "1.0"
+```

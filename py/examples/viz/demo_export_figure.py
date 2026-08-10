@@ -7,12 +7,12 @@ Run with:  uv run python py/examples/viz/demo_export_figure.py
 """
 
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import FigureStyle, SceneExporter, Visualizer
+from pytanga.viz import FigureStyle, PointStyle, SceneExporter, SphereStyle, Visualizer
 
 viz = Visualizer(title="Sphere Construction")
 
-viz.add(Sphere(Point(0, 0, 0), 2.5), wireframe=True, opacity=0.4, label="$S_1$")
-viz.add(Point(0, 0, 0), color="#ffff00", size=0.15, label="$O$")
+viz.add(Sphere(Point(0, 0, 0), 2.5), style=SphereStyle(wireframe=True), opacity=0.4, label="$S_1$")
+viz.add(Point(0, 0, 0), color="#ffff00", style=PointStyle(size=0.15), label="$O$")
 
 exporter = SceneExporter(viz)
 

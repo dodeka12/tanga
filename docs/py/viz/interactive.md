@@ -10,7 +10,7 @@ Derive from `VisualizerApp`, override `init()` and `cleanup()`, and call
 `run()` from your `main()` function:
 
 ```python
-from pytanga.viz import VisualizerApp
+from pytanga.viz import ControlEvent, VisualizerApp
 
 class MyApp(VisualizerApp):
     def __init__(self):
@@ -19,7 +19,7 @@ class MyApp(VisualizerApp):
     async def init(self) -> None:
         self.viz.add_slider("x", on_change=self.on_x)
 
-    async def on_x(self, value: float) -> None:
+    async def on_x(self, value: float, event: ControlEvent) -> None:
         self.viz.flush()
 
     async def cleanup(self) -> None:
@@ -101,7 +101,7 @@ self.viz.add_slider(
 | `max` | `float` | `1.0` | Maximum value |
 | `step` | `float` | `0.01` | Step increment |
 | `default` | `float` | `min` | Initial value |
-| `on_change` | `Callable` | `None` | Async callback: `(value: float) -> None` |
+| `on_change` | `Callable` | `None` | Async callback: `(value: float, event: ControlEvent) -> None` |
 
 ### `add_dropdown`
 
@@ -121,7 +121,7 @@ self.viz.add_dropdown(
 | `label` | `str` | `""` | Label text |
 | `options` | `list[str]` | `[]` | Dropdown choices |
 | `default` | `str` | `""` | Initial selection |
-| `on_change` | `Callable` | `None` | Async callback: `(value: str) -> None` |
+| `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
 
 ### `add_button`
 
@@ -137,7 +137,7 @@ self.viz.add_button(
 |-----------|------|---------|-------------|
 | `cid` | `str` | *(required)* | Control ID |
 | `label` | `str` | `""` | Button text |
-| `on_click` | `Callable` | `None` | Async callback: `(value: None) -> None` |
+| `on_click` | `Callable` | `None` | Async callback: `(value: None, event: ControlEvent) -> None` |
 
 ### `add_group`
 
@@ -159,7 +159,7 @@ self.viz.add_group(
 | `controls` | `list[str]` | `[]` | Ordered list of control IDs |
 | `position` | `str` | `"bottom-right"` | `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"` |
 | `collapsed` | `bool` | `False` | Start collapsed |
-| `on_toggle` | `Callable` | `None` | Async callback: `(value: bool) -> None` |
+| `on_toggle` | `Callable` | `None` | Async callback: `(value: bool, event: ControlEvent) -> None` |
 
 Controls must be created **before** the group that references them.
 
@@ -174,32 +174,35 @@ self.viz.clear_controls()  # remove all
 ## Handler Methods
 
 Handler callbacks are **async** methods on your app class. They receive
-the new value from the control and an optional ``browser_id`` keyword
-identifying which browser tab triggered the event:
+the new value from the control and a :class:`~pytanga.viz.ControlEvent`
+instance with metadata about the event:
 
 ```python
-async def on_slider(self, value: float, *, browser_id: str | None = None) -> None:
+from pytanga.viz import ControlEvent
+
+async def on_slider(self, value: float, event: ControlEvent) -> None:
     """Called when the slider moves."""
     self._x = value
     s2_mv = self._geo.create(Sphere(Point(value, 0, 0), 1.3))
     self.viz.update_entity(SPHERE_B_ID, s2_mv)
     self.viz.flush()
 
-async def on_mode(self, mode: str, *, browser_id: str | None = None) -> None:
+async def on_mode(self, mode: str, event: ControlEvent) -> None:
     """Called when the dropdown changes."""
     self._mode = mode
     await self._update_scene()
 
-async def on_reset(self, _: None, *, browser_id: str | None = None) -> None:
+async def on_reset(self, _: None, event: ControlEvent) -> None:
     """Called when the button is clicked."""
     self._x = 2.5
     self.viz.clear_controls()
     self._setup_controls()
 ```
 
-The ``browser_id`` can be used with :meth:`Visualizer.navigate_to` to redirect
-a specific browser tab.  Callbacks that don't need it can simply omit the
-parameter.
+The :class:`ControlEvent` currently carries a ``browser_id`` attribute that
+can be used with :meth:`~pytanga.viz.Visualizer.navigate_to` to redirect a
+specific browser tab.  Additional metadata fields may be added in the future
+without breaking existing handler signatures.
 
 ### Scene-Scoped Controls
 

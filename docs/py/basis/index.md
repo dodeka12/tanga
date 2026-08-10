@@ -48,3 +48,4 @@ b = E3.e1 * E3.e2           # geometric product → e12
 
 E3.show(v, "v")
 print(b)                     # "e12"
+```

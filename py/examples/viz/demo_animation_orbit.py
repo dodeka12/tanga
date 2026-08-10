@@ -9,7 +9,7 @@ Run with:  uv run python py/examples/viz/demo_animation_orbit.py
 import math
 
 from pytanga.geometry import Direction, Line, Point
-from pytanga.viz import Visualizer
+from pytanga.viz import PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Animated Orbit")
 viz.start()
@@ -22,7 +22,7 @@ viz.add(
 )
 
 point_id = viz.add(Point(3, 0, 0), color="#ff4444", label="orbit")
-trail_id = viz.add(Point(3, 0, 0), color="#ff8844", size=0.08)
+trail_id = viz.add(Point(3, 0, 0), color="#ff8844", style=PointStyle(size=0.08))
 viz.flush()
 
 print("Animating for 5 seconds...")

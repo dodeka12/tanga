@@ -50,3 +50,4 @@ a_mask = BladeMask.from_mv(alg, mv)
 
 # Union of masks across multiple MVs
 combined = BladeMask.from_array(alg, [mv1, mv2, mv3])
+```

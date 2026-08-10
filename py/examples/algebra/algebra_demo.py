@@ -21,7 +21,6 @@ Run with:
     uv run python py/examples/algebra_demo.py
 """
 
-import pytanga
 from pytanga.algebra import Algebra
 
 

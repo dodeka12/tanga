@@ -31,7 +31,7 @@ ep: MV = N3.ep
 em: MV = N3.em
 einf: MV = N3.einf
 eo: MV = N3.eo
-I: MV = N3.I
+I: MV = N3.I  # noqa: E741
 
 print("\nExtra basis vectors:")
 ep.show("ep  (ep² = +1)")

@@ -43,22 +43,33 @@ let _availableScenes = [];
 function initScene() {
     window._viewerContainer = document.getElementById('viewer-container');
 
-    // WebGL Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = false;
-    window._viewerContainer.appendChild(renderer.domElement);
+    let webglOk = true;
+    try {
+        // WebGL Renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = false;
+        window._viewerContainer.appendChild(renderer.domElement);
+    } catch (e) {
+        console.warn('WebGL renderer failed — falling back to headless mode:', e.message);
+        webglOk = false;
+        renderer = null;
+    }
 
     // CSS2D Renderer
-    window._labelRenderer = new CSS2DRenderer();
-    window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
-    window._labelRenderer.domElement.style.position = 'absolute';
-    window._labelRenderer.domElement.style.top = '0px';
-    window._labelRenderer.domElement.style.pointerEvents = 'none';
-    window._viewerContainer.appendChild(window._labelRenderer.domElement);
+    try {
+        window._labelRenderer = new CSS2DRenderer();
+        window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        window._labelRenderer.domElement.style.position = 'absolute';
+        window._labelRenderer.domElement.style.top = '0px';
+        window._labelRenderer.domElement.style.pointerEvents = 'none';
+        window._viewerContainer.appendChild(window._labelRenderer.domElement);
+    } catch (e) {
+        window._labelRenderer = null;
+    }
 
-    // Scene
+    // Scene (always created — works even without a renderer)
     scene = new THREE.Scene();
     scene.fog = null;
 
@@ -84,23 +95,29 @@ function initScene() {
     window._axesHelper = new THREE.AxesHelper(5);
     scene.add(window._axesHelper);
 
-    // Controls
-    controls = setupControls(camera, renderer);
+    // Controls — only if WebGL is available (needs renderer.domElement)
+    if (webglOk && renderer) {
+        controls = setupControls(camera, renderer);
+        // Ctrl+S screenshot shortcut
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                const dataUrl = renderer.domElement.toDataURL('image/png');
+                const now = new Date();
+                const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const link = document.createElement('a');
+                link.download = `tanga_${ts}.png`;
+                link.href = dataUrl;
+                link.click();
+            }
+        });
+    }
+
     window.addEventListener('resize', onResize);
 
-    // Ctrl+S screenshot shortcut
-    window.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            const dataUrl = renderer.domElement.toDataURL('image/png');
-            const now = new Date();
-            const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            const link = document.createElement('a');
-            link.download = `tanga_${ts}.png`;
-            link.href = dataUrl;
-            link.click();
-        }
-    });
+    console.log('[tanga-debug] initScene done — camera.pos: [', camera.position.toArray().join(', '), ']',
+        'controls:', controls ? ('target: [' + controls.target.toArray().join(', ') + ']') : 'none',
+        'renderer:', webglOk ? 'ok' : 'null');
 }
 
 function onResize() {
@@ -247,6 +264,10 @@ function applySceneConfig(config) {
     // Controls & renderer — delegates to view_mode.js
     configureControls(controls, renderer, spaceDim);
 
+    console.log('[tanga-debug] applySceneConfig — cam.pos: [', camera.position.toArray().join(', '), ']',
+        'target:', controls ? ('[' + controls.target.toArray().join(', ') + ']') : 'none',
+        'scene:', scene ? 'ok' : 'none');
+
     // Title
     if (config.title !== undefined) {
         renderTitle(config.title);
@@ -380,6 +401,11 @@ function rotationFromDirection(dx, dy, dz) {
     return quaternion;
 }
 
+// ── Numeric tolerance helper ─────────────────────────────────
+function _approx(a, b, eps = 1e-9) {
+    return Math.abs(a - b) < eps;
+}
+
 // ── In-place entity updates for frame streaming ─────────────
 function inPlaceUpdate(ent) {
     const mesh = entityMeshes.get(ent.id);
@@ -437,10 +463,10 @@ function inPlaceUpdate(ent) {
     // PointPath requires full rebuild on any change
     if (ent.kind === 'PointPath') return false;
 
-    // Structural changes require full rebuild
-    if (ent.radius !== undefined && ent.radius !== previous?.radius) return false;
-    if (ent.extent !== undefined && ent.extent !== previous?.extent) return false;
-    if (ent.length !== undefined && ent.length !== previous?.length) return false;
+    // Structural changes require full rebuild (tolerance-aware)
+    if (ent.radius !== undefined && (!previous || !_approx(ent.radius, previous.radius))) return false;
+    if (ent.extent !== undefined && (!previous || !_approx(ent.extent, previous.extent))) return false;
+    if (ent.length !== undefined && (!previous || !_approx(ent.length, previous.length))) return false;
     if (ent.kind !== undefined && ent.kind !== previous?.kind) return false;
 
     return true;
@@ -549,10 +575,10 @@ function handleMessage(msg) {
                 upsertLabel(lbl);
             }
         }
-        if (!cameraPositioned && entityMeshes.size > 0) {
-            const cc = sceneConfig?.camera;
-            if (!cc || (!cc.position && !cc.target)) fitCameraToScene();
-            cameraPositioned = true;
+        if (msg.fit_camera) {
+            fitCameraToScene();
+            console.log('[tanga-debug] fit_camera on flush — cam.pos: [', camera.position.toArray().join(', '), ']',
+                'controls.target: [', controls ? controls.target.toArray().join(', ') : 'none', ']');
         }
     } else if (msg.type === 'animate') {
         handleAnimate(msg);

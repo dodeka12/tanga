@@ -75,3 +75,4 @@ Every solver function that expects a multivector also accepts:
 solve(A, 1.0, algebra=alg)              # 1.0 → scalar MV
 solve(A, "e1", algebra=alg)             # "e1" → MV with e1=1
 solve(A, "2e1 - e2", algebra=alg)       # parsed expression
+```

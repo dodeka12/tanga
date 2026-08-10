@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pytanga.viz.export._animation_recording import AnimationRecording
     from pytanga.viz.visualizer import Visualizer
 
 from pytanga.viz._figure import FigureConfig
@@ -437,7 +438,7 @@ class SceneExporter:
 
     # ── Animated export ────────────────────────────────────
 
-    def start_animation_recording(self):
+    def start_animation_recording(self) -> AnimationRecording:
         """Begin recording entity state for animated HTML export.
 
         Returns an ``AnimationRecording`` context object.  Call

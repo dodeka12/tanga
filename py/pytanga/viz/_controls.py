@@ -14,13 +14,29 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+
+# ── Control event dataclass ──────────────────────────────────
+
+
+@dataclass
+class ControlEvent:
+    """Metadata passed to every control handler alongside the value.
+
+    Only *browser_id* is populated for now; additional fields may be added
+    without breaking existing handler signatures.
+    """
+
+    browser_id: str | None = None
+
+
 # ── Handler type alias ──────────────────────────────────────
 
-Handler = Callable[[Any], Awaitable[None]]
+Handler = Callable[[Any, ControlEvent], Awaitable[None]]
 """Async callback type for control interaction handlers.
 
-Takes a single ``value`` argument (float for sliders, str for dropdowns,
-``None`` for buttons / group toggles) and returns an awaitable.
+Takes a ``value`` argument (float for sliders, str for dropdowns,
+``None`` for buttons / group toggles) and a :class:`ControlEvent`,
+and returns an awaitable.
 """
 
 
