@@ -434,6 +434,9 @@ function inPlaceUpdate(ent) {
         mesh.scale.set(ent.scale[0], ent.scale[1], ent.scale[2]);
     }
 
+    // PointPath requires full rebuild on any change
+    if (ent.kind === 'PointPath') return false;
+
     // Structural changes require full rebuild
     if (ent.radius !== undefined && ent.radius !== previous?.radius) return false;
     if (ent.extent !== undefined && ent.extent !== previous?.extent) return false;

@@ -27,6 +27,7 @@ from ._app import VisualizerApp
 from ._controls import Button, ControlGroup, Dropdown, Slider
 from ._figure import FigureConfig
 from ._label import Label
+from ._point_path import PointPath, gradient_colors, multi_gradient_colors
 from ._scene_handle import VizSceneHandle
 from ._styles import (
     AnimStyle,
@@ -45,6 +46,7 @@ from ._styles import (
     ObjVizStyle,
     PlaneStyle,
     PointPairStyle,
+    PointPathStyle,
     PointStyle,
     ReflectionLineStyle,
     ReflectionPlaneStyle,
@@ -55,7 +57,7 @@ from ._styles import (
     TranslatorStyle,
     VizStyle,
 )
-from ._types import VizInputType
+from ._types import SceneEntity, VizInputType
 from .export._exporter import SceneExporter
 from .scene import CameraConfig, SceneConfig
 from .visualizer import Timeline, Visualizer
@@ -82,17 +84,22 @@ __all__ = [
     "MotorStyle",
     "ObjVizStyle",
     "PlaneStyle",
+    "PointPath",
+    "PointPathStyle",
     "PointPairStyle",
     "PointStyle",
     "ReflectionLineStyle",
     "ReflectionPlaneStyle",
     "RotorStyle",
     "SceneConfig",
+    "SceneEntity",
     "SceneExporter",
     "Slider",
     "SpaceStyle",
     "SphereStyle",
     "Timeline",
+    "gradient_colors",
+    "multi_gradient_colors",
     "TitleStyle",
     "TranslatorStyle",
     "Visualizer",

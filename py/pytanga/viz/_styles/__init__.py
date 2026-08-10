@@ -58,6 +58,7 @@ from ._entity_styles import (
     LineStyle,
     PlaneStyle,
     PointPairStyle,
+    PointPathStyle,
     PointStyle,
     SpaceStyle,
     SphereStyle,
@@ -104,6 +105,7 @@ ObjVizStyle: TypeAlias = Union[
     MotorStyle,
     GeneralRotorStyle,
     CrossHairPointStyle,
+    PointPathStyle,
 ]
 
 
@@ -121,6 +123,7 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Circle": CircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
     "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
+    "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=0.03),
     # Operators
     "ReflectionLine": ReflectionLineStyle(
         color="#aaccff", opacity=0.6, length=5.0, thickness=0.04

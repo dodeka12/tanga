@@ -22,6 +22,8 @@ from pytanga.geometry.entities import (
     Space,
     Sphere,
 )
+
+from ._point_path import PointPath
 from pytanga.geometry.operators import (
     Dilator,
     GeneralRotor,
@@ -66,7 +68,11 @@ def serialize_entity(
         kind = type(entity).__name__
 
     # ── Entities ──
-    if isinstance(entity, Point):
+    if isinstance(entity, PointPath):
+        result.update(
+            _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
+        )
+    elif isinstance(entity, Point):
         result.update(_serialize_point(entity, props, kind=kind, styles_map=styles_map))
     elif isinstance(entity, Direction):
         result.update(
@@ -240,6 +246,24 @@ def _clamp_positive(val: float, minimum: float = 0.001) -> float:
 
 
 # ── Entities ────────────────────────────────────────────────
+
+
+def _serialize_point_path(
+    ent: PointPath,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {"line_thickness": 0.03},
+        styles_map=styles_map,
+    ) | {
+        "points": [list(p) for p in ent.points],
+        "colors": ent.colors,
+    }
 
 
 def _serialize_point(

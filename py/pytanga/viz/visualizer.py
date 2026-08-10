@@ -34,7 +34,7 @@ from ._style_dict import (
     _StyleDict,
 )
 from ._timeline import Timeline
-from ._types import VizInputType
+from ._types import SceneEntity, VizInputType
 from ._utils import _is_jupyter
 from .scene import CameraConfig, Scene, SceneConfig, SceneObject
 
@@ -295,6 +295,24 @@ class Visualizer(_JupyterDisplayMixin):
                 ids.append(eid)
             return ids
 
+        # Viz-level drawables (PointPath, etc.) go through add_object
+        from pytanga.geometry.entities import Entity as GeoEntity
+        from pytanga.geometry.operators import Operator as GeoOperator
+
+        if not isinstance(entity, (GeoEntity, GeoOperator)):
+            kind = type(entity).__name__
+            return scene.add_object(
+                SceneObject(
+                    id=entity_id or "",
+                    layer="scene",
+                    kind=kind,
+                    data=entity,
+                    properties=properties,
+                    dirty=True,
+                ),
+                object_id=entity_id,
+            )
+
         eid = scene.add(entity, entity_id=entity_id, **properties)
 
         if label is not None:
@@ -320,16 +338,51 @@ class Visualizer(_JupyterDisplayMixin):
         return eid
 
     def update(self, entity_id: str, **properties: Any) -> None:
-        """Update rendering properties of an existing entity in the main scene."""
+        """Update rendering properties of an existing entity in the main scene.
+
+        Accepted keyword arguments correspond to the style fields of the
+        entity's kind — see :class:`~pytanga.viz.ObjVizStyle` and its
+        per-entity subclasses.
+
+        Common across all kinds:
+            ``color`` (str), ``opacity`` (float), ``style`` (ObjVizStyle)
+
+        Per-kind examples:
+            Point/HPoint: ``size``
+            Line: ``thickness``, ``length``
+            PointPath: ``line_thickness``
+            Sphere/Circle/Plane/Line: ``wireframe`` (bool)
+        """
         self._scenes[""].update(entity_id, **properties)
 
+    def update_style(
+        self, entity_id: str, style: ObjVizStyle
+    ) -> None:
+        """Update rendering style of an existing entity from a style instance.
+
+        Extracts only the explicitly set (non-``None``) fields from *style*
+        and passes them as keyword properties to :meth:`update`.
+
+        Example::
+
+            viz.update_style(point_id, PointStyle(size=0.15, opacity=0.5))
+
+        is equivalent to::
+
+            viz.update(point_id, size=0.15, opacity=0.5)
+        """
+        from ._props import _extract_non_none
+
+        props = _extract_non_none(style)
+        self._scenes[""].update(entity_id, **props)
+
     def update_entity(
-        self, entity_id: str, obj: GeoEntity | Any, *, opns: bool | None = None
+        self, entity_id: str, obj: SceneEntity, *, opns: bool | None = None
     ) -> None:
         """Replace the geometry for an existing entity in the main scene."""
         if opns is None:
             opns = self._opns
-        entity = self._resolve(obj, opns=opns)
+        entity: SceneEntity | list[GeoEntity] = self._resolve(obj, opns=opns)
         if isinstance(entity, list):
             raise ValueError(
                 f"update_entity expects a single entity, but the MV resolved to "
@@ -427,10 +480,22 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── MV resolution ──────────────────────────────────────
 
-    def _resolve(self, obj: Any, *, opns: bool = True) -> GeoEntity | list[GeoEntity]:
-        """Resolve an MV or Entity/Operator to one or more geo entities."""
+    def _resolve(
+        self, obj: Any, *, opns: bool = True
+    ) -> SceneEntity | list[GeoEntity]:
+        """Resolve an MV to a :class:`SceneEntity` or list of GeoEntities.
+
+        Viz-level drawables (PointPath, …) are passed through unchanged.
+        GeoEntities and Operators are returned as-is.
+        MVs are resolved via :func:`pytanga.geometry.analyze`.
+        """
         from pytanga.geometry.operators import Operator as GeoOperator
 
+        # Viz-level drawables — pass through
+        if isinstance(obj, SceneEntity):
+            return obj  # type: ignore[return-value]
+
+        # Geo entities and operators — pass through
         if isinstance(obj, (GeoEntity, GeoOperator)):
             return obj  # type: ignore[return-value]
 

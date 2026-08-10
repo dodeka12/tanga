@@ -302,3 +302,31 @@ class SpaceStyle(VizStyle):
         if self.extent is not None:
             result["extent"] = self.extent
         return result
+
+
+@dataclass
+class PointPathStyle(VizStyle):
+    """Visual style for :class:`~pytanga.viz._point_path.PointPath`.
+
+    Attributes:
+        color: Fallback uniform color when per-point colors are ``None``.
+        opacity: Global opacity (0..1).
+        line_thickness: Uniform line thickness when not using per-vertex
+            thickness.  Due to WebGL limitations, ``THREE.Line`` thickness
+            is capped at 1px on most platforms.  Per-vertex thickness
+            requires a custom geometry approach (future).
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    line_thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "PointPathStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.line_thickness is not None:
+            result["line_thickness"] = self.line_thickness
+        return result

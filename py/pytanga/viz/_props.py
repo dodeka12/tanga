@@ -33,3 +33,22 @@ def _normalize_color(
             return (hex_str, a)
         return hex_str
     raise TypeError(f"Color must be str or tuple, got {type(color).__name__}")
+
+
+def _extract_non_none(style) -> dict[str, object]:
+    """Extract non-None fields from a style dataclass as a keyword dict.
+
+    Used by :meth:`update_style` to convert a sparse style instance into
+    the ``**properties`` accepted by :meth:`~scene.Scene.update`.
+
+    Example::
+
+        >>> from pytanga.viz import PointStyle
+        >>> _extract_non_none(PointStyle(size=0.15, opacity=0.5))
+        {'size': 0.15, 'opacity': 0.5}
+    """
+    return {
+        field_name: value
+        for field_name, value in style.__dict__.items()
+        if value is not None
+    }
