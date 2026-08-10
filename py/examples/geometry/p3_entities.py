@@ -28,7 +28,6 @@ from pytanga.geometry import (
     Point,
     Reflection,
     Rotor,
-    Space,
 )
 
 p3 = BasisP3()
@@ -106,7 +105,7 @@ print(f"  Rotor → {result}")
 # ── 7. Plain Functions (alternative) ───────────────────────
 hr("7. Plain functions — no Geometry wrapper needed")
 
-from pytanga.geometry import analyze, create
+from pytanga.geometry import analyze, create  # noqa: E402
 
 result = analyze(create(p3, Point(10, 0, 0)))
 print(f"  plain create + analyze → {result}")

@@ -151,7 +151,7 @@ for e in entities:
 # ── 9. Plain Functions (alternative) ───────────────────────
 hr("9. Plain functions — no Geometry wrapper needed")
 
-from pytanga.geometry import analyze, create
+from pytanga.geometry import analyze, create  # noqa: E402
 
 mv_pt = create(n3, Point(7, 0, 0))
 result = analyze(mv_pt)

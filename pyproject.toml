@@ -31,7 +31,7 @@ examples = [
     "ipython>=8.30",
 ]
 
-[tool.ruff]
+[tool.ruff.lint]
 # Keep reporting unused imports, but do not automatically delete them
 unfixable = ["F401"]
 
