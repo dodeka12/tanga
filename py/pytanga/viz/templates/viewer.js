@@ -297,7 +297,19 @@ function renderTitle(titleText) {
         titleElement.style.zIndex = '5';
         window._viewerContainer.appendChild(titleElement);
     }
-    titleElement.textContent = titleText;
+    titleElement.textContent = '';  // clear first
+    titleElement.innerHTML = titleText;
+    if (typeof renderMathInElement !== 'undefined') {
+        try {
+            renderMathInElement(titleElement, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                ],
+                throwOnError: false,
+            });
+        } catch (e) { /* ignore */ }
+    }
 }
 
 // ── Annotation Panel ──────────────────────────────────────────
