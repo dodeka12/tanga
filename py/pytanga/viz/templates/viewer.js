@@ -114,6 +114,10 @@ function initScene() {
     }
 
     window.addEventListener('resize', onResize);
+
+    console.log('[tanga-debug] initScene done — camera.pos:', camera.position.toArray(),
+        'controls:', controls ? { target: controls.target.toArray() } : 'none',
+        'renderer:', webglOk ? 'ok' : 'null');
 }
 
 function onResize() {
@@ -259,6 +263,10 @@ function applySceneConfig(config) {
 
     // Controls & renderer — delegates to view_mode.js
     configureControls(controls, renderer, spaceDim);
+
+    console.log('[tanga-debug] applySceneConfig — cam.pos:', camera.position.toArray(),
+        'target:', controls ? controls.target.toArray() : 'none',
+        'scene:', scene ? 'ok' : 'none');
 
     // Title
     if (config.title !== undefined) {
@@ -564,7 +572,17 @@ function handleMessage(msg) {
         }
         if (!cameraPositioned && entityMeshes.size > 0) {
             const cc = sceneConfig?.camera;
-            if (!cc || (!cc.position && !cc.target)) fitCameraToScene();
+            console.log('[tanga-debug] first entity update — entityMeshes:', entityMeshes.size,
+                'cameraPositioned:', cameraPositioned,
+                'cam.pos:', camera.position.toArray(),
+                'controls.target:', controls ? controls.target.toArray() : 'none',
+                'cameraConfig:', cc || 'none');
+            if (!cc || (!cc.position && !cc.target)) {
+                console.log('[tanga-debug] calling fitCameraToScene ...');
+                fitCameraToScene();
+                console.log('[tanga-debug] fitCameraToScene done — cam.pos:', camera.position.toArray(),
+                    'controls.target:', controls ? controls.target.toArray() : 'none');
+            }
             cameraPositioned = true;
         }
     } else if (msg.type === 'animate') {
