@@ -160,3 +160,4 @@ scaled = batch.mul_scalar(3.0)
 
 # Convert to labeled tensor for label‑driven arithmetic
 labeled = batch["nm"]                 # labels "n*_*" (short form) → "n*_*" canon
+```

@@ -94,3 +94,4 @@ mask_a = BladeMask(alg, [0, 1, 2])
 mask_b = BladeMask(alg, [1, 2, 3])
 # mask_a.intersection(mask_b) succeeds (set op)
 # aligning tensor axes with these masks fails (compatibility check)
+```

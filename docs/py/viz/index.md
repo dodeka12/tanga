@@ -88,3 +88,4 @@ load automatically from CDN in the browser — no additional installs needed.
 
 ```bash
 uv add aiohttp
+```

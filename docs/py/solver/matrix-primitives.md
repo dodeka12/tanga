@@ -100,3 +100,4 @@ y_vec = to_matrix(Y, mask=M.c_mask)
 x_arr = np.linalg.solve(M.data[0], y_vec.data)   # M.data[0] is (|c|, |b|)
 X = from_matrix(MVMatrix(x_arr, M.b_mask))
 print(X)
+```

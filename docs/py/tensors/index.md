@@ -42,3 +42,4 @@ O = product_tensor(mask, mask)  # shape 8×8×8
 
 # Label the axes and perform a label‑driven GP
 C = (O["kij"] * A["i"] * A["j"])["->k"]
+```
