@@ -896,6 +896,6 @@ function animate() {
 }
 
 // ── Bootstrap ───────────────────────────────────────────────
-initScene();
 connectWebSocket();
+initScene();
 animate();

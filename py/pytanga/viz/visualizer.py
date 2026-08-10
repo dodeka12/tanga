@@ -839,6 +839,8 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = VizServer(host=self._host, port=self._port)
 
         async def _run() -> None:
+            ws_ready = asyncio.Event()
+
             await self._server.start(
                 lambda scene_name: (
                     self._scenes.get(scene_name, self._scenes[""]).full_state(
@@ -851,11 +853,19 @@ class Visualizer(_JupyterDisplayMixin):
                 on_connect=self._on_client_connect,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
+                on_ready=lambda: ws_ready.set(),
             )
             if self._open_browser:
                 self._server.open_browser()
             if wait_for_browser:
-                await self._server.wait_for_client()
+                try:
+                    await asyncio.wait_for(ws_ready.wait(), timeout=30.0)
+                except asyncio.TimeoutError:
+                    self._print_ws_timeout_note()
+                    raise RuntimeError(
+                        "No browser connected within 30s.  "
+                        f"Open {self.url} manually."
+                    )
             # Flush initial state for the main scene
             await self._flush_scene_async("")
 
@@ -1145,16 +1155,19 @@ class Visualizer(_JupyterDisplayMixin):
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
         """Handle an incoming control event from the frontend."""
+        from ._controls import ControlEvent
+
         cid = payload.get("control_id")
         browser_id = payload.get("browser_id")
+        event = ControlEvent(browser_id=browser_id)
         if cid and (handler := self._handler_registry.get(cid)):
             try:
                 if msg_type == "control:change":
-                    await handler(payload.get("value"), browser_id=browser_id)
+                    await handler(payload.get("value"), event)
                 elif msg_type == "control:click":
-                    await handler(None, browser_id=browser_id)
+                    await handler(None, event)
                 elif msg_type == "control:group_toggle":
-                    await handler(payload.get("value"), browser_id=browser_id)
+                    await handler(payload.get("value"), event)
             except Exception:
                 import logging
 
