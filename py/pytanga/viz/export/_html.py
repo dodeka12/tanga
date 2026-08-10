@@ -62,6 +62,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     """Generate the JS bootstrap adapter for static full-page HTML exports."""
     bg_color = scene_config.get("background_color", "#1a1a2e")
     space_extent = scene_config.get("space_extent", 10)
+    space_dim = scene_config.get("space_dim", 3)
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")
 
@@ -102,6 +103,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             auto_rotate=False,
             show_grid=False,
             show_axes=False,
+            space_dim=space_dim,
         ),
     ]
 
@@ -173,6 +175,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             camera_var="adapterCamera",
             controls_var="adapterControls",
             cam_explicit=False,
+            space_dim=space_dim,
         )
     )
     parts.append(

@@ -220,6 +220,7 @@ def _build_animated_figure_adapter(
     auto_rotate = figure_style.get("auto_rotate", False)
     show_grid = figure_style.get("show_grid", True)
     show_axes = figure_style.get("show_axes", True)
+    space_dim = figure_style.get("space_dim", 3)
     show_title = figure_style.get("show_title", True)
     show_annotation = figure_style.get("show_annotation", True)
 
@@ -267,6 +268,7 @@ def _build_animated_figure_adapter(
             show_grid=show_grid,
             show_axes=show_axes,
             space_extent=5,
+            space_dim=space_dim,
             explicit_mouse_buttons=True,
         ),
         js_resize_handler(
@@ -298,6 +300,7 @@ def _build_animated_figure_adapter(
             camera_var="figCamera",
             controls_var="figControls",
             cam_explicit=False,
+            space_dim=space_dim,
         ),
         "",
         js_annotation_panel(
@@ -336,6 +339,7 @@ def _build_animated_fullpage_adapter(
     """Generate the JS bootstrap adapter for a full-page animated document."""
     bg = scene_config.get("background_color", "#1a1a2e")
     space_extent = scene_config.get("space_extent", 10)
+    space_dim = scene_config.get("space_dim", 3)
     show_grid = scene_config.get("show_grid", True)
     show_axes = scene_config.get("show_axes", True)
 
@@ -385,6 +389,7 @@ def _build_animated_fullpage_adapter(
             show_grid=show_grid,
             show_axes=show_axes,
             space_extent=space_extent,
+            space_dim=space_dim,
         ),
         js_resize_handler(
             renderer_var="figRenderer",
@@ -413,6 +418,7 @@ def _build_animated_fullpage_adapter(
             camera_var="figCamera",
             controls_var="figControls",
             cam_explicit=cam_explicit,
+            space_dim=space_dim,
         ),
         "",
         js_annotation_panel(
