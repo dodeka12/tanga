@@ -401,6 +401,11 @@ function rotationFromDirection(dx, dy, dz) {
     return quaternion;
 }
 
+// ── Numeric tolerance helper ─────────────────────────────────
+function _approx(a, b, eps = 1e-9) {
+    return Math.abs(a - b) < eps;
+}
+
 // ── In-place entity updates for frame streaming ─────────────
 function inPlaceUpdate(ent) {
     const mesh = entityMeshes.get(ent.id);
@@ -458,10 +463,10 @@ function inPlaceUpdate(ent) {
     // PointPath requires full rebuild on any change
     if (ent.kind === 'PointPath') return false;
 
-    // Structural changes require full rebuild
-    if (ent.radius !== undefined && ent.radius !== previous?.radius) return false;
-    if (ent.extent !== undefined && ent.extent !== previous?.extent) return false;
-    if (ent.length !== undefined && ent.length !== previous?.length) return false;
+    // Structural changes require full rebuild (tolerance-aware)
+    if (ent.radius !== undefined && (!previous || !_approx(ent.radius, previous.radius))) return false;
+    if (ent.extent !== undefined && (!previous || !_approx(ent.extent, previous.extent))) return false;
+    if (ent.length !== undefined && (!previous || !_approx(ent.length, previous.length))) return false;
     if (ent.kind !== undefined && ent.kind !== previous?.kind) return false;
 
     return true;
