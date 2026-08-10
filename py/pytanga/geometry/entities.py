@@ -289,12 +289,30 @@ class Circle:
 
     For imaginary circles (N3-only, dual of a real point pair), set
     ``is_imaginary=True``.  They have no real Euclidean points on them.
+
+    The ``normal`` defaults to ``Direction(0, 0, 1)`` (the positive
+    z-axis), which is the natural choice for 2D use cases where the
+    circle lies in the xy-plane.
     """
 
     center: Point
     normal: Direction
     radius: float
     is_imaginary: bool = False
+
+    def __init__(
+        self,
+        center: Point,
+        normal: Direction | None = None,
+        radius: float = 0.0,
+        is_imaginary: bool = False,
+    ):
+        if normal is None:
+            normal = Direction(0.0, 0.0, 1.0)
+        object.__setattr__(self, "center", center)
+        object.__setattr__(self, "normal", normal)
+        object.__setattr__(self, "radius", float(radius))
+        object.__setattr__(self, "is_imaginary", is_imaginary)
 
     def __repr__(self) -> str:
         prefix = "Imag" if self.is_imaginary else ""
@@ -308,9 +326,21 @@ class ImagCircle(Circle):
     Inherits all fields from :class:`Circle` with ``is_imaginary=True``.
     Can be used as a class-based key in :attr:`Visualizer.default_styles`
     (e.g. ``viz.default_styles[ImagCircle]``).
+
+    Like :class:`Circle`, the ``normal`` defaults to ``Direction(0, 0, 1)``
+    when not provided.
     """
 
     is_imaginary: bool = True
+
+    def __init__(
+        self,
+        center: Point,
+        normal: Direction | None = None,
+        radius: float = 0.0,
+        is_imaginary: bool = True,
+    ):
+        super().__init__(center, normal, radius, is_imaginary)
 
 
 @dataclass(frozen=True)

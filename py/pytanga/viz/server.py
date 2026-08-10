@@ -72,6 +72,7 @@ class VizServer:
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
         self._pending_screenshots: dict[str, asyncio.Future[Any]] = {}
         self._pending_page_tokens: dict[str, dict[str, Any]] = {}
+        self._any_ws_ready: asyncio.Event = asyncio.Event()
 
     # ── Lifecycle ───────────────────────────────────────────
 
@@ -290,10 +291,16 @@ class VizServer:
             file_path = self._static_dir / rel_path
             if file_path.is_file():
                 return web.FileResponse(file_path)
+            # If the path looks like a static file request (has a file
+            # extension, e.g. /favicon.ico), return 404 instead of
+            # serving viewer.html — avoids bogus page-load prints.
+            if "." in rel_path.rsplit("/", 1)[-1]:
+                raise web.HTTPNotFound()
 
         # Inject a page token for WS connectivity correlation
+        # Use token from URL query param if present, otherwise generate random
         viewer_path = self._static_dir / "viewer.html"
-        page_token = uuid4().hex[:8]
+        page_token = request.query.get("token") or uuid4().hex[:8]
         remote_addr = request.remote or "unknown"
         self._pending_page_tokens[page_token] = {
             "remote_addr": remote_addr,
@@ -388,11 +395,23 @@ class VizServer:
                             viewer_name = data.get("viewer_name")
                             if viewer_name:
                                 current_session.viewer_name = viewer_name
-                            await self._push_full_state(ws, scene_name=scene_name)
-                            if self._push_controls_cb is not None:
-                                await self._push_controls_cb(scene_name)
+
+                            # Signal ready BEFORE push operations so the
+                            # wait_for_ws_ready() mechanism is not blocked
+                            # by a failure in push_full_state / push_controls.
+                            self._any_ws_ready.set()
                             if self._on_ready is not None:
                                 self._on_ready()
+
+                            try:
+                                await self._push_full_state(ws, scene_name=scene_name)
+                            except Exception:
+                                pass
+                            try:
+                                if self._push_controls_cb is not None:
+                                    await self._push_controls_cb(scene_name)
+                            except Exception:
+                                pass
 
                         elif msg_type == "screenshot:data":
                             rid = data.get("request_id")
@@ -622,10 +641,15 @@ class VizServer:
                     f"(port forwarding/proxy must support WebSocket upgrades)."
                 )
 
-    def open_browser(self) -> None:
-        """Open the viewer URL in the default browser with graceful fallback."""
+    def open_browser(self, path: str = "") -> None:
+        """Open the viewer URL in the default browser with graceful fallback.
+
+        Args:
+            path: Optional URL path/query to append (e.g. ``"/?token=abc123"``).
+        """
+        url = self.url + path
         try:
-            ok = webbrowser.open(self.url)
+            ok = webbrowser.open(url)
             if ok:
                 return
         except Exception:
@@ -637,7 +661,7 @@ class VizServer:
             from rich.text import Text
 
             console = Console()
-            url_text = Text(self.url, style="bold cyan underline")
+            url_text = Text(url, style="bold cyan underline")
             panel = Panel(
                 Text.assemble(
                     "[yellow]Could not open browser automatically.[/yellow]\n",
@@ -649,11 +673,9 @@ class VizServer:
                 padding=(1, 2),
             )
             console.print(panel)
-            self._print_ws_reachability_note()
         except ImportError:
             print("Could not open browser automatically.")
-            print(f"Open {self.url} manually to view the scene.")
-            self._print_ws_reachability_note()
+            print(f"Open {url} manually to view the scene.")
 
     async def wait_for_client(self, timeout: float = 30.0) -> bool:
         """Wait until at least one WebSocket client connects.
@@ -668,3 +690,16 @@ class VizServer:
                 return True
             await asyncio.sleep(0.5)
         return False
+
+    async def wait_for_ws_ready(self, *, timeout: float = 30.0) -> bool:
+        """Wait until at least one browser completes the WebSocket ready round-trip.
+
+        Returns ``True`` if a ready message was received, ``False`` on timeout.
+        """
+        if self._any_ws_ready.is_set():
+            return True
+        try:
+            await asyncio.wait_for(self._any_ws_ready.wait(), timeout=timeout)
+            return True
+        except asyncio.TimeoutError:
+            return False

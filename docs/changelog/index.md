@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.3] — 2026-08-10
+
+### New Features
+- `Circle.normal` now optional, defaults to `Direction(0, 0, 1)`
+
+### Bug Fixes
+- Unified WebSocket startup/reconnect flow across all entry points
+- Export 2D views as orthographic in standalone HTML
+- Render title overlays with KaTeX in HTML exports and live viewer
+- Include `PointPath` renderer in HTML/glTF exports
+
+### Doc Changes
+- Added `viz-websocket-startup-fix.md` planning document
+
+→ [Full changelog](2026-08-10_4c556d3.md)
+
 ## [0.5.2] — 2026-08-10
 
 ### New Features

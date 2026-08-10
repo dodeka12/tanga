@@ -34,6 +34,7 @@ def js_scene_setup(
     show_grid: bool = True,
     show_axes: bool = True,
     space_extent: float = 10,
+    space_dim: int = 3,
     pixel_ratio_expr: str = "window.devicePixelRatio",
     explicit_mouse_buttons: bool = False,
 ) -> str:
@@ -57,7 +58,7 @@ def js_scene_setup(
         scene_var: JS variable name for ``Scene``.
         width_expr: JS expression for renderer width.
         height_expr: JS expression for renderer height.
-        cam_fov: Camera field-of-view.
+        cam_fov: Camera field-of-view (3D only).
         cam_pos: Initial camera position.
         cam_target: OrbitControls target.
         cam_near: Camera near plane.
@@ -66,30 +67,52 @@ def js_scene_setup(
         show_grid: Whether to add a ``GridHelper``.
         show_axes: Whether to add an ``AxesHelper``.
         space_extent: Extent for grid/axes sizing.
+        space_dim: 2 for 2D orthographic view, 3 for 3D perspective.
         pixel_ratio_expr: JS expression for device pixel ratio.
         explicit_mouse_buttons: If True, set LEFT/MIDDLE/RIGHT mouse buttons.
 
     Returns:
         JS code string.
     """
-    mouse_buttons_block = ""
+    is_2d = space_dim == 2
+
+    # ── Mouse buttons ──────────────────────────────────────
     if explicit_mouse_buttons:
-        mouse_buttons_block = f"""{controls_var}.mouseButtons = {{
+        if is_2d:
+            mouse_buttons_block = f"""{controls_var}.mouseButtons = {{
+    LEFT: THREE.MOUSE.PAN,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN,
+}};
+"""
+        else:
+            mouse_buttons_block = f"""{controls_var}.mouseButtons = {{
     LEFT: THREE.MOUSE.ROTATE,
     MIDDLE: THREE.MOUSE.DOLLY,
     RIGHT: THREE.MOUSE.PAN,
 }};
 """
+    else:
+        mouse_buttons_block = ""
 
+    # ── Grid ───────────────────────────────────────────────
     grid_block = ""
     if show_grid:
-        grid_block = f"""const gs = {space_extent * 2};
+        if is_2d:
+            # GridHelper creates XZ-plane grid. Rotate to XY for top-down 2D.
+            grid_block = f"""const gs = {space_extent * 2};
+const _grid = new THREE.GridHelper(gs, Math.max(gs, 20), 0x444466, 0x222244);
+_grid.rotation.x = Math.PI / 2;  // XZ → XY plane
+{scene_var}.add(_grid);"""
+        else:
+            grid_block = f"""const gs = {space_extent * 2};
 {scene_var}.add(new THREE.GridHelper(gs, Math.max(gs, 20), 0x444466, 0x222244));"""
 
     axes_block = ""
     if show_axes:
         axes_block = f"{scene_var}.add(new THREE.AxesHelper({space_extent}));"
 
+    # ── Background / renderer ──────────────────────────────
     if bg_color == "transparent":
         scene_bg = f"{scene_var}.background = null;"
         renderer_opts = "{ antialias: true, alpha: true }"
@@ -99,14 +122,37 @@ def js_scene_setup(
         renderer_opts = "{ antialias: true }"
         clear_color = ""
 
+    # ── Camera ─────────────────────────────────────────────
+    if is_2d:
+        camera_js = f"""// 2D orthographic camera – top‑down view
+const _frustumSize = {space_extent * 2};
+const {camera_var} = new THREE.OrthographicCamera(
+    _frustumSize * ({width_expr} / {height_expr}) / -2,
+    _frustumSize * ({width_expr} / {height_expr}) / 2,
+    _frustumSize / 2,
+    _frustumSize / -2,
+    0.1, 1000
+);
+{camera_var}.position.set(0, 0, 20);
+{camera_var}.lookAt(0, 0, 0);"""
+    else:
+        camera_js = f"""const {camera_var} = new THREE.PerspectiveCamera(
+    {cam_fov}, {width_expr} / {height_expr}, {cam_near}, {cam_far}
+);
+{camera_var}.position.set({cam_pos[0]}, {cam_pos[1]}, {cam_pos[2]});"""
+
+    # ── Controls extras for 2D ─────────────────────────────
+    controls_2d_extras = ""
+    if is_2d:
+        controls_2d_extras = f"""
+{controls_var}.enableRotate = false;
+"""
+
     return f"""// Scene
 const {scene_var} = new THREE.Scene();
 {scene_bg}
 
-const {camera_var} = new THREE.PerspectiveCamera(
-    {cam_fov}, {width_expr} / {height_expr}, {cam_near}, {cam_far}
-);
-{camera_var}.position.set({cam_pos[0]}, {cam_pos[1]}, {cam_pos[2]});
+{camera_js}
 
 const {renderer_var} = new THREE.WebGLRenderer({renderer_opts});{clear_color}
 {renderer_var}.setPixelRatio({pixel_ratio_expr});
@@ -127,7 +173,7 @@ const {controls_var} = new OrbitControls({camera_var}, {renderer_var}.domElement
 {controls_var}.dampingFactor = 0.08;
 {controls_var}.screenSpacePanning = true;
 {controls_var}.target.set({cam_target[0]}, {cam_target[1]}, {cam_target[2]});
-{controls_var}.autoRotate = {_format_js_bool(auto_rotate)};
+{controls_var}.autoRotate = {_format_js_bool(auto_rotate)};{controls_2d_extras}
 {controls_var}.update();
 
 // Toggle auto-rotate with 'r' key
@@ -211,12 +257,37 @@ def js_autofit_camera(
     camera_var: str,
     controls_var: str,
     cam_explicit: bool,
+    space_dim: int = 3,
 ) -> str:
     """Generate JS for auto-fit camera from entity bounding box."""
     if cam_explicit:
         return ""
 
-    return f"""// Auto-fit camera from entity bounds
+    if space_dim == 2:
+        return f"""// Auto-fit 2D orthographic camera from entity XY bounds
+if ({mesh_map_var}.size > 0) {{
+    const box = new THREE.Box3();
+    {mesh_map_var}.forEach(m => box.expandByObject(m));
+    if (!box.isEmpty()) {{
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        const sz = new THREE.Vector3();
+        box.getSize(sz);
+        const frustumSize = Math.max(sz.x, sz.y, 1) * 1.2;
+        const aspect = {camera_var}.right ? Math.abs({camera_var}.right - {camera_var}.left) / Math.abs({camera_var}.top - {camera_var}.bottom) : 1;
+        {camera_var}.left = frustumSize * aspect / -2;
+        {camera_var}.right = frustumSize * aspect / 2;
+        {camera_var}.top = frustumSize / 2;
+        {camera_var}.bottom = frustumSize / -2;
+        {camera_var}.position.set(center.x, center.y, 20);
+        {camera_var}.lookAt(center.x, center.y, 0);
+        {camera_var}.updateProjectionMatrix();
+        {controls_var}.target.set(center.x, center.y, 0);
+        {controls_var}.update();
+    }}
+}}"""
+
+    return f"""// Auto-fit 3D camera from entity bounds
 if ({mesh_map_var}.size > 0) {{
     const box = new THREE.Box3();
     {mesh_map_var}.forEach(m => box.expandByObject(m));

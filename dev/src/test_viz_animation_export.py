@@ -31,7 +31,7 @@ from pytanga.viz import AnimStyle, FigureStyle, SceneExporter, Visualizer
 
 
 def main() -> None:
-    viz = Visualizer(opns=False)
+    viz = Visualizer(title="Sphere intersection $S_1 \\wedge S_2$", opns=False)
     exporter = SceneExporter(viz)
     viz.set_annotation(
         "## Hello World\n\nRecording sphere intersection $S_1 \\wedge S_2$."

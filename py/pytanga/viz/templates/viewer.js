@@ -115,9 +115,6 @@ function initScene() {
 
     window.addEventListener('resize', onResize);
 
-    console.log('[tanga-debug] initScene done — camera.pos: [', camera.position.toArray().join(', '), ']',
-        'controls:', controls ? ('target: [' + controls.target.toArray().join(', ') + ']') : 'none',
-        'renderer:', webglOk ? 'ok' : 'null');
 }
 
 function onResize() {
@@ -157,7 +154,9 @@ function connectWebSocket() {
         const readyPayload = { type: 'ready', scene: _myScene };
         if (_browserId) readyPayload.browser_id = _browserId;
         if (_viewerName) readyPayload.viewer_name = _viewerName;
-        if (window.__tanga_page_token) readyPayload.page_token = window.__tanga_page_token;
+        const pageToken = window.__tanga_page_token
+            || new URLSearchParams(window.location.search).get('token');
+        if (pageToken) readyPayload.page_token = pageToken;
         ws.send(JSON.stringify(readyPayload));
     };
 
@@ -264,10 +263,6 @@ function applySceneConfig(config) {
     // Controls & renderer — delegates to view_mode.js
     configureControls(controls, renderer, spaceDim);
 
-    console.log('[tanga-debug] applySceneConfig — cam.pos: [', camera.position.toArray().join(', '), ']',
-        'target:', controls ? ('[' + controls.target.toArray().join(', ') + ']') : 'none',
-        'scene:', scene ? 'ok' : 'none');
-
     // Title
     if (config.title !== undefined) {
         renderTitle(config.title);
@@ -302,7 +297,19 @@ function renderTitle(titleText) {
         titleElement.style.zIndex = '5';
         window._viewerContainer.appendChild(titleElement);
     }
-    titleElement.textContent = titleText;
+    titleElement.textContent = '';  // clear first
+    titleElement.innerHTML = titleText;
+    if (typeof renderMathInElement !== 'undefined') {
+        try {
+            renderMathInElement(titleElement, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                ],
+                throwOnError: false,
+            });
+        } catch (e) { /* ignore */ }
+    }
 }
 
 // ── Annotation Panel ──────────────────────────────────────────
@@ -577,8 +584,6 @@ function handleMessage(msg) {
         }
         if (msg.fit_camera) {
             fitCameraToScene();
-            console.log('[tanga-debug] fit_camera on flush — cam.pos: [', camera.position.toArray().join(', '), ']',
-                'controls.target: [', controls ? controls.target.toArray().join(', ') : 'none', ']');
         }
     } else if (msg.type === 'animate') {
         handleAnimate(msg);

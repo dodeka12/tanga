@@ -9,8 +9,10 @@ Supports multiple named scenes, each served at a unique URL path.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import signal
+import sys
 import threading
 import time
 from typing import TYPE_CHECKING, Any
@@ -138,9 +140,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes: dict[str, Scene] = {}
         self._scenes[""] = Scene(self._config, name="")
 
-        # WS ready synchronisation — set when a browser completes the
-        # WebSocket ready round-trip (after _print_ws_connected fires).
-        self._ws_ready_event = threading.Event()
+
 
     # ── Scene access ─────────────────────────────────────────
 
@@ -613,6 +613,8 @@ class Visualizer(_JupyterDisplayMixin):
         iframes connect asynchronously when they render.  Outside Jupyter
         it defaults to ``True`` so entities are pushed reliably.
         """
+        import secrets
+
         if wait_for_browser is None:
             wait_for_browser = not self._jupyter
 
@@ -622,7 +624,6 @@ class Visualizer(_JupyterDisplayMixin):
         from .server import VizServer
 
         self._server = VizServer(host=self._host, port=self._port)
-        self._ws_ready_event.clear()
 
         _boot_done = threading.Event()
 
@@ -641,7 +642,6 @@ class Visualizer(_JupyterDisplayMixin):
                 push_controls=self._push_controls_async,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
-                on_ready=lambda: self._ws_ready_event.set(),
             )
             _boot_done.set()
 
@@ -656,20 +656,37 @@ class Visualizer(_JupyterDisplayMixin):
         if not _boot_done.wait(timeout=5.0):
             raise RuntimeError("Server failed to start within 5s")
 
-        # Print URLs and start WS connectivity diagnostics
+        # Print URLs
         self._print_startup_urls()
-        asyncio.run_coroutine_threadsafe(self._server.check_page_tokens(), self._loop)
 
         if self._open_browser:
+            page_token = secrets.token_hex(4)  # 8 hex chars
             if self._reuse_existing:
-                if not self._wait_for_client_quiet(timeout=3.0):
-                    self._server.open_browser()
+                sys.stdout.write("Waiting for existing browser to reconnect ...\n")
+                sys.stdout.flush()
+                fut = asyncio.run_coroutine_threadsafe(
+                    self._server.wait_for_ws_ready(timeout=3.0), self._loop
+                )
+                try:
+                    reconnected = fut.result(timeout=3.5)
+                except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
+                    reconnected = False
+                if reconnected:
+                    sys.stdout.write("Existing browser reconnected.\n")
+                    sys.stdout.flush()
+                else:
+                    sys.stdout.write(
+                        "No existing browser reconnected — opening new tab.\n"
+                    )
+                    sys.stdout.flush()
+                    # Reset so we wait for the new tab, not a stale reconnect
+                    self._server._any_ws_ready.clear()
+                    self._server.open_browser(f"/?token={page_token}")
             else:
-                self._server.open_browser()
+                self._server._any_ws_ready.clear()
+                self._server.open_browser(f"/?token={page_token}")
 
         if wait_for_browser:
-            if self._ws_ready_event.is_set():
-                return True
             return self.wait_for_browser(timeout=timeout)
         return True
 
@@ -732,7 +749,15 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             print(f"Waiting for browser to connect at {self.url} ...")
 
-        if self._ws_ready_event.wait(timeout=timeout):
+        fut = asyncio.run_coroutine_threadsafe(
+            self._server.wait_for_ws_ready(timeout=timeout), self._loop
+        )
+        try:
+            ready = fut.result(timeout=timeout + 1.0)
+        except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
+            ready = False
+
+        if ready:
             return True
 
         try:
@@ -747,24 +772,6 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             pass
         self._print_ws_timeout_note()
-        return False
-
-    def _wait_for_client_quiet(self, timeout: float = 3.0) -> bool:
-        """Poll for a WebSocket client with a compact spinner."""
-        if self._server is None:
-            return False
-
-        import sys
-
-        sys.stdout.write("Waiting for existing browser to reconnect ...\n")
-        sys.stdout.flush()
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            if self._server._ws_clients:
-                return True
-            time.sleep(0.1)
-
-        print("No existing browser connected — opening new tab.")
         return False
 
     def _print_ws_timeout_note(self) -> None:
@@ -788,17 +795,6 @@ class Visualizer(_JupyterDisplayMixin):
                 f"check that {ws_url} is reachable "
                 f"(port forwarding/proxy must support WebSocket upgrades)."
             )
-
-    def _print_connect(self, remote_addr: str) -> None:
-        try:
-            from rich.console import Console
-            from rich.text import Text
-
-            Console().print(
-                Text(f"✓ Browser connected  ({remote_addr}).", style="bold green")
-            )
-        except ImportError:
-            print(f"Browser connected ({remote_addr}).")
 
     def _print_disconnect(self, remote_addr: str) -> None:
         try:
@@ -844,6 +840,8 @@ class Visualizer(_JupyterDisplayMixin):
 
         In Jupyter, ``wait_for_browser`` defaults to ``False``.
         """
+        import secrets
+
         if wait_for_browser is None:
             wait_for_browser = not self._jupyter
         from .server import VizServer
@@ -851,8 +849,6 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = VizServer(host=self._host, port=self._port)
 
         async def _run() -> None:
-            ws_ready = asyncio.Event()
-
             await self._server.start(
                 lambda scene_name: (
                     self._scenes.get(scene_name, self._scenes[""]).full_state(
@@ -865,19 +861,35 @@ class Visualizer(_JupyterDisplayMixin):
                 on_connect=self._on_client_connect,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
-                on_ready=lambda: ws_ready.set(),
             )
             if self._open_browser:
-                self._server.open_browser()
-            if wait_for_browser:
-                try:
-                    await asyncio.wait_for(ws_ready.wait(), timeout=30.0)
-                except asyncio.TimeoutError:
-                    self._print_ws_timeout_note()
-                    raise RuntimeError(
-                        "No browser connected within 30s.  "
-                        f"Open {self.url} manually."
-                    )
+                page_token = secrets.token_hex(4)  # 8 hex chars
+                if self._reuse_existing:
+                    reconnected = await self._server.wait_for_ws_ready(timeout=3.0)
+                    if reconnected:
+                        print("Existing browser reconnected.")
+                    else:
+                        print(
+                            "No existing browser reconnected — opening new tab."
+                        )
+                        self._server._any_ws_ready.clear()
+                        self._server.open_browser(f"/?token={page_token}")
+                else:
+                    self._server._any_ws_ready.clear()
+                    self._server.open_browser(f"/?token={page_token}")
+
+                if wait_for_browser:
+                    try:
+                        await asyncio.wait_for(
+                            self._server.wait_for_ws_ready(), timeout=30.0
+                        )
+                    except asyncio.TimeoutError:
+                        self._print_ws_timeout_note()
+                        raise RuntimeError(
+                            "No browser connected within 30s.  "
+                            f"Open {self.url} manually."
+                        )
+
             # Flush initial state for the main scene
             await self._flush_scene_async("")
 

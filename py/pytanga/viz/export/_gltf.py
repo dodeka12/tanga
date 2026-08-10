@@ -265,6 +265,13 @@ class _GltfBuilder:
                     8,
                 )
             ]
+        elif kind == "PointPath":
+            pts = ent.get("points", [])
+            if isinstance(pts, list) and len(pts) >= 2:
+                pts_typed = [(float(p[0]), float(p[1]), float(p[2])) for p in pts]
+                prim = _prims.lines_from_points(pts_typed)
+                return [prim] if prim is not None else []
+            return []
         return []
 
     @staticmethod
