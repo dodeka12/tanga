@@ -338,7 +338,21 @@ class Visualizer(_JupyterDisplayMixin):
         return eid
 
     def update(self, entity_id: str, **properties: Any) -> None:
-        """Update rendering properties of an existing entity in the main scene."""
+        """Update rendering properties of an existing entity in the main scene.
+
+        Accepted keyword arguments correspond to the style fields of the
+        entity's kind — see :class:`~pytanga.viz.ObjVizStyle` and its
+        per-entity subclasses.
+
+        Common across all kinds:
+            ``color`` (str), ``opacity`` (float), ``style`` (ObjVizStyle)
+
+        Per-kind examples:
+            Point/HPoint: ``size``
+            Line: ``thickness``, ``length``
+            PointPath: ``line_thickness``
+            Sphere/Circle/Plane/Line: ``wireframe`` (bool)
+        """
         self._scenes[""].update(entity_id, **properties)
 
     def update_entity(
