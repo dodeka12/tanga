@@ -268,6 +268,33 @@ class Visualizer(_JupyterDisplayMixin):
 
         properties: dict[str, Any] = {}
 
+        from ._point_path import PointPath
+
+        if isinstance(obj, PointPath):
+            if color is not None:
+                normalized = _normalize_color(color)
+                if isinstance(normalized, tuple):
+                    properties["color"] = normalized[0]
+                    if opacity is None:
+                        properties["opacity"] = normalized[1]
+                else:
+                    properties["color"] = normalized
+            if opacity is not None:
+                properties["opacity"] = float(opacity)
+            if style is not None:
+                properties["style"] = style
+            return scene.add_object(
+                SceneObject(
+                    id=entity_id or "",
+                    layer="scene",
+                    kind="PointPath",
+                    data=obj,
+                    properties=properties,
+                    dirty=True,
+                ),
+                object_id=entity_id,
+            )
+
         if color is not None:
             normalized = _normalize_color(color)
             if isinstance(normalized, tuple):
