@@ -355,6 +355,27 @@ class Visualizer(_JupyterDisplayMixin):
         """
         self._scenes[""].update(entity_id, **properties)
 
+    def update_style(
+        self, entity_id: str, style: ObjVizStyle
+    ) -> None:
+        """Update rendering style of an existing entity from a style instance.
+
+        Extracts only the explicitly set (non-``None``) fields from *style*
+        and passes them as keyword properties to :meth:`update`.
+
+        Example::
+
+            viz.update_style(point_id, PointStyle(size=0.15, opacity=0.5))
+
+        is equivalent to::
+
+            viz.update(point_id, size=0.15, opacity=0.5)
+        """
+        from ._props import _extract_non_none
+
+        props = _extract_non_none(style)
+        self._scenes[""].update(entity_id, **props)
+
     def update_entity(
         self, entity_id: str, obj: SceneEntity, *, opns: bool | None = None
     ) -> None:
