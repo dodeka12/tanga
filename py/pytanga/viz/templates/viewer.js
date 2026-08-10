@@ -43,22 +43,33 @@ let _availableScenes = [];
 function initScene() {
     window._viewerContainer = document.getElementById('viewer-container');
 
-    // WebGL Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = false;
-    window._viewerContainer.appendChild(renderer.domElement);
+    let webglOk = true;
+    try {
+        // WebGL Renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = false;
+        window._viewerContainer.appendChild(renderer.domElement);
+    } catch (e) {
+        console.warn('WebGL renderer failed — falling back to headless mode:', e.message);
+        webglOk = false;
+        renderer = null;
+    }
 
     // CSS2D Renderer
-    window._labelRenderer = new CSS2DRenderer();
-    window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
-    window._labelRenderer.domElement.style.position = 'absolute';
-    window._labelRenderer.domElement.style.top = '0px';
-    window._labelRenderer.domElement.style.pointerEvents = 'none';
-    window._viewerContainer.appendChild(window._labelRenderer.domElement);
+    try {
+        window._labelRenderer = new CSS2DRenderer();
+        window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        window._labelRenderer.domElement.style.position = 'absolute';
+        window._labelRenderer.domElement.style.top = '0px';
+        window._labelRenderer.domElement.style.pointerEvents = 'none';
+        window._viewerContainer.appendChild(window._labelRenderer.domElement);
+    } catch (e) {
+        window._labelRenderer = null;
+    }
 
-    // Scene
+    // Scene (always created — works even without a renderer)
     scene = new THREE.Scene();
     scene.fog = null;
 
@@ -84,23 +95,25 @@ function initScene() {
     window._axesHelper = new THREE.AxesHelper(5);
     scene.add(window._axesHelper);
 
-    // Controls
-    controls = setupControls(camera, renderer);
-    window.addEventListener('resize', onResize);
+    // Controls — only if WebGL is available (needs renderer.domElement)
+    if (webglOk && renderer) {
+        controls = setupControls(camera, renderer);
+        // Ctrl+S screenshot shortcut
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                const dataUrl = renderer.domElement.toDataURL('image/png');
+                const now = new Date();
+                const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const link = document.createElement('a');
+                link.download = `tanga_${ts}.png`;
+                link.href = dataUrl;
+                link.click();
+            }
+        });
+    }
 
-    // Ctrl+S screenshot shortcut
-    window.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            const dataUrl = renderer.domElement.toDataURL('image/png');
-            const now = new Date();
-            const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            const link = document.createElement('a');
-            link.download = `tanga_${ts}.png`;
-            link.href = dataUrl;
-            link.click();
-        }
-    });
+    window.addEventListener('resize', onResize);
 }
 
 function onResize() {
@@ -896,6 +909,6 @@ function animate() {
 }
 
 // ── Bootstrap ───────────────────────────────────────────────
-connectWebSocket();
 initScene();
+connectWebSocket();
 animate();
