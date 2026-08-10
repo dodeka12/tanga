@@ -63,7 +63,7 @@ def main() -> None:
     viz.add(s3_mv, color="#dd44ff", opacity="0.6", label="$S_3$")
 
     viz.add(c1_mv, color="#D1BF1D", label="$S_1\\wedge S_2$")
-    eid, lid = viz.add(
+    viz.add(
         pp1_mv,
         color="#1AB03D",
         label="Point Pair",

@@ -46,18 +46,18 @@ def main() -> None:
     # Fixed sphere at origin
     s1_fixed = Sphere(Point(0.0, 0.0, 0.0), 1.0)
     s1_mv = geo.create(s1_fixed)
-    s1_id, _ = viz.add(s1_mv, color="#ff4444", opacity="0.3", label="$S_1$ (fixed)")
+    s1_id = viz.add(s1_mv, color="#ff4444", opacity="0.3", label="$S_1$ (fixed)")
 
     # First placement of the moving sphere
     s2_current = Sphere(Point(3.0, 0.0, 0.0), 1.3)
     s2_mv = geo.create(s2_current)
-    s2_id, _ = viz.add(s2_mv, color="#4488ff", opacity="0.3", label="$S_2$ (moving)")
+    s2_id = viz.add(s2_mv, color="#4488ff", opacity="0.3", label="$S_2$ (moving)")
 
     # Initial intersection circle
     ci_mv = s1_mv ^ s2_mv
     ci_ana = geo.which_entity(ci_mv)
     print(f"Intersection analysis: {ci_ana}")
-    ci_id, _ = viz.add(ci_mv, color="#ffcc00", label="$S_1 ∧ S_2$")
+    ci_id = viz.add(ci_mv, color="#ffcc00", label="$S_1 ∧ S_2$")
 
     time.sleep(1.0)  # let the browser connect and receive initial scene
 

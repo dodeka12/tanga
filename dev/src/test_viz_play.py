@@ -64,12 +64,13 @@ def main() -> None:
     viz.add(s3_mv, color="#dd44ff", opacity="0.6", label="$S_3$")
 
     viz.add(c1_mv, color="#D1BF1D", label="$S_1\\wedge S_2$")
-    eid, lid = viz.add(
+    eid = viz.add(
         pp1_mv,
         color="#1AB03D",
         label="Point Pair",
         label_style=LabelStyle(offset_local=(-1.0, 0, 0), align=(0, 1)),
     )
+    lid = viz.get_label_ids(eid)[0]
 
     annotation = """
 ## Sphere Intersections

@@ -303,6 +303,17 @@ class Scene:
                 result.append(_serialize_label(obj.data, oid))
         return result
 
+    # -- Label look-up -----------------------------------------
+
+    def get_label_ids(self, entity_id: str) -> list[str]:
+        """Return the IDs of all labels attached to *entity_id*."""
+        result: list[str] = []
+        for oid, obj in self._objects.items():
+            if obj.layer == "overlay" and obj.kind == "label":
+                if getattr(obj.data, "parent_id", None) == entity_id:
+                    result.append(oid)
+        return result
+
     # -- Helpers -----------------------------------------------
 
     @property

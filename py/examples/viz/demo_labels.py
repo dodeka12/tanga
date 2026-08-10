@@ -18,7 +18,7 @@ viz.start()
 viz.add(Point(1, 2, 0), color="#ff4444", size=0.15, label="P₁")
 
 # Custom label style
-origin_id, origin_label = viz.add(
+origin_id = viz.add(
     Point(0, 0, 0),
     color="#ffff00",
     size=0.2,
@@ -49,15 +49,34 @@ viz.add(
 
 viz.flush()
 
-# Dynamic label update
+# Dynamic label update — remove and re-add the entity with a new label style
 print("Updating label in 3 seconds...")
 time.sleep(3)
-viz.update_label(origin_label, text="O", style=LabelStyle(color="#ff8888"))
+viz.remove(origin_id)
+viz.add(
+    Point(0, 0, 0),
+    entity_id=origin_id,
+    color="#ffff00",
+    size=0.2,
+    label="O",
+    label_style=LabelStyle(
+        offset_local=(0.0, 1.1, 0.0),
+        font_size=18,
+        color="#ff8888",
+        background="rgba(0, 0, 0, 0.8)",
+    ),
+)
 viz.flush()
 
 print("Removing label in 3 seconds...")
 time.sleep(3)
-viz.update_label(origin_label, text="")
+viz.remove(origin_id)
+viz.add(
+    Point(0, 0, 0),
+    entity_id=origin_id,
+    color="#ffff00",
+    size=0.2,
+)
 viz.flush()
 
 print("Close the browser window or press Ctrl+C to exit.")

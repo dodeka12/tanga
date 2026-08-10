@@ -54,7 +54,7 @@ viz.add(
 )
 
 # Body entities
-id_1, lid_1 = viz.add(
+id_1 = viz.add(
     pos_1,
     label=f"$m_1 = {mass_1}$",
     style=PointStyle(
@@ -62,7 +62,7 @@ id_1, lid_1 = viz.add(
         color="#ff4444",
     ),
 )
-id_2, lid_2 = viz.add(
+id_2 = viz.add(
     pos_2,
     label=f"$m_2 ={mass_2}$",
     style=PointStyle(

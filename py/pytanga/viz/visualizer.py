@@ -224,8 +224,12 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+    ) -> str | list[str]:
         """Add a geometric entity, operator, multivector, or label to the main scene.
+
+        Returns the entity ID (a single ``str``), or a ``list[str]`` when a
+        multivector resolves to multiple entities.  If *label* is provided the
+        label is created alongside the entity and only the entity ID is returned.
 
         See the class docstring for full parameter documentation.
         """
@@ -253,7 +257,7 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+    ) -> str | list[str]:
         """Add an entity to a specific scene."""
         from ._label import Label
         from ._styles import LabelStyle as _LS
@@ -332,8 +336,8 @@ class Visualizer(_JupyterDisplayMixin):
                 parent_id=eid,
                 style=resolved_ls,
             )
-            lid = scene.add_label(lbl)
-            return (eid, lid)
+            scene.add_label(lbl)
+            return eid
 
         return eid
 
@@ -399,6 +403,10 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> None:
         """Update a label's text and/or style in the main scene."""
         self._scenes[""].update_label(object_id, text=text, style=style)
+
+    def get_label_ids(self, entity_id: str) -> list[str]:
+        """Return the IDs of all labels attached to *entity_id* in the main scene."""
+        return self._scenes[""].get_label_ids(entity_id)
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity from the main scene."""

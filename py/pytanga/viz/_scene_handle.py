@@ -110,8 +110,11 @@ class VizSceneHandle(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+    ) -> str | list[str]:
         """Add an entity, operator, MV, or label to this scene.
+
+        Returns the entity ID (a single ``str``), or a ``list[str]`` when a
+        multivector resolves to multiple entities.
 
         See :meth:`Visualizer.add` for full documentation.
         """
@@ -154,6 +157,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
     ) -> None:
         """Update a label's text and/or style."""
         self._scene().update_label(object_id, text=text, style=style)
+
+    def get_label_ids(self, entity_id: str) -> list[str]:
+        """Return the IDs of all labels attached to *entity_id* in this scene."""
+        return self._scene().get_label_ids(entity_id)
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity from this scene."""
