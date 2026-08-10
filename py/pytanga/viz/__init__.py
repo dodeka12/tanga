@@ -57,7 +57,7 @@ from ._styles import (
     TranslatorStyle,
     VizStyle,
 )
-from ._types import VizInputType
+from ._types import SceneEntity, VizInputType
 from .export._exporter import SceneExporter
 from .scene import CameraConfig, SceneConfig
 from .visualizer import Timeline, Visualizer
@@ -92,6 +92,7 @@ __all__ = [
     "ReflectionPlaneStyle",
     "RotorStyle",
     "SceneConfig",
+    "SceneEntity",
     "SceneExporter",
     "Slider",
     "SpaceStyle",

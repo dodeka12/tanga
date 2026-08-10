@@ -34,7 +34,7 @@ from ._style_dict import (
     _StyleDict,
 )
 from ._timeline import Timeline
-from ._types import VizInputType
+from ._types import SceneEntity, VizInputType
 from ._utils import _is_jupyter
 from .scene import CameraConfig, Scene, SceneConfig, SceneObject
 
@@ -268,33 +268,6 @@ class Visualizer(_JupyterDisplayMixin):
 
         properties: dict[str, Any] = {}
 
-        from ._point_path import PointPath
-
-        if isinstance(obj, PointPath):
-            if color is not None:
-                normalized = _normalize_color(color)
-                if isinstance(normalized, tuple):
-                    properties["color"] = normalized[0]
-                    if opacity is None:
-                        properties["opacity"] = normalized[1]
-                else:
-                    properties["color"] = normalized
-            if opacity is not None:
-                properties["opacity"] = float(opacity)
-            if style is not None:
-                properties["style"] = style
-            return scene.add_object(
-                SceneObject(
-                    id=entity_id or "",
-                    layer="scene",
-                    kind="PointPath",
-                    data=obj,
-                    properties=properties,
-                    dirty=True,
-                ),
-                object_id=entity_id,
-            )
-
         if color is not None:
             normalized = _normalize_color(color)
             if isinstance(normalized, tuple):
@@ -321,6 +294,24 @@ class Visualizer(_JupyterDisplayMixin):
                 )
                 ids.append(eid)
             return ids
+
+        # Viz-level drawables (PointPath, etc.) go through add_object
+        from pytanga.geometry.entities import Entity as GeoEntity
+        from pytanga.geometry.operators import Operator as GeoOperator
+
+        if not isinstance(entity, (GeoEntity, GeoOperator)):
+            kind = type(entity).__name__
+            return scene.add_object(
+                SceneObject(
+                    id=entity_id or "",
+                    layer="scene",
+                    kind=kind,
+                    data=entity,
+                    properties=properties,
+                    dirty=True,
+                ),
+                object_id=entity_id,
+            )
 
         eid = scene.add(entity, entity_id=entity_id, **properties)
 
@@ -354,15 +345,9 @@ class Visualizer(_JupyterDisplayMixin):
         self, entity_id: str, obj: GeoEntity | Any, *, opns: bool | None = None
     ) -> None:
         """Replace the geometry for an existing entity in the main scene."""
-        from ._point_path import PointPath
-
-        if isinstance(obj, PointPath):
-            self._scenes[""].update_entity(entity_id, obj)
-            return
-
         if opns is None:
             opns = self._opns
-        entity = self._resolve(obj, opns=opns)
+        entity: SceneEntity | list[GeoEntity] = self._resolve(obj, opns=opns)
         if isinstance(entity, list):
             raise ValueError(
                 f"update_entity expects a single entity, but the MV resolved to "
@@ -460,10 +445,22 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── MV resolution ──────────────────────────────────────
 
-    def _resolve(self, obj: Any, *, opns: bool = True) -> GeoEntity | list[GeoEntity]:
-        """Resolve an MV or Entity/Operator to one or more geo entities."""
+    def _resolve(
+        self, obj: Any, *, opns: bool = True
+    ) -> SceneEntity | list[GeoEntity]:
+        """Resolve an MV to a :class:`SceneEntity` or list of GeoEntities.
+
+        Viz-level drawables (PointPath, …) are passed through unchanged.
+        GeoEntities and Operators are returned as-is.
+        MVs are resolved via :func:`pytanga.geometry.analyze`.
+        """
         from pytanga.geometry.operators import Operator as GeoOperator
 
+        # Viz-level drawables — pass through
+        if isinstance(obj, SceneEntity):
+            return obj  # type: ignore[return-value]
+
+        # Geo entities and operators — pass through
         if isinstance(obj, (GeoEntity, GeoOperator)):
             return obj  # type: ignore[return-value]
 
