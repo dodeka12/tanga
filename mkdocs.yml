@@ -145,8 +145,7 @@ nav:
       - Precompiled wheels: dev/workflows/precompiled-wheels.md
       - Use-case examples: dev/workflows/use-case-examples.md
       - Version tagging: dev/workflows/version-tagging.md
-       - MkDocs publishing: dev/workflows/mkdocs-publishing.md
-       - Docs publishing workflows: dev/workflows/docs-publishing-workflows.md
+      - MkDocs publishing: dev/workflows/mkdocs-publishing.md
+      - Docs publishing workflows: dev/workflows/docs-publishing-workflows.md
 
-   - Changelog:
-     - changelog/index.md
+  - Changelog: changelog/index.md
