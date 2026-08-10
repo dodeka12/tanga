@@ -122,6 +122,7 @@ nav:
       - Camera & Controls: py/viz/camera.md
       - Style system: py/viz/styles.md
       - Labels: py/viz/labels.md
+      - PointPath: py/viz/point-path.md
       - Title & annotation: py/viz/title-annotation.md
       - Animation: py/viz/animation.md
       - Export & capture: py/viz/export.md

@@ -47,6 +47,7 @@ viz.display_row(
 | [Camera & Controls](camera.md) | `CameraConfig`, auto-fit vs explicit vs partial camera, orbit controls, Ctrl+S screenshots |
 | [Style System](styles.md) | `*Style` dataclasses, `default_styles`, `set_default_color()`, `CrossHairPointStyle` |
 | [Labels](labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
+| [PointPath](point-path.md) | Connected line segments, object trails, per-point colors, FIFO capping, gradient utilities |
 | [Title & Annotation](title-annotation.md) | Title overlay, Markdown annotation panel, LaTeX math with KaTeX |
 | [Animation](animation.md) | Frame streaming, keyframe tweening (`animate_to`), scene-aware `Timeline` sequencer |
 | [Export & Capture](export.md) | `SceneExporter`: HTML/glTF/figure export, screenshots, video capture, animated HTML |
