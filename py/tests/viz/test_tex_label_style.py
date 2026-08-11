@@ -21,7 +21,7 @@ class TestTextureLabelStyle:
         assert tls.offset_u is None
         assert tls.offset_v is None
         assert tls.align is None
-        assert tls.background == "#ffffff"
+        assert tls.background is None
         assert tls.resolution == 512
         assert tls.color == "#000000"
         assert tls.font_size == 48
@@ -32,7 +32,7 @@ class TestTextureLabelStyle:
         d = tls.to_dict()
         assert d["style_type"] == "TextureLabelStyle"
         assert d["math_mode"] is False
-        assert d["background"] == "#ffffff"
+        assert "background" not in d  # None is omitted
         assert d["resolution"] == 512
         assert d["color"] == "#000000"
         assert d["font_size"] == 48
