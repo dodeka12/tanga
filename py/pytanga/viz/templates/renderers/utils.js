@@ -174,3 +174,191 @@ export function createDilatorRings(color, opacity, count, maxR, origin) {
     g.position.set(origin[0], origin[1], origin[2]);
     return g;
 }
+
+
+// ── Texture Label Utilities ──────────────────────────────────
+
+
+/**
+ * Check whether a string contains $...$ (inline) or $$...$$ (display)
+ * math delimiters.  Used to decide between plain-text and mixed
+ * rendering modes.
+ *
+ * A single unpaired ``$`` is treated as plain text (no mixed mode).
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
+export function hasMathDelimiters(text) {
+    // Must have at least one pair of $$ or $
+    return /\$\$/.test(text) || /\$[^$]+\$/.test(text);
+}
+
+
+/**
+ * Render text (plain or with ``$...$`` / ``$$...$$`` KaTeX delimiters)
+ * onto a canvas via a DOM element + ``html2canvas`` capture.
+ *
+ * @param {CanvasRenderingContext2D} ctx - Target canvas 2D context.
+ * @param {string} text - Text with optional ``$`` / ``$$`` KaTeX delimiters.
+ * @param {number} width - Target canvas width.
+ * @param {number} height - Target canvas height.
+ * @param {number} fontSize - Font size in px for plain text portions.
+ * @param {string} color - CSS text color.
+ * @returns {Promise<void>}
+ */
+async function renderToCanvas(ctx, text, width, height, fontSize, color) {
+    if (typeof html2canvas === 'undefined') {
+        throw new Error('html2canvas not available');
+    }
+
+    const div = document.createElement('div');
+    div.style.position = 'absolute';
+    div.style.left = '0px';
+    div.style.top = '0px';
+    div.style.width = width + 'px';
+    div.style.height = height + 'px';
+    div.style.display = 'flex';
+    div.style.flexDirection = 'column';
+    div.style.alignItems = 'center';
+    div.style.justifyContent = 'center';
+    div.style.color = color;
+    div.style.fontFamily = 'sans-serif';
+    div.style.fontSize = fontSize + 'px';
+    div.style.lineHeight = '1.5';
+    div.style.padding = '20px';
+    div.style.boxSizing = 'border-box';
+    div.style.background = 'transparent';
+    div.style.overflow = 'hidden';
+    div.innerHTML = text;
+
+    document.body.appendChild(div);
+
+    try {
+        if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(div, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                ],
+                throwOnError: false,
+            });
+        }
+
+        const capture = await html2canvas(div, {
+            backgroundColor: null,
+            scale: 1,
+            width: width,
+            height: height,
+        });
+        ctx.drawImage(capture, 0, 0);
+    } finally {
+        document.body.removeChild(div);
+    }
+}
+
+
+/**
+ * Render plain text centered on the canvas.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {string} text
+ * @param {number} width
+ * @param {number} height
+ * @param {number} fontSize
+ * @param {string} color
+ */
+function drawPlainText(ctx, text, width, height, fontSize, color) {
+    ctx.fillStyle = color;
+    ctx.font = `${fontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, width / 2, height / 2);
+}
+
+
+/**
+ * Create a THREE.CanvasTexture from a label string and texture label style.
+ *
+ * Two modes:
+ * - Text contains ``$...$`` / ``$$...$$`` delimiters: rendered via DOM +
+ *   ``renderMathInElement`` + ``html2canvas`` capture.
+ * - Plain text: drawn directly on canvas with ``ctx.fillText()``.
+ *
+ * Returns ``null`` if text is falsy or rendering fails.
+ *
+ * @param {string|null|undefined} text - The label content.
+ * @param {object} style - TextureLabelStyle dict from the entity's style.
+ *        Expected keys: repeat_u, repeat_v, offset_u, offset_v,
+ *        background, resolution, color, font_size.
+ * @returns {Promise<THREE.CanvasTexture|null>}
+ */
+export async function createTextureLabel(text, style) {
+    if (!text) return null;
+
+    const color = style.color || '#000000';
+    const s = style.scale || 1.0;
+    const a = style.aspect || 1.0;
+    const repeatU = style.repeat_u || 1;
+    const repeatV = style.repeat_v || 1;
+
+    // Cell size: each tile gets contentW×contentH pixels.
+    // Larger resolution = sharper, larger scale = larger text.
+    const baseW = style.resolution || 512;
+    const contentW = Math.floor(baseW / repeatU);
+    const contentH = Math.floor(baseW / repeatV / 2);
+
+    // Scale/aspect applied to font size, not canvas size.
+    // scale=2 → text is 2× larger, aspect=0.5 → half as tall.
+    const scaledFontSize = Math.round((style.font_size || 48) * s);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = contentW;
+    canvas.height = contentH;
+    const ctx = canvas.getContext('2d');
+
+    // Background fill
+    const bg = (style.background && style.background !== 'transparent')
+        ? style.background
+        : '#ffffff';
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, contentW, contentH);
+
+    // Apply aspect as vertical canvas scale so content is compressed
+    // taller or shorter relative to the cell height.
+    ctx.save();
+    if (a !== 1.0) {
+        ctx.translate(0, contentH * (1 - a) / 2);
+        ctx.scale(1, a);
+    }
+
+    try {
+        if (hasMathDelimiters(text)) {
+            await renderToCanvas(ctx, text, contentW, contentH, scaledFontSize, color);
+        } else {
+            drawPlainText(ctx, text, contentW, contentH, scaledFontSize, color);
+        }
+    } catch (err) {
+        console.warn('createTextureLabel: rendering failed', err);
+        ctx.restore();
+        return null;
+    }
+    ctx.restore();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+
+    if (repeatU > 1 || repeatV > 1) {
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(repeatU, repeatV);
+    }
+
+    const offsetU = style.offset_u;
+    const offsetV = style.offset_v;
+    if (offsetU || offsetV) {
+        texture.offset.set(offsetU || 0, offsetV || 0);
+    }
+
+    return texture;
+}

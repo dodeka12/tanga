@@ -223,7 +223,10 @@ class VizServer:
         from .serializer import serialize_scene_update
 
         # 0. Clear the browser scene first (handles reconnect with new server)
+        print(f"[_push_full_state] Sending clear_all for scene '{scene_name}'")
         await ws.send_str(json.dumps({"type": "clear_all"}))
+        # Small delay to ensure clear_all is processed before subsequent messages
+        await asyncio.sleep(0.05)
 
         # 1. Scene configuration (scoped to the specific scene if available)
         if self._scene_config_callback is not None:
@@ -235,6 +238,7 @@ class VizServer:
 
         if cfg is not None:
             cfg.setdefault("name", scene_name)
+            print(f"[_push_full_state] Sending scene_config for '{scene_name}'")
             await ws.send_str(json.dumps(cfg))
 
         # 2. Full state (entities + labels merged)
@@ -243,6 +247,7 @@ class VizServer:
             if entities:
                 msg = serialize_scene_update(entities, [])
                 msg["scene"] = scene_name
+                print(f"[_push_full_state] Sending {len(entities)} entities for scene '{scene_name}'")
                 await ws.send_str(json.dumps(msg))
 
         # 3. Scene list (so the frontend knows available scenes)

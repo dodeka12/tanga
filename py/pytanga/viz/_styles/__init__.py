@@ -38,8 +38,8 @@ from pytanga.geometry.operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionPoint,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
 )
@@ -82,6 +82,7 @@ from ._overlay_styles import (
     LabelStyle,
     TitleStyle,
 )
+from ._tex_label_style import TextureLabelStyle
 
 # ── Union type ──────────────────────────────────────────────
 

@@ -31,8 +31,11 @@ from ._style_dict import (
     _make_default_label_style,
     _make_default_label_styles,
     _make_default_styles,
+    _make_default_tex_label_style,
+    _make_default_tex_label_styles,
     _resolve_annotation_style,
     _resolve_label_style,
+    _resolve_tex_label_style,
     _StyleDict,
 )
 from ._timeline import Timeline
@@ -129,6 +132,8 @@ class Visualizer(_JupyterDisplayMixin):
         self._default_label_style = _make_default_label_style()
         self._default_annotation_style = _make_default_annotation_style()
         self._default_label_styles = _make_default_label_styles()
+        self._default_tex_label_style = _make_default_tex_label_style()
+        self._default_tex_label_styles = _make_default_tex_label_styles()
 
         # Control handler registry (shared across all scenes)
         from ._controls import ControlHandlerRegistry
@@ -139,8 +144,6 @@ class Visualizer(_JupyterDisplayMixin):
         # Key "" is the main scene (backward compatible).
         self._scenes: dict[str, Scene] = {}
         self._scenes[""] = Scene(self._config, name="")
-
-
 
     # ── Scene access ─────────────────────────────────────────
 
@@ -224,6 +227,8 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
     ) -> str | list[str]:
         """Add a geometric entity, operator, multivector, or label to the main scene.
 
@@ -243,6 +248,8 @@ class Visualizer(_JupyterDisplayMixin):
             style=style,
             label=label,
             label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
         )
 
     def _add_to_scene(
@@ -257,10 +264,13 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
     ) -> str | list[str]:
         """Add an entity to a specific scene."""
         from ._label import Label
         from ._styles import LabelStyle as _LS
+        from ._styles import TextureLabelStyle as _TLS
 
         scene = self._scenes[scene_name]
 
@@ -283,6 +293,51 @@ class Visualizer(_JupyterDisplayMixin):
 
         if opacity is not None:
             properties["opacity"] = float(opacity)
+
+        # Build texture label convenience style if tex_label is set
+        _tex_label_merged: _TLS | None = None
+        if tex_label is not None:
+            entity_for_kind = self._resolve(obj, opns=opns)
+            if isinstance(entity_for_kind, list) and entity_for_kind:
+                entity_for_kind = entity_for_kind[0]
+            kind = type(entity_for_kind).__name__
+            _tex_label_merged = _resolve_tex_label_style(
+                self._default_tex_label_style,
+                self._default_tex_label_styles.get(kind),
+                tex_label_style or _TLS(),
+            )
+            _tex_label_merged.text = tex_label
+
+        # Merge texture label into style if the user didn't provide
+        # texture_label explicitly via style
+        if _tex_label_merged is not None:
+            if style is not None:
+                from ._styles import PlaneStyle, SphereStyle
+
+                style_for_check = style
+                if isinstance(style_for_check, (SphereStyle, PlaneStyle)):
+                    if style_for_check.texture_label is None:
+                        style_for_check.texture_label = _tex_label_merged
+                # Otherwise leave the user's explicit style alone
+            else:
+                kind_for_style = None
+                entity_for_style = self._resolve(obj, opns=opns)
+                if isinstance(entity_for_style, list) and entity_for_style:
+                    entity_for_style = entity_for_style[0]
+                if entity_for_style is not None:
+                    kind_for_style = type(entity_for_style).__name__
+                if kind_for_style == "Sphere":
+                    from ._styles import SphereStyle as SS
+
+                    style = SS(
+                        texture_label=_tex_label_merged,
+                        wireframe=False,
+                        # double_sided=True,
+                    )
+                elif kind_for_style == "Plane":
+                    from ._styles import PlaneStyle as PS
+
+                    style = PS(texture_label=_tex_label_merged, wireframe=False)
 
         if style is not None:
             properties["style"] = style
@@ -359,9 +414,7 @@ class Visualizer(_JupyterDisplayMixin):
         """
         self._scenes[""].update(entity_id, **properties)
 
-    def update_style(
-        self, entity_id: str, style: ObjVizStyle
-    ) -> None:
+    def update_style(self, entity_id: str, style: ObjVizStyle) -> None:
         """Update rendering style of an existing entity from a style instance.
 
         Extracts only the explicitly set (non-``None``) fields from *style*
@@ -488,9 +541,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── MV resolution ──────────────────────────────────────
 
-    def _resolve(
-        self, obj: Any, *, opns: bool = True
-    ) -> SceneEntity | list[GeoEntity]:
+    def _resolve(self, obj: Any, *, opns: bool = True) -> SceneEntity | list[GeoEntity]:
         """Resolve an MV to a :class:`SceneEntity` or list of GeoEntities.
 
         Viz-level drawables (PointPath, …) are passed through unchanged.
@@ -807,7 +858,9 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             print(f"Browser disconnected ({remote_addr}).")
 
-    async def _flush_scene_async(self, scene_name: str, *, fit_camera: bool = False) -> None:
+    async def _flush_scene_async(
+        self, scene_name: str, *, fit_camera: bool = False
+    ) -> None:
         """Push dirty state for a specific scene (must be called from server's event loop)."""
         if self._server is None:
             return
@@ -816,7 +869,9 @@ class Visualizer(_JupyterDisplayMixin):
             return
         entities, removed = scene.flush(styles_map=self._default_styles)
         if entities or removed or fit_camera:
-            await self._server.push(entities, removed, scene=scene_name, fit_camera=fit_camera)
+            await self._server.push(
+                entities, removed, scene=scene_name, fit_camera=fit_camera
+            )
 
     def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe)."""
@@ -869,9 +924,7 @@ class Visualizer(_JupyterDisplayMixin):
                     if reconnected:
                         print("Existing browser reconnected.")
                     else:
-                        print(
-                            "No existing browser reconnected — opening new tab."
-                        )
+                        print("No existing browser reconnected — opening new tab.")
                         self._server._any_ws_ready.clear()
                         self._server.open_browser(f"/?token={page_token}")
                 else:
@@ -1336,6 +1389,18 @@ class Visualizer(_JupyterDisplayMixin):
     def default_annotation_style(self) -> AnnotationStyle:
         """The global default ``AnnotationStyle`` instance."""
         return self._default_annotation_style
+
+    @property
+    def default_tex_label_style(self) -> _StyleDict:
+        """Per-kind texture label style defaults.
+
+        Usage::
+
+            viz.default_tex_label_style["Sphere"] = TextureLabelStyle(
+                repeat_u=4, offset_v=0.25, background=None
+            )
+        """
+        return _StyleDict(self._default_tex_label_styles)
 
     @property
     def url(self) -> str:

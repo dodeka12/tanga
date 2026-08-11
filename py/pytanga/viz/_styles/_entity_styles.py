@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ._base import VizStyle, WireframeDashPattern
+from ._tex_label_style import TextureLabelStyle
 
 
 @dataclass
@@ -175,6 +176,10 @@ class PlaneStyle(VizStyle):
             ``None`` uses the entity's main color.
         wireframe_opacity: Optional opacity for wireframe lines (0..1).
             ``None`` defaults to fully opaque.
+        texture_label: Optional :class:`TextureLabelStyle` for a text
+            or formula label rendered onto the plane surface.  When
+            ``None``, no texture is applied.  Use ``align`` to control
+            layout (``"stretch"``, ``"fit"``, ``"repeat"``).
     """
 
     color: str | None = None
@@ -184,6 +189,7 @@ class PlaneStyle(VizStyle):
     wireframe_dash: WireframeDashPattern | None = None
     wireframe_color: str | None = None
     wireframe_opacity: float | None = None
+    texture_label: TextureLabelStyle | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "PlaneStyle"}
@@ -201,6 +207,8 @@ class PlaneStyle(VizStyle):
             result["wireframe_color"] = self.wireframe_color
         if self.wireframe_opacity is not None:
             result["wireframe_opacity"] = self.wireframe_opacity
+        if self.texture_label is not None:
+            result["texture_label"] = self.texture_label.to_dict()
         return result
 
 
@@ -259,6 +267,10 @@ class SphereStyle(VizStyle):
             ``None`` uses the entity's main color.
         wireframe_opacity: Optional opacity for wireframe lines (0..1).
             ``None`` defaults to fully opaque.
+        texture_label: Optional :class:`TextureLabelStyle` for a text
+            or formula label rendered onto the sphere surface.  When
+            ``None``, no texture is applied.  Use ``offset_v=0.25`` to
+            center the label at the equator.
     """
 
     color: str | None = None
@@ -267,6 +279,8 @@ class SphereStyle(VizStyle):
     wireframe_dash: WireframeDashPattern | None = None
     wireframe_color: str | None = None
     wireframe_opacity: float | None = None
+    texture_label: TextureLabelStyle | None = None
+    double_sided: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "SphereStyle"}
@@ -282,6 +296,10 @@ class SphereStyle(VizStyle):
             result["wireframe_color"] = self.wireframe_color
         if self.wireframe_opacity is not None:
             result["wireframe_opacity"] = self.wireframe_opacity
+        if self.texture_label is not None:
+            result["texture_label"] = self.texture_label.to_dict()
+        if self.double_sided is not None:
+            result["double_sided"] = self.double_sided
         return result
 
 

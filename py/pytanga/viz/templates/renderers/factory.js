@@ -26,7 +26,7 @@ import { tagEntity } from './utils.js';
  * Create a Three.js Object3D for a given entity JSON dict.
  * Dispatches to the appropriate per-entity renderer.
  */
-export function createEntityMesh(ent) {
+export async function createEntityMesh(ent) {
     let mesh;
 
     switch (ent.kind) {
@@ -46,13 +46,13 @@ export function createEntityMesh(ent) {
             mesh = createLine(ent);
             break;
         case 'Plane':
-            mesh = createPlane(ent);
+            mesh = await createPlane(ent);
             break;
         case 'Circle':
             mesh = createCircle(ent);
             break;
         case 'Sphere':
-            mesh = createSphere(ent);
+            mesh = await createSphere(ent);
             break;
         case 'Space':
             mesh = createSpace(ent);

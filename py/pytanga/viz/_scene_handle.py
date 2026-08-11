@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle
+    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
     from .visualizer import Visualizer
 
 from pytanga.geometry.entities import Entity as GeoEntity
@@ -110,6 +110,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: TextureLabelStyle | None = None,
     ) -> str | list[str]:
         """Add an entity, operator, MV, or label to this scene.
 
@@ -128,6 +130,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             style=style,
             label=label,
             label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
         )
 
     def update(self, entity_id: str, **properties: Any) -> None:

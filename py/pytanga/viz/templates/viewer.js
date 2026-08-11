@@ -511,19 +511,30 @@ function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
-        entityMeshes.forEach((mesh) => removeEntityMesh(mesh));
+        console.log('[clear_all] Resetting scene — objects:', sceneObjects.size, 'meshes:', entityMeshes.size, 'labels:', labelObjects.size);
+        // Remove all scene children (entities, lights, grid, axes)
+        while (scene.children.length > 0) {
+            const child = scene.children[0];
+            scene.remove(child);
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        }
+        // Remove all CSS2D objects from the label renderer
+        if (window._labelRenderer && window._labelRenderer.domElement) {
+            window._labelRenderer.domElement.innerHTML = '';
+        }
+        // Clear maps
         entityMeshes.clear();
         entityData.clear();
-        labelObjects.forEach((lbl) => {
-            lbl.removeFromParent();
-            if (lbl.element) lbl.element.remove();
-        });
         labelObjects.clear();
-        sceneObjects.forEach((obj) => {
-            if (obj.obj && obj.obj.removeFromParent) obj.obj.removeFromParent();
-            if (obj.el) obj.el.remove();
-        });
         sceneObjects.clear();
+        // Clear overlays
         removeAnnotation();
         if (titleElement) {
             titleElement.remove();
@@ -532,6 +543,15 @@ function handleMessage(msg) {
         handleControlsClear();
         detachAll();
         cameraPositioned = false;
+        // Rebuild default lights
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const d1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        d1.position.set(10, 20, 10);
+        scene.add(d1);
+        const d2 = new THREE.DirectionalLight(0xffffff, 0.3);
+        d2.position.set(-5, -2, -8);
+        scene.add(d2);
+        console.log('[clear_all] Scene reset complete');
     } else if (msg.type === 'scene_config') {
         applySceneConfig(msg);
     } else if (msg.type === 'scene_update') {
@@ -679,7 +699,7 @@ function handleScreenshot(msg) {
 
 // ── Unified Object Management ──────────────────────────────
 
-function upsertObject(msg) {
+async function upsertObject(msg) {
     const old = sceneObjects.get(msg.id);
     if (old) {
         if (old.obj && old.obj.removeFromParent) old.obj.removeFromParent();
@@ -691,7 +711,7 @@ function upsertObject(msg) {
     labelObjects.delete(msg.id);
 
     if (msg.layer === 'scene') {
-        const mesh = createEntityMesh(msg);
+        const mesh = await createEntityMesh(msg);
         if (mesh) {
             if (msg.position) {
                 applyOverlayDrawOrder(mesh, msg.position[2] || 0, sceneConfig?.space_dim || 3);
@@ -846,12 +866,12 @@ function upsertLabel(lbl) {
     labelObjects.set(lbl.id, labelObj);
 }
 
-function updateEntity(ent) {
+async function updateEntity(ent) {
     const id = ent.id;
     const existing = entityData.get(id);
 
     if (!existing) {
-        const mesh = createEntityMesh(ent);
+        const mesh = await createEntityMesh(ent);
         if (mesh) {
             if (ent.position) {
                 applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
@@ -872,7 +892,7 @@ function updateEntity(ent) {
     const attachedLabels = oldMesh ? (oldMesh.userData._labels || []).slice() : [];
     if (oldMesh) removeEntityMesh(oldMesh);
     entityMeshes.delete(id);
-    const mesh = createEntityMesh({ ...existing, ...ent });
+    const mesh = await createEntityMesh({ ...existing, ...ent });
     if (mesh) {
         const pos = ent.position || existing?.position;
         if (pos) {
