@@ -106,7 +106,7 @@ class Point:
         """Euclidean magnitude sqrt(x² + y² + z²)."""
         return (self.x**2 + self.y**2 + self.z**2) ** 0.5
 
-    def norm(self) -> "Point":
+    def normalized(self) -> "Point":
         """Return a normalised copy (same direction, magnitude 1)."""
         m = self.mag()
         if m == 0:
@@ -203,7 +203,7 @@ class Direction:
         """Euclidean magnitude sqrt(x² + y² + z²)."""
         return (self.x**2 + self.y**2 + self.z**2) ** 0.5
 
-    def norm(self) -> "Direction":
+    def normalized(self) -> "Direction":
         """Return a normalised copy (same direction, magnitude 1)."""
         m = self.mag()
         if m == 0:
@@ -263,24 +263,99 @@ class ImagPointPair(PointPair):
 
 @dataclass(frozen=True)
 class Line:
-    """An infinite line in 3D space."""
+    """An infinite line in 3D space.
+
+    Can be constructed from origin+direction or directly from two points
+    via :meth:`from_points`.
+
+    The optional *length* field provides a rendering hint for the
+    visualizer — when set, it overrides the default line length.
+    ``None`` (the default) means "use the style default" (typically
+    20 units for lines derived from geometric algebra).
+    """
 
     origin: Point
     direction: Direction
+    length: float | None = None
 
     def __repr__(self) -> str:
         return f"Line(org={self.origin}, dir={self.direction})"
 
+    @classmethod
+    def from_points(cls, start: Point, end: Point) -> "Line":
+        """Construct a line segment from *start* to *end*.
+
+        The direction is ``end - start`` and *length* is set to
+        ``|end - start|`` so the visualizer draws exactly the segment.
+        """
+        direction = end - start
+        return cls(origin=start, direction=direction, length=direction.mag())
+
+    @property
+    def start(self) -> Point:
+        """The origin point of the line (alias for :attr:`origin`)."""
+        return self.origin
+
+    @property
+    def end(self) -> Point:
+        """A point on the line at distance ``length`` from ``origin``.
+
+        When *length* is set (as with :meth:`from_points`), this is
+        exactly the endpoint passed to the factory.
+        """
+        if self.length is not None:
+            return self.origin + self.direction.normalized() * self.length
+        return self.origin + self.direction
+
 
 @dataclass(frozen=True)
 class Plane:
-    """An infinite plane in 3D space."""
+    """An infinite plane in 3D space.
+
+    The optional *span_u* and *span_v* fields define a parallelogram
+    shape for rendering.  When both are provided, the visualizer draws
+    a quad with those exact edge vectors instead of a square of size
+    ``extent``.  When ``None``, *extent* controls the half-side of a
+    square (default 10.0).
+    """
 
     point: Point
     normal: Direction
+    span_u: Direction | None = None
+    span_v: Direction | None = None
+    extent: float | None = None
 
     def __repr__(self) -> str:
         return f"Plane(pt={self.point}, n={self.normal})"
+
+    @classmethod
+    def from_corner_and_span(
+        cls, corner: Point, u: Direction, v: Direction
+    ) -> "Plane":
+        """Construct a plane from a corner point and two full edge vectors.
+
+        The center is ``corner + u/2 + v/2``.  Normal is ``u × v``
+        (normalized).  Does **not** set *extent* (the spans define
+        the shape).
+        """
+        center = corner + u / 2.0 + v / 2.0
+        normal = u.cross(v).normalized()
+        return cls(point=center, normal=normal, span_u=u, span_v=v)
+
+    @classmethod
+    def from_center_and_half_span(
+        cls, center: Point, u: Direction, v: Direction
+    ) -> "Plane":
+        """Construct a plane from a center and two half-span vectors.
+
+        The edge vectors are ``2·u`` and ``2·v``.  Normal is ``u × v``
+        (normalized).
+        """
+        normal = u.cross(v).normalized()
+        return cls(
+            point=center, normal=normal,
+            span_u=2.0 * u, span_v=2.0 * v,
+        )
 
 
 @dataclass(frozen=True)

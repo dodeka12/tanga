@@ -65,7 +65,7 @@ and `Direction` support component‑wise arithmetic operators:
 | `dot(other)` | `float` | Euclidean dot product with another `Point` or `Direction` |
 | `cross(other)` | `Direction` | vector cross product (always returns a `Direction`) |
 | `mag()` | `float` | Euclidean magnitude √(x² + y² + z²) |
-| `norm()` | `Point` | normalised copy (same direction, magnitude 1) |
+| `normalized()` | `Point` | normalised copy (same direction, magnitude 1) |
 
 **Example:**
 
@@ -75,7 +75,7 @@ from pytanga.geometry import Point, Direction
 p1 = Point(3, 0, 0)
 p2 = Point(1, 0, 0)
 d = p1 - p2           # Direction(2.00, 0.00, 0.00)
-d_norm = d.norm()     # Direction(1.00, 0.00, 0.00)
+d_norm = d.normalized()     # Direction(1.00, 0.00, 0.00)
 mid = (p1 + p2) / 2   # Point(2.00, 0.00, 0.00)
 dist = p1.dot(d_norm) # 3.0
 ```
@@ -136,7 +136,7 @@ e3.vector(Direction(1, 0, 0)) # 1 e1
 | `dot(other)` | `float` | Euclidean dot product with another `Point` or `Direction` |
 | `cross(other)` | `Direction` | vector cross product |
 | `mag()` | `float` | Euclidean magnitude √(x² + y² + z²) |
-| `norm()` | `Direction` | normalised copy (same direction, magnitude 1) |
+| `normalized()` | `Direction` | normalised copy (same direction, magnitude 1) |
 
 ## Line
 

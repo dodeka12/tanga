@@ -75,7 +75,7 @@ def test_entity_line_opns_round_trip(b):
     the two point factors.
     """
     direction = Direction(1, 2, 0)
-    unit = direction.norm()
+    unit = direction.normalized()
     pt = Point(1, 2, 0)
     mv = create_entity(b, Line(pt, direction))
     r = analyze_entity(mv, opns=True)

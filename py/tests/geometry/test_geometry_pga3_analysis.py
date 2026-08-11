@@ -68,7 +68,7 @@ def test_entity_plane_opns_round_trip(b):
     The point is verified by checking it lies on the plane: n·p = d.
     """
     normal = Direction(1, 3, 0)
-    unit = normal.norm()
+    unit = normal.normalized()
     pt = Point(3, -2, 1)
     mv: MV = create_entity(b, Plane(pt, normal))
     r = analyze_entity(mv, opns=True)
@@ -96,7 +96,7 @@ def test_entity_line_opns_round_trip(b):
     checking it lies on the line: (r.origin − pt) is parallel to direction.
     """
     direction = Direction(1, 2, 0)
-    unit = direction.norm()
+    unit = direction.normalized()
     pt = Point(1, 2, 3)
     mv: MV = create_entity(b, Line(pt, direction))
     r = analyze_entity(mv, opns=True)

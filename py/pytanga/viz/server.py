@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import webbrowser
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -21,11 +22,14 @@ from uuid import uuid4
 
 from aiohttp import web
 
+logger = logging.getLogger("tanga.viz.server")
+
 # Callback types
 FlushCallback = Callable[[str], tuple[list[dict[str, Any]], list[str]]]
 ConfigCallback = Callable[[], dict[str, Any]]
 SceneConfigCallback = Callable[[str], dict[str, Any] | None]
 ControlCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
+InteractionCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 SceneListCallback = Callable[[], list[str]]
 PushControlsCallback = Callable[[str], Awaitable[None]]
 
@@ -73,6 +77,8 @@ class VizServer:
         self._pending_screenshots: dict[str, asyncio.Future[Any]] = {}
         self._pending_page_tokens: dict[str, dict[str, Any]] = {}
         self._any_ws_ready: asyncio.Event = asyncio.Event()
+        self._ws_error_event: asyncio.Event = asyncio.Event()
+        self._ws_error_msg: str = ""
 
     # ── Lifecycle ───────────────────────────────────────────
 
@@ -82,6 +88,7 @@ class VizServer:
         config_callback: ConfigCallback,
         *,
         control_callback: ControlCallback | None = None,
+        interaction_callback: InteractionCallback | None = None,
         on_connect: Callable[[str], Awaitable[None]] | None = None,
         on_disconnect: Callable[[str], Awaitable[None]] | None = None,
         push_controls: PushControlsCallback | None = None,
@@ -95,6 +102,7 @@ class VizServer:
         self._scene_config_callback = scene_config_callback
         self._scene_list_callback = scene_list_callback
         self._control_callback = control_callback
+        self._interaction_callback = interaction_callback
         self._on_connect = on_connect
         self._on_disconnect = on_disconnect
         self._push_controls_cb = push_controls
@@ -223,7 +231,7 @@ class VizServer:
         from .serializer import serialize_scene_update
 
         # 0. Clear the browser scene first (handles reconnect with new server)
-        print(f"[_push_full_state] Sending clear_all for scene '{scene_name}'")
+        logger.debug("Sending clear_all for scene '%s'", scene_name)
         await ws.send_str(json.dumps({"type": "clear_all"}))
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
@@ -238,7 +246,7 @@ class VizServer:
 
         if cfg is not None:
             cfg.setdefault("name", scene_name)
-            print(f"[_push_full_state] Sending scene_config for '{scene_name}'")
+            logger.debug("Sending scene_config for '%s'", scene_name)
             await ws.send_str(json.dumps(cfg))
 
         # 2. Full state (entities + labels merged)
@@ -247,7 +255,7 @@ class VizServer:
             if entities:
                 msg = serialize_scene_update(entities, [])
                 msg["scene"] = scene_name
-                print(f"[_push_full_state] Sending {len(entities)} entities for scene '{scene_name}'")
+                logger.debug("Sending %d entities for scene '%s'", len(entities), scene_name)
                 await ws.send_str(json.dumps(msg))
 
         # 3. Scene list (so the frontend knows available scenes)
@@ -292,23 +300,27 @@ class VizServer:
         diagnostics.
         """
         rel_path = request.match_info.get("name", "")
+        remote_addr = request.remote or "unknown"
         if rel_path:
             file_path = self._static_dir / rel_path
             if file_path.is_file():
+                logger.debug("HTTP GET /%s → static file → %s", rel_path, remote_addr)
                 return web.FileResponse(file_path)
             # If the path looks like a static file request (has a file
             # extension, e.g. /favicon.ico), return 404 instead of
             # serving viewer.html — avoids bogus page-load prints.
             if "." in rel_path.rsplit("/", 1)[-1]:
+                logger.debug("HTTP GET /%s → 404 (unknown static) → %s", rel_path, remote_addr)
                 raise web.HTTPNotFound()
 
         # Inject a page token for WS connectivity correlation
         # Use token from URL query param if present, otherwise generate random
         viewer_path = self._static_dir / "viewer.html"
         page_token = request.query.get("token") or uuid4().hex[:8]
-        remote_addr = request.remote or "unknown"
+        logger.info("HTTP GET / → serving viewer.html (token=%s) → %s", page_token, remote_addr)
         self._pending_page_tokens[page_token] = {
             "remote_addr": remote_addr,
+            "token": page_token,
             "timestamp": asyncio.get_running_loop().time(),
         }
 
@@ -340,6 +352,7 @@ class VizServer:
         self._ws_clients.add(ws)
 
         remote_addr = request.remote or "unknown"
+        logger.info("WS connect from %s", remote_addr)
 
         # Assign a unique browser ID and send it immediately
         browser_id = uuid4().hex[:8]
@@ -378,6 +391,28 @@ class VizServer:
                             page_token = data.get("page_token")
                             if page_token:
                                 self._pending_page_tokens.pop(page_token, None)
+                            logger.debug(
+                                "WS ready: id=%s token=%s viewer=%s scene=%s",
+                                msg_browser_id,
+                                page_token,
+                                data.get("viewer_name"),
+                                scene_name,
+                            )
+
+                            # Handle CDN / load errors reported by the frontend
+                            if data.get("error"):
+                                self._ws_error_msg = data.get(
+                                    "error_msg", data.get("error", "unknown error")
+                                )
+                                logger.error(
+                                    "WS ready with error from %s: %s — %s",
+                                    remote_addr,
+                                    data.get("error"),
+                                    self._ws_error_msg,
+                                )
+                                self._ws_error_event.set()
+                                continue
+
                             # Print comprehensive connection summary
                             self._print_ws_connected(
                                 remote_addr,
@@ -437,11 +472,19 @@ class VizServer:
                                 asyncio.create_task(
                                     self._control_callback(msg_type, data)
                                 )
+                        elif msg_type.startswith("interaction:"):
+                            if self._interaction_callback is not None:
+                                if msg_browser_id:
+                                    data["browser_id"] = msg_browser_id
+                                asyncio.create_task(
+                                    self._interaction_callback(msg_type, data)
+                                )
                     except json.JSONDecodeError:
                         pass
                 elif msg.type == web.WSMsgType.ERROR:
                     break
         finally:
+            logger.info("WS disconnect from %s (id=%s)", remote_addr, browser_id)
             # Clean up pending futures for this client
             for rid, future in list(self._pending_screenshots.items()):
                 if not future.done():
@@ -618,33 +661,12 @@ class VizServer:
             return
 
         ws_url = f"ws://{self._host}:{self._port}/ws"
-        try:
-            from rich.console import Console
-            from rich.panel import Panel
-            from rich.text import Text
-
-            console = Console()
-            for info in stale:
-                panel = Panel(
-                    Text.assemble(
-                        "[bold red]WebSocket connection failed[/bold red]\n",
-                        f"Browser at [cyan]{info['remote_addr']}[/cyan] loaded the "
-                        "page via HTTP but the WebSocket never connected.\n"
-                        "Check that the following URL is reachable:\n",
-                        Text(ws_url, style="bold cyan underline"),
-                    ),
-                    border_style="red",
-                    padding=(1, 2),
-                )
-                console.print(panel)
-        except ImportError:
-            for info in stale:
-                print(
-                    f"WARNING: Browser at {info['remote_addr']} loaded the page "
-                    f"but WebSocket never connected. "
-                    f"Check that {ws_url} is reachable "
-                    f"(port forwarding/proxy must support WebSocket upgrades)."
-                )
+        for info in stale:
+            logger.warning(
+                "Browser at %s loaded page (token=%s) but WebSocket never connected. "
+                "Check that %s is reachable.",
+                info["remote_addr"], info["token"], ws_url,
+            )
 
     def open_browser(self, path: str = "") -> None:
         """Open the viewer URL in the default browser with graceful fallback.
@@ -653,6 +675,7 @@ class VizServer:
             path: Optional URL path/query to append (e.g. ``"/?token=abc123"``).
         """
         url = self.url + path
+        logger.info("Opening browser: %s", url)
         try:
             ok = webbrowser.open(url)
             if ok:
@@ -692,19 +715,41 @@ class VizServer:
         deadline = _time.monotonic() + timeout
         while _time.monotonic() < deadline:
             if self._ws_clients:
+                logger.debug("WS client connected after %.1fs", timeout - (deadline - _time.monotonic()))
                 return True
             await asyncio.sleep(0.5)
+        logger.info("wait_for_client timed out after %.0fs", timeout)
         return False
 
     async def wait_for_ws_ready(self, *, timeout: float = 30.0) -> bool:
         """Wait until at least one browser completes the WebSocket ready round-trip.
 
         Returns ``True`` if a ready message was received, ``False`` on timeout.
+        Raises ``ConnectionError`` if the browser reports a load error (e.g. CDN
+        failure).
         """
         if self._any_ws_ready.is_set():
+            logger.debug("WS ready already set")
             return True
-        try:
-            await asyncio.wait_for(self._any_ws_ready.wait(), timeout=timeout)
+        if self._ws_error_event.is_set():
+            raise ConnectionError(self._ws_error_msg or "Browser reported a load error")
+        import time as _time
+
+        start = _time.monotonic()
+        logger.debug("Waiting for WS ready (timeout=%.0fs)...", timeout)
+        done, _ = await asyncio.wait(
+            [
+                asyncio.create_task(self._any_ws_ready.wait()),
+                asyncio.create_task(self._ws_error_event.wait()),
+            ],
+            timeout=timeout,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        elapsed = _time.monotonic() - start
+        if self._ws_error_event.is_set():
+            raise ConnectionError(self._ws_error_msg or "Browser reported a load error")
+        if self._any_ws_ready.is_set():
+            logger.info("WS ready received after %.1fs", elapsed)
             return True
-        except asyncio.TimeoutError:
-            return False
+        logger.info("WS ready timed out after %.1fs", elapsed)
+        return False

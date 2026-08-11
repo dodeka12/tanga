@@ -117,4 +117,4 @@ def _extract_axis(bi_e: MV, is_2d: bool) -> Direction:
         return Direction(0, 0, 1)
     axis_mv = bi_e.ip(bi_e._alg.multivector({7: 1.0}))  # e₁₂₃
     axis = Direction(axis_mv["e1"], axis_mv["e2"], axis_mv["e3"])
-    return axis.norm()
+    return axis.normalized()

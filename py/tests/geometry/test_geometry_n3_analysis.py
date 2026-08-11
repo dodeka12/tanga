@@ -115,7 +115,7 @@ def test_entity_hpoint_opns_round_trip(b):
 def test_entity_line_opns_round_trip(b):
     """E5: create Line(origin=(1,2,3), dir=(1,2,0)) → analyze → assert."""
     direction = Direction(1, 2, 0)
-    unit = direction.norm()
+    unit = direction.normalized()
     pt = Point(1, 2, 3)
     mv = create_entity(b, Line(pt, direction))
     r = analyze_entity(mv, opns=True)
@@ -142,7 +142,7 @@ def test_entity_line_opns_round_trip(b):
 def test_entity_circle_opns_round_trip(b):
     """E6: create Circle(center=(1,0,2), normal=(0,1,0), radius=2.5) → analyze."""
     normal = Direction(0, 1, 0)
-    unit = normal.norm()
+    unit = normal.normalized()
     mv = create_entity(b, Circle(Point(1, 0, 2), normal, 2.5))
     r = analyze_entity(mv, opns=True)
     assert isinstance(r, Circle), f"Got {type(r).__name__}"
@@ -162,7 +162,7 @@ def test_entity_circle_opns_round_trip(b):
 def test_entity_plane_opns_round_trip(b):
     """E7: create Plane(point=(3,-2,1), normal=(1,3,0)) → analyze → assert."""
     normal = Direction(1, 3, 0)
-    unit = normal.norm()
+    unit = normal.normalized()
     pt = Point(3, -2, 1)
     mv = create_entity(b, Plane(pt, normal))
     r = analyze_entity(mv, opns=True)

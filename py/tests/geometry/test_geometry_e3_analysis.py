@@ -63,7 +63,7 @@ def test_entity_plane_opns_round_trip(b):
     after analysis.  Sign may flip (±n describe the same plane).
     """
     normal = Direction(1, 2, 3)
-    unit = normal.norm()
+    unit = normal.normalized()
     plane = Plane(point=Point(0, 0, 0), normal=normal)
     mv = create_entity(b, plane, opns=True)
     r = analyze_entity(mv, opns=True)

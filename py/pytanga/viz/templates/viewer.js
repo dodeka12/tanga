@@ -12,6 +12,7 @@ import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, applyOverlayDrawOrder, switchToCamera, createGrid } from './view_mode.js';
+import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
 const sceneObjects = new Map();   // id → {obj, layer, el?}
@@ -98,6 +99,8 @@ function initScene() {
     // Controls — only if WebGL is available (needs renderer.domElement)
     if (webglOk && renderer) {
         controls = setupControls(camera, renderer);
+        // Initialize interaction system
+        initInteraction(camera, renderer.domElement, controls, ws);
         // Ctrl+S screenshot shortcut
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -142,8 +145,13 @@ function connectWebSocket() {
     ws = new WebSocket(url);
 
     ws.onopen = () => {
+        const pageToken = window.__tanga_page_token
+            || new URLSearchParams(window.location.search).get('token');
+        console.log('[tanga] WS connected (attempt=' + _reconnectAttempts
+            + ', token=' + (pageToken || 'none') + ')');
         setStatus('connected');
         setWebSocket(ws);
+        setInteractionWebSocket(ws);
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
@@ -154,8 +162,6 @@ function connectWebSocket() {
         const readyPayload = { type: 'ready', scene: _myScene };
         if (_browserId) readyPayload.browser_id = _browserId;
         if (_viewerName) readyPayload.viewer_name = _viewerName;
-        const pageToken = window.__tanga_page_token
-            || new URLSearchParams(window.location.search).get('token');
         if (pageToken) readyPayload.page_token = pageToken;
         ws.send(JSON.stringify(readyPayload));
     };
@@ -169,7 +175,7 @@ function connectWebSocket() {
     };
 
     ws.onclose = (event) => {
-        console.warn('[tanga] disconnected (code ' + event.code + '), retrying in 800ms');
+        console.warn('[tanga] WS closed (code=' + event.code + '), retrying in 800ms');
         setStatus('disconnected');
         updateStatusIndicator('disconnected');
         reconnectTimer = setTimeout(connectWebSocket, 800);
@@ -430,7 +436,20 @@ function inPlaceUpdate(ent) {
     if (ent.vector || ent.direction) {
         const vec = ent.vector || ent.direction;
         const origin = ent.origin || [0, 0, 0];
-        mesh.position.set(origin[0], origin[1], origin[2]);
+        // Line entities position their cylinder mesh at the midpoint
+        // (origin + dir * len/2), not at origin.  Other direction-based
+        // entities (Direction arrow groups, etc.) sit at origin.
+        if (ent.kind === 'Line') {
+            const len = (ent.length !== undefined) ? ent.length : (previous?.length ?? 20.0);
+            const d = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
+            mesh.position.set(
+                origin[0] + d.x * len / 2,
+                origin[1] + d.y * len / 2,
+                origin[2] + d.z * len / 2
+            );
+        } else {
+            mesh.position.set(origin[0], origin[1], origin[2]);
+        }
         mesh.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
     }
 
@@ -530,6 +549,7 @@ function handleMessage(msg) {
             window._labelRenderer.domElement.innerHTML = '';
         }
         // Clear maps
+        clearAllInteractive();
         entityMeshes.clear();
         entityData.clear();
         labelObjects.clear();
@@ -557,6 +577,7 @@ function handleMessage(msg) {
     } else if (msg.type === 'scene_update') {
         if (msg.removed) {
             for (const id of msg.removed) {
+                unregisterInteractive(id);
                 const mesh = entityMeshes.get(id);
                 if (mesh) {
                     if (mesh.userData._attachedGroups) {
@@ -720,6 +741,10 @@ async function upsertObject(msg) {
             sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
             entityMeshes.set(msg.id, mesh);
             entityData.set(msg.id, { ...msg });
+            // ── Interaction ──
+            if (msg.interaction) {
+                registerInteractive(msg.id, mesh, msg.interaction);
+            }
         }
     } else if (msg.layer === 'overlay') {
         if (msg.kind === 'annotation') {

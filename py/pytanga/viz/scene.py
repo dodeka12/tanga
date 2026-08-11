@@ -129,6 +129,7 @@ class Scene:
         self._removed_ids: list[str] = []
         self._controls: dict[str, Any] = {}
         self._groups: dict[str, Any] = {}
+        self._interaction_configs: dict[str, Any] = {}
 
     # -- Object lifecycle -------------------------------------
 
@@ -239,11 +240,35 @@ class Scene:
         """Mark an object for removal in the next flush."""
         if object_id in self._objects:
             self._removed_ids.append(object_id)
+        self._interaction_configs.pop(object_id, None)
 
     def clear(self) -> None:
         """Remove all objects."""
         for oid in list(self._objects):
             self._removed_ids.append(oid)
+        self._interaction_configs.clear()
+
+    # -- Interaction config management -----------------------
+
+    def set_interaction(self, object_id: str, config: Any) -> None:
+        """Set or update the interaction configuration for an entity.
+
+        The config is a :class:`~pytanga.viz._interaction.InteractionConfig`
+        instance.  It is included in the entity JSON on the next flush.
+        """
+        self._interaction_configs[object_id] = config
+        # Mark entity dirty so the interaction field is re-sent
+        obj = self._objects.get(object_id)
+        if obj is not None:
+            obj.dirty = True
+
+    def get_interaction(self, object_id: str) -> Any | None:
+        """Get the interaction config for an entity, or ``None``."""
+        return self._interaction_configs.get(object_id)
+
+    def remove_interaction(self, object_id: str) -> None:
+        """Remove the interaction config for an entity."""
+        self._interaction_configs.pop(object_id, None)
 
     # -- Sync / flush ----------------------------------------
 
@@ -272,7 +297,9 @@ class Scene:
             if obj is None:
                 continue
             if obj.dirty:
-                dirty.append(_serialize_object(obj, styles_map=styles_map))
+                entity_dict = _serialize_object(obj, styles_map=styles_map)
+                _inject_interaction(entity_dict, oid, self._interaction_configs)
+                dirty.append(entity_dict)
                 obj.dirty = False
 
         return dirty, removed
@@ -287,7 +314,9 @@ class Scene:
         for oid in self._order:
             obj = self._objects.get(oid)
             if obj is not None:
-                result.append(_serialize_object(obj, styles_map=styles_map))
+                entity_dict = _serialize_object(obj, styles_map=styles_map)
+                _inject_interaction(entity_dict, oid, self._interaction_configs)
+                result.append(entity_dict)
         return result
 
     # -- Backward-compat helpers (used by visualizer.py) ----
@@ -347,6 +376,22 @@ class Scene:
 
 def _generate_id() -> str:
     return uuid4().hex[:8]
+
+
+def _inject_interaction(
+    entity_dict: dict[str, Any],
+    object_id: str,
+    interaction_configs: dict[str, Any],
+) -> None:
+    """Inject the ``"interaction"`` field into a serialized entity dict.
+
+    Only adds the field for scene-layer objects that have an enabled
+    interaction config.  Overlay objects (labels, annotations) are
+    skipped — they never have interaction configs.
+    """
+    ic = interaction_configs.get(object_id)
+    if ic is not None and getattr(ic, "enabled", False):
+        entity_dict["interaction"] = ic.to_dict()
 
 
 # ── Serialization helper ──────────────────────────────────

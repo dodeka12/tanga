@@ -231,6 +231,16 @@ def _apply_defaults(
     if "opacity" in result:
         merged_style["opacity"] = result["opacity"]
 
+    # ── Overlay per-entity builtin overrides into the style dict ──
+    # The JS styleParam() checks ent.style first, so any per-entity
+    # override of a builtin key (length, thickness, extent, …) must
+    # also be mirrored into the merged style dict.  We only overlay
+    # keys that were explicitly set in per-entity props — not keys
+    # that merely inherited from the canonical style or builtins.
+    for key in builtin:
+        if key in props and key not in ("color", "opacity"):
+            merged_style[key] = result[key]
+
     # Also pull color/opacity from merged style if not otherwise resolved
     if "color" not in result and "color" in merged_style:
         result["color"] = merged_style["color"]
@@ -349,10 +359,13 @@ def _serialize_line(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
+    builtins = {"thickness": 0.03, "length": 20.0}
+    if ent.length is not None:
+        props["length"] = ent.length
     return _apply_defaults(
         props,
         kind,
-        {"thickness": 0.03, "length": 20.0},
+        builtins,
         styles_map=styles_map,
     ) | {
         "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
@@ -367,15 +380,17 @@ def _serialize_plane(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    return _apply_defaults(
-        props,
-        kind,
-        {"extent": 10.0},
-        styles_map=styles_map,
-    ) | {
+    builtins: dict[str, Any] = {"extent": 10.0}
+    if ent.extent is not None:
+        props["extent"] = ent.extent
+    result = _apply_defaults(props, kind, builtins, styles_map=styles_map) | {
         "point": [ent.point.x, ent.point.y, ent.point.z],
         "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
     }
+    if ent.span_u is not None and ent.span_v is not None:
+        result["span_u"] = [ent.span_u.x, ent.span_u.y, ent.span_u.z]
+        result["span_v"] = [ent.span_v.x, ent.span_v.y, ent.span_v.z]
+    return result
 
 
 def _serialize_circle(

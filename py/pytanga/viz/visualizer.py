@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import json
+import logging
 import signal
 import sys
 import threading
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle
 
 from pytanga.geometry.entities import Entity as GeoEntity
+
+logger = logging.getLogger("tanga.viz")
 
 from ._jupyter import _JupyterDisplayMixin
 from ._props import _normalize_color
@@ -139,6 +142,12 @@ class Visualizer(_JupyterDisplayMixin):
         from ._controls import ControlHandlerRegistry
 
         self._handler_registry = ControlHandlerRegistry()
+
+        # Interaction handler registry (shared across all scenes)
+        from ._interaction import InteractionHandlerRegistry
+
+        self._interaction_registry = InteractionHandlerRegistry()
+        self._interaction_configs: dict[str, dict[str, Any]] = {}
 
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
@@ -670,13 +679,16 @@ class Visualizer(_JupyterDisplayMixin):
             wait_for_browser = not self._jupyter
 
         if self._server is not None:
+            logger.debug("Stopping previous server instance")
             self.stop()
 
         from .server import VizServer
 
+        logger.info("Starting VizServer on %s:%d", self._host, self._port)
         self._server = VizServer(host=self._host, port=self._port)
 
         _boot_done = threading.Event()
+        _boot_start = time.monotonic()
 
         async def _boot() -> None:
             await self._server.start(
@@ -688,6 +700,7 @@ class Visualizer(_JupyterDisplayMixin):
                 ),
                 self._config.to_dict,
                 control_callback=self._dispatch_control_event,
+                interaction_callback=self._dispatch_interaction_event,
                 on_connect=self._on_client_connect,
                 on_disconnect=self._on_client_disconnect,
                 push_controls=self._push_controls_async,
@@ -707,34 +720,48 @@ class Visualizer(_JupyterDisplayMixin):
         if not _boot_done.wait(timeout=5.0):
             raise RuntimeError("Server failed to start within 5s")
 
+        logger.debug("Server booted in %.1fs", time.monotonic() - _boot_start)
+
+        # Threading.Event for Ctrl+C — signal handler sets it, poll loop checks it.
+        # Avoids asyncio/signal clashes on Windows.
+        self._shutdown_requested = threading.Event()
+
+        def _on_sigint(signum: int, frame: object) -> None:
+            logger.info("Ctrl+C received — requesting shutdown")
+            self._shutdown_requested.set()
+
+        signal.signal(signal.SIGINT, _on_sigint)
+        signal.signal(signal.SIGTERM, _on_sigint)
+
         # Print URLs
         self._print_startup_urls()
 
         if self._open_browser:
             page_token = secrets.token_hex(4)  # 8 hex chars
             if self._reuse_existing:
-                sys.stdout.write("Waiting for existing browser to reconnect ...\n")
-                sys.stdout.flush()
+                logger.info("Waiting up to 5s for existing browser reconnect...")
                 fut = asyncio.run_coroutine_threadsafe(
-                    self._server.wait_for_ws_ready(timeout=3.0), self._loop
+                    self._server.wait_for_ws_ready(timeout=5.0), self._loop
                 )
                 try:
-                    reconnected = fut.result(timeout=3.5)
+                    reconnected = fut.result(timeout=5.5)
                 except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
                     reconnected = False
                 if reconnected:
-                    sys.stdout.write("Existing browser reconnected.\n")
-                    sys.stdout.flush()
+                    logger.info("Existing browser reconnected")
                 else:
-                    sys.stdout.write(
-                        "No existing browser reconnected — opening new tab.\n"
+                    logger.info(
+                        "No existing browser reconnected — opening new tab (token=%s)",
+                        page_token,
                     )
-                    sys.stdout.flush()
-                    # Reset so we wait for the new tab, not a stale reconnect
+                    logger.debug("Clearing _any_ws_ready before opening new tab")
                     self._server._any_ws_ready.clear()
+                    self._server._ws_error_event.clear()
                     self._server.open_browser(f"/?token={page_token}")
             else:
+                logger.debug("Clearing _any_ws_ready (reuse disabled)")
                 self._server._any_ws_ready.clear()
+                self._server._ws_error_event.clear()
                 self._server.open_browser(f"/?token={page_token}")
 
         if wait_for_browser:
@@ -759,12 +786,32 @@ class Visualizer(_JupyterDisplayMixin):
             return None
         return scene.config.to_dict()
 
+    async def wait_for_shutdown(self, poll_interval: float = 0.25) -> None:
+        """Asyncio-friendly wait until shutdown is requested (e.g. Ctrl+C).
+
+        Polls ``self._shutdown_requested`` so it works on Windows where
+        ``loop.add_signal_handler`` is not available.
+        """
+        while not self._shutdown_requested.is_set():
+            await asyncio.sleep(poll_interval)
+
     def stop(self, *, timeout: float = 5.0) -> None:
         """Stop the server and clean up."""
         if self._server is None:
+            logger.debug("stop() called but server already None")
             return
 
+        logger.info("Shutting down server...")
+
         async def _stop() -> None:
+            # Cancel pending tasks gently to avoid "Task was destroyed but pending"
+            # warnings.  Don't do t.cancel() in a loop — it can recurse on child tasks.
+            tasks = [t for t in asyncio.all_tasks(self._loop)
+                     if not t.done() and t is not asyncio.current_task(self._loop)]
+            if tasks:
+                for t in tasks:
+                    t.cancel('server shutting down')
+                await asyncio.gather(*tasks, return_exceptions=True)
             await self._server.stop()
 
         if self._loop is not None and self._loop.is_running():
@@ -780,48 +827,67 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = None
         self._loop = None
         self._thread = None
+        logger.debug("Server stopped")
 
     def wait_for_browser(self, timeout: float = 30.0) -> bool:
-        """Block until a browser completes the WebSocket ready round-trip."""
+        """Block until a browser completes the WebSocket ready round-trip.
+
+        Polls with short timeouts so Ctrl+C is responsive even on Windows.
+        """
         if self._server is None or self._loop is None:
             raise RuntimeError("Server not started. Call start() first.")
 
-        try:
-            from rich.console import Console
-            from rich.text import Text
+        logger.info("Waiting for browser to connect at %s ...", self.url)
+        start_ts = time.monotonic()
 
-            Console().print(
-                Text.assemble(
-                    "Waiting for browser to connect at ",
-                    Text(self.url, style="bold cyan underline"),
-                    " ...",
-                )
-            )
-        except ImportError:
-            print(f"Waiting for browser to connect at {self.url} ...")
+        # Poll in short increments so KeyboardInterrupt can land between waits.
+        poll_interval = 0.2
+        cancel = threading.Event()
+
+        def _on_interrupt(signum: int, frame: object) -> None:
+            logger.info("Ctrl+C received, cancelling wait")
+            cancel.set()
+
+        # Install a temporary handler just for this wait.
+        # (The persistent handler from start() handles Ctrl+C after this returns.)
+        prev_sigint = signal.signal(signal.SIGINT, _on_interrupt)
+        prev_sigterm = signal.signal(signal.SIGTERM, _on_interrupt)
 
         fut = asyncio.run_coroutine_threadsafe(
             self._server.wait_for_ws_ready(timeout=timeout), self._loop
         )
+        ready = False
+        deadline = time.monotonic() + timeout
         try:
-            ready = fut.result(timeout=timeout + 1.0)
-        except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
-            ready = False
+            while time.monotonic() < deadline and not cancel.is_set():
+                try:
+                    ready = fut.result(timeout=poll_interval)
+                    break
+                except concurrent.futures.TimeoutError:
+                    continue
+                except Exception:
+                    break
+        finally:
+            # Restore previous handlers (or the persistent one from start())
+            signal.signal(signal.SIGINT, prev_sigint)
+            signal.signal(signal.SIGTERM, prev_sigterm)
 
+        if cancel.is_set():
+            logger.info("Cancelled by user")
+            return False
+
+        # Check for exceptions (e.g. CDN failure ConnectionError)
+        if fut.done() and fut.exception() is not None:
+            exc = fut.exception()
+            logger.error("Browser connection failed: %s", exc)
+            return False
+
+        elapsed = time.monotonic() - start_ts
         if ready:
+            logger.info("Browser connected after %.1fs", elapsed)
             return True
 
-        try:
-            from rich.console import Console
-            from rich.text import Text
-
-            Console().print(
-                Text.from_markup(
-                    f"[bold red]✗[/bold red] No browser connected within {timeout:.0f}s"
-                )
-            )
-        except ImportError:
-            pass
+        logger.warning("No browser connected within %.0fs", elapsed)
         self._print_ws_timeout_note()
         return False
 
@@ -901,6 +967,7 @@ class Visualizer(_JupyterDisplayMixin):
             wait_for_browser = not self._jupyter
         from .server import VizServer
 
+        logger.info("Starting VizServer (run mode) on %s:%d", self._host, self._port)
         self._server = VizServer(host=self._host, port=self._port)
 
         async def _run() -> None:
@@ -913,6 +980,7 @@ class Visualizer(_JupyterDisplayMixin):
                 ),
                 self._config.to_dict,
                 control_callback=self._dispatch_control_event,
+                interaction_callback=self._dispatch_interaction_event,
                 on_connect=self._on_client_connect,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
@@ -920,15 +988,21 @@ class Visualizer(_JupyterDisplayMixin):
             if self._open_browser:
                 page_token = secrets.token_hex(4)  # 8 hex chars
                 if self._reuse_existing:
-                    reconnected = await self._server.wait_for_ws_ready(timeout=3.0)
+                    logger.info("Waiting up to 5s for existing browser reconnect...")
+                    reconnected = await self._server.wait_for_ws_ready(timeout=5.0)
                     if reconnected:
-                        print("Existing browser reconnected.")
+                        logger.info("Existing browser reconnected")
                     else:
-                        print("No existing browser reconnected — opening new tab.")
+                        logger.info(
+                            "No existing browser reconnected — opening new tab (token=%s)",
+                            page_token,
+                        )
                         self._server._any_ws_ready.clear()
+                        self._server._ws_error_event.clear()
                         self._server.open_browser(f"/?token={page_token}")
                 else:
                     self._server._any_ws_ready.clear()
+                    self._server._ws_error_event.clear()
                     self._server.open_browser(f"/?token={page_token}")
 
                 if wait_for_browser:
@@ -950,6 +1024,7 @@ class Visualizer(_JupyterDisplayMixin):
             loop = asyncio.get_running_loop()
 
             def _signal_handler() -> None:
+                logger.info("Signal received, shutting down...")
                 stop_event.set()
 
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -963,20 +1038,67 @@ class Visualizer(_JupyterDisplayMixin):
         try:
             asyncio.run(_run())
         except KeyboardInterrupt:
-            pass
+            logger.info("Interrupted (KeyboardInterrupt), shutting down...")
         finally:
             if self._server is not None:
                 try:
                     asyncio.run(self._server.stop())
                 except Exception:
                     pass
-            try:
-                from rich.console import Console
-                from rich.text import Text
+            logger.info("Visualizer shut down")
 
-                Console().print(Text("Visualizer shut down.", style="dim"))
-            except ImportError:
-                print("Visualizer shut down.")
+    # ── Object Interaction ─────────────────────────────────
+
+    def set_interaction(
+        self,
+        object_id: str,
+        config: Any,
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Set the interaction configuration for an entity.
+
+        The config is sent to the frontend with the next scene flush.
+        """
+        self._interaction_configs.setdefault(scene_name, {})[object_id] = config
+        scene = self._scenes[scene_name]
+        scene.set_interaction(object_id, config)
+
+    def on_interaction(
+        self,
+        object_id: str,
+        event_type: Any,
+        handler: Any,
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Register an async handler for interaction events on an entity.
+
+        Args:
+            object_id: The entity ID.
+            event_type: An :class:`~pytanga.viz._interaction.InteractionEventType`
+                value.
+            handler: Async callable receiving a :class:`ClickEvent`,
+                :class:`DragEvent`, or :class:`ScrollEvent`.
+            scene_name: Target scene (default ``""`` = main scene).
+        """
+        self._interaction_registry.register(object_id, event_type, handler)
+
+    async def _dispatch_interaction_event(
+        self, msg_type: str, data: dict[str, Any]
+    ) -> None:
+        """Callback invoked by the server for incoming interaction events.
+
+        Parses the raw JSON dict into the appropriate event dataclass and
+        dispatches to the :class:`InteractionHandlerRegistry`.
+        """
+        from ._interaction import _parse_event
+
+        try:
+            event = _parse_event(data)
+        except (ValueError, KeyError):
+            return
+        await self._interaction_registry.dispatch(event)
 
     # ── Interactive Controls (main scene) ───────────────────
 
