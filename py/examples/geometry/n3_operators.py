@@ -159,7 +159,7 @@ except (ValueError, NotImplementedError):
 # ── 9. Plain Functions (alternative) ───────────────────────
 hr("9. Plain functions — no Geometry wrapper needed")
 
-from pytanga.geometry import analyze_operator, create_operator
+from pytanga.geometry import analyze_operator, create_operator  # noqa: E402
 
 mv_op = create_operator(n3, Reflection(Direction(1, 0, 0)))
 result = analyze_operator(mv_op)

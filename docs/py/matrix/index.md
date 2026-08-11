@@ -43,3 +43,4 @@ b_mask = BladeMask(alg, grades=[1])   # vector subspace
 
 M = product_matrix(A, a_mask=a_mask, b_mask=b_mask, c_mask=a_mask)
 # M.data[0] is the (|a_mask|×|b_mask|) 2‑D product matrix
+```

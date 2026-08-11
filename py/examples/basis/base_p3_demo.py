@@ -28,7 +28,7 @@ e1: MV = P3.e1
 e2: MV = P3.e2
 e3: MV = P3.e3
 e4: MV = P3.e4
-I: MV = P3.I
+I: MV = P3.I  # noqa: E741
 
 print("\nBasis blades:")
 e1.show("e1")

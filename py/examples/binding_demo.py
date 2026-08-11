@@ -72,7 +72,7 @@ Override the location with the PYTANGA_CACHE_DIR environment variable.
 # ─────────────────────────────────────────────────────────────────────────────
 hr("2. Inspecting cache entries")
 
-import json
+import json  # noqa: E402
 
 entries = sorted(root.glob("*/meta.json")) if root.exists() else []
 if not entries:
@@ -141,7 +141,7 @@ The result is a fully specialised .cpp that CMake compiles with -O2.
 """)
 
 # Show a snippet of what the generated code looks like
-import tempfile
+import tempfile  # noqa: E402
 
 with tempfile.NamedTemporaryFile(suffix=".cpp", delete=False, mode="w") as tmp:
     tmp_path = Path(tmp.name)

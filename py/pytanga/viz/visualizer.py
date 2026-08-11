@@ -9,8 +9,10 @@ Supports multiple named scenes, each served at a unique URL path.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import signal
+import sys
 import threading
 import time
 from typing import TYPE_CHECKING, Any
@@ -29,8 +31,11 @@ from ._style_dict import (
     _make_default_label_style,
     _make_default_label_styles,
     _make_default_styles,
+    _make_default_tex_label_style,
+    _make_default_tex_label_styles,
     _resolve_annotation_style,
     _resolve_label_style,
+    _resolve_tex_label_style,
     _StyleDict,
 )
 from ._timeline import Timeline
@@ -127,6 +132,8 @@ class Visualizer(_JupyterDisplayMixin):
         self._default_label_style = _make_default_label_style()
         self._default_annotation_style = _make_default_annotation_style()
         self._default_label_styles = _make_default_label_styles()
+        self._default_tex_label_style = _make_default_tex_label_style()
+        self._default_tex_label_styles = _make_default_tex_label_styles()
 
         # Control handler registry (shared across all scenes)
         from ._controls import ControlHandlerRegistry
@@ -137,10 +144,6 @@ class Visualizer(_JupyterDisplayMixin):
         # Key "" is the main scene (backward compatible).
         self._scenes: dict[str, Scene] = {}
         self._scenes[""] = Scene(self._config, name="")
-
-        # WS ready synchronisation — set when a browser completes the
-        # WebSocket ready round-trip (after _print_ws_connected fires).
-        self._ws_ready_event = threading.Event()
 
     # ── Scene access ─────────────────────────────────────────
 
@@ -224,8 +227,14 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
+    ) -> str | list[str]:
         """Add a geometric entity, operator, multivector, or label to the main scene.
+
+        Returns the entity ID (a single ``str``), or a ``list[str]`` when a
+        multivector resolves to multiple entities.  If *label* is provided the
+        label is created alongside the entity and only the entity ID is returned.
 
         See the class docstring for full parameter documentation.
         """
@@ -239,6 +248,8 @@ class Visualizer(_JupyterDisplayMixin):
             style=style,
             label=label,
             label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
         )
 
     def _add_to_scene(
@@ -253,10 +264,13 @@ class Visualizer(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
+    ) -> str | list[str]:
         """Add an entity to a specific scene."""
         from ._label import Label
         from ._styles import LabelStyle as _LS
+        from ._styles import TextureLabelStyle as _TLS
 
         scene = self._scenes[scene_name]
 
@@ -279,6 +293,47 @@ class Visualizer(_JupyterDisplayMixin):
 
         if opacity is not None:
             properties["opacity"] = float(opacity)
+
+        # Build texture label convenience style if tex_label is set
+        _tex_label_merged: _TLS | None = None
+        if tex_label is not None:
+            entity_for_kind = self._resolve(obj, opns=opns)
+            if isinstance(entity_for_kind, list) and entity_for_kind:
+                entity_for_kind = entity_for_kind[0]
+            kind = type(entity_for_kind).__name__
+            _tex_label_merged = _resolve_tex_label_style(
+                self._default_tex_label_style,
+                self._default_tex_label_styles.get(kind),
+                tex_label_style or _TLS(),
+            )
+            _tex_label_merged.text = tex_label
+
+        # Merge texture label into style if the user didn't provide
+        # texture_label explicitly via style
+        if _tex_label_merged is not None:
+            if style is not None:
+                from ._styles import PlaneStyle, SphereStyle
+
+                style_for_check = style
+                if isinstance(style_for_check, (SphereStyle, PlaneStyle)):
+                    if style_for_check.texture_label is None:
+                        style_for_check.texture_label = _tex_label_merged
+                # Otherwise leave the user's explicit style alone
+            else:
+                kind_for_style = None
+                entity_for_style = self._resolve(obj, opns=opns)
+                if isinstance(entity_for_style, list) and entity_for_style:
+                    entity_for_style = entity_for_style[0]
+                if entity_for_style is not None:
+                    kind_for_style = type(entity_for_style).__name__
+                if kind_for_style == "Sphere":
+                    from ._styles import SphereStyle as SS
+
+                    style = SS(texture_label=_tex_label_merged)
+                elif kind_for_style == "Plane":
+                    from ._styles import PlaneStyle as PS
+
+                    style = PS(texture_label=_tex_label_merged)
 
         if style is not None:
             properties["style"] = style
@@ -332,8 +387,8 @@ class Visualizer(_JupyterDisplayMixin):
                 parent_id=eid,
                 style=resolved_ls,
             )
-            lid = scene.add_label(lbl)
-            return (eid, lid)
+            scene.add_label(lbl)
+            return eid
 
         return eid
 
@@ -355,9 +410,7 @@ class Visualizer(_JupyterDisplayMixin):
         """
         self._scenes[""].update(entity_id, **properties)
 
-    def update_style(
-        self, entity_id: str, style: ObjVizStyle
-    ) -> None:
+    def update_style(self, entity_id: str, style: ObjVizStyle) -> None:
         """Update rendering style of an existing entity from a style instance.
 
         Extracts only the explicitly set (non-``None``) fields from *style*
@@ -399,6 +452,10 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> None:
         """Update a label's text and/or style in the main scene."""
         self._scenes[""].update_label(object_id, text=text, style=style)
+
+    def get_label_ids(self, entity_id: str) -> list[str]:
+        """Return the IDs of all labels attached to *entity_id* in the main scene."""
+        return self._scenes[""].get_label_ids(entity_id)
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity from the main scene."""
@@ -480,9 +537,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── MV resolution ──────────────────────────────────────
 
-    def _resolve(
-        self, obj: Any, *, opns: bool = True
-    ) -> SceneEntity | list[GeoEntity]:
+    def _resolve(self, obj: Any, *, opns: bool = True) -> SceneEntity | list[GeoEntity]:
         """Resolve an MV to a :class:`SceneEntity` or list of GeoEntities.
 
         Viz-level drawables (PointPath, …) are passed through unchanged.
@@ -605,6 +660,8 @@ class Visualizer(_JupyterDisplayMixin):
         iframes connect asynchronously when they render.  Outside Jupyter
         it defaults to ``True`` so entities are pushed reliably.
         """
+        import secrets
+
         if wait_for_browser is None:
             wait_for_browser = not self._jupyter
 
@@ -614,7 +671,6 @@ class Visualizer(_JupyterDisplayMixin):
         from .server import VizServer
 
         self._server = VizServer(host=self._host, port=self._port)
-        self._ws_ready_event.clear()
 
         _boot_done = threading.Event()
 
@@ -633,7 +689,6 @@ class Visualizer(_JupyterDisplayMixin):
                 push_controls=self._push_controls_async,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
-                on_ready=lambda: self._ws_ready_event.set(),
             )
             _boot_done.set()
 
@@ -648,20 +703,37 @@ class Visualizer(_JupyterDisplayMixin):
         if not _boot_done.wait(timeout=5.0):
             raise RuntimeError("Server failed to start within 5s")
 
-        # Print URLs and start WS connectivity diagnostics
+        # Print URLs
         self._print_startup_urls()
-        asyncio.run_coroutine_threadsafe(self._server.check_page_tokens(), self._loop)
 
         if self._open_browser:
+            page_token = secrets.token_hex(4)  # 8 hex chars
             if self._reuse_existing:
-                if not self._wait_for_client_quiet(timeout=3.0):
-                    self._server.open_browser()
+                sys.stdout.write("Waiting for existing browser to reconnect ...\n")
+                sys.stdout.flush()
+                fut = asyncio.run_coroutine_threadsafe(
+                    self._server.wait_for_ws_ready(timeout=3.0), self._loop
+                )
+                try:
+                    reconnected = fut.result(timeout=3.5)
+                except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
+                    reconnected = False
+                if reconnected:
+                    sys.stdout.write("Existing browser reconnected.\n")
+                    sys.stdout.flush()
+                else:
+                    sys.stdout.write(
+                        "No existing browser reconnected — opening new tab.\n"
+                    )
+                    sys.stdout.flush()
+                    # Reset so we wait for the new tab, not a stale reconnect
+                    self._server._any_ws_ready.clear()
+                    self._server.open_browser(f"/?token={page_token}")
             else:
-                self._server.open_browser()
+                self._server._any_ws_ready.clear()
+                self._server.open_browser(f"/?token={page_token}")
 
         if wait_for_browser:
-            if self._ws_ready_event.is_set():
-                return True
             return self.wait_for_browser(timeout=timeout)
         return True
 
@@ -724,7 +796,15 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             print(f"Waiting for browser to connect at {self.url} ...")
 
-        if self._ws_ready_event.wait(timeout=timeout):
+        fut = asyncio.run_coroutine_threadsafe(
+            self._server.wait_for_ws_ready(timeout=timeout), self._loop
+        )
+        try:
+            ready = fut.result(timeout=timeout + 1.0)
+        except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
+            ready = False
+
+        if ready:
             return True
 
         try:
@@ -739,24 +819,6 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             pass
         self._print_ws_timeout_note()
-        return False
-
-    def _wait_for_client_quiet(self, timeout: float = 3.0) -> bool:
-        """Poll for a WebSocket client with a compact spinner."""
-        if self._server is None:
-            return False
-
-        import sys
-
-        sys.stdout.write("Waiting for existing browser to reconnect ...\n")
-        sys.stdout.flush()
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            if self._server._ws_clients:
-                return True
-            time.sleep(0.1)
-
-        print("No existing browser connected — opening new tab.")
         return False
 
     def _print_ws_timeout_note(self) -> None:
@@ -781,17 +843,6 @@ class Visualizer(_JupyterDisplayMixin):
                 f"(port forwarding/proxy must support WebSocket upgrades)."
             )
 
-    def _print_connect(self, remote_addr: str) -> None:
-        try:
-            from rich.console import Console
-            from rich.text import Text
-
-            Console().print(
-                Text(f"✓ Browser connected  ({remote_addr}).", style="bold green")
-            )
-        except ImportError:
-            print(f"Browser connected ({remote_addr}).")
-
     def _print_disconnect(self, remote_addr: str) -> None:
         try:
             from rich.console import Console
@@ -803,7 +854,9 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             print(f"Browser disconnected ({remote_addr}).")
 
-    async def _flush_scene_async(self, scene_name: str) -> None:
+    async def _flush_scene_async(
+        self, scene_name: str, *, fit_camera: bool = False
+    ) -> None:
         """Push dirty state for a specific scene (must be called from server's event loop)."""
         if self._server is None:
             return
@@ -811,27 +864,35 @@ class Visualizer(_JupyterDisplayMixin):
         if scene is None:
             return
         entities, removed = scene.flush(styles_map=self._default_styles)
-        if entities or removed:
-            await self._server.push(entities, removed, scene=scene_name)
+        if entities or removed or fit_camera:
+            await self._server.push(
+                entities, removed, scene=scene_name, fit_camera=fit_camera
+            )
 
-    def _flush_scene(self, scene_name: str) -> None:
+    def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe)."""
         if self._loop is not None and self._server is not None:
             asyncio.run_coroutine_threadsafe(
-                self._flush_scene_async(scene_name), self._loop
+                self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
             )
 
-    def flush(self) -> None:
-        """Schedule all dirty scenes to be pushed to the server (thread-safe)."""
+    def flush(self, *, fit_camera: bool = False) -> None:
+        """Schedule all dirty scenes to be pushed to the server (thread-safe).
+
+        If *fit_camera* is ``True``, the frontend will auto‑adjust the
+        camera to encompass all entities after the flush.
+        """
         if self._loop is not None and self._server is not None:
             for name in self._scenes:
-                self._flush_scene(name)
+                self._flush_scene(name, fit_camera=fit_camera)
 
     def run(self, *, wait_for_browser: bool | None = None) -> None:
         """Start the server, open the browser, and block until interrupted.
 
         In Jupyter, ``wait_for_browser`` defaults to ``False``.
         """
+        import secrets
+
         if wait_for_browser is None:
             wait_for_browser = not self._jupyter
         from .server import VizServer
@@ -853,9 +914,31 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_list_callback=self.list_scenes,
             )
             if self._open_browser:
-                self._server.open_browser()
-            if wait_for_browser:
-                await self._server.wait_for_client()
+                page_token = secrets.token_hex(4)  # 8 hex chars
+                if self._reuse_existing:
+                    reconnected = await self._server.wait_for_ws_ready(timeout=3.0)
+                    if reconnected:
+                        print("Existing browser reconnected.")
+                    else:
+                        print("No existing browser reconnected — opening new tab.")
+                        self._server._any_ws_ready.clear()
+                        self._server.open_browser(f"/?token={page_token}")
+                else:
+                    self._server._any_ws_ready.clear()
+                    self._server.open_browser(f"/?token={page_token}")
+
+                if wait_for_browser:
+                    try:
+                        await asyncio.wait_for(
+                            self._server.wait_for_ws_ready(), timeout=30.0
+                        )
+                    except asyncio.TimeoutError:
+                        self._print_ws_timeout_note()
+                        raise RuntimeError(
+                            "No browser connected within 30s.  "
+                            f"Open {self.url} manually."
+                        )
+
             # Flush initial state for the main scene
             await self._flush_scene_async("")
 
@@ -1145,16 +1228,19 @@ class Visualizer(_JupyterDisplayMixin):
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
         """Handle an incoming control event from the frontend."""
+        from ._controls import ControlEvent
+
         cid = payload.get("control_id")
         browser_id = payload.get("browser_id")
+        event = ControlEvent(browser_id=browser_id)
         if cid and (handler := self._handler_registry.get(cid)):
             try:
                 if msg_type == "control:change":
-                    await handler(payload.get("value"), browser_id=browser_id)
+                    await handler(payload.get("value"), event)
                 elif msg_type == "control:click":
-                    await handler(None, browser_id=browser_id)
+                    await handler(None, event)
                 elif msg_type == "control:group_toggle":
-                    await handler(payload.get("value"), browser_id=browser_id)
+                    await handler(payload.get("value"), event)
             except Exception:
                 import logging
 
@@ -1299,6 +1385,18 @@ class Visualizer(_JupyterDisplayMixin):
     def default_annotation_style(self) -> AnnotationStyle:
         """The global default ``AnnotationStyle`` instance."""
         return self._default_annotation_style
+
+    @property
+    def default_tex_label_style(self) -> _StyleDict:
+        """Per-kind texture label style defaults.
+
+        Usage::
+
+            viz.default_tex_label_style["Sphere"] = TextureLabelStyle(
+                repeat_u=4, offset_v=0.25, background=None
+            )
+        """
+        return _StyleDict(self._default_tex_label_styles)
 
     @property
     def url(self) -> str:

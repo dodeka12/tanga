@@ -113,3 +113,4 @@ print(full.grades)                        # [0, 1, 2, 3]
 scalars = BladeMask(alg, grades=[0])
 vectors = BladeMask(alg, grades=[1])
 both = scalars.union(vectors)            # scalars + vectors
+```

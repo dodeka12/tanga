@@ -44,3 +44,4 @@ print(a * b)
 
 # Outer product
 print(a ^ b)
+```

@@ -32,7 +32,6 @@ from pytanga.geometry import (
     Motor,
     Plane,
     Point,
-    Reflection,
     Rotor,
     Space,
     Translator,
@@ -150,7 +149,7 @@ for name, e in entities:
 # ── 9. Plain Functions (alternative) ──────────────────────
 hr("9. Plain functions — no Geometry wrapper needed")
 
-from pytanga.geometry import analyze, create
+from pytanga.geometry import analyze, create  # noqa: E402
 
 result = analyze(create(pga, Point(10, 0, 0)))
 print(f"  plain create + analyze → {result}")

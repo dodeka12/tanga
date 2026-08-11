@@ -42,7 +42,7 @@ def test_default_construction():
     viz = Visualizer(open_browser=False)
 
     # Add a few entities
-    id_p = viz.add(Point(2, 0, 0), color="#ff4444", size=0.12, label="P₁")
+    id_p = viz.add(Point(2, 0, 0), color="#ff4444"style=PointStyle(size=0.12), label="P₁")
     id_l = viz.add(
         Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)),
         color="#44ff44",
@@ -114,7 +114,7 @@ def test_all_entity_types():
         Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2),
         label="Circle",
     )
-    viz.add(Sphere(Point(0, 0, 0), radius=2), wireframe=True, label="Sphere")
+    viz.add(Sphere(Point(0, 0, 0), radius=2), style=SphereStyle(wireframe=True), label="Sphere")
     viz.add(Space(), label="Space")
 
     viz.start()

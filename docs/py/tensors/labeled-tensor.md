@@ -307,3 +307,4 @@ result = O["kij"] * A_batch["in_"] * B_batch["jn_"]
 ```python
 C = (A_batch["in_"] * B_batch["jn_"])         # labels "i*j*n_"
 D = C["->nij"]                                # labels "n_i*j*"
+```

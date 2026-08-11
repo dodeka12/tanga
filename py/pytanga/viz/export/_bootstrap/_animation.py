@@ -329,10 +329,11 @@ function applyFrameUpdate(ent, meshMap) {{
 
     if (ent.scale) mesh.scale.set(ent.scale[0], ent.scale[1], ent.scale[2]);
 
-    // Full rebuild for structural changes
+    // Full rebuild for structural changes (tolerance-aware)
     const prevData = mesh.userData._data || {{}};
-    if (ent.radius !== undefined && ent.radius !== prevData.radius ||
-        ent.extent !== undefined && ent.extent !== prevData.extent ||
+    const _tol = (a, b) => Math.abs(a - b) > 1e-9;
+    if (ent.radius !== undefined && (!(ent.radius in prevData) || _tol(ent.radius, prevData.radius)) ||
+        ent.extent !== undefined && (!(ent.extent in prevData) || _tol(ent.extent, prevData.extent)) ||
         ent.kind !== undefined && ent.kind !== prevData.kind) {{
         const oldLabels = mesh.userData._labels || [];
         removeEntityMesh(mesh);

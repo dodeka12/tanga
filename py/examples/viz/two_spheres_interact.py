@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from pytanga.basis import BasisN3
 from pytanga.geometry import Geometry, Point, Sphere
-from pytanga.viz import VisualizerApp
+from pytanga.viz import ControlEvent, VisualizerApp
 
 SPHERE_A_ID = "sphere_a"
 SPHERE_B_ID = "sphere_b"
@@ -84,15 +84,15 @@ class TwoSpheresApp(VisualizerApp):
 
     # ── handlers ────────────────────────────────────────────
 
-    async def on_slider(self, value: float) -> None:
+    async def on_slider(self, value: float, _event: ControlEvent) -> None:
         self.x_default = value
         await self._update_scene(value, self.mode)
 
-    async def on_mode(self, mode: str) -> None:
+    async def on_mode(self, mode: str, _event: ControlEvent) -> None:
         self.mode = mode
         await self._update_scene(self.x_default, mode)
 
-    async def on_reset(self, _: None) -> None:
+    async def on_reset(self, _value: None, _event: ControlEvent) -> None:
         self.x_default = 2.5
         self.mode = "Both"
         await self._update_scene(2.5, "Both")

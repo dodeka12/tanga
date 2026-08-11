@@ -87,3 +87,4 @@ v = MVMatrix(data=np.random.randn(8, 1), row_mask=full)
 batch = MVMatrix(data=np.random.randn(8, 5), row_mask=full)
 print(batch.n_cols)                            # 5
 print(batch.is_single)                         # False
+```

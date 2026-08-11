@@ -97,3 +97,4 @@ v = E2.e1 * E2.e2    # → e12
 
 ```python
 globals().update(E2.blades())
+```

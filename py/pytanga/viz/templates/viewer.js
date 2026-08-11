@@ -43,22 +43,33 @@ let _availableScenes = [];
 function initScene() {
     window._viewerContainer = document.getElementById('viewer-container');
 
-    // WebGL Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = false;
-    window._viewerContainer.appendChild(renderer.domElement);
+    let webglOk = true;
+    try {
+        // WebGL Renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = false;
+        window._viewerContainer.appendChild(renderer.domElement);
+    } catch (e) {
+        console.warn('WebGL renderer failed — falling back to headless mode:', e.message);
+        webglOk = false;
+        renderer = null;
+    }
 
     // CSS2D Renderer
-    window._labelRenderer = new CSS2DRenderer();
-    window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
-    window._labelRenderer.domElement.style.position = 'absolute';
-    window._labelRenderer.domElement.style.top = '0px';
-    window._labelRenderer.domElement.style.pointerEvents = 'none';
-    window._viewerContainer.appendChild(window._labelRenderer.domElement);
+    try {
+        window._labelRenderer = new CSS2DRenderer();
+        window._labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        window._labelRenderer.domElement.style.position = 'absolute';
+        window._labelRenderer.domElement.style.top = '0px';
+        window._labelRenderer.domElement.style.pointerEvents = 'none';
+        window._viewerContainer.appendChild(window._labelRenderer.domElement);
+    } catch (e) {
+        window._labelRenderer = null;
+    }
 
-    // Scene
+    // Scene (always created — works even without a renderer)
     scene = new THREE.Scene();
     scene.fog = null;
 
@@ -84,23 +95,26 @@ function initScene() {
     window._axesHelper = new THREE.AxesHelper(5);
     scene.add(window._axesHelper);
 
-    // Controls
-    controls = setupControls(camera, renderer);
+    // Controls — only if WebGL is available (needs renderer.domElement)
+    if (webglOk && renderer) {
+        controls = setupControls(camera, renderer);
+        // Ctrl+S screenshot shortcut
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                const dataUrl = renderer.domElement.toDataURL('image/png');
+                const now = new Date();
+                const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const link = document.createElement('a');
+                link.download = `tanga_${ts}.png`;
+                link.href = dataUrl;
+                link.click();
+            }
+        });
+    }
+
     window.addEventListener('resize', onResize);
 
-    // Ctrl+S screenshot shortcut
-    window.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            const dataUrl = renderer.domElement.toDataURL('image/png');
-            const now = new Date();
-            const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            const link = document.createElement('a');
-            link.download = `tanga_${ts}.png`;
-            link.href = dataUrl;
-            link.click();
-        }
-    });
 }
 
 function onResize() {
@@ -140,7 +154,9 @@ function connectWebSocket() {
         const readyPayload = { type: 'ready', scene: _myScene };
         if (_browserId) readyPayload.browser_id = _browserId;
         if (_viewerName) readyPayload.viewer_name = _viewerName;
-        if (window.__tanga_page_token) readyPayload.page_token = window.__tanga_page_token;
+        const pageToken = window.__tanga_page_token
+            || new URLSearchParams(window.location.search).get('token');
+        if (pageToken) readyPayload.page_token = pageToken;
         ws.send(JSON.stringify(readyPayload));
     };
 
@@ -281,7 +297,19 @@ function renderTitle(titleText) {
         titleElement.style.zIndex = '5';
         window._viewerContainer.appendChild(titleElement);
     }
-    titleElement.textContent = titleText;
+    titleElement.textContent = '';  // clear first
+    titleElement.innerHTML = titleText;
+    if (typeof renderMathInElement !== 'undefined') {
+        try {
+            renderMathInElement(titleElement, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                ],
+                throwOnError: false,
+            });
+        } catch (e) { /* ignore */ }
+    }
 }
 
 // ── Annotation Panel ──────────────────────────────────────────
@@ -380,6 +408,11 @@ function rotationFromDirection(dx, dy, dz) {
     return quaternion;
 }
 
+// ── Numeric tolerance helper ─────────────────────────────────
+function _approx(a, b, eps = 1e-9) {
+    return Math.abs(a - b) < eps;
+}
+
 // ── In-place entity updates for frame streaming ─────────────
 function inPlaceUpdate(ent) {
     const mesh = entityMeshes.get(ent.id);
@@ -437,10 +470,10 @@ function inPlaceUpdate(ent) {
     // PointPath requires full rebuild on any change
     if (ent.kind === 'PointPath') return false;
 
-    // Structural changes require full rebuild
-    if (ent.radius !== undefined && ent.radius !== previous?.radius) return false;
-    if (ent.extent !== undefined && ent.extent !== previous?.extent) return false;
-    if (ent.length !== undefined && ent.length !== previous?.length) return false;
+    // Structural changes require full rebuild (tolerance-aware)
+    if (ent.radius !== undefined && (!previous || !_approx(ent.radius, previous.radius))) return false;
+    if (ent.extent !== undefined && (!previous || !_approx(ent.extent, previous.extent))) return false;
+    if (ent.length !== undefined && (!previous || !_approx(ent.length, previous.length))) return false;
     if (ent.kind !== undefined && ent.kind !== previous?.kind) return false;
 
     return true;
@@ -478,19 +511,30 @@ function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
-        entityMeshes.forEach((mesh) => removeEntityMesh(mesh));
+        console.log('[clear_all] Resetting scene — objects:', sceneObjects.size, 'meshes:', entityMeshes.size, 'labels:', labelObjects.size);
+        // Remove all scene children (entities, lights, grid, axes)
+        while (scene.children.length > 0) {
+            const child = scene.children[0];
+            scene.remove(child);
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        }
+        // Remove all CSS2D objects from the label renderer
+        if (window._labelRenderer && window._labelRenderer.domElement) {
+            window._labelRenderer.domElement.innerHTML = '';
+        }
+        // Clear maps
         entityMeshes.clear();
         entityData.clear();
-        labelObjects.forEach((lbl) => {
-            lbl.removeFromParent();
-            if (lbl.element) lbl.element.remove();
-        });
         labelObjects.clear();
-        sceneObjects.forEach((obj) => {
-            if (obj.obj && obj.obj.removeFromParent) obj.obj.removeFromParent();
-            if (obj.el) obj.el.remove();
-        });
         sceneObjects.clear();
+        // Clear overlays
         removeAnnotation();
         if (titleElement) {
             titleElement.remove();
@@ -499,6 +543,15 @@ function handleMessage(msg) {
         handleControlsClear();
         detachAll();
         cameraPositioned = false;
+        // Rebuild default lights
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const d1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        d1.position.set(10, 20, 10);
+        scene.add(d1);
+        const d2 = new THREE.DirectionalLight(0xffffff, 0.3);
+        d2.position.set(-5, -2, -8);
+        scene.add(d2);
+        console.log('[clear_all] Scene reset complete');
     } else if (msg.type === 'scene_config') {
         applySceneConfig(msg);
     } else if (msg.type === 'scene_update') {
@@ -549,10 +602,8 @@ function handleMessage(msg) {
                 upsertLabel(lbl);
             }
         }
-        if (!cameraPositioned && entityMeshes.size > 0) {
-            const cc = sceneConfig?.camera;
-            if (!cc || (!cc.position && !cc.target)) fitCameraToScene();
-            cameraPositioned = true;
+        if (msg.fit_camera) {
+            fitCameraToScene();
         }
     } else if (msg.type === 'animate') {
         handleAnimate(msg);
@@ -648,7 +699,7 @@ function handleScreenshot(msg) {
 
 // ── Unified Object Management ──────────────────────────────
 
-function upsertObject(msg) {
+async function upsertObject(msg) {
     const old = sceneObjects.get(msg.id);
     if (old) {
         if (old.obj && old.obj.removeFromParent) old.obj.removeFromParent();
@@ -660,7 +711,7 @@ function upsertObject(msg) {
     labelObjects.delete(msg.id);
 
     if (msg.layer === 'scene') {
-        const mesh = createEntityMesh(msg);
+        const mesh = await createEntityMesh(msg);
         if (mesh) {
             if (msg.position) {
                 applyOverlayDrawOrder(mesh, msg.position[2] || 0, sceneConfig?.space_dim || 3);
@@ -815,12 +866,12 @@ function upsertLabel(lbl) {
     labelObjects.set(lbl.id, labelObj);
 }
 
-function updateEntity(ent) {
+async function updateEntity(ent) {
     const id = ent.id;
     const existing = entityData.get(id);
 
     if (!existing) {
-        const mesh = createEntityMesh(ent);
+        const mesh = await createEntityMesh(ent);
         if (mesh) {
             if (ent.position) {
                 applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
@@ -841,7 +892,7 @@ function updateEntity(ent) {
     const attachedLabels = oldMesh ? (oldMesh.userData._labels || []).slice() : [];
     if (oldMesh) removeEntityMesh(oldMesh);
     entityMeshes.delete(id);
-    const mesh = createEntityMesh({ ...existing, ...ent });
+    const mesh = await createEntityMesh({ ...existing, ...ent });
     if (mesh) {
         const pos = ent.position || existing?.position;
         if (pos) {

@@ -149,3 +149,4 @@ C_batch = O["kij"] * A_batch["in_"] * B_batch["jn_"]
 ```python
 O_ip = product_tensor(full, full, product=EProduct.IP)
 result = O_ip["kij"] * a["i"] * b["j"]
+```

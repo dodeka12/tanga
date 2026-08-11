@@ -31,7 +31,7 @@ ep: MV = PGA.ep
 em: MV = PGA.em
 einf: MV = PGA.einf
 eo: MV = PGA.eo
-I: MV = PGA.I
+I: MV = PGA.I  # noqa: E741
 
 print("\nFinite point factory  p = x·e1 + y·e2 + z·e3 + eo:")
 P = PGA.point(1, 2, 3)

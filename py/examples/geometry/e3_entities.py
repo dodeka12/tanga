@@ -111,7 +111,7 @@ print(f"  create + analyze Plane → {result}")
 # ── 8. Plain Functions (alternative) ─────────────────────────
 hr("8. Plain functions — no Geometry wrapper needed")
 
-from pytanga.geometry import analyze, analyze_entity, create
+from pytanga.geometry import analyze, create  # noqa: E402
 
 mv_ref2 = create(e3, Reflection(normal=Direction(0, 1, 0)))
 result = analyze(mv_ref2)

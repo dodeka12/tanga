@@ -95,3 +95,4 @@ M_op = product_matrix(A, a_mask=BladeMask(A),
 points = [alg.random_mv(rng=i) for i in range(5)]
 M_arr = product_matrix(points, b_mask=full, c_mask=full)
 # M_arr.data.shape == (5, 8, 8)
+```

@@ -33,7 +33,18 @@ def js_title_overlay(
     safe_title = json.dumps(title)
     return f"""// Title
 const titleEl = document.createElement('div');
-titleEl.textContent = {safe_title};
+titleEl.innerHTML = {safe_title};
+if (typeof renderMathInElement !== 'undefined') {{
+    try {{
+        renderMathInElement(titleEl, {{
+            delimiters: [
+                {{ left: '$$', right: '$$', display: true }},
+                {{ left: '$', right: '$', display: false }},
+            ],
+            throwOnError: false,
+        }});
+    }} catch (e) {{ /* ignore rendering errors */ }}
+}}
 titleEl.style.position = '{positioning}';
 titleEl.style.top = '10px';
 titleEl.style.left = '50%';

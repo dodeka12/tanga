@@ -177,3 +177,16 @@ viz.add(Point(5, 0, 0), style=CrossHairPointStyle(
 This is the reference pattern for future extended styles — inherit from the
 base `*Style`, add new fields (all defaulting to `None`), override `to_dict()`,
 and add a new JS renderer module dispatched on the `style_type` string.
+
+## Texture Label Style — `TextureLabelStyle`
+
+`TextureLabelStyle` controls text, KaTeX formula, and mixed content labels
+rendered directly onto entity surfaces (Sphere, Plane). It appears as the
+optional `texture_label` field on `SphereStyle` and `PlaneStyle`.
+
+See **[Texture Labels](texture-labels.md)** for full documentation with
+examples covering all fields, content modes, per-kind defaults, and the
+`tex_label`/`tex_label_style` convenience API.
+
+Fields: `text`, `math_mode`, `repeat_u`, `repeat_v`, `offset_u`, `offset_v`,
+`align`, `background`, `resolution`, `color`, `font_size`.

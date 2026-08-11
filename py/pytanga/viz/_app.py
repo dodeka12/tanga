@@ -27,6 +27,8 @@ class VisualizerApp:
 
     Usage::
 
+        from pytanga.viz._controls import ControlEvent
+
         class MyApp(VisualizerApp):
             def __init__(self):
                 super().__init__(title="My Scene", space_extent=8)
@@ -36,7 +38,7 @@ class VisualizerApp:
                 self.viz.add(...)
                 self.viz.add_slider("x", on_change=self.on_x)
 
-            async def on_x(self, value: float) -> None:
+            async def on_x(self, value: float, event: ControlEvent) -> None:
                 self.viz.update_entity("ent", ...)
                 self.viz.flush()
 

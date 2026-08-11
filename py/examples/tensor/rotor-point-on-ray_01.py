@@ -10,7 +10,6 @@ from pytanga import BladeMask, EInv, EProduct, MV
 from pytanga.algebra import from_rotor
 from pytanga.basis.p3 import BasisP3
 from pytanga.tensor import MVTensor, MVLabeledTensor
-from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
 from pytanga.tensor.convert import to_tensor, from_tensor
 

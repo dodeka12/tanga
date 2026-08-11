@@ -254,3 +254,83 @@ def _resolve_figure_style(
         if v is not None:
             merged[k] = v
     return merged
+
+
+# ── Texture label style defaults ────────────────────────────────
+
+
+def _make_default_tex_label_style() -> "TextureLabelStyle":
+    """Return a fully-initialised canonical ``TextureLabelStyle``."""
+    from ._styles import TextureLabelStyle as _TLS
+
+    return _TLS(
+        font_size=48,
+        color="#000000",
+        background=None,
+        resolution=1024,
+    )
+
+
+def _make_default_tex_label_styles() -> dict[str, "TextureLabelStyle | None"]:
+    """Return per-kind texture label style overrides.
+
+    Sphere defaults ``offset_v=0.25`` to center at the equator.
+    Plane defaults ``offset_v=0.0``.  All other kinds default to ``None``
+    (no texture label).
+    """
+    from ._styles import TextureLabelStyle as _TLS
+
+    return {
+        "Sphere": _TLS(repeat_u=2, repeat_v=1, offset_v=0.0, aspect=1.0, scale=0.8),
+        "Plane": _TLS(offset_v=0.0),
+        "Point": None,
+        "Direction": None,
+        "HPoint": None,
+        "PointPair": None,
+        "ImagPointPair": None,
+        "Line": None,
+        "Circle": None,
+        "ImagCircle": None,
+        "ImagSphere": None,
+        "Space": None,
+        "ReflectionLine": None,
+        "ReflectionPlane": None,
+        "ReflectionPoint": None,
+        "Inversion": None,
+        "Rotor": None,
+        "Translator": None,
+        "Dilator": None,
+        "Motor": None,
+        "GeneralRotor": None,
+        "PointPath": None,
+    }
+
+
+def _resolve_tex_label_style(
+    global_default: "TextureLabelStyle",
+    per_kind: "TextureLabelStyle | None",
+    user_style: "TextureLabelStyle",
+) -> "TextureLabelStyle":
+    """Resolve the effective texture label style: user > per-kind > global.
+
+    All three inputs are ``TextureLabelStyle`` instances.  Fields from the
+    higher-priority source overwrite lower-priority ones only if they
+    are not ``None``.
+    """
+    from copy import copy
+
+    # Start with a copy of the global default
+    result = copy(global_default)
+
+    # Overlay per-kind (non-None fields only)
+    if per_kind is not None:
+        for field_name, value in per_kind.__dict__.items():
+            if value is not None:
+                setattr(result, field_name, value)
+
+    # Overlay user (non-None fields only)
+    for field_name, value in user_style.__dict__.items():
+        if value is not None:
+            setattr(result, field_name, value)
+
+    return result

@@ -46,6 +46,7 @@ viz.display_row(
 | [Visualizer API](visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
 | [Camera & Controls](camera.md) | `CameraConfig`, auto-fit vs explicit vs partial camera, orbit controls, Ctrl+S screenshots |
 | [Style System](styles.md) | `*Style` dataclasses, `default_styles`, `set_default_color()`, `CrossHairPointStyle` |
+| [Texture Labels](texture-labels.md) | Text, KaTeX formulas, and mixed content on entity surfaces (Sphere, Plane) |
 | [Labels](labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
 | [PointPath](point-path.md) | Connected line segments, object trails, per-point colors, FIFO capping, gradient utilities |
 | [Title & Annotation](title-annotation.md) | Title overlay, Markdown annotation panel, LaTeX math with KaTeX |
@@ -78,6 +79,8 @@ uv run python py/examples/viz/<script>.py
 | [`demo_export_html.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_html.py) | Self-contained HTML and glTF export |
 | [`demo_export_figure.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_figure.py) | Presentation figure export with `FigureStyle` |
 | [`demo_animated_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animated_export.py) | Animated HTML export with JS playback engine |
+| [`demo_texture_label_sphere.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_sphere.py) | Plain text, KaTeX, and mixed content on spheres |
+| [`demo_texture_label_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_plane.py) | Align modes (stretch/fit/repeat) and mixed content on planes |
 | [`two_spheres_interact.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_spheres_interact.py) | `VisualizerApp` with IPNS spheres, slider, dropdown, reset button |
 | [`two_body_gravity.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_body_gravity.py) | Gravitational two-body simulation using `Point`/`Direction` arithmetic |
 
@@ -88,3 +91,4 @@ load automatically from CDN in the browser — no additional installs needed.
 
 ```bash
 uv add aiohttp
+```

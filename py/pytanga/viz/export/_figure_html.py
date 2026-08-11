@@ -149,6 +149,7 @@ def _build_static_figure_adapter(
     cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
     # ── Dimension helpers ─────────────────────────────────────
+    space_dim = scene_config.get("space_dim", 3)
     if responsive:
         dim_w = "(figContainer.clientWidth || window.innerWidth)"
         dim_h = "(figContainer.clientHeight || window.innerHeight)"
@@ -187,6 +188,7 @@ def _build_static_figure_adapter(
             show_grid=show_grid,
             show_axes=show_axes,
             space_extent=5,
+            space_dim=space_dim,
             explicit_mouse_buttons=True,
         ),
         js_resize_handler(
@@ -218,6 +220,7 @@ def _build_static_figure_adapter(
             camera_var="figCamera",
             controls_var="figControls",
             cam_explicit=cam_explicit,
+            space_dim=space_dim,
         ),
         "",
         js_label_creation_static(

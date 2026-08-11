@@ -24,7 +24,7 @@ Usage::
 """
 
 from ._app import VisualizerApp
-from ._controls import Button, ControlGroup, Dropdown, Slider
+from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
 from ._figure import FigureConfig
 from ._label import Label
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
@@ -53,6 +53,7 @@ from ._styles import (
     RotorStyle,
     SpaceStyle,
     SphereStyle,
+    TextureLabelStyle,
     TitleStyle,
     TranslatorStyle,
     VizStyle,
@@ -67,6 +68,7 @@ __all__ = [
     "AnnotationStyle",
     "Button",
     "CameraConfig",
+    "ControlEvent",
     "CircleStyle",
     "ControlGroup",
     "CrossHairPointStyle",
@@ -97,6 +99,7 @@ __all__ = [
     "Slider",
     "SpaceStyle",
     "SphereStyle",
+    "TextureLabelStyle",
     "Timeline",
     "gradient_colors",
     "multi_gradient_colors",

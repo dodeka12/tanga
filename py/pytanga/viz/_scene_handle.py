@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle
+    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
     from .visualizer import Visualizer
 
 from pytanga.geometry.entities import Entity as GeoEntity
@@ -110,8 +110,13 @@ class VizSceneHandle(_JupyterDisplayMixin):
         style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ) -> str | list[str] | tuple[str, str]:
+        tex_label: str | None = None,
+        tex_label_style: TextureLabelStyle | None = None,
+    ) -> str | list[str]:
         """Add an entity, operator, MV, or label to this scene.
+
+        Returns the entity ID (a single ``str``), or a ``list[str]`` when a
+        multivector resolves to multiple entities.
 
         See :meth:`Visualizer.add` for full documentation.
         """
@@ -125,6 +130,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             style=style,
             label=label,
             label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
         )
 
     def update(self, entity_id: str, **properties: Any) -> None:
@@ -155,6 +162,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update a label's text and/or style."""
         self._scene().update_label(object_id, text=text, style=style)
 
+    def get_label_ids(self, entity_id: str) -> list[str]:
+        """Return the IDs of all labels attached to *entity_id* in this scene."""
+        return self._scene().get_label_ids(entity_id)
+
     def remove(self, entity_id: str) -> None:
         """Remove an entity from this scene."""
         self._scene().remove(entity_id)
@@ -163,9 +174,13 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Remove all entities from this scene."""
         self._scene().clear()
 
-    def flush(self) -> None:
-        """Schedule a scene update on the server's event loop (thread-safe)."""
-        self._viz._flush_scene(self._name)
+    def flush(self, *, fit_camera: bool = False) -> None:
+        """Schedule a scene update on the server's event loop (thread-safe).
+
+        If *fit_camera* is ``True``, the frontend will auto‑adjust the
+        camera to encompass all entities after the flush.
+        """
+        self._viz._flush_scene(self._name, fit_camera=fit_camera)
 
     # ── Title & annotation ──────────────────────────────────
 
