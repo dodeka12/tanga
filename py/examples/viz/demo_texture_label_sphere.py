@@ -18,21 +18,23 @@ def main():
 
     # ── Sphere with plain text label ──
     viz.add(
-        Sphere(Point(-5, 0, 0), 2.0),
+        Sphere(Point(-3, 0, 0), 2.0),
+        color="#4488ff",
+        tex_label="Sphere A",
         style=SphereStyle(
             color="#4488ff",
-            opacity=0.6,
+            opacity=1.0,
             wireframe=False,
-            texture_label=TextureLabelStyle(
-                text="Sphere A",
-                repeat_u=2,
-                repeat_v=1,
-                offset_v=0,
-                background="#ffffff",
-                color="#000000",
-                font_size=64,
-                scale=0.5,
-            ),
+            # texture_label=TextureLabelStyle(
+            #     text="Sphere A",
+            #     repeat_u=2,
+            #     repeat_v=1,
+            #     offset_v=0,
+            #     background="#ffffff",
+            #     color="#000000",
+            #     font_size=64,
+            #     scale=0.5,
+            # ),
         ),
     )
 
@@ -40,11 +42,11 @@ def main():
     viz.add(
         Sphere(Point(0, 0, 0), 2.0),
         tex_label=r"$\mathcal{S}_1$",
-        style=SphereStyle(
-            color="#ff8844",
-            opacity=0.6,
-            wireframe=False,
-        ),
+        # style=SphereStyle(
+        #     color="#ff8844",
+        #     opacity=0.6,
+        #     wireframe=False,
+        # ),
     )
 
     # ── Sphere with mixed text + embedded formula ──

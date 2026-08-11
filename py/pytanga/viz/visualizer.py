@@ -329,11 +329,15 @@ class Visualizer(_JupyterDisplayMixin):
                 if kind_for_style == "Sphere":
                     from ._styles import SphereStyle as SS
 
-                    style = SS(texture_label=_tex_label_merged)
+                    style = SS(
+                        texture_label=_tex_label_merged,
+                        wireframe=False,
+                        # double_sided=True,
+                    )
                 elif kind_for_style == "Plane":
                     from ._styles import PlaneStyle as PS
 
-                    style = PS(texture_label=_tex_label_merged)
+                    style = PS(texture_label=_tex_label_merged, wireframe=False)
 
         if style is not None:
             properties["style"] = style

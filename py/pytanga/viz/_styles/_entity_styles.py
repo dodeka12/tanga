@@ -280,6 +280,7 @@ class SphereStyle(VizStyle):
     wireframe_color: str | None = None
     wireframe_opacity: float | None = None
     texture_label: TextureLabelStyle | None = None
+    double_sided: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "SphereStyle"}
@@ -297,6 +298,8 @@ class SphereStyle(VizStyle):
             result["wireframe_opacity"] = self.wireframe_opacity
         if self.texture_label is not None:
             result["texture_label"] = self.texture_label.to_dict()
+        if self.double_sided is not None:
+            result["double_sided"] = self.double_sided
         return result
 
 

@@ -18,7 +18,8 @@ export async function createSphere(ent) {
     const radius = Math.max(ent.radius || 1.0, 0.001);
 
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = makeMaterial(color, opacity);
+    const doubleSided = styleParam(ent, 'double_sided', false);
+    const material = makeMaterial(color, opacity, doubleSided);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(center[0], center[1], center[2]);
 

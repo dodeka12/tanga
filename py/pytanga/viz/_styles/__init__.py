@@ -38,8 +38,8 @@ from pytanga.geometry.operators import (
     Inversion,
     Motor,
     ReflectionLine,
-    ReflectionPoint,
     ReflectionPlane,
+    ReflectionPoint,
     Rotor,
     Translator,
 )
@@ -122,7 +122,9 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Line": LineStyle(color="#44ff44", opacity=0.8, length=20.0, thickness=0.03),
     "Plane": PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0),
     "Circle": CircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
-    "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
+    "Sphere": SphereStyle(
+        color="#ffaa00", opacity=0.6, wireframe=True, double_sided=True
+    ),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
     "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=0.03),
     # Operators
