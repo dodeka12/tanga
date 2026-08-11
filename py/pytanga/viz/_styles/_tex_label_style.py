@@ -77,7 +77,7 @@ class TextureLabelStyle:
     offset_u: float | None = None
     offset_v: float | None = None
     align: str | None = None
-    background: str | None = "#ffffff"
+    background: str | None = None
     resolution: int | None = 512
     color: str | None = "#000000"
     font_size: int | None = 48

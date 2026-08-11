@@ -62,7 +62,7 @@ def main():
                 repeat_v=1,
                 offset_v=0,
                 background=None,
-                color="#000000",
+                color="#DA1313",
                 font_size=48,
                 resolution=1024,
             ),

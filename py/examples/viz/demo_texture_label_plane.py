@@ -8,8 +8,8 @@ Run::
     uv run python py/examples/viz/demo_texture_label_plane.py
 """
 
-from pytanga.geometry.entities import Plane, Point, Direction
-from pytanga.viz import Visualizer, PlaneStyle, TextureLabelStyle
+from pytanga.geometry.entities import Direction, Plane, Point
+from pytanga.viz import PlaneStyle, TextureLabelStyle, Visualizer
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
             texture_label=TextureLabelStyle(
                 text="Stretch Mode",
                 align="stretch",
-                background="#ffffff",
+                # background="#ffffff",
                 color="#333333",
                 font_size=48,
             ),
@@ -43,7 +43,7 @@ def main():
             texture_label=TextureLabelStyle(
                 text="Fit Mode",
                 align="fit",
-                background="#ffffff",
+                # background="#ffffff",
                 color="#333333",
                 font_size=48,
             ),
@@ -62,7 +62,7 @@ def main():
                 align="repeat",
                 repeat_u=3,
                 repeat_v=3,
-                background=None,
+                # background=None,
                 color="#000000",
                 font_size=48,
             ),
