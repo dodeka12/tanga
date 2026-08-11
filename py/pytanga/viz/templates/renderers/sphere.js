@@ -26,9 +26,17 @@ export async function createSphere(ent) {
     // ── Texture label ──
     const texLabel = ent.style?.texture_label;
     if (texLabel && texLabel.text) {
+        // Default background to entity color so the label blends in
+        if (!texLabel.background || texLabel.background === 'transparent') {
+            texLabel.background = color;
+        }
         const texture = await createTextureLabel(texLabel.text, texLabel);
         if (texture) {
             material.map = texture;
+            // Set material color to white so the texture's own colors
+            // pass through unmodified (MeshPhongMaterial multiplies
+            // material.color * texture pixel values).
+            material.color.set(0xffffff);
             material.needsUpdate = true;
         }
     }

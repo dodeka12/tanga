@@ -32,6 +32,10 @@ export async function createPlane(ent) {
     if (texLabel && texLabel.text) {
         // Plane defaults: no offset
         if (texLabel.offset_v === undefined) texLabel.offset_v = 0.0;
+        // Default background to entity color so the label blends in
+        if (!texLabel.background || texLabel.background === 'transparent') {
+            texLabel.background = color;
+        }
 
         const texture = await createTextureLabel(texLabel.text, texLabel);
         if (texture) {
@@ -59,6 +63,7 @@ export async function createPlane(ent) {
                     break;
             }
             material.map = texture;
+            material.color.set(0xffffff);
             material.needsUpdate = true;
         }
     }
