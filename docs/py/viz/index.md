@@ -44,7 +44,8 @@ viz.display_row(
 | Guide | What you will learn |
 |-------|---------------------|
 | [Visualizer API](visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
-| [Camera & Controls](camera.md) | `CameraConfig`, auto-fit vs explicit vs partial camera, orbit controls, Ctrl+S screenshots |
+| [Camera & Controls](camera.md) | `CameraConfig`, `View2DConfig`, `ViewPlaneConfig`, auto-fit vs explicit, orbit controls, Ctrl+S screenshots |
+| [Axes & Grid](axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, ticks, labels, defaults |
 | [Style System](styles.md) | `*Style` dataclasses, `default_styles`, `set_default_color()`, `CrossHairPointStyle` |
 | [Texture Labels](texture-labels.md) | Text, KaTeX formulas, and mixed content on entity surfaces (Sphere, Plane) |
 | [Labels](labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
@@ -70,7 +71,10 @@ uv run python py/examples/viz/<script>.py
 | [`demo_all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_all_entities.py) | All entity types in one scene |
 | [`demo_labels.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_labels.py) | Labels with custom styling, dynamic update, removal |
 | [`demo_mv_visualization.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_mv_visualization.py) | MV input from PGA3 and N3, OPNS vs IPNS |
-| [`demo_camera_config.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_config.py) | Auto-fit, explicit, and partial camera modes |
+| [`demo_camera_config.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_config.py) | Auto-fit, explicit, `view_2d`, and `view_plane` camera modes |
+| [`demo_camera_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_2d.py) | `View2DConfig` with custom extent and centre |
+| [`demo_camera_3d_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_3d_plane.py) | `ViewPlaneConfig` with a tilted plane and `span_u` |
+| [`demo_axes_custom.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_axes_custom.py) | Custom `Axis` intervals, ticks, labels, and `Grid` |
 | [`demo_custom_defaults.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_custom_defaults.py) | Global default styles, per-call overrides |
 | [`demo_operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_operators.py) | Rotor, Translator, Motor, Dilator visualization |
 | [`demo_animation_orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_orbit.py) | Frame-by-frame animation at ~60 FPS |

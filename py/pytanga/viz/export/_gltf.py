@@ -272,7 +272,90 @@ class _GltfBuilder:
                 prim = _prims.lines_from_points(pts_typed)
                 return [prim] if prim is not None else []
             return []
+        elif kind == "Axis":
+            return self._axis_primitives(ent)
+        elif kind == "Grid":
+            return self._grid_primitives(ent)
         return []
+
+    def _axis_primitives(self, ent: Dict[str, Any]) -> List[_Primitive]:
+        """Render an Axis as world-anchored line segments (no text in glTF)."""
+        start = np.array(ent.get("start", [0, 0, 0]), dtype=np.float64)
+        end = np.array(ent.get("end", [1, 0, 0]), dtype=np.float64)
+        d = end - start
+        length = float(np.linalg.norm(d))
+        if length < 1e-9:
+            return []
+        axis_dir = d / length
+
+        # A stable perpendicular to the axis direction.
+        ref = np.array([0.0, 0.0, 1.0])
+        if abs(np.dot(axis_dir, ref)) > 0.99:
+            ref = np.array([1.0, 0.0, 0.0])
+        perp = np.cross(ref, axis_dir)
+        p_len = float(np.linalg.norm(perp))
+        if p_len < 1e-9:
+            perp = np.array([1.0, 0.0, 0.0])
+        else:
+            perp = perp / p_len
+
+        tick_len = max(length * 0.02, self._style_val(ent, "line_thickness", 0.03) * 4)
+        segments: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = [
+            (tuple(start.tolist()), tuple(end.tolist()))
+        ]
+
+        major = abs(float(ent.get("majorInterval", 1.0)))
+        show_ticks = ent.get("showTicks", True)
+        if show_ticks and major > 0:
+            count = int(length // major)
+            for i in range(1, count + 1):
+                p = start + axis_dir * (i * major)
+                a = p + perp * tick_len
+                b = p - perp * tick_len
+                segments.append(
+                    (tuple(a.tolist()), tuple(b.tolist()))
+                )
+
+        prim = _prims.lines_from_segments(segments)
+        return [prim] if prim is not None else []
+
+    def _grid_primitives(self, ent: Dict[str, Any]) -> List[_Primitive]:
+        """Render a Grid as world-anchored line segments in a UV plane."""
+        origin = np.array(ent.get("origin", [0, 0, 0]), dtype=np.float64)
+        dir_u = np.array(ent.get("dir_u", [1, 0, 0]), dtype=np.float64)
+        dir_v = np.array(ent.get("dir_v", [0, 1, 0]), dtype=np.float64)
+        u_len = float(np.linalg.norm(dir_u))
+        v_len = float(np.linalg.norm(dir_v))
+        if u_len < 1e-9 or v_len < 1e-9:
+            return []
+        dir_u = dir_u / u_len
+        dir_v = dir_v / v_len
+
+        range_u = abs(float(ent.get("range_u", 5.0)))
+        range_v = abs(float(ent.get("range_v", 5.0)))
+        interval_u = abs(float(ent.get("interval_u", 1.0)))
+        interval_v = abs(float(ent.get("interval_v", 1.0)))
+
+        half_u = range_u / 2
+        half_v = range_v / 2
+        corner = origin - dir_u * half_u - dir_v * half_v
+
+        segments: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = []
+
+        v_steps = int(range_v // interval_v)
+        for i in range(v_steps + 1):
+            a = corner + dir_v * (i * interval_v)
+            b = a + dir_u * range_u
+            segments.append((tuple(a.tolist()), tuple(b.tolist())))
+
+        u_steps = int(range_u // interval_u)
+        for i in range(u_steps + 1):
+            a = corner + dir_u * (i * interval_u)
+            b = a + dir_v * range_v
+            segments.append((tuple(a.tolist()), tuple(b.tolist())))
+
+        prim = _prims.lines_from_segments(segments)
+        return [prim] if prim is not None else []
 
     @staticmethod
     def _get_position(ent: Dict[str, Any]) -> tuple[float, float, float] | None:

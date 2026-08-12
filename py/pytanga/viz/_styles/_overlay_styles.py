@@ -88,14 +88,13 @@ class FigureStyle(VizStyle):
 
     Controls the appearance of the 3D canvas container — dimensions,
     background, auto-rotation, and which overlays to show.
+    Grid and axes are now explicit scene objects, not figure-style toggles.
     """
 
     width: int | None = None  # px (default 800)
     height: int | None = None  # px (default 600)
     background: str | None = None  # CSS background (default "transparent")
     auto_rotate: bool | None = None  # auto-rotate the camera (default False)
-    show_grid: bool | None = None  # show grid (default True)
-    show_axes: bool | None = None  # show axes (default True)
     show_title: bool | None = None  # show title overlay (default True)
     show_annotation: bool | None = None  # show annotation panel (default True)
     border_radius: str | None = None  # CSS border-radius (default "0")
@@ -111,10 +110,6 @@ class FigureStyle(VizStyle):
             result["background"] = self.background
         if self.auto_rotate is not None:
             result["auto_rotate"] = self.auto_rotate
-        if self.show_grid is not None:
-            result["show_grid"] = self.show_grid
-        if self.show_axes is not None:
-            result["show_axes"] = self.show_axes
         if self.show_title is not None:
             result["show_title"] = self.show_title
         if self.show_annotation is not None:

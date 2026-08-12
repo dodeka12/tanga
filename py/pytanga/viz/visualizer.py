@@ -73,10 +73,6 @@ class Visualizer(_JupyterDisplayMixin):
     _viewer_name: str | None = None
     _name: str = ""
 
-    @property
-    def _space_extent(self) -> float:
-        return self._config.space_extent
-
     # ── Visualizer ─────────────────────────────────────────
 
     def __init__(
@@ -89,10 +85,6 @@ class Visualizer(_JupyterDisplayMixin):
         opns: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
-        # Scene configuration
-        space_extent: float = 10.0,
-        show_grid: bool = True,
-        show_axes: bool = True,
         background_color: str = "#1a1a2e",
         # Camera configuration (None = auto-fit from entities)
         camera: CameraConfig | None = None,
@@ -101,9 +93,6 @@ class Visualizer(_JupyterDisplayMixin):
         if space_dim == 2 and title == "Tanga 3D Viewer":
             title = "Tanga 2D Viewer"
         self._config = SceneConfig(
-            space_extent=space_extent,
-            show_grid=show_grid,
-            show_axes=show_axes,
             background_color=background_color,
             camera=camera,
             title=title,
@@ -160,6 +149,7 @@ class Visualizer(_JupyterDisplayMixin):
         # Key "" is the main scene (backward compatible).
         self._scenes: dict[str, Scene] = {}
         self._scenes[""] = Scene(self._config, name="")
+        self._default_objects_added: set[str] = set()
 
     # ── Scene access ─────────────────────────────────────────
 
@@ -173,9 +163,6 @@ class Visualizer(_JupyterDisplayMixin):
         """
         if name not in self._scenes:
             cfg = SceneConfig(
-                space_extent=self._config.space_extent,
-                show_grid=self._config.show_grid,
-                show_axes=self._config.show_axes,
                 background_color=self._config.background_color,
                 camera=None,
                 title=name or self._config.title,
@@ -245,12 +232,11 @@ class Visualizer(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: "TextureLabelStyle | None" = None,
-    ) -> str | list[str]:
+    ) -> str:
         """Add a geometric entity, operator, multivector, or label to the main scene.
 
-        Returns the entity ID (a single ``str``), or a ``list[str]`` when a
-        multivector resolves to multiple entities.  If *label* is provided the
-        label is created alongside the entity and only the entity ID is returned.
+        Returns the entity ID as a ``str``.  If *label* is provided the
+        label is created alongside the entity and the entity ID is returned.
 
         See the class docstring for full parameter documentation.
         """
@@ -282,7 +268,7 @@ class Visualizer(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: "TextureLabelStyle | None" = None,
-    ) -> str | list[str]:
+    ) -> str:
         """Add an entity to a specific scene."""
         from ._active import ActSceneObject
         from ._label import Label
@@ -333,8 +319,6 @@ class Visualizer(_JupyterDisplayMixin):
         _tex_label_merged: _TLS | None = None
         if tex_label is not None:
             entity_for_kind = self._resolve(obj, opns=opns)
-            if isinstance(entity_for_kind, list) and entity_for_kind:
-                entity_for_kind = entity_for_kind[0]
             kind = type(entity_for_kind).__name__
             _tex_label_merged = _resolve_tex_label_style(
                 self._default_tex_label_style,
@@ -357,8 +341,6 @@ class Visualizer(_JupyterDisplayMixin):
             else:
                 kind_for_style = None
                 entity_for_style = self._resolve(obj, opns=opns)
-                if isinstance(entity_for_style, list) and entity_for_style:
-                    entity_for_style = entity_for_style[0]
                 if entity_for_style is not None:
                     kind_for_style = type(entity_for_style).__name__
                 if kind_for_style == "Sphere":
@@ -377,17 +359,27 @@ class Visualizer(_JupyterDisplayMixin):
         if style is not None:
             properties["style"] = style
 
-        entity = self._resolve(obj, opns=opns)
-        if isinstance(entity, list):
-            ids: list[str] = []
-            for ent in entity:
-                eid = scene.add(
-                    ent,
-                    entity_id=entity_id if len(entity) == 1 else None,
-                    **properties,
+        # Convenience axes classes expand into individual Axis objects
+        from ._scene_objects import Axes2D, Axes3D
+
+        if isinstance(obj, (Axes3D, Axes2D)):
+            first_id: str | None = None
+            for axis in obj.expand():
+                aid = scene.add_object(
+                    SceneObject(
+                        id="",
+                        layer="scene",
+                        kind="Axis",
+                        data=axis,
+                        properties=dict(properties),
+                        dirty=True,
+                    ),
                 )
-                ids.append(eid)
-            return ids
+                if first_id is None:
+                    first_id = aid
+            return first_id or ""
+
+        entity = self._resolve(obj, opns=opns)
 
         # Viz-level drawables (PointPath, etc.) go through add_object
         from pytanga.geometry.entities import Entity as GeoEntity
@@ -474,12 +466,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Replace the geometry for an existing entity in the main scene."""
         if opns is None:
             opns = self._opns
-        entity: SceneEntity | list[GeoEntity] = self._resolve(obj, opns=opns)
-        if isinstance(entity, list):
-            raise ValueError(
-                f"update_entity expects a single entity, but the MV resolved to "
-                f"{len(entity)} entities. Use the first one explicitly."
-            )
+        entity: SceneEntity = self._resolve(obj, opns=opns)
         self._scenes[""].update_entity(entity_id, entity)
 
     def update_label(
@@ -550,6 +537,64 @@ class Visualizer(_JupyterDisplayMixin):
         data = json.dumps(self._scenes[scene_name].config.to_dict())
         asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
 
+    def set_camera(self, camera: CameraConfig, *, scene_name: str = "") -> None:
+        """Update the camera configuration for a scene at runtime.
+
+        Args:
+            camera: The new :class:`CameraConfig`.
+            scene_name: Target scene (default ``""`` = main scene).
+        """
+        scene = self._scenes[scene_name]
+        scene.config.camera = camera
+        self._push_scene_config(scene_name)
+
+    # ── Default scene objects ───────────────────────────────
+
+    def _add_default_scene_objects(self, scene_name: str) -> None:
+        """Add default axes and a grid unless the user supplied their own.
+
+        Idempotent per scene: runs only once.  Triggered lazily before the
+        scene's full state is first served to a browser.
+        """
+        if scene_name in self._default_objects_added:
+            return
+        scene = self._scenes[scene_name]
+        has_axis_or_grid = any(
+            obj.kind in ("Axis", "Grid") for obj in scene._objects.values()
+        )
+        if not has_axis_or_grid:
+            from ._scene_objects import Axes2D, Axes3D, Grid
+
+            if scene.config.space_dim == 2:
+                axes: Axes2D | Axes3D = Axes2D(
+                    range_u=10.0, range_v=10.0, labels=("X", "Y")
+                )
+                grid = Grid(range_u=10.0, range_v=10.0)
+            else:
+                axes = Axes3D(
+                    range_u=10.0,
+                    range_v=10.0,
+                    range_w=10.0,
+                    labels=("X", "Y", "Z"),
+                )
+                grid = Grid(
+                    dir_u=(1.0, 0.0, 0.0),
+                    dir_v=(0.0, 0.0, 1.0),
+                    range_u=10.0,
+                    range_v=10.0,
+                )
+            self._add_to_scene(scene_name, obj=axes)
+            self._add_to_scene(scene_name, obj=grid)
+        self._default_objects_added.add(scene_name)
+
+    def _full_state_for(
+        self, scene_name: str
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """Return full serialized state for a scene, adding defaults first."""
+        self._add_default_scene_objects(scene_name)
+        scene = self._scenes.get(scene_name, self._scenes[""])
+        return scene.full_state(styles_map=self._default_styles), []
+
     @staticmethod
     def sleep_ms(milliseconds: int) -> None:
         """Pause execution for *milliseconds*."""
@@ -576,8 +621,8 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── MV resolution ──────────────────────────────────────
 
-    def _resolve(self, obj: Any, *, opns: bool = True) -> SceneEntity | list[GeoEntity]:
-        """Resolve an MV to a :class:`SceneEntity` or list of GeoEntities.
+    def _resolve(self, obj: Any, *, opns: bool = True) -> SceneEntity:
+        """Resolve an MV to a :class:`SceneEntity`.
 
         Viz-level drawables (PointPath, …) are passed through unchanged.
         GeoEntities and Operators are returned as-is.
@@ -718,12 +763,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         async def _boot() -> None:
             await self._server.start(
-                lambda scene_name: (
-                    self._scenes.get(scene_name, self._scenes[""]).full_state(
-                        styles_map=self._default_styles
-                    ),
-                    [],
-                ),
+                self._full_state_for,
                 self._config.to_dict,
                 control_callback=self._dispatch_control_event,
                 interaction_callback=self._dispatch_interaction_event,
@@ -765,33 +805,41 @@ class Visualizer(_JupyterDisplayMixin):
         if self._open_browser:
             page_token = secrets.token_hex(4)  # 8 hex chars
             if self._reuse_existing:
-                logger.info("Waiting up to 5s for existing browser reconnect...")
-                fut = asyncio.run_coroutine_threadsafe(
-                    self._server.wait_for_ws_ready(timeout=5.0), self._loop
-                )
-                try:
-                    reconnected = fut.result(timeout=5.5)
-                except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
-                    reconnected = False
-                if reconnected:
-                    logger.info("Existing browser reconnected")
+                # Interactive wait: user either clicks Reconnect or presses Enter
+                if wait_for_browser:
+                    connected = self.wait_for_browser(timeout=120.0)
+                    if not connected:
+                        return False
                 else:
-                    logger.info(
-                        "No existing browser reconnected — opening new tab (token=%s)",
-                        page_token,
+                    # wait_for_browser is False (e.g. Jupyter): just check if
+                    # one is already there, otherwise open tab and don't wait.
+                    fut = asyncio.run_coroutine_threadsafe(
+                        self._server.wait_for_ws_ready(timeout=3.0), self._loop
                     )
-                    logger.debug("Clearing _any_ws_ready before opening new tab")
-                    self._server._any_ws_ready.clear()
-                    self._server._ws_error_event.clear()
-                    self._server.open_browser(f"/?token={page_token}")
+                    try:
+                        reconnected = fut.result(timeout=3.5)
+                    except (
+                        concurrent.futures.TimeoutError,
+                        asyncio.TimeoutError,
+                    ):
+                        reconnected = False
+                    if not reconnected:
+                        if self._loop is not None:
+                            self._loop.call_soon_threadsafe(
+                                self._server._clear_ws_ready_events
+                            )
+                        self._server.open_browser(f"/?token={page_token}")
             else:
-                logger.debug("Clearing _any_ws_ready (reuse disabled)")
-                self._server._any_ws_ready.clear()
-                self._server._ws_error_event.clear()
+                # reuse_existing disabled — always open new tab
+                if self._loop is not None:
+                    self._loop.call_soon_threadsafe(
+                        self._server._clear_ws_ready_events
+                    )
                 self._server.open_browser(f"/?token={page_token}")
+                if wait_for_browser:
+                    return self.wait_for_browser(timeout=30.0)
+            return True
 
-        if wait_for_browser:
-            return self.wait_for_browser(timeout=timeout)
         return True
 
     def _print_startup_urls(self) -> None:
@@ -855,65 +903,111 @@ class Visualizer(_JupyterDisplayMixin):
         self._thread = None
         logger.debug("Server stopped")
 
-    def wait_for_browser(self, timeout: float = 30.0) -> bool:
-        """Block until a browser completes the WebSocket ready round-trip.
+    def wait_for_browser(self, timeout: float = 120.0) -> bool:
+        """Block until a browser connects, or the user opens one interactively.
 
-        Polls with short timeouts so Ctrl+C is responsive even on Windows.
+        Prints a prompt and waits for EITHER:
+          - An existing browser to reconnect, OR
+          - The user to press Enter (opens a new tab with a fresh token).
+
+        Returns True if a browser connected, False if cancelled by user
+        (Ctrl+C) or on timeout after opening a tab.
+
+        Ctrl+C is responsive throughout.
         """
+        import secrets
+
         if self._server is None or self._loop is None:
             raise RuntimeError("Server not started. Call start() first.")
 
-        logger.info("Waiting for browser to connect at %s ...", self.url)
-        start_ts = time.monotonic()
-
-        # Poll in short increments so KeyboardInterrupt can land between waits.
-        poll_interval = 0.2
-        cancel = threading.Event()
-
-        def _on_interrupt(signum: int, frame: object) -> None:
-            logger.info("Ctrl+C received, cancelling wait")
-            cancel.set()
-
-        # Install a temporary handler just for this wait.
-        # (The persistent handler from start() handles Ctrl+C after this returns.)
-        prev_sigint = signal.signal(signal.SIGINT, _on_interrupt)
-        prev_sigterm = signal.signal(signal.SIGTERM, _on_interrupt)
-
-        fut = asyncio.run_coroutine_threadsafe(
-            self._server.wait_for_ws_ready(timeout=timeout), self._loop
-        )
-        ready = False
-        deadline = time.monotonic() + timeout
-        try:
-            while time.monotonic() < deadline and not cancel.is_set():
-                try:
-                    ready = fut.result(timeout=poll_interval)
-                    break
-                except concurrent.futures.TimeoutError:
-                    continue
-                except Exception:
-                    break
-        finally:
-            # Restore previous handlers (or the persistent one from start())
-            signal.signal(signal.SIGINT, prev_sigint)
-            signal.signal(signal.SIGTERM, prev_sigterm)
-
-        if cancel.is_set():
-            logger.info("Cancelled by user")
-            return False
-
-        # Check for exceptions (e.g. CDN failure ConnectionError)
-        if fut.done() and fut.exception() is not None:
-            exc = fut.exception()
-            logger.error("Browser connection failed: %s", exc)
-            return False
-
-        elapsed = time.monotonic() - start_ts
-        if ready:
-            logger.info("Browser connected after %.1fs", elapsed)
+        # ── Check if already connected ──
+        if self._server._any_ws_ready_thread.is_set():
+            logger.info("Browser already connected")
             return True
 
-        logger.warning("No browser connected within %.0fs", elapsed)
+        # ── Print interactive prompt ──
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            console = Console()
+            console.print(
+                Text.assemble(
+                    "Press ", Text("Enter", style="bold"),
+                    " to open a new browser tab, or click ",
+                    Text("'Reconnect'", style="bold"),
+                    " in an existing tab…",
+                )
+            )
+        except ImportError:
+            print(
+                "Press Enter to open a new browser tab, "
+                "or click 'Reconnect' in an existing tab…"
+            )
+
+        # ── Threading.Event for Enter press ──
+        enter_pressed = threading.Event()
+        shutdown = getattr(self, "_shutdown_requested", threading.Event())
+
+        def _wait_for_enter() -> None:
+            try:
+                input()
+                enter_pressed.set()
+            except (EOFError, KeyboardInterrupt):
+                pass
+
+        enter_thread = threading.Thread(target=_wait_for_enter, daemon=True)
+        enter_thread.start()
+
+        # ── Poll loop ──
+        start_ts = time.monotonic()
+        poll_interval = 0.2
+
+        while True:
+            if self._server._any_ws_ready_thread.is_set():
+                elapsed = time.monotonic() - start_ts
+                logger.info("Browser reconnected after %.1fs", elapsed)
+                return True
+            if enter_pressed.is_set():
+                logger.info("User pressed Enter — opening new tab")
+                break
+            if shutdown.is_set():
+                logger.info("Shutdown requested during wait")
+                return False
+            time.sleep(poll_interval)
+
+        # ── User chose to open a new tab ──
+        page_token = secrets.token_hex(4)  # 8 hex chars
+        logger.info("Opening new tab with token=%s", page_token)
+
+        # Thread-safe clear of ready events
+        if self._loop is not None:
+            self._loop.call_soon_threadsafe(
+                self._server._clear_ws_ready_events
+            )
+
+        self._server.open_browser(f"/?token={page_token}")
+
+        # Now wait for the new tab to connect
+        logger.info(
+            "Waiting up to %.0fs for new tab to connect at %s ...",
+            timeout,
+            self.url,
+        )
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self._server._any_ws_ready_thread.is_set():
+                elapsed = time.monotonic() - start_ts
+                logger.info("New tab connected after %.1fs", elapsed)
+                return True
+            if shutdown.is_set():
+                logger.info("Shutdown requested during tab wait")
+                return False
+            time.sleep(poll_interval)
+
+        logger.warning(
+            "No browser connected within %.0fs after opening tab", timeout
+        )
         self._print_ws_timeout_note()
         return False
 
@@ -998,12 +1092,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         async def _run() -> None:
             await self._server.start(
-                lambda scene_name: (
-                    self._scenes.get(scene_name, self._scenes[""]).full_state(
-                        styles_map=self._default_styles
-                    ),
-                    [],
-                ),
+                self._full_state_for,
                 self._config.to_dict,
                 control_callback=self._dispatch_control_event,
                 interaction_callback=self._dispatch_interaction_event,
@@ -1014,34 +1103,97 @@ class Visualizer(_JupyterDisplayMixin):
             if self._open_browser:
                 page_token = secrets.token_hex(4)  # 8 hex chars
                 if self._reuse_existing:
-                    logger.info("Waiting up to 5s for existing browser reconnect...")
-                    reconnected = await self._server.wait_for_ws_ready(timeout=5.0)
-                    if reconnected:
-                        logger.info("Existing browser reconnected")
-                    else:
-                        logger.info(
-                            "No existing browser reconnected — opening new tab (token=%s)",
-                            page_token,
+                    logger.info(
+                        "Server ready at %s — checking for existing browser…",
+                        self._server.url,
+                    )
+                    # Async interactive wait: race ws_ready against stdin read
+                    if wait_for_browser:
+                        enter_task = asyncio.create_task(
+                            asyncio.to_thread(sys.stdin.readline)
                         )
-                        self._server._any_ws_ready.clear()
-                        self._server._ws_error_event.clear()
-                        self._server.open_browser(f"/?token={page_token}")
+                        ws_task = asyncio.create_task(
+                            self._server.wait_for_ws_ready()
+                        )
+
+                        # Print prompt
+                        try:
+                            from rich.console import Console
+                            from rich.text import Text
+
+                            Console().print(
+                                Text.assemble(
+                                    "Press ", Text("Enter", style="bold"),
+                                    " to open a new browser tab, or click ",
+                                    Text("'Reconnect'", style="bold"),
+                                    " in an existing tab…",
+                                )
+                            )
+                        except ImportError:
+                            print(
+                                "Press Enter to open a new browser tab, "
+                                "or click 'Reconnect' in an existing tab…"
+                            )
+
+                        done, pending = await asyncio.wait(
+                            [enter_task, ws_task],
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                        for task in pending:
+                            task.cancel()
+
+                        if ws_task in done:
+                            logger.info("Browser reconnected")
+                        else:
+                            logger.info(
+                                "User pressed Enter — opening new tab (token=%s)",
+                                page_token,
+                            )
+                            self._server._clear_ws_ready_events()
+                            self._server.open_browser(
+                                f"/?token={page_token}"
+                            )
+                            try:
+                                await asyncio.wait_for(
+                                    self._server.wait_for_ws_ready(),
+                                    timeout=30.0,
+                                )
+                            except asyncio.TimeoutError:
+                                self._print_ws_timeout_note()
+                                raise RuntimeError(
+                                    "No browser connected within 30s.  "
+                                    f"Open {self.url} manually."
+                                )
+                        # Clean up enter_task
+                        try:
+                            await enter_task
+                        except (asyncio.CancelledError, Exception):
+                            pass
+                    else:
+                        # Non-blocking: just check if already connected
+                        reconnected = await self._server.wait_for_ws_ready(
+                            timeout=3.0
+                        )
+                        if not reconnected:
+                            self._server._clear_ws_ready_events()
+                            self._server.open_browser(
+                                f"/?token={page_token}"
+                            )
                 else:
-                    self._server._any_ws_ready.clear()
-                    self._server._ws_error_event.clear()
+                    self._server._clear_ws_ready_events()
                     self._server.open_browser(f"/?token={page_token}")
 
-                if wait_for_browser:
-                    try:
-                        await asyncio.wait_for(
-                            self._server.wait_for_ws_ready(), timeout=30.0
-                        )
-                    except asyncio.TimeoutError:
-                        self._print_ws_timeout_note()
-                        raise RuntimeError(
-                            "No browser connected within 30s.  "
-                            f"Open {self.url} manually."
-                        )
+                    if wait_for_browser:
+                        try:
+                            await asyncio.wait_for(
+                                self._server.wait_for_ws_ready(), timeout=30.0
+                            )
+                        except asyncio.TimeoutError:
+                            self._print_ws_timeout_note()
+                            raise RuntimeError(
+                                "No browser connected within 30s.  "
+                                f"Open {self.url} manually."
+                            )
 
             # Flush initial state for the main scene
             await self._flush_scene_async("")

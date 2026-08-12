@@ -87,8 +87,6 @@ exporter.export_figure(
 | `height` | `int` | `600` | Canvas height in px |
 | `background` | `str` | `"transparent"` | CSS background |
 | `auto_rotate` | `bool` | `False` | Auto-rotate the camera |
-| `show_grid` | `bool` | `True` | Show grid |
-| `show_axes` | `bool` | `True` | Show axes |
 | `show_title` | `bool` | `True` | Show title overlay |
 | `show_annotation` | `bool` | `True` | Show annotation panel |
 | `border_radius` | `str` | `"0"` | CSS border-radius |

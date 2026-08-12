@@ -20,6 +20,8 @@ import { createReflectionLine } from './operators/reflection_line.js';
 import { createReflectionPlane } from './operators/reflection_plane.js';
 import { createReflectionPoint } from './operators/reflection_point.js';
 import { createPointPath } from './point_path.js';
+import { createAxis } from './axis.js';
+import { createGrid } from './grid.js';
 import { tagEntity } from './utils.js';
 
 /**
@@ -92,6 +94,13 @@ export async function createEntityMesh(ent) {
 
         case 'PointPath':
             mesh = createPointPath(ent);
+            break;
+
+        case 'Axis':
+            mesh = createAxis(ent);
+            break;
+        case 'Grid':
+            mesh = createGrid(ent);
             break;
 
         default:

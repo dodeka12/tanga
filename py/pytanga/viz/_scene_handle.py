@@ -47,10 +47,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def _server(self) -> Any:
         return self._viz._server
 
-    @property
-    def _space_extent(self) -> float:
-        return self._scene().config.space_extent
-
     # ── Scene access ────────────────────────────────────────
 
     def _scene(self) -> Scene:
@@ -118,11 +114,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: TextureLabelStyle | None = None,
-    ) -> str | list[str]:
+    ) -> str:
         """Add an entity, operator, MV, or label to this scene.
 
-        Returns the entity ID (a single ``str``), or a ``list[str]`` when a
-        multivector resolves to multiple entities.
+        Returns the entity ID as a ``str``.
 
         See :meth:`Visualizer.add` for full documentation.
         """
@@ -151,11 +146,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
         if opns is None:
             opns = self._viz._opns
         entity = self._viz._resolve(obj, opns=opns)
-        if isinstance(entity, list):
-            raise ValueError(
-                f"update_entity expects a single entity, but the MV resolved to "
-                f"{len(entity)} entities. Use the first one explicitly."
-            )
         self._scene().update_entity(entity_id, entity)
 
     def update_label(
@@ -193,6 +183,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def set_title(self, title: str) -> None:
         """Update the viewport title overlay for this scene."""
         self._viz._set_scene_title(self._name, title)
+
+    def set_camera(self, camera: Any) -> None:
+        """Update the camera configuration for this scene at runtime."""
+        self._viz.set_camera(camera, scene_name=self._name)
 
     def set_annotation(
         self, text: str | None, *, style: AnnotationStyle | None = None
@@ -376,7 +370,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._viewer_name = viewer_name
 
         if height is None:
-            height = max(400, int(self._scene().config.space_extent * 50))
+            height = 500
 
         src = self.url
         if self._viewer_name:

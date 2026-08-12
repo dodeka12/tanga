@@ -14,6 +14,8 @@ CameraConfig(
     fov=None,                # vertical field of view in degrees
     near=None,               # near clipping plane
     far=None,                # far clipping plane
+    view_2d=None,            # View2DConfig for orthographic views
+    view_plane=None,         # ViewPlaneConfig for plane-based views
 )
 ```
 
@@ -24,6 +26,8 @@ CameraConfig(
 | `fov` | `float \| None` | Vertical field of view in degrees |
 | `near` | `float \| None` | Near clipping plane |
 | `far` | `float \| None` | Far clipping plane |
+| `view_2d` | `View2DConfig \| None` | Orthographic view defined by a rectangle |
+| `view_plane` | `ViewPlaneConfig \| None` | Perspective view defined by a virtual plane |
 
 ## Camera Modes
 
@@ -62,43 +66,76 @@ viz = Visualizer(camera=CameraConfig(position=(10, 3, 0)))
 viz = Visualizer(camera=CameraConfig(position=(0, 15, 0), fov=30))
 ```
 
-## 2D Camera (Orthographic)
+## 2D Camera via View2DConfig
 
-When `space_dim=2`, the viewer uses an **orthographic camera** with a
-top-down view.  This is set automatically — no explicit `CameraConfig`
-is needed.
-
-```python
-from pytanga.viz import Visualizer
-
-viz = Visualizer(space_dim=2)  # orthographic top-down camera
-```
-
-**Default configuration:**
-
-| Property | Value |
-|----------|-------|
-| Camera type | Orthographic |
-| Position | `(0, 0, 20)` — looking straight down |
-| Target | `(0, 0, 0)` |
-| `fov` (from `CameraConfig`) | Ignored for orthographic cameras |
-
-**Auto-fit** uses the 2D bounding box (x‑y extent only), so entities are
-sized appropriately for the viewport.
-
-**Explicit `CameraConfig`** still works, but `fov` is ignored for
-orthographic cameras:
+`View2DConfig` defines an orthographic view from a rectangle centred at
+`center`.  The larger extent is fit to the viewport aspect ratio.
 
 ```python
-from pytanga.viz import Visualizer, CameraConfig
+from pytanga.viz import CameraConfig, View2DConfig, Visualizer
 
 viz = Visualizer(
     space_dim=2,
     camera=CameraConfig(
-        position=(0, 0, 30),   # higher up
-        target=(5, 5, 0),      # centered on a different point
+        view_2d=View2DConfig(
+            extent_x=4.0,          # full width
+            extent_y=3.0,          # full height
+            center=(1.0, 2.0),     # viewport centre
+        )
     ),
 )
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `extent_x` | `float` | Full width of the view rectangle |
+| `extent_y` | `float` | Full height of the view rectangle |
+| `center` | `(float, float)` | Point appearing at the viewport centre |
+
+## 3D Camera via ViewPlaneConfig
+
+`ViewPlaneConfig` places the perspective camera along a plane normal at a
+distance computed from `fov` and the plane extents.  The optical axis is
+the normal; `center` maps to the viewport centre.
+
+```python
+from pytanga.viz import CameraConfig, ViewPlaneConfig, Visualizer
+
+viz = Visualizer(
+    camera=CameraConfig(
+        view_plane=ViewPlaneConfig(
+            point=(0.0, 0.0, 0.0),    # point on the plane
+            normal=(0.4, 0.6, 1.0),   # camera optical axis
+            extent_u=6.0,             # full horizontal extent
+            extent_v=5.0,             # full vertical extent
+            span_u=(1.0, 0.0, -0.4),  # optional horizontal direction
+            fov=50.0,
+        )
+    ),
+)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `point` | `(float, float, float)` | Point on the virtual plane |
+| `normal` | `(float, float, float)` | Camera optical axis (plane normal) |
+| `extent_u` | `float` | Full horizontal extent |
+| `extent_v` | `float` | Full vertical extent |
+| `center` | `(float, float, float) \| None` | Point mapped to viewport centre (defaults to `point`) |
+| `span_u` | `(float, float, float) \| None` | Optional horizontal direction |
+| `fov` | `float` | Vertical field of view in degrees |
+
+When `span_u` is `None`, a horizontal direction is auto-computed.  The
+vertical direction is always `cross(normal, span_u)`.
+
+## Runtime Camera Updates
+
+`set_camera()` updates the camera for a scene at runtime without restarting
+the viewer:
+
+```python
+viz.set_camera(CameraConfig(view_2d=View2DConfig(8.0, 6.0)))
+viz.scene("details").set_camera(CameraConfig(fov=30))
 ```
 
 ## Orbit Controls
@@ -131,24 +168,21 @@ zoom while entities move.
 | `Ctrl+S` / `Cmd+S` | Download a PNG snapshot of the current viewport |
 | `r` | Toggle camera auto-rotation (OrbitControls `autoRotate`) |
 
-The `Ctrl+S` shortcut captures the WebGL canvas (3D scene, grid, axes). It
-does not capture DOM overlays (labels, title, annotation panel) — for
-full-viewport captures including overlays, use `SceneExporter.screenshot()`
-(see [Export & Capture](export.md)).
+The `Ctrl+S` shortcut captures the WebGL canvas (3D scene). It does not
+capture DOM overlays (labels, title, annotation panel) — for full-viewport
+captures including overlays, use `SceneExporter.screenshot()` (see
+[Export & Capture](export.md)).
 
 ## Scene Configuration
 
-The `Visualizer` constructor also accepts scene-wide settings:
+The `Visualizer` constructor accepts scene-wide settings:
 
 ```python
 Visualizer(
-    space_extent=20.0,       # larger grid and rendering extent
-    show_grid=False,         # hide grid
-    show_axes=False,         # hide axes
-    background_color="#000000",  # black background
+    space_dim=3,                 # 2 or 3
+    background_color="#1a1a2e",  # background color
 )
 ```
 
-`space_extent` controls the size of the grid and the default rendering extent
-for infinite entities (lines, planes, space box). Doubling it doubles the
-grid size.
+Grid and axes are no longer toggled via boolean flags — they are explicit
+scene objects.  See [Axes & Grid](axes-grid.md).

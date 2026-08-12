@@ -327,6 +327,31 @@ def lines_from_points(
     return _Primitive(positions=pos, normals=norms, indices=indices, mode=1)
 
 
+def lines_from_segments(
+    segments: list[tuple[tuple[float, float, float], tuple[float, float, float]]],
+) -> _Primitive | None:
+    """Build a ``LINES`` primitive from explicit start/end point pairs.
+
+    Each segment is an independent line — unlike :func:`lines_from_points`,
+    consecutive pairs are not implicitly connected.  Returns ``None`` if no
+    segments are provided.
+    """
+    if not segments:
+        return None
+
+    pts: list[tuple[float, float, float]] = []
+    for a, b in segments:
+        pts.append(a)
+        pts.append(b)
+
+    pos = np.array(pts, dtype=np.float32)
+    norms = np.zeros_like(pos)
+
+    n = len(segments)
+    indices = np.arange(n * 2, dtype=np.uint16)
+    return _Primitive(positions=pos, normals=norms, indices=indices, mode=1)
+
+
 def helix_tube(
     radius: float,
     tube_radius: float,

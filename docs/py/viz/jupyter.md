@@ -19,7 +19,6 @@ from pytanga.viz import Visualizer, CameraConfig
 from pytanga.geometry import Point, Sphere, Plane, Direction
 
 viz = Visualizer(
-    space_extent=15,
     camera=CameraConfig(fov=45),
 )
 viz.start()

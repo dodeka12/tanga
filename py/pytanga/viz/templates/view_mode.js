@@ -9,10 +9,9 @@ import * as THREE from 'three';
  *
  * @param {number} spaceDim  2 or 3
  * @param {number} aspect    window.innerWidth / window.innerHeight
- * @param {number} extent    space_extent from scene config (default 10)
  * @returns {THREE.Camera}
  */
-export function createCamera(spaceDim, aspect, extent = 10) {
+export function createCamera(spaceDim, aspect) {
     // Always start with 3D perspective — switchToCamera() is called
     // from applySceneConfig() once sceneConfig arrives.
     const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
@@ -21,59 +20,143 @@ export function createCamera(spaceDim, aspect, extent = 10) {
     return camera;
 }
 
-/**
- * Switch the camera and/or grid from the current mode to 2D orthographic.
- * Called from applySceneConfig() when space_dim is 2.
- *
- * @param {THREE.Camera} camera    — will be replaced with OrthographicCamera
- * @param {THREE.OrbitControls} controls
- * @param {number} extent          space_extent from scene config
- * @returns {THREE.Camera}         the new (or same) camera
- */
-export function switchToCamera(camera, controls, spaceDim, extent) {
-    if (spaceDim !== 2 || camera.isOrthographicCamera) {
-        return camera;
-    }
+function _newOrthographic() {
+    return new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+}
 
-    const frustumSize = extent * 2;
-    const aspect = window.innerWidth / window.innerHeight;
-    const newCam = new THREE.OrthographicCamera(
-        frustumSize * aspect / -2,
-        frustumSize * aspect / 2,
-        frustumSize / 2,
-        frustumSize / -2,
-        0.1,
-        1000
-    );
-    newCam.position.set(0, 0, 20);
-    newCam.lookAt(0, 0, 0);
-    controls.object = newCam;
-    return newCam;
+function _newPerspective(aspect, fov = 50) {
+    return new THREE.PerspectiveCamera(fov, aspect, 0.1, 1000);
+}
+
+function _normalize(v) {
+    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    if (len < 1e-9) return [0, 0, 1];
+    return [v[0] / len, v[1] / len, v[2] / len];
+}
+
+function _cross(a, b) {
+    return [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ];
 }
 
 /**
- * Create a grid helper appropriate for the given space dimension.
- * 2D: XY-plane grid (rotated GridHelper), 3D: XZ-plane grid.
- *
- * @param {THREE.Scene} scene
- * @param {number} extent  space_extent from scene config
- * @param {number} spaceDim  2 or 3
- * @returns {THREE.GridHelper|THREE.Group}
+ * Compute an in-plane horizontal direction when the user did not provide
+ * ``span_u``.  Returns a normalized vector perpendicular to ``n``.
  */
-export function createGrid(scene, extent, spaceDim) {
-    const size = extent * 2;
-    const divisions = Math.max(size, 20);
+function _autoSpanU(n) {
+    const ref = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+    return _normalize(_cross(ref, n));
+}
 
-    if (spaceDim === 2) {
-        // GridHelper makes XZ-plane grid (normal=Y). Rotate it so
-        // the grid lies in the XY plane (normal=Z) for top‑down view.
-        const grid = new THREE.GridHelper(size, divisions, 0x444466, 0x222244);
-        grid.rotation.x = Math.PI / 2;  // XZ → XY
-        return grid;
+/**
+ * Apply the camera described by ``cameraConfig`` to the scene.
+ *
+ * Handles three cases:
+ *   - ``view_2d``: orthographic view from a rectangle (extent_x × extent_y).
+ *   - ``view_plane``: perspective view defined by a virtual plane.
+ *   - otherwise: fall back to an orthographic 2D view when ``spaceDim`` is 2.
+ *
+ * @param {THREE.Camera} camera
+ * @param {THREE.OrbitControls} controls
+ * @param {number} spaceDim  2 or 3
+ * @param {object|null} cameraConfig  normalized ``camera`` config dict
+ * @returns {THREE.Camera} the (possibly replaced) camera
+ */
+export function switchToCamera(camera, controls, spaceDim, cameraConfig) {
+    const cc = cameraConfig || {};
+    const aspect = window.innerWidth / window.innerHeight;
+
+    // ── view_2d ──
+    if (cc.view_2d) {
+        const v = cc.view_2d;
+        const cx = v.center ? v.center[0] : 0;
+        const cy = v.center ? v.center[1] : 0;
+        const extX = Math.abs(v.extent_x || 10);
+        const extY = Math.abs(v.extent_y || 10);
+
+        let cam = camera;
+        if (!cam.isOrthographicCamera) {
+            cam = _newOrthographic();
+            controls.object = cam;
+        }
+        const fit = Math.max(extX / aspect, extY);
+        cam.left = -fit * aspect / 2;
+        cam.right = fit * aspect / 2;
+        cam.top = fit / 2;
+        cam.bottom = -fit / 2;
+        cam.near = 0.1;
+        cam.far = 1000;
+        cam.position.set(cx, cy, 20);
+        cam.lookAt(cx, cy, 0);
+        cam.updateProjectionMatrix();
+        cam.userData._view2d = { extent_x: extX, extent_y: extY, center: [cx, cy] };
+        controls.target.set(cx, cy, 0);
+        controls.update();
+        return cam;
     }
 
-    // 3D: XZ plane (default)
-    return new THREE.GridHelper(size, divisions, 0x444466, 0x222244);
+    // ── view_plane ──
+    if (cc.view_plane) {
+        const v = cc.view_plane;
+        const n = _normalize(v.normal || [0, 0, 1]);
+        const center = v.center || v.point || [0, 0, 0];
+        const extU = Math.abs(v.extent_u || 10);
+        const extV = Math.abs(v.extent_v || 10);
+        const fov = v.fov || 50;
+
+        let u = v.span_u ? _normalize(v.span_u) : _autoSpanU(n);
+        // Orthogonalize u against n (relevant when span_u had a normal
+        // component) and build v = n × u.
+        const dot = u[0] * n[0] + u[1] * n[1] + u[2] * n[2];
+        u = _normalize([
+            u[0] - dot * n[0],
+            u[1] - dot * n[1],
+            u[2] - dot * n[2],
+        ]);
+        const vv = _cross(n, u);
+
+        const distance = (Math.max(extU, extV) / 2) / Math.tan((fov * Math.PI / 180) / 2);
+
+        let cam = camera;
+        if (cam.isOrthographicCamera) {
+            cam = _newPerspective(aspect, fov);
+            controls.object = cam;
+        }
+        cam.fov = fov;
+        cam.aspect = aspect;
+        cam.near = Math.max(0.01, distance * 0.001);
+        cam.far = distance * 10;
+        cam.position.set(
+            center[0] + n[0] * distance,
+            center[1] + n[1] * distance,
+            center[2] + n[2] * distance
+        );
+        cam.up.set(vv[0], vv[1], vv[2]);
+        cam.lookAt(center[0], center[1], center[2]);
+        cam.updateProjectionMatrix();
+        controls.target.set(center[0], center[1], center[2]);
+        controls.update();
+        return cam;
+    }
+
+    // ── Default 2D (no explicit view config) ──
+    if (spaceDim === 2 && !camera.isOrthographicCamera) {
+        const frustumSize = 20;  // sensible default full height
+        const newCam = _newOrthographic();
+        newCam.left = frustumSize * aspect / -2;
+        newCam.right = frustumSize * aspect / 2;
+        newCam.top = frustumSize / 2;
+        newCam.bottom = frustumSize / -2;
+        newCam.position.set(0, 0, 20);
+        newCam.lookAt(0, 0, 0);
+        controls.object = newCam;
+        return newCam;
+    }
+
+    return camera;
 }
 
 /**
@@ -165,12 +248,17 @@ export function fitCamera(entityMeshes, camera, controls, spaceDim) {
  */
 export function handleResize(camera, renderer, labelRenderer, viewerContainer, spaceDim) {
     if (spaceDim === 2 && camera.isOrthographicCamera) {
-        const frustumSize = (Math.abs(camera.right - camera.left) + Math.abs(camera.top - camera.bottom)) / 2;
         const aspect = window.innerWidth / window.innerHeight;
-        camera.left = frustumSize * aspect / -2;
-        camera.right = frustumSize * aspect / 2;
-        camera.top = frustumSize / 2;
-        camera.bottom = frustumSize / -2;
+        // Prefer the custom view_2d extents stored by switchToCamera;
+        // otherwise preserve the current visible full height.
+        const v2d = camera.userData?._view2d;
+        const extX = v2d ? v2d.extent_x : Math.abs(camera.right - camera.left);
+        const extY = v2d ? v2d.extent_y : Math.abs(camera.top - camera.bottom);
+        const fit = Math.max(extX / aspect, extY);
+        camera.left = -fit * aspect / 2;
+        camera.right = fit * aspect / 2;
+        camera.top = fit / 2;
+        camera.bottom = -fit / 2;
     }
 
     camera.aspect = window.innerWidth / window.innerHeight;

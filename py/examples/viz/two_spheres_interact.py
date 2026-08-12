@@ -33,7 +33,6 @@ class TwoSpheresApp(VisualizerApp):
     def __init__(self) -> None:
         super().__init__(
             title="Two Spheres Intersection (IPNS)",
-            space_extent=6,
             opns=False,
         )
         # ── App state (used by handlers) ──

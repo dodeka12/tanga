@@ -37,8 +37,6 @@ class SceneExporter:
             height=600,
             background="transparent",
             auto_rotate=False,
-            show_grid=True,
-            show_axes=True,
             show_title=True,
             show_annotation=True,
             border_radius="0",

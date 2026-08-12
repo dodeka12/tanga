@@ -19,7 +19,6 @@ class _JupyterDisplayMixin:
     abstract properties so the host can freely assign them):
 
     * ``_server`` — the current :class:`VizServer` or ``None``
-    * ``_space_extent: float`` — numeric value for iframe height scaling
     * ``_name: str`` — scene name used in the iframe title (``""`` for main)
     * ``_viewer_name: str | None`` — optional viewer label
     * ``url: str`` — the HTTP URL of the scene
@@ -37,7 +36,7 @@ class _JupyterDisplayMixin:
                 "<p style='color:#888'>Visualizer not started. "
                 "Call <code>.start()</code> first.</p>"
             )
-        height = max(400, int(self._space_extent * 50))  # type: ignore[has-type]
+        height = 500
         src = self.url  # type: ignore[has-type]
         if self._viewer_name:
             src += f"?viewer={self._viewer_name}"

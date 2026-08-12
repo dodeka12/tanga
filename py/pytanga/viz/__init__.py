@@ -18,7 +18,6 @@ Usage::
     # Explicit camera settings
     viz = Visualizer(
         camera=CameraConfig(position=(10, 6, 12), target=(0, 0, 0), fov=50),
-        space_extent=15,
     )
     viz.run()
 """
@@ -45,6 +44,7 @@ from ._interaction import (
 from ._label import Label
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
 from ._scene_handle import VizSceneHandle
+from ._scene_objects import Axes2D, Axes3D, Axis, Grid
 from ._styles import (
     AnimStyle,
     AnnotationStyle,
@@ -76,7 +76,7 @@ from ._styles import (
 )
 from ._types import SceneEntity, VizInputType
 from .export._exporter import SceneExporter
-from .scene import CameraConfig, SceneConfig
+from .scene import CameraConfig, SceneConfig, View2DConfig, ViewPlaneConfig
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
@@ -87,6 +87,9 @@ __all__ = [
     "ActSceneObject",
     "AnimStyle",
     "AnnotationStyle",
+    "Axes2D",
+    "Axes3D",
+    "Axis",
     "Button",
     "Camera",
     "CameraConfig",
@@ -103,6 +106,7 @@ __all__ = [
     "FigureConfig",
     "FigureStyle",
     "GeneralRotorStyle",
+    "Grid",
     "Handler",
     "HPointStyle",
     "InteractionConfig",
@@ -138,6 +142,8 @@ __all__ = [
     "multi_gradient_colors",
     "TitleStyle",
     "TranslatorStyle",
+    "View2DConfig",
+    "ViewPlaneConfig",
     "Visualizer",
     "VisualizerApp",
     "VizSceneHandle",

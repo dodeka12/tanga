@@ -61,7 +61,6 @@ def render_export_html(
 def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     """Generate the JS bootstrap adapter for static full-page HTML exports."""
     bg_color = scene_config.get("background_color", "#1a1a2e")
-    space_extent = scene_config.get("space_extent", 10)
     space_dim = scene_config.get("space_dim", 3)
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")
@@ -101,22 +100,9 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             cam_near=cam_near,
             cam_far=cam_far,
             auto_rotate=False,
-            show_grid=False,
-            show_axes=False,
             space_dim=space_dim,
         ),
     ]
-
-    parts.append(
-        f"const adapterExtent = sceneConfig.space_extent || {space_extent};\n"
-        "if (sceneConfig.show_grid !== false) {\n"
-        "    const gs = adapterExtent * 2;\n"
-        "    adapterScene.add(new THREE.GridHelper(gs, Math.max(gs, 20), 0x444466, 0x222244));\n"
-        "}\n"
-        "if (sceneConfig.show_axes !== false) {\n"
-        "    adapterScene.add(new THREE.AxesHelper(adapterExtent));\n"
-        "}"
-    )
 
     parts.append("")
     parts.append(

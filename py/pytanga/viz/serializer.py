@@ -24,6 +24,7 @@ from pytanga.geometry.entities import (
 )
 
 from ._point_path import PointPath
+from ._scene_objects import Axis, Grid
 from pytanga.geometry.operators import (
     Dilator,
     GeneralRotor,
@@ -71,6 +72,14 @@ def serialize_entity(
     if isinstance(entity, PointPath):
         result.update(
             _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
+        )
+    elif isinstance(entity, Axis):
+        result.update(
+            _serialize_axis(entity, props, kind=kind, styles_map=styles_map)
+        )
+    elif isinstance(entity, Grid):
+        result.update(
+            _serialize_grid(entity, props, kind=kind, styles_map=styles_map)
         )
     elif isinstance(entity, Point):
         result.update(_serialize_point(entity, props, kind=kind, styles_map=styles_map))
@@ -273,6 +282,58 @@ def _serialize_point_path(
     ) | {
         "points": [list(p) for p in ent.points],
         "colors": ent.colors,
+    }
+
+
+def _serialize_axis(
+    ent: Axis,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(
+        props,
+        kind,
+        {"line_thickness": 0.03},
+        styles_map=styles_map,
+    ) | {
+        "start": list(ent.start),
+        "end": list(ent.end),
+        "majorInterval": ent.major_interval,
+        "labelAtMajor": ent.label_at_major,
+        "labelFormat": ent.label_format,
+        "showTicks": ent.show_ticks,
+    }
+    if ent.minor_interval is not None:
+        result["minorInterval"] = ent.minor_interval
+    if ent.label_size is not None:
+        result["labelSize"] = ent.label_size
+    if ent.label is not None:
+        result["label"] = ent.label
+    return result
+
+
+def _serialize_grid(
+    ent: Grid,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {"line_thickness": 0.02},
+        styles_map=styles_map,
+    ) | {
+        "origin": list(ent.origin),
+        "dir_u": list(ent.dir_u),
+        "dir_v": list(ent.dir_v),
+        "range_u": ent.range_u,
+        "range_v": ent.range_v,
+        "interval_u": ent.interval_u,
+        "interval_v": ent.interval_v,
     }
 
 

@@ -31,14 +31,11 @@ def js_scene_setup(
     cam_near: float = 0.1,
     cam_far: float = 1000,
     auto_rotate: bool = False,
-    show_grid: bool = True,
-    show_axes: bool = True,
-    space_extent: float = 10,
     space_dim: int = 3,
     pixel_ratio_expr: str = "window.devicePixelRatio",
     explicit_mouse_buttons: bool = False,
 ) -> str:
-    """Generate JS for scene, camera, renderers, controls, lighting, grid, axes.
+    """Generate JS for scene, camera, renderers, controls, and lighting.
 
     When *bg_color* is ``"transparent"``, the ``WebGLRenderer`` is created with
     ``alpha: true`` and ``setClearColor(0, 0)``, and the scene background is set
@@ -64,9 +61,6 @@ def js_scene_setup(
         cam_near: Camera near plane.
         cam_far: Camera far plane.
         auto_rotate: Whether OrbitControls auto-rotate.
-        show_grid: Whether to add a ``GridHelper``.
-        show_axes: Whether to add an ``AxesHelper``.
-        space_extent: Extent for grid/axes sizing.
         space_dim: 2 for 2D orthographic view, 3 for 3D perspective.
         pixel_ratio_expr: JS expression for device pixel ratio.
         explicit_mouse_buttons: If True, set LEFT/MIDDLE/RIGHT mouse buttons.
@@ -95,23 +89,6 @@ def js_scene_setup(
     else:
         mouse_buttons_block = ""
 
-    # ── Grid ───────────────────────────────────────────────
-    grid_block = ""
-    if show_grid:
-        if is_2d:
-            # GridHelper creates XZ-plane grid. Rotate to XY for top-down 2D.
-            grid_block = f"""const gs = {space_extent * 2};
-const _grid = new THREE.GridHelper(gs, Math.max(gs, 20), 0x444466, 0x222244);
-_grid.rotation.x = Math.PI / 2;  // XZ → XY plane
-{scene_var}.add(_grid);"""
-        else:
-            grid_block = f"""const gs = {space_extent * 2};
-{scene_var}.add(new THREE.GridHelper(gs, Math.max(gs, 20), 0x444466, 0x222244));"""
-
-    axes_block = ""
-    if show_axes:
-        axes_block = f"{scene_var}.add(new THREE.AxesHelper({space_extent}));"
-
     # ── Background / renderer ──────────────────────────────
     if bg_color == "transparent":
         scene_bg = f"{scene_var}.background = null;"
@@ -125,7 +102,7 @@ _grid.rotation.x = Math.PI / 2;  // XZ → XY plane
     # ── Camera ─────────────────────────────────────────────
     if is_2d:
         camera_js = f"""// 2D orthographic camera – top‑down view
-const _frustumSize = {space_extent * 2};
+const _frustumSize = 20;
 const {camera_var} = new THREE.OrthographicCamera(
     _frustumSize * ({width_expr} / {height_expr}) / -2,
     _frustumSize * ({width_expr} / {height_expr}) / 2,
@@ -190,11 +167,7 @@ _d1.position.set(10, 20, 10);
 {scene_var}.add(_d1);
 const _d2 = new THREE.DirectionalLight(0xffffff, 0.3);
 _d2.position.set(-5, -2, -8);
-{scene_var}.add(_d2);
-
-// Grid & axes
-{grid_block}
-{axes_block}"""
+{scene_var}.add(_d2);"""
 
 
 def js_render_loop(

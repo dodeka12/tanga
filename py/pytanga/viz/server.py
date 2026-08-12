@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 import webbrowser
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -77,6 +78,7 @@ class VizServer:
         self._pending_screenshots: dict[str, asyncio.Future[Any]] = {}
         self._pending_page_tokens: dict[str, dict[str, Any]] = {}
         self._any_ws_ready: asyncio.Event = asyncio.Event()
+        self._any_ws_ready_thread: threading.Event = threading.Event()
         self._ws_error_event: asyncio.Event = asyncio.Event()
         self._ws_error_msg: str = ""
 
@@ -267,6 +269,15 @@ class VizServer:
 
     # ── Browser sessions (read-only access for Visualizer) ─
 
+    def _clear_ws_ready_events(self) -> None:
+        """Clear both the asyncio.Event and its threading mirror.
+
+        Must be called from the event loop.
+        """
+        self._any_ws_ready.clear()
+        self._any_ws_ready_thread.clear()
+        self._ws_error_event.clear()
+
     def get_browser_sessions(self) -> list[dict[str, str | None]]:
         """Return a list of active browser sessions as plain dicts."""
         return [
@@ -391,12 +402,14 @@ class VizServer:
                             page_token = data.get("page_token")
                             if page_token:
                                 self._pending_page_tokens.pop(page_token, None)
-                            logger.debug(
-                                "WS ready: id=%s token=%s viewer=%s scene=%s",
+                            logger.info(
+                                "WS ready: id=%s token=%s viewer=%s scene=%s remote=%s sessions=%d",
                                 msg_browser_id,
-                                page_token,
-                                data.get("viewer_name"),
+                                page_token or "reconnect",
+                                data.get("viewer_name") or "none",
                                 scene_name,
+                                remote_addr,
+                                len(self._browser_sessions),
                             )
 
                             # Handle CDN / load errors reported by the frontend
@@ -440,6 +453,7 @@ class VizServer:
                             # wait_for_ws_ready() mechanism is not blocked
                             # by a failure in push_full_state / push_controls.
                             self._any_ws_ready.set()
+                            self._any_ws_ready_thread.set()
                             if self._on_ready is not None:
                                 self._on_ready()
 

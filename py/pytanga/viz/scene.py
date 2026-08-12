@@ -21,11 +21,96 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 
 @dataclass
+class View2DConfig:
+    """2D camera view defined by a rectangle centred at ``center``.
+
+    The camera is positioned along the +Z axis, looking down, with
+    an orthographic frustum sized to ``extent_x`` × ``extent_y``.
+    The aspect ratio is respected so the larger extent fits the
+    viewport.
+
+    Args:
+        extent_x: Full width of the view rectangle.
+        extent_y: Full height of the view rectangle.
+        center: Point appearing at the viewport center (in world XY).
+    """
+
+    extent_x: float
+    extent_y: float
+    center: tuple[float, float] = (0.0, 0.0)
+
+    def to_dict(self) -> dict:
+        """Serialize to a JSON-compatible dict."""
+        return {
+            "extent_x": self.extent_x,
+            "extent_y": self.extent_y,
+            "center": list(self.center),
+        }
+
+
+@dataclass
+class ViewPlaneConfig:
+    """3D camera defined via a virtual plane.
+
+    The camera optical axis is the plane normal.  The camera is placed
+    at ``center + n̂ * distance`` where ``distance`` is computed from
+    ``fov`` and ``max(extent_u, extent_v)``.
+
+    If ``span_u`` is given it defines the horizontal direction **û**
+    (orthogonalized against the normal).  Otherwise **û** is
+    auto-computed from a reference vector.  **v̂** is always
+    ``cross(normal, û)``.
+
+    Args:
+        point: A point on the virtual plane.
+        normal: Camera optical axis direction (the plane normal).
+        extent_u: Full horizontal extent of the virtual plane.
+        extent_v: Full vertical extent of the virtual plane.
+        center: Point that maps to the viewport center (defaults to
+            ``point``).
+        span_u: Optional horizontal direction in world space.  If
+            ``None``, a suitable direction is auto-computed.
+        fov: Vertical field of view in degrees.
+    """
+
+    point: tuple[float, float, float]
+    normal: tuple[float, float, float]
+    extent_u: float
+    extent_v: float
+    center: tuple[float, float, float] | None = None
+    span_u: tuple[float, float, float] | None = None
+    fov: float = 50.0
+
+    def to_dict(self) -> dict:
+        """Serialize to a JSON-compatible dict, omitting None values."""
+        result: dict[str, Any] = {
+            "point": list(self.point),
+            "normal": list(self.normal),
+            "extent_u": self.extent_u,
+            "extent_v": self.extent_v,
+            "fov": self.fov,
+        }
+        if self.center is not None:
+            result["center"] = list(self.center)
+        if self.span_u is not None:
+            result["span_u"] = list(self.span_u)
+        return result
+
+
+@dataclass
 class CameraConfig:
     """Camera configuration for the 3D viewer.
 
-    All fields are optional. When a field is None, the browser uses its
-    default or computes the value automatically from scene bounds (auto-fit).
+    Supports three modes:
+
+    - **Manual** (``position`` / ``target``): explicit camera placement.
+    - **View 2D**: orthographic view defined by a rectangle (``view_2d``).
+    - **View plane**: perspective view defined by a virtual plane
+      (``view_plane``).
+
+    When ``view_2d`` or ``view_plane`` is set, ``position`` and
+    ``target`` are computed by the frontend.  When all are ``None``,
+    the browser auto-fits from entity bounds.
     """
 
     position: tuple[float, float, float] | None = None  # (x, y, z)
@@ -33,6 +118,8 @@ class CameraConfig:
     fov: float | None = None  # vertical field of view in degrees
     near: float | None = None  # near clipping plane
     far: float | None = None  # far clipping plane
+    view_2d: View2DConfig | None = None
+    view_plane: ViewPlaneConfig | None = None
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-compatible dict, omitting None values."""
@@ -47,6 +134,10 @@ class CameraConfig:
             result["near"] = self.near
         if self.far is not None:
             result["far"] = self.far
+        if self.view_2d is not None:
+            result["view_2d"] = self.view_2d.to_dict()
+        if self.view_plane is not None:
+            result["view_plane"] = self.view_plane.to_dict()
         return result
 
 
@@ -58,9 +149,6 @@ class SceneConfig:
     message, before any entity data.
     """
 
-    space_extent: float = 10.0  # half-extent of visible space; affects grid size
-    show_grid: bool = True  # show ground grid
-    show_axes: bool = True  # show RGB axes helper
     background_color: str = "#1a1a2e"
     camera: CameraConfig | None = None  # None = auto-fit from entities
     title: str = "Tanga 3D Viewer"  # viewport title overlay
@@ -72,9 +160,6 @@ class SceneConfig:
         """Serialize to a JSON-compatible dict."""
         result: dict[str, Any] = {
             "type": "scene_config",
-            "space_extent": self.space_extent,
-            "show_grid": self.show_grid,
-            "show_axes": self.show_axes,
             "background_color": self.background_color,
             "title": self.title,
             "name": self.name,

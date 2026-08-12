@@ -8,7 +8,16 @@ import json
 import pytest
 from pytanga.geometry.entities import Point
 from pytanga.viz._props import _normalize_color
-from pytanga.viz.scene import CameraConfig, Scene, SceneConfig, SceneObject
+from pytanga.viz._scene_objects import Axes2D, Axes3D, Axis, Grid
+from pytanga.viz.scene import (
+    CameraConfig,
+    Scene,
+    SceneConfig,
+    SceneObject,
+    View2DConfig,
+    ViewPlaneConfig,
+)
+from pytanga.viz.serializer import serialize_entity
 from pytanga.viz.visualizer import Visualizer
 
 # ── CameraConfig ────────────────────────────────────────────
@@ -51,6 +60,32 @@ class TestCameraConfig:
         c = CameraConfig(position=(1, 2, 3), fov=45)
         json.dumps(c.to_dict())  # should not raise
 
+    def test_to_dict_includes_view_2d(self):
+        c = CameraConfig(view_2d=View2DConfig(4.0, 3.0, center=(1.0, 2.0)))
+        d = c.to_dict()
+        assert d["view_2d"] == {
+            "extent_x": 4.0,
+            "extent_y": 3.0,
+            "center": [1.0, 2.0],
+        }
+
+    def test_to_dict_includes_view_plane(self):
+        c = CameraConfig(
+            view_plane=ViewPlaneConfig(
+                point=(0, 0, 0),
+                normal=(0, 0, 1),
+                extent_u=6.0,
+                extent_v=5.0,
+            )
+        )
+        d = c.to_dict()
+        assert d["view_plane"]["point"] == [0, 0, 0]
+        assert d["view_plane"]["normal"] == [0, 0, 1]
+        assert d["view_plane"]["extent_u"] == 6.0
+        assert d["view_plane"]["extent_v"] == 5.0
+        assert "center" not in d["view_plane"]
+        assert "span_u" not in d["view_plane"]
+
 
 # ── SceneConfig ─────────────────────────────────────────────
 
@@ -58,9 +93,6 @@ class TestCameraConfig:
 class TestSceneConfig:
     def test_defaults(self):
         sc = SceneConfig()
-        assert sc.space_extent == 10.0
-        assert sc.show_grid is True
-        assert sc.show_axes is True
         assert sc.background_color == "#1a1a2e"
         assert sc.camera is None
 
@@ -70,15 +102,16 @@ class TestSceneConfig:
         assert d["type"] == "scene_config"
         assert "camera" not in d  # None camera should be omitted
 
-    def test_to_dict_with_camera(self):
-        sc = SceneConfig(
-            space_extent=20,
-            show_grid=False,
-            camera=CameraConfig(fov=30),
-        )
+    def test_to_dict_omits_obsolete_keys(self):
+        sc = SceneConfig()
         d = sc.to_dict()
-        assert d["space_extent"] == 20
-        assert d["show_grid"] is False
+        assert "space_extent" not in d
+        assert "show_grid" not in d
+        assert "show_axes" not in d
+
+    def test_to_dict_with_camera(self):
+        sc = SceneConfig(camera=CameraConfig(fov=30))
+        d = sc.to_dict()
         assert d["camera"] == {"fov": 30}
 
     def test_to_dict_with_empty_camera_omitted(self):
@@ -210,10 +243,13 @@ class TestVisualizer:
         assert viz._port == 9999
         assert viz._host == "127.0.0.1"
 
-    def test_scene_config_forwarded(self):
-        viz = Visualizer(space_extent=25, show_grid=False)
-        assert viz._config.space_extent == 25
-        assert viz._config.show_grid is False
+    def test_obsolete_kwargs_rejected(self):
+        with pytest.raises(TypeError):
+            Visualizer(space_extent=25)
+        with pytest.raises(TypeError):
+            Visualizer(show_grid=False)
+        with pytest.raises(TypeError):
+            Visualizer(show_axes=False)
 
     def test_camera_config_forwarded(self):
         cam = CameraConfig(fov=35)
@@ -375,3 +411,86 @@ class TestLabelDefaults:
         assert ls.offset_local is None
         assert ls.offset_2d is None
         assert ls.align is None
+
+
+# ── Axis / Grid serialization ──────────────────────────────
+
+
+class TestAxisSerialization:
+    def test_axis_serialization(self):
+        ent = Axis((0, 0, 0), (3, 0, 0), major_interval=1.0, label="X")
+        d = serialize_entity(ent, "a1", kind="Axis")
+        assert d["kind"] == "Axis"
+        assert d["start"] == [0, 0, 0]
+        assert d["end"] == [3, 0, 0]
+        assert d["majorInterval"] == 1.0
+        assert d["label"] == "X"
+        assert d["labelFormat"] == ".1f"
+        assert d["showTicks"] is True
+
+    def test_axis_minor_interval_omitted_when_none(self):
+        ent = Axis((0, 0, 0), (3, 0, 0))
+        d = serialize_entity(ent, "a1", kind="Axis")
+        assert "minorInterval" not in d
+
+
+class TestGridSerialization:
+    def test_grid_serialization(self):
+        g = Grid(range_u=10.0, range_v=6.0)
+        d = serialize_entity(g, "g1", kind="Grid")
+        assert d["kind"] == "Grid"
+        assert d["origin"] == [0.0, 0.0, 0.0]
+        assert d["dir_u"] == [1.0, 0.0, 0.0]
+        assert d["dir_v"] == [0.0, 1.0, 0.0]
+        assert d["range_u"] == 10.0
+        assert d["range_v"] == 6.0
+
+
+class TestAxesExpansion:
+    def test_axes_3d_expands_to_three_axes(self):
+        a = Axes3D(range_u=4, range_v=5, range_w=6, labels=("X", "Y", "Z"))
+        axes = a.expand()
+        assert len(axes) == 3
+        assert [x.label for x in axes] == ["X", "Y", "Z"]
+        assert axes[0].end == (4.0, 0.0, 0.0)
+        assert axes[1].end == (0.0, 5.0, 0.0)
+        assert axes[2].end == (0.0, 0.0, 6.0)
+
+    def test_axes_2d_expands_to_two_axes(self):
+        a = Axes2D(range_u=3, range_v=4, labels=("X", "Y"))
+        axes = a.expand()
+        assert len(axes) == 2
+        assert [x.label for x in axes] == ["X", "Y"]
+        assert axes[0].end == (3.0, 0.0, 0.0)
+        assert axes[1].end == (0.0, 4.0, 0.0)
+
+
+# ── Default scene objects ──────────────────────────────────
+
+
+class TestDefaultSceneObjects:
+    def _kinds(self, viz):
+        return sorted(o.kind for o in viz._scenes[""]._objects.values())
+
+    def test_default_added_when_none_provided(self):
+        viz = Visualizer()
+        viz._full_state_for("")
+        kinds = self._kinds(viz)
+        assert "Axis" in kinds
+        assert "Grid" in kinds
+
+    def test_default_not_added_when_axis_provided(self):
+        viz = Visualizer()
+        viz.add(Axis((0, 0, 0), (1, 0, 0)))
+        viz._full_state_for("")
+        kinds = self._kinds(viz)
+        assert "Axis" in kinds
+        assert "Grid" not in kinds
+
+    def test_default_not_added_when_grid_provided(self):
+        viz = Visualizer()
+        viz.add(Grid())
+        viz._full_state_for("")
+        kinds = self._kinds(viz)
+        assert "Grid" in kinds
+        assert "Axis" not in kinds
