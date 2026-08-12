@@ -27,28 +27,32 @@ def js_entity_creation(
     """
     if layer_dispatch:
         return f"""// ── Entity creation (initial_state) ──
-for (const ent of {entities_expr}) {{
-    if (ent.layer === 'scene') {{
-        const mesh = createEntityMesh(ent);
-        if (mesh) {{
-            {scene_var}.add(mesh);
-            {mesh_map_var}.set(ent.id, mesh);
-            mesh.userData._data = ent;
+(async () => {{
+    for (const ent of {entities_expr}) {{
+        if (ent.layer === 'scene') {{
+            const mesh = await createEntityMesh(ent);
+            if (mesh) {{
+                {scene_var}.add(mesh);
+                {mesh_map_var}.set(ent.id, mesh);
+                mesh.userData._data = ent;
+            }}
+        }} else if (ent.layer === 'overlay' && ent.kind === 'label') {{
+            _createLabel(ent);
         }}
-    }} else if (ent.layer === 'overlay' && ent.kind === 'label') {{
-        _createLabel(ent);
     }}
-}}"""
+}})();"""
 
     return f"""// Entities
 const {mesh_map_var} = new Map();
-for (const ent of {entities_expr}) {{
-    const mesh = createEntityMesh(ent);
-    if (mesh) {{
-        {scene_var}.add(mesh);
-        {mesh_map_var}.set(ent.id, mesh);
+(async () => {{
+    for (const ent of {entities_expr}) {{
+        const mesh = await createEntityMesh(ent);
+        if (mesh) {{
+            {scene_var}.add(mesh);
+            {mesh_map_var}.set(ent.id, mesh);
+        }}
     }}
-}}"""
+}})();"""
 
 
 def js_label_creation(

@@ -116,7 +116,8 @@ class SceneExporter:
 
         from pytanga.viz.export import render_export_html  # noqa: PLC0415
 
-        entities = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        all_objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        entities = [o for o in all_objects if o.get("layer") != "overlay"]
         labels = self._viz._scene._serialize_labels()
         html = render_export_html(entities, labels, self._viz._config.to_dict())
         path.write_text(html, encoding="utf-8")
@@ -142,7 +143,8 @@ class SceneExporter:
 
         from pytanga.viz.export import build_gltf_scene  # noqa: PLC0415
 
-        entities = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        all_objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        entities = [o for o in all_objects if o.get("layer") != "overlay"]
         labels = self._viz._scene._serialize_labels()
         glb_data = build_gltf_scene(entities, self._viz._config, labels=labels)
         path.write_bytes(glb_data)
@@ -207,7 +209,8 @@ class SceneExporter:
         else:
             resolved = self._default_figure_style
 
-        entities = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        all_objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        entities = [o for o in all_objects if o.get("layer") != "overlay"]
         labels = self._viz._scene._serialize_labels()
         fig_config = self.figure_config
 

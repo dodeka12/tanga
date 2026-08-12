@@ -15,11 +15,13 @@ viz.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_
 viz.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
 viz.add(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.25)
 
+# Static exports read directly from the in-memory scene — no server needed.
+# flush() ensures any pending dirty state is resolved before export.
+viz.flush()
+
 exporter = SceneExporter(viz)
-exporter.export_html("scene.html")
+exporter.export_html("scene.html", overwrite=True)
 print("Exported to scene.html — open it in any browser.")
 
-exporter.export_glb("scene.glb")
+exporter.export_glb("scene.glb", overwrite=True)
 print("Exported to scene.glb — open with Blender or <model-viewer>.")
-
-viz.run()
