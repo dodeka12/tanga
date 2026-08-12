@@ -75,7 +75,7 @@ async def main() -> None:
         return False  # let ActPoint do the default move + flush
 
     # Create the interactive point — style is set via viz.add().
-    ap = ActPoint(0, 0, 2, handler=on_point_drag)
+    ap = ActPoint(1, 1, 1, handler=on_point_drag)
     viz.add(ap, color="#ff4444")
 
     # Initial projection lines
