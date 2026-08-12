@@ -88,12 +88,6 @@ def _default_drag_triggers(button: MouseButton) -> list[InteractionTrigger]:
     ]
 
 
-# ── Default hover constants ────────────────────────────────────
-
-_DEFAULT_HOVER_EMISSIVE = "#ffff44"
-_DEFAULT_HOVER_SCALE = 1.5
-
-
 # ── ActSceneObject ─────────────────────────────────────────────
 
 
@@ -251,6 +245,25 @@ class ActPoint(ActSceneObject):
         else:
             self._point = Point(float(x), float(y), float(z))
         self._act_style = act_style
+        self._resolved_style: ActPointStyle | None = None
+
+    # ── Init (called by Visualizer) ────────────────────────
+
+    def _init(self, viz_handle: VizSceneHandle, entity_id: str) -> None:
+        """Resolve style from visualizer default, then register handlers."""
+        if self._act_style is None:
+            self._resolved_style = viz_handle.default_act_point_style
+        else:
+            default = viz_handle.default_act_point_style
+            self._resolved_style = ActPointStyle(
+                hover_emissive=self._act_style.hover_emissive
+                if self._act_style.hover_emissive is not None
+                else default.hover_emissive,
+                hover_scale=self._act_style.hover_scale
+                if self._act_style.hover_scale is not None
+                else default.hover_scale,
+            )
+        super()._init(viz_handle, entity_id)
 
     # ── Properties ─────────────────────────────────────────
 
@@ -266,21 +279,14 @@ class ActPoint(ActSceneObject):
 
     @property
     def interaction_config(self) -> InteractionConfig:
-        """Standard drag triggers with optional hover highlighting."""
-        hover_emissive = _DEFAULT_HOVER_EMISSIVE
-        hover_scale = _DEFAULT_HOVER_SCALE
-        if self._act_style is not None:
-            if self._act_style.hover_emissive is not None:
-                hover_emissive = self._act_style.hover_emissive
-            if self._act_style.hover_scale is not None:
-                hover_scale = self._act_style.hover_scale
-
+        """Standard drag triggers with hover highlighting."""
+        s = self._resolved_style or ActPointStyle()
         return InteractionConfig(
             enabled=True,
             triggers=_default_drag_triggers(MouseButton.LEFT),
             throttle_ms=40,
-            hover_emissive=hover_emissive,
-            hover_scale=hover_scale,
+            hover_emissive=s.hover_emissive,
+            hover_scale=s.hover_scale,
         )
 
     # ── Default movement ───────────────────────────────────

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
+from ._act_style import ActPointStyle
 from ._jupyter import _JupyterDisplayMixin
 from ._timeline import Timeline
 from ._types import SceneEntity
@@ -93,6 +94,11 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def default_annotation_style(self) -> AnnotationStyle:
         """The global default ``AnnotationStyle`` instance (shared across scenes)."""
         return self._viz.default_annotation_style
+
+    @property
+    def default_act_point_style(self) -> ActPointStyle:
+        """The global default ``ActPointStyle`` instance (shared across scenes)."""
+        return self._viz.default_act_point_style
 
     # ── Entity management ───────────────────────────────────
 

@@ -149,6 +149,13 @@ class Visualizer(_JupyterDisplayMixin):
         self._interaction_registry = InteractionHandlerRegistry()
         self._interaction_configs: dict[str, dict[str, Any]] = {}
 
+        # Default ActPointStyle (shared across all scenes)
+        from ._act_style import ActPointStyle
+
+        self._default_act_point_style = ActPointStyle(
+            hover_emissive="#ffff44", hover_scale=1.5
+        )
+
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
         self._scenes: dict[str, Scene] = {}
@@ -1530,6 +1537,23 @@ class Visualizer(_JupyterDisplayMixin):
     def default_annotation_style(self) -> AnnotationStyle:
         """The global default ``AnnotationStyle`` instance."""
         return self._default_annotation_style
+
+    @property
+    def default_act_point_style(self) -> ActPointStyle:
+        """The global default :class:`ActPointStyle` for all active points.
+        
+        Can be reassigned to change hover highlighting for all
+        active points at once::
+        
+            viz.default_act_point_style = ActPointStyle(
+                hover_emissive="#00ff00", hover_scale=2.0
+            )
+        """
+        return self._default_act_point_style
+
+    @default_act_point_style.setter
+    def default_act_point_style(self, value: ActPointStyle) -> None:
+        self._default_act_point_style = value
 
     @property
     def default_tex_label_style(self) -> _StyleDict:
