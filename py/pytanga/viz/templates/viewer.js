@@ -12,7 +12,7 @@ import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, applyOverlayDrawOrder, switchToCamera, createGrid } from './view_mode.js';
-import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket } from './interaction.js';
+import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket, setSpaceDim } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
 const sceneObjects = new Map();   // id → {obj, layer, el?}
@@ -268,6 +268,9 @@ function applySceneConfig(config) {
 
     // Controls & renderer — delegates to view_mode.js
     configureControls(controls, renderer, spaceDim);
+
+    // Tell the interaction module about the current space dimension
+    setSpaceDim(spaceDim);
 
     // Title
     if (config.title !== undefined) {

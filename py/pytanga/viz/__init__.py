@@ -27,6 +27,7 @@ from ._app import VisualizerApp
 from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
 from ._figure import FigureConfig
 from ._interaction import (
+    Camera,
     ClickEvent,
     DragEvent,
     DragMode,
@@ -80,6 +81,7 @@ __all__ = [
     "AnimStyle",
     "AnnotationStyle",
     "Button",
+    "Camera",
     "CameraConfig",
     "ClickEvent",
     "ControlEvent",

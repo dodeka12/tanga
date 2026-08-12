@@ -8,7 +8,8 @@
 //   - Click / double-click detection (distance + time threshold)
 //   - Scroll wheel capture (non-passive, only when hovering interactive object)
 //   - Ray-plane intersection for drag: projects mouse ray onto depth plane
-//   - Sends camera frame with every event
+//   - Sends camera matrices with drag_start / click / dblclick / scroll events;
+//     omits them from drag_move / drag_end (backend caches from drag_start)
 //   - Construct JSON messages and send via WebSocket
 
 import * as THREE from 'three';
@@ -22,6 +23,7 @@ let mouse = new THREE.Vector2();
 let camera = null;
 let rendererDomElement = null;
 let controls = null;
+let _spaceDim = 3;  // set via setSpaceDim() from viewer.js
 
 // Throttling state: "objectId:eventType" → { lastSent, pendingTimer, pendingData }
 const _throttles = new Map();
@@ -43,27 +45,29 @@ const DBLCLICK_TIMEOUT = 300;
 // Click movement threshold (pixels)
 const CLICK_THRESHOLD = 3;
 
-// ── Camera frame helper ───────────────────────────────────────
+// ── Camera payload helper ───────────────────────────────────────
+//
+// Sends view and projection matrices (and their inverses) plus viewport
+// dimensions.  This allows the Python backend to do full world↔screen
+// projection without any trigonometry.
 
-function getCameraFrame() {
-    const right = new THREE.Vector3();
-    const up = new THREE.Vector3();
-    const forward = new THREE.Vector3();
-    camera.matrixWorld.extractBasis(right, up, forward);
-    // Three.js camera looks along -Z in local; viewDir = -forward
-    const viewDir = new THREE.Vector3().copy(forward).negate().normalize();
-    right.normalize();
-    up.normalize();
-    return { right, up, viewDir };
-}
-
-function cameraFrameToPayload(worldPos) {
-    const { right, up, viewDir } = getCameraFrame();
+function getCameraPayload(worldPos) {
+    const view = Array.from(camera.matrixWorldInverse.elements);
+    const viewInv = Array.from(camera.matrixWorld.elements);
+    const proj = Array.from(camera.projectionMatrix.elements);
+    const projInv = Array.from(camera.projectionMatrixInverse.elements);
     const dist = worldPos ? camera.position.distanceTo(worldPos) : 0;
+
     return {
-        camera_right: [right.x, right.y, right.z],
-        camera_up: [up.x, up.y, up.z],
-        camera_view: [viewDir.x, viewDir.y, viewDir.z],
+        camera: {
+            view: view,
+            view_inv: viewInv,
+            proj: proj,
+            proj_inv: projInv,
+            viewport_width: rendererDomElement.clientWidth,
+            viewport_height: rendererDomElement.clientHeight,
+            space_dim: _spaceDim,
+        },
         camera_distance: dist,
     };
 }
@@ -82,7 +86,13 @@ function computeScreenPlaneVectors(intersectPoint) {
     const viewportHeight = rendererDomElement.clientHeight;
     const scale = 2 * dist * Math.tan(vFov / 2) / viewportHeight;
 
-    const { right, up } = getCameraFrame();
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3();
+    const forward = new THREE.Vector3();
+    camera.matrixWorld.extractBasis(right, up, forward);
+    right.normalize();
+    up.normalize();
+
     const screenDx = right.clone().multiplyScalar(scale);
     const screenDy = up.clone().multiplyScalar(-scale);  // screen -Y → world
 
@@ -141,6 +151,10 @@ export function initInteraction(_camera, _rendererDomElement, _controls, websock
     rendererDomElement.addEventListener('lostpointercapture', onLostCapture);
     rendererDomElement.addEventListener('wheel', onWheel, { passive: false });
     rendererDomElement.addEventListener('dblclick', onDblClick);
+}
+
+export function setSpaceDim(dim) {
+    _spaceDim = dim;
 }
 
 // ── Object Registration ──────────────────────────────────────
@@ -357,9 +371,9 @@ function onPointerMove(event) {
         const worldDelta = [worldDeltaVec.x, worldDeltaVec.y, worldDeltaVec.z];
 
         const eventType = _dragStarted ? 'drag_move' : 'drag_start';
-        const { right: cr, up: cu, viewDir: cv } = getCameraFrame();
 
-        const payload = () => ({
+        // Build payload: camera is only included for drag_start
+        const basePayload = {
             type: 'interaction:drag_move',
             event_type: eventType,
             object_id: _activeDrag.objectId,
@@ -370,16 +384,16 @@ function onPointerMove(event) {
             world_position: [worldPos.x, worldPos.y, worldPos.z],
             world_delta: worldDelta,
             drag_mode: dragMode,
-            camera_right: [cr.x, cr.y, cr.z],
-            camera_up: [cu.x, cu.y, cu.z],
-            camera_view: [cv.x, cv.y, cv.z],
-            camera_distance: _activeDrag.dist,
-        });
+        };
+
+        const payload = _dragStarted
+            ? () => ({ ...basePayload })  // drag_move: no camera
+            : { ...basePayload, ...getCameraPayload(worldPos) };  // drag_start: include camera
 
         if (_dragStarted) {
             throttledSend(_activeDrag.objectId, 'drag_move', payload);
         } else {
-            if (ws) ws.send(JSON.stringify(payload()));
+            if (ws) ws.send(JSON.stringify(payload));
             _dragStarted = true;
         }
         event.preventDefault();
@@ -392,9 +406,9 @@ function onPointerMove(event) {
 
 function onPointerUp(event) {
     if (_activeDrag && _activeDrag.pointerId === event.pointerId) {
-        const { dragMode, accWorldPos, dist } = _activeDrag;
-        const { right: cr, up: cu, viewDir: cv } = getCameraFrame();
+        const { dragMode, accWorldPos } = _activeDrag;
 
+        // drag_end: no camera payload (backend cached it from drag_start)
         const payload = {
             type: 'interaction:drag_end',
             event_type: 'drag_end',
@@ -409,10 +423,6 @@ function onPointerUp(event) {
             world_position: [accWorldPos.x, accWorldPos.y, accWorldPos.z],
             world_delta: [0, 0, 0],
             drag_mode: dragMode,
-            camera_right: [cr.x, cr.y, cr.z],
-            camera_up: [cu.x, cu.y, cu.z],
-            camera_view: [cv.x, cv.y, cv.z],
-            camera_distance: dist,
         };
         if (ws) ws.send(JSON.stringify(payload));
 
@@ -441,7 +451,6 @@ function onPointerUp(event) {
                     const wp = hit.intersect.point;
                     const normal = hit.intersect.face
                         ? hit.intersect.face.normal : new THREE.Vector3(0, 0, 1);
-                    const { right: cr, up: cu, viewDir: cv } = getCameraFrame();
                     const payload = {
                         type: 'interaction:click',
                         event_type: 'click',
@@ -451,10 +460,7 @@ function onPointerUp(event) {
                         screen_position: [event.clientX, event.clientY],
                         world_position: [wp.x, wp.y, wp.z],
                         world_normal: [normal.x, normal.y, normal.z],
-                        camera_right: [cr.x, cr.y, cr.z],
-                        camera_up: [cu.x, cu.y, cu.z],
-                        camera_view: [cv.x, cv.y, cv.z],
-                        camera_distance: camera.position.distanceTo(wp),
+                        ...getCameraPayload(wp),
                     };
                     if (ws) ws.send(JSON.stringify(payload));
                 }
@@ -475,7 +481,6 @@ function onDblClick(event) {
         const wp = hit.intersect.point;
         const normal = hit.intersect.face
             ? hit.intersect.face.normal : new THREE.Vector3(0, 0, 1);
-        const { right: cr, up: cu, viewDir: cv } = getCameraFrame();
         const payload = {
             type: 'interaction:dblclick',
             event_type: 'dblclick',
@@ -485,10 +490,7 @@ function onDblClick(event) {
             screen_position: [event.clientX, event.clientY],
             world_position: [wp.x, wp.y, wp.z],
             world_normal: [normal.x, normal.y, normal.z],
-            camera_right: [cr.x, cr.y, cr.z],
-            camera_up: [cu.x, cu.y, cu.z],
-            camera_view: [cv.x, cv.y, cv.z],
-            camera_distance: camera.position.distanceTo(wp),
+            ...getCameraPayload(wp),
         };
         if (ws) ws.send(JSON.stringify(payload));
     }
@@ -502,7 +504,6 @@ function onWheel(event) {
     if (triggers.length > 0) {
         event.preventDefault();
         const wp = hit.intersect.point;
-        const { right: cr, up: cu, viewDir: cv } = getCameraFrame();
         const payload = () => ({
             type: 'interaction:scroll',
             event_type: 'scroll',
@@ -510,10 +511,7 @@ function onWheel(event) {
             modifiers: Array.from(modifiers),
             screen_position: [event.clientX, event.clientY],
             delta_xy: [event.deltaX, event.deltaY],
-            camera_right: [cr.x, cr.y, cr.z],
-            camera_up: [cu.x, cu.y, cu.z],
-            camera_view: [cv.x, cv.y, cv.z],
-            camera_distance: camera.position.distanceTo(wp),
+            ...getCameraPayload(wp),
         });
         throttledSend(hit.objectId, 'scroll', payload);
     }
@@ -524,8 +522,6 @@ function onLostCapture() { if (_activeDrag) cancelDrag(); }
 function cancelDrag() {
     if (_activeDrag) {
         if (_dragStarted && ws) {
-            const { depth } = _activeDrag;
-            const { right: cr, up: cu, viewDir: cv } = getCameraFrame();
             const payload = {
                 type: 'interaction:drag_end',
                 event_type: 'drag_end',
@@ -536,10 +532,6 @@ function cancelDrag() {
                 delta_pixels: [0, 0],
                 world_position: [0, 0, 0],
                 world_delta: [0, 0, 0],
-                camera_right: [cr.x, cr.y, cr.z],
-                camera_up: [cu.x, cu.y, cu.z],
-                camera_view: [cv.x, cv.y, cv.z],
-                camera_distance: depth,
             };
             try { ws.send(JSON.stringify(payload)); } catch (e) {}
         }

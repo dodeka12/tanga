@@ -21,7 +21,10 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import singledispatchmethod
 from typing import Any
+
+from pytanga.geometry import Direction, Point
 
 _logger = logging.getLogger(__name__)
 
@@ -168,6 +171,247 @@ class InteractionConfig:
         }
 
 
+# ── Matrix helpers ─────────────────────────────────────────────
+
+
+def _mat4_col(m: tuple[float, ...], col: int) -> tuple[float, float, float, float]:
+    """Extract column *col* (0-3) from a 16-float column-major matrix."""
+    i = col * 4
+    return (m[i], m[i + 1], m[i + 2], m[i + 3])
+
+
+def _mat4_mul_vec4(
+    m: tuple[float, ...], v: tuple[float, float, float, float]
+) -> tuple[float, float, float, float]:
+    """Multiply a 16-float column-major 4×4 matrix by a 4-element vector."""
+    return (
+        m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3],
+        m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3],
+        m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3],
+        m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3],
+    )
+
+
+# ── Camera dataclass ───────────────────────────────────────────
+
+
+@dataclass
+class Camera:
+    """Camera state for world ↔ screen coordinate conversion.
+
+    Stores the view and projection matrices (and their inverses) along
+    with viewport dimensions and space dimensionality.  Provides
+    ``project`` / ``unproject`` methods that dispatch on :class:`Point`
+    vs :class:`Direction` input.
+
+    The matrices are flat 16-float tuples in column-major order,
+    matching Three.js ``Matrix4.elements``.
+    """
+
+    view: tuple[float, ...] = field(default_factory=lambda: (
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    ))
+    view_inv: tuple[float, ...] = field(default_factory=lambda: (
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    ))
+    proj: tuple[float, ...] = field(default_factory=lambda: (
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    ))
+    proj_inv: tuple[float, ...] = field(default_factory=lambda: (
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    ))
+    viewport_width: int = 800
+    viewport_height: int = 600
+    space_dim: int = 3
+
+    @property
+    def position(self) -> Point:
+        """Camera world-space position, extracted from the inverse view matrix."""
+        col3 = _mat4_col(self.view_inv, 3)
+        return Point(col3[0], col3[1], col3[2])
+
+    @property
+    def right(self) -> Direction:
+        """Camera right axis in world space."""
+        col0 = _mat4_col(self.view_inv, 0)
+        return Direction(col0[0], col0[1], col0[2])
+
+    @property
+    def up(self) -> Direction:
+        """Camera up axis in world space."""
+        col1 = _mat4_col(self.view_inv, 1)
+        return Direction(col1[0], col1[1], col1[2])
+
+    @property
+    def view_dir(self) -> Direction:
+        """Camera view direction in world space (look-at axis, forward)."""
+        col2 = _mat4_col(self.view_inv, 2)
+        return Direction(col2[0], col2[1], col2[2])
+
+    @property
+    def focal_length_px(self) -> float:
+        """Focal length in pixel units from the projection matrix.
+
+        For a PerspectiveCamera: ``proj[5] = 1 / tan(fov / 2)``, so
+        focal_length = proj[5] * viewport_height / 2.
+        """
+        return self.proj[5] * self.viewport_height / 2.0
+
+    # ── Project ─────────────────────────────────────────────
+
+    @singledispatchmethod
+    def project(self, obj) -> tuple[float, float]:
+        """Project a world-space :class:`Point` or :class:`Direction` to
+        screen pixel coordinates.
+
+        Returns ``(pixel_x, pixel_y)``.
+        """
+        raise TypeError(
+            f"project() expects Point or Direction, got {type(obj).__name__}"
+        )
+
+    @project.register(Point)
+    def _(self, p: Point) -> tuple[float, float]:
+        """Project a world point to screen pixel coordinates."""
+        eye = _mat4_mul_vec4(self.view, (p.x, p.y, p.z, 1.0))
+        clip = _mat4_mul_vec4(self.proj, eye)
+        w = clip[3]
+        if abs(w) < 1e-12:
+            return (float("nan"), float("nan"))
+        ndc_x = clip[0] / w
+        ndc_y = clip[1] / w
+        px = (ndc_x + 1.0) * 0.5 * self.viewport_width
+        py = (1.0 - ndc_y) * 0.5 * self.viewport_height
+        return (px, py)
+
+    @project.register(Direction)
+    def _(self, d: Direction) -> tuple[float, float]:
+        """Project a world direction to a screen pixel displacement.
+
+        The direction is treated as a vector (w=0) so view-matrix
+        translation is ignored.
+        """
+        eye = _mat4_mul_vec4(self.view, (d.x, d.y, d.z, 0.0))
+        clip = _mat4_mul_vec4(self.proj, eye)
+        w = clip[3]
+        if abs(w) < 1e-12:
+            return (float("nan"), float("nan"))
+        ndc_x = clip[0] / w
+        ndc_y = clip[1] / w
+        px = ndc_x * 0.5 * self.viewport_width
+        py = -ndc_y * 0.5 * self.viewport_height
+        return (px, py)
+
+    # ── Unproject ───────────────────────────────────────────
+
+    @singledispatchmethod
+    def unproject(self, obj, depth: float = 0.0) -> Point | Direction:
+        """Unproject screen-space coordinates to world space.
+
+        When *obj* is a :class:`Point` (the first two components are
+        treated as pixel coordinates), returns a world-space
+        :class:`Point` at the given *depth*.
+
+        When *obj* is a :class:`Direction` (the first two components
+        are treated as pixel displacement), returns a world-space
+        :class:`Direction` at the given *depth*.
+        """
+        raise TypeError(
+            f"unproject() expects Point or Direction, got {type(obj).__name__}"
+        )
+
+    @unproject.register(Point)
+    def _(self, p: Point, depth: float = 0.0) -> Point:
+        """Unproject a screen-pixel point to a world :class:`Point` at *depth*."""
+        px, py = p.x, p.y
+        # NDC from pixel coords
+        ndc_x = (px / self.viewport_width) * 2.0 - 1.0
+        ndc_y = 1.0 - (py / self.viewport_height) * 2.0
+
+        # Build two clip-space points: one at near (z=-1), one at far (z=1)
+        near_clip = _mat4_mul_vec4(self.proj_inv, (ndc_x, ndc_y, -1.0, 1.0))
+        far_clip = _mat4_mul_vec4(self.proj_inv, (ndc_x, ndc_y, 1.0, 1.0))
+
+        # Perspective divide → camera-space
+        if abs(near_clip[3]) < 1e-12 or abs(far_clip[3]) < 1e-12:
+            return Point(float("nan"), float("nan"), float("nan"))
+        near_eye = (
+            near_clip[0] / near_clip[3],
+            near_clip[1] / near_clip[3],
+            near_clip[2] / near_clip[3],
+            1.0,
+        )
+        far_eye = (
+            far_clip[0] / far_clip[3],
+            far_clip[1] / far_clip[3],
+            far_clip[2] / far_clip[3],
+            1.0,
+        )
+
+        # World-space
+        near_world = _mat4_mul_vec4(self.view_inv, near_eye)
+        far_world = _mat4_mul_vec4(self.view_inv, far_eye)
+
+        # Ray origin and direction in world space
+        ray_origin = Direction(
+            near_world[0], near_world[1], near_world[2]
+        )
+        ray_dir = Direction(
+            far_world[0] - near_world[0],
+            far_world[1] - near_world[1],
+            far_world[2] - near_world[2],
+        ).normalized()
+
+        # March along ray to the plane at distance *depth* from camera,
+        # perpendicular to the camera view direction.
+        cam_pos = self.position
+        cam_view = self.view_dir
+        plane_point = cam_pos + cam_view * depth
+
+        # Intersect ray with plane ⟂ cam_view through plane_point
+        denom = ray_dir.dot(cam_view)
+        if abs(denom) < 1e-12:
+            return Point(float("nan"), float("nan"), float("nan"))
+        t = (plane_point - Point(near_world[0], near_world[1], near_world[2])).dot(cam_view) / denom
+
+        result = Point(
+            near_world[0] + ray_dir.x * t,
+            near_world[1] + ray_dir.y * t,
+            near_world[2] + ray_dir.z * t,
+        )
+        return result
+
+    @unproject.register(Direction)
+    def _(self, d: Direction, depth: float = 0.0) -> Direction:
+        """Unproject a screen-pixel displacement to a world :class:`Direction` at *depth*."""
+        dx, dy = d.x, d.y
+        # Unproject two points: screen center and screen center + (dx, dy)
+        cx = self.viewport_width * 0.5
+        cy = self.viewport_height * 0.5
+        p0 = self.unproject(Point(cx, cy), depth)
+        p1 = self.unproject(Point(cx + dx, cy + dy), depth)
+        return p1 - p0
+
+    @unproject.register(type(None))
+    def _(self, _obj: None, depth: float = 0.0) -> None:
+        """Handle None gracefully (e.g., default event fields)."""
+        raise TypeError(
+            "unproject() expects Point or Direction, got None"
+        )
+
+
 # ── Event dataclasses ──────────────────────────────────────────
 
 
@@ -175,15 +419,18 @@ class InteractionConfig:
 class ControlEvent:
     """Base class for all interaction events.
 
-    All events carry the current camera frame so handlers can transform
+    All events carry a :class:`Camera` so handlers can transform
     between screen space and world space without additional round-trips.
+
+    The *camera* may be ``None`` on drag-move/drag-end events coming
+    from the frontend (the camera is only sent on drag-start).
+    The :class:`InteractionHandlerRegistry` injects the cached camera
+    before the handler sees it, so handlers always receive a populated
+    ``camera``.
     """
 
     browser_id: str | None = None
-    camera_right: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    camera_up: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    camera_view: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    camera_distance: float = 0.0
+    camera: Camera | None = None
 
 
 @dataclass
@@ -199,8 +446,8 @@ class ClickEvent(ControlEvent):
     mouse_button: MouseButton = MouseButton.LEFT
     modifiers: frozenset[ModifierKey] = frozenset()
     screen_position: tuple[float, float] = (0.0, 0.0)
-    world_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    world_normal: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    world_position: Point = field(default_factory=Point)
+    world_normal: Direction = field(default_factory=Direction)
 
 
 @dataclass
@@ -212,8 +459,7 @@ class DragEvent(ControlEvent):
     :attr:`~InteractionEventType.DRAG_END`.
 
     The frontend computes ``world_position`` by intersecting the
-    pixel-position ray with the plane perpendicular to ``camera_view``
-    at ``camera_distance`` (cached at drag start).  ``world_delta``
+    pixel-position ray with the constraint plane.  ``world_delta``
     is the change since the previous drag event.
     """
 
@@ -223,8 +469,8 @@ class DragEvent(ControlEvent):
     modifiers: frozenset[ModifierKey] = frozenset()
     screen_position: tuple[float, float] = (0.0, 0.0)
     delta_pixels: tuple[float, float] = (0.0, 0.0)
-    world_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    world_delta: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    world_position: Point = field(default_factory=Point)
+    world_delta: Direction = field(default_factory=Direction)
     drag_mode: DragMode = DragMode.VIEW_PLANE
 
 
@@ -247,13 +493,19 @@ def _parse_modifiers(modifiers_list: list[str]) -> frozenset[ModifierKey]:
     return frozenset(ModifierKey(m) for m in modifiers_list)
 
 
-def _parse_camera_frame(data: dict[str, Any]) -> dict[str, Any]:
-    """Extract camera frame fields from a JSON dict."""
-    return dict(
-        camera_right=tuple(data.get("camera_right", [0.0, 0.0, 0.0])),
-        camera_up=tuple(data.get("camera_up", [0.0, 0.0, 0.0])),
-        camera_view=tuple(data.get("camera_view", [0.0, 0.0, 0.0])),
-        camera_distance=float(data.get("camera_distance", 0.0)),
+def _parse_camera(data: dict[str, Any]) -> Camera | None:
+    """Parse a camera sub-object from a JSON dict, or return None."""
+    cam_data = data.get("camera")
+    if cam_data is None:
+        return None
+    return Camera(
+        view=tuple(cam_data.get("view", [])),
+        view_inv=tuple(cam_data.get("view_inv", [])),
+        proj=tuple(cam_data.get("proj", [])),
+        proj_inv=tuple(cam_data.get("proj_inv", [])),
+        viewport_width=int(cam_data.get("viewport_width", 800)),
+        viewport_height=int(cam_data.get("viewport_height", 600)),
+        space_dim=int(cam_data.get("space_dim", 3)),
     )
 
 
@@ -272,19 +524,21 @@ def _parse_event(data: dict[str, Any]) -> ControlEvent:
 
     modifiers = _parse_modifiers(data.get("modifiers", []))
     browser_id = data.get("browser_id")
-    cam = _parse_camera_frame(data)
+    camera = _parse_camera(data)
 
     if event_type in (InteractionEventType.CLICK, InteractionEventType.DBLCLICK):
+        wp = data.get("world_position", [0.0, 0.0, 0.0])
+        wn = data.get("world_normal", [0.0, 0.0, 0.0])
         return ClickEvent(
             browser_id=browser_id,
+            camera=camera,
             object_id=data.get("object_id", ""),
             event_type=event_type,
             mouse_button=MouseButton(data.get("mouse_button", "left")),
             modifiers=modifiers,
             screen_position=tuple(data.get("screen_position", [0.0, 0.0])),
-            world_position=tuple(data.get("world_position", [0.0, 0.0, 0.0])),
-            world_normal=tuple(data.get("world_normal", [0.0, 0.0, 0.0])),
-            **cam,
+            world_position=Point(float(wp[0]), float(wp[1]), float(wp[2])),
+            world_normal=Direction(float(wn[0]), float(wn[1]), float(wn[2])),
         )
 
     if event_type in (
@@ -298,29 +552,31 @@ def _parse_event(data: dict[str, Any]) -> ControlEvent:
                 drag_mode = DragMode(data["drag_mode"])
             except ValueError:
                 pass
+        wp = data.get("world_position", [0.0, 0.0, 0.0])
+        wd = data.get("world_delta", [0.0, 0.0, 0.0])
         return DragEvent(
             browser_id=browser_id,
+            camera=camera,
             object_id=data.get("object_id", ""),
             event_type=event_type,
             mouse_button=MouseButton(data.get("mouse_button", "left")),
             modifiers=modifiers,
             screen_position=tuple(data.get("screen_position", [0.0, 0.0])),
             delta_pixels=tuple(data.get("delta_pixels", [0.0, 0.0])),
-            world_position=tuple(data.get("world_position", [0.0, 0.0, 0.0])),
-            world_delta=tuple(data.get("world_delta", [0.0, 0.0, 0.0])),
+            world_position=Point(float(wp[0]), float(wp[1]), float(wp[2])),
+            world_delta=Direction(float(wd[0]), float(wd[1]), float(wd[2])),
             drag_mode=drag_mode,
-            **cam,
         )
 
     if event_type == InteractionEventType.SCROLL:
         return ScrollEvent(
             browser_id=browser_id,
+            camera=camera,
             object_id=data.get("object_id", ""),
             event_type=event_type,
             modifiers=modifiers,
             screen_position=tuple(data.get("screen_position", [0.0, 0.0])),
             delta_xy=tuple(data.get("delta_xy", [0.0, 0.0])),
-            **cam,
         )
 
     raise ValueError(f"Unhandled interaction event type: {event_type!r}")
@@ -334,7 +590,7 @@ def _coalesce_drag_events(events: list[DragEvent]) -> DragEvent:
 
     All events must have the same ``object_id`` and ``event_type``.  The
     result uses the latest ``screen_position``, ``world_position``,
-    ``world_delta``, ``modifiers``, and camera frame.
+    ``world_delta``, ``modifiers``, and camera.
 
     ``delta_pixels`` and ``world_delta`` are summed across events.
 
@@ -349,13 +605,14 @@ def _coalesce_drag_events(events: list[DragEvent]) -> DragEvent:
     first = events[0]
     total_delta_x = sum(e.delta_pixels[0] for e in events)
     total_delta_y = sum(e.delta_pixels[1] for e in events)
-    total_wx = sum(e.world_delta[0] for e in events)
-    total_wy = sum(e.world_delta[1] for e in events)
-    total_wz = sum(e.world_delta[2] for e in events)
+    total_world_delta = first.world_delta
+    for e in events[1:]:
+        total_world_delta = total_world_delta + e.world_delta
     last = events[-1]
 
     return DragEvent(
         browser_id=last.browser_id,
+        camera=last.camera,
         object_id=first.object_id,
         event_type=first.event_type,
         mouse_button=first.mouse_button,
@@ -363,11 +620,8 @@ def _coalesce_drag_events(events: list[DragEvent]) -> DragEvent:
         screen_position=last.screen_position,
         delta_pixels=(total_delta_x, total_delta_y),
         world_position=last.world_position,
-        world_delta=(total_wx, total_wy, total_wz),
-        camera_right=last.camera_right,
-        camera_up=last.camera_up,
-        camera_view=last.camera_view,
-        camera_distance=last.camera_distance,
+        world_delta=total_world_delta,
+        drag_mode=last.drag_mode,
     )
 
 
@@ -388,6 +642,10 @@ class InteractionHandlerRegistry:
     for the same object while a handler is still processing, they are merged
     into a single event before the next handler invocation.  This prevents
     unbounded queue growth and reduces handler calls during rapid dragging.
+
+    Also caches the camera from ``DRAG_START`` and injects it into
+    ``DRAG_MOVE`` / ``DRAG_END`` events that arrive without a camera,
+    so handlers always receive a fully populated ``camera`` field.
     """
 
     def __init__(self) -> None:
@@ -395,6 +653,9 @@ class InteractionHandlerRegistry:
         # Per-object state for coalescing
         self._pending: dict[str, list[DragEvent]] = {}
         self._running: dict[str, bool] = {}
+        # Camera cache: stored on drag_start / click / scroll,
+        # injected into drag_move / drag_end when missing
+        self._camera_store: dict[str, Camera] = {}
 
     # ── Registration ───────────────────────────────────────────
 
@@ -434,22 +695,39 @@ class InteractionHandlerRegistry:
         self._handlers.clear()
         self._pending.clear()
         self._running.clear()
+        self._camera_store.clear()
 
     # ── Dispatch ───────────────────────────────────────────────
 
     async def dispatch(self, event: ControlEvent) -> None:
         """Fire-and-forget dispatch with drag_move coalescing.
 
-        * ``DRAG_START`` / ``DRAG_END``: flush pending queue, dispatch
+        * ``DRAG_START``: cache camera, flush pending queue, dispatch
           immediately.
-        * ``DRAG_MOVE``: if handler is running, queue the event for later
-          coalescing.  Otherwise dispatch immediately.
-        * Other event types: dispatch immediately (no coalescing needed).
+        * ``DRAG_MOVE``: inject cached camera if missing; if handler is
+          running, queue the event for later coalescing. Otherwise
+          dispatch immediately.
+        * ``DRAG_END``: inject cached camera if missing, flush pending
+          queue, dispatch immediately.
+        * Other event types: cache camera, dispatch immediately (no
+          coalescing needed).
         """
+        # ── Cache camera on any event that has one ──────────
+        if event.camera is not None:
+            oid = getattr(event, "object_id", None)
+            if oid:
+                self._camera_store[oid] = event.camera
+
         if isinstance(event, DragEvent):
             handler = self.get(event.object_id, event.event_type)
             if handler is None:
                 return
+
+            # Inject camera from cache if the frontend didn't send one
+            if event.camera is None:
+                cached = self._camera_store.get(event.object_id)
+                if cached is not None:
+                    event.camera = cached
 
             if event.event_type in (
                 InteractionEventType.DRAG_START,
@@ -470,6 +748,11 @@ class InteractionHandlerRegistry:
         else:
             handler = self.get(event.object_id, event.event_type)
             if handler is not None:
+                # Inject camera from cache for click/scroll events too
+                if event.camera is None:
+                    cached = self._camera_store.get(event.object_id)
+                    if cached is not None:
+                        event.camera = cached
                 asyncio.create_task(handler(event))
 
     async def _run_handler(self, handler: Handler, event: DragEvent) -> None:

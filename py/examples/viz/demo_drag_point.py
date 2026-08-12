@@ -17,6 +17,12 @@ Modifier keys switch the drag constraint plane::
     Ctrl         → XZ plane (y-locked)
     Ctrl+Shift   → YZ plane (x-locked)
 
+Projection helpers::
+
+    Use event.camera.project(point) to convert a world Point to
+    screen pixel coordinates.  Use event.camera.unproject(screen_point, depth)
+    to go the other way.  Both dispatch on Point vs Direction input.
+
 Usage::
 
     uv run python py/examples/viz/demo_drag_point.py
@@ -86,13 +92,6 @@ async def main() -> None:
     # Initial projection lines
     _update_lines(*pos)
 
-    # Reference points along axes
-    for i in range(-5, 6):
-        if i != 0:
-            viz.add(Point(i, 0, 0), color="#444444", opacity=0.3)
-            viz.add(Point(0, i, 0), color="#444444", opacity=0.3)
-            viz.add(Point(0, 0, i), color="#444444", opacity=0.3)
-
     # Enable left-button dragging with multiple constraint planes
     viz.set_interaction(
         point_id,
@@ -128,10 +127,19 @@ async def main() -> None:
     )
 
     async def on_drag(event):
-        wx, wy, wz = event.world_position
-        pos[0], pos[1], pos[2] = wx, wy, wz
-        viz.update_entity(event.object_id, Point(wx, wy, wz))
-        _update_lines(wx, wy, wz)
+        # event.world_position is a pytanga.geometry.Point
+        p = event.world_position
+        pos[0], pos[1], pos[2] = p.x, p.y, p.z
+        viz.update_entity(event.object_id, p)
+        _update_lines(p.x, p.y, p.z)
+
+        # Example: project the world position to screen pixels
+        # screen_xy = event.camera.project(p)
+        # print(f"Screen: {screen_xy}")
+
+        # Example: unproject a pixel offset to a world Direction
+        # d = event.camera.unproject(Direction(10, 0, 0), depth=cam_dist)
+
         viz.flush()
 
     viz.on_interaction(point_id, InteractionEventType.DRAG_MOVE, on_drag)
