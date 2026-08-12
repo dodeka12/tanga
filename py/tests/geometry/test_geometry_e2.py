@@ -103,7 +103,7 @@ from pytanga.geometry.operators import (
         (Sphere, (Point(0, 0, 0), 1.0), {}, "Spheres require conformal"),
         (
             Circle,
-            (Point(0, 0, 0), Direction(0, 0, 1), 1.0),
+            (Point(0, 0, 0), 1.0, Direction(0, 0, 1)),
             {},
             "Circles require conformal",
         ),

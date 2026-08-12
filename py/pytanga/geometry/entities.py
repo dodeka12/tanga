@@ -53,6 +53,13 @@ class Point:
     def __repr__(self) -> str:
         return f"Point{_fmt_v(self.x, self.y, self.z)}"
 
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Point):
+            return self.x == other.x and self.y == other.y and self.z == other.z
+        if isinstance(other, (tuple, list)) and len(other) == 3:
+            return self.x == other[0] and self.y == other[1] and self.z == other[2]
+        return NotImplemented
+
     def __neg__(self) -> "Point":
         return Point(-self.x, -self.y, -self.z)
 
@@ -151,6 +158,13 @@ class Direction:
 
     def __repr__(self) -> str:
         return f"Dir{_fmt_v(self.x, self.y, self.z)}"
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Direction):
+            return self.x == other.x and self.y == other.y and self.z == other.z
+        if isinstance(other, (tuple, list)) and len(other) == 3:
+            return self.x == other[0] and self.y == other[1] and self.z == other[2]
+        return NotImplemented
 
     def __neg__(self) -> "Direction":
         return Direction(-self.x, -self.y, -self.z)

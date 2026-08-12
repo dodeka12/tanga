@@ -203,6 +203,36 @@ def _mat4_mul_vec4(
     )
 
 
+def apply_delta_transform(
+    delta: tuple[float, float],
+    transform: tuple[float, ...],
+) -> tuple[float, float, float]:
+    """Apply a 4×4 column-major matrix to a 2D delta as world position.
+
+    Treats ``delta`` as ``(dx, dy, 0, 1)``, multiplies by the 4×4
+    *transform*, and returns the resulting ``(x, y, z)``.
+    """
+    if len(transform) != 16:
+        raise ValueError(
+            f"Transform must have exactly 16 elements, got {len(transform)}"
+        )
+    x, y, z, _w = _mat4_mul_vec4(transform, (delta[0], delta[1], 0.0, 1.0))
+    return (x, y, z)
+
+
+def extract_camera_directions(
+    transform: tuple[float, ...],
+) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]]:
+    """Extract right, up, and forward direction vectors from a 4×4 column-major matrix.
+
+    Returns ``(right, up, forward)``, each as a ``(x, y, z)`` tuple.
+    """
+    right = (transform[0], transform[1], transform[2])
+    up = (transform[4], transform[5], transform[6])
+    forward = (transform[8], transform[9], transform[10])
+    return (right, up, forward)
+
+
 # ── Camera dataclass ───────────────────────────────────────────
 
 
@@ -480,6 +510,7 @@ class DragEvent(ControlEvent):
     modifiers: frozenset[ModifierKey] = frozenset()
     screen_position: tuple[float, float] = (0.0, 0.0)
     delta_pixels: tuple[float, float] = (0.0, 0.0)
+    delta_transform: tuple[float, ...] = ()
     world_position: Point = field(default_factory=Point)
     world_delta: Direction = field(default_factory=Direction)
     drag_mode: DragMode = DragMode.VIEW_PLANE
@@ -565,6 +596,7 @@ def _parse_event(data: dict[str, Any]) -> ControlEvent:
                 pass
         wp = data.get("world_position", [0.0, 0.0, 0.0])
         wd = data.get("world_delta", [0.0, 0.0, 0.0])
+        dt = data.get("delta_transform", [])
         return DragEvent(
             browser_id=browser_id,
             camera=camera,
@@ -574,6 +606,7 @@ def _parse_event(data: dict[str, Any]) -> ControlEvent:
             modifiers=modifiers,
             screen_position=tuple(data.get("screen_position", [0.0, 0.0])),
             delta_pixels=tuple(data.get("delta_pixels", [0.0, 0.0])),
+            delta_transform=tuple(dt),
             world_position=Point(float(wp[0]), float(wp[1]), float(wp[2])),
             world_delta=Direction(float(wd[0]), float(wd[1]), float(wd[2])),
             drag_mode=drag_mode,
