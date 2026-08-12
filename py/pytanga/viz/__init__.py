@@ -23,6 +23,7 @@ Usage::
     viz.run()
 """
 
+from ._active import ActHandler, ActPoint, ActSceneObject
 from ._app import VisualizerApp
 from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
 from ._figure import FigureConfig
@@ -78,6 +79,9 @@ from .scene import CameraConfig, SceneConfig
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
+    "ActHandler",
+    "ActPoint",
+    "ActSceneObject",
     "AnimStyle",
     "AnnotationStyle",
     "Button",

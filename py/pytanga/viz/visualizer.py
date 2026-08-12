@@ -277,11 +277,34 @@ class Visualizer(_JupyterDisplayMixin):
         tex_label_style: "TextureLabelStyle | None" = None,
     ) -> str | list[str]:
         """Add an entity to a specific scene."""
+        from ._active import ActSceneObject
         from ._label import Label
         from ._styles import LabelStyle as _LS
         from ._styles import TextureLabelStyle as _TLS
 
         scene = self._scenes[scene_name]
+
+        if isinstance(obj, ActSceneObject):
+            properties: dict[str, Any] = {}
+            if color is not None:
+                normalized = _normalize_color(color)
+                if isinstance(normalized, tuple):
+                    properties["color"] = normalized[0]
+                    if opacity is None:
+                        properties["opacity"] = normalized[1]
+                else:
+                    properties["color"] = normalized
+            if opacity is not None:
+                properties["opacity"] = float(opacity)
+            if style is not None:
+                properties["style"] = style
+            # Merge in convenience kwargs from the active object (e.g. ActPoint._add_kwargs)
+            for k, v in getattr(obj, "_add_kwargs", {}).items():
+                if k not in properties and v is not None:
+                    properties[k] = v
+            eid = scene.add(obj.entity, entity_id=entity_id, **properties)
+            obj._init(VizSceneHandle(self, scene_name), eid)
+            return eid
 
         if isinstance(obj, Label):
             return scene.add_label(obj)

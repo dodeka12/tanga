@@ -17,11 +17,8 @@ Modifier keys switch the drag constraint plane::
     Ctrl         → XZ plane (y-locked)
     Ctrl+Shift   → YZ plane (x-locked)
 
-Projection helpers::
-
-    Use event.camera.project(point) to convert a world Point to
-    screen pixel coordinates.  Use event.camera.unproject(screen_point, depth)
-    to go the other way.  Both dispatch on Point vs Direction input.
+This demo uses the low-level interaction API directly, giving full
+control over triggers and handlers.
 
 Usage::
 
@@ -49,48 +46,42 @@ logging.getLogger("tanga.viz.server").setLevel(logging.DEBUG)  # extra HTTP/WS d
 async def main() -> None:
     viz = Visualizer(title="Drag Demo — Grab the red point")
 
-    # Build the scene — mutable pos for the handler
-    pos = [0.0, 0.0, 2.0]
-
     # The draggable point
-    point_id = viz.add(Point(*pos), color="#ff4444")
+    pos = Point(0, 0, 2)
+    point_id = viz.add(pos, color="#ff4444")
 
     # Projection lines to cardinal planes (updated on drag)
-    #   Cyan   → XY plane (z=0)
-    #   Magenta → XZ plane (y=0)
-    #   Yellow  → YZ plane (x=0)
     line_xy_id: str | None = None
     line_xz_id: str | None = None
     line_yz_id: str | None = None
 
-    def _update_lines(x: float, y: float, z: float) -> None:
+    def _update_lines(p: Point) -> None:
         """Create/replace projection lines from (x,y,z) to the three planes."""
         nonlocal line_xy_id, line_xz_id, line_yz_id
-        p = Point(x, y, z)
 
         # XY plane: set z=0
-        xy_line = Line.from_points(p, Point(x, y, 0))
+        xy_line = Line.from_points(p, Point(p.x, p.y, 0))
         if line_xy_id is None:
-            line_xy_id = viz.add(xy_line, color="#00cccc", opacity=0.5)
+            line_xy_id = viz.add(xy_line, color="#00cccc", opacity=1.0)
         else:
             viz.update_entity(line_xy_id, xy_line)
 
         # XZ plane: set y=0
-        xz_line = Line.from_points(p, Point(x, 0, z))
+        xz_line = Line.from_points(p, Point(p.x, 0, p.z))
         if line_xz_id is None:
-            line_xz_id = viz.add(xz_line, color="#cc00cc", opacity=0.5)
+            line_xz_id = viz.add(xz_line, color="#cc00cc", opacity=1.0)
         else:
             viz.update_entity(line_xz_id, xz_line)
 
         # YZ plane: set x=0
-        yz_line = Line.from_points(p, Point(0, y, z))
+        yz_line = Line.from_points(p, Point(0, p.y, p.z))
         if line_yz_id is None:
-            line_yz_id = viz.add(yz_line, color="#cccc00", opacity=0.5)
+            line_yz_id = viz.add(yz_line, color="#cccc00", opacity=1.0)
         else:
             viz.update_entity(line_yz_id, yz_line)
 
     # Initial projection lines
-    _update_lines(*pos)
+    _update_lines(pos)
 
     # Enable left-button dragging with multiple constraint planes
     viz.set_interaction(
@@ -129,17 +120,8 @@ async def main() -> None:
     async def on_drag(event):
         # event.world_position is a pytanga.geometry.Point
         p = event.world_position
-        pos[0], pos[1], pos[2] = p.x, p.y, p.z
         viz.update_entity(event.object_id, p)
-        _update_lines(p.x, p.y, p.z)
-
-        # Example: project the world position to screen pixels
-        # screen_xy = event.camera.project(p)
-        # print(f"Screen: {screen_xy}")
-
-        # Example: unproject a pixel offset to a world Direction
-        # d = event.camera.unproject(Direction(10, 0, 0), depth=cam_dist)
-
+        _update_lines(p)
         viz.flush()
 
     viz.on_interaction(point_id, InteractionEventType.DRAG_MOVE, on_drag)
