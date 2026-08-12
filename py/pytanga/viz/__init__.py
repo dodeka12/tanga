@@ -23,9 +23,25 @@ Usage::
     viz.run()
 """
 
+from ._active import ActHandler, ActPoint, ActSceneObject
+from ._act_style import ActObjectStyle, ActPointStyle
 from ._app import VisualizerApp
 from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
 from ._figure import FigureConfig
+from ._interaction import (
+    Camera,
+    ClickEvent,
+    DragEvent,
+    DragMode,
+    Handler,
+    InteractionConfig,
+    InteractionEventType,
+    InteractionHandlerRegistry,
+    InteractionTrigger,
+    ModifierKey,
+    MouseButton,
+    ScrollEvent,
+)
 from ._label import Label
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
 from ._scene_handle import VizSceneHandle
@@ -64,25 +80,41 @@ from .scene import CameraConfig, SceneConfig
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
+    "ActHandler",
+    "ActObjectStyle",
+    "ActPoint",
+    "ActPointStyle",
+    "ActSceneObject",
     "AnimStyle",
     "AnnotationStyle",
     "Button",
+    "Camera",
     "CameraConfig",
+    "ClickEvent",
     "ControlEvent",
     "CircleStyle",
     "ControlGroup",
     "CrossHairPointStyle",
     "DilatorStyle",
     "DirectionStyle",
+    "DragEvent",
+    "DragMode",
     "Dropdown",
     "FigureConfig",
     "FigureStyle",
     "GeneralRotorStyle",
+    "Handler",
     "HPointStyle",
+    "InteractionConfig",
+    "InteractionEventType",
+    "InteractionHandlerRegistry",
+    "InteractionTrigger",
     "InversionStyle",
     "Label",
     "LabelStyle",
     "LineStyle",
+    "ModifierKey",
+    "MouseButton",
     "MotorStyle",
     "ObjVizStyle",
     "PlaneStyle",
@@ -96,6 +128,7 @@ __all__ = [
     "SceneConfig",
     "SceneEntity",
     "SceneExporter",
+    "ScrollEvent",
     "Slider",
     "SpaceStyle",
     "SphereStyle",

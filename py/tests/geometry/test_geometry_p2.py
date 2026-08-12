@@ -100,7 +100,7 @@ from pytanga.geometry.operators import Dilator, Inversion, Motor, Translator
     "entity_cls,args",
     [
         (Sphere, (Point(0, 0, 0), 1.0)),
-        (Circle, (Point(0, 0, 0), Direction(0, 0, 1), 1.0)),
+        (Circle, (Point(0, 0, 0), 1.0, Direction(0, 0, 1))),
         (PointPair, (Point(0, 0, 0), Point(1, 0, 0))),
         (HPoint, (Point(0, 0, 0),)),
     ],

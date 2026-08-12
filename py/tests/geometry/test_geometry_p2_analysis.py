@@ -75,7 +75,7 @@ def test_entity_line_opns_round_trip(b):
     the two point factors.
     """
     direction = Direction(1, 2, 0)
-    unit = direction.norm()
+    unit = direction.normalized()
     pt = Point(1, 2, 0)
     mv = create_entity(b, Line(pt, direction))
     r = analyze_entity(mv, opns=True)
@@ -267,7 +267,7 @@ from pytanga.geometry.operators import (
     "entity_cls,args",
     [
         (Sphere, (Point(0, 0, 0), 1.0)),
-        (Circle, (Point(0, 0, 0), Direction(0, 0, 1), 1.0)),
+        (Circle, (Point(0, 0, 0), 1.0, Direction(0, 0, 1))),
         (PointPair, (Point(0, 0, 0), Point(1, 0, 0))),
         (HPoint, (Point(0, 0, 0),)),
     ],

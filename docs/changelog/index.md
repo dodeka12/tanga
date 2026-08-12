@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.8.0] — 2026-08-12
+
+### New Features
+- Interactive 3D object manipulation with drag, click, scroll events via WebSocket
+- `ActSceneObject` and `ActPoint` — self-registering interactive entities
+- `ActObjectStyle` / `ActPointStyle` with hover visual feedback
+- `set_interaction()` / `on_interaction()` API on `Visualizer` and `VizSceneHandle`
+- Per-trigger `DragMode` for constrained-plane dragging with modifier keys
+- Drag-move coalescing on the backend
+
+### Breaking Changes
+- `Circle` parameter order changed to `center, radius, normal, is_imaginary`
+
+### Doc Changes
+- Added `object-interaction.md` and active-elements documentation
+- Added `viz-interact/` planning documents to `dev/todos/`
+- Added `demo_drag_point.py` and `demo_act_point.py` examples
+
+→ [Full changelog](2026-08-12_4dcfd2d.md)
+
 ## [0.5.3] — 2026-08-10
 
 ### New Features

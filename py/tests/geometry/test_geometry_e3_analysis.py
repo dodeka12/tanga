@@ -63,7 +63,7 @@ def test_entity_plane_opns_round_trip(b):
     after analysis.  Sign may flip (±n describe the same plane).
     """
     normal = Direction(1, 2, 3)
-    unit = normal.norm()
+    unit = normal.normalized()
     plane = Plane(point=Point(0, 0, 0), normal=normal)
     mv = create_entity(b, plane, opns=True)
     r = analyze_entity(mv, opns=True)
@@ -336,7 +336,7 @@ from pytanga.geometry.operators import (
     "entity_cls,args",
     [
         (Sphere, (Point(0, 0, 0), 1.0)),
-        (Circle, (Point(0, 0, 0), Direction(0, 0, 1), 1.0)),
+        (Circle, (Point(0, 0, 0), 1.0, Direction(0, 0, 1))),
         (PointPair, (Point(0, 0, 0), Point(1, 1, 1))),
         (HPoint, (Point(0, 0, 0),)),
     ],

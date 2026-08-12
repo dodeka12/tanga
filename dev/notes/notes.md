@@ -7,7 +7,10 @@
 
 # features:
 
-- imlement operator functions for multivectors that (mostly) fit the galgebra definitions.
+- improve defining viewable area and camera for visualizer startup and also changing camera.
+- add animated camera movements that can be set and triggered from the python side.
+
+- (ok) implement operator functions for multivectors that (mostly) fit the galgebra definitions.
 - allow picking out all elements of a specific grade from an MV by using round brackets like a(2) to get all grade 2 elements.
 
 - add function to get E3 representative vector.

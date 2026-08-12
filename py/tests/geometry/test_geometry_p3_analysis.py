@@ -76,7 +76,7 @@ def test_entity_line_opns_round_trip(b):
     the two point factors.
     """
     direction = Direction(1, 2, 0)
-    unit = direction.norm()
+    unit = direction.normalized()
     pt = Point(1, 2, 3)
     mv = create_entity(b, Line(pt, direction))
     r = analyze_entity(mv, opns=True)
@@ -104,7 +104,7 @@ def test_entity_line_opns_round_trip(b):
 def test_entity_plane_opns_round_trip(b):
     """E4: create Plane(point=(3,-2,1), normal=(1,3,0)) → analyze → assert."""
     normal = Direction(1, 3, 0)
-    unit = normal.norm()
+    unit = normal.normalized()
     pt = Point(3, -2, 1)
     mv = create_entity(b, Plane(pt, normal))
     r = analyze_entity(mv, opns=True)
@@ -366,7 +366,7 @@ from pytanga.geometry.operators import Dilator, GeneralRotor, Inversion, Motor, 
     "entity_cls,args",
     [
         (Sphere, (Point(0, 0, 0), 1.0)),
-        (Circle, (Point(0, 0, 0), Direction(0, 0, 1), 1.0)),
+        (Circle, (Point(0, 0, 0), 1.0, Direction(0, 0, 1))),
         (PointPair, (Point(0, 0, 0), Point(1, 1, 1))),
         (HPoint, (Point(0, 0, 0),)),
     ],

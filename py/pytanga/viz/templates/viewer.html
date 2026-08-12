@@ -146,6 +146,40 @@
                 }
                 if (_slowNotice) { _slowNotice.remove(); _slowNotice = null; }
                 if (ESSENTIAL_FAILED) {
+                    // Auto-fallback: if we just failed on jsdelivr, silently
+                    // retry with unpkg.  Only report failure if both CDNs fail.
+                    if (window.__tanga_cdn !== 'unpkg') {
+                        var params = new URLSearchParams(location.search);
+                        params.set('cdn', 'unpkg');
+                        location.search = params.toString();
+                        return;  // never show banner on first failure
+                    }
+
+                    // Both CDNs failed — show countdown banner, then report to server
+                    var COUNTDOWN_SECS = 10;
+                    var _reported = false;
+
+                    function _sendError() {
+                        if (_reported) return; _reported = true;
+                        try {
+                            var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                            var ws = new WebSocket(protocol + '//' + location.host + '/ws');
+                            ws.onopen = function () {
+                                var pageToken = window.__tanga_page_token
+                                    || new URLSearchParams(window.location.search).get('token');
+                                ws.send(JSON.stringify({
+                                    type: 'ready',
+                                    scene: '',
+                                    error: 'cdn_failure',
+                                    error_msg: 'Failed to load Three.js from both jsdelivr '
+                                        + 'and unpkg CDNs. Check internet, firewall, or proxy.',
+                                    page_token: pageToken || undefined
+                                }));
+                                ws.close();
+                            };
+                        } catch (_) {}
+                    }
+
                     var banner = document.createElement('div');
                     banner.style.position = 'fixed';
                     banner.style.top = '0';
@@ -159,12 +193,58 @@
                     banner.style.padding = '12px 20px';
                     banner.style.textAlign = 'center';
                     banner.style.lineHeight = '1.5';
-                    banner.innerHTML =
-                        '<strong>Failed to load Three.js.</strong> ' +
-                        'The 3D viewer cannot start. Please check your internet connection, ' +
-                        'firewall, or corporate proxy settings. Three.js loads from CDN ' +
-                        '(cdn.jsdelivr.net).';
+
+                    var _countdownEl = document.createElement('span');
+                    _countdownEl.style.fontWeight = 'bold';
+
+                    function _updateBanner() {
+                        banner.innerHTML = '';
+                        var txt = document.createTextNode(
+                            'Failed to load Three.js from both jsdelivr.net and unpkg.com. '
+                            + 'Check internet, firewall, or proxy settings. '
+                        );
+                        banner.appendChild(txt);
+                        if (COUNTDOWN_SECS > 0) {
+                            banner.appendChild(document.createTextNode(
+                                'Reporting in '
+                            ));
+                            _countdownEl.textContent = COUNTDOWN_SECS + 's';
+                            banner.appendChild(_countdownEl);
+                            banner.appendChild(document.createTextNode('…'));
+
+                            var retry = document.createElement('button');
+                            retry.textContent = 'Retry now';
+                            retry.style.marginLeft = '12px';
+                            retry.style.padding = '4px 12px';
+                            retry.style.background = '#fff';
+                            retry.style.color = '#cc2222';
+                            retry.style.border = 'none';
+                            retry.style.borderRadius = '3px';
+                            retry.style.cursor = 'pointer';
+                            retry.style.fontWeight = 'bold';
+                            retry.onclick = function () { location.reload(); };
+                            banner.appendChild(retry);
+                        }
+                    }
+
+                    _updateBanner();
                     document.body.insertBefore(banner, document.body.firstChild);
+
+                    // Countdown
+                    var _timer = setInterval(function () {
+                        COUNTDOWN_SECS--;
+                        if (COUNTDOWN_SECS <= 0) {
+                            clearInterval(_timer);
+                            _countdownEl.textContent = '';
+                            _sendError();
+                            _updateBanner();
+                        } else {
+                            _countdownEl.textContent = COUNTDOWN_SECS + 's';
+                        }
+                    }, 1000);
+
+                    // Also retry button that immediately reports + allows manual retry
+                    // (handled by _sendError which is idempotent)
                 }
                 if (OPTIONAL_MISSING.length > 0) {
                     var warning = document.createElement('div');
@@ -197,25 +277,36 @@
         <div id="status" class="disconnected"></div>
     </div>
 
-    <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
-    }
-  }
-  </script>
+        <script>
+        // Choose CDN based on ?cdn= query param (fallback support)
+        var _cdn = new URLSearchParams(location.search).get('cdn');
+        var _threeBase = _cdn === 'unpkg'
+            ? 'https://unpkg.com/three@0.168.0'
+            : 'https://cdn.jsdelivr.net/npm/three@0.168.0';
+        window.__tanga_cdn = _cdn || 'jsdelivr';
+        document.write(
+            '<script type="importmap">' +
+            '{"imports":{"three":"' + _threeBase + '/build/three.module.js",' +
+            '"three/addons/":"' + _threeBase + '/examples/jsm/"}}' +
+            '<'+'/script>'
+        );
+    </script>
 
-    <!-- Markdown rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-    <!-- KaTeX for math formulas -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
-
-    <!-- html2canvas for DOM overlay capture (title, annotation) -->
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        (function() {
+            var isUnpkg = window.__tanga_cdn === 'unpkg';
+            var cdn = isUnpkg ? 'https://unpkg.com' : 'https://cdn.jsdelivr.net/npm';
+            // unpkg uses {pkg}@{ver}/{file}, jsdelivr uses {pkg}/{file}
+            function url(pkg, file) {
+                return isUnpkg ? (cdn + '/' + pkg + '/' + file) : (cdn + '/' + pkg.split('@')[0] + '/' + file);
+            }
+            document.write('<script src="' + url('marked@12.0.2', 'marked.min.js') + '"><' + '/script>');
+            document.write('<link rel="stylesheet" href="' + url('katex@0.16.11', 'dist/katex.min.css') + '">');
+            document.write('<script src="' + url('katex@0.16.11', 'dist/katex.min.js') + '"><' + '/script>');
+            document.write('<script src="' + url('katex@0.16.11', 'dist/contrib/auto-render.min.js') + '"><' + '/script>');
+            document.write('<script src="' + url('html2canvas@1.4.1', 'dist/html2canvas.min.js') + '"><' + '/script>');
+        })();
+    </script>
 
     <script type="module" src="viewer.js"></script>
     <script type="module" src="controls-panel.js"></script>

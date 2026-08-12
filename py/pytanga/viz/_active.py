@@ -1,0 +1,296 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""Active scene objects — self-registering interactive entities.
+
+Provides :class:`ActSceneObject` (base class) and :class:`ActPoint`
+for creating interactive 3D objects that register their own interaction
+handlers with the visualizer.
+
+Usage::
+
+    from pytanga.viz import Visualizer
+    from pytanga.viz._active import ActPoint
+    from pytanga.geometry import Point
+
+    viz = Visualizer()
+    ap = ActPoint(1, 2, 3)
+    viz.add(ap, color="#ff4444", style=PointStyle(size=0.15))
+    viz.run()
+"""
+
+from __future__ import annotations
+
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
+
+from pytanga.geometry import Point
+
+from ._act_style import ActPointStyle
+from ._interaction import (
+    DragEvent,
+    DragMode,
+    InteractionConfig,
+    InteractionEventType,
+    InteractionTrigger,
+    ModifierKey,
+    MouseButton,
+)
+
+if TYPE_CHECKING:
+    from ._scene_handle import VizSceneHandle
+
+# ── Handler type ───────────────────────────────────────────────
+
+ActHandler = Callable[[DragEvent, "ActSceneObject"], Awaitable[bool]]
+"""Custom handler signature for active scene objects.
+
+Receives the drag event and the :class:`ActSceneObject` instance.  Must
+return ``True`` if it fully handled the event (including flush), or
+``False`` to let the default behaviour run (move & flush).
+"""
+
+
+# ── Default trigger helpers ─────────────────────────────────────
+
+def _default_drag_triggers(button: MouseButton) -> list[InteractionTrigger]:
+    """Standard four drag-mode triggers for a single mouse button.
+
+    * No modifier → view plane
+    * Shift → XY plane
+    * Ctrl → XZ plane
+    * Ctrl+Shift → YZ plane
+    """
+    return [
+        InteractionTrigger(
+            event_type=InteractionEventType.DRAG,
+            mouse_button=button,
+            drag_mode=DragMode.VIEW_PLANE,
+        ),
+        InteractionTrigger(
+            event_type=InteractionEventType.DRAG,
+            mouse_button=button,
+            modifiers=frozenset({ModifierKey.SHIFT}),
+            drag_mode=DragMode.XY_PLANE,
+        ),
+        InteractionTrigger(
+            event_type=InteractionEventType.DRAG,
+            mouse_button=button,
+            modifiers=frozenset({ModifierKey.CTRL}),
+            drag_mode=DragMode.XZ_PLANE,
+        ),
+        InteractionTrigger(
+            event_type=InteractionEventType.DRAG,
+            mouse_button=button,
+            modifiers=frozenset({ModifierKey.CTRL, ModifierKey.SHIFT}),
+            drag_mode=DragMode.YZ_PLANE,
+        ),
+    ]
+
+
+# ── ActSceneObject ─────────────────────────────────────────────
+
+
+class ActSceneObject:
+    """Base class for interactive scene objects.
+
+    Subclasses must define the :attr:`entity` property (the geometry
+    entity rendered in the scene) and :attr:`interaction_config`
+    (the triggers that activate interaction).
+
+    The visualizer calls :meth:`_init` after the entity is added to
+    the scene, giving the object access to its :class:`VizSceneHandle`
+    and generated entity ID.
+    """
+
+    # ── Subclass contract ──────────────────────────────────
+
+    @property
+    def entity(self) -> Any:
+        """The geometry entity rendered in the scene (Point, Sphere, …)."""
+        raise NotImplementedError
+
+    @property
+    def interaction_config(self) -> InteractionConfig:
+        """Triggers that make this entity interactive."""
+        raise NotImplementedError
+
+    # ── Managed state ──────────────────────────────────────
+
+    def __init__(self, *, handler: ActHandler | None = None) -> None:
+        self._handler: ActHandler | None = handler
+        self._viz_handle: VizSceneHandle | None = None
+        self._entity_id: str = ""
+
+    # ── Initialization (called by Visualizer) ──────────────
+
+    def _init(self, viz_handle: VizSceneHandle, entity_id: str) -> None:
+        """Bind this active object to a scene handle and entity ID.
+
+        Called automatically by :meth:`Visualizer.add` after the
+        underlying entity is added to the scene.
+        """
+        self._viz_handle = viz_handle
+        self._entity_id = entity_id
+        self._register_interaction()
+
+    # ── Interaction registration ───────────────────────────
+
+    def _register_interaction(self) -> None:
+        """Register interaction config and handlers with the scene.
+
+        Iterates over :attr:`interaction_config.triggers` and registers
+        a handler for ``DRAG_MOVE`` (the per-frame event).  Calls
+        :meth:`_on_drag` for each drag-move event.
+        """
+        if self._viz_handle is None:
+            return
+        cfg = self.interaction_config
+        self._viz_handle.set_interaction(self._entity_id, cfg)
+        self._viz_handle.on_interaction(
+            self._entity_id, InteractionEventType.DRAG_MOVE, self._on_drag
+        )
+
+    # ── Default drag handler ───────────────────────────────
+
+    async def _on_drag(self, event: DragEvent) -> None:
+        """Default drag handler.
+
+        1. If a custom handler is set → call it.
+           * Returns ``True`` → nothing more (handler did its own flush).
+           * Returns ``False`` → continue with default behaviour.
+        2. Replace the position of the geometry entity with
+           ``event.world_position``.
+        3. Call :meth:`update` to push the change to the scene.
+        4. Call :meth:`flush` to send the update to the frontend.
+        """
+        if self._handler is not None:
+            handled = await self._handler(event, self)
+            if handled:
+                return
+
+        self._move_to(event.world_position)
+        self.update()
+        self.flush()
+
+    def _move_to(self, pos: Point) -> None:
+        """Update the internal position.  Override in subclasses."""
+        raise NotImplementedError
+
+    # ── Helpers ────────────────────────────────────────────
+
+    @property
+    def entity_id(self) -> str:
+        """The scene entity ID assigned by the visualizer."""
+        return self._entity_id
+
+    @property
+    def viz_handle(self) -> VizSceneHandle | None:
+        """The :class:`VizSceneHandle` that owns this object."""
+        return self._viz_handle
+
+    def update(self) -> None:
+        """Push current :attr:`entity` geometry to the scene."""
+        if self._viz_handle is not None:
+            self._viz_handle.update_entity(self._entity_id, self.entity)
+
+    def flush(self) -> None:
+        """Flush scene updates to the frontend."""
+        if self._viz_handle is not None:
+            self._viz_handle.flush()
+
+
+# ── ActPoint ───────────────────────────────────────────────────
+
+
+class ActPoint(ActSceneObject):
+    """An interactive draggable point.
+
+    Creates a :class:`Point` entity with four standard drag-mode triggers
+    (view-plane, XY, XZ, YZ) on the left mouse button.
+
+    The point's visual style (colour, size, opacity) is set via the
+    :meth:`Visualizer.add` call, just like any other geometry entity::
+
+        ap = ActPoint(0, 0, 2)
+        viz.add(ap, color="#ff4444", style=PointStyle(size=0.15))
+
+    Args:
+        x: X coordinate or a :class:`Point` instance.  When a ``Point``
+            is given, *y* and *z* are ignored.
+        y: Y coordinate (default ``0.0``).  Ignored when *x* is a ``Point``.
+        z: Z coordinate (default ``0.0``).  Ignored when *x* is a ``Point``.
+        act_style: Optional :class:`~pytanga.viz._act_style.ActPointStyle`
+            controlling hover highlighting and other interactive feedback.
+        handler: Optional async callback invoked before the default
+            point-movement logic.  Signature:
+            ``async def handler(event: DragEvent, ap: ActPoint) -> bool``.
+            Return ``True`` to fully handle the event (no default
+            movement or flush), or ``False`` to let ``ActPoint`` move
+            the point and flush.
+    """
+
+    def __init__(
+        self,
+        x: float | Point,
+        y: float = 0.0,
+        z: float = 0.0,
+        *,
+        act_style: ActPointStyle | None = None,
+        handler: ActHandler | None = None,
+    ) -> None:
+        super().__init__(handler=handler)
+        if isinstance(x, Point):
+            self._point = x
+        else:
+            self._point = Point(float(x), float(y), float(z))
+        self._act_style = act_style
+        self._resolved_style: ActPointStyle | None = None
+
+    # ── Init (called by Visualizer) ────────────────────────
+
+    def _init(self, viz_handle: VizSceneHandle, entity_id: str) -> None:
+        """Resolve style from visualizer default, then register handlers."""
+        if self._act_style is None:
+            self._resolved_style = viz_handle.default_act_point_style
+        else:
+            default = viz_handle.default_act_point_style
+            self._resolved_style = ActPointStyle(
+                hover_emissive=self._act_style.hover_emissive
+                if self._act_style.hover_emissive is not None
+                else default.hover_emissive,
+                hover_scale=self._act_style.hover_scale
+                if self._act_style.hover_scale is not None
+                else default.hover_scale,
+            )
+        super()._init(viz_handle, entity_id)
+
+    # ── Properties ─────────────────────────────────────────
+
+    @property
+    def point(self) -> Point:
+        """Current position."""
+        return self._point
+
+    @property
+    def entity(self) -> Point:
+        """The underlying :class:`Point` geometry entity."""
+        return self._point
+
+    @property
+    def interaction_config(self) -> InteractionConfig:
+        """Standard drag triggers with hover highlighting."""
+        s = self._resolved_style or ActPointStyle()
+        return InteractionConfig(
+            enabled=True,
+            triggers=_default_drag_triggers(MouseButton.LEFT),
+            throttle_ms=40,
+            hover_emissive=s.hover_emissive,
+            hover_scale=s.hover_scale,
+        )
+
+    # ── Default movement ───────────────────────────────────
+
+    def _move_to(self, pos: Point) -> None:
+        """Set the point position to *pos*."""
+        self._point = pos

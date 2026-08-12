@@ -53,6 +53,8 @@ viz.display_row(
 | [Animation](animation.md) | Frame streaming, keyframe tweening (`animate_to`), scene-aware `Timeline` sequencer |
 | [Export & Capture](export.md) | `SceneExporter`: HTML/glTF/figure export, screenshots, video capture, animated HTML |
 | [Jupyter Notebooks](jupyter.md) | Auto-detection, inline iframe, multi-scene `display_row()`, `start()`/`flush()`/`stop()` pattern |
+| [Object Interaction](object-interaction.md) | Pointer-based 3D object interaction: click, drag, scroll; `Camera` projection; event dispatch |
+| [Active Elements](active-elements/index.md) | Simplified high-level API: `ActPoint` and future self-registering interactive entities |
 | [Interactive Controls](interactive.md) | `VisualizerApp` base class, sliders, dropdowns, buttons, groups, lifecycle hooks |
 
 ## Example Scripts
@@ -82,6 +84,8 @@ uv run python py/examples/viz/<script>.py
 | [`demo_texture_label_sphere.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_sphere.py) | Plain text, KaTeX, and mixed content on spheres |
 | [`demo_texture_label_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_plane.py) | Align modes (stretch/fit/repeat) and mixed content on planes |
 | [`two_spheres_interact.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_spheres_interact.py) | `VisualizerApp` with IPNS spheres, slider, dropdown, reset button |
+| [`demo_drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_drag_point.py) | Interactive point dragging with four constraint planes (low-level API) |
+| [`demo_act_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_act_point.py) | Interactive point dragging with `ActPoint` convenience class |
 | [`two_body_gravity.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_body_gravity.py) | Gravitational two-body simulation using `Point`/`Direction` arithmetic |
 
 ## Dependencies

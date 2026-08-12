@@ -90,7 +90,7 @@ def test_create_sphere_ipns_formula(b):
 
 def test_create_circle_opns(b):
     """create_circle delegates to create_sphere in N2."""
-    mv = create_entity(b, Circle(Point(0, 0, 0), Direction(0, 0, 1), 2.0))
+    mv = create_entity(b, Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1)))
     r = analyze_entity(mv, opns=True)
     assert isinstance(r, Circle)
     assert r.radius == pytest.approx(2.0, abs=1e-4)

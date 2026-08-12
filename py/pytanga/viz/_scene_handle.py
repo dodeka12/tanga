@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
+from ._act_style import ActPointStyle
 from ._jupyter import _JupyterDisplayMixin
 from ._timeline import Timeline
 from ._types import SceneEntity
@@ -93,6 +94,11 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def default_annotation_style(self) -> AnnotationStyle:
         """The global default ``AnnotationStyle`` instance (shared across scenes)."""
         return self._viz.default_annotation_style
+
+    @property
+    def default_act_point_style(self) -> ActPointStyle:
+        """The global default ``ActPointStyle`` instance (shared across scenes)."""
+        return self._viz.default_act_point_style
 
     # ── Entity management ───────────────────────────────────
 
@@ -322,6 +328,18 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def clear_controls(self) -> None:
         """Remove all controls and groups from this scene."""
         self._viz._clear_scene_controls(self._name)
+
+    # ── Object Interaction ───────────────────────────────────
+
+    def set_interaction(self, object_id: str, config: Any) -> None:
+        """Set the interaction configuration for an entity in this scene."""
+        self._viz.set_interaction(object_id, config, scene_name=self._name)
+
+    def on_interaction(
+        self, object_id: str, event_type: Any, handler: Any
+    ) -> None:
+        """Register an async handler for interaction events on an entity."""
+        self._viz.on_interaction(object_id, event_type, handler, scene_name=self._name)
 
     # ── Navigation ───────────────────────────────────────────
 

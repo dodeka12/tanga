@@ -83,7 +83,7 @@ for _frame in range(TOTAL_FRAMES):
     r_12: Direction = pos_2 - pos_1
     dist_12 = r_12.mag()
     # Unit direction from 1 toward 2
-    r_hat_12: Direction = r_12.norm()
+    r_hat_12: Direction = r_12.normalized()
 
     # Force magnitude: F = G * m1 * m2 / r²
     force_mag = G * mass_1 * mass_2 / (dist_12 * dist_12)

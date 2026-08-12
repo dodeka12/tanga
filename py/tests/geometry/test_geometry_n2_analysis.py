@@ -112,7 +112,7 @@ def test_entity_hpoint_opns_round_trip(b):
 def test_entity_line_opns_round_trip(b):
     """E5: create Line(origin=(1,2,0), dir=(1,2,0)) → analyze → assert."""
     direction = Direction(1, 2, 0)
-    unit = direction.norm()
+    unit = direction.normalized()
     pt = Point(1, 2, 0)
     mv = create_entity(b, Line(pt, direction))
     r = analyze_entity(mv, opns=True)
@@ -133,7 +133,7 @@ def test_entity_line_opns_round_trip(b):
 
 def test_entity_circle_opns_round_trip(b):
     """E6: create Circle(center=(1,0,0), normal=(0,0,1), radius=2.5) → analyze."""
-    mv = create_entity(b, Circle(Point(1, 0, 0), Direction(0, 0, 1), 2.5))
+    mv = create_entity(b, Circle(Point(1, 0, 0), 2.5, Direction(0, 0, 1)))
     r = analyze_entity(mv, opns=True)
     assert isinstance(r, Circle), f"Got {type(r).__name__}"
     assert not r.is_imaginary
@@ -227,7 +227,7 @@ def test_operator_reflection_line_round_trip(b):
     r = analyze_operator(mv)
     assert isinstance(r, ReflectionLine), f"Got {type(r).__name__}"
     # Direction is unit-normalized with correct sign
-    unit = Direction(1, 2, 0).norm()
+    unit = Direction(1, 2, 0).normalized()
     assert r.line.direction.x == pytest.approx(unit.x)
     assert r.line.direction.y == pytest.approx(unit.y)
     assert r.line.direction.z == pytest.approx(0)
