@@ -143,7 +143,7 @@ def test_entity_circle_opns_round_trip(b):
     """E6: create Circle(center=(1,0,2), normal=(0,1,0), radius=2.5) → analyze."""
     normal = Direction(0, 1, 0)
     unit = normal.normalized()
-    mv = create_entity(b, Circle(Point(1, 0, 2), normal, 2.5))
+    mv = create_entity(b, Circle(Point(1, 0, 2), 2.5, normal))
     r = analyze_entity(mv, opns=True)
     assert isinstance(r, Circle), f"Got {type(r).__name__}"
     assert not r.is_imaginary

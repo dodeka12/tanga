@@ -135,7 +135,7 @@ entities = [
     HPoint(Point(1, 0, 0)),
     PointPair(Point(-1, 0, 0), Point(1, 0, 0)),
     Line(Point(0, 0, 0), Direction(1, 0, 0)),
-    Circle(Point(0, 0, 0), Direction(0, 0, 1), 2.0),
+    Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1)),
     Plane(Point(0, 0, 3), Direction(0, 0, 1)),
     Sphere(Point(1, 0, 0), 3.0),
     Space(),

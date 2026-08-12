@@ -102,7 +102,7 @@ def test_create_plane_ipns_round_trip(b):
 
 
 def test_create_circle_opns(b):
-    mv = create_entity(b, Circle(Point(0, 0, 0), Direction(0, 0, 1), 2.0))
+    mv = create_entity(b, Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1)))
     r = analyze_entity(mv, opns=True)
     assert isinstance(r, Circle)
     assert r.radius == pytest.approx(2.0, abs=1e-4)
@@ -243,7 +243,7 @@ def test_imag_point_pair_via_circle_dual(b):
 
 def test_imag_point_pair_create_entity(b):
     """Imag point pair via PointPair with is_imaginary flag."""
-    c = create_entity(b, Circle(Point(0, 0, 0), Direction(0, 0, 1), 2.0), opns=True)
+    c = create_entity(b, Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1)), opns=True)
     mv = c.dual()
     assert mv.grades
 

@@ -371,27 +371,27 @@ class Circle:
     """
 
     center: Point
-    normal: Direction
     radius: float
+    normal: Direction | None = None
     is_imaginary: bool = False
 
     def __init__(
         self,
         center: Point,
+        radius: float,
         normal: Direction | None = None,
-        radius: float = 0.0,
         is_imaginary: bool = False,
     ):
         if normal is None:
             normal = Direction(0.0, 0.0, 1.0)
         object.__setattr__(self, "center", center)
-        object.__setattr__(self, "normal", normal)
         object.__setattr__(self, "radius", float(radius))
+        object.__setattr__(self, "normal", normal)
         object.__setattr__(self, "is_imaginary", is_imaginary)
 
     def __repr__(self) -> str:
         prefix = "Imag" if self.is_imaginary else ""
-        return f"{prefix}Circle(c={self.center}, n={self.normal}, r={self.radius:.2f})"
+        return f"{prefix}Circle(c={self.center}, r={self.radius:.2f}, n={self.normal})"
 
 
 @dataclass(frozen=True)
@@ -411,11 +411,11 @@ class ImagCircle(Circle):
     def __init__(
         self,
         center: Point,
+        radius: float,
         normal: Direction | None = None,
-        radius: float = 0.0,
         is_imaginary: bool = True,
     ):
-        super().__init__(center, normal, radius, is_imaginary)
+        super().__init__(center, radius, normal, is_imaginary)
 
 
 @dataclass(frozen=True)

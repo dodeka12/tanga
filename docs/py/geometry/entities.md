@@ -180,8 +180,8 @@ from pytanga.geometry import Circle, Point, Direction
 
 circle = Circle(
     center=Point(0, 0, 0),
-    normal=Direction(0, 0, 1),
     radius=2.0,
+    normal=Direction(0, 0, 1),
 )
 ```
 
@@ -200,8 +200,8 @@ from pytanga.geometry import ImagCircle, Point, Direction
 
 ic = ImagCircle(
     center=Point(0, 0, 0),
-    normal=Direction(0, 0, 1),
     radius=2.0,
+    normal=Direction(0, 0, 1),
 )
 ```
 
