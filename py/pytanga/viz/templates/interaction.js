@@ -37,8 +37,88 @@ let _dragStarted = false;
 // Click detection state
 const _clickState = new Map();
 
-// Hover tracking (for scroll target detection)
+// Hover tracking and visual feedback
 let _hoveredObjectId = null;
+const _hoverState = new Map();  // objectId → { originalEmissive, originalScale }
+
+// ── Hover effect helpers ───────────────────────────────────────
+
+function _saveMeshState(mesh) {
+    const state = {};
+    mesh.traverse(child => {
+        if (child.material) {
+            if (!state._materials) state._materials = [];
+            if (Array.isArray(child.material)) {
+                state._materials.push(...child.material.map(m => ({
+                    ref: m,
+                    emissive: m.emissive ? m.emissive.getHex() : 0,
+                    emissiveIsSet: m.emissive ? true : false,
+                })));
+            } else {
+                state._materials.push({
+                    ref: child.material,
+                    emissive: child.material.emissive ? child.material.emissive.getHex() : 0,
+                    emissiveIsSet: child.material.emissive ? true : false,
+                });
+            }
+        }
+    });
+    state._originalScale = mesh.scale.clone();
+    return state;
+}
+
+function _applyHover(mesh, config) {
+    const emissiveColor = config.hover_emissive;
+    const scale = config.hover_scale;
+
+    // Save original state
+    const state = _saveMeshState(mesh);
+    _hoverState.set(mesh.uuid, state);
+
+    // Apply emissive
+    if (emissiveColor) {
+        const c = new THREE.Color(emissiveColor);
+        mesh.traverse(child => {
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => {
+                        if (m.emissive) m.emissive.copy(c);
+                    });
+                } else if (child.material.emissive) {
+                    child.material.emissive.copy(c);
+                }
+            }
+        });
+    }
+
+    // Apply scale
+    if (scale) {
+        mesh.scale.multiplyScalar(scale);
+    }
+
+    rendererDomElement.style.cursor = 'pointer';
+}
+
+function _resetHover(mesh) {
+    if (!mesh) return;
+    const state = _hoverState.get(mesh.uuid);
+    if (!state) return;
+
+    // Restore emissive
+    if (state._materials) {
+        state._materials.forEach(({ ref, emissive, emissiveIsSet }) => {
+            if (emissiveIsSet && ref.emissive) {
+                ref.emissive.setHex(emissive);
+            }
+        });
+    }
+
+    // Restore scale
+    mesh.scale.copy(state._originalScale);
+
+    _hoverState.delete(mesh.uuid);
+    rendererDomElement.style.cursor = '';
+}
 
 // Double-click timeout (ms)
 const DBLCLICK_TIMEOUT = 300;
@@ -401,7 +481,23 @@ function onPointerMove(event) {
     }
 
     const hit = getInteractiveHit(event);
-    _hoveredObjectId = hit ? hit.objectId : null;
+    const newHoveredId = hit ? hit.objectId : null;
+
+    if (newHoveredId !== _hoveredObjectId) {
+        // Reset previous hover
+        if (_hoveredObjectId) {
+            const prevObj = interactiveObjects.get(_hoveredObjectId);
+            if (prevObj && prevObj.mesh) _resetHover(prevObj.mesh);
+        }
+        // Apply new hover
+        if (newHoveredId) {
+            const newObj = interactiveObjects.get(newHoveredId);
+            if (newObj && newObj.mesh && newObj.config) {
+                _applyHover(newObj.mesh, newObj.config);
+            }
+        }
+        _hoveredObjectId = newHoveredId;
+    }
 }
 
 function onPointerUp(event) {

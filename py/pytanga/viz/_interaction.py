@@ -156,19 +156,30 @@ class InteractionConfig:
         throttle_ms: Minimum interval in milliseconds between consecutive
             events of the same type for the same object.  ``0`` disables
             throttling entirely.
+        hover_emissive: CSS colour string for emissive glow on hover
+            (e.g. ``"#ffff44"``).  ``None`` = no hover highlight.
+        hover_scale: Uniform scale multiplier on hover
+            (e.g. ``1.5``).  ``None`` = no hover scaling.
     """
 
     enabled: bool = False
     triggers: list[InteractionTrigger] = field(default_factory=list)
     throttle_ms: int = 50
+    hover_emissive: str | None = None
+    hover_scale: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to JSON-ready dict."""
-        return {
+        result: dict[str, Any] = {
             "enabled": self.enabled,
             "triggers": [t.to_dict() for t in self.triggers],
             "throttle_ms": self.throttle_ms,
         }
+        if self.hover_emissive is not None:
+            result["hover_emissive"] = self.hover_emissive
+        if self.hover_scale is not None:
+            result["hover_scale"] = self.hover_scale
+        return result
 
 
 # ── Matrix helpers ─────────────────────────────────────────────

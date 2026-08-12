@@ -18,9 +18,9 @@ Modifier keys switch the drag constraint plane::
     Ctrl+Shift   → YZ plane (x-locked)
 
 This demo uses :class:`ActPoint` which registers its own interaction
-handlers automatically.  A custom handler updates the projection lines
-on every drag move, then returns ``False`` to let :class:`ActPoint`
-move the point and flush.
+handlers automatically.  The point's visual style is set via the
+``viz.add()`` call.  Hover highlighting (emissive glow + scale) is
+applied automatically from the default ``ActPointStyle``.
 
 Usage::
 
@@ -74,9 +74,9 @@ async def main() -> None:
         _update_lines(p)
         return False  # let ActPoint do the default move + flush
 
-    # Create the interactive point — ActPoint registers its own handlers.
-    ap = ActPoint(Point(0, 0, 2), color="#ff4444", custom_handler=on_point_drag)
-    viz.add(ap)
+    # Create the interactive point — style is set via viz.add().
+    ap = ActPoint(0, 0, 2, handler=on_point_drag)
+    viz.add(ap, color="#ff4444")
 
     # Initial projection lines
     _update_lines(ap.point)

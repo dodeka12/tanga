@@ -24,6 +24,7 @@ Usage::
 """
 
 from ._active import ActHandler, ActPoint, ActSceneObject
+from ._act_style import ActObjectStyle, ActPointStyle
 from ._app import VisualizerApp
 from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
 from ._figure import FigureConfig
@@ -80,7 +81,9 @@ from .visualizer import Timeline, Visualizer
 
 __all__ = [
     "ActHandler",
+    "ActObjectStyle",
     "ActPoint",
+    "ActPointStyle",
     "ActSceneObject",
     "AnimStyle",
     "AnnotationStyle",

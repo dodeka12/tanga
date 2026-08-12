@@ -14,8 +14,8 @@ Usage::
     from pytanga.geometry import Point
 
     viz = Visualizer()
-    ap = ActPoint(Point(1, 2, 3), color="#ff4444")
-    viz.add(ap)
+    ap = ActPoint(1, 2, 3)
+    viz.add(ap, color="#ff4444", style=PointStyle(size=0.15))
     viz.run()
 """
 
@@ -24,8 +24,9 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
-from pytanga.geometry import Direction, Point
+from pytanga.geometry import Point
 
+from ._act_style import ActPointStyle
 from ._interaction import (
     DragEvent,
     DragMode,
@@ -50,7 +51,7 @@ return ``True`` if it fully handled the event (including flush), or
 """
 
 
-# ── Default triggers ───────────────────────────────────────────
+# ── Default trigger helpers ─────────────────────────────────────
 
 def _default_drag_triggers(button: MouseButton) -> list[InteractionTrigger]:
     """Standard four drag-mode triggers for a single mouse button.
@@ -87,6 +88,12 @@ def _default_drag_triggers(button: MouseButton) -> list[InteractionTrigger]:
     ]
 
 
+# ── Default hover constants ────────────────────────────────────
+
+_DEFAULT_HOVER_EMISSIVE = "#ffff44"
+_DEFAULT_HOVER_SCALE = 1.5
+
+
 # ── ActSceneObject ─────────────────────────────────────────────
 
 
@@ -114,14 +121,10 @@ class ActSceneObject:
         """Triggers that make this entity interactive."""
         raise NotImplementedError
 
-    # Override in subclasses if the default drag handler needs
-    # to be replaced entirely
-    _custom_handler: ActHandler | None = None
-
     # ── Managed state ──────────────────────────────────────
 
-    def __init__(self, *, custom_handler: ActHandler | None = None) -> None:
-        self._custom_handler = custom_handler
+    def __init__(self, *, handler: ActHandler | None = None) -> None:
+        self._handler: ActHandler | None = handler
         self._viz_handle: VizSceneHandle | None = None
         self._entity_id: str = ""
 
@@ -167,8 +170,8 @@ class ActSceneObject:
         3. Call :meth:`update` to push the change to the scene.
         4. Call :meth:`flush` to send the update to the frontend.
         """
-        if self._custom_handler is not None:
-            handled = await self._custom_handler(event, self)
+        if self._handler is not None:
+            handled = await self._handler(event, self)
             if handled:
                 return
 
@@ -212,13 +215,21 @@ class ActPoint(ActSceneObject):
     Creates a :class:`Point` entity with four standard drag-mode triggers
     (view-plane, XY, XZ, YZ) on the left mouse button.
 
+    The point's visual style (colour, size, opacity) is set via the
+    :meth:`Visualizer.add` call, just like any other geometry entity::
+
+        ap = ActPoint(0, 0, 2)
+        viz.add(ap, color="#ff4444", style=PointStyle(size=0.15))
+
     Args:
-        point: The initial position.
-        color: CSS colour string for the point (default ``"#ff4444"``).
-        size: Point size in world units (default ``0.2``).
-        opacity: Opacity (0–1, default ``1.0``).
-        custom_handler: Optional async callback invoked before the
-            default point-movement logic.  Signature:
+        x: X coordinate or a :class:`Point` instance.  When a ``Point``
+            is given, *y* and *z* are ignored.
+        y: Y coordinate (default ``0.0``).  Ignored when *x* is a ``Point``.
+        z: Z coordinate (default ``0.0``).  Ignored when *x* is a ``Point``.
+        act_style: Optional :class:`~pytanga.viz._act_style.ActPointStyle`
+            controlling hover highlighting and other interactive feedback.
+        handler: Optional async callback invoked before the default
+            point-movement logic.  Signature:
             ``async def handler(event: DragEvent, ap: ActPoint) -> bool``.
             Return ``True`` to fully handle the event (no default
             movement or flush), or ``False`` to let ``ActPoint`` move
@@ -227,18 +238,19 @@ class ActPoint(ActSceneObject):
 
     def __init__(
         self,
-        point: Point,
+        x: float | Point,
+        y: float = 0.0,
+        z: float = 0.0,
         *,
-        color: str | None = None,
-        size: float | None = None,
-        opacity: float | None = None,
-        custom_handler: ActHandler | None = None,
+        act_style: ActPointStyle | None = None,
+        handler: ActHandler | None = None,
     ) -> None:
-        super().__init__(custom_handler=custom_handler)
-        self._point = point
-        self._color = color
-        self._size = size
-        self._opacity = opacity
+        super().__init__(handler=handler)
+        if isinstance(x, Point):
+            self._point = x
+        else:
+            self._point = Point(float(x), float(y), float(z))
+        self._act_style = act_style
 
     # ── Properties ─────────────────────────────────────────
 
@@ -254,11 +266,21 @@ class ActPoint(ActSceneObject):
 
     @property
     def interaction_config(self) -> InteractionConfig:
-        """Standard drag triggers for a draggable point."""
+        """Standard drag triggers with optional hover highlighting."""
+        hover_emissive = _DEFAULT_HOVER_EMISSIVE
+        hover_scale = _DEFAULT_HOVER_SCALE
+        if self._act_style is not None:
+            if self._act_style.hover_emissive is not None:
+                hover_emissive = self._act_style.hover_emissive
+            if self._act_style.hover_scale is not None:
+                hover_scale = self._act_style.hover_scale
+
         return InteractionConfig(
             enabled=True,
             triggers=_default_drag_triggers(MouseButton.LEFT),
             throttle_ms=40,
+            hover_emissive=hover_emissive,
+            hover_scale=hover_scale,
         )
 
     # ── Default movement ───────────────────────────────────
@@ -266,17 +288,3 @@ class ActPoint(ActSceneObject):
     def _move_to(self, pos: Point) -> None:
         """Set the point position to *pos*."""
         self._point = pos
-
-    # ── Convenience properties for add() ────────────────────
-
-    @property
-    def _add_kwargs(self) -> dict[str, Any]:
-        """Keyword arguments to pass to ``scene.add()``."""
-        kwargs: dict[str, Any] = {}
-        if self._color is not None:
-            kwargs["color"] = self._color
-        if self._size is not None:
-            kwargs["size"] = self._size
-        if self._opacity is not None:
-            kwargs["opacity"] = self._opacity
-        return kwargs

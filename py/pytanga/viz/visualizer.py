@@ -298,10 +298,6 @@ class Visualizer(_JupyterDisplayMixin):
                 properties["opacity"] = float(opacity)
             if style is not None:
                 properties["style"] = style
-            # Merge in convenience kwargs from the active object (e.g. ActPoint._add_kwargs)
-            for k, v in getattr(obj, "_add_kwargs", {}).items():
-                if k not in properties and v is not None:
-                    properties[k] = v
             eid = scene.add(obj.entity, entity_id=entity_id, **properties)
             obj._init(VizSceneHandle(self, scene_name), eid)
             return eid
