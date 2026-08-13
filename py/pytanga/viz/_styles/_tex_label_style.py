@@ -71,16 +71,16 @@ class TextureLabelStyle:
     """
 
     text: str | None = None
-    math_mode: bool | None = False
+    math_mode: bool | None = None
     repeat_u: float | None = None
     repeat_v: float | None = None
     offset_u: float | None = None
     offset_v: float | None = None
     align: str | None = None
     background: str | None = None
-    resolution: int | None = 512
-    color: str | None = "#000000"
-    font_size: int | None = 48
+    resolution: int | None = None
+    color: str | None = None
+    font_size: int | None = None
     scale: float | None = None
     aspect: float | None = None
 

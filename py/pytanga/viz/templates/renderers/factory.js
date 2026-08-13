@@ -21,6 +21,8 @@ import { createReflectionPlane } from './operators/reflection_plane.js';
 import { createReflectionPoint } from './operators/reflection_point.js';
 import { createPointPath } from './point_path.js';
 import { createAxis } from './axis.js';
+import { createAxes2D } from './axes2d.js';
+import { createAxes3D } from './axes3d.js';
 import { createGrid } from './grid.js';
 import { tagEntity } from './utils.js';
 
@@ -98,6 +100,12 @@ export async function createEntityMesh(ent) {
 
         case 'Axis':
             mesh = createAxis(ent);
+            break;
+        case 'Axes2D':
+            mesh = createAxes2D(ent);
+            break;
+        case 'Axes3D':
+            mesh = createAxes3D(ent);
             break;
         case 'Grid':
             mesh = createGrid(ent);

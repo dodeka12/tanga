@@ -8,11 +8,11 @@ Run with:  uv run python py/examples/viz/demo_camera_config.py
 
 from pytanga.geometry import Direction, Plane, Point, Sphere
 from pytanga.viz import (
-    CameraConfig,
+    CameraConfig3d,
     PointStyle,
     SphereStyle,
     View2DConfig,
-    ViewPlaneConfig,
+    View3dConfig,
     Visualizer,
 )
 
@@ -30,7 +30,7 @@ viz1.run()
 print("\nScene 2: Explicit camera (top-down, narrow FOV)")
 viz2 = Visualizer(
     title="Tanga — Explicit Camera",
-    camera=CameraConfig(position=(0, 15, 0), target=(0, 0, 0), fov=30),
+    camera=CameraConfig3d(position=(0, 15, 0), target=(0, 0, 0), fov=30),
 )
 viz2.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
 viz2.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
@@ -42,7 +42,7 @@ viz2.run()
 print("\nScene 3: Partial camera — position set, target & FOV auto-computed")
 viz3 = Visualizer(
     title="Tanga — Partial Camera",
-    camera=CameraConfig(position=(10, 3, 0)),
+    camera=CameraConfig3d(position=(10, 3, 0)),
 )
 viz3.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
 viz3.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
@@ -50,33 +50,49 @@ viz3.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), 
 viz3.run()
 
 # ── Scene 4: 2D orthographic view via View2DConfig ─────────
-print("\nScene 4: View2DConfig — rectangle centred at (1, 2)")
+print("\nScene 4: View2DConfig — rectangle centred at (1, 2), letterboxed")
 viz4 = Visualizer(
-    title="Tanga — View2DConfig",
-    camera=CameraConfig(view_2d=View2DConfig(extent_x=4.0, extent_y=3.0, center=(1.0, 2.0))),
-    space_dim=2,
+    title="Tanga — View2DConfig (letterboxed)",
+    camera=View2DConfig(xmin=-1.0, xmax=3.0, ymin=0.5, ymax=3.5),
 )
 viz4.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
 viz4.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
 viz4.run()
 
-# ── Scene 5: 3D plane-based camera via ViewPlaneConfig ─────
-print("\nScene 5: ViewPlaneConfig — tilted virtual plane")
+# ── Scene 5: 2D stretch-to-fill via View2DConfig (uniform=False) ──
+print("\nScene 5: View2DConfig — long, thin plot stretched to fill")
 viz5 = Visualizer(
-    title="Tanga — ViewPlaneConfig",
-    camera=CameraConfig(
-        view_plane=ViewPlaneConfig(
-            point=(0.0, 0.0, 0.0),
-            normal=(0.5, 0.4, 1.0),
-            extent_u=6.0,
-            extent_v=5.0,
-            fov=45.0,
-        )
+    title="Tanga — View2DConfig (stretch-to-fill)",
+    camera=View2DConfig(
+        xmin=0.0,
+        xmax=100.0,
+        ymin=0.0,
+        ymax=2.0,
+        border_world=2.0,
+        border_px=30.0,
+        uniform=False,
     ),
 )
-viz5.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
-viz5.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
-viz5.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
+viz5.add(Point(10, 1, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+viz5.add(Point(50, 0.5, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
+viz5.add(Point(90, 1.5, 0), color="#4444ff", style=PointStyle(size=0.15), label="$P_3$")
 viz5.run()
+
+# ── Scene 6: 3D plane-based camera via View3dConfig ─────
+print("\nScene 6: View3dConfig — tilted virtual plane")
+viz6 = Visualizer(
+    title="Tanga — View3dConfig",
+    camera=View3dConfig(
+        point=(0.0, 0.0, 0.0),
+        normal=(0.5, 0.4, 1.0),
+        extent_u=6.0,
+        extent_v=5.0,
+        fov=45.0,
+    ),
+)
+viz6.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+viz6.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
+viz6.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
+viz6.run()
 
 print("\nAll scenes complete.")

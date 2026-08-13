@@ -68,8 +68,66 @@ class _StyleDict:
     def get(self, k: str | type, default: Any = None) -> Any:
         return self._mapping.get(self._key(k), default)
 
+    def merge(self, k: str | type, style: Any, *, deep: bool = True) -> None:
+        """Merge a (possibly partial) style onto the entry for ``k``.
+
+        Only the style's **non-``None``** fields are applied, so unspecified
+        fields keep their previous values.  If no entry exists yet for ``k``,
+        a copy of ``style`` is stored.
+
+        With ``deep=True`` (default), nested style-like objects (for example
+        ``wireframe_dash`` or ``texture_label``) are merged recursively using
+        the same non-``None`` rule.  With ``deep=False``, nested objects are
+        replaced wholesale when present.
+
+        ``k`` may be a string key (``"Sphere"``) or a class (``Sphere``).
+        """
+        key = self._key(k)
+        existing = self._mapping.get(key)
+        if existing is None:
+            self._mapping[key] = _copy_style(style)
+        else:
+            self._mapping[key] = _merge_style(existing, style, deep=deep)
+
     def __repr__(self) -> str:
         return f"_StyleDict({self._mapping!r})"
+
+
+def _copy_style(style: Any) -> Any:
+    """Return a shallow copy of a style instance."""
+    from copy import copy
+
+    return copy(style)
+
+
+def _is_mergeable(value: Any) -> bool:
+    """Return ``True`` for dataclass-style objects we can overlay via ``__dict__``."""
+    if isinstance(value, (str, int, float, bool, list, tuple, dict, type(None))):
+        return False
+    return hasattr(value, "__dict__")
+
+
+def _merge_style(base: Any, override: Any, *, deep: bool) -> Any:
+    """Overlay non-``None`` fields from ``override`` onto a copy of ``base``."""
+    from copy import copy
+
+    result = copy(base)
+    for field, value in override.__dict__.items():
+        if value is None:
+            continue
+        if deep:
+            existing_val = getattr(result, field, None)
+            if (
+                _is_mergeable(existing_val)
+                and _is_mergeable(value)
+                and type(existing_val) is type(value)
+            ):
+                setattr(result, field, _merge_style(existing_val, value, deep=True))
+            else:
+                setattr(result, field, value)
+        else:
+            setattr(result, field, value)
+    return result
 
 
 def _make_default_styles() -> _StyleDict:
@@ -123,31 +181,41 @@ def _make_default_annotation_style() -> "AnnotationStyle":
 
 
 def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:
-    """Return the per-kind label style overrides dict (all ``None`` initially)."""
-    return {
-        "Point": None,
-        "Direction": None,
-        "HPoint": None,
-        "PointPair": None,
-        "ImagPointPair": None,
-        "Line": None,
-        "Plane": None,
-        "Circle": None,
-        "ImagCircle": None,
-        "Sphere": None,
-        "ImagSphere": None,
-        "Space": None,
-        "ReflectionLine": None,
-        "ReflectionPlane": None,
-        "ReflectionPoint": None,
-        "Inversion": None,
-        "Rotor": None,
-        "Translator": None,
-        "Dilator": None,
-        "Motor": None,
-        "GeneralRotor": None,
-        "PointPath": None,
-    }
+    """Return per-kind label style overrides, seeded with copies of the default.
+
+    Every kind starts as a copy of the canonical default ``LabelStyle`` so
+    that ``merge`` / partial styles always have a fully-populated base to
+    build on.  The ``Visualizer`` resolution still applies the global
+    default first, so these copies only matter when a per-kind value is set.
+    """
+    from copy import copy
+
+    base = _make_default_label_style()
+    kinds = [
+        "Point",
+        "Direction",
+        "HPoint",
+        "PointPair",
+        "ImagPointPair",
+        "Line",
+        "Plane",
+        "Circle",
+        "ImagCircle",
+        "Sphere",
+        "ImagSphere",
+        "Space",
+        "ReflectionLine",
+        "ReflectionPlane",
+        "ReflectionPoint",
+        "Inversion",
+        "Rotor",
+        "Translator",
+        "Dilator",
+        "Motor",
+        "GeneralRotor",
+        "PointPath",
+    ]
+    return {kind: copy(base) for kind in kinds}
 
 
 # ── Kind-key mapping ───────────────────────────────────────────
@@ -178,6 +246,8 @@ def _kind_to_key(kind: str) -> str:
         "motor": "Motor",
         "general_rotor": "GeneralRotor",
         "pointpath": "PointPath",
+        "grid": "Grid",
+        "axis": "Axis",
     }
     key = mapping.get(kind.lower())
     if key is None:
@@ -191,11 +261,12 @@ def _kind_to_key(kind: str) -> str:
 def _resolve_label_style(
     global_default: "LabelStyle",
     per_kind: "LabelStyle | None",
-    user_style: "LabelStyle",
+    user_style: "LabelStyle | None",
 ) -> "LabelStyle":
     """Resolve the effective label style: user > per-kind > global.
 
-    All three inputs are ``LabelStyle`` instances.  Fields from the
+    ``global_default`` is a fully-initialised canonical ``LabelStyle``.
+    ``per_kind`` and ``user_style`` may be ``None``.  Fields from the
     higher-priority source overwrite lower-priority ones only if they
     are not ``None``.
     """
@@ -211,9 +282,10 @@ def _resolve_label_style(
                 setattr(result, field_name, value)
 
     # Overlay user (non-None fields only)
-    for field_name, value in user_style.__dict__.items():
-        if value is not None:
-            setattr(result, field_name, value)
+    if user_style is not None:
+        for field_name, value in user_style.__dict__.items():
+            if value is not None:
+                setattr(result, field_name, value)
 
     return result
 
@@ -309,11 +381,12 @@ def _make_default_tex_label_styles() -> dict[str, "TextureLabelStyle | None"]:
 def _resolve_tex_label_style(
     global_default: "TextureLabelStyle",
     per_kind: "TextureLabelStyle | None",
-    user_style: "TextureLabelStyle",
+    user_style: "TextureLabelStyle | None",
 ) -> "TextureLabelStyle":
     """Resolve the effective texture label style: user > per-kind > global.
 
-    All three inputs are ``TextureLabelStyle`` instances.  Fields from the
+    ``global_default`` is a fully-initialised canonical ``TextureLabelStyle``.
+    ``per_kind`` and ``user_style`` may be ``None``.  Fields from the
     higher-priority source overwrite lower-priority ones only if they
     are not ``None``.
     """
@@ -329,8 +402,9 @@ def _resolve_tex_label_style(
                 setattr(result, field_name, value)
 
     # Overlay user (non-None fields only)
-    for field_name, value in user_style.__dict__.items():
-        if value is not None:
-            setattr(result, field_name, value)
+    if user_style is not None:
+        for field_name, value in user_style.__dict__.items():
+            if value is not None:
+                setattr(result, field_name, value)
 
     return result

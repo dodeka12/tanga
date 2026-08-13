@@ -8,7 +8,7 @@ pipeline for visualizing pytanga.geometry entities in a web browser.
 
 Usage::
 
-    from pytanga.viz import Visualizer, CameraConfig
+    from pytanga.viz import Visualizer, CameraConfig3d
     from pytanga.geometry import Point
 
     viz = Visualizer()
@@ -17,7 +17,7 @@ Usage::
 
     # Explicit camera settings
     viz = Visualizer(
-        camera=CameraConfig(position=(10, 6, 12), target=(0, 0, 0), fov=50),
+        camera=CameraConfig3d(position=(10, 6, 12), target=(0, 0, 0), fov=50),
     )
     viz.run()
 """
@@ -48,12 +48,16 @@ from ._scene_objects import Axes2D, Axes3D, Axis, Grid
 from ._styles import (
     AnimStyle,
     AnnotationStyle,
+    Axes2DStyle,
+    Axes3DStyle,
+    AxisStyle,
     CircleStyle,
     CrossHairPointStyle,
     DilatorStyle,
     DirectionStyle,
     FigureStyle,
     GeneralRotorStyle,
+    GridStyle,
     HPointStyle,
     InversionStyle,
     LabelStyle,
@@ -75,8 +79,18 @@ from ._styles import (
     VizStyle,
 )
 from ._types import SceneEntity, VizInputType
+from .camera import (
+    CameraConfig,
+    CameraConfig2d,
+    CameraConfig3d,
+    View2DConfig,
+    View3dConfig,
+    get_camera,
+    get_camera_view2d,
+    get_camera_view3d,
+)
 from .export._exporter import SceneExporter
-from .scene import CameraConfig, SceneConfig, View2DConfig, ViewPlaneConfig
+from .scene import SceneConfig
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
@@ -88,11 +102,16 @@ __all__ = [
     "AnimStyle",
     "AnnotationStyle",
     "Axes2D",
+    "Axes2DStyle",
     "Axes3D",
+    "Axes3DStyle",
     "Axis",
+    "AxisStyle",
     "Button",
     "Camera",
     "CameraConfig",
+    "CameraConfig2d",
+    "CameraConfig3d",
     "ClickEvent",
     "ControlEvent",
     "CircleStyle",
@@ -107,6 +126,10 @@ __all__ = [
     "FigureStyle",
     "GeneralRotorStyle",
     "Grid",
+    "GridStyle",
+    "get_camera",
+    "get_camera_view2d",
+    "get_camera_view3d",
     "Handler",
     "HPointStyle",
     "InteractionConfig",
@@ -143,7 +166,7 @@ __all__ = [
     "TitleStyle",
     "TranslatorStyle",
     "View2DConfig",
-    "ViewPlaneConfig",
+    "View3dConfig",
     "Visualizer",
     "VisualizerApp",
     "VizSceneHandle",

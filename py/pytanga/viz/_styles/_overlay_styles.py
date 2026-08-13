@@ -19,10 +19,10 @@ class LabelStyle(VizStyle):
     but labels have their own serialization path since they are not entities.
     """
 
-    font_size: float = 14
-    font_family: str = "sans-serif"
-    color: str = "#ffffff"
-    background: str = "rgba(0, 0, 0, 0.6)"
+    font_size: float | None = None
+    font_family: str | None = None
+    color: str | None = None
+    background: str | None = None
     font_weight: str | None = None
     text_transform: str | None = None
 
@@ -38,10 +38,14 @@ class LabelStyle(VizStyle):
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "LabelStyle"}
-        result["font_size"] = self.font_size
-        result["font_family"] = self.font_family
-        result["color"] = self.color
-        result["background"] = self.background
+        if self.font_size is not None:
+            result["font_size"] = self.font_size
+        if self.font_family is not None:
+            result["font_family"] = self.font_family
+        if self.color is not None:
+            result["color"] = self.color
+        if self.background is not None:
+            result["background"] = self.background
         if self.font_weight is not None:
             result["font_weight"] = self.font_weight
         if self.text_transform is not None:

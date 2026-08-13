@@ -5,7 +5,7 @@ The `Visualizer` class is the main entry point for the 3D viewer.
 ## Constructor
 
 ```python
-from pytanga.viz import Visualizer, CameraConfig
+from pytanga.viz import Visualizer, CameraConfig3d
 
 Visualizer(
     port=8765,
@@ -29,13 +29,13 @@ Visualizer(
 | `opns` | `bool` | `True` | Default MV interpretation (OPNS/IPNS) |
 | `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
-| `space_dim` | `int` | `3` | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer (see below) |
+| `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
 | `background_color` | `str` | `"#1a1a2e"` | CSS background color |
 | `camera` | `CameraConfig \| None` | `None` | Explicit camera settings |
 
 ## 2D Visualization
 
-Activate 2D mode with `space_dim=2`:
+Activate 2D mode by passing `space_dim=2`:
 
 ```python
 from pytanga.viz import Visualizer
@@ -44,6 +44,15 @@ from pytanga.geometry import Point
 viz = Visualizer(space_dim=2)
 viz.add(Point(3, 4, 0))
 viz.run()
+```
+
+Alternatively, pass a 2D camera config and the dimension is deduced
+automatically:
+
+```python
+from pytanga.viz import View2DConfig, Visualizer
+
+viz = Visualizer(camera=View2DConfig(xmin=0, xmax=8, ymin=0, ymax=6))
 ```
 
 When `space_dim=2`:

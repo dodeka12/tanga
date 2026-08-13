@@ -1,33 +1,32 @@
 # Camera & Controls
 
-## CameraConfig
+## Camera Config Types
 
-All fields are optional. When a field is `None`, the browser computes it
-automatically from the scene's entity bounding box.
+Camera configuration is split into a small typed hierarchy:
+
+- `CameraConfig` — the base type carrying a `type` discriminator plus the
+  fields shared by both camera families (`position`, `target`, `up`, `near`,
+  `far`).
+- `CameraConfig3d` — a perspective camera (adds `fov`).
+- `CameraConfig2d` — an orthographic top-down camera (adds the visible world
+  rectangle and a scaling policy).
+
+You normally construct the concrete subclass directly, or use one of the
+builder functions below.
 
 ```python
-from pytanga.viz import CameraConfig
+from pytanga.viz import CameraConfig3d
 
-CameraConfig(
-    position=None,           # (x, y, z) world position
-    target=None,             # (x, y, z) look-at point
-    fov=None,                # vertical field of view in degrees
-    near=None,               # near clipping plane
-    far=None,                # far clipping plane
-    view_2d=None,            # View2DConfig for orthographic views
-    view_plane=None,         # ViewPlaneConfig for plane-based views
+# Perspective camera with explicit placement
+CameraConfig3d(
+    position=(10, 6, 12),   # (x, y, z) world position
+    target=(0, 0, 0),       # look-at point
+    up=None,                # optional camera up vector
+    fov=50.0,               # vertical field of view in degrees
+    near=None,              # near clipping plane
+    far=None,               # far clipping plane
 )
 ```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `position` | `(float, float, float) \| None` | Camera world position |
-| `target` | `(float, float, float) \| None` | Look-at point |
-| `fov` | `float \| None` | Vertical field of view in degrees |
-| `near` | `float \| None` | Near clipping plane |
-| `far` | `float \| None` | Far clipping plane |
-| `view_2d` | `View2DConfig \| None` | Orthographic view defined by a rectangle |
-| `view_plane` | `ViewPlaneConfig \| None` | Perspective view defined by a virtual plane |
 
 ## Camera Modes
 
@@ -40,12 +39,12 @@ far are all auto-computed from the bounding box of all entities in the scene.
 viz = Visualizer()  # auto-fit
 ```
 
-### Full Explicit
-
-All fields are specified — nothing is auto-computed:
+### Explicit 3D Perspective
 
 ```python
-viz = Visualizer(camera=CameraConfig(
+from pytanga.viz import CameraConfig3d, Visualizer
+
+viz = Visualizer(camera=CameraConfig3d(
     position=(10, 6, 12),
     target=(0, 0, 0),
     fov=45,
@@ -54,64 +53,91 @@ viz = Visualizer(camera=CameraConfig(
 ))
 ```
 
-### Partial Explicit
-
-Specify only some fields — the rest are auto-computed:
+Partial cameras are also supported — any field left `None` is auto-computed:
 
 ```python
-# Explicit position and target, auto-computed FOV
-viz = Visualizer(camera=CameraConfig(position=(10, 3, 0)))
-
-# Top-down view with narrow FOV
-viz = Visualizer(camera=CameraConfig(position=(0, 15, 0), fov=30))
+CameraConfig3d(position=(10, 3, 0))
+CameraConfig3d(position=(0, 15, 0), fov=30)
 ```
 
 ## 2D Camera via View2DConfig
 
-`View2DConfig` defines an orthographic view from a rectangle centred at
-`center`.  The larger extent is fit to the viewport aspect ratio.
+`View2DConfig` is a pure **input** spec for an orthographic view. It defines
+the visible world rectangle with min/max bounds, optional borders, and a
+scaling policy. Pass it directly to `Visualizer(camera=...)` — the viewer
+deduces `space_dim=2` from it automatically. (You can also convert it
+explicitly with `get_camera_view2d()` or the dispatching `get_camera()`.)
 
 ```python
-from pytanga.viz import CameraConfig, View2DConfig, Visualizer
+from pytanga.viz import View2DConfig, Visualizer
 
 viz = Visualizer(
-    space_dim=2,
-    camera=CameraConfig(
-        view_2d=View2DConfig(
-            extent_x=4.0,          # full width
-            extent_y=3.0,          # full height
-            center=(1.0, 2.0),     # viewport centre
-        )
+    camera=View2DConfig(
+        xmin=-4.0,              # minimum visible world X
+        xmax=4.0,               # maximum visible world X
+        ymin=-3.0,              # minimum visible world Y
+        ymax=3.0,               # maximum visible world Y
     ),
 )
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `extent_x` | `float` | Full width of the view rectangle |
-| `extent_y` | `float` | Full height of the view rectangle |
-| `center` | `(float, float)` | Point appearing at the viewport centre |
+| `xmin` / `xmax` | `float` | Visible world X range |
+| `ymin` / `ymax` | `float` | Visible world Y range |
+| `border_world` | `float` | World-unit margin added on all four sides (applied in Python) |
+| `border_px` | `float` | Pixel margin added on all four sides (applied by the frontend) |
+| `uniform` | `bool` | `True` = letterbox (uniform scale), `False` = stretch-to-fill |
 
-## 3D Camera via ViewPlaneConfig
+### Scaling Policy (`uniform`)
 
-`ViewPlaneConfig` places the perspective camera along a plane normal at a
-distance computed from `fov` and the plane extents.  The optical axis is
-the normal; `center` maps to the viewport centre.
+`uniform=True` (default) preserves the aspect ratio via letterboxing: a single
+world-units-per-pixel scale is used so geometry is never distorted, and the
+requested rectangle is fully contained. The frontend computes the final
+frustum from the live browser viewport so the result is independent of the
+window size.
+
+`uniform=False` stretches the rectangle's width and height to fill the
+viewport, scaling X and Y independently. A long, thin plot therefore fills the
+whole window (axes intentionally non-uniform). This is the right choice for
+graph-style plots where the data bounds may be very wide or tall.
+
+`border_world` and `border_px` provide margins for clean graph rendering:
+`border_world` is applied deterministically in Python; `border_px` is applied
+by the frontend because converting pixels to world units requires the live
+viewport size. Both apply in **both** scaling modes: letterboxing shrinks the
+effective content area before the fit, and stretch-to-fill maps the rectangle
+onto the inset content area (viewport minus the border).
+
+## 3D Camera via View3dConfig
+
+`View3dConfig` is a pure **input** spec that describes a projective 3D camera
+using a virtual plane.  The plane defines the camera's **initial framing**:
+
+- the optical axis is the plane normal `n̂`;
+- the camera is placed at `center + n̂ · distance`, where `distance` is derived
+  from `fov` and the plane extents so the plane is fully framed;
+- the horizontal direction `û` (explicit `span_u`, or auto-computed) fixes the
+  viewing orientation, and the vertical `v̂ = cross(n̂, û)` becomes the camera
+  up vector.
+
+Convert it with `get_camera_view3d()` (or the dispatching `get_camera()`). The
+result is a plain projective `CameraConfig3d` (with `position` / `target` /
+`up` / `fov` populated), so it is **not** a locked 2D-on-plane view — the
+frontend renders it as a free 3D camera with standard orbit controls.
 
 ```python
-from pytanga.viz import CameraConfig, ViewPlaneConfig, Visualizer
+from pytanga.viz import View3dConfig, Visualizer, get_camera_view3d
 
 viz = Visualizer(
-    camera=CameraConfig(
-        view_plane=ViewPlaneConfig(
-            point=(0.0, 0.0, 0.0),    # point on the plane
-            normal=(0.4, 0.6, 1.0),   # camera optical axis
-            extent_u=6.0,             # full horizontal extent
-            extent_v=5.0,             # full vertical extent
-            span_u=(1.0, 0.0, -0.4),  # optional horizontal direction
-            fov=50.0,
-        )
-    ),
+    camera=get_camera_view3d(View3dConfig(
+        point=(0.0, 0.0, 0.0),    # point on the virtual plane
+        normal=(0.4, 0.6, 1.0),   # camera optical axis
+        extent_u=6.0,             # full horizontal extent
+        extent_v=5.0,             # full vertical extent
+        span_u=(1.0, 0.0, -0.4),  # optional horizontal direction
+        fov=50.0,
+    )),
 )
 ```
 
@@ -125,8 +151,22 @@ viz = Visualizer(
 | `span_u` | `(float, float, float) \| None` | Optional horizontal direction |
 | `fov` | `float` | Vertical field of view in degrees |
 
-When `span_u` is `None`, a horizontal direction is auto-computed.  The
-vertical direction is always `cross(normal, span_u)`.
+When `span_u` is `None`, a horizontal direction is auto-computed. The vertical
+direction is always `cross(normal, span_u)`.
+
+The produced `CameraConfig3d` is a fully explicit projective camera; once it is
+in place, the user can freely rotate (left-drag), pan (right/middle-drag), and
+zoom (scroll wheel) about the framed plane.
+
+## Builder Functions
+
+| Function | Input | Returns |
+|----------|-------|---------|
+| `get_camera_view2d(config)` | `View2DConfig` | `CameraConfig2d` |
+| `get_camera_view3d(config)` | `View3dConfig` | `CameraConfig3d` |
+| `get_camera(view_config)` | `View2DConfig \| View3dConfig` | `CameraConfig` (dispatches) |
+
+`get_camera()` is a convenience dispatcher over the two specific builders.
 
 ## Runtime Camera Updates
 
@@ -134,8 +174,8 @@ vertical direction is always `cross(normal, span_u)`.
 the viewer:
 
 ```python
-viz.set_camera(CameraConfig(view_2d=View2DConfig(8.0, 6.0)))
-viz.scene("details").set_camera(CameraConfig(fov=30))
+viz.set_camera(get_camera_view2d(View2DConfig(xmin=0, xmax=8, ymin=0, ymax=6)))
+viz.scene("details").set_camera(CameraConfig3d(fov=30))
 ```
 
 ## Orbit Controls

@@ -52,8 +52,12 @@ from ._base import (
     WireframeDashPattern,
 )
 from ._entity_styles import (
+    Axes2DStyle,
+    Axes3DStyle,
+    AxisStyle,
     CircleStyle,
     DirectionStyle,
+    GridStyle,
     HPointStyle,
     LineStyle,
     PlaneStyle,
@@ -107,6 +111,10 @@ ObjVizStyle: TypeAlias = Union[
     GeneralRotorStyle,
     CrossHairPointStyle,
     PointPathStyle,
+    GridStyle,
+    AxisStyle,
+    Axes2DStyle,
+    Axes3DStyle,
 ]
 
 
@@ -125,6 +133,10 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
     "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=0.03),
+    "Grid": GridStyle(color="#555555", opacity=0.5, line_thickness=0.02),
+    "Axis": AxisStyle(color="#888888", opacity=0.9, line_thickness=0.03),
+    "Axes2D": Axes2DStyle(),
+    "Axes3D": Axes3DStyle(),
     # Operators
     "ReflectionLine": ReflectionLineStyle(
         color="#aaccff", opacity=0.6, length=5.0, thickness=0.04

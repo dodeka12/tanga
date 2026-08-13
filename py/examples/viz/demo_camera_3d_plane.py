@@ -1,32 +1,59 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""demo_camera_3d_plane.py — 3D plane-based camera via ViewPlaneConfig.
+"""demo_camera_3d_plane.py — 3D projective camera via View3dConfig.
 
-Defines a tilted virtual plane (point + normal) with explicit horizontal
-extents and a custom ``span_u`` direction.  The camera is placed along
-the plane normal at a distance computed from ``fov`` and the extents.
+``View3dConfig`` defines the initial framing of a projective 3D camera using a
+virtual plane: a plane ``point``/``normal``, the plane ``extent_u``/``extent_v``,
+and an optional ``span_u`` horizontal direction.  The camera is placed along the
+plane normal at a distance computed from ``fov`` and the extents, looking at the
+plane centre with ``up`` derived from the plane orientation.
+
+The resulting camera is a plain projective 3D camera with free orbit controls:
+left-drag rotates, right/middle-drag pans, and the scroll wheel zooms.
+
+The ``View3dConfig`` can be passed directly to ``Visualizer(camera=...)``.
 
 Run with:  uv run python py/examples/viz/demo_camera_3d_plane.py
 """
 
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import CameraConfig, PointStyle, SphereStyle, ViewPlaneConfig, Visualizer
+from pytanga.viz import (
+    Axes3D,
+    Axes3DStyle,
+    AxisStyle,
+    LabelStyle,
+    PointStyle,
+    SphereStyle,
+    View3dConfig,
+    Visualizer,
+)
 
 viz = Visualizer(
-    title="Tanga — 3D Plane Camera (ViewPlaneConfig)",
-    camera=CameraConfig(
-        view_plane=ViewPlaneConfig(
-            point=(0.0, 0.0, 0.0),
-            normal=(0.4, 0.6, 1.0),
-            extent_u=7.0,
-            extent_v=5.0,
-            span_u=(1.0, 0.0, -0.4),
-            fov=50.0,
-        )
+    title="Tanga — 3D Plane Camera (View3dConfig)",
+    camera=View3dConfig(
+        point=(0.0, 0.0, 0.0),
+        normal=(0.4, 0.6, 1.0),
+        extent_u=7.0,
+        extent_v=5.0,
+        span_u=(1.0, 0.0, -0.4),
+        fov=50.0,
     ),
 )
 
+viz.add(
+    Axes3D(),
+    style=Axes3DStyle(
+        u=AxisStyle(
+            color="red",
+            label_style=LabelStyle(
+                align=(0.5, 1), offset_2d=(0, 0), offset_local=(0, 0, 0)
+            ),
+        ),
+        v=AxisStyle(color="green"),
+        w=AxisStyle(color="blue"),
+    ),
+)
 viz.add(Point(2, 1, 3), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
 viz.add(Point(-1, 2, 1), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
 viz.add(

@@ -44,7 +44,14 @@ from ._style_dict import (
 from ._timeline import Timeline
 from ._types import SceneEntity, VizInputType
 from ._utils import _is_jupyter
-from .scene import CameraConfig, Scene, SceneConfig, SceneObject
+from .camera import (
+    CameraConfig,
+    View2DConfig,
+    View3dConfig,
+    _deduce_space_dim,
+    _normalize_camera_config,
+)
+from .scene import Scene, SceneConfig, SceneObject
 
 
 class Visualizer(_JupyterDisplayMixin):
@@ -86,15 +93,20 @@ class Visualizer(_JupyterDisplayMixin):
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
         background_color: str = "#1a1a2e",
-        # Camera configuration (None = auto-fit from entities)
-        camera: CameraConfig | None = None,
-        space_dim: int = 3,  # 2 or 3
+        # Camera configuration (None = auto-fit from entities). Accepts a
+        # CameraConfig, or a View2DConfig/View3dConfig input spec.
+        camera: CameraConfig | View2DConfig | View3dConfig | None = None,
+        # 2 or 3. When None (default), deduced from the camera config whenever
+        # possible; otherwise 3.
+        space_dim: int | None = None,
     ) -> None:
+        if space_dim is None:
+            space_dim = _deduce_space_dim(camera) or 3
         if space_dim == 2 and title == "Tanga 3D Viewer":
             title = "Tanga 2D Viewer"
         self._config = SceneConfig(
             background_color=background_color,
-            camera=camera,
+            camera=_normalize_camera_config(camera),
             title=title,
             annotation=annotation,
             name="",
@@ -272,7 +284,6 @@ class Visualizer(_JupyterDisplayMixin):
         """Add an entity to a specific scene."""
         from ._active import ActSceneObject
         from ._label import Label
-        from ._styles import LabelStyle as _LS
         from ._styles import TextureLabelStyle as _TLS
 
         scene = self._scenes[scene_name]
@@ -323,7 +334,7 @@ class Visualizer(_JupyterDisplayMixin):
             _tex_label_merged = _resolve_tex_label_style(
                 self._default_tex_label_style,
                 self._default_tex_label_styles.get(kind),
-                tex_label_style or _TLS(),
+                tex_label_style,
             )
             _tex_label_merged.text = tex_label
 
@@ -359,26 +370,6 @@ class Visualizer(_JupyterDisplayMixin):
         if style is not None:
             properties["style"] = style
 
-        # Convenience axes classes expand into individual Axis objects
-        from ._scene_objects import Axes2D, Axes3D
-
-        if isinstance(obj, (Axes3D, Axes2D)):
-            first_id: str | None = None
-            for axis in obj.expand():
-                aid = scene.add_object(
-                    SceneObject(
-                        id="",
-                        layer="scene",
-                        kind="Axis",
-                        data=axis,
-                        properties=dict(properties),
-                        dirty=True,
-                    ),
-                )
-                if first_id is None:
-                    first_id = aid
-            return first_id or ""
-
         entity = self._resolve(obj, opns=opns)
 
         # Viz-level drawables (PointPath, etc.) go through add_object
@@ -408,7 +399,7 @@ class Visualizer(_JupyterDisplayMixin):
             resolved_ls = _resolve_label_style(
                 self._default_label_style,
                 self._default_label_styles.get(kind),
-                label_style or _LS(),
+                label_style,
             )
 
             position = compute_label_position(entity, resolved_ls.offset_local)
@@ -537,15 +528,21 @@ class Visualizer(_JupyterDisplayMixin):
         data = json.dumps(self._scenes[scene_name].config.to_dict())
         asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
 
-    def set_camera(self, camera: CameraConfig, *, scene_name: str = "") -> None:
+    def set_camera(
+        self,
+        camera: CameraConfig | View2DConfig | View3dConfig,
+        *,
+        scene_name: str = "",
+    ) -> None:
         """Update the camera configuration for a scene at runtime.
 
         Args:
-            camera: The new :class:`CameraConfig`.
+            camera: A :class:`CameraConfig`, or a :class:`View2DConfig` /
+                :class:`View3dConfig` input spec.
             scene_name: Target scene (default ``""`` = main scene).
         """
         scene = self._scenes[scene_name]
-        scene.config.camera = camera
+        scene.config.camera = _normalize_camera_config(camera)
         self._push_scene_config(scene_name)
 
     # ── Default scene objects ───────────────────────────────
@@ -553,35 +550,40 @@ class Visualizer(_JupyterDisplayMixin):
     def _add_default_scene_objects(self, scene_name: str) -> None:
         """Add default axes and a grid unless the user supplied their own.
 
-        Idempotent per scene: runs only once.  Triggered lazily before the
-        scene's full state is first served to a browser.
+        Also suppressed when the scene has a custom camera configuration, as
+        the default axes/grid are auto-fit helpers that assume an origin-centred
+        view.  Idempotent per scene: runs only once.  Triggered lazily before
+        the scene's full state is first served to a browser.
         """
         if scene_name in self._default_objects_added:
             return
         scene = self._scenes[scene_name]
+        has_custom_camera = scene.config.camera is not None
         has_axis_or_grid = any(
-            obj.kind in ("Axis", "Grid") for obj in scene._objects.values()
+            obj.kind in ("Axis", "Grid", "Axes2D", "Axes3D")
+            for obj in scene._objects.values()
         )
-        if not has_axis_or_grid:
+        if not has_axis_or_grid and not has_custom_camera:
             from ._scene_objects import Axes2D, Axes3D, Grid
 
             if scene.config.space_dim == 2:
                 axes: Axes2D | Axes3D = Axes2D(
-                    range_u=10.0, range_v=10.0, labels=("X", "Y")
+                    range_u=(-5.0, 5.0), range_v=(-5.0, 5.0), labels=("X", "Y")
                 )
-                grid = Grid(range_u=10.0, range_v=10.0)
+                grid = Grid(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
             else:
                 axes = Axes3D(
-                    range_u=10.0,
-                    range_v=10.0,
-                    range_w=10.0,
+                    range_u=(-5.0, 5.0),
+                    range_v=(-5.0, 5.0),
+                    range_w=(-5.0, 5.0),
                     labels=("X", "Y", "Z"),
                 )
                 grid = Grid(
+                    origin=(0.0, 0.0, 0.0),
                     dir_u=(1.0, 0.0, 0.0),
                     dir_v=(0.0, 0.0, 1.0),
-                    range_u=10.0,
-                    range_v=10.0,
+                    range_u=(-5.0, 5.0),
+                    range_v=(-5.0, 5.0),
                 )
             self._add_to_scene(scene_name, obj=axes)
             self._add_to_scene(scene_name, obj=grid)
@@ -853,6 +855,35 @@ class Visualizer(_JupyterDisplayMixin):
         except ImportError:
             print(http_url)
 
+    def _print_connect_prompt(self) -> None:
+        """Print the interactive connect prompt including the server URL.
+
+        The URL is printed on its own line so terminals (e.g. VS Code) can
+        detect it as a clickable link.
+        """
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(
+                Text.assemble(
+                    "Server: ",
+                    Text(self.url, style="bold cyan"),
+                    "\n",
+                    "Press ",
+                    Text("Enter", style="bold"),
+                    " to open a new browser tab, or click ",
+                    Text("'Reconnect'", style="bold"),
+                    " in an existing tab…",
+                )
+            )
+        except ImportError:
+            print(
+                f"Server: {self.url}\n"
+                "Press Enter to open a new browser tab, "
+                "or click 'Reconnect' in an existing tab…"
+            )
+
     def _scene_config_for(self, scene_name: str) -> dict[str, Any] | None:
         """Callback: return config dict for a named scene, or None if not found."""
         scene = self._scenes.get(scene_name)
@@ -926,24 +957,7 @@ class Visualizer(_JupyterDisplayMixin):
             return True
 
         # ── Print interactive prompt ──
-        try:
-            from rich.console import Console
-            from rich.text import Text
-
-            console = Console()
-            console.print(
-                Text.assemble(
-                    "Press ", Text("Enter", style="bold"),
-                    " to open a new browser tab, or click ",
-                    Text("'Reconnect'", style="bold"),
-                    " in an existing tab…",
-                )
-            )
-        except ImportError:
-            print(
-                "Press Enter to open a new browser tab, "
-                "or click 'Reconnect' in an existing tab…"
-            )
+        self._print_connect_prompt()
 
         # ── Threading.Event for Enter press ──
         enter_pressed = threading.Event()
@@ -1117,23 +1131,7 @@ class Visualizer(_JupyterDisplayMixin):
                         )
 
                         # Print prompt
-                        try:
-                            from rich.console import Console
-                            from rich.text import Text
-
-                            Console().print(
-                                Text.assemble(
-                                    "Press ", Text("Enter", style="bold"),
-                                    " to open a new browser tab, or click ",
-                                    Text("'Reconnect'", style="bold"),
-                                    " in an existing tab…",
-                                )
-                            )
-                        except ImportError:
-                            print(
-                                "Press Enter to open a new browser tab, "
-                                "or click 'Reconnect' in an existing tab…"
-                            )
+                        self._print_connect_prompt()
 
                         done, pending = await asyncio.wait(
                             [enter_task, ws_task],
@@ -1675,10 +1673,21 @@ class Visualizer(_JupyterDisplayMixin):
         """The global default ``LabelStyle`` instance."""
         return self._default_label_style
 
+    @default_label_style.setter
+    def default_label_style(self, value: LabelStyle) -> None:
+        self._default_label_style = value
+
     @property
-    def default_label_styles(self) -> dict[str, LabelStyle | None]:
-        """Per-kind default label style overrides."""
-        return self._default_label_styles
+    def default_label_styles(self) -> _StyleDict:
+        """Per-kind default label style overrides.
+
+        Wrapped in a :class:`_StyleDict`, so entries may be addressed by
+        string key (``"Sphere"``) or by class (``Sphere``)::
+
+            viz.default_label_styles[Sphere] = LabelStyle(font_size=18)
+            viz.default_label_styles["Sphere"]  # same entry
+        """
+        return _StyleDict(self._default_label_styles)
 
     @property
     def main_scene(self) -> Scene:

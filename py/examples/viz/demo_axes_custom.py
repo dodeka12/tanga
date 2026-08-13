@@ -30,7 +30,7 @@ viz.add(
 )
 
 # Grid in the XY plane with 1-unit spacing and a 10×6 extent.
-viz.add(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=10.0, range_v=6.0))
+viz.add(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-3, 3)))
 
 viz.add(Point(3, 2, 0), color="#ffcc00", style=PointStyle(size=0.12), label="P")
 

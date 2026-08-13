@@ -11,7 +11,7 @@ import { createEntityMesh, removeEntityMesh } from './renderers/factory.js';
 import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
-import { createCamera, configureControls, fitCamera, handleResize, applyOverlayDrawOrder, switchToCamera } from './view_mode.js';
+import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from './view_mode.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket, setSpaceDim } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
@@ -325,7 +325,7 @@ function applySceneConfig(config) {
         scene.background = new THREE.Color(config.background_color);
     }
 
-    // Camera — switchToCamera handles view_2d / view_plane / default-2D.
+    // Camera — switchToCamera handles "2d" / "3d" / default-2D camera types.
     // Must happen before user-configured position/target overrides are
     // applied because switchToCamera may replace the camera object.
     camera = switchToCamera(camera, controls, spaceDim, config.camera);
@@ -507,7 +507,6 @@ function inPlaceUpdate(ent) {
     // Position update
     if (ent.position) {
         mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
-        applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
     }
 
     // Direction/vector update
@@ -812,9 +811,6 @@ async function upsertObject(msg) {
     if (msg.layer === 'scene') {
         const mesh = await createEntityMesh(msg);
         if (mesh) {
-            if (msg.position) {
-                applyOverlayDrawOrder(mesh, msg.position[2] || 0, sceneConfig?.space_dim || 3);
-            }
             scene.add(mesh);
             sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
             entityMeshes.set(msg.id, mesh);
@@ -976,9 +972,6 @@ async function updateEntity(ent) {
     if (!existing) {
         const mesh = await createEntityMesh(ent);
         if (mesh) {
-            if (ent.position) {
-                applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
-            }
             scene.add(mesh);
             entityMeshes.set(id, mesh);
         }
@@ -997,10 +990,6 @@ async function updateEntity(ent) {
     entityMeshes.delete(id);
     const mesh = await createEntityMesh({ ...existing, ...ent });
     if (mesh) {
-        const pos = ent.position || existing?.position;
-        if (pos) {
-            applyOverlayDrawOrder(mesh, pos[2] || 0, sceneConfig?.space_dim || 3);
-        }
         scene.add(mesh);
         entityMeshes.set(id, mesh);
         mesh.userData._labels = [];

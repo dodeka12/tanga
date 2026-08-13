@@ -12,31 +12,31 @@ class TestTextureLabelStyle:
     """Tests for the TextureLabelStyle dataclass."""
 
     def test_default_construction(self):
-        """A default TextureLabelStyle has sensible defaults."""
+        """A default TextureLabelStyle has all-None defaults."""
         tls = TextureLabelStyle()
         assert tls.text is None
-        assert tls.math_mode is False
+        assert tls.math_mode is None
         assert tls.repeat_u is None
         assert tls.repeat_v is None
         assert tls.offset_u is None
         assert tls.offset_v is None
         assert tls.align is None
         assert tls.background is None
-        assert tls.resolution == 512
-        assert tls.color == "#000000"
-        assert tls.font_size == 48
+        assert tls.resolution is None
+        assert tls.color is None
+        assert tls.font_size is None
 
     def test_to_dict_defaults(self):
-        """to_dict() includes only non-None fields with defaults."""
+        """to_dict() includes only non-None fields."""
         tls = TextureLabelStyle()
         d = tls.to_dict()
         assert d["style_type"] == "TextureLabelStyle"
-        assert d["math_mode"] is False
-        assert "background" not in d  # None is omitted
-        assert d["resolution"] == 512
-        assert d["color"] == "#000000"
-        assert d["font_size"] == 48
         # None fields are omitted
+        assert "math_mode" not in d
+        assert "background" not in d
+        assert "resolution" not in d
+        assert "color" not in d
+        assert "font_size" not in d
         assert "text" not in d
         assert "repeat_u" not in d
         assert "repeat_v" not in d
@@ -74,7 +74,7 @@ class TestTextureLabelStyle:
         )
         d = tls.to_dict()
         assert d["text"] == "Hello World"
-        assert d["math_mode"] is False
+        assert "math_mode" not in d  # None omitted
         assert d["font_size"] == 36
         assert d["color"] == "#333333"
 

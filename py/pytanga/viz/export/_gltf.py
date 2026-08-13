@@ -331,27 +331,31 @@ class _GltfBuilder:
         dir_u = dir_u / u_len
         dir_v = dir_v / v_len
 
-        range_u = abs(float(ent.get("range_u", 5.0)))
-        range_v = abs(float(ent.get("range_v", 5.0)))
+        range_u = ent.get("range_u", [0.0, 5.0])
+        range_v = ent.get("range_v", [0.0, 5.0])
+        min_u = float(min(range_u[0], range_u[1]))
+        max_u = float(max(range_u[0], range_u[1]))
+        min_v = float(min(range_v[0], range_v[1]))
+        max_v = float(max(range_v[0], range_v[1]))
+        extent_u = max_u - min_u
+        extent_v = max_v - min_v
         interval_u = abs(float(ent.get("interval_u", 1.0)))
         interval_v = abs(float(ent.get("interval_v", 1.0)))
 
-        half_u = range_u / 2
-        half_v = range_v / 2
-        corner = origin - dir_u * half_u - dir_v * half_v
+        corner = origin + dir_u * min_u + dir_v * min_v
 
         segments: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = []
 
-        v_steps = int(range_v // interval_v)
+        v_steps = int(extent_v // interval_v)
         for i in range(v_steps + 1):
             a = corner + dir_v * (i * interval_v)
-            b = a + dir_u * range_u
+            b = a + dir_u * extent_u
             segments.append((tuple(a.tolist()), tuple(b.tolist())))
 
-        u_steps = int(range_u // interval_u)
+        u_steps = int(extent_u // interval_u)
         for i in range(u_steps + 1):
             a = corner + dir_u * (i * interval_u)
-            b = a + dir_v * range_v
+            b = a + dir_v * extent_v
             segments.append((tuple(a.tolist()), tuple(b.tolist())))
 
         prim = _prims.lines_from_segments(segments)
@@ -429,23 +433,57 @@ class _GltfBuilder:
     # ── Camera ──────────────────────────────────────────
 
     def add_camera(self, cam_config: Any) -> None:
+        cam_type = getattr(cam_config, "type", "3d")
         cam_idx = len(self._cameras)
+
+        if cam_type == "2d":
+            # Orthographic camera: xmag/ymag are half extents at z=0.  The
+            # node sits at ``position`` looking down -Z (no rotation).
+            xmin = getattr(cam_config, "xmin", 0.0)
+            xmax = getattr(cam_config, "xmax", 0.0)
+            ymin = getattr(cam_config, "ymin", 0.0)
+            ymax = getattr(cam_config, "ymax", 0.0)
+            self._cameras.append(
+                {
+                    "type": "orthographic",
+                    "orthographic": {
+                        "xmag": abs(xmax - xmin) / 2.0,
+                        "ymag": abs(ymax - ymin) / 2.0,
+                        "znear": cam_config.near or 0.1,
+                        "zfar": cam_config.far or 1000.0,
+                    },
+                }
+            )
+            node: dict = {"camera": cam_idx}
+            if cam_config.position:
+                node["translation"] = list(cam_config.position)
+            node_idx = len(self._nodes)
+            self._nodes.append(node)
+            self._camera_node = node_idx
+            return
+
+        # Perspective (default / 3d)
+        fov = getattr(cam_config, "fov", None) or 50.0
+        near = cam_config.near
+        far = cam_config.far
+        position = cam_config.position
+
         self._cameras.append(
             {
                 "type": "perspective",
                 "perspective": {
                     "aspectRatio": 16.0 / 9.0,
-                    "yfov": (cam_config.fov or 50.0) * math.pi / 180.0,
-                    "znear": cam_config.near or 0.1,
-                    "zfar": cam_config.far or 1000.0,
+                    "yfov": fov * math.pi / 180.0,
+                    "znear": near or 0.1,
+                    "zfar": far or 1000.0,
                 },
             }
         )
-        node: dict = {"camera": cam_idx}
-        if cam_config.position:
-            node["translation"] = list(cam_config.position)
+        node = {"camera": cam_idx}
+        if position:
+            node["translation"] = list(position)
         if cam_config.target:
-            pos = cam_config.position or (0, 0, 10)
+            pos = position or (0, 0, 10)
             tgt = cam_config.target
             fwd = np.array(
                 [tgt[0] - pos[0], tgt[1] - pos[1], tgt[2] - pos[2]], dtype=np.float64
@@ -453,7 +491,14 @@ class _GltfBuilder:
             fwd_len = np.linalg.norm(fwd)
             if fwd_len > 1e-10:
                 fwd /= fwd_len
-                up = np.array([0.0, 1.0, 0.0])
+                # Prefer the explicit up vector, else default +Y.
+                up_arr = getattr(cam_config, "up", None)
+                if up_arr:
+                    up = np.array(up_arr, dtype=np.float64)
+                    up_len = np.linalg.norm(up)
+                    up = up / up_len if up_len > 1e-10 else np.array([0.0, 1.0, 0.0])
+                else:
+                    up = np.array([0.0, 1.0, 0.0])
                 right = np.cross(up, fwd)
                 rc = np.linalg.norm(right)
                 if rc < 1e-6:

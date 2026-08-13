@@ -82,8 +82,12 @@ class VizSceneHandle(_JupyterDisplayMixin):
         return self._viz.default_label_style
 
     @property
-    def default_label_styles(self) -> dict[str, Any]:
-        """Per-kind default label style overrides (shared across scenes)."""
+    def default_label_styles(self) -> Any:
+        """Per-kind default label style overrides (shared across scenes).
+
+        Wrapped in a :class:`_StyleDict`, so entries may be addressed by
+        string key or by class.
+        """
         return self._viz.default_label_styles
 
     @property

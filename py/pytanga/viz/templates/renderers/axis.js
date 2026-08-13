@@ -1,10 +1,9 @@
-// Axis renderer — a coordinate axis with ticks and optional CSS2D value labels.
-// Renders a line from `start` to `end`, perpendicular tick marks at major/
-// minor intervals, and value labels at major intervals.
+// Axis renderer — a coordinate axis line with optional value labels and a
+// name label placed at the end of the axis.  No tick marks are drawn.
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { makeMaterial, parseColor, styleParam, tagEntity } from './utils.js';
+import { makeMaterial, parseColor, styleParam } from './utils.js';
 
 /**
  * Parse a Python-style float format specifier (e.g. ".2f") into a number of
@@ -30,35 +29,66 @@ function perpendicularTo(v) {
     return new THREE.Vector3(-v.y, v.x, 0).normalize();
 }
 
-export function createAxis(ent) {
-    const group = new THREE.Group();
-
-    const start = new THREE.Vector3(...(ent.start || [0, 0, 0]));
-    const end = new THREE.Vector3(...(ent.end || [1, 0, 0]));
+/**
+ * Draw a single coordinate axis into `group`.
+ *
+ * `axis` is a JSON dict with the same shape as a standalone Axis entity:
+ * `start`, `end`, `majorInterval`, `labelAtMajor`, `labelFormat`, `labelSize`,
+ * `valueStart`, `valueStep`, `label`, and a resolved `style` (plus optional
+ * flat `color`/`opacity`).
+ *
+ * The value labels are controlled by ``axis.style.label_style`` (a
+ * ``LabelStyle`` dict with ``font_size``, ``color``, ``align``,
+ * ``offset_2d`` and ``offset_local``) and ``axis.style.label_at_major``.
+ * These are shared by `createAxis`, `createAxes2D`, and `createAxes3D` so
+ * every axis is drawn identically.  `offset_local` is applied in the axis
+ * local frame: x = along the axis, y = perpendicular (label separation),
+ * z = binormal (``cross(dir, perp)``).
+ */
+export function addAxis(group, axis) {
+    const start = new THREE.Vector3(...(axis.start || [0, 0, 0]));
+    const end = new THREE.Vector3(...(axis.end || [1, 0, 0]));
     const dir = end.clone().sub(start);
     const length = dir.length();
-    if (length < 1e-9) return group;
+    if (length < 1e-9) return;
     dir.normalize();
 
-    const color = parseColor(ent, '#888888');
-    const opacity = styleParam(ent, 'opacity', 0.9);
-    const major = Math.abs(ent.majorInterval || 1.0);
-    const minor = ent.minorInterval != null ? Math.abs(ent.minorInterval) : null;
-    const labelAtMajor = ent.labelAtMajor !== false;
-    const labelFormat = ent.labelFormat || '.1f';
+    const color = parseColor(axis, '#888888');
+    const colorHex = typeof color === 'string' ? color : '#' + color.getHexString();
+    const opacity = styleParam(axis, 'opacity', 0.9);
+    const major = Math.abs(axis.majorInterval || 1.0);
+
+    // Value-label style (LabelStyle dict embedded in the resolved Axis style).
+    const labelStyle = (axis.style && axis.style.label_style) || {};
+    const labelAtMajor = axis.style && axis.style.label_at_major !== undefined
+        ? axis.style.label_at_major
+        : axis.labelAtMajor !== false;
+
+    const labelFormat = axis.labelFormat || '.1f';
     const decimals = _parseDecimals(labelFormat);
-    const labelSize = ent.labelSize || 12;
-    const showTicks = ent.showTicks !== false;
+    const labelSize = axis.labelSize || 12;
+    const valueLabelSize = labelStyle.font_size ?? labelSize;
+    const valueLabelColor = labelStyle.color ?? colorHex;
+    const valueStart = axis.valueStart != null ? axis.valueStart : 0.0;
+    const valueStep = axis.valueStep != null ? axis.valueStep : 1.0;
 
     const perp = perpendicularTo(dir);
-    const tickLen = Math.max(length * 0.02, styleParam(ent, 'line_thickness', 0.03) * 4);
+    const binormal = new THREE.Vector3().crossVectors(dir, perp).normalize();
+
+    // Baseline perpendicular separation between the axis line and its value
+    // labels.  Zero so that with no explicit offset the label centre lies
+    // exactly on the axis; use LabelStyle.offset_local to move it further.
+    const valueLabelOffset = 0.0;
+
+    // 3D label offset in the axis local frame:
+    //   [0] along the axis, [1] perpendicular separation, [2] binormal.
+    const offLocal = labelStyle.offset_local || [0, 0, 0];
 
     const lineMaterial = makeMaterial(color, opacity);
 
     function addSegment(a, b) {
         const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
         const line = new THREE.Line(geo, lineMaterial);
-        line.renderOrder = 1;
         group.add(line);
         return line;
     }
@@ -68,68 +98,83 @@ export function createAxis(ent) {
         return value.toFixed(decimals);
     }
 
-    // Main axis line
+    function makeLabel(text, opts = {}) {
+        const {
+            bold = false,
+            fontSize = labelSize,
+            fontColor = colorHex,
+            align = null,
+            offset = null,
+        } = opts;
+
+        const content = document.createElement('div');
+        content.textContent = text;
+        content.style.color = fontColor;
+        content.style.fontSize = Math.round(fontSize * (bold ? 1.15 : 1.0)) + 'px';
+        content.style.fontFamily = 'sans-serif';
+        if (bold) content.style.fontWeight = 'bold';
+        content.style.textShadow = '0 0 4px rgba(0,0,0,0.8)';
+        content.style.pointerEvents = 'none';
+        content.style.whiteSpace = 'nowrap';
+
+        if (align || offset) {
+            const ax = align ? align[0] : 0.5;
+            const ay = align ? align[1] : 0.5;
+            const ox = offset ? offset[0] : 0;
+            const oy = offset ? offset[1] : 0;
+            const tx = (0.5 - ax) * 100;
+            const ty = (0.5 - ay) * 100;
+            content.style.transform = `translate(${ox}px, ${oy}px) translate(${tx}%, ${ty}%)`;
+        }
+
+        // CSS2DRenderer repositions the element it wraps each frame, so the
+        // styled content must be nested inside an outer element.  Otherwise
+        // the align/offset transform on `content` would be overwritten.
+        const wrapper = document.createElement('div');
+        wrapper.style.pointerEvents = 'none';
+        wrapper.appendChild(content);
+        return new CSS2DObject(wrapper);
+    }
+
+    // Axis line
     addSegment(start, end);
 
-    // Ticks
-    if (showTicks && major > 0) {
-        const majorIntervals = Math.floor(length / major);
-
-        for (let i = 1; i <= majorIntervals; i++) {
+    // Value labels at major intervals (no tick marks).
+    if (labelAtMajor && major > 0) {
+        const count = Math.floor(length / major);
+        for (let i = 1; i <= count; i++) {
             const t = i * major;
+            const value = valueStart + i * major * valueStep;
             const p = start.clone().addScaledVector(dir, t);
+            const labelPos = p.clone()
+                .addScaledVector(dir, offLocal[0] || 0)
+                .addScaledVector(perp, (offLocal[1] || 0) + valueLabelOffset)
+                .addScaledVector(binormal, offLocal[2] || 0);
 
-            // Major tick + optional value label
-            const ma = p.clone().addScaledVector(perp, tickLen);
-            const mb = p.clone().addScaledVector(perp, -tickLen);
-            addSegment(ma, mb, tickLen);
-
-            if (labelAtMajor) {
-                const value = i * major;
-                const div = document.createElement('div');
-                div.textContent = formatValue(value);
-                div.style.color = typeof color === 'string' ? color : '#' + color.getHexString();
-                div.style.fontSize = labelSize + 'px';
-                div.style.fontFamily = 'sans-serif';
-                div.style.textShadow = '0 0 4px rgba(0,0,0,0.8)';
-                div.style.pointerEvents = 'none';
-                const label = new CSS2DObject(div);
-                label.position.copy(p).addScaledVector(perp, tickLen * 2.5);
-                group.add(label);
-            }
-        }
-
-        // Minor ticks
-        if (minor && minor > 0 && minor < major) {
-            const minorIntervals = Math.floor(length / minor);
-            const halfLen = tickLen * 0.5;
-            for (let i = 1; i <= minorIntervals; i++) {
-                // Skip positions that coincide with a major tick
-                if (Math.abs(i * minor % major) < 1e-6) continue;
-                const t = i * minor;
-                const p = start.clone().addScaledVector(dir, t);
-                const ma = p.clone().addScaledVector(perp, halfLen);
-                const mb = p.clone().addScaledVector(perp, -halfLen);
-                addSegment(ma, mb, halfLen);
-            }
+            const label = makeLabel(formatValue(value), {
+                fontSize: valueLabelSize,
+                fontColor: valueLabelColor,
+                align: labelStyle.align || null,
+                offset: labelStyle.offset_2d || null,
+            });
+            label.position.copy(labelPos);
+            group.add(label);
         }
     }
 
-    // Optional axis name label at the end
-    if (ent.label) {
-        const div = document.createElement('div');
-        div.textContent = ent.label;
-        div.style.color = typeof color === 'string' ? color : '#' + color.getHexString();
-        div.style.fontSize = Math.round(labelSize * 1.15) + 'px';
-        div.style.fontWeight = 'bold';
-        div.style.fontFamily = 'sans-serif';
-        div.style.textShadow = '0 0 4px rgba(0,0,0,0.8)';
-        div.style.pointerEvents = 'none';
-        const label = new CSS2DObject(div);
-        label.position.copy(end).addScaledVector(dir, tickLen * 3);
+    // Axis name label at the end of the axis.
+    if (axis.label) {
+        const label = makeLabel(axis.label, { bold: true });
+        label.position.copy(end);
         group.add(label);
     }
+}
 
-    tagEntity(group, ent);
+/**
+ * Create a standalone Axis entity (one line with its own style).
+ */
+export function createAxis(ent) {
+    const group = new THREE.Group();
+    addAxis(group, ent);
     return group;
 }
