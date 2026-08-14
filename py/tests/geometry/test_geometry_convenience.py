@@ -29,12 +29,10 @@ def test_geometry_algebra_is_read_only(b):
         geo.algebra = b  # type: ignore[misc]
 
 
-def test_geometry_default_opns_true(b):
-    assert Geometry(b).opns is True
-
-
-def test_geometry_explicit_opns(b):
-    assert Geometry(b, opns=False).opns is False
+def test_geometry_follows_algebra_opns(b):
+    assert Geometry(b).algebra.opns is True
+    alg = BasisN3(opns=False)
+    assert Geometry(alg).algebra.opns is False
 
 
 def test_geometry_importable():
@@ -47,29 +45,31 @@ def test_geometry_importable():
 
 
 def test_create_uses_default_opns(b):
-    geo = Geometry(b, opns=True)
+    geo = Geometry(b)
     mv = geo.create(Point(1, 2, 3))
     # OPNS point is grade-1
     assert 1 in mv.grades
 
 
 def test_create_override_opns(b):
-    geo = Geometry(b, opns=True)
+    geo = Geometry(b)
     mv = geo.create(Sphere(Point(0, 0, 0), 3.0), opns=False)
     # IPNS sphere is grade-1
     assert max(mv.grades) == 1
 
 
-def test_create_with_opns_false_default(b):
-    geo = Geometry(b, opns=False)
+def test_create_with_opns_false_default():
+    alg = BasisN3(opns=False)
+    geo = Geometry(alg)
     mv = geo.create(Point(1, 2, 3))
     # IPNS point is grade-4 (dual of grade-1 point)
     assert 4 in mv.grades
 
 
-def test_create_opns_can_be_changed(b):
-    geo = Geometry(b, opns=True)
-    geo.opns = False
+def test_create_opns_can_be_changed():
+    alg = BasisN3()
+    geo = Geometry(alg)
+    alg.opns = False
     mv = geo.create(Point(1, 2, 3))
     assert 4 in mv.grades
 
@@ -78,7 +78,7 @@ def test_create_opns_can_be_changed(b):
 
 
 def test_which_entity_round_trip(b):
-    geo = Geometry(b, opns=True)
+    geo = Geometry(b)
     sphere = Sphere(Point(1, 2, 3), 2.0)
     mv = geo.create(sphere)
     result = geo.which_entity(mv)
@@ -87,10 +87,11 @@ def test_which_entity_round_trip(b):
     assert result.radius == pytest.approx(2, abs=1e-4)
 
 
-def test_which_entity_override_opns(b):
-    geo = Geometry(b, opns=False)
-    mv = geo.create(Point(0, 0, 5), opns=False)
-    # Analyze with matching opns
+def test_which_entity_follows_algebra_opns():
+    alg = BasisN3(opns=False)
+    geo = Geometry(alg)
+    mv = geo.create(Point(0, 0, 5))
+    # which_entity reads mv.algebra.opns (False → IPNS)
     result = geo.which_entity(mv)
     assert isinstance(result, Point)
 

@@ -201,7 +201,13 @@ def _resolve_point(point: _PointInput) -> tuple[float, float, float]:
         from pytanga.geometry import analyze
         from pytanga.geometry.entities import HPoint, Point as GeoPoint, Sphere
 
-        result = analyze(point)
+        # Typed conversion first: a point MV resolves directly to a GeoPoint
+        # (Phase 3's ``Point(mv)`` constructor reads ``mv.algebra.opns``).
+        try:
+            result = GeoPoint(point)
+        except (ValueError, TypeError):
+            # Fallback: HPoint / Sphere center via generic analysis.
+            result = analyze(point)
         if isinstance(result, GeoPoint):
             return (result.x, result.y, result.z)
         if isinstance(result, HPoint):

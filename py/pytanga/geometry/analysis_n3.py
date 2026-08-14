@@ -74,8 +74,6 @@ if TYPE_CHECKING:
 
 def analyze_entity(
     mv: MV,
-    *,
-    opns: bool = True,
 ) -> (
     Point
     | Direction
@@ -91,11 +89,11 @@ def analyze_entity(
 ):
     """Analyze an MV in N3 as a geometric entity.
 
-    Returns ``None`` if the null-space of the MV (in the requested OPNS/IPNS
-    interpretation) is empty — i.e., no real Euclidean points satisfy
-    the entity equation.
+    Returns ``None`` if the null-space of the MV (in the
+    ``mv.algebra.opns`` interpretation) is empty — i.e., no real
+    Euclidean points satisfy the entity equation.
     """
-    if not opns:
+    if not mv.algebra.opns:
         dual = mv.dual()
         return _analyze_entity_opns(dual)
     return _analyze_entity_opns(mv)
@@ -759,52 +757,52 @@ def _expect(result, cls):
 
 def analyze_point(mv: MV) -> Point:
     """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Point)
+    return _expect(analyze_entity(mv), Point)
 
 
 def analyze_direction(mv: MV) -> Direction:
     """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Direction)
+    return _expect(analyze_entity(mv), Direction)
 
 
 def analyze_line(mv: MV) -> Line:
     """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Line)
+    return _expect(analyze_entity(mv), Line)
 
 
 def analyze_plane(mv: MV) -> Plane:
     """Interpret *mv* as a :class:`Plane` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Plane)
+    return _expect(analyze_entity(mv), Plane)
 
 
 def analyze_circle(mv: MV) -> Circle:
     """Interpret *mv* as a :class:`Circle` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Circle)
+    return _expect(analyze_entity(mv), Circle)
 
 
 def analyze_sphere(mv: MV) -> Sphere:
     """Interpret *mv* as a :class:`Sphere` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Sphere)
+    return _expect(analyze_entity(mv), Sphere)
 
 
 def analyze_point_pair(mv: MV) -> PointPair:
     """Interpret *mv* as a :class:`PointPair` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), PointPair)
+    return _expect(analyze_entity(mv), PointPair)
 
 
 def analyze_hpoint(mv: MV) -> HPoint:
     """Interpret *mv* as an :class:`HPoint` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), HPoint)
+    return _expect(analyze_entity(mv), HPoint)
 
 
 def analyze_hdirection(mv: MV) -> HDirection:
     """Interpret *mv* as an :class:`HDirection` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), HDirection)
+    return _expect(analyze_entity(mv), HDirection)
 
 
 def analyze_space(mv: MV) -> Space:
     """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode."""
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Space)
+    return _expect(analyze_entity(mv), Space)
 
 
 def _factor_to_point(factor: MV, alg: Algebra) -> Point:

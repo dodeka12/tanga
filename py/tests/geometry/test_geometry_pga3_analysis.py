@@ -42,7 +42,7 @@ def b():
 def test_entity_point_opns_round_trip(b):
     """E1: create Point(3,-2,7) → analyze → assert exact."""
     mv: MV = create_entity(b, Point(3, -2, 7))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3)
     assert r.y == pytest.approx(-2)
@@ -52,7 +52,7 @@ def test_entity_point_opns_round_trip(b):
 def test_entity_direction_opns_round_trip(b):
     """E2: create Direction(1,2,0) → analyze → assert exact."""
     mv: MV = create_entity(b, Direction(1, 2, 0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1)
     assert r.y == pytest.approx(2)
@@ -71,7 +71,7 @@ def test_entity_plane_opns_round_trip(b):
     unit = normal.normalized()
     pt = Point(3, -2, 1)
     mv: MV = create_entity(b, Plane(pt, normal))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
     # Normal must match the unit-length direction
     assert r.normal.x == pytest.approx(unit.x)
@@ -99,7 +99,7 @@ def test_entity_line_opns_round_trip(b):
     unit = direction.normalized()
     pt = Point(1, 2, 3)
     mv: MV = create_entity(b, Line(pt, direction))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Line), f"Got {type(r).__name__}"
     # Direction normalized and preserves sign
     assert r.direction.x == pytest.approx(unit.x)
@@ -120,7 +120,7 @@ def test_entity_line_opns_round_trip(b):
 def test_entity_space_opns_round_trip(b):
     """E5: create Space(scale=2.5) → analyze → assert."""
     mv: MV = create_entity(b, Space(scale=2.5))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
     assert r.scale == pytest.approx(2.5)
 
@@ -230,7 +230,7 @@ def test_apply_translator_point_displacement(b):
     p: MV = create_entity(b, Point(0, 0, 0))
     T: MV = create_operator(b, Translator(Direction(3, 0, 0)))
     result: MV = T.gp(p).gp(T.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3)
     assert r.y == pytest.approx(0)
@@ -242,7 +242,7 @@ def test_apply_rotor_point_rotation_z(b):
     p: MV = create_entity(b, Point(1, 0, 0))
     R: MV = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
     result: MV = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
@@ -257,7 +257,7 @@ def test_apply_rotor_point_rotation_x(b):
     p: MV = create_entity(b, Point(0, 1, 0))
     R: MV = create_operator(b, Rotor(math.pi / 2, Direction(1, 0, 0)))
     result: MV = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -272,7 +272,7 @@ def test_apply_rotor_point_rotation_y(b):
     p: MV = create_entity(b, Point(0, 0, 1))
     R: MV = create_operator(b, Rotor(math.pi / 2, Direction(0, 1, 0)))
     result: MV = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -295,7 +295,7 @@ def test_apply_motor_point_rigid_motion(b):
         ),
     )
     result: MV = M.gp(p).gp(M.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
@@ -307,7 +307,7 @@ def test_apply_reflection_plane_point_mirror(b):
     p: MV = create_entity(b, Point(1, 2, 5))
     F: MV = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1))))
     result: MV = F.gp(p).gp(F.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1)
     assert r.y == pytest.approx(2)
@@ -326,7 +326,7 @@ def test_apply_general_rotor_point_displaced_rotation(b):
         b, GeneralRotor(math.pi / 2, Direction(0, 0, 1), Point(1, 0, 0))
     )
     result: MV = G.gp(p).gp(G.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
@@ -375,7 +375,7 @@ def test_apply_reflection_point_origin_negation(b):
     p = create_entity(b, Point(5, -3, 2))
     O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     result = O.gp(p).gp(O.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(-5, abs=1e-6)
     assert r.y == pytest.approx(3, abs=1e-6)
@@ -390,7 +390,7 @@ def test_apply_reflection_line_point_mirror_x(b):
     p = create_entity(b, Point(3, 1, 0))
     L = create_operator(b, ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0))))
     result = L.gp(p).gp(L.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3, abs=1e-6)
     assert r.y == pytest.approx(-1, abs=1e-6)

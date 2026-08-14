@@ -32,7 +32,7 @@ def b():
 
 def test_create_point_opns_round_trip(b):
     mv = create_entity(b, Point(1, 2, 0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Point)
     # Sign may flip due to blade factorization order
     assert abs(r.x) == pytest.approx(1)
@@ -42,7 +42,7 @@ def test_create_point_opns_round_trip(b):
 def test_entity_direction_opns_round_trip(b):
     """E#: create Direction(1,2) → analyze OPNS → assert exact fields."""
     mv = create_entity(b, Direction(1, 2, 0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1)
     assert r.y == pytest.approx(2)
@@ -52,23 +52,24 @@ def test_entity_direction_opns_round_trip(b):
 def test_create_line_opns_round_trip(b):
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
     mv = create_entity(b, line)
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Line)
     assert abs(r.direction.x) > 0.9
 
 
 def test_create_space_round_trip(b):
     mv = create_entity(b, Space(1.0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Space)
 
 
 # ═══════ IPNS ═══════
 
 
-def test_create_point_ipns_round_trip(b):
+def test_create_point_ipns_round_trip(b, monkeypatch):
+    monkeypatch.setattr(b, "opns", False)
     mv = create_entity(b, Point(1, 2, 0), opns=False)
-    r = analyze_entity(mv, opns=False)
+    r = analyze_entity(mv)
     assert isinstance(r, Point)
     assert abs(r.x) == pytest.approx(1)
 

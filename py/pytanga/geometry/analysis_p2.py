@@ -39,18 +39,13 @@ E123 = BasisP2.E123
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(
-    mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Space | None:
+def analyze_entity(mv: MV) -> Point | Direction | Line | Space | None:
     """Analyze an MV in P2 as a geometric entity.
 
     Parameters
     ----------
     mv : MV
         A multivector to analyze.
-    opns : bool, optional
-        *True* (default) → OPNS interpretation.
-        *False* → IPNS interpretation (dualizes to OPNS first).
 
     P2 OPNS entities (pure-grade blades):
 
@@ -58,7 +53,7 @@ def analyze_entity(
     - Grade 2 → :class:`Line` (2 homogeneous point factors)
     - Grade 3 → :class:`Space` (pseudoscalar e₁₂₃)
     """
-    if not opns:
+    if not mv.algebra.opns:
         dual = mv.dual()
         return _analyze_entity_opns(dual)
     return _analyze_entity_opns(mv)
@@ -296,7 +291,7 @@ def analyze_point(mv: MV) -> Point:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Point)
+    return _expect(analyze_entity(mv), Point)
 
 
 def analyze_direction(mv: MV) -> Direction:
@@ -304,7 +299,7 @@ def analyze_direction(mv: MV) -> Direction:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Direction)
+    return _expect(analyze_entity(mv), Direction)
 
 
 def analyze_line(mv: MV) -> Line:
@@ -312,7 +307,7 @@ def analyze_line(mv: MV) -> Line:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Line)
+    return _expect(analyze_entity(mv), Line)
 
 
 def analyze_space(mv: MV) -> Space:
@@ -320,4 +315,4 @@ def analyze_space(mv: MV) -> Space:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Space)
+    return _expect(analyze_entity(mv), Space)

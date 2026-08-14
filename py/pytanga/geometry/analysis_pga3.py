@@ -66,18 +66,13 @@ if TYPE_CHECKING:
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(
-    mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Plane | Space | None:
+def analyze_entity(mv: MV) -> Point | Direction | Line | Plane | Space | None:
     """Analyze an MV in PGA3 as a geometric entity.
 
     Parameters
     ----------
     mv : MV
         A multivector to analyze.
-    opns : bool, optional
-        *True* (default) → OPNS interpretation.
-        *False* → IPNS interpretation (dualizes to OPNS first).
 
     OPNS entities (Gunn/Dorst grades):
 
@@ -86,7 +81,7 @@ def analyze_entity(
     - Grade 3 → :class:`Point` (finite) or :class:`Direction` (ideal)
     - Grade 5 → :class:`Space`
     """
-    if not opns:
+    if not mv.algebra.opns:
         return _analyze_entity_ipns(mv)
     return _analyze_entity_opns(mv)
 
@@ -441,7 +436,7 @@ def analyze_point(mv: MV) -> Point:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Point)
+    return _expect(analyze_entity(mv), Point)
 
 
 def analyze_direction(mv: MV) -> Direction:
@@ -449,7 +444,7 @@ def analyze_direction(mv: MV) -> Direction:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Direction)
+    return _expect(analyze_entity(mv), Direction)
 
 
 def analyze_line(mv: MV) -> Line:
@@ -457,7 +452,7 @@ def analyze_line(mv: MV) -> Line:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Line)
+    return _expect(analyze_entity(mv), Line)
 
 
 def analyze_plane(mv: MV) -> Plane:
@@ -465,7 +460,7 @@ def analyze_plane(mv: MV) -> Plane:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Plane)
+    return _expect(analyze_entity(mv), Plane)
 
 
 def analyze_space(mv: MV) -> Space:
@@ -473,4 +468,4 @@ def analyze_space(mv: MV) -> Space:
 
     Raises ``TypeError`` if the MV represents a different entity.
     """
-    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Space)
+    return _expect(analyze_entity(mv), Space)

@@ -44,7 +44,7 @@ def test_create_direction_round_trip_opns(basis_e2):
     """create → analyze OPNS reproduces Direction."""
     d = Direction(3, 4, 0)
     mv = create_entity(basis_e2, d, opns=True)
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Direction)
     assert result.x == pytest.approx(3)
     assert result.y == pytest.approx(4)
@@ -79,7 +79,7 @@ def test_create_line_not_through_origin_raises(basis_e2):
 def test_create_space_round_trip(basis_e2):
     """Create pseudoscalar, analyze → Space."""
     mv = create_entity(basis_e2, Space(scale=5.0), opns=True)
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(5.0)
 

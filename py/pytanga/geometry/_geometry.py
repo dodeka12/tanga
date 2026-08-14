@@ -6,7 +6,7 @@
 The :class:`Geometry` class wraps an algebra instance and provides
 ``create()``, ``which_entity()``, and ``which_operator()`` methods that
 delegate to the existing dispatchers, always using the stored algebra.
-A default ``opns`` flag can be set on the instance and overridden per call.
+The OPNS/IPNS interpretation is read from ``geometry.algebra.opns``.
 """
 
 from __future__ import annotations
@@ -33,16 +33,12 @@ class Geometry:
     algebra : Algebra
         The algebra instance (e.g. ``BasisN3()``).
         Stored immutably; access via the :attr:`algebra` property.
-    opns : bool, optional
-        Default OPNS/IPNS flag for :meth:`create` and :meth:`which_entity`.
-        Can be overridden per call.  Defaults to *True*.
     """
 
-    __slots__ = ("_algebra", "opns")
+    __slots__ = ("_algebra",)
 
-    def __init__(self, algebra: Algebra, *, opns: bool = True) -> None:
+    def __init__(self, algebra: Algebra) -> None:
         self._algebra = algebra
-        self.opns: bool = opns
 
     # ── read-only algebra ──────────────────────────────────────
 
@@ -62,32 +58,32 @@ class Geometry:
             A geometric entity or operator dataclass.
         opns : bool or None, optional
             *True* → create in OPNS, *False* → create in IPNS.
-            If *None* (default), uses ``self.opns``.
+            If *None* (default), uses ``self.algebra.opns``.
 
         Returns
         -------
         MV
             The multivector representation.
         """
-        return create(self._algebra, obj, opns=self._opns(opns))
+        if opns is None:
+            opns = self._algebra.opns
+        return create(self._algebra, obj, opns=opns)
 
-    def which_entity(self, mv: MV, *, opns: bool | None = None) -> Entity:
+    def which_entity(self, mv: MV) -> Entity:
         """Determine which geometric entity an MV represents.
 
         Parameters
         ----------
         mv : MV
-            A multivector to analyze.
-        opns : bool or None, optional
-            *True* → interpret blade in OPNS, *False* → in IPNS.
-            If *None* (default), uses ``self.opns``.
+            A multivector to analyze.  The MV's ``algebra.opns`` flag
+            determines the OPNS/IPNS interpretation.
 
         Returns
         -------
         Entity
             The :class:`~.entities.Entity` dataclass.
         """
-        return analyze_entity(mv, opns=self._opns(opns))
+        return analyze_entity(mv)
 
     def which_operator(self, mv: MV) -> Operator:
         """Determine which versor / operator an MV represents.
@@ -109,7 +105,7 @@ class Geometry:
         """
         return analyze_operator(mv)
 
-    def analyze(self, mv: MV, *, opns: bool | None = None) -> Entity | Operator | None:
+    def analyze(self, mv: MV) -> Entity | Operator | None:
         """Try to analyze an MV as either an entity or an operator.
 
         Tries entity analysis first, then operator analysis.
@@ -118,19 +114,12 @@ class Geometry:
         Parameters
         ----------
         mv : MV
-            A multivector to analyze.
-        opns : bool or None, optional
-            *True* → OPNS, *False* → IPNS. Only passed to entity analysis;
-            operators are unaffected.  If *None* (default), uses ``self.opns``.
+            A multivector to analyze.  The MV's ``algebra.opns`` flag
+            determines the OPNS/IPNS interpretation for entity analysis;
+            operators are unaffected.
 
         Returns
         -------
         Entity, Operator, or None
         """
-        return _analyze(mv, opns=self._opns(opns))
-
-    # ── helpers ────────────────────────────────────────────────
-
-    def _opns(self, override: bool | None) -> bool:
-        """Resolve effective opns: *override* if given, else ``self.opns``."""
-        return self.opns if override is None else override
+        return _analyze(mv)

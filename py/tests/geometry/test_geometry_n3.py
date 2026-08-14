@@ -44,7 +44,7 @@ def b():
 
 def test_create_point_round_trip(b):
     mv = create_entity(b, Point(1, 2, 3))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Point)
     assert r.x == pytest.approx(1)
     assert r.y == pytest.approx(2)
@@ -64,21 +64,21 @@ def test_create_point_inner_product_distance(b):
 
 def test_create_line_round_trip(b):
     mv = create_entity(b, Line(Point(1, 2, 3), Direction(1, 0, 0)))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Line)
     assert abs(r.direction.x) > 0.9
 
 
 def test_create_plane_opns_round_trip(b):
     mv = create_entity(b, Plane(Point(0, 0, 5), Direction(0, 0, 1)))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Plane)
     assert abs(r.normal.z) == pytest.approx(1, abs=1e-6)
 
 
 def test_create_sphere_opns_round_trip(b):
     mv = create_entity(b, Sphere(Point(1, 2, 3), 2.0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Sphere)
     assert r.center.x == pytest.approx(1, abs=1e-4)
     assert r.center.y == pytest.approx(2, abs=1e-4)
@@ -94,42 +94,43 @@ def test_create_sphere_ipns_formula(b):
     assert float(s_ipns.sp(s_ipns)) == pytest.approx(9.0, abs=1e-6)
 
 
-def test_create_plane_ipns_round_trip(b):
+def test_create_plane_ipns_round_trip(b, monkeypatch):
+    monkeypatch.setattr(b, "opns", False)
     mv = create_entity(b, Plane(Point(0, 0, 4), Direction(0, 0, 1)), opns=False)
-    r = analyze_entity(mv, opns=False)
+    r = analyze_entity(mv)
     assert isinstance(r, Plane)
     assert r.point.z == pytest.approx(4, abs=1e-4)
 
 
 def test_create_circle_opns(b):
     mv = create_entity(b, Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1)))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Circle)
     assert r.radius == pytest.approx(2.0, abs=1e-4)
 
 
 def test_create_point_pair_round_trip(b):
     mv = create_entity(b, PointPair(Point(1, 0, 0), Point(3, 0, 0)))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, PointPair)
 
 
 def test_create_hpoint_round_trip(b):
     mv = create_entity(b, HPoint(Point(1, 2, 3)))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, HPoint)
 
 
 def test_create_space_round_trip(b):
     mv = create_entity(b, Space(2.0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Space)
     assert r.scale == pytest.approx(2)
 
 
 def test_create_direction_round_trip(b):
     mv = create_entity(b, Direction(1, 0, 0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction)
 
 
@@ -141,7 +142,7 @@ def test_reflection_plane_op(b):
     rp = create_operator(b, ReflectionPlane(Direction(0, 0, 1)))
     p = create_entity(b, Point(1, 2, 3))
     result = rp * p * rp.rev()
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert r.x == pytest.approx(1)
     assert r.y == pytest.approx(2)
     assert r.z == pytest.approx(-3)
@@ -158,7 +159,7 @@ def test_inversion_application(b):
     inv = create_operator(b, Inversion(Point(0, 0, 0), 1.0))
     p = create_entity(b, Point(2, 0, 0))
     result = inv * p * inv.rev()
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert r.x == pytest.approx(0.5, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
     assert r.z == pytest.approx(0, abs=1e-6)
@@ -189,7 +190,7 @@ def test_translator_application(b):
     t = create_operator(b, Translator(Direction(10, 0, 0)))
     p = create_entity(b, Point(1, 2, 3))
     result = t * p * t.rev()
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert r.x == pytest.approx(11, abs=1e-6)
     assert r.y == pytest.approx(2, abs=1e-6)
     assert r.z == pytest.approx(3, abs=1e-6)
@@ -225,7 +226,7 @@ def test_imag_sphere_ipns_squared_negative(b):
 
 def test_imag_sphere_round_trip(b):
     mv = create_entity(b, Sphere(Point(0, 0, 0), 3.0, is_imaginary=True), opns=True)
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Sphere)
     assert r.is_imaginary
 
@@ -281,7 +282,7 @@ def test_general_rotor_creation(b):
     )
     p = create_entity(b, Point(0, 0, 0))
     result = gr * p * gr.rev()
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     # The point (0,0,0) relative to center (10,0,0) is (−10,0,0).
     # After 90° rotation about z: (0,±10,0) then add center: (10,±10,0).
     assert abs(r.x) == pytest.approx(10, abs=1e-4)
@@ -307,7 +308,7 @@ def test_dilator_at_offset_creation(b):
     )
     p = create_entity(b, Point(2, 0, 0))
     result = gd * p * gd.rev()
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert r.x == pytest.approx(3, abs=1e-4)
     assert r.y == pytest.approx(0, abs=1e-4)
 

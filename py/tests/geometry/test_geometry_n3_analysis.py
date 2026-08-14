@@ -34,7 +34,7 @@ def b():
 def test_entity_point_opns_round_trip(b):
     """E1: create Point(3,-2,7) → analyze → assert exact."""
     mv = create_entity(b, Point(3, -2, 7))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3)
     assert r.y == pytest.approx(-2)
@@ -47,7 +47,7 @@ def test_entity_point_opns_round_trip(b):
 def test_entity_direction_opns_round_trip(b):
     """E2: create Direction(1,2,0) → analyze → assert exact."""
     mv = create_entity(b, Direction(1, 2, 0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1)
     assert r.y == pytest.approx(2)
@@ -62,7 +62,7 @@ def test_entity_point_pair_opns_round_trip(b):
     a = Point(1, 0, 1)
     b_p = Point(3, 0, 2)
     mv = create_entity(b, PointPair(a, b_p))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, PointPair), f"Got {type(r).__name__}"
     assert not r.is_imaginary
     # Verify midpoint
@@ -101,7 +101,7 @@ def test_entity_point_pair_opns_round_trip(b):
 def test_entity_hpoint_opns_round_trip(b):
     """E4: create HPoint(Point(2,-1,3), weight=2.5) → analyze → assert."""
     mv = create_entity(b, HPoint(Point(2, -1, 3), weight=2.5))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, HPoint), f"Got {type(r).__name__}"
     assert r.point.x == pytest.approx(2)
     assert r.point.y == pytest.approx(-1)
@@ -118,7 +118,7 @@ def test_entity_line_opns_round_trip(b):
     unit = direction.normalized()
     pt = Point(1, 2, 3)
     mv = create_entity(b, Line(pt, direction))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Line), f"Got {type(r).__name__}"
     # Direction normalized and preserves sign
     assert r.direction.x == pytest.approx(unit.x)
@@ -144,7 +144,7 @@ def test_entity_circle_opns_round_trip(b):
     normal = Direction(0, 1, 0)
     unit = normal.normalized()
     mv = create_entity(b, Circle(Point(1, 0, 2), 2.5, normal))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Circle), f"Got {type(r).__name__}"
     assert not r.is_imaginary
     assert r.center.x == pytest.approx(1)
@@ -165,7 +165,7 @@ def test_entity_plane_opns_round_trip(b):
     unit = normal.normalized()
     pt = Point(3, -2, 1)
     mv = create_entity(b, Plane(pt, normal))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
     # Normal must match the unit-length direction
     assert r.normal.x == pytest.approx(unit.x)
@@ -186,7 +186,7 @@ def test_entity_plane_opns_round_trip(b):
 def test_entity_sphere_opns_round_trip(b):
     """E8: create Sphere(center=(2,-1,3), radius=2.5) → analyze → assert."""
     mv = create_entity(b, Sphere(Point(2, -1, 3), 2.5))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Sphere), f"Got {type(r).__name__}"
     assert not r.is_imaginary
     assert r.center.x == pytest.approx(2)
@@ -201,7 +201,7 @@ def test_entity_sphere_opns_round_trip(b):
 def test_entity_space_opns_round_trip(b):
     """E9: create Space(scale=2.5) → analyze → assert."""
     mv = create_entity(b, Space(scale=2.5))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
     assert r.scale == pytest.approx(2.5)
 
@@ -438,7 +438,7 @@ def test_apply_translator_point_displacement(b):
     p = create_entity(b, Point(0, 0, 0))
     T = create_operator(b, Translator(Direction(3, 0, 0)))
     result = T.gp(p).gp(T.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3)
     assert r.y == pytest.approx(0)
@@ -453,7 +453,7 @@ def test_apply_rotor_point_rotation_z(b):
     p = create_entity(b, Point(1, 0, 0))
     R = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
     result = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
@@ -468,7 +468,7 @@ def test_apply_rotor_point_rotation_x(b):
     p = create_entity(b, Point(0, 1, 0))
     R = create_operator(b, Rotor(math.pi / 2, Direction(1, 0, 0)))
     result = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -483,7 +483,7 @@ def test_apply_rotor_point_rotation_y(b):
     p = create_entity(b, Point(0, 0, 1))
     R = create_operator(b, Rotor(math.pi / 2, Direction(0, 1, 0)))
     result = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -498,7 +498,7 @@ def test_apply_reflection_line_point_mirror_x(b):
     p = create_entity(b, Point(3, 1, 0))
     L = create_operator(b, ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0))))
     result = L.gp(p).gp(L.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3, abs=1e-6)
     assert r.y == pytest.approx(-1, abs=1e-6)
@@ -513,7 +513,7 @@ def test_apply_reflection_line_off_origin(b):
     p = create_entity(b, Point(4, 1, 0))
     L = create_operator(b, ReflectionLine(Line(Point(2, 0, 0), Direction(0, 1, 0))))
     result = L.gp(p).gp(L.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
@@ -528,7 +528,7 @@ def test_apply_reflection_plane_point_mirror(b):
     p = create_entity(b, Point(1, 2, 5))
     F = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1))))
     result = F.gp(p).gp(F.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(2, abs=1e-6)
@@ -543,7 +543,7 @@ def test_apply_reflection_plane_off_origin(b):
     p = create_entity(b, Point(0, 0, 8))
     F = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 5), Direction(0, 0, 1))))
     result = F.gp(p).gp(F.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -558,7 +558,7 @@ def test_apply_reflection_point_origin_negation(b):
     p = create_entity(b, Point(5, -3, 2))
     O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     result = O.gp(p).gp(O.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(-5, abs=1e-6)
     assert r.y == pytest.approx(3, abs=1e-6)
@@ -573,7 +573,7 @@ def test_apply_reflection_point_general(b):
     p = create_entity(b, Point(5, 0, 0))
     R = create_operator(b, ReflectionPoint(Point(2, 0, 0)))
     result = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(-1, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -588,7 +588,7 @@ def test_apply_hdirection_maps_to_infinity(b):
     p = create_entity(b, Point(1, 2, 3))
     H = create_operator(b, HDirection(Direction(1, 0, 0)))
     result = H.gp(p).gp(H.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     # HDirection operator maps result toward infinity
     # Result may be a Direction (ideal point) or None
     assert not isinstance(r, Point) if r is not None else True
@@ -604,7 +604,7 @@ def test_dual_role_hpoint_as_operator_sandwich(b):
     hp_entity = create_entity(b, HPoint(Point(2, 0, 0), weight=1.0))
     p = create_entity(b, Point(5, 0, 0))
     result = hp_entity.gp(p).gp(hp_entity.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(-1, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -613,7 +613,7 @@ def test_dual_role_hpoint_as_operator_sandwich(b):
 def test_dual_role_hpoint_entity_vs_operator(b):
     """Same MV: analyze_entity → HPoint, analyze_operator → ReflectionPoint."""
     hp_mv = create_entity(b, HPoint(Point(2, -1, 3), weight=1.0))
-    e = analyze_entity(hp_mv, opns=True)
+    e = analyze_entity(hp_mv)
     assert isinstance(e, HPoint)
     assert e.point.x == pytest.approx(2)
     o = analyze_operator(hp_mv)
@@ -624,7 +624,7 @@ def test_dual_role_hpoint_entity_vs_operator(b):
 def test_dual_role_hdirection_entity_vs_operator(b):
     """Same MV: analyze_entity → HDirection, analyze_operator → HDirection."""
     hd_mv = create_entity(b, HDirection(Direction(1, 2, 3)))
-    e = analyze_entity(hd_mv, opns=True)
+    e = analyze_entity(hd_mv)
     assert isinstance(e, HDirection)
     o = analyze_operator(hd_mv)
     assert isinstance(o, HDirection)
@@ -633,7 +633,7 @@ def test_dual_role_hdirection_entity_vs_operator(b):
 def test_dual_role_operator_creates_entity_mv(b):
     """create_operator(ReflectionPoint(p)) → MV valid as HPoint entity."""
     op_mv = create_operator(b, ReflectionPoint(Point(3, 1, 4)))
-    e = analyze_entity(op_mv, opns=True)
+    e = analyze_entity(op_mv)
     assert isinstance(e, HPoint)
     assert e.point.x == pytest.approx(3)
 
@@ -643,7 +643,7 @@ def test_dual_role_weight_insensitivity(b):
     hp_w25 = create_entity(b, HPoint(Point(2, 0, 0), weight=2.5))
     p = create_entity(b, Point(5, 0, 0))
     result = hp_w25.gp(p).gp(hp_w25.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(-1, abs=1e-6)
 
@@ -660,7 +660,7 @@ def test_apply_inversion_point_scaling(b):
     p = create_entity(b, Point(2, 0, 0))
     S = create_operator(b, Inversion(Point(0, 0, 0), 1.0))
     result = S.gp(p).gp(S.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0.5)
     assert r.y == pytest.approx(0)
@@ -678,7 +678,7 @@ def test_apply_dilator_origin_point_scaling(b):
     p = create_entity(b, Point(3, 0, 0))
     D = create_operator(b, Dilator(2.0))
     result = D.gp(p).gp(D.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(6)
     assert r.y == pytest.approx(0)
@@ -697,7 +697,7 @@ def test_apply_dilator_displaced_point_scaling(b):
     p = create_entity(b, Point(2, 0, 0))
     D = create_operator(b, Dilator(2.0, origin=Point(1, 0, 0)))
     result = D.gp(p).gp(D.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3)
     assert r.y == pytest.approx(0)
@@ -722,7 +722,7 @@ def test_apply_motor_point_rigid_motion(b):
         ),
     )
     result = M.gp(p).gp(M.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(3, abs=1e-6)
@@ -744,7 +744,7 @@ def test_apply_general_rotor_point_displaced_rotation(b):
         b, GeneralRotor(math.pi / 2, Direction(0, 0, 1), Point(1, 0, 0))
     )
     result = G.gp(p).gp(G.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)

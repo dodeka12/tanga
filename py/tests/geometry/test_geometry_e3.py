@@ -44,17 +44,18 @@ def test_create_direction_round_trip_opns(basis_e3):
     """create → analyze OPNS reproduces Direction."""
     d = Direction(3, 4, 0)
     mv = create_entity(basis_e3, d, opns=True)
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Direction)
     # Length may differ; verify direction ratios
     assert result.x / result.y == pytest.approx(3 / 4)
 
 
-def test_create_direction_round_trip_ipns(basis_e3):
+def test_create_direction_round_trip_ipns(basis_e3, monkeypatch):
     """A direction in IPNS creates a vector, analyzed as IPNS → Plane."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     d = Direction(0, 0, 1)
     mv = create_entity(basis_e3, d, opns=False)
-    result = analyze_entity(mv, opns=False)
+    result = analyze_entity(mv)
     # IPNS grade-1 vector = plane normal → Plane through origin
     assert isinstance(result, Plane)
     assert result.point.x == 0 and result.point.y == 0 and result.point.z == 0
@@ -83,8 +84,9 @@ def test_create_line_not_through_origin_raises(basis_e3):
         create_entity(basis_e3, line, opns=True)
 
 
-def test_line_ipns_round_trip(basis_e3):
+def test_line_ipns_round_trip(basis_e3, monkeypatch):
     """IPNS grade 2 (intersection of two planes) → Line through origin."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     # Two orthogonal planes through origin: normal z and normal x.
     # Intersection is the y-axis line.
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
@@ -93,7 +95,7 @@ def test_line_ipns_round_trip(basis_e3):
     mv2 = create_entity(basis_e3, p2, opns=False)  # IPNS vector for plane 2
     # Intersection in IPNS: outer product → grade-2 bivector
     line_mv = mv1.op(mv2)
-    result = analyze_entity(line_mv, opns=False)
+    result = analyze_entity(line_mv)
     assert isinstance(result, Line)
     assert result.origin.x == pytest.approx(0)
     assert result.origin.y == pytest.approx(0)
@@ -132,7 +134,7 @@ def test_plane_opns_round_trip(basis_e3):
     """Create plane bivector, analyze OPNS → Plane through origin."""
     plane = Plane(point=Point(0, 0, 0), normal=Direction(1, 2, 3))
     mv = create_entity(basis_e3, plane, opns=True)
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Plane)
     assert result.point.x == pytest.approx(0)
     assert result.point.y == pytest.approx(0)
@@ -142,11 +144,12 @@ def test_plane_opns_round_trip(basis_e3):
     assert length == pytest.approx(1.0, abs=1e-6)
 
 
-def test_plane_ipns_round_trip(basis_e3):
+def test_plane_ipns_round_trip(basis_e3, monkeypatch):
     """Create plane IPNS (vector), analyze IPNS → Plane through origin."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     plane = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
     mv = create_entity(basis_e3, plane, opns=False)
-    result = analyze_entity(mv, opns=False)
+    result = analyze_entity(mv)
     assert isinstance(result, Plane)
     assert result.normal.x == pytest.approx(0)
     assert result.normal.y == pytest.approx(0)
@@ -161,7 +164,7 @@ def test_plane_ipns_round_trip(basis_e3):
 def test_create_space_round_trip(basis_e3):
     """Create pseudoscalar, analyze → Space."""
     mv = create_entity(basis_e3, Space(scale=5.0), opns=True)
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(5.0)
 
@@ -404,8 +407,9 @@ def test_reflection_alias_is_reflection_plane():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_ipns_grade_3_raises(basis_e3):
+def test_ipns_grade_3_raises(basis_e3, monkeypatch):
     """IPNS grade-3 trivector is trivial-only origin → ValueError."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0))
     p2 = Plane(point=Point(0, 0, 0), normal=Direction(0, 1, 0))
     p3 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
@@ -414,7 +418,7 @@ def test_ipns_grade_3_raises(basis_e3):
     m3 = create_entity(basis_e3, p3, opns=False)
     grade3_ipns = m1.op(m2).op(m3)
     with pytest.raises(ValueError, match="trivial"):
-        analyze_entity(grade3_ipns, opns=False)
+        analyze_entity(grade3_ipns)
 
 
 # ═══════════════════════════════════════════════════════════════

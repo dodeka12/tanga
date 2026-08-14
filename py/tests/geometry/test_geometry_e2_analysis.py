@@ -44,7 +44,7 @@ def b():
 def test_entity_direction_opns_round_trip(b):
     """E1: create Direction(3,-4,0) → analyze OPNS → assert exact fields."""
     mv = create_entity(b, Direction(3, -4, 0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     # Not normalized — exact coefficients preserved
     assert r.x == pytest.approx(3)
@@ -58,7 +58,7 @@ def test_entity_direction_opns_round_trip(b):
 def test_entity_space_opns_round_trip(b):
     """E2: create Space(scale=3.5) → analyze → assert scale."""
     mv = create_entity(b, Space(scale=3.5))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
     assert r.scale == pytest.approx(3.5)
 
@@ -66,15 +66,16 @@ def test_entity_space_opns_round_trip(b):
 # --- E3. Direction (IPNS) ---
 
 
-def test_entity_direction_ipns_round_trip(b):
+def test_entity_direction_ipns_round_trip(b, monkeypatch):
     """E3: create Direction(1,2,0) → analyze IPNS → assert normalized Direction.
 
     In E2 IPNS, a grade-1 vector represents a line through the origin
     with *n* being the line normal.  Analysis returns the Direction
     extracted from the normal (with unit normalization).
     """
+    monkeypatch.setattr(b, "opns", False)
     mv = create_entity(b, Direction(1, 2, 0), opns=False)
-    r = analyze_entity(mv, opns=False)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     # IPNS direction is normalized to unit length
     mag = math.sqrt(1 * 1 + 2 * 2)
@@ -198,22 +199,23 @@ def test_create_direction_zero_norm_raises(b):
     """
     mv = create_entity(b, Direction(0, 0, 0))
     with pytest.raises(ValueError):
-        analyze_entity(mv, opns=True)
+        analyze_entity(mv)
 
 
 def test_analyze_zero_vector_raises(b):
     """Zero MV passed to analyze_entity must raise ValueError."""
     zero = b.multivector({})
     with pytest.raises(ValueError):
-        analyze_entity(zero, opns=True)
+        analyze_entity(zero)
 
 
-def test_ipns_grade_2_raises(b):
+def test_ipns_grade_2_raises(b, monkeypatch):
     """IPNS grade-2 bivector is only the trivial origin → ValueError."""
+    monkeypatch.setattr(b, "opns", False)
     # Create a grade-2 bivector = pseudoscalar
     grade2_ipns = b.multivector({b.E12: 1.0})
     with pytest.raises(ValueError, match="trivial"):
-        analyze_entity(grade2_ipns, opns=False)
+        analyze_entity(grade2_ipns)
 
 
 # ===============================================================

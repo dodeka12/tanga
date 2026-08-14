@@ -123,21 +123,21 @@ that sets `alg.opns = False` before the call, and drop `opns=True` arguments.
 
 ## 7. Implementation Checklist
 
-- [ ] Remove `opns` from 8 `analysis_*` module `analyze_entity`
-- [ ] Remove `opns` from `analysis.py` `analyze_entity`/`analyze`
-- [ ] Update Phase-2 typed analyzers that referenced the old `opns=` argument
-- [ ] Remove `opns` from `Geometry` (store/slots/`which_entity`/`analyze`/`_opns`)
-- [ ] Remove `opns` from `viz/visualizer.py`, `_scene_handle.py`, `_app.py`
-- [ ] Update `_point_path.py` `_resolve_point` to typed conversion (drop `opns`)
-- [ ] Update the test files listed above (set `alg.opns` where IPNS is tested)
-- [ ] Run: `pytest py/tests/geometry py/tests/viz -q`
+- [x] Remove `opns` from 8 `analysis_*` module `analyze_entity`
+- [x] Remove `opns` from `analysis.py` `analyze_entity`/`analyze`
+- [x] Update Phase-2 typed analyzers that referenced the old `opns=` argument
+- [x] Remove `opns` from `Geometry` (store/slots/`which_entity`/`analyze`/`_opns`)
+- [x] Remove `opns` from `viz/visualizer.py`, `_scene_handle.py`, `_app.py`
+- [x] Update `_point_path.py` `_resolve_point` to typed conversion (drop `opns`)
+- [x] Update the test files listed above (set `alg.opns` where IPNS is tested)
+- [x] Run: `pytest py/tests/geometry py/tests/viz -q`
 
 ---
 
 ## 8. Verification
 
-- [ ] `analyze_entity(mv)` / `analyze(mv)` no longer accept `opns`
-- [ ] `Geometry.which_entity(mv)` / `Geometry.analyze(mv)` follow `algebra.opns`
-- [ ] `viz.add(mv)` resolves via the MV's algebra flag
-- [ ] `PointPath.add(mv)` auto-converts a point MV and raises on mismatch
-- [ ] Full geometry + viz test suites pass
+- [x] `analyze_entity(mv)` / `analyze(mv)` no longer accept `opns`
+- [x] `Geometry.which_entity(mv)` / `Geometry.analyze(mv)` follow `algebra.opns`
+- [x] `viz.add(mv)` resolves via the MV's algebra flag
+- [x] `PointPath.add(mv)` auto-converts a point MV and raises on mismatch
+- [x] Full geometry + viz test suites pass
