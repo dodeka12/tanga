@@ -129,26 +129,43 @@ labels count downward.  Both halves of a direction share that direction's
 
 ## Defaults
 
-If you do not add any `Axis` or `Grid` objects to a scene, the visualizer
-inserts a default `Axes3D` (or `Axes2D` for `space_dim=2`) and a `Grid`
-the first time the scene is served:
+By default every scene automatically receives a default `Axes3D` (or
+`Axes2D` for `space_dim=2`) and a `Grid`.  These are added eagerly when the
+scene is created, independent of whether the server is running — so static
+HTML/glTF/figure exports include them too:
 
 ```python
-viz = Visualizer()        # 3D → default XYZ axes + XZ grid
-viz = Visualizer(space_dim=2)  # 2D → default XY axes + XY grid
+viz = Visualizer()               # 3D → default XYZ axes + XZ grid
+viz = Visualizer(space_dim=2)    # 2D → default XY axes + XY grid
 ```
 
-Adding at least one explicit `Axis` or `Grid` disables the automatic
-defaults for that scene:
+The behaviour is controlled by two constructor flags, both `True` by
+default:
 
 ```python
-viz = Visualizer()
-viz.add(Axis((0, 0, 0), (4, 0, 0), label="X"))  # no auto grid/axes
+Visualizer(add_default_axes=True, add_default_grid=True)
 ```
 
-Providing a custom camera configuration also disables the defaults, since
-the automatic axes/grid assume an origin-centred auto-fit view:
+| Flag | Default | Effect |
+|------|---------|--------|
+| `add_default_axes` | `True` | Insert a default `Axes3D` (or `Axes2D` in 2D) into each scene |
+| `add_default_grid` | `True` | Insert a default `Grid` into each scene |
+
+Set either to `False` to suppress just that object:
 
 ```python
-viz = Visualizer(camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1))  # no auto grid/axes
+viz = Visualizer(add_default_grid=False)   # axes only, no grid
+viz = Visualizer(add_default_axes=False)   # grid only, no axes
+viz = Visualizer(add_default_axes=False, add_default_grid=False)  # neither
+```
+
+The flags are fully authoritative: they are not affected by a custom camera
+configuration, and they do not detect whether you later add your own
+`Axis`/`Grid`.  If you want only your own axes/grid, pass both flags as
+`False`:
+
+```python
+viz = Visualizer(add_default_axes=False, add_default_grid=False)
+viz.add(Axes3D(range_u=(0, 5), range_v=(0, 5), range_w=(0, 5)))
+viz.add(Grid(range_u=(-5, 5), range_v=(-5, 5)))
 ```

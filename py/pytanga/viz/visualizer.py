@@ -99,6 +99,10 @@ class Visualizer(_JupyterDisplayMixin):
         # 2 or 3. When None (default), deduced from the camera config whenever
         # possible; otherwise 3.
         space_dim: int | None = None,
+        # Whether to automatically add default coordinate axes / a grid to
+        # each scene.  Independent of the server and fully authoritative.
+        add_default_axes: bool = True,
+        add_default_grid: bool = True,
     ) -> None:
         if space_dim is None:
             space_dim = _deduce_space_dim(camera) or 3
@@ -119,6 +123,8 @@ class Visualizer(_JupyterDisplayMixin):
         self._opns = opns
         self._title = title
         self._annotation = annotation
+        self._add_default_axes = add_default_axes
+        self._add_default_grid = add_default_grid
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
@@ -163,6 +169,9 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes[""] = Scene(self._config, name="")
         self._default_objects_added: set[str] = set()
 
+        # Seed default axes/grid immediately — independent of server start.
+        self._add_default_scene_objects("")
+
     # ── Scene access ─────────────────────────────────────────
 
     def scene(self, name: str) -> VizSceneHandle:
@@ -182,6 +191,7 @@ class Visualizer(_JupyterDisplayMixin):
                 space_dim=self._config.space_dim,
             )
             self._scenes[name] = Scene(cfg, name=name)
+            self._add_default_scene_objects(name)
         return VizSceneHandle(self, name)
 
     @property
@@ -548,44 +558,34 @@ class Visualizer(_JupyterDisplayMixin):
     # ── Default scene objects ───────────────────────────────
 
     def _add_default_scene_objects(self, scene_name: str) -> None:
-        """Add default axes and a grid unless the user supplied their own.
+        """Add default axes and/or grid, controlled by constructor flags.
 
-        Also suppressed when the scene has a custom camera configuration, as
-        the default axes/grid are auto-fit helpers that assume an origin-centred
-        view.  Idempotent per scene: runs only once.  Triggered lazily before
-        the scene's full state is first served to a browser.
+        Each object is added independently based on ``_add_default_axes`` and
+        ``_add_default_grid``.  Idempotent per scene (runs only once).  Runs
+        eagerly at construction and when a named scene is created, so exports
+        that read the scene directly (without starting the server) also see
+        the defaults.
         """
         if scene_name in self._default_objects_added:
             return
         scene = self._scenes[scene_name]
-        has_custom_camera = scene.config.camera is not None
-        has_axis_or_grid = any(
-            obj.kind in ("Axis", "Grid", "Axes2D", "Axes3D")
-            for obj in scene._objects.values()
-        )
 
-        if not has_axis_or_grid and not has_custom_camera:
-            from ._scene_objects import Axes2D, Axes3D, Grid
-            from ._styles import Axes3DStyle, AxisStyle
+        from ._scene_objects import Axes2D, Axes3D, Grid
+        from ._styles import Axes3DStyle, AxisStyle
 
-            if scene.config.space_dim == 2:
+        if scene.config.space_dim == 2:
+            if self._add_default_axes:
                 axes: Axes2D | Axes3D = Axes2D(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
-                grid = Grid(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
                 self._add_to_scene(scene_name, obj=axes)
+            if self._add_default_grid:
+                grid = Grid(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
                 self._add_to_scene(scene_name, obj=grid)
-            else:
+        else:
+            if self._add_default_axes:
                 axes = Axes3D(
                     range_u=(0.0, 5.0),
                     range_v=(0.0, 5.0),
                     range_w=(0.0, 5.0),
-                    # labels=("X", "Y", "Z"),
-                )
-                grid = Grid(
-                    origin=(0.0, 0.0, 0.0),
-                    dir_u=(1.0, 0.0, 0.0),
-                    dir_v=(0.0, 0.0, 1.0),
-                    range_u=(-5.0, 5.0),
-                    range_v=(-5.0, 5.0),
                 )
                 self._add_to_scene(
                     scene_name,
@@ -595,6 +595,14 @@ class Visualizer(_JupyterDisplayMixin):
                         v=AxisStyle(color="green", label_at_major=False),
                         w=AxisStyle(color="blue", label_at_major=False),
                     ),
+                )
+            if self._add_default_grid:
+                grid = Grid(
+                    origin=(0.0, 0.0, 0.0),
+                    dir_u=(1.0, 0.0, 0.0),
+                    dir_v=(0.0, 0.0, 1.0),
+                    range_u=(-5.0, 5.0),
+                    range_v=(-5.0, 5.0),
                 )
                 self._add_to_scene(scene_name, obj=grid)
 

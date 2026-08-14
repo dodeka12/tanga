@@ -66,7 +66,7 @@ class TestVisualizer2D:
         assert isinstance(eid, str)
 
     def test_entity_serializes_with_z_zero(self):
-        viz = Visualizer(space_dim=2)
+        viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
         viz.add(Point(3, 4, 0))
         dirty, _ = viz._scene.flush()
         assert dirty[0]["position"] == [3, 4, 0]

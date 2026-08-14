@@ -256,6 +256,60 @@ export function styleParam(ent, key, fallback) {
 }
 
 /**
+ * Numeric equality within a small absolute tolerance.
+ */
+export function approxEqual(a, b, eps = 1e-9) {
+    return Math.abs(a - b) < eps;
+}
+
+/**
+ * Apply the common, non-structural style fields (opacity, color, scale) to a
+ * mesh and its children.  Used by the shared update dispatcher and by
+ * per-entity updaters so the mutations are defined in one place.
+ */
+export function applyStyleUpdate(mesh, ent) {
+    if (ent.opacity !== undefined) {
+        mesh.traverse((child) => {
+            if (child.material && child.material.opacity !== undefined) {
+                child.material.opacity = ent.opacity;
+                child.material.transparent = ent.opacity < 1.0;
+                child.material.depthWrite = ent.opacity >= 0.99;
+                child.material.needsUpdate = true;
+            }
+        });
+    }
+
+    if (ent.color) {
+        const c = new THREE.Color(ent.color);
+        mesh.traverse((child) => {
+            if (child.material && child.material.color) {
+                child.material.color.copy(c);
+            }
+        });
+    }
+
+    if (ent.scale) {
+        mesh.scale.set(ent.scale[0], ent.scale[1], ent.scale[2]);
+    }
+}
+
+/**
+ * Return true when an entity whose geometry derives directly from its fields
+ * must be rebuilt rather than updated in place.
+ *
+ * ``prev`` is the previously applied merged entity dict (may be undefined for
+ * a brand-new entity; callers invoking this on an in-place path always have it).
+ */
+export function entityRequiresRebuild(ent, prev) {
+    if (ent.kind === 'PointPath') return true;
+    if (ent.radius !== undefined && (!prev || !approxEqual(ent.radius, prev.radius))) return true;
+    if (ent.extent !== undefined && (!prev || !approxEqual(ent.extent, prev.extent))) return true;
+    if (ent.length !== undefined && (!prev || !approxEqual(ent.length, prev.length))) return true;
+    if (ent.kind !== undefined && ent.kind !== prev?.kind) return true;
+    return false;
+}
+
+/**
  * Create a 3D arrow group (cylinder shaft + cone head) oriented along a direction.
  *
  * @param {THREE.Color|string} color

@@ -9,6 +9,8 @@ import {
     styleParam,
     parseColor,
     tagEntity,
+    applyStyleUpdate,
+    approxEqual,
     addWireframeOverlay,
 } from './utils.js';
 
@@ -50,4 +52,24 @@ export function createLine(ent) {
 
     tagEntity(mesh, ent);
     return mesh;
+}
+
+export function updateLine(mesh, ent, prev) {
+    const dir = ent.direction || prev?.direction || [1, 0, 0];
+    const origin = ent.origin || prev?.origin || [0, 0, 0];
+    const length = ent.length ?? prev?.length ?? 20.0;
+
+    const d = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize();
+    mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
+    mesh.position.set(
+        origin[0] + d.x * length / 2,
+        origin[1] + d.y * length / 2,
+        origin[2] + d.z * length / 2
+    );
+
+    applyStyleUpdate(mesh, ent);
+
+    if (ent.length !== undefined && prev && !approxEqual(ent.length, prev.length)) return false;
+    if (ent.thickness !== undefined && prev && !approxEqual(ent.thickness, prev.thickness)) return false;
+    return true;
 }

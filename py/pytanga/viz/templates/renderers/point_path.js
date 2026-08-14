@@ -82,6 +82,13 @@ export function createPointPath(ent) {
     return line;
 }
 
+export function updatePointPath(_mesh, _ent, _prev) {
+    // The fat-line geometry is rebuilt from ``points``/``colors``, so an
+    // in-place update is never correct.  Returning false forces the caller
+    // to dispose and recreate the mesh from the current frame's data.
+    return false;
+}
+
 /**
  * Resolve a per-point color to an {r, g, b} object (0-1 range).
  * If the color is null/undefined, returns the parsed uniform color.

@@ -31,17 +31,24 @@
             overflow: hidden;
         }
 
-        #status {
+        #tanga-status-area {
             position: fixed;
-            top: 10px;
+            top: 8px;
             right: 10px;
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        #status {
             width: 10px;
             height: 10px;
             border-radius: 50%;
             background: #f44;
             pointer-events: none;
             transition: background 0.3s;
-            z-index: 10;
         }
 
         #status.connected {
@@ -273,9 +280,10 @@
             }
         })();
     </script>
-    <div id="viewer-container">
+    <div id="tanga-status-area">
         <div id="status" class="disconnected"></div>
     </div>
+    <div id="viewer-container"></div>
 
         <script>
         // Choose CDN based on ?cdn= query param (fallback support)

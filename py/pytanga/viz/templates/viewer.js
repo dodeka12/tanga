@@ -7,7 +7,7 @@ window.__tanga_ready = true;
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { setupControls } from './controls.js';
-import { createEntityMesh, removeEntityMesh } from './renderers/factory.js';
+import { createEntityMesh, removeEntityMesh, updateEntityMesh } from './renderers/factory.js';
 import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
@@ -134,21 +134,52 @@ const _RECONNECT_BASE_MS = 1000;
 const _RECONNECT_MAX_MS = 30000;
 let _reconnectDelay = _RECONNECT_BASE_MS;
 
+// Single-flight guard: increment on teardown so stale onopen/onclose
+// handlers from superseded sockets are ignored.
+let _wsGeneration = 0;
+
+function closeActiveWs() {
+    if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+        _log('ws-teardown', 'closing readyState=' + ws.readyState);
+        _wsGeneration++;                          // invalidate stale handlers
+        const old = ws;
+        old.onopen = old.onclose = old.onerror = old.onmessage = null;
+        try { old.close(); } catch (_) {}
+    }
+    ws = null;
+}
+
 function connectWebSocket() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${location.host}/ws`;
 
+    closeActiveWs();
+    const gen = _wsGeneration;
+
     _reconnectAttempts++;
     updateStatusIndicator('connecting', _reconnectAttempts);
     document.title = 'Connecting… — ' + _savedTitle;
+    _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts);
 
     ws = new WebSocket(url);
 
+    const connectWatchdog = setTimeout(() => {
+        if (ws && ws.readyState === WebSocket.CONNECTING && gen === _wsGeneration) {
+            _log('ws-watchdog', 'connect timed out — aborting and retrying');
+            _wsGeneration++;               // invalidate this socket's handlers
+            try { ws.close(); } catch (_) {}
+            ws = null;
+            connectWebSocket();            // retry immediately
+        }
+    }, 5000);
+
     ws.onopen = () => {
+        if (gen !== _wsGeneration) return;
+        clearTimeout(connectWatchdog);
         const pageToken = window.__tanga_page_token
             || new URLSearchParams(window.location.search).get('token');
-        console.log('[tanga] WS connected (attempt=' + _reconnectAttempts
-            + ', token=' + (pageToken || 'none') + ')');
+        _log('ws-open', 'attempt=' + _reconnectAttempts
+            + ' token=' + (pageToken || 'none'));
         setStatus('connected');
         setWebSocket(ws);
         setInteractionWebSocket(ws);
@@ -169,23 +200,29 @@ function connectWebSocket() {
     };
 
     ws.onmessage = (event) => {
+        let msg;
         try {
-            handleMessage(JSON.parse(event.data));
+            msg = JSON.parse(event.data);
         } catch (e) {
             console.error('Failed to parse WebSocket message:', e);
+            return;
         }
+        _log('ws-msg', 'type=' + (msg.type || 'unknown'));
+        handleMessage(msg);
     };
 
     ws.onclose = (event) => {
-        console.warn('[tanga] WS closed (code=' + event.code
-            + '), reason=' + (event.reason || 'none'));
+        if (gen !== _wsGeneration) return;
+        clearTimeout(connectWatchdog);
+        _log('ws-close', 'code=' + event.code
+            + ' reason=' + (event.reason || 'none'));
         setStatus('disconnected');
         updateStatusIndicator('disconnected');
         document.title = 'Disconnected — ' + _savedTitle;
 
         const jitter = 0.8 + Math.random() * 0.4;  // ±20%
         const delay = Math.round(Math.min(_reconnectDelay * jitter, _RECONNECT_MAX_MS));
-        console.log('[tanga] Reconnecting in ' + delay + 'ms (backoff=' + _reconnectDelay + 'ms)');
+        _log('ws-reconnect', 'delay=' + delay + 'ms backoff=' + _reconnectDelay + 'ms');
         _reconnectDelay = Math.min(_reconnectDelay * 2, _RECONNECT_MAX_MS);
         reconnectTimer = setTimeout(connectWebSocket, delay);
     };
@@ -202,7 +239,7 @@ function setStatus(cls) {
 // ── Visibility wake-up ────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && ws === null) {
-        console.log('[tanga] Tab became visible — triggering immediate reconnect');
+        _log('ws-visibility', 'tab visible — immediate reconnect');
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
@@ -216,6 +253,15 @@ document.addEventListener('visibilitychange', () => {
 let _reconnectButtonEl = null;
 let _reconnectClickCount = 0;
 
+function _log(phase, detail) {
+    const parts = ['[tanga:' + phase + ']'];
+    if (_browserId) parts.push('id=' + _browserId);
+    if (_viewerName) parts.push('viewer=' + _viewerName);
+    if (_myScene) parts.push('scene=' + _myScene);
+    if (detail) parts.push(detail);
+    console.log(parts.join(' '));
+}
+
 function showReconnectButton(mode) {
     // mode: 'reconnect' (normal reconnect) or 'page-reload' (full refresh)
     if (_reconnectButtonEl) {
@@ -225,9 +271,6 @@ function showReconnectButton(mode) {
 
     _reconnectButtonEl = document.createElement('button');
     _reconnectButtonEl.id = 'tanga-reconnect-btn';
-    _reconnectButtonEl.style.position = 'fixed';
-    _reconnectButtonEl.style.top = '6px';
-    _reconnectButtonEl.style.right = '28px';
     _reconnectButtonEl.style.padding = '2px 8px';
     _reconnectButtonEl.style.fontSize = '11px';
     _reconnectButtonEl.style.fontFamily = 'sans-serif';
@@ -262,17 +305,23 @@ function showReconnectButton(mode) {
                 showReconnectButton('page-reload');
                 return;
             }
-            console.log('[tanga] Manual reconnect requested (click ' + _reconnectClickCount + ')');
+            _log('ws-manual', 'reconnect click=' + _reconnectClickCount);
             if (reconnectTimer) {
                 clearTimeout(reconnectTimer);
                 reconnectTimer = null;
             }
+            closeActiveWs();
             _reconnectDelay = _RECONNECT_BASE_MS;
             connectWebSocket();
         });
     }
 
-    document.body.appendChild(_reconnectButtonEl);
+    const statusArea = document.getElementById('tanga-status-area');
+    if (statusArea) {
+        statusArea.appendChild(_reconnectButtonEl);
+    } else {
+        document.body.appendChild(_reconnectButtonEl);
+    }
 }
 
 function hideReconnectButton() {
@@ -301,15 +350,17 @@ function updateStatusIndicator(state, attempts) {
         if (!labelEl) {
             labelEl = document.createElement('span');
             labelEl.id = 'status-label';
-            labelEl.style.position = 'fixed';
-            labelEl.style.top = '8px';
-            labelEl.style.right = '26px';
             labelEl.style.color = '#888';
             labelEl.style.fontFamily = 'sans-serif';
             labelEl.style.fontSize = '11px';
             labelEl.style.pointerEvents = 'none';
-            labelEl.style.zIndex = '11';
-            document.body.appendChild(labelEl);
+            labelEl.style.whiteSpace = 'nowrap';
+            const statusArea = document.getElementById('tanga-status-area');
+            if (statusArea) {
+                statusArea.appendChild(labelEl);
+            } else {
+                document.body.appendChild(labelEl);
+            }
         }
         labelEl.textContent = 'attempt ' + attempts;
         labelEl.style.display = '';
@@ -503,78 +554,8 @@ function _approx(a, b, eps = 1e-9) {
 function inPlaceUpdate(ent) {
     const mesh = entityMeshes.get(ent.id);
     if (!mesh) return false;
-
     const previous = entityData.get(ent.id);
-
-    // Position update
-    if (ent.position) {
-        mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
-    }
-
-    // Direction/vector update
-    if (ent.vector || ent.direction) {
-        const vec = ent.vector || ent.direction;
-        const origin = ent.origin || [0, 0, 0];
-        // Line entities position their cylinder mesh at the midpoint
-        // (origin + dir * len/2), not at origin.  Other direction-based
-        // entities (Direction arrow groups, etc.) sit at origin.
-        if (ent.kind === 'Line') {
-            const len = (ent.length !== undefined) ? ent.length : (previous?.length ?? 20.0);
-            const d = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
-            mesh.position.set(
-                origin[0] + d.x * len / 2,
-                origin[1] + d.y * len / 2,
-                origin[2] + d.z * len / 2
-            );
-        } else {
-            mesh.position.set(origin[0], origin[1], origin[2]);
-        }
-        mesh.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
-    }
-
-    // Center update
-    if (ent.center) {
-        mesh.position.set(ent.center[0], ent.center[1], ent.center[2]);
-    }
-
-    // Opacity update
-    if (ent.opacity !== undefined && ent.opacity !== (previous?.opacity)) {
-        const val = ent.opacity;
-        mesh.traverse(child => {
-            if (child.material && child.material.opacity !== undefined) {
-                child.material.opacity = val;
-                child.material.transparent = val < 1.0;
-                child.material.depthWrite = val >= 0.99;
-                child.material.needsUpdate = true;
-            }
-        });
-    }
-
-    // Color update
-    if (ent.color && ent.color !== previous?.color) {
-        const c = new THREE.Color(ent.color);
-        mesh.traverse(child => {
-            if (child.material && child.material.color) {
-                child.material.color.copy(c);
-            }
-        });
-    }
-
-    // Scale update
-    if (ent.scale) {
-        mesh.scale.set(ent.scale[0], ent.scale[1], ent.scale[2]);
-    }
-
-    // PointPath requires full rebuild on any change
-    if (ent.kind === 'PointPath') return false;
-
-    // Structural changes require full rebuild (tolerance-aware)
-    if (ent.radius !== undefined && (!previous || !_approx(ent.radius, previous.radius))) return false;
-    if (ent.extent !== undefined && (!previous || !_approx(ent.extent, previous.extent))) return false;
-    if (ent.length !== undefined && (!previous || !_approx(ent.length, previous.length))) return false;
-    if (ent.kind !== undefined && ent.kind !== previous?.kind) return false;
-
-    return true;
+    return updateEntityMesh(mesh, ent, previous);
 }
 
 // ── Message Handler ─────────────────────────────────────────

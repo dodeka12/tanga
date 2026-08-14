@@ -225,5 +225,7 @@ Visualizer(
 )
 ```
 
-Grid and axes are no longer toggled via boolean flags — they are explicit
-scene objects.  See [Axes & Grid](axes-grid.md).
+Grid and axes are explicit scene objects (see [Axes & Grid](axes-grid.md)).
+Whether a default axes/grid is inserted automatically is controlled by the
+`add_default_axes` / `add_default_grid` constructor flags (both `True` by
+default).

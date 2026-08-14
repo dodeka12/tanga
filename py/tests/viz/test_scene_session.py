@@ -333,27 +333,27 @@ class TestVisualizer:
         assert isinstance(eid, str)
 
     def test_add_with_color_normalizes(self):
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.5, 0.0))
         dirty, _ = viz._scene.flush()
         assert dirty[0]["color"] == "#ff8000"
 
     def test_add_with_4tuple_extracts_opacity(self):
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3))
         dirty, _ = viz._scene.flush()
         assert dirty[0]["color"] == "#ff0000"
         assert dirty[0]["opacity"] == 0.3
 
     def test_add_with_color_and_explicit_opacity(self):
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3), opacity=0.8)
         dirty, _ = viz._scene.flush()
         assert dirty[0]["color"] == "#ff0000"
         assert dirty[0]["opacity"] == 0.8  # explicit wins
 
     def test_add_with_hex_color_passthrough(self):
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0), color="#abcdef")
         dirty, _ = viz._scene.flush()
         assert dirty[0]["color"] == "#abcdef"
@@ -361,7 +361,7 @@ class TestVisualizer:
     def test_add_with_style(self):
         from pytanga.viz._styles import PointStyle
 
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0), style=PointStyle(size=0.5, color="#00ff00"))
         dirty, _ = viz._scene.flush()
         assert dirty[0]["style"]["size"] == 0.5
@@ -376,7 +376,7 @@ class TestVisualizer:
         assert dirty[0]["color"] == "#00ff00"
 
     def test_remove_delegates(self):
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         eid = viz.add(Point(0, 0, 0))
         viz.remove(eid)
         assert viz._scene.entity_count == 1  # until flush
@@ -384,7 +384,7 @@ class TestVisualizer:
         assert viz._scene.entity_count == 0
 
     def test_clear_delegates(self):
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0))
         viz.add(Point(1, 1, 1))
         viz.clear()
@@ -791,7 +791,7 @@ class TestGridAxesStyles:
     def test_grid_style_via_add(self):
         from pytanga.viz import GridStyle
 
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Grid(), style=GridStyle(color="#ff0000"))
         dirty, _ = viz._scene.flush()
         assert dirty[0]["color"] == "#ff0000"
@@ -799,7 +799,7 @@ class TestGridAxesStyles:
     def test_axes_style_via_add(self):
         from pytanga.viz import AxisStyle
 
-        viz = Visualizer()
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Axis((0, 0, 0), (1, 0, 0)), style=AxisStyle(color="#00ff00"))
         dirty, _ = viz._scene.flush()
         assert dirty[0]["color"] == "#00ff00"
@@ -901,39 +901,38 @@ class TestDefaultSceneObjects:
     def _kinds(self, viz):
         return sorted(o.kind for o in viz._scenes[""]._objects.values())
 
-    def test_default_added_when_none_provided(self):
+    def test_defaults_added_eagerly(self):
         viz = Visualizer()
-        viz._full_state_for("")
         kinds = self._kinds(viz)
         assert "Axes3D" in kinds
         assert "Grid" in kinds
 
-    def test_default_not_added_when_axis_provided(self):
+    def test_add_default_axes_false(self):
+        viz = Visualizer(add_default_axes=False)
+        kinds = self._kinds(viz)
+        assert "Axes3D" not in kinds
+        assert "Grid" in kinds
+
+    def test_add_default_grid_false(self):
+        viz = Visualizer(add_default_grid=False)
+        kinds = self._kinds(viz)
+        assert "Axes3D" in kinds
+        assert "Grid" not in kinds
+
+    def test_both_defaults_disabled(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        assert self._kinds(viz) == []
+
+    def test_defaults_authoritative_with_custom_camera(self):
+        viz = Visualizer(camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
+        kinds = self._kinds(viz)
+        assert "Axes3D" in kinds
+        assert "Grid" in kinds
+
+    def test_user_axes_in_addition_to_defaults(self):
         viz = Visualizer()
         viz.add(Axis((0, 0, 0), (1, 0, 0)))
-        viz._full_state_for("")
         kinds = self._kinds(viz)
         assert "Axis" in kinds
-        assert "Grid" not in kinds
-
-    def test_default_not_added_when_grid_provided(self):
-        viz = Visualizer()
-        viz.add(Grid())
-        viz._full_state_for("")
-        kinds = self._kinds(viz)
+        assert "Axes3D" in kinds
         assert "Grid" in kinds
-        assert "Axis" not in kinds
-
-    def test_default_not_added_when_custom_camera_2d(self):
-        viz = Visualizer(camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1))
-        viz._full_state_for("")
-        kinds = self._kinds(viz)
-        assert "Axis" not in kinds
-        assert "Grid" not in kinds
-
-    def test_default_not_added_when_custom_camera_3d(self):
-        viz = Visualizer(camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
-        viz._full_state_for("")
-        kinds = self._kinds(viz)
-        assert "Axis" not in kinds
-        assert "Grid" not in kinds

@@ -8,6 +8,8 @@ import {
     styleParam,
     parseColor,
     tagEntity,
+    applyStyleUpdate,
+    approxEqual,
 } from './utils.js';
 
 export function createDirection(ent) {
@@ -42,4 +44,17 @@ export function createDirection(ent) {
 
     tagEntity(group, ent);
     return group;
+}
+
+export function updateDirection(mesh, ent, prev) {
+    const vec = ent.vector || prev?.vector || [0, 0, 1];
+    const origin = ent.origin || prev?.origin || [0, 0, 0];
+
+    mesh.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
+    mesh.position.set(origin[0], origin[1], origin[2]);
+
+    applyStyleUpdate(mesh, ent);
+
+    if (ent.length !== undefined && prev && !approxEqual(ent.length, prev.length)) return false;
+    return true;
 }

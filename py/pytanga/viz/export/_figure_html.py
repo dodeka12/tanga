@@ -207,7 +207,6 @@ def _build_static_figure_adapter(
             entities_expr="figEntities",
             mesh_map_var="figMeshMap",
             scene_var="figScene",
-            layer_dispatch=False,
         ),
         "",
         js_autofit_camera(

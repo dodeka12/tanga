@@ -3,8 +3,8 @@
 
 import { createPoint } from './point.js';
 import { createCrossHairPoint } from './crosshair_point.js';
-import { createDirection } from './direction.js';
-import { createLine } from './line.js';
+import { createDirection, updateDirection } from './direction.js';
+import { createLine, updateLine } from './line.js';
 import { createPlane } from './plane.js';
 import { createCircle } from './circle.js';
 import { createSphere } from './sphere.js';
@@ -19,12 +19,12 @@ import { createGeneralRotor } from './operators/general_rotor.js';
 import { createReflectionLine } from './operators/reflection_line.js';
 import { createReflectionPlane } from './operators/reflection_plane.js';
 import { createReflectionPoint } from './operators/reflection_point.js';
-import { createPointPath } from './point_path.js';
+import { createPointPath, updatePointPath } from './point_path.js';
 import { createAxis } from './axis.js';
 import { createAxes2D } from './axes2d.js';
 import { createAxes3D } from './axes3d.js';
 import { createGrid } from './grid.js';
-import { tagEntity } from './utils.js';
+import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
 
 /**
  * Create a Three.js Object3D for a given entity JSON dict.
@@ -120,6 +120,41 @@ export async function createEntityMesh(ent) {
         tagEntity(mesh, ent);
     }
     return mesh;
+}
+
+export function updateEntityMesh(mesh, ent, prev) {
+    // Route to the co-located, kind-specific updater when one exists; these
+    // handle bespoke placement (e.g. Line's segment midpoint) and return false
+    // when the geometry must be rebuilt instead of updated in place.
+    switch (ent.kind) {
+        case 'Line':
+            return updateLine(mesh, ent, prev);
+        case 'PointPath':
+            return updatePointPath(mesh, ent, prev);
+        case 'Direction':
+            return updateDirection(mesh, ent, prev);
+        default:
+            break;
+    }
+
+    // Generic in-place update: position/orientation + common style fields.
+    if (ent.position) {
+        mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
+    }
+    if (ent.center) {
+        mesh.position.set(ent.center[0], ent.center[1], ent.center[2]);
+    }
+    if (ent.vector || ent.direction) {
+        const vec = ent.vector || ent.direction;
+        const origin = ent.origin || [0, 0, 0];
+        mesh.position.set(origin[0], origin[1], origin[2]);
+        const dir = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
+        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        mesh.setRotationFromQuaternion(quat);
+    }
+    applyStyleUpdate(mesh, ent);
+
+    return !entityRequiresRebuild(ent, prev);
 }
 
 export function removeEntityMesh(mesh) {
