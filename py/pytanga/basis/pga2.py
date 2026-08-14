@@ -126,28 +126,6 @@ class BasisPGA2(Algebra):
         """
         return self.dual(a)
 
-    # ── convenience constructors ──────────────────────────────────
-
-    def point(self, x: float, y: float) -> MV:
-        """Point in IPNS / dual form: ``x·e₁ + y·e₂ + e₀``.
-
-        The OPNS form (grade‑2 bivector) is obtained via ``.dual()``
-        or by wedging two orthogonal lines (planes in 2D) through the point.
-        """
-        return self.multivector({1: x, 2: y, self.EP: 1.0, self.EM: 1.0})
-
-    def direction(self, x: float, y: float) -> MV:
-        """Direction / ideal point (IPNS): ``x·e₁ + y·e₂``
-        (no e₀ component)."""
-        return self.multivector({1: x, 2: y})
-
-    def line(self, nx: float, ny: float, d: float = 0.0) -> MV:
-        """Line in 2D (PGA line = grade‑1): ``nx·e₁ + ny·e₂ + d·e₀``.
-
-        *d* is the signed distance from the origin.
-        """
-        return self.multivector({1: nx, 2: ny, self.EP: d, self.EM: d})
-
     # ── display ───────────────────────────────────────────────────
 
     @cached_property

@@ -56,10 +56,7 @@ def create_point(
         *False* → IPNS: grade‑3 trivector (dual of Hop(a)), representing
         the intersection of three orthogonal planes through the point.
     """
-    if hasattr(basis, "point"):
-        opns_mv = basis.point(x, y, z)
-    else:
-        opns_mv = basis.multivector({E1: x, E2: y, E3: z, E4: 1})
+    opns_mv = basis.multivector({E1: x, E2: y, E3: z, E4: 1})
 
     if opns:
         return opns_mv
@@ -80,10 +77,7 @@ def create_direction(
     if abs(x) < 1e-15 and abs(y) < 1e-15 and abs(z) < 1e-15:
         raise ValueError("Zero‑norm direction is not a valid geometric direction")
 
-    if hasattr(basis, "direction"):
-        opns_mv = basis.direction(x, y, z)
-    else:
-        opns_mv = basis.multivector({E1: x, E2: y, E3: z})
+    opns_mv = basis.multivector({E1: x, E2: y, E3: z})
 
     if opns:
         return opns_mv

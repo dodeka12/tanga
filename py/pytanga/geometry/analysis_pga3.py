@@ -309,8 +309,6 @@ def make_point(alg: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA3 point (grade‑1 IPNS form):
     ``x·e₁ + y·e₂ + z·e₃ + e₀``.
     """
-    if hasattr(alg, "point"):
-        return alg.point(x, y, z)
     return alg.multivector({E1: x, E2: y, E3: z, EP: 1.0, EM: 1.0})
 
 
@@ -318,15 +316,11 @@ def make_direction(alg: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA3 direction (ideal point, grade‑1 IPNS):
     ``x·e₁ + y·e₂ + z·e₃``.
     """
-    if hasattr(alg, "direction"):
-        return alg.direction(x, y, z)
     return alg.multivector({E1: x, E2: y, E3: z})
 
 
 def make_plane(alg: Algebra, nx: float, ny: float, nz: float, d: float = 0.0) -> MV:
     """Create a PGA3 plane (grade‑1): ``nx·e₁ + ny·e₂ + nz·e₃ + d·e₀``."""
-    if hasattr(alg, "plane"):
-        return alg.plane(nx, ny, nz, d)
     return alg.multivector({E1: nx, E2: ny, E3: nz, EP: d, EM: d})
 
 

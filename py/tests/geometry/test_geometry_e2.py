@@ -210,7 +210,7 @@ def test_reflection_line_round_trip(basis_e2):
 def test_reflection_line_application(basis_e2):
     """Reflection on y-axis line: y stays, x flips via d * v * d.rev()."""
     rl_mv = create_operator(basis_e2, ReflectionLine(Direction(0, 1, 0)))
-    v = basis_e2.vector(1, 2)
+    v = basis_e2.multivector({1: 1, 2: 2})
     result = rl_mv * v * rl_mv.rev()
     # d = e2. Parallel (e2) stays: (0,2). Perp (e1) flips: (-1,0) → (-1,2)
     assert float(result[basis_e2.blade_id("e1")]) == pytest.approx(-1.0)
@@ -220,7 +220,7 @@ def test_reflection_line_application(basis_e2):
 def test_reflection_line_e1_application(basis_e2):
     """Reflection on x-axis line: x stays, y flips."""
     rl_mv = create_operator(basis_e2, ReflectionLine(Direction(1, 0, 0)))
-    v = basis_e2.vector(1, 2)
+    v = basis_e2.multivector({1: 1, 2: 2})
     result = rl_mv * v * rl_mv.rev()
     assert float(result[basis_e2.blade_id("e1")]) == pytest.approx(1.0)
     assert float(result[basis_e2.blade_id("e2")]) == pytest.approx(-2.0)

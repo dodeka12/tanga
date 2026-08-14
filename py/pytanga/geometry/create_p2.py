@@ -50,8 +50,6 @@ def create_point(
         *True* (default) → OPNS: grade‑1 vector ``Hop(a)``.
         *False* → IPNS: grade‑2 bivector (dual of Hop(a)).
     """
-    if hasattr(basis, "point"):
-        return basis.point(x, y)
     opns_mv = basis.multivector({E1: x, E2: y, E3: 1})
     if opns:
         return opns_mv
@@ -72,10 +70,7 @@ def create_direction(
     if abs(x) < 1e-15 and abs(y) < 1e-15:
         raise ValueError("Zero‑norm direction is not a valid geometric direction")
 
-    if hasattr(basis, "direction"):
-        opns_mv = basis.direction(x, y)
-    else:
-        opns_mv = basis.multivector({E1: x, E2: y})
+    opns_mv = basis.multivector({E1: x, E2: y})
 
     if opns:
         return opns_mv

@@ -302,7 +302,7 @@ def test_reflection_line_round_trip_e3(basis_e3):
 def test_reflection_line_e3_application(basis_e3):
     """Reflection on z-axis line: z stays, xy flips via d * v * d.rev()."""
     rl_mv = create_operator(basis_e3, ReflectionLine(Direction(0, 0, 1)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     result = rl_mv * v * rl_mv.rev()
     # d = e3, a = (1,2,3). Parallel: (0,0,3) stays. Perp: (1,2,0) flips → (-1,-2,0)
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(-1.0)
@@ -313,7 +313,7 @@ def test_reflection_line_e3_application(basis_e3):
 def test_reflection_line_e1_application(basis_e3):
     """Reflection on x-axis line: x stays, yz flips."""
     rl_mv = create_operator(basis_e3, ReflectionLine(Direction(1, 0, 0)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     result = rl_mv * v * rl_mv.rev()
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(1.0)
     assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(-2.0)
@@ -348,7 +348,7 @@ def test_reflection_plane_round_trip_e3(basis_e3):
 def test_reflection_plane_e3_application(basis_e3):
     """Reflection on xy-plane via −B * v * B.rev(): xy stays, z flips."""
     rp_mv = create_operator(basis_e3, ReflectionPlane(Direction(0, 0, 1)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     # Plane reflection formula: (−1)^(k+1) B a B⁻¹ with k=2 → −B a B.rev()
     result = -rp_mv * v * rp_mv.rev()
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(1.0)
@@ -359,7 +359,7 @@ def test_reflection_plane_e3_application(basis_e3):
 def test_reflection_plane_e1_normal_application(basis_e3):
     """Reflection on yz-plane (normal e1): x flips, yz stays."""
     rp_mv = create_operator(basis_e3, ReflectionPlane(Direction(1, 0, 0)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     result = -rp_mv * v * rp_mv.rev()
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(-1.0)
     assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(2.0)
@@ -373,7 +373,7 @@ def test_reflection_plane_e1_normal_application(basis_e3):
 
 def test_line_vs_plane_reflection_are_complementary_e3(basis_e3):
     """Line reflection on e3 + Plane reflection on e3 normal = full inversion."""
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     rl = create_operator(basis_e3, ReflectionLine(Direction(0, 0, 1)))
     rp = create_operator(basis_e3, ReflectionPlane(Direction(0, 0, 1)))
     # Line reflection: d*v*d.rev() with d=e3 → z stays, xy flips → (-1, -2, 3)

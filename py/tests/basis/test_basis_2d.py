@@ -8,6 +8,8 @@ from __future__ import annotations
 import pytest
 from pytanga import Algebra
 from pytanga.basis import BasisE2, BasisN2, BasisP2, BasisPGA2
+from pytanga.geometry.create import create_entity
+from pytanga.geometry.entities import Direction, Point
 
 
 # Skip all tests that instantiate a Basis class (requires C++ compilation) when
@@ -119,7 +121,7 @@ class TestBasisE2:
         assert float(self.b.I[3]) == pytest.approx(1.0)
 
     def test_vector_factory(self):
-        v = self.b.vector(3, 4)
+        v = self.b.multivector({1: 3, 2: 4})
         assert float(v[1]) == pytest.approx(3.0)
         assert float(v[2]) == pytest.approx(4.0)
 
@@ -156,13 +158,13 @@ class TestBasisP2:
         assert self.b.pseudoscalar_id == 7  # 1|2|4
 
     def test_point_factory(self):
-        p = self.b.point(3, 4)
+        p = create_entity(self.b, Point(3, 4, 0))
         assert float(p[1]) == pytest.approx(3.0)
         assert float(p[2]) == pytest.approx(4.0)
         assert float(p[4]) == pytest.approx(1.0)  # e3 = homogeneous weight
 
     def test_direction_factory(self):
-        d = self.b.direction(1, 2)
+        d = create_entity(self.b, Direction(1, 2, 0))
         assert float(d[1]) == pytest.approx(1.0)
         assert float(d[2]) == pytest.approx(2.0)
         assert float(d[4]) == pytest.approx(0.0)  # no e3 component
@@ -257,7 +259,7 @@ class TestBasisPGA2:
         assert abs(scalar(result) - 1.0) < 1e-6
 
     def test_point_has_correct_blades(self):
-        p = self.b.point(1, 2)
+        p = self.b.multivector({1: 1, 2: 2, 4: 1.0, 8: 1.0})
         assert float(p[1]) == pytest.approx(1.0)  # e1
         assert float(p[2]) == pytest.approx(2.0)  # e2
         assert float(p[4]) == pytest.approx(1.0)  # ep component of e0
@@ -265,29 +267,29 @@ class TestBasisPGA2:
 
     def test_point_inner_product_with_e0_inv(self):
         """ip(point, e0_inv) must equal +1 for any finite point in PGA2."""
-        p = self.b.point(3, 4)
+        p = self.b.multivector({1: 3, 2: 4, 4: 1.0, 8: 1.0})
         result = self.b.ip(p, self.b.e0_inv)
         assert abs(scalar(result) - 1.0) < 1e-12
 
     def test_ideal_direction_inner_product_with_e0_inv_is_zero(self):
         """ip(direction, e0_inv) = 0 for ideal points."""
-        v = self.b.direction(1, 0)
+        v = self.b.multivector({1: 1.0})
         result = self.b.ip(v, self.b.e0_inv)
         assert is_zero(result)
 
     def test_direction_factory(self):
-        v = self.b.direction(3, 0)
+        v = self.b.multivector({1: 3.0, 2: 0.0})
         assert float(v[1]) == pytest.approx(3.0)
         assert float(v[2]) == pytest.approx(0.0)
         assert float(v[4]) == pytest.approx(0.0)  # no ep
         assert float(v[8]) == pytest.approx(0.0)  # no em
 
     def test_line_factory(self):
-        l = self.b.line(0, 1, 5.0)
-        assert float(l[1]) == pytest.approx(0.0)
-        assert float(l[2]) == pytest.approx(1.0)
-        assert float(l[4]) == pytest.approx(5.0)
-        assert float(l[8]) == pytest.approx(5.0)
+        line_mv = self.b.multivector({1: 0.0, 2: 1.0, 4: 5.0, 8: 5.0})
+        assert float(line_mv[1]) == pytest.approx(0.0)
+        assert float(line_mv[2]) == pytest.approx(1.0)
+        assert float(line_mv[4]) == pytest.approx(5.0)
+        assert float(line_mv[8]) == pytest.approx(5.0)
 
     def test_algebra_dim(self):
         assert self.b.algebra_dim == 16  # 2^4

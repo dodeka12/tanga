@@ -223,8 +223,6 @@ def make_point(alg: Algebra, x: float, y: float, z: float) -> MV:
 
     Note: In E3 this is a direction / line through origin, not a point.
     """
-    if hasattr(alg, "vector"):
-        return alg.vector(x, y, z)
     return alg.multivector({E1: x, E2: y, E3: z})
 
 

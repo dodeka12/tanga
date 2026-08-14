@@ -157,28 +157,6 @@ class BasisPGA3(Algebra):
         """
         return self.dual(a)
 
-    # ── convenience constructors ──────────────────────────────────
-
-    def point(self, x: float, y: float, z: float) -> MV:
-        """Point in IPNS / dual form: ``x·e₁ + y·e₂ + z·e₃ + e₀``.
-
-        The OPNS form (grade‑3 trivector) is obtained via ``.dual()``
-        or by wedging three orthogonal planes through the point.
-        """
-        return self.multivector({1: x, 2: y, 4: z, self.EP: 1.0, self.EM: 1.0})
-
-    def direction(self, x: float, y: float, z: float) -> MV:
-        """Direction / ideal point (IPNS): ``x·e₁ + y·e₂ + z·e₃``
-        (no e₀ component)."""
-        return self.multivector({1: x, 2: y, 4: z})
-
-    def plane(self, nx: float, ny: float, nz: float, d: float = 0.0) -> MV:
-        """Plane (grade‑1): ``nx·e₁ + ny·e₂ + nz·e₃ + d·e₀``.
-
-        *d* is the signed distance from the origin.
-        """
-        return self.multivector({1: nx, 2: ny, 4: nz, self.EP: d, self.EM: d})
-
     # ── display ───────────────────────────────────────────────────
 
     @cached_property

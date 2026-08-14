@@ -12,12 +12,9 @@ from pytanga.geometry.create import create_entity
 from pytanga.geometry.entities import (
     Circle,
     Direction,
-    HDirection,
-    HPoint,
     Line,
     Plane,
     Point,
-    PointPair,
     Space,
     Sphere,
 )
@@ -65,13 +62,13 @@ def test_point_rejects_line_mv():
 
 def test_e3_point_convenience():
     alg = BasisE3()
-    mv = alg.vector(1, 2, 3)
+    mv = alg.multivector({1: 1, 2: 2, 4: 3})
     assert Point(mv) == Point(1, 2, 3)
 
 
 def test_e3_direction_convenience():
     alg = BasisE3()
-    mv = alg.vector(1, 0, 0)
+    mv = alg.multivector({1: 1})
     assert Direction(mv) == Direction(1, 0, 0)
 
 
@@ -194,8 +191,8 @@ def test_line_from_points_n3_mvs():
 
 def test_line_from_points_e3_convenience():
     alg = BasisE3()
-    a = alg.vector(0, 0, 0)
-    b = alg.vector(1, 0, 0)
+    a = alg.multivector({1: 0, 2: 0, 4: 0})
+    b = alg.multivector({1: 1})
     line = Line.from_points(a, b)
     assert line.origin.x == pytest.approx(0)
     assert abs(line.direction.x) == pytest.approx(1)

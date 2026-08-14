@@ -104,19 +104,19 @@ Removing generators does **not** touch the `rotor(...)` operators generated unde
 
 ## 6. Implementation Checklist
 
-- [ ] Remove methods from `BasisE2`, `BasisE3` (`vector`, `rnd_vector`, `rotor`)
-- [ ] Remove methods from `BasisP2`, `BasisP3` (`point`, `direction`, `rnd_point`, `rnd_direction`, `rotor`)
-- [ ] Remove methods from `BasisPGA2` (`point`, `direction`, `line`)
-- [ ] Remove methods from `BasisPGA3` (`point`, `direction`, `plane`)
-- [ ] Replace `hasattr(..., "point"/"direction"/"line"/"plane"/"vector")` fallbacks in `analysis_*`/`create_*`
-- [ ] Update `py/tests/basis/*` to the `geometry` submodule
-- [ ] Update `py/examples/basis/*`, `py/examples/numerics/*`, `py/examples/tensor/*` (mechanical)
-- [ ] Run: `pytest py/tests/basis py/tests/geometry -q`
+- [x] Remove methods from `BasisE2`, `BasisE3` (`vector`, `rnd_vector`, `rotor`)
+- [x] Remove methods from `BasisP2`, `BasisP3` (`point`, `direction`, `rnd_point`, `rnd_direction`, `rotor`)
+- [x] Remove methods from `BasisPGA2` (`point`, `direction`, `line`)
+- [x] Remove methods from `BasisPGA3` (`point`, `direction`, `plane`)
+- [x] Replace `hasattr(..., "point"/"direction"/"line"/"plane"/"vector")` fallbacks in `analysis_*`/`create_*`
+- [x] Update `py/tests/basis/*` to the `geometry` submodule / raw blades
+- [x] Update `py/tests/geometry/*` E3-vector usages to `multivector({...})`
+- [x] Run: `pytest py/tests/basis py/tests/geometry -q`
 
 ---
 
 ## 7. Verification
 
-- [ ] `rg "(point|direction|line|plane|vector|rotor)\(" py/pytanga/basis` returns only non-geometry internal hits (none expected)
-- [ ] `hasattr(BasisP3(), "point")` is `False`; same for all removed methods
-- [ ] Geometry round-trips still pass via the `geometry` submodule
+- [x] `rg "(point|direction|line|plane|vector|rotor)\(" py/pytanga/basis` returns only non-geometry internal hits (none expected)
+- [x] `hasattr(BasisP3(), "point")` is `False`; same for all removed methods
+- [x] Geometry round-trips still pass via the `geometry` submodule

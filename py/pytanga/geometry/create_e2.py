@@ -54,8 +54,6 @@ def create_direction(
     or the normal to a line (IPNS).  This function produces the vector
     itself; the caller uses *opns* to control the dual.
     """
-    if hasattr(basis, "vector"):
-        return basis.vector(x, y)
     return basis.multivector({E1: x, E2: y})
 
 
