@@ -258,3 +258,43 @@ def make_rotor(alg: Algebra, angle: float, axis: Direction) -> MV:
 def _get_grades(mv: MV) -> set[int]:
     """Return the set of grades present in *mv*."""
     return set(mv.grades)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Typed analyzers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _expect(result, cls):
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def analyze_direction(mv: MV) -> Direction:
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Direction)
+
+
+def analyze_line(mv: MV) -> Line:
+    """Interpret *mv* as a :class:`Line` through the origin.
+
+    In E2 a grade-1 vector is a line through the origin, analyzed as a
+    :class:`Direction`; this wraps it into a ``Line(origin=(0,0,0), …)``.
+    """
+    d = analyze_direction(mv)
+    return Line(origin=Point(0.0, 0.0, 0.0), direction=d)
+
+
+def analyze_space(mv: MV) -> Space:
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Space)

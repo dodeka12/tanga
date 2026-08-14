@@ -715,6 +715,65 @@ def _get_grades(mv: MV) -> set[int]:
     return set(mv.grades)
 
 
+# ═══════════════════════════════════════════════════════════════
+# Typed analyzers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _expect(result, cls):
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def analyze_point(mv: MV) -> Point:
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Point)
+
+
+def analyze_direction(mv: MV) -> Direction:
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Direction)
+
+
+def analyze_line(mv: MV) -> Line:
+    """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Line)
+
+
+def analyze_circle(mv: MV) -> Circle:
+    """Interpret *mv* as a :class:`Circle` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Circle)
+
+
+def analyze_sphere(mv: MV) -> Sphere:
+    """Interpret *mv* as a :class:`Sphere` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Sphere)
+
+
+def analyze_point_pair(mv: MV) -> PointPair:
+    """Interpret *mv* as a :class:`PointPair` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), PointPair)
+
+
+def analyze_hpoint(mv: MV) -> HPoint:
+    """Interpret *mv* as an :class:`HPoint` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), HPoint)
+
+
+def analyze_hdirection(mv: MV) -> HDirection:
+    """Interpret *mv* as an :class:`HDirection` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), HDirection)
+
+
+def analyze_space(mv: MV) -> Space:
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv, opns=mv.algebra.opns), Space)
+
+
 def _factor_to_point(factor: MV, alg: Algebra) -> Point:
     """Extract a Euclidean point from a homogeneous point blade.
 

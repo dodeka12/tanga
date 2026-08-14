@@ -148,22 +148,22 @@ No existing tests change in Phase 2 (typed analyzers are additive).
 
 ## 7. Implementation Checklist
 
-- [ ] Add typed analyzers to `analysis_e2.py`
-- [ ] Add typed analyzers to `analysis_e3.py`
-- [ ] Add typed analyzers to `analysis_p2.py`
-- [ ] Add typed analyzers to `analysis_p3.py`
-- [ ] Add typed analyzers to `analysis_n2.py`
-- [ ] Add typed analyzers to `analysis_n3.py`
-- [ ] Add typed analyzers to `analysis_pga2.py`
-- [ ] Add typed analyzers to `analysis_pga3.py`
-- [ ] Add shared dispatchers in `analysis.py` (calling `_detect`)
-- [ ] Add `py/tests/geometry/test_typed_analyzers.py`
-- [ ] Run: `pytest py/tests/geometry/test_typed_analyzers.py -q`
+- [x] Add typed analyzers to `analysis_e2.py`
+- [x] Add typed analyzers to `analysis_e3.py`
+- [x] Add typed analyzers to `analysis_p2.py`
+- [x] Add typed analyzers to `analysis_p3.py`
+- [x] Add typed analyzers to `analysis_n2.py`
+- [x] Add typed analyzers to `analysis_n3.py`
+- [x] Add typed analyzers to `analysis_pga2.py`
+- [x] Add typed analyzers to `analysis_pga3.py`
+- [x] Add shared dispatchers in `analysis.py` (calling `_detect`)
+- [x] Add `py/tests/geometry/test_typed_analyzers.py`
+- [x] Run: `pytest py/tests/geometry/test_typed_analyzers.py -q`
 
 ---
 
 ## 8. Verification
 
-- [ ] Every matrix cell marked ✓ round-trips via `create_entity` + typed analyzer in both `opns` modes
-- [ ] Mismatched inputs raise `TypeError`
-- [ ] Unsupported algebra+entity raises `TypeError` from the shared dispatcher
+- [x] Every matrix cell marked ✓ round-trips via `create_entity` + typed analyzer in both `opns` modes
+- [x] Mismatched inputs raise `TypeError`
+- [x] Unsupported algebra+entity raises `TypeError` from the shared dispatcher
