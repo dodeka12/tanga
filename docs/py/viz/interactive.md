@@ -43,9 +43,6 @@ VisualizerApp(
     opns=True,
     title="Tanga 3D Viewer",
     annotation=None,
-    space_extent=10.0,
-    show_grid=True,
-    show_axes=True,
     background_color="#1a1a2e",
     camera=None,
 )

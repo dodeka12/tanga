@@ -5,7 +5,7 @@ The `Visualizer` class is the main entry point for the 3D viewer.
 ## Constructor
 
 ```python
-from pytanga.viz import Visualizer, CameraConfig
+from pytanga.viz import Visualizer, CameraConfig3d
 
 Visualizer(
     port=8765,
@@ -15,9 +15,6 @@ Visualizer(
     opns=True,
     title="Tanga 3D Viewer",
     annotation=None,
-    space_extent=10.0,
-    show_grid=True,
-    show_axes=True,
     background_color="#1a1a2e",
     camera=None,  # None = auto-fit from entities
 )
@@ -32,16 +29,13 @@ Visualizer(
 | `opns` | `bool` | `True` | Default MV interpretation (OPNS/IPNS) |
 | `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
-| `space_dim` | `int` | `3` | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer (see below) |
-| `space_extent` | `float` | `10.0` | Half-extent of visible space |
-| `show_grid` | `bool` | `True` | Show ground grid |
-| `show_axes` | `bool` | `True` | Show RGB axes helper |
+| `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
 | `background_color` | `str` | `"#1a1a2e"` | CSS background color |
 | `camera` | `CameraConfig \| None` | `None` | Explicit camera settings |
 
 ## 2D Visualization
 
-Activate 2D mode with `space_dim=2`:
+Activate 2D mode by passing `space_dim=2`:
 
 ```python
 from pytanga.viz import Visualizer
@@ -50,6 +44,15 @@ from pytanga.geometry import Point
 viz = Visualizer(space_dim=2)
 viz.add(Point(3, 4, 0))
 viz.run()
+```
+
+Alternatively, pass a 2D camera config and the dimension is deduced
+automatically:
+
+```python
+from pytanga.viz import View2DConfig, Visualizer
+
+viz = Visualizer(camera=View2DConfig(xmin=0, xmax=8, ymin=0, ymax=6))
 ```
 
 When `space_dim=2`:
@@ -61,7 +64,7 @@ When `space_dim=2`:
     - **Pan:** left-click drag *or* right-click drag
     - **Zoom:** scroll wheel
     - No orbit rotation (rotation around the view axis is locked).
-- The grid renders as a flat XY plane instead of a ground plane.
+- Grids and axes are explicit scene objects (see [Axes & Grid](axes-grid.md)).
 - **Full 3D entities render in 2D mode.** Any 3D entity (e.g. `Sphere`,
   `Plane`, `Circle` with non‑zero `z`) can be added and renders correctly
   from the orthographic top‑down perspective. This works out of the box
@@ -91,7 +94,7 @@ add(
     style=None,                   # PointStyle, SphereStyle, …
     label=None,                   # shortcut: auto-create a Label
     label_style=None,             # style for the auto-created label
-) → str | list[str]
+) → str
 ```
 
 `add()` is the universal entry point for the **main scene**. It accepts:
@@ -110,8 +113,7 @@ add(
 | Input | Returns |
 |-------|---------|
 | Entity / Operator | Entity ID (`str`) |
-| MV → single entity | Entity ID (`str`) |
-| MV → multiple entities | List of IDs (`list[str]`) |
+| MV → entity | Entity ID (`str`) |
 | `Label` instance | Label ID (`str`) |
 
 The label that is created alongside an entity via the ``label="…"`` shortcut

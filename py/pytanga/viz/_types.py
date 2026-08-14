@@ -11,12 +11,18 @@ from pytanga.geometry.entities import Entity as GeoEntity
 from pytanga.geometry.operators import Operator as GeoOperator
 
 from ._point_path import PointPath
+from ._scene_objects import Axes2D, Axes3D, Axis, Grid
 
 # Any type that can be passed to Visualizer.add()
 # Note: "Any" covers the MV case — _resolve() uses duck-typing via
 # pytanga.geometry.analyze() rather than isinstance checks.
-VizInputType: TypeAlias = Union[GeoEntity, GeoOperator, PointPath, Any]
+VizInputType: TypeAlias = Union[
+    GeoEntity, GeoOperator, PointPath, Axis, Grid, Axes2D, Axes3D, Any
+]
 
 # A scene-level entity — a GeoEntity, GeoOperator, or a viz-level drawable
-# like PointPath that the serializer and frontend know how to render.
-SceneEntity: TypeAlias = Union[GeoEntity, GeoOperator, PointPath]
+# like PointPath / Axis / Grid that the serializer and frontend know how
+# to render.
+SceneEntity: TypeAlias = Union[
+    GeoEntity, GeoOperator, PointPath, Axis, Grid, Axes2D, Axes3D
+]

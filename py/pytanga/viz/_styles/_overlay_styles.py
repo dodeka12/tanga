@@ -19,10 +19,10 @@ class LabelStyle(VizStyle):
     but labels have their own serialization path since they are not entities.
     """
 
-    font_size: float = 14
-    font_family: str = "sans-serif"
-    color: str = "#ffffff"
-    background: str = "rgba(0, 0, 0, 0.6)"
+    font_size: float | None = None
+    font_family: str | None = None
+    color: str | None = None
+    background: str | None = None
     font_weight: str | None = None
     text_transform: str | None = None
 
@@ -38,10 +38,14 @@ class LabelStyle(VizStyle):
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "LabelStyle"}
-        result["font_size"] = self.font_size
-        result["font_family"] = self.font_family
-        result["color"] = self.color
-        result["background"] = self.background
+        if self.font_size is not None:
+            result["font_size"] = self.font_size
+        if self.font_family is not None:
+            result["font_family"] = self.font_family
+        if self.color is not None:
+            result["color"] = self.color
+        if self.background is not None:
+            result["background"] = self.background
         if self.font_weight is not None:
             result["font_weight"] = self.font_weight
         if self.text_transform is not None:
@@ -88,14 +92,13 @@ class FigureStyle(VizStyle):
 
     Controls the appearance of the 3D canvas container — dimensions,
     background, auto-rotation, and which overlays to show.
+    Grid and axes are now explicit scene objects, not figure-style toggles.
     """
 
     width: int | None = None  # px (default 800)
     height: int | None = None  # px (default 600)
     background: str | None = None  # CSS background (default "transparent")
     auto_rotate: bool | None = None  # auto-rotate the camera (default False)
-    show_grid: bool | None = None  # show grid (default True)
-    show_axes: bool | None = None  # show axes (default True)
     show_title: bool | None = None  # show title overlay (default True)
     show_annotation: bool | None = None  # show annotation panel (default True)
     border_radius: str | None = None  # CSS border-radius (default "0")
@@ -111,10 +114,6 @@ class FigureStyle(VizStyle):
             result["background"] = self.background
         if self.auto_rotate is not None:
             result["auto_rotate"] = self.auto_rotate
-        if self.show_grid is not None:
-            result["show_grid"] = self.show_grid
-        if self.show_axes is not None:
-            result["show_axes"] = self.show_axes
         if self.show_title is not None:
             result["show_title"] = self.show_title
         if self.show_annotation is not None:

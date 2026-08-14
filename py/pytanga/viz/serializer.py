@@ -24,6 +24,15 @@ from pytanga.geometry.entities import (
 )
 
 from ._point_path import PointPath
+from ._scene_objects import (
+    Axes2D,
+    Axes3D,
+    Axis,
+    Grid,
+    _AXES_Z,
+    _pad_origin,
+    _scale_dir,
+)
 from pytanga.geometry.operators import (
     Dilator,
     GeneralRotor,
@@ -71,6 +80,22 @@ def serialize_entity(
     if isinstance(entity, PointPath):
         result.update(
             _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
+        )
+    elif isinstance(entity, Axes2D):
+        result.update(
+            _serialize_axes2d(entity, props, kind=kind, styles_map=styles_map)
+        )
+    elif isinstance(entity, Axes3D):
+        result.update(
+            _serialize_axes3d(entity, props, kind=kind, styles_map=styles_map)
+        )
+    elif isinstance(entity, Axis):
+        result.update(
+            _serialize_axis(entity, props, kind=kind, styles_map=styles_map)
+        )
+    elif isinstance(entity, Grid):
+        result.update(
+            _serialize_grid(entity, props, kind=kind, styles_map=styles_map)
         )
     elif isinstance(entity, Point):
         result.update(_serialize_point(entity, props, kind=kind, styles_map=styles_map))
@@ -273,6 +298,253 @@ def _serialize_point_path(
     ) | {
         "points": [list(p) for p in ent.points],
         "colors": ent.colors,
+    }
+
+
+def _serialize_axis(
+    ent: Axis,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(
+        props,
+        kind,
+        {"line_thickness": 0.03},
+        styles_map=styles_map,
+    ) | {
+        "start": list(ent.start),
+        "end": list(ent.end),
+        "majorInterval": ent.major_interval,
+        "labelAtMajor": ent.label_at_major,
+        "labelFormat": ent.label_format,
+        "showTicks": ent.show_ticks,
+    }
+    if ent.minor_interval is not None:
+        result["minorInterval"] = ent.minor_interval
+    if ent.label_size is not None:
+        result["labelSize"] = ent.label_size
+    if ent.label is not None:
+        result["label"] = ent.label
+    if ent.value_start != 0.0:
+        result["valueStart"] = ent.value_start
+    if ent.value_step != 1.0:
+        result["valueStep"] = ent.value_step
+    return result
+
+
+def _serialize_axes2d(
+    ent: Axes2D,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Serialize an :class:`Axes2D` as a single scene object.
+
+    The group carries an ``axes`` list, each entry describing one axis half
+    (positive and/or negative) with its resolved per-direction style.
+    """
+    origin = _pad_origin(ent.origin, _AXES_Z)
+    u_label = ent.labels[0] if ent.labels is not None else None
+    v_label = ent.labels[1] if ent.labels is not None else None
+    styles = _resolve_group_axis_styles(props, kind, 2, styles_map=styles_map)
+    axes = _build_axes_entries(
+        origin,
+        [
+            (ent.dir_u, ent.range_u, u_label),
+            (ent.dir_v, ent.range_v, v_label),
+        ],
+        styles,
+        ent.major_interval,
+    )
+    result: Dict[str, Any] = {
+        "kind": kind,
+        "origin": list(origin),
+        "dir_u": list(ent.dir_u),
+        "dir_v": list(ent.dir_v),
+        "range_u": list(ent.range_u),
+        "range_v": list(ent.range_v),
+        "major_interval": ent.major_interval,
+        "axes": axes,
+    }
+    if ent.labels is not None:
+        result["labels"] = list(ent.labels)
+    return result
+
+
+def _serialize_axes3d(
+    ent: Axes3D,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Serialize an :class:`Axes3D` as a single scene object."""
+    origin = ent.origin if len(ent.origin) == 3 else _pad_origin(ent.origin, 0.0)
+    u_label = ent.labels[0] if ent.labels is not None else None
+    v_label = ent.labels[1] if ent.labels is not None else None
+    w_label = ent.labels[2] if ent.labels is not None else None
+    styles = _resolve_group_axis_styles(props, kind, 3, styles_map=styles_map)
+    axes = _build_axes_entries(
+        origin,
+        [
+            (ent.dir_u, ent.range_u, u_label),
+            (ent.dir_v, ent.range_v, v_label),
+            (ent.dir_w, ent.range_w, w_label),
+        ],
+        styles,
+        ent.major_interval,
+    )
+    result: Dict[str, Any] = {
+        "kind": kind,
+        "origin": list(origin),
+        "dir_u": list(ent.dir_u),
+        "dir_v": list(ent.dir_v),
+        "dir_w": list(ent.dir_w),
+        "range_u": list(ent.range_u),
+        "range_v": list(ent.range_v),
+        "range_w": list(ent.range_w),
+        "major_interval": ent.major_interval,
+        "axes": axes,
+    }
+    if ent.labels is not None:
+        result["labels"] = list(ent.labels)
+    return result
+
+
+def _resolve_group_axis_styles(
+    props: Dict[str, Any],
+    kind: str,
+    n: int,
+    *,
+    styles_map: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    """Resolve per-direction axis styles into complete merged dicts.
+
+    Priority for the per-direction style source:
+    1. a user :class:`AxisStyle` applied to every direction,
+    2. a user :class:`Axes2DStyle` / :class:`Axes3DStyle` instance,
+    3. the canonical group style for ``kind``.
+
+    Each :class:`AxisStyle` is then resolved against the canonical ``"Axis"``
+    default so sparse styles still get ``color``/``opacity``/``line_thickness``.
+    """
+    from ._styles import (
+        Axes2DStyle,
+        Axes3DStyle,
+        AxisStyle,
+        _style_for_kind,
+        _style_to_output,
+    )
+
+    group_style = props.get("style")
+    canonical = _style_for_kind(kind, styles_map=styles_map)
+
+    if isinstance(group_style, AxisStyle):
+        base: List[Any] = [group_style] * n
+    elif isinstance(group_style, (Axes2DStyle, Axes3DStyle)):
+        base = [getattr(group_style, name) for name in ("u", "v", "w")[:n]]
+    elif isinstance(canonical, (Axes2DStyle, Axes3DStyle)):
+        base = [getattr(canonical, name) for name in ("u", "v", "w")[:n]]
+    else:
+        base = [AxisStyle()] * n
+
+    resolved: List[Dict[str, Any]] = []
+    for axis_style in base:
+        style = _style_to_output(axis_style, "Axis", styles_map=styles_map)
+        if props.get("color") is not None:
+            style["color"] = props["color"]
+        if props.get("opacity") is not None:
+            style["opacity"] = props["opacity"]
+        resolved.append(style)
+    return resolved
+
+
+def _build_axes_entries(
+    origin: Any,
+    directions: List[tuple[Any, tuple[float, float], str | None]],
+    styles: List[Dict[str, Any]],
+    major_interval: float,
+) -> List[Dict[str, Any]]:
+    """Expand direction extents into axis-half dicts with per-direction styles."""
+    axes: List[Dict[str, Any]] = []
+    for (direction, extent, label), style in zip(directions, styles):
+        lo, hi = extent
+        if hi != 0.0:
+            axes.append(
+                _axis_entry(
+                    origin,
+                    _scale_dir(origin, direction, hi),
+                    label,
+                    1.0,
+                    style,
+                    major_interval,
+                )
+            )
+        if lo != 0.0:
+            axes.append(
+                _axis_entry(
+                    origin,
+                    _scale_dir(origin, direction, lo),
+                    None,
+                    -1.0,
+                    style,
+                    major_interval,
+                )
+            )
+    return axes
+
+
+def _axis_entry(
+    origin: Any,
+    end: Any,
+    label: str | None,
+    value_step: float,
+    style: Dict[str, Any],
+    major_interval: float,
+) -> Dict[str, Any]:
+    """Build a single axis-half dict with a flat color/opacity for the shared renderer."""
+    label_at_major = style.get("label_at_major", True)
+    entry: Dict[str, Any] = {
+        "start": list(origin),
+        "end": list(end),
+        "majorInterval": major_interval,
+        "labelAtMajor": label_at_major,
+        "labelFormat": ".1f",
+        "valueStep": value_step,
+        "style": style,
+    }
+    if style.get("color") is not None:
+        entry["color"] = style["color"]
+    if style.get("opacity") is not None:
+        entry["opacity"] = style["opacity"]
+    if label is not None:
+        entry["label"] = label
+    return entry
+
+
+def _serialize_grid(
+    ent: Grid,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {"line_thickness": 0.02},
+        styles_map=styles_map,
+    ) | {
+        "origin": list(ent.origin),
+        "dir_u": list(ent.dir_u),
+        "dir_v": list(ent.dir_v),
+        "range_u": list(ent.range_u),
+        "range_v": list(ent.range_v),
+        "interval_u": ent.interval_u,
+        "interval_v": ent.interval_v,
     }
 
 

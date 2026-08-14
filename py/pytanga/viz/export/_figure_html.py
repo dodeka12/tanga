@@ -136,8 +136,6 @@ def _build_static_figure_adapter(
     auto_rotate = figure_style.get("auto_rotate", False)
     show_title = figure_style.get("show_title", True)
     show_annotation = figure_style.get("show_annotation", True)
-    show_grid = figure_style.get("show_grid", True)
-    show_axes = figure_style.get("show_axes", True)
 
     # Camera config from scene_config (if present)
     cam_cfg = scene_config.get("camera") or {}
@@ -185,9 +183,6 @@ def _build_static_figure_adapter(
             cam_near=cam_near,
             cam_far=cam_far,
             auto_rotate=auto_rotate,
-            show_grid=show_grid,
-            show_axes=show_axes,
-            space_extent=5,
             space_dim=space_dim,
             explicit_mouse_buttons=True,
         ),

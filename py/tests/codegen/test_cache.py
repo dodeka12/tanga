@@ -104,7 +104,10 @@ class TestGetOrBuild:
         with patch(
             "pytanga.codegen._cache.build_and_load",
             return_value=(fake_mod, fake_so),
-        ) as mock_build:
+        ) as mock_build, patch(
+            "pytanga.codegen._cache._load_precompiled",
+            return_value=None,
+        ):
             fake_so.parent.mkdir(parents=True, exist_ok=True)
             fake_so.write_bytes(b"fake")
 

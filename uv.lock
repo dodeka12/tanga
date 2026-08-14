@@ -2670,7 +2670,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "tanga-py", extra = ["compile", "examples"] },
+    { name = "tanga-py", extra = ["compile", "examples", "galgebra"] },
     { name = "twine" },
 ]
 
@@ -2697,7 +2697,7 @@ dev = [
     { name = "pre-commit", specifier = ">=4.3" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.14.0" },
-    { name = "tanga-py", extras = ["compile", "examples"] },
+    { name = "tanga-py", extras = ["compile", "examples", "galgebra"] },
     { name = "twine", specifier = ">=6.0" },
 ]
 

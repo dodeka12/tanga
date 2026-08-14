@@ -104,7 +104,7 @@ function _updateScrubBar() {
     timeEl.textContent = ct.toFixed(1) + 's / ' + totalDuration.toFixed(1) + 's';
 }
 
-function _onScrub(val) {
+async function _onScrub(val) {
     const targetFrame = parseInt(val, 10);
     // Walk from frame 0 to target
     const direction = targetFrame > currentFrame ? 1 : -1;
@@ -113,7 +113,7 @@ function _onScrub(val) {
         f += direction;
         if (f >= 0 && f < frames.length) {
             for (const ent of (frames[f] || [])) {
-                applyFrameUpdate(ent, figMeshMap);
+                await applyFrameUpdate(ent, figMeshMap);
             }
         }
     }
@@ -293,7 +293,7 @@ def js_animated_render_loop(
         JS code string with ``applyFrameUpdate`` and ``_figAnimate``.
     """
     return f"""// ── Playback engine ──────────────────────────────────────────
-function applyFrameUpdate(ent, meshMap) {{
+async function applyFrameUpdate(ent, meshMap) {{
     const mesh = meshMap.get(ent.id);
     if (!mesh) return;
 
@@ -340,7 +340,7 @@ function applyFrameUpdate(ent, meshMap) {{
         meshMap.delete(ent.id);
         const merged = {{ ...prevData, ...ent }};
         merged.id = ent.id;
-        const rebuilt = createEntityMesh(merged);
+        const rebuilt = await createEntityMesh(merged);
         if (rebuilt) {{
             {scene_var}.add(rebuilt);
             meshMap.set(ent.id, rebuilt);
@@ -361,7 +361,7 @@ function applyFrameUpdate(ent, meshMap) {{
 
 // ── Render loop ──────────────────────────────────────────────
 let _lastTimestamp = 0;
-function _figAnimate(timestamp) {{
+async function _figAnimate(timestamp) {{
     requestAnimationFrame(_figAnimate);
     const dt = (_lastTimestamp ? timestamp - _lastTimestamp : 16) / 1000;
     _lastTimestamp = timestamp;
@@ -381,7 +381,7 @@ function _figAnimate(timestamp) {{
                 f += step;
                 if (f >= 0 && f < frames.length) {{
                     for (const ent of (frames[f] || [])) {{
-                        applyFrameUpdate(ent, figMeshMap);
+                        await applyFrameUpdate(ent, figMeshMap);
                     }}
                 }}
             }}

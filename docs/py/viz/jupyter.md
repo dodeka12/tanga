@@ -15,12 +15,11 @@ for notebook environments.
 
 ```python
 # Cell 1: Setup
-from pytanga.viz import Visualizer, CameraConfig
+from pytanga.viz import Visualizer, CameraConfig3d
 from pytanga.geometry import Point, Sphere, Plane, Direction
 
 viz = Visualizer(
-    space_extent=15,
-    camera=CameraConfig(fov=45),
+    camera=CameraConfig3d(fov=45),
 )
 viz.start()
 print(f"Viewer available at {viz.url}")

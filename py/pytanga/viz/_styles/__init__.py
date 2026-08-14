@@ -52,8 +52,12 @@ from ._base import (
     WireframeDashPattern,
 )
 from ._entity_styles import (
+    Axes2DStyle,
+    Axes3DStyle,
+    AxisStyle,
     CircleStyle,
     DirectionStyle,
+    GridStyle,
     HPointStyle,
     LineStyle,
     PlaneStyle,
@@ -107,6 +111,10 @@ ObjVizStyle: TypeAlias = Union[
     GeneralRotorStyle,
     CrossHairPointStyle,
     PointPathStyle,
+    GridStyle,
+    AxisStyle,
+    Axes2DStyle,
+    Axes3DStyle,
 ]
 
 
@@ -117,14 +125,18 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Direction": DirectionStyle(color="#ffffff", opacity=0.9, length=2.0),
     "HPoint": HPointStyle(color="#ff8844", opacity=1.0, size=0.08),
     "PointPair": PointPairStyle(
-        color="#44ff44", opacity=1.0, point_size=0.06, line_thickness=0.02
+        color="#44ff44", opacity=1.0, point_size=0.06, line_thickness=1.0
     ),
     "Line": LineStyle(color="#44ff44", opacity=0.8, length=20.0, thickness=0.03),
     "Plane": PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0),
     "Circle": CircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
     "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
-    "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=0.03),
+    "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=2.0),
+    "Grid": GridStyle(color="#555555", opacity=0.8, line_thickness=1.0),
+    "Axis": AxisStyle(color="#888888", opacity=1.0, line_thickness=2.0),
+    "Axes2D": Axes2DStyle(),
+    "Axes3D": Axes3DStyle(),
     # Operators
     "ReflectionLine": ReflectionLineStyle(
         color="#aaccff", opacity=0.6, length=5.0, thickness=0.04
@@ -142,7 +154,7 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
         color="#ff88ff",
         opacity=1.0,
         point_size=0.06,
-        line_thickness=0.02,
+        line_thickness=1.0,
         wireframe=True,
         wireframe_dash=DottedWireframe(),
         wireframe_opacity=0.6,

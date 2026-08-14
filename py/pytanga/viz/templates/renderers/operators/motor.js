@@ -2,12 +2,13 @@
 // Phase 6: Moved from inline factory.js to dedicated operator module.
 
 import * as THREE from 'three';
-import { styleParam,  parseColor } from '../utils.js';
+import { makeFatLine, styleParam, parseColor } from '../utils.js';
 
 
 export function createMotor(ent) {
     const color = parseColor(ent, '#ff66cc');
     const opacity = styleParam(ent, 'opacity', 0.7);
+    const lineWidth = styleParam(ent, 'line_thickness', 1);
     const col = new THREE.Color(color);
     const r = ent.rotor || {};
     const t = ent.translator || {};
@@ -30,16 +31,7 @@ export function createMotor(ent) {
             )
         );
     }
-    g.add(
-        new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints(pts),
-            new THREE.LineBasicMaterial({
-                color: col,
-                opacity,
-                transparent: true,
-            })
-        )
-    );
+    g.add(makeFatLine(pts, col, opacity, lineWidth));
     g.setRotationFromQuaternion(
         new THREE.Quaternion().setFromUnitVectors(
             new THREE.Vector3(0, 0, 1),

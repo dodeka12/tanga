@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.9.0] — 2026-08-12
+
+### New Features
+- `View2DConfig` and `ViewPlaneConfig` for rich 2D/3D camera specification
+- `set_camera()` for runtime camera updates on `Visualizer` and `VizSceneHandle`
+- `Axis`, `Grid`, `Axes2D`, `Axes3D` as explicit scene objects with ticks, labels, and UV-plane grids
+- Automatic default axes + grid insertion when no explicit `Axis`/`Grid` is added
+- Axis and grid rendering in live viewer, HTML export, and glTF export
+
+### Breaking Changes
+- Removed `space_extent`, `show_grid`, and `show_axes` from `SceneConfig`, `Visualizer`, `VisualizerApp`, and `FigureStyle`
+- Removed the internal `_space_extent` contract from `VizSceneHandle` and the Jupyter mixin
+
+### Bug Fixes
+- WebSocket exponential backoff, interactive reconnect wait, and thread safety
+- Fixed animated HTML export
+- Added missing arguments to the WebSocket `ready` log message
+- Simplified `add()` return type to `str`; fixed `test_cache`; enabled `galgebra` in CI
+
+### Doc Changes
+- Added `axes-grid.md` guide
+- Updated `camera.md` with `View2DConfig` / `ViewPlaneConfig` and `set_camera()`
+- Added `viz-camera-axes-grid-plan.md` planning document
+- Added `demo_axes_custom.py`, `demo_camera_2d.py`, `demo_camera_3d_plane.py` examples
+
+→ [Full changelog](2026-08-12_5d757c9.md)
+
 ## [0.8.0] — 2026-08-12
 
 ### New Features
@@ -49,7 +76,7 @@
 - Fixed orbit target drifting away from world origin
 - Fixed sphere flickering in animations (float epsilon rebuilds)
 - Added missing `reflection_point.js` renderer
-- `add()` return type simplified to `str | list[str]`
+- `add()` return type is `str`
 
 ### Doc Changes
 - Updated `visualizer.md` and `interactive.md` for new APIs

@@ -17,37 +17,9 @@ from uuid import uuid4
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
+from .camera import CameraConfig
+
 # ── Configuration ──────────────────────────────────────────
-
-
-@dataclass
-class CameraConfig:
-    """Camera configuration for the 3D viewer.
-
-    All fields are optional. When a field is None, the browser uses its
-    default or computes the value automatically from scene bounds (auto-fit).
-    """
-
-    position: tuple[float, float, float] | None = None  # (x, y, z)
-    target: tuple[float, float, float] | None = None  # look-at point
-    fov: float | None = None  # vertical field of view in degrees
-    near: float | None = None  # near clipping plane
-    far: float | None = None  # far clipping plane
-
-    def to_dict(self) -> dict:
-        """Serialize to a JSON-compatible dict, omitting None values."""
-        result: dict[str, Any] = {}
-        if self.position is not None:
-            result["position"] = list(self.position)
-        if self.target is not None:
-            result["target"] = list(self.target)
-        if self.fov is not None:
-            result["fov"] = self.fov
-        if self.near is not None:
-            result["near"] = self.near
-        if self.far is not None:
-            result["far"] = self.far
-        return result
 
 
 @dataclass
@@ -58,9 +30,6 @@ class SceneConfig:
     message, before any entity data.
     """
 
-    space_extent: float = 10.0  # half-extent of visible space; affects grid size
-    show_grid: bool = True  # show ground grid
-    show_axes: bool = True  # show RGB axes helper
     background_color: str = "#1a1a2e"
     camera: CameraConfig | None = None  # None = auto-fit from entities
     title: str = "Tanga 3D Viewer"  # viewport title overlay
@@ -72,9 +41,6 @@ class SceneConfig:
         """Serialize to a JSON-compatible dict."""
         result: dict[str, Any] = {
             "type": "scene_config",
-            "space_extent": self.space_extent,
-            "show_grid": self.show_grid,
-            "show_axes": self.show_axes,
             "background_color": self.background_color,
             "title": self.title,
             "name": self.name,

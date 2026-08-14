@@ -13,7 +13,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .scene import CameraConfig
+    from .camera import CameraConfig, View2DConfig, View3dConfig
 
 
 class VisualizerApp:
@@ -31,7 +31,7 @@ class VisualizerApp:
 
         class MyApp(VisualizerApp):
             def __init__(self):
-                super().__init__(title="My Scene", space_extent=8)
+                super().__init__(title="My Scene")
                 self._data = []
 
             async def init(self) -> None:
@@ -56,12 +56,9 @@ class VisualizerApp:
         opns: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
-        space_extent: float = 10.0,
-        show_grid: bool = True,
-        show_axes: bool = True,
         background_color: str = "#1a1a2e",
-        camera: CameraConfig | None = None,
-        space_dim: int = 3,  # 2 or 3
+        camera: CameraConfig | View2DConfig | View3dConfig | None = None,
+        space_dim: int | None = None,  # 2 or 3; None = deduce from camera
     ) -> None:
         """Create the app and the underlying :class:`~pytanga.viz.Visualizer`.
 
@@ -78,9 +75,6 @@ class VisualizerApp:
             opns=opns,
             title=title,
             annotation=annotation,
-            space_extent=space_extent,
-            show_grid=show_grid,
-            show_axes=show_axes,
             background_color=background_color,
             camera=camera,
             space_dim=space_dim,

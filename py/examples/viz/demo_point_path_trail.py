@@ -43,7 +43,7 @@ trail = PointPath(
 for _ in range(TRAIL_LENGTH):
     trail.add((0, 0, 0))
 
-trail_id = viz.add(trail, style=PointPathStyle(line_thickness=0.04))
+trail_id = viz.add(trail, style=PointPathStyle(line_thickness=2))
 
 # The moving object itself
 point_id = viz.add(

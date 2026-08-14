@@ -9,7 +9,7 @@ Run with:  uv run python py/examples/viz/demo_animated_export.py
 import math
 
 from pytanga.geometry import Point
-from pytanga.viz import SceneExporter, Visualizer
+from pytanga.viz import AnimStyle, SceneExporter, Visualizer
 
 viz = Visualizer(title="Tanga — Animated Export")
 viz.start()
@@ -33,8 +33,8 @@ for frame in range(90):
 exporter.export_animated_html(
     "animated_orbit.html",
     recording,
-    fps=30,
-    loop=True,
+    overwrite=True,
+    anim_style=AnimStyle(fps=30, loop=True, compress=True),
 )
 
 print("Exported to animated_orbit.html — open it in any browser.")

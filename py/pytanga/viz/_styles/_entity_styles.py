@@ -5,10 +5,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from ._base import VizStyle, WireframeDashPattern
+from ._overlay_styles import LabelStyle
 from ._tex_label_style import TextureLabelStyle
 
 
@@ -329,10 +330,9 @@ class PointPathStyle(VizStyle):
     Attributes:
         color: Fallback uniform color when per-point colors are ``None``.
         opacity: Global opacity (0..1).
-        line_thickness: Uniform line thickness when not using per-vertex
-            thickness.  Due to WebGL limitations, ``THREE.Line`` thickness
-            is capped at 1px on most platforms.  Per-vertex thickness
-            requires a custom geometry approach (future).
+        line_thickness: Uniform line width in screen-space pixels (three.js
+            ``Line2`` fat lines).  Per-vertex thickness still requires a
+            custom geometry approach (future).
     """
 
     color: str | None = None
@@ -347,4 +347,117 @@ class PointPathStyle(VizStyle):
             result["opacity"] = self.opacity
         if self.line_thickness is not None:
             result["line_thickness"] = self.line_thickness
+        return result
+
+
+@dataclass
+class GridStyle(VizStyle):
+    """Visual style for :class:`~pytanga.viz.Grid`.
+
+    Attributes:
+        color: Grid line color.
+        opacity: Grid line opacity (0..1).
+        line_thickness: Grid line width in screen-space pixels.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    line_thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "GridStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.line_thickness is not None:
+            result["line_thickness"] = self.line_thickness
+        return result
+
+
+@dataclass
+class AxisStyle(VizStyle):
+    """Visual style for a single coordinate axis.
+
+    Attributes:
+        color: Axis line and value/name label color.
+        opacity: Axis line opacity (0..1).
+        line_thickness: Axis line width in screen-space pixels.
+        label_at_major: When ``False``, value labels are not drawn at major
+            intervals (defaults to showing them).
+        label_style: Optional :class:`LabelStyle` controlling the value
+            labels (font size, color, alignment, 2D pixel offset, and 3D
+            ``offset_local``).
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    line_thickness: float | None = None
+    label_at_major: bool | None = None
+    label_style: LabelStyle | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "AxisStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.line_thickness is not None:
+            result["line_thickness"] = self.line_thickness
+        if self.label_at_major is not None:
+            result["label_at_major"] = self.label_at_major
+        if self.label_style is not None:
+            result["label_style"] = self.label_style.to_dict()
+        return result
+
+
+@dataclass
+class Axes2DStyle(VizStyle):
+    """Visual style for :class:`~pytanga.viz.Axes2D`.
+
+    Holds one :class:`AxisStyle` for each of the two axes directions.
+    The same style is used for the positive and negative half of an axis.
+
+    Attributes:
+        u: :class:`AxisStyle` for the ``dir_u`` axis.
+        v: :class:`AxisStyle` for the ``dir_v`` axis.
+    """
+
+    u: AxisStyle = field(default_factory=AxisStyle)
+    v: AxisStyle = field(default_factory=AxisStyle)
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "Axes2DStyle"}
+        if self.u is not None:
+            result["u"] = self.u.to_dict()
+        if self.v is not None:
+            result["v"] = self.v.to_dict()
+        return result
+
+
+@dataclass
+class Axes3DStyle(VizStyle):
+    """Visual style for :class:`~pytanga.viz.Axes3D`.
+
+    Holds one :class:`AxisStyle` for each of the three axes directions.
+    The same style is used for the positive and negative half of an axis.
+
+    Attributes:
+        u: :class:`AxisStyle` for the ``dir_u`` axis.
+        v: :class:`AxisStyle` for the ``dir_v`` axis.
+        w: :class:`AxisStyle` for the ``dir_w`` axis.
+    """
+
+    u: AxisStyle = field(default_factory=AxisStyle)
+    v: AxisStyle = field(default_factory=AxisStyle)
+    w: AxisStyle = field(default_factory=AxisStyle)
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "Axes3DStyle"}
+        if self.u is not None:
+            result["u"] = self.u.to_dict()
+        if self.v is not None:
+            result["v"] = self.v.to_dict()
+        if self.w is not None:
+            result["w"] = self.w.to_dict()
         return result

@@ -11,7 +11,8 @@ import { createEntityMesh, removeEntityMesh } from './renderers/factory.js';
 import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
-import { createCamera, configureControls, fitCamera, handleResize, applyOverlayDrawOrder, switchToCamera, createGrid } from './view_mode.js';
+import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from './view_mode.js';
+import { updateLineResolutions } from './renderers/utils.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket, setSpaceDim } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
@@ -77,8 +78,7 @@ function initScene() {
     // Camera — delegates to view_mode.js for 2D/3D creation
     camera = createCamera(
         sceneConfig?.space_dim || 3,
-        window.innerWidth / window.innerHeight,
-        sceneConfig?.space_extent || 10
+        window.innerWidth / window.innerHeight
     );
 
     // Lights
@@ -89,12 +89,6 @@ function initScene() {
     const d2 = new THREE.DirectionalLight(0xffffff, 0.3);
     d2.position.set(-5, -2, -8);
     scene.add(d2);
-
-    // Grid & Axes (placeholders, rebuilt by applySceneConfig)
-    window._gridHelper = new THREE.GridHelper(20, 20, 0x444466, 0x222244);
-    scene.add(window._gridHelper);
-    window._axesHelper = new THREE.AxesHelper(5);
-    scene.add(window._axesHelper);
 
     // Controls — only if WebGL is available (needs renderer.domElement)
     if (webglOk && renderer) {
@@ -128,11 +122,17 @@ function onResize() {
         window._viewerContainer,
         sceneConfig?.space_dim || 3
     );
+    updateLineResolutions();
 }
 
 // ── WebSocket Client ────────────────────────────────────────
 let _reconnectAttempts = 0;
 let _savedTitle = document.title || 'Tanga Viewer';
+
+// Exponential backoff
+const _RECONNECT_BASE_MS = 1000;
+const _RECONNECT_MAX_MS = 30000;
+let _reconnectDelay = _RECONNECT_BASE_MS;
 
 function connectWebSocket() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -157,6 +157,8 @@ function connectWebSocket() {
             reconnectTimer = null;
         }
         _reconnectAttempts = 0;
+        _reconnectDelay = _RECONNECT_BASE_MS;
+        hideReconnectButton();
         updateStatusIndicator('connected');
         document.title = _savedTitle;
         const readyPayload = { type: 'ready', scene: _myScene };
@@ -175,11 +177,17 @@ function connectWebSocket() {
     };
 
     ws.onclose = (event) => {
-        console.warn('[tanga] WS closed (code=' + event.code + '), retrying in 800ms');
+        console.warn('[tanga] WS closed (code=' + event.code
+            + '), reason=' + (event.reason || 'none'));
         setStatus('disconnected');
         updateStatusIndicator('disconnected');
-        reconnectTimer = setTimeout(connectWebSocket, 800);
         document.title = 'Disconnected — ' + _savedTitle;
+
+        const jitter = 0.8 + Math.random() * 0.4;  // ±20%
+        const delay = Math.round(Math.min(_reconnectDelay * jitter, _RECONNECT_MAX_MS));
+        console.log('[tanga] Reconnecting in ' + delay + 'ms (backoff=' + _reconnectDelay + 'ms)');
+        _reconnectDelay = Math.min(_reconnectDelay * 2, _RECONNECT_MAX_MS);
+        reconnectTimer = setTimeout(connectWebSocket, delay);
     };
 
     ws.onerror = () => { /* onclose will fire next */ };
@@ -191,10 +199,102 @@ function setStatus(cls) {
     el.className = cls;
 }
 
+// ── Visibility wake-up ────────────────────────────────────────
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && ws === null) {
+        console.log('[tanga] Tab became visible — triggering immediate reconnect');
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+        _reconnectDelay = _RECONNECT_BASE_MS;
+        connectWebSocket();
+    }
+});
+
+// ── Reconnect Button ──────────────────────────────────────────
+let _reconnectButtonEl = null;
+let _reconnectClickCount = 0;
+
+function showReconnectButton(mode) {
+    // mode: 'reconnect' (normal reconnect) or 'page-reload' (full refresh)
+    if (_reconnectButtonEl) {
+        _reconnectButtonEl.remove();
+        _reconnectButtonEl = null;
+    }
+
+    _reconnectButtonEl = document.createElement('button');
+    _reconnectButtonEl.id = 'tanga-reconnect-btn';
+    _reconnectButtonEl.style.position = 'fixed';
+    _reconnectButtonEl.style.top = '6px';
+    _reconnectButtonEl.style.right = '28px';
+    _reconnectButtonEl.style.padding = '2px 8px';
+    _reconnectButtonEl.style.fontSize = '11px';
+    _reconnectButtonEl.style.fontFamily = 'sans-serif';
+    _reconnectButtonEl.style.color = '#fff';
+    _reconnectButtonEl.style.background = 'rgba(255,255,255,0.15)';
+    _reconnectButtonEl.style.border = '1px solid rgba(255,255,255,0.3)';
+    _reconnectButtonEl.style.borderRadius = '3px';
+    _reconnectButtonEl.style.cursor = 'pointer';
+    _reconnectButtonEl.style.zIndex = '11';
+    _reconnectButtonEl.style.transition = 'background 0.2s';
+
+    _reconnectButtonEl.addEventListener('mouseenter', () => {
+        _reconnectButtonEl.style.background = 'rgba(255,255,255,0.25)';
+    });
+    _reconnectButtonEl.addEventListener('mouseleave', () => {
+        _reconnectButtonEl.style.background = 'rgba(255,255,255,0.15)';
+    });
+
+    if (mode === 'page-reload') {
+        _reconnectButtonEl.textContent = '↻ Reload';
+        _reconnectButtonEl.title = 'Reconnect failed — reload page';
+        _reconnectButtonEl.addEventListener('click', () => {
+            window.location.reload();
+        });
+    } else {
+        _reconnectButtonEl.textContent = 'Reconnect';
+        _reconnectButtonEl.title = 'Click to reconnect immediately';
+        _reconnectButtonEl.addEventListener('click', () => {
+            _reconnectClickCount++;
+            if (_reconnectClickCount >= 3) {
+                console.log('[tanga] 3 reconnect attempts without success — offering page reload');
+                showReconnectButton('page-reload');
+                return;
+            }
+            console.log('[tanga] Manual reconnect requested (click ' + _reconnectClickCount + ')');
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            _reconnectDelay = _RECONNECT_BASE_MS;
+            connectWebSocket();
+        });
+    }
+
+    document.body.appendChild(_reconnectButtonEl);
+}
+
+function hideReconnectButton() {
+    if (_reconnectButtonEl) {
+        _reconnectButtonEl.remove();
+        _reconnectButtonEl = null;
+    }
+    _reconnectClickCount = 0;
+}
+
 function updateStatusIndicator(state, attempts) {
     const el = document.getElementById('status');
     if (!el) return;
-    el.className = state === 'connected' ? 'connected' : 'disconnected';
+    if (state === 'connected') {
+        el.className = 'connected';
+        hideReconnectButton();
+    } else {
+        el.className = 'disconnected';
+        if (!_reconnectButtonEl) {
+            showReconnectButton('reconnect');
+        }
+    }
 
     let labelEl = document.getElementById('status-label');
     if (state === 'connecting' && attempts > 0) {
@@ -226,34 +326,11 @@ function applySceneConfig(config) {
     if (config.background_color) {
         scene.background = new THREE.Color(config.background_color);
     }
-    const extent = config.space_extent || 10;
 
-    // Grid — delegates to view_mode.js for XY-plane (2D) vs XZ-plane (3D)
-    if (window._gridHelper) {
-        scene.remove(window._gridHelper);
-        window._gridHelper.geometry.dispose();
-        window._gridHelper.material.dispose();
-    }
-    if (config.show_grid !== false) {
-        window._gridHelper = createGrid(scene, extent, spaceDim);
-        scene.add(window._gridHelper);
-    }
-
-    // Axes
-    if (window._axesHelper) {
-        scene.remove(window._axesHelper);
-        window._axesHelper.geometry?.dispose();
-        window._axesHelper.material?.dispose();
-    }
-    if (config.show_axes !== false) {
-        window._axesHelper = new THREE.AxesHelper(extent);
-        scene.add(window._axesHelper);
-    }
-
-    // Switch to 2D orthographic camera if needed — must happen before
-    // user-configured camera overrides (cc.position etc.) because
-    // switchToCamera replaces the camera object entirely.
-    camera = switchToCamera(camera, controls, spaceDim, extent);
+    // Camera — switchToCamera handles "2d" / "3d" / default-2D camera types.
+    // Must happen before user-configured position/target overrides are
+    // applied because switchToCamera may replace the camera object.
+    camera = switchToCamera(camera, controls, spaceDim, config.camera);
 
     // Camera (user-configured)
     const cc = config.camera;
@@ -432,7 +509,6 @@ function inPlaceUpdate(ent) {
     // Position update
     if (ent.position) {
         mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
-        applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
     }
 
     // Direction/vector update
@@ -652,6 +728,7 @@ function handleMessage(msg) {
             renderer.setPixelRatio(_savedPixelRatio);
             _savedPixelRatio = null;
         }
+        updateLineResolutions();
         const statusEl2 = document.getElementById('status');
         if (statusEl2) {
             statusEl2.style.display = _savedStatusDisplay || 'block';
@@ -673,6 +750,7 @@ function handleScreenshot(msg) {
         _savedPixelRatio = renderer.getPixelRatio();
         renderer.setPixelRatio(1);
         renderer.setSize(w, h);
+        updateLineResolutions();
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         if (window._labelRenderer) {
@@ -737,9 +815,6 @@ async function upsertObject(msg) {
     if (msg.layer === 'scene') {
         const mesh = await createEntityMesh(msg);
         if (mesh) {
-            if (msg.position) {
-                applyOverlayDrawOrder(mesh, msg.position[2] || 0, sceneConfig?.space_dim || 3);
-            }
             scene.add(mesh);
             sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
             entityMeshes.set(msg.id, mesh);
@@ -901,9 +976,6 @@ async function updateEntity(ent) {
     if (!existing) {
         const mesh = await createEntityMesh(ent);
         if (mesh) {
-            if (ent.position) {
-                applyOverlayDrawOrder(mesh, ent.position[2] || 0, sceneConfig?.space_dim || 3);
-            }
             scene.add(mesh);
             entityMeshes.set(id, mesh);
         }
@@ -922,10 +994,6 @@ async function updateEntity(ent) {
     entityMeshes.delete(id);
     const mesh = await createEntityMesh({ ...existing, ...ent });
     if (mesh) {
-        const pos = ent.position || existing?.position;
-        if (pos) {
-            applyOverlayDrawOrder(mesh, pos[2] || 0, sceneConfig?.space_dim || 3);
-        }
         scene.add(mesh);
         entityMeshes.set(id, mesh);
         mesh.userData._labels = [];

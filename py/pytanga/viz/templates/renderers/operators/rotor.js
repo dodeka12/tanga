@@ -2,12 +2,13 @@
 // Phase 6: Moved from inline factory.js to dedicated operator module.
 
 import * as THREE from 'three';
-import { styleParam,  makeMaterial, parseColor } from '../utils.js';
+import { makeFatLine, styleParam, makeMaterial, parseColor } from '../utils.js';
 
 
 export function createRotor(ent) {
     const color = parseColor(ent, '#ff8844');
     const opacity = styleParam(ent, 'opacity', 0.7);
+    const lineWidth = styleParam(ent, 'line_thickness', 1);
     const col = new THREE.Color(color);
     const axis = ent.axis || [0, 0, 1];
     const angle = ent.angle ?? 0;
@@ -35,16 +36,14 @@ export function createRotor(ent) {
     );
     const al = dr * 1.6;
     g.add(
-        new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints([
+        makeFatLine(
+            [
                 new THREE.Vector3(0, 0, -al),
                 new THREE.Vector3(0, 0, al),
-            ]),
-            new THREE.LineBasicMaterial({
-                color: col,
-                opacity: 0.4,
-                transparent: true,
-            })
+            ],
+            col,
+            opacity,
+            lineWidth
         )
     );
     g.setRotationFromQuaternion(

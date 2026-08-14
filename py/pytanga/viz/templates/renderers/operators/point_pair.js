@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import {
+    makeFatLine,
     makeMaterial,
     styleParam,
     parseColor,
@@ -50,19 +51,13 @@ export function createPointPair(ent) {
         g.add(gm);
     }
 
-    const lg = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(pa[0] - mid[0], pa[1] - mid[1], pa[2] - mid[2]),
-        new THREE.Vector3(pb[0] - mid[0], pb[1] - mid[1], pb[2] - mid[2]),
-    ]);
-    g.add(
-        new THREE.Line(
-            lg,
-            new THREE.LineBasicMaterial({
-                color: col,
-                opacity,
-                transparent: opacity < 1,
-            })
-        )
+    const lineThickness = styleParam(ent, 'line_thickness', 1);
+    const start = new THREE.Vector3(
+        pa[0] - mid[0], pa[1] - mid[1], pa[2] - mid[2]
     );
+    const end = new THREE.Vector3(
+        pb[0] - mid[0], pb[1] - mid[1], pb[2] - mid[2]
+    );
+    g.add(makeFatLine([start, end], col, opacity, lineThickness));
     return g;
 }

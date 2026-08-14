@@ -28,7 +28,49 @@ viz.set_default_color("sphere", (0.0, 0.0, 1.0, 0.5))  # blue + 50% opacity
 
 The `default_styles` property supports both **class-based access**
 (`viz.default_styles[Sphere]`) and **string-based access**
-(`viz.default_styles["Sphere"]`).
+(`viz.default_styles["Sphere"]`). The same applies to
+`default_label_styles` and `default_tex_label_style`.
+
+### Assign vs. merge
+
+There are two ways to change a stored default:
+
+- **Assignment (`=`) replaces the whole entry.** Unspecified fields become
+  `None` (and therefore fall back to the frontend defaults at render time).
+- **`merge(...)` overlays only non-`None` fields** onto the existing entry,
+  leaving everything else intact.
+
+```python
+from pytanga.viz import SphereStyle
+
+# Replace: opacity and wireframe are lost
+viz.default_styles["Sphere"] = SphereStyle(color="#00ff00")
+
+# Merge: only color changes; opacity/wireframe are preserved
+viz.default_styles.merge("Sphere", SphereStyle(color="#00ff00"))
+```
+
+`merge` accepts either a string key or a class:
+
+```python
+from pytanga.geometry import Sphere
+
+viz.default_styles.merge(Sphere, SphereStyle(opacity=0.9))
+```
+
+By default `merge` merges nested style objects (`wireframe_dash`,
+`texture_label`) recursively (`deep=True`). Pass `deep=False` to replace a
+nested object wholesale:
+
+```python
+viz.default_styles.merge(
+    "Sphere",
+    SphereStyle(texture_label=TextureLabelStyle(font_size=30)),  # deep=True (default)
+)  # other texture_label fields (offset_v, repeat_u, …) are preserved
+```
+
+Because all style classes default their fields to `None`, a sparse style
+instance unambiguously expresses "only change these fields".
 
 ## Per-Call Style Overrides
 
@@ -58,6 +100,10 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 | `CircleStyle` | `Circle`, `ImagCircle` | `color`, `opacity`, `tube_radius`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
 | `SphereStyle` | `Sphere`, `ImagSphere` | `color`, `opacity`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
 | `SpaceStyle` | `Space` | `color`, `opacity`, `extent` |
+| `GridStyle` | `Grid` | `color`, `opacity`, `line_thickness` |
+| `AxisStyle` | `Axis` | `color`, `opacity`, `line_thickness`, `label_at_major`, `label_style` |
+| `Axes2DStyle` | `Axes2D` | `u`, `v` (each an `AxisStyle`) |
+| `Axes3DStyle` | `Axes3D` | `u`, `v`, `w` (each an `AxisStyle`) |
 | `ReflectionLineStyle` | `ReflectionLine` | `color`, `opacity`, `length`, `thickness` |
 | `ReflectionPlaneStyle` | `ReflectionPlane` | `color`, `opacity`, `extent` |
 | `ReflectionPointStyle` | `ReflectionPoint` | `color`, `opacity`, `extent` |
@@ -67,7 +113,7 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 | `DilatorStyle` | `Dilator` | `color`, `opacity`, `ring_count`, `max_radius` |
 | `MotorStyle` | `Motor` | `color`, `opacity` |
 | `GeneralRotorStyle` | `GeneralRotor` | `color`, `opacity` |
-| `FigureStyle` | figure export | `width`, `height`, `background`, `auto_rotate`, `show_grid`, `show_axes`, `show_title`, `show_annotation`, `border_radius`, `responsive` |
+| `FigureStyle` | figure export | `width`, `height`, `background`, `auto_rotate`, `show_title`, `show_annotation`, `border_radius`, `responsive` |
 | `AnimStyle` | animated export | `fps`, `loop`, `show_controls`, `compress` |
 
 See [Export & Capture](export.md) for `FigureStyle` and `AnimStyle` defaults
@@ -86,6 +132,10 @@ and usage.
 | Circle | `#ff44ff` (magenta) |
 | Sphere | `#ffaa00` (amber) |
 | Space | `#888888` (grey) |
+| Grid | `#555555` (grey) |
+| Axis | `#888888` (grey) |
+| Axes2D | same as `Axis` (per-direction `AxisStyle`) |
+| Axes3D | same as `Axis` (per-direction `AxisStyle`) |
 | ReflectionLine | `#aaccff` (light blue) |
 | ReflectionPlane | `#88ccff` (light blue) |
 | ReflectionPoint | `#ffffff` (white) |
