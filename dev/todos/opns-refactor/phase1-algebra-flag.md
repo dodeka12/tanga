@@ -123,18 +123,18 @@ No existing tests change in Phase 1.
 
 ## 5. Implementation Checklist
 
-- [ ] `Algebra.__init__` gains `opns: bool = True`; stores `_opns`
-- [ ] `Algebra.opns` property (getter + setter)
-- [ ] `MV.opns` property
-- [ ] Forward `opns` in all 8 `Basis*.__init__`
-- [ ] Add `py/tests/geometry/test_opns_algebra_flag.py`
-- [ ] Run: `pytest py/tests/geometry/test_opns_algebra_flag.py py/tests/basis -q`
+- [x] `Algebra.__init__` gains `opns: bool = True`; stores `_opns`
+- [x] `Algebra.opns` property (getter + setter)
+- [x] `MV.opns` property
+- [x] Forward `opns` in all 8 `Basis*.__init__`
+- [x] Add `py/tests/geometry/test_opns_algebra_flag.py`
+- [x] Run: `pytest py/tests/geometry/test_opns_algebra_flag.py py/tests/basis -q`
 
 ---
 
 ## 6. Verification
 
-- [ ] `Algebra(2, 0).opns is True`
-- [ ] `Algebra(2, 0, opns=False).opns is False`
-- [ ] `alg.opns = False` mutates and is observed by an existing `MV` via `mv.opns`
-- [ ] All 8 basis classes construct with `opns=False` and report `False`
+- [x] `Algebra(2, 0).opns is True`
+- [x] `Algebra(2, 0, opns=False).opns is False`
+- [x] `alg.opns = False` mutates and is observed by an existing `MV` via `mv.opns`
+- [x] All 8 basis classes construct with `opns=False` and report `False`

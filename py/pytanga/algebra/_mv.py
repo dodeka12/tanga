@@ -116,6 +116,11 @@ class MV:
         return self._alg
 
     @property
+    def opns(self) -> bool:
+        """The OPNS/IPNS interpretation flag inherited from this multivector's algebra."""
+        return self._alg.opns
+
+    @property
     def scalar(self) -> float | int:
         """The scalar coefficient."""
         return self._alg.scalar(self)

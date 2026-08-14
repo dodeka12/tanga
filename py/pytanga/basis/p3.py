@@ -28,8 +28,14 @@ class BasisP3(Algebra):
     E34: int = 12
     E123: int = 7
 
-    def __init__(self, dtype: str = "float64", seed: int | None = None, **kw) -> None:
-        super().__init__(4, 0, dtype, seed=seed, **kw)
+    def __init__(
+        self,
+        dtype: str = "float64",
+        seed: int | None = None,
+        opns: bool = True,
+        **kw,
+    ) -> None:
+        super().__init__(4, 0, dtype, seed=seed, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})

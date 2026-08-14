@@ -113,8 +113,8 @@ class BasisPGA3(Algebra):
         23: {0: 0.5},  # J(e₁₂₃∧em)
     }
 
-    def __init__(self, dtype: str = "float64", **kw) -> None:
-        super().__init__(5, 0b10000, dtype, **kw)
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+        super().__init__(5, 0b10000, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})

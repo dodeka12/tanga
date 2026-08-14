@@ -23,8 +23,8 @@ class BasisE3(Algebra):
     E23: int = 6
     E123: int = 7
 
-    def __init__(self, dtype: str = "float64", **kw) -> None:
-        super().__init__(3, 0, dtype, **kw)
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+        super().__init__(3, 0, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})

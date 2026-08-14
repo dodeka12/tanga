@@ -32,8 +32,8 @@ class BasisN2(Algebra):
     EM: int = 8  # em = e4,  em² = -1
     E12: int = 3
 
-    def __init__(self, dtype: str = "float64", **kw) -> None:
-        super().__init__(4, 0b1000, dtype, **kw)
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+        super().__init__(4, 0b1000, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})
