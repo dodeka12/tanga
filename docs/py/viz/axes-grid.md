@@ -63,7 +63,9 @@ viz.add(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-3, 3))
 | `interval_v` | `float` | Spacing between lines parallel to `dir_u` |
 
 Rendering properties (color, opacity, line thickness) are set via the
-dedicated style classes:
+dedicated style classes.  `line_thickness` is expressed in **screen-space
+pixels** (constant on screen regardless of zoom) via three.js `Line2` fat
+lines:
 
 - `GridStyle` for :class:`~pytanga.viz.Grid`.
 - `AxisStyle` for a standalone :class:`~pytanga.viz.Axis`.
@@ -77,7 +79,7 @@ Styles are passed to `add()` as the `style` argument, or configured via
 from pytanga.viz import Axes2D, Axes2DStyle, AxisStyle, Grid, GridStyle
 
 viz.add(Grid(range_u=(-5, 5), range_v=(-3, 3)),
-        style=GridStyle(color="#3a3a3a", line_thickness=0.015))
+        style=GridStyle(color="#3a3a3a", line_thickness=1))
 viz.add(
     Axes2D(range_u=(-5, 5), range_v=(-3, 3), labels=("X", "Y")),
     style=Axes2DStyle(

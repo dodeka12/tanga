@@ -61,7 +61,7 @@ viz.add(
         interval_u=1.0,
         interval_v=1.0,
     ),
-    style=GridStyle(color="#3a3a3a", line_thickness=0.015),
+    style=GridStyle(color="#3a3a3a", line_thickness=1),
 )
 
 # A few points to make the scene interesting.

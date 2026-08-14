@@ -1,23 +1,25 @@
 // PointPath renderer — renders connected line segments from an ordered
 // list of 3D points with optional per-vertex colors.
-// Uses THREE.Line with BufferGeometry for efficiency.
+// Uses three.js Line2 (LineSegments2) fat lines so `line_thickness` is
+// honored as a screen-space pixel width.
 
 import * as THREE from 'three';
 import {
-    makeMaterial,
+    makeFatSegmentsColored,
+    makeFatSegmentsFromFlat,
     parseColor,
     styleParam,
     tagEntity,
 } from './utils.js';
 
 /**
- * Create a THREE.Line for a PointPath entity JSON dict.
+ * Create a fat line for a PointPath entity JSON dict.
  *
  * ent.points: [[x,y,z], ...]
  * ent.colors: ["#ff0000", null, "#00ff00", ...]  — null = use uniform fallback
  * ent.color: "#ffffff"  — uniform fallback color
  * ent.opacity: 1.0
- * ent.line_thickness: 0.03
+ * ent.line_thickness: 2  — screen-space pixel width
  */
 export function createPointPath(ent) {
     const points = ent.points || [];
@@ -29,13 +31,15 @@ export function createPointPath(ent) {
     const perPointColors = ent.colors || [];
     const uniformColor = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 1.0);
+    const lineWidth = styleParam(ent, 'line_thickness', 2);
 
     // Determine if we should use per-vertex colors
-    const hasAnyVertexColor = perPointColors.some(c => c !== null && c !== undefined);
-    const perVertexFields = hasAnyVertexColor ? { vertexColors: true } : {};
+    const hasAnyVertexColor = perPointColors.some(
+        (c) => c !== null && c !== undefined
+    );
 
     // Build segment pairs: each consecutive pair of points forms one segment
-    // For n points we have n-1 segments, so 2*(n-1) positions
+    // For n points we have n-1 segments, so 2*(n-1) positions.
     const n = points.length;
     const numVertices = (n - 1) * 2;
     const positions = new Float32Array(numVertices * 3);
@@ -71,21 +75,9 @@ export function createPointPath(ent) {
         }
     }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    if (hasAnyVertexColor) {
-        geometry.setAttribute('color', new THREE.BufferAttribute(vertexColors, 3));
-    }
-
-    const material = new THREE.LineBasicMaterial({
-        color: hasAnyVertexColor ? 0xffffff : uniformColor,
-        opacity: opacity,
-        transparent: opacity < 1.0,
-        depthWrite: opacity >= 0.99,
-        ...perVertexFields,
-    });
-
-    const line = new THREE.LineSegments(geometry, material);
+    const line = hasAnyVertexColor
+        ? makeFatSegmentsColored(positions, vertexColors, opacity, lineWidth)
+        : makeFatSegmentsFromFlat(positions, uniformColor, opacity, lineWidth);
     tagEntity(line, ent);
     return line;
 }

@@ -3,7 +3,13 @@
 // range_u / range_v are [min, max] pairs relative to `origin`.
 
 import * as THREE from 'three';
-import { parseColor, styleParam, tagEntity } from './utils.js';
+import {
+    makeLineMaterial,
+    makeFatLineWithMaterial,
+    parseColor,
+    styleParam,
+    tagEntity,
+} from './utils.js';
 
 export function createGrid(ent) {
     const group = new THREE.Group();
@@ -26,11 +32,8 @@ export function createGrid(ent) {
 
     const color = parseColor(ent, '#555555');
     const opacity = styleParam(ent, 'opacity', 0.5);
-    const material = new THREE.LineBasicMaterial({
-        color: typeof color === 'string' ? new THREE.Color(color) : color,
-        opacity,
-        transparent: opacity < 1.0,
-    });
+    const lineWidth = styleParam(ent, 'line_thickness', 1);
+    const material = makeLineMaterial(color, opacity, lineWidth);
 
     // Corner of the grid rectangle in UV space.
     const corner = origin.clone()
@@ -38,8 +41,7 @@ export function createGrid(ent) {
         .addScaledVector(dirV, minV);
 
     function addLine(a, b) {
-        const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
-        const line = new THREE.Line(geo, material);
+        const line = makeFatLineWithMaterial([a, b], material);
         group.add(line);
     }
 

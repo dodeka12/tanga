@@ -663,8 +663,8 @@ class TestAxesSerialization:
         assert u_entry["color"] == "#ff0000"
         # sparse AxisStyle resolves to canonical Axis defaults
         assert v_entry["style"]["color"] == "#888888"
-        assert v_entry["style"]["opacity"] == 0.9
-        assert v_entry["style"]["line_thickness"] == 0.03
+        assert v_entry["style"]["opacity"] == 1.0
+        assert v_entry["style"]["line_thickness"] == 2.0
 
     def test_axes_without_style_uses_canonical_group(self):
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
@@ -673,7 +673,7 @@ class TestAxesSerialization:
         assert len(entries) == 2
         for e in entries:
             assert e["style"]["color"] == "#888888"
-            assert e["style"]["opacity"] == 0.9
+            assert e["style"]["opacity"] == 1.0
 
     def test_axes_scalar_axis_style_applies_to_all_directions(self):
         from pytanga.viz import AxisStyle
@@ -776,11 +776,11 @@ class TestGridAxesStyles:
         assert isinstance(viz.default_styles["Axes2D"], Axes2DStyle)
         assert isinstance(viz.default_styles["Axes3D"], Axes3DStyle)
         assert viz.default_styles["Grid"].color == "#555555"
-        assert viz.default_styles["Grid"].opacity == 0.5
-        assert viz.default_styles["Grid"].line_thickness == 0.02
+        assert viz.default_styles["Grid"].opacity == 0.8
+        assert viz.default_styles["Grid"].line_thickness == 1.0
         assert viz.default_styles["Axis"].color == "#888888"
-        assert viz.default_styles["Axis"].opacity == 0.9
-        assert viz.default_styles["Axis"].line_thickness == 0.03
+        assert viz.default_styles["Axis"].opacity == 1.0
+        assert viz.default_styles["Axis"].line_thickness == 2.0
 
     def test_grid_style_via_add(self):
         from pytanga.viz import GridStyle
@@ -804,7 +804,7 @@ class TestGridAxesStyles:
         viz = Visualizer()
         viz.default_styles.merge("Grid", GridStyle(color="#00ff00"))
         assert viz.default_styles["Grid"].color == "#00ff00"
-        assert viz.default_styles["Grid"].opacity == 0.5  # preserved
+        assert viz.default_styles["Grid"].opacity == 0.8  # preserved
 
     def test_grid_set_default_color(self):
         viz = Visualizer()

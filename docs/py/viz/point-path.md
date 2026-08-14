@@ -23,7 +23,7 @@ path = PointPath()
 path.add((0, 0, 0), color="#ff0000")
 path.add((1, 2, 0), color="#00ff00")
 path.add(Point(3, 1, 0), color="#0000ff")
-viz.add(path, style=PointPathStyle(line_thickness=0.05))
+viz.add(path, style=PointPathStyle(line_thickness=2))
 
 viz.run()
 ```
@@ -153,17 +153,16 @@ for node in graph_nodes:
 class PointPathStyle(VizStyle):
     color: str | None = None           # fallback uniform color
     opacity: float | None = None       # 0..1
-    line_thickness: float | None = None # uniform line thickness
+    line_thickness: float | None = None # line width in screen-space pixels
 ```
 
-Canonical default: `PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=0.03)`
+Canonical default: `PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=2.0)`
 
-??? note "Line thickness limitation"
-    `THREE.Line` uses `gl.lineWidth()` which is capped at 1px on most
-    platforms (Windows ANGLE, macOS, mobile). The `line_thickness` value is
-    stored but the actual rendered width may be limited to 1 pixel.
-    Per-vertex variable thickness is not supported by WebGL lines — this
-    can be added later via custom ribbon/tube geometry.
+??? note "Line thickness"
+    `line_thickness` is a **screen-space pixel width** rendered via three.js
+    `Line2` fat lines, so it stays constant on screen regardless of zoom.
+    Per-vertex variable thickness is not supported — this can be added later
+    via custom ribbon/tube geometry.
 
 ## Adding to a Visualizer
 
@@ -175,7 +174,7 @@ trail = PointPath(max_points=100, pop_colors=False,
 for _ in range(100):          # pre-fill so it draws immediately
     trail.add((0, 0, 0))
 
-trail_id = viz.add(trail, style=PointPathStyle(line_thickness=0.04))
+trail_id = viz.add(trail, style=PointPathStyle(line_thickness=2))
 
 # In animation loop:
 trail.add((x, y, z))
@@ -195,7 +194,7 @@ rebuilding the geometry:
 from pytanga.viz import PointPathStyle
 
 # Change line thickness and opacity
-viz.update_style(trail_id, PointPathStyle(line_thickness=0.06, opacity=0.7))
+viz.update_style(trail_id, PointPathStyle(line_thickness=3, opacity=0.7))
 
 # Change only the color
 viz.update_style(trail_id, PointPathStyle(color="#ff8844"))

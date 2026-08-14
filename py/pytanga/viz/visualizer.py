@@ -563,20 +563,22 @@ class Visualizer(_JupyterDisplayMixin):
             obj.kind in ("Axis", "Grid", "Axes2D", "Axes3D")
             for obj in scene._objects.values()
         )
+
         if not has_axis_or_grid and not has_custom_camera:
             from ._scene_objects import Axes2D, Axes3D, Grid
+            from ._styles import Axes3DStyle, AxisStyle
 
             if scene.config.space_dim == 2:
-                axes: Axes2D | Axes3D = Axes2D(
-                    range_u=(-5.0, 5.0), range_v=(-5.0, 5.0), labels=("X", "Y")
-                )
+                axes: Axes2D | Axes3D = Axes2D(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
                 grid = Grid(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
+                self._add_to_scene(scene_name, obj=axes)
+                self._add_to_scene(scene_name, obj=grid)
             else:
                 axes = Axes3D(
-                    range_u=(-5.0, 5.0),
-                    range_v=(-5.0, 5.0),
-                    range_w=(-5.0, 5.0),
-                    labels=("X", "Y", "Z"),
+                    range_u=(0.0, 5.0),
+                    range_v=(0.0, 5.0),
+                    range_w=(0.0, 5.0),
+                    # labels=("X", "Y", "Z"),
                 )
                 grid = Grid(
                     origin=(0.0, 0.0, 0.0),
@@ -585,8 +587,17 @@ class Visualizer(_JupyterDisplayMixin):
                     range_u=(-5.0, 5.0),
                     range_v=(-5.0, 5.0),
                 )
-            self._add_to_scene(scene_name, obj=axes)
-            self._add_to_scene(scene_name, obj=grid)
+                self._add_to_scene(
+                    scene_name,
+                    obj=axes,
+                    style=Axes3DStyle(
+                        u=AxisStyle(color="#ff0000", label_at_major=False),
+                        v=AxisStyle(color="green", label_at_major=False),
+                        w=AxisStyle(color="blue", label_at_major=False),
+                    ),
+                )
+                self._add_to_scene(scene_name, obj=grid)
+
         self._default_objects_added.add(scene_name)
 
     def _full_state_for(
@@ -834,9 +845,7 @@ class Visualizer(_JupyterDisplayMixin):
             else:
                 # reuse_existing disabled — always open new tab
                 if self._loop is not None:
-                    self._loop.call_soon_threadsafe(
-                        self._server._clear_ws_ready_events
-                    )
+                    self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
                 self._server.open_browser(f"/?token={page_token}")
                 if wait_for_browser:
                     return self.wait_for_browser(timeout=30.0)
@@ -911,11 +920,14 @@ class Visualizer(_JupyterDisplayMixin):
         async def _stop() -> None:
             # Cancel pending tasks gently to avoid "Task was destroyed but pending"
             # warnings.  Don't do t.cancel() in a loop — it can recurse on child tasks.
-            tasks = [t for t in asyncio.all_tasks(self._loop)
-                     if not t.done() and t is not asyncio.current_task(self._loop)]
+            tasks = [
+                t
+                for t in asyncio.all_tasks(self._loop)
+                if not t.done() and t is not asyncio.current_task(self._loop)
+            ]
             if tasks:
                 for t in tasks:
-                    t.cancel('server shutting down')
+                    t.cancel("server shutting down")
                 await asyncio.gather(*tasks, return_exceptions=True)
             await self._server.stop()
 
@@ -996,9 +1008,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         # Thread-safe clear of ready events
         if self._loop is not None:
-            self._loop.call_soon_threadsafe(
-                self._server._clear_ws_ready_events
-            )
+            self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
 
         self._server.open_browser(f"/?token={page_token}")
 
@@ -1019,9 +1029,7 @@ class Visualizer(_JupyterDisplayMixin):
                 return False
             time.sleep(poll_interval)
 
-        logger.warning(
-            "No browser connected within %.0fs after opening tab", timeout
-        )
+        logger.warning("No browser connected within %.0fs after opening tab", timeout)
         self._print_ws_timeout_note()
         return False
 
@@ -1126,9 +1134,7 @@ class Visualizer(_JupyterDisplayMixin):
                         enter_task = asyncio.create_task(
                             asyncio.to_thread(sys.stdin.readline)
                         )
-                        ws_task = asyncio.create_task(
-                            self._server.wait_for_ws_ready()
-                        )
+                        ws_task = asyncio.create_task(self._server.wait_for_ws_ready())
 
                         # Print prompt
                         self._print_connect_prompt()
@@ -1148,9 +1154,7 @@ class Visualizer(_JupyterDisplayMixin):
                                 page_token,
                             )
                             self._server._clear_ws_ready_events()
-                            self._server.open_browser(
-                                f"/?token={page_token}"
-                            )
+                            self._server.open_browser(f"/?token={page_token}")
                             try:
                                 await asyncio.wait_for(
                                     self._server.wait_for_ws_ready(),
@@ -1169,14 +1173,10 @@ class Visualizer(_JupyterDisplayMixin):
                             pass
                     else:
                         # Non-blocking: just check if already connected
-                        reconnected = await self._server.wait_for_ws_ready(
-                            timeout=3.0
-                        )
+                        reconnected = await self._server.wait_for_ws_ready(timeout=3.0)
                         if not reconnected:
                             self._server._clear_ws_ready_events()
-                            self._server.open_browser(
-                                f"/?token={page_token}"
-                            )
+                            self._server.open_browser(f"/?token={page_token}")
                 else:
                     self._server._clear_ws_ready_events()
                     self._server.open_browser(f"/?token={page_token}")
@@ -1702,10 +1702,10 @@ class Visualizer(_JupyterDisplayMixin):
     @property
     def default_act_point_style(self) -> ActPointStyle:
         """The global default :class:`ActPointStyle` for all active points.
-        
+
         Can be reassigned to change hover highlighting for all
         active points at once::
-        
+
             viz.default_act_point_style = ActPointStyle(
                 hover_emissive="#00ff00", hover_scale=2.0
             )

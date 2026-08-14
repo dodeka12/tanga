@@ -12,6 +12,7 @@ import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from './view_mode.js';
+import { updateLineResolutions } from './renderers/utils.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket, setSpaceDim } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
@@ -121,6 +122,7 @@ function onResize() {
         window._viewerContainer,
         sceneConfig?.space_dim || 3
     );
+    updateLineResolutions();
 }
 
 // ── WebSocket Client ────────────────────────────────────────
@@ -726,6 +728,7 @@ function handleMessage(msg) {
             renderer.setPixelRatio(_savedPixelRatio);
             _savedPixelRatio = null;
         }
+        updateLineResolutions();
         const statusEl2 = document.getElementById('status');
         if (statusEl2) {
             statusEl2.style.display = _savedStatusDisplay || 'block';
@@ -747,6 +750,7 @@ function handleScreenshot(msg) {
         _savedPixelRatio = renderer.getPixelRatio();
         renderer.setPixelRatio(1);
         renderer.setSize(w, h);
+        updateLineResolutions();
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         if (window._labelRenderer) {

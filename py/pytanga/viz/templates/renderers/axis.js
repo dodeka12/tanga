@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { makeMaterial, parseColor, styleParam } from './utils.js';
+import { makeFatLine, parseColor, styleParam } from './utils.js';
 
 /**
  * Parse a Python-style float format specifier (e.g. ".2f") into a number of
@@ -56,6 +56,7 @@ export function addAxis(group, axis) {
     const color = parseColor(axis, '#888888');
     const colorHex = typeof color === 'string' ? color : '#' + color.getHexString();
     const opacity = styleParam(axis, 'opacity', 0.9);
+    const lineWidth = styleParam(axis, 'line_thickness', 1);
     const major = Math.abs(axis.majorInterval || 1.0);
 
     // Value-label style (LabelStyle dict embedded in the resolved Axis style).
@@ -84,11 +85,8 @@ export function addAxis(group, axis) {
     //   [0] along the axis, [1] perpendicular separation, [2] binormal.
     const offLocal = labelStyle.offset_local || [0, 0, 0];
 
-    const lineMaterial = makeMaterial(color, opacity);
-
     function addSegment(a, b) {
-        const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
-        const line = new THREE.Line(geo, lineMaterial);
+        const line = makeFatLine([a, b], color, opacity, lineWidth);
         group.add(line);
         return line;
     }

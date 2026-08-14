@@ -2,6 +2,11 @@
 // Phase 5: Used by per-entity modules and the factory dispatcher.
 
 import * as THREE from 'three';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 
 /**
  * Create a MeshPhongMaterial with sensible defaults for Tanga entities.
@@ -18,6 +23,185 @@ export function makeMaterial(color, opacity = 1.0, doubleSided = false) {
         depthWrite: opacity >= 0.99,
         side: doubleSided ? THREE.DoubleSide : THREE.FrontSide,
     });
+}
+
+// ── Fat lines (screen-space width) ──────────────────────────
+//
+// THREE.Line + LineBasicMaterial cannot vary their width: WebGL caps line
+// width at 1px on most platforms.  For axes/grid overlays we instead use
+// three.js `Line2` fat lines, whose `linewidth` is expressed in
+// screen-space pixels (worldUnits: false) and therefore stays constant
+// on screen regardless of zoom.
+
+function _lineResolution() {
+    const pr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const w = (typeof window !== 'undefined' ? window.innerWidth : 1) * pr;
+    const h = (typeof window !== 'undefined' ? window.innerHeight : 1) * pr;
+    return new THREE.Vector2(Math.max(1, w), Math.max(1, h));
+}
+
+/**
+ * Create a LineMaterial for a three.js `Line2` fat line.
+ *
+ * @param {string|THREE.Color} color
+ * @param {number} opacity - 0..1
+ * @param {number} lineWidth - line width in screen-space pixels
+ * @returns {THREE.ShaderMaterial}
+ */
+const _lineMaterials = new Set();
+
+export function makeLineMaterial(color, opacity = 1.0, lineWidth = 1.0, options = {}) {
+    const c = typeof color === 'string' ? new THREE.Color(color) : color;
+    const material = new LineMaterial({
+        color: c,
+        linewidth: Math.max(0.1, lineWidth),
+        worldUnits: false,
+        transparent: opacity < 1.0,
+        opacity,
+        depthWrite: opacity >= 0.99,
+        resolution: _lineResolution(),
+        vertexColors: !!options.vertexColors,
+    });
+    if (options.dashed) {
+        material.dashed = true;
+        material.dashSize = options.dashSize ?? 4;
+        material.gapSize = options.gapSize ?? 2;
+        material.dashScale = options.dashScale ?? 1;
+    }
+    _lineMaterials.add(material);
+    return material;
+}
+
+/**
+ * Recompute the screen resolution for every registered LineMaterial.
+ * Called on window resize / screenshot capture so screen-space line widths
+ * stay correct when the drawing buffer size changes.
+ */
+export function updateLineResolutions() {
+    const res = _lineResolution();
+    for (const m of _lineMaterials) {
+        m.resolution.copy(res);
+    }
+}
+
+function _flattenPoints(points) {
+    const out = [];
+    for (const p of points) out.push(p.x, p.y, p.z);
+    return out;
+}
+
+function _flattenSegments(segments) {
+    const out = [];
+    for (const [a, b] of segments) out.push(a.x, a.y, a.z, b.x, b.y, b.z);
+    return out;
+}
+
+/**
+ * Create a `Line2` fat line through the given points.
+ *
+ * @param {THREE.Vector3[]} points
+ * @param {string|THREE.Color} color
+ * @param {number} opacity
+ * @param {number} lineWidth - screen-space pixel width
+ * @returns {Line2}
+ */
+export function makeFatLine(points, color, opacity = 1.0, lineWidth = 1.0) {
+    const material = makeLineMaterial(color, opacity, lineWidth);
+    const geometry = new LineGeometry();
+    geometry.setPositions(_flattenPoints(points));
+    return new Line2(geometry, material);
+}
+
+/**
+ * Create a `Line2` fat line reusing an existing LineMaterial.
+ *
+ * @param {THREE.Vector3[]} points
+ * @param {THREE.ShaderMaterial} material - a LineMaterial
+ * @returns {Line2}
+ */
+export function makeFatLineWithMaterial(points, material) {
+    const geometry = new LineGeometry();
+    geometry.setPositions(_flattenPoints(points));
+    return new Line2(geometry, material);
+}
+
+/**
+ * Create a `LineSegments2` fat line from independent start/end segment pairs.
+ *
+ * @param {[THREE.Vector3, THREE.Vector3][]} segments
+ * @param {string|THREE.Color} color
+ * @param {number} opacity
+ * @param {number} lineWidth - screen-space pixel width
+ * @returns {LineSegments2}
+ */
+function _finalizeSegmentsLine(geometry, material) {
+    const line = new LineSegments2(geometry, material);
+    if (material.dashed) line.computeLineDistances();
+    return line;
+}
+
+export function makeFatSegments(segments, color, opacity = 1.0, lineWidth = 1.0) {
+    const material = makeLineMaterial(color, opacity, lineWidth);
+    return makeFatSegmentsWithMaterial(segments, material);
+}
+
+/**
+ * Create a `LineSegments2` fat line reusing an existing LineMaterial.
+ *
+ * @param {[THREE.Vector3, THREE.Vector3][]} segments
+ * @param {THREE.ShaderMaterial} material - a LineMaterial
+ * @returns {LineSegments2}
+ */
+export function makeFatSegmentsWithMaterial(segments, material) {
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(_flattenSegments(segments));
+    return _finalizeSegmentsLine(geometry, material);
+}
+
+/**
+ * Create a `LineSegments2` fat line from flat [x,y,z, x,y,z, ...] pair data.
+ *
+ * @param {number[]|Float32Array} flatPositions - consecutive start/end pairs
+ * @param {string|THREE.Color} color
+ * @param {number} opacity
+ * @param {number} lineWidth - screen-space pixel width
+ * @returns {LineSegments2}
+ */
+export function makeFatSegmentsFromFlat(flatPositions, color, opacity = 1.0, lineWidth = 1.0) {
+    const material = makeLineMaterial(color, opacity, lineWidth);
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(flatPositions);
+    return _finalizeSegmentsLine(geometry, material);
+}
+
+/**
+ * Create a `LineSegments2` fat line from flat positions reusing a material.
+ *
+ * @param {number[]|Float32Array} flatPositions - consecutive start/end pairs
+ * @param {THREE.ShaderMaterial} material - a LineMaterial
+ * @returns {LineSegments2}
+ */
+export function makeFatSegmentsFromFlatWithMaterial(flatPositions, material) {
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(flatPositions);
+    return _finalizeSegmentsLine(geometry, material);
+}
+
+/**
+ * Create a `LineSegments2` fat line with per-segment start/end colors.
+ *
+ * @param {number[]|Float32Array} flatPositions - consecutive start/end pairs
+ * @param {number[]|Float32Array} flatColors - flat [r,g,b, r,g,b, ...] per vertex
+ * @param {number} opacity
+ * @param {number} lineWidth - screen-space pixel width
+ * @returns {LineSegments2}
+ */
+export function makeFatSegmentsColored(flatPositions, flatColors, opacity = 1.0, lineWidth = 1.0) {
+    const material = makeLineMaterial('#ffffff', opacity, lineWidth, { vertexColors: true });
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(flatPositions);
+    geometry.setColors(flatColors);
+    return _finalizeSegmentsLine(geometry, material);
 }
 
 /**
@@ -118,32 +302,22 @@ export function createArrow(color, opacity, vec, length, origin) {
  */
 export function addWireframeOverlay(parent, geometry, color, dashPattern, opacity = 1.0) {
     const wireGeo = new THREE.WireframeGeometry(geometry);
-    const c = typeof color === 'string' ? new THREE.Color(color) : color;
+    const flatPositions = wireGeo.attributes.position.array;
     const useDash = dashPattern && dashPattern.dash_size > 0;
-    const material = useDash
-        ? new THREE.LineDashedMaterial({
-            color: c,
-            dashSize: dashPattern.dash_size,
-            gapSize: dashPattern.gap_size,
-            scale: dashPattern.scale || 1.0,
-            opacity: opacity,
-            transparent: opacity < 1.0,
-        })
-        : new THREE.LineBasicMaterial({ color: c, opacity: opacity, transparent: opacity < 1.0 });
-    const lines = new THREE.LineSegments(wireGeo, material);
-    if (useDash) {
-        const pos = wireGeo.getAttribute('position');
-        const distances = new Float32Array(pos.count);
-        for (let i = 0; i < pos.count; i += 2) {
-            const dx = pos.getX(i + 1) - pos.getX(i);
-            const dy = pos.getY(i + 1) - pos.getY(i);
-            const dz = pos.getZ(i + 1) - pos.getZ(i);
-            const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            distances[i] = 0;
-            distances[i + 1] = len;
-        }
-        wireGeo.setAttribute('lineDistance', new THREE.BufferAttribute(distances, 1));
-    }
+    const material = makeLineMaterial(
+        color,
+        opacity,
+        1.0,
+        useDash
+            ? {
+                dashed: true,
+                dashSize: dashPattern.dash_size,
+                gapSize: dashPattern.gap_size,
+                dashScale: dashPattern.scale || 1.0,
+            }
+            : {}
+    );
+    const lines = makeFatSegmentsFromFlatWithMaterial(flatPositions, material);
     parent.add(lines);
 }
 

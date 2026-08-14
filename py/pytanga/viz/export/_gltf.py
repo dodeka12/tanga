@@ -279,42 +279,16 @@ class _GltfBuilder:
         return []
 
     def _axis_primitives(self, ent: Dict[str, Any]) -> List[_Primitive]:
-        """Render an Axis as world-anchored line segments (no text in glTF)."""
+        """Render an Axis as a single world-anchored line segment (no text in glTF)."""
         start = np.array(ent.get("start", [0, 0, 0]), dtype=np.float64)
         end = np.array(ent.get("end", [1, 0, 0]), dtype=np.float64)
-        d = end - start
-        length = float(np.linalg.norm(d))
+        length = float(np.linalg.norm(end - start))
         if length < 1e-9:
             return []
-        axis_dir = d / length
 
-        # A stable perpendicular to the axis direction.
-        ref = np.array([0.0, 0.0, 1.0])
-        if abs(np.dot(axis_dir, ref)) > 0.99:
-            ref = np.array([1.0, 0.0, 0.0])
-        perp = np.cross(ref, axis_dir)
-        p_len = float(np.linalg.norm(perp))
-        if p_len < 1e-9:
-            perp = np.array([1.0, 0.0, 0.0])
-        else:
-            perp = perp / p_len
-
-        tick_len = max(length * 0.02, self._style_val(ent, "line_thickness", 0.03) * 4)
         segments: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = [
             (tuple(start.tolist()), tuple(end.tolist()))
         ]
-
-        major = abs(float(ent.get("majorInterval", 1.0)))
-        show_ticks = ent.get("showTicks", True)
-        if show_ticks and major > 0:
-            count = int(length // major)
-            for i in range(1, count + 1):
-                p = start + axis_dir * (i * major)
-                a = p + perp * tick_len
-                b = p - perp * tick_len
-                segments.append(
-                    (tuple(a.tolist()), tuple(b.tolist()))
-                )
 
         prim = _prims.lines_from_segments(segments)
         return [prim] if prim is not None else []

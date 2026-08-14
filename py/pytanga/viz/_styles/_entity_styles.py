@@ -330,10 +330,9 @@ class PointPathStyle(VizStyle):
     Attributes:
         color: Fallback uniform color when per-point colors are ``None``.
         opacity: Global opacity (0..1).
-        line_thickness: Uniform line thickness when not using per-vertex
-            thickness.  Due to WebGL limitations, ``THREE.Line`` thickness
-            is capped at 1px on most platforms.  Per-vertex thickness
-            requires a custom geometry approach (future).
+        line_thickness: Uniform line width in screen-space pixels (three.js
+            ``Line2`` fat lines).  Per-vertex thickness still requires a
+            custom geometry approach (future).
     """
 
     color: str | None = None
@@ -358,9 +357,7 @@ class GridStyle(VizStyle):
     Attributes:
         color: Grid line color.
         opacity: Grid line opacity (0..1).
-        line_thickness: Grid line thickness.  Due to WebGL limitations,
-            ``THREE.Line`` thickness is capped at 1px on most platforms;
-            it still affects glTF export and other line-derived sizing.
+        line_thickness: Grid line width in screen-space pixels.
     """
 
     color: str | None = None
@@ -385,9 +382,7 @@ class AxisStyle(VizStyle):
     Attributes:
         color: Axis line and value/name label color.
         opacity: Axis line opacity (0..1).
-        line_thickness: Axis line thickness.  Due to WebGL limitations,
-            ``THREE.Line`` thickness is capped at 1px on most platforms;
-            it still affects glTF export.
+        line_thickness: Axis line width in screen-space pixels.
         label_at_major: When ``False``, value labels are not drawn at major
             intervals (defaults to showing them).
         label_style: Optional :class:`LabelStyle` controlling the value
