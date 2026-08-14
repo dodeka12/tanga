@@ -5,9 +5,10 @@
 
 ``View3dConfig`` defines the initial framing of a projective 3D camera using a
 virtual plane: a plane ``point``/``normal``, the plane ``extent_u``/``extent_v``,
-and an optional ``span_u`` horizontal direction.  The camera is placed along the
-plane normal at a distance computed from ``fov`` and the extents, looking at the
-plane centre with ``up`` derived from the plane orientation.
+and an optional ``up`` vector.  The camera is placed along the plane normal at a
+distance computed from ``fov`` and the extents, looking at the plane centre.
+The ``up`` vector (default ``(0, 1, 0)``) is the orbit rotation axis in the
+interactive viewer, independent of the plane orientation.
 
 The resulting camera is a plain projective 3D camera with free orbit controls:
 left-drag rotates, right/middle-drag pans, and the scroll wheel zooms.
@@ -36,7 +37,6 @@ viz = Visualizer(
         normal=(0.4, 0.6, 1.0),
         extent_u=7.0,
         extent_v=5.0,
-        span_u=(1.0, 0.0, -0.4),
         fov=50.0,
     ),
 )

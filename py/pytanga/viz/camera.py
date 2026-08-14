@@ -105,6 +105,7 @@ class CameraConfig3d(CameraConfig):
     type: Literal["3d"] = "3d"
 
     fov: float = 50.0  # vertical field of view in degrees
+    up: tuple[float, float, float] | None = None  # camera up / orbit axis
 
 
 # ── Input specs ────────────────────────────────────────────
@@ -144,11 +145,6 @@ class View3dConfig:
     at ``center + n̂ * distance`` where ``distance`` is computed from
     ``fov`` and the plane extents.
 
-    If ``span_u`` is given it defines the horizontal direction **û**
-    (orthogonalized against the normal).  Otherwise **û** is
-    auto-computed from a reference vector.  **v̂** is always
-    ``cross(normal, û)``.
-
     Args:
         point: A point on the virtual plane.
         normal: Camera optical axis direction (the plane normal).
@@ -156,8 +152,9 @@ class View3dConfig:
         extent_v: Full vertical extent of the virtual plane.
         center: Point that maps to the viewport center (defaults to
             ``point``).
-        span_u: Optional horizontal direction in world space.  If
-            ``None``, a suitable direction is auto-computed.
+        up: Camera up vector, used as the orbit rotation axis by the
+            interactive viewer.  Defaults to ``(0, 1, 0)`` so orbit
+            behaviour matches the no-camera case.
         fov: Vertical field of view in degrees.
     """
 
@@ -166,7 +163,7 @@ class View3dConfig:
     extent_u: float
     extent_v: float
     center: tuple[float, float, float] | None = None
-    span_u: tuple[float, float, float] | None = None
+    up: tuple[float, float, float] = (0.0, 1.0, 0.0)
     fov: float = 50.0
 
 
@@ -179,22 +176,6 @@ def _normalize(v: tuple[float, float, float]) -> tuple[float, float, float]:
     if length < 1e-9:
         return (0.0, 0.0, 1.0)
     return (x / length, y / length, z / length)
-
-
-def _cross(
-    a: tuple[float, float, float], b: tuple[float, float, float]
-) -> tuple[float, float, float]:
-    return (
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    )
-
-
-def _auto_span_u(n: tuple[float, float, float]) -> tuple[float, float, float]:
-    """Auto-compute an in-plane horizontal direction perpendicular to ``n``."""
-    ref: tuple[float, float, float] = (1.0, 0.0, 0.0) if abs(n[0]) < 0.9 else (0.0, 1.0, 0.0)
-    return _normalize(_cross(ref, n))
 
 
 # ── Builders ───────────────────────────────────────────────
@@ -235,9 +216,8 @@ def get_camera_view3d(config: View3dConfig) -> CameraConfig3d:
     ``extent_v`` determines the initial framing: the camera optical axis is the
     plane normal ``n̂`` and the camera is placed at ``center + n̂ * distance``
     where ``distance`` is computed from ``fov`` and the plane extents.  The
-    horizontal direction ``û`` (``span_u``, or a computed reference) fixes the
-    viewing orientation and the vertical ``v̂ = cross(n̂, û)`` becomes the
-    camera up vector.
+    camera up vector defaults to ``(0, 1, 0)`` so the interactive viewer's
+    orbit rotation axis matches the no-camera case.
 
     The resulting :class:`CameraConfig3d` is a plain projective camera that the
     frontend renders with free orbit controls (rotation + pan + zoom).
@@ -247,22 +227,6 @@ def get_camera_view3d(config: View3dConfig) -> CameraConfig3d:
     ext_u = abs(config.extent_u)
     ext_v = abs(config.extent_v)
     fov = config.fov
-
-    if config.span_u is not None:
-        u = _normalize(config.span_u)
-    else:
-        u = _auto_span_u(n)
-
-    # Orthogonalize u against n (relevant when span_u had a normal component)
-    dot = u[0] * n[0] + u[1] * n[1] + u[2] * n[2]
-    u = _normalize(
-        (
-            u[0] - dot * n[0],
-            u[1] - dot * n[1],
-            u[2] - dot * n[2],
-        )
-    )
-    vv = _cross(n, u)
 
     distance = (max(ext_u, ext_v) / 2.0) / math.tan(math.radians(fov) / 2.0)
 
@@ -276,7 +240,7 @@ def get_camera_view3d(config: View3dConfig) -> CameraConfig3d:
         fov=fov,
         position=position,
         target=center,
-        up=vv,
+        up=config.up,
         near=max(0.01, distance * 0.001),
         far=distance * 10.0,
     )

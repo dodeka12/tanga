@@ -73,7 +73,7 @@ uv run python py/examples/viz/<script>.py
 | [`demo_mv_visualization.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_mv_visualization.py) | MV input from PGA3 and N3, OPNS vs IPNS |
 | [`demo_camera_config.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_config.py) | Auto-fit, explicit 3D, 2D, and plane-based camera modes |
 | [`demo_camera_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_2d.py) | `View2DConfig` with min/max world bounds |
-| [`demo_camera_3d_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_3d_plane.py) | `View3dConfig` with a tilted plane and `span_u` |
+| [`demo_camera_3d_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_3d_plane.py) | `View3dConfig` with a tilted plane and a custom `up` |
 | [`demo_axes_custom.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_axes_custom.py) | Custom `Axis` intervals, ticks, labels, and `Grid` |
 | [`demo_custom_defaults.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_custom_defaults.py) | Global default styles, per-call overrides |
 | [`demo_operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_operators.py) | Rotor, Translator, Motor, Dilator visualization |

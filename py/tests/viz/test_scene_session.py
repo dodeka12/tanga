@@ -103,8 +103,8 @@ class TestCameraBuilders:
         # position is along +Z at a positive distance
         assert cam.position is not None
         assert cam.position[2] > 0
-        # up is precomputed (auto span_u cross-product)
-        assert cam.up is not None
+        # up defaults to (0, 1, 0) so orbit behaviour matches the no-camera case
+        assert cam.up == (0.0, 1.0, 0.0)
         # the resulting config is a plain projective 3D camera with no
         # plane-fit extent fields — the frontend renders it with free
         # orbit controls (rotation + pan).
@@ -116,6 +116,12 @@ class TestCameraBuilders:
         assert not hasattr(cam, "extent_u")
         assert not hasattr(cam, "extent_v")
         assert cam.position == (10, 6, 12)
+
+    def test_view3d_custom_up_passthrough(self):
+        cam = get_camera_view3d(
+            View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0, up=(0.2, 0.3, 1.0))
+        )
+        assert cam.up == (0.2, 0.3, 1.0)
 
     def test_get_camera_dispatches(self):
         assert isinstance(get_camera(View2DConfig(xmin=0, xmax=1, ymin=0, ymax=1)), CameraConfig2d)

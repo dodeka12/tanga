@@ -21,7 +21,7 @@ from pytanga.viz import CameraConfig3d
 CameraConfig3d(
     position=(10, 6, 12),   # (x, y, z) world position
     target=(0, 0, 0),       # look-at point
-    up=None,                # optional camera up vector
+    up=(0, 1, 0),           # camera up vector (also the orbit rotation axis)
     fov=50.0,               # vertical field of view in degrees
     near=None,              # near clipping plane
     far=None,               # far clipping plane
@@ -117,9 +117,9 @@ using a virtual plane.  The plane defines the camera's **initial framing**:
 - the optical axis is the plane normal `n̂`;
 - the camera is placed at `center + n̂ · distance`, where `distance` is derived
   from `fov` and the plane extents so the plane is fully framed;
-- the horizontal direction `û` (explicit `span_u`, or auto-computed) fixes the
-  viewing orientation, and the vertical `v̂ = cross(n̂, û)` becomes the camera
-  up vector.
+- the `up` vector (default `(0, 1, 0)`) is the camera's up direction and is
+  also used as the orbit rotation axis by the interactive viewer, independent
+  of the plane orientation.
 
 Convert it with `get_camera_view3d()` (or the dispatching `get_camera()`). The
 result is a plain projective `CameraConfig3d` (with `position` / `target` /
@@ -135,7 +135,7 @@ viz = Visualizer(
         normal=(0.4, 0.6, 1.0),   # camera optical axis
         extent_u=6.0,             # full horizontal extent
         extent_v=5.0,             # full vertical extent
-        span_u=(1.0, 0.0, -0.4),  # optional horizontal direction
+        up=(0.0, 1.0, 0.0),       # camera up / orbit rotation axis
         fov=50.0,
     )),
 )
@@ -148,11 +148,12 @@ viz = Visualizer(
 | `extent_u` | `float` | Full horizontal extent |
 | `extent_v` | `float` | Full vertical extent |
 | `center` | `(float, float, float) \| None` | Point mapped to viewport centre (defaults to `point`) |
-| `span_u` | `(float, float, float) \| None` | Optional horizontal direction |
+| `up` | `(float, float, float)` | Camera up vector / orbit rotation axis (defaults to `(0, 1, 0)`) |
 | `fov` | `float` | Vertical field of view in degrees |
 
-When `span_u` is `None`, a horizontal direction is auto-computed. The vertical
-direction is always `cross(normal, span_u)`.
+The `up` vector controls the camera roll and, in the interactive viewer, the
+orbit rotation axis. It defaults to `(0, 1, 0)` so orbit behaviour matches the
+no-camera case regardless of the plane orientation.
 
 The produced `CameraConfig3d` is a fully explicit projective camera; once it is
 in place, the user can freely rotate (left-drag), pan (right/middle-drag), and
