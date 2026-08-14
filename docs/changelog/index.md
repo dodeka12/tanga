@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.1] — 2026-08-14
+
+### New Features
+- Camera `up` decoupled from orbit; `View3dConfig.up` and `CameraConfig3d.up` are now user-settable
+- `line_thickness` rendered as screen-space fat lines (`Line2`) for `Axis`, `Grid`, and `PointPath`
+
+### Doc Changes
+- Added `demo_camera_axes_grid_2d.py` to the viz examples index
+- Documented `Axis.value_start` / `Axis.value_step`
+- Clarified the `Visualizer.camera` parameter accepts `View2DConfig` / `View3dConfig`
+- Clarified `Axis` renders value labels only (no tick marks)
+
+→ [Full changelog](2026-08-14_3869da1.md)
+
 ## [0.9.0] — 2026-08-12
 
 ### New Features

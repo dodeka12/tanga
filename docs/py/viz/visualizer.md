@@ -31,7 +31,7 @@ Visualizer(
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
 | `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
 | `background_color` | `str` | `"#1a1a2e"` | CSS background color |
-| `camera` | `CameraConfig \| None` | `None` | Explicit camera settings |
+| `camera` | `CameraConfig \| View2DConfig \| View3dConfig \| None` | `None` | Explicit camera settings. Also accepts a `View2DConfig` / `View3dConfig` input spec, which is converted via `get_camera()` (see [Camera & Controls](camera.md)). |
 
 ## 2D Visualization
 
