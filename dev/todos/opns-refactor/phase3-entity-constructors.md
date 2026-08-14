@@ -214,21 +214,21 @@ No existing tests change in Phase 3.
 
 ## 8. Implementation Checklist
 
-- [ ] Add `_is_mv` and `_point_from_mv` / `_direction_from_mv` helpers
-- [ ] Rewrite `Point.__init__` and `Direction.__init__`
-- [ ] Add MV acceptance to `Line`, `Plane`, `Circle`, `Sphere`, `Space`,
+- [x] Add `_is_mv` and `_point_from_mv` / `_direction_from_mv` helpers
+- [x] Rewrite `Point.__init__` and `Direction.__init__`
+- [x] Add MV acceptance to `Line`, `Plane`, `Circle`, `Sphere`, `Space`,
       `PointPair`, `HPoint`, `HDirection`
-- [ ] Add `_coerce`/`_scalar` helpers and coerce every `Point`/`Direction`/`float` field
-- [ ] Auto-convert MV args in `Line.from_points`
-- [ ] Add `py/tests/geometry/test_entity_constructors.py`
-- [ ] Run: `pytest py/tests/geometry/test_entity_constructors.py -q`
+- [x] Add `_coerce`/`_scalar` helpers and coerce every `Point`/`Direction`/`float` field
+- [x] Auto-convert MV args in `Line.from_points`
+- [x] Add `py/tests/geometry/test_entity_constructors.py`
+- [x] Run: `pytest py/tests/geometry/test_entity_constructors.py -q`
 
 ---
 
 ## 9. Verification
 
-- [ ] Every supported entity constructor converts a matching MV to the expected entity
-- [ ] Mismatched MVs raise `TypeError` from the underlying typed analyzer
-- [ ] E3 grade-1 vector convenience still works for `Point`/`Direction`
-- [ ] `Circle(point_mv, radius_mv, normal_mv)` auto-converts all fields
-- [ ] `Line.from_points(mv, mv)` converts multivectors automatically
+- [x] Every supported entity constructor converts a matching MV to the expected entity
+- [x] Mismatched MVs raise `TypeError` from the underlying typed analyzer
+- [x] E3 grade-1 vector convenience still works for `Point`/`Direction`
+- [x] `Circle(point_mv, radius_mv, normal_mv)` auto-converts all fields
+- [x] `Line.from_points(mv, mv)` converts multivectors automatically
