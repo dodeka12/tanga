@@ -45,7 +45,7 @@ viz.display_row(
 |-------|---------------------|
 | [Visualizer API](visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
 | [Camera & Controls](camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`, `View3dConfig`, auto-fit vs explicit, orbit controls, Ctrl+S screenshots |
-| [Axes & Grid](axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, ticks, labels, defaults |
+| [Axes & Grid](axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, value labels, defaults |
 | [Style System](styles.md) | `*Style` dataclasses, `default_styles`, `set_default_color()`, `CrossHairPointStyle` |
 | [Texture Labels](texture-labels.md) | Text, KaTeX formulas, and mixed content on entity surfaces (Sphere, Plane) |
 | [Labels](labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
@@ -74,7 +74,8 @@ uv run python py/examples/viz/<script>.py
 | [`demo_camera_config.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_config.py) | Auto-fit, explicit 3D, 2D, and plane-based camera modes |
 | [`demo_camera_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_2d.py) | `View2DConfig` with min/max world bounds |
 | [`demo_camera_3d_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_3d_plane.py) | `View3dConfig` with a tilted plane and a custom `up` |
-| [`demo_axes_custom.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_axes_custom.py) | Custom `Axis` intervals, ticks, labels, and `Grid` |
+| [`demo_camera_axes_grid_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_axes_grid_2d.py) | `View2DConfig` + `Axes2D` + `Grid` basics in 2D |
+| [`demo_axes_custom.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_axes_custom.py) | Custom `Axis` intervals, value labels, and `Grid` |
 | [`demo_custom_defaults.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_custom_defaults.py) | Global default styles, per-call overrides |
 | [`demo_operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_operators.py) | Rotor, Translator, Motor, Dilator visualization |
 | [`demo_animation_orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_orbit.py) | Frame-by-frame animation at ~60 FPS |

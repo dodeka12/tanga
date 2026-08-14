@@ -19,13 +19,15 @@ viz.add(Axis(start=(0, 0, 0), end=(10, 0, 0), major_interval=2.0, label="X"))
 |-------|------|-------------|
 | `start` | `(float, float, float)` | Start point |
 | `end` | `(float, float, float)` | End point |
-| `major_interval` | `float` | Spacing between major ticks |
-| `minor_interval` | `float \| None` | Spacing between minor ticks |
-| `label_at_major` | `bool` | Draw a value label at each major tick |
+| `major_interval` | `float` | Spacing between value labels |
+| `minor_interval` | `float \| None` | Accepted, but minor ticks are not currently rendered |
+| `label_at_major` | `bool` | Draw a value label at each major interval |
 | `label_format` | `str` | Python format specifier (e.g. `.2f`) |
 | `label_size` | `float \| None` | Font size in px for CSS2D labels |
-| `show_ticks` | `bool` | Draw tick marks |
+| `show_ticks` | `bool` | Accepted, but tick marks are not currently rendered |
 | `label` | `str \| None` | Axis name label near the end |
+| `value_start` | `float` | Numeric value at `start` (defaults to `0`) |
+| `value_step` | `float` | Numeric increment per world unit along `start` → `end` |
 
 `AxisStyle` additionally controls the value labels:
 `label_at_major` (bool, hide value labels when ``False``) and `label_style`
