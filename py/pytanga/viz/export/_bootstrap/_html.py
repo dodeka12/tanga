@@ -79,6 +79,8 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "operators" / "reflection_point.js",
     _RENDERERS_DIR / "point_path.js",
     _RENDERERS_DIR / "axis.js",
+    _RENDERERS_DIR / "axes2d.js",
+    _RENDERERS_DIR / "axes3d.js",
     _RENDERERS_DIR / "grid.js",
     _RENDERERS_DIR / "factory.js",
 ]
