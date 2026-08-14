@@ -17,6 +17,9 @@ Visualizer(
     annotation=None,
     background_color="#1a1a2e",
     camera=None,  # None = auto-fit from entities
+    space_dim=None,          # 2 or 3; deduced from camera when None
+    add_default_axes=True,   # insert a default Axes3D/Axes2D per scene
+    add_default_grid=True,   # insert a default Grid per scene
 )
 ```
 
@@ -32,6 +35,8 @@ Visualizer(
 | `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
 | `background_color` | `str` | `"#1a1a2e"` | CSS background color |
 | `camera` | `CameraConfig \| View2DConfig \| View3dConfig \| None` | `None` | Explicit camera settings. Also accepts a `View2DConfig` / `View3dConfig` input spec, which is converted via `get_camera()` (see [Camera & Controls](camera.md)). |
+| `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](axes-grid.md). |
+| `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](axes-grid.md). |
 
 ## 2D Visualization
 

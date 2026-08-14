@@ -16,6 +16,7 @@ from pytanga.viz.export._bootstrap._animation import (  # noqa: F401
     js_animation_state,
     js_controls_html,
     js_controls_ui,
+    js_reconcile_frame,
 )
 from pytanga.viz.export._bootstrap._entities import (  # noqa: F401
     js_entity_creation,

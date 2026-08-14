@@ -101,6 +101,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             cam_far=cam_far,
             auto_rotate=False,
             space_dim=space_dim,
+            explicit_mouse_buttons=True,
         ),
     ]
 
@@ -129,7 +130,6 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             entities_expr="entities",
             mesh_map_var="meshMap",
             scene_var="adapterScene",
-            layer_dispatch=False,
         )
     )
 

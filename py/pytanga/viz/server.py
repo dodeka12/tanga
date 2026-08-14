@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sys
 import threading
 import webbrowser
 from collections.abc import Awaitable, Callable
@@ -24,6 +25,20 @@ from uuid import uuid4
 from aiohttp import web
 
 logger = logging.getLogger("tanga.viz.server")
+
+
+async def _heartbeat(ws: web.WebSocketResponse, interval: float = 15.0) -> None:
+    """Send periodic pings so dead/half-open connections are detected.
+
+    A failed ``ping()`` surfaces as a ``WSMsgType.ERROR`` in the connection's
+    message loop, which breaks the loop and triggers cleanup.
+    """
+    try:
+        while not ws.closed:
+            await asyncio.sleep(interval)
+            await ws.ping()
+    except (ConnectionError, Exception):
+        pass
 
 # Callback types
 FlushCallback = Callable[[str], tuple[list[dict[str, Any]], list[str]]]
@@ -114,8 +129,10 @@ class VizServer:
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
         try:
+            bind_host = "127.0.0.1" if self._host == "localhost" else self._host
+            reuse_address = sys.platform != "win32"
             self._site = web.TCPSite(
-                self._runner, self._host, self._port, reuse_address=True
+                self._runner, bind_host, self._port, reuse_address=reuse_address
             )
             await self._site.start()
         except OSError as e:
@@ -274,6 +291,10 @@ class VizServer:
 
         Must be called from the event loop.
         """
+        logger.debug(
+            "Clearing WS ready events (was_ready=%s)",
+            self._any_ws_ready.is_set(),
+        )
         self._any_ws_ready.clear()
         self._any_ws_ready_thread.clear()
         self._ws_error_event.clear()
@@ -363,7 +384,10 @@ class VizServer:
         self._ws_clients.add(ws)
 
         remote_addr = request.remote or "unknown"
-        logger.info("WS connect from %s", remote_addr)
+        logger.info(
+            "WS connect from %s (total_clients=%d, sessions=%d)",
+            remote_addr, len(self._ws_clients), len(self._browser_sessions),
+        )
 
         # Assign a unique browser ID and send it immediately
         browser_id = uuid4().hex[:8]
@@ -371,6 +395,10 @@ class VizServer:
             id=browser_id, scene="", remote_addr=remote_addr, ws=ws
         )
         self._browser_sessions[browser_id] = session
+        logger.debug("WS session assigned id=%s remote=%s", browser_id, remote_addr)
+
+        heartbeat_task = asyncio.create_task(_heartbeat(ws))
+        logger.debug("WS heartbeat started id=%s", browser_id)
 
         await ws.send_str(json.dumps({"type": "browser_id", "browser_id": browser_id}))
 
@@ -396,6 +424,11 @@ class VizServer:
                             current_session = session
                             msg_browser_id = browser_id
 
+                        logger.debug(
+                            "WS msg: %s from %s (id=%s)",
+                            msg_type, remote_addr, msg_browser_id,
+                        )
+
                         if msg_type == "ready":
                             scene_name = data.get("scene", "")
                             # Correlate page token if present (HTTP→WS round-trip diagnostic)
@@ -403,13 +436,15 @@ class VizServer:
                             if page_token:
                                 self._pending_page_tokens.pop(page_token, None)
                             logger.info(
-                                "WS ready: id=%s token=%s viewer=%s scene=%s remote=%s sessions=%d",
+                                "WS ready: id=%s token=%s viewer=%s scene=%s remote=%s "
+                                "sessions=%d pending_tokens=%d — signalling ready",
                                 msg_browser_id,
                                 page_token or "reconnect",
                                 data.get("viewer_name") or "none",
                                 scene_name,
                                 remote_addr,
                                 len(self._browser_sessions),
+                                len(self._pending_page_tokens),
                             )
 
                             # Handle CDN / load errors reported by the frontend
@@ -498,7 +533,12 @@ class VizServer:
                 elif msg.type == web.WSMsgType.ERROR:
                     break
         finally:
-            logger.info("WS disconnect from %s (id=%s)", remote_addr, browser_id)
+            heartbeat_task.cancel()
+            logger.debug("WS heartbeat stopped id=%s", browser_id)
+            logger.info(
+                "WS disconnect from %s (id=%s, sessions_remaining=%d)",
+                remote_addr, browser_id, len(self._browser_sessions) - 1,
+            )
             # Clean up pending futures for this client
             for rid, future in list(self._pending_screenshots.items()):
                 if not future.done():

@@ -186,11 +186,11 @@ def katex_css_if_needed(
     or explicit annotation/footer strings.
     """
     if recording_data:
-        initial = recording_data.get("initial_state", [])
-        for obj in initial:
-            text = obj.get("text", "")
-            if text and "$" in text:
-                return _KATEX_CSS_LINK
+        for frame in recording_data.get("frames", []):
+            for obj in frame or []:
+                text = obj.get("text", "")
+                if text and "$" in text:
+                    return _KATEX_CSS_LINK
 
     if fig_config:
         for key in ("annotation", "footer"):

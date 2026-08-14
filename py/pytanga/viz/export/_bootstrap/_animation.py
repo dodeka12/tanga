@@ -7,7 +7,7 @@ from __future__ import annotations
 # ── Shared JS snippet constants ────────────────────────────────────
 
 _GET_ANIM_DATA_JS = """function _getAnimData() {
-    return window.__TANGA_ANIMATION__ || { initial_state: [], frames: [], frame_count: 0 };
+    return window.__TANGA_ANIMATION__ || { frames: [], frame_count: 0 };
 }"""
 
 _ANIMATION_DECOMPRESS_JS = r"""<script type="module">
@@ -75,16 +75,13 @@ function _togglePlay() {
         isPlaying = false;
     } else {
         if (currentFrame >= frames.length - 1 && !_loopEnabled) {
-            // Reset to start
-            currentFrame = -1;
-            for (let i = 0; i < frames.length; i++) {
-                for (const ent of (frames[i] || [])) {
-                    // We can't easily reset to initial, so just restart from 0
-                }
-            }
+            // Restart from the first frame when at the end and not looping
+            _playFrame(0);
+            startTime = performance.now();
+        } else {
+            startTime = performance.now() - (Math.max(0, currentFrame) / fps * 1000);
         }
         isPlaying = true;
-        startTime = performance.now() - (Math.max(0, currentFrame) / fps * 1000);
     }
     _updatePlayBtn();
 }
@@ -106,18 +103,7 @@ function _updateScrubBar() {
 
 async function _onScrub(val) {
     const targetFrame = parseInt(val, 10);
-    // Walk from frame 0 to target
-    const direction = targetFrame > currentFrame ? 1 : -1;
-    let f = currentFrame;
-    while (f !== targetFrame) {
-        f += direction;
-        if (f >= 0 && f < frames.length) {
-            for (const ent of (frames[f] || [])) {
-                await applyFrameUpdate(ent, figMeshMap);
-            }
-        }
-    }
-    currentFrame = targetFrame;
+    await _playFrame(targetFrame);
     if (isPlaying) startTime = performance.now() - (targetFrame / fps * 1000);
     _updateScrubBar();
 }
@@ -233,14 +219,113 @@ def js_animation_data_init(fps: int, extra_map_vars: str = "") -> str:
         extra_map_vars: Additional JS to append (e.g. ``"\\nconst labelObjects = new Map();"``).
 
     Returns:
-        JS code string extracting ``animData``, ``fps``, ``frames``, ``initial``,
+        JS code string extracting ``animData``, ``fps``, ``frames``,
         and ``figMeshMap``.
     """
     return f"""const animData = _getAnimData();
 const fps = animData.fps || {fps};
 const frames = animData.frames || [];
-const initial = animData.initial_state || [];
 const figMeshMap = new Map();{extra_map_vars}"""
+
+
+def js_reconcile_frame(
+    *,
+    scene_var: str,
+    label_objects_map_var: str = "labelObjects",
+    mesh_map_var: str = "figMeshMap",
+) -> str:
+    """Generate the id-based frame reconciliation engine.
+
+    Emits ``_reconcileFrame(frame)`` (create-on-first-seen, update-on-seen-again,
+    hide-and-cache on absence) and the ``_playFrame(n)`` helper.  The engine
+    reuses the bundled ``updateEntityMesh``/``createEntityMesh`` dispatchers
+    from ``factory.js`` rather than reimplementing in-place update semantics.
+
+    Args:
+        scene_var: JS variable name for the three.js Scene.
+        label_objects_map_var: JS variable name for the label objects Map.
+        mesh_map_var: JS variable name for the mesh Map.
+
+    Returns:
+        JS code string defining ``_reconcileFrame`` and ``_playFrame``.
+    """
+    return f"""// ── Frame reconciliation (id-based snapshot diff) ──
+async function _reconcileFrame(frame) {{
+    const ents = frame || [];
+    const targetIds = new Set(ents.map(e => e.id));
+
+    for (const ent of ents) {{
+        if (ent.layer === 'overlay' && ent.kind === 'label') {{
+            let labelObj = {label_objects_map_var}.get(ent.id);
+            if (!labelObj) {{
+                _createLabel(ent);
+                labelObj = {label_objects_map_var}.get(ent.id);
+            }}
+            if (labelObj) {{
+                labelObj.visible = true;
+                if (labelObj.element) labelObj.element.style.display = '';
+            }}
+            continue;
+        }}
+        if (ent.layer !== 'scene') continue;
+
+        let mesh = {mesh_map_var}.get(ent.id);
+        if (!mesh) {{
+            mesh = await createEntityMesh(ent);
+            if (mesh) {{
+                {scene_var}.add(mesh);
+                {mesh_map_var}.set(ent.id, mesh);
+                mesh.userData._data = ent;
+                mesh.visible = true;
+            }}
+            continue;
+        }}
+
+        const prev = mesh.userData._data || {{}};
+        if (updateEntityMesh(mesh, ent, prev)) {{
+            mesh.userData._data = {{ ...prev, ...ent }};
+            mesh.visible = true;
+        }} else {{
+            const oldLabels = mesh.userData._labels || [];
+            removeEntityMesh(mesh);
+            {mesh_map_var}.delete(ent.id);
+            const merged = {{ ...prev, ...ent }};
+            merged.id = ent.id;
+            const rebuilt = await createEntityMesh(merged);
+            if (rebuilt) {{
+                {scene_var}.add(rebuilt);
+                {mesh_map_var}.set(ent.id, rebuilt);
+                rebuilt.userData._data = merged;
+                rebuilt.userData._labels = [];
+                for (const lblId of oldLabels) {{
+                    const lbl = {label_objects_map_var}.get(lblId);
+                    if (lbl) {{
+                        rebuilt.add(lbl);
+                        rebuilt.userData._labels.push(lblId);
+                    }}
+                }}
+                rebuilt.visible = true;
+            }}
+        }}
+    }}
+
+    for (const [id, mesh] of {mesh_map_var}) {{
+        if (!targetIds.has(id)) mesh.visible = false;
+    }}
+    for (const [id, lbl] of {label_objects_map_var}) {{
+        if (!targetIds.has(id)) {{
+            lbl.visible = false;
+            if (lbl.element) lbl.element.style.display = 'none';
+        }}
+    }}
+}}
+
+async function _playFrame(n) {{
+    if (n >= 0 && n < frames.length) {{
+        await _reconcileFrame(frames[n]);
+        currentFrame = n;
+    }}
+}}"""
 
 
 def js_controls_ui(show_controls: bool = True) -> str:
@@ -276,10 +361,10 @@ def js_animated_render_loop(
     scene_var: str,
     label_objects_map_var: str = "labelObjects",
 ) -> str:
-    """Generate the animated playback engine and render loop.
+    """Generate the animated render loop.
 
-    Moved from ``_animated_figure.py._animated_playback_engine()``.
-    Replaces the old unused ``js_animation_playback()`` in ``_bootstrap_core.py``.
+    The loop computes the target frame from elapsed time (with loop modulo)
+    and jumps directly to it via ``_playFrame`` — no frame-by-frame walking.
 
     Args:
         fps: Playback frame rate.
@@ -287,84 +372,15 @@ def js_animated_render_loop(
             ``"animData.loop"``).
         scene_var: JS variable name for the scene (``"figScene"``).
         label_objects_map_var: JS variable name for the label objects Map
-            (``"labelObjects"`` for full-page, ``"figScene"`` for figure).
+            (``"labelObjects"``).  Kept for signature compatibility with the
+            previous API; the loop itself delegates to ``_playFrame``.
 
     Returns:
-        JS code string with ``applyFrameUpdate`` and ``_figAnimate``.
+        JS code string with the ``_figAnimate`` render loop.
     """
-    return f"""// ── Playback engine ──────────────────────────────────────────
-async function applyFrameUpdate(ent, meshMap) {{
-    const mesh = meshMap.get(ent.id);
-    if (!mesh) return;
-
-    if (ent.position) mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
-    if (ent.center) mesh.position.set(ent.center[0], ent.center[1], ent.center[2]);
-    if (ent.vector || ent.direction) {{
-        const vec = ent.vector || ent.direction;
-        const origin = ent.origin || [0, 0, 0];
-        mesh.position.set(origin[0], origin[1], origin[2]);
-        const dir = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
-        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-        mesh.setRotationFromQuaternion(quat);
-    }}
-
-    if (ent.opacity !== undefined) {{
-        mesh.traverse(child => {{
-            if (child.material && child.material.opacity !== undefined && !child.material.wireframe) {{
-                child.material.opacity = ent.opacity;
-                child.material.transparent = ent.opacity < 1.0;
-                child.material.depthWrite = ent.opacity >= 0.99;
-                child.material.needsUpdate = true;
-            }}
-        }});
-    }}
-
-    if (ent.color) {{
-        const c = new THREE.Color(ent.color);
-        mesh.traverse(child => {{
-            if (child.material && child.material.color && !child.material.wireframe)
-                child.material.color.copy(c);
-        }});
-    }}
-
-    if (ent.scale) mesh.scale.set(ent.scale[0], ent.scale[1], ent.scale[2]);
-
-    // Full rebuild for structural changes (tolerance-aware)
-    const prevData = mesh.userData._data || {{}};
-    const _tol = (a, b) => Math.abs(a - b) > 1e-9;
-    if (ent.radius !== undefined && (!(ent.radius in prevData) || _tol(ent.radius, prevData.radius)) ||
-        ent.extent !== undefined && (!(ent.extent in prevData) || _tol(ent.extent, prevData.extent)) ||
-        ent.kind !== undefined && ent.kind !== prevData.kind) {{
-        const oldLabels = mesh.userData._labels || [];
-        removeEntityMesh(mesh);
-        meshMap.delete(ent.id);
-        const merged = {{ ...prevData, ...ent }};
-        merged.id = ent.id;
-        const rebuilt = await createEntityMesh(merged);
-        if (rebuilt) {{
-            {scene_var}.add(rebuilt);
-            meshMap.set(ent.id, rebuilt);
-            rebuilt.userData._data = merged;
-            rebuilt.userData._labels = [];
-            for (const lblId of oldLabels) {{
-                const lbl = {label_objects_map_var}.get(lblId);
-                if (lbl) {{
-                    rebuilt.add(lbl);
-                    rebuilt.userData._labels.push(lblId);
-                }}
-            }}
-        }}
-        return;
-    }}
-    mesh.userData._data = {{ ...prevData, ...ent }};
-}}
-
-// ── Render loop ──────────────────────────────────────────────
-let _lastTimestamp = 0;
+    return f"""// ── Render loop ──────────────────────────────────────────
 async function _figAnimate(timestamp) {{
     requestAnimationFrame(_figAnimate);
-    const dt = (_lastTimestamp ? timestamp - _lastTimestamp : 16) / 1000;
-    _lastTimestamp = timestamp;
 
     if (isPlaying && frames.length > 0) {{
         const elapsed = (timestamp - startTime) / 1000;
@@ -373,20 +389,9 @@ async function _figAnimate(timestamp) {{
             effectiveTime = elapsed % totalDuration;
         }}
         const targetFrame = Math.floor(effectiveTime * {fps});
-        if (targetFrame !== currentFrame && targetFrame >= 0 && targetFrame < frames.length) {{
-            // Walk forward through frames
-            const step = targetFrame > currentFrame ? 1 : -1;
-            let f = currentFrame;
-            while (f !== targetFrame) {{
-                f += step;
-                if (f >= 0 && f < frames.length) {{
-                    for (const ent of (frames[f] || [])) {{
-                        await applyFrameUpdate(ent, figMeshMap);
-                    }}
-                }}
-            }}
+        if (targetFrame >= 0 && targetFrame < frames.length && targetFrame !== currentFrame) {{
+            await _playFrame(targetFrame);
         }}
-        currentFrame = targetFrame;
         if (effectiveTime >= totalDuration && !animData.loop && !{loop_js_bool}) {{
             isPlaying = false;
             _updatePlayBtn();

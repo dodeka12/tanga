@@ -10,38 +10,21 @@ def js_entity_creation(
     entities_expr: str,
     mesh_map_var: str,
     scene_var: str,
-    layer_dispatch: bool = True,
 ) -> str:
-    """Generate JS for entity mesh creation loop.
+    """Generate JS for the static entity mesh creation loop.
+
+    Used by the static standalone and figure HTML exports.  The animated
+    export path instead uses the frame reconciliation engine and does not
+    call this generator.
 
     Args:
         entities_expr: JS expression yielding the entities array.
         mesh_map_var: JS variable name for the mesh map.
         scene_var: JS variable name for the scene.
-        layer_dispatch: If True, use ``ent.layer`` dispatch (animated path
-            separates scene/overlay layers).  If False, use simple
-            ``createEntityMesh`` without layer dispatch (static path).
 
     Returns:
         JS code string.
     """
-    if layer_dispatch:
-        return f"""// ── Entity creation (initial_state) ──
-(async () => {{
-    for (const ent of {entities_expr}) {{
-        if (ent.layer === 'scene') {{
-            const mesh = await createEntityMesh(ent);
-            if (mesh) {{
-                {scene_var}.add(mesh);
-                {mesh_map_var}.set(ent.id, mesh);
-                mesh.userData._data = ent;
-            }}
-        }} else if (ent.layer === 'overlay' && ent.kind === 'label') {{
-            _createLabel(ent);
-        }}
-    }}
-}})();"""
-
     return f"""// Entities
 const {mesh_map_var} = new Map();
 (async () => {{

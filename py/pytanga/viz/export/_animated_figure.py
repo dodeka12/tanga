@@ -33,9 +33,9 @@ from pytanga.viz.export._bootstrap import (
     js_autofit_camera,
     js_controls_html,
     js_controls_ui,
-    js_entity_creation,
     js_footer,
     js_imports,
+    js_reconcile_frame,
     js_resize_handler,
     js_scene_setup,
     js_title_overlay,
@@ -55,7 +55,7 @@ def render_export_animated_figure(
     """Render an animated figure HTML snippet for embedding.
 
     Args:
-        recording_data: Dict with ``initial_state``, ``frames``, ``frame_count``
+        recording_data: Dict with ``frames``, ``frame_count``
             from ``AnimationRecording.to_dict()``.
         figure_style: ``FigureStyle.to_dict()`` result.
         figure_config: ``FigureConfig.to_dict()`` result.
@@ -146,7 +146,7 @@ def render_export_animated_html(
     """Render a full-page animated HTML document for standalone viewing.
 
     Args:
-        recording_data: Dict with ``initial_state``, ``frames``, ``frame_count``
+        recording_data: Dict with ``frames``, ``frame_count``
             from ``AnimationRecording.to_dict()``.
         scene_config: ``SceneConfig.to_dict()`` result (background, grid, axes,
             camera).
@@ -200,6 +200,17 @@ def render_export_animated_html(
     )
 
 
+def _js_frame0_bootstrap(autofit_js: str) -> str:
+    """Reify frame 0 (await ``_playFrame(0)``), then auto-fit the camera.
+
+    The auto-fit JS must run after frame-0 meshes exist; ``js_autofit_camera``
+    is synchronous, so it is embedded inside this async IIFE.
+    """
+    return f"""(async () => {{
+    await _playFrame(0);
+{autofit_js}}})();"""
+
+
 # ── JS adapter builders (composed from shared JS generators) ──
 
 
@@ -228,6 +239,14 @@ def _build_animated_figure_adapter(
 
     loop_js = "true" if loop else "false"
 
+    autofit_js = js_autofit_camera(
+        mesh_map_var="figMeshMap",
+        camera_var="figCamera",
+        controls_var="figControls",
+        cam_explicit=False,
+        space_dim=space_dim,
+    )
+
     if responsive:
         dim_w = "(figContainer.clientWidth || window.innerWidth)"
         dim_h = "(figContainer.clientHeight || window.innerHeight)"
@@ -243,8 +262,8 @@ def _build_animated_figure_adapter(
         "",
         f"const figContainer = document.getElementById('{fig_id}');",
         get_anim_data_js(),
-        js_animated_label_function(label_map_var=""),
-        js_animation_data_init(fps),
+        js_animated_label_function(label_map_var="labelObjects"),
+        js_animation_data_init(fps, extra_map_vars="\nconst labelObjects = new Map();"),
         "",
         js_animation_state(),
         "",
@@ -283,20 +302,12 @@ def _build_animated_figure_adapter(
             show_title=show_title,
         ),
         "",
-        js_entity_creation(
-            entities_expr="initial",
-            mesh_map_var="figMeshMap",
+        js_reconcile_frame(
             scene_var="figScene",
-            layer_dispatch=True,
+            label_objects_map_var="labelObjects",
         ),
         "",
-        js_autofit_camera(
-            mesh_map_var="figMeshMap",
-            camera_var="figCamera",
-            controls_var="figControls",
-            cam_explicit=False,
-            space_dim=space_dim,
-        ),
+        _js_frame0_bootstrap(autofit_js),
         "",
         js_annotation_panel(
             annotation_md=annotation_raw,
@@ -316,7 +327,7 @@ def _build_animated_figure_adapter(
             fps=fps,
             loop_js_bool=loop_js,
             scene_var="figScene",
-            label_objects_map_var="figScene",
+            label_objects_map_var="labelObjects",
         ),
     ]
 
@@ -347,6 +358,14 @@ def _build_animated_fullpage_adapter(
     cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
     loop_js = "true" if loop else "false"
+
+    autofit_js = js_autofit_camera(
+        mesh_map_var="figMeshMap",
+        camera_var="figCamera",
+        controls_var="figControls",
+        cam_explicit=cam_explicit,
+        space_dim=space_dim,
+    )
 
     parts = [
         "window.__tanga_ready = true;",
@@ -379,6 +398,7 @@ def _build_animated_fullpage_adapter(
             cam_far=cam_far,
             auto_rotate=False,
             space_dim=space_dim,
+            explicit_mouse_buttons=True,
         ),
         js_resize_handler(
             renderer_var="figRenderer",
@@ -395,20 +415,12 @@ def _build_animated_fullpage_adapter(
             show_title=bool(title_raw),
         ),
         "",
-        js_entity_creation(
-            entities_expr="initial",
-            mesh_map_var="figMeshMap",
+        js_reconcile_frame(
             scene_var="figScene",
-            layer_dispatch=True,
+            label_objects_map_var="labelObjects",
         ),
         "",
-        js_autofit_camera(
-            mesh_map_var="figMeshMap",
-            camera_var="figCamera",
-            controls_var="figControls",
-            cam_explicit=cam_explicit,
-            space_dim=space_dim,
-        ),
+        _js_frame0_bootstrap(autofit_js),
         "",
         js_annotation_panel(
             annotation_md=annotation_raw,

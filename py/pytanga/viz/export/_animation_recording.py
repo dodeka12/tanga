@@ -3,9 +3,10 @@
 
 """AnimationRecording — captures per-frame entity state for animated export.
 
-Provides a lightweight recording buffer that snapshots dirty entity state
-via ``Scene.flush()``.  Each frame only stores entities that changed since
-the previous frame, keeping recordings compact.
+Each frame is a full, id-keyed snapshot of every object in the scene
+(scene-layer entities and overlay labels), captured via
+``Scene.full_state()``.  The JS playback engine reconciles consecutive
+snapshots by entity id, so no separate ``initial_state`` is needed.
 """
 
 from __future__ import annotations
@@ -45,10 +46,6 @@ class AnimationRecording:
         self._scene = scene
         self._styles_map = styles_map or {}
         self._frames: list[list[dict[str, Any]]] = []
-        # Snapshot initial state NOW — before any animation changes entities
-        self._initial_state: list[dict[str, Any]] = self._scene.full_state(
-            styles_map=self._styles_map
-        )
 
     def capture_frame(self) -> None:
         """Snapshot the current entity state.
@@ -58,7 +55,7 @@ class AnimationRecording:
         ``viz.flush()`` is called before or after — the recording is
         independent of the live viewer's dirty-tracked flush cycle.
 
-        For typical 3-entity animations this adds ~2 KB per frame.
+        Each captured frame is a full, id-keyed snapshot of every object.
         """
         entities = self._scene.full_state(styles_map=self._styles_map)
         self._frames.append(list(entities))
@@ -73,23 +70,14 @@ class AnimationRecording:
         """Number of recorded frames."""
         return len(self._frames)
 
-    def get_initial_state(self) -> list[dict[str, Any]]:
-        """Return the full entity list as it was at recording start.
-
-        This snapshot was taken in ``__init__`` before any frames were
-        captured.  The JS playback engine uses this to create all meshes
-        at their starting positions.
-        """
-        return self._initial_state
-
     def to_dict(self) -> dict[str, Any]:
         """Serialize the recording to a compact JSON-serializable dict.
 
-        Returns a dict with ``initial_state`` (full mesh data) and
-        ``frames`` (per-frame update lists).
+        Returns a dict with ``frames`` (full, id-keyed per-frame snapshots)
+        and ``frame_count``.  Frames are the single source of truth for
+        playback; there is no separate ``initial_state``.
         """
         return {
-            "initial_state": self.get_initial_state(),
             "frames": self._frames,
             "frame_count": len(self._frames),
         }
