@@ -22,9 +22,10 @@ Usage::
     viz.run()
 """
 
-from ._active import ActHandler, ActPoint, ActSceneObject
 from ._act_style import ActObjectStyle, ActPointStyle
+from ._active import ActHandler, ActPoint, ActSceneObject
 from ._app import VisualizerApp
+from ._colors import Color
 from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
 from ._figure import FigureConfig
 from ._interaction import (
@@ -112,6 +113,7 @@ __all__ = [
     "CameraConfig",
     "CameraConfig2d",
     "CameraConfig3d",
+    "Color",
     "ClickEvent",
     "ControlEvent",
     "CircleStyle",
