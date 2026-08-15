@@ -97,7 +97,7 @@ def test_create_line_offset(basis_p3):
 def test_create_plane_opns_round_trip_xy_plane(basis_p3):
     """Plane z=5, normal z → OPNS round-trip."""
     plane = Plane(point=Point(0, 0, 5), normal=Direction(0, 0, 1))
-    mv = create_entity(basis_p3, plane, opns=True)
+    mv = create_entity(basis_p3, plane)
     result = analyze_entity(mv)
     assert isinstance(result, Plane)
     assert result.normal.z == pytest.approx(1, abs=1e-6)
@@ -108,7 +108,7 @@ def test_create_plane_opns_round_trip_xy_plane(basis_p3):
 def test_create_plane_opns_round_trip_diagonal(basis_p3):
     """Plane x+y+z=1 → OPNS round-trip."""
     plane = Plane(point=Point(1, 0, 0), normal=Direction(1, 0, 1))
-    mv = create_entity(basis_p3, plane, opns=True)
+    mv = create_entity(basis_p3, plane)
     result = analyze_entity(mv)
     assert isinstance(result, Plane)
     length = math.sqrt(result.normal.x**2 + result.normal.z**2)
@@ -133,7 +133,7 @@ def test_create_plane_ipns_round_trip(basis_p3, monkeypatch):
     """Plane z=4, normal z → IPNS round-trip."""
     monkeypatch.setattr(basis_p3, "opns", False)
     plane = Plane(point=Point(0, 0, 4), normal=Direction(0, 0, 1))
-    mv = create_entity(basis_p3, plane, opns=False)
+    mv = create_entity(basis_p3, plane)
     result = analyze_entity(mv)
     assert isinstance(result, Plane)
     assert result.normal.z == pytest.approx(1, abs=1e-6)
@@ -146,7 +146,7 @@ def test_create_plane_ipns_round_trip(basis_p3, monkeypatch):
 
 
 def test_create_space_round_trip(basis_p3):
-    mv = create_entity(basis_p3, Space(scale=2.0), opns=True)
+    mv = create_entity(basis_p3, Space(scale=2.0))
     result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(2)
@@ -403,7 +403,7 @@ def test_analyze_zero_vector_raises(basis_p3):
 def test_create_point_ipns_round_trip(basis_p3, monkeypatch):
     """Point(1,2,3) → IPNS (grade‑3) → analyze IPNS → Point(1,2,3)."""
     monkeypatch.setattr(basis_p3, "opns", False)
-    mv = create_entity(basis_p3, Point(1, 2, 3), opns=False)
+    mv = create_entity(basis_p3, Point(1, 2, 3))
     assert set(mv.grades) == {3}
     result = analyze_entity(mv)
     assert isinstance(result, Point)
@@ -415,7 +415,7 @@ def test_create_point_ipns_round_trip(basis_p3, monkeypatch):
 def test_create_direction_ipns_round_trip(basis_p3, monkeypatch):
     """Direction(1,0,0) → IPNS (grade‑3) → analyze IPNS → Direction(1,0,0)."""
     monkeypatch.setattr(basis_p3, "opns", False)
-    mv = create_entity(basis_p3, Direction(1, 0, 0), opns=False)
+    mv = create_entity(basis_p3, Direction(1, 0, 0))
     assert set(mv.grades) == {3}
     result = analyze_entity(mv)
     assert isinstance(result, Direction)
@@ -428,7 +428,7 @@ def test_create_line_ipns_round_trip(basis_p3, monkeypatch):
     """Line → IPNS → analyze IPNS → Line with correct direction."""
     monkeypatch.setattr(basis_p3, "opns", False)
     line = Line(origin=Point(1, 2, 3), direction=Direction(0, 0, 1))
-    mv = create_entity(basis_p3, line, opns=False)
+    mv = create_entity(basis_p3, line)
     assert set(mv.grades) == {2}
     result = analyze_entity(mv)
     assert isinstance(result, Line)
@@ -439,7 +439,7 @@ def test_create_line_ipns_round_trip(basis_p3, monkeypatch):
 def test_create_space_ipns_round_trip(basis_p3, monkeypatch):
     """Space(scale=3) → IPNS (grade‑0 scalar) → analyze IPNS → Space(3)."""
     monkeypatch.setattr(basis_p3, "opns", False)
-    mv = create_entity(basis_p3, Space(scale=3.0), opns=False)
+    mv = create_entity(basis_p3, Space(scale=3.0))
     assert set(mv.grades) == {0}
     result = analyze_entity(mv)
     assert isinstance(result, Space)
