@@ -31,8 +31,10 @@
 #	include <intrin.h>
 #	include <nmmintrin.h>
 #else
-#	include <x86intrin.h>
-#	include <nmmintrin.h>
+#	if defined(__x86_64__) || defined(__i386__)
+#		include <x86intrin.h>
+#		include <nmmintrin.h>
+#	endif
 
 	// GCC/Clang equivalents for MSVC bit-scan intrinsics.
 	// Returns non-zero if a set bit was found, 0 if value is zero.
@@ -66,7 +68,11 @@ namespace Tan
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		inline unsigned CountOneBits(const unsigned& uValue)
 		{
+#ifdef _MSC_VER
 			return _mm_popcnt_u32(uValue);
+#else
+			return __builtin_popcount(uValue);
+#endif
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
