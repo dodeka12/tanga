@@ -32,7 +32,7 @@ from ._pga2_utils import (
     _get_e0,
 )
 from .entities import Direction, Line, Point
-from .operators import GeneralRotor, ReflectionLine, Rotor, Translator
+from .operators import Rotor, Translator
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra

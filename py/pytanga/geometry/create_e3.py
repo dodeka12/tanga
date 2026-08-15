@@ -73,10 +73,9 @@ def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
 
     .. note::
 
-       The returned MV is a grade-1 vector.  When analyzed with
-       :func:`~pytanga.geometry.analysis_e3.analyze_entity` with
-       ``opns=True``, it is recognized as a :class:`Direction`, not a
-       :class:`Line`.  This is because E3 cannot distinguish a
+       The returned MV is a grade-1 vector.  When analyzed in OPNS it
+       is recognized as a :class:`Direction`, not a :class:`Line`.
+       This is because E3 cannot distinguish a
        line-through-origin from a raw direction vector — the origin is
        always implicitly (0, 0, 0).  Use P3 or N3 for round-trips that
        preserve the ``Line`` entity type.
