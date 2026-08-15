@@ -780,3 +780,21 @@ def test_circle_from_three_points_radius_one(b):
     assert r.normal.x == pytest.approx(0, abs=1e-6)
     assert r.normal.y == pytest.approx(0, abs=1e-6)
     assert abs(r.normal.z) == pytest.approx(1, abs=1e-6)
+
+
+def test_sphere_from_four_points_radius_one(b):
+    """Sphere = outer product of four non-coplanar points at radius 1.
+
+    Centre (1,2,3); points (2,2,3), (1,3,3), (1,2,4), (0,2,3) all lie
+    at distance 1.  The blade p1∧p2∧p3∧p4 must analyze back to a sphere
+    with that centre and radius 1.
+    """
+    p1, p2, p3, p4 = _pts(b, (2, 2, 3), (1, 3, 3), (1, 2, 4), (0, 2, 3))
+    blade = p1.op(p2).op(p3).op(p4)
+    r = analyze_entity(blade)
+    assert isinstance(r, Sphere), f"Got {type(r).__name__}"
+    assert not r.is_imaginary
+    assert r.center.x == pytest.approx(1, abs=1e-6)
+    assert r.center.y == pytest.approx(2, abs=1e-6)
+    assert r.center.z == pytest.approx(3, abs=1e-6)
+    assert r.radius == pytest.approx(1.0, abs=1e-6)
