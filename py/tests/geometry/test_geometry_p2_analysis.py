@@ -104,6 +104,46 @@ def test_entity_space_opns_round_trip(b):
 
 
 # ═══════════════════════════════════════════════════════════════
+# Scale-by-2 correctness (a global scale must not change geometry)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_scale2_point_invariant(b):
+    mv = create_entity(b, Point(3, -2, 0)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(3, abs=1e-6)
+    assert r.y == pytest.approx(-2, abs=1e-6)
+    assert r.z == pytest.approx(0, abs=1e-6)
+
+
+def test_scale2_line_invariant(b):
+    direction = Direction(1, 2, 0)
+    unit = direction.normalized()
+    pt = Point(1, 2, 0)
+    mv = create_entity(b, Line(pt, direction)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Line), f"Got {type(r).__name__}"
+
+    # Direction is parallel to expected (dot = ±1)
+    dot = r.direction.x * unit.x + r.direction.y * unit.y
+    assert abs(dot) == pytest.approx(1.0, abs=1e-6)
+
+    # Analyzed origin must lie on the line (2D cross product)
+    dx = r.origin.x - pt.x
+    dy = r.origin.y - pt.y
+    cross = direction.x * dy - direction.y * dx
+    assert cross == pytest.approx(0, abs=1e-6)
+
+
+def test_scale2_space_doubles(b):
+    mv = create_entity(b, Space(scale=2.5)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Space), f"Got {type(r).__name__}"
+    assert r.scale == pytest.approx(5.0, abs=1e-6)
+
+
+# ═══════════════════════════════════════════════════════════════
 # Operator round-trips
 # ═══════════════════════════════════════════════════════════════
 
