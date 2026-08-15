@@ -81,7 +81,7 @@ def test_create_sphere_ipns_formula(b):
     """S = Cop(c) - ½r²·e∞ should have S² = r²."""
     from pytanga.geometry.create_n2 import create_sphere as n2_create_sphere
 
-    s_ipns = n2_create_sphere(b, Point(0, 0, 0), 3.0, opns=False)
+    s_ipns = n2_create_sphere(BasisN2(opns=False), Point(0, 0, 0), 3.0)
     assert float(s_ipns.sp(s_ipns)) == pytest.approx(9.0, abs=1e-6)
 
 
