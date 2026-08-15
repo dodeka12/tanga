@@ -42,50 +42,14 @@ if TYPE_CHECKING:
 # ── Entities ──────────────────────────────────────────────────
 
 
-def create_point(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
-    """Create a PGA3 point.
-
-    *opns=True* (default):  grade‑3 trivector (intersection of three planes
-      ``(e₁ - x·e₀) ∧ (e₂ - y·e₀) ∧ (e₃ - z·e₀)``).
-
-    *opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + z·e₃ + e₀``.
-    """
+def _point_opns(basis: Algebra, x: float, y: float, z: float) -> MV:
+    """Raw OPNS PGA3 point (grade‑3 trivector, intersection of three planes)."""
     p_ipns = basis.multivector({E1: x, E2: y, E3: z, EP: 1.0, EM: 1.0})
-    if not opns:
-        # IPNS (dual) form
-        return p_ipns
-
     return p_ipns.dual()
 
 
-def create_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
-    """Create a PGA3 direction (ideal point).
-
-    *opns=True*:  grade‑3 trivector (same construction as point but
-      the dual has no e₀ component).
-
-    *opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + z·e₃``.
-    """
-    d_ipns = basis.multivector({E1: -x, E2: -y, E3: -z})
-    if not opns:
-        return d_ipns
-
-    return d_ipns.dual()
-
-
-def create_line(
-    basis: Algebra, origin: Point, direction: Direction, *, opns: bool = True
-) -> MV:
-    """Create a PGA3 line (grade‑2 bivector = intersection of two planes).
-
-    The line is the intersection of two planes that both contain the
-    line: one with normal orthogonal to the direction, and one with
-    the direction itself as normal (plane perpendicular to direction).
-    """
+def _line_opns(basis: Algebra, origin: Point, direction: Direction) -> MV:
+    """Raw OPNS PGA3 line (grade‑2 bivector = intersection of two planes)."""
     dx, dy, dz = direction.x, direction.y, direction.z
 
     # Choose a direction n1 perpendicular to the line direction
@@ -111,36 +75,80 @@ def create_line(
     d1 = n1[0] * origin.x + n1[1] * origin.y + n1[2] * origin.z
     d2 = n2x * origin.x + n2y * origin.y + n2z * origin.z
 
-    if not opns:
-        # IPNS form: dual of OPNS
-        mv = create_line(basis, origin, direction, opns=True)
-        return mv.dual()
-
     # OPNS: wedge of two planes
     p1 = basis.multivector({E1: n1[0], E2: n1[1], E3: n1[2], EP: d1, EM: d1})
     p2 = basis.multivector({E1: n2x, E2: n2y, E3: n2z, EP: d2, EM: d2})
     return p1.op(p2)
 
 
-def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
-    """Create a PGA3 plane.
-
-    *opns=True* (default):  grade‑1 vector ``nx·e₁ + ny·e₂ + nz·e₃ + d·e₀``
-      where *d* is the signed distance from origin.
-
-    *opns=False* (IPNS):  5D ``dual()`` of the OPNS blade.
-    """
+def _plane_opns(basis: Algebra, plane: Plane) -> MV:
+    """Raw OPNS PGA3 plane (grade‑1 vector ``nx·e₁ + ny·e₂ + nz·e₃ + d·e₀``)."""
     nx, ny, nz = plane.normal.x, plane.normal.y, plane.normal.z
     # Signed distance from the origin
     d = -(nx * plane.point.x + ny * plane.point.y + nz * plane.point.z)
 
-    mv = basis.multivector({E1: nx, E2: ny, E3: nz, EP: d, EM: d})
-    if not opns:
+    return basis.multivector({E1: nx, E2: ny, E3: nz, EP: d, EM: d})
+
+
+def create_point(basis: Algebra, x: float, y: float, z: float) -> MV:
+    """Create a PGA3 point.
+
+    *basis.opns=True* (default):  grade‑3 trivector (intersection of three planes
+      ``(e₁ - x·e₀) ∧ (e₂ - y·e₀) ∧ (e₃ - z·e₀)``).
+
+    *basis.opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + z·e₃ + e₀``.
+    """
+    p_ipns = basis.multivector({E1: x, E2: y, E3: z, EP: 1.0, EM: 1.0})
+    if not basis.opns:
+        # IPNS (dual) form
+        return p_ipns
+
+    return p_ipns.dual()
+
+
+def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
+    """Create a PGA3 direction (ideal point).
+
+    *basis.opns=True*:  grade‑3 trivector (same construction as point but
+      the dual has no e₀ component).
+
+    *basis.opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + z·e₃``.
+    """
+    d_ipns = basis.multivector({E1: -x, E2: -y, E3: -z})
+    if not basis.opns:
+        return d_ipns
+
+    return d_ipns.dual()
+
+
+def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
+    """Create a PGA3 line (grade‑2 bivector = intersection of two planes).
+
+    The line is the intersection of two planes that both contain the
+    line: one with normal orthogonal to the direction, and one with
+    the direction itself as normal (plane perpendicular to direction).
+    """
+    mv = _line_opns(basis, origin, direction)
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
+def create_plane(basis: Algebra, plane: Plane) -> MV:
+    """Create a PGA3 plane.
+
+    *basis.opns=True* (default):  grade‑1 vector ``nx·e₁ + ny·e₂ + nz·e₃ + d·e₀``
+      where *d* is the signed distance from origin.
+
+    *basis.opns=False* (IPNS):  5D ``dual()`` of the OPNS blade.
+    """
+    mv = _plane_opns(basis, plane)
+    if not basis.opns:
+        mv = mv.dual()
+    return mv
+
+
+def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
     """PGA3 Space: ``scale · e₁ ∧ e₂ ∧ e₃ ∧ e₀``."""
     if hasattr(basis, "e1"):
         mv = basis.e1.op(basis.e2).op(basis.e3).op(_get_e0(basis)) * scale
@@ -152,7 +160,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
                 EM: scale,  # e₀
             }
         ).grade(4)  # grade-4 part
-    if not opns:
+    if not basis.opns:
         mv = mv.dual()  # IPNS is a scalar
     return mv
 
@@ -202,7 +210,7 @@ def create_reflection_line(basis: Algebra, line: Line) -> MV:
 
     In PGA3, a line is a grade-2 bivector (intersection of two planes).
     """
-    return create_line(basis, line.origin, line.direction, opns=True)
+    return _line_opns(basis, line.origin, line.direction)
 
 
 def create_reflection_plane(basis: Algebra, plane: Plane) -> MV:
@@ -210,7 +218,7 @@ def create_reflection_plane(basis: Algebra, plane: Plane) -> MV:
 
     In PGA3, a plane is a grade-1 vector.
     """
-    return create_plane(basis, plane, opns=True)
+    return _plane_opns(basis, plane)
 
 
 def create_reflection_point(basis: Algebra, point: Point) -> MV:
@@ -219,7 +227,7 @@ def create_reflection_point(basis: Algebra, point: Point) -> MV:
     In PGA3, a point is a grade-3 trivector.
     Reflection in the origin is ``ReflectionPoint(Point(0,0,0))``.
     """
-    return create_point(basis, point.x, point.y, point.z, opns=True)
+    return _point_opns(basis, point.x, point.y, point.z)
 
 
 def create_general_rotor(
