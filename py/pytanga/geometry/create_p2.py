@@ -39,31 +39,32 @@ E123 = BasisP2.E123
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_point(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def _point_opns(basis: Algebra, x: float, y: float) -> MV:
+    """Raw OPNS homogeneous point ``x·e₁ + y·e₂ + e₃`` (grade-1)."""
+    return basis.multivector({E1: x, E2: y, E3: 1})
+
+
+def create_point(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Homogeneous point ``Hop(a) = x·e₁ + y·e₂ + e₃``.
 
     Parameters
     ----------
-    opns : bool
+    basis.opns
         *True* (default) → OPNS: grade‑1 vector ``Hop(a)``.
         *False* → IPNS: grade‑2 bivector (dual of Hop(a)).
     """
-    opns_mv = basis.multivector({E1: x, E2: y, E3: 1})
-    if opns:
+    opns_mv = _point_opns(basis, x, y)
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
 
-def create_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Ideal point ``x·e₁ + y·e₂`` (e₃ = 0).
 
     Parameters
     ----------
-    opns : bool
+    basis.opns
         *True* (default) → OPNS: grade‑1 direction vector (no e₃).
         *False* → IPNS: grade‑2 bivector (dual of the direction vector).
     """
@@ -72,14 +73,12 @@ def create_direction(
 
     opns_mv = basis.multivector({E1: x, E2: y})
 
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
 
-def create_line(
-    basis: Algebra, origin: Point, direction: Direction, *, opns: bool = True
-) -> MV:
+def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
     """Line through *origin* with direction *d*.
 
     Constructed as ``Hop(origin) ∧ Hop(origin + direction)`` (two
@@ -87,31 +86,25 @@ def create_line(
 
     Parameters
     ----------
-    opns : bool
+    basis.opns
         *True* (default) → OPNS: ``Hop(origin) ∧ Hop(origin + d)``
         (grade‑2 bivector).
         *False* → IPNS: grade‑1 vector (dual of the OPNS bivector),
         representing a line in IPNS form ``â − α·e₃``.
     """
-    a = create_point(basis, origin.x, origin.y, 0.0, opns=True)
-    b = create_point(
-        basis,
-        origin.x + direction.x,
-        origin.y + direction.y,
-        0.0,
-        opns=True,
-    )
+    a = _point_opns(basis, origin.x, origin.y)
+    b = _point_opns(basis, origin.x + direction.x, origin.y + direction.y)
     opns_mv = a.op(b)
 
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
+def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
     """Pseudoscalar ``scale * e₁₂₃``."""
     opns_mv = basis.multivector({E123: scale})
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
@@ -121,9 +114,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_sphere(
-    basis: Algebra, center: Point, radius: float, *, opns: bool = True
-) -> MV:
+def create_sphere(basis: Algebra, center: Point, radius: float) -> MV:
     raise ValueError("Spheres require conformal embedding (N2); not available in P2.")
 
 
@@ -132,20 +123,18 @@ def create_circle(
     center: Point,
     normal: Direction,
     radius: float,
-    *,
-    opns: bool = True,
 ) -> MV:
     raise ValueError("Circles require conformal embedding (N2); not available in P2.")
 
 
-def create_point_pair(basis: Algebra, a: Point, b: Point, *, opns: bool = True) -> MV:
+def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     raise ValueError(
         "Point pairs require conformal embedding (N2); not available in P2."
     )
 
 
 def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0, *, opns: bool = True
+    basis: Algebra, pt: Point, weight: float = 1.0
 ) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N2); not available in P2."
@@ -183,7 +172,7 @@ def create_reflection_line(basis: Algebra, direction: Direction) -> MV:
 
 def create_reflection_point(basis: Algebra, point: Point) -> MV:
     """Reflection in a point."""
-    return create_point(basis, point.x, point.y, 0.0, opns=True)
+    return _point_opns(basis, point.x, point.y)
 
 def create_translator(basis: Algebra, x: float, y: float, z: float) -> MV:
     raise ValueError(
