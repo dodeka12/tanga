@@ -126,6 +126,72 @@ def test_entity_space_opns_round_trip(b):
 
 
 # ═══════════════════════════════════════════════════════════════
+# Scale-by-2 correctness (a global scale must not change geometry)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_scale2_point_invariant(b):
+    mv = create_entity(b, Point(3, -2, 7)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(3, abs=1e-6)
+    assert r.y == pytest.approx(-2, abs=1e-6)
+    assert r.z == pytest.approx(7, abs=1e-6)
+
+
+def test_scale2_line_invariant(b):
+    direction = Direction(1, 2, 0)
+    unit = direction.normalized()
+    pt = Point(1, 2, 3)
+    mv = create_entity(b, Line(pt, direction)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Line), f"Got {type(r).__name__}"
+
+    # Direction is parallel to expected (dot = ±1)
+    dot = r.direction.x * unit.x + r.direction.y * unit.y + r.direction.z * unit.z
+    assert abs(dot) == pytest.approx(1.0, abs=1e-6)
+
+    # Analyzed origin must lie on the line: (r.origin − pt) ∥ direction
+    dx = r.origin.x - pt.x
+    dy = r.origin.y - pt.y
+    dz = r.origin.z - pt.z
+    cross_x = direction.y * dz - direction.z * dy
+    cross_y = direction.z * dx - direction.x * dz
+    cross_z = direction.x * dy - direction.y * dx
+    assert cross_x == pytest.approx(0, abs=1e-6)
+    assert cross_y == pytest.approx(0, abs=1e-6)
+    assert cross_z == pytest.approx(0, abs=1e-6)
+
+
+def test_scale2_plane_invariant(b):
+    normal = Direction(1, 3, 0)
+    unit = normal.normalized()
+    pt = Point(3, -2, 1)
+    mv = create_entity(b, Plane(pt, normal)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Plane), f"Got {type(r).__name__}"
+
+    # Normal direction is scale-invariant (parallel, dot = ±1)
+    dot = r.normal.x * unit.x + r.normal.y * unit.y + r.normal.z * unit.z
+    assert abs(dot) == pytest.approx(1.0, abs=1e-6)
+
+    # Analyzed point must lie on the plane: n·p = d
+    d = normal.x * pt.x + normal.y * pt.y + normal.z * pt.z
+    d_scaled = d / normal.mag()
+    d_analyzed = (
+        r.normal.x * r.point.x + r.normal.y * r.point.y + r.normal.z * r.point.z
+    )
+    assert d_analyzed == pytest.approx(d_scaled, abs=1e-6)
+
+
+def test_scale2_space_doubles(b):
+    mv = create_entity(b, Space(scale=2.5)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Space), f"Got {type(r).__name__}"
+    assert r.scale == pytest.approx(5.0, abs=1e-6)
+
+
+# ═══════════════════════════════════════════════════════════════
 # 2. Operator Round-Trips
 # ═══════════════════════════════════════════════════════════════
 
