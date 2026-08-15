@@ -296,12 +296,12 @@ def _reflection_plane_from_bivector(mv: MV) -> ReflectionPlane:
     n_norm = math.sqrt(bx * bx + by * by + bz * bz)
     if n_norm < 1e-15:
         raise ValueError("Zero bivector – not a valid reflection plane")
-    return ReflectionPlane(normal=Direction(bx / n_norm, by / n_norm, bz / n_norm))
+    return ReflectionPlane(Direction(bx / n_norm, by / n_norm, bz / n_norm))
 
 
 def _reflection_from_factor(f: MV) -> ReflectionLine:
     """Single grade-1 factor vector → ReflectionLine."""
-    return ReflectionLine(direction=Direction(float(f[E1]), float(f[E2]), float(f[E3])))
+    return ReflectionLine(Direction(float(f[E1]), float(f[E2]), float(f[E3])))
 
 
 def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:

@@ -332,18 +332,17 @@ def analyze_operator(
 def _entity_to_operator(entity):
     """Wrap an entity as its corresponding reflection operator."""
     if isinstance(entity, Line):
-        return ReflectionLine(line=entity)
+        return ReflectionLine(entity)
     elif isinstance(entity, Point):
-        return ReflectionPoint(point=entity)
-    raise ValueError(
-        f"Entity type {type(entity).__name__} has no reflection operator"
-    )
+        return ReflectionPoint(entity)
+    raise ValueError(f"Entity type {type(entity).__name__} has no reflection operator")
 
 
 def _triple_reflection_from_factors(factors):
     """Three line reflections -> TripleReflection."""
     lines = tuple(_line_from_vector(f) for f in factors)
     return TripleReflection(planes=lines)
+
 
 def _ana_versor(
     mv: MV,

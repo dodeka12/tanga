@@ -289,7 +289,7 @@ def _classify_grade2_versor(mv: MV) -> ReflectionLine:
     n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
     if n_norm < 1e-15:
         raise ValueError("Zero direction in e₄ bivector – not a valid reflection")
-    return ReflectionLine(direction=Direction(nx / n_norm, ny / n_norm, nz / n_norm))
+    return ReflectionLine(Direction(nx / n_norm, ny / n_norm, nz / n_norm))
 
 
 def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:

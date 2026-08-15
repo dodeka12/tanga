@@ -58,8 +58,8 @@ def _make_full_scene() -> Visualizer:
     viz.add(Space())
 
     # Operators
-    viz.add(ReflectionLine(direction=Direction(0, 0, 1)))
-    viz.add(ReflectionPlane(normal=Direction(0, 0, 1)))
+    viz.add(ReflectionLine(Direction(0, 0, 1)))
+    viz.add(ReflectionPlane(Direction(0, 0, 1)))
     viz.add(ReflectionOrigin())
     viz.add(Inversion(center=Point(0, 0, 0)))
     viz.add(Rotor(angle=1.2, axis=Direction(0, 0, 1)))
@@ -238,8 +238,8 @@ class TestGltfExport:
         """Each operator kind can be exported to glTF without error."""
         viz = Visualizer()
         operators = [
-            ReflectionLine(direction=Direction(0, 0, 1)),
-            ReflectionPlane(normal=Direction(0, 0, 1)),
+            ReflectionLine(Direction(0, 0, 1)),
+            ReflectionPlane(Direction(0, 0, 1)),
             ReflectionOrigin(),
             Inversion(center=Point(0, 0, 0)),
             Rotor(angle=1.2, axis=Direction(0, 0, 1)),

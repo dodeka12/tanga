@@ -578,7 +578,7 @@ def _inversion_from_ipns(op, einf, eo):
 def _plane_from_ipns_operator(op, einf, eo):
     """Extract ReflectionPlane from IPNS plane blade (grade 1)."""
     plane = _plane_from_ipns(op, einf, eo)
-    return ReflectionPlane(plane=plane)
+    return ReflectionPlane(plane)
 
 
 # ── Helper: ReflectionPoint from HPoint blade ───────────────────
@@ -588,7 +588,7 @@ def _reflection_point_from_hpoint(op, einf, eo):
     """Extract ReflectionPoint from an OPNS HPoint blade (grade 2)."""
     alg = op.algebra
     point = _factor_to_point(op, alg)
-    return ReflectionPoint(point=point)
+    return ReflectionPoint(point)
 
 
 # ── Helper: ReflectionLine from IPNS bivector ───────────────────
@@ -603,7 +603,7 @@ def _reflection_line_from_ipns(op, einf, eo):
     line = _decompose_line(line_opns)
     if line is None:
         raise ValueError("Degenerate line in ReflectionLine operator")
-    return ReflectionLine(line=line)
+    return ReflectionLine(line)
 
 
 # ── Helper: HDirection from blade ───────────────────────────────

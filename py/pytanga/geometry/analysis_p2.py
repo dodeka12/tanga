@@ -229,7 +229,7 @@ def _classify_grade1_versor(mv: MV) -> ReflectionLine | ReflectionPoint:
     else:
         if abs(e3_val) > 1e-15:
             raise ValueError("Mixed e₃ and Euclidean components – ambiguous P2 versor")
-        return ReflectionLine(direction=Direction(ex / eucl_norm, ey / eucl_norm, 0.0))
+        return ReflectionLine(Direction(ex / eucl_norm, ey / eucl_norm, 0.0))
 
 
 def _classify_grade2_versor(mv: MV) -> ReflectionLine:
@@ -243,7 +243,7 @@ def _classify_grade2_versor(mv: MV) -> ReflectionLine:
     n_norm = math.sqrt(nx * nx + ny * ny)
     if n_norm < 1e-15:
         raise ValueError("Zero direction in e₃ bivector – not a valid reflection")
-    return ReflectionLine(direction=Direction(nx / n_norm, ny / n_norm, 0.0))
+    return ReflectionLine(Direction(nx / n_norm, ny / n_norm, 0.0))
 
 
 def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:

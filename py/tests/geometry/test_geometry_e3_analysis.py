@@ -167,7 +167,7 @@ def test_operator_reflection_line_round_trip(b):
 
 
 def test_operator_reflection_plane_round_trip(b):
-    """O3: create ReflectionPlane(normal=(0.6, 0, 0.8)) → analyze → assert.
+    """O3: create ReflectionPlane((0.6, 0, 0.8)) → analyze → assert.
 
     E3 reflection plane versor is a grade-2 bivector n·I⁻¹.
     """

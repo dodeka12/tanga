@@ -498,7 +498,7 @@ def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
             line = _decompose_line(mv)
             if line is None:
                 raise ValueError("Degenerate line in ReflectionLine operator")
-            return ReflectionLine(line=line)
+            return ReflectionLine(line)
         # Otherwise dualize (e.g. imaginary circle → inversion via dual)
         op = mv.dual()
         return _classify_grade1_operator(op, einf, eo)
@@ -585,7 +585,7 @@ def _reflection_line_from_ipns_grade1(op, einf, eo):
     line = _decompose_line(line_opns)
     if line is None:
         raise ValueError("Degenerate line in ReflectionLine operator")
-    return ReflectionLine(line=line)
+    return ReflectionLine(line)
 
 
 # ── Helper: ReflectionPoint from HPoint blade ───────────────────
@@ -595,7 +595,7 @@ def _reflection_point_from_hpoint(op, einf, eo):
     """Extract ReflectionPoint from an OPNS HPoint blade (grade 2)."""
     alg = op.algebra
     point = _factor_to_point(op, alg)
-    return ReflectionPoint(point=point)
+    return ReflectionPoint(point)
 
 
 # ── Helper: ReflectionLine from IPNS bivector ───────────────────
@@ -610,7 +610,7 @@ def _reflection_line_from_ipns(op, einf, eo):
     line = _decompose_line(line_opns)
     if line is None:
         raise ValueError("Degenerate line in ReflectionLine operator")
-    return ReflectionLine(line=line)
+    return ReflectionLine(line)
 
 
 # ── Helper: HDirection from blade ───────────────────────────────

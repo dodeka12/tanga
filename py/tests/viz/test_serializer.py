@@ -163,7 +163,7 @@ class TestSerializeEntities:
 
 class TestSerializeOperators:
     def test_reflection_plane(self):
-        r = ReflectionPlane(normal=Direction(0, 0, 1))
+        r = ReflectionPlane(Direction(0, 0, 1))
         d = _serialize(r)
         assert d["kind"] == "ReflectionPlane"
         assert d["normal"] == [0, 0, 1]
@@ -172,14 +172,14 @@ class TestSerializeOperators:
         assert d["extent"] == 5.0
 
     def test_reflection_line(self):
-        r = ReflectionLine(direction=Direction(0, 0, 1))
+        r = ReflectionLine(Direction(0, 0, 1))
         d = _serialize(r)
         assert d["kind"] == "ReflectionLine"
         assert d["direction"] == [0, 0, 1]
         assert d["color"] == "#aaccff"
 
     def test_reflection_origin(self):
-        r = ReflectionPoint(point=Point(0, 0, 0))
+        r = ReflectionPoint(Point(0, 0, 0))
         d = _serialize(r)
         assert d["origin"] == [0, 0, 0]
         assert d["color"] == "#ffffff"
@@ -258,9 +258,9 @@ class TestSerializeOperators:
 
     def test_all_operators_json_serializable(self):
         ops = [
-            ReflectionPlane(normal=Direction(1, 0, 0)),
-            ReflectionLine(direction=Direction(1, 0, 0)),
-            ReflectionPoint(point=Point(0, 0, 0)),
+            ReflectionPlane(Direction(1, 0, 0)),
+            ReflectionLine(Direction(1, 0, 0)),
+            ReflectionPoint(Point(0, 0, 0)),
             Inversion(center=Point(0, 0, 0)),
             Rotor(angle=0.5, axis=Direction(0, 0, 1)),
             Translator(vector=Direction(1, 0, 0)),

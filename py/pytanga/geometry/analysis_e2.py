@@ -197,14 +197,12 @@ def analyze_operator(mv: MV) -> ReflectionLine | Rotor:
 def _reflection_from_grade1(mv: MV) -> ReflectionLine:
     """Pure grade-1 blade → ReflectionLine."""
     grade1 = mv.grade(1)
-    return ReflectionLine(
-        direction=Direction(float(grade1[E1]), float(grade1[E2]), 0.0)
-    )
+    return ReflectionLine(Direction(float(grade1[E1]), float(grade1[E2]), 0.0))
 
 
 def _reflection_from_factor(f: MV) -> ReflectionLine:
     """Single grade-1 factor vector → ReflectionLine."""
-    return ReflectionLine(direction=Direction(float(f[E1]), float(f[E2]), 0.0))
+    return ReflectionLine(Direction(float(f[E1]), float(f[E2]), 0.0))
 
 
 def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:
