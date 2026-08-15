@@ -90,13 +90,13 @@ def test_create_sphere_ipns_formula(b):
     """S = Cop(c) - ½r²·e∞ should have S² = r²."""
     from pytanga.geometry.create_n3 import create_sphere as n3_create_sphere
 
-    s_ipns = n3_create_sphere(b, Point(0, 0, 0), 3.0, opns=False)
+    s_ipns = n3_create_sphere(BasisN3(opns=False), Point(0, 0, 0), 3.0)
     assert float(s_ipns.sp(s_ipns)) == pytest.approx(9.0, abs=1e-6)
 
 
 def test_create_plane_ipns_round_trip(b, monkeypatch):
     monkeypatch.setattr(b, "opns", False)
-    mv = create_entity(b, Plane(Point(0, 0, 4), Direction(0, 0, 1)), opns=False)
+    mv = create_entity(b, Plane(Point(0, 0, 4), Direction(0, 0, 1)))
     r = analyze_entity(mv)
     assert isinstance(r, Plane)
     assert r.point.z == pytest.approx(4, abs=1e-4)
