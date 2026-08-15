@@ -522,3 +522,27 @@ def test_circle_from_three_points_radius_one(b):
     assert r.normal.x == pytest.approx(0, abs=1e-6)
     assert r.normal.y == pytest.approx(0, abs=1e-6)
     assert r.normal.z == pytest.approx(1, abs=1e-6)
+
+
+def test_point_pair_from_two_points(b):
+    """PointPair = outer product of two conformal points.
+
+    Points (1,0,0) and (3,0,0): midpoint (2,0,0), separation 2.
+    """
+    pa, pb = _pts(b, (1, 0, 0), (3, 0, 0))
+    blade = pa.op(pb)
+    r = analyze_entity(blade)
+    assert isinstance(r, PointPair), f"Got {type(r).__name__}"
+    assert not r.is_imaginary
+    mid = Point(
+        (r.point_a.x + r.point_b.x) / 2,
+        (r.point_a.y + r.point_b.y) / 2,
+        0.0,
+    )
+    assert mid.x == pytest.approx(2, abs=1e-6)
+    assert mid.y == pytest.approx(0, abs=1e-6)
+    sep = math.sqrt(
+        (r.point_b.x - r.point_a.x) ** 2
+        + (r.point_b.y - r.point_a.y) ** 2
+    )
+    assert sep == pytest.approx(2.0, abs=1e-6)
