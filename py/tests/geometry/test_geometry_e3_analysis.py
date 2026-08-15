@@ -65,7 +65,7 @@ def test_entity_plane_opns_round_trip(b):
     normal = Direction(1, 2, 3)
     unit = normal.normalized()
     plane = Plane(point=Point(0, 0, 0), normal=normal)
-    mv = create_entity(b, plane, opns=True)
+    mv = create_entity(b, plane)
     r = analyze_entity(mv)
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
     # Normal may have sign flip (±n describe the same plane through origin)
@@ -95,7 +95,7 @@ def test_entity_plane_ipns_round_trip(b, monkeypatch):
     """E4: create Plane(origin, normal=z) → analyze IPNS → assert."""
     monkeypatch.setattr(b, "opns", False)
     plane = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
-    mv = create_entity(b, plane, opns=False)
+    mv = create_entity(b, plane)
     r = analyze_entity(mv)
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
     assert abs(r.normal.z) == pytest.approx(1)
@@ -112,8 +112,8 @@ def test_entity_line_ipns_round_trip(b, monkeypatch):
     monkeypatch.setattr(b, "opns", False)
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
     p2 = Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0))
-    mv1 = create_entity(b, p1, opns=False)
-    mv2 = create_entity(b, p2, opns=False)
+    mv1 = create_entity(b, p1)
+    mv2 = create_entity(b, p2)
     line_mv = mv1.op(mv2)  # grade-2 IPNS bivector
     r = analyze_entity(line_mv)
     assert isinstance(r, Line), f"Got {type(r).__name__}"
@@ -280,14 +280,14 @@ def test_create_line_not_through_origin_raises(b):
     """Line offset from origin must raise ValueError in E3."""
     line = Line(origin=Point(1, 2, 3), direction=Direction(1, 0, 0))
     with pytest.raises(ValueError, match="only lines through the origin"):
-        create_entity(b, line, opns=True)
+        create_entity(b, line)
 
 
 def test_create_plane_not_through_origin_raises(b):
     """Plane not through origin must raise ValueError in E3."""
     plane = Plane(point=Point(1, 0, 0), normal=Direction(0, 0, 1))
     with pytest.raises(ValueError, match="only planes through the origin"):
-        create_entity(b, plane, opns=True)
+        create_entity(b, plane)
 
 
 def test_create_direction_zero_norm_raises(b):
@@ -315,9 +315,9 @@ def test_ipns_grade_3_raises(b, monkeypatch):
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0))
     p2 = Plane(point=Point(0, 0, 0), normal=Direction(0, 1, 0))
     p3 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
-    m1 = create_entity(b, p1, opns=False)
-    m2 = create_entity(b, p2, opns=False)
-    m3 = create_entity(b, p3, opns=False)
+    m1 = create_entity(b, p1)
+    m2 = create_entity(b, p2)
+    m3 = create_entity(b, p3)
     grade3_ipns = m1.op(m2).op(m3)
     with pytest.raises(ValueError, match="trivial"):
         analyze_entity(grade3_ipns)

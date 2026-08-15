@@ -42,9 +42,7 @@ E123 = BasisE3.E123
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_point(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def create_point(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Euclidean point components — ``x·e₁ + y·e₂ + z·e₃`` (OPNS/IPNS independent).
 
     A point cannot be represented as a null space in E3 (that requires
@@ -54,9 +52,7 @@ def create_point(
     return basis.multivector({E1: x, E2: y, E3: z})
 
 
-def create_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Grade-1 vector ``x·e₁ + y·e₂ + z·e₃``.
 
     In E3 a grade-1 blade represents a line through the origin (OPNS)
@@ -64,14 +60,12 @@ def create_direction(
     IPNS returns its dual.
     """
     opns_mv = basis.multivector({E1: x, E2: y, E3: z})
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
 
-def create_line(
-    basis: Algebra, origin: Point, direction: Direction, *, opns: bool = True
-) -> MV:
+def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
     """Line through the origin in direction *d* (grade-1 vector).
 
     In E3 only lines through the origin can be represented.  If *origin*
@@ -93,10 +87,10 @@ def create_line(
             "In E3 only lines through the origin can be represented; "
             "use P3 or N3 for general lines."
         )
-    return create_direction(basis, direction.x, direction.y, direction.z, opns=opns)
+    return create_direction(basis, direction.x, direction.y, direction.z)
 
 
-def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
+def create_plane(basis: Algebra, plane: Plane) -> MV:
     """Plane through origin.
 
     Uses the IPNS formula (grade-1 vector = normal *n*) as the simplest
@@ -115,15 +109,15 @@ def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
     ipns = basis.multivector(
         {E1: plane.normal.x, E2: plane.normal.y, E3: plane.normal.z}
     )
-    if opns:
+    if basis.opns:
         return ipns.dual()
     return ipns
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
+def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
     """OPNS pseudoscalar ``scale * e₁₂₃``; IPNS is the scalar ``scale``."""
     opns_mv = basis.multivector({E123: scale})
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
@@ -133,9 +127,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_sphere(
-    basis: Algebra, center: Point, radius: float, *, opns: bool = True
-) -> MV:
+def create_sphere(basis: Algebra, center: Point, radius: float) -> MV:
     raise ValueError("Spheres require conformal embedding (N3); not available in E3.")
 
 
@@ -144,20 +136,18 @@ def create_circle(
     center: Point,
     normal: Direction,
     radius: float,
-    *,
-    opns: bool = True,
 ) -> MV:
     raise ValueError("Circles require conformal embedding (N3); not available in E3.")
 
 
-def create_point_pair(basis: Algebra, a: Point, b: Point, *, opns: bool = True) -> MV:
+def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     raise ValueError(
         "Point pairs require conformal embedding (N3); not available in E3."
     )
 
 
 def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0, *, opns: bool = True
+    basis: Algebra, pt: Point, weight: float = 1.0
 ) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N3); not available in E3."
