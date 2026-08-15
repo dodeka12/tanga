@@ -74,7 +74,7 @@ def test_entity_direction_ipns_round_trip(b, monkeypatch):
     dual of its Euclidean vector — a perpendicular vector `(y, −x)`.
     """
     monkeypatch.setattr(b, "opns", False)
-    mv = create_entity(b, Direction(1, 2, 0), opns=False)
+    mv = create_entity(b, Direction(1, 2, 0))
     r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     # IPNS direction is the dual (perpendicular), normalized to unit length
@@ -190,7 +190,7 @@ def test_create_line_not_through_origin_raises(b):
     """Line offset from origin must raise ValueError in E2."""
     line = Line(origin=Point(1, 2, 0), direction=Direction(1, 0, 0))
     with pytest.raises(ValueError, match="only lines through the origin"):
-        create_entity(b, line, opns=True)
+        create_entity(b, line)
 
 
 def test_create_direction_zero_norm_raises(b):
