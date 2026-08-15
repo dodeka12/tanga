@@ -126,13 +126,13 @@ def _analyze_entity_opns(
     max_grade = max(grades)
 
     if max_grade == 1:
-        return _point_or_direction_n3(mv)
+        return _point_or_direction_n3_opns(mv)
     elif max_grade == 2:
-        return _decompose_grade2(mv)
+        return _decompose_grade2_opns(mv)
     elif max_grade == 3:
-        return _line_or_circle_n3(mv)
+        return _line_or_circle_n3_opns(mv)
     elif max_grade == 4:
-        return _sphere_or_plane_n3(mv)
+        return _sphere_or_plane_n3_opns(mv)
     elif max_grade == 5:
         scale, _ = mv.blade_factorize_versor()
         return Space(scale=abs(float(scale[0])))
@@ -143,7 +143,7 @@ def _analyze_entity_opns(
 # ── Grade 1: Point / Direction ────────────────────────────────
 
 
-def _point_or_direction_n3(mv: MV) -> Point | Direction | None:
+def _point_or_direction_n3_opns(mv: MV) -> Point | Direction | None:
     """Analyze a grade-1 OPNS blade as a conformal point or direction.
 
     An OPNS point blade has the form ``Cop(p) = p + ½‖p‖²·e∞ + e₀``.
@@ -174,7 +174,7 @@ def _point_or_direction_n3(mv: MV) -> Point | Direction | None:
 # ── Grade 2: PointPair / HPoint ────────────────────
 
 
-def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection | None:
+def _decompose_grade2_opns(mv: MV) -> PointPair | HPoint | HDirection | None:
     """Analyze a grade‑2 OPNS blade.
 
     Perwass, GAConfSpc_Ana.tex §PointPair:
@@ -208,7 +208,9 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection | None:
             d_norm = math.sqrt(dx * dx + dy * dy + dz * dz)
             if d_norm < 1e-15:
                 return None  # degenerate
-            return HDirection(direction=Direction(dx / d_norm, dy / d_norm, dz / d_norm))
+            return HDirection(
+                direction=Direction(dx / d_norm, dy / d_norm, dz / d_norm)
+            )
 
     # ── 1. Line through the point pair ──
     L = mv.op(einf)  # grade 3 OPNS
@@ -238,6 +240,8 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection | None:
     # ── 5. Point separation: S* = Q·L⁻¹ ──
     L_inv = L.inv()
     S_star = mv.ip(L_inv)
+    f_eo = eo_coeff(S_star, einf)
+    S_star = S_star / f_eo  # normalize to get Cop(c) − ½r²·e∞
     r_sq = float(S_star.sp(S_star))  # (d/2)², may be negative
     separation = 2.0 * math.sqrt(abs(r_sq))
     is_imaginary = r_sq < 0
@@ -264,7 +268,7 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection | None:
 # ── Grade 3: Line / Circle ────────────────────────────────────
 
 
-def _line_or_circle_n3(mv: MV) -> Line | Circle | None:
+def _line_or_circle_n3_opns(mv: MV) -> Line | Circle | None:
     """Distinguish Line vs Circle via C∧e∞.
 
     For a grade‑3 OPNS blade *C*:
@@ -350,6 +354,8 @@ def _decompose_circle(mv: MV) -> Circle | None:
 
     # ── 5. Radius: S* = C·P⁻¹ ──
     S_star = mv.ip(P.inv())  # grade 1  IPNS sphere
+    f_eo = eo_coeff(S_star, einf)
+    S_star = S_star / f_eo  # normalize to get Cop(c) − ½r²·e∞
     r_sq = float(S_star.sp(S_star))
     is_imaginary = r_sq < 0
     radius = math.sqrt(abs(r_sq))
@@ -367,7 +373,7 @@ def _decompose_circle(mv: MV) -> Circle | None:
 # ── Grade 4: Plane / Sphere ───────────────────────────────────
 
 
-def _sphere_or_plane_n3(mv: MV) -> Plane | Sphere:
+def _sphere_or_plane_n3_opns(mv: MV) -> Plane | Sphere:
     """Distinguish Plane vs Sphere via dual IPNS analysis.
 
     In the IPNS (dual):
@@ -407,7 +413,7 @@ def _plane_from_ipns(ipns: MV, einf: MV, eo: MV) -> Plane:
     return Plane(point=point, normal=Direction(ux, uy, uz))
 
 
-def _sphere_from_ipns(ipns: MV, einf: MV, eo: MV) -> Sphere:
+def _sphere_from_ipns(sphere_ipns: MV, einf: MV, eo: MV) -> Sphere:
     """Perwass: S̃ = α(A − ½r²·e∞) → extract center and radius.
 
     Uses scale-invariant formulas:
@@ -416,13 +422,17 @@ def _sphere_from_ipns(ipns: MV, einf: MV, eo: MV) -> Sphere:
 
     If r² < 0, returns a Sphere with ``is_imaginary=True``.
     """
-    einf_sp = float(ipns.sp(einf))
+    einf_sp = float(sphere_ipns.sp(einf))
     if abs(einf_sp) < 1e-10:
         raise ValueError("Sphere IPNS has zero einf component – not a sphere")
     norm = -einf_sp
-    ex, ey, ez = float(ipns[E1]) / norm, float(ipns[E2]) / norm, float(ipns[E3]) / norm
+    ex, ey, ez = (
+        float(sphere_ipns[E1]) / norm,
+        float(sphere_ipns[E2]) / norm,
+        float(sphere_ipns[E3]) / norm,
+    )
 
-    s_normalized = ipns * (1.0 / norm)
+    s_normalized = sphere_ipns / norm
     r_sq = float(s_normalized.sp(s_normalized))
     if r_sq < 0:
         return Sphere(
@@ -618,9 +628,7 @@ def _hdirection_from_blade(op, einf, eo):
 
 def _has_euclidean_bivector(op):
     """True if the blade has E12, E23, or E13 bivector components."""
-    return (
-        abs(float(op[E12])) + abs(float(op[E23])) + abs(float(op[E13])) > 1e-15
-    )
+    return abs(float(op[E12])) + abs(float(op[E23])) + abs(float(op[E13])) > 1e-15
 
 
 def _classify_single_reflector(n: MV, einf: MV, eo: MV):

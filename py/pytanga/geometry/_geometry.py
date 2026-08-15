@@ -16,13 +16,12 @@ from typing import TYPE_CHECKING
 from .analysis import analyze as _analyze
 from .analysis import analyze_entity, analyze_operator
 from .create import create
+from .entities import Entity, _is_mv
+from .operators import Operator
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
-
-    from .entities import Entity
-    from .operators import Operator
 
 
 class Geometry:
@@ -66,9 +65,16 @@ class Geometry:
         """
         return create(self._algebra, obj)
 
-    def __call__(self, obj: Entity | Operator) -> MV:
+    def __call__(self, obj: Entity | Operator | MV) -> MV:
         """Create an MV from *obj* (alias for :meth:`create`)."""
-        return self.create(obj)
+        if isinstance(obj, (Entity, Operator)):
+            return self.create(obj)
+        elif _is_mv(obj):
+            return self.analyze(obj)
+        else:
+            raise TypeError(
+                f"Geometry.__call__() expects Entity, Operator, or MV, got {type(obj)}"
+            )
 
     def which_entity(self, mv: MV) -> Entity:
         """Determine which geometric entity an MV represents.

@@ -1,3 +1,4 @@
+
 # Phase 4 — Remove Geometry-Creating Methods from Basis Classes
 
 **Prerequisites:** Phases 1–3 (entity constructors + typed analyzers exist, so
