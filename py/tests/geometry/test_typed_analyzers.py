@@ -45,7 +45,7 @@ def _point(p):
 @pytest.mark.parametrize("opns", [True, False])
 def test_p3_point_round_trip(opns):
     alg = BasisP3(opns=opns)
-    mv = create_entity(alg, Point(1, 2, 3), opns=opns)
+    mv = create_entity(alg, Point(1, 2, 3))
     r = analysis.analyze_point(mv)
     assert isinstance(r, Point)
     assert r.x == pytest.approx(1)
@@ -56,7 +56,7 @@ def test_p3_point_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_p3_direction_round_trip(opns):
     alg = BasisP3(opns=opns)
-    mv = create_entity(alg, Direction(1, 2, 3), opns=opns)
+    mv = create_entity(alg, Direction(1, 2, 3))
     r = analysis.analyze_direction(mv)
     assert isinstance(r, Direction)
 
@@ -64,7 +64,7 @@ def test_p3_direction_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_p3_line_round_trip(opns):
     alg = BasisP3(opns=opns)
-    mv = create_entity(alg, Line(Point(1, 0, 0), Direction(0, 1, 0)), opns=opns)
+    mv = create_entity(alg, Line(Point(1, 0, 0), Direction(0, 1, 0)))
     r = analysis.analyze_line(mv)
     assert isinstance(r, Line)
 
@@ -72,7 +72,7 @@ def test_p3_line_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_n3_point_round_trip(opns):
     alg = BasisN3(opns=opns)
-    mv = create_entity(alg, Point(1, 2, 3), opns=opns)
+    mv = create_entity(alg, Point(1, 2, 3))
     r = analysis.analyze_point(mv)
     assert isinstance(r, Point)
     assert r.x == pytest.approx(1)
@@ -83,7 +83,7 @@ def test_n3_point_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_n3_circle_round_trip(opns):
     alg = BasisN3(opns=opns)
-    mv = create_entity(alg, Circle(Point(1, 2, 3), 2.0, Direction(0, 0, 1)), opns=opns)
+    mv = create_entity(alg, Circle(Point(1, 2, 3), 2.0, Direction(0, 0, 1)))
     r = analysis.analyze_circle(mv)
     assert isinstance(r, Circle)
     assert r.radius == pytest.approx(2.0)
@@ -92,7 +92,7 @@ def test_n3_circle_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_n3_sphere_round_trip(opns):
     alg = BasisN3(opns=opns)
-    mv = create_entity(alg, Sphere(Point(1, 0, 0), 2.0), opns=opns)
+    mv = create_entity(alg, Sphere(Point(1, 0, 0), 2.0))
     r = analysis.analyze_sphere(mv)
     assert isinstance(r, Sphere)
     assert r.radius == pytest.approx(2.0)
@@ -101,7 +101,7 @@ def test_n3_sphere_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_pga3_point_round_trip(opns):
     alg = BasisPGA3(opns=opns)
-    mv = create_entity(alg, Point(1, 2, 3), opns=opns)
+    mv = create_entity(alg, Point(1, 2, 3))
     r = analysis.analyze_point(mv)
     assert isinstance(r, Point)
     assert r.x == pytest.approx(1)
@@ -112,14 +112,14 @@ def test_pga3_point_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_pga3_plane_round_trip(opns):
     alg = BasisPGA3(opns=opns)
-    mv = create_entity(alg, Plane(Point(0, 0, 0), Direction(0, 0, 1)), opns=opns)
+    mv = create_entity(alg, Plane(Point(0, 0, 0), Direction(0, 0, 1)))
     r = analysis.analyze_plane(mv)
     assert isinstance(r, Plane)
 
 
 def test_e3_direction_round_trip():
     alg = BasisE3()
-    mv = create_entity(alg, Direction(1, 2, 3), opns=True)
+    mv = create_entity(alg, Direction(1, 2, 3))
     r = analysis.analyze_direction(mv)
     assert isinstance(r, Direction)
 
@@ -127,7 +127,7 @@ def test_e3_direction_round_trip():
 @pytest.mark.parametrize("opns", [True, False])
 def test_e3_plane_round_trip(opns):
     alg = BasisE3(opns=opns)
-    mv = create_entity(alg, Plane(Point(0, 0, 0), Direction(0, 0, 1)), opns=opns)
+    mv = create_entity(alg, Plane(Point(0, 0, 0), Direction(0, 0, 1)))
     r = analysis.analyze_plane(mv)
     assert isinstance(r, Plane)
 
@@ -135,7 +135,7 @@ def test_e3_plane_round_trip(opns):
 @pytest.mark.parametrize("opns", [True, False])
 def test_e2_direction_round_trip(opns):
     alg = BasisE2(opns=opns)
-    mv = create_entity(alg, Direction(1, 2, 0), opns=opns)
+    mv = create_entity(alg, Direction(1, 2, 0))
     r = analysis.analyze_direction(mv)
     assert isinstance(r, Direction)
 
@@ -176,7 +176,7 @@ def test_analyze_plane_unsupported_in_e2():
 def test_ipns_mode_round_trip():
     alg = BasisN3()
     alg.opns = False
-    mv = create_entity(alg, Point(1, 2, 3), opns=False)
+    mv = create_entity(alg, Point(1, 2, 3))
     r = analysis.analyze_point(mv)
     assert isinstance(r, Point)
     assert r.x == pytest.approx(1)

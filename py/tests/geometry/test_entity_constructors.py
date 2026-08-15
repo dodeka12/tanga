@@ -28,7 +28,7 @@ from pytanga.geometry.entities import (
 @pytest.mark.parametrize("opns", [True, False])
 def test_point_from_n3_mv(opns):
     alg = BasisN3(opns=opns)
-    mv = create_entity(alg, Point(1, 2, 3), opns=opns)
+    mv = create_entity(alg, Point(1, 2, 3))
     p = Point(mv)
     assert p.x == pytest.approx(1)
     assert p.y == pytest.approx(2)

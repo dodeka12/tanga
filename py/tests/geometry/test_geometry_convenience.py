@@ -51,9 +51,11 @@ def test_create_uses_default_opns(b):
     assert 1 in mv.grades
 
 
-def test_create_override_opns(b):
-    geo = Geometry(b)
-    mv = geo.create(Sphere(Point(0, 0, 0), 3.0), opns=False)
+def test_create_follows_algebra_opns():
+    alg = BasisN3()
+    geo = Geometry(alg)
+    alg.opns = False
+    mv = geo.create(Sphere(Point(0, 0, 0), 3.0))
     # IPNS sphere is grade-1
     assert max(mv.grades) == 1
 
@@ -71,6 +73,26 @@ def test_create_opns_can_be_changed():
     geo = Geometry(alg)
     alg.opns = False
     mv = geo.create(Point(1, 2, 3))
+    assert 4 in mv.grades
+
+
+# ═══ __call__ ═══
+
+
+def test_call_aliases_create(b):
+    geo = Geometry(b)
+    mv_call = geo(Point(1, 2, 3))
+    mv_create = geo.create(Point(1, 2, 3))
+    assert mv_call.grades == mv_create.grades
+    assert 1 in mv_call.grades
+
+
+def test_call_follows_algebra_opns():
+    alg = BasisN3()
+    geo = Geometry(alg)
+    alg.opns = False
+    mv = geo(Point(1, 2, 3))
+    # IPNS point is grade-4
     assert 4 in mv.grades
 
 
