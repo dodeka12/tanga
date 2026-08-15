@@ -1,0 +1,185 @@
+name: Build (debug, single combination)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        type: choice
+        required: true
+        default: 'macos'
+        options:
+          - macos
+          - windows
+          - linux
+      os:
+        description: 'macOS runner (only used when platform = macos)'
+        type: choice
+        required: true
+        default: 'macos-14'
+        options:
+          - macos-13
+          - macos-14
+      python-version:
+        description: 'Python version'
+        type: choice
+        required: true
+        default: '3.12'
+        options:
+          - '3.12'
+          - '3.13'
+      version:
+        description: 'Forced version (optional; e.g. v0.9.2). Empty = auto via setuptools-scm.'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------- macOS
+  build-macos:
+    if: inputs.platform == 'macos'
+    name: Build macOS wheel (${{ inputs.os }}, py${{ inputs.python-version }})
+    runs-on: ${{ inputs.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build wheel and fix tag
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}"
+          fi
+          uv run bash tools/build-precompiled-wheel.sh
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+          VERSION: ${{ inputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-debug-macos-${{ inputs.os }}-${{ inputs.python-version }}
+          path: dist/*.whl
+
+  # --------------------------------------------------------------- Windows
+  build-windows:
+    if: inputs.platform == 'windows'
+    name: Build Windows wheel (py${{ inputs.python-version }})
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build wheel and fix tag
+        shell: pwsh
+        run: |
+          if ("${{ inputs.version }}") {
+            $env:SETUPTOOLS_SCM_PRETEND_VERSION = "${{ inputs.version }}".TrimStart('v')
+          }
+          uv run powershell tools/build-precompiled-wheel.ps1
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-debug-windows-${{ inputs.python-version }}
+          path: dist/*.whl
+
+  # ----------------------------------------------------------------- Linux
+  build-linux:
+    if: inputs.platform == 'linux'
+    name: Build Linux wheel (py${{ inputs.python-version }}, manylinux_x86_64)
+    runs-on: ubuntu-24.04
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup environment
+        run: |
+          PY_ABI="cp${{ inputs.python-version }}"
+          PY_ABI="${PY_ABI//.}"
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "/opt/python/${PY_ABI}-${PY_ABI}/bin" >> $GITHUB_PATH
+          echo "UV_PYTHON=/opt/python/${PY_ABI}-${PY_ABI}/bin/python${{ inputs.python-version }}" >> $GITHUB_ENV
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+
+      - name: Build wheel
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}"
+          fi
+          uv build --wheel
+        env:
+          VERSION: ${{ inputs.version }}
+
+      - name: Auditwheel repair
+        run: |
+          PY_ABI="cp${{ inputs.python-version }}"
+          PY_ABI="${PY_ABI//.}"
+          /opt/python/${PY_ABI}-${PY_ABI}/bin/pip install auditwheel
+          /opt/python/${PY_ABI}-${PY_ABI}/bin/auditwheel repair dist/*.whl -w dist/
+          rm dist/*-none-any.whl
+          for whl in dist/*.whl; do
+            new_name="${whl/-py3-none-/-${PY_ABI}-${PY_ABI}-}"
+            if [ "$whl" != "$new_name" ]; then
+              mv "$whl" "$new_name"
+              echo "Renamed: $(basename "$whl") -> $(basename "$new_name")"
+            fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-debug-linux-${{ inputs.python-version }}
+          path: dist/*.whl

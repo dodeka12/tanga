@@ -35,7 +35,7 @@ target_include_directories(TemplateGaCompileTest PUBLIC ${CMAKE_SOURCE_DIR}/cpp)
 
 if(MSVC)
     target_compile_options(TemplateGaCompileTest PUBLIC /arch:SSE4.1)
-else()
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i[3-6]86")
     target_compile_options(TemplateGaCompileTest PUBLIC "-msse4.1")
     target_compile_options(TemplateGaCompileTest PUBLIC "-mpopcnt")
 endif()

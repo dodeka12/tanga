@@ -57,8 +57,10 @@ target_include_directories(${MODULE_NAME} PRIVATE "${TANGA_SOURCE}")
 # ---------------------------------------------------------------------------
 if(MSVC)
     target_compile_options(${MODULE_NAME} PRIVATE /arch:SSE4.1 /O2)
-else()
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i[3-6]86")
     target_compile_options(${MODULE_NAME} PRIVATE -msse4.1 -mpopcnt -O3)
+else()
+    target_compile_options(${MODULE_NAME} PRIVATE -O3)
 endif()
 
 # ---------------------------------------------------------------------------

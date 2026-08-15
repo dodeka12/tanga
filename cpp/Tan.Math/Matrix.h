@@ -26,6 +26,9 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+#if defined(__APPLE__)
+#	include <cmath>
+#endif
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -834,6 +837,12 @@ namespace Tan
 		template<typename TValue>
 		bool IsNumber() const
 		{
+#if defined(__APPLE__)
+			return ForEachCompTest([](const TValue& tValue)
+			{
+				return !std::isnan(tValue);
+			});
+#else
 			return ForEachCompTest([](const TValue& tValue)
 			{
 				if (!IsNumber(tValue))
@@ -843,6 +852,7 @@ namespace Tan
 				return true;
 
 			});
+#endif
 		}
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -860,6 +870,12 @@ namespace Tan
 		template<typename TValue>
 		bool IsFiniteNumber() const
 		{
+#if defined(__APPLE__)
+			return ForEachCompTest([](const TValue& tValue)
+			{
+				return std::isfinite(tValue);
+			});
+#else
 			return ForEachCompTest([](const TValue& tValue)
 			{
 				if (!IsFiniteNumber(tValue))
@@ -869,6 +885,7 @@ namespace Tan
 				return true;
 
 			});
+#endif
 		}
 
 
