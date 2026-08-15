@@ -492,3 +492,33 @@ def test_apply_general_rotor_point_displaced_rotation(b):
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
     assert r.z == pytest.approx(0)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Entity from point blades (analysis correctness)
+# ═══════════════════════════════════════════════════════════════
+
+
+def _pts(b, *coords):
+    return [create_entity(b, Point(*c)) for c in coords]
+
+
+def test_circle_from_three_points_radius_one(b):
+    """Circle = outer product of three points at radius 1 from centre.
+
+    Centre (2,3,0); points (3,3,0), (2,4,0), (1,3,0) all lie at
+    Euclidean distance 1.  The blade p1∧p2∧p3 must analyze back to a
+    circle with that centre, radius 1, and normal +z.
+    """
+    p1, p2, p3 = _pts(b, (3, 3, 0), (2, 4, 0), (1, 3, 0))
+    blade = p1.op(p2).op(p3)
+    r = analyze_entity(blade)
+    assert isinstance(r, Circle), f"Got {type(r).__name__}"
+    assert not r.is_imaginary
+    assert r.center.x == pytest.approx(2, abs=1e-6)
+    assert r.center.y == pytest.approx(3, abs=1e-6)
+    assert r.center.z == pytest.approx(0, abs=1e-6)
+    assert r.radius == pytest.approx(1.0, abs=1e-6)
+    assert r.normal.x == pytest.approx(0, abs=1e-6)
+    assert r.normal.y == pytest.approx(0, abs=1e-6)
+    assert r.normal.z == pytest.approx(1, abs=1e-6)
