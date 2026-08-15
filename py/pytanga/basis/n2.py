@@ -43,6 +43,7 @@ class BasisN2(Algebra):
         self.einf = mv({_EP: 1.0, _EM: 1.0})  # ep + em
         self.eo = mv({_EP: -0.5, _EM: 0.5})  # 0.5·em - 0.5·ep
         self.I = mv({self.pseudoscalar_id: 1})
+        self.E = self.einf ^ self.eo
 
     @cached_property
     def _display_basis(self) -> list:

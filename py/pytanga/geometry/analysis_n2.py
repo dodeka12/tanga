@@ -217,7 +217,7 @@ def _decompose_grade2_opns(mv: MV) -> PointPair | HPoint | HDirection:
     d = L.ip(E)  # grade 1 direction
     if d.is_zero:
         raise ValueError("Point pair direction is zero")
-    direction = Direction(float(d[E1]), float(d[E2]), 0.0)
+    direction = Direction(float(d[E1]), float(d[E2]), 0.0).normalized()
 
     # ── 5. Point separation: S* = Q·L⁻¹ ──
     L_inv = L.inv()
@@ -225,10 +225,10 @@ def _decompose_grade2_opns(mv: MV) -> PointPair | HPoint | HDirection:
     f_eo = eo_coeff(S_star, einf)
     S_star = S_star / f_eo  # normalize to get Cop(c) − ½r²·e∞
     r_sq = float(S_star.sp(S_star))  # separation², may be negative
-    separation = math.sqrt(abs(r_sq))
+    half_dist = math.sqrt(abs(r_sq))
+    separation = half_dist * 2.0
     is_imaginary = r_sq < 0
 
-    half_dist = separation * 0.5
     return PointPair(
         point_a=Point(
             center.x - direction.x * half_dist,
