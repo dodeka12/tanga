@@ -166,6 +166,6 @@ Same pattern in `test_geometry_n3_analysis.py`:
 - [x] N2 circle-from-3-points returns correct centre/radius/normal
 - [x] N3 circle-from-3-points returns correct centre/radius/normal
 - [x] N3 sphere-from-4-points returns correct centre/radius
-- [ ] N2 + N3 point-pair-from-2-points returns correct midpoint/separation
+- [x] N2 + N3 point-pair-from-2-points returns correct midpoint/separation
 - [ ] N2 + N3 scale-by-2 tests: all geometric params invariant; HPoint.weight and Space.scale double
 - [ ] Full geometry test suite passes
