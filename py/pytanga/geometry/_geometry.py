@@ -49,25 +49,26 @@ class Geometry:
 
     # ── convenience methods ────────────────────────────────────
 
-    def create(self, obj: Entity | Operator, *, opns: bool | None = None) -> MV:
+    def create(self, obj: Entity | Operator) -> MV:
         """Create an MV from an entity or operator.
+
+        The OPNS/IPNS interpretation is read from ``self.algebra.opns``.
 
         Parameters
         ----------
         obj : Entity or Operator
             A geometric entity or operator dataclass.
-        opns : bool or None, optional
-            *True* → create in OPNS, *False* → create in IPNS.
-            If *None* (default), uses ``self.algebra.opns``.
 
         Returns
         -------
         MV
             The multivector representation.
         """
-        if opns is None:
-            opns = self._algebra.opns
-        return create(self._algebra, obj, opns=opns)
+        return create(self._algebra, obj)
+
+    def __call__(self, obj: Entity | Operator) -> MV:
+        """Create an MV from *obj* (alias for :meth:`create`)."""
+        return self.create(obj)
 
     def which_entity(self, mv: MV) -> Entity:
         """Determine which geometric entity an MV represents.

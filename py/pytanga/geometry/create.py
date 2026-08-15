@@ -81,18 +81,16 @@ def _detect(basis) -> str:
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
+def create_entity(basis: Algebra, entity: Entity) -> MV:
     """Create an MV representing a geometric entity.
 
     Parameters
     ----------
     basis : Algebra
-        An algebra instance (e.g. ``BasisE3()``).
+        An algebra instance (e.g. ``BasisE3()``).  Its ``opns`` flag
+        determines whether the entity is created in OPNS or IPNS.
     entity : Entity
         An :class:`~.entities.Entity` dataclass.
-    opns : bool, optional
-        *True* (default) → create in OPNS.
-        *False* → create in IPNS (OPNS blade, then ``sdual()``).
 
     Returns
     -------
@@ -123,13 +121,11 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
     mod = modules[_detect(basis)]
 
     if isinstance(entity, Point):
-        return mod.create_point(basis, entity.x, entity.y, entity.z, opns=opns)
+        return mod.create_point(basis, entity.x, entity.y, entity.z)
     elif isinstance(entity, Direction):
-        return mod.create_direction(basis, entity.x, entity.y, entity.z, opns=opns)
+        return mod.create_direction(basis, entity.x, entity.y, entity.z)
     elif isinstance(entity, HPoint):
-        return mod.create_homogeneous_point(
-            basis, entity.point, entity.weight, opns=opns
-        )
+        return mod.create_homogeneous_point(basis, entity.point, entity.weight)
     elif isinstance(entity, HDirection):
         alg_type = _detect(basis)
         if alg_type not in ("n3", "n2"):
@@ -138,7 +134,7 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
                 f"not supported in {alg_type.upper()}."
             )
         return mod.create_homogeneous_direction(
-            basis, entity.direction.x, entity.direction.y, entity.direction.z, opns=opns
+            basis, entity.direction.x, entity.direction.y, entity.direction.z
         )
     elif isinstance(entity, PointPair):
         if entity.is_imaginary and _detect(basis) in ("n3", "pga3"):
@@ -149,7 +145,6 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
                     entity._center,
                     entity._direction,
                     entity._separation or 1.0,
-                    opns=opns,
                 )
             # Fallback: reconstruct center/direction from point_a/point_b
             center = Point(
@@ -168,11 +163,10 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
                 center,
                 direction,
                 separation,
-                opns=opns,
             )
-        return mod.create_point_pair(basis, entity.point_a, entity.point_b, opns=opns)
+        return mod.create_point_pair(basis, entity.point_a, entity.point_b)
     elif isinstance(entity, Line):
-        return mod.create_line(basis, entity.origin, entity.direction, opns=opns)
+        return mod.create_line(basis, entity.origin, entity.direction)
     elif isinstance(entity, Circle):
         if entity.is_imaginary and _detect(basis) in ("n3", "pga3"):
             return mod.create_imag_circle(
@@ -180,13 +174,12 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
                 entity.center,
                 entity.normal,
                 entity.radius,
-                opns=opns,
             )
         return mod.create_circle(
-            basis, entity.center, entity.normal, entity.radius, opns=opns
+            basis, entity.center, entity.normal, entity.radius
         )
     elif isinstance(entity, Plane):
-        return mod.create_plane(basis, entity, opns=opns)
+        return mod.create_plane(basis, entity)
     elif isinstance(entity, Sphere):
         if entity.is_imaginary:
             if _detect(basis) in ("n2", "n3"):
@@ -194,13 +187,12 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
                     basis,
                     entity.center,
                     entity.radius,
-                    opns=opns,
                     is_imaginary=True,
                 )
             raise NotImplementedError("Imaginary spheres are not supported yet.")
-        return mod.create_sphere(basis, entity.center, entity.radius, opns=opns)
+        return mod.create_sphere(basis, entity.center, entity.radius)
     elif isinstance(entity, Space):
-        return mod.create_space(basis, scale=entity.scale, opns=opns)
+        return mod.create_space(basis, scale=entity.scale)
     else:
         raise TypeError(
             f"Entity type {type(entity).__name__} not supported in {_detect(basis)}"
@@ -310,18 +302,16 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
 # ═══════════════════════════════════════════════════════════════
 
 
-def create(basis: Algebra, obj: Entity | Operator, *, opns: bool = True) -> MV:
+def create(basis: Algebra, obj: Entity | Operator) -> MV:
     """Create an MV from an entity or operator dataclass.
 
     Parameters
     ----------
     basis : Algebra
-        An algebra instance.
+        An algebra instance.  Its ``opns`` flag determines whether an
+        entity is created in OPNS or IPNS.
     obj : Entity or Operator
         A geometric entity or operator dataclass.
-    opns : bool, optional
-        *True* (default) → create in OPNS.
-        *False* → create in IPNS.
 
     Returns
     -------
@@ -329,7 +319,7 @@ def create(basis: Algebra, obj: Entity | Operator, *, opns: bool = True) -> MV:
         The multivector representation.
     """
     if isinstance(obj, Entity):
-        return create_entity(basis, obj, opns=opns)
+        return create_entity(basis, obj)
     elif isinstance(obj, Operator):
         return create_operator(basis, obj)
     else:
