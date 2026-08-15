@@ -31,7 +31,7 @@ from ._pga2_utils import (
     EP,
     _get_e0,
 )
-from .entities import Direction, Point
+from .entities import Direction, Line, Point
 from .operators import GeneralRotor, ReflectionLine, Rotor, Translator
 
 if TYPE_CHECKING:
@@ -42,33 +42,49 @@ if TYPE_CHECKING:
 # ── Entities ──────────────────────────────────────────────────
 
 
-def create_point(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def _point_opns(basis: Algebra, x: float, y: float) -> MV:
+    """Raw OPNS PGA2 point (grade‑2 bivector, intersection of two lines)."""
+    p_ipns = basis.multivector({E1: -x, E2: -y, EP: -1.0, EM: -1.0})
+    return p_ipns.dual()
+
+
+def _line_opns(basis: Algebra, origin: Point, direction: Direction) -> MV:
+    """Raw OPNS PGA2 line (grade‑1 vector ``nx·e₁ + ny·e₂ + d·e₀``)."""
+    dx, dy = direction.x, direction.y
+    n_norm = math.sqrt(dx * dx + dy * dy)
+    if n_norm < 1e-15:
+        raise ValueError("Zero direction – not a valid line")
+    nx, ny = -dy / n_norm, dx / n_norm
+
+    # Signed distance: n·origin
+    d = -(nx * origin.x + ny * origin.y)
+
+    return basis.multivector({E1: nx, E2: ny, EP: d, EM: d})
+
+
+def create_point(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA2 point.
 
-    *opns=True* (default):  grade‑2 bivector (intersection of two lines
+    *basis.opns=True* (default):  grade‑2 bivector (intersection of two lines
       ``(e₁ − x·e₀) ∧ (e₂ − y·e₀)``).
 
-    *opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + e₀``.
+    *basis.opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂ + e₀``.
     """
     p_ipns = basis.multivector({E1: -x, E2: -y, EP: -1.0, EM: -1.0})
-    if not opns:
+    if not basis.opns:
         return p_ipns
 
     return p_ipns.dual()
 
 
-def create_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA2 direction (ideal point).
 
-    *opns=True*:  grade‑2 bivector (dual of the IPNS direction vector).
+    *basis.opns=True*:  grade‑2 bivector (dual of the IPNS direction vector).
 
-    *opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂``.
+    *basis.opns=False* (IPNS):  grade‑1 vector ``x·e₁ + y·e₂``.
     """
-    if not opns:
+    if not basis.opns:
         return basis.multivector({E1: x, E2: y})
 
     # OPNS: dualize the IPNS direction vector using the 3D PGA dual.
@@ -79,35 +95,23 @@ def create_direction(
     return basis.dual(ipns)
 
 
-def create_line(
-    basis: Algebra, origin: Point, direction: Direction, *, opns: bool = True
-) -> MV:
+def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
     """Create a PGA2 line (codimension-1 hyperplane in 2D).
 
     In 2D PGA, a line is a grade‑1 vector ``nx·e₁ + ny·e₂ + d·e₀``
     where *d* is the signed distance from origin (the IPNS/OPNS form
     of a hyperplane).  The line's normal is perpendicular to *direction*.
 
-    *opns=True* (default):  grade‑1 vector.
-    *opns=False* (IPNS):  4D ``dual()`` of the OPNS blade.
+    *basis.opns=True* (default):  grade‑1 vector.
+    *basis.opns=False* (IPNS):  4D ``dual()`` of the OPNS blade.
     """
-    # Line direction (dx, dy), normal = (-dy, dx)
-    dx, dy = direction.x, direction.y
-    n_norm = math.sqrt(dx * dx + dy * dy)
-    if n_norm < 1e-15:
-        raise ValueError("Zero direction – not a valid line")
-    nx, ny = -dy / n_norm, dx / n_norm
-
-    # Signed distance: n·origin
-    d = -(nx * origin.x + ny * origin.y)
-
-    mv = basis.multivector({E1: nx, E2: ny, EP: d, EM: d})
-    if not opns:
+    mv = _line_opns(basis, origin, direction)
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
+def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
     """PGA2 Space: ``scale · e₁ ∧ e₂ ∧ e₀``."""
     if hasattr(basis, "e1"):
         mv = basis.e1.op(basis.e2).op(_get_e0(basis)) * scale
@@ -119,7 +123,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
                 EM: scale,
             }
         ).grade(3)
-    if not opns:
+    if not basis.opns:
         mv = mv.dual()  # IPNS is a scalar
     return mv
 
@@ -182,7 +186,7 @@ def create_reflection_line(basis: Algebra, line: Line) -> MV:
 
     In PGA2, a line is a grade-1 vector.
     """
-    return create_line(basis, line.origin, line.direction, opns=True)
+    return _line_opns(basis, line.origin, line.direction)
 
 
 def create_reflection_point(basis: Algebra, point: Point) -> MV:
@@ -191,7 +195,7 @@ def create_reflection_point(basis: Algebra, point: Point) -> MV:
     In PGA2, a point is a grade-2 bivector.
     Reflection in the origin is ``ReflectionPoint(Point(0,0,0))``.
     """
-    return create_point(basis, point.x, point.y, 0.0, opns=True)
+    return _point_opns(basis, point.x, point.y)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -199,9 +203,7 @@ def create_reflection_point(basis: Algebra, point: Point) -> MV:
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_sphere(
-    basis: Algebra, center: Point, radius: float, *, opns: bool = True
-) -> MV:
+def create_sphere(basis: Algebra, center: Point, radius: float) -> MV:
     raise ValueError("Spheres require conformal embedding (N2); not available in PGA2.")
 
 
@@ -210,20 +212,18 @@ def create_circle(
     center: Point,
     normal: Direction,
     radius: float,
-    *,
-    opns: bool = True,
 ) -> MV:
     raise ValueError("Circles require conformal embedding (N2); not available in PGA2.")
 
 
-def create_point_pair(basis: Algebra, a: Point, b: Point, *, opns: bool = True) -> MV:
+def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     raise ValueError(
         "Point pairs require conformal embedding (N2); not available in PGA2."
     )
 
 
 def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0, *, opns: bool = True
+    basis: Algebra, pt: Point, weight: float = 1.0
 ) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N2); not available in PGA2."

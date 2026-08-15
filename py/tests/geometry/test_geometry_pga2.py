@@ -68,7 +68,7 @@ def test_create_space_round_trip(b):
 
 def test_create_point_ipns_round_trip(b, monkeypatch):
     monkeypatch.setattr(b, "opns", False)
-    mv = create_entity(b, Point(1, 2, 0), opns=False)
+    mv = create_entity(b, Point(1, 2, 0))
     r = analyze_entity(mv)
     assert isinstance(r, Point)
     assert abs(r.x) == pytest.approx(1)
