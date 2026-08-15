@@ -218,57 +218,34 @@ def test_reflection_origin_round_trip(b):
 # ═══════ Imaginary Sphere ═══════
 
 
-def test_imag_sphere_ipns_squared_negative(b):
-    """Imag sphere IPNS has S² = −r²."""
-    mv = create_entity(b, Sphere(Point(1, 2, 3), 2.0, is_imaginary=True), opns=False)
-    assert float(mv.sp(mv)) == pytest.approx(-4.0, abs=1e-6)
-
-
-def test_imag_sphere_round_trip(b):
-    mv = create_entity(b, Sphere(Point(0, 0, 0), 3.0, is_imaginary=True), opns=True)
-    r = analyze_entity(mv)
-    assert isinstance(r, Sphere)
-    assert r.is_imaginary
+def test_imag_sphere_not_supported(b):
+    """Imaginary spheres are not implemented yet."""
+    with pytest.raises(NotImplementedError):
+        create_entity(b, Sphere(Point(1, 2, 3), 2.0, is_imaginary=True))
 
 
 # ═══════ Imaginary Point Pair ═══════
 
 
-def test_imag_point_pair_via_circle_dual(b):
-    """Imag point pair is the dual of a real circle."""
-    from pytanga.geometry.create_n3 import create_imag_point_pair
-
-    mv = create_imag_point_pair(b, Point(0, 0, 0), Direction(0, 0, 1), 4.0, opns=True)
-    assert max(mv.grades) in (2, 3)
-
-
-def test_imag_point_pair_create_entity(b):
-    """Imag point pair via PointPair with is_imaginary flag."""
-    c = create_entity(b, Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1)), opns=True)
-    mv = c.dual()
-    assert mv.grades
+def test_imag_point_pair_not_supported(b):
+    """Imaginary point pairs are not implemented yet."""
+    with pytest.raises(NotImplementedError):
+        create_entity(
+            b,
+            PointPair(Point(1, 0, 0), Point(3, 0, 0), is_imaginary=True),
+        )
 
 
 # ═══════ Imaginary Circle ═══════
 
 
-def test_imag_circle_via_point_pair_dual(b):
-    """Imag circle is the dual of a real point pair."""
-    from pytanga.geometry.create_n3 import create_imag_circle
-
-    mv = create_imag_circle(b, Point(0, 0, 0), Direction(0, 0, 1), 2.0, opns=True)
-    assert max(mv.grades) in (2, 3)
-
-
-def test_imag_circle_create_entity(b):
-    """Imag circle via Circle with is_imaginary flag."""
-    pp = create_entity(
-        b,
-        PointPair(Point(1, 0, 0), Point(3, 0, 0)),
-        opns=True,
-    )
-    mv = pp.dual()
-    assert mv.grades
+def test_imag_circle_not_supported(b):
+    """Imaginary circles are not implemented yet."""
+    with pytest.raises(NotImplementedError):
+        create_entity(
+            b,
+            Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1), is_imaginary=True),
+        )
 
 
 # ═══════ General Rotor ═══════

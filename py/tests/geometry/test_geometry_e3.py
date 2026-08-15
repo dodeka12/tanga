@@ -29,10 +29,18 @@ def basis_e3():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_point_raises(basis_e3):
-    """Points cannot be represented in E3."""
-    with pytest.raises(ValueError, match="Points cannot be represented"):
-        create_entity(basis_e3, Point(1, 2, 3))
+def test_create_point_components(basis_e3):
+    """Point maps to e1/e2/e3 components independent of OPNS/IPNS."""
+    mv = create_entity(basis_e3, Point(1, 2, 3))
+    assert set(mv.grades) == {1}
+    assert float(mv[1]) == pytest.approx(1)
+    assert float(mv[2]) == pytest.approx(2)
+    assert float(mv[4]) == pytest.approx(3)
+    # IPNS: same Euclidean components (no dualization)
+    mv_ipns = create_entity(basis_e3, Point(1, 2, 3), opns=False)
+    assert float(mv_ipns[1]) == pytest.approx(1)
+    assert float(mv_ipns[2]) == pytest.approx(2)
+    assert float(mv_ipns[4]) == pytest.approx(3)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -51,17 +59,16 @@ def test_create_direction_round_trip_opns(basis_e3):
 
 
 def test_create_direction_round_trip_ipns(basis_e3, monkeypatch):
-    """A direction in IPNS creates a vector, analyzed as IPNS → Plane."""
+    """A direction in IPNS is a bivector, analyzed as IPNS → Line."""
     monkeypatch.setattr(basis_e3, "opns", False)
     d = Direction(0, 0, 1)
     mv = create_entity(basis_e3, d, opns=False)
+    # IPNS direction is the dual — a grade-2 bivector
+    assert set(mv.grades) == {2}
     result = analyze_entity(mv)
-    # IPNS grade-1 vector = plane normal → Plane through origin
-    assert isinstance(result, Plane)
-    assert result.point.x == 0 and result.point.y == 0 and result.point.z == 0
-    assert result.normal.x == pytest.approx(0)
-    assert result.normal.y == pytest.approx(0)
-    assert abs(result.normal.z) == pytest.approx(1)
+    # IPNS bivector = intersection of two planes → Line through origin
+    assert isinstance(result, Line)
+    assert result.origin.x == 0 and result.origin.y == 0 and result.origin.z == 0
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -167,6 +174,13 @@ def test_create_space_round_trip(basis_e3):
     result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(5.0)
+
+
+def test_create_space_ipns_is_scalar(basis_e3):
+    """Space in IPNS is a grade-0 scalar."""
+    mv = create_entity(basis_e3, Space(scale=2.0), opns=False)
+    assert set(mv.grades) == {0}
+    assert float(mv.scalar) == pytest.approx(2.0)
 
 
 # ═══════════════════════════════════════════════════════════════

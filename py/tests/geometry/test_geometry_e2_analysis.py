@@ -69,18 +69,18 @@ def test_entity_space_opns_round_trip(b):
 def test_entity_direction_ipns_round_trip(b, monkeypatch):
     """E3: create Direction(1,2,0) → analyze IPNS → assert normalized Direction.
 
-    In E2 IPNS, a grade-1 vector represents a line through the origin
-    with *n* being the line normal.  Analysis returns the Direction
-    extracted from the normal (with unit normalization).
+    In E2 IPNS, a grade-1 blade represents a line through the origin
+    with *n* being the line normal.  The IPNS form of a direction is the
+    dual of its Euclidean vector — a perpendicular vector `(y, −x)`.
     """
     monkeypatch.setattr(b, "opns", False)
     mv = create_entity(b, Direction(1, 2, 0), opns=False)
     r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
-    # IPNS direction is normalized to unit length
+    # IPNS direction is the dual (perpendicular), normalized to unit length
     mag = math.sqrt(1 * 1 + 2 * 2)
-    assert r.x == pytest.approx(1 / mag)
-    assert r.y == pytest.approx(2 / mag)
+    assert r.x == pytest.approx(2 / mag)
+    assert r.y == pytest.approx(-1 / mag)
     assert r.z == pytest.approx(0)
 
 
@@ -178,10 +178,12 @@ def test_apply_reflection_line_vector_mirror_x(b):
 # ===============================================================
 
 
-def test_create_point_raises(b):
-    """create_entity(Point(...)) must raise ValueError in E2."""
-    with pytest.raises(ValueError, match="Points cannot be represented"):
-        create_entity(b, Point(1, 2, 0))
+def test_create_point_components(b):
+    """Point maps to e1/e2 components independent of OPNS/IPNS."""
+    mv = create_entity(b, Point(1, 2, 0))
+    assert set(mv.grades) == {1}
+    assert float(mv[1]) == pytest.approx(1)
+    assert float(mv[2]) == pytest.approx(2)
 
 
 def test_create_line_not_through_origin_raises(b):

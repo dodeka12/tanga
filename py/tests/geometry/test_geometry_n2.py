@@ -9,8 +9,6 @@ N2 (Cl(3,1)) is the conformal model for 2D.
 
 from __future__ import annotations
 
-import math
-
 import pytest
 from pytanga.basis import BasisN2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
@@ -22,7 +20,6 @@ from pytanga.geometry.entities import (
     Line,
     Point,
     PointPair,
-    Space,
     Sphere,
 )
 from pytanga.geometry.operators import (
@@ -208,19 +205,7 @@ def test_dilator_at_origin_round_trip(b):
 # ═══════ Imaginary Sphere (circle) — using direct N2 API ═══════
 
 
-def test_imag_sphere_ipns_squared_negative(b):
-    """Imag sphere (circle) IPNS has S² = -r². Direct N2 API."""
-    from pytanga.geometry.create_n2 import create_sphere as n2_create_sphere
-
-    s_ipns = n2_create_sphere(b, Point(1, 2, 0), 2.0, opns=False, is_imaginary=True)
-    assert float(s_ipns.sp(s_ipns)) == pytest.approx(-4.0, abs=1e-6)
-
-
-def test_imag_sphere_round_trip(b):
-    """Imag sphere round-trip via direct N2 API."""
-    from pytanga.geometry.create_n2 import create_sphere as n2_create_sphere
-
-    mv = n2_create_sphere(b, Point(0, 0, 0), 3.0, is_imaginary=True, opns=True)
-    r = analyze_entity(mv)
-    assert isinstance(r, Circle)
-    assert r.is_imaginary
+def test_imag_sphere_not_supported(b):
+    """Imaginary spheres/circles are not implemented yet."""
+    with pytest.raises(NotImplementedError):
+        create_entity(b, Sphere(Point(1, 2, 0), 2.0, is_imaginary=True))

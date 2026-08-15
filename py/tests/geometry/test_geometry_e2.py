@@ -29,10 +29,16 @@ def basis_e2():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_point_raises(basis_e2):
-    """Points cannot be represented in E2."""
-    with pytest.raises(ValueError, match="Points cannot be represented"):
-        create_entity(basis_e2, Point(1, 2, 0))
+def test_create_point_components(basis_e2):
+    """Point maps to e1/e2 components independent of OPNS/IPNS."""
+    mv = create_entity(basis_e2, Point(1, 2, 0))
+    assert set(mv.grades) == {1}
+    assert float(mv[1]) == pytest.approx(1)
+    assert float(mv[2]) == pytest.approx(2)
+    # IPNS: same Euclidean components (no dualization)
+    mv_ipns = create_entity(basis_e2, Point(1, 2, 0), opns=False)
+    assert float(mv_ipns[1]) == pytest.approx(1)
+    assert float(mv_ipns[2]) == pytest.approx(2)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -82,6 +88,13 @@ def test_create_space_round_trip(basis_e2):
     result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(5.0)
+
+
+def test_create_space_ipns_is_scalar(basis_e2):
+    """Space in IPNS is a grade-0 scalar."""
+    mv = create_entity(basis_e2, Space(scale=2.0), opns=False)
+    assert set(mv.grades) == {0}
+    assert float(mv.scalar) == pytest.approx(2.0)
 
 
 # ═══════════════════════════════════════════════════════════════

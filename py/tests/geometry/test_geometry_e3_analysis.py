@@ -267,10 +267,13 @@ def test_apply_reflection_plane_vector_mirror_z(b):
 # ===============================================================
 
 
-def test_create_point_raises(b):
-    """create_entity(Point(...)) must raise ValueError in E3."""
-    with pytest.raises(ValueError, match="Points cannot be represented"):
-        create_entity(b, Point(1, 2, 3))
+def test_create_point_components(b):
+    """Point maps to e1/e2/e3 components independent of OPNS/IPNS."""
+    mv = create_entity(b, Point(1, 2, 3))
+    assert set(mv.grades) == {1}
+    assert float(mv[1]) == pytest.approx(1)
+    assert float(mv[2]) == pytest.approx(2)
+    assert float(mv[4]) == pytest.approx(3)
 
 
 def test_create_line_not_through_origin_raises(b):

@@ -45,11 +45,13 @@ E123 = BasisE3.E123
 def create_point(
     basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
 ) -> MV:
-    """Points cannot be represented as null spaces in E3 — raise ValueError."""
-    raise ValueError(
-        "Points cannot be represented as null spaces in E3; "
-        "use P3 or N3 for point representation."
-    )
+    """Euclidean point components — ``x·e₁ + y·e₂ + z·e₃`` (OPNS/IPNS independent).
+
+    A point cannot be represented as a null space in E3 (that requires
+    P3 or N3), but its Euclidean coordinates map to the e₁/e₂/e₃
+    components independent of the OPNS/IPNS flag.
+    """
+    return basis.multivector({E1: x, E2: y, E3: z})
 
 
 def create_direction(
@@ -58,10 +60,13 @@ def create_direction(
     """Grade-1 vector ``x·e₁ + y·e₂ + z·e₃``.
 
     In E3 a grade-1 blade represents a line through the origin (OPNS)
-    or a plane normal (IPNS).  This function produces the vector itself;
-    the caller uses *opns* to control the dual.
+    or a plane normal (IPNS).  OPNS returns the vector directly;
+    IPNS returns its dual.
     """
-    return basis.multivector({E1: x, E2: y, E3: z})
+    opns_mv = basis.multivector({E1: x, E2: y, E3: z})
+    if opns:
+        return opns_mv
+    return opns_mv.dual()
 
 
 def create_line(
@@ -88,7 +93,7 @@ def create_line(
             "In E3 only lines through the origin can be represented; "
             "use P3 or N3 for general lines."
         )
-    return create_direction(basis, direction.x, direction.y, direction.z)
+    return create_direction(basis, direction.x, direction.y, direction.z, opns=opns)
 
 
 def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
@@ -116,8 +121,11 @@ def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
 
 
 def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
-    """Pseudoscalar ``scale * e₁₂₃``."""
-    return basis.multivector({E123: scale})
+    """OPNS pseudoscalar ``scale * e₁₂₃``; IPNS is the scalar ``scale``."""
+    opns_mv = basis.multivector({E123: scale})
+    if opns:
+        return opns_mv
+    return opns_mv.dual()
 
 
 # ═══════════════════════════════════════════════════════════════

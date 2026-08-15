@@ -188,19 +188,16 @@ def create_entity(basis: Algebra, entity: Entity, *, opns: bool = True) -> MV:
     elif isinstance(entity, Plane):
         return mod.create_plane(basis, entity, opns=opns)
     elif isinstance(entity, Sphere):
-        if entity.is_imaginary and _detect(basis) != "n3":
-            raise ValueError(
-                "Imaginary spheres require conformal embedding (N3); "
-                f"not available in {_detect(basis).upper()}."
-            )
-        if _detect(basis) == "n3":
-            return mod.create_sphere(
-                basis,
-                entity.center,
-                entity.radius,
-                opns=opns,
-                is_imaginary=entity.is_imaginary,
-            )
+        if entity.is_imaginary:
+            if _detect(basis) in ("n2", "n3"):
+                return mod.create_sphere(
+                    basis,
+                    entity.center,
+                    entity.radius,
+                    opns=opns,
+                    is_imaginary=True,
+                )
+            raise NotImplementedError("Imaginary spheres are not supported yet.")
         return mod.create_sphere(basis, entity.center, entity.radius, opns=opns)
     elif isinstance(entity, Space):
         return mod.create_space(basis, scale=entity.scale, opns=opns)

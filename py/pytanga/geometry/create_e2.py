@@ -38,11 +38,13 @@ E12 = BasisE2.E12
 def create_point(
     basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
 ) -> MV:
-    """Points cannot be represented as null spaces in E2 — raise ValueError."""
-    raise ValueError(
-        "Points cannot be represented as null spaces in E2; "
-        "use P2 or N2 for point representation."
-    )
+    """Euclidean point components — ``x·e₁ + y·e₂`` (OPNS/IPNS independent).
+
+    A point cannot be represented as a null space in E2 (that requires
+    P2 or N2), but its Euclidean coordinates map to the e₁/e₂ components
+    independent of the OPNS/IPNS flag.
+    """
+    return basis.multivector({E1: x, E2: y})
 
 
 def create_direction(
@@ -51,10 +53,13 @@ def create_direction(
     """Grade-1 vector ``x·e₁ + y·e₂``.
 
     In E2 a grade-1 blade represents a line through the origin (OPNS)
-    or the normal to a line (IPNS).  This function produces the vector
-    itself; the caller uses *opns* to control the dual.
+    or the normal to a line (IPNS).  OPNS returns the vector directly;
+    IPNS returns its dual.
     """
-    return basis.multivector({E1: x, E2: y})
+    opns_mv = basis.multivector({E1: x, E2: y})
+    if opns:
+        return opns_mv
+    return opns_mv.dual()
 
 
 def create_line(
@@ -71,12 +76,15 @@ def create_line(
             "In E2 only lines through the origin can be represented; "
             "use P2 or N2 for general lines."
         )
-    return create_direction(basis, direction.x, direction.y, 0.0)
+    return create_direction(basis, direction.x, direction.y, 0.0, opns=opns)
 
 
 def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
-    """Pseudoscalar ``scale * e₁₂``."""
-    return basis.multivector({E12: scale})
+    """OPNS pseudoscalar ``scale * e₁₂``; IPNS is the scalar ``scale``."""
+    opns_mv = basis.multivector({E12: scale})
+    if opns:
+        return opns_mv
+    return opns_mv.dual()
 
 
 # ═══════════════════════════════════════════════════════════════

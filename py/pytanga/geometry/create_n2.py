@@ -136,10 +136,14 @@ def create_sphere(
     For imaginary circles (no real points), use ``is_imaginary=True``
     (plus sign: ``S = Cop(c) + ½·r²·e∞``, has ``S² = −r²``).
     """
+    if is_imaginary:
+        raise NotImplementedError(
+            "Imaginary spheres/circles are not supported yet."
+        )
+
     c = _cop(basis, center.x, center.y)
     einf = get_einf(basis)
-    sign = 1.0 if is_imaginary else -1.0
-    ipns = c + einf * (0.5 * radius * radius * sign)
+    ipns = c - einf * (0.5 * radius * radius)
     if opns:
         return ipns.dual()
     return ipns
@@ -162,8 +166,11 @@ def create_circle(
 
 
 def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
-    """Pseudoscalar ``scale * I``."""
-    return basis.multivector({basis.pseudoscalar_id: scale})
+    """OPNS pseudoscalar ``scale * I``; IPNS is the scalar ``scale``."""
+    opns_mv = basis.multivector({basis.pseudoscalar_id: scale})
+    if opns:
+        return opns_mv
+    return opns_mv.dual()
 
 
 def create_imag_point_pair(
@@ -174,18 +181,8 @@ def create_imag_point_pair(
     *,
     opns: bool = True,
 ) -> MV:
-    """Imaginary point pair: dual of a real circle."""
-    nx, ny = direction.x, direction.y
-    n_norm = math.sqrt(nx * nx + ny * ny)
-    if n_norm < 1e-15:
-        raise ValueError("Zero direction – not a valid imaginary point pair")
-    ux, uy = nx / n_norm, ny / n_norm
-    r = separation / 2.0
-    circle_opns = create_sphere(basis, center, r, opns=True)
-    mv = circle_opns.dual()
-    if not opns:
-        mv = mv.dual()
-    return mv
+    """Imaginary point pair: dual of a real circle (not yet supported)."""
+    raise NotImplementedError("Imaginary point pairs are not supported yet.")
 
 
 def create_imag_circle(
@@ -196,28 +193,8 @@ def create_imag_circle(
     *,
     opns: bool = True,
 ) -> MV:
-    """Imaginary circle: dual of a real point pair."""
-    nx, ny = normal.x, normal.y
-    n_norm = math.sqrt(nx * nx + ny * ny)
-    if n_norm < 1e-15:
-        raise ValueError("Zero normal – not a valid imaginary circle")
-    ux, uy = nx / n_norm, ny / n_norm
-    half_sep = radius
-    a = Point(
-        center.x - ux * half_sep,
-        center.y - uy * half_sep,
-        0.0,
-    )
-    b = Point(
-        center.x + ux * half_sep,
-        center.y + uy * half_sep,
-        0.0,
-    )
-    pp_opns = create_point_pair(basis, a, b, opns=True)
-    mv = pp_opns.dual()
-    if not opns:
-        mv = mv.dual()
-    return mv
+    """Imaginary circle: dual of a real point pair (not yet supported)."""
+    raise NotImplementedError("Imaginary circles are not supported yet.")
 
 
 # ═══════════════════════════════════════════════════════════════
