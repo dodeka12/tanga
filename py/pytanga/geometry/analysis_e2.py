@@ -269,6 +269,24 @@ def _expect(result, cls):
     return result
 
 
+def analyze_point(mv: MV) -> Point:
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode.
+
+    In E2, a finite point cannot be represented (the origin is fixed at
+    ``(0, 0)``).  This convenience reads a plain Euclidean grade-1 vector
+    ``x·e1 + y·e2`` directly into a :class:`Point` (z = 0).
+    """
+    d = mv._impl.to_dict()
+    for bid in d:
+        if bid not in (E1, E2):
+            raise ValueError("An E2 point requires a plain e1/e2 vector")
+    return Point(
+        x=float(d.get(E1, 0.0)),
+        y=float(d.get(E2, 0.0)),
+        z=0.0,
+    )
+
+
 def analyze_direction(mv: MV) -> Direction:
     """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode.
 

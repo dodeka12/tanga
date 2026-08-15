@@ -169,7 +169,7 @@ def analyze_operator(mv: MV) -> Operator | None:
 
 
 _ENTITY_ALG_SUPPORT = {
-    "point": {"p2", "p3", "n2", "n3", "pga2", "pga3"},
+    "point": {"e2", "e3", "p2", "p3", "n2", "n3", "pga2", "pga3"},
     "direction": {"e2", "e3", "p2", "p3", "n2", "n3", "pga2", "pga3"},
     "line": {"e2", "e3", "p2", "p3", "n2", "n3", "pga2", "pga3"},
     "plane": {"e3", "p3", "n3", "pga3"},
@@ -252,6 +252,30 @@ def analyze_space(mv: MV) -> "Space":
 
 
 # ── combined fallback ───────────────────────────────────────────
+
+
+def _register_entity_analyzers() -> None:
+    """Register typed analyzers with :mod:`pytanga.geometry.entities`.
+
+    Called once at import time so entity constructors (``Point(mv)``, …)
+    can route an MV through the algebra-specific analyzer without
+    importing ``analysis`` themselves.
+    """
+    from .entities import register_analyzer
+
+    register_analyzer("point", analyze_point)
+    register_analyzer("direction", analyze_direction)
+    register_analyzer("line", analyze_line)
+    register_analyzer("plane", analyze_plane)
+    register_analyzer("circle", analyze_circle)
+    register_analyzer("sphere", analyze_sphere)
+    register_analyzer("point_pair", analyze_point_pair)
+    register_analyzer("hpoint", analyze_hpoint)
+    register_analyzer("hdirection", analyze_hdirection)
+    register_analyzer("space", analyze_space)
+
+
+_register_entity_analyzers()
 
 
 def analyze(mv: MV) -> Entity | Operator | None:

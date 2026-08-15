@@ -10,7 +10,9 @@ and these entity classes is handled by the analysis and create modules.
 
 Entity constructors accept a single multivector argument and convert it
 via the matching typed analyzer, raising if the MV has the wrong
-structure.  ``Point``/``Direction`` keep the E3 plain-vector convenience.
+structure.  The analyzer is resolved through a registry populated by
+:mod:`pytanga.geometry.analysis`, so this module has no import-time
+dependency on ``analysis``.
 """
 
 from __future__ import annotations
@@ -28,39 +30,32 @@ def _is_mv(x) -> bool:
     return hasattr(x, "_alg")
 
 
-def _plain_vector_coords(mv):
-    """Return ``(x, y, z)`` if *mv* is a plain Euclidean grade-1 vector.
+# Registry of ``analyze_<name>(mv)`` functions, populated by
+# ``pytanga.geometry.analysis`` once all dispatchers are defined.  This keeps
+# ``entities`` free of any import-time dependency on ``analysis`` (which in
+# turn imports ``entities``), while still letting entity constructors route
+# an MV through the full, algebra-specific analyzer.
+_ANALYZERS: dict[str, "callable"] = {}
 
-    A "plain" vector is one whose non-zero blades are all grade-1 basis
-    vectors e1/e2/e3 (blade ids 1, 2, 4).  Returns ``None`` otherwise.
+
+def register_analyzer(name: str, fn) -> None:
+    """Register an algebra-specific analyzer callable under *name*.
+
+    Called by :mod:`pytanga.geometry.analysis` during import.  *fn* must
+    accept a single MV and return the matching entity dataclass.
     """
-    d = mv._impl.to_dict()
-    if not d:
-        return None
-    for bid in d:
-        if bid not in (1, 2, 4):
-            return None
-    return (float(d.get(1, 0.0)), float(d.get(2, 0.0)), float(d.get(4, 0.0)))
+    _ANALYZERS[name] = fn
 
 
-def _import_analyzer(name):
-    from . import analysis
-
-    return getattr(analysis, f"analyze_{name}")
-
-
-def _point_from_mv(mv) -> "Point":
-    coords = _plain_vector_coords(mv)
-    if coords is not None:
-        return Point(coords[0], coords[1], coords[2])
-    return _import_analyzer("point")(mv)
-
-
-def _direction_from_mv(mv) -> "Direction":
-    coords = _plain_vector_coords(mv)
-    if coords is not None:
-        return Direction(coords[0], coords[1], coords[2])
-    return _import_analyzer("direction")(mv)
+def _convert_mv(name: str, mv):
+    """Convert an MV to an entity via the registered analyzer for *name*."""
+    try:
+        analyzer = _ANALYZERS[name]
+    except KeyError:
+        raise RuntimeError(
+            f"No analyzer registered for {name!r}; import pytanga.geometry first."
+        ) from None
+    return analyzer(mv)
 
 
 def _scalar(value):
@@ -75,15 +70,15 @@ def _scalar(value):
 def _coerce(value, target):
     """Auto-convert an MV to the target python type.
 
-    - ``target is Point``      → ``Point(value)`` (typed + E3 shortcut)
+    - ``target is Point``      → ``Point(value)`` (typed analyzer)
     - ``target is Direction``  → ``Direction(value)``
     - ``target is float``      → ``float(value.scalar)`` for scalar MVs
     """
     if _is_mv(value):
         if target is Point:
-            return _point_from_mv(value)
+            return _convert_mv("point", value)
         if target is Direction:
-            return _direction_from_mv(value)
+            return _convert_mv("direction", value)
         if target is float:
             return float(_scalar(value))
     return value
@@ -100,11 +95,11 @@ class Point:
 
     Supported algebras: E3, P3, N3/PGA3
 
-    Can be initialised from a multivector:
-
-    - A plain Euclidean grade-1 vector (blades e1/e2/e3 only) in E3 is
-      read directly (the E3 convenience).
-    - Any other MV is converted via :func:`~pytanga.geometry.analysis.analyze_point`.
+    Can be initialised from a multivector via
+    :func:`~pytanga.geometry.analysis.analyze_point`, which dispatches to
+    the algebra-specific analyzer.  In E3/E2 a plain Euclidean grade-1
+    vector (blades e1/e2/e3 only) is read directly as a coordinate
+    convenience.
     """
 
     x: float
@@ -113,7 +108,7 @@ class Point:
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
         if _is_mv(x):
-            p = _point_from_mv(x)
+            p = _convert_mv("point", x)
             object.__setattr__(self, "x", p.x)
             object.__setattr__(self, "y", p.y)
             object.__setattr__(self, "z", p.z)
@@ -206,11 +201,9 @@ class Direction:
         y: The y-component of the direction vector.
         z: The z-component of the direction vector.
 
-    Can be initialised from a multivector:
-
-    - A plain Euclidean grade-1 vector (blades e1/e2/e3 only) in E3 is
-      read directly (the E3 convenience).
-    - Any other MV is converted via :func:`~pytanga.geometry.analysis.analyze_direction`.
+    Can be initialised from a multivector via
+    :func:`~pytanga.geometry.analysis.analyze_direction`, which dispatches
+    to the algebra-specific analyzer.
     """
 
     x: float
@@ -219,7 +212,7 @@ class Direction:
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
         if _is_mv(x):
-            d = _direction_from_mv(x)
+            d = _convert_mv("direction", x)
             object.__setattr__(self, "x", d.x)
             object.__setattr__(self, "y", d.y)
             object.__setattr__(self, "z", d.z)
@@ -306,7 +299,7 @@ class HPoint:
 
     def __init__(self, point, weight=1.0):
         if _is_mv(point) and weight == 1.0:
-            h = _import_analyzer("hpoint")(point)
+            h = _convert_mv("hpoint", point)
             object.__setattr__(self, "point", h.point)
             object.__setattr__(self, "weight", h.weight)
         else:
@@ -349,7 +342,7 @@ class PointPair:
         _separation=None,
     ):
         if _is_mv(point_a) and point_b is None:
-            pp = _import_analyzer("point_pair")(point_a)
+            pp = _convert_mv("point_pair", point_a)
             object.__setattr__(self, "point_a", pp.point_a)
             object.__setattr__(self, "point_b", pp.point_b)
             object.__setattr__(self, "is_imaginary", pp.is_imaginary)
@@ -411,7 +404,7 @@ class Line:
 
     def __init__(self, origin=None, direction=None, length=None):
         if _is_mv(origin):
-            line = _import_analyzer("line")(origin)
+            line = _convert_mv("line", origin)
             object.__setattr__(self, "origin", line.origin)
             object.__setattr__(self, "direction", line.direction)
             object.__setattr__(self, "length", line.length)
@@ -479,7 +472,7 @@ class Plane:
 
     def __init__(self, point=None, normal=None, span_u=None, span_v=None, extent=None):
         if _is_mv(point):
-            plane = _import_analyzer("plane")(point)
+            plane = _convert_mv("plane", point)
             object.__setattr__(self, "point", plane.point)
             object.__setattr__(self, "normal", plane.normal)
             object.__setattr__(self, "span_u", plane.span_u)
@@ -559,7 +552,7 @@ class Circle:
         is_imaginary=False,
     ):
         if _is_mv(center) and radius is None:
-            circle = _import_analyzer("circle")(center)
+            circle = _convert_mv("circle", center)
             object.__setattr__(self, "center", circle.center)
             object.__setattr__(self, "radius", circle.radius)
             object.__setattr__(self, "normal", circle.normal)
@@ -619,7 +612,7 @@ class Sphere:
 
     def __init__(self, center, radius=None, is_imaginary=False):
         if _is_mv(center) and radius is None:
-            sphere = _import_analyzer("sphere")(center)
+            sphere = _convert_mv("sphere", center)
             object.__setattr__(self, "center", sphere.center)
             object.__setattr__(self, "radius", sphere.radius)
             object.__setattr__(self, "is_imaginary", sphere.is_imaginary)
@@ -660,7 +653,7 @@ class HDirection:
 
     def __init__(self, direction):
         if _is_mv(direction):
-            hd = _import_analyzer("hdirection")(direction)
+            hd = _convert_mv("hdirection", direction)
             object.__setattr__(self, "direction", hd.direction)
         else:
             object.__setattr__(self, "direction", _coerce(direction, Direction))
@@ -688,7 +681,7 @@ class Space:
             if scale.is_scalar:
                 object.__setattr__(self, "scale", float(scale.scalar))
             else:
-                s = _import_analyzer("space")(scale)
+                s = _convert_mv("space", scale)
                 object.__setattr__(self, "scale", s.scale)
         else:
             object.__setattr__(self, "scale", float(scale))

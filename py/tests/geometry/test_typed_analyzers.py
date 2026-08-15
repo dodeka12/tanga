@@ -159,11 +159,24 @@ def test_analyze_space_rejects_point():
         analysis.analyze_space(point_mv)
 
 
-def test_analyze_point_unsupported_in_e3():
+def test_analyze_point_e3_convenience():
     alg = BasisE3()
     mv = alg.multivector({1: 1.0})
-    with pytest.raises(TypeError, match="not supported in e3"):
-        analysis.analyze_point(mv)
+    r = analysis.analyze_point(mv)
+    assert isinstance(r, Point)
+    assert r.x == pytest.approx(1)
+    assert r.y == pytest.approx(0)
+    assert r.z == pytest.approx(0)
+
+
+def test_analyze_point_e2_convenience():
+    alg = BasisE2()
+    mv = alg.multivector({1: 1.0, 2: 2.0})
+    r = analysis.analyze_point(mv)
+    assert isinstance(r, Point)
+    assert r.x == pytest.approx(1)
+    assert r.y == pytest.approx(2)
+    assert r.z == pytest.approx(0)
 
 
 def test_analyze_plane_unsupported_in_e2():
