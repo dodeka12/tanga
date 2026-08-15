@@ -425,7 +425,221 @@ The `download-artifact` step already uses `pattern: wheels-*` with
 `merge-multiple: true`, so the new `wheels-macos-*` artifacts are collected
 automatically. No other change is required there.
 
-### (Optional) D3. `ci.yml` — add a macOS test leg
+### D3. Add a manually-triggered single-combination debug workflow
+
+**File:** `.github/workflows/build-debug.yml` (new)
+
+A dedicated `workflow_dispatch` workflow that builds **one** platform × Python
+combination at a time, so a specific compile can be debugged without paying
+for all matrix cells. It covers macOS, Windows, and Linux via a single
+`platform` dropdown; selecting a platform runs the matching job only.
+
+```yaml
+name: Build (debug, single combination)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        type: choice
+        required: true
+        default: 'macos'
+        options:
+          - macos
+          - windows
+          - linux
+      os:
+        description: 'macOS runner (only used when platform = macos)'
+        type: choice
+        required: true
+        default: 'macos-14'
+        options:
+          - macos-13
+          - macos-14
+      python-version:
+        description: 'Python version'
+        type: choice
+        required: true
+        default: '3.12'
+        options:
+          - '3.12'
+          - '3.13'
+      version:
+        description: 'Forced version (optional; e.g. v0.9.2). Empty = auto via setuptools-scm.'
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  # ---------------------------------------------------------------- macOS
+  build-macos:
+    if: inputs.platform == 'macos'
+    name: Build macOS wheel (${{ inputs.os }}, py${{ inputs.python-version }})
+    runs-on: ${{ inputs.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build wheel and fix tag
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}"
+          fi
+          uv run bash tools/build-precompiled-wheel.sh
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+          VERSION: ${{ inputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-debug-macos-${{ inputs.os }}-${{ inputs.python-version }}
+          path: dist/*.whl
+
+  # --------------------------------------------------------------- Windows
+  build-windows:
+    if: inputs.platform == 'windows'
+    name: Build Windows wheel (py${{ inputs.python-version }})
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build wheel and fix tag
+        shell: pwsh
+        run: |
+          if ("${{ inputs.version }}") {
+            $env:SETUPTOOLS_SCM_PRETEND_VERSION = "${{ inputs.version }}".TrimStart('v')
+          }
+          uv run powershell tools/build-precompiled-wheel.ps1
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-debug-windows-${{ inputs.python-version }}
+          path: dist/*.whl
+
+  # ----------------------------------------------------------------- Linux
+  build-linux:
+    if: inputs.platform == 'linux'
+    name: Build Linux wheel (py${{ inputs.python-version }}, manylinux_x86_64)
+    runs-on: ubuntu-24.04
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup environment
+        run: |
+          PY_ABI="cp${{ inputs.python-version }}"
+          PY_ABI="${PY_ABI//.}"
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "/opt/python/${PY_ABI}-${PY_ABI}/bin" >> $GITHUB_PATH
+          echo "UV_PYTHON=/opt/python/${PY_ABI}-${PY_ABI}/bin/python${{ inputs.python-version }}" >> $GITHUB_ENV
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+
+      - name: Build wheel
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            export SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION#v}"
+          fi
+          uv build --wheel
+        env:
+          VERSION: ${{ inputs.version }}
+
+      - name: Auditwheel repair
+        run: |
+          PY_ABI="cp${{ inputs.python-version }}"
+          PY_ABI="${PY_ABI//.}"
+          /opt/python/${PY_ABI}-${PY_ABI}/bin/pip install auditwheel
+          /opt/python/${PY_ABI}-${PY_ABI}/bin/auditwheel repair dist/*.whl -w dist/
+          rm dist/*-none-any.whl
+          for whl in dist/*.whl; do
+            new_name="${whl/-py3-none-/-${PY_ABI}-${PY_ABI}-}"
+            if [ "$whl" != "$new_name" ]; then
+              mv "$whl" "$new_name"
+              echo "Renamed: $(basename "$whl") -> $(basename "$new_name")"
+            fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-debug-linux-${{ inputs.python-version }}
+          path: dist/*.whl
+```
+
+Key points:
+
+- A single `platform` dropdown (macos / windows / linux) selects which job
+  runs; each job is mirrored from its `publish.yml` counterpart
+  (`build-macos` D1, `build-windows`, `build-linux`) so behavior is identical
+  to release builds.
+- The `os` input only matters for macOS (`macos-13` = Intel `x86_64`,
+  `macos-14` = Apple Silicon `arm64`); it is ignored by the Windows/Linux jobs.
+- The optional `version` input overrides `SETUPTOOLS_SCM_PRETEND_VERSION`
+  (with the `v` prefix stripped, mirroring the `compute-version` job), handy for
+  testing a specific release without changing git tags.
+  - macOS/Linux strip the `v` in bash (`${VERSION#v}`).
+  - Windows strips it in PowerShell (`.TrimStart('v')`).
+- Artifact names are prefixed `wheels-debug-*` so they remain distinct from the
+  release `wheels-*` artifacts (the publish job's `wheels-*` pattern would
+  otherwise pick them up if both are present in a run).
+- Linux uses the same manylinux container + `auditwheel repair` + ABI-tag
+  rename steps as `publish.yml` `build-linux`, while macOS and Windows use
+  `fix-wheel-tag.py` via their respective wheel scripts.
+
+### (Optional) D4. `ci.yml` — add a macOS test leg
 
 Not part of this plan's core scope, but once Parts B+C land, an arm64 macOS
 pytest / C++ test leg in `.github/workflows/ci.yml` would prevent regressions.
@@ -465,8 +679,10 @@ Defer until Parts A–D are validated.
 | C4 | verify `_build.py` / `fix-wheel-tag.py` (no change) | 5 min | C1, C2 |
 | D1 | `publish.yml` — `build-macos` job + matrix | 20 min | B1, B2, C1, C2 |
 | D2 | `publish.yml` — `publish.needs` | 5 min | D1 |
+| D3 | `.github/workflows/build-debug.yml` (new: macos/windows/linux) | 25 min | D1 |
+| D4 | `ci.yml` — macOS test leg (optional) | 15 min | B+C |
 
-**Total: ~125 minutes.**
+**Total: ~155 minutes (incl. optional D4).**
 
 ---
 
@@ -494,5 +710,9 @@ Trigger a manual `cd.yml` / `publish.yml` run (`workflow_dispatch`) and verify:
    `-msse4.1`, or `-mpopcnt` in the `macos-14` (arm64) jobs.
 3. `publish` collects `wheels-macos-*` alongside `wheels-linux-*` /
    `wheels-windows-*` and uploads all to Test PyPI.
-4. Install the `macosx_14_0_arm64` wheel on an Apple Silicon machine and
+4. Manually run `build-debug` with a single `platform` + `python-version`
+   choice (e.g. `macos` / `macos-14` / `3.12`, or `linux` / `3.13`, or
+   `windows` / `3.12`) and confirm exactly one `wheels-debug-*` artifact is
+   produced, letting a single failing combination be debugged in isolation.
+5. Install the `macosx_14_0_arm64` wheel on an Apple Silicon machine and
    confirm precompiled algebras load without JIT compilation.
