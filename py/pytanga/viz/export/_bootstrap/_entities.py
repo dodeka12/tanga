@@ -31,8 +31,29 @@ const {mesh_map_var} = new Map();
     for (const ent of {entities_expr}) {{
         const mesh = await createEntityMesh(ent);
         if (mesh) {{
-            {scene_var}.add(mesh);
-            {mesh_map_var}.set(ent.id, mesh);
+            let node = mesh;
+            const t = ent.transform;
+            if (t) {{
+                const p = t.position || [0, 0, 0];
+                const r = t.rotation || [0, 0, 0];
+                const s = t.scale || [1, 1, 1];
+                const identity = p[0] === 0 && p[1] === 0 && p[2] === 0
+                    && r[0] === 0 && r[1] === 0 && r[2] === 0
+                    && s[0] === 1 && s[1] === 1 && s[2] === 1;
+                if (!identity) {{
+                    node = new THREE.Group();
+                    node.add(mesh);
+                    node.position.set(p[0], p[1], p[2]);
+                    node.rotation.set(r[0], r[1], r[2]);
+                    node.scale.set(s[0], s[1], s[2]);
+                }}
+            }}
+            if (ent.parent_id && {mesh_map_var}.has(ent.parent_id)) {{
+                {mesh_map_var}.get(ent.parent_id).add(node);
+            }} else {{
+                {scene_var}.add(node);
+            }}
+            {mesh_map_var}.set(ent.id, node);
         }}
     }}
 }})();"""

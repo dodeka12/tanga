@@ -786,24 +786,27 @@ async function upsertObject(msg) {
     if (msg.layer === 'scene') {
         const mesh = await createEntityMesh(msg);
         if (mesh) {
-            applyTransformToObject(mesh, msg.transform);
+            // The node transform is additive on top of the entity geometry.
+            // Identity transforms are skipped so the renderer's geometry
+            // position (ent.position / ent.center / …) is preserved.
+            const node = wrapWithNodeTransform(mesh, msg.transform);
             if (msg.parent_id) {
                 const parent = sceneObjects.get(msg.parent_id);
                 if (parent && parent.obj) {
-                    parent.obj.add(mesh);
+                    parent.obj.add(node);
                 } else {
-                    scene.add(mesh);
+                    scene.add(node);
                 }
             } else {
-                scene.add(mesh);
+                scene.add(node);
             }
-            mesh.userData.parentId = msg.parent_id || null;
-            sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
-            entityMeshes.set(msg.id, mesh);
+            node.userData.parentId = msg.parent_id || null;
+            sceneObjects.set(msg.id, { obj: node, layer: 'scene' });
+            entityMeshes.set(msg.id, node);
             entityData.set(msg.id, { ...msg });
             // ── Interaction ──
             if (msg.interaction) {
-                registerInteractive(msg.id, mesh, msg.interaction);
+                registerInteractive(msg.id, node, msg.interaction);
             }
         }
     } else if (msg.layer === 'overlay') {
@@ -890,6 +893,24 @@ function applyTransformToObject(obj, transform) {
     if (transform.position) obj.position.set(transform.position[0], transform.position[1], transform.position[2]);
     if (transform.rotation) obj.rotation.set(transform.rotation[0], transform.rotation[1], transform.rotation[2]);
     if (transform.scale) obj.scale.set(transform.scale[0], transform.scale[1], transform.scale[2]);
+}
+
+function isIdentityTransform(transform) {
+    if (!transform) return true;
+    const p = transform.position || [0, 0, 0];
+    const r = transform.rotation || [0, 0, 0];
+    const s = transform.scale || [1, 1, 1];
+    return p[0] === 0 && p[1] === 0 && p[2] === 0
+        && r[0] === 0 && r[1] === 0 && r[2] === 0
+        && s[0] === 1 && s[1] === 1 && s[2] === 1;
+}
+
+function wrapWithNodeTransform(mesh, transform) {
+    if (isIdentityTransform(transform)) return mesh;
+    const node = new THREE.Group();
+    node.add(mesh);
+    applyTransformToObject(node, transform);
+    return node;
 }
 
 function applyObjectPatch(patch) {
