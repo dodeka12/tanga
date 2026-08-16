@@ -273,7 +273,7 @@ def _classify_grade1_versor(mv: MV) -> ReflectionPlane | ReflectionPoint:
         if abs(e4_val) > 1e-15:
             raise ValueError("Mixed e₄ and Euclidean components – ambiguous P3 versor")
         return ReflectionPlane(
-            normal=Direction(ex / eucl_norm, ey / eucl_norm, ez / eucl_norm)
+            Direction(ex / eucl_norm, ey / eucl_norm, ez / eucl_norm)
         )
 
 

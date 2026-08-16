@@ -280,7 +280,7 @@ def _reflection_from_grade1(mv: MV) -> ReflectionLine:
     """Pure grade-1 blade → ReflectionLine."""
     grade1 = mv.grade(1)
     return ReflectionLine(
-        direction=Direction(float(grade1[E1]), float(grade1[E2]), float(grade1[E3]))
+        Direction(float(grade1[E1]), float(grade1[E2]), float(grade1[E3]))
     )
 
 

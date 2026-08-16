@@ -411,7 +411,7 @@ def test_reflection_alias_is_reflection_plane():
     """Reflection should be an alias for ReflectionPlane."""
     from pytanga.geometry.operators import Reflection as PRefl
 
-    r = PRefl(normal=Direction(1, 0, 0))
+    r = PRefl(Direction(1, 0, 0))
     assert isinstance(r, ReflectionPlane)
     assert r.plane.normal.x == 1
 
