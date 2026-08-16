@@ -1,6 +1,6 @@
 # Phase 10 — Example script demonstrating `VizGroup` + transforms
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -18,27 +18,27 @@ Add a runnable example under `py/examples/viz/` that demonstrates:
 
 ## Script outline
 
-- [ ] Header/docstring explaining what it demonstrates and how to run it
+- [x] Header/docstring explaining what it demonstrates and how to run it
       (`uv run python py/examples/viz/demo_scene_graph.py`).
-- [ ] Build a compound object:
-  - [ ] `grp = viz.add_group("spinner")`
-  - [ ] `grp.new(Point(...), style=...)` (or a small set of `Point`/`Line`).
-- [ ] Add some independent elements to the main scene for contrast.
-- [ ] Animate in a loop:
-  - [ ] `grp.rotate(axis=(0,0,1), angle=step)` → group-only `transform` aspect.
-  - [ ] `element.translate(x=..., y=...)` (element-local transform).
-  - [ ] Use `grp.transform(Rotor(...))` and/or `Motor(...)` / `Translator(...)`
+- [x] Build a compound object:
+  - [x] `grp = viz.add_group("spinner")`
+  - [x] `grp.new(Point(...), style=...)` (or a small set of `Point`/`Line`).
+- [x] Add some independent elements to the main scene for contrast.
+- [x] Animate in a loop:
+  - [x] `grp.rotate(axis=(0,0,1), angle=step)` → group-only `transform` aspect.
+  - [x] `element.translate(x=..., y=...)` (element-local transform).
+  - [x] Use `grp.transform(Rotor(...))` and/or `Motor(...)` / `Translator(...)`
         to showcase the operator-based transform API.
-- [ ] `viz.flush()` in the loop to push transform-only aspect updates.
-- [ ] Keep it lightweight and idiomatic; follow the style of existing
+- [x] `viz.flush()` in the loop to push transform-only aspect updates.
+- [x] Keep it lightweight and idiomatic; follow the style of existing
       `py/examples/viz/demo_animation_*.py` scripts (signal handling,
       `viz.run()` / `viz.start()` conventions).
 
 ## Verification
 
-- [ ] `uv run python py/examples/viz/demo_scene_graph.py` runs without error.
-- [ ] The group rotates as a unit; individual elements translate independently.
-- [ ] No full entity re-serialization is emitted for transform-only changes
+- [x] `uv run python py/examples/viz/demo_scene_graph.py` runs without error.
+- [x] The group rotates as a unit; individual elements translate independently.
+- [x] No full entity re-serialization is emitted for transform-only changes
       (verify by watching the server log / WS messages — only `transform`
       aspect patches).
-- [ ] `uv run ruff check py/examples/viz/demo_scene_graph.py` passes.
+- [x] `uv run ruff check py/examples/viz/demo_scene_graph.py` passes.
