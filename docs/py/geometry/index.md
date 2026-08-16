@@ -85,4 +85,5 @@ stored algebra.
 | [Operators](operators.md) | `ReflectionPlane`, `ReflectionLine`, `ReflectionPoint`, `Inversion`, `Rotor`, `Translator`, `Dilator`, `Motor`, `GeneralRotor` |
 | [Analysis Pipeline](analysis.md) | `analyze()`, `analyze_entity()`, `analyze_operator()` — MV → geometry |
 | [Creation Pipeline](create.md) | `create()`, `create_entity()`, `create_operator()` — geometry → MV |
+| [Random Generation](random.md) | Deterministic, seedable random points/directions (`RndPoint()`, `RndDirection()`, `Normal`/`Uniform`) |
 | [Round-Trip Examples](round-trip.md) | End-to-end examples and algebra coverage matrices |

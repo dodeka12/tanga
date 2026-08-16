@@ -13,11 +13,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from .analysis import analyze as _analyze
 from .analysis import analyze_entity, analyze_operator
 from .create import create
 from .entities import Entity, _is_mv
 from .operators import Operator
+from .random import RndEntity
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -32,12 +35,16 @@ class Geometry:
     algebra : Algebra
         The algebra instance (e.g. ``BasisN3()``).
         Stored immutably; access via the :attr:`algebra` property.
+    seed : int | None
+        Optional seed for this instance's random number generator (used by
+        the random entity generators passed to :meth:`__call__`).
     """
 
-    __slots__ = ("_algebra",)
+    __slots__ = ("_algebra", "_rng")
 
-    def __init__(self, algebra: Algebra) -> None:
+    def __init__(self, algebra: Algebra, *, seed: int | None = None) -> None:
         self._algebra = algebra
+        self._rng = np.random.default_rng(seed)
 
     # ── read-only algebra ──────────────────────────────────────
 
@@ -45,6 +52,15 @@ class Geometry:
     def algebra(self) -> Algebra:
         """The algebra this ``Geometry`` instance is bound to (read-only)."""
         return self._algebra
+
+    @property
+    def rng(self) -> np.random.Generator:
+        """NumPy random number generator owned by this :class:`Geometry`.
+
+        Seedable at construction time via ``Geometry(algebra, seed=...)`` and
+        forwarded to random entity generators so results are reproducible.
+        """
+        return self._rng
 
     # ── convenience methods ────────────────────────────────────
 
@@ -65,16 +81,33 @@ class Geometry:
         """
         return create(self._algebra, obj)
 
-    def __call__(self, obj: Entity | Operator | MV) -> MV:
-        """Create an MV from *obj* (alias for :meth:`create`)."""
+    def __call__(self, obj):
+        """Create MVs from entities, operators, random generators, or analyzes MVs.
+
+        Dispatch rules, in order:
+
+        - :class:`~.random.RndEntity` (e.g. ``RndPoint``) → materialize with this
+          instance's ``rng`` and create the resulting entity or list of entities.
+        - ``list`` / ``tuple`` → recurse over each element (e.g. a list of
+          ``RndPoint`` instances, or plain entities).
+        - :class:`Entity` / :class:`Operator` → :meth:`create`.
+        - :class:`MV` → :meth:`analyze`.
+        """
+        if isinstance(obj, RndEntity):
+            result = obj(self._rng)
+            if isinstance(result, (list, tuple)):
+                return [self.create(item) for item in result]
+            return self.create(result)
+        if isinstance(obj, (list, tuple)):
+            return [self(item) for item in obj]
         if isinstance(obj, (Entity, Operator)):
             return self.create(obj)
-        elif _is_mv(obj):
+        if _is_mv(obj):
             return self.analyze(obj)
-        else:
-            raise TypeError(
-                f"Geometry.__call__() expects Entity, Operator, or MV, got {type(obj)}"
-            )
+        raise TypeError(
+            f"Geometry.__call__() expects RndEntity, Entity, Operator, list, or MV, "
+            f"got {type(obj).__name__}"
+        )
 
     def which_entity(self, mv: MV) -> Entity:
         """Determine which geometric entity an MV represents.

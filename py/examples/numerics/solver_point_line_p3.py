@@ -9,48 +9,42 @@ from pytanga import MV, BladeMask
 from pytanga.algebra import EProduct
 from pytanga.basis.p3 import BasisP3
 from pytanga.blade_mask.predict import product_blade_mask
-from pytanga.geometry import Direction, Point, Rotor, create_entity, create_operator
+from pytanga.geometry import (
+    Direction,
+    Geometry,
+    Point,
+    RndDirection,
+    RndPoint,
+    Rotor,
+)
 from pytanga.matrix import MVProductMatrix
 from pytanga.matrix.convert import to_matrix
 from pytanga.matrix.product import product_matrix
 
 P3 = BasisP3()
+geo = Geometry(P3, seed=0)
 
 
 def _rnd_point() -> MV:
-    return create_entity(
-        P3,
-        Point(
-            P3.rng.uniform(-2, 2),
-            P3.rng.uniform(-2, 2),
-            P3.rng.uniform(-2, 2),
-        ),
-    )
+    return geo(RndPoint((-2, 2), (-2, 2), (-2, 2)))
 
 
 def _rnd_direction() -> MV:
-    return create_entity(
-        P3,
-        Direction(
-            P3.rng.uniform(-0.1, 0.1),
-            P3.rng.uniform(-0.1, 0.1),
-            P3.rng.uniform(-0.1, 0.1),
-        ),
-    )
+    return geo(RndDirection((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)))
 
 
 # Create random points
-pnt_list: list[MV] = [_rnd_point() for _ in range(4)]
+pnt_list: list[MV] = geo(RndPoint((-2, 2), (-2, 2), (-2, 2), count=4))
 print("3D points:")
 for pnt in pnt_list:
     pnt.show()
 
 # Project the 3d points to an image plane perpendicular to e3 at e3 + e4.
-origin: MV = create_entity(P3, Point(0, 0, 0))
+origin: MV = geo(Point(0, 0, 0))
 plane: MV = (
-    create_entity(P3, Point(0, 0, 1))
-    ^ create_entity(P3, Point(1, 0, 1))
-    ^ create_entity(P3, Point(0, 1, 1))
+    geo(Point(0, 0, 1))
+    ^ geo(Point(1, 0, 1))
+    ^ geo(Point(0, 1, 1))
 )
 prj_ray_list: list[MV] = [origin ^ pnt for pnt in pnt_list]
 prj_pnt_list: list[MV] = [ray | plane for ray in prj_ray_list]
@@ -60,17 +54,12 @@ for pnt in prj_pnt_list:
 
 theta_true: float = math.radians(36.0)
 
-rotor_true: MV = create_operator(
-    P3, Rotor(angle=theta_true, axis=Direction(1, 1, 1).normalized())
-)
+rotor_true: MV = geo(Rotor(angle=theta_true, axis=Direction(1, 1, 1).normalized()))
 
 # Rotate the points and add some noise to them
 true_rot_pnt_list: list[MV] = [rotor_true.vp(pnt) for pnt in pnt_list]
 
-rot_pnt_list: list[MV] = [
-    pnt + _rnd_direction()
-    for pnt in true_rot_pnt_list
-]
+rot_pnt_list: list[MV] = [pnt + _rnd_direction() for pnt in true_rot_pnt_list]
 
 # We are looking for the rotor that best maps the noisy rot_pnt_list back to pnt_list
 # from just knowing the projection rays.
