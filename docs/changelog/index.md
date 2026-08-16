@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Since 0.9.2] — 2026-08-16
+- Scene graph (`VizGroup`) · `VizObjectRef` · per-object transforms · aspect patches · overlay `attach_to`
+→ [Details](2026-08-16_5877a61.md)
+
+## [Since 0.9.2] — 2026-08-16
 - OPNS/IPNS flag on `Algebra.opns` · typed analyzers · MV-accepting constructors · `Geometry.__call__` · random entity generators · macOS compilation + Apple Silicon wheels · extended algebra/MV operators · `MV.prune(tol)` · `Color` enum · entities-module split
 - Breaking: per-call `opns` removed · basis geometry methods removed
 → [Details](2026-08-16_7cb2db1.md)

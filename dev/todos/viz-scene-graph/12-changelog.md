@@ -1,6 +1,6 @@
 # Phase 12 — Changelog
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -17,50 +17,50 @@ Add a changelog entry for the scene-graph work following
 
 ### Determine the "since" label
 
-- [ ] Check the current latest public release version; use the form
+- [x] Check the current latest public release version; use the form
       `# Changes since version <last-public-release>` in the title and the
       `## [Since <version>] — <date>` heading in the index.
 
 ### Create the changelog file
 
-- [ ] Create `docs/changelog/YYYY-MM-DD_<short-hash>.md`.
-- [ ] Use only the sections that apply, in the required order
+- [x] Create `docs/changelog/YYYY-MM-DD_<short-hash>.md`.
+- [x] Use only the sections that apply, in the required order
       (`New Features`, `Breaking Changes`, `Bug Fixes`, `Refactor`).
-- [ ] Add entries covering at least:
-  - [ ] **New Features** — `VizGroup` container nodes and scene-graph parenting.
-  - [ ] **New Features** — `VizObjectRef` (entity/style/color/opacity/
+- [x] Add entries covering at least:
+  - [x] **New Features** — `VizGroup` container nodes and scene-graph parenting.
+  - [x] **New Features** — `VizObjectRef` (entity/style/color/opacity/
         texture-label/label access, transform mutators, group `add`/`new`).
-  - [ ] **New Features** — per-object transforms
+  - [x] **New Features** — per-object transforms
         (`translate`/`rotate`/`scale_by`/`set_transform`/`transform`) and
         aspect-scoped updates (`full`/`style`/`transform`) for fast,
         in-place group animation.
-  - [ ] **New Features** — overlay objects (`VizOverlayObject`) and
+  - [x] **New Features** — overlay objects (`VizOverlayObject`) and
         `attach_to` for labels that live-follow scene nodes.
-  - [ ] **New Features** — `_transforms.py` operator/entity → matrix/TRS
+  - [x] **New Features** — `_transforms.py` operator/entity → matrix/TRS
         conversion helpers.
-  - [ ] **Breaking Changes** (if any) — e.g. any removed serializer
+  - [x] **Breaking Changes** (if any) — e.g. any removed serializer
         entry points or `SceneObject` changes surfaced to users.
-  - [ ] **Refactor** — object-node hierarchy (`VizSceneObject` /
+  - [x] **Refactor** — object-node hierarchy (`VizSceneObject` /
         `VizOverlayObject` / `VizGroup`) replacing the flat `SceneObject`
         registry, with serialization moving into node `serialize()` and
         updates emitted as aspect patches.
-  - [ ] **Refactor** — default styles moved into a per-scene
+  - [x] **Refactor** — default styles moved into a per-scene
         `VizStyleDefaults` holder (snapshotted at scene creation).
-- [ ] Wrap body text at ~80 columns; use `- **Headline** — …` bullet style.
+- [x] Wrap body text at ~80 columns; use `- **Headline** — …` bullet style.
 
 ### Update the index
 
-- [ ] Add a new entry at the top of `docs/changelog/index.md`, directly below
+- [x] Add a new entry at the top of `docs/changelog/index.md`, directly below
       `# Changelog`.
-- [ ] Head it `## [Since <version>] — <YYYY-MM-DD>`.
-- [ ] Add a dot-separated summary line (main features `·` optional
+- [x] Head it `## [Since <version>] — <YYYY-MM-DD>`.
+- [x] Add a dot-separated summary line (main features `·` optional
       breaking/bug highlights) and a `→ [Details](...md)` link.
-- [ ] Leave older entries untouched.
+- [x] Leave older entries untouched.
 
 ## Verification
 
-- [ ] Filename matches `YYYY-MM-DD_<short-hash>.md` per the workflow.
-- [ ] Title uses the `# Changes since version <last-public-release>` form.
-- [ ] Section order matches the workflow.
-- [ ] Index entry is newest-first and links to the new file.
-- [ ] No hard-coded future version number is introduced.
+- [x] Filename matches `YYYY-MM-DD_<short-hash>.md` per the workflow.
+- [x] Title uses the `# Changes since version <last-public-release>` form.
+- [x] Section order matches the workflow.
+- [x] Index entry is newest-first and links to the new file.
+- [x] No hard-coded future version number is introduced.
