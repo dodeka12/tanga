@@ -1,31 +1,41 @@
 # Viz Scene Graph — Overview
 
-**Created:** 2026-08-16 | **Status:** Planned
+**Created:** 2026-08-16 | **Status:** Planned (revised after design discussion)
 
 ## Target
 
 Refactor the visualizer's flat `SceneObject` registry into a full **scene
 graph** with persisted, fully-resolved visualization objects, explicit
-per-object transforms, container nodes (`VizGroup`), and a convenience
-reference class (`VizObjectRef`) for mutating objects without tracking raw
-IDs.
+per-object transforms, container nodes (`VizGroup`), first-class overlay
+objects (labels/annotations/titles/controls), and a convenience reference
+class (`VizObjectRef`) for mutating objects without tracking raw IDs.
 
-The Python side becomes the authoritative source of truth: every object
-stores its resolved geometry + style + transform and can re-serialize itself.
-The browser rebuilds the same hierarchy via three.js (`THREE.Group` /
-`THREE.Object3D`) and applies transform-only updates in place, enabling fast
-rotation/movement of compound objects without recomputing any vertices.
+The Python side becomes the authoritative source of truth: every node stores
+its resolved geometry + style + transform and can serialize itself. The
+browser rebuilds the same hierarchy via three.js and applies **partial,
+aspect-scoped updates** (`full` / `style` / `transform`) in place, enabling
+fast rotation/movement of compound objects without recomputing any vertices.
+
+## Layer model (two sub-graphs)
+
+- **Scene layer** nodes carry a canonical `Transform` (position + Euler
+  rotation + scale) and participate in a parent/child tree (`VizGroup`
+  containers). Rendered via `THREE.Object3D` hierarchy.
+- **Overlay layer** nodes (labels, annotations, titles, controls) live in the
+  screen/CSS plane. They carry a `position` anchor plus an optional
+  `attach_to` scene-node reference — **no** `Transform`. The frontend
+  **live-follows** the referenced node's resolved world position.
 
 ## Phases
 
 | Phase | File | Summary |
 |-------|------|---------|
-| 1 | [01-transform-math.md](./01-transform-math.md) | `_transforms.py`: operator/entity → 4×4 matrix and TRS converters (+ unit tests) |
-| 2 | [02-node-hierarchy.md](./02-node-hierarchy.md) | `_nodes.py`: `Transform`, `VizNode`, `VizObject`, `VizGroup` + dirty flags (+ unit tests) |
-| 3 | [03-node-serialization.md](./03-node-serialization.md) | Move serialization dispatch into `VizObject.serialize()` (+ unit tests) |
-| 4 | [04-object-ref.md](./04-object-ref.md) | `VizObjectRef`: property/method API incl. labels, texture label, transforms (+ unit tests) |
-| 5 | [05-entry-points.md](./05-entry-points.md) | `Visualizer` / `VizSceneHandle` `new()` / `add_group()` / `parent_id` threading (+ unit tests) |
-| 6 | [06-frontend-scene-graph.md](./06-frontend-scene-graph.md) | Frontend: `parent_id` + `transform` + `VizGroup` + `transform_update` (+ renderer smoke test) |
+| 1 | [01-transform-math.md](./01-transform-math.md) | `_transforms.py`: operator/entity → 4×4 matrix and TRS converters (+ unit tests) — **DONE** |
+| 2 | [02-node-hierarchy.md](./02-node-hierarchy.md) | `_nodes.py`: `VizNode` / `VizSceneObject` / `VizOverlayObject` / `VizGroup` + aspect-dirty tracking (+ unit tests) |
+| 3 | [03-node-serialization.md](./03-node-serialization.md) | Move serialization dispatch into node `serialize()`; emit `full/style/transform` aspect patches (+ unit tests) |
+| 4 | [04-object-ref.md](./04-object-ref.md) | `VizObjectRef`: property/method API incl. labels and transform aspects (+ unit tests) |
+| 5 | [05-entry-points.md](./05-entry-points.md) | `Visualizer` / `VizSceneHandle` `new()` / `add_group()` / `parent_id` / `attach_to` / control update (+ unit tests) |
+| 6 | [06-frontend-scene-graph.md](./06-frontend-scene-graph.md) | Frontend: `object_update` aspect patches + parenting + live-follow overlays (+ smoke test) |
 | 7 | [07-export-static.md](./07-export-static.md) | Ensure standalone and figure HTML exports still work end-to-end |
 | 8 | [08-end-to-end.md](./08-end-to-end.md) | Live viewer + recording + GLTF compound/group verification |
 | 9 | [09-example.md](./09-example.md) | Example script under `py/examples/viz` demonstrating `VizGroup` + direct transforms |
@@ -34,16 +44,29 @@ rotation/movement of compound objects without recomputing any vertices.
 
 ## Guiding decisions
 
-- **Store only the resolved style** on each `VizObject`. Style updates are a
-  non-`None` merge into that resolved instance.
-- Separate **`dirty`** (object changed → full re-serialize) and
-  **`transform_dirty`** (transform changed → lightweight `transform_update`).
+- **Layer split:** `VizSceneObject` (Transform + parent/child graph) vs
+  `VizOverlayObject` (position + `attach_to`). Only scene nodes get a
+  `Transform`; overlay nodes have no rotation/scale.
+- **Transform is additive ("extra transform on top").** Entity geometry keeps
+  its own positions; a node's `transform` is an additional transform starting
+  at identity.
+- **Aspect-patch updates.** Instead of two boolean dirty flags, each node
+  tracks which *aspects* changed (`full`, `style`, `transform`) and `flush()`
+  emits an `object_update` message with a `patches` list. `style` is a coarse
+  aspect (whole resolved style dict); `transform` is one aspect, not special.
+- **Store only the resolved style** at creation (canonical + non-`None` user
+  merges). Style patches re-serialize that resolved instance.
+- **Labels and overlays are first-class nodes**, not special-cased data. They
+  expose the same patch aspects (`full`/`style`) and are discovered via
+  `get_label_ids(...)` / the reference API.
+- **Controls stay on a separate `controls_define` channel**, but are
+  attachable to scene nodes (via `attach_to`) and gain an `update_control`
+  path for post-creation mutation.
+- **Frontend live-follows** overlay `attach_to` targets each frame; Python does
+  not recompute overlay anchors on parent moves.
 - **Python-authoritative graph**, serialized as a flat DFS pre-order list with
-  `parent_id`; three.js reconstructs the tree.
+  `parent_id` / `attach_to`.
 - **Backward compatible:** `add()` keeps returning a `str` id; `new()` returns
   a `VizObjectRef`.
-- Container nodes are named **`VizGroup`**; a group's `VizObjectRef` exposes
-  `add()` / `new()` to attach children directly.
-- Operator→matrix math lives in a standalone `_transforms.py` module usable
-  both by the scene graph and standalone user code.
+- Operator→matrix math lives in a standalone `_transforms.py` module.
 - Every implementation phase includes unit tests covering its main behaviors.

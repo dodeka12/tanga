@@ -31,14 +31,19 @@ Add a changelog entry for the scene-graph work following
   - [ ] **New Features** — `VizObjectRef` (entity/style/color/opacity/
         texture-label/label access, transform mutators, group `add`/`new`).
   - [ ] **New Features** — per-object transforms
-        (`translate`/`rotate`/`scale`/`set_transform`/`transform`) and
-        transform-only updates for fast group animation.
+        (`translate`/`rotate`/`scale_by`/`set_transform`/`transform`) and
+        aspect-scoped updates (`full`/`style`/`transform`) for fast,
+        in-place group animation.
+  - [ ] **New Features** — overlay objects (`VizOverlayObject`) and
+        `attach_to` for labels that live-follow scene nodes.
   - [ ] **New Features** — `_transforms.py` operator/entity → matrix/TRS
         conversion helpers.
   - [ ] **Breaking Changes** (if any) — e.g. any removed serializer
         entry points or `SceneObject` changes surfaced to users.
-  - [ ] **Refactor** — object-node hierarchy replacing the flat
-        `SceneObject` registry and serialization moving into node `serialize()`.
+  - [ ] **Refactor** — object-node hierarchy (`VizSceneObject` /
+        `VizOverlayObject` / `VizGroup`) replacing the flat `SceneObject`
+        registry, with serialization moving into node `serialize()` and
+        updates emitted as aspect patches.
 - [ ] Wrap body text at ~80 columns; use `- **Headline** — …` bullet style.
 
 ### Update the index

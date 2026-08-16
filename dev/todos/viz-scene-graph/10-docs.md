@@ -18,17 +18,21 @@ Document the new scene-graph features and APIs in the MkDocs viz guides.
 
 ### New guide `docs/py/viz/scene-graph.md`
 
-- [ ] Explain the node hierarchy (`VizNode`, `VizObject`, `VizGroup`) and
-      transforms (`Transform` TRS + derived matrix).
+- [ ] Explain the node hierarchy (`VizNode`, `VizSceneObject`,
+      `VizOverlayObject`, `VizGroup`) and transforms (`Transform` TRS +
+      derived matrix).
+- [ ] Explain the layer split: scene nodes have a `Transform` and parent/child
+      graph; overlay nodes have an `attach_to` reference (living in the
+      screen/CSS plane) and no rotation/scale.
 - [ ] Document `VizObjectRef` and all its properties/methods:
   - [ ] `entity`, `style`, `color`, `opacity`, `texture_label`
-  - [ ] `translate`, `rotate`, `scale`, `set_transform`, `transform(...)`
+  - [ ] `translate`, `rotate`, `scale_by`, `set_transform`, `transform(...)`
   - [ ] `label_ids`, `labels`, `update_label`
   - [ ] group `add`/`new`/`add_group`
 - [ ] Document `viz.new(...)` vs backward-compatible `viz.add(...)`.
 - [ ] Document `viz.add_group(...)` and attaching children.
-- [ ] Document the transform-only update path (`transform_dirty` →
-      `transform_update`) and why rotating a `VizGroup` is cheap.
+- [ ] Document the aspect-patch update model (`full` / `style` / `transform`)
+      and why rotating a `VizGroup` (a `transform` aspect patch) is cheap.
 - [ ] Document the operator/entity transform affordances (`Rotor`,
       `GeneralRotor`, `Motor`, `Translator`, `Dilator`, `Point`, `Direction`).
 - [ ] Include a short, runnable snippet mirroring `py/examples/viz/demo_scene_graph.py`.
@@ -43,7 +47,8 @@ Document the new scene-graph features and APIs in the MkDocs viz guides.
 ### Consistency
 
 - [ ] Keep terminology consistent with the README/target docs (resolved style,
-      `VizGroup`, `VizObjectRef`, `parent_id`, `transform_update`).
+      `VizGroup`, `VizObjectRef`, `VizSceneObject`, `VizOverlayObject`,
+      `parent_id`, `attach_to`, aspect patches).
 - [ ] Follow the existing MkDocs heading/table style.
 
 ## Verification

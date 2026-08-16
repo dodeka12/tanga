@@ -22,8 +22,8 @@ vertices in live mode and round-trip correctly in offline outputs.
 
 - [ ] Confirm `VizGroup` + `VizObjectRef.transform(...)` flows work against a
       running server.
-- [ ] Confirm `transform_dirty` → `transform_update` fast path moves a group
-      without re-sending children (inspect frames / server log).
+- [ ] Confirm the `transform` aspect patch fast path moves a group without
+      re-sending children (inspect frames / server log).
 
 ### Animation recording / animated figure
 

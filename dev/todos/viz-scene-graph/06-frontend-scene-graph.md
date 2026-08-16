@@ -1,88 +1,108 @@
 # Phase 6 — Frontend scene graph
 
-**Status:** Planned
+**Status:** Planned (revised after design discussion)
 
 ## Goal
 
-Teach the browser to rebuild the Python-authored scene graph, honor
-`parent_id` + `transform`, render `VizGroup` as a `THREE.Group`, and apply
-transform-only updates in place without recreating geometry.
+Teach the browser to consume the Python-authored scene graph via the
+`object_update` aspect-patch message: rebuild `parent_id`/`transform`
+hierarchies, render `VizGroup` as a `THREE.Group`, apply `style` and
+`transform` patches in place, and live-follow overlay `attach_to` targets.
 
 ## Files
 
 - Modify: `py/pytanga/viz/templates/viewer.js`
 - Modify: `py/pytanga/viz/templates/renderers/factory.js`
-- New: `py/pytanga/viz/templates/renderers/group.js`
+- New: `py/pytanga/viz/templates/renderers/group.js` + overlay renderers as
+      needed.
 - (possibly) `py/pytanga/viz/export/...` bootstrap for static export parity
-      (defer complex export parity to Phase 7)
+      (defer complex parity to Phase 7).
 
-## Wire format additions
+## Wire format (agreed, Phase 3)
 
-- Each serialized node gains:
-  - `parent_id: str | null`
-  - `transform: { position: [x,y,z], rotation: [x,y,z], scale: [x,y,z] }`
-- New message type:
-  ```json
-  { "type": "transform_update", "scene": "...",
-    "transforms": [ {"id": "...", "position": [...], "rotation": [...], "scale": [...] } ] }
-  ```
+```json
+{
+  "type": "object_update",
+  "scene": "",
+  "patches": [
+    { "id": "a", "aspect": "full",      "value": { "id":"a", "layer":"scene", "kind":"Point", "parent_id":null, "transform":{...}, "style":{...} } },
+    { "id": "b", "aspect": "style",     "value": { "style": { "color": "#ff0000" } } },
+    { "id": "c", "aspect": "transform", "value": { "position": [1,2,3], "rotation": [0,0,0], "scale": [1,1,1] } }
+  ],
+  "removed": ["x"]
+}
+```
+
+The old `scene_update` message remains supported for backward compatibility
+during the transition (Phases 7 checks exports).
 
 ## Steps
 
 ### `renderers/group.js`
 
 - [ ] Add `createVizGroup(ent) -> THREE.Group` (no geometry).
-- [ ] Tag the group with entity metadata for consistency.
+- [ ] Tag with entity metadata (userData.kind = "VizGroup").
 
 ### `renderers/factory.js`
 
 - [ ] Add `case 'VizGroup': mesh = createVizGroup(ent); break;`.
 
+### `viewer.js` — aspect routing
+
+- [ ] Add an `object_update` handler that iterates `patches` and dispatches
+      by `aspect`:
+  - [ ] `full` → existing `upsertObject`/`updateEntity` rebuild path,
+        now honoring `parent_id`/`transform`/`layer`.
+  - [ ] `style` → merge `value.style` into the stored `ent.style` and
+        re-apply material/opacity (no geometry recreation).
+  - [ ] `transform` → set `position`, Euler (order `"XYZ"`) quaternion, and
+        `scale` on the `Object3D` in place.
+- [ ] Keep `scene_update` (full dicts) working for legacy callers.
+
 ### `viewer.js` — object creation/parenting
 
-- [ ] In `upsertObject`, after `createEntityMesh`:
-  - [ ] If `msg.parent_id` references a known `sceneObjects` entry, `parent.obj.add(mesh)`; otherwise `scene.add(mesh)`.
-  - [ ] Apply `transform` (position / Euler rotation / scale) to the `Object3D`.
-- [ ] In `createEntityMesh` result, set `mesh.userData.parentId = msg.parent_id || null`.
-- [ ] In `updateEntity`, when a full rebuild happens, preserve and re-attach to the correct parent.
+- [ ] In the full/upsert path:
+  - [ ] If `parent_id` references a known `sceneObjects` entry, parent
+        `mesh.obj` under it; otherwise `scene.add(...)`.
+  - [ ] Apply `transform` (position/quaternion/scale) to the `Object3D`.
+  - [ ] Set `mesh.userData.parentId = parent_id || null`.
 
-### `viewer.js` — transform updates
+### Overlay live-follow
 
-- [ ] Add a `handleTransformUpdate(msg)` branch:
-  - [ ] For each `{id, position, rotation, scale}`, look up the `Object3D` in
-        `sceneObjects` (or `entityMeshes` fallback).
-  - [ ] Set `position`, `quaternion` from Euler (`XYZ`), and `scale` in place.
-  - [ ] Do not dispose or recreate geometry.
+- [ ] Overlay nodes (labels/annotations/markers) store `attach_to` (not a
+      `Transform`).
+- [ ] Each frame (or on the parent's transform patch), position the overlay
+      at the referenced scene node's resolved world position (CSS2DRenderer
+      anchor). No geometry/matrix on the overlay itself.
 
 ### Removal / clear
 
-- [ ] Ensure `parent` removal propagates children correctly via
-      `removeFromParent`/`traverse` cleanup.
-- [ ] Ensure `clear_all` resets the scene graph cleanly.
+- [ ] Ensure `removed` and `clear_all` dispose children/materials and remove
+      overlay live-follow registrations.
 
 ## Unit / smoke tests
 
-No browser-level unit test framework is wired into the repo; cover the Python
-side that the frontend consumes and add a JS renderer smoke test reference.
+No browser-level unit test framework is wired in; cover the Python-authorized
+message shape and add a JS renderer smoke reference.
 
 - [ ] `py/tests/viz/test_frontend_transform_shape.py`:
-  - [ ] `test_transform_message_shape` — `transform_update` message serializes
-        `{id, position, rotation, scale}` correctly.
-  - [ ] `test_full_state_includes_parent_and_transform` — `full_state()` emits
-        `parent_id` and `transform` on every node.
-  - [ ] `test_group_kind_in_state` — groups are serialized with
-        `kind == "VizGroup"`.
+  - [ ] `test_object_update_message_shape` — `{type:"object_update",
+        patches:[...], removed:[...]}`.
+  - [ ] `test_full_patch_includes_parent_and_transform`.
+  - [ ] `test_style_patch_shape` — `{aspect:"style", value:{style:{...}}}`.
+  - [ ] `test_transform_patch_shape` — `{aspect:"transform", value:{position,
+        rotation, scale}}`.
+  - [ ] `test_overlay_patch_has_attach_to` — overlay patch has `attach_to`,
+        no `transform`.
+  - [ ] `test_group_kind_in_state` — groups serialize `kind == "VizGroup"`.
   - [ ] `test_dfs_preorder` — parents appear before children.
-- [ ] Manual / existing `test_export_renderers.py`-style check that
-      `createVizGroup` returns a `THREE.Group` with no geometry (if the test
-      harness has a JS runner; otherwise verify visually via Phase 8 smoke).
+- [ ] Manual / visual smoke via Phase 8 for actual THREE behavior.
 
 ## Verification
 
 - [ ] `uv run pytest py/tests/viz/test_frontend_transform_shape.py` passes.
-- [ ] Adding `grp = viz.add_group(...)` then `grp.new(...)` renders children
-      parented under the group (visual smoke).
-- [ ] A `transform_update` rotates a `VizGroup` without re-sending any child
-      geometry (verify via WebSocket message inspection).
-- [ ] Reparented and removed objects clean up their children/materials.
+- [ ] `grp = viz.add_group(...)` then `grp.new(...)` renders children
+      parented under the group (visual smoke, Phase 8).
+- [ ] A `transform` patch moves a `VizGroup` without re-sending child geometry.
+- [ ] A label with `attach_to` follows its node's transform.
 - [ ] Existing live-viewer smoke flows still work.

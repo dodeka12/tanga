@@ -1,20 +1,21 @@
 # Phase 5 — Entry points (`Visualizer` / `VizSceneHandle`)
 
-**Status:** Planned
+**Status:** Planned (revised after design discussion)
 
 ## Goal
 
 Expose the new API at the top level while staying backward compatible:
 `add()` still returns a `str` id; `new()` returns a `VizObjectRef`;
-`add_group()` returns a `VizObjectRef` for a `VizGroup`. Add `parent_id`
-support to the add path so groups and scene-graph parenting work.
+`add_group()` returns a `VizObjectRef` for a `VizGroup`; `attach_to` and
+`parent_id` hook overlays and scene children into the graph; `update_control`
+adds post-creation control mutation.
 
 ## Files
 
 - Modify: `py/pytanga/viz/visualizer.py`
 - Modify: `py/pytanga/viz/_scene_handle.py`
 - Modify: `py/pytanga/viz/__init__.py`
-- (possibly) `py/pytanga/viz/_types.py` (add `VizGroup` to accepted input)
+- (possibly) `py/pytanga/viz/_types.py`
 
 ## Steps
 
@@ -22,33 +23,42 @@ support to the add path so groups and scene-graph parenting work.
 
 - [ ] Add `new(...)` mirroring `add(...)`; returns `VizObjectRef`.
 - [ ] Add `add_group(name=None)` returning `VizObjectRef` wrapping a
-      `VizGroup`.
-- [ ] Thread `parent_id: str | None = None` through `add` / `_add_to_scene`.
-- [ ] Special-case `VizGroup` in `_add_to_scene` (no `_resolve` call; store as a
+      `VizGroup` node.
+- [ ] Thread `parent_id: str | None = None` through `add` / `_add_to_scene`;
+      thread `attach_to: str | None = None` for overlay creation.
+- [ ] Special-case `VizGroup` in `_add_to_scene` (no `_resolve`; store as a
       group node).
-- [ ] Ensure `add(...)` behavior and return type (`str`) are unchanged.
-- [ ] Delegate `new`/`add_group` to the main-scene handle pattern
-      (`VizSceneHandle(self, "")`).
+- [ ] Thread the resolved `styles_map` into node creation (`Scene` holds the
+      default styles, so resolve at creation).
+- [ ] Add `add_label`/`new_label`-style helpers returning refs (label nodes are
+      `VizOverlayObject`s with `attach_to`).
+- [ ] Keep `add(...)` behavior and `str` return type unchanged.
+- [ ] Add `update_control(ctrl_id, ...)` re-pushing via `controls_define`.
 
 ### `VizSceneHandle`
 
 - [ ] Add `new(...)` returning `VizObjectRef(self, node)`.
 - [ ] Add `add_group(name=None)`.
-- [ ] Re-expose the existing per-scene `add` with `parent_id` support
-      (delegating to `Visualizer._add_to_scene`).
-- [ ] Add `update_style(...)` for parity with `Visualizer` (used by
-      `VizObjectRef.style` setter).
+- [ ] Re-expose per-scene `add` with `parent_id`/`attach_to` support.
+- [ ] Add `update_style(...)` parity.
+- [ ] Add `new_label(...)`/label-ref accessors for labels attached to a node.
 
 ### `_types.py`
 
-- [ ] Add `VizGroup` to the accepted `VizInputType`/`SceneEntity` union (or
-      handle it purely within `_add_to_scene`).
+- [ ] Add `VizGroup` to accepted input (or handle purely in `_add_to_scene`).
 
 ### `__init__.py`
 
-- [ ] Export `VizGroup` and `VizObjectRef`; add to `__all__`.
-- [ ] Avoid a circular import by importing `VizObjectRef` lazily or from a
-      module that doesn't import `visualizer` at module load time.
+- [ ] Export `VizGroup`, `VizObjectRef`, `VizSceneObject`, `VizOverlayObject`.
+- [ ] Import `VizObjectRef` lazily to avoid a circular import.
+
+## Control update details
+
+- [ ] `update_control(ctrl_id, **fields)` mutates the stored `Control` and
+      re-pushes `controls_define` (separate channel). A `Slider` range update
+      is `update_control("s", min=0, max=10)`.
+- [ ] Controls remain `Control` dataclasses (not viz nodes) on the separate
+      channel, but may carry `parent_id`/`attach_to` for scene-node following.
 
 ## Unit tests
 
@@ -60,8 +70,11 @@ File: `py/tests/viz/test_entry_points.py`.
       `VizObjectRef`.
 - [ ] `test_group_new_attaches_child` — `grp.new(Point(...))` parents the child
       under `grp`.
-- [ ] `test_parent_id_add` — `viz.add(Point(...), parent_id=grp.id)` nests
-      correctly.
+- [ ] `test_parent_id_add` — `viz.add(Point(...), parent_id=grp.id)` nests.
+- [ ] `test_attach_to_label` — a label created with `attach_to` references the
+      scene node.
+- [ ] `test_update_control` — `viz.update_control("s", max=10)` updates the
+      stored slider and re-pushes.
 - [ ] `test_scene_handle_new` — `viz.scene("s").new(Point(...))` targets the
       named scene.
 - [ ] `test_scene_handle_add_group` — group is created in the named scene.
@@ -73,6 +86,6 @@ File: `py/tests/viz/test_entry_points.py`.
 - [ ] `viz.add(Point(...))` returns a `str`.
 - [ ] `viz.new(Point(...))` returns a `VizObjectRef`.
 - [ ] `grp = viz.add_group("g")` then `grp.new(Point(...))` attaches to `grp`.
-- [ ] `scn = viz.scene("s"); scn.new(Point(...))` targets the correct scene.
-- [ ] `add`/`new` accept `parent_id` and nest correctly.
+- [ ] A label created with `attach_to=node_id` is discovered and follows.
+- [ ] `viz.update_control("s", max=10)` mutates + re-pushes the control.
 - [ ] Existing multi-scene and label tests still pass.
