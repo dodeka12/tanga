@@ -649,7 +649,13 @@ function handleMessage(msg) {
         }
         if (msg.objects) {
             for (const obj of msg.objects) {
-                if (obj.layer === 'scene' && entityMeshes.has(obj.id)) {
+                // Scene-graph objects carry parent_id/transform. Route them
+                // through upsertObject (remove + rebuild) so a full-state sync
+                // is idempotent even if the object already exists — the legacy
+                // in-place updateEntity path doesn't re-apply parenting or the
+                // node transform.
+                const hasSceneGraph = obj.parent_id !== undefined || obj.transform !== undefined;
+                if (obj.layer === 'scene' && entityMeshes.has(obj.id) && !hasSceneGraph) {
                     updateEntity(obj);
                 } else {
                     upsertObject(obj);
