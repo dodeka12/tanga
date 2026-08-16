@@ -67,6 +67,7 @@ class _GltfBuilder:
         self._buffer_views: List[dict] = []
         self._cameras: List[dict] = []
         self._camera_node: int | None = None
+        self._node_by_id: Dict[str, int] = {}
 
     # ── Material helpers ────────────────────────────────
 
@@ -145,28 +146,55 @@ class _GltfBuilder:
             self._add_entity(ent)
 
     def _add_entity(self, ent: Dict[str, Any]) -> None:
-        # kind = ent.get("kind", "")
-        color = str(ent.get("color", "#ffffff"))
-        opacity = float(ent.get("opacity", 1.0))
-        mat_idx = self._get_or_create_material(color, opacity)
-        prims = self._make_primitives(ent)
-        if not prims:
-            return
+        kind = ent.get("kind", "")
+        node: dict = {}
 
-        mesh_idx = len(self._meshes)
-        gltf_prims = [self._prim_to_gltf(p, mat_idx) for p in prims]
-        self._meshes.append({"primitives": gltf_prims})
+        if kind == "VizGroup":
+            # Empty group node — children parent under it below.
+            pass
+        else:
+            color = str(ent.get("color", "#ffffff"))
+            opacity = float(ent.get("opacity", 1.0))
+            mat_idx = self._get_or_create_material(color, opacity)
+            prims = self._make_primitives(ent)
+            if not prims:
+                return
 
-        node: dict = {"mesh": mesh_idx}
+            mesh_idx = len(self._meshes)
+            gltf_prims = [self._prim_to_gltf(p, mat_idx) for p in prims]
+            self._meshes.append({"primitives": gltf_prims})
+            node["mesh"] = mesh_idx
+
         pos = self._get_position(ent)
         if pos and any(p != 0 for p in pos):
             node["translation"] = list(pos)
         rot = self._get_rotation(ent)
         if rot and not (rot[0] == 0 and rot[1] == 0 and rot[2] == 0 and rot[3] == 1):
             node["rotation"] = list(rot)
+
+        # Apply the scene-graph node transform (Euler ``"XYZ"`` → quaternion).
+        transform = ent.get("transform")
+        if transform:
+            tp = transform.get("position")
+            tr = transform.get("rotation")
+            ts = transform.get("scale")
+            if tp and any(v != 0 for v in tp):
+                node["translation"] = list(tp)
+            if tr and any(v != 0 for v in tr):
+                node["rotation"] = list(self._euler_xyz_to_quat(tr))
+            if ts and not (ts[0] == 1 and ts[1] == 1 and ts[2] == 1):
+                node["scale"] = list(ts)
+
         node_idx = len(self._nodes)
         self._nodes.append(node)
-        self._scene_nodes.append(node_idx)
+        self._node_by_id[str(ent.get("id"))] = node_idx
+
+        parent_id = ent.get("parent_id")
+        if parent_id is not None and str(parent_id) in self._node_by_id:
+            parent_node = self._nodes[self._node_by_id[str(parent_id)]]
+            parent_node.setdefault("children", []).append(node_idx)
+        else:
+            self._scene_nodes.append(node_idx)
 
     def _make_primitives(self, ent: Dict[str, Any]) -> List[_Primitive]:
         kind = ent.get("kind", "")
@@ -382,6 +410,49 @@ class _GltfBuilder:
                 if q_len > 1e-10:
                     return (v[0] / q_len, v[1] / q_len, v[2] / q_len, w / q_len)
         return None
+
+    @staticmethod
+    def _euler_xyz_to_quat(euler: list[float]) -> tuple[float, float, float, float]:
+        """Convert Euler angles (order ``"XYZ"``, ``R = Rx @ Ry @ Rz``) to a quaternion."""
+        from pytanga.viz import _transforms as _T
+
+        rx = _T.rotation_matrix((1.0, 0.0, 0.0), float(euler[0]))
+        ry = _T.rotation_matrix((0.0, 1.0, 0.0), float(euler[1]))
+        rz = _T.rotation_matrix((0.0, 0.0, 1.0), float(euler[2]))
+        r = (rx @ ry @ rz)[:3, :3]
+
+        t = float(np.trace(r))
+        if t > 0.0:
+            s = math.sqrt(t + 1.0) * 2.0
+            return (
+                (r[2, 1] - r[1, 2]) / s,
+                (r[0, 2] - r[2, 0]) / s,
+                (r[1, 0] - r[0, 1]) / s,
+                0.25 * s,
+            )
+        if r[0, 0] > r[1, 1] and r[0, 0] > r[2, 2]:
+            s = math.sqrt(1.0 + r[0, 0] - r[1, 1] - r[2, 2]) * 2.0
+            return (
+                0.25 * s,
+                (r[0, 1] + r[1, 0]) / s,
+                (r[0, 2] + r[2, 0]) / s,
+                (r[2, 1] - r[1, 2]) / s,
+            )
+        if r[1, 1] > r[2, 2]:
+            s = math.sqrt(1.0 + r[1, 1] - r[0, 0] - r[2, 2]) * 2.0
+            return (
+                (r[0, 1] + r[1, 0]) / s,
+                0.25 * s,
+                (r[1, 2] + r[2, 1]) / s,
+                (r[0, 2] - r[2, 0]) / s,
+            )
+        s = math.sqrt(1.0 + r[2, 2] - r[0, 0] - r[1, 1]) * 2.0
+        return (
+            (r[0, 2] + r[2, 0]) / s,
+            (r[1, 2] + r[2, 1]) / s,
+            0.25 * s,
+            (r[1, 0] - r[0, 1]) / s,
+        )
 
     def _prim_to_gltf(self, prim: _Primitive, mat_idx: int) -> dict:
         po, pl = self._write_buffer(prim.positions)

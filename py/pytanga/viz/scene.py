@@ -337,10 +337,26 @@ class Scene:
             node.set_entity(entity)
 
     def remove(self, object_id: str) -> None:
-        """Mark an object (or group node) for removal in the next flush."""
+        """Mark an object (or group node) for removal in the next flush.
+
+        Removing a group node also removes its whole descendant subtree.
+        """
         if object_id in self._objects or object_id in self._nodes:
             self._removed_ids.append(object_id)
+        node = self._nodes.get(object_id)
+        if isinstance(node, VizSceneObject):
+            for descendant in self._descendants(node):
+                if descendant.id not in self._removed_ids:
+                    self._removed_ids.append(descendant.id)
+                self._interaction_configs.pop(descendant.id, None)
         self._interaction_configs.pop(object_id, None)
+
+    @staticmethod
+    def _descendants(node: VizSceneObject):
+        """Yield *node*'s descendants in DFS pre-order (children first)."""
+        for child in node.children:
+            yield child
+            yield from Scene._descendants(child)
 
     def clear(self) -> None:
         """Remove all objects and group nodes."""

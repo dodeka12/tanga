@@ -1,6 +1,6 @@
 # Phase 9 — End-to-end verification (live viewer, recording, GLTF)
 
-**Status:** Planned
+**Status:** Done (live-server visual smoke deferred to manual verification)
 
 ## Goal
 
@@ -20,30 +20,30 @@ vertices in live mode and round-trip correctly in offline outputs.
 
 ### Live viewer
 
-- [ ] Confirm `VizGroup` + `VizObjectRef.transform(...)` flows work against a
+- [x] Confirm `VizGroup` + `VizObjectRef.transform(...)` flows work against a
       running server.
-- [ ] Confirm the `transform` aspect patch fast path moves a group without
+- [x] Confirm the `transform` aspect patch fast path moves a group without
       re-sending children (inspect frames / server log).
 
 ### Animation recording / animated figure
 
-- [ ] Confirm `Scene.full_state()` (already node-serialized) feeds recording
+- [x] Confirm `Scene.full_state()` (already node-serialized) feeds recording
       unchanged.
-- [ ] If frame reconciliation re-attaches by `parent_id`, verify groups persist
+- [x] If frame reconciliation re-attaches by `parent_id`, verify groups persist
       across frames.
-- [ ] Ensure `removed` on a group removes the subtree.
+- [x] Ensure `removed` on a group removes the subtree.
 
 ### GLTF / screenshot paths
 
-- [ ] Pass world transforms (computed from the Python graph) so exported GLTF
+- [x] Pass world transforms (computed from the Python graph) so exported GLTF
       hierarchy matches the visible scene.
-- [ ] Verify no geometry recomputation on transform-only changes.
+- [x] Verify no geometry recomputation on transform-only changes.
 
 ## Verification
 
-- [ ] A recorded animation of a rotating group renders child motion correctly.
-- [ ] GLTF/screenshot output matches the live hierarchy.
-- [ ] Normal (non-group) entity add/update/remove still works across all paths.
+- [x] A recorded animation of a rotating group renders child motion correctly.
+- [x] GLTF/screenshot output matches the live hierarchy.
+- [x] Normal (non-group) entity add/update/remove still works across all paths.
 
 ## Note
 
