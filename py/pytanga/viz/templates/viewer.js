@@ -254,7 +254,9 @@ let _reconnectButtonEl = null;
 let _reconnectClickCount = 0;
 
 function _log(phase, detail) {
-    const parts = ['[tanga:' + phase + ']'];
+    const t = (typeof performance !== 'undefined' && performance.now)
+        ? (performance.now() / 1000).toFixed(3) : '0';
+    const parts = ['[tanga:' + phase + ' t=' + t + ']'];
     if (_browserId) parts.push('id=' + _browserId);
     if (_viewerName) parts.push('viewer=' + _viewerName);
     if (_myScene) parts.push('scene=' + _myScene);

@@ -15,6 +15,7 @@ import json
 import logging
 import sys
 import threading
+import time
 import webbrowser
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -237,7 +238,10 @@ class VizServer:
         if fit_camera:
             message["fit_camera"] = True
         data = json.dumps(message)
-        logger.info("WS SEND %s clients=%d", _ws_msg_brief(data), len(self._ws_clients))
+        logger.info(
+            "WS SEND t=%.3f %s clients=%d",
+            time.monotonic(), _ws_msg_brief(data), len(self._ws_clients),
+        )
 
         dead: list[web.WebSocketResponse] = []
         for ws in self._ws_clients:
@@ -253,7 +257,10 @@ class VizServer:
         """Send an arbitrary JSON string to all connected clients."""
         if not self._ws_clients:
             return
-        logger.info("WS SEND %s clients=%d", _ws_msg_brief(data), len(self._ws_clients))
+        logger.info(
+            "WS SEND t=%.3f %s clients=%d",
+            time.monotonic(), _ws_msg_brief(data), len(self._ws_clients),
+        )
         dead: list[web.WebSocketResponse] = []
         for ws in self._ws_clients:
             try:
@@ -300,16 +307,23 @@ class VizServer:
                 pass
 
     async def _push_full_state(
-        self, ws: web.WebSocketResponse, *, scene_name: str = ""
+        self,
+        ws: web.WebSocketResponse,
+        *,
+        scene_name: str = "",
+        browser_id: str | None = None,
     ) -> None:
         """Send scene config + full entity state to a single client."""
         from .serializer import serialize_scene_update
 
-        logger.info("WS FULL-STATE-BEGIN scene=%r", scene_name)
+        logger.info(
+            "WS FULL-STATE-BEGIN t=%.3f id=%s scene=%r",
+            time.monotonic(), browser_id, scene_name,
+        )
 
         # 0. Clear the browser scene first (handles reconnect with new server)
         clear_payload = json.dumps({"type": "clear_all"})
-        logger.info("WS SEND %s", _ws_msg_brief(clear_payload))
+        logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(clear_payload))
         await ws.send_str(clear_payload)
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
@@ -325,7 +339,7 @@ class VizServer:
         if cfg is not None:
             cfg.setdefault("name", scene_name)
             cfg_payload = json.dumps(cfg)
-            logger.info("WS SEND %s", _ws_msg_brief(cfg_payload))
+            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(cfg_payload))
             await ws.send_str(cfg_payload)
 
         # 2. Full state (entities + labels merged)
@@ -335,7 +349,7 @@ class VizServer:
                 msg = serialize_scene_update(entities, [])
                 msg["scene"] = scene_name
                 state_payload = json.dumps(msg)
-                logger.info("WS SEND %s", _ws_msg_brief(state_payload))
+                logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(state_payload))
                 await ws.send_str(state_payload)
 
         # 3. Scene list (so the frontend knows available scenes)
@@ -344,10 +358,13 @@ class VizServer:
             list_payload = json.dumps(
                 {"type": "scene_list", "scenes": scene_names, "default": ""}
             )
-            logger.info("WS SEND %s", _ws_msg_brief(list_payload))
+            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(list_payload))
             await ws.send_str(list_payload)
 
-        logger.info("WS FULL-STATE-END scene=%r", scene_name)
+        logger.info(
+            "WS FULL-STATE-END t=%.3f id=%s scene=%r",
+            time.monotonic(), browser_id, scene_name,
+        )
 
     # ── Browser sessions (read-only access for Visualizer) ─
 
@@ -465,7 +482,9 @@ class VizServer:
         heartbeat_task = asyncio.create_task(_heartbeat(ws))
         logger.debug("WS heartbeat started id=%s", browser_id)
 
-        await ws.send_str(json.dumps({"type": "browser_id", "browser_id": browser_id}))
+        bid_payload = json.dumps({"type": "browser_id", "browser_id": browser_id})
+        logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(bid_payload))
+        await ws.send_str(bid_payload)
 
         # The frontend will send a "ready" message with the scene name.
         # We handle initialization inside the message loop.
@@ -490,8 +509,8 @@ class VizServer:
                             msg_browser_id = browser_id
 
                         logger.info(
-                            "WS RECV %s from %s (id=%s)",
-                            _ws_msg_brief(data), remote_addr, msg_browser_id,
+                            "WS RECV t=%.3f %s from %s (id=%s)",
+                            time.monotonic(), _ws_msg_brief(data), remote_addr, msg_browser_id,
                         )
 
                         if msg_type == "ready":
@@ -558,7 +577,9 @@ class VizServer:
                                 self._on_ready()
 
                             try:
-                                await self._push_full_state(ws, scene_name=scene_name)
+                                await self._push_full_state(
+                                    ws, scene_name=scene_name, browser_id=browser_id
+                                )
                             except Exception:
                                 pass
                             try:
