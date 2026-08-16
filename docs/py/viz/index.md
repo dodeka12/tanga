@@ -49,6 +49,7 @@ viz.display_row(
 | [Style System](styles.md) | `*Style` dataclasses, `default_styles`, `set_default_color()`, `CrossHairPointStyle` |
 | [Texture Labels](texture-labels.md) | Text, KaTeX formulas, and mixed content on entity surfaces (Sphere, Plane) |
 | [Labels](labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
+| [Scene Graph & Transforms](scene-graph.md) | `VizGroup`, `VizObjectRef`, parent/child hierarchy, transforms, aspect patches |
 | [PointPath](point-path.md) | Connected line segments, object trails, per-point colors, FIFO capping, gradient utilities |
 | [Title & Annotation](title-annotation.md) | Title overlay, Markdown annotation panel, LaTeX math with KaTeX |
 | [Animation](animation.md) | Frame streaming, keyframe tweening (`animate_to`), scene-aware `Timeline` sequencer |
@@ -80,6 +81,7 @@ uv run python py/examples/viz/<script>.py
 | [`demo_operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_operators.py) | Rotor, Translator, Motor, Dilator visualization |
 | [`demo_animation_orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_orbit.py) | Frame-by-frame animation at ~60 FPS |
 | [`demo_animation_timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_timeline.py) | Keyframe timeline with fade-in and move |
+| [`demo_scene_graph.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_scene_graph.py) | `VizGroup` + `VizObjectRef` transforms and compound animation |
 | [`demo_title_annotation.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_title_annotation.py) | Title overlay and Markdown + LaTeX annotation |
 | [`demo_screenshot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_screenshot.py) | Programmatic PNG screenshot |
 | [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/dev/src/test_viz_multi_scene.py) | Multi-scene viewer with browser targeting and navigation |

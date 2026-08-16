@@ -1,6 +1,6 @@
 # Phase 11 — Documentation update
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -18,41 +18,41 @@ Document the new scene-graph features and APIs in the MkDocs viz guides.
 
 ### New guide `docs/py/viz/scene-graph.md`
 
-- [ ] Explain the node hierarchy (`VizNode`, `VizSceneObject`,
+- [x] Explain the node hierarchy (`VizNode`, `VizSceneObject`,
       `VizOverlayObject`, `VizGroup`) and transforms (`Transform` TRS +
       derived matrix).
-- [ ] Explain the layer split: scene nodes have a `Transform` and parent/child
+- [x] Explain the layer split: scene nodes have a `Transform` and parent/child
       graph; overlay nodes have an `attach_to` reference (living in the
       screen/CSS plane) and no rotation/scale.
-- [ ] Document `VizObjectRef` and all its properties/methods:
-  - [ ] `entity`, `style`, `color`, `opacity`, `texture_label`
-  - [ ] `translate`, `rotate`, `scale_by`, `set_transform`, `transform(...)`
-  - [ ] `label_ids`, `labels`, `update_label`
-  - [ ] group `add`/`new`/`add_group`
-- [ ] Document `viz.new(...)` vs backward-compatible `viz.add(...)`.
-- [ ] Document `viz.add_group(...)` and attaching children.
-- [ ] Document the aspect-patch update model (`full` / `style` / `transform`)
+- [x] Document `VizObjectRef` and all its properties/methods:
+  - [x] `entity`, `style`, `color`, `opacity`, `texture_label`
+  - [x] `translate`, `rotate`, `scale_by`, `set_transform`, `transform(...)`
+  - [x] `label_ids`, `labels`, `update_label`
+  - [x] group `add`/`new`/`add_group`
+- [x] Document `viz.new(...)` vs backward-compatible `viz.add(...)`.
+- [x] Document `viz.add_group(...)` and attaching children.
+- [x] Document the aspect-patch update model (`full` / `style` / `transform`)
       and why rotating a `VizGroup` (a `transform` aspect patch) is cheap.
-- [ ] Document the operator/entity transform affordances (`Rotor`,
+- [x] Document the operator/entity transform affordances (`Rotor`,
       `GeneralRotor`, `Motor`, `Translator`, `Dilator`, `Point`, `Direction`).
-- [ ] Include a short, runnable snippet mirroring `py/examples/viz/demo_scene_graph.py`.
+- [x] Include a short, runnable snippet mirroring `py/examples/viz/demo_scene_graph.py`.
 
 ### Update `docs/py/viz/index.md`
 
-- [ ] Add a `[Scene Graph & Transforms](scene-graph.md)` row to the Topics
+- [x] Add a `[Scene Graph & Transforms](scene-graph.md)` row to the Topics
       table.
-- [ ] Add `demo_scene_graph.py` to the Example Scripts table (link following
+- [x] Add `demo_scene_graph.py` to the Example Scripts table (link following
       the existing GitHub blob URL convention).
 
 ### Consistency
 
-- [ ] Keep terminology consistent with the README/target docs (resolved style,
+- [x] Keep terminology consistent with the README/target docs (resolved style,
       `VizGroup`, `VizObjectRef`, `VizSceneObject`, `VizOverlayObject`,
       `parent_id`, `attach_to`, aspect patches).
-- [ ] Follow the existing MkDocs heading/table style.
+- [x] Follow the existing MkDocs heading/table style.
 
 ## Verification
 
-- [ ] `uv run mkdocs build` (or the project's docs build task) succeeds.
-- [ ] `scene-graph.md` links in `index.md` resolve.
-- [ ] The documented snippet matches `demo_scene_graph.py` behavior.
+- [x] `uv run mkdocs build` (or the project's docs build task) succeeds.
+- [x] `scene-graph.md` links in `index.md` resolve.
+- [x] The documented snippet matches `demo_scene_graph.py` behavior.
