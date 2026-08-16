@@ -1,17 +1,63 @@
 # TanGA Documentation
 
-TanGA is a geometric algebra library with a C++ core and a Python interface
-(**pytanga**).
+TanGA is a Python and C++ library for **interactive technical visualization**
+and **geometric algebra (Clifford algebra)** — two independent toolkits under
+one roof.
+
+- **Visualization** — build animated, interactive 3D and 2D technical scenes in
+  the browser, and export them as standalone HTML (animations included),
+  glTF/GLB, PNG, or MP4. No knowledge of geometric algebra required.
+- **Geometric algebra / Clifford algebra** — sparse multivectors over vector
+  spaces of up to 31 dimensions with arbitrary signature, with explicit support
+  for Euclidean, projective, and conformal spaces (E2/E3, P2/P3, N2/N3,
+  PGA2/PGA3). Backed by a C++ template core with a zero-setup Python interface
+  (**pytanga**).
 
 ---
 
 ## Key Features
+
+### Visualization
+
+- **Interactive 3D & 2D scenes** — `pytanga.viz` provides a live
+  WebSocket‑driven Three.js visualizer in the browser.  Add entities, style
+  them, rotate/pan/zoom the camera, and work in 3D or 2D (`space_dim=2`).
+  Usable without geometric algebra.
+  → [3D Visualization](py/viz/index.md)
+
+- **Animations** — Frame-by-frame streaming at ~60 FPS and keyframe tweening
+  (`animate_to`) with a scene-aware `Timeline` sequencer.
+  → [Animation](py/viz/animation.md)
+
+- **Standalone HTML export** — Export self-contained, shareable HTML that
+  supports animations:
+
+    - **standalone HTML** (self‑contained, shareable, supports animations),
+    - **embeddable HTML** for iframes (e.g. Reveal.js slides, supports animations),
+    - **glTF / GLB** for use in other 3D tools,
+    - **PNG screenshots** and **MP4 video** (requires a local browser).
+
+  → [Export & Capture](py/viz/export.md)
+
+- **Interactivity** — Interactive controls (sliders, dropdowns, buttons),
+  pointer-based object interaction (click, drag, scroll), and a simplified
+  `ActPoint` API.  Jupyter notebook support with inline iframes.
+  → [Interactive Controls](py/viz/interactive.md)
+  · [Object Interaction](py/viz/object-interaction.md)
+  · [Jupyter Notebooks](py/viz/jupyter.md)
+
+### Geometric Algebra / Clifford Algebra
 
 - **High-dimensional algebras** — Work with geometric algebras over
   vector spaces of up to 31 dimensions with **any signature**.  Sparse
   blade encoding keeps storage and computation proportional to the number
   of non-zero coefficients, not the full $2^D$ blade space.
   → [Dynamic multivectors](cpp/dynamic-multivectors.md)
+
+- **Built-in spaces** — Explicit, ready-to-use algebras for **Euclidean**
+  (E2/E3), **projective** (P2/P3), and **conformal** (N2/N3, PGA2/PGA3)
+  spaces.
+  → [Basis Classes](py/basis/index.md)
 
 - **C++ template header library** — The core engine is 100 % C++17
   headers with `constexpr`-friendly templates.  Fixing dimension and
@@ -47,17 +93,6 @@ TanGA is a geometric algebra library with a C++ core and a Python interface
   across E3, P3, N3, and PGA3 algebras with a unified, algebra‑independent
   data model.
   → [Geometry (Python)](py/geometry/index.md)
-
-- **Interactive 3D visualization** — `pytanga.viz` provides a live
-  WebSocket‑driven Three.js visualizer in the browser.  Add entities,
-  style them, animate keyframes, and export to:
-
-    - **standalone HTML** (self‑contained, shareable, supports animations),
-    - **embeddable HTML** for iframes (e.g. Reveal.js slides, supports animations),
-    - **glTF / GLB** for use in other 3D tools,
-    - **PNG screenshots** and **MP4 video** (requires a local browser).
-
-  → [3D Visualization](py/viz/index.md)
 
 - **galgebra interoperability** — `GalgebraBridge` provides bidirectional
   conversion between galgebra (sympy‑based, symbolic) and tanga (numeric)

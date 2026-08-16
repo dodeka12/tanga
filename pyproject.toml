@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tanga-py"
 dynamic = ["version"]
-description = "Python bindings for the TanGA geometric algebra library"
+description = "Interactive technical visualization and geometric algebra (Clifford algebra) library — 3D/2D scenes with animation and standalone HTML export, plus algebras over vector spaces up to 31 dimensions with Euclidean, projective, and conformal support. C++ core with Python interface."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
