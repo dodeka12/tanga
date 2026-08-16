@@ -554,7 +554,7 @@ function _forMyScene(msg) {
     return !msg.scene || msg.scene === _myScene;
 }
 
-function handleMessage(msg) {
+async function handleMessage(msg) {
     if (msg.type === 'browser_id') {
         _browserId = msg.browser_id;
         _log('init', 'browser_id=' + msg.browser_id);
@@ -635,7 +635,7 @@ function handleMessage(msg) {
         }
         if (msg.objects) {
             for (const obj of msg.objects) {
-                upsertObject(obj);
+                await upsertObject(obj);
             }
         }
         if (msg.fit_camera) {
@@ -656,7 +656,7 @@ function handleMessage(msg) {
         }
         if (msg.patches) {
             for (const patch of msg.patches) {
-                applyObjectPatch(patch);
+                await applyObjectPatch(patch);
             }
         }
         if (msg.fit_camera) {
@@ -890,13 +890,13 @@ function wrapWithNodeTransform(mesh, transform) {
     return node;
 }
 
-function applyObjectPatch(patch) {
+async function applyObjectPatch(patch) {
     const id = patch.id;
     const aspect = patch.aspect;
     const value = patch.value || {};
 
     if (aspect === 'full') {
-        upsertObject(value);
+        await upsertObject(value);
         return;
     }
 
@@ -904,7 +904,7 @@ function applyObjectPatch(patch) {
     if (!entry) return;
 
     if (aspect === 'content') {
-        updateEntityContent(id, value);
+        await updateEntityContent(id, value);
         return;
     }
 
