@@ -26,10 +26,14 @@
 
 #include "Defines.h"
 
+#if defined(__APPLE__)
+#	include <iterator>
+#else
 namespace std
 {
 	struct random_access_iterator_tag;
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary>	A stride iterator. </summary>

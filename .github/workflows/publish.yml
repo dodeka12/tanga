@@ -189,39 +189,54 @@ jobs:
           name: wheels-windows-${{ matrix.python-version }}
           path: dist/*.whl
 
-  # -- macOS build disabled until precompiled compilation is fixed --
-  # build-macos:
-  #   name: Build macOS wheel (${{ matrix.os }})
-  #   strategy:
-  #     matrix:
-  #       os: [macos-13, macos-14]
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #
-  #     - uses: astral-sh/setup-uv@v5
-  #       with:
-  #         enable-cache: true
-  #
-  #     - name: Sync dependencies
-  #       run: uv sync --group dev
-  #
-  #     - name: Build precompiled
-  #       run: uv run python tools/build-precompiled.py
-  #
-  #     - name: Build wheel and fix tag
-  #       run: uv run bash tools/build-precompiled-wheel.sh
-  #
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: wheels-macos-${{ matrix.os }}
-  #         path: dist/*.whl
+  # -- macOS build --
+  build-macos:
+    name: Build macOS wheel (${{ matrix.os }}, ${{ matrix.python-version }})
+    needs: [compute-version]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-14]
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build precompiled
+        run: uv run python tools/build-precompiled.py
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - name: Build wheel and fix tag
+        run: |
+          SETUPTOOLS_SCM_PRETEND_VERSION="${{ needs.compute-version.outputs.pretend_version }}" \
+            uv run bash tools/build-precompiled-wheel.sh
+        env:
+          UV_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist/*.whl
 
   publish:
     name: Publish to PyPI
-    needs: [build-pure, build-linux, build-windows]
+    needs: [build-pure, build-linux, build-windows, build-macos]
     runs-on: ubuntu-24.04
     permissions:
       id-token: write

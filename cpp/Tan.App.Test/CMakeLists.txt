@@ -28,7 +28,7 @@ link_libraries(tan.core tan.math)
 
 if(MSVC)
     add_compile_options(/arch:SSE4.1)
-else()
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i[3-6]86")
     add_compile_options("-msse4.1")
     add_compile_options("-mpopcnt")
 endif()
