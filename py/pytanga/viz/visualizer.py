@@ -30,12 +30,6 @@ from ._props import _normalize_color
 from ._scene_handle import VizSceneHandle
 from ._style_dict import (
     _kind_to_key,
-    _make_default_annotation_style,
-    _make_default_label_style,
-    _make_default_label_styles,
-    _make_default_styles,
-    _make_default_tex_label_style,
-    _make_default_tex_label_styles,
     _resolve_annotation_style,
     _resolve_label_style,
     _resolve_tex_label_style,
@@ -133,15 +127,10 @@ class Visualizer(_JupyterDisplayMixin):
             open_browser = not self._jupyter
         self._open_browser = open_browser
 
-        # Per-kind entity/operator style instances (shared across all scenes).
-        self._default_styles = _make_default_styles()
+        # Bundled default style configuration (shared canonical instance).
+        from ._style_defaults import make_defaults
 
-        # Default style instances (factory functions in _style_dict.py)
-        self._default_label_style = _make_default_label_style()
-        self._default_annotation_style = _make_default_annotation_style()
-        self._default_label_styles = _make_default_label_styles()
-        self._default_tex_label_style = _make_default_tex_label_style()
-        self._default_tex_label_styles = _make_default_tex_label_styles()
+        self._style_defaults = make_defaults()
 
         # Control handler registry (shared across all scenes)
         from ._controls import ControlHandlerRegistry
@@ -164,7 +153,9 @@ class Visualizer(_JupyterDisplayMixin):
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
         self._scenes: dict[str, Scene] = {}
-        self._scenes[""] = Scene(self._config, name="")
+        self._scenes[""] = Scene(
+            self._config, name="", style_defaults=self._style_defaults.copy()
+        )
         self._default_objects_added: set[str] = set()
 
         # Seed default axes/grid immediately — independent of server start.
@@ -188,7 +179,9 @@ class Visualizer(_JupyterDisplayMixin):
                 name=name,
                 space_dim=self._config.space_dim,
             )
-            self._scenes[name] = Scene(cfg, name=name)
+            self._scenes[name] = Scene(
+                cfg, name=name, style_defaults=self._style_defaults.copy()
+            )
             self._add_default_scene_objects(name)
         return VizSceneHandle(self, name)
 
@@ -1663,6 +1656,36 @@ class Visualizer(_JupyterDisplayMixin):
             return None
 
     @property
+    def _default_styles(self):
+        """Backing per-kind style instances (forward to the holder)."""
+        return self._style_defaults.default_styles
+
+    @property
+    def _default_label_style(self):
+        """Backing global label style (forward to the holder)."""
+        return self._style_defaults.default_label_style
+
+    @property
+    def _default_label_styles(self):
+        """Backing per-kind label style overrides (forward to the holder)."""
+        return self._style_defaults.default_label_styles
+
+    @property
+    def _default_annotation_style(self):
+        """Backing global annotation style (forward to the holder)."""
+        return self._style_defaults.default_annotation_style
+
+    @property
+    def _default_tex_label_style(self):
+        """Backing global texture label style (forward to the holder)."""
+        return self._style_defaults.default_tex_label_style
+
+    @property
+    def _default_tex_label_styles(self):
+        """Backing per-kind texture label overrides (forward to the holder)."""
+        return self._style_defaults.default_tex_label_styles
+
+    @property
     def default_styles(self) -> _StyleDict:
         """Per-kind style instances used as defaults."""
         return self._default_styles
@@ -1674,7 +1697,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     @default_label_style.setter
     def default_label_style(self, value: LabelStyle) -> None:
-        self._default_label_style = value
+        self._style_defaults.default_label_style = value
 
     @property
     def default_label_styles(self) -> _StyleDict:
