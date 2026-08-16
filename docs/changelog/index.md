@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 0.9.2] — 2026-08-17
+- `content` aspect for in-place entity updates · single `sceneObjects` frontend registry (legacy path removed)
+→ [Details](2026-08-17_ad59e6e.md)
+
 ## [Since 0.9.2] — 2026-08-16
 - Scene graph (`VizGroup`) · `VizObjectRef` · per-object transforms · aspect patches · overlay `attach_to`
 → [Details](2026-08-16_5877a61.md)
