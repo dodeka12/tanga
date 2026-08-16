@@ -16,8 +16,6 @@ if TYPE_CHECKING:
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
     from .visualizer import Visualizer
 
-from pytanga.geometry.entities import Entity as GeoEntity
-
 from ._act_style import ActPointStyle
 from ._jupyter import _JupyterDisplayMixin
 from ._timeline import Timeline
@@ -117,6 +115,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: TextureLabelStyle | None = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
     ) -> str:
         """Add an entity, operator, MV, or label to this scene.
 
@@ -135,7 +135,57 @@ class VizSceneHandle(_JupyterDisplayMixin):
             label_style=label_style,
             tex_label=tex_label,
             tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
         )
+
+    def new(
+        self,
+        obj: Any = None,
+        *,
+        entity_id: str | None = None,
+        color: str
+        | tuple[float, float, float]
+        | tuple[float, float, float, float]
+        | None = None,
+        opacity: float | None = None,
+        style: ObjVizStyle | None = None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: TextureLabelStyle | None = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
+    ) -> Any:
+        """Like :meth:`add`, but returns a :class:`VizObjectRef` for the node."""
+        from ._object_ref import VizObjectRef
+
+        eid = self._viz._add_to_scene(
+            self._name,
+            obj=obj,
+            entity_id=entity_id,
+            color=color,
+            opacity=opacity,
+            style=style,
+            label=label,
+            label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
+        )
+        return VizObjectRef(self, self._scene().get_node(eid))
+
+    def add_group(self, name: str | None = None) -> Any:
+        """Create a scene-graph group in this scene and return a :class:`VizObjectRef`."""
+        from ._object_ref import VizObjectRef
+
+        group = self._scene().add_group(name)
+        return VizObjectRef(self, group)
+
+    def update_style(self, entity_id: str, style: ObjVizStyle) -> None:
+        """Update the style of an existing entity in this scene."""
+        self._scene().update(entity_id, style=style)
 
     def update(self, entity_id: str, **properties: Any) -> None:
         """Update rendering properties of an existing entity."""

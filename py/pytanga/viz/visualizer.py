@@ -19,7 +19,8 @@ import time
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle
+    from ._object_ref import VizObjectRef
+    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
@@ -244,6 +245,8 @@ class Visualizer(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
     ) -> str:
         """Add a geometric entity, operator, multivector, or label to the main scene.
 
@@ -263,7 +266,55 @@ class Visualizer(_JupyterDisplayMixin):
             label_style=label_style,
             tex_label=tex_label,
             tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
         )
+
+    def new(
+        self,
+        obj: VizInputType | None = None,
+        *,
+        entity_id: str | None = None,
+        color: str
+        | tuple[float, float, float]
+        | tuple[float, float, float, float]
+        | None = None,
+        opacity: float | None = None,
+        style: ObjVizStyle | None = None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
+    ) -> "VizObjectRef":
+        """Like :meth:`add`, but returns a :class:`VizObjectRef` instead of a ``str``."""
+        from ._object_ref import VizObjectRef
+
+        eid = self._add_to_scene(
+            "",
+            obj=obj,
+            entity_id=entity_id,
+            color=color,
+            opacity=opacity,
+            style=style,
+            label=label,
+            label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
+        )
+        node = self._scenes[""].get_node(eid)
+        return VizObjectRef(VizSceneHandle(self, ""), node)
+
+    def add_group(self, name: str | None = None, *, scene_name: str = "") -> "VizObjectRef":
+        """Create a scene-graph group and return a :class:`VizObjectRef` for it."""
+        from ._object_ref import VizObjectRef
+
+        scene = self._scenes[scene_name]
+        group = scene.add_group(name)
+        return VizObjectRef(VizSceneHandle(self, scene_name), group)
 
     def _add_to_scene(
         self,
@@ -278,13 +329,32 @@ class Visualizer(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
     ) -> str:
-        """Add an entity to a specific scene."""
+        """Add an entity to a specific scene.
+
+        ``parent_id`` parents the new scene node under an existing scene node;
+        ``attach_to`` sets the scene-node reference for a label created here.
+        """
         from ._active import ActSceneObject
         from ._label import Label
+        from ._nodes import VizGroup, VizSceneObject
         from ._styles import TextureLabelStyle as _TLS
 
         scene = self._scenes[scene_name]
+
+        if isinstance(obj, VizGroup):
+            from .scene import _generate_id
+
+            gid = entity_id or obj.id or _generate_id()
+            obj.id = gid
+            scene.add_node(obj, object_id=gid)
+            if parent_id is not None:
+                parent = scene.get_node(parent_id)
+                if isinstance(parent, VizSceneObject):
+                    parent.add_child(obj)
+            return gid
 
         if isinstance(obj, ActSceneObject):
             properties: dict[str, Any] = {}
@@ -305,6 +375,8 @@ class Visualizer(_JupyterDisplayMixin):
             return eid
 
         if isinstance(obj, Label):
+            if attach_to is not None:
+                obj.parent_id = attach_to
             return scene.add_label(obj)
 
         properties: dict[str, Any] = {}
@@ -373,7 +445,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if not isinstance(entity, (GeoEntity, GeoOperator)):
             kind = type(entity).__name__
-            return scene.add_object(
+            oid = scene.add_object(
                 SceneObject(
                     id=entity_id or "",
                     layer="scene",
@@ -384,8 +456,11 @@ class Visualizer(_JupyterDisplayMixin):
                 ),
                 object_id=entity_id,
             )
+            self._attach_to_parent(scene, oid, parent_id)
+            return oid
 
         eid = scene.add(entity, entity_id=entity_id, **properties)
+        self._attach_to_parent(scene, eid, parent_id)
 
         if label is not None:
             from ._label_frame import compute_label_position
@@ -401,13 +476,25 @@ class Visualizer(_JupyterDisplayMixin):
             lbl = Label(
                 text=label,
                 position=position,
-                parent_id=eid,
+                parent_id=attach_to if attach_to is not None else eid,
                 style=resolved_ls,
             )
             scene.add_label(lbl)
             return eid
 
         return eid
+
+    @staticmethod
+    def _attach_to_parent(scene: Any, oid: str, parent_id: str | None) -> None:
+        """Attach a scene node to a parent scene node (no-op when ``parent_id`` is ``None``)."""
+        if parent_id is None:
+            return
+        from ._nodes import VizSceneObject
+
+        child = scene.get_node(oid)
+        parent = scene.get_node(parent_id)
+        if isinstance(child, VizSceneObject) and isinstance(parent, VizSceneObject):
+            parent.add_child(child)
 
     def update(self, entity_id: str, **properties: Any) -> None:
         """Update rendering properties of an existing entity in the main scene.
@@ -1326,6 +1413,16 @@ class Visualizer(_JupyterDisplayMixin):
             self._handler_registry.register(cid, on_change)
         self._push_controls(scene_name)
         return cid
+
+    def update_control(self, ctrl_id: str, *, scene_name: str = "", **fields: Any) -> None:
+        """Mutate fields of a stored control and re-push ``controls_define``."""
+        scene = self._scenes[scene_name]
+        ctrl = scene._controls.get(ctrl_id)
+        if ctrl is None:
+            raise KeyError(f"Control {ctrl_id!r} not found")
+        for key, value in fields.items():
+            setattr(ctrl, key, value)
+        self._push_controls(scene_name)
 
     def add_dropdown(
         self,
