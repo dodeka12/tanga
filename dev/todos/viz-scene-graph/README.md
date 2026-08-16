@@ -42,6 +42,8 @@ fast rotation/movement of compound objects without recomputing any vertices.
 | 10 | [10-example.md](./10-example.md) | Example script under `py/examples/viz` demonstrating `VizGroup` + direct transforms |
 | 11 | [11-docs.md](./11-docs.md) | Update docs with the new scene-graph / `VizObjectRef` / `VizGroup` features |
 | 12 | [12-changelog.md](./12-changelog.md) | Add a changelog entry following `dev/workflows/changelog.md` |
+| 13 | [13-content-update.md](./13-content-update.md) | `content` aspect (in-place entity geometry update) + remove legacy flat-entity path and consolidate frontend maps — **PLANNED** |
+| 14 | [14-render-pipeline-consolidation.md](./14-render-pipeline-consolidation.md) | Unify live/export render pipeline: shared `scene-builder.js` + single `objects`/`attach_to` wire format — **PLANNED** |
 
 ## Guiding decisions
 
