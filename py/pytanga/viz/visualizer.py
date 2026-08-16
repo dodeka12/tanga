@@ -1411,7 +1411,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
         return cid
 
-    def add_group(
+    def add_control_group(
         self,
         gid: str,
         *,
@@ -1422,6 +1422,7 @@ class Visualizer(_JupyterDisplayMixin):
         parent_id: str | None = None,
         on_toggle: Any = None,
     ) -> str:
+        """Create a UI control group (sliders/buttons) in the main scene."""
         return self._add_scene_group(
             "",
             gid,
@@ -1456,7 +1457,7 @@ class Visualizer(_JupyterDisplayMixin):
             parent_id=parent_id,
             on_toggle=on_toggle,
         )
-        self._scenes[scene_name].add_group(group)
+        self._scenes[scene_name].add_control_group(group)
         if on_toggle is not None:
             self._handler_registry.register(f"__group__{gid}", on_toggle)
         self._push_controls(scene_name)
@@ -1470,12 +1471,13 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes[scene_name].remove_control(cid)
         self._push_controls(scene_name)
 
-    def remove_group(self, gid: str) -> None:
+    def remove_control_group(self, gid: str) -> None:
+        """Remove a UI control group from the main scene."""
         self._remove_scene_group("", gid)
 
     def _remove_scene_group(self, scene_name: str, gid: str) -> None:
         self._handler_registry.unregister(f"__group__{gid}")
-        self._scenes[scene_name].remove_group(gid)
+        self._scenes[scene_name].remove_control_group(gid)
         self._push_controls(scene_name)
 
     def clear_controls(self) -> None:

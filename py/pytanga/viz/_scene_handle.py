@@ -286,7 +286,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             parent_id=parent_id,
         )
 
-    def add_group(
+    def add_control_group(
         self,
         gid: str,
         *,
@@ -297,7 +297,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         parent_id: str | None = None,
         on_toggle: Any = None,
     ) -> str:
-        """Create a control group in this scene."""
+        """Create a UI control group in this scene."""
         return self._viz._add_scene_group(
             self._name,
             gid,
@@ -313,8 +313,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Remove a control from this scene."""
         self._viz._remove_scene_control(self._name, cid)
 
-    def remove_group(self, gid: str) -> None:
-        """Remove a control group from this scene."""
+    def remove_control_group(self, gid: str) -> None:
+        """Remove a UI control group from this scene."""
         self._viz._remove_scene_group(self._name, gid)
 
     def clear_controls(self) -> None:

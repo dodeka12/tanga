@@ -322,15 +322,15 @@ class Scene:
         """Register a control on the scene (stored separately from scene objects)."""
         self._controls[ctrl.id] = ctrl
 
-    def add_group(self, group: Any) -> None:
-        """Register a control group on the scene."""
+    def add_control_group(self, group: Any) -> None:
+        """Register a control group (UI controls) on the scene."""
         self._groups[group.id] = group
 
     def remove_control(self, cid: str) -> None:
         """Remove a control by ID."""
         self._controls.pop(cid, None)
 
-    def remove_group(self, gid: str) -> None:
+    def remove_control_group(self, gid: str) -> None:
         """Remove a control group by ID."""
         self._groups.pop(gid, None)
 
