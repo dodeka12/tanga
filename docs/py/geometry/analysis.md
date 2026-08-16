@@ -20,7 +20,7 @@ from pytanga.geometry import Geometry, Point
 e3 = BasisE3()
 geo = Geometry(e3)
 
-point_mv = e3.vector(1, 2, 3)
+point_mv = e3("e1 + 2 e2 + 3 e3")
 result = geo.analyze(point_mv)
 print(result)  # Point(x=1.0, y=2.0, z=3.0)
 ```
@@ -48,28 +48,35 @@ Determines which versor/operator a multivector represents.
 
 ```python
 from pytanga.algebra import Algebra
-from pytanga.geometry import Geometry, Rotor
+from pytanga.geometry import Geometry, Rotor, Direction, create_operator
 
 e3 = BasisE3()
 geo = Geometry(e3)
 
-rotor_mv = e3.rotor(1.57, e3.e3)
+rotor_mv = create_operator(e3, Rotor(angle=1.57, axis=Direction(0, 0, 1)))
 result = geo.which_operator(rotor_mv)
 print(result)  # Rotor(angle=1.57, axis=Direction(0,0,1))
 ```
 
 ## Plain Functions
 
-The underlying plain functions are also importable directly — they require
-the algebra and OPNS flag to be passed explicitly:
+The underlying plain functions are also importable directly — they read the
+OPNS/IPNS flag from the MV's algebra (`mv.algebra.opns`):
 
 ```python
 from pytanga.geometry import analyze, analyze_entity, analyze_operator
 
 result = analyze(point_mv)               # Entity or Operator
-result = analyze_entity(mv, opns=True)   # Entity only
+result = analyze_entity(mv)              # Entity only
 result = analyze_operator(mv)            # Operator only
 ```
+
+### Typed analyzers
+
+Specific per-entity analyzers are public in every `analysis_*` module:
+`analyze_point`, `analyze_direction`, `analyze_line`, `analyze_plane`,
+`analyze_circle`, `analyze_sphere`, `analyze_point_pair`, `analyze_hpoint`,
+`analyze_hdirection`, and `analyze_space` — all reading `mv.algebra.opns`.
 
 ## How It Works
 

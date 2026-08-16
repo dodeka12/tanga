@@ -112,6 +112,7 @@ nav:
     - Geometry:
       - Overview: py/geometry/index.md
       - Entities: py/geometry/entities.md
+      - MV-accepting constructors: py/geometry/mv-constructors.md
       - Operators: py/geometry/operators.md
       - Analysis pipeline: py/geometry/analysis.md
       - Creation pipeline: py/geometry/create.md

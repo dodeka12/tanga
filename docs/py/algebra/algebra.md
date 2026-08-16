@@ -115,11 +115,29 @@ vectors in the blade.
 For convenience, `MV` also exposes `a.rev()` and `a.conj()` which delegate
 to the parent algebra.
 
+**Grade‑based involutions** (galgebra‑compatible):
+
+```python
+gi = alg.grade_involution(a)   # negate odd-grade parts: (−1)^k · ⟨A⟩_k
+gc = alg.grade_conj(a)         # (−1)^(k(k+1)/2) · ⟨A⟩_k = grade_involution(a).rev()
+```
+
+`grade_involution` negates odd-grade parts.  `grade_conj` is the
+metric‑independent grade‑based Clifford conjugate (galgebra's `ccon`), unlike
+the metric‑aware `conj`.
+
+**Grade extraction:**
+
+```python
+ev = alg.even(a)        # grades 0, 2, 4, …
+od = alg.odd(a)         # grades 1, 3, 5, …
+```
+
 ### Miscellaneous operations
 
 ```python
 scalar = alg.scalar(a)         # scalar coefficient
-grade_k = alg.grade_proj(a, k) # ⟨A⟩_k — grade-k part
+grade_k = alg.grade_proj(a, k) # ⟨A⟩_k — grade-k part (also list[int])
 mag_sq = alg.magnitude_sq(a)   # sum of squared coefficients
 magnitude = alg.magnitude(a)   # sqrt of magnitude_sq
 is_zero = alg.is_zero(a)       # True if all coefficients zero
@@ -131,6 +149,66 @@ sp = alg.sp(a, b)              # scalar product: scalar part of a * b
 
 inv_a = alg.inv(a)             # multiplicative inverse
 inv_a = alg.inv(a, 97)         # modular inverse (integer algebras only)
+```
+
+### Norms, quadratic form, and exponential
+
+```python
+q = alg.qform(a)               # scalar_part(rev(A) * A)
+n2 = alg.norm2(a)              # |scalar_part(rev(A) * A)|
+n = alg.norm(a)                # sqrt(norm2(A))
+e = alg.exp(a)                 # exponential (requires A² ∈ ℝ)
+```
+
+`norm2`/`norm` are the quadratic‑form‑based norms (equal to `mag`/`mag2` in
+Euclidean algebras, distinct in non‑Euclidean).  `exp` raises `ValueError`
+if `A²` is not a scalar.
+
+### Commutator, contractions, and grade products
+
+```python
+c = alg.cp(a, b)       # commutator (A·B − B·A)/2
+ac = alg.acp(a, b)     # anti-commutator (A·B + B·A)/2
+rc = alg.rc(a, b)      # right contraction A ⌊ B
+mn = alg.gp_min(a, b)  # Hestenes inner product ⟨AB⟩_{|k−j|} (pure blades)
+mx = alg.gp_max(a, b)  # outermost grade product ⟨AB⟩_{k+j} (pure blades)
+```
+
+`rc` vanishes when `grade(A) < grade(B)`; `gp_min`/`gp_max` require pure‑blade
+operands and raise `ValueError` otherwise.
+
+### Dual inverse
+
+```python
+u = alg.undual(a)      # inverse of dual ★
+```
+
+`undual` is algebra‑specific: `A · I` in E3/P3/N3; the J‑map (same as `dual`)
+in PGA3/PGA2, where the pseudoscalar is not invertible.  See [Duals](duals.md).
+
+### Products with reverse/conjugate flags
+
+```python
+alg.gp_rev(a, b, rev_a=True)    # GP with reverse on first operand
+alg.gp_conj(a, b, conj_b=True)  # GP with conjugate on second operand
+alg.ip_rev(a, b, rev_a=True)    # IP with reverse on first operand
+alg.ip_conj(a, b, conj_b=True)  # IP with conjugate on second operand
+alg.op_rev(a, b, rev_a=True)    # OP with reverse on first operand
+alg.op_conj(a, b, conj_b=True)  # OP with conjugate on second operand
+```
+
+### Type checks and coefficients
+
+```python
+alg.is_vector(a)               # only grade-1 blades
+alg.is_base(a)                 # exactly one basis blade, coefficient 1
+alg.is_blade(a)                # simple r-vector
+alg.is_versor(a)               # versor (product of invertible vectors)
+alg.is_grade(a, 2)             # pure grade-2 element
+alg.blade_coefs(a, blades)     # coefficients per blade
+alg.components(a)              # list of single-blade MVs
+alg.get_coefs(a, k)            # grade-k coefficients
+alg.normalized(a)              # a / |a|
 ```
 
 ### Versor product

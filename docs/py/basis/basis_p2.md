@@ -32,16 +32,19 @@ P2 = BasisP2()            # default dtype='float64'
 | `e123` | $e_1 \wedge e_2 \wedge e_3$ | `0b111` |
 | `I` | Pseudoscalar ($e_1 \wedge e_2 \wedge e_3$) | `0b111` |
 
-## Factory Methods
+## Constructing Multivectors
+
+Points and directions are built from strings, or through the
+[`geometry` submodule](../geometry/index.md):
 
 ```python
-p = P2.point(3, 4)                          # x·e1 + y·e2 + e3  (homogeneous point)
+p = P2("3 e1 + 4 e2 + e3")   # x·e1 + y·e2 + e3  (homogeneous point)
+d = P2("e1")                 # x·e1 + y·e2         (ideal point, at infinity)
 
-d = P2.direction(1, 0)                      # x·e1 + y·e2         (ideal point, at infinity)
-
-p_rnd = P2.rnd_point((-5, 5), (0, 10))      # random point in given ranges
-
-d_rnd = P2.rnd_direction((-1, 1), (-1, 1))  # random direction in given ranges
+# Equivalent, via the geometry submodule:
+from pytanga.geometry import Direction, Point, create_entity
+p = create_entity(P2, Point(3, 4, 0))
+d = create_entity(P2, Direction(1, 0, 0))
 ```
 
 ## Display
@@ -59,15 +62,15 @@ from pytanga.basis import BasisP2
 P2 = BasisP2()
 
 # Create a point
-p = P2.point(2, 3)
+p = P2("2 e1 + 3 e2 + e3")
 P2.show(p, "point")               # e1 · 2 + e2 · 3 + e3 · 1
 
 # Create a direction (ideal point at infinity)
-d = P2.direction(1, 1)
+d = P2("e1 + e2")
 P2.show(d, "direction")           # e1 · 1 + e2 · 1 (no e3 component)
 
 # A line through two points p and q is their outer product
-q = P2.point(5, 1)
+q = P2("5 e1 + e2 + e3")
 line = P2.op(p, q)                # p ∧ q = bivector in P2
 P2.show(line, "line p∧q")
 ```
@@ -75,7 +78,9 @@ P2.show(line, "line p∧q")
 !!! note "Homogeneous coordinate"
     The third basis vector $e_3$ serves as the homogeneous coordinate.
     A point has coefficient 1 for $e_3$; a direction (ideal point) has
-    coefficient 0. This distinction is automatic in the factory methods.
+    coefficient 0. This distinction is encoded in the multivector
+    coefficients (or handled automatically by the [`geometry`](../geometry/index.md)
+    submodule).
 
 ## Three Patterns for Accessing Blades
 

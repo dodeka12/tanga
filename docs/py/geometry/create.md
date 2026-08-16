@@ -36,38 +36,50 @@ mv = geom_pga.create(r)
 
 ## OPNS / IPNS
 
-The default `Geometry(algebra)` uses OPNS.  To switch to IPNS, pass `opns=False`
-at construction time, or override per call:
+The OPNS/IPNS interpretation is an **algebra property** (`Algebra.opns`,
+mutable, default `True`).  `Geometry(algebra)` reads the flag from the
+algebra; there is no per-call `opns` override.
 
 ```python
-from pytanga.algebra import Algebra
+from pytanga.basis import BasisN3
 from pytanga.geometry import Geometry, Point
 
-n3 = BasisN3()
+n3 = BasisN3()                # algebra.opns is True by default
+geo = Geometry(n3)
 
 # Default OPNS (recommended for most uses)
-geo = Geometry(n3, opns=True)
 mv = geo.create(Point(1, 0, 0))         # OPNS point
 
-# Override to IPNS for a single call
-mv_ipns = geo.create(Point(1, 0, 0), opns=False)
+# Switch to IPNS by mutating the algebra flag:
+n3.opns = False
+mv_ipns = geo.create(Point(1, 0, 0))    # IPNS point
 
-# Or create an IPNS-bound instance
-geom_ipns = Geometry(n3, opns=False)
-mv = geom_ipns.create(Point(1, 0, 0))    # IPNS point
+# Or construct an IPNS algebra directly:
+geom_ipns = Geometry(BasisN3(opns=False))
+mv = geom_ipns.create(Point(1, 0, 0))   # IPNS point
 ```
 
 ## Plain Functions
 
-The underlying plain functions are available directly.  They require the
-algebra and OPNS flag to be passed explicitly:
+The underlying plain functions are available directly.  They read the
+OPNS/IPNS flag from the algebra (`algebra.opns`):
 
 ```python
 from pytanga.geometry import create, create_entity, create_operator
 
-mv = create(algebra, obj, opns=True)            # Entity or Operator
-mv = create_entity(algebra, entity, opns=True)  # Entity only
-mv = create_operator(algebra, operator)          # Operator only
+mv = create(algebra, obj)            # Entity or Operator
+mv = create_entity(algebra, entity)  # Entity only
+mv = create_operator(algebra, operator)  # Operator only
+```
+
+### `Geometry.__call__`
+
+`Geometry` instances are callable: `geo(obj)` forwards to `create(obj)` for
+entities/operators and to `analyze(obj)` for multivectors.
+
+```python
+mv = geo(Point(1, 2, 3))    # create — Entity argument
+result = geo(mv)            # analyze — MV argument
 ```
 
 ## Algebra-Specific Entity Representations

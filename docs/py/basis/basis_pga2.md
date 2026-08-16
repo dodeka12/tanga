@@ -46,16 +46,17 @@ Background: [pga\_null\_embedding.md](pga_null_embedding.md).
 | `ep` | $e_3$ ($e_p^2 = +1$) | Internal embedding (prefer `e0`) |
 | `em` | $e_4$ ($e_m^2 = -1$) | Internal embedding (prefer `e0`) |
 
-## Factory Methods
+## Constructing Multivectors
 
 ```python
-p = pga2.point(3, 4)             # IPNS: x·e1 + y·e2 + e₀
-                                   # OPNS: grade‑2 bivector (intersection of 2 lines)
-
-d = pga2.direction(1, 0)         # IPNS: x·e1 + y·e2 (ideal point, no e₀ component)
-
-ℓ = pga2.line(nx=1, ny=0, d=2)  # OPNS: nx·e1 + ny·e2 + d·e₀ (grade‑1 vector)
+p = pga2("3 e1 + 4 e2 + e0")     # IPNS point
+d = pga2("e1")                   # ideal point / direction (no e0 component)
+ℓ = pga2("e1 + 2 e0")            # line: nx·e1 + ny·e2 + d·e0 (grade‑1 vector)
 ```
+
+Geometric entities are also available through the
+[`geometry` submodule](../geometry/index.md), e.g.
+`create_entity(pga2, Point(3, 4, 0))`.
 
 ## Entity Grades (Gunn/Dorst Convention)
 
@@ -74,16 +75,16 @@ from pytanga.basis import BasisPGA2
 pga2 = BasisPGA2()
 
 # A line: grade-1 vector in OPNS
-line_x = pga2.line(nx=1, ny=0, d=0)    # line through origin along y-axis
-line_y = pga2.line(nx=0, ny=1, d=0)    # line through origin along x-axis
+line_x = pga2("e1")                     # line through origin along y-axis
+line_y = pga2("e2")                     # line through origin along x-axis
 
 # A point is the intersection (meet) of two lines
 # OPNS: line_x ∨ line_y = bivector
 origin = pga2.op(line_x, line_y)        # point at (0, 0)
 pga2.show(origin, "origin (OPNS)")
 
-# Point in IPNS from factory
-p = pga2.point(2, 3)
+# Point in IPNS (string conversion)
+p = pga2("2 e1 + 3 e2 + e0")
 pga2.show(p, "point (2,3) IPNS")        # e1·2 + e2·3 + e₀·1
 ```
 

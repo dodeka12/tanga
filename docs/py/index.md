@@ -14,7 +14,7 @@ interface to TanGA's geometric algebra engine.
 |-------|---------------------|
 | [Environment & Setup](env/index.md) | Installation prerequisites, uv environment, automatic C++ compilation and caching |
 | [Algebra submodule](algebra/index.md) | `Algebra`, `MV`, duals, modulus arithmetic, galgebra bridge — the core GA types and operations |
-| [Basis classes](basis/index.md) | How `BasisE2`, `BasisP2`, `BasisN2`, `BasisPGA2` (2D) and `BasisE3`, `BasisP3`, `BasisN3`, `BasisPGA3` (3D) expose named blades and factory methods |
+| [Basis classes](basis/index.md) | How `BasisE2`, `BasisP2`, `BasisN2`, `BasisPGA2` (2D) and `BasisE3`, `BasisP3`, `BasisN3`, `BasisPGA3` (3D) expose named blades |
 | [BladeMask](blade-mask/index.md) | Construction, properties, set operations — the foundational type labelling all matrix and tensor axes |
 | [Matrix Operations](matrix/index.md) | `MVMatrix`, `MVProductMatrix` — product‑matrix and blade‑mask pipeline |
 | [Equation Solving](solver/index.md) | `solve`, `solve_lsq`, `solve_mod` — automatic blade‑mask derivation and linear system solving via free functions |
@@ -41,14 +41,14 @@ print(a * b)
 print(a ^ b)
 ```
 
-For named blades and convenience factory methods use a `Basis` class:
+For named blades use a `Basis` class and construct multivectors from strings:
 
 ```python
 from pytanga.basis import BasisE3
 
 E3 = BasisE3()
-v  = E3.vector(1, 2, 3)
-w  = E3.vector(0, 1, 0)
+v  = E3("e1 + 2 e2 + 3 e3")
+w  = E3("e2")
 print(v * w)
 ```
 
@@ -94,7 +94,7 @@ uv run python py/examples/<script>.py
 | [`base_e3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_e3_demo.py) | `BasisE3` — Euclidean 3D |
 | [`base_p3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_p3_demo.py) | `BasisP3` — Projective 3D |
 | [`base_n3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_n3_demo.py) | `BasisN3` — Null / conformal 3D |
-| [`base_pga3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_pga3_demo.py) | `BasisPGA3` — PGA 3D with geometric factory methods |
+| [`base_pga3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_pga3_demo.py) | `BasisPGA3` — PGA 3D |
 | [`modulus_algebra_single.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/modulus_algebra_single.py) | Integer algebra with a fixed modulus |
 | [`modulus_algebra_multi.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/modulus_algebra_multi.py) | Two different moduli on the same algebra (NTRU style) |
 | [`geometry/e3_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/geometry/e3_entities.py) | E3 Point, Plane, Reflection, Rotor — create, analyze, IPNS |

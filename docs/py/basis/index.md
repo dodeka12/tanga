@@ -9,8 +9,8 @@ Among the 3D classes, [`BasisE3`](bases.md#basise3-euclidean-3d-g3-0) covers
 Euclidean 3D, [`BasisP3`](bases.md#basisp3-projective-3d-g4-0) covers Projective 3D,
 [`BasisN3`](bases.md#basisn3-nullconformal-3d-g5-0textb10000) covers
 conformal/null 3D using the [null‑vector embedding](pga_null_embedding.md),
-and [`BasisPGA3`](bases.md#basispga3-pga-3d) extends `BasisN3` with
-geometric factory methods for points and vectors.
+and [`BasisPGA3`](bases.md#basispga3-pga-3d) implements the Gunn/Dorst
+plane‑based PGA.
 
 Among the 2D classes, [`BasisE2`](bases.md#basise2-euclidean-2d-g2-0) covers
 Euclidean 2D, [`BasisP2`](bases.md#basisp2-projective-2d-g3-0) covers
@@ -42,8 +42,8 @@ from pytanga.basis import BasisE3
 
 E3 = BasisE3()
 
-# Named blades as attributes
-v = E3.vector(1, 2, 3)
+# Named blades as attributes; multivectors from strings
+v = E3("e1 + 2 e2 + 3 e3")
 b = E3.e1 * E3.e2           # geometric product → e12
 
 E3.show(v, "v")

@@ -13,7 +13,7 @@ throughout:
 ```python
 from pytanga.geometry import Geometry
 
-geo = Geometry(algebra, opns=True)
+geo = Geometry(algebra)   # OPNS/IPNS flag lives on the algebra
 ```
 
 ## E3 Round-Trip
@@ -275,8 +275,8 @@ assert isinstance(result, Space)
 
 ## Plain Functions
 
-The same round‑trips can be written with the plain functions — pass the
-algebra and OPNS flag explicitly on each call:
+The same round‑trips can be written with the plain functions — the
+OPNS/IPNS flag is read from the algebra:
 
 ```python
 from pytanga.geometry import analyze, create
@@ -285,8 +285,8 @@ result = analyze(create(e3, Point(3, -1, 2)))
 assert isinstance(result, Point)
 ```
 
-The `Geometry` class is a convenience wrapper that stores the algebra and
-default OPNS flag so you don't need to repeat them.
+The `Geometry` class is a convenience wrapper that stores the algebra so you
+don't need to repeat it.
 
 ## Entity Coverage by Algebra
 

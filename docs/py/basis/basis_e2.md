@@ -28,15 +28,17 @@ E2 = BasisE2()            # default dtype='float64'
 | `e12` | $e_1 \wedge e_2$ | `0b11` |
 | `I` | Pseudoscalar ($e_1 \wedge e_2$) | `0b11` |
 
-## Factory Methods
+## Constructing Multivectors
+
+Vectors are built from strings; rotors are created through the
+[`geometry` submodule](../geometry/index.md):
 
 ```python
-v = E2.vector(3, 4)                     # 3·e1 + 4·e2
-
-v_rnd = E2.rnd_vector((-5, 5), (0, 10)) # random vector in x∈[-5,5], y∈[0,10]
+v = E2("3 e1 + 4 e2")                   # 3·e1 + 4·e2
 
 # Rotor: rotation by angle θ in the e12 plane (the only rotation plane in 2D)
-r = E2.rotor(1.57, E2.e12)              # 90° CCW rotor
+from pytanga.geometry import Direction, Rotor, create_operator
+r = create_operator(E2, Rotor(angle=1.57, axis=Direction(0, 0, 1)))  # 90° CCW
 ```
 
 ## Display
@@ -55,15 +57,16 @@ import math
 E2 = BasisE2()
 
 # Create vectors
-a = E2.vector(1, 0)
-b = E2.vector(0, 1)
+a = E2("e1")
+b = E2("e2")
 
 # Geometric product
 ab = a * b
 E2.show(ab, "a*b")       # e12 (bivector)
 
 # Rotor: rotate a by 90° CCW
-R = E2.rotor(math.pi / 2, E2.e12)
+from pytanga.geometry import Direction, Rotor, create_operator
+R = create_operator(E2, Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1)))
 a_rotated = R * a * ~R
 E2.show(a_rotated, "R·a·R⁻¹")  # -e2 (e₁ → -e₂ clockwise by default convention)
 ```
