@@ -1,6 +1,6 @@
 # Phase 2 — Style defaults holder (`VizStyleDefaults`)
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -58,57 +58,57 @@ re-wire where style resolution happens.
 
 ### `_style_defaults.py`
 
-- [ ] `@dataclass class VizStyleDefaults` with fields:
+- [x] `@dataclass class VizStyleDefaults` with fields:
       `default_styles`, `default_label_style`, `default_label_styles`,
       `default_annotation_style`, `default_tex_label_style`,
       `default_tex_label_styles`.
-- [ ] `make_defaults()` factory that builds a fresh canonical instance from the
+- [x] `make_defaults()` factory that builds a fresh canonical instance from the
       existing `_make_default_*` factory functions in `_style_dict.py`.
-- [ ] `copy(self) -> VizStyleDefaults` deep-copying every field (via
+- [x] `copy(self) -> VizStyleDefaults` deep-copying every field (via
       `copy.deepcopy`).
-- [ ] No import of `Visualizer`/`Scene` (avoid circular imports); import the
+- [x] No import of `Visualizer`/`Scene` (avoid circular imports); import the
       `_style_dict` factories only inside `make_defaults()`, and style types
       under `TYPE_CHECKING`.
 
 ### `visualizer.py`
 
-- [ ] Replace the individual `_default_*` attributes with a single
+- [x] Replace the individual `_default_*` attributes with a single
       `self._style_defaults: VizStyleDefaults` built via `make_defaults()`.
-- [ ] Keep `self._default_styles` (and the other `_default_*`) as read-only
+- [x] Keep `self._default_styles` (and the other `_default_*`) as read-only
       properties forwarding to `self._style_defaults`, so the existing public
       API (`viz.default_styles`, `viz.default_label_style`, …) and internal
       uses keep working unchanged.
-- [ ] Drop the now-unused `_make_default_*` imports.
-- [ ] `self._default_act_point_style` stays on the Visualizer (not bundled).
-- [ ] When constructing the main `Scene` and each named `Scene`, pass
+- [x] Drop the now-unused `_make_default_*` imports.
+- [x] `self._default_act_point_style` stays on the Visualizer (not bundled).
+- [x] When constructing the main `Scene` and each named `Scene`, pass
       `style_defaults=self._style_defaults.copy()`.
-- [ ] Leave `_flushed_scene` / `_full_state_for` / label resolution untouched
+- [x] Leave `_flushed_scene` / `_full_state_for` / label resolution untouched
       (they still read the Visualizer's `_default_*` properties this phase).
 
 ### `scene.py`
 
-- [ ] Add `Scene(..., style_defaults: VizStyleDefaults | None = None)`; when
+- [x] Add `Scene(..., style_defaults: VizStyleDefaults | None = None)`; when
       `None`, fall back to `make_defaults()` (standalone `Scene()` usage
       keeps working).
-- [ ] Store `self.style_defaults`.
-- [ ] Expose read-only accessor properties (e.g. `default_styles`,
+- [x] Store `self.style_defaults`.
+- [x] Expose read-only accessor properties (e.g. `default_styles`,
       `default_label_style`, `default_label_styles`, `default_annotation_style`,
       `default_tex_label_style`, `default_tex_label_styles`) reading from
       `self.style_defaults`.
-- [ ] Do **not** change `flush` / `full_state` / `add` / `add_label` yet.
+- [x] Do **not** change `flush` / `full_state` / `add` / `add_label` yet.
 
 ## Unit tests
 
 File: `py/tests/viz/test_style_defaults.py`.
 
-- [ ] `test_make_defaults_has_all_fields` — every field is populated.
-- [ ] `test_copy_is_deep` — mutating a copied nested style does not affect the
+- [x] `test_make_defaults_has_all_fields` — every field is populated.
+- [x] `test_copy_is_deep` — mutating a copied nested style does not affect the
       original.
-- [ ] `test_scene_receives_independent_copy` — mutating a scene's holder does
+- [x] `test_scene_receives_independent_copy` — mutating a scene's holder does
       not change the Visualizer's holder, and vice versa.
-- [ ] `test_scene_default_fallback` — `Scene()` without an explicit holder
+- [x] `test_scene_default_fallback` — `Scene()` without an explicit holder
       gets an independent default holder.
-- [ ] `test_visualizer_backcompat_properties` — `viz.default_styles`,
+- [x] `test_visualizer_backcompat_properties` — `viz.default_styles`,
       `viz.default_label_style`, `viz.default_label_styles`,
       `viz.default_annotation_style`, `viz.default_tex_label_style` forward to
       the holder and still expose the pre-existing shapes
@@ -117,8 +117,8 @@ File: `py/tests/viz/test_style_defaults.py`.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/test_style_defaults.py py/tests/viz/test_scene_session.py` passes.
-- [ ] `viz.default_styles[Point]` still works through the backward-compat property.
-- [ ] Mutating a scene's holder never changes the Visualizer's holder.
-- [ ] `Scene()` (standalone) still constructs with an independent holder.
-- [ ] Existing viz tests (serializer, controls, 2d, interaction, export) still pass.
+- [x] `uv run pytest py/tests/viz/test_style_defaults.py py/tests/viz/test_scene_session.py` passes.
+- [x] `viz.default_styles[Point]` still works through the backward-compat property.
+- [x] Mutating a scene's holder never changes the Visualizer's holder.
+- [x] `Scene()` (standalone) still constructs with an independent holder.
+- [x] Existing viz tests (serializer, controls, 2d, interaction, export) still pass.
