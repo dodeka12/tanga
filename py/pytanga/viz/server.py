@@ -27,6 +27,60 @@ from aiohttp import web
 logger = logging.getLogger("tanga.viz.server")
 
 
+def _ws_msg_brief(payload: Any) -> str:
+    """Return a concise description of a WebSocket message for diagnostics."""
+    if isinstance(payload, str):
+        raw = payload
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            return f"<non-json {len(raw)}B>"
+    else:
+        obj = payload
+        raw = json.dumps(obj) if isinstance(obj, dict) else ""
+    size = len(raw)
+    t = obj.get("type", "?") if isinstance(obj, dict) else "?"
+
+    if t == "object_update":
+        return (
+            f"object_update patches={len(obj.get('patches', []))} "
+            f"removed={len(obj.get('removed', []))} "
+            f"scene={obj.get('scene', '')!r} ({size}B)"
+        )
+    if t == "scene_update":
+        return (
+            f"scene_update objects={len(obj.get('objects', []))} "
+            f"removed={len(obj.get('removed', []))} "
+            f"scene={obj.get('scene', '')!r} ({size}B)"
+        )
+    if t == "controls_define":
+        return (
+            f"controls_define controls={len(obj.get('controls', []))} "
+            f"groups={len(obj.get('groups', []))} "
+            f"scene={obj.get('scene', '')!r} ({size}B)"
+        )
+    if t == "scene_config":
+        return (
+            f"scene_config name={obj.get('name', '')!r} "
+            f"space_dim={obj.get('space_dim', '?')} ({size}B)"
+        )
+    if t == "scene_list":
+        return f"scene_list scenes={obj.get('scenes', [])} ({size}B)"
+    if t == "browser_id":
+        return f"browser_id id={obj.get('browser_id', '')!r} ({size}B)"
+    if t == "ready":
+        return (
+            f"ready scene={obj.get('scene', '')!r} "
+            f"token={obj.get('page_token') or 'none'} "
+            f"browser_id={obj.get('browser_id') or 'none'} ({size}B)"
+        )
+    if t == "clear_all":
+        return f"clear_all ({size}B)"
+    if t == "navigate":
+        return f"navigate scene={obj.get('scene', '')!r} ({size}B)"
+    return f"type={t} ({size}B)"
+
+
 async def _heartbeat(ws: web.WebSocketResponse, interval: float = 15.0) -> None:
     """Send periodic pings so dead/half-open connections are detected.
 
@@ -183,6 +237,7 @@ class VizServer:
         if fit_camera:
             message["fit_camera"] = True
         data = json.dumps(message)
+        logger.info("WS SEND %s clients=%d", _ws_msg_brief(data), len(self._ws_clients))
 
         dead: list[web.WebSocketResponse] = []
         for ws in self._ws_clients:
@@ -198,6 +253,7 @@ class VizServer:
         """Send an arbitrary JSON string to all connected clients."""
         if not self._ws_clients:
             return
+        logger.info("WS SEND %s clients=%d", _ws_msg_brief(data), len(self._ws_clients))
         dead: list[web.WebSocketResponse] = []
         for ws in self._ws_clients:
             try:
@@ -249,9 +305,12 @@ class VizServer:
         """Send scene config + full entity state to a single client."""
         from .serializer import serialize_scene_update
 
+        logger.info("WS FULL-STATE-BEGIN scene=%r", scene_name)
+
         # 0. Clear the browser scene first (handles reconnect with new server)
-        logger.debug("Sending clear_all for scene '%s'", scene_name)
-        await ws.send_str(json.dumps({"type": "clear_all"}))
+        clear_payload = json.dumps({"type": "clear_all"})
+        logger.info("WS SEND %s", _ws_msg_brief(clear_payload))
+        await ws.send_str(clear_payload)
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
 
@@ -265,8 +324,9 @@ class VizServer:
 
         if cfg is not None:
             cfg.setdefault("name", scene_name)
-            logger.debug("Sending scene_config for '%s'", scene_name)
-            await ws.send_str(json.dumps(cfg))
+            cfg_payload = json.dumps(cfg)
+            logger.info("WS SEND %s", _ws_msg_brief(cfg_payload))
+            await ws.send_str(cfg_payload)
 
         # 2. Full state (entities + labels merged)
         if self._flush_callback is not None:
@@ -274,15 +334,20 @@ class VizServer:
             if entities:
                 msg = serialize_scene_update(entities, [])
                 msg["scene"] = scene_name
-                logger.debug("Sending %d entities for scene '%s'", len(entities), scene_name)
-                await ws.send_str(json.dumps(msg))
+                state_payload = json.dumps(msg)
+                logger.info("WS SEND %s", _ws_msg_brief(state_payload))
+                await ws.send_str(state_payload)
 
         # 3. Scene list (so the frontend knows available scenes)
         if self._scene_list_callback is not None:
             scene_names = self._scene_list_callback()
-            await ws.send_str(
-                json.dumps({"type": "scene_list", "scenes": scene_names, "default": ""})
+            list_payload = json.dumps(
+                {"type": "scene_list", "scenes": scene_names, "default": ""}
             )
+            logger.info("WS SEND %s", _ws_msg_brief(list_payload))
+            await ws.send_str(list_payload)
+
+        logger.info("WS FULL-STATE-END scene=%r", scene_name)
 
     # ── Browser sessions (read-only access for Visualizer) ─
 
@@ -424,9 +489,9 @@ class VizServer:
                             current_session = session
                             msg_browser_id = browser_id
 
-                        logger.debug(
-                            "WS msg: %s from %s (id=%s)",
-                            msg_type, remote_addr, msg_browser_id,
+                        logger.info(
+                            "WS RECV %s from %s (id=%s)",
+                            _ws_msg_brief(data), remote_addr, msg_browser_id,
                         )
 
                         if msg_type == "ready":

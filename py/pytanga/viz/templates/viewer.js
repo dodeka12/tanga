@@ -207,7 +207,7 @@ function connectWebSocket() {
             console.error('Failed to parse WebSocket message:', e);
             return;
         }
-        _log('ws-msg', 'type=' + (msg.type || 'unknown'));
+        _log('ws-msg', 'type=' + (msg.type || 'unknown') + ' size=' + event.data.length);
         handleMessage(msg);
     };
 
@@ -566,6 +566,7 @@ function _forMyScene(msg) {
 function handleMessage(msg) {
     if (msg.type === 'browser_id') {
         _browserId = msg.browser_id;
+        _log('init', 'browser_id=' + msg.browser_id);
         return;
     }
     if (msg.type === 'navigate') {
@@ -590,6 +591,7 @@ function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
+        _log('init', 'clear_all → reset (objects=' + sceneObjects.size + ' meshes=' + entityMeshes.size + ' labels=' + labelObjects.size + ')');
         console.log('[clear_all] Resetting scene — objects:', sceneObjects.size, 'meshes:', entityMeshes.size, 'labels:', labelObjects.size);
         // Remove all scene children (entities, lights, grid, axes)
         while (scene.children.length > 0) {
@@ -632,9 +634,12 @@ function handleMessage(msg) {
         d2.position.set(-5, -2, -8);
         scene.add(d2);
         console.log('[clear_all] Scene reset complete');
+        _log('init', 'clear_all → reset complete');
     } else if (msg.type === 'scene_config') {
+        _log('init', 'scene_config name=' + (msg.name || '') + ' space_dim=' + msg.space_dim);
         applySceneConfig(msg);
     } else if (msg.type === 'scene_update') {
+        _log('init', 'scene_update objects=' + (msg.objects ? msg.objects.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {
             for (const id of msg.removed) {
                 removeSceneObject(id);
@@ -663,6 +668,7 @@ function handleMessage(msg) {
             fitCameraToScene();
         }
     } else if (msg.type === 'object_update') {
+        _log('init', 'object_update patches=' + (msg.patches ? msg.patches.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {
             for (const id of msg.removed) {
                 removeSceneObject(id);
@@ -683,6 +689,7 @@ function handleMessage(msg) {
     } else if (msg.type === 'screenshot') {
         handleScreenshot(msg);
     } else if (msg.type === 'controls_define') {
+        _log('init', 'controls_define controls=' + (msg.controls ? msg.controls.length : 0) + ' groups=' + (msg.groups ? msg.groups.length : 0));
         handleControlsDefine(msg);
         const controls2 = msg.controls || [];
         const groups = msg.groups || [];
