@@ -69,6 +69,9 @@ class TestCdnUnreachableDetection:
         assert "__tanga_cdn_failed" in script
         assert "cdn.jsdelivr.net/npm/three" in script
         assert "AbortError" in script
+        # A runtime error must be reported distinctly from a CDN failure.
+        assert "RUNTIME_ERROR_MESSAGE" in script
+        assert "Viewer error" in script
 
     def test_live_viewer_cdn_probe_present(self):
         html = (
@@ -76,3 +79,5 @@ class TestCdnUnreachableDetection:
         ).read_text(encoding="utf-8")
         assert "__tanga_cdn_failed" in html
         assert "cdn.jsdelivr.net" in html
+        assert "RUNTIME_ERROR_MESSAGE" in html
+        assert "Viewer error" in html
