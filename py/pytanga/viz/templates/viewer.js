@@ -279,7 +279,6 @@ function showReconnectButton(mode) {
         _reconnectButtonEl.addEventListener('click', () => {
             _reconnectClickCount++;
             if (_reconnectClickCount >= 3) {
-                console.log('[tanga] 3 reconnect attempts without success — offering page reload');
                 showReconnectButton('page-reload');
                 return;
             }
@@ -559,7 +558,6 @@ async function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
-        console.log('[clear_all] Resetting scene — objects:', sceneObjects.size);
         // Remove all scene children (entities, lights, grid, axes)
         while (scene.children.length > 0) {
             const child = scene.children[0];
@@ -597,7 +595,6 @@ async function handleMessage(msg) {
         const d2 = new THREE.DirectionalLight(0xffffff, 0.3);
         d2.position.set(-5, -2, -8);
         scene.add(d2);
-        console.log('[clear_all] Scene reset complete');
     } else if (msg.type === 'scene_config') {
         applySceneConfig(msg);
     } else if (msg.type === 'scene_update') {
