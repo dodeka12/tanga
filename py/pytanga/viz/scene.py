@@ -148,7 +148,15 @@ class Scene:
             merged["color"] = props["color"]
         if props.get("opacity") is not None:
             merged["opacity"] = props["opacity"]
-        return VizSceneObject(obj.id, obj.data, merged, name=obj.kind, kind=kind)
+        return VizSceneObject(
+            obj.id,
+            obj.data,
+            merged,
+            name=obj.kind,
+            kind=kind,
+            props=props,
+            styles_map=self.default_styles,
+        )
 
     def _make_overlay_node(self, obj: SceneObject) -> VizOverlayObject:
         """Build an overlay-layer node from a label/annotation/title object."""
@@ -270,6 +278,10 @@ class Scene:
         obj.properties.update(properties)
         obj.dirty = True
 
+        node = self._nodes.get(object_id)
+        if isinstance(node, VizSceneObject):
+            node.apply_props(dict(properties))
+
     def update_label(
         self,
         object_id: str,
@@ -306,12 +318,23 @@ class Scene:
                     )
         obj.dirty = True
 
+        node = self._nodes.get(object_id)
+        if isinstance(node, VizOverlayObject):
+            if text is not None:
+                node.set_payload(text)
+            if style is not None:
+                node.set_style(style)
+
     def update_entity(self, entity_id: str, entity: GeoEntity) -> None:
         """Replace the geometry entity for an existing scene-layer ID."""
         obj = self._get(entity_id)
         obj.data = entity
         obj.kind = type(entity).__name__
         obj.dirty = True
+
+        node = self._nodes.get(entity_id)
+        if isinstance(node, VizSceneObject):
+            node.set_entity(entity)
 
     def remove(self, object_id: str) -> None:
         """Mark an object (or group node) for removal in the next flush."""
@@ -341,6 +364,9 @@ class Scene:
         obj = self._objects.get(object_id)
         if obj is not None:
             obj.dirty = True
+        node = self._nodes.get(object_id)
+        if node is not None:
+            node.mark("full")
 
     def get_interaction(self, object_id: str) -> Any | None:
         """Get the interaction config for an entity, or ``None``."""
@@ -357,11 +383,13 @@ class Scene:
         *,
         styles_map: dict[str, Any] | None = None,
     ) -> tuple[list[dict[str, Any]], list[str]]:
-        """Return (dirty_object_dicts, removed_ids) and reset tracking.
+        """Return (aspect_patches, removed_ids) and reset dirty tracking.
 
-        ``styles_map`` is the Visualizer's per-kind style dict.
+        Walks the scene-graph nodes in DFS pre-order and collects one
+        aspect-scoped patch per dirty aspect (``full`` / ``style`` /
+        ``transform``).  Nodes use their scene-snapshotted styles by default.
         """
-        dirty: list[dict[str, Any]] = []
+        patches: list[dict[str, Any]] = []
         removed = list(self._removed_ids)
 
         for oid in list(self._removed_ids):
@@ -373,31 +401,37 @@ class Scene:
                 pass
         self._removed_ids.clear()
 
-        for oid in self._order:
-            obj = self._objects.get(oid)
-            if obj is None:
+        for node in self._dfs_preorder():
+            dirty_aspects = node.consume_dirty()
+            if not dirty_aspects:
                 continue
-            if obj.dirty:
-                entity_dict = _serialize_object(obj, styles_map=styles_map)
-                _inject_interaction(entity_dict, oid, self._interaction_configs)
-                dirty.append(entity_dict)
-                obj.dirty = False
+            for aspect in ("full", "style", "transform"):
+                if aspect not in dirty_aspects:
+                    continue
+                patch = node.patch(aspect)
+                if aspect == "full" and node.layer == "scene":
+                    _inject_interaction(
+                        patch["value"], node.id, self._interaction_configs
+                    )
+                patches.append(patch)
 
-        return dirty, removed
+        return patches, removed
 
     def full_state(
         self,
         *,
         styles_map: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        """Return all objects serialized (for initial client sync)."""
+        """Return all nodes serialized (for initial client sync / export)."""
         result: list[dict[str, Any]] = []
-        for oid in self._order:
-            obj = self._objects.get(oid)
-            if obj is not None:
-                entity_dict = _serialize_object(obj, styles_map=styles_map)
-                _inject_interaction(entity_dict, oid, self._interaction_configs)
-                result.append(entity_dict)
+        for node in self._dfs_preorder():
+            if isinstance(node, VizSceneObject):
+                entity_dict = node.serialize(styles_map=styles_map)
+            else:
+                entity_dict = node.serialize()
+            if node.layer == "scene":
+                _inject_interaction(entity_dict, node.id, self._interaction_configs)
+            result.append(entity_dict)
         return result
 
     # -- Backward-compat helpers (used by visualizer.py) ----

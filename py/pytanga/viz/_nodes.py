@@ -96,6 +96,17 @@ def _merge_style_into(base: Any, override: Any) -> Any:
     return _merge_style(base, override, deep=True)
 
 
+def _style_to_dict(style: Any) -> dict[str, Any]:
+    """Return *style* as a plain dict (from an instance, a dict, or ``None``)."""
+    if style is None:
+        return {}
+    if isinstance(style, dict):
+        return dict(style)
+    if hasattr(style, "to_dict"):
+        return dict(style.to_dict())
+    return dict(getattr(style, "__dict__", {}))
+
+
 class Transform:
     """Canonical TRS transform (translation, Euler-``"XYZ"`` rotation, scale).
 
@@ -277,6 +288,8 @@ class VizSceneObject(VizNode):
         transform: Transform | None = None,
         parent: "VizSceneObject | None" = None,
         visible: bool = True,
+        props: dict[str, Any] | None = None,
+        styles_map: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
             id,
@@ -290,6 +303,8 @@ class VizSceneObject(VizNode):
         self.transform: Transform = transform if transform is not None else Transform()
         self.parent: VizSceneObject | None = None
         self.children: list[VizSceneObject] = []
+        self._props: dict[str, Any] = dict(props) if props else {}
+        self._styles_map: dict[str, Any] | None = styles_map
         if parent is not None:
             parent.add_child(self)
 
@@ -315,6 +330,60 @@ class VizSceneObject(VizNode):
         if self.parent is not None:
             m = self.parent.world_matrix() @ m
         return m
+
+    # ── Serialization / patches ─────────────────────────────
+
+    def serialize(
+        self,
+        *,
+        styles_map: dict[str, Any] | None = None,
+        props: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Serialize the full node (geometry + resolved style + transform)."""
+        from .serializer import _dispatch_entity
+
+        sm = styles_map if styles_map is not None else self._styles_map
+        p = dict(props) if props is not None else dict(self._props)
+        leaf = _dispatch_entity(self.entity, self.kind, p, sm)
+
+        # The node's resolved style is authoritative for the style block and
+        # its top-level color/opacity mirrors (frontend ``styleParam()``).
+        resolved = _style_to_dict(self.style)
+        if resolved:
+            leaf["style"] = resolved
+            if "color" in resolved:
+                leaf["color"] = resolved["color"]
+            if "opacity" in resolved:
+                leaf["opacity"] = resolved["opacity"]
+
+        result: dict[str, Any] = {
+            "id": self.id,
+            "layer": "scene",
+            "kind": self.kind,
+            "parent_id": self.parent.id if self.parent is not None else None,
+            "transform": self.transform.to_dict(),
+            "visible": self.visible,
+        }
+        result.update(leaf)
+        return result
+
+    def patch(self, aspect: str) -> dict[str, Any]:
+        """Return an aspect-scoped patch dict for this node."""
+        if aspect == "full":
+            return {"id": self.id, "aspect": "full", "value": self.serialize()}
+        if aspect == "style":
+            return {
+                "id": self.id,
+                "aspect": "style",
+                "value": {"style": _style_to_dict(self.style)},
+            }
+        if aspect == "transform":
+            return {
+                "id": self.id,
+                "aspect": "transform",
+                "value": self.transform.to_dict(),
+            }
+        raise ValueError(f"Unsupported aspect {aspect!r} for scene node {self.kind}")
 
     # ── Entity / style setters (aspect-correct) ─────────────
 
@@ -345,6 +414,28 @@ class VizSceneObject(VizNode):
             self.style = _assign_style_field(self.style, "texture_label", texture_label)
         elif isinstance(self.style, dict):
             self.style = _assign_style_field(self.style, "texture_label", texture_label)
+        self.mark("style")
+
+    def apply_props(self, props: dict[str, Any]) -> None:
+        """Merge per-entity rendering props into resolved style + stored props.
+
+        Keeps the node's ``style`` (used for ``style`` patches) and ``_props``
+        (used for full re-serialization) in sync, then marks ``style``.
+        """
+        if not props:
+            return
+        self._props.update(props)
+        style = props.get("style")
+        if style is not None:
+            self.style = _merge_style_into(self.style, _style_to_dict(style))
+        for key in ("color", "opacity"):
+            if key in props:
+                self.style = _assign_style_field(self.style, key, props[key])
+        extra = {
+            k: v for k, v in props.items() if k not in ("style", "color", "opacity")
+        }
+        if extra:
+            self.style = _merge_style_into(self.style, extra)
         self.mark("style")
 
     # ── Transform mutators (aspect-correct) ─────────────────
@@ -416,6 +507,53 @@ class VizOverlayObject(VizNode):
         self.style = _merge_style_into(self.style, style)
         self.mark("style")
 
+    # ── Serialization / patches ─────────────────────────────
+
+    def serialize(self) -> dict[str, Any]:
+        """Serialize the full overlay node (position/attach_to + payload + style)."""
+        result: dict[str, Any] = {
+            "id": self.id,
+            "layer": "overlay",
+            "kind": self.kind,
+            "visible": self.visible,
+        }
+        if self.kind == "label":
+            result["position"] = list(self.position)
+            result["attach_to"] = self.attach_to
+            result["text"] = self.payload
+        elif self.kind == "annotation":
+            result["positioning"] = "fixed"
+            result["anchor"] = "bottom"
+            result["text"] = self.payload
+        elif self.kind == "title":
+            result["positioning"] = "fixed"
+            result["anchor"] = "top"
+            result["text"] = self.payload
+        else:
+            result["position"] = list(self.position)
+            if self.attach_to is not None:
+                result["attach_to"] = self.attach_to
+            if self.payload is not None:
+                result["text"] = self.payload
+
+        style = _style_to_dict(self.style)
+        if self.kind == "label":
+            style.pop("offset_local", None)
+        result["style"] = style
+        return result
+
+    def patch(self, aspect: str) -> dict[str, Any]:
+        """Return an aspect-scoped patch dict for this overlay node."""
+        if aspect == "full":
+            return {"id": self.id, "aspect": "full", "value": self.serialize()}
+        if aspect == "style":
+            return {
+                "id": self.id,
+                "aspect": "style",
+                "value": {"style": _style_to_dict(self.style)},
+            }
+        raise ValueError(f"Unsupported aspect {aspect!r} for overlay node {self.kind}")
+
 
 class VizGroup(VizSceneObject):
     """A container node with no entity/style, ``kind == "VizGroup"``."""
@@ -437,3 +575,19 @@ class VizGroup(VizSceneObject):
             transform=transform,
             visible=visible,
         )
+
+    def serialize(
+        self,
+        *,
+        styles_map: dict[str, Any] | None = None,
+        props: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Serialize a group node (no entity/style, only transform + parenting)."""
+        return {
+            "id": self.id,
+            "layer": "scene",
+            "kind": "VizGroup",
+            "parent_id": self.parent.id if self.parent is not None else None,
+            "transform": self.transform.to_dict(),
+            "visible": self.visible,
+        }

@@ -71,101 +71,77 @@ def serialize_entity(
         A flat dict suitable for ``json.dumps()``.
     """
     props = dict(properties) if properties else {}
-    result: Dict[str, Any] = {"id": entity_id, "layer": "scene"}
-
     if kind is None:
         kind = type(entity).__name__
 
+    result: Dict[str, Any] = {"id": entity_id, "layer": "scene"}
+    result.update(_dispatch_entity(entity, kind, props, styles_map))
+    return result
+
+
+def _dispatch_entity(
+    entity: Any,
+    kind: str,
+    props: Dict[str, Any],
+    styles_map: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Route an entity/operator to its per-kind leaf serializer.
+
+    Returns the flat geometry + style fields (no ``id``/``layer``).  Shared by
+    :func:`serialize_entity` (backward-compat trampoline) and the scene-graph
+    node serializers in ``_nodes.py``.
+    """
     # ── Entities ──
     if isinstance(entity, PointPath):
-        result.update(
-            _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Axes2D):
-        result.update(
-            _serialize_axes2d(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Axes3D):
-        result.update(
-            _serialize_axes3d(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Axis):
-        result.update(
-            _serialize_axis(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Grid):
-        result.update(
-            _serialize_grid(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Point):
-        result.update(_serialize_point(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Direction):
-        result.update(
-            _serialize_direction(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, HPoint):
-        result.update(
-            _serialize_hpoint(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, PointPair):
-        result.update(
-            _serialize_point_pair(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Line):
-        result.update(_serialize_line(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Plane):
-        result.update(_serialize_plane(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Circle):
-        result.update(
-            _serialize_circle(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Sphere):
-        result.update(
-            _serialize_sphere(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Space):
-        result.update(_serialize_space(entity, props, kind=kind, styles_map=styles_map))
+        return _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Axes2D):
+        return _serialize_axes2d(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Axes3D):
+        return _serialize_axes3d(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Axis):
+        return _serialize_axis(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Grid):
+        return _serialize_grid(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Point):
+        return _serialize_point(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Direction):
+        return _serialize_direction(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, HPoint):
+        return _serialize_hpoint(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PointPair):
+        return _serialize_point_pair(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Line):
+        return _serialize_line(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Plane):
+        return _serialize_plane(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Circle):
+        return _serialize_circle(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Sphere):
+        return _serialize_sphere(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Space):
+        return _serialize_space(entity, props, kind=kind, styles_map=styles_map)
 
     # ── Operators ──
-    elif isinstance(entity, ReflectionLine):
-        result.update(
-            _serialize_reflection_line(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, ReflectionPlane):
-        result.update(
-            _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, ReflectionPoint):
-        result.update(
-            _serialize_reflection_origin(
-                entity, props, kind=kind, styles_map=styles_map
-            )
-        )
-    elif isinstance(entity, Inversion):
-        result.update(
-            _serialize_inversion(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Rotor):
-        result.update(_serialize_rotor(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Translator):
-        result.update(
-            _serialize_translator(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Dilator):
-        result.update(
-            _serialize_dilator(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Motor):
-        result.update(_serialize_motor(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, GeneralRotor):
-        result.update(
-            _serialize_general_rotor(entity, props, kind=kind, styles_map=styles_map)
-        )
+    if isinstance(entity, ReflectionLine):
+        return _serialize_reflection_line(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ReflectionPlane):
+        return _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ReflectionPoint):
+        return _serialize_reflection_origin(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Inversion):
+        return _serialize_inversion(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Rotor):
+        return _serialize_rotor(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Translator):
+        return _serialize_translator(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Dilator):
+        return _serialize_dilator(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Motor):
+        return _serialize_motor(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, GeneralRotor):
+        return _serialize_general_rotor(entity, props, kind=kind, styles_map=styles_map)
 
-    else:
-        raise TypeError(f"Unknown entity type: {kind}")
-
-    return result
+    raise TypeError(f"Unknown entity type: {kind}")
 
 
 def serialize_scene_update(
@@ -182,6 +158,23 @@ def serialize_scene_update(
         "type": "scene_update",
         "objects": objects,
         "removed": removed,
+    }
+
+
+def serialize_object_update(
+    patches: List[Dict[str, Any]],
+    removed: List[str],
+) -> Dict[str, Any]:
+    """Wrap aspect-scoped patches + removals into the ``object_update`` message.
+
+    Each patch is ``{"id", "aspect", "value"}`` (see ``VizNode.patch``).
+    ``scene`` is left empty here; the caller sets the scene name.
+    """
+    return {
+        "type": "object_update",
+        "scene": "",
+        "patches": list(patches),
+        "removed": list(removed),
     }
 
 

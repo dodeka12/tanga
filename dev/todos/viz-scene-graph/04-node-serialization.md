@@ -1,6 +1,6 @@
 # Phase 4 — Node serialization (aspect patches)
 
-**Status:** Planned (revised after design discussion)
+**Status:** Done
 
 ## Goal
 
@@ -46,46 +46,46 @@ Aspect semantics (Python authoritative):
 
 ### Per-kind serialize (move leaf serializers into `_nodes.py`)
 
-- [ ] Base `VizNode.serialize()` returns id/layer/kind/visible.
-- [ ] `VizSceneObject.serialize()`:
-  - [ ] adds `parent_id`, `transform`, geometry fields, resolved `style`.
-  - [ ] calls per-kind `_serialize_<kind>` helpers (moved from serializer.py).
-  - [ ] supports `Point`, `Direction`, `HPoint`, `PointPair`(+Imag),
+- [x] Base `VizNode.serialize()` returns id/layer/kind/visible.
+- [x] `VizSceneObject.serialize()`:
+  - [x] adds `parent_id`, `transform`, geometry fields, resolved `style`.
+  - [x] calls per-kind `_serialize_<kind>` helpers (moved from serializer.py).
+  - [x] supports `Point`, `Direction`, `HPoint`, `PointPair`(+Imag),
         `Line`, `Plane`, `Circle`(+Imag), `Sphere`(+Imag), `Space`,
         `PointPath`, `Axis`, `Axes2D`, `Axes3D`, `Grid`, and operators.
-- [ ] `VizOverlayObject.serialize()`:
-  - [ ] adds `position`, `attach_to`, and kind-specific `payload`
+- [x] `VizOverlayObject.serialize()`:
+  - [x] adds `position`, `attach_to`, and kind-specific `payload`
         (label text / annotation / title), and resolved `style`.
-- [ ] `VizGroup.serialize()`: `{kind:"VizGroup", parent_id, transform, ...}`.
+- [x] `VizGroup.serialize()`: `{kind:"VizGroup", parent_id, transform, ...}`.
 
 ### Patch generation
 
-- [ ] `VizNode.patch(aspect) -> dict`:
-  - [ ] `full` → `{id, aspect:"full", value: serialize()}`
-  - [ ] `style` → `{id, aspect:"style", value: {style: <resolved style dict>}}`
-  - [ ] `transform` → `{id, aspect:"transform", value: <transform trs dict>}`
-- [ ] `Scene.flush()` walks DFS pre-order and collects patches per node's
+- [x] `VizNode.patch(aspect) -> dict`:
+  - [x] `full` → `{id, aspect:"full", value: serialize()}`
+  - [x] `style` → `{id, aspect:"style", value: {style: <resolved style dict>}}`
+  - [x] `transform` → `{id, aspect:"transform", value: <transform trs dict>}`
+- [x] `Scene.flush()` walks DFS pre-order and collects patches per node's
       dirty aspects (see Phase 3 `consume_dirty()`); returns
       `(patches, removed)`. `full_state()` still returns complete lists for
       initial sync / export.
 
 ### serializer.py cleanup
 
-- [ ] Keep `_apply_defaults`, `_style_to_output`, `_style_for_kind`, all
+- [x] Keep `_apply_defaults`, `_style_to_output`, `_style_for_kind`, all
       `_serialize_<kind>` leaf helpers, `_serialize_label`.
-- [ ] Delete `serialize_entity`'s `isinstance`/`elif` dispatch (keep a thin
+- [x] Delete `serialize_entity`'s `isinstance`/`elif` dispatch (keep a thin
       backward-compat trampoline if other callers remain; migrate them).
-- [ ] Keep `serialize_scene_update` for now (used by existing tests) but add
+- [x] Keep `serialize_scene_update` for now (used by existing tests) but add
       `serialize_object_update(patches, removed)`.
 
 ### visualizer.py
 
-- [ ] `_flush_scene_async` consumes `(patches, removed)` and pushes via a new
+- [x] `_flush_scene_async` consumes `(patches, removed)` and pushes via a new
       server push path (or generic `push_raw`).
 
 ## Backward compatibility
 
-- [ ] Existing `SceneObject` path + `scene_update` message must keep working
+- [x] Existing `SceneObject` path + `scene_update` message must keep working
       (Phase 8 export readers) until `new()`/`VizObjectRef` become primary in
       Phase 6. The new `object_update` message is additive.
 
@@ -94,29 +94,29 @@ Aspect semantics (Python authoritative):
 File: `py/tests/viz/test_serializer.py` (extend) + new
 `py/tests/viz/test_node_serialization.py`.
 
-- [ ] `test_point_serialize` — point node output matches previous leaf layout
+- [x] `test_point_serialize` — point node output matches previous leaf layout
       plus `parent_id`/`transform`.
-- [ ] `test_representative_kinds_serialize` — parametrized over
+- [x] `test_representative_kinds_serialize` — parametrized over
       `Point`/`Line`/`Plane`/`Sphere`/`Circle`/`PointPair`/`PointPath`/
       `Grid`/`Axis`/operators.
-- [ ] `test_resolved_style_present` — resolved merged style dict.
-- [ ] `test_imaginary_variants` — `ImagPointPair`/`ImagCircle`/`ImagSphere`.
-- [ ] `test_aspect_full_patch` — full patch shape.
-- [ ] `test_aspect_style_patch` — style patch carries only `{style: ...}`.
-- [ ] `test_aspect_transform_patch` — transform patch carries `{position,
+- [x] `test_resolved_style_present` — resolved merged style dict.
+- [x] `test_imaginary_variants` — `ImagPointPair`/`ImagCircle`/`ImagSphere`.
+- [x] `test_aspect_full_patch` — full patch shape.
+- [x] `test_aspect_style_patch` — style patch carries only `{style: ...}`.
+- [x] `test_aspect_transform_patch` — transform patch carries `{position,
       rotation, scale}` and no geometry/style.
-- [ ] `test_overlay_label_patch` — `position` + `attach_to`, no transform.
-- [ ] `test_full_state_equiv` — `full_state()` matches prior `serialize_entity`
+- [x] `test_overlay_label_patch` — `position` + `attach_to`, no transform.
+- [x] `test_full_state_equiv` — `full_state()` matches prior `serialize_entity`
       modulo added keys.
-- [ ] `test_removed_tracking` — add/update/remove cycles.
-- [ ] `test_group_serialize_shape` — `kind == "VizGroup"`.
+- [x] `test_removed_tracking` — add/update/remove cycles.
+- [x] `test_group_serialize_shape` — `kind == "VizGroup"`.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/test_serializer.py py/tests/viz/test_node_serialization.py` passes.
-- [ ] `full_state()` output byte-equivalent (modulo new keys) to prior
+- [x] `uv run pytest py/tests/viz/test_serializer.py py/tests/viz/test_node_serialization.py` passes.
+- [x] `full_state()` output byte-equivalent (modulo new keys) to prior
       `serialize_entity` for representative entities/operators.
-- [ ] Color-only change emits a `style` patch (no geometry/transform).
-- [ ] Transform-only change emits a `transform` patch.
-- [ ] No `Unknown entity type` regression.
-- [ ] Existing viz smoke/export tests pass.
+- [x] Color-only change emits a `style` patch (no geometry/transform).
+- [x] Transform-only change emits a `transform` patch.
+- [x] No `Unknown entity type` regression.
+- [x] Existing viz smoke/export tests pass.

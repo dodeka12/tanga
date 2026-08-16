@@ -29,7 +29,11 @@ from pytanga.geometry.operators import (
     Translator,
 )
 from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND as _CANONICAL
-from pytanga.viz.serializer import serialize_entity, serialize_scene_update
+from pytanga.viz.serializer import (
+    serialize_entity,
+    serialize_object_update,
+    serialize_scene_update,
+)
 
 # ── Helpers ────────────────────────────────────────────────
 
@@ -371,3 +375,24 @@ class TestSceneUpdate:
         )
         assert len(msg["objects"]) == 2
         assert msg["objects"][1]["text"] == "X"
+
+
+# ── Object update wrapper ───────────────────────────────────
+
+
+class TestObjectUpdate:
+    def test_wrapper_format(self):
+        msg = serialize_object_update(
+            [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}],
+            ["b"],
+        )
+        assert msg["type"] == "object_update"
+        assert msg["scene"] == ""
+        assert msg["patches"] == [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}]
+        assert msg["removed"] == ["b"]
+
+    def test_empty(self):
+        msg = serialize_object_update([], [])
+        assert msg["type"] == "object_update"
+        assert msg["patches"] == []
+        assert msg["removed"] == []

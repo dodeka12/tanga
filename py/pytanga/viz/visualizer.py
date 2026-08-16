@@ -1065,11 +1065,15 @@ class Visualizer(_JupyterDisplayMixin):
         scene = self._scenes.get(scene_name)
         if scene is None:
             return
-        entities, removed = scene.flush(styles_map=self._default_styles)
-        if entities or removed or fit_camera:
-            await self._server.push(
-                entities, removed, scene=scene_name, fit_camera=fit_camera
-            )
+        patches, removed = scene.flush()
+        if patches or removed or fit_camera:
+            from .serializer import serialize_object_update
+
+            message = serialize_object_update(patches, removed)
+            message["scene"] = scene_name
+            if fit_camera:
+                message["fit_camera"] = True
+            await self._server.push_raw(json.dumps(message))
 
     def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe)."""

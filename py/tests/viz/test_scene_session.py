@@ -206,7 +206,8 @@ class TestScene:
         s.add(Point(1, 0, 0))
         dirty, removed = s.flush()
         assert len(dirty) == 1
-        assert dirty[0]["kind"] == "Point"
+        assert dirty[0]["aspect"] == "full"
+        assert dirty[0]["value"]["kind"] == "Point"
         assert removed == []
 
     def test_flush_only_returns_dirty(self):
@@ -229,7 +230,8 @@ class TestScene:
         eid = s.add(Point(1, 0, 0))
         s.update_entity(eid, Point(5, 6, 7))
         dirty, _ = s.flush()
-        assert dirty[0]["position"] == [5, 6, 7]
+        assert dirty[0]["aspect"] == "full"
+        assert dirty[0]["value"]["position"] == [5, 6, 7]
 
     def test_remove_then_flush(self):
         s = Scene()
@@ -338,37 +340,37 @@ class TestVisualizer:
     def test_add_with_color_normalizes(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.5, 0.0))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff8000"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff8000"
 
     def test_add_with_4tuple_extracts_opacity(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff0000"
-        assert dirty[0]["opacity"] == 0.3
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff0000"
+        assert state[0]["opacity"] == 0.3
 
     def test_add_with_color_and_explicit_opacity(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3), opacity=0.8)
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff0000"
-        assert dirty[0]["opacity"] == 0.8  # explicit wins
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff0000"
+        assert state[0]["opacity"] == 0.8  # explicit wins
 
     def test_add_with_hex_color_passthrough(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0), color="#abcdef")
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#abcdef"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#abcdef"
 
     def test_add_with_style(self):
         from pytanga.viz._styles import PointStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0), style=PointStyle(size=0.5, color="#00ff00"))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["style"]["size"] == 0.5
-        assert dirty[0]["style"]["color"] == "#00ff00"
+        state = viz._scene.full_state()
+        assert state[0]["style"]["size"] == 0.5
+        assert state[0]["style"]["color"] == "#00ff00"
 
     def test_update_with_color(self):
         viz = Visualizer()
@@ -376,7 +378,8 @@ class TestVisualizer:
         viz._scene.flush()
         viz.update(eid, color="#00ff00")
         dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#00ff00"
+        assert dirty[0]["aspect"] == "style"
+        assert dirty[0]["value"]["style"]["color"] == "#00ff00"
 
     def test_remove_delegates(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -796,16 +799,16 @@ class TestGridAxesStyles:
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Grid(), style=GridStyle(color="#ff0000"))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff0000"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff0000"
 
     def test_axes_style_via_add(self):
         from pytanga.viz import AxisStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Axis((0, 0, 0), (1, 0, 0)), style=AxisStyle(color="#00ff00"))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#00ff00"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#00ff00"
 
     def test_grid_style_merge(self):
         from pytanga.viz import GridStyle
