@@ -4,8 +4,8 @@ The visualizer maintains an authoritative **scene graph** in Python. Every
 drawable is a *node* that stores its own resolved style, geometry, and — for
 scene-layer nodes — an explicit transform. The browser mirrors this hierarchy
 in three.js and applies **partial, aspect-scoped updates** (`full` / `style` /
-`transform`) in place, so moving or rotating a compound object never recomputes
-or re-sends its geometry.
+`transform` / `content`) in place, so moving or rotating a compound object never
+recomputes or re-sends its geometry.
 
 ## Layers
 
@@ -50,7 +50,7 @@ tracking raw IDs. Property setters mark the correct dirty aspect automatically.
 ```python
 ref = viz.new(Point(1, 2, 3))
 
-ref.entity = Point(4, 5, 6)      # replaces geometry → "full" aspect
+ref.entity = Point(4, 5, 6)      # replaces geometry (same kind) → "content" aspect
 ref.style  = PointStyle(size=0.2)  # merges non-None style fields → "style"
 ref.color  = "#00ff00"           # → "style"
 ref.opacity = 0.5                # → "style"
@@ -102,6 +102,7 @@ message with a list of patches:
 | `full` | complete node dict (geometry + style + transform/parent) | create/replace |
 | `style` | `{"style": {…}}` | merge the resolved style, re-apply materials |
 | `transform` | `{"position", "rotation", "scale"}` | apply to the `Object3D` in place |
+| `content` | `kind` + geometry + resolved style | update the inner mesh in place (same kind) |
 
 Rotating a :class:`~pytanga.viz.VizGroup` therefore emits a single `transform`
 patch for the group — its children are **not** re-serialized and their vertices

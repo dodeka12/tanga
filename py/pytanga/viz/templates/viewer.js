@@ -16,10 +16,7 @@ import { updateLineResolutions, applyStyleUpdate } from './renderers/utils.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket, setSpaceDim } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
-const sceneObjects = new Map();   // id → {obj, layer, el?}
-const entityMeshes = new Map();   // id → THREE.Object3D (backward compat for render loop / tween / camera)
-const entityData = new Map();     // id → raw JSON entity data (backward compat)
-const labelObjects = new Map();   // id → CSS2DObject (backward compat for render loop)
+const sceneObjects = new Map();   // id → {obj, mesh, data, layer, el?}
 
 let scene, camera, renderer, controls;
 let ws = null;
@@ -536,7 +533,7 @@ function removeAnnotation() {
 }
 
 function fitCameraToScene() {
-    fitCamera(entityMeshes, camera, controls, sceneConfig?.space_dim || 3);
+    fitCamera(sceneObjects, camera, controls, sceneConfig?.space_dim || 3);
 }
 
 // ── Helper: rotate mesh to point along a direction vector ───
@@ -550,14 +547,6 @@ function rotationFromDirection(dx, dy, dz) {
 // ── Numeric tolerance helper ─────────────────────────────────
 function _approx(a, b, eps = 1e-9) {
     return Math.abs(a - b) < eps;
-}
-
-// ── In-place entity updates for frame streaming ─────────────
-function inPlaceUpdate(ent) {
-    const mesh = entityMeshes.get(ent.id);
-    if (!mesh) return false;
-    const previous = entityData.get(ent.id);
-    return updateEntityMesh(mesh, ent, previous);
 }
 
 // ── Message Handler ─────────────────────────────────────────
@@ -593,8 +582,8 @@ function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
-        _log('init', 'clear_all → reset (objects=' + sceneObjects.size + ' meshes=' + entityMeshes.size + ' labels=' + labelObjects.size + ')');
-        console.log('[clear_all] Resetting scene — objects:', sceneObjects.size, 'meshes:', entityMeshes.size, 'labels:', labelObjects.size);
+        _log('init', 'clear_all → reset (objects=' + sceneObjects.size + ')');
+        console.log('[clear_all] Resetting scene — objects:', sceneObjects.size);
         // Remove all scene children (entities, lights, grid, axes)
         while (scene.children.length > 0) {
             const child = scene.children[0];
@@ -614,9 +603,6 @@ function handleMessage(msg) {
         }
         // Clear maps
         clearAllInteractive();
-        entityMeshes.clear();
-        entityData.clear();
-        labelObjects.clear();
         sceneObjects.clear();
         // Clear overlays
         removeAnnotation();
@@ -649,27 +635,7 @@ function handleMessage(msg) {
         }
         if (msg.objects) {
             for (const obj of msg.objects) {
-                // Scene-graph objects carry parent_id/transform. Route them
-                // through upsertObject (remove + rebuild) so a full-state sync
-                // is idempotent even if the object already exists — the legacy
-                // in-place updateEntity path doesn't re-apply parenting or the
-                // node transform.
-                const hasSceneGraph = obj.parent_id !== undefined || obj.transform !== undefined;
-                if (obj.layer === 'scene' && entityMeshes.has(obj.id) && !hasSceneGraph) {
-                    updateEntity(obj);
-                } else {
-                    upsertObject(obj);
-                }
-            }
-        }
-        if (msg.entities) {
-            for (const ent of msg.entities) {
-                updateEntity(ent);
-            }
-        }
-        if (msg.labels) {
-            for (const lbl of msg.labels) {
-                upsertLabel(lbl);
+                upsertObject(obj);
             }
         }
         if (msg.fit_camera) {
@@ -709,7 +675,7 @@ function handleMessage(msg) {
         const groups = msg.groups || [];
         for (const g of groups) {
             if (g.parentId) {
-                attachGroup(g, controls2, entityMeshes);
+                attachGroup(g, controls2, sceneObjects);
             }
         }
     } else if (msg.type === 'controls_clear') {
@@ -800,10 +766,6 @@ async function upsertObject(msg) {
         if (old.el) old.el.remove();
         sceneObjects.delete(msg.id);
     }
-    entityMeshes.delete(msg.id);
-    entityData.delete(msg.id);
-    labelObjects.delete(msg.id);
-
     if (msg.layer === 'scene') {
         const mesh = await createEntityMesh(msg);
         if (mesh) {
@@ -822,9 +784,7 @@ async function upsertObject(msg) {
                 scene.add(node);
             }
             node.userData.parentId = msg.parent_id || null;
-            sceneObjects.set(msg.id, { obj: node, layer: 'scene' });
-            entityMeshes.set(msg.id, node);
-            entityData.set(msg.id, { ...msg });
+            sceneObjects.set(msg.id, { obj: node, mesh, data: { ...msg }, layer: 'scene' });
             // ── Interaction ──
             if (msg.interaction) {
                 registerInteractive(msg.id, node, msg.interaction);
@@ -835,7 +795,7 @@ async function upsertObject(msg) {
             if (!msg.text) return;
             renderAnnotation(msg.text, msg.style || null);
             if (annotationPanel) {
-                sceneObjects.set(msg.id, { obj: null, el: annotationPanel, layer: 'overlay' });
+                sceneObjects.set(msg.id, { obj: null, mesh: null, data: { ...msg }, el: annotationPanel, layer: 'overlay' });
             }
             return;
         }
@@ -865,7 +825,6 @@ async function upsertObject(msg) {
             } else {
                 scene.add(css2d);
             }
-            labelObjects.set(msg.id, css2d);
         } else {
             el.style.position = 'absolute';
             const off = msg.offset || [10, 10];
@@ -877,35 +836,32 @@ async function upsertObject(msg) {
             }
             document.body.appendChild(el);
         }
-        sceneObjects.set(msg.id, { obj: css2d, el, layer: 'overlay' });
+        sceneObjects.set(msg.id, { obj: css2d, mesh: null, data: { ...msg }, el, layer: 'overlay' });
     }
 }
 
 function removeSceneObject(id) {
     unregisterInteractive(id);
-    const mesh = entityMeshes.get(id);
-    if (mesh) {
-        if (mesh.userData._attachedGroups) {
-            for (const groupId of mesh.userData._attachedGroups) {
-                detachGroup(groupId);
+    const entry = sceneObjects.get(id);
+    if (!entry) {
+        cancelTween(id);
+        return;
+    }
+    if (entry.layer === 'scene') {
+        if (entry.obj) {
+            if (entry.obj.userData._attachedGroups) {
+                for (const groupId of entry.obj.userData._attachedGroups) {
+                    detachGroup(groupId);
+                }
             }
+            removeEntityMesh(entry.obj);
         }
-        removeEntityMesh(mesh);
+    } else {
+        if (entry.obj && entry.obj.removeFromParent) entry.obj.removeFromParent();
+        if (entry.obj && entry.obj.element) entry.obj.element.remove();
+        if (entry.el) entry.el.remove();
     }
-    entityMeshes.delete(id);
-    entityData.delete(id);
-    const oldObj = sceneObjects.get(id);
-    if (oldObj) {
-        if (oldObj.obj && oldObj.obj.removeFromParent) oldObj.obj.removeFromParent();
-        if (oldObj.el) oldObj.el.remove();
-        sceneObjects.delete(id);
-    }
-    const lbl = labelObjects.get(id);
-    if (lbl) {
-        lbl.removeFromParent();
-        if (lbl.element) lbl.element.remove();
-        labelObjects.delete(id);
-    }
+    sceneObjects.delete(id);
     cancelTween(id);
 }
 
@@ -947,6 +903,11 @@ function applyObjectPatch(patch) {
     const entry = sceneObjects.get(id);
     if (!entry) return;
 
+    if (aspect === 'content') {
+        updateEntityContent(id, value);
+        return;
+    }
+
     if (aspect === 'transform') {
         if (entry.obj) applyTransformToObject(entry.obj, value);
         return;
@@ -954,11 +915,56 @@ function applyObjectPatch(patch) {
 
     if (aspect === 'style') {
         if (value.style && entry.obj) {
-            const merged = { ...(entityData.get(id) || {}), style: { ...(entityData.get(id)?.style || {}), ...value.style } };
-            entityData.set(id, merged);
-            if (entry.obj.isObject3D) applyStyleUpdate(entry.obj, merged);
+            const prev = entry.data || {};
+            entry.data = { ...prev, style: { ...(prev.style || {}), ...value.style } };
+            if (entry.obj.isObject3D) applyStyleUpdate(entry.obj, entry.data);
         }
         return;
+    }
+}
+
+async function updateEntityContent(id, content) {
+    const entry = sceneObjects.get(id);
+    if (!entry || entry.layer !== 'scene' || !entry.mesh) return;
+    const prev = entry.data || {};
+
+    if (updateEntityMesh(entry.mesh, content, prev)) {
+        entry.data = { ...prev, ...content };
+        return;
+    }
+
+    // Structural change — rebuild the mesh in place, keeping the node
+    // wrapper (transform) and parent intact.
+    const newMesh = await createEntityMesh({ ...prev, ...content });
+    if (!newMesh) return;
+
+    if (entry.obj === entry.mesh) {
+        // Identity transform: the mesh IS the node. Re-attach any labels
+        // that were children of the old mesh.
+        const attachedLabels = (entry.obj.userData._labels || []).slice();
+        const parent = entry.obj.parent;
+        removeEntityMesh(entry.obj);
+        entry.obj = newMesh;
+        entry.mesh = newMesh;
+        newMesh.userData.parentId = prev.parent_id || null;
+        newMesh.userData._labels = [];
+        if (parent) parent.add(newMesh); else scene.add(newMesh);
+        for (const lblId of attachedLabels) {
+            const lblEntry = sceneObjects.get(lblId);
+            if (lblEntry && lblEntry.obj) {
+                newMesh.add(lblEntry.obj);
+                newMesh.userData._labels.push(lblId);
+            }
+        }
+    } else {
+        // Wrapped: replace the child mesh inside the wrapper Group.
+        removeEntityMesh(entry.mesh);
+        entry.obj.add(newMesh);
+        entry.mesh = newMesh;
+    }
+    entry.data = { ...prev, ...content };
+    if (prev.interaction) {
+        registerInteractive(id, entry.obj, prev.interaction);
     }
 }
 
@@ -1003,99 +1009,6 @@ function buildOverlayElement(msg) {
     }
 }
 
-function upsertLabel(lbl) {
-    if (!lbl.text) return;
-
-    const existing = labelObjects.get(lbl.id);
-    if (existing) {
-        existing.removeFromParent();
-        if (existing.element) existing.element.remove();
-        labelObjects.delete(lbl.id);
-    }
-
-    const div = document.createElement('div');
-    div.textContent = lbl.text;
-    const s = lbl.style || {};
-    div.style.fontFamily = s.font_family || 'sans-serif';
-    div.style.fontSize = (s.font_size || 14) + 'px';
-    div.style.color = s.color || '#ffffff';
-    div.style.backgroundColor = s.background || 'rgba(0, 0, 0, 0.6)';
-    div.style.padding = '2px 6px';
-    div.style.borderRadius = '3px';
-    div.style.userSelect = 'none';
-    div.style.whiteSpace = 'nowrap';
-
-    if (typeof renderMathInElement !== 'undefined') {
-        try {
-            renderMathInElement(div, {
-                delimiters: [
-                    { left: '$$', right: '$$', display: true },
-                    { left: '$', right: '$', display: false },
-                ],
-                throwOnError: false,
-            });
-        } catch (e) {
-            console.warn('KaTeX label rendering error:', e);
-        }
-    }
-
-    const labelObj = new CSS2DObject(div);
-    const pos = lbl.position || [0, 0, 0];
-    const off = s.offset || [0, 0.3, 0];
-    labelObj.position.set(pos[0] + off[0], pos[1] + off[1], pos[2] + off[2]);
-
-    if (lbl.parentId && entityMeshes.has(lbl.parentId)) {
-        const parentMesh = entityMeshes.get(lbl.parentId);
-        parentMesh.add(labelObj);
-        parentMesh.userData._labels = parentMesh.userData._labels || [];
-        parentMesh.userData._labels.push(lbl.id);
-        labelObj.userData._parentId = lbl.parentId;
-    } else {
-        scene.add(labelObj);
-    }
-
-    labelObjects.set(lbl.id, labelObj);
-}
-
-async function updateEntity(ent) {
-    const id = ent.id;
-    const existing = entityData.get(id);
-
-    if (!existing) {
-        const mesh = await createEntityMesh(ent);
-        if (mesh) {
-            scene.add(mesh);
-            entityMeshes.set(id, mesh);
-        }
-        entityData.set(id, { ...ent });
-        return;
-    }
-
-    if (inPlaceUpdate(ent)) {
-        entityData.set(id, { ...existing, ...ent });
-        return;
-    }
-
-    const oldMesh = entityMeshes.get(id);
-    const attachedLabels = oldMesh ? (oldMesh.userData._labels || []).slice() : [];
-    if (oldMesh) removeEntityMesh(oldMesh);
-    entityMeshes.delete(id);
-    const mesh = await createEntityMesh({ ...existing, ...ent });
-    if (mesh) {
-        scene.add(mesh);
-        entityMeshes.set(id, mesh);
-        mesh.userData._labels = [];
-        for (const lblId of attachedLabels) {
-            const labelObj = labelObjects.get(lblId);
-            if (labelObj) {
-                mesh.add(labelObj);
-                mesh.userData._labels.push(lblId);
-            }
-        }
-    }
-    entityData.set(id, { ...existing, ...ent });
-}
-
 function handleAnimate(msg) {
     if (!msg.animations) return;
     for (const anim of msg.animations) {
@@ -1104,7 +1017,7 @@ function handleAnimate(msg) {
             anim.target,
             anim.duration || 1.0,
             anim.easing || 'ease-in-out',
-            entityMeshes
+            sceneObjects
         );
     }
 }
@@ -1123,7 +1036,7 @@ function handleTimeline(msg) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    updateTweens(entityMeshes);
+    updateTweens(sceneObjects);
     renderer.render(scene, camera);
     if (window._labelRenderer) {
         window._labelRenderer.render(scene, camera);

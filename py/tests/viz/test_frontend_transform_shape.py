@@ -48,6 +48,19 @@ class TestFrontendTransformShape:
         assert patch["aspect"] == "transform"
         assert set(patch["value"].keys()) == {"position", "rotation", "scale"}
 
+    def test_content_patch_shape(self):
+        s = Scene()
+        eid = s.add(Point(0, 0, 0))
+        node = s.get_node(eid)
+        node.consume_dirty()
+        node.set_entity(Point(1, 2, 3))
+        patch = node.patch("content")
+        assert patch["aspect"] == "content"
+        assert patch["value"]["kind"] == "Point"
+        assert "position" in patch["value"]
+        assert "transform" not in patch["value"]
+        assert "parent_id" not in patch["value"]
+
     def test_overlay_patch_has_attach_to(self):
         s = Scene()
         s.add(Point(0, 0, 0))

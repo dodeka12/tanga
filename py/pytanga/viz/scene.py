@@ -403,7 +403,8 @@ class Scene:
 
         Walks the scene-graph nodes in DFS pre-order and collects one
         aspect-scoped patch per dirty aspect (``full`` / ``style`` /
-        ``transform``).  Nodes use their scene-snapshotted styles by default.
+        ``transform`` / ``content``).  Nodes use their scene-snapshotted
+        styles by default.
         """
         patches: list[dict[str, Any]] = []
         removed = list(self._removed_ids)
@@ -421,7 +422,7 @@ class Scene:
             dirty_aspects = node.consume_dirty()
             if not dirty_aspects:
                 continue
-            for aspect in ("full", "style", "transform"):
+            for aspect in ("full", "style", "transform", "content"):
                 if aspect not in dirty_aspects:
                     continue
                 patch = node.patch(aspect)

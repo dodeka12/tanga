@@ -73,3 +73,18 @@ instance wholesale.
 Commits in this branch were created with `--no-gpg-sign` (and `--no-verify`),
 because the machine's git config enables GPG signing, which cannot complete
 non-interactively. They can be re-signed/amended if signing is required.
+
+## 7. Phase 13 — `content` aspect + legacy removal
+
+- `set_entity` now marks `content` (not `full`) when the entity's kind is
+  unchanged; a kind change still marks `full`. `patch("content")` returns the
+  "leaf" (`kind` + geometry + resolved style), factored into
+  `VizSceneObject._serialize_content()`.
+- The frontend now has a single registry, `sceneObjects` (entries
+  `{obj, mesh, data, layer, el?}`), replacing `entityMeshes` / `entityData` /
+  `labelObjects`. `updateEntity` / `inPlaceUpdate` / `upsertLabel` and the
+  `msg.entities` / `msg.labels` branches are gone; `animator.js`,
+  `view_mode.js`, and `controls-attached.js` now read `sceneObjects`.
+- `updateEntityContent()` applies `content` in place via `updateEntityMesh`,
+  rebuilding only the mesh (swapping it inside the wrapper, or replacing the
+  node when the transform is identity) when `entityRequiresRebuild` demands it.

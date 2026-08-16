@@ -343,13 +343,18 @@ class VizSceneObject(VizNode):
 
     # ── Serialization / patches ─────────────────────────────
 
-    def serialize(
+    def _serialize_content(
         self,
         *,
         styles_map: dict[str, Any] | None = None,
         props: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Serialize the full node (geometry + resolved style + transform)."""
+        """Return the "leaf" dict: ``kind`` + geometry + resolved style.
+
+        Excludes the node-level fields (``id``/``layer``/``parent_id``/
+        ``transform``/``visible``).  Used by ``serialize()`` and the
+        ``content`` aspect patch.
+        """
         from .serializer import _dispatch_entity
 
         sm = styles_map if styles_map is not None else self._styles_map
@@ -365,7 +370,15 @@ class VizSceneObject(VizNode):
                 leaf["color"] = resolved["color"]
             if "opacity" in resolved:
                 leaf["opacity"] = resolved["opacity"]
+        return leaf
 
+    def serialize(
+        self,
+        *,
+        styles_map: dict[str, Any] | None = None,
+        props: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Serialize the full node (geometry + resolved style + transform)."""
         result: dict[str, Any] = {
             "id": self.id,
             "layer": "scene",
@@ -374,7 +387,7 @@ class VizSceneObject(VizNode):
             "transform": self.transform.to_dict(),
             "visible": self.visible,
         }
-        result.update(leaf)
+        result.update(self._serialize_content(styles_map=styles_map, props=props))
         return result
 
     def patch(self, aspect: str) -> dict[str, Any]:
@@ -393,15 +406,25 @@ class VizSceneObject(VizNode):
                 "aspect": "transform",
                 "value": self.transform.to_dict(),
             }
+        if aspect == "content":
+            return {
+                "id": self.id,
+                "aspect": "content",
+                "value": self._serialize_content(),
+            }
         raise ValueError(f"Unsupported aspect {aspect!r} for scene node {self.kind}")
 
     # ── Entity / style setters (aspect-correct) ─────────────
 
     def set_entity(self, entity: Any) -> None:
-        """Replace the geometry entity (marks ``full``)."""
+        """Replace the geometry entity.
+
+        Marks ``content`` when the kind is unchanged, else ``full``.
+        """
+        old_kind = self.kind
         self.entity = entity
         self.kind = type(entity).__name__
-        self.mark("full")
+        self.mark("content" if self.kind == old_kind else "full")
 
     def set_style(self, style: Any) -> None:
         """Merge non-``None`` style fields (marks ``style``)."""

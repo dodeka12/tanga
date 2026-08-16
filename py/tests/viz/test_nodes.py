@@ -7,7 +7,7 @@ import math
 
 import numpy as np
 
-from pytanga.geometry.entities import Point
+from pytanga.geometry.entities import Direction, Line, Point
 from pytanga.viz._nodes import Transform, VizGroup, VizOverlayObject, VizSceneObject
 from pytanga.viz._styles import PointStyle
 from pytanga.viz.scene import Scene
@@ -76,13 +76,21 @@ class TestTransform:
 
 
 class TestSceneObjectAspects:
-    def test_set_entity_marks_full(self):
+    def test_set_entity_marks_content(self):
         node = VizSceneObject("a", Point(0, 0, 0), kind="Point")
         node.consume_dirty()
         node.set_entity(Point(1, 2, 3))
-        assert node.dirty_for("full")
+        assert node.dirty_for("content")
         assert not node.dirty_for("style")
         assert not node.dirty_for("transform")
+        assert not node.dirty_for("full")
+
+    def test_set_entity_marks_full_on_kind_change(self):
+        node = VizSceneObject("a", Point(0, 0, 0), kind="Point")
+        node.consume_dirty()
+        node.set_entity(Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)))
+        assert node.dirty_for("full")
+        assert not node.dirty_for("content")
 
     def test_set_style_marks_style(self):
         node = VizSceneObject("a", Point(0, 0, 0), {"color": "#ff0000"}, kind="Point")

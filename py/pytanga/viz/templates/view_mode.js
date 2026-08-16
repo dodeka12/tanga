@@ -232,16 +232,18 @@ export function configureControls(controls, renderer, spaceDim) {
 /**
  * Auto‑fit the camera to encompass all entity meshes.
  *
- * @param {Map<string,THREE.Object3D>} entityMeshes
+ * @param {Map<string,{obj:THREE.Object3D|null,layer:string}>} sceneObjects
  * @param {THREE.Camera} camera
  * @param {THREE.OrbitControls} controls
  * @param {number} spaceDim  2 or 3
  */
-export function fitCamera(entityMeshes, camera, controls, spaceDim) {
-    if (entityMeshes.size === 0) return;
-
+export function fitCamera(sceneObjects, camera, controls, spaceDim) {
     const box = new THREE.Box3();
-    entityMeshes.forEach(m => box.expandByObject(m));
+    sceneObjects.forEach(entry => {
+        if (entry.layer === 'scene' && entry.obj) box.expandByObject(entry.obj);
+    });
+    if (box.isEmpty()) return;
+
     const center = new THREE.Vector3();
     box.getCenter(center);
     const size = new THREE.Vector3();

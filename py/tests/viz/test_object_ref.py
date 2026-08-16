@@ -29,7 +29,7 @@ class TestEntityAndStyle:
         node = h.scene.get_node(ref.id)
         node.consume_dirty()
         ref.entity = Point(4, 5, 6)
-        assert node.dirty_for("full")
+        assert node.dirty_for("content")
         assert node.entity == Point(4, 5, 6)
         assert ref.entity == Point(4, 5, 6)
 

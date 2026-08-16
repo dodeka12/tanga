@@ -230,7 +230,7 @@ class TestScene:
         eid = s.add(Point(1, 0, 0))
         s.update_entity(eid, Point(5, 6, 7))
         dirty, _ = s.flush()
-        assert dirty[0]["aspect"] == "full"
+        assert dirty[0]["aspect"] == "content"
         assert dirty[0]["value"]["position"] == [5, 6, 7]
 
     def test_remove_then_flush(self):

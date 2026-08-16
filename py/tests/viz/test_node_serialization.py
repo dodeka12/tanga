@@ -130,6 +130,21 @@ class TestNodeSerialization:
         assert patch["value"]["position"] == [1, 2, 3]
         assert patch["value"]["kind"] == "Point"
 
+    def test_aspect_content_patch(self):
+        node = VizSceneObject("a", Point(0, 0, 0), {"color": "#ff0000"}, kind="Point")
+        node.consume_dirty()
+        node.set_entity(Point(1, 2, 3))
+        patch = node.patch("content")
+        assert patch["id"] == "a"
+        assert patch["aspect"] == "content"
+        assert patch["value"]["kind"] == "Point"
+        assert patch["value"]["position"] == [1, 2, 3]
+        assert "parent_id" not in patch["value"]
+        assert "transform" not in patch["value"]
+        assert "visible" not in patch["value"]
+        assert "layer" not in patch["value"]
+        assert "id" not in patch["value"]
+
     def test_aspect_style_patch(self):
         node = VizSceneObject("a", Point(0, 0, 0), {"color": "#ff0000"}, kind="Point")
         node.consume_dirty()
