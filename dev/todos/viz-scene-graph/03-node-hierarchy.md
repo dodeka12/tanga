@@ -1,6 +1,6 @@
 # Phase 3 — Node hierarchy (`_nodes.py`)
 
-**Status:** Planned (revised after design discussion)
+**Status:** Done (revised after design discussion)
 
 ## Goal
 
@@ -69,73 +69,73 @@ Node serialize (overlay layer):
 
 ### `_nodes.py`
 
-- [ ] `class Transform` (reuse `_transforms` primitives)
-  - [ ] fields: `position`, `rotation` (Euler `"XYZ"`), `scale`
-  - [ ] `matrix()` derived from TRS
-  - [ ] `from_matrix(M)` / `set_matrix(M)` via `to_trs`
-  - [ ] `apply_matrix(M, space="local"|"world")`
-  - [ ] mutators `translate(...)`, `rotate(axis, angle)`, `scale_by(...)`,
+- [x] `class Transform` (reuse `_transforms` primitives)
+  - [x] fields: `position`, `rotation` (Euler `"XYZ"`), `scale`
+  - [x] `matrix()` derived from TRS
+  - [x] `from_matrix(M)` / `set_matrix(M)` via `to_trs`
+  - [x] `apply_matrix(M, space="local"|"world")`
+  - [x] mutators `translate(...)`, `rotate(axis, angle)`, `scale_by(...)`,
         `set(...)` — note `scale_by` avoids clashing with the `.scale` field.
-- [ ] `class VizNode`
-  - [ ] fields: `id`, `name`, `layer`, `kind`, `visible`
-  - [ ] `_dirty_aspects: set[str]`
-  - [ ] `mark(kind="full")` — set the aspect (full clears style/transform)
-  - [ ] `dirty_for(aspect) -> bool`, `consume_dirty() -> set[str]`
-  - [ ] `serialize() -> dict` base fields (id/layer/kind/visible)
-- [ ] `class VizSceneObject(VizNode)`
-  - [ ] fields: `entity`, `style` (resolved), `transform`, `parent`,
+- [x] `class VizNode`
+  - [x] fields: `id`, `name`, `layer`, `kind`, `visible`
+  - [x] `_dirty_aspects: set[str]`
+  - [x] `mark(kind="full")` — set the aspect (full clears style/transform)
+  - [x] `dirty_for(aspect) -> bool`, `consume_dirty() -> set[str]`
+  - [x] `serialize() -> dict` base fields (id/layer/kind/visible)
+- [x] `class VizSceneObject(VizNode)`
+  - [x] fields: `entity`, `style` (resolved), `transform`, `parent`,
         `children`, `name`
-  - [ ] `add_child` / `remove_child` / `world_matrix()`
-  - [ ] setters: `set_entity` (marks `full`), `set_style`/`set_color`/
+  - [x] `add_child` / `remove_child` / `world_matrix()`
+  - [x] setters: `set_entity` (marks `full`), `set_style`/`set_color`/
         `set_opacity`/`set_texture_label` (each marks `style`),
         `set_transform`/`translate`/`rotate`/`scale_by` (each marks
         `transform`)
-  - [ ] non-`None` deep style merge helper
-- [ ] `class VizOverlayObject(VizNode)`
-  - [ ] fields: `position`, `attach_to`, `style` (resolved), `payload`
+  - [x] non-`None` deep style merge helper
+- [x] `class VizOverlayObject(VizNode)`
+  - [x] fields: `position`, `attach_to`, `style` (resolved), `payload`
         (kind-specific: text/title/annotation)
-  - [ ] setters: `set_payload`, `set_position` (full), `set_style` (style)
-- [ ] `class VizGroup(VizSceneObject)`
-  - [ ] no `entity`/`style`; `kind="VizGroup"`.
+  - [x] setters: `set_payload`, `set_position` (full), `set_style` (style)
+- [x] `class VizGroup(VizSceneObject)`
+  - [x] no `entity`/`style`; `kind="VizGroup"`.
 
 ### `scene.py` integration
 
-- [ ] Keep `SceneObject`/`Scene` existing behavior intact (all current tests
+- [x] Keep `SceneObject`/`Scene` existing behavior intact (all current tests
       must still pass) — the flat path stays the shim until Phase 4/6.
-- [ ] Add `_nodes: dict[str, VizNode]`; populate it from `add` / `add_label` /
+- [x] Add `_nodes: dict[str, VizNode]`; populate it from `add` / `add_label` /
       `add_object` by building a node whose style is resolved via
       `self.style_defaults` at creation.
-- [ ] Add node-construction helpers on `Scene` (e.g. `_make_scene_node(...)`,
+- [x] Add node-construction helpers on `Scene` (e.g. `_make_scene_node(...)`,
       `_make_overlay_node(...)`) doing the resolve + store-in-`_nodes`.
-- [ ] Add `Scene.get_node(object_id) -> VizNode` accessor.
-- [ ] Add `Scene.add_group(name=None) -> VizGroup` (scene-graph group; this
+- [x] Add `Scene.get_node(object_id) -> VizNode` accessor.
+- [x] Add `Scene.add_group(name=None) -> VizGroup` (scene-graph group; this
       is distinct from the already-renamed `add_control_group`).
-- [ ] Add `Scene.add_node(node)` / `group_ids` / node-tree DFS helpers (used
+- [x] Add `Scene.add_node(node)` / `group_ids` / node-tree DFS helpers (used
       by Phase 4/6).
 
 ## Unit tests
 
 File: `py/tests/viz/test_nodes.py`.
 
-- [ ] `test_transform_matrix` / `from_matrix` / `scale_by` / mutators.
-- [ ] `test_scene_object_aspects` — `set_entity` marks `full`; `set_style`
+- [x] `test_transform_matrix` / `from_matrix` / `scale_by` / mutators.
+- [x] `test_scene_object_aspects` — `set_entity` marks `full`; `set_style`
       marks `style`; `set_transform` marks `transform`.
-- [ ] `test_scene_object_parenting` — add/reparent/remove + world matrix.
-- [ ] `test_overlay_object_no_transform` — overlay has `position`/`attach_to`
+- [x] `test_scene_object_parenting` — add/reparent/remove + world matrix.
+- [x] `test_overlay_object_no_transform` — overlay has `position`/`attach_to`
       and no `Transform`.
-- [ ] `test_group_serialize` — `kind == "VizGroup"`, no geometry/style.
-- [ ] `test_resolved_style_creation` — canonical defaults + non-`None` merge.
-- [ ] `test_scene_add_populates_nodes` — `Scene.add(Point(...))` creates a
+- [x] `test_group_serialize` — `kind == "VizGroup"`, no geometry/style.
+- [x] `test_resolved_style_creation` — canonical defaults + non-`None` merge.
+- [x] `test_scene_add_populates_nodes` — `Scene.add(Point(...))` creates a
       `VizSceneObject` with a resolved style.
-- [ ] `test_scene_add_label_populates_nodes` — `Scene.add_label` creates a
+- [x] `test_scene_add_label_populates_nodes` — `Scene.add_label` creates a
       `VizOverlayObject` with resolved style and `attach_to`.
-- [ ] `test_get_node_and_add_group` — `get_node`/`add_group` round-trip.
+- [x] `test_get_node_and_add_group` — `get_node`/`add_group` round-trip.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/test_nodes.py` passes.
-- [ ] Existing viz tests still pass (scene.py compatibility shim).
-- [ ] `VizSceneObject` transform changes set only the `transform` aspect.
-- [ ] `VizOverlayObject` has `position`+`attach_to`, not a `Transform`.
-- [ ] `Scene.add_group` returns a `VizGroup` distinct from control groups.
-- [ ] `Scene.add(...)` nodes carry a resolved style from `style_defaults`.
+- [x] `uv run pytest py/tests/viz/test_nodes.py` passes.
+- [x] Existing viz tests still pass (scene.py compatibility shim).
+- [x] `VizSceneObject` transform changes set only the `transform` aspect.
+- [x] `VizOverlayObject` has `position`+`attach_to`, not a `Transform`.
+- [x] `Scene.add_group` returns a `VizGroup` distinct from control groups.
+- [x] `Scene.add(...)` nodes carry a resolved style from `style_defaults`.

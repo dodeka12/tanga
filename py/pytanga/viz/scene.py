@@ -18,6 +18,7 @@ from uuid import uuid4
 from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraConfig
+from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
 from ._style_defaults import VizStyleDefaults, make_defaults
 
 # ── Configuration ──────────────────────────────────────────
@@ -99,6 +100,7 @@ class Scene:
         self.name: str = name
         self.style_defaults: VizStyleDefaults = style_defaults or make_defaults()
         self._objects: dict[str, SceneObject] = {}
+        self._nodes: dict[str, VizNode] = {}
         self._order: list[str] = []
         self._removed_ids: list[str] = []
         self._controls: dict[str, Any] = {}
@@ -113,12 +115,113 @@ class Scene:
         *,
         object_id: str | None = None,
     ) -> str:
-        """Add a SceneObject and return its ID."""
+        """Add a SceneObject and return its ID.
+
+        Also builds and stores the corresponding scene-graph node (with a
+        resolved style) in ``_nodes``.
+        """
         oid = object_id or _generate_id()
         obj.id = oid
         self._objects[oid] = obj
         self._order.append(oid)
+        self._nodes[oid] = self._make_node(obj)
         return oid
+
+    # -- Node construction / accessors -----------------------
+
+    def _make_node(self, obj: SceneObject) -> VizNode:
+        """Build the scene-graph node for *obj*, resolving its style."""
+        if obj.layer == "overlay":
+            return self._make_overlay_node(obj)
+        return self._make_scene_node(obj)
+
+    def _make_scene_node(self, obj: SceneObject) -> VizSceneObject:
+        """Build a scene-layer node with a resolved style (canonical + user)."""
+        from ._styles import _style_to_output
+
+        props = obj.properties or {}
+        kind = obj.kind
+        merged = _style_to_output(
+            props.get("style"), kind, styles_map=self.default_styles
+        )
+        if props.get("color") is not None:
+            merged["color"] = props["color"]
+        if props.get("opacity") is not None:
+            merged["opacity"] = props["opacity"]
+        return VizSceneObject(obj.id, obj.data, merged, name=obj.kind, kind=kind)
+
+    def _make_overlay_node(self, obj: SceneObject) -> VizOverlayObject:
+        """Build an overlay-layer node from a label/annotation/title object."""
+        if obj.kind == "label":
+            label = obj.data
+            return VizOverlayObject(
+                obj.id,
+                kind="label",
+                style=getattr(label, "style", None) or self.default_label_style,
+                position=getattr(label, "position", (0.0, 0.0, 0.0)),
+                attach_to=getattr(label, "parent_id", None),
+                payload=getattr(label, "text", None),
+            )
+        data = obj.data if isinstance(obj.data, dict) else {}
+        return VizOverlayObject(
+            obj.id,
+            kind=obj.kind,
+            style=data.get("style", {}),
+            payload=data.get("text", ""),
+        )
+
+    def get_node(self, object_id: str) -> VizNode:
+        """Return the scene-graph node for *object_id*."""
+        node = self._nodes.get(object_id)
+        if node is None:
+            raise KeyError(f"Object {object_id!r} not found")
+        return node
+
+    def add_node(self, node: VizNode, *, object_id: str | None = None) -> str:
+        """Register a scene-graph node and return its ID."""
+        oid = object_id or node.id or _generate_id()
+        node.id = oid
+        self._nodes[oid] = node
+        if oid not in self._order:
+            self._order.append(oid)
+        return oid
+
+    def add_group(self, name: str | None = None) -> VizGroup:
+        """Create and register a scene-graph group (``kind == "VizGroup"``)."""
+        gid = _generate_id()
+        group = VizGroup(gid, name=name or "")
+        self._nodes[gid] = group
+        self._order.append(gid)
+        return group
+
+    @property
+    def group_ids(self) -> list[str]:
+        """IDs of all scene-graph groups."""
+        return [oid for oid, node in self._nodes.items() if node.kind == "VizGroup"]
+
+    def _dfs_preorder(self) -> list[VizNode]:
+        """Return all nodes in DFS pre-order (parents before children)."""
+        result: list[VizNode] = []
+        visited: set[str] = set()
+
+        def visit(node: VizSceneObject) -> None:
+            if node.id in visited:
+                return
+            visited.add(node.id)
+            result.append(node)
+            for child in node.children:
+                visit(child)
+
+        for oid in self._order:
+            node = self._nodes.get(oid)
+            if node is None:
+                continue
+            if isinstance(node, VizSceneObject) and node.parent is None:
+                visit(node)
+            elif node.id not in visited:
+                visited.add(node.id)
+                result.append(node)
+        return result
 
     def _get(self, object_id: str) -> SceneObject:
         ent = self._objects.get(object_id)
@@ -211,15 +314,18 @@ class Scene:
         obj.dirty = True
 
     def remove(self, object_id: str) -> None:
-        """Mark an object for removal in the next flush."""
-        if object_id in self._objects:
+        """Mark an object (or group node) for removal in the next flush."""
+        if object_id in self._objects or object_id in self._nodes:
             self._removed_ids.append(object_id)
         self._interaction_configs.pop(object_id, None)
 
     def clear(self) -> None:
-        """Remove all objects."""
+        """Remove all objects and group nodes."""
         for oid in list(self._objects):
             self._removed_ids.append(oid)
+        for oid in list(self._nodes):
+            if oid not in self._removed_ids:
+                self._removed_ids.append(oid)
         self._interaction_configs.clear()
 
     # -- Interaction config management -----------------------
@@ -260,6 +366,7 @@ class Scene:
 
         for oid in list(self._removed_ids):
             self._objects.pop(oid, None)
+            self._nodes.pop(oid, None)
             try:
                 self._order.remove(oid)
             except ValueError:

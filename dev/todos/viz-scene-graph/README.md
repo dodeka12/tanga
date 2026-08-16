@@ -32,7 +32,7 @@ fast rotation/movement of compound objects without recomputing any vertices.
 |-------|------|---------|
 | 1 | [01-transform-math.md](./01-transform-math.md) | `_transforms.py`: operator/entity → 4×4 matrix and TRS converters (+ unit tests) — **DONE** |
 | 2 | [02-style-defaults.md](./02-style-defaults.md) | `VizStyleDefaults`: bundle default styles into one copyable holder; scenes snapshot a copy (+ unit tests) — **DONE** |
-| 3 | [03-node-hierarchy.md](./03-node-hierarchy.md) | `_nodes.py`: `VizNode` / `VizSceneObject` / `VizOverlayObject` / `VizGroup` + aspect-dirty tracking + resolved-at-creation styles; migrate `Scene.add`/`add_label`/`add_object` to nodes (+ unit tests) |
+| 3 | [03-node-hierarchy.md](./03-node-hierarchy.md) | `_nodes.py`: `VizNode` / `VizSceneObject` / `VizOverlayObject` / `VizGroup` + aspect-dirty tracking + resolved-at-creation styles; migrate `Scene.add`/`add_label`/`add_object` to nodes (+ unit tests) — **DONE** |
 | 4 | [04-node-serialization.md](./04-node-serialization.md) | Move serialization dispatch into node `serialize()`; emit `full/style/transform` aspect patches (+ unit tests) |
 | 5 | [05-object-ref.md](./05-object-ref.md) | `VizObjectRef`: property/method API incl. labels and transform aspects (+ unit tests) |
 | 6 | [06-entry-points.md](./06-entry-points.md) | `Visualizer` / `VizSceneHandle` `new()` / `add_group()` / `parent_id` / `attach_to` / control update (+ unit tests) |
