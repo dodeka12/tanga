@@ -91,8 +91,18 @@ def _merge_style_into(base: Any, override: Any) -> Any:
                 setattr(result, key, value)
         return result
     # override is a style instance
-    if base is None or isinstance(base, dict):
+    if base is None:
         return copy(override)
+    if isinstance(base, dict):
+        result = copy(base)
+        if hasattr(override, "to_dict"):
+            override_items = override.to_dict().items()
+        else:
+            override_items = getattr(override, "__dict__", {}).items()
+        for key, value in override_items:
+            if value is not None:
+                result[key] = value
+        return result
     return _merge_style(base, override, deep=True)
 
 
@@ -470,6 +480,15 @@ class VizSceneObject(VizNode):
         self.transform.scale_by(x, y, z)
         self.mark("transform")
 
+    def apply_transform(self, op: Any) -> None:
+        """Apply an operator (Rotor/Motor/Translator/Dilator/…) in local space.
+
+        Marks ``transform``.  Supports the same operator dataclasses as
+        :func:`pytanga.viz._transforms.operator_to_matrix`.
+        """
+        self.transform.apply_matrix(_T.operator_to_matrix(op), space="local")
+        self.mark("transform")
+
 
 class VizOverlayObject(VizNode):
     """Overlay-layer node (label/annotation/title): position + attach_to."""
@@ -501,6 +520,21 @@ class VizOverlayObject(VizNode):
         """Set the anchor position (marks ``full``)."""
         self.position = _as_vec3(position)
         self.mark("full")
+
+    def set_attach_to(self, attach_to: str | None) -> None:
+        """Set the referenced scene-node ID (marks ``full``)."""
+        self.attach_to = attach_to
+        self.mark("full")
+
+    def set_color(self, color: Any) -> None:
+        """Set the resolved style color (marks ``style``)."""
+        self.style = _assign_style_field(self.style, "color", color)
+        self.mark("style")
+
+    def set_opacity(self, opacity: float) -> None:
+        """Set the resolved style opacity (marks ``style``)."""
+        self.style = _assign_style_field(self.style, "opacity", opacity)
+        self.mark("style")
 
     def set_style(self, style: Any) -> None:
         """Merge non-``None`` style fields (marks ``style``)."""
