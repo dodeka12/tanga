@@ -164,9 +164,10 @@ class MV:
         dim = self._alg.dim
         return {blade_name(k, dim): v for k, v in self._impl.to_dict().items()}
 
-    def prune(self) -> "MV":
+    def prune(self, tol: float | int | None = None) -> "MV":
         """Remove coefficients with ``abs(coeff) < algebra.precision`` in-place and return self."""
-        tol = self._alg._precision
+        if tol is None:
+            tol = self._alg._precision
         d = self._impl.to_dict()
         self._impl.reset()
         for blade_id, v in d.items():
