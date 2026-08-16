@@ -1,4 +1,4 @@
-# Phase 7 — Standalone & figure HTML export verification
+# Phase 8 — Standalone & figure HTML export verification
 
 **Status:** Planned
 

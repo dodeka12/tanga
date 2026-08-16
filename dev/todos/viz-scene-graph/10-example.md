@@ -1,4 +1,4 @@
-# Phase 9 — Example script demonstrating `VizGroup` + transforms
+# Phase 10 — Example script demonstrating `VizGroup` + transforms
 
 **Status:** Planned
 

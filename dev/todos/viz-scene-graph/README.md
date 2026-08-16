@@ -31,16 +31,17 @@ fast rotation/movement of compound objects without recomputing any vertices.
 | Phase | File | Summary |
 |-------|------|---------|
 | 1 | [01-transform-math.md](./01-transform-math.md) | `_transforms.py`: operator/entity → 4×4 matrix and TRS converters (+ unit tests) — **DONE** |
-| 2 | [02-node-hierarchy.md](./02-node-hierarchy.md) | `_nodes.py`: `VizNode` / `VizSceneObject` / `VizOverlayObject` / `VizGroup` + aspect-dirty tracking (+ unit tests) |
-| 3 | [03-node-serialization.md](./03-node-serialization.md) | Move serialization dispatch into node `serialize()`; emit `full/style/transform` aspect patches (+ unit tests) |
-| 4 | [04-object-ref.md](./04-object-ref.md) | `VizObjectRef`: property/method API incl. labels and transform aspects (+ unit tests) |
-| 5 | [05-entry-points.md](./05-entry-points.md) | `Visualizer` / `VizSceneHandle` `new()` / `add_group()` / `parent_id` / `attach_to` / control update (+ unit tests) |
-| 6 | [06-frontend-scene-graph.md](./06-frontend-scene-graph.md) | Frontend: `object_update` aspect patches + parenting + live-follow overlays (+ smoke test) |
-| 7 | [07-export-static.md](./07-export-static.md) | Ensure standalone and figure HTML exports still work end-to-end |
-| 8 | [08-end-to-end.md](./08-end-to-end.md) | Live viewer + recording + GLTF compound/group verification |
-| 9 | [09-example.md](./09-example.md) | Example script under `py/examples/viz` demonstrating `VizGroup` + direct transforms |
-| 10 | [10-docs.md](./10-docs.md) | Update docs with the new scene-graph / `VizObjectRef` / `VizGroup` features |
-| 11 | [11-changelog.md](./11-changelog.md) | Add a changelog entry following `dev/workflows/changelog.md` |
+| 2 | [02-style-defaults.md](./02-style-defaults.md) | `VizStyleDefaults`: bundle default styles into one copyable holder; scenes snapshot a copy (+ unit tests) |
+| 3 | [03-node-hierarchy.md](./03-node-hierarchy.md) | `_nodes.py`: `VizNode` / `VizSceneObject` / `VizOverlayObject` / `VizGroup` + aspect-dirty tracking + resolved-at-creation styles; migrate `Scene.add`/`add_label`/`add_object` to nodes (+ unit tests) |
+| 4 | [04-node-serialization.md](./04-node-serialization.md) | Move serialization dispatch into node `serialize()`; emit `full/style/transform` aspect patches (+ unit tests) |
+| 5 | [05-object-ref.md](./05-object-ref.md) | `VizObjectRef`: property/method API incl. labels and transform aspects (+ unit tests) |
+| 6 | [06-entry-points.md](./06-entry-points.md) | `Visualizer` / `VizSceneHandle` `new()` / `add_group()` / `parent_id` / `attach_to` / control update (+ unit tests) |
+| 7 | [07-frontend-scene-graph.md](./07-frontend-scene-graph.md) | Frontend: `object_update` aspect patches + parenting + live-follow overlays (+ smoke test) |
+| 8 | [08-export-static.md](./08-export-static.md) | Ensure standalone and figure HTML exports still work end-to-end |
+| 9 | [09-end-to-end.md](./09-end-to-end.md) | Live viewer + recording + GLTF compound/group verification |
+| 10 | [10-example.md](./10-example.md) | Example script under `py/examples/viz` demonstrating `VizGroup` + direct transforms |
+| 11 | [11-docs.md](./11-docs.md) | Update docs with the new scene-graph / `VizObjectRef` / `VizGroup` features |
+| 12 | [12-changelog.md](./12-changelog.md) | Add a changelog entry following `dev/workflows/changelog.md` |
 
 ## Guiding decisions
 
@@ -56,6 +57,10 @@ fast rotation/movement of compound objects without recomputing any vertices.
   aspect (whole resolved style dict); `transform` is one aspect, not special.
 - **Store only the resolved style** at creation (canonical + non-`None` user
   merges). Style patches re-serialize that resolved instance.
+- **Default styles are snapshotted per scene.** The `Visualizer` owns a
+  canonical `VizStyleDefaults` holder; each `Scene` receives a **copy** at
+  creation.  Mutating the Visualizer defaults later does not affect existing
+  scenes — mutate a scene's own holder to change its defaults.
 - **Labels and overlays are first-class nodes**, not special-cased data. They
   expose the same patch aspects (`full`/`style`) and are discovered via
   `get_label_ids(...)` / the reference API.

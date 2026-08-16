@@ -1,4 +1,4 @@
-# Phase 11 — Changelog
+# Phase 12 — Changelog
 
 **Status:** Planned
 
@@ -44,6 +44,8 @@ Add a changelog entry for the scene-graph work following
         `VizOverlayObject` / `VizGroup`) replacing the flat `SceneObject`
         registry, with serialization moving into node `serialize()` and
         updates emitted as aspect patches.
+  - [ ] **Refactor** — default styles moved into a per-scene
+        `VizStyleDefaults` holder (snapshotted at scene creation).
 - [ ] Wrap body text at ~80 columns; use `- **Headline** — …` bullet style.
 
 ### Update the index

@@ -1,4 +1,4 @@
-# Phase 8 — End-to-end verification (live viewer, recording, GLTF)
+# Phase 9 — End-to-end verification (live viewer, recording, GLTF)
 
 **Status:** Planned
 
@@ -47,6 +47,6 @@ vertices in live mode and round-trip correctly in offline outputs.
 
 ## Note
 
-This phase intentionally depends on Phases 1–7. Only live-server smoke checks
+This phase intentionally depends on Phases 1–8. Only live-server smoke checks
 and recording/GLTF integration remain here; core behavior and static export are
 covered by earlier phases.

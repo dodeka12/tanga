@@ -1,4 +1,4 @@
-# Phase 3 — Node serialization (aspect patches)
+# Phase 4 — Node serialization (aspect patches)
 
 **Status:** Planned (revised after design discussion)
 
@@ -65,7 +65,7 @@ Aspect semantics (Python authoritative):
   - [ ] `style` → `{id, aspect:"style", value: {style: <resolved style dict>}}`
   - [ ] `transform` → `{id, aspect:"transform", value: <transform trs dict>}`
 - [ ] `Scene.flush()` walks DFS pre-order and collects patches per node's
-      dirty aspects (see Phase 2 `consume_dirty()`); returns
+      dirty aspects (see Phase 3 `consume_dirty()`); returns
       `(patches, removed)`. `full_state()` still returns complete lists for
       initial sync / export.
 
@@ -86,8 +86,8 @@ Aspect semantics (Python authoritative):
 ## Backward compatibility
 
 - [ ] Existing `SceneObject` path + `scene_update` message must keep working
-      (Phase 7 export readers) until `new()`/`VizObjectRef` become primary in
-      Phase 5. The new `object_update` message is additive.
+      (Phase 8 export readers) until `new()`/`VizObjectRef` become primary in
+      Phase 6. The new `object_update` message is additive.
 
 ## Unit tests
 

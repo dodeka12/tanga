@@ -1,4 +1,4 @@
-# Phase 5 — Entry points (`Visualizer` / `VizSceneHandle`)
+# Phase 6 — Entry points (`Visualizer` / `VizSceneHandle`)
 
 **Status:** Planned (revised after design discussion)
 

@@ -1,11 +1,20 @@
-# Phase 2 — Node hierarchy (`_nodes.py`)
+# Phase 3 — Node hierarchy (`_nodes.py`)
 
 **Status:** Planned (revised after design discussion)
 
 ## Goal
 
 Introduce the scene-graph node classes that become the authoritative source of
-truth for the visualizer:
+truth for the visualizer, and migrate the flat `SceneObject` registry onto
+them. By the end of this phase:
+
+- every drawable is a node (`VizSceneObject` or `VizOverlayObject`) with an
+  **already-resolved** style stored at creation (canonical default + non-`None`
+  user overlays), and
+- `Scene.add` / `Scene.add_label` / `Scene.add_object` create nodes (resolving
+  styles via the scene's own `style_defaults` from Phase 2).
+
+The classes are:
 
 - `Transform` (canonical TRS) — reused from Phase 1 primitives.
 - `VizNode` (base: id/name/layer/kind/visible + aspect-dirty tracking).
@@ -14,16 +23,14 @@ truth for the visualizer:
   **no** `Transform`).
 - `VizGroup` (a `VizSceneObject` container, `kind="VizGroup"`).
 
-Replace the flat `SceneObject` registry conceptually; full `Scene` adoption is
-in this phase's `scene.py` integration section (kept as a backward-compatible
-shim until Phase 3/5 migrate callers).
+The existing `SceneObject` dataclass and `_objects` registry are kept as a
+backward-compatible shim (serialized via `serializer.py`) until Phase 4 moves
+serialization onto nodes and Phase 6 migrates the Visualizer callers.
 
 ## Files
 
 - New: `py/pytanga/viz/_nodes.py`
-- Modify: `py/pytanga/viz/scene.py` (keep existing `SceneObject` working; add
-  node-based accessors used by later phases; this phase also performs the
-  control-group rename already landed.)
+- Modify: `py/pytanga/viz/scene.py`
 
 ## Key decisions
 
@@ -36,8 +43,9 @@ shim until Phase 3/5 migrate callers).
   `transform_dirty` pair. Each node keeps a set of dirty aspects:
   `{"full"}`, or `{"style"}`, or `{"transform"}` (scene layer only). A full
   object change sets `{"full"}` (and clears `style`/`transform`).
-- **Resolved style only.** `VizSceneObject`/`VizOverlayObject` store a fully
-  resolved style instance (canonical default + non-`None` user overlays).
+- **Resolved style at creation.** `Scene` resolves each node's style from its
+  own `style_defaults` holder (Phase 2) when the node is created. This phase is
+  the single "cut-over": no style re-resolution happens later in Phase 4/5.
 
 ## Wire shape (agreed)
 
@@ -93,18 +101,21 @@ Node serialize (overlay layer):
 ### `scene.py` integration
 
 - [ ] Keep `SceneObject`/`Scene` existing behavior intact (all current tests
-      must still pass).
-- [ ] Add `_nodes: dict[str, VizNode]` (populated on `add_object` alongside
-      `_objects`) so later phases can migrate incrementally.
+      must still pass) — the flat path stays the shim until Phase 4/6.
+- [ ] Add `_nodes: dict[str, VizNode]`; populate it from `add` / `add_label` /
+      `add_object` by building a node whose style is resolved via
+      `self.style_defaults` at creation.
+- [ ] Add node-construction helpers on `Scene` (e.g. `_make_scene_node(...)`,
+      `_make_overlay_node(...)`) doing the resolve + store-in-`_nodes`.
 - [ ] Add `Scene.get_node(object_id) -> VizNode` accessor.
-- [ ] Add a `Scene.add_group(name=None) -> VizGroup` (scene-graph group; this
+- [ ] Add `Scene.add_group(name=None) -> VizGroup` (scene-graph group; this
       is distinct from the already-renamed `add_control_group`).
-- [ ] Add `Scene.group_ids` / node-tree DFS helpers (used by Phase 3/5).
+- [ ] Add `Scene.add_node(node)` / `group_ids` / node-tree DFS helpers (used
+      by Phase 4/6).
 
 ## Unit tests
 
-File: `py/tests/viz/test_nodes.py` (replace current prototype assertions to
-match the layer split + aspect model; keep existing Transform tests).
+File: `py/tests/viz/test_nodes.py`.
 
 - [ ] `test_transform_matrix` / `from_matrix` / `scale_by` / mutators.
 - [ ] `test_scene_object_aspects` — `set_entity` marks `full`; `set_style`
@@ -114,6 +125,11 @@ match the layer split + aspect model; keep existing Transform tests).
       and no `Transform`.
 - [ ] `test_group_serialize` — `kind == "VizGroup"`, no geometry/style.
 - [ ] `test_resolved_style_creation` — canonical defaults + non-`None` merge.
+- [ ] `test_scene_add_populates_nodes` — `Scene.add(Point(...))` creates a
+      `VizSceneObject` with a resolved style.
+- [ ] `test_scene_add_label_populates_nodes` — `Scene.add_label` creates a
+      `VizOverlayObject` with resolved style and `attach_to`.
+- [ ] `test_get_node_and_add_group` — `get_node`/`add_group` round-trip.
 
 ## Verification
 
@@ -122,3 +138,4 @@ match the layer split + aspect model; keep existing Transform tests).
 - [ ] `VizSceneObject` transform changes set only the `transform` aspect.
 - [ ] `VizOverlayObject` has `position`+`attach_to`, not a `Transform`.
 - [ ] `Scene.add_group` returns a `VizGroup` distinct from control groups.
+- [ ] `Scene.add(...)` nodes carry a resolved style from `style_defaults`.

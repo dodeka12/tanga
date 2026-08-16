@@ -1,4 +1,4 @@
-# Phase 4 — `VizObjectRef`
+# Phase 5 — `VizObjectRef`
 
 **Status:** Planned (revised after design discussion)
 
@@ -11,7 +11,7 @@ mark the correct aspect (`full` / `style` / `transform`).
 ## Files
 
 - New: `py/pytanga/viz/_object_ref.py`
-- (export from `py/pytanga/viz/__init__.py` in Phase 5)
+- (export from `py/pytanga/viz/__init__.py` in Phase 6)
 
 ## API
 

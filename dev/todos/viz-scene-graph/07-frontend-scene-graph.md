@@ -1,4 +1,4 @@
-# Phase 6 — Frontend scene graph
+# Phase 7 — Frontend scene graph
 
 **Status:** Planned (revised after design discussion)
 
@@ -16,9 +16,9 @@ hierarchies, render `VizGroup` as a `THREE.Group`, apply `style` and
 - New: `py/pytanga/viz/templates/renderers/group.js` + overlay renderers as
       needed.
 - (possibly) `py/pytanga/viz/export/...` bootstrap for static export parity
-      (defer complex parity to Phase 7).
+      (defer complex parity to Phase 8).
 
-## Wire format (agreed, Phase 3)
+## Wire format (agreed, Phase 4)
 
 ```json
 {
@@ -34,7 +34,7 @@ hierarchies, render `VizGroup` as a `THREE.Group`, apply `style` and
 ```
 
 The old `scene_update` message remains supported for backward compatibility
-during the transition (Phases 7 checks exports).
+during the transition (Phase 8 checks exports).
 
 ## Steps
 
@@ -96,13 +96,13 @@ message shape and add a JS renderer smoke reference.
         no `transform`.
   - [ ] `test_group_kind_in_state` — groups serialize `kind == "VizGroup"`.
   - [ ] `test_dfs_preorder` — parents appear before children.
-- [ ] Manual / visual smoke via Phase 8 for actual THREE behavior.
+- [ ] Manual / visual smoke via Phase 9 for actual THREE behavior.
 
 ## Verification
 
 - [ ] `uv run pytest py/tests/viz/test_frontend_transform_shape.py` passes.
 - [ ] `grp = viz.add_group(...)` then `grp.new(...)` renders children
-      parented under the group (visual smoke, Phase 8).
+      parented under the group (visual smoke, Phase 9).
 - [ ] A `transform` patch moves a `VizGroup` without re-sending child geometry.
 - [ ] A label with `attach_to` follows its node's transform.
 - [ ] Existing live-viewer smoke flows still work.
