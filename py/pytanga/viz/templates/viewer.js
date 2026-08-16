@@ -137,7 +137,6 @@ let _wsGeneration = 0;
 
 function closeActiveWs() {
     if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
-        _log('ws-teardown', 'closing readyState=' + ws.readyState);
         _wsGeneration++;                          // invalidate stale handlers
         const old = ws;
         old.onopen = old.onclose = old.onerror = old.onmessage = null;
@@ -156,13 +155,11 @@ function connectWebSocket() {
     _reconnectAttempts++;
     updateStatusIndicator('connecting', _reconnectAttempts);
     document.title = 'Connecting… — ' + _savedTitle;
-    _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts);
 
     ws = new WebSocket(url);
 
     const connectWatchdog = setTimeout(() => {
         if (ws && ws.readyState === WebSocket.CONNECTING && gen === _wsGeneration) {
-            _log('ws-watchdog', 'connect timed out — aborting and retrying');
             _wsGeneration++;               // invalidate this socket's handlers
             try { ws.close(); } catch (_) {}
             ws = null;
@@ -175,8 +172,6 @@ function connectWebSocket() {
         clearTimeout(connectWatchdog);
         const pageToken = window.__tanga_page_token
             || new URLSearchParams(window.location.search).get('token');
-        _log('ws-open', 'attempt=' + _reconnectAttempts
-            + ' token=' + (pageToken || 'none'));
         setStatus('connected');
         setWebSocket(ws);
         setInteractionWebSocket(ws);
@@ -204,22 +199,18 @@ function connectWebSocket() {
             console.error('Failed to parse WebSocket message:', e);
             return;
         }
-        _log('ws-msg', 'type=' + (msg.type || 'unknown') + ' size=' + event.data.length);
         handleMessage(msg);
     };
 
     ws.onclose = (event) => {
         if (gen !== _wsGeneration) return;
         clearTimeout(connectWatchdog);
-        _log('ws-close', 'code=' + event.code
-            + ' reason=' + (event.reason || 'none'));
         setStatus('disconnected');
         updateStatusIndicator('disconnected');
         document.title = 'Disconnected — ' + _savedTitle;
 
         const jitter = 0.8 + Math.random() * 0.4;  // ±20%
         const delay = Math.round(Math.min(_reconnectDelay * jitter, _RECONNECT_MAX_MS));
-        _log('ws-reconnect', 'delay=' + delay + 'ms backoff=' + _reconnectDelay + 'ms');
         _reconnectDelay = Math.min(_reconnectDelay * 2, _RECONNECT_MAX_MS);
         reconnectTimer = setTimeout(connectWebSocket, delay);
     };
@@ -236,7 +227,6 @@ function setStatus(cls) {
 // ── Visibility wake-up ────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && ws === null) {
-        _log('ws-visibility', 'tab visible — immediate reconnect');
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
@@ -249,17 +239,6 @@ document.addEventListener('visibilitychange', () => {
 // ── Reconnect Button ──────────────────────────────────────────
 let _reconnectButtonEl = null;
 let _reconnectClickCount = 0;
-
-function _log(phase, detail) {
-    const t = (typeof performance !== 'undefined' && performance.now)
-        ? (performance.now() / 1000).toFixed(3) : '0';
-    const parts = ['[tanga:' + phase + ' t=' + t + ']'];
-    if (_browserId) parts.push('id=' + _browserId);
-    if (_viewerName) parts.push('viewer=' + _viewerName);
-    if (_myScene) parts.push('scene=' + _myScene);
-    if (detail) parts.push(detail);
-    console.log(parts.join(' '));
-}
 
 function showReconnectButton(mode) {
     // mode: 'reconnect' (normal reconnect) or 'page-reload' (full refresh)
@@ -304,7 +283,6 @@ function showReconnectButton(mode) {
                 showReconnectButton('page-reload');
                 return;
             }
-            _log('ws-manual', 'reconnect click=' + _reconnectClickCount);
             if (reconnectTimer) {
                 clearTimeout(reconnectTimer);
                 reconnectTimer = null;
@@ -557,7 +535,6 @@ function _forMyScene(msg) {
 async function handleMessage(msg) {
     if (msg.type === 'browser_id') {
         _browserId = msg.browser_id;
-        _log('init', 'browser_id=' + msg.browser_id);
         return;
     }
     if (msg.type === 'navigate') {
@@ -582,7 +559,6 @@ async function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
-        _log('init', 'clear_all → reset (objects=' + sceneObjects.size + ')');
         console.log('[clear_all] Resetting scene — objects:', sceneObjects.size);
         // Remove all scene children (entities, lights, grid, axes)
         while (scene.children.length > 0) {
@@ -622,12 +598,9 @@ async function handleMessage(msg) {
         d2.position.set(-5, -2, -8);
         scene.add(d2);
         console.log('[clear_all] Scene reset complete');
-        _log('init', 'clear_all → reset complete');
     } else if (msg.type === 'scene_config') {
-        _log('init', 'scene_config name=' + (msg.name || '') + ' space_dim=' + msg.space_dim);
         applySceneConfig(msg);
     } else if (msg.type === 'scene_update') {
-        _log('init', 'scene_update objects=' + (msg.objects ? msg.objects.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {
             for (const id of msg.removed) {
                 removeSceneObject(id);
@@ -648,7 +621,6 @@ async function handleMessage(msg) {
             ws.send(JSON.stringify({ type: 'scene_synced', browser_id: _browserId }));
         }
     } else if (msg.type === 'object_update') {
-        _log('init', 'object_update patches=' + (msg.patches ? msg.patches.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {
             for (const id of msg.removed) {
                 removeSceneObject(id);
@@ -669,7 +641,6 @@ async function handleMessage(msg) {
     } else if (msg.type === 'screenshot') {
         handleScreenshot(msg);
     } else if (msg.type === 'controls_define') {
-        _log('init', 'controls_define controls=' + (msg.controls ? msg.controls.length : 0) + ' groups=' + (msg.groups ? msg.groups.length : 0));
         handleControlsDefine(msg);
         const controls2 = msg.controls || [];
         const groups = msg.groups || [];
