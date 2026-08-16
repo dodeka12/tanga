@@ -38,7 +38,7 @@ in a BasisE3 algebra). Only the ``e1``, ``e2`` and ``e3`` components are used:
 from pytanga.basis import BasisE3
 
 e3 = BasisE3()
-mv = e3.vector(3, 4, 5)
+mv = e3("3 e1 + 4 e2 + 5 e3")
 p = Point(mv)   # Point(3.00, 4.00, 5.00)
 ```
 
@@ -97,7 +97,7 @@ d = Direction(x=1.0, y=0.0, z=0.0)
 # From an MV
 from pytanga.basis import BasisE3
 e3 = BasisE3()
-mv = e3.vector(1, 2, 3)
+mv = e3("e1 + 2 e2 + 3 e3")
 d = Direction(mv)  # Dir(1.00, 2.00, 3.00)
 ```
 
@@ -110,11 +110,14 @@ d = Direction(mv)  # Dir(1.00, 2.00, 3.00)
 
 ### Conversion to MV
 
-A `Point` or `Direction` can be passed directly to :meth:`BasisE3.vector`:
+A `Point` or `Direction` can be converted to a multivector via the
+[`geometry` submodule](create.md):
 
 ```python
-e3.vector(Point(1, 2, 3))     # 1 e1 + 2 e2 + 3 e3
-e3.vector(Direction(1, 0, 0)) # 1 e1
+from pytanga.geometry import create_entity
+
+create_entity(e3, Point(1, 2, 3))     # 1 e1 + 2 e2 + 3 e3
+create_entity(e3, Direction(1, 0, 0)) # 1 e1
 ```
 
 ### Vector arithmetic operators

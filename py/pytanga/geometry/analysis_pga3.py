@@ -66,18 +66,13 @@ if TYPE_CHECKING:
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(
-    mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Plane | Space | None:
+def analyze_entity(mv: MV) -> Point | Direction | Line | Plane | Space | None:
     """Analyze an MV in PGA3 as a geometric entity.
 
     Parameters
     ----------
     mv : MV
         A multivector to analyze.
-    opns : bool, optional
-        *True* (default) → OPNS interpretation.
-        *False* → IPNS interpretation (dualizes to OPNS first).
 
     OPNS entities (Gunn/Dorst grades):
 
@@ -86,7 +81,7 @@ def analyze_entity(
     - Grade 3 → :class:`Point` (finite) or :class:`Direction` (ideal)
     - Grade 5 → :class:`Space`
     """
-    if not opns:
+    if not mv.algebra.opns:
         return _analyze_entity_ipns(mv)
     return _analyze_entity_opns(mv)
 
@@ -309,8 +304,6 @@ def make_point(alg: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA3 point (grade‑1 IPNS form):
     ``x·e₁ + y·e₂ + z·e₃ + e₀``.
     """
-    if hasattr(alg, "point"):
-        return alg.point(x, y, z)
     return alg.multivector({E1: x, E2: y, E3: z, EP: 1.0, EM: 1.0})
 
 
@@ -318,15 +311,11 @@ def make_direction(alg: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA3 direction (ideal point, grade‑1 IPNS):
     ``x·e₁ + y·e₂ + z·e₃``.
     """
-    if hasattr(alg, "direction"):
-        return alg.direction(x, y, z)
     return alg.multivector({E1: x, E2: y, E3: z})
 
 
 def make_plane(alg: Algebra, nx: float, ny: float, nz: float, d: float = 0.0) -> MV:
     """Create a PGA3 plane (grade‑1): ``nx·e₁ + ny·e₂ + nz·e₃ + d·e₀``."""
-    if hasattr(alg, "plane"):
-        return alg.plane(nx, ny, nz, d)
     return alg.multivector({E1: nx, E2: ny, E3: nz, EP: d, EM: d})
 
 
@@ -382,14 +371,12 @@ def analyze_operator(
 def _entity_to_operator(entity):
     """Wrap an entity as its corresponding reflection operator."""
     if isinstance(entity, Plane):
-        return ReflectionPlane(plane=entity)
+        return ReflectionPlane(entity)
     elif isinstance(entity, Line):
-        return ReflectionLine(line=entity)
+        return ReflectionLine(entity)
     elif isinstance(entity, Point):
-        return ReflectionPoint(point=entity)
-    raise ValueError(
-        f"Entity type {type(entity).__name__} has no reflection operator"
-    )
+        return ReflectionPoint(entity)
+    raise ValueError(f"Entity type {type(entity).__name__} has no reflection operator")
 
 
 def _triple_reflection_from_factors(factors):
@@ -426,3 +413,57 @@ def _ana_versor(
 
 def _get_grades(mv: MV) -> set[int]:
     return set(mv.grades)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Typed analyzers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _expect(result, cls):
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def analyze_point(mv: MV) -> Point:
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Point)
+
+
+def analyze_direction(mv: MV) -> Direction:
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Direction)
+
+
+def analyze_line(mv: MV) -> Line:
+    """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Line)
+
+
+def analyze_plane(mv: MV) -> Plane:
+    """Interpret *mv* as a :class:`Plane` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Plane)
+
+
+def analyze_space(mv: MV) -> Space:
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Space)

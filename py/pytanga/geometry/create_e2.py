@@ -35,33 +35,30 @@ E12 = BasisE2.E12
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_point(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
-    """Points cannot be represented as null spaces in E2 — raise ValueError."""
-    raise ValueError(
-        "Points cannot be represented as null spaces in E2; "
-        "use P2 or N2 for point representation."
-    )
+def create_point(basis: Algebra, x: float, y: float, z: float) -> MV:
+    """Euclidean point components — ``x·e₁ + y·e₂`` (OPNS/IPNS independent).
 
-
-def create_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
-    """Grade-1 vector ``x·e₁ + y·e₂``.
-
-    In E2 a grade-1 blade represents a line through the origin (OPNS)
-    or the normal to a line (IPNS).  This function produces the vector
-    itself; the caller uses *opns* to control the dual.
+    A point cannot be represented as a null space in E2 (that requires
+    P2 or N2), but its Euclidean coordinates map to the e₁/e₂ components
+    independent of the OPNS/IPNS flag.
     """
-    if hasattr(basis, "vector"):
-        return basis.vector(x, y)
     return basis.multivector({E1: x, E2: y})
 
 
-def create_line(
-    basis: Algebra, origin: Point, direction: Direction, *, opns: bool = True
-) -> MV:
+def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
+    """Grade-1 vector ``x·e₁ + y·e₂``.
+
+    In E2 a grade-1 blade represents a line through the origin (OPNS)
+    or the normal to a line (IPNS).  OPNS returns the vector directly;
+    IPNS returns its dual.
+    """
+    opns_mv = basis.multivector({E1: x, E2: y})
+    if basis.opns:
+        return opns_mv
+    return opns_mv.dual()
+
+
+def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
     """Line through the origin in direction *d* (grade-1 vector).
 
     In E2 only lines through the origin can be represented.  If *origin*
@@ -76,9 +73,12 @@ def create_line(
     return create_direction(basis, direction.x, direction.y, 0.0)
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
-    """Pseudoscalar ``scale * e₁₂``."""
-    return basis.multivector({E12: scale})
+def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
+    """OPNS pseudoscalar ``scale * e₁₂``; IPNS is the scalar ``scale``."""
+    opns_mv = basis.multivector({E12: scale})
+    if basis.opns:
+        return opns_mv
+    return opns_mv.dual()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -86,9 +86,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_sphere(
-    basis: Algebra, center: Point, radius: float, *, opns: bool = True
-) -> MV:
+def create_sphere(basis: Algebra, center: Point, radius: float) -> MV:
     raise ValueError("Spheres require conformal embedding (N2); not available in E2.")
 
 
@@ -97,20 +95,18 @@ def create_circle(
     center: Point,
     normal: Direction,
     radius: float,
-    *,
-    opns: bool = True,
 ) -> MV:
     raise ValueError("Circles require conformal embedding (N2); not available in E2.")
 
 
-def create_point_pair(basis: Algebra, a: Point, b: Point, *, opns: bool = True) -> MV:
+def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     raise ValueError(
         "Point pairs require conformal embedding (N2); not available in E2."
     )
 
 
 def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0, *, opns: bool = True
+    basis: Algebra, pt: Point, weight: float = 1.0
 ) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N2); not available in E2."

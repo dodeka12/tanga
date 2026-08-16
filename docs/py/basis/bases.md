@@ -34,11 +34,14 @@ E3 = BasisE3()            # default dtype='float64'
 | `e23` | $e_2 \wedge e_3$ | `0b110` |
 | `I` | $e_1 \wedge e_2 \wedge e_3$ | `0b111` |
 
-**Factory methods**
+**Constructing multivectors** (string conversion)
 
 ```python
-v = E3.vector(1, 2, 3)   # 1·e1 + 2·e2 + 3·e3
+v = E3("e1 + 2 e2 + 3 e3")   # 1·e1 + 2·e2 + 3·e3
 ```
+
+Geometric entities (points, lines, …) are created through the
+[`geometry` submodule](../geometry/index.md), not on the basis classes.
 
 **Display**
 
@@ -62,11 +65,14 @@ P3 = BasisP3()
 
 **Named blades**: `e1`, `e2`, `e3`, `e4` (homogeneous direction), `I`.
 
-**Factory methods**
+**Constructing multivectors** (string conversion)
 
 ```python
-p = P3.point(x, y, z)    # x·e1 + y·e2 + z·e3 + e4 (homogeneous point)
+p = P3("e1 + 2 e2 + 3 e3 + e4")    # homogeneous point (1, 2, 3)
 ```
+
+Geometric entities (points, lines, …) are created through the
+[`geometry` submodule](../geometry/index.md), not on the basis classes.
 
 ---
 
@@ -139,13 +145,16 @@ $$p = x \cdot e_1 + y \cdot e_2 + z \cdot e_3 + e₀$$
 
 The OPNS form is a grade‑3 trivector (intersection of three planes).
 
-**Factory methods**
+**Constructing multivectors** (string conversion)
 
 ```python
-p = pga.point(x, y, z)        # IPNS: x·e1 + y·e2 + z·e3 + e₀
-d = pga.direction(x, y, z)    # IPNS: x·e1 + y·e2 + z·e3  (ideal point)
-π = pga.plane(nx, ny, nz, d)  # OPNS: nx·e1 + ny·e2 + nz·e3 + d·e₀
+p = pga("e1 + 2 e2 + 3 e3 + e0")   # IPNS point (finite)
+d = pga("e1 + 2 e2 + 3 e3")        # ideal point / direction
+π = pga("e3 + e0")                 # plane z = 1 (normal +z, offset 1)
 ```
+
+Geometric entities (points, lines, …) are created through the
+[`geometry` submodule](../geometry/index.md), not on the basis classes.
 
 **Entity grades (Gunn/Dorst convention):**
 
@@ -175,13 +184,13 @@ E2 = BasisE2()
 
 **Named blades:** `e1`, `e2`, `e12` (pseudoscalar `I`).
 
-**Factory methods**
+**Constructing multivectors** (string conversion)
 
 ```python
-v = E2.vector(x, y)              # x·e1 + y·e2
-v = E2.rnd_vector(x_range, y_range)  # random vector
-r = E2.rotor(theta, axis)         # rotation in e12 plane
+v = E2("3 e1 + 4 e2")              # 3·e1 + 4·e2
 ```
+
+Rotors are created through the [`geometry` submodule](../geometry/index.md).
 
 !!! note "No points in E2"
     E2 can only represent directions and rotors. For points, use P2, N2, or PGA2.
@@ -200,14 +209,15 @@ P2 = BasisP2()
 
 **Named blades:** `e1`, `e2`, `e3` (homogeneous direction), `I`.
 
-**Factory methods**
+**Constructing multivectors** (string conversion)
 
 ```python
-p = P2.point(x, y)               # homogeneous point: x·e1 + y·e2 + e3
-d = P2.direction(x, y)           # ideal point: x·e1 + y·e2 (no e3)
-p = P2.rnd_point(x_range, y_range)
-d = P2.rnd_direction(x_range, y_range)
+p = P2("e1 + 2 e2 + e3")         # homogeneous point (1, 2)
+d = P2("e1 + 2 e2")              # ideal point: x·e1 + y·e2 (no e3)
 ```
+
+Geometric entities (points, lines, …) are created through the
+[`geometry` submodule](../geometry/index.md), not on the basis classes.
 
 Detailed documentation: [basis\_p2.md](basis_p2.md).
 
@@ -281,13 +291,16 @@ pga2 = BasisPGA2()
 | `ep` | $e_3$ ($e_p^2 = +1$) | Internal embedding (prefer `e0`) |
 | `em` | $e_4$ ($e_m^2 = -1$) | Internal embedding (prefer `e0`) |
 
-**Factory methods**
+**Constructing multivectors** (string conversion)
 
 ```python
-p = pga2.point(x, y)              # IPNS: x·e1 + y·e2 + e₀
-d = pga2.direction(x, y)          # IPNS: x·e1 + y·e2  (ideal point)
-ℓ = pga2.line(nx, ny, d)          # OPNS: nx·e1 + ny·e2 + d·e₀ (grade‑1 vector)
+p = pga2("e1 + 2 e2 + e0")        # IPNS point (finite)
+d = pga2("e1 + 2 e2")             # ideal point / direction
+ℓ = pga2("e1 + e0")               # line x = 1 (grade‑1 vector)
 ```
+
+Geometric entities (points, lines, …) are created through the
+[`geometry` submodule](../geometry/index.md), not on the basis classes.
 
 **Entity grades (Gunn/Dorst convention):**
 
@@ -319,7 +332,7 @@ I:   MV = E3.I
 
 ```python
 E3 = BasisE3()
-v = E3.vector(1, 2, 3)
+v = E3("e1 + 2 e2 + 3 e3")
 print(E3.e1 * E3.e2)    # always works, no linter issues
 ```
 

@@ -41,6 +41,7 @@ class Algebra:
         print_fmt: str = ".4g",
         precision: float = 1e-10,
         seed: int | None = None,
+        opns: bool = True,
     ) -> None:
         from pytanga.codegen import get_or_build
 
@@ -76,6 +77,7 @@ class Algebra:
         self._precision = precision
         self._mod = get_or_build(dim, sig, dtype, verbose=verbose)
         self._rng = np.random.default_rng(seed)
+        self._opns = bool(opns)
 
     # -----------------------------------------------------------------------
     # Properties
@@ -124,6 +126,26 @@ class Algebra:
     def print_fmt(self) -> str:
         """Python format spec for printing coefficients (default '.4g')."""
         return self._print_fmt
+
+    @property
+    def opns(self) -> bool:
+        """OPNS/IPNS interpretation flag.
+
+        ``True`` (default) -> multivectors are interpreted in the Outer
+        Product Null Space; ``False`` -> Inner Product Null Space.  This is
+        the single source of truth for geometry interpretation: every
+        multivector created by this algebra reads the flag through
+        :attr:`~pytanga.MV.opns`.
+
+        The flag is mutable.  Changing it reinterprets subsequently created
+        or analyzed multivectors of this algebra (existing MVs will be
+        interpreted with the new setting when analyzed).
+        """
+        return self._opns
+
+    @opns.setter
+    def opns(self, value: bool) -> None:
+        self._opns = bool(value)
 
     # -----------------------------------------------------------------------
     # Factory

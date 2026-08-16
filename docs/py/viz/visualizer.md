@@ -12,7 +12,6 @@ Visualizer(
     host="localhost",
     open_browser=None,  # auto: False in Jupyter, True otherwise
     reuse_existing=True,
-    opns=True,
     title="Tanga 3D Viewer",
     annotation=None,
     background_color="#1a1a2e",
@@ -29,7 +28,6 @@ Visualizer(
 | `host` | `str` | `"localhost"` | Bind address |
 | `open_browser` | `bool \| None` | auto | Open viewer URL on start |
 | `reuse_existing` | `bool` | `True` | Wait for existing browser tab to reconnect before opening a new one |
-| `opns` | `bool` | `True` | Default MV interpretation (OPNS/IPNS) |
 | `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
 | `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
@@ -93,7 +91,6 @@ add(
     obj,                          # Entity, Operator, MV, or Label
     *,
     entity_id=None,               # explicit ID or auto-generated
-    opns=None,                    # MV interpretation (None = instance default)
     color=None,                   # hex string, RGB tuple, or RGBA tuple
     opacity=None,                 # 0.0–1.0
     style=None,                   # PointStyle, SphereStyle, …
@@ -233,19 +230,25 @@ detail.display(viewer_name="presenter-laptop")
 ## MV Input
 
 ```python
-from pytanga.algebra import Algebra
+from pytanga.basis import BasisPGA3
+from pytanga.geometry import Direction, Geometry, Plane, Point
 
 pga = BasisPGA3()
-viz = Visualizer(opns=True)
+geo = Geometry(pga)
+viz = Visualizer()
 
-# MV → analyze(opns=True) → Entity
-viz.add(pga.point(5, 0, 0), color="#ff4444")  # OPNS
-viz.add(pga.point(5, 0, 0), color="#44ff44", opns=False)  # IPNS
-viz.add(pga.plane(0, 0, 1, 3), opacity=0.3)
+# MV → analyze → Entity (the MV's algebra.opns flag is authoritative)
+viz.add(geo(Point(5, 0, 0)), color="#ff4444")  # OPNS
+
+# The same point in IPNS (grade-1 vector)
+geo_ipns = Geometry(BasisPGA3(opns=False))
+viz.add(geo_ipns(Point(5, 0, 0)), color="#44ff44")  # IPNS
+
+viz.add(geo(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1))), opacity=0.3)
 ```
 
-The `opns` flag on `add()` overrides the instance default. When `None`,
-the instance's `self._opns` value is used.
+Multivectors carry the OPNS/IPNS interpretation from the algebra that
+created them; `add()` has no `opns` parameter.
 
 ## Updating Entities
 

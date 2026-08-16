@@ -49,8 +49,10 @@ def hr(title: str) -> None:
 hr("1. Reflection — grade-1 versor, no null components")
 
 refl = Reflection(normal=Direction(0, 0, 1))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_ref = geo.create(refl)
 mv_ref.show("Reflection in plane with normal (0,0,1)")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_ref)
 print(f"  analyze → {result}")
 
@@ -58,8 +60,10 @@ print(f"  analyze → {result}")
 hr("2. Inversion — grade-1 versor with eo component")
 
 inv = Inversion(center=Point(2, 0, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_inv = geo.create(inv)
 mv_inv.show("Inversion at origin (2,0,0)")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_inv)
 print(f"  analyze → {result}")
 print(
@@ -70,8 +74,10 @@ print(
 hr("3. Rotor — two Euclidean reflectors")
 
 rot = Rotor(angle=math.pi / 3, axis=Direction(0, 0, 1))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_rot = geo.create(rot)
 mv_rot.show("Rotor: 60° about z-axis")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_rot)
 print(f"  analyze → {result}")
 
@@ -79,8 +85,10 @@ print(f"  analyze → {result}")
 hr("4. Translator — two einf reflectors, direct coefficient extraction")
 
 t = Translator(vector=Direction(3, 1, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_t = geo.create(t)
 mv_t.show("Translator by (3, 1, 0)")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_t)
 print(f"  analyze → {result}")
 print(
@@ -91,8 +99,10 @@ print(
 hr("5. Dilator — two eo reflectors, uniform scaling")
 
 d = Dilator(factor=2.0)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_d = geo.create(d)
 mv_d.show("Dilator: factor = 2.0")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_d)
 print(f"  analyze → {result}")
 if isinstance(result, Dilator):
@@ -105,8 +115,10 @@ motor = Motor(
     rotor=Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1)),
     translator=Translator(vector=Direction(1, 0, 0)),
 )
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_m = geo.create(motor)
 mv_m.show("Motor: 90° around z + shift along x")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_m)
 print(f"  analyze → {result}")
 if isinstance(result, Motor):
@@ -129,11 +141,14 @@ ops = [
 ]
 
 for name, op in ops:
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     mv_op = geo.create(op)
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     result = geo.which_operator(mv_op)
     print(f"  {name}: {type(result).__name__} ✓")
 
 # Motor via combined dispatcher
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.analyze(geo.create(motor))
 print(f"  Motor (via analyze): {type(result).__name__} ✓")
 
@@ -141,15 +156,18 @@ print(f"  Motor (via analyze): {type(result).__name__} ✓")
 hr("8. Entity vs Operator — same blade, different interpretation")
 
 sphere = Sphere(center=Point(0, 0, 0), radius=2.0)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_sph = geo.create(sphere)
 
 # which_entity sees the geometric entity
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 entity_result = geo.which_entity(mv_sph)
 print(f"  which_entity → {entity_result}")
 print("    (sphere is a geometric entity)")
 
 # which_operator sees the same blade as an Inversion
 try:
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     op_result = geo.which_operator(mv_sph)
     print(f"  which_operator → {op_result}")
     print("    (the same blade is also an inversion operator)")

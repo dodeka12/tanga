@@ -278,7 +278,10 @@ class TestVisualizer:
         viz = Visualizer()
         assert viz._port == 8765
         assert viz._host == "localhost"
-        assert viz._opns is True
+
+    def test_opns_kwarg_rejected(self):
+        with pytest.raises(TypeError):
+            Visualizer(opns=False)
 
     def test_custom_port_and_host(self):
         viz = Visualizer(port=9999, host="127.0.0.1")

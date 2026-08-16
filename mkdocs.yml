@@ -112,9 +112,11 @@ nav:
     - Geometry:
       - Overview: py/geometry/index.md
       - Entities: py/geometry/entities.md
+      - MV-accepting constructors: py/geometry/mv-constructors.md
       - Operators: py/geometry/operators.md
       - Analysis pipeline: py/geometry/analysis.md
       - Creation pipeline: py/geometry/create.md
+      - Random generation: py/geometry/random.md
       - Round-trip examples: py/geometry/round-trip.md
     - 3D Visualization:
       - Overview: py/viz/index.md

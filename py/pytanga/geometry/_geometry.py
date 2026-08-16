@@ -6,23 +6,25 @@
 The :class:`Geometry` class wraps an algebra instance and provides
 ``create()``, ``which_entity()``, and ``which_operator()`` methods that
 delegate to the existing dispatchers, always using the stored algebra.
-A default ``opns`` flag can be set on the instance and overridden per call.
+The OPNS/IPNS interpretation is read from ``geometry.algebra.opns``.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from .analysis import analyze as _analyze
 from .analysis import analyze_entity, analyze_operator
 from .create import create
+from .entities import Entity, _is_mv
+from .operators import Operator
+from .random import RndEntity
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
-
-    from .entities import Entity
-    from .operators import Operator
 
 
 class Geometry:
@@ -33,16 +35,16 @@ class Geometry:
     algebra : Algebra
         The algebra instance (e.g. ``BasisN3()``).
         Stored immutably; access via the :attr:`algebra` property.
-    opns : bool, optional
-        Default OPNS/IPNS flag for :meth:`create` and :meth:`which_entity`.
-        Can be overridden per call.  Defaults to *True*.
+    seed : int | None
+        Optional seed for this instance's random number generator (used by
+        the random entity generators passed to :meth:`__call__`).
     """
 
-    __slots__ = ("_algebra", "opns")
+    __slots__ = ("_algebra", "_rng")
 
-    def __init__(self, algebra: Algebra, *, opns: bool = True) -> None:
+    def __init__(self, algebra: Algebra, *, seed: int | None = None) -> None:
         self._algebra = algebra
-        self.opns: bool = opns
+        self._rng = np.random.default_rng(seed)
 
     # ── read-only algebra ──────────────────────────────────────
 
@@ -51,43 +53,77 @@ class Geometry:
         """The algebra this ``Geometry`` instance is bound to (read-only)."""
         return self._algebra
 
+    @property
+    def rng(self) -> np.random.Generator:
+        """NumPy random number generator owned by this :class:`Geometry`.
+
+        Seedable at construction time via ``Geometry(algebra, seed=...)`` and
+        forwarded to random entity generators so results are reproducible.
+        """
+        return self._rng
+
     # ── convenience methods ────────────────────────────────────
 
-    def create(self, obj: Entity | Operator, *, opns: bool | None = None) -> MV:
+    def create(self, obj: Entity | Operator) -> MV:
         """Create an MV from an entity or operator.
+
+        The OPNS/IPNS interpretation is read from ``self.algebra.opns``.
 
         Parameters
         ----------
         obj : Entity or Operator
             A geometric entity or operator dataclass.
-        opns : bool or None, optional
-            *True* → create in OPNS, *False* → create in IPNS.
-            If *None* (default), uses ``self.opns``.
 
         Returns
         -------
         MV
             The multivector representation.
         """
-        return create(self._algebra, obj, opns=self._opns(opns))
+        return create(self._algebra, obj)
 
-    def which_entity(self, mv: MV, *, opns: bool | None = None) -> Entity:
+    def __call__(self, obj):
+        """Create MVs from entities, operators, random generators, or analyzes MVs.
+
+        Dispatch rules, in order:
+
+        - :class:`~.random.RndEntity` (e.g. ``RndPoint``) → materialize with this
+          instance's ``rng`` and create the resulting entity or list of entities.
+        - ``list`` / ``tuple`` → recurse over each element (e.g. a list of
+          ``RndPoint`` instances, or plain entities).
+        - :class:`Entity` / :class:`Operator` → :meth:`create`.
+        - :class:`MV` → :meth:`analyze`.
+        """
+        if isinstance(obj, RndEntity):
+            result = obj(self._rng)
+            if isinstance(result, (list, tuple)):
+                return [self.create(item) for item in result]
+            return self.create(result)
+        if isinstance(obj, (list, tuple)):
+            return [self(item) for item in obj]
+        if isinstance(obj, (Entity, Operator)):
+            return self.create(obj)
+        if _is_mv(obj):
+            return self.analyze(obj)
+        raise TypeError(
+            f"Geometry.__call__() expects RndEntity, Entity, Operator, list, or MV, "
+            f"got {type(obj).__name__}"
+        )
+
+    def which_entity(self, mv: MV) -> Entity:
         """Determine which geometric entity an MV represents.
 
         Parameters
         ----------
         mv : MV
-            A multivector to analyze.
-        opns : bool or None, optional
-            *True* → interpret blade in OPNS, *False* → in IPNS.
-            If *None* (default), uses ``self.opns``.
+            A multivector to analyze.  The MV's ``algebra.opns`` flag
+            determines the OPNS/IPNS interpretation.
 
         Returns
         -------
         Entity
             The :class:`~.entities.Entity` dataclass.
         """
-        return analyze_entity(mv, opns=self._opns(opns))
+        return analyze_entity(mv)
 
     def which_operator(self, mv: MV) -> Operator:
         """Determine which versor / operator an MV represents.
@@ -109,7 +145,7 @@ class Geometry:
         """
         return analyze_operator(mv)
 
-    def analyze(self, mv: MV, *, opns: bool | None = None) -> Entity | Operator | None:
+    def analyze(self, mv: MV) -> Entity | Operator | None:
         """Try to analyze an MV as either an entity or an operator.
 
         Tries entity analysis first, then operator analysis.
@@ -118,19 +154,12 @@ class Geometry:
         Parameters
         ----------
         mv : MV
-            A multivector to analyze.
-        opns : bool or None, optional
-            *True* → OPNS, *False* → IPNS. Only passed to entity analysis;
-            operators are unaffected.  If *None* (default), uses ``self.opns``.
+            A multivector to analyze.  The MV's ``algebra.opns`` flag
+            determines the OPNS/IPNS interpretation for entity analysis;
+            operators are unaffected.
 
         Returns
         -------
         Entity, Operator, or None
         """
-        return _analyze(mv, opns=self._opns(opns))
-
-    # ── helpers ────────────────────────────────────────────────
-
-    def _opns(self, override: bool | None) -> bool:
-        """Resolve effective opns: *override* if given, else ``self.opns``."""
-        return self.opns if override is None else override
+        return _analyze(mv)

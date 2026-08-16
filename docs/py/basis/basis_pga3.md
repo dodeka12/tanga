@@ -114,8 +114,8 @@ P_{\text{OPNS}} = \text{dual}(P_{\text{IPNS}})
 $$
 
 ```python
-p = pga.point(3, 4, 5)
-# IPNS:  {e1:3, e2:4, e3:5, ep:1.0, em:1.0}
+p = pga("3 e1 + 4 e2 + 5 e3 + e0")
+# IPNS:  x·e1 + y·e2 + z·e3 + e0
 # OPNS:  dual → grade-3 trivector
 ```
 
@@ -126,7 +126,7 @@ D_{\text{IPNS}} = x \cdot e₁ + y \cdot e₂ + z \cdot e₃
 $$
 
 ```python
-d = pga.direction(1, 0, 0)  # {e1:1}
+d = pga("e1")  # x·e1 + y·e2 + z·e3 (no e0 component)
 ```
 
 ### 2.3 Plane Representation
@@ -140,7 +140,7 @@ $$
 
 ```python
 # Plane at z = 3, normal pointing in +z direction
-plane = pga.plane(0, 0, 1, 3)
+plane = pga("e3 + 3 e0")
 ```
 
 ---

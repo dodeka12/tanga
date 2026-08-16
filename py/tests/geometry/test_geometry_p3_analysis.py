@@ -44,7 +44,7 @@ def b():
 def test_entity_point_opns_round_trip(b):
     """E1: create Point(3,-2,7) → analyze → assert exact fields."""
     mv = create_entity(b, Point(3, -2, 7))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3)
     assert r.y == pytest.approx(-2)
@@ -57,7 +57,7 @@ def test_entity_point_opns_round_trip(b):
 def test_entity_direction_opns_round_trip(b):
     """E2: create Direction(1,2,0) → analyze → assert exact fields."""
     mv = create_entity(b, Direction(1, 2, 0))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1)
     assert r.y == pytest.approx(2)
@@ -79,7 +79,7 @@ def test_entity_line_opns_round_trip(b):
     unit = direction.normalized()
     pt = Point(1, 2, 3)
     mv = create_entity(b, Line(pt, direction))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Line), f"Got {type(r).__name__}"
 
     # Direction is parallel to expected (dot = ±1)
@@ -107,7 +107,7 @@ def test_entity_plane_opns_round_trip(b):
     unit = normal.normalized()
     pt = Point(3, -2, 1)
     mv = create_entity(b, Plane(pt, normal))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
 
     # Normal must match the unit-length direction exactly
@@ -132,9 +132,77 @@ def test_entity_plane_opns_round_trip(b):
 def test_entity_space_opns_round_trip(b):
     """E5: create Space(scale=2.5) → analyze → assert scale."""
     mv = create_entity(b, Space(scale=2.5))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
     assert r.scale == pytest.approx(2.5)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Scale-by-2 correctness (a global scale must not change geometry)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_scale2_point_invariant(b):
+    mv = create_entity(b, Point(3, -2, 7)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Point), f"Got {type(r).__name__}"
+    assert r.x == pytest.approx(3, abs=1e-6)
+    assert r.y == pytest.approx(-2, abs=1e-6)
+    assert r.z == pytest.approx(7, abs=1e-6)
+
+
+def test_scale2_line_invariant(b):
+    direction = Direction(1, 2, 0)
+    unit = direction.normalized()
+    pt = Point(1, 2, 3)
+    mv = create_entity(b, Line(pt, direction)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Line), f"Got {type(r).__name__}"
+
+    # Direction is parallel to expected (dot = ±1)
+    dot = r.direction.x * unit.x + r.direction.y * unit.y + r.direction.z * unit.z
+    assert abs(dot) == pytest.approx(1.0, abs=1e-6)
+
+    # Analyzed origin must lie on the line: (r.origin − pt) ∥ direction
+    dx = r.origin.x - pt.x
+    dy = r.origin.y - pt.y
+    dz = r.origin.z - pt.z
+    cross_x = direction.y * dz - direction.z * dy
+    cross_y = direction.z * dx - direction.x * dz
+    cross_z = direction.x * dy - direction.y * dx
+    assert cross_x == pytest.approx(0, abs=1e-6)
+    assert cross_y == pytest.approx(0, abs=1e-6)
+    assert cross_z == pytest.approx(0, abs=1e-6)
+
+
+def test_scale2_plane_invariant(b):
+    normal = Direction(1, 3, 0)
+    unit = normal.normalized()
+    pt = Point(3, -2, 1)
+    mv = create_entity(b, Plane(pt, normal)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Plane), f"Got {type(r).__name__}"
+
+    # Normal direction is scale-invariant (parallel, dot = ±1)
+    dot = (
+        r.normal.x * unit.x + r.normal.y * unit.y + r.normal.z * unit.z
+    )
+    assert abs(dot) == pytest.approx(1.0, abs=1e-6)
+
+    # Analyzed point must lie on the plane: n·p = d
+    d = normal.x * pt.x + normal.y * pt.y + normal.z * pt.z
+    d_scaled = d / normal.mag()
+    d_analyzed = (
+        r.normal.x * r.point.x + r.normal.y * r.point.y + r.normal.z * r.point.z
+    )
+    assert d_analyzed == pytest.approx(d_scaled, abs=1e-6)
+
+
+def test_scale2_space_doubles(b):
+    mv = create_entity(b, Space(scale=2.5)) * 2.0
+    r = analyze_entity(mv)
+    assert isinstance(r, Space), f"Got {type(r).__name__}"
+    assert r.scale == pytest.approx(5.0, abs=1e-6)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -229,7 +297,7 @@ def test_apply_rotor_point_rotation_z(b):
     p = create_entity(b, Point(1, 0, 0))
     R = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
     result = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(1, abs=1e-6)
@@ -244,7 +312,7 @@ def test_apply_rotor_point_rotation_x(b):
     p = create_entity(b, Point(0, 1, 0))
     R = create_operator(b, Rotor(math.pi / 2, Direction(1, 0, 0)))
     result = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(0, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -259,7 +327,7 @@ def test_apply_rotor_point_rotation_y(b):
     p = create_entity(b, Point(0, 0, 1))
     R = create_operator(b, Rotor(math.pi / 2, Direction(0, 1, 0)))
     result = R.gp(p).gp(R.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(0, abs=1e-6)
@@ -278,7 +346,7 @@ def test_apply_reflection_line_point_mirror_x(b):
     p = create_entity(b, Point(3, 1, 0))
     L = create_operator(b, ReflectionLine(Direction(1, 0, 0)))
     result = L.gp(p).gp(L.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(3, abs=1e-6)
     assert r.y == pytest.approx(-1, abs=1e-6)
@@ -297,7 +365,7 @@ def test_apply_reflection_plane_point_mirror_z(b):
     p = create_entity(b, Point(1, 2, 5))
     F = create_operator(b, ReflectionPlane(Direction(0, 0, 1)))
     result = F.gp(p).gp(F.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(1, abs=1e-6)
     assert r.y == pytest.approx(2, abs=1e-6)
@@ -316,7 +384,7 @@ def test_apply_reflection_point_origin_negation(b):
     p = create_entity(b, Point(5, -3, 2))
     O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     result = O.gp(p).gp(O.rev())
-    r = analyze_entity(result, opns=True)
+    r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(-5, abs=1e-6)
     assert r.y == pytest.approx(3, abs=1e-6)
@@ -338,7 +406,7 @@ def test_analyze_non_simple_bivector_raises(b):
     )
     non_simple = line1 + line2
     with pytest.raises(ValueError, match="Non.*simple"):
-        analyze_entity(non_simple, opns=True)
+        analyze_entity(non_simple)
 
 
 def test_create_direction_zero_norm_raises(b):
@@ -351,7 +419,7 @@ def test_analyze_zero_vector_raises(b):
     """Zero MV passed to analyze_entity must raise ValueError."""
     zero = b.multivector({})
     with pytest.raises(ValueError):
-        analyze_entity(zero, opns=True)
+        analyze_entity(zero)
 
 
 # ═══════════════════════════════════════════════════════════════

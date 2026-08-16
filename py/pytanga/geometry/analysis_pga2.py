@@ -54,18 +54,13 @@ if TYPE_CHECKING:
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(
-    mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Space | None:
+def analyze_entity(mv: MV) -> Point | Direction | Line | Space | None:
     """Analyze an MV in PGA2 as a geometric entity.
 
     Parameters
     ----------
     mv : MV
         A multivector to analyze.
-    opns : bool, optional
-        *True* (default) → OPNS interpretation.
-        *False* → IPNS interpretation (dualizes to OPNS first).
 
     OPNS entities (Gunn/Dorst grades, 2D):
 
@@ -73,7 +68,7 @@ def analyze_entity(
     - Grade 2 → :class:`Point`
     - Grade 3 → :class:`Space` (pseudoscalar) or :class:`Direction`
     """
-    if not opns:
+    if not mv.algebra.opns:
         return _analyze_entity_ipns(mv)
     return _analyze_entity_opns(mv)
 
@@ -272,8 +267,6 @@ def make_point(alg: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA2 point (grade‑1 IPNS form):
     ``x·e₁ + y·e₂ + e₀``.
     """
-    if hasattr(alg, "point"):
-        return alg.point(x, y)
     return alg.multivector({E1: x, E2: y, EP: 1.0, EM: 1.0})
 
 
@@ -281,15 +274,11 @@ def make_direction(alg: Algebra, x: float, y: float, z: float) -> MV:
     """Create a PGA2 direction (ideal point, grade‑1 IPNS):
     ``x·e₁ + y·e₂``.
     """
-    if hasattr(alg, "direction"):
-        return alg.direction(x, y)
     return alg.multivector({E1: x, E2: y})
 
 
 def make_line(alg: Algebra, nx: float, ny: float, d: float = 0.0) -> MV:
     """Create a PGA2 line (grade‑1): ``nx·e₁ + ny·e₂ + d·e₀``."""
-    if hasattr(alg, "line"):
-        return alg.line(nx, ny, d)
     return alg.multivector({E1: nx, E2: ny, EP: d, EM: d})
 
 
@@ -343,18 +332,17 @@ def analyze_operator(
 def _entity_to_operator(entity):
     """Wrap an entity as its corresponding reflection operator."""
     if isinstance(entity, Line):
-        return ReflectionLine(line=entity)
+        return ReflectionLine(entity)
     elif isinstance(entity, Point):
-        return ReflectionPoint(point=entity)
-    raise ValueError(
-        f"Entity type {type(entity).__name__} has no reflection operator"
-    )
+        return ReflectionPoint(entity)
+    raise ValueError(f"Entity type {type(entity).__name__} has no reflection operator")
 
 
 def _triple_reflection_from_factors(factors):
     """Three line reflections -> TripleReflection."""
     lines = tuple(_line_from_vector(f) for f in factors)
     return TripleReflection(planes=lines)
+
 
 def _ana_versor(
     mv: MV,
@@ -384,3 +372,49 @@ def _ana_versor(
 
 def _get_grades(mv: MV) -> set[int]:
     return set(mv.grades)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Typed analyzers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _expect(result, cls):
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def analyze_point(mv: MV) -> Point:
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Point)
+
+
+def analyze_direction(mv: MV) -> Direction:
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Direction)
+
+
+def analyze_line(mv: MV) -> Line:
+    """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Line)
+
+
+def analyze_space(mv: MV) -> Space:
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Space)

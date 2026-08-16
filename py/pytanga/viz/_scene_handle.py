@@ -107,7 +107,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
         obj: Any = None,
         *,
         entity_id: str | None = None,
-        opns: bool | None = None,
         color: str
         | tuple[float, float, float]
         | tuple[float, float, float, float]
@@ -129,7 +128,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             obj=obj,
             entity_id=entity_id,
-            opns=opns,
             color=color,
             opacity=opacity,
             style=style,
@@ -143,13 +141,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update rendering properties of an existing entity."""
         self._scene().update(entity_id, **properties)
 
-    def update_entity(
-        self, entity_id: str, obj: SceneEntity, *, opns: bool | None = None
-    ) -> None:
+    def update_entity(self, entity_id: str, obj: SceneEntity) -> None:
         """Replace the geometry for an existing entity."""
-        if opns is None:
-            opns = self._viz._opns
-        entity = self._viz._resolve(obj, opns=opns)
+        entity = self._viz._resolve(obj)
         self._scene().update_entity(entity_id, entity)
 
     def update_label(

@@ -22,6 +22,14 @@ from .create import (
     create_entity,
     create_operator,
 )
+from .random import (
+    Distribution,
+    Normal,
+    RndDirection,
+    RndEntity,
+    RndPoint,
+    Uniform,
+)
 from .entities import (
     Circle,
     Direction,
@@ -92,4 +100,11 @@ __all__ = [
     "create",
     "create_entity",
     "create_operator",
+    # Random generation
+    "Distribution",
+    "Normal",
+    "RndDirection",
+    "RndEntity",
+    "RndPoint",
+    "Uniform",
 ]

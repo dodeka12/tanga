@@ -44,55 +44,48 @@ E34 = BasisP3.E34
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_point(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def _point_opns(basis: Algebra, x: float, y: float, z: float) -> MV:
+    """Raw OPNS homogeneous point ``x·e₁ + y·e₂ + z·e₃ + e₄`` (grade-1)."""
+    return basis.multivector({E1: x, E2: y, E3: z, E4: 1})
+
+
+def create_point(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Homogeneous point ``Hop(a) = x·e₁ + y·e₂ + z·e₃ + e₄``.
 
     Parameters
     ----------
-    opns : bool
+    basis.opns
         *True* (default) → OPNS: grade‑1 vector ``Hop(a)``.
         *False* → IPNS: grade‑3 trivector (dual of Hop(a)), representing
         the intersection of three orthogonal planes through the point.
     """
-    if hasattr(basis, "point"):
-        opns_mv = basis.point(x, y, z)
-    else:
-        opns_mv = basis.multivector({E1: x, E2: y, E3: z, E4: 1})
+    opns_mv = _point_opns(basis, x, y, z)
 
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
 
-def create_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Ideal point ``x·e₁ + y·e₂ + z·e₃`` (e₄ = 0).
 
     Parameters
     ----------
-    opns : bool
+    basis.opns
         *True* (default) → OPNS: grade‑1 direction vector (no e₄).
         *False* → IPNS: grade‑3 trivector (dual of the direction vector).
     """
     if abs(x) < 1e-15 and abs(y) < 1e-15 and abs(z) < 1e-15:
         raise ValueError("Zero‑norm direction is not a valid geometric direction")
 
-    if hasattr(basis, "direction"):
-        opns_mv = basis.direction(x, y, z)
-    else:
-        opns_mv = basis.multivector({E1: x, E2: y, E3: z})
+    opns_mv = basis.multivector({E1: x, E2: y, E3: z})
 
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
 
-def create_line(
-    basis: Algebra, origin: Point, direction: Direction, *, opns: bool = True
-) -> MV:
+def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
     """Line through *origin* with direction *d*.
 
     Constructed as ``Hop(origin) ∧ Hop(origin + direction)`` (Perwass:
@@ -100,7 +93,7 @@ def create_line(
 
     Parameters
     ----------
-    opns : bool
+    basis.opns
         *True* (default) → OPNS: ``Hop(origin) ∧ Hop(origin + d)``
         (grade‑2 bivector, two homogeneous points on the line).
         *False* → IPNS: grade‑2 bivector (dual of the OPNS bivector),
@@ -111,28 +104,27 @@ def create_line(
     In G(4,0), grade 2 is the self‑dual grade, so OPNS and IPNS lines
     are both bivectors (but with different blade coefficients).
     """
-    a = create_point(basis, origin.x, origin.y, origin.z, opns=True)
-    b = create_point(
+    a = _point_opns(basis, origin.x, origin.y, origin.z)
+    b = _point_opns(
         basis,
         origin.x + direction.x,
         origin.y + direction.y,
         origin.z + direction.z,
-        opns=True,
     )
     opns_mv = a.op(b)
 
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
 
-def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
+def create_plane(basis: Algebra, plane: Plane) -> MV:
     """Plane through *point* with normal *n*.
 
     OPNS (default): three homogeneous points → grade-3 trivector.
-    IPNS (``opns=False``): direct formula ``P = â − α·e₄`` where â is
+    IPNS (``basis.opns=False``): direct formula ``P = â − α·e₄`` where â is
     the unit normal and α is the signed distance from the origin
-    (Perwass GIPNS).  When ``opns=True``, constructs via IPNS then
+    (Perwass GIPNS).  When ``basis.opns=True``, constructs via IPNS then
     dualizes.
     """
     nx, ny, nz = plane.normal.x, plane.normal.y, plane.normal.z
@@ -147,23 +139,23 @@ def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
     # IPNS: P = â − α·e₄ (grade-1 vector)
     ipns = basis.multivector({E1: ux, E2: uy, E3: uz, E4: -alpha})
 
-    if opns:
+    if basis.opns:
         return ipns.dual()
     return ipns
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
+def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
     """Pseudoscalar.
 
     Parameters
     ----------
-    opns : bool
+    basis.opns
         *True* (default) → OPNS: ``scale * e₁₂₃₄`` (grade‑4 pseudoscalar).
         *False* → IPNS: ``scale * 1`` (grade‑0 scalar).
     """
     opns_mv = basis.multivector({basis.pseudoscalar_id: scale})
 
-    if opns:
+    if basis.opns:
         return opns_mv
     return opns_mv.dual()
 
@@ -173,9 +165,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_sphere(
-    basis: Algebra, center: Point, radius: float, *, opns: bool = True
-) -> MV:
+def create_sphere(basis: Algebra, center: Point, radius: float) -> MV:
     raise ValueError("Spheres require conformal embedding (N3); not available in P3.")
 
 
@@ -184,20 +174,18 @@ def create_circle(
     center: Point,
     normal: Direction,
     radius: float,
-    *,
-    opns: bool = True,
 ) -> MV:
     raise ValueError("Circles require conformal embedding (N3); not available in P3.")
 
 
-def create_point_pair(basis: Algebra, a: Point, b: Point, *, opns: bool = True) -> MV:
+def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     raise ValueError(
         "Point pairs require conformal embedding (N3); not available in P3."
     )
 
 
 def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0, *, opns: bool = True
+    basis: Algebra, pt: Point, weight: float = 1.0
 ) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N3); not available in P3."
@@ -251,7 +239,7 @@ def create_reflection_plane(basis: Algebra, normal: Direction) -> MV:
 
 def create_reflection_point(basis: Algebra, point: Point) -> MV:
     """Reflection in a point."""
-    return create_point(basis, point.x, point.y, point.z, opns=True)
+    return _point_opns(basis, point.x, point.y, point.z)
 
 def create_translator(basis: Algebra, x: float, y: float, z: float) -> MV:
     raise ValueError(

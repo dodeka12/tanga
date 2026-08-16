@@ -42,18 +42,13 @@ E123 = BasisE3.E123
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(
-    mv: MV, *, opns: bool = True
-) -> Direction | Plane | Space | Line | None:
+def analyze_entity(mv: MV) -> Direction | Plane | Space | Line | None:
     """Analyze an MV in E3 as a geometric entity.
 
     Parameters
     ----------
     mv : MV
         A multivector to analyze.
-    opns : bool, optional
-        *True* (default) → OPNS interpretation.
-        *False* → IPNS interpretation (dualizes to OPNS first).
 
     OPNS entities (pure-grade blades):
 
@@ -78,7 +73,7 @@ def analyze_entity(
     - Grade 2 → :class:`Line` through origin (intersection of two planes)
     - Grade 3 → raises ``ValueError`` (only the trivial origin solution)
     """
-    if not opns:
+    if not mv.algebra.opns:
         return _analyze_entity_ipns(mv)
     return _analyze_entity_opns(mv)
 
@@ -223,8 +218,6 @@ def make_point(alg: Algebra, x: float, y: float, z: float) -> MV:
 
     Note: In E3 this is a direction / line through origin, not a point.
     """
-    if hasattr(alg, "vector"):
-        return alg.vector(x, y, z)
     return alg.multivector({E1: x, E2: y, E3: z})
 
 
@@ -287,7 +280,7 @@ def _reflection_from_grade1(mv: MV) -> ReflectionLine:
     """Pure grade-1 blade → ReflectionLine."""
     grade1 = mv.grade(1)
     return ReflectionLine(
-        direction=Direction(float(grade1[E1]), float(grade1[E2]), float(grade1[E3]))
+        Direction(float(grade1[E1]), float(grade1[E2]), float(grade1[E3]))
     )
 
 
@@ -303,12 +296,12 @@ def _reflection_plane_from_bivector(mv: MV) -> ReflectionPlane:
     n_norm = math.sqrt(bx * bx + by * by + bz * bz)
     if n_norm < 1e-15:
         raise ValueError("Zero bivector – not a valid reflection plane")
-    return ReflectionPlane(normal=Direction(bx / n_norm, by / n_norm, bz / n_norm))
+    return ReflectionPlane(Direction(bx / n_norm, by / n_norm, bz / n_norm))
 
 
 def _reflection_from_factor(f: MV) -> ReflectionLine:
     """Single grade-1 factor vector → ReflectionLine."""
-    return ReflectionLine(direction=Direction(float(f[E1]), float(f[E2]), float(f[E3])))
+    return ReflectionLine(Direction(float(f[E1]), float(f[E2]), float(f[E3])))
 
 
 def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:
@@ -360,3 +353,68 @@ def make_rotor(alg: Algebra, angle: float, axis: Direction) -> MV:
 def _get_grades(mv: MV) -> set[int]:
     """Return the set of grades present in *mv*."""
     return set(mv.grades)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Typed analyzers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _expect(result, cls):
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def analyze_point(mv: MV) -> Point:
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode.
+
+    In E3, a finite point cannot be represented (the origin is fixed at
+    ``(0, 0, 0)``).  This convenience reads a plain Euclidean grade-1
+    vector ``x·e1 + y·e2 + z·e3`` directly into a :class:`Point`.
+    """
+    d = mv._impl.to_dict()
+    for bid in d:
+        if bid not in (E1, E2, E3):
+            raise ValueError("An E3 point requires a plain e1/e2/e3 vector")
+    return Point(
+        x=float(d.get(E1, 0.0)),
+        y=float(d.get(E2, 0.0)),
+        z=float(d.get(E3, 0.0)),
+    )
+
+
+def analyze_direction(mv: MV) -> Direction:
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Direction)
+
+
+def analyze_line(mv: MV) -> Line:
+    """Interpret *mv* as an IPNS :class:`Line` (grade-2 bivector).
+
+    In E3 a line is an IPNS entity; the MV only succeeds when the current
+    ``mv.algebra.opns`` mode and input combination actually produce a Line.
+    """
+    return _expect(analyze_entity(mv), Line)
+
+
+def analyze_plane(mv: MV) -> Plane:
+    """Interpret *mv* as a :class:`Plane` through the origin.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Plane)
+
+
+def analyze_space(mv: MV) -> Space:
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Space)

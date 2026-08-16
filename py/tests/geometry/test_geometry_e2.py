@@ -29,10 +29,16 @@ def basis_e2():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_point_raises(basis_e2):
-    """Points cannot be represented in E2."""
-    with pytest.raises(ValueError, match="Points cannot be represented"):
-        create_entity(basis_e2, Point(1, 2, 0))
+def test_create_point_components(basis_e2):
+    """Point maps to e1/e2 components independent of OPNS/IPNS."""
+    mv = create_entity(basis_e2, Point(1, 2, 0))
+    assert set(mv.grades) == {1}
+    assert float(mv[1]) == pytest.approx(1)
+    assert float(mv[2]) == pytest.approx(2)
+    # IPNS: same Euclidean components (no dualization)
+    mv_ipns = create_entity(BasisE2(opns=False), Point(1, 2, 0))
+    assert float(mv_ipns[1]) == pytest.approx(1)
+    assert float(mv_ipns[2]) == pytest.approx(2)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -43,8 +49,8 @@ def test_create_point_raises(basis_e2):
 def test_create_direction_round_trip_opns(basis_e2):
     """create → analyze OPNS reproduces Direction."""
     d = Direction(3, 4, 0)
-    mv = create_entity(basis_e2, d, opns=True)
-    result = analyze_entity(mv, opns=True)
+    mv = create_entity(basis_e2, d)
+    result = analyze_entity(mv)
     assert isinstance(result, Direction)
     assert result.x == pytest.approx(3)
     assert result.y == pytest.approx(4)
@@ -59,7 +65,7 @@ def test_create_direction_round_trip_opns(basis_e2):
 def test_create_line_through_origin(basis_e2):
     """Line through origin → grade-1 vector."""
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
-    mv = create_entity(basis_e2, line, opns=True)
+    mv = create_entity(basis_e2, line)
     grades = set(mv.grades)
     assert grades == {1}
 
@@ -68,7 +74,7 @@ def test_create_line_not_through_origin_raises(basis_e2):
     """Line NOT through origin → ValueError."""
     line = Line(origin=Point(1, 2, 0), direction=Direction(1, 0, 0))
     with pytest.raises(ValueError, match="only lines through the origin"):
-        create_entity(basis_e2, line, opns=True)
+        create_entity(basis_e2, line)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -78,10 +84,17 @@ def test_create_line_not_through_origin_raises(basis_e2):
 
 def test_create_space_round_trip(basis_e2):
     """Create pseudoscalar, analyze → Space."""
-    mv = create_entity(basis_e2, Space(scale=5.0), opns=True)
-    result = analyze_entity(mv, opns=True)
+    mv = create_entity(basis_e2, Space(scale=5.0))
+    result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(5.0)
+
+
+def test_create_space_ipns_is_scalar():
+    """Space in IPNS is a grade-0 scalar."""
+    mv = create_entity(BasisE2(opns=False), Space(scale=2.0))
+    assert set(mv.grades) == {0}
+    assert float(mv.scalar) == pytest.approx(2.0)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -210,7 +223,7 @@ def test_reflection_line_round_trip(basis_e2):
 def test_reflection_line_application(basis_e2):
     """Reflection on y-axis line: y stays, x flips via d * v * d.rev()."""
     rl_mv = create_operator(basis_e2, ReflectionLine(Direction(0, 1, 0)))
-    v = basis_e2.vector(1, 2)
+    v = basis_e2.multivector({1: 1, 2: 2})
     result = rl_mv * v * rl_mv.rev()
     # d = e2. Parallel (e2) stays: (0,2). Perp (e1) flips: (-1,0) → (-1,2)
     assert float(result[basis_e2.blade_id("e1")]) == pytest.approx(-1.0)
@@ -220,7 +233,7 @@ def test_reflection_line_application(basis_e2):
 def test_reflection_line_e1_application(basis_e2):
     """Reflection on x-axis line: x stays, y flips."""
     rl_mv = create_operator(basis_e2, ReflectionLine(Direction(1, 0, 0)))
-    v = basis_e2.vector(1, 2)
+    v = basis_e2.multivector({1: 1, 2: 2})
     result = rl_mv * v * rl_mv.rev()
     assert float(result[basis_e2.blade_id("e1")]) == pytest.approx(1.0)
     assert float(result[basis_e2.blade_id("e2")]) == pytest.approx(-2.0)

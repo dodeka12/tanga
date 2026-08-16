@@ -40,7 +40,6 @@ VisualizerApp(
     host="localhost",
     open_browser=None,
     reuse_existing=True,
-    opns=True,
     title="Tanga 3D Viewer",
     annotation=None,
     background_color="#1a1a2e",

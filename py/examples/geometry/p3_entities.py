@@ -44,11 +44,13 @@ def hr(title: str) -> None:
 hr("1. Point (finite) vs Direction (ideal)")
 
 p = Point(1, 2, 3)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_p = geo.create(p)
 mv_p.show("Point(1,2,3) in P3")
 print(f"  analyze → {geo.analyze(mv_p)}")
 
 d = Direction(4, 0, 0)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_d = geo.create(d)
 mv_d.show("Direction(4,0,0) — ideal point")
 print(f"  analyze → {geo.analyze(mv_d)}")
@@ -57,6 +59,7 @@ print(f"  analyze → {geo.analyze(mv_d)}")
 hr("2. Line — outer product of point and direction")
 
 line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_line = geo.create(line)
 mv_line.show("Line through origin along x-axis")
 result = geo.analyze(mv_line)
@@ -66,6 +69,7 @@ print(f"  analyze → {result}")
 hr("3. Plane — offset from origin")
 
 plane = Plane(point=Point(0, 0, 5), normal=Direction(0, 0, 1))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_pl = geo.create(plane)
 mv_pl.show("Plane at z=5 with normal (0,0,1)")
 result = geo.analyze(mv_pl)
@@ -80,6 +84,7 @@ for name, e in [
     ("Line", Line(Point(0, 0, 0), Direction(1, 1, 0))),
     ("Plane", Plane(Point(1, 0, 0), Direction(0, 1, 0))),
 ]:
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     result = geo.analyze(geo.create(e))
     print(f"  {name}: {type(result).__name__} ✓")
 
@@ -87,18 +92,24 @@ for name, e in [
 hr("5. IPNS interpretation in P3")
 
 # In IPNS, a point becomes a plane, etc.
+p3.opns = False
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_p = geo.create(Point(1, 0, 0))
-result = geo.which_entity(mv_p, opns=False)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+result = geo.which_entity(mv_p)
 print(f"  IPNS of Point(1,0,0) → {type(result).__name__}")
+p3.opns = True
 
 # ── 6. Operators ────────────────────────────────────────────
 hr("6. Operators: Reflection and Rotor")
 
 refl = Reflection(normal=Direction(0, 1, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.analyze(geo.create(refl))
 print(f"  Reflection → {result}")
 
 rot = Rotor(angle=math.pi / 4, axis=Direction(1, 0, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.analyze(geo.create(rot))
 print(f"  Rotor → {result}")
 

@@ -29,7 +29,7 @@ from ._n3_helpers import (
     get_einf,
     get_eo,
 )
-from .entities import Direction, Plane, Point
+from .entities import Direction, Line, Plane, Point
 from .operators import Rotor, Translator
 
 if TYPE_CHECKING:
@@ -44,45 +44,67 @@ def _cop(basis: Algebra, x: float, y: float, z: float) -> MV:
     return eucl + get_einf(basis) * (0.5 * r_sq) + get_eo(basis)
 
 
+def _sphere_ipns(basis: Algebra, center: Point, radius: float) -> MV:
+    """Raw IPNS sphere ``S = Cop(c) − ½·r²·e∞`` (grade-1 vector)."""
+    c = _cop(basis, center.x, center.y, center.z)
+    einf = get_einf(basis)
+    return c - einf * (0.5 * radius * radius)
+
+
+def _plane_opns(basis: Algebra, plane: Plane) -> MV:
+    """Raw OPNS plane (grade-4): the dual of the IPNS ``â + α·e∞`` vector."""
+    nx, ny, nz = plane.normal.x, plane.normal.y, plane.normal.z
+    n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
+    if n_norm < 1e-15:
+        raise ValueError("Zero normal – not a valid plane")
+
+    ux, uy, uz = nx / n_norm, ny / n_norm, nz / n_norm
+    alpha = plane.point.x * ux + plane.point.y * uy + plane.point.z * uz
+
+    ipns = basis.multivector({E1: ux, E2: uy, E3: uz}) + get_einf(basis) * alpha
+    return ipns.dual()
+
+
+def _homogeneous_point_opns(basis: Algebra, point: Point, weight: float = 1.0) -> MV:
+    """Raw OPNS homogeneous point ``A ∧ e∞`` (grade-2)."""
+    a = _cop(basis, point.x, point.y, point.z)
+    einf = get_einf(basis)
+    return a.op(einf) * weight
+
+
 # ═══════════════════════════════════════════════════════════════
 # Entity creation
 # ═══════════════════════════════════════════════════════════════
 
 
-def create_point(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def create_point(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Conformal point ``Cop(x)`` (grade-1, on the null cone)."""
     mv = _cop(basis, x, y, z)
-    if not opns:
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
-def create_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
-) -> MV:
+def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
     """Euclidean direction vector (e∞ = 0, e₀ = 0)."""
     mv = basis.multivector({E1: x, E2: y, E3: z})
-    if not opns:
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
 def create_homogeneous_point(
-    basis: Algebra, point: Point, weight: float = 1.0, *, opns: bool = True
+    basis: Algebra, point: Point, weight: float = 1.0
 ) -> MV:
     """OPNS: ``A ∧ e∞``."""
-    a = _cop(basis, point.x, point.y, point.z)
-    einf = get_einf(basis)
-    mv = a.op(einf) * weight
-    if not opns:
+    mv = _homogeneous_point_opns(basis, point, weight)
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
 def create_homogeneous_direction(
-    basis: Algebra, x: float, y: float, z: float, *, opns: bool = True
+    basis: Algebra, x: float, y: float, z: float
 ) -> MV:
     """OPNS: ``d∧e∞`` (grade 2) where d is a Euclidean direction.
 
@@ -91,24 +113,22 @@ def create_homogeneous_direction(
     d = basis.multivector({E1: x, E2: y, E3: z})
     einf = get_einf(basis)
     mv = d.op(einf)
-    if not opns:
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
-def create_point_pair(basis: Algebra, a: Point, b: Point, *, opns: bool = True) -> MV:
+def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     """OPNS: ``Cop(a) ∧ Cop(b)`` (grade-2)."""
     cp1 = _cop(basis, a.x, a.y, a.z)
     cp2 = _cop(basis, b.x, b.y, b.z)
     mv = cp1.op(cp2)
-    if not opns:
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
-def create_line(
-    basis: Algebra, origin: Point, direction: Direction, *, opns: bool = True
-) -> MV:
+def create_line(basis: Algebra, origin: Point, direction: Direction) -> MV:
     """OPNS: ``Cop(a) ∧ Cop(b) ∧ e∞`` (grade-3)."""
     a = _cop(basis, origin.x, origin.y, origin.z)
     b = _cop(
@@ -118,17 +138,17 @@ def create_line(
         origin.z + direction.z,
     )
     mv = a.op(b).op(get_einf(basis))
-    if not opns:
+    if not basis.opns:
         mv = mv.dual()
     return mv
 
 
-def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
+def create_plane(basis: Algebra, plane: Plane) -> MV:
     """Plane with normal *n* through *point*.
 
     Uses direct IPNS formula ``P = â + α·e∞`` (grade-1 vector) where â
     is the unit normal and α is the signed distance from origin
-    (Perwass GIPNS).  Dualizes to OPNS (grade-4) when ``opns=True``.
+    (Perwass GIPNS).  Dualizes to OPNS (grade-4) when ``basis.opns=True``.
     """
     nx, ny, nz = plane.normal.x, plane.normal.y, plane.normal.z
     n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
@@ -139,7 +159,7 @@ def create_plane(basis: Algebra, plane: Plane, *, opns: bool = True) -> MV:
     alpha = plane.point.x * ux + plane.point.y * uy + plane.point.z * uz
 
     ipns = basis.multivector({E1: ux, E2: uy, E3: uz}) + get_einf(basis) * alpha
-    if opns:
+    if basis.opns:
         return ipns.dual()
     return ipns
 
@@ -149,22 +169,18 @@ def create_sphere(
     center: Point,
     radius: float,
     *,
-    opns: bool = True,
     is_imaginary: bool = False,
 ) -> MV:
     """Sphere centered at *center* with radius *r*.
 
     Uses direct IPNS formula ``S = Cop(c) − ½·r²·e∞`` (grade-1 vector,
-    Perwass GIPNS).  Dualizes to OPNS (grade-4) when ``opns=True``.
-
-    For imaginary spheres, use ``is_imaginary=True`` (plus sign:
-    ``S = Cop(c) + ½·r²·e∞``, has ``S² = −r²``).
+    Perwass GIPNS).  Dualizes to OPNS (grade-4) when ``basis.opns=True``.
     """
-    c = _cop(basis, center.x, center.y, center.z)
-    einf = get_einf(basis)
-    sign = 1.0 if is_imaginary else -1.0
-    ipns = c + einf * (0.5 * radius * radius * sign)
-    if opns:
+    if is_imaginary:
+        raise NotImplementedError("Imaginary spheres are not supported yet.")
+
+    ipns = _sphere_ipns(basis, center, radius)
+    if basis.opns:
         return ipns.dual()
     return ipns
 
@@ -174,14 +190,12 @@ def create_circle(
     center: Point,
     normal: Direction,
     radius: float,
-    *,
-    opns: bool = True,
 ) -> MV:
     """Circle in plane with given normal, centered at *center*.
 
     Constructed as intersection of sphere (S = Cop(c) − ½r²·e∞) and
     plane (P = â + α·e∞) in IPNS: ``C = S ∧ P`` (grade-2 IPNS).
-    Dualized to OPNS (grade-3) when ``opns=True``.
+    Dualized to OPNS (grade-3) when ``basis.opns=True``.
     """
     nx, ny, nz = normal.x, normal.y, normal.z
     n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
@@ -198,14 +212,17 @@ def create_circle(
     p_ipns = basis.multivector({E1: ux, E2: uy, E3: uz}) + einf * alpha
 
     circle_ipns = s_ipns.op(p_ipns)
-    if opns:
+    if basis.opns:
         return circle_ipns.dual()
     return circle_ipns
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV:
-    """Pseudoscalar ``scale * I``."""
-    return basis.multivector({basis.pseudoscalar_id: scale})
+def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
+    """OPNS pseudoscalar ``scale * I``; IPNS is the scalar ``scale``."""
+    opns_mv = basis.multivector({basis.pseudoscalar_id: scale})
+    if basis.opns:
+        return opns_mv
+    return opns_mv.dual()
 
 
 def create_imag_point_pair(
@@ -213,21 +230,9 @@ def create_imag_point_pair(
     center: Point,
     direction: Direction,
     separation: float,
-    *,
-    opns: bool = True,
 ) -> MV:
-    """Imaginary point pair: dual of a real circle."""
-    nx, ny, nz = direction.x, direction.y, direction.z
-    n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
-    if n_norm < 1e-15:
-        raise ValueError("Zero direction – not a valid imaginary point pair")
-    ux, uy, uz = nx / n_norm, ny / n_norm, nz / n_norm
-    r = separation / 2.0
-    circle_opns = create_circle(basis, center, Direction(ux, uy, uz), r, opns=True)
-    mv = circle_opns.dual()
-    if not opns:
-        mv = mv.dual()
-    return mv
+    """Imaginary point pair: dual of a real circle (not yet supported)."""
+    raise NotImplementedError("Imaginary point pairs are not supported yet.")
 
 
 def create_imag_circle(
@@ -235,31 +240,9 @@ def create_imag_circle(
     center: Point,
     normal: Direction,
     radius: float,
-    *,
-    opns: bool = True,
 ) -> MV:
-    """Imaginary circle: dual of a real point pair."""
-    nx, ny, nz = normal.x, normal.y, normal.z
-    n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
-    if n_norm < 1e-15:
-        raise ValueError("Zero normal – not a valid imaginary circle")
-    ux, uy, uz = nx / n_norm, ny / n_norm, nz / n_norm
-    half_sep = radius
-    a = Point(
-        center.x - ux * half_sep,
-        center.y - uy * half_sep,
-        center.z - uz * half_sep,
-    )
-    b = Point(
-        center.x + ux * half_sep,
-        center.y + uy * half_sep,
-        center.z + uz * half_sep,
-    )
-    pp_opns = create_point_pair(basis, a, b, opns=True)
-    mv = pp_opns.dual()
-    if not opns:
-        mv = mv.dual()
-    return mv
+    """Imaginary circle: dual of a real point pair (not yet supported)."""
+    raise NotImplementedError("Imaginary circles are not supported yet.")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -330,7 +313,7 @@ def create_reflection_plane(basis: Algebra, plane: Plane) -> MV:
     non-collinear points on the plane.  Equivalent to creating the
     plane entity OPNS.
     """
-    return create_plane(basis, plane, opns=True)
+    return _plane_opns(basis, plane)
 
 
 def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
@@ -340,7 +323,7 @@ def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     This is NOT a null vector — it's an IPNS sphere with S² = radius².
     For center at (0,0,0) and radius=1: S = e₀ − ½e∞ = −e₊.
     """
-    return create_sphere(basis, center, radius, opns=False)
+    return _sphere_ipns(basis, center, radius)
 
 
 def create_reflection_line(basis: Algebra, line: Line) -> MV:
@@ -365,7 +348,7 @@ def create_reflection_point(basis: Algebra, point: Point) -> MV:
     OPNS: ``Cop(p)∧e∞`` — the HPoint blade used as a versor.
     This is identical to the OPNS HPoint entity with weight=1.
     """
-    return create_homogeneous_point(basis, point, weight=1.0, opns=True)
+    return _homogeneous_point_opns(basis, point, weight=1.0)
 
 
 def create_general_rotor(

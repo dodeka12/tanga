@@ -4,8 +4,8 @@
 """
 base_e3_demo.py — Euclidean 3D geometric algebra  G(3, 0).
 
-Demonstrates BasisE3: basis blades, vector factory, geometric and outer
-products, and mixed-grade multivectors.
+Demonstrates BasisE3: basis blades, string-based multivector construction,
+geometric and outer products, and mixed-grade multivectors.
 
 Run with:
     uv run python py/examples/base_e3_demo.py
@@ -41,8 +41,8 @@ e31.show("e31 = e3 ∧ e1")
 e23.show("e23 = e2 ∧ e3")
 I.show("I   = pseudoscalar")
 
-print("\nVector factory:")
-v = E3.vector(1, 2, 3)
+print("\nVector (string conversion):")
+v = E3("e1 + 2 e2 + 3 e3")
 v.show("v = (1, 2, 3)")
 
 print("\nGeometric product examples:")

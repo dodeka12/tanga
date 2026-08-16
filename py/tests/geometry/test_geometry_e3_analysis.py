@@ -45,7 +45,7 @@ def b():
 def test_entity_direction_opns_round_trip(b):
     """E1: create Direction(1,2,3) → analyze OPNS → assert exact fields."""
     mv = create_entity(b, Direction(1, 2, 3))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Direction), f"Got {type(r).__name__}"
     # Not normalized — exact coefficients preserved
     assert r.x == pytest.approx(1)
@@ -65,8 +65,8 @@ def test_entity_plane_opns_round_trip(b):
     normal = Direction(1, 2, 3)
     unit = normal.normalized()
     plane = Plane(point=Point(0, 0, 0), normal=normal)
-    mv = create_entity(b, plane, opns=True)
-    r = analyze_entity(mv, opns=True)
+    mv = create_entity(b, plane)
+    r = analyze_entity(mv)
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
     # Normal may have sign flip (±n describe the same plane through origin)
     assert abs(r.normal.x) == pytest.approx(abs(unit.x))
@@ -83,7 +83,7 @@ def test_entity_plane_opns_round_trip(b):
 def test_entity_space_opns_round_trip(b):
     """E3: create Space(scale=3.5) → analyze → assert scale."""
     mv = create_entity(b, Space(scale=3.5))
-    r = analyze_entity(mv, opns=True)
+    r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
     assert r.scale == pytest.approx(3.5)
 
@@ -91,11 +91,12 @@ def test_entity_space_opns_round_trip(b):
 # --- E4. Plane (IPNS, grade-1 vector) ---
 
 
-def test_entity_plane_ipns_round_trip(b):
+def test_entity_plane_ipns_round_trip(b, monkeypatch):
     """E4: create Plane(origin, normal=z) → analyze IPNS → assert."""
+    monkeypatch.setattr(b, "opns", False)
     plane = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
-    mv = create_entity(b, plane, opns=False)
-    r = analyze_entity(mv, opns=False)
+    mv = create_entity(b, plane)
+    r = analyze_entity(mv)
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
     assert abs(r.normal.z) == pytest.approx(1)
     assert r.point.x == pytest.approx(0)
@@ -106,14 +107,15 @@ def test_entity_plane_ipns_round_trip(b):
 # --- E5. Line (IPNS, grade-2 bivector via plane intersection) ---
 
 
-def test_entity_line_ipns_round_trip(b):
+def test_entity_line_ipns_round_trip(b, monkeypatch):
     """E5: two IPNS planes → IPNS bivector → analyze IPNS → Line through origin."""
+    monkeypatch.setattr(b, "opns", False)
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
     p2 = Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0))
-    mv1 = create_entity(b, p1, opns=False)
-    mv2 = create_entity(b, p2, opns=False)
+    mv1 = create_entity(b, p1)
+    mv2 = create_entity(b, p2)
     line_mv = mv1.op(mv2)  # grade-2 IPNS bivector
-    r = analyze_entity(line_mv, opns=False)
+    r = analyze_entity(line_mv)
     assert isinstance(r, Line), f"Got {type(r).__name__}"
     assert r.origin.x == pytest.approx(0)
     assert r.origin.y == pytest.approx(0)
@@ -165,7 +167,7 @@ def test_operator_reflection_line_round_trip(b):
 
 
 def test_operator_reflection_plane_round_trip(b):
-    """O3: create ReflectionPlane(normal=(0.6, 0, 0.8)) → analyze → assert.
+    """O3: create ReflectionPlane((0.6, 0, 0.8)) → analyze → assert.
 
     E3 reflection plane versor is a grade-2 bivector n·I⁻¹.
     """
@@ -265,24 +267,27 @@ def test_apply_reflection_plane_vector_mirror_z(b):
 # ===============================================================
 
 
-def test_create_point_raises(b):
-    """create_entity(Point(...)) must raise ValueError in E3."""
-    with pytest.raises(ValueError, match="Points cannot be represented"):
-        create_entity(b, Point(1, 2, 3))
+def test_create_point_components(b):
+    """Point maps to e1/e2/e3 components independent of OPNS/IPNS."""
+    mv = create_entity(b, Point(1, 2, 3))
+    assert set(mv.grades) == {1}
+    assert float(mv[1]) == pytest.approx(1)
+    assert float(mv[2]) == pytest.approx(2)
+    assert float(mv[4]) == pytest.approx(3)
 
 
 def test_create_line_not_through_origin_raises(b):
     """Line offset from origin must raise ValueError in E3."""
     line = Line(origin=Point(1, 2, 3), direction=Direction(1, 0, 0))
     with pytest.raises(ValueError, match="only lines through the origin"):
-        create_entity(b, line, opns=True)
+        create_entity(b, line)
 
 
 def test_create_plane_not_through_origin_raises(b):
     """Plane not through origin must raise ValueError in E3."""
     plane = Plane(point=Point(1, 0, 0), normal=Direction(0, 0, 1))
     with pytest.raises(ValueError, match="only planes through the origin"):
-        create_entity(b, plane, opns=True)
+        create_entity(b, plane)
 
 
 def test_create_direction_zero_norm_raises(b):
@@ -294,27 +299,28 @@ def test_create_direction_zero_norm_raises(b):
     """
     mv = create_entity(b, Direction(0, 0, 0))
     with pytest.raises(ValueError):
-        analyze_entity(mv, opns=True)
+        analyze_entity(mv)
 
 
 def test_analyze_zero_vector_raises(b):
     """Zero MV passed to analyze_entity must raise ValueError."""
     zero = b.multivector({})
     with pytest.raises(ValueError):
-        analyze_entity(zero, opns=True)
+        analyze_entity(zero)
 
 
-def test_ipns_grade_3_raises(b):
+def test_ipns_grade_3_raises(b, monkeypatch):
     """IPNS grade-3 trivector is only the trivial origin → ValueError."""
+    monkeypatch.setattr(b, "opns", False)
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0))
     p2 = Plane(point=Point(0, 0, 0), normal=Direction(0, 1, 0))
     p3 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
-    m1 = create_entity(b, p1, opns=False)
-    m2 = create_entity(b, p2, opns=False)
-    m3 = create_entity(b, p3, opns=False)
+    m1 = create_entity(b, p1)
+    m2 = create_entity(b, p2)
+    m3 = create_entity(b, p3)
     grade3_ipns = m1.op(m2).op(m3)
     with pytest.raises(ValueError, match="trivial"):
-        analyze_entity(grade3_ipns, opns=False)
+        analyze_entity(grade3_ipns)
 
 
 # ===============================================================

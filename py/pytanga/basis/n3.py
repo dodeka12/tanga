@@ -36,8 +36,8 @@ class BasisN3(Algebra):
     E23: int = 6
     E123: int = 7
 
-    def __init__(self, dtype: str = "float64", **kw) -> None:
-        super().__init__(5, 0b10000, dtype, **kw)
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+        super().__init__(5, 0b10000, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})
@@ -48,6 +48,7 @@ class BasisN3(Algebra):
         self.einf = mv({_EP: 1.0, _EM: 1.0})  # ep + em
         self.eo = mv({_EP: -0.5, _EM: 0.5})  # 0.5·em - 0.5·ep
         self.I = mv({self.pseudoscalar_id: 1})
+        self.E = self.einf ^ self.eo
 
     @cached_property
     def _display_basis(self) -> list:

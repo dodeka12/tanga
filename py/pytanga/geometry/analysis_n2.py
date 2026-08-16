@@ -70,18 +70,27 @@ if TYPE_CHECKING:
 
 def analyze_entity(
     mv: MV,
-    *,
-    opns: bool = True,
-) -> Point | Direction | PointPair | HPoint | HDirection | Line | Circle | Sphere | Space | None:
+) -> (
+    Point
+    | Direction
+    | PointPair
+    | HPoint
+    | HDirection
+    | Line
+    | Circle
+    | Sphere
+    | Space
+    | None
+):
     """Analyze an MV in N2 as a geometric entity.
 
-    Returns ``None`` if the null-space of the MV (in the requested OPNS/IPNS
-    interpretation) is empty.
+    Returns ``None`` if the null-space of the MV (in the
+    ``mv.algebra.opns`` interpretation) is empty.
 
     In 2D conformal geometry, a "sphere" is a circle and a "plane" is a
     line.  Entity naming follows what the entity looks like in 2D.
     """
-    if not opns:
+    if not mv.algebra.opns:
         dual = mv.dual()
         return _analyze_entity_opns(dual)
     return _analyze_entity_opns(mv)
@@ -89,7 +98,18 @@ def analyze_entity(
 
 def _analyze_entity_opns(
     mv: MV,
-) -> Point | Direction | PointPair | HPoint | HDirection | Line | Circle | Sphere | Space | None:
+) -> (
+    Point
+    | Direction
+    | PointPair
+    | HPoint
+    | HDirection
+    | Line
+    | Circle
+    | Sphere
+    | Space
+    | None
+):
     if mv.is_zero:
         raise ValueError("Zero MV is not a geometric entity")
     if mv.is_scalar:
@@ -102,18 +122,18 @@ def _analyze_entity_opns(
     max_grade = max(grades)
 
     if max_grade == 1:
-        return _point_or_direction_n2(mv)
+        return _point_or_direction_n2_opns(mv)
     elif max_grade == 2:
-        return _decompose_grade2(mv)
+        return _decompose_grade2_opns(mv)
     elif max_grade == 3:
-        return _line_or_circle_n2(mv)
+        return _line_or_circle_n2_opns(mv)
     elif max_grade == 4:
         # Pseudoscalar → Space
         if mv.grade(4).mag > 0 and mv.grade(0).mag < 1e-15 and len(grades) == 1:
             # Pure grade-4 blade could be Space, IPNS line, or OPNS sphere
             # Check if it's the pseudoscalar (all unit components) → Space
-            return _sphere_or_line_or_space_n2(mv)
-        return _sphere_or_line_n2(mv)
+            return _sphere_or_line_or_space_n2_opns(mv)
+        return _sphere_or_line_n2_opns(mv)
     else:
         raise ValueError(f"Unexpected grade {max_grade} in N2")
 
@@ -121,7 +141,7 @@ def _analyze_entity_opns(
 # ── Grade 1: Point / Direction ────────────────────────────────
 
 
-def _point_or_direction_n2(mv: MV) -> Point | Direction | None:
+def _point_or_direction_n2_opns(mv: MV) -> Point | Direction | None:
     """Analyze a grade-1 OPNS blade as a conformal point or direction.
 
     An OPNS point blade has the form ``Cop(p) = p + ½‖p‖²·e∞ + e₀``.
@@ -151,7 +171,7 @@ def _point_or_direction_n2(mv: MV) -> Point | Direction | None:
 # ── Grade 2: PointPair / HPoint ────────────────────
 
 
-def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection:
+def _decompose_grade2_opns(mv: MV) -> PointPair | HPoint | HDirection:
     """Analyze a grade‑2 OPNS blade (mirrors N3 _decompose_grade2).
 
     Perwass, GAConfSpc_Ana.tex §PointPair (adapted for 2D):
@@ -197,16 +217,18 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection:
     d = L.ip(E)  # grade 1 direction
     if d.is_zero:
         raise ValueError("Point pair direction is zero")
-    direction = Direction(float(d[E1]), float(d[E2]), 0.0)
+    direction = Direction(float(d[E1]), float(d[E2]), 0.0).normalized()
 
     # ── 5. Point separation: S* = Q·L⁻¹ ──
     L_inv = L.inv()
     S_star = mv.ip(L_inv)
+    f_eo = eo_coeff(S_star, einf)
+    S_star = S_star / f_eo  # normalize to get Cop(c) − ½r²·e∞
     r_sq = float(S_star.sp(S_star))  # separation², may be negative
-    separation = math.sqrt(abs(r_sq))
+    half_dist = math.sqrt(abs(r_sq))
+    separation = half_dist * 2.0
     is_imaginary = r_sq < 0
 
-    half_dist = separation * 0.5
     return PointPair(
         point_a=Point(
             center.x - direction.x * half_dist,
@@ -228,10 +250,10 @@ def _decompose_grade2(mv: MV) -> PointPair | HPoint | HDirection:
 # ── Grade 3: Line / Circle ────────────────────────────────────
 
 
-def _line_or_circle_n2(mv: MV) -> Line | Circle:
+def _line_or_circle_n2_opns(mv: MV) -> Line | Circle:
     """Distinguish Line vs Circle via C∧e∞.
 
-    For a grade‑3 OPNS blade *C*:
+    For a grade-3 OPNS blade *C*:
       - *C*∧*e∞* = 0  → **line** (contains *e∞*).
       - *C*∧*e∞* ≠ 0  → **circle** (no *e∞* factor).
     """
@@ -283,7 +305,7 @@ def _decompose_circle(mv: MV) -> Circle:
     einf = get_einf(alg)
 
     # ── 1. "Plane" of circle (line through centre in 2D) ──
-    P = mv.op(einf)  # grade 4 (in 2D this is a line IPNS)
+    P = mv.op(einf)  # grade 3 (in 2D this is a line IPNS)
     if P.is_zero:
         raise ValueError("Degenerate circle: no line factor")
 
@@ -293,9 +315,11 @@ def _decompose_circle(mv: MV) -> Circle:
     # ── 3. Centre: extract from IPNS circle ──
     # C* = Cop(c) − ½r²·e∞.  e₀ component gives homogeneous weight.
     f_eo = eo_coeff(C_star, einf)
+    C_star = C_star / f_eo  # normalize to get Cop(c) − ½r²·e∞
+
     if abs(f_eo) < 1e-15:
         raise ValueError("Degenerate circle: no e₀ component in IPNS")
-    pt = Point(float(C_star[E1]) / f_eo, float(C_star[E2]) / f_eo, 0.0)
+    pt = Point(float(C_star[E1]), float(C_star[E2]), 0.0)
 
     # ── 4. Radius: from C*·C* ──
     r_sq = float(C_star.sp(C_star))
@@ -311,7 +335,7 @@ def _decompose_circle(mv: MV) -> Circle:
 # ── Grade 4: Sphere (circle) / Line (IPNS dual) ────────────────
 
 
-def _sphere_or_line_or_space_n2(mv: MV) -> Space | Sphere | Line:
+def _sphere_or_line_or_space_n2_opns(mv: MV) -> Space | Sphere | Line:
     """Distinguish Space / Circle (Sphere) / Line from grade-4 OPNS blade."""
     ipns = mv.dual()
     if ipns.is_zero:
@@ -331,7 +355,7 @@ def _sphere_or_line_or_space_n2(mv: MV) -> Space | Sphere | Line:
         return _line_from_ipns_opns(mv, ipns, einf, eo)
 
 
-def _sphere_or_line_n2(mv: MV) -> Sphere | Line:
+def _sphere_or_line_n2_opns(mv: MV) -> Sphere | Line:
     """Distinguish Circle (Sphere) vs Line via dual IPNS analysis.
 
     In the IPNS (dual):
@@ -474,7 +498,7 @@ def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
             line = _decompose_line(mv)
             if line is None:
                 raise ValueError("Degenerate line in ReflectionLine operator")
-            return ReflectionLine(line=line)
+            return ReflectionLine(line)
         # Otherwise dualize (e.g. imaginary circle → inversion via dual)
         op = mv.dual()
         return _classify_grade1_operator(op, einf, eo)
@@ -561,7 +585,7 @@ def _reflection_line_from_ipns_grade1(op, einf, eo):
     line = _decompose_line(line_opns)
     if line is None:
         raise ValueError("Degenerate line in ReflectionLine operator")
-    return ReflectionLine(line=line)
+    return ReflectionLine(line)
 
 
 # ── Helper: ReflectionPoint from HPoint blade ───────────────────
@@ -571,7 +595,7 @@ def _reflection_point_from_hpoint(op, einf, eo):
     """Extract ReflectionPoint from an OPNS HPoint blade (grade 2)."""
     alg = op.algebra
     point = _factor_to_point(op, alg)
-    return ReflectionPoint(point=point)
+    return ReflectionPoint(point)
 
 
 # ── Helper: ReflectionLine from IPNS bivector ───────────────────
@@ -586,7 +610,7 @@ def _reflection_line_from_ipns(op, einf, eo):
     line = _decompose_line(line_opns)
     if line is None:
         raise ValueError("Degenerate line in ReflectionLine operator")
-    return ReflectionLine(line=line)
+    return ReflectionLine(line)
 
 
 # ── Helper: HDirection from blade ───────────────────────────────
@@ -713,6 +737,65 @@ def _dilator_from_versor(mv: MV) -> Dilator:
 
 def _get_grades(mv: MV) -> set[int]:
     return set(mv.grades)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Typed analyzers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _expect(result, cls):
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def analyze_point(mv: MV) -> Point:
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), Point)
+
+
+def analyze_direction(mv: MV) -> Direction:
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), Direction)
+
+
+def analyze_line(mv: MV) -> Line:
+    """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), Line)
+
+
+def analyze_circle(mv: MV) -> Circle:
+    """Interpret *mv* as a :class:`Circle` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), Circle)
+
+
+def analyze_sphere(mv: MV) -> Sphere:
+    """Interpret *mv* as a :class:`Sphere` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), Sphere)
+
+
+def analyze_point_pair(mv: MV) -> PointPair:
+    """Interpret *mv* as a :class:`PointPair` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), PointPair)
+
+
+def analyze_hpoint(mv: MV) -> HPoint:
+    """Interpret *mv* as an :class:`HPoint` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), HPoint)
+
+
+def analyze_hdirection(mv: MV) -> HDirection:
+    """Interpret *mv* as an :class:`HDirection` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), HDirection)
+
+
+def analyze_space(mv: MV) -> Space:
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode."""
+    return _expect(analyze_entity(mv), Space)
 
 
 def _factor_to_point(factor: MV, alg: Algebra) -> Point:

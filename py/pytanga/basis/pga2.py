@@ -86,8 +86,8 @@ class BasisPGA2(Algebra):
         11: {0: 0.5},  # J(em∧e₁₂) = 1/2
     }
 
-    def __init__(self, dtype: str = "float64", **kw) -> None:
-        super().__init__(4, 0b1000, dtype, **kw)
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+        super().__init__(4, 0b1000, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})
@@ -125,28 +125,6 @@ class BasisPGA2(Algebra):
         so ``undual == dual``.
         """
         return self.dual(a)
-
-    # ── convenience constructors ──────────────────────────────────
-
-    def point(self, x: float, y: float) -> MV:
-        """Point in IPNS / dual form: ``x·e₁ + y·e₂ + e₀``.
-
-        The OPNS form (grade‑2 bivector) is obtained via ``.dual()``
-        or by wedging two orthogonal lines (planes in 2D) through the point.
-        """
-        return self.multivector({1: x, 2: y, self.EP: 1.0, self.EM: 1.0})
-
-    def direction(self, x: float, y: float) -> MV:
-        """Direction / ideal point (IPNS): ``x·e₁ + y·e₂``
-        (no e₀ component)."""
-        return self.multivector({1: x, 2: y})
-
-    def line(self, nx: float, ny: float, d: float = 0.0) -> MV:
-        """Line in 2D (PGA line = grade‑1): ``nx·e₁ + ny·e₂ + d·e₀``.
-
-        *d* is the signed distance from the origin.
-        """
-        return self.multivector({1: nx, 2: ny, self.EP: d, self.EM: d})
 
     # ── display ───────────────────────────────────────────────────
 

@@ -150,6 +150,23 @@ See [Duals](duals.md) for `dual()`, `complement()`, `ldual()`.
 | `a.gp_min(b)` | Hestenes inner product for pure blades: $⟨AB⟩_{\|k−j\|}$. Raises `ValueError` if not pure blades |
 | `a.gp_max(b)` | Outermost grade product for pure blades: $⟨AB⟩_{k+j}$. For vectors = outer product. Raises `ValueError` if not pure blades |
 
+### Products with reverse/conjugate flags
+
+Each core product is also available with explicit per-operand reverse or
+conjugate flags, matching galgebra's convention:
+
+| Method | Description |
+|--------|-------------|
+| `a.gp_rev(b, rev_self=False, rev_other=False)` | Geometric product with optional reverse on either operand |
+| `a.gp_conj(b, conj_self=False, conj_other=False)` | Geometric product with optional conjugate on either operand |
+| `a.ip_rev(b, rev_self=False, rev_other=False)` | Inner product with optional reverse on either operand |
+| `a.ip_conj(b, conj_self=False, conj_other=False)` | Inner product with optional conjugate on either operand |
+| `a.op_rev(b, rev_self=False, rev_other=False)` | Outer product with optional reverse on either operand |
+| `a.op_conj(b, conj_self=False, conj_other=False)` | Outer product with optional conjugate on either operand |
+
+These delegate to the equivalent `Algebra` methods (`gp_rev`, `gp_conj`,
+`ip_rev`, `ip_conj`, `op_rev`, `op_conj`).
+
 ## Modular Arithmetic Methods
 
 For integer-dtype algebras, explicit per-call modulus variants exist.
@@ -172,7 +189,9 @@ algebra construction.
 | Method | Description |
 |--------|-------------|
 | `a.to_dict()` | Returns `{blade_name: coeff}` for all non-zero blades |
-| `a.prune()` | Removes coefficients `abs(coeff) < algebra.precision` in-place; returns `self` |
+| `a.prune(tol=None)` | Removes coefficients `abs(coeff) < tol` in-place; returns `self`. When `tol` is `None`, uses `algebra.precision` |
+| `a.normalized()` | Returns the MV scaled to unit magnitude `a / |a|` |
+| `a.is_grade(k)` | True if this multivector is a pure grade‑*k* element |
 | `repr(a)` | Produces a human-readable expression string |
 
 ## Properties
@@ -244,9 +263,19 @@ Tanga provides two distinct Clifford conjugates:
 The `Algebra` class has a `precision` property (default `1e-10`, settable at
 construction or via assignment) that controls the numerical zero threshold for:
 
-- `prune()` — removes coefficients with `abs(coeff) < precision`
+- `prune()` — removes coefficients with `abs(coeff) < precision` (or an explicit
+  `tol` override)
 - `is_zero()` — returns `True` when all `abs(coeff) < precision`
 - `is_scalar()` — ignores non‑scalar blades whose `abs(coeff) < precision`
+
+`prune()` additionally accepts an optional tolerance argument to override the
+algebra default:
+
+```python
+mv = alg("1e-6 e1 + 1e-12 e2 + 2 e3")
+mv.prune()        # uses alg.precision (default 1e-10) → keeps e1 and e3
+mv.prune(1e-8)    # keeps only e3
+```
 
 ```python
 alg = Algebra(3, precision=1e-8)

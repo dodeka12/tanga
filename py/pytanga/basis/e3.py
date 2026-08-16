@@ -8,7 +8,6 @@ from __future__ import annotations
 from functools import cached_property
 
 from pytanga.algebra._algebra import Algebra
-from pytanga.algebra._mv import MV
 
 
 class BasisE3(Algebra):
@@ -23,8 +22,8 @@ class BasisE3(Algebra):
     E23: int = 6
     E123: int = 7
 
-    def __init__(self, dtype: str = "float64", **kw) -> None:
-        super().__init__(3, 0, dtype, **kw)
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+        super().__init__(3, 0, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})
@@ -34,46 +33,6 @@ class BasisE3(Algebra):
         self.e13 = -self.e31  # alias matching Perwass notation e₁₃ = −e₃₁
         self.e23 = self.op(self.e2, self.e3)
         self.I = mv({self.pseudoscalar_id: 1})
-
-    def vector(self, x=0.0, y=0.0, z=0.0) -> MV:
-        """Create a 3D vector: x·e1 + y·e2 + z·e3.
-
-        Can also be called with a :class:`~pytanga.geometry.entities.Point`
-        or :class:`~pytanga.geometry.entities.Direction` as a single argument.
-        """
-        from pytanga.geometry.entities import Direction, Point
-
-        if isinstance(x, (Point, Direction)):
-            return self.multivector({1: x.x, 2: x.y, 4: x.z})
-        return self.multivector({1: x, 2: y, 4: z})
-
-    def rnd_vector(
-        self,
-        x_range: tuple[float, float],
-        y_range: tuple[float, float],
-        z_range: tuple[float, float],
-    ) -> MV:
-        """Random 3D vector: x·e1 + y·e2 + z·e3."""
-        return self.vector(
-            self.rng.uniform(x_range[0], x_range[1]),
-            self.rng.uniform(y_range[0], y_range[1]),
-            self.rng.uniform(z_range[0], z_range[1]),
-        )
-
-    def rotor(self, theta: float, axis: MV) -> MV:
-        """Rotor for rotation by angle ``theta`` about the given *axis*.
-
-        Convenience method that delegates to :func:`~pytanga.geometry.create_e3.create_rotor`.
-        """
-        from pytanga.geometry.create_e3 import create_rotor
-        from pytanga.geometry.entities import Direction
-
-        axis = axis.normalized()
-        return create_rotor(
-            self,
-            float(theta),
-            Direction(float(axis[1]), float(axis[2]), float(axis[4])),
-        )
 
     @cached_property
     def _display_basis(self) -> list:

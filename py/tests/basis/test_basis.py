@@ -114,7 +114,7 @@ class TestBasisE3:
         assert self.b.I[7] == pytest.approx(1.0)
 
     def test_vector_factory(self):
-        v = self.b.vector(1, 2, 3)
+        v = self.b.multivector({1: 1, 2: 2, 4: 3})
         assert v[1] == pytest.approx(1.0)
         assert v[2] == pytest.approx(2.0)
         assert v[4] == pytest.approx(3.0)
@@ -137,7 +137,7 @@ class TestBasisP3:
         assert self.b.pseudoscalar_id == 15  # 1|2|4|8
 
     def test_point_factory(self):
-        p = self.b.point(1, 2, 3)
+        p = self.b.multivector({1: 1, 2: 2, 4: 3, 8: 1})
         assert p[1] == pytest.approx(1.0)
         assert p[2] == pytest.approx(2.0)
         assert p[4] == pytest.approx(3.0)
@@ -203,7 +203,7 @@ class TestBasisPGA3:
         self.b = BasisPGA3()
 
     def test_point_has_correct_blades(self):
-        p = self.b.point(1, 2, 3)
+        p = self.b.multivector({1: 1, 2: 2, 4: 3, 8: 1, 16: 1})
         assert p[1] == pytest.approx(1.0)
         assert p[2] == pytest.approx(2.0)
         assert p[4] == pytest.approx(3.0)
@@ -214,18 +214,18 @@ class TestBasisPGA3:
 
     def test_point_inner_product_with_e0_inv(self):
         """ip(point, e0_inv) must equal +1 for any finite point in PGA3."""
-        p = self.b.point(1, 2, 3)
+        p = self.b.multivector({1: 1, 2: 2, 4: 3, 8: 1, 16: 1})
         result = self.b.ip(p, self.b.e0_inv)
         assert abs(scalar(result) - 1.0) < 1e-12
 
     def test_ideal_direction_inner_product_with_e0_inv_is_zero(self):
         """ip(direction, e0_inv) = 0 for ideal points."""
-        v = self.b.direction(1, 0, 0)
+        v = self.b.multivector({1: 1})
         result = self.b.ip(v, self.b.e0_inv)
         assert is_zero(result)
 
     def test_direction_factory(self):
-        v = self.b.direction(3, 0, 0)
+        v = self.b.multivector({1: 3})
         assert v[1] == pytest.approx(3.0)
         assert v[2] == pytest.approx(0.0)
         assert v[4] == pytest.approx(0.0)

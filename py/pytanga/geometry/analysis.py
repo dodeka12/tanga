@@ -83,16 +83,14 @@ def _detect(alg: Algebra) -> str:
 # ── entity analysis ─────────────────────────────────────────────
 
 
-def analyze_entity(mv: MV, *, opns: bool = True) -> Entity | None:
+def analyze_entity(mv: MV) -> Entity | None:
     """Determine which geometric entity an MV represents.
 
     Parameters
     ----------
     mv : MV
-        A multivector to analyze.
-    opns : bool, optional
-        *True* → interpret blade in OPNS (default).
-        *False* → interpret blade in IPNS (dualizes to OPNS first).
+        A multivector to analyze.  The MV's ``algebra.opns`` flag
+        determines the OPNS/IPNS interpretation.
 
     Returns
     -------
@@ -108,21 +106,21 @@ def analyze_entity(mv: MV, *, opns: bool = True) -> Entity | None:
     """
     alg_type = _detect(mv._alg)
     if alg_type == "e3":
-        return analysis_e3.analyze_entity(mv, opns=opns)
+        return analysis_e3.analyze_entity(mv)
     elif alg_type == "p3":
-        return analysis_p3.analyze_entity(mv, opns=opns)
+        return analysis_p3.analyze_entity(mv)
     elif alg_type == "pga3":
-        return analysis_pga3.analyze_entity(mv, opns=opns)
+        return analysis_pga3.analyze_entity(mv)
     elif alg_type == "n3":
-        return analysis_n3.analyze_entity(mv, opns=opns)
+        return analysis_n3.analyze_entity(mv)
     elif alg_type == "e2":
-        return analysis_e2.analyze_entity(mv, opns=opns)
+        return analysis_e2.analyze_entity(mv)
     elif alg_type == "p2":
-        return analysis_p2.analyze_entity(mv, opns=opns)
+        return analysis_p2.analyze_entity(mv)
     elif alg_type == "pga2":
-        return analysis_pga2.analyze_entity(mv, opns=opns)
+        return analysis_pga2.analyze_entity(mv)
     elif alg_type == "n2":
-        return analysis_n2.analyze_entity(mv, opns=opns)
+        return analysis_n2.analyze_entity(mv)
 
 
 # ── operator analysis ───────────────────────────────────────────
@@ -167,10 +165,120 @@ def analyze_operator(mv: MV) -> Operator | None:
         return analysis_n2.analyze_operator(mv)
 
 
+# ── typed dispatchers ──────────────────────────────────────────
+
+
+_ENTITY_ALG_SUPPORT = {
+    "point": {"e2", "e3", "p2", "p3", "n2", "n3", "pga2", "pga3"},
+    "direction": {"e2", "e3", "p2", "p3", "n2", "n3", "pga2", "pga3"},
+    "line": {"e2", "e3", "p2", "p3", "n2", "n3", "pga2", "pga3"},
+    "plane": {"e3", "p3", "n3", "pga3"},
+    "circle": {"n2", "n3"},
+    "sphere": {"n2", "n3"},
+    "point_pair": {"n2", "n3"},
+    "hpoint": {"n2", "n3"},
+    "hdirection": {"n2", "n3"},
+    "space": {"e2", "e3", "p2", "p3", "n2", "n3", "pga2", "pga3"},
+}
+
+_MODULES = {
+    "e2": analysis_e2,
+    "e3": analysis_e3,
+    "p2": analysis_p2,
+    "p3": analysis_p3,
+    "n2": analysis_n2,
+    "n3": analysis_n3,
+    "pga2": analysis_pga2,
+    "pga3": analysis_pga3,
+}
+
+
+def _typed(mv: MV, name: str, display: str) -> Entity:
+    """Dispatch a typed analyzer ``analyze_<name>(mv)`` to the right module."""
+    alg_type = _detect(mv._alg)
+    if alg_type not in _ENTITY_ALG_SUPPORT[name]:
+        raise TypeError(f"{display} is not supported in {alg_type}")
+    return getattr(_MODULES[alg_type], f"analyze_{name}")(mv)
+
+
+def analyze_point(mv: MV) -> "Point":
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "point", "Point")
+
+
+def analyze_direction(mv: MV) -> "Direction":
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "direction", "Direction")
+
+
+def analyze_line(mv: MV) -> "Line":
+    """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "line", "Line")
+
+
+def analyze_plane(mv: MV) -> "Plane":
+    """Interpret *mv* as a :class:`Plane` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "plane", "Plane")
+
+
+def analyze_circle(mv: MV) -> "Circle":
+    """Interpret *mv* as a :class:`Circle` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "circle", "Circle")
+
+
+def analyze_sphere(mv: MV) -> "Sphere":
+    """Interpret *mv* as a :class:`Sphere` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "sphere", "Sphere")
+
+
+def analyze_point_pair(mv: MV) -> "PointPair":
+    """Interpret *mv* as a :class:`PointPair` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "point_pair", "PointPair")
+
+
+def analyze_hpoint(mv: MV) -> "HPoint":
+    """Interpret *mv* as an :class:`HPoint` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "hpoint", "HPoint")
+
+
+def analyze_hdirection(mv: MV) -> "HDirection":
+    """Interpret *mv* as an :class:`HDirection` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "hdirection", "HDirection")
+
+
+def analyze_space(mv: MV) -> "Space":
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode."""
+    return _typed(mv, "space", "Space")
+
+
 # ── combined fallback ───────────────────────────────────────────
 
 
-def analyze(mv: MV, *, opns: bool = True) -> Entity | Operator | None:
+def _register_entity_analyzers() -> None:
+    """Register typed analyzers with :mod:`pytanga.geometry.entities`.
+
+    Called once at import time so entity constructors (``Point(mv)``, …)
+    can route an MV through the algebra-specific analyzer without
+    importing ``analysis`` themselves.
+    """
+    from .entities import register_analyzer
+
+    register_analyzer("point", analyze_point)
+    register_analyzer("direction", analyze_direction)
+    register_analyzer("line", analyze_line)
+    register_analyzer("plane", analyze_plane)
+    register_analyzer("circle", analyze_circle)
+    register_analyzer("sphere", analyze_sphere)
+    register_analyzer("point_pair", analyze_point_pair)
+    register_analyzer("hpoint", analyze_hpoint)
+    register_analyzer("hdirection", analyze_hdirection)
+    register_analyzer("space", analyze_space)
+
+
+_register_entity_analyzers()
+
+
+def analyze(mv: MV) -> Entity | Operator | None:
     """Try to analyze an MV as either an entity or an operator.
 
     Tries entity analysis first, then operator analysis.
@@ -179,10 +287,9 @@ def analyze(mv: MV, *, opns: bool = True) -> Entity | Operator | None:
     Parameters
     ----------
     mv : MV
-        A multivector to analyze.
-    opns : bool, optional
-        *True* → OPNS (default), *False* → IPNS. Only passed
-        to entity analysis; operators are unaffected.
+        A multivector to analyze.  The MV's ``algebra.opns`` flag
+        determines the OPNS/IPNS interpretation for entity analysis;
+        operators are unaffected.
 
     Returns
     -------
@@ -198,7 +305,7 @@ def analyze(mv: MV, *, opns: bool = True) -> Entity | Operator | None:
     """
     result = None
     try:
-        result = analyze_entity(mv, opns=opns)
+        result = analyze_entity(mv)
     except (ValueError, NotImplementedError):
         pass
     if result is not None:

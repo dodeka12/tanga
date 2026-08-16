@@ -29,10 +29,18 @@ def basis_e3():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_point_raises(basis_e3):
-    """Points cannot be represented in E3."""
-    with pytest.raises(ValueError, match="Points cannot be represented"):
-        create_entity(basis_e3, Point(1, 2, 3))
+def test_create_point_components(basis_e3):
+    """Point maps to e1/e2/e3 components independent of OPNS/IPNS."""
+    mv = create_entity(basis_e3, Point(1, 2, 3))
+    assert set(mv.grades) == {1}
+    assert float(mv[1]) == pytest.approx(1)
+    assert float(mv[2]) == pytest.approx(2)
+    assert float(mv[4]) == pytest.approx(3)
+    # IPNS: same Euclidean components (no dualization)
+    mv_ipns = create_entity(BasisE3(opns=False), Point(1, 2, 3))
+    assert float(mv_ipns[1]) == pytest.approx(1)
+    assert float(mv_ipns[2]) == pytest.approx(2)
+    assert float(mv_ipns[4]) == pytest.approx(3)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -43,24 +51,24 @@ def test_create_point_raises(basis_e3):
 def test_create_direction_round_trip_opns(basis_e3):
     """create → analyze OPNS reproduces Direction."""
     d = Direction(3, 4, 0)
-    mv = create_entity(basis_e3, d, opns=True)
-    result = analyze_entity(mv, opns=True)
+    mv = create_entity(basis_e3, d)
+    result = analyze_entity(mv)
     assert isinstance(result, Direction)
     # Length may differ; verify direction ratios
     assert result.x / result.y == pytest.approx(3 / 4)
 
 
-def test_create_direction_round_trip_ipns(basis_e3):
-    """A direction in IPNS creates a vector, analyzed as IPNS → Plane."""
+def test_create_direction_round_trip_ipns(basis_e3, monkeypatch):
+    """A direction in IPNS is a bivector, analyzed as IPNS → Line."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     d = Direction(0, 0, 1)
-    mv = create_entity(basis_e3, d, opns=False)
-    result = analyze_entity(mv, opns=False)
-    # IPNS grade-1 vector = plane normal → Plane through origin
-    assert isinstance(result, Plane)
-    assert result.point.x == 0 and result.point.y == 0 and result.point.z == 0
-    assert result.normal.x == pytest.approx(0)
-    assert result.normal.y == pytest.approx(0)
-    assert abs(result.normal.z) == pytest.approx(1)
+    mv = create_entity(basis_e3, d)
+    # IPNS direction is the dual — a grade-2 bivector
+    assert set(mv.grades) == {2}
+    result = analyze_entity(mv)
+    # IPNS bivector = intersection of two planes → Line through origin
+    assert isinstance(result, Line)
+    assert result.origin.x == 0 and result.origin.y == 0 and result.origin.z == 0
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -71,7 +79,7 @@ def test_create_direction_round_trip_ipns(basis_e3):
 def test_create_line_through_origin(basis_e3):
     """Line through origin → grade-1 vector."""
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
-    mv = create_entity(basis_e3, line, opns=True)
+    mv = create_entity(basis_e3, line)
     grades = set(mv.grades)
     assert grades == {1}
 
@@ -80,20 +88,21 @@ def test_create_line_not_through_origin_raises(basis_e3):
     """Line NOT through origin → ValueError."""
     line = Line(origin=Point(1, 2, 3), direction=Direction(1, 0, 0))
     with pytest.raises(ValueError, match="only lines through the origin"):
-        create_entity(basis_e3, line, opns=True)
+        create_entity(basis_e3, line)
 
 
-def test_line_ipns_round_trip(basis_e3):
+def test_line_ipns_round_trip(basis_e3, monkeypatch):
     """IPNS grade 2 (intersection of two planes) → Line through origin."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     # Two orthogonal planes through origin: normal z and normal x.
     # Intersection is the y-axis line.
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
     p2 = Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0))
-    mv1 = create_entity(basis_e3, p1, opns=False)  # IPNS vector for plane 1
-    mv2 = create_entity(basis_e3, p2, opns=False)  # IPNS vector for plane 2
+    mv1 = create_entity(basis_e3, p1)  # IPNS vector for plane 1
+    mv2 = create_entity(basis_e3, p2)  # IPNS vector for plane 2
     # Intersection in IPNS: outer product → grade-2 bivector
     line_mv = mv1.op(mv2)
-    result = analyze_entity(line_mv, opns=False)
+    result = analyze_entity(line_mv)
     assert isinstance(result, Line)
     assert result.origin.x == pytest.approx(0)
     assert result.origin.y == pytest.approx(0)
@@ -110,7 +119,7 @@ def test_line_ipns_round_trip(basis_e3):
 def test_create_plane_through_origin_opns(basis_e3):
     """Plane through origin → bivector."""
     plane = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
-    mv = create_entity(basis_e3, plane, opns=True)
+    mv = create_entity(basis_e3, plane)
     grades = set(mv.grades)
     assert grades == {2}
     # Components in e23 (nx), e31 (ny), e12 (nz)
@@ -125,14 +134,14 @@ def test_create_plane_not_through_origin_raises(basis_e3):
     """Plane NOT through origin → ValueError."""
     plane = Plane(point=Point(1, 0, 0), normal=Direction(0, 0, 1))
     with pytest.raises(ValueError, match="only planes through the origin"):
-        create_entity(basis_e3, plane, opns=True)
+        create_entity(basis_e3, plane)
 
 
 def test_plane_opns_round_trip(basis_e3):
     """Create plane bivector, analyze OPNS → Plane through origin."""
     plane = Plane(point=Point(0, 0, 0), normal=Direction(1, 2, 3))
-    mv = create_entity(basis_e3, plane, opns=True)
-    result = analyze_entity(mv, opns=True)
+    mv = create_entity(basis_e3, plane)
+    result = analyze_entity(mv)
     assert isinstance(result, Plane)
     assert result.point.x == pytest.approx(0)
     assert result.point.y == pytest.approx(0)
@@ -142,11 +151,12 @@ def test_plane_opns_round_trip(basis_e3):
     assert length == pytest.approx(1.0, abs=1e-6)
 
 
-def test_plane_ipns_round_trip(basis_e3):
+def test_plane_ipns_round_trip(basis_e3, monkeypatch):
     """Create plane IPNS (vector), analyze IPNS → Plane through origin."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     plane = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
-    mv = create_entity(basis_e3, plane, opns=False)
-    result = analyze_entity(mv, opns=False)
+    mv = create_entity(basis_e3, plane)
+    result = analyze_entity(mv)
     assert isinstance(result, Plane)
     assert result.normal.x == pytest.approx(0)
     assert result.normal.y == pytest.approx(0)
@@ -160,10 +170,17 @@ def test_plane_ipns_round_trip(basis_e3):
 
 def test_create_space_round_trip(basis_e3):
     """Create pseudoscalar, analyze → Space."""
-    mv = create_entity(basis_e3, Space(scale=5.0), opns=True)
-    result = analyze_entity(mv, opns=True)
+    mv = create_entity(basis_e3, Space(scale=5.0))
+    result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(5.0)
+
+
+def test_create_space_ipns_is_scalar():
+    """Space in IPNS is a grade-0 scalar."""
+    mv = create_entity(BasisE3(opns=False), Space(scale=2.0))
+    assert set(mv.grades) == {0}
+    assert float(mv.scalar) == pytest.approx(2.0)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -302,7 +319,7 @@ def test_reflection_line_round_trip_e3(basis_e3):
 def test_reflection_line_e3_application(basis_e3):
     """Reflection on z-axis line: z stays, xy flips via d * v * d.rev()."""
     rl_mv = create_operator(basis_e3, ReflectionLine(Direction(0, 0, 1)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     result = rl_mv * v * rl_mv.rev()
     # d = e3, a = (1,2,3). Parallel: (0,0,3) stays. Perp: (1,2,0) flips → (-1,-2,0)
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(-1.0)
@@ -313,7 +330,7 @@ def test_reflection_line_e3_application(basis_e3):
 def test_reflection_line_e1_application(basis_e3):
     """Reflection on x-axis line: x stays, yz flips."""
     rl_mv = create_operator(basis_e3, ReflectionLine(Direction(1, 0, 0)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     result = rl_mv * v * rl_mv.rev()
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(1.0)
     assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(-2.0)
@@ -348,7 +365,7 @@ def test_reflection_plane_round_trip_e3(basis_e3):
 def test_reflection_plane_e3_application(basis_e3):
     """Reflection on xy-plane via −B * v * B.rev(): xy stays, z flips."""
     rp_mv = create_operator(basis_e3, ReflectionPlane(Direction(0, 0, 1)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     # Plane reflection formula: (−1)^(k+1) B a B⁻¹ with k=2 → −B a B.rev()
     result = -rp_mv * v * rp_mv.rev()
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(1.0)
@@ -359,7 +376,7 @@ def test_reflection_plane_e3_application(basis_e3):
 def test_reflection_plane_e1_normal_application(basis_e3):
     """Reflection on yz-plane (normal e1): x flips, yz stays."""
     rp_mv = create_operator(basis_e3, ReflectionPlane(Direction(1, 0, 0)))
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     result = -rp_mv * v * rp_mv.rev()
     assert float(result[basis_e3.blade_id("e1")]) == pytest.approx(-1.0)
     assert float(result[basis_e3.blade_id("e2")]) == pytest.approx(2.0)
@@ -373,7 +390,7 @@ def test_reflection_plane_e1_normal_application(basis_e3):
 
 def test_line_vs_plane_reflection_are_complementary_e3(basis_e3):
     """Line reflection on e3 + Plane reflection on e3 normal = full inversion."""
-    v = basis_e3.vector(1, 2, 3)
+    v = basis_e3.multivector({1: 1, 2: 2, 4: 3})
     rl = create_operator(basis_e3, ReflectionLine(Direction(0, 0, 1)))
     rp = create_operator(basis_e3, ReflectionPlane(Direction(0, 0, 1)))
     # Line reflection: d*v*d.rev() with d=e3 → z stays, xy flips → (-1, -2, 3)
@@ -394,7 +411,7 @@ def test_reflection_alias_is_reflection_plane():
     """Reflection should be an alias for ReflectionPlane."""
     from pytanga.geometry.operators import Reflection as PRefl
 
-    r = PRefl(normal=Direction(1, 0, 0))
+    r = PRefl(Direction(1, 0, 0))
     assert isinstance(r, ReflectionPlane)
     assert r.plane.normal.x == 1
 
@@ -404,17 +421,18 @@ def test_reflection_alias_is_reflection_plane():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_ipns_grade_3_raises(basis_e3):
+def test_ipns_grade_3_raises(basis_e3, monkeypatch):
     """IPNS grade-3 trivector is trivial-only origin → ValueError."""
+    monkeypatch.setattr(basis_e3, "opns", False)
     p1 = Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0))
     p2 = Plane(point=Point(0, 0, 0), normal=Direction(0, 1, 0))
     p3 = Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1))
-    m1 = create_entity(basis_e3, p1, opns=False)
-    m2 = create_entity(basis_e3, p2, opns=False)
-    m3 = create_entity(basis_e3, p3, opns=False)
+    m1 = create_entity(basis_e3, p1)
+    m2 = create_entity(basis_e3, p2)
+    m3 = create_entity(basis_e3, p3)
     grade3_ipns = m1.op(m2).op(m3)
     with pytest.raises(ValueError, match="trivial"):
-        analyze_entity(grade3_ipns, opns=False)
+        analyze_entity(grade3_ipns)
 
 
 # ═══════════════════════════════════════════════════════════════

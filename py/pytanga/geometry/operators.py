@@ -16,7 +16,16 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
-from .entities import Direction, HDirection, Line, Plane, Point
+from .entities import (
+    Direction,
+    HDirection,
+    Line,
+    Plane,
+    Point,
+    to_direction,
+    to_float,
+    to_point,
+)
 
 
 @dataclass(frozen=True)
@@ -35,18 +44,15 @@ class ReflectionLine:
 
     line: Line
 
-    def __init__(self, line_or_direction: Line | Direction = None, /, **kwargs):
-        # Accept keyword 'line' for new style
-        if line_or_direction is None and "line" in kwargs:
-            line_or_direction = kwargs["line"]
-        # Backward-compat: accept Direction → Line through origin
+    def __init__(self, line_or_direction: Line | Direction):
         if isinstance(line_or_direction, Direction):
             line_or_direction = Line(Point(0, 0, 0), line_or_direction)
-        # Backward-compat: accept direction= keyword
-        if line_or_direction is None and "direction" in kwargs:
-            line_or_direction = Line(Point(0, 0, 0), kwargs["direction"])
-        if line_or_direction is None:
-            raise TypeError("ReflectionLine requires a Line or Direction")
+        elif not isinstance(line_or_direction, Line):
+            raise TypeError(
+                "ReflectionLine requires a Line or Direction, got "
+                f"{type(line_or_direction).__name__}"
+            )
+
         object.__setattr__(self, "line", line_or_direction)
 
     def __repr__(self) -> str:
@@ -69,18 +75,14 @@ class ReflectionPlane:
 
     plane: Plane
 
-    def __init__(self, plane_or_normal: Plane | Direction = None, /, **kwargs):
-        # Accept keyword 'plane' for new style
-        if plane_or_normal is None and "plane" in kwargs:
-            plane_or_normal = kwargs["plane"]
-        # Backward-compat: accept Direction → Plane through origin
+    def __init__(self, plane_or_normal: Plane | Direction):
         if isinstance(plane_or_normal, Direction):
             plane_or_normal = Plane(Point(0, 0, 0), plane_or_normal)
-        # Backward-compat: accept normal= keyword
-        if plane_or_normal is None and "normal" in kwargs:
-            plane_or_normal = Plane(Point(0, 0, 0), kwargs["normal"])
-        if plane_or_normal is None:
-            raise TypeError("ReflectionPlane requires a Plane or Direction")
+        elif not isinstance(plane_or_normal, Plane):
+            raise TypeError(
+                "ReflectionPlane requires a Plane or Direction, got "
+                f"{type(plane_or_normal).__name__}"
+            )
         object.__setattr__(self, "plane", plane_or_normal)
 
     def __repr__(self) -> str:
@@ -101,6 +103,10 @@ class ReflectionPoint:
 
     point: Point
 
+    def __init__(self, point: Point):
+        point = to_point(point)
+        object.__setattr__(self, "point", point)
+
     def __repr__(self) -> str:
         return f"ReflPoint(pt={self.point})"
 
@@ -118,6 +124,12 @@ class Inversion:
     center: Point
     radius: float = 1.0
 
+    def __init__(self, center: Point, radius: float = 1.0):
+        center = to_point(center)
+        radius = to_float(radius)
+        object.__setattr__(self, "center", center)
+        object.__setattr__(self, "radius", radius)
+
     def __repr__(self) -> str:
         return f"Inv(c={self.center}, r={self.radius:.2f})"
 
@@ -132,6 +144,12 @@ class Rotor:
     angle: float
     axis: Direction
 
+    def __init__(self, angle: float, axis: Direction):
+        angle = to_float(angle)
+        axis = to_direction(axis)
+        object.__setattr__(self, "angle", angle)
+        object.__setattr__(self, "axis", axis)
+
     def __repr__(self) -> str:
         deg = math.degrees(self.angle)
         return f"Rotor({deg:.1f}° about {self.axis})"
@@ -145,6 +163,10 @@ class Translator:
     """
 
     vector: Direction
+
+    def __init__(self, vector: Direction):
+        vector = to_direction(vector)
+        object.__setattr__(self, "vector", vector)
 
     def __repr__(self) -> str:
         return f"Transl({self.vector})"
@@ -167,6 +189,13 @@ class Dilator:
     factor: float
     origin: Point = field(default_factory=lambda: Point(0, 0, 0))
 
+    def __init__(self, factor: float, origin: Optional[Point] = None):
+        factor = to_float(factor)
+        origin = to_point(origin) if origin is not None else Point(0, 0, 0)
+
+        object.__setattr__(self, "factor", factor)
+        object.__setattr__(self, "origin", origin)
+
     def __repr__(self) -> str:
         if self.origin.x == 0 and self.origin.y == 0 and self.origin.z == 0:
             return f"Dilator(×{self.factor:.2f})"
@@ -182,6 +211,14 @@ class Motor:
 
     rotor: Rotor
     translator: Translator
+
+    def __init__(self, rotor: Rotor, translator: Translator):
+        if not isinstance(rotor, Rotor):
+            raise TypeError(f"Expected Rotor, got {type(rotor).__name__}")
+        if not isinstance(translator, Translator):
+            raise TypeError(f"Expected Translator, got {type(translator).__name__}")
+        object.__setattr__(self, "rotor", rotor)
+        object.__setattr__(self, "translator", translator)
 
     def __repr__(self) -> str:
         return f"Motor({self.rotor}, {self.translator})"
@@ -200,6 +237,15 @@ class GeneralRotor:
     angle: float
     axis: Direction
     origin: Point = field(default_factory=lambda: Point(0, 0, 0))
+
+    def __init__(self, angle: float, axis: Direction, origin: Optional[Point] = None):
+        angle = to_float(angle)
+        axis = to_direction(axis)
+        origin = to_point(origin) if origin is not None else Point(0, 0, 0)
+
+        object.__setattr__(self, "angle", angle)
+        object.__setattr__(self, "axis", axis)
+        object.__setattr__(self, "origin", origin)
 
     def __repr__(self) -> str:
         deg = math.degrees(self.angle)

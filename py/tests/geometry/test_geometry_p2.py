@@ -32,7 +32,7 @@ def basis_p2():
 
 def test_create_point_round_trip(basis_p2):
     mv = create_entity(basis_p2, Point(1, 2, 0))
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Point)
     assert result.x == pytest.approx(1)
     assert result.y == pytest.approx(2)
@@ -43,7 +43,7 @@ def test_create_point_round_trip(basis_p2):
 
 def test_create_direction_round_trip(basis_p2):
     mv = create_entity(basis_p2, Direction(1, 0, 0))
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Direction)
     assert result.x == pytest.approx(1)
 
@@ -54,7 +54,7 @@ def test_create_direction_round_trip(basis_p2):
 def test_create_line_through_origin(basis_p2):
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
     mv = create_entity(basis_p2, line)
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Line)
     assert abs(result.direction.x) == pytest.approx(1)
 
@@ -62,7 +62,7 @@ def test_create_line_through_origin(basis_p2):
 def test_create_line_offset(basis_p2):
     line = Line(origin=Point(1, 2, 0), direction=Direction(1, 0, 0))
     mv = create_entity(basis_p2, line)
-    result = analyze_entity(mv, opns=True)
+    result = analyze_entity(mv)
     assert isinstance(result, Line)
     assert abs(result.direction.x) > 0.9
 
@@ -77,15 +77,15 @@ def test_create_plane_raises_in_p2(basis_p2):
     """Plane entity is not supported in 2D (use Line instead)."""
     plane = Plane(point=Point(0, 5, 0), normal=Direction(0, 1, 0))
     with pytest.raises(AttributeError):
-        create_entity(basis_p2, plane, opns=True)
+        create_entity(basis_p2, plane)
 
 
 # ═══════ Space ═══════
 
 
 def test_create_space_round_trip(basis_p2):
-    mv = create_entity(basis_p2, Space(scale=2.0), opns=True)
-    result = analyze_entity(mv, opns=True)
+    mv = create_entity(basis_p2, Space(scale=2.0))
+    result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(2)
 
@@ -204,16 +204,18 @@ def test_rotor_application_homogeneous(basis_p2):
 # ═══════ IPNS round-trips ═══════
 
 
-def test_create_direction_ipns_round_trip(basis_p2):
+def test_create_direction_ipns_round_trip(basis_p2, monkeypatch):
     """Direction(1,0,0) → IPNS → analyze IPNS → Direction(1,0,0)."""
-    mv = create_entity(basis_p2, Direction(1, 0, 0), opns=False)
-    result = analyze_entity(mv, opns=False)
+    monkeypatch.setattr(basis_p2, "opns", False)
+    mv = create_entity(basis_p2, Direction(1, 0, 0))
+    result = analyze_entity(mv)
     assert isinstance(result, Direction)
 
 
-def test_create_space_ipns_round_trip(basis_p2):
-    mv = create_entity(basis_p2, Space(scale=3.0), opns=False)
+def test_create_space_ipns_round_trip(basis_p2, monkeypatch):
+    monkeypatch.setattr(basis_p2, "opns", False)
+    mv = create_entity(basis_p2, Space(scale=3.0))
     assert set(mv.grades) == {0}
-    result = analyze_entity(mv, opns=False)
+    result = analyze_entity(mv)
     assert isinstance(result, Space)
     assert result.scale == pytest.approx(3)

@@ -43,18 +43,13 @@ E34 = BasisP3.E34
 # ═══════════════════════════════════════════════════════════════
 
 
-def analyze_entity(
-    mv: MV, *, opns: bool = True
-) -> Point | Direction | Line | Plane | Space | None:
+def analyze_entity(mv: MV) -> Point | Direction | Line | Plane | Space | None:
     """Analyze an MV in P3 as a geometric entity.
 
     Parameters
     ----------
     mv : MV
         A multivector to analyze.
-    opns : bool, optional
-        *True* (default) → OPNS interpretation.
-        *False* → IPNS interpretation (dualizes to OPNS first).
 
     P3 OPNS entities (pure-grade blades):
 
@@ -63,7 +58,7 @@ def analyze_entity(
     - Grade 3 → :class:`Plane` (dual gives normal + offset)
     - Grade 4 → :class:`Space` (pseudoscalar)
     """
-    if not opns:
+    if not mv.algebra.opns:
         dual = mv.dual()
         return _analyze_entity_opns(dual)
     return _analyze_entity_opns(mv)
@@ -278,7 +273,7 @@ def _classify_grade1_versor(mv: MV) -> ReflectionPlane | ReflectionPoint:
         if abs(e4_val) > 1e-15:
             raise ValueError("Mixed e₄ and Euclidean components – ambiguous P3 versor")
         return ReflectionPlane(
-            normal=Direction(ex / eucl_norm, ey / eucl_norm, ez / eucl_norm)
+            Direction(ex / eucl_norm, ey / eucl_norm, ez / eucl_norm)
         )
 
 
@@ -294,7 +289,7 @@ def _classify_grade2_versor(mv: MV) -> ReflectionLine:
     n_norm = math.sqrt(nx * nx + ny * ny + nz * nz)
     if n_norm < 1e-15:
         raise ValueError("Zero direction in e₄ bivector – not a valid reflection")
-    return ReflectionLine(direction=Direction(nx / n_norm, ny / n_norm, nz / n_norm))
+    return ReflectionLine(Direction(nx / n_norm, ny / n_norm, nz / n_norm))
 
 
 def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:
@@ -324,3 +319,57 @@ def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:
 def _get_grades(mv: MV) -> set[int]:
     """Return the set of grades present in *mv*."""
     return set(mv.grades)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Typed analyzers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _expect(result, cls):
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def analyze_point(mv: MV) -> Point:
+    """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Point)
+
+
+def analyze_direction(mv: MV) -> Direction:
+    """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Direction)
+
+
+def analyze_line(mv: MV) -> Line:
+    """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Line)
+
+
+def analyze_plane(mv: MV) -> Plane:
+    """Interpret *mv* as a :class:`Plane` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Plane)
+
+
+def analyze_space(mv: MV) -> Space:
+    """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode.
+
+    Raises ``TypeError`` if the MV represents a different entity.
+    """
+    return _expect(analyze_entity(mv), Space)

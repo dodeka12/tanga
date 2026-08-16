@@ -66,7 +66,7 @@ class Visualizer(_JupyterDisplayMixin):
         from pytanga.viz import Visualizer
         from pytanga.geometry import Point
 
-        viz = Visualizer(opns=True)
+        viz = Visualizer()
         viz.add(Point(1, 2, 3), color="#ff4444")
         viz.run()  # opens browser, blocks until Ctrl+C
 
@@ -89,7 +89,6 @@ class Visualizer(_JupyterDisplayMixin):
         host: str = "localhost",
         open_browser: bool | None = None,
         reuse_existing: bool = True,
-        opns: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
         background_color: str = "#1a1a2e",
@@ -120,7 +119,6 @@ class Visualizer(_JupyterDisplayMixin):
         self._host = host
         self._open_browser = open_browser
         self._reuse_existing = reuse_existing
-        self._opns = opns
         self._title = title
         self._annotation = annotation
         self._add_default_axes = add_default_axes
@@ -243,7 +241,6 @@ class Visualizer(_JupyterDisplayMixin):
         obj: VizInputType | None = None,
         *,
         entity_id: str | None = None,
-        opns: bool | None = None,
         color: str
         | tuple[float, float, float]
         | tuple[float, float, float, float]
@@ -266,7 +263,6 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             obj=obj,
             entity_id=entity_id,
-            opns=opns,
             color=color,
             opacity=opacity,
             style=style,
@@ -282,7 +278,6 @@ class Visualizer(_JupyterDisplayMixin):
         *,
         obj: VizInputType | None = None,
         entity_id: str | None = None,
-        opns: bool | None = None,
         color: Any = None,
         opacity: float | None = None,
         style: ObjVizStyle | None = None,
@@ -319,9 +314,6 @@ class Visualizer(_JupyterDisplayMixin):
         if isinstance(obj, Label):
             return scene.add_label(obj)
 
-        if opns is None:
-            opns = self._opns
-
         properties: dict[str, Any] = {}
 
         if color is not None:
@@ -339,7 +331,7 @@ class Visualizer(_JupyterDisplayMixin):
         # Build texture label convenience style if tex_label is set
         _tex_label_merged: _TLS | None = None
         if tex_label is not None:
-            entity_for_kind = self._resolve(obj, opns=opns)
+            entity_for_kind = self._resolve(obj)
             kind = type(entity_for_kind).__name__
             _tex_label_merged = _resolve_tex_label_style(
                 self._default_tex_label_style,
@@ -361,7 +353,7 @@ class Visualizer(_JupyterDisplayMixin):
                 # Otherwise leave the user's explicit style alone
             else:
                 kind_for_style = None
-                entity_for_style = self._resolve(obj, opns=opns)
+                entity_for_style = self._resolve(obj)
                 if entity_for_style is not None:
                     kind_for_style = type(entity_for_style).__name__
                 if kind_for_style == "Sphere":
@@ -380,7 +372,7 @@ class Visualizer(_JupyterDisplayMixin):
         if style is not None:
             properties["style"] = style
 
-        entity = self._resolve(obj, opns=opns)
+        entity = self._resolve(obj)
 
         # Viz-level drawables (PointPath, etc.) go through add_object
         from pytanga.geometry.entities import Entity as GeoEntity
@@ -461,13 +453,9 @@ class Visualizer(_JupyterDisplayMixin):
         props = _extract_non_none(style)
         self._scenes[""].update(entity_id, **props)
 
-    def update_entity(
-        self, entity_id: str, obj: SceneEntity, *, opns: bool | None = None
-    ) -> None:
+    def update_entity(self, entity_id: str, obj: SceneEntity) -> None:
         """Replace the geometry for an existing entity in the main scene."""
-        if opns is None:
-            opns = self._opns
-        entity: SceneEntity = self._resolve(obj, opns=opns)
+        entity: SceneEntity = self._resolve(obj)
         self._scenes[""].update_entity(entity_id, entity)
 
     def update_label(
@@ -642,12 +630,13 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── MV resolution ──────────────────────────────────────
 
-    def _resolve(self, obj: Any, *, opns: bool = True) -> SceneEntity:
+    def _resolve(self, obj: Any) -> SceneEntity:
         """Resolve an MV to a :class:`SceneEntity`.
 
         Viz-level drawables (PointPath, …) are passed through unchanged.
         GeoEntities and Operators are returned as-is.
-        MVs are resolved via :func:`pytanga.geometry.analyze`.
+        MVs are resolved via :func:`pytanga.geometry.analyze`, reading the
+        MV's ``algebra.opns`` flag.
         """
         from pytanga.geometry.operators import Operator as GeoOperator
 
@@ -662,7 +651,7 @@ class Visualizer(_JupyterDisplayMixin):
         try:
             from pytanga.geometry import analyze
 
-            result = analyze(obj, opns=opns)
+            result = analyze(obj)
             if result is None:
                 raise ValueError(f"Could not analyze object: {obj!r}")
             return result
