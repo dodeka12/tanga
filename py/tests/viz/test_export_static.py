@@ -3,6 +3,9 @@
 
 """Tests for standalone & figure HTML export with the scene-graph hierarchy."""
 
+from pathlib import Path
+
+import pytanga.viz
 from pytanga.geometry.entities import Point
 from pytanga.viz.export._figure_html import render_export_figure
 from pytanga.viz.export._html import render_export_html
@@ -56,3 +59,20 @@ class TestExportStatic:
         group = next(n for n in nodes if n.kind == "VizGroup")
         child = next(n for n in nodes if n.kind == "Point")
         assert ids.index(group.id) < ids.index(child.id)
+
+
+class TestCdnUnreachableDetection:
+    def test_export_cdn_probe_present(self):
+        from pytanga.viz.export._bootstrap._errors import js_cdn_check_script
+
+        script = js_cdn_check_script()
+        assert "__tanga_cdn_failed" in script
+        assert "cdn.jsdelivr.net/npm/three" in script
+        assert "AbortError" in script
+
+    def test_live_viewer_cdn_probe_present(self):
+        html = (
+            Path(pytanga.viz.__file__).parent / "templates" / "viewer.html"
+        ).read_text(encoding="utf-8")
+        assert "__tanga_cdn_failed" in html
+        assert "cdn.jsdelivr.net" in html

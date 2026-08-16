@@ -91,7 +91,8 @@ def js_cdn_check_script() -> str:
             if (_slowNotice) {{ _slowNotice.remove(); _slowNotice = null; }}
             return;
         }}
-        if (ESSENTIAL_FAILED) {{
+        if (ESSENTIAL_FAILED || window.__tanga_cdn_failed) {{
+            ESSENTIAL_FAILED = true;
             // A definitive error was caught — show error banner immediately
             if (!_resultsShown) {{ _showError(); }}
         }} else if (_pollCount >= 50 && !_slowNotice) {{
@@ -120,6 +121,38 @@ def js_cdn_check_script() -> str:
         }}
     }}
     setTimeout(_pollReady, 500);
+
+    // ── CDN reachability probe ──────────────────────────────
+    // A failed module import (offline / blocked CDN) does not surface a
+    // reliable `src` on the `error` event, so probe the CDN directly and
+    // flag a definitive network failure for the error banner.
+    (function() {{
+        var _probeUrl = 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+        var _controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var _timer = setTimeout(function() {{
+            if (_controller) _controller.abort();
+        }}, 6000);
+        try {{
+            fetch(_probeUrl, {{
+                method: 'GET',
+                mode: 'no-cors',
+                cache: 'no-store',
+                signal: _controller ? _controller.signal : undefined
+            }}).then(function() {{
+                clearTimeout(_timer);
+            }}).catch(function(err) {{
+                clearTimeout(_timer);
+                // Ignore the timeout (handled by the "slow connection"
+                // notice); only flag a definitive network failure.
+                if (!err || err.name !== 'AbortError') {{
+                    window.__tanga_cdn_failed = true;
+                }}
+            }});
+        }} catch (_) {{
+            clearTimeout(_timer);
+            window.__tanga_cdn_failed = true;
+        }}
+    }})();
 
     // ── Show error banner when a definitive failure occurred ─
     function _showError() {{
