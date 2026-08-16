@@ -669,6 +669,12 @@ function handleMessage(msg) {
         if (msg.fit_camera) {
             fitCameraToScene();
         }
+        // Acknowledge full-state sync so the server only starts streaming
+        // incremental updates after this tab has rebuilt the scene (this
+        // closes the reconnect/init race).
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'scene_synced', browser_id: _browserId }));
+        }
     } else if (msg.type === 'object_update') {
         _log('init', 'object_update patches=' + (msg.patches ? msg.patches.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {

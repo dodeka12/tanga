@@ -381,6 +381,15 @@ class VizServer:
         self._any_ws_ready_thread.clear()
         self._ws_error_event.clear()
 
+    def _signal_ws_ready(self) -> None:
+        """Set the ready events and invoke ``_on_ready`` (idempotent)."""
+        if self._any_ws_ready.is_set():
+            return
+        self._any_ws_ready.set()
+        self._any_ws_ready_thread.set()
+        if self._on_ready is not None:
+            self._on_ready()
+
     def get_browser_sessions(self) -> list[dict[str, str | None]]:
         """Return a list of active browser sessions as plain dicts."""
         return [
@@ -568,14 +577,12 @@ class VizServer:
                             if viewer_name:
                                 current_session.viewer_name = viewer_name
 
-                            # Signal ready BEFORE push operations so the
-                            # wait_for_ws_ready() mechanism is not blocked
-                            # by a failure in push_full_state / push_controls.
-                            self._any_ws_ready.set()
-                            self._any_ws_ready_thread.set()
-                            if self._on_ready is not None:
-                                self._on_ready()
-
+                            # Push the full state first, then signal ready on the
+                            # frontend's "scene_synced" ack, so the user's
+                            # incremental flushes (scheduled after viz.start()
+                            # returns) can't race with the initial full-state
+                            # push. A short fallback timer keeps old/cached
+                            # frontends (that never ack) from hanging start().
                             try:
                                 await self._push_full_state(
                                     ws, scene_name=scene_name, browser_id=browser_id
@@ -587,6 +594,17 @@ class VizServer:
                                     await self._push_controls_cb(scene_name)
                             except Exception:
                                 pass
+                            # Fallback for frontends that never send "scene_synced".
+                            asyncio.get_running_loop().call_later(
+                                1.0, self._signal_ws_ready
+                            )
+
+                        elif msg_type == "scene_synced":
+                            logger.info(
+                                "WS scene_synced from %s (id=%s) — signalling ready",
+                                remote_addr, msg_browser_id,
+                            )
+                            self._signal_ws_ready()
 
                         elif msg_type == "screenshot:data":
                             rid = data.get("request_id")
