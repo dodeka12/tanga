@@ -24,6 +24,7 @@ import { createAxis } from './axis.js';
 import { createAxes2D } from './axes2d.js';
 import { createAxes3D } from './axes3d.js';
 import { createGrid } from './grid.js';
+import { createVizGroup } from './group.js';
 import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
 
 /**
@@ -109,6 +110,10 @@ export async function createEntityMesh(ent) {
             break;
         case 'Grid':
             mesh = createGrid(ent);
+            break;
+
+        case 'VizGroup':
+            mesh = createVizGroup(ent);
             break;
 
         default:

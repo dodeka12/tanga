@@ -12,7 +12,7 @@ import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from './view_mode.js';
-import { updateLineResolutions } from './renderers/utils.js';
+import { updateLineResolutions, applyStyleUpdate } from './renderers/utils.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket, setSpaceDim } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
@@ -582,7 +582,7 @@ function handleMessage(msg) {
         return;
     }
 
-    if (msg.type === 'scene_config' || msg.type === 'scene_update') {
+    if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update') {
         if (!_forMyScene(msg)) return;
     }
     if (msg.type === 'controls_define' || msg.type === 'controls_clear') {
@@ -637,31 +637,7 @@ function handleMessage(msg) {
     } else if (msg.type === 'scene_update') {
         if (msg.removed) {
             for (const id of msg.removed) {
-                unregisterInteractive(id);
-                const mesh = entityMeshes.get(id);
-                if (mesh) {
-                    if (mesh.userData._attachedGroups) {
-                        for (const groupId of mesh.userData._attachedGroups) {
-                            detachGroup(groupId);
-                        }
-                    }
-                    removeEntityMesh(mesh);
-                }
-                entityMeshes.delete(id);
-                entityData.delete(id);
-                const oldObj = sceneObjects.get(id);
-                if (oldObj) {
-                    if (oldObj.obj && oldObj.obj.removeFromParent) oldObj.obj.removeFromParent();
-                    if (oldObj.el) oldObj.el.remove();
-                    sceneObjects.delete(id);
-                }
-                const lbl = labelObjects.get(id);
-                if (lbl) {
-                    lbl.removeFromParent();
-                    if (lbl.element) lbl.element.remove();
-                    labelObjects.delete(id);
-                }
-                cancelTween(id);
+                removeSceneObject(id);
             }
         }
         if (msg.objects) {
@@ -681,6 +657,20 @@ function handleMessage(msg) {
         if (msg.labels) {
             for (const lbl of msg.labels) {
                 upsertLabel(lbl);
+            }
+        }
+        if (msg.fit_camera) {
+            fitCameraToScene();
+        }
+    } else if (msg.type === 'object_update') {
+        if (msg.removed) {
+            for (const id of msg.removed) {
+                removeSceneObject(id);
+            }
+        }
+        if (msg.patches) {
+            for (const patch of msg.patches) {
+                applyObjectPatch(patch);
             }
         }
         if (msg.fit_camera) {
@@ -796,7 +786,18 @@ async function upsertObject(msg) {
     if (msg.layer === 'scene') {
         const mesh = await createEntityMesh(msg);
         if (mesh) {
-            scene.add(mesh);
+            applyTransformToObject(mesh, msg.transform);
+            if (msg.parent_id) {
+                const parent = sceneObjects.get(msg.parent_id);
+                if (parent && parent.obj) {
+                    parent.obj.add(mesh);
+                } else {
+                    scene.add(mesh);
+                }
+            } else {
+                scene.add(mesh);
+            }
+            mesh.userData.parentId = msg.parent_id || null;
             sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
             entityMeshes.set(msg.id, mesh);
             entityData.set(msg.id, { ...msg });
@@ -819,7 +820,8 @@ async function upsertObject(msg) {
         if (!el) return;
 
         let css2d = null;
-        if (msg.parentId) {
+        const attachId = msg.attach_to ?? msg.parentId;
+        if (attachId) {
             const container = document.createElement('div');
             container.appendChild(el);
             css2d = new CSS2DObject(container);
@@ -830,12 +832,12 @@ async function upsertObject(msg) {
             const tx = (0.5 - align[0]) * 100;
             const ty = (0.5 - align[1]) * 100;
             el.style.transform = `translate(${off2d[0]}px, ${off2d[1]}px) translate(${tx}%, ${ty}%)`;
-            const parentObj = sceneObjects.get(msg.parentId);
+            const parentObj = sceneObjects.get(attachId);
             if (parentObj && parentObj.obj) {
                 parentObj.obj.add(css2d);
                 parentObj.obj.userData._labels = parentObj.obj.userData._labels || [];
                 parentObj.obj.userData._labels.push(msg.id);
-                css2d.userData._parentId = msg.parentId;
+                css2d.userData._parentId = attachId;
             } else {
                 scene.add(css2d);
             }
@@ -852,6 +854,69 @@ async function upsertObject(msg) {
             document.body.appendChild(el);
         }
         sceneObjects.set(msg.id, { obj: css2d, el, layer: 'overlay' });
+    }
+}
+
+function removeSceneObject(id) {
+    unregisterInteractive(id);
+    const mesh = entityMeshes.get(id);
+    if (mesh) {
+        if (mesh.userData._attachedGroups) {
+            for (const groupId of mesh.userData._attachedGroups) {
+                detachGroup(groupId);
+            }
+        }
+        removeEntityMesh(mesh);
+    }
+    entityMeshes.delete(id);
+    entityData.delete(id);
+    const oldObj = sceneObjects.get(id);
+    if (oldObj) {
+        if (oldObj.obj && oldObj.obj.removeFromParent) oldObj.obj.removeFromParent();
+        if (oldObj.el) oldObj.el.remove();
+        sceneObjects.delete(id);
+    }
+    const lbl = labelObjects.get(id);
+    if (lbl) {
+        lbl.removeFromParent();
+        if (lbl.element) lbl.element.remove();
+        labelObjects.delete(id);
+    }
+    cancelTween(id);
+}
+
+function applyTransformToObject(obj, transform) {
+    if (!transform) return;
+    if (transform.position) obj.position.set(transform.position[0], transform.position[1], transform.position[2]);
+    if (transform.rotation) obj.rotation.set(transform.rotation[0], transform.rotation[1], transform.rotation[2]);
+    if (transform.scale) obj.scale.set(transform.scale[0], transform.scale[1], transform.scale[2]);
+}
+
+function applyObjectPatch(patch) {
+    const id = patch.id;
+    const aspect = patch.aspect;
+    const value = patch.value || {};
+
+    if (aspect === 'full') {
+        upsertObject(value);
+        return;
+    }
+
+    const entry = sceneObjects.get(id);
+    if (!entry) return;
+
+    if (aspect === 'transform') {
+        if (entry.obj) applyTransformToObject(entry.obj, value);
+        return;
+    }
+
+    if (aspect === 'style') {
+        if (value.style && entry.obj) {
+            const merged = { ...(entityData.get(id) || {}), style: { ...(entityData.get(id)?.style || {}), ...value.style } };
+            entityData.set(id, merged);
+            if (entry.obj.isObject3D) applyStyleUpdate(entry.obj, merged);
+        }
+        return;
     }
 }
 

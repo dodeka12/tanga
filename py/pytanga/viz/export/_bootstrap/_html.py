@@ -82,6 +82,7 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "axes2d.js",
     _RENDERERS_DIR / "axes3d.js",
     _RENDERERS_DIR / "grid.js",
+    _RENDERERS_DIR / "group.js",
     _RENDERERS_DIR / "factory.js",
 ]
 
