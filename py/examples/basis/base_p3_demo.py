@@ -5,7 +5,8 @@
 base_p3_demo.py — Projective 3D geometric algebra  G(4, 0).
 
 Demonstrates BasisP3: basis blades including the homogeneous direction e4,
-point factory, and join of points via the outer product (lines and planes).
+string-based homogeneous point construction, and join of points via the
+outer product (lines and planes).
 
 Run with:
     uv run python py/examples/base_p3_demo.py
@@ -37,10 +38,10 @@ e3.show("e3")
 e4.show("e4 (homogeneous direction)")
 I.show("I  = pseudoscalar")
 
-print("\nPoint factory — homogeneous coordinates:")
-A = P3.point(1, 0, 0)
-B = P3.point(0, 1, 0)
-C = P3.point(0, 0, 1)
+print("\nHomogeneous points (string conversion: x·e1 + y·e2 + z·e3 + e4):")
+A = P3("e1 + e4")
+B = P3("e2 + e4")
+C = P3("e3 + e4")
 A.show("A = point(1, 0, 0)")
 B.show("B = point(0, 1, 0)")
 C.show("C = point(0, 0, 1)")

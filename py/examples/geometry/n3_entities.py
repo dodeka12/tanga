@@ -47,8 +47,10 @@ def hr(title: str) -> None:
 hr("1. Conformal Point — second-order embedding")
 
 p = Point(2, 0, 0)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv = geo.create(p)
 mv.show("Point(2,0,0) — conformal embedding")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_entity(mv)
 print(f"  analyze → {result}")
 
@@ -56,8 +58,10 @@ print(f"  analyze → {result}")
 hr("2. Direction — ideal point at infinity")
 
 d = Direction(0, 1, 0)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_d = geo.create(d)
 mv_d.show("Direction(0,1,0) — SP with einf = 0")
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_entity(mv_d)
 print(f"  analyze → {result}")
 
@@ -65,6 +69,7 @@ print(f"  analyze → {result}")
 hr("3. PointPair — two-point entity (grade-2 blade)")
 
 pp = PointPair(point_a=Point(-2, 0, 0), point_b=Point(2, 0, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_pp = geo.create(pp)
 print(f"  create → grade-{max(mv_pp.grades)} blade")
 result = geo.analyze(mv_pp)
@@ -74,6 +79,7 @@ print(f"  analyze → {result}")
 hr("4. HPoint — weighted point (A ∧ einf)")
 
 hp = HPoint(point=Point(1, 2, 3), weight=1.5)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_hp = geo.create(hp)
 result = geo.analyze(mv_hp)
 print(f"  create+analyze → {result}")
@@ -85,10 +91,12 @@ print(
 hr("5. Line vs Circle — grade-3 distinction")
 
 line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 print(f"  Line:  {geo.analyze(geo.create(line))}")
 
 circle = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)
 try:
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     result = geo.analyze(geo.create(circle))
     print(f"  Circle: {result}")
 except Exception:
@@ -99,9 +107,11 @@ print("  (Circle has e123 component; Line does not)")
 hr("6. Plane vs Sphere — grade-4 distinction")
 
 plane = Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 print(f"  Plane:  {geo.analyze(geo.create(plane))}")
 
 sphere = Sphere(center=Point(1, 0, 0), radius=3.0)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.analyze(geo.create(sphere))
 print(
     f"  Sphere: center=({result.center.x:.1f}, "
@@ -115,16 +125,22 @@ print("  (Sphere has e123o component; Plane does not)")
 hr("7. IPNS — spheres as grade-1, points as grade-4")
 
 # A sphere in IPNS is a grade-1 vector (dual of grade-4 OPNS blade)
-mv_sp_ipns = geo.create(sphere, opns=False)
+n3.opns = False
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+mv_sp_ipns = geo.create(sphere)
 print(f"  IPNS Sphere: grade-{max(mv_sp_ipns.grades)} blade")
-result = geo.which_entity(mv_sp_ipns, opns=False)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+result = geo.which_entity(mv_sp_ipns)
 print(f"  analyze → {result}")
 
 # A point in IPNS is a grade-4 blade (dual of grade-1 OPNS blade)
-mv_pt_ipns = geo.create(Point(5, 0, 0), opns=False)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+mv_pt_ipns = geo.create(Point(5, 0, 0))
 print(f"  IPNS Point: grade-{max(mv_pt_ipns.grades)} blade")
-result = geo.which_entity(mv_pt_ipns, opns=False)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+result = geo.which_entity(mv_pt_ipns)
 print(f"  analyze → {result}")
+n3.opns = True
 
 # ── 8. Entity coverage summary ──────────────────────────────
 hr("8. Entity coverage — all 9 N3 types")
@@ -142,6 +158,7 @@ entities = [
 ]
 
 for e in entities:
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     mv = geo.create(e)
     result = geo.analyze(mv)
     name = type(e).__name__

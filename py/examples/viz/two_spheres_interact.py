@@ -31,10 +31,7 @@ class TwoSpheresApp(VisualizerApp):
     """
 
     def __init__(self) -> None:
-        super().__init__(
-            title="Two Spheres Intersection (IPNS)",
-            opns=False,
-        )
+        super().__init__(title="Two Spheres Intersection (IPNS)")
         # ── App state (used by handlers) ──
         self.radius_a = 1.0
         self.radius_b = 1.3
@@ -45,17 +42,20 @@ class TwoSpheresApp(VisualizerApp):
 
     async def init(self) -> None:
         """Create the geometry, add entities, and register controls."""
-        b = BasisN3()
-        self._geo = Geometry(b, opns=False)
+        b = BasisN3(opns=False)
+        self._geo = Geometry(b)
 
         self.viz.set_annotation(
             "IPNS intersection $S_1 \\wedge S_2$ — drag the slider to move Sphere B."
         )
 
         # ── Store initial MVs so handlers can reuse them ──
+        # _geo(...) creates for Entity/Operator args; analyzes for MV args
         self._s1_mv = self._geo.create(Sphere(Point(0.0, 0.0, 0.0), self.radius_a))
+        # _geo(...) creates for Entity/Operator args; analyzes for MV args
         s2_mv = self._geo.create(Sphere(Point(self.x_default, 0.0, 0.0), self.radius_b))
         ci_mv = self._s1_mv ^ s2_mv
+        # _geo(...) creates for Entity/Operator args; analyzes for MV args
         print(self._geo.which_entity(ci_mv))
 
         self.viz.add(
@@ -126,10 +126,12 @@ class TwoSpheresApp(VisualizerApp):
         )
 
     async def _update_scene(self, x: float, mode: str) -> None:
+        # _geo(...) creates for Entity/Operator args; analyzes for MV args
         s2_mv = self._geo.create(Sphere(Point(x, 0.0, 0.0), self.radius_b))
         self.viz.update_entity(SPHERE_B_ID, s2_mv)
 
         ci_mv = self._s1_mv ^ s2_mv
+        # _geo(...) creates for Entity/Operator args; analyzes for MV args
         ci_exists = self._geo.which_entity(ci_mv) is not None
 
         show_a = mode in ("Both", "Sphere A only")

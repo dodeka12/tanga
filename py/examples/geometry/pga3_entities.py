@@ -6,13 +6,13 @@
 This script demonstrates the Gunn/Dorst projective geometric algebra (PGA)
 in 3D, where:
 
-  - Planes  = grade‑1 vectors   ``n + d·einf``
+  - Planes  = grade‑1 vectors   ``n + d·e0``
   - Lines   = grade‑2 bivectors (intersection of two planes)
   - Points  = grade‑3 trivectors (intersection of three planes)
 
 Points can also be represented in IPNS (dual) form as
-``x·e1 + y·e2 + z·e3 + einf`` (grade 1).  The default ``opns=True`` mode
-uses the plane‑based representation.
+``x·e1 + y·e2 + z·e3 + e0`` (grade 1).  The default OPNS algebra flag uses
+the plane‑based representation.
 
 Uses the ``Geometry`` class to bind the PGA3 algebra and its default OPNS
 flag.  Plain functions remain available as an alternative (see the last
@@ -51,6 +51,7 @@ def hr(title: str) -> None:
 hr("1. Plane — grade‑1 vector (Gunn/Dorst OPNS)")
 
 plane = Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv = geo.create(plane)
 mv.show("Plane at z=3, normal (0,0,1)")
 result = geo.analyze(mv)
@@ -61,6 +62,7 @@ print("  (OPNS grade 1 = plane)")
 hr("2. Line — grade‑2 bivector (intersection of two planes)")
 
 line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_l = geo.create(line)
 mv_l.show("Line through origin along x‑axis")
 print(f"  analyze → {geo.analyze(mv_l)}")
@@ -70,29 +72,38 @@ print("  (OPNS grade 2 = line)")
 hr("3. Point — grade‑3 trivector in OPNS")
 
 p = Point(5, 0, 0)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv = geo.create(p)
 print(f"  OPNS point grade: {max(mv.grades)}  (expected 3)")
 result = geo.analyze(mv)
 print(f"  analyze → {result}")
 
 # IPNS form (dual, grade 1)
-mv2 = geo.create(p, opns=False)
+pga.opns = False
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+mv2 = geo.create(p)
 print(f"  IPNS point grade: {max(mv2.grades)}  (expected 1)")
 result2 = geo.analyze(mv2)
 print(f"  analyze (IPNS) → {result2}")
+pga.opns = True
 
 # ── 4. Direction ──────────────────────────────────────────
 hr("4. Direction — ideal point at infinity")
 
 d = Direction(1, 0, 0)
-mv_d = geo.create(d, opns=False)
-print(f"  IPNS Direction: {geo.which_entity(mv_d, opns=False)}")
-print("  (ideal point: no einf component in the grade‑1 dual)")
+pga.opns = False
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+mv_d = geo.create(d)
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+print(f"  IPNS Direction: {geo.which_entity(mv_d)}")
+print("  (ideal point: no e0 component in the grade‑1 dual)")
+pga.opns = True
 
 # ── 5. Space ──────────────────────────────────────────────
-hr("5. Space — 4D pseudoscalar I_4d = e1∧e2∧e3∧einf")
+hr("5. Space — 4D pseudoscalar I_4d = e1∧e2∧e3∧e0")
 
 sp = Space()
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_sp = geo.create(sp)
 print(f"  Space OPNS grade: {max(mv_sp.grades)}  (expected 4)")
 result = geo.analyze(mv_sp)
@@ -103,12 +114,14 @@ hr("6. Operators (Rotor, Translator, Motor)")
 
 # Rotor round-trip
 r = Rotor(angle=0.5, axis=Direction(0, 1, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 result_op = geo.which_operator(geo.create(r))
 print(f"  Rotor: {type(result_op).__name__} ✓")
 
 # Translator round-trip
 t = Translator(vector=Direction(2, 0, 0))
 try:
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     result_op = geo.which_operator(geo.create(t))
     print(f"  Translator: {type(result_op).__name__} ✓")
 except (ValueError, NotImplementedError):
@@ -119,15 +132,20 @@ m = Motor(
     rotor=Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1)),
     translator=Translator(vector=Direction(1, 0, 0)),
 )
+# geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_m = geo.create(m)
 print(f"  Motor created: grade‑{max(mv_m.grades)} versor ✓")
 
 # ── 7. IPNS interpretation ────────────────────────────────
-hr("7. IPNS interpretation (opns=False)")
+hr("7. IPNS interpretation (algebra flag opns=False)")
 
-mv_pt = geo.create(Point(3, 0, 0), opns=False)
-result = geo.which_entity(mv_pt, opns=False)
+pga.opns = False
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+mv_pt = geo.create(Point(3, 0, 0))
+# geo(...) creates for Entity/Operator args; analyzes for MV args
+result = geo.which_entity(mv_pt)
 print(f"  IPNS create + analyze of Point(3,0,0) → {result}")
+pga.opns = True
 
 # ── 8. Entity coverage summary ────────────────────────────
 hr("8. Entity coverage — all PGA3 types")
@@ -141,6 +159,7 @@ entities = [
 ]
 
 for name, e in entities:
+    # geo(...) creates for Entity/Operator args; analyzes for MV args
     mv = geo.create(e)
     result = geo.analyze(mv)
     ok = "✓" if type(result).__name__ == name else f"→ {type(result).__name__}"

@@ -9,6 +9,7 @@ from pytanga import MV, BladeMask
 from pytanga.algebra import EProduct
 from pytanga.basis.p3 import BasisP3
 from pytanga.blade_mask.predict import product_blade_mask
+from pytanga.geometry import Direction, Point, Rotor, create_entity, create_operator
 from pytanga.matrix import MVProductMatrix
 from pytanga.matrix.convert import to_matrix
 from pytanga.matrix.product import product_matrix
@@ -16,15 +17,41 @@ from pytanga.matrix.product import product_matrix
 P3 = BasisP3()
 
 
+def _rnd_point() -> MV:
+    return create_entity(
+        P3,
+        Point(
+            P3.rng.uniform(-2, 2),
+            P3.rng.uniform(-2, 2),
+            P3.rng.uniform(-2, 2),
+        ),
+    )
+
+
+def _rnd_direction() -> MV:
+    return create_entity(
+        P3,
+        Direction(
+            P3.rng.uniform(-0.1, 0.1),
+            P3.rng.uniform(-0.1, 0.1),
+            P3.rng.uniform(-0.1, 0.1),
+        ),
+    )
+
+
 # Create random points
-pnt_list: list[MV] = [P3.rnd_point((-2, 2), (-2, 2), (-2, 2)) for _ in range(4)]
+pnt_list: list[MV] = [_rnd_point() for _ in range(4)]
 print("3D points:")
 for pnt in pnt_list:
     pnt.show()
 
 # Project the 3d points to an image plane perpendicular to e3 at e3 + e4.
-origin: MV = P3.point(0, 0, 0)
-plane: MV = P3.point(0, 0, 1) ^ P3.point(1, 0, 1) ^ P3.point(0, 1, 1)
+origin: MV = create_entity(P3, Point(0, 0, 0))
+plane: MV = (
+    create_entity(P3, Point(0, 0, 1))
+    ^ create_entity(P3, Point(1, 0, 1))
+    ^ create_entity(P3, Point(0, 1, 1))
+)
 prj_ray_list: list[MV] = [origin ^ pnt for pnt in pnt_list]
 prj_pnt_list: list[MV] = [ray | plane for ray in prj_ray_list]
 print("Projections:")
@@ -33,14 +60,15 @@ for pnt in prj_pnt_list:
 
 theta_true: float = math.radians(36.0)
 
-rot_axis: MV = P3("e1 + e2 + e3")
-rotor_true: MV = P3.rotor(theta_true, rot_axis)
+rotor_true: MV = create_operator(
+    P3, Rotor(angle=theta_true, axis=Direction(1, 1, 1).normalized())
+)
 
 # Rotate the points and add some noise to them
 true_rot_pnt_list: list[MV] = [rotor_true.vp(pnt) for pnt in pnt_list]
 
 rot_pnt_list: list[MV] = [
-    pnt + P3.rnd_direction((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1))
+    pnt + _rnd_direction()
     for pnt in true_rot_pnt_list
 ]
 

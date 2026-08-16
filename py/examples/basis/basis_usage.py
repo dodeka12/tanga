@@ -106,7 +106,7 @@ hr("Method 2 — attribute access (b.e1, b.e2, …)")
 (b.e2 * b.e1).show("b.e2 * b.e1")
 (b.I * b.I).show("b.I  * b.I ")
 b.e1.op(b.e2).show("b.e1.op(b.e2)")
-b.vector(1, 2, 3).show("b.vector(1, 2, 3)")
+b("e1 + 2 e2 + 3 e3").show("b(\"e1 + 2 e2 + 3 e3\")")
 
 
 # Works identically inside a function — no algebra object needed.
@@ -115,8 +115,8 @@ def euclidean_dot(u: MV, v: MV) -> MV:
     return u.ip(v)
 
 
-v1 = b.vector(1, 0, 0)
-v2 = b.vector(0, 1, 0)
+v1 = b("e1")
+v2 = b("e2")
 euclidean_dot(v1, v2).show("e1 · e2 (should be 0)")
 euclidean_dot(v1, v1).show("e1 · e1 (should be 1)")
 
