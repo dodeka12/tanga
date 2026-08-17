@@ -19,7 +19,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraConfig
 from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
-from ._style_defaults import VizStyleDefaults, make_defaults
+from ._viz_styles import VizStyles, make_styles
 
 # ── Configuration ──────────────────────────────────────────
 
@@ -93,12 +93,12 @@ class Scene:
         config: SceneConfig | None = None,
         *,
         name: str = "",
-        style_defaults: VizStyleDefaults | None = None,
+        styles: VizStyles | None = None,
     ) -> None:
         self.config = config or SceneConfig()
         self.config.name = name
         self.name: str = name
-        self.style_defaults: VizStyleDefaults = style_defaults or make_defaults()
+        self.styles: VizStyles = styles or make_styles()
         self._objects: dict[str, SceneObject] = {}
         self._nodes: dict[str, VizNode] = {}
         self._order: list[str] = []
@@ -142,7 +142,7 @@ class Scene:
         props = obj.properties or {}
         kind = obj.kind
         merged = _style_to_output(
-            props.get("style"), kind, styles_map=self.default_styles
+            props.get("style"), kind, styles_map=self.styles.kind
         )
         if props.get("color") is not None:
             merged["color"] = props["color"]
@@ -155,7 +155,7 @@ class Scene:
             name=obj.kind,
             kind=kind,
             props=props,
-            styles_map=self.default_styles,
+            styles_map=self.styles.kind,
         )
 
     def _make_overlay_node(self, obj: SceneObject) -> VizOverlayObject:
@@ -165,7 +165,7 @@ class Scene:
             return VizOverlayObject(
                 obj.id,
                 kind="label",
-                style=getattr(label, "style", None) or self.default_label_style,
+                style=getattr(label, "style", None) or self.styles.label_base,
                 position=getattr(label, "position", (0.0, 0.0, 0.0)),
                 attach_to=getattr(label, "parent_id", None),
                 payload=getattr(label, "text", None),
@@ -322,11 +322,11 @@ class Scene:
                     line_length = None
                     if isinstance(parent_entity, Line):
                         line_length = resolve_line_length(
-                            parent_entity, styles_map=self.default_styles
+                            parent_entity, styles_map=self.styles.kind
                         )
                     elif isinstance(parent_entity, ReflectionLine):
                         line_length = resolve_line_length(
-                            parent_entity.line, styles_map=self.default_styles
+                            parent_entity.line, styles_map=self.styles.kind
                         )
 
                     new_position = compute_label_position(
@@ -491,38 +491,6 @@ class Scene:
     def entity_count(self) -> int:
         """Number of live objects."""
         return len(self._objects)
-
-    # -- Default style accessors -------------------------------
-
-    @property
-    def default_styles(self):
-        """Per-kind entity/operator style instances (this scene's copy)."""
-        return self.style_defaults.default_styles
-
-    @property
-    def default_label_style(self):
-        """Global default ``LabelStyle`` (this scene's copy)."""
-        return self.style_defaults.default_label_style
-
-    @property
-    def default_label_styles(self):
-        """Per-kind default label style overrides (this scene's copy)."""
-        return self.style_defaults.default_label_styles
-
-    @property
-    def default_annotation_style(self):
-        """Global default ``AnnotationStyle`` (this scene's copy)."""
-        return self.style_defaults.default_annotation_style
-
-    @property
-    def default_tex_label_style(self):
-        """Global default ``TextureLabelStyle`` (this scene's copy)."""
-        return self.style_defaults.default_tex_label_style
-
-    @property
-    def default_tex_label_styles(self):
-        """Per-kind texture label style overrides (this scene's copy)."""
-        return self.style_defaults.default_tex_label_styles
 
     # -- Control storage ---------------------------------------
 

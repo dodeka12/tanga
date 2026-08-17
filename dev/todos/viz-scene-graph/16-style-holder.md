@@ -127,7 +127,7 @@ The working tree still contains four mistaken edits from an earlier attempt
 
 ### Step 2 — Migrate the library to `VizStyles` (atomic clean break)
 
-- [ ] `py/pytanga/viz/visualizer.py`:
+- [x] `py/pytanga/viz/visualizer.py`:
       - `self._style_defaults = make_defaults()` → `self._global_styles = make_styles()`;
         drop the inline `ActPointStyle` construction.
       - Add `global_styles` and `styles` properties.
@@ -138,21 +138,21 @@ The working tree still contains four mistaken edits from an earlier attempt
         (label_base / label_kind / tex_label_base / tex_label_kind /
         annotation / kind) instead of `self._default_*`.
       - `_full_state_for` (≈705) and the export path (≈1815) →
-        `styles_map=self.styles.kind`.
-- [ ] `py/pytanga/viz/scene.py`:
+        `styles_map=scene.styles.kind`.
+- [x] `py/pytanga/viz/scene.py`:
       - rename the `style_defaults` attribute → `styles` (update `__init__`
         and every `self.style_defaults` reference).
       - `default_*` properties (≈498-525) → `styles.*` members (or remove the
         wrappers and read members directly in `_make_scene_node` /
         `_make_overlay_node` / `update_label`).
-- [ ] `py/pytanga/viz/_scene_handle.py`: replace `default_styles`,
+- [x] `py/pytanga/viz/_scene_handle.py`: replace `default_styles`,
       `default_label_style`, `default_label_styles`, `default_annotation_style`,
       `default_act_point_style` (≈72-99) with a single `styles` property →
       `self._scene().styles`.
-- [ ] `py/pytanga/viz/_active.py`: `viz_handle.default_act_point_style` →
+- [x] `py/pytanga/viz/_active.py`: `viz_handle.default_act_point_style` →
       `viz_handle.styles.act_point` (≈255, 257).
-- [ ] Delete `py/pytanga/viz/_style_defaults.py`.
-- [ ] Verify: `uv run python -c "import pytanga.viz"` clean; `compileall` on the
+- [x] Delete `py/pytanga/viz/_style_defaults.py`.
+- [x] Verify: `uv run python -c "import pytanga.viz"` clean; `compileall` on the
       package. (Tests referencing the old API fail until Step 3.)
 
 ### Step 3 — Update tests and non-demo examples (clean-break fallout)

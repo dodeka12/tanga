@@ -65,7 +65,7 @@ def serialize_entity(
         kind: The kind string (``type(entity).__name__``).  When ``None`` it
             is auto-detected from ``entity``.  Passing the pre-computed kind
             from ``SceneObject`` avoids duplicating type checks.
-        styles_map: Per-kind style dict from Visualizer.default_styles.
+        styles_map: Per-kind style dict from ``VizStyles.kind`` (a scene's styles).
 
     Returns:
         A flat dict suitable for ``json.dumps()``.

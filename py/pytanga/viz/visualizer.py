@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Iterator
 if TYPE_CHECKING:
     from ._object_ref import VizObjectRef
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
+    from ._viz_styles import VizStyles
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
@@ -34,7 +35,6 @@ from ._style_dict import (
     _resolve_annotation_style,
     _resolve_label_style,
     _resolve_tex_label_style,
-    _StyleDict,
 )
 from ._timeline import Timeline
 from ._types import SceneEntity, VizInputType
@@ -129,10 +129,10 @@ class Visualizer(_JupyterDisplayMixin):
             open_browser = not self._jupyter
         self._open_browser = open_browser
 
-        # Bundled default style configuration (shared canonical instance).
-        from ._style_defaults import make_defaults
+        # Bundled default style configuration (master instance; scenes copy it).
+        from ._viz_styles import make_styles
 
-        self._style_defaults = make_defaults()
+        self._global_styles = make_styles()
 
         # Control handler registry (shared across all scenes)
         from ._controls import ControlHandlerRegistry
@@ -145,18 +145,11 @@ class Visualizer(_JupyterDisplayMixin):
         self._interaction_registry = InteractionHandlerRegistry()
         self._interaction_configs: dict[str, dict[str, Any]] = {}
 
-        # Default ActPointStyle (shared across all scenes)
-        from ._act_style import ActPointStyle
-
-        self._default_act_point_style = ActPointStyle(
-            hover_emissive="#ffff44", hover_scale=1.5
-        )
-
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
         self._scenes: dict[str, Scene] = {}
         self._scenes[""] = Scene(
-            self._config, name="", style_defaults=self._style_defaults.copy()
+            self._config, name="", styles=self._global_styles.copy()
         )
         self._default_objects_added: set[str] = set()
 
@@ -182,7 +175,7 @@ class Visualizer(_JupyterDisplayMixin):
                 space_dim=self._config.space_dim,
             )
             self._scenes[name] = Scene(
-                cfg, name=name, style_defaults=self._style_defaults.copy()
+                cfg, name=name, styles=self._global_styles.copy()
             )
             self._add_default_scene_objects(name)
         return VizSceneHandle(self, name)
@@ -400,8 +393,8 @@ class Visualizer(_JupyterDisplayMixin):
             entity_for_kind = self._resolve(obj)
             kind = type(entity_for_kind).__name__
             _tex_label_merged = _resolve_tex_label_style(
-                self._default_tex_label_style,
-                self._default_tex_label_styles.get(kind),
+                scene.styles.tex_label_base,
+                scene.styles.tex_label_kind.get(kind),
                 tex_label_style,
             )
             _tex_label_merged.text = tex_label
@@ -472,19 +465,19 @@ class Visualizer(_JupyterDisplayMixin):
 
             kind = type(entity).__name__
             resolved_ls = _resolve_label_style(
-                self._default_label_style,
-                self._default_label_styles.get(kind),
+                scene.styles.label_base,
+                scene.styles.label_kind.get(kind),
                 label_style,
             )
 
             line_length = None
             if isinstance(entity, Line):
                 line_length = resolve_line_length(
-                    entity, styles_map=self._default_styles, props=properties
+                    entity, styles_map=scene.styles.kind, props=properties
                 )
             elif isinstance(entity, ReflectionLine):
                 line_length = resolve_line_length(
-                    entity.line, styles_map=self._default_styles, props=properties
+                    entity.line, styles_map=scene.styles.kind, props=properties
                 )
 
             position = compute_label_position(
@@ -607,7 +600,7 @@ class Visualizer(_JupyterDisplayMixin):
             scene.remove("__annotation__")
         else:
             style_dict = _resolve_annotation_style(
-                self._default_annotation_style, style
+                scene.styles.annotation, style
             )
             obj = SceneObject(
                 id="__annotation__",
@@ -702,7 +695,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Return full serialized state for a scene, adding defaults first."""
         self._add_default_scene_objects(scene_name)
         scene = self._scenes.get(scene_name, self._scenes[""])
-        return scene.full_state(styles_map=self._default_styles), []
+        return scene.full_state(styles_map=scene.styles.kind), []
 
     @staticmethod
     def sleep_ms(milliseconds: int) -> None:
@@ -755,17 +748,20 @@ class Visualizer(_JupyterDisplayMixin):
         kind: str,
         color: str | tuple[float, float, float] | tuple[float, float, float, float],
     ) -> None:
-        """Set the default color (and optionally opacity) for an entity kind."""
+        """Set the default color (and optionally opacity) for an entity kind.
+
+        Targets the main scene's style defaults (``viz.styles``).
+        """
         normalized = _normalize_color(color)
         key = _kind_to_key(kind)
-        if key not in self._default_styles:
+        if key not in self.styles.kind:
             raise ValueError(f"Unknown entity kind: {kind!r}")
 
         if isinstance(normalized, tuple):
-            self._default_styles[key].color = normalized[0]
-            self._default_styles[key].opacity = normalized[1]
+            self.styles.kind[key].color = normalized[0]
+            self.styles.kind[key].opacity = normalized[1]
         else:
-            self._default_styles[key].color = normalized
+            self.styles.kind[key].color = normalized
 
     # ── MV resolution ──────────────────────────────────────
 
@@ -1812,7 +1808,7 @@ class Visualizer(_JupyterDisplayMixin):
         from pytanga.viz.export._html import render_export_html
 
         scene = self._scenes[scene_name]
-        objects = scene.full_state(styles_map=self._default_styles)
+        objects = scene.full_state(styles_map=scene.styles.kind)
 
         html = render_export_html(
             objects=objects,
@@ -1834,99 +1830,19 @@ class Visualizer(_JupyterDisplayMixin):
             return None
 
     @property
-    def _default_styles(self):
-        """Backing per-kind style instances (forward to the holder)."""
-        return self._style_defaults.default_styles
+    def global_styles(self) -> "VizStyles":
+        """The master :class:`VizStyles` instance (template for new scenes)."""
+        return self._global_styles
 
     @property
-    def _default_label_style(self):
-        """Backing global label style (forward to the holder)."""
-        return self._style_defaults.default_label_style
-
-    @property
-    def _default_label_styles(self):
-        """Backing per-kind label style overrides (forward to the holder)."""
-        return self._style_defaults.default_label_styles
-
-    @property
-    def _default_annotation_style(self):
-        """Backing global annotation style (forward to the holder)."""
-        return self._style_defaults.default_annotation_style
-
-    @property
-    def _default_tex_label_style(self):
-        """Backing global texture label style (forward to the holder)."""
-        return self._style_defaults.default_tex_label_style
-
-    @property
-    def _default_tex_label_styles(self):
-        """Backing per-kind texture label overrides (forward to the holder)."""
-        return self._style_defaults.default_tex_label_styles
-
-    @property
-    def default_styles(self) -> _StyleDict:
-        """Per-kind style instances used as defaults."""
-        return self._default_styles
-
-    @property
-    def default_label_style(self) -> LabelStyle:
-        """The global default ``LabelStyle`` instance."""
-        return self._default_label_style
-
-    @default_label_style.setter
-    def default_label_style(self, value: LabelStyle) -> None:
-        self._style_defaults.default_label_style = value
-
-    @property
-    def default_label_styles(self) -> _StyleDict:
-        """Per-kind default label style overrides.
-
-        Wrapped in a :class:`_StyleDict`, so entries may be addressed by
-        string key (``"Sphere"``) or by class (``Sphere``)::
-
-            viz.default_label_styles[Sphere] = LabelStyle(font_size=18)
-            viz.default_label_styles["Sphere"]  # same entry
-        """
-        return _StyleDict(self._default_label_styles)
+    def styles(self) -> "VizStyles":
+        """The main scene's :class:`VizStyles` (what gets rendered)."""
+        return self._scenes[""].styles
 
     @property
     def main_scene(self) -> Scene:
         """The underlying main :class:`Scene` instance (backward compat)."""
         return self._scenes[""]
-
-    @property
-    def default_annotation_style(self) -> AnnotationStyle:
-        """The global default ``AnnotationStyle`` instance."""
-        return self._default_annotation_style
-
-    @property
-    def default_act_point_style(self) -> ActPointStyle:
-        """The global default :class:`ActPointStyle` for all active points.
-
-        Can be reassigned to change hover highlighting for all
-        active points at once::
-
-            viz.default_act_point_style = ActPointStyle(
-                hover_emissive="#00ff00", hover_scale=2.0
-            )
-        """
-        return self._default_act_point_style
-
-    @default_act_point_style.setter
-    def default_act_point_style(self, value: ActPointStyle) -> None:
-        self._default_act_point_style = value
-
-    @property
-    def default_tex_label_style(self) -> _StyleDict:
-        """Per-kind texture label style defaults.
-
-        Usage::
-
-            viz.default_tex_label_style["Sphere"] = TextureLabelStyle(
-                repeat_u=4, offset_v=0.25, background=None
-            )
-        """
-        return _StyleDict(self._default_tex_label_styles)
 
     @property
     def url(self) -> str:

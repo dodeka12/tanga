@@ -14,9 +14,9 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
+    from ._viz_styles import VizStyles
     from .visualizer import Visualizer
 
-from ._act_style import ActPointStyle
 from ._jupyter import _JupyterDisplayMixin
 from ._timeline import Timeline
 from ._types import SceneEntity
@@ -70,33 +70,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
         return self._scene()
 
     @property
-    def default_styles(self) -> Any:
-        """Per-kind style instances (shared across all scenes)."""
-        return self._viz.default_styles
-
-    @property
-    def default_label_style(self) -> LabelStyle:
-        """The global default ``LabelStyle`` instance (shared across scenes)."""
-        return self._viz.default_label_style
-
-    @property
-    def default_label_styles(self) -> Any:
-        """Per-kind default label style overrides (shared across scenes).
-
-        Wrapped in a :class:`_StyleDict`, so entries may be addressed by
-        string key or by class.
-        """
-        return self._viz.default_label_styles
-
-    @property
-    def default_annotation_style(self) -> AnnotationStyle:
-        """The global default ``AnnotationStyle`` instance (shared across scenes)."""
-        return self._viz.default_annotation_style
-
-    @property
-    def default_act_point_style(self) -> ActPointStyle:
-        """The global default ``ActPointStyle`` instance (shared across scenes)."""
-        return self._viz.default_act_point_style
+    def styles(self) -> "VizStyles":
+        """This scene's :class:`VizStyles` holder (its own copy)."""
+        return self._scene().styles
 
     # ── Entity management ───────────────────────────────────
 
