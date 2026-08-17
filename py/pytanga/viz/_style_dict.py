@@ -12,7 +12,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ._styles import AnnotationStyle, FigureStyle, LabelStyle
+    from ._act_style import ActPointStyle
+    from ._styles import AnnotationStyle, FigureStyle, LabelStyle, TextureLabelStyle
 
 
 class _StyleDict:
@@ -178,6 +179,13 @@ def _make_default_annotation_style() -> "AnnotationStyle":
         padding="10px 16px",
         border_radius="4px",
     )
+
+
+def _make_default_act_point_style() -> "ActPointStyle":
+    """Return a fully-initialised canonical ``ActPointStyle``."""
+    from ._act_style import ActPointStyle as _APS
+
+    return _APS(hover_emissive="#ffff44", hover_scale=1.5)
 
 
 def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:

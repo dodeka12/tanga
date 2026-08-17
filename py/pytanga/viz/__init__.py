@@ -83,6 +83,7 @@ from ._styles import (
     VizStyle,
 )
 from ._types import SceneEntity, VizInputType
+from ._viz_styles import VizStyles
 from .camera import (
     CameraConfig,
     CameraConfig2d,
@@ -182,4 +183,5 @@ __all__ = [
     "VizSceneHandle",
     "VizSceneObject",
     "VizStyle",
+    "VizStyles",
 ]

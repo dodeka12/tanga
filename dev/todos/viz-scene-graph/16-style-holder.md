@@ -115,15 +115,15 @@ The working tree still contains four mistaken edits from an earlier attempt
 
 ### Step 1 — Introduce `VizStyles` (additive, nothing else changes)
 
-- [ ] New `py/pytanga/viz/_viz_styles.py`: the `VizStyles` dataclass
+- [x] New `py/pytanga/viz/_viz_styles.py`: the `VizStyles` dataclass
       (7 members, `__getitem__`/`__setitem__`, deep `copy()`) and
       `make_styles()` (reusing the existing `_make_default_*` factories;
       wrap `label_kind`/`tex_label_kind` in `_StyleDict`).
-- [ ] `py/pytanga/viz/_style_dict.py`: add `_make_default_act_point_style()`.
-- [ ] `py/pytanga/viz/__init__.py`: export `VizStyles`.
-- [ ] New `py/tests/viz/test_viz_styles.py`: member access, class-key + string-key
+- [x] `py/pytanga/viz/_style_dict.py`: add `_make_default_act_point_style()`.
+- [x] `py/pytanga/viz/__init__.py`: export `VizStyles`.
+- [x] New `py/tests/viz/test_viz_styles.py`: member access, class-key + string-key
       `__getitem__`/`__setitem__`, `copy()` deep isolation, `act_point` default.
-- [ ] Verify: new tests + full suite green (old API untouched).
+- [x] Verify: new tests + full suite green (old API untouched).
 
 ### Step 2 — Migrate the library to `VizStyles` (atomic clean break)
 
