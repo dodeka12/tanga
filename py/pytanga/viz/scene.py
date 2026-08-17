@@ -289,17 +289,14 @@ class Scene:
         text: str | None = None,
         style: Any | None = None,
     ) -> None:
-        """Update a label's text and/or style without changing its position.
-
-        Args:
-            object_id: The label's scene object ID (returned by ``add()``
-                when passing a ``Label``, or retrievable via scene introspection).
-            text: New label text.  ``None`` leaves unchanged.
-            style: New ``LabelStyle`` instance.  ``None`` leaves unchanged.
-        """
+        """Update a label's text and/or style (and position when the anchor changes)."""
         obj = self._get(object_id)
+        node = self._nodes.get(object_id)
+
         if text is not None:
             obj.data.text = text
+
+        new_position: tuple[float, float, float] | None = None
         if style is not None:
             if obj.data.style is None:
                 obj.data.style = style
@@ -307,23 +304,49 @@ class Scene:
                 for field_name, value in style.__dict__.items():
                     if value is not None:
                         setattr(obj.data.style, field_name, value)
-            # If offset_local changed, recompute the label position
-            if style.offset_local is not None and obj.data.parent_id is not None:
+            # If the anchor offset or the along parameter changed, recompute
+            # the label position.
+            if (
+                style.offset_local is not None or style.along is not None
+            ) and obj.data.parent_id is not None:
                 parent_obj = self._objects.get(obj.data.parent_id)
                 if parent_obj is not None and parent_obj.layer == "scene":
                     from ._label_frame import compute_label_position
+                    from .serializer import resolve_line_length
 
-                    obj.data.position = compute_label_position(
-                        parent_obj.data, style.offset_local
+                    from pytanga.geometry.entities import Line
+                    from pytanga.geometry.operators import ReflectionLine
+
+                    merged = obj.data.style
+                    parent_entity = parent_obj.data
+                    line_length = None
+                    if isinstance(parent_entity, Line):
+                        line_length = resolve_line_length(
+                            parent_entity, styles_map=self.default_styles
+                        )
+                    elif isinstance(parent_entity, ReflectionLine):
+                        line_length = resolve_line_length(
+                            parent_entity.line, styles_map=self.default_styles
+                        )
+
+                    new_position = compute_label_position(
+                        parent_entity,
+                        merged.offset_local,
+                        along=merged.along,
+                        line_length=line_length,
                     )
+
+        if new_position is not None:
+            obj.data.position = new_position
         obj.dirty = True
 
-        node = self._nodes.get(object_id)
         if isinstance(node, VizOverlayObject):
             if text is not None:
                 node.set_payload(text)
             if style is not None:
                 node.set_style(style)
+            if new_position is not None:
+                node.set_position(new_position)
 
     def update_entity(self, entity_id: str, entity: GeoEntity) -> None:
         """Replace the geometry entity for an existing scene-layer ID."""

@@ -208,10 +208,14 @@ class _GltfBuilder:
             cone.positions[:, 1] += length * 0.75 + length * 0.25 / 2
             return [cyl, cone]
         elif kind == "Line":
+            # `length` is a content field (0 = "infinite → style default").
+            # `thickness` is a pixel width on the web frontend; glTF has no
+            # such concept, so use a fixed world-unit cylinder radius.
+            length = ent.get("length") or self._style_val(ent, "length", 20.0)
             return [
                 _prims.cylinder(
-                    self._style_val(ent, "thickness", 0.03),
-                    self._style_val(ent, "length", 20.0),
+                    0.03,
+                    length,
                     8,
                 )
             ]

@@ -126,7 +126,7 @@ class VisualizerApp:
                 from rich.text import Text
 
                 Console().print(Text("Visualizer shut down.", style="dim"))
-            except ImportError:
+            except Exception:
                 print("Visualizer shut down.")
 
     async def _app_main(self) -> None:

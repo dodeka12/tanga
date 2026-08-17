@@ -1,9 +1,17 @@
-// Line renderer — renders as a cylinder along the direction vector
-// with optional wireframe overlay.
+// Line renderer — draws a straight segment from `origin` to
+// `origin + normalize(direction) * length`.
+//
+// `length` is a content field: `0` means "infinite line → use the style's
+// default length".  Rendering dispatches on the style type:
+//   - `LineStyle` (default) → three.js `Line2` fat line; `thickness` is a
+//     screen-space pixel width.
+//   - `CylinderLineStyle`   → solid `CylinderGeometry`; `thickness` is the
+//     cylinder radius in world units.
 // Phase 5: Per-entity module.
 
 import * as THREE from 'three';
 import {
+    makeFatLine,
     makeMaterial,
     rotationFromDirection,
     styleParam,
@@ -11,65 +19,76 @@ import {
     tagEntity,
     applyStyleUpdate,
     approxEqual,
-    addWireframeOverlay,
 } from './utils.js';
+
+function isCylinderStyle(ent) {
+    return !!(ent.style && ent.style.style_type === 'CylinderLineStyle');
+}
+
+function resolveLength(ent) {
+    // `0` is the "infinite line" sentinel → fall back to the style default.
+    return ent.length ? ent.length : styleParam(ent, 'length', 20.0);
+}
 
 export function createLine(ent) {
     const color = parseColor(ent, '#44ff44');
     const opacity = styleParam(ent, 'opacity', 0.8);
-    const thickness = styleParam(ent, 'thickness', 0.03);
-    const length = styleParam(ent, 'length', 20.0);
+    const length = resolveLength(ent);
     const origin = ent.origin || [0, 0, 0];
     const dir = ent.direction || [1, 0, 0];
 
-    const geometry = new THREE.CylinderGeometry(thickness, thickness, length, 8, 1);
-    const material = makeMaterial(color, opacity);
-    const mesh = new THREE.Mesh(geometry, material);
-
-    mesh.setRotationFromQuaternion(rotationFromDirection(dir[0], dir[1], dir[2]));
-
     const d = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize();
-    mesh.position.set(
-        origin[0] + d.x * length / 2,
-        origin[1] + d.y * length / 2,
-        origin[2] + d.z * length / 2
-    );
+    const start = new THREE.Vector3(origin[0], origin[1], origin[2]);
+    const end = start.clone().addScaledVector(d, length);
 
-    // Wireframe overlay
-    const wireframe = styleParam(ent, 'wireframe', false);
-    if (wireframe) {
-        const wfColor = styleParam(ent, 'wireframe_color', null) || color;
-        const wfOpacity = styleParam(ent, 'wireframe_opacity', 1.0);
-        const dash = styleParam(ent, 'wireframe_dash', null);
-        addWireframeOverlay(
-            mesh,
-            new THREE.CylinderGeometry(thickness, thickness, length, 8, 1),
-            wfColor,
-            dash,
-            wfOpacity
+    if (isCylinderStyle(ent)) {
+        const thickness = styleParam(ent, 'thickness', 0.03);
+        const geometry = new THREE.CylinderGeometry(thickness, thickness, length, 8, 1);
+        const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+        mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
+        mesh.position.set(
+            origin[0] + d.x * length / 2,
+            origin[1] + d.y * length / 2,
+            origin[2] + d.z * length / 2
         );
+        tagEntity(mesh, ent);
+        return mesh;
     }
 
-    tagEntity(mesh, ent);
-    return mesh;
+    const thickness = styleParam(ent, 'thickness', 1.0);
+    const line = makeFatLine([start, end], color, opacity, thickness);
+    tagEntity(line, ent);
+    return line;
 }
 
 export function updateLine(mesh, ent, prev) {
-    const dir = ent.direction || prev?.direction || [1, 0, 0];
+    // Switching between fat-line and cylinder rendering requires a rebuild.
+    if (prev && isCylinderStyle(ent) !== isCylinderStyle(prev)) return false;
+
+    const length = resolveLength(ent);
+    // A length change alters the segment geometry; cheaper to rebuild.
+    if (prev && !approxEqual(length, resolveLength(prev))) return false;
+
     const origin = ent.origin || prev?.origin || [0, 0, 0];
-    const length = ent.length ?? prev?.length ?? 20.0;
-
+    const dir = ent.direction || prev?.direction || [1, 0, 0];
     const d = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize();
-    mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
-    mesh.position.set(
-        origin[0] + d.x * length / 2,
-        origin[1] + d.y * length / 2,
-        origin[2] + d.z * length / 2
-    );
 
+    if (isCylinderStyle(ent)) {
+        mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
+        mesh.position.set(
+            origin[0] + d.x * length / 2,
+            origin[1] + d.y * length / 2,
+            origin[2] + d.z * length / 2
+        );
+    } else {
+        const start = new THREE.Vector3(origin[0], origin[1], origin[2]);
+        const end = start.clone().addScaledVector(d, length);
+        mesh.geometry.setPositions([start.x, start.y, start.z, end.x, end.y, end.z]);
+        const thickness = styleParam(ent, 'thickness', 1.0);
+        if (mesh.material && mesh.material.linewidth !== undefined) {
+            mesh.material.linewidth = Math.max(0.1, thickness);
+        }
+    }
     applyStyleUpdate(mesh, ent);
-
-    if (ent.length !== undefined && prev && !approxEqual(ent.length, prev.length)) return false;
-    if (ent.thickness !== undefined && prev && !approxEqual(ent.thickness, prev.thickness)) return false;
     return true;
 }

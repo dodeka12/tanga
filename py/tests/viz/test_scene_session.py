@@ -228,10 +228,23 @@ class TestScene:
     def test_update_entity_replaces_geometry(self):
         s = Scene()
         eid = s.add(Point(1, 0, 0))
+        s.flush()  # consume the initial "full" dirty flag
         s.update_entity(eid, Point(5, 6, 7))
         dirty, _ = s.flush()
         assert dirty[0]["aspect"] == "content"
         assert dirty[0]["value"]["position"] == [5, 6, 7]
+
+    def test_new_node_with_transform_mutation_still_full(self):
+        # A node that has never reached the client must emit `full` even if a
+        # sub-aspect (transform) is mutated before the first flush; otherwise
+        # the client never learns about the node (regression for nested groups).
+        s = Scene()
+        g = s.add_group("arm")
+        g.set_transform(position=(1, 0, 0))
+        dirty, _ = s.flush()
+        patches = [p for p in dirty if p["id"] == g.id]
+        assert [p["aspect"] for p in patches] == ["full"]
+        assert patches[0]["value"]["transform"]["position"] == [1, 0, 0]
 
     def test_remove_then_flush(self):
         s = Scene()
@@ -490,6 +503,48 @@ class TestLabelDefaults:
         assert ls.offset_2d is None
         assert ls.align is None
 
+    def test_point_label_aligns_top_left(self):
+        from pytanga.geometry import Line, Point
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(0, 0, 0), label="P")
+        viz.add(Line.from_points(Point(0, 0, 0), Point(1, 0, 0)), label="L")
+        labels = {
+            o.get("text"): o["style"]
+            for o in viz._scene.full_state()
+            if o.get("kind") == "label"
+        }
+        assert labels["P"]["align"] == [0.0, 0.0]
+        assert labels["P"]["offset_2d"] == [5.0, 5.0]
+        # Non-point labels keep the centered default.
+        assert labels["L"]["align"] == [0.5, 0.5]
+        assert labels["L"]["offset_2d"] == [0.0, 0.0]
+
+    def test_label_style_along_and_rotation_to_dict(self):
+        from pytanga.viz._styles import LabelStyle
+
+        assert LabelStyle(along=0.5, rotation=45).to_dict()["along"] == 0.5
+        assert LabelStyle(along=0.5, rotation=45).to_dict()["rotation"] == 45
+        assert LabelStyle(along=(0.25, 0.5)).to_dict()["along"] == [0.25, 0.5]
+
+    def test_line_label_default_along(self):
+        from pytanga.viz._style_dict import _make_default_label_styles
+
+        styles = _make_default_label_styles()
+        assert styles["Line"].along == 0.5
+        assert styles["Sphere"].along is None
+
+    def test_label_serialization_strips_along_keeps_rotation(self):
+        from pytanga.geometry import Point
+        from pytanga.viz._styles import LabelStyle
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(0, 0, 0), label="P", label_style=LabelStyle(rotation=45, along=0.5))
+        labels = [o for o in viz._scene.full_state() if o.get("kind") == "label"]
+        assert len(labels) == 1
+        assert "along" not in labels[0]["style"]
+        assert labels[0]["style"]["rotation"] == 45
+
     def test_default_label_styles_accepts_class_key(self):
         from pytanga.geometry import Sphere
         from pytanga.viz._styles import LabelStyle
@@ -720,6 +775,23 @@ class TestAxesSerialization:
         assert u_entry["style"]["label_style"]["font_size"] == 20
         assert u_entry["style"]["label_style"]["align"] == [0.5, 0.0]
         assert v_entry["style"]["label_style"]["offset_2d"] == [3, 4]
+
+    def test_axes_label_style_rotation_flows_into_entries(self):
+        from pytanga.viz import Axes2DStyle, AxisStyle, LabelStyle
+
+        a = Axes2D(range_u=(0, 1), range_v=(0, 1))
+        d = serialize_entity(
+            a, "ax2", kind="Axes2D",
+            properties={
+                "style": Axes2DStyle(
+                    u=AxisStyle(label_style=LabelStyle(rotation=30)),
+                    v=AxisStyle(label_style=LabelStyle(rotation=-20)),
+                )
+            },
+        )
+        entries = d["axes"]
+        assert entries[0]["style"]["label_style"]["rotation"] == 30
+        assert entries[1]["style"]["label_style"]["rotation"] == -20
 
 
 class TestGridAxesStyles:

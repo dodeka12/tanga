@@ -121,6 +121,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
+        self._atexit_registered = False
 
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
@@ -464,6 +465,10 @@ class Visualizer(_JupyterDisplayMixin):
 
         if label is not None:
             from ._label_frame import compute_label_position
+            from .serializer import resolve_line_length
+
+            from pytanga.geometry.entities import Line
+            from pytanga.geometry.operators import ReflectionLine
 
             kind = type(entity).__name__
             resolved_ls = _resolve_label_style(
@@ -472,7 +477,22 @@ class Visualizer(_JupyterDisplayMixin):
                 label_style,
             )
 
-            position = compute_label_position(entity, resolved_ls.offset_local)
+            line_length = None
+            if isinstance(entity, Line):
+                line_length = resolve_line_length(
+                    entity, styles_map=self._default_styles, props=properties
+                )
+            elif isinstance(entity, ReflectionLine):
+                line_length = resolve_line_length(
+                    entity.line, styles_map=self._default_styles, props=properties
+                )
+
+            position = compute_label_position(
+                entity,
+                resolved_ls.offset_local,
+                along=resolved_ls.along,
+                line_length=line_length,
+            )
             lbl = Label(
                 text=label,
                 position=position,
@@ -878,12 +898,27 @@ class Visualizer(_JupyterDisplayMixin):
 
         logger.debug("Server booted in %.1fs", time.monotonic() - _boot_start)
 
+        # Graceful shutdown on interpreter exit, even if the script forgets to
+        # call stop() — otherwise the daemon server thread is killed abruptly
+        # and browsers see an abnormal 1006 reset instead of a clean 1001 close.
+        if not self._atexit_registered:
+            import atexit
+
+            def _atexit_stop() -> None:
+                try:
+                    self.stop(timeout=2.0)
+                except Exception:
+                    pass
+
+            atexit.register(_atexit_stop)
+            self._atexit_registered = True
+
         # Threading.Event for Ctrl+C — signal handler sets it, poll loop checks it.
         # Avoids asyncio/signal clashes on Windows.
         self._shutdown_requested = threading.Event()
 
         def _on_sigint(signum: int, frame: object) -> None:
-            logger.info("Ctrl+C received — requesting shutdown")
+            logger.info("Ctrl+C received - requesting shutdown")
             self._shutdown_requested.set()
 
         signal.signal(signal.SIGINT, _on_sigint)
@@ -938,7 +973,7 @@ class Visualizer(_JupyterDisplayMixin):
             from rich.text import Text
 
             Console().print(Text(http_url, style="bold cyan"))
-        except ImportError:
+        except Exception:
             print(http_url)
 
     def _print_connect_prompt(self) -> None:
@@ -960,14 +995,14 @@ class Visualizer(_JupyterDisplayMixin):
                     Text("Enter", style="bold"),
                     " to open a new browser tab, or click ",
                     Text("'Reconnect'", style="bold"),
-                    " in an existing tab…",
+                    " in an existing tab...",
                 )
             )
-        except ImportError:
+        except Exception:
             print(
                 f"Server: {self.url}\n"
                 "Press Enter to open a new browser tab, "
-                "or click 'Reconnect' in an existing tab…"
+                "or click 'Reconnect' in an existing tab..."
             )
 
     def _scene_config_for(self, scene_name: str) -> dict[str, Any] | None:
@@ -995,8 +1030,15 @@ class Visualizer(_JupyterDisplayMixin):
         logger.info("Shutting down server...")
 
         async def _stop() -> None:
-            # Cancel pending tasks gently to avoid "Task was destroyed but pending"
-            # warnings.  Don't do t.cancel() in a loop — it can recurse on child tasks.
+            # Gracefully close WebSocket connections FIRST, so browsers receive
+            # a clean close frame (1001) instead of an abnormal 1006 reset.
+            # Cancelling the handler tasks before this would let their finally
+            # blocks discard the sockets from _ws_clients before the close
+            # frame can be sent.
+            await self._server.stop()
+
+            # Cancel remaining tasks (heartbeats, handlers) that may still be
+            # pending.  Don't do t.cancel() in a loop — it can recurse on child tasks.
             tasks = [
                 t
                 for t in asyncio.all_tasks(self._loop)
@@ -1006,7 +1048,6 @@ class Visualizer(_JupyterDisplayMixin):
                 for t in tasks:
                     t.cancel("server shutting down")
                 await asyncio.gather(*tasks, return_exceptions=True)
-            await self._server.stop()
 
         if self._loop is not None and self._loop.is_running():
             fut = asyncio.run_coroutine_threadsafe(_stop(), self._loop)
@@ -1072,7 +1113,7 @@ class Visualizer(_JupyterDisplayMixin):
                 logger.info("Browser reconnected after %.1fs", elapsed)
                 return True
             if enter_pressed.is_set():
-                logger.info("User pressed Enter — opening new tab")
+                logger.info("User pressed Enter - opening new tab")
                 break
             if shutdown.is_set():
                 logger.info("Shutdown requested during wait")
@@ -1125,7 +1166,7 @@ class Visualizer(_JupyterDisplayMixin):
                     style="dim",
                 )
             )
-        except ImportError:
+        except Exception:
             print(
                 f"If the browser loaded the page but shows an empty scene, "
                 f"check that {ws_url} is reachable "
@@ -1140,7 +1181,7 @@ class Visualizer(_JupyterDisplayMixin):
             Console().print(
                 Text(f"Browser disconnected  ({remote_addr}).", style="bold yellow")
             )
-        except ImportError:
+        except Exception:
             print(f"Browser disconnected ({remote_addr}).")
 
     async def _flush_scene_async(
@@ -1207,7 +1248,7 @@ class Visualizer(_JupyterDisplayMixin):
                 page_token = secrets.token_hex(4)  # 8 hex chars
                 if self._reuse_existing:
                     logger.info(
-                        "Server ready at %s — checking for existing browser…",
+                        "Server ready at %s - checking for existing browser...",
                         self._server.url,
                     )
                     # Async interactive wait: race ws_ready against stdin read
@@ -1231,7 +1272,7 @@ class Visualizer(_JupyterDisplayMixin):
                             logger.info("Browser reconnected")
                         else:
                             logger.info(
-                                "User pressed Enter — opening new tab (token=%s)",
+                                "User pressed Enter - opening new tab (token=%s)",
                                 page_token,
                             )
                             self._server._clear_ws_ready_events()

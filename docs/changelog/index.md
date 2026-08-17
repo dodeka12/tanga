@@ -1,12 +1,9 @@
 # Changelog
 
 ## [Since 0.9.2] — 2026-08-17
-- Unified live/export render pipeline (shared `scene-builder.js`) · export consumes `Scene.full_state()` directly · legacy `_serialize_labels()`/`parentId` label path removed
-→ [Details](2026-08-17_9774152.md)
-
-## [Since 0.9.2] — 2026-08-17
-- `content` aspect for in-place entity updates · single `sceneObjects` frontend registry (legacy path removed)
-→ [Details](2026-08-17_ad59e6e.md)
+- `CylinderLineStyle` (world-unit cylinder lines) · `content` aspect for in-place updates · unified live/export render pipeline · `Line` length as a content field · screen-space fat-line rendering · single `sceneObjects` registry
+- Bug fixes: WebSocket reconnect overhaul — IPv4+IPv6 loopback bind · graceful `1001` shutdown · Unicode-safe console/log output · fixed 2s auto-reconnect for 60s then stop
+→ [Details](2026-08-17_13b30f7.md)
 
 ## [Since 0.9.2] — 2026-08-16
 - Scene graph (`VizGroup`) · `VizObjectRef` · per-object transforms · aspect patches · overlay `attach_to`

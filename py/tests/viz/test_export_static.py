@@ -62,6 +62,20 @@ class TestExportStatic:
         child = next(n for n in nodes if n.kind == "Point")
         assert ids.index(group.id) < ids.index(child.id)
 
+    def test_static_render_html_embeds_label_rotation(self, tmp_path):
+        viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(
+            Point(1, 2, 3),
+            label="tilted",
+            label_style=pytanga.viz.LabelStyle(rotation=45),
+        )
+        path = tmp_path / "rotated.html"
+        pytanga.viz.SceneExporter(viz).export_html(str(path), overwrite=True)
+        content = path.read_text(encoding="utf-8")
+        assert '"rotation": 45' in content
+        assert "rotate(${rotation}deg)" in content
+        assert "transformOrigin" in content
+
 
 class TestCdnUnreachableDetection:
     def test_export_cdn_probe_present(self):

@@ -257,11 +257,15 @@ class VizNode:
     # ── Aspect tracking ─────────────────────────────────────
 
     def mark(self, kind: str = "full") -> None:
-        """Set a dirty aspect.  ``"full"`` clears the other aspects."""
+        """Set a dirty aspect.  ``"full"`` clears the other aspects.
+
+        A sub-aspect patch (``transform`` / ``style`` / ``content``) is only
+        meaningful once the client already has the node, so a pending ``full``
+        flag dominates: marking a sub-aspect must never downgrade ``full``.
+        """
         if kind == "full":
             self._dirty_aspects = {"full"}
-        else:
-            self._dirty_aspects.discard("full")
+        elif "full" not in self._dirty_aspects:
             self._dirty_aspects.add(kind)
 
     def dirty_for(self, aspect: str) -> bool:
@@ -370,6 +374,14 @@ class VizSceneObject(VizNode):
                 leaf["color"] = resolved["color"]
             if "opacity" in resolved:
                 leaf["opacity"] = resolved["opacity"]
+            # Entity-derived geometry params (e.g. ``extent``) that
+            # ``_dispatch_entity`` mirrored into the leaf's own style must not
+            # be shadowed by the node's canonical style defaults.  ``length``
+            # is intentionally NOT mirrored: it is a content field whose ``0``
+            # sentinel tells the frontend to fall back to the style default.
+            for key in ("extent",):
+                if key in leaf:
+                    leaf["style"][key] = leaf[key]
         return leaf
 
     def serialize(
@@ -596,6 +608,7 @@ class VizOverlayObject(VizNode):
         style = _style_to_dict(self.style)
         if self.kind == "label":
             style.pop("offset_local", None)
+            style.pop("along", None)
         result["style"] = style
         return result
 

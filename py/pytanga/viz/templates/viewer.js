@@ -127,17 +127,36 @@ function onResize() {
 let _reconnectAttempts = 0;
 let _savedTitle = document.title || 'Tanga Viewer';
 
-// Exponential backoff
-const _RECONNECT_BASE_MS = 1000;
-const _RECONNECT_MAX_MS = 30000;
-let _reconnectDelay = _RECONNECT_BASE_MS;
+// Auto-reconnect: retry at a fixed 2s interval for the first minute after a
+// disconnect, then stop (manual reconnect via the button remains available).
+const _RECONNECT_INTERVAL_MS = 2000;
+const _RECONNECT_WINDOW_MS = 60000;
+let _reconnectDeadline = 0;  // timestamp when auto-reconnect should stop (0 = none)
 
 // Single-flight guard: increment on teardown so stale onopen/onclose
 // handlers from superseded sockets are ignored.
 let _wsGeneration = 0;
 
+// ── Connection diagnostics ──────────────────────────────────
+// Detailed console logging for the connection/reconnection flow, so the
+// transcript can be correlated with the backend's `WS connect`/`WS ready`/
+// `WS disconnect` log lines.  Every WebSocket state transition, sent message,
+// and received message is logged with a monotonic timestamp and the
+// browser/viewer/scene identity.
+function _log(phase, detail) {
+    const t = (typeof performance !== 'undefined' && performance.now)
+        ? (performance.now() / 1000).toFixed(3) : '0';
+    const parts = ['[tanga:' + phase + ' t=' + t + ']'];
+    if (_browserId) parts.push('id=' + _browserId);
+    if (_viewerName) parts.push('viewer=' + _viewerName);
+    if (_myScene) parts.push('scene=' + _myScene);
+    if (detail) parts.push(detail);
+    console.log(parts.join(' '));
+}
+
 function closeActiveWs() {
     if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+        _log('ws-teardown', 'closing active socket readyState=' + ws.readyState);
         _wsGeneration++;                          // invalidate stale handlers
         const old = ws;
         old.onopen = old.onclose = old.onerror = old.onmessage = null;
@@ -157,22 +176,31 @@ function connectWebSocket() {
     updateStatusIndicator('connecting', _reconnectAttempts);
     document.title = 'Connecting… — ' + _savedTitle;
 
+    _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts + ' gen=' + gen);
+
     ws = new WebSocket(url);
 
     const connectWatchdog = setTimeout(() => {
         if (ws && ws.readyState === WebSocket.CONNECTING && gen === _wsGeneration) {
+            _log('ws-watchdog', 'connect timed out after ' + _RECONNECT_INTERVAL_MS + 'ms - aborting and retrying');
             _wsGeneration++;               // invalidate this socket's handlers
             try { ws.close(); } catch (_) {}
             ws = null;
+            // Respect the auto-reconnect window: stop retrying once it elapses.
+            if (_reconnectDeadline && Date.now() >= _reconnectDeadline) {
+                _log('ws-reconnect', 'auto-reconnect window elapsed - stopping (manual reconnect available)');
+                return;
+            }
             connectWebSocket();            // retry immediately
         }
-    }, 5000);
+    }, _RECONNECT_INTERVAL_MS);
 
     ws.onopen = () => {
         if (gen !== _wsGeneration) return;
         clearTimeout(connectWatchdog);
         const pageToken = window.__tanga_page_token
             || new URLSearchParams(window.location.search).get('token');
+        _log('ws-open', 'attempt=' + _reconnectAttempts + ' token=' + (pageToken || 'none'));
         setStatus('connected');
         setWebSocket(ws);
         setInteractionWebSocket(ws);
@@ -181,7 +209,7 @@ function connectWebSocket() {
             reconnectTimer = null;
         }
         _reconnectAttempts = 0;
-        _reconnectDelay = _RECONNECT_BASE_MS;
+        _reconnectDeadline = 0;  // connected — clear any pending reconnect window
         hideReconnectButton();
         updateStatusIndicator('connected');
         document.title = _savedTitle;
@@ -189,6 +217,7 @@ function connectWebSocket() {
         if (_browserId) readyPayload.browser_id = _browserId;
         if (_viewerName) readyPayload.viewer_name = _viewerName;
         if (pageToken) readyPayload.page_token = pageToken;
+        _log('ws-send', 'type=ready scene=' + (_myScene || '') + ' token=' + (pageToken || 'none'));
         ws.send(JSON.stringify(readyPayload));
     };
 
@@ -200,23 +229,34 @@ function connectWebSocket() {
             console.error('Failed to parse WebSocket message:', e);
             return;
         }
+        // _log('ws-msg', 'type=' + (msg.type || 'unknown') + ' size=' + event.data.length);
         handleMessage(msg);
     };
 
     ws.onclose = (event) => {
         if (gen !== _wsGeneration) return;
         clearTimeout(connectWatchdog);
+        _log('ws-close', 'code=' + event.code + ' reason=' + (event.reason || 'none')
+            + ' wasClean=' + event.wasClean);
         setStatus('disconnected');
         updateStatusIndicator('disconnected');
         document.title = 'Disconnected — ' + _savedTitle;
 
-        const jitter = 0.8 + Math.random() * 0.4;  // ±20%
-        const delay = Math.round(Math.min(_reconnectDelay * jitter, _RECONNECT_MAX_MS));
-        _reconnectDelay = Math.min(_reconnectDelay * 2, _RECONNECT_MAX_MS);
-        reconnectTimer = setTimeout(connectWebSocket, delay);
+        // Fixed-interval auto-reconnect for the first minute after the
+        // connection was lost, then stop (the manual button still works).
+        const now = Date.now();
+        if (!_reconnectDeadline) {
+            _reconnectDeadline = now + _RECONNECT_WINDOW_MS;
+        }
+        if (now < _reconnectDeadline) {
+            _log('ws-reconnect', 'delay=' + _RECONNECT_INTERVAL_MS + 'ms deadline_in=' + Math.round((_reconnectDeadline - now) / 1000) + 's');
+            reconnectTimer = setTimeout(connectWebSocket, _RECONNECT_INTERVAL_MS);
+        } else {
+            _log('ws-reconnect', 'auto-reconnect window elapsed - stopping (manual reconnect available)');
+        }
     };
 
-    ws.onerror = () => { /* onclose will fire next */ };
+    ws.onerror = () => { _log('ws-error', 'error event (onclose follows)'); };
 }
 
 function setStatus(cls) {
@@ -228,11 +268,12 @@ function setStatus(cls) {
 // ── Visibility wake-up ────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && ws === null) {
+        _log('ws-visibility', 'tab visible with no socket — immediate reconnect');
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
         }
-        _reconnectDelay = _RECONNECT_BASE_MS;
+        _reconnectDeadline = Date.now() + _RECONNECT_WINDOW_MS;
         connectWebSocket();
     }
 });
@@ -280,15 +321,17 @@ function showReconnectButton(mode) {
         _reconnectButtonEl.addEventListener('click', () => {
             _reconnectClickCount++;
             if (_reconnectClickCount >= 3) {
+                _log('ws-manual', '3 failed clicks — offering page reload');
                 showReconnectButton('page-reload');
                 return;
             }
+            _log('ws-manual', 'reconnect click=' + _reconnectClickCount);
             if (reconnectTimer) {
                 clearTimeout(reconnectTimer);
                 reconnectTimer = null;
             }
             closeActiveWs();
-            _reconnectDelay = _RECONNECT_BASE_MS;
+            _reconnectDeadline = Date.now() + _RECONNECT_WINDOW_MS;
             connectWebSocket();
         });
     }
@@ -535,9 +578,11 @@ function _forMyScene(msg) {
 async function handleMessage(msg) {
     if (msg.type === 'browser_id') {
         _browserId = msg.browser_id;
+        _log('init', 'browser_id=' + msg.browser_id);
         return;
     }
     if (msg.type === 'navigate') {
+        _log('init', 'navigate → scene=' + (msg.scene || ''));
         const target = msg.scene || '';
         let newUrl = target ? '/' + target : '/';
         if (_viewerName) {
@@ -547,6 +592,7 @@ async function handleMessage(msg) {
         return;
     }
     if (msg.type === 'scene_list') {
+        _log('init', 'scene_list scenes=' + JSON.stringify(msg.scenes || []));
         _availableScenes = msg.scenes || [];
         return;
     }
@@ -559,6 +605,7 @@ async function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
+        _log('init', 'clear_all → resetting scene (objects=' + sceneObjects.size + ')');
         // Remove all scene children (entities, lights, grid, axes)
         while (scene.children.length > 0) {
             const child = scene.children[0];
@@ -597,8 +644,10 @@ async function handleMessage(msg) {
         d2.position.set(-5, -2, -8);
         scene.add(d2);
     } else if (msg.type === 'scene_config') {
+        _log('init', 'scene_config name=' + (msg.name || '') + ' space_dim=' + msg.space_dim);
         applySceneConfig(msg);
     } else if (msg.type === 'scene_update') {
+        _log('init', 'scene_update objects=' + (msg.objects ? msg.objects.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {
             for (const id of msg.removed) {
                 removeSceneObject(id);
@@ -616,9 +665,11 @@ async function handleMessage(msg) {
         // incremental updates after this tab has rebuilt the scene (this
         // closes the reconnect/init race).
         if (ws && ws.readyState === WebSocket.OPEN) {
+            _log('ws-send', 'type=scene_synced browser_id=' + _browserId);
             ws.send(JSON.stringify({ type: 'scene_synced', browser_id: _browserId }));
         }
     } else if (msg.type === 'object_update') {
+        // _log('init', 'object_update patches=' + (msg.patches ? msg.patches.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {
             for (const id of msg.removed) {
                 removeSceneObject(id);
@@ -639,6 +690,7 @@ async function handleMessage(msg) {
     } else if (msg.type === 'screenshot') {
         handleScreenshot(msg);
     } else if (msg.type === 'controls_define') {
+        _log('init', 'controls_define controls=' + (msg.controls ? msg.controls.length : 0) + ' groups=' + (msg.groups ? msg.groups.length : 0));
         handleControlsDefine(msg);
         const controls2 = msg.controls || [];
         const groups = msg.groups || [];

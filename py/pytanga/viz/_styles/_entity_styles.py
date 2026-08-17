@@ -165,6 +165,24 @@ class LineStyle(VizStyle):
 
 
 @dataclass
+class CylinderLineStyle(LineStyle):
+    """LineStyle variant that renders :class:`~pytanga.geometry.Line` as a
+    solid 3D cylinder instead of a screen-space fat line.
+
+    ``thickness`` is interpreted in **world units** (the cylinder radius),
+    unlike the base :class:`LineStyle`, whose ``thickness`` is a screen-space
+    pixel width.
+    """
+
+    thickness: float = 0.03
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "CylinderLineStyle"
+        return result
+
+
+@dataclass
 class PlaneStyle(VizStyle):
     """Visual style for :class:`~pytanga.geometry.Plane`.
 

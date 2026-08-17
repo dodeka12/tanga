@@ -103,6 +103,7 @@ export function addAxis(group, axis) {
             fontColor = colorHex,
             align = null,
             offset = null,
+            rotation = 0,
         } = opts;
 
         const content = document.createElement('div');
@@ -115,15 +116,14 @@ export function addAxis(group, axis) {
         content.style.pointerEvents = 'none';
         content.style.whiteSpace = 'nowrap';
 
-        if (align || offset) {
-            const ax = align ? align[0] : 0.5;
-            const ay = align ? align[1] : 0.5;
-            const ox = offset ? offset[0] : 0;
-            const oy = offset ? offset[1] : 0;
-            const tx = (0.5 - ax) * 100;
-            const ty = (0.5 - ay) * 100;
-            content.style.transform = `translate(${ox}px, ${oy}px) translate(${tx}%, ${ty}%)`;
-        }
+        const ax = align ? align[0] : 0.5;
+        const ay = align ? align[1] : 0.5;
+        const ox = offset ? offset[0] : 0;
+        const oy = offset ? offset[1] : 0;
+        const tx = (0.5 - ax) * 100;
+        const ty = (0.5 - ay) * 100;
+        content.style.transformOrigin = `${ax * 100}% ${ay * 100}%`;
+        content.style.transform = `translate(${ox}px, ${oy}px) translate(${tx}%, ${ty}%) rotate(${rotation}deg)`;
 
         // CSS2DRenderer repositions the element it wraps each frame, so the
         // styled content must be nested inside an outer element.  Otherwise
@@ -154,6 +154,7 @@ export function addAxis(group, axis) {
                 fontColor: valueLabelColor,
                 align: labelStyle.align || null,
                 offset: labelStyle.offset_2d || null,
+                rotation: labelStyle.rotation || 0,
             });
             label.position.copy(labelPos);
             group.add(label);

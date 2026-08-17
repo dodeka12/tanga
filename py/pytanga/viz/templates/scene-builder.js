@@ -3,6 +3,7 @@
 // overlay/label creation, shared by `viewer.js` and the export bootstrap so a
 // render-pipeline change is made once.
 
+import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createEntityMesh, removeEntityMesh } from './renderers/factory.js';
 
@@ -95,9 +96,11 @@ export function buildOverlay(obj, scene, registry) {
         // plus apply the pixel offset:
         const off2d = s.offset_2d || [0, 0];
         const align = s.align || [0.5, 0.5];
+        const rotation = s.rotation || 0;
         const tx = (0.5 - align[0]) * 100;
         const ty = (0.5 - align[1]) * 100;
-        div.style.transform = `translate(${off2d[0]}px, ${off2d[1]}px) translate(${tx}%, ${ty}%)`;
+        div.style.transformOrigin = `${align[0] * 100}% ${align[1] * 100}%`;
+        div.style.transform = `translate(${off2d[0]}px, ${off2d[1]}px) translate(${tx}%, ${ty}%) rotate(${rotation}deg)`;
 
         const parent = registry.get(attachId);
         if (parent && parent.obj) {

@@ -215,7 +215,14 @@ def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:
         "GeneralRotor",
         "PointPath",
     ]
-    return {kind: copy(base) for kind in kinds}
+    result = {kind: copy(base) for kind in kinds}
+    # Points: anchor the label's top-left corner to the point (instead of
+    # centering the label on it) with a 5px, 5px screen-space offset.
+    result["Point"].align = (0.0, 0.0)
+    result["Point"].offset_2d = (5.0, 5.0)
+    # Lines: anchor the label at the segment midpoint (fraction 0.5 along it).
+    result["Line"].along = 0.5
+    return result
 
 
 # ── Kind-key mapping ───────────────────────────────────────────

@@ -591,6 +591,39 @@ def _serialize_point_pair(
     return result
 
 
+def resolve_line_length(
+    line: Line,
+    *,
+    styles_map: Dict[str, Any] | None = None,
+    props: Dict[str, Any] | None = None,
+) -> float:
+    """Return the effective rendered length of a Line.
+
+    Finite lines use their explicit ``length``; infinite lines (``length`` is
+    ``None``) fall back to a per-call ``style`` override, then the canonical
+    ``LineStyle.length`` default.  Matches the frontend ``resolveLength()``.
+    """
+    if line.length is not None and line.length > 0:
+        return float(line.length)
+
+    props = props or {}
+    style = props.get("style")
+    if style is not None:
+        override = getattr(style, "length", None)
+        if override is not None and override > 0:
+            return float(override)
+
+    if styles_map is not None:
+        from ._styles import _style_for_kind
+
+        canonical = _style_for_kind("Line", styles_map=styles_map)
+        length = getattr(canonical, "length", None)
+        if length is not None:
+            return float(length)
+
+    return 20.0
+
+
 def _serialize_line(
     ent: Line,
     props: Dict[str, Any],
@@ -598,9 +631,10 @@ def _serialize_line(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    builtins = {"thickness": 0.03, "length": 20.0}
-    if ent.length is not None:
-        props["length"] = ent.length
+    builtins = {"thickness": 1.0}
+    # Resolve the length here so the frontend always receives a valid value
+    # (infinite lines use the canonical `LineStyle.length` default).
+    props["length"] = resolve_line_length(ent, styles_map=styles_map, props=props)
     return _apply_defaults(
         props,
         kind,

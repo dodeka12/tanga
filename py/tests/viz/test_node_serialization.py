@@ -55,6 +55,40 @@ class TestNodeSerialization:
         assert d["position"] == [1.5, 2.5, 3.5]
         assert d["style"]["style_type"] == "PointStyle"
 
+    def test_line_from_points_keeps_segment_length(self):
+        # Regression: the node's canonical style default (LineStyle.length=20.0)
+        # must not clobber the explicit segment length from Line.from_points.
+        s = Scene()
+        eid = s.add(Line.from_points(Point(0, 0, 0), Point(2, 0, 0)))
+        d = s.get_node(eid).serialize()
+        # `length` is a content field carrying the explicit segment length.
+        assert d["length"] == 2.0
+        # The style `length` stays the default (used only for infinite lines).
+        assert d["style"]["length"] == 20.0
+        assert d["thickness"] == 1.0
+        assert d["style"]["thickness"] == 1.0
+
+    def test_infinite_line_resolves_default_length(self):
+        s = Scene()
+        eid = s.add(Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)))
+        d = s.get_node(eid).serialize()
+        # The backend resolves the effective length (default 20.0) so the
+        # frontend always receives a valid value.
+        assert d["length"] == 20.0
+        assert d["style"]["length"] == 20.0
+
+    def test_cylinder_line_style(self):
+        from pytanga.viz import CylinderLineStyle
+
+        s = Scene()
+        eid = s.add(
+            Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)),
+            style=CylinderLineStyle(thickness=0.05),
+        )
+        d = s.get_node(eid).serialize()
+        assert d["style"]["style_type"] == "CylinderLineStyle"
+        assert d["style"]["thickness"] == 0.05
+
     def test_representative_kinds_serialize(self):
         path = PointPath()
         path.add((1, 2, 0), color="#ff0000")

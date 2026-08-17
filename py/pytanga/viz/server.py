@@ -135,7 +135,7 @@ class VizServer:
         self._static_dir = static_dir or Path(__file__).parent / "templates"
         self._app: web.Application | None = None
         self._runner: web.AppRunner | None = None
-        self._site: web.TCPSite | None = None
+        self._sites: list[web.TCPSite] = []
         self._ws_clients: set[web.WebSocketResponse] = set()
         self._browser_sessions: dict[str, BrowserSession] = {}
         self._flush_callback: FlushCallback | None = None
@@ -184,12 +184,37 @@ class VizServer:
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
         try:
-            bind_host = "127.0.0.1" if self._host == "localhost" else self._host
+            # When host is "localhost", bind both IPv4 and IPv6 loopback so
+            # browsers that resolve `localhost` to `::1` can still reach the
+            # WebSocket endpoint — otherwise Firefox's WS connection can hang
+            # in CONNECTING on Windows (the server would only listen on IPv4).
             reuse_address = sys.platform != "win32"
-            self._site = web.TCPSite(
-                self._runner, bind_host, self._port, reuse_address=reuse_address
+            bind_hosts = (
+                ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
             )
-            await self._site.start()
+
+            self._sites = []
+            for bind_host in bind_hosts:
+                site = web.TCPSite(
+                    self._runner, bind_host, self._port, reuse_address=reuse_address
+                )
+                try:
+                    await site.start()
+                    self._sites.append(site)
+                except OSError:
+                    # The primary (IPv4) bind must succeed; the IPv6 loopback
+                    # bind is best-effort (may be unavailable on some systems).
+                    if not self._sites:
+                        raise
+                    logger.info("Could not bind to %s (skipping)", bind_host)
+
+            logger.info(
+                "Server listening: bind=%s port=%d (http://%s:%d, ws /ws)",
+                ",".join(bind_hosts[: len(self._sites)]),
+                self._port,
+                self._host,
+                self._port,
+            )
         except OSError as e:
             if (
                 getattr(e, "errno", 0) == 98
@@ -212,8 +237,10 @@ class VizServer:
         self._ws_clients.clear()
         self._browser_sessions.clear()
 
-        if self._site is not None:
-            await self._site.stop()
+        if self._sites:
+            for site in self._sites:
+                await site.stop()
+            self._sites.clear()
         if self._runner is not None:
             await self._runner.cleanup()
 
@@ -427,20 +454,20 @@ class VizServer:
         if rel_path:
             file_path = self._static_dir / rel_path
             if file_path.is_file():
-                logger.debug("HTTP GET /%s → static file → %s", rel_path, remote_addr)
+                logger.debug("HTTP GET /%s -> static file -> %s", rel_path, remote_addr)
                 return web.FileResponse(file_path)
             # If the path looks like a static file request (has a file
             # extension, e.g. /favicon.ico), return 404 instead of
             # serving viewer.html — avoids bogus page-load prints.
             if "." in rel_path.rsplit("/", 1)[-1]:
-                logger.debug("HTTP GET /%s → 404 (unknown static) → %s", rel_path, remote_addr)
+                logger.debug("HTTP GET /%s -> 404 (unknown static) -> %s", rel_path, remote_addr)
                 raise web.HTTPNotFound()
 
         # Inject a page token for WS connectivity correlation
         # Use token from URL query param if present, otherwise generate random
         viewer_path = self._static_dir / "viewer.html"
         page_token = request.query.get("token") or uuid4().hex[:8]
-        logger.info("HTTP GET / → serving viewer.html (token=%s) → %s", page_token, remote_addr)
+        logger.info("HTTP GET / -> serving viewer.html (token=%s) -> %s", page_token, remote_addr)
         self._pending_page_tokens[page_token] = {
             "remote_addr": remote_addr,
             "token": page_token,
@@ -530,7 +557,7 @@ class VizServer:
                                 self._pending_page_tokens.pop(page_token, None)
                             logger.info(
                                 "WS ready: id=%s token=%s viewer=%s scene=%s remote=%s "
-                                "sessions=%d pending_tokens=%d — signalling ready",
+                                "sessions=%d pending_tokens=%d - signalling ready",
                                 msg_browser_id,
                                 page_token or "reconnect",
                                 data.get("viewer_name") or "none",
@@ -546,7 +573,7 @@ class VizServer:
                                     "error_msg", data.get("error", "unknown error")
                                 )
                                 logger.error(
-                                    "WS ready with error from %s: %s — %s",
+                                    "WS ready with error from %s: %s - %s",
                                     remote_addr,
                                     data.get("error"),
                                     self._ws_error_msg,
@@ -601,7 +628,7 @@ class VizServer:
 
                         elif msg_type == "scene_synced":
                             logger.info(
-                                "WS scene_synced from %s (id=%s) — signalling ready",
+                                "WS scene_synced from %s (id=%s) - signalling ready",
                                 remote_addr, msg_browser_id,
                             )
                             self._signal_ws_ready()
@@ -639,9 +666,12 @@ class VizServer:
         finally:
             heartbeat_task.cancel()
             logger.debug("WS heartbeat stopped id=%s", browser_id)
+            close_code = getattr(ws, "close_code", None)
             logger.info(
-                "WS disconnect from %s (id=%s, sessions_remaining=%d)",
-                remote_addr, browser_id, len(self._browser_sessions) - 1,
+                "WS disconnect from %s (id=%s, close_code=%s, "
+                "clients_remaining=%d, sessions_remaining=%d)",
+                remote_addr, browser_id, close_code,
+                len(self._ws_clients) - 1, len(self._browser_sessions) - 1,
             )
             # Clean up pending futures for this client
             for rid, future in list(self._pending_screenshots.items()):
@@ -746,7 +776,7 @@ class VizServer:
                     style="dim",
                 )
             )
-        except ImportError:
+        except Exception:
             print(f"Browser at {remote_addr} loaded page (token: {page_token}).")
 
     def _print_ws_connected(
@@ -771,8 +801,11 @@ class VizServer:
             Console().print(
                 Text(f"✓ Browser connected  ({detail})", style="bold green")
             )
-        except ImportError:
-            print(f"✓ Browser connected  ({detail})")
+        except Exception:
+            # rich (or the console encoding) can fail on non-UTF-8 consoles
+            # (e.g. cp1252 on Windows); fall back to an ASCII-safe print so a
+            # display failure can never crash the WebSocket handler.
+            print(f"[OK] Browser connected  ({detail})")
 
     def _print_ws_reachability_note(self) -> None:
         """Print a note about WebSocket reachability for port forwarding setups."""
@@ -782,7 +815,7 @@ class VizServer:
             + ws_url
             + ") must also be reachable from the\n"
             "browser. If using port forwarding or a reverse proxy, ensure WebSocket\n"
-            "upgrade requests are forwarded — otherwise the viewer will render an\n"
+            "upgrade requests are forwarded - otherwise the viewer will render an\n"
             "empty 3D scene.\n"
         )
         try:
@@ -790,7 +823,7 @@ class VizServer:
             from rich.text import Text
 
             Console().print(Text(note, style="dim"))
-        except ImportError:
+        except Exception:
             print(note)
 
     async def check_page_tokens(

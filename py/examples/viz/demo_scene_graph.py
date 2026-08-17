@@ -11,11 +11,25 @@ no child geometry is recomputed or re-sent.
 Run with:  uv run python py/examples/viz/demo_scene_graph.py
 """
 
+import logging
 import math
 
 from pytanga.geometry import Direction, Line, Point
 from pytanga.geometry.operators import Translator
 from pytanga.viz import PointStyle, Visualizer
+
+# Enable verbose WebSocket message-flow logging (see the reconnect/init trace).
+# No module changes are needed: every ``tanga.*`` logger (server, visualizer)
+# propagates to the root logger, so a single basicConfig() here redirects all
+# of them to a file.  Set level=INFO for a quieter trace, DEBUG for the full
+# connection/reconnection transcript.
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     filename="_output/tanga_viz.log",
+#     filemode="a",
+#     encoding="utf-8",
+#     format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+# )
 
 viz = Visualizer(title="Tanga — Scene Graph")
 viz.start()
@@ -38,7 +52,7 @@ roamer = viz.new(Point(0, 0, 3), color="#ffffff", label="roamer")
 viz.flush()
 
 print("Animating the scene graph for ~6 seconds...")
-for frame in range(360):
+for frame in range(300):
     angle = frame * 0.03
 
     # Group-only transform aspect — children are NOT re-serialized.
@@ -58,7 +72,7 @@ for frame in range(360):
         spinner.apply_transform(Translator(vector=Direction(0.0, 0.0, 0.1)))
 
     viz.flush()
-    viz.sleep_ms(16)
+    viz.sleep_ms(20)
 
 viz.stop()
 print("Animation stopped.")
