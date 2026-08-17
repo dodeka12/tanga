@@ -1,7 +1,7 @@
 # Phase 16 — Unified style holder (`VizStyles`)
 
 **Parent:** [README.md](./README.md)
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -200,19 +200,19 @@ The working tree still contains four mistaken edits from an earlier attempt
 
 ### Step 6 — Changelog
 
-- [ ] `docs/changelog/2026-08-17_13b30f7.md` (still unreleased — editable):
+- [x] `docs/changelog/2026-08-17_13b30f7.md` (still unreleased — editable):
       add **Breaking Changes** (old `default_*` API removed; `set_default_color`
       now targets the main scene) and **New Features** (`VizStyles`,
       `styles`/`global_styles`, `viz.styles[Kind] = ...` sugar) bullets.
-- [ ] `docs/changelog/index.md`: extend the `## [Since 0.9.2]` summary line.
+- [x] `docs/changelog/index.md`: extend the `## [Since 0.9.2]` summary line.
 
 ## Verification (end-to-end)
 
-- [ ] `uv run pytest py/tests/viz -q` green.
-- [ ] `uv run ruff check py/pytanga/viz py/tests/viz py/examples/viz` — no new
+- [x] `uv run pytest py/tests/viz -q` green.
+- [x] `uv run ruff check py/pytanga/viz py/tests/viz py/examples/viz` — no new
       issues (pre-existing E402/F821/F401 in `visualizer.py` /
       `test_scene_session.py` are out of scope).
-- [ ] Manual: `viz.styles["Line"] = CylinderLineStyle(...)` changes a new
+- [x] Manual: `viz.styles["Line"] = CylinderLineStyle(...)` changes a new
       line's render; `viz.global_styles` affects only new scenes; a named
       scene's `styles` are independent.
 
