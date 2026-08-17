@@ -30,7 +30,6 @@ viz.add(
 origin_id = viz.add(
     Point(0, 0, 0),
     color="#ffff00",
-    size=0.2,
     label="Origin",
     label_style=LabelStyle(
         offset_local=(0.0, 1.1, 0.0),
@@ -50,7 +49,6 @@ viz.add(
 # Label on a sphere — positioned above the surface
 viz.add(
     Sphere(Point(0, 0, 0), radius=2.5),
-    wireframe=True,
     opacity=0.4,
     label="$S_1$",
     label_style=LabelStyle(offset_local=(0.0, 1.05, 0.0)),
@@ -66,7 +64,6 @@ viz.add(
     Point(0, 0, 0),
     entity_id=origin_id,
     color="#ffff00",
-    size=0.2,
     label="O",
     label_style=LabelStyle(
         offset_local=(0.0, 1.1, 0.0),
@@ -84,7 +81,6 @@ viz.add(
     Point(0, 0, 0),
     entity_id=origin_id,
     color="#ffff00",
-    size=0.2,
 )
 viz.flush()
 

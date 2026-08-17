@@ -13,7 +13,11 @@ Run with:  uv run python py/examples/viz/demo_axes_custom.py
 from pytanga.geometry import Point
 from pytanga.viz import Axis, AxisStyle, Grid, LabelStyle, PointStyle, Visualizer
 
-viz = Visualizer(title="Tanga — Custom Axes & Grid")
+viz = Visualizer(
+    title="Tanga — Custom Axes & Grid",
+    add_default_axes=False,
+    add_default_grid=False,
+)
 
 # Custom X axis: major ticks every 2 units, value labels at each major tick.
 viz.new(Axis(start=(0, 0, 0), end=(10, 0, 0), major_interval=2.0, label="X"))
