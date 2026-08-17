@@ -11,7 +11,7 @@ Run with:  uv run python py/examples/viz/demo_axes_custom.py
 """
 
 from pytanga.geometry import Point
-from pytanga.viz import Axis, Grid, PointStyle, Visualizer
+from pytanga.viz import Axis, AxisStyle, Grid, LabelStyle, PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Custom Axes & Grid")
 
@@ -27,6 +27,12 @@ viz.new(
         minor_interval=0.5,
         label="Y",
     )
+)
+
+# Custom Z axis: value labels rotated -90° so they read vertically.
+viz.new(
+    Axis(start=(0, 0, 0), end=(0, 0, 4), major_interval=1.0, label="Z"),
+    style=AxisStyle(label_style=LabelStyle(rotation=-90)),
 )
 
 # Grid in the XY plane with 1-unit spacing and a 10×6 extent.
