@@ -28,14 +28,14 @@ Usage::
 """
 
 import asyncio
-import logging
 
+# import logging
 from pytanga.geometry import Line, Point
 from pytanga.viz import CylinderLineStyle, Visualizer, VizObjectRef
 from pytanga.viz._active import ActPoint
 
-logging.basicConfig(level=logging.INFO)  # everything
-logging.getLogger("tanga.viz.server").setLevel(logging.DEBUG)  # extra HTTP/WS detail
+# logging.basicConfig(level=logging.INFO)  # everything
+# logging.getLogger("tanga.viz.server").setLevel(logging.DEBUG)  # extra HTTP/WS detail
 
 
 async def main() -> None:
