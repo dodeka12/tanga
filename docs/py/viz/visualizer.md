@@ -129,7 +129,7 @@ add(color=...)               → explicit per-call (highest)
   ↓ if not provided
 style=SphereStyle(color=…)   → user's style fields (non-None)
   ↓ if None in user's style
-default_styles[Sphere]       → canonical default (lowest)
+styles[Sphere]       → canonical default (lowest)
 ```
 
 ## Multi-Scene Support
@@ -191,7 +191,7 @@ API as ``Visualizer``, but all operations affect only the target scene.
 | `display(*, viewer_name, width, height)` | Jupyter inline display with optional viewer identity |
 | `display_static(width, height)` | Serverless static HTML display |
 
-Properties: `name`, `url`, `scene`, `default_styles`, `default_label_style`.
+Properties: `name`, `url`, `scene`, `styles`.
 
 ### Browser Navigation
 

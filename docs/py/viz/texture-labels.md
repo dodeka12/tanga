@@ -181,7 +181,7 @@ TextureLabelStyle(
 ## Per-Kind Defaults
 
 Configure default texture label styles per entity kind via the
-`default_tex_label_style` property:
+`styles.tex_label_kind` property:
 
 ```python
 from pytanga.viz import Visualizer, TextureLabelStyle
@@ -189,14 +189,14 @@ from pytanga.viz import Visualizer, TextureLabelStyle
 viz = Visualizer()
 
 # Override sphere defaults
-viz.default_tex_label_style["Sphere"] = TextureLabelStyle(
+viz.styles.tex_label_kind["Sphere"] = TextureLabelStyle(
     repeat_u=6,
     offset_v=0.0,
     resolution=2048,
 )
 
 # Override plane defaults
-viz.default_tex_label_style["Plane"] = TextureLabelStyle(
+viz.styles.tex_label_kind["Plane"] = TextureLabelStyle(
     align="fit",
     background="#ffffff",
     font_size=36,
@@ -207,9 +207,9 @@ viz.add(Sphere(Point(0, 0, 0), 2.0), tex_label="$$\mathcal{S}_1$$")
 viz.add(Plane(...), tex_label="z=3")
 ```
 
-The `default_tex_label_style` property supports both class-based access
-(`viz.default_tex_label_style[Sphere]`) and string-based access
-(`viz.default_tex_label_style["Sphere"]`).
+The `styles.tex_label_kind` property supports both class-based access
+(`viz.styles.tex_label_kind[Sphere]`) and string-based access
+(`viz.styles.tex_label_kind["Sphere"]`).
 
 The global defaults (applied when no per-kind override exists) are:
 `font_size=48`, `color="#000000"`, `background=None` (entity color),

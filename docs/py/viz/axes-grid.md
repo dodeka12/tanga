@@ -75,7 +75,7 @@ lines:
   :class:`~pytanga.viz.Axes3D`, holding one `AxisStyle` per direction.
 
 Styles are passed to `add()` as the `style` argument, or configured via
-`default_styles`.  See [Styles](styles.md) for details.
+`styles`.  See [Styles](styles.md) for details.
 
 ```python
 from pytanga.viz import Axes2D, Axes2DStyle, AxisStyle, Grid, GridStyle

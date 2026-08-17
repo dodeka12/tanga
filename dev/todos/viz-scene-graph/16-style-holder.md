@@ -185,14 +185,18 @@ The working tree still contains four mistaken edits from an earlier attempt
 
 ### Step 5 — Docs
 
-- [ ] `docs/py/viz/styles.md`: replace `viz.default_styles[...]` examples with
+- [x] `docs/py/viz/styles.md`: replace `viz.default_styles[...]` examples with
       `viz.styles[...]` / `viz.styles.kind[...]`; document `styles` vs
-      `global_styles`.
-- [ ] `docs/py/viz/labels.md`, `docs/py/viz/texture-labels.md`: any
+      `global_styles` (new "Per-scene vs global defaults" section).
+- [x] `docs/py/viz/labels.md`, `docs/py/viz/texture-labels.md`: any
       `default_label_style` / `default_tex_label_style` references.
-- [ ] `docs/py/viz/visualizer.md`: method table + non-blocking-mode examples
-      (and any `set_default_color` mentions).
-- [ ] `docs/py/viz/scene-graph.md`: if it references `default_styles`.
+- [x] `docs/py/viz/visualizer.md`: method table + non-blocking-mode examples
+      (and any `set_default_color` mentions); fixed the `VizSceneHandle`
+      property list.
+- [x] `docs/py/viz/scene-graph.md`: confirmed no `default_styles` reference
+      (no change needed).
+- [x] Also `docs/py/viz/axes-grid.md`, `index.md`, `title-annotation.md`
+      (stale `default_*` mentions).
 
 ### Step 6 — Changelog
 

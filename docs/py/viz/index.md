@@ -46,7 +46,7 @@ viz.display_row(
 | [Visualizer API](visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
 | [Camera & Controls](camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`, `View3dConfig`, auto-fit vs explicit, orbit controls, Ctrl+S screenshots |
 | [Axes & Grid](axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, value labels, defaults |
-| [Style System](styles.md) | `*Style` dataclasses, `default_styles`, `set_default_color()`, `CrossHairPointStyle` |
+| [Style System](styles.md) | `*Style` dataclasses, `styles`, `set_default_color()`, `CrossHairPointStyle` |
 | [Texture Labels](texture-labels.md) | Text, KaTeX formulas, and mixed content on entity surfaces (Sphere, Plane) |
 | [Labels](labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
 | [Scene Graph & Transforms](scene-graph.md) | `VizGroup`, `VizObjectRef`, parent/child hierarchy, transforms, aspect patches |

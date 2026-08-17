@@ -15,21 +15,44 @@ from pytanga.viz import LineStyle, SphereStyle
 from pytanga.geometry import Sphere
 
 # Mutate canonical defaults via class-based access (autocomplete-friendly)
-viz.default_styles[Sphere].wireframe = False
-viz.default_styles[Sphere].opacity = 0.6
+viz.styles[Sphere].wireframe = False
+viz.styles[Sphere].opacity = 0.6
 
 # Or via string keys
-viz.default_styles["Line"] = LineStyle(length=30.0, thickness=0.05)
+viz.styles["Line"] = LineStyle(length=30.0, thickness=0.05)
 
 # Quick color-only override (also supports RGBA tuples for opacity)
 viz.set_default_color("point", "#00ff00")
 viz.set_default_color("sphere", (0.0, 0.0, 1.0, 0.5))  # blue + 50% opacity
 ```
 
-The `default_styles` property supports both **class-based access**
-(`viz.default_styles[Sphere]`) and **string-based access**
-(`viz.default_styles["Sphere"]`). The same applies to
-`default_label_styles` and `default_tex_label_style`.
+The `styles` property supports both **class-based access**
+(`viz.styles[Sphere]`) and **string-based access**
+(`viz.styles["Sphere"]`). The same applies to
+`styles.label_kind` and `styles.tex_label_kind`.
+
+### Per-scene vs global defaults
+
+`viz.styles` is the **main scene's** style holder — mutating it changes what
+the main scene renders for subsequently-added entities:
+
+```python
+viz.styles["Line"] = CylinderLineStyle(thickness=0.03)
+```
+
+`viz.global_styles` is the **master template** that *new* scenes copy from.
+Change it to affect scenes created later via `viz.scene(name)`; already-created
+scenes keep their own copy:
+
+```python
+viz.global_styles["Line"] = CylinderLineStyle(thickness=0.05)
+detail = viz.scene("detail")   # copies global_styles
+detail.styles["Line"]          # CylinderLineStyle (from global)
+viz.styles["Line"]             # unaffected (main scene keeps its copy)
+```
+
+Each scene's holder is independent; use `viz.scene("name").styles` to mutate a
+named scene's defaults directly.
 
 ### Assign vs. merge
 
@@ -44,10 +67,10 @@ There are two ways to change a stored default:
 from pytanga.viz import SphereStyle
 
 # Replace: opacity and wireframe are lost
-viz.default_styles["Sphere"] = SphereStyle(color="#00ff00")
+viz.styles["Sphere"] = SphereStyle(color="#00ff00")
 
 # Merge: only color changes; opacity/wireframe are preserved
-viz.default_styles.merge("Sphere", SphereStyle(color="#00ff00"))
+viz.styles.kind.merge("Sphere", SphereStyle(color="#00ff00"))
 ```
 
 `merge` accepts either a string key or a class:
@@ -55,7 +78,7 @@ viz.default_styles.merge("Sphere", SphereStyle(color="#00ff00"))
 ```python
 from pytanga.geometry import Sphere
 
-viz.default_styles.merge(Sphere, SphereStyle(opacity=0.9))
+viz.styles.kind.merge(Sphere, SphereStyle(opacity=0.9))
 ```
 
 By default `merge` merges nested style objects (`wireframe_dash`,
@@ -63,7 +86,7 @@ By default `merge` merges nested style objects (`wireframe_dash`,
 nested object wholesale:
 
 ```python
-viz.default_styles.merge(
+viz.styles.kind.merge(
     "Sphere",
     SphereStyle(texture_label=TextureLabelStyle(font_size=30)),  # deep=True (default)
 )  # other texture_label fields (offset_v, repeat_u, …) are preserved
@@ -85,7 +108,7 @@ viz.add(Sphere(Point(0, 0, 0), 2), style=SphereStyle(wireframe=False))
 viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 ```
 
-**Priority:** `add(color=...)` > `style=SphereStyle(color=…)` > `default_styles[Sphere]`
+**Priority:** `add(color=...)` > `style=SphereStyle(color=…)` > `styles[Sphere]`
 
 ## All Style Classes
 
@@ -202,8 +225,8 @@ Override them via class-based access:
 from pytanga.viz import DashedWireframe
 from pytanga.geometry import ImagCircle
 
-viz.default_styles[ImagCircle].wireframe_dash = DashedWireframe()
-viz.default_styles[ImagCircle].opacity = 0.2
+viz.styles[ImagCircle].wireframe_dash = DashedWireframe()
+viz.styles[ImagCircle].opacity = 0.2
 ```
 
 ## Extended Styles — `CrossHairPointStyle`

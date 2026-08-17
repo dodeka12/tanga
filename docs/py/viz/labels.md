@@ -85,7 +85,7 @@ as a scalar or a 2-/3-tuple of fractions:
 
 ```python
 viz.add(Line.from_points(Point(0, 0, 0), Point(4, 0, 0)), label="mid")   # 0.5
-viz.default_label_styles["Line"].along = 1.0                              # at the end
+viz.styles.label_kind["Line"].along = 1.0                              # at the end
 ```
 
 ### Screen-plane rotation (`rotation`)
@@ -95,7 +95,7 @@ the screen plane — useful for coordinate-axis tick labels so longer labels
 don't overlap:
 
 ```python
-viz.default_label_styles["Axis"] = LabelStyle(rotation=-45)
+viz.styles.label_kind["Axis"] = LabelStyle(rotation=-45)
 ```
 
 ## Default Label Styling
@@ -104,11 +104,11 @@ viz.default_label_styles["Axis"] = LabelStyle(rotation=-45)
 from pytanga.geometry import Sphere
 
 # Global default — affects all labels
-viz.default_label_style.offset_local = (0.0, 1.1, 0.0)
-viz.default_label_style.align = (0.5, 1.0)
+viz.styles.label_base.offset_local = (0.0, 1.1, 0.0)
+viz.styles.label_base.align = (0.5, 1.0)
 
 # Per-kind override — only for Sphere labels
-viz.default_label_styles["Sphere"] = LabelStyle(offset_local=(0.0, 1.05, 0.0))
+viz.styles.label_kind["Sphere"] = LabelStyle(offset_local=(0.0, 1.05, 0.0))
 ```
 
 Priority: user's `label_style` > per-kind default > global default.
