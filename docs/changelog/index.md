@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Since 0.9.2] — 2026-08-17
+- Unified live/export render pipeline (shared `scene-builder.js`) · export consumes `Scene.full_state()` directly · legacy `_serialize_labels()`/`parentId` label path removed
+→ [Details](2026-08-17_9774152.md)
+
+## [Since 0.9.2] — 2026-08-17
 - `content` aspect for in-place entity updates · single `sceneObjects` frontend registry (legacy path removed)
 → [Details](2026-08-17_ad59e6e.md)
 
