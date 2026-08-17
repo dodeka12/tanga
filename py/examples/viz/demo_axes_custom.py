@@ -36,7 +36,10 @@ viz.new(
 # Custom Z axis: value labels rotated -90° so they read vertically.
 viz.new(
     Axis(start=(0, 0, 0), end=(0, 0, 4), major_interval=1.0, label="Z"),
-    style=AxisStyle(value_style=LabelStyle(rotation=-90)),
+    style=AxisStyle(
+        value_style=LabelStyle(rotation=45, offset_2d=(0, 10)),
+        label_style=LabelStyle(offset_2d=(0, 20)),
+    ),
 )
 
 # Grid in the XY plane with 1-unit spacing and a 10×6 extent.
