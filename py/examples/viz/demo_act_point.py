@@ -19,7 +19,7 @@ Modifier keys switch the drag constraint plane::
 
 This demo uses :class:`ActPoint` which registers its own interaction
 handlers automatically.  The point's visual style is set via the
-``viz.add()`` call.  Hover highlighting (emissive glow + scale) is
+``viz.new()`` call.  Hover highlighting (emissive glow + scale) is
 applied automatically from the default ``ActPointStyle``.
 
 Usage::
@@ -31,7 +31,7 @@ import asyncio
 import logging
 
 from pytanga.geometry import Line, Point
-from pytanga.viz import Visualizer
+from pytanga.viz import Visualizer, VizObjectRef
 from pytanga.viz._active import ActPoint
 
 logging.basicConfig(level=logging.INFO)  # everything
@@ -41,32 +41,33 @@ logging.getLogger("tanga.viz.server").setLevel(logging.DEBUG)  # extra HTTP/WS d
 async def main() -> None:
     viz = Visualizer(title="Drag Demo — ActPoint")
 
-    # Projection lines to cardinal planes (updated on drag)
-    line_xy_id: str | None = None
-    line_xz_id: str | None = None
-    line_yz_id: str | None = None
+    # Projection lines to cardinal planes (updated on drag).
+    # ``new()`` returns a VizObjectRef; replace its ``.entity`` to update it.
+    line_xy: VizObjectRef | None = None
+    line_xz: VizObjectRef | None = None
+    line_yz: VizObjectRef | None = None
 
     def _update_lines(p: Point) -> None:
         """Create/replace projection lines from point to the three planes."""
-        nonlocal line_xy_id, line_xz_id, line_yz_id
+        nonlocal line_xy, line_xz, line_yz
 
         xy_line = Line.from_points(p, Point(p.x, p.y, 0))
-        if line_xy_id is None:
-            line_xy_id = viz.add(xy_line, color="#00cccc", opacity=1.0)
+        if line_xy is None:
+            line_xy = viz.new(xy_line, color="#00cccc", opacity=1.0)
         else:
-            viz.update_entity(line_xy_id, xy_line)
+            line_xy.entity = xy_line
 
         xz_line = Line.from_points(p, Point(p.x, 0, p.z))
-        if line_xz_id is None:
-            line_xz_id = viz.add(xz_line, color="#cc00cc", opacity=1.0)
+        if line_xz is None:
+            line_xz = viz.new(xz_line, color="#cc00cc", opacity=1.0)
         else:
-            viz.update_entity(line_xz_id, xz_line)
+            line_xz.entity = xz_line
 
         yz_line = Line.from_points(p, Point(0, p.y, p.z))
-        if line_yz_id is None:
-            line_yz_id = viz.add(yz_line, color="#cccc00", opacity=1.0)
+        if line_yz is None:
+            line_yz = viz.new(yz_line, color="#cccc00", opacity=1.0)
         else:
-            viz.update_entity(line_yz_id, yz_line)
+            line_yz.entity = yz_line
 
     # Custom handler: update projection lines, then let ActPoint move the point.
     async def on_point_drag(event, ap):
@@ -74,9 +75,9 @@ async def main() -> None:
         _update_lines(p)
         return False  # let ActPoint do the default move + flush
 
-    # Create the interactive point — style is set via viz.add().
+    # Create the interactive point — style is set via viz.new().
     ap = ActPoint(1, 1, 1, handler=on_point_drag)
-    viz.add(ap, color="#ff4444")
+    viz.new(ap, color="#ff4444")
 
     # Initial projection lines
     _update_lines(ap.point)
