@@ -124,7 +124,7 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 | `SphereStyle` | `Sphere`, `ImagSphere` | `color`, `opacity`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
 | `SpaceStyle` | `Space` | `color`, `opacity`, `extent` |
 | `GridStyle` | `Grid` | `color`, `opacity`, `line_thickness` |
-| `AxisStyle` | `Axis` | `color`, `opacity`, `line_thickness`, `label_at_major`, `label_style` |
+| `AxisStyle` | `Axis` | `color`, `opacity`, `line_thickness`, `label_style`, `value_style` |
 | `Axes2DStyle` | `Axes2D` | `u`, `v` (each an `AxisStyle`) |
 | `Axes3DStyle` | `Axes3D` | `u`, `v`, `w` (each an `AxisStyle`) |
 | `ReflectionLineStyle` | `ReflectionLine` | `color`, `opacity`, `length`, `thickness` |

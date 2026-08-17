@@ -7,7 +7,8 @@ export (without text labels).
 ## Axis
 
 A single coordinate axis from `start` to `end` with optional value labels.
-There is no tick rendering; the name label is drawn at the end of the axis.
+There is no tick rendering; the name label is drawn at the axis midpoint by
+default (configurable via `AxisStyle.label_style`).
 
 ```python
 from pytanga.viz import Axis
@@ -21,18 +22,23 @@ viz.add(Axis(start=(0, 0, 0), end=(10, 0, 0), major_interval=2.0, label="X"))
 | `end` | `(float, float, float)` | End point |
 | `major_interval` | `float` | Spacing between value labels |
 | `minor_interval` | `float \| None` | Accepted, but minor ticks are not currently rendered |
-| `label_at_major` | `bool` | Draw a value label at each major interval |
-| `label_format` | `str` | Python format specifier (e.g. `.2f`) |
-| `label_size` | `float \| None` | Font size in px for CSS2D labels |
+| `show_value_labels` | `bool` | Draw a value label at each major interval |
+| `value_format` | `str` | Python format specifier (e.g. `.2f`) |
 | `show_ticks` | `bool` | Accepted, but tick marks are not currently rendered |
-| `label` | `str \| None` | Axis name label near the end |
+| `label` | `str \| None` | Axis name label, drawn at the axis midpoint by default |
 | `value_start` | `float` | Numeric value at `start` (defaults to `0`) |
 | `value_step` | `float` | Numeric increment per world unit along `start` → `end` |
 
-`AxisStyle` additionally controls the value labels:
-`label_at_major` (bool, hide value labels when ``False``) and `label_style`
-(a :class:`~pytanga.viz.LabelStyle` with `font_size`, `color`, `align`,
-`offset_2d`, and `offset_local`).
+`AxisStyle` controls the two label kinds separately:
+
+- `value_style` (a :class:`~pytanga.viz.LabelStyle`) styles the numeric
+  **value labels** (`font_size`, `color`, `align`, `offset_2d`,
+  `offset_local`, and `rotation`).
+- `label_style` (a :class:`~pytanga.viz.LabelStyle`) styles the axis
+  **name label** (`font_size`, `color`, `align`, `along`, `offset_2d`,
+  `offset_local`, and `rotation`).  By default the name label is anchored
+  at the axis midpoint (`along=0.5`) and hangs below the axis
+  (`align=(0.5, 0)`, `offset_2d=(0, 10)`).
 
 For value labels, `offset_local` is a 3D offset in the axis local frame:
 

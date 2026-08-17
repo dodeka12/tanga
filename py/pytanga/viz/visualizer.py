@@ -667,14 +667,15 @@ class Visualizer(_JupyterDisplayMixin):
                     range_u=(0.0, 5.0),
                     range_v=(0.0, 5.0),
                     range_w=(0.0, 5.0),
+                    show_value_labels=False,
                 )
                 self._add_to_scene(
                     scene_name,
                     obj=axes,
                     style=Axes3DStyle(
-                        u=AxisStyle(color="#ff0000", label_at_major=False),
-                        v=AxisStyle(color="green", label_at_major=False),
-                        w=AxisStyle(color="blue", label_at_major=False),
+                        u=AxisStyle(color="#ff0000"),
+                        v=AxisStyle(color="green"),
+                        w=AxisStyle(color="blue"),
                     ),
                 )
             if self._add_default_grid:

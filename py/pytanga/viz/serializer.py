@@ -284,14 +284,12 @@ def _serialize_axis(
         "start": list(ent.start),
         "end": list(ent.end),
         "majorInterval": ent.major_interval,
-        "labelAtMajor": ent.label_at_major,
-        "labelFormat": ent.label_format,
+        "showValueLabels": ent.show_value_labels,
+        "valueFormat": ent.value_format,
         "showTicks": ent.show_ticks,
     }
     if ent.minor_interval is not None:
         result["minorInterval"] = ent.minor_interval
-    if ent.label_size is not None:
-        result["labelSize"] = ent.label_size
     if ent.label is not None:
         result["label"] = ent.label
     if ent.value_start != 0.0:
@@ -325,6 +323,8 @@ def _serialize_axes2d(
         ],
         styles,
         ent.major_interval,
+        ent.show_value_labels,
+        ent.value_format,
     )
     result: Dict[str, Any] = {
         "kind": kind,
@@ -363,6 +363,8 @@ def _serialize_axes3d(
         ],
         styles,
         ent.major_interval,
+        ent.show_value_labels,
+        ent.value_format,
     )
     result: Dict[str, Any] = {
         "kind": kind,
@@ -434,6 +436,8 @@ def _build_axes_entries(
     directions: List[tuple[Any, tuple[float, float], str | None]],
     styles: List[Dict[str, Any]],
     major_interval: float,
+    show_value_labels: bool,
+    value_format: str,
 ) -> List[Dict[str, Any]]:
     """Expand direction extents into axis-half dicts with per-direction styles."""
     axes: List[Dict[str, Any]] = []
@@ -448,6 +452,8 @@ def _build_axes_entries(
                     1.0,
                     style,
                     major_interval,
+                    show_value_labels,
+                    value_format,
                 )
             )
         if lo != 0.0:
@@ -459,6 +465,8 @@ def _build_axes_entries(
                     -1.0,
                     style,
                     major_interval,
+                    show_value_labels,
+                    value_format,
                 )
             )
     return axes
@@ -471,15 +479,16 @@ def _axis_entry(
     value_step: float,
     style: Dict[str, Any],
     major_interval: float,
+    show_value_labels: bool,
+    value_format: str,
 ) -> Dict[str, Any]:
     """Build a single axis-half dict with a flat color/opacity for the shared renderer."""
-    label_at_major = style.get("label_at_major", True)
     entry: Dict[str, Any] = {
         "start": list(origin),
         "end": list(end),
         "majorInterval": major_interval,
-        "labelAtMajor": label_at_major,
-        "labelFormat": ".1f",
+        "showValueLabels": show_value_labels,
+        "valueFormat": value_format,
         "valueStep": value_step,
         "style": style,
     }

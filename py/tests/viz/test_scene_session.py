@@ -664,13 +664,23 @@ class TestAxisSerialization:
         assert d["end"] == [3, 0, 0]
         assert d["majorInterval"] == 1.0
         assert d["label"] == "X"
-        assert d["labelFormat"] == ".1f"
+        assert d["valueFormat"] == ".1f"
+        assert d["showValueLabels"] is True
         assert d["showTicks"] is True
 
     def test_axis_minor_interval_omitted_when_none(self):
         ent = Axis((0, 0, 0), (3, 0, 0))
         d = serialize_entity(ent, "a1", kind="Axis")
         assert "minorInterval" not in d
+
+    def test_axis_name_and_value_style_defaults(self):
+        ent = Axis((0, 0, 0), (3, 0, 0), label="X")
+        d = serialize_entity(ent, "a1", kind="Axis")
+        assert d["style"]["label_style"]["along"] == 0.5
+        assert d["style"]["label_style"]["align"] == [0.5, 0.0]
+        assert d["style"]["label_style"]["offset_2d"] == [0.0, 10.0]
+        assert d["style"]["value_style"]["font_size"] == 12
+        assert d["style"]["value_style"]["align"] == [0.5, 0.5]
 
 
 class TestGridSerialization:
@@ -768,7 +778,7 @@ class TestAxesSerialization:
         for e in entries:
             assert e["color"] == "#ff0000"
 
-    def test_axes_label_style_flows_into_entries(self):
+    def test_axes_value_style_flows_into_entries(self):
         from pytanga.viz import Axes2DStyle, AxisStyle, LabelStyle
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
@@ -776,23 +786,20 @@ class TestAxesSerialization:
             a, "ax2", kind="Axes2D",
             properties={
                 "style": Axes2DStyle(
-                    u=AxisStyle(
-                        label_at_major=False,
-                        label_style=LabelStyle(font_size=20, align=(0.5, 0.0)),
-                    ),
-                    v=AxisStyle(label_style=LabelStyle(offset_2d=(3, 4))),
+                    u=AxisStyle(value_style=LabelStyle(font_size=20, align=(0.5, 0.0))),
+                    v=AxisStyle(value_style=LabelStyle(offset_2d=(3, 4))),
                 )
             },
         )
         entries = d["axes"]
         u_entry = entries[0]
         v_entry = entries[1]
-        assert u_entry["labelAtMajor"] is False
-        assert u_entry["style"]["label_style"]["font_size"] == 20
-        assert u_entry["style"]["label_style"]["align"] == [0.5, 0.0]
-        assert v_entry["style"]["label_style"]["offset_2d"] == [3, 4]
+        assert u_entry["showValueLabels"] is True
+        assert u_entry["style"]["value_style"]["font_size"] == 20
+        assert u_entry["style"]["value_style"]["align"] == [0.5, 0.0]
+        assert v_entry["style"]["value_style"]["offset_2d"] == [3, 4]
 
-    def test_axes_label_style_rotation_flows_into_entries(self):
+    def test_axes_value_style_rotation_flows_into_entries(self):
         from pytanga.viz import Axes2DStyle, AxisStyle, LabelStyle
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
@@ -800,14 +807,30 @@ class TestAxesSerialization:
             a, "ax2", kind="Axes2D",
             properties={
                 "style": Axes2DStyle(
-                    u=AxisStyle(label_style=LabelStyle(rotation=30)),
-                    v=AxisStyle(label_style=LabelStyle(rotation=-20)),
+                    u=AxisStyle(value_style=LabelStyle(rotation=30)),
+                    v=AxisStyle(value_style=LabelStyle(rotation=-20)),
                 )
             },
         )
         entries = d["axes"]
-        assert entries[0]["style"]["label_style"]["rotation"] == 30
-        assert entries[1]["style"]["label_style"]["rotation"] == -20
+        assert entries[0]["style"]["value_style"]["rotation"] == 30
+        assert entries[1]["style"]["value_style"]["rotation"] == -20
+
+    def test_axes_label_and_value_style_defaults(self):
+        a = Axes2D(range_u=(0, 1), range_v=(0, 1), labels=("X", "Y"))
+        d = serialize_entity(a, "ax2", kind="Axes2D")
+        for e in d["axes"]:
+            assert e["style"]["label_style"]["along"] == 0.5
+            assert e["style"]["label_style"]["align"] == [0.5, 0.0]
+            assert e["style"]["label_style"]["offset_2d"] == [0.0, 10.0]
+            assert e["style"]["value_style"]["font_size"] == 12
+            assert e["style"]["value_style"]["align"] == [0.5, 0.5]
+
+    def test_axes_show_value_labels_passthrough(self):
+        a = Axes2D(range_u=(0, 1), range_v=(0, 1), show_value_labels=False)
+        d = serialize_entity(a, "ax2", kind="Axes2D")
+        for e in d["axes"]:
+            assert e["showValueLabels"] is False
 
 
 class TestGridAxesStyles:
@@ -827,24 +850,28 @@ class TestGridAxesStyles:
         assert s.color is None
         assert s.opacity is None
         assert s.line_thickness is None
-        assert s.label_at_major is None
         assert s.label_style is None
+        assert s.value_style is None
         assert s.to_dict() == {"style_type": "AxisStyle"}
 
     def test_axis_style_label_fields(self):
         from pytanga.viz import AxisStyle, LabelStyle
 
         s = AxisStyle(
-            label_at_major=False,
-            label_style=LabelStyle(font_size=18, align=(0.5, 0.0), offset_2d=(2, -4)),
+            label_style=LabelStyle(along=0.5, align=(0.5, 0.0), offset_2d=(2, -4)),
+            value_style=LabelStyle(font_size=18, align=(0.5, 0.5)),
         )
         d = s.to_dict()
-        assert d["label_at_major"] is False
         assert d["label_style"] == {
             "style_type": "LabelStyle",
-            "font_size": 18,
+            "along": 0.5,
             "align": [0.5, 0.0],
             "offset_2d": [2, -4],
+        }
+        assert d["value_style"] == {
+            "style_type": "LabelStyle",
+            "font_size": 18,
+            "align": [0.5, 0.5],
         }
 
     def test_axes2d_style_defaults(self):

@@ -136,7 +136,13 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
     "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=2.0),
     "Grid": GridStyle(color="#555555", opacity=0.8, line_thickness=1.0),
-    "Axis": AxisStyle(color="#888888", opacity=1.0, line_thickness=2.0),
+    "Axis": AxisStyle(
+        color="#888888",
+        opacity=1.0,
+        line_thickness=2.0,
+        label_style=LabelStyle(along=0.5, align=(0.5, 0.0), offset_2d=(0.0, 10.0)),
+        value_style=LabelStyle(font_size=12, align=(0.5, 0.5)),
+    ),
     "Axes2D": Axes2DStyle(),
     "Axes3D": Axes3DStyle(),
     # Operators
