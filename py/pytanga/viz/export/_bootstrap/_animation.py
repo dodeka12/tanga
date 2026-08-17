@@ -146,55 +146,6 @@ if (_loopChk) _loopChk.addEventListener('change', (e) => _onLoop(e.target.checke
 # ── JS generator functions ──────────────────────────────────────────
 
 
-def js_animated_label_function(label_map_var: str = "") -> str:
-    """Generate the ``_createLabel()`` JS function for animated adapters.
-
-    Args:
-        label_map_var: If non-empty (e.g. ``"labelObjects"``), the function
-            stores created label objects in a Map under this variable name.
-
-    Returns:
-        JS code string defining the ``_createLabel`` function.
-    """
-    map_set = f"    {label_map_var}.set(lbl.id, labelObj);" if label_map_var else ""
-
-    return f"""function _createLabel(lbl) {{
-    if (!lbl.text) return;
-    const div = document.createElement('div');
-    div.textContent = lbl.text;
-    const s = lbl.style || {{}};
-    div.style.fontFamily = s.font_family || 'sans-serif';
-    div.style.fontSize = (s.font_size || 14) + 'px';
-    div.style.color = s.color || '#ffffff';
-    div.style.backgroundColor = s.background || 'rgba(0, 0, 0, 0.6)';
-    div.style.padding = '2px 6px';
-    div.style.borderRadius = '3px';
-    div.style.userSelect = 'none';
-    div.style.whiteSpace = 'nowrap';
-    if (typeof renderMathInElement !== 'undefined') {{
-        try {{ renderMathInElement(div, {{ delimiters: [
-            {{ left: '$$', right: '$$', display: true }},
-            {{ left: '$', right: '$', display: false }} ], throwOnError: false }}); }}
-        catch(e) {{ /* ignore */ }}
-    }}
-    const container = document.createElement('div');
-    container.appendChild(div);
-    const labelObj = new CSS2DObject(container);
-    if (lbl.parentId && figMeshMap.has(lbl.parentId)) {{
-        const pos = lbl.position || [0, 0, 0];
-        labelObj.position.set(pos[0], pos[1], pos[2]);
-        const parentMesh = figMeshMap.get(lbl.parentId);
-        parentMesh.add(labelObj);
-        parentMesh.userData._labels = parentMesh.userData._labels || [];
-        parentMesh.userData._labels.push(lbl.id);
-    }} else {{
-        const pos = lbl.position || [0, 0, 0];
-        labelObj.position.set(pos[0], pos[1], pos[2]);
-        figScene.add(labelObj);
-    }}
-{map_set}}}"""
-
-
 def js_animation_state() -> str:
     """Generate the animation state variable declarations.
 
@@ -233,18 +184,22 @@ def js_reconcile_frame(
     scene_var: str,
     label_objects_map_var: str = "labelObjects",
     mesh_map_var: str = "figMeshMap",
+    registry_var: str = "figRegistry",
 ) -> str:
     """Generate the id-based frame reconciliation engine.
 
     Emits ``_reconcileFrame(frame)`` (create-on-first-seen, update-on-seen-again,
-    hide-and-cache on absence) and the ``_playFrame(n)`` helper.  The engine
-    reuses the bundled ``updateEntityMesh``/``createEntityMesh`` dispatchers
-    from ``factory.js`` rather than reimplementing in-place update semantics.
+    hide-and-cache on absence) and the ``_playFrame(n)`` helper.  Scene objects
+    are built through the shared ``buildSceneObject``/``buildOverlay`` so the
+    animated export applies node transforms + parenting exactly like the live
+    viewer, then updated in place via the bundled ``updateEntityMesh``
+    dispatcher.
 
     Args:
         scene_var: JS variable name for the three.js Scene.
         label_objects_map_var: JS variable name for the label objects Map.
-        mesh_map_var: JS variable name for the mesh Map.
+        mesh_map_var: JS variable name for the id -> inner-mesh Map.
+        registry_var: JS variable name for the id -> entry registry Map.
 
     Returns:
         JS code string defining ``_reconcileFrame`` and ``_playFrame``.
@@ -255,15 +210,15 @@ async function _reconcileFrame(frame) {{
     const targetIds = new Set(ents.map(e => e.id));
 
     for (const ent of ents) {{
-        if (ent.layer === 'overlay' && ent.kind === 'label') {{
-            let labelObj = {label_objects_map_var}.get(ent.id);
-            if (!labelObj) {{
-                _createLabel(ent);
-                labelObj = {label_objects_map_var}.get(ent.id);
+        if (ent.layer === 'overlay') {{
+            let entry = {registry_var}.get(ent.id);
+            if (!entry) {{
+                entry = buildOverlay(ent, {scene_var}, {registry_var});
+                if (entry && entry.obj) {label_objects_map_var}.set(ent.id, entry.obj);
             }}
-            if (labelObj) {{
-                labelObj.visible = true;
-                if (labelObj.element) labelObj.element.style.display = '';
+            if (entry) {{
+                entry.obj.visible = true;
+                if (entry.obj.element) entry.obj.element.style.display = '';
             }}
             continue;
         }}
@@ -271,12 +226,11 @@ async function _reconcileFrame(frame) {{
 
         let mesh = {mesh_map_var}.get(ent.id);
         if (!mesh) {{
-            mesh = await createEntityMesh(ent);
-            if (mesh) {{
-                {scene_var}.add(mesh);
-                {mesh_map_var}.set(ent.id, mesh);
-                mesh.userData._data = ent;
-                mesh.visible = true;
+            const entry = await buildSceneObject(ent, {scene_var}, {registry_var});
+            if (entry) {{
+                {mesh_map_var}.set(ent.id, entry.mesh);
+                entry.mesh.userData._data = ent;
+                entry.mesh.visible = true;
             }}
             continue;
         }}
@@ -286,25 +240,26 @@ async function _reconcileFrame(frame) {{
             mesh.userData._data = {{ ...prev, ...ent }};
             mesh.visible = true;
         }} else {{
-            const oldLabels = mesh.userData._labels || [];
-            removeEntityMesh(mesh);
+            const entry = {registry_var}.get(ent.id);
+            const oldLabels = entry && entry.obj ? (entry.obj.userData._labels || []) : [];
+            removeEntityMesh(entry ? entry.obj : mesh);
             {mesh_map_var}.delete(ent.id);
+            {registry_var}.delete(ent.id);
             const merged = {{ ...prev, ...ent }};
             merged.id = ent.id;
-            const rebuilt = await createEntityMesh(merged);
-            if (rebuilt) {{
-                {scene_var}.add(rebuilt);
-                {mesh_map_var}.set(ent.id, rebuilt);
-                rebuilt.userData._data = merged;
-                rebuilt.userData._labels = [];
+            const newEntry = await buildSceneObject(merged, {scene_var}, {registry_var});
+            if (newEntry) {{
+                {mesh_map_var}.set(ent.id, newEntry.mesh);
+                newEntry.mesh.userData._data = merged;
+                newEntry.obj.userData._labels = [];
                 for (const lblId of oldLabels) {{
                     const lbl = {label_objects_map_var}.get(lblId);
                     if (lbl) {{
-                        rebuilt.add(lbl);
-                        rebuilt.userData._labels.push(lblId);
+                        newEntry.obj.add(lbl);
+                        newEntry.obj.userData._labels.push(lblId);
                     }}
                 }}
-                rebuilt.visible = true;
+                newEntry.mesh.visible = true;
             }}
         }}
     }}

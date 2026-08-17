@@ -5,8 +5,9 @@
 Usage::
     from pytanga.viz.export import render_export_html, build_gltf_scene
 
-    html = render_export_html(entities, labels, scene_config)
-    glb_bytes = build_gltf_scene(entities, config, labels=labels)
+    objects = scene.full_state()
+    html = render_export_html(objects, scene_config)
+    glb_bytes = build_gltf_scene(entities, config)
 """
 
 from ._gltf import build_gltf_scene

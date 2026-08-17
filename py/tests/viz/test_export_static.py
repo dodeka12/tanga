@@ -37,20 +37,22 @@ class TestExportStatic:
 
     def test_static_render_html(self):
         s = _group_scene()
-        html = render_export_html(s.full_state(), s._serialize_labels(), s.config.to_dict())
+        html = render_export_html(s.full_state(), s.config.to_dict())
         assert "function createEntityMesh(" in html
         assert "function createVizGroup(" in html
+        assert "function buildSceneObject(" in html
+        assert "function buildOverlay(" in html
 
     def test_figure_html_generation(self):
         s = _group_scene()
         html = render_export_figure(
             s.full_state(),
-            s._serialize_labels(),
             s.config.to_dict(),
             {"width": 400, "height": 300},
             {"title": "T"},
         )
         assert "function createVizGroup(" in html
+        assert "function buildSceneObject(" in html
 
     def test_parent_before_child(self):
         s = _group_scene()

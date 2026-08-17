@@ -178,32 +178,6 @@ def serialize_object_update(
     }
 
 
-def _serialize_label(label: Any, label_id: str) -> dict[str, Any]:
-    """Serialize a :class:`~pytanga.viz._label.Label` to a JSON-ready dict.
-
-    The ``position`` is already the parent-relative anchor computed from
-    ``compute_label_position()``.  ``offset_local`` is NOT sent to the
-    frontend — it was already applied when computing ``position``.
-    """
-    from ._styles import LabelStyle
-
-    style = label.style if label.style is not None else LabelStyle()
-    style_dict = style.to_dict()
-
-    # offset_local is NOT included in the wire format
-    style_dict.pop("offset_local", None)
-
-    return {
-        "id": label_id,
-        "layer": "overlay",
-        "kind": "label",
-        "text": label.text,
-        "position": list(label.position),
-        "parentId": label.parent_id,
-        "style": style_dict,
-    }
-
-
 # ── Helpers ────────────────────────────────────────────────
 
 

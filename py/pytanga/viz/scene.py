@@ -451,19 +451,6 @@ class Scene:
             result.append(entity_dict)
         return result
 
-    # -- Backward-compat helpers (used by visualizer.py) ----
-
-    def _serialize_labels(self) -> list[dict[str, Any]]:
-        """Return all labels serialized (for export, backward compat)."""
-        from .serializer import _serialize_label
-
-        result: list[dict[str, Any]] = []
-        for oid in self._order:
-            obj = self._objects.get(oid)
-            if obj is not None and obj.layer == "overlay" and obj.kind == "label":
-                result.append(_serialize_label(obj.data, oid))
-        return result
-
     # -- Label look-up -----------------------------------------
 
     def get_label_ids(self, entity_id: str) -> list[str]:
@@ -556,71 +543,3 @@ def _inject_interaction(
     ic = interaction_configs.get(object_id)
     if ic is not None and getattr(ic, "enabled", False):
         entity_dict["interaction"] = ic.to_dict()
-
-
-# ── Serialization helper ──────────────────────────────────
-
-
-def _serialize_object(
-    obj: SceneObject,
-    *,
-    styles_map: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Serialize a SceneObject to a JSON-ready dict.
-
-    Dispatches on ``obj.layer`` to the appropriate serializer.
-    """
-    from .serializer import _serialize_label, serialize_entity
-
-    if obj.layer == "overlay":
-        if obj.kind == "label":
-            return _serialize_label(obj.data, obj.id)
-        if obj.kind == "annotation":
-            return _serialize_annotation(obj)
-        if obj.kind == "title":
-            return _serialize_title(obj)
-        # Generic overlay (future: sliders, buttons, etc.)
-        return {
-            "id": obj.id,
-            "layer": "overlay",
-            "kind": obj.kind,
-        }
-
-    # scene layer: serialize as entity
-    return serialize_entity(
-        obj.data,
-        obj.id,
-        obj.properties,
-        kind=obj.kind,
-        styles_map=styles_map,
-    )
-
-
-def _serialize_annotation(obj: SceneObject) -> dict[str, Any]:
-    """Serialize an annotation overlay object."""
-    text = obj.data.get("text", "") if isinstance(obj.data, dict) else ""
-    style = obj.data.get("style", {}) if isinstance(obj.data, dict) else {}
-    return {
-        "id": obj.id,
-        "layer": "overlay",
-        "kind": "annotation",
-        "positioning": "fixed",
-        "anchor": "bottom",
-        "text": text,
-        "style": style,
-    }
-
-
-def _serialize_title(obj: SceneObject) -> dict[str, Any]:
-    """Serialize a title overlay object."""
-    text = obj.data.get("text", "") if isinstance(obj.data, dict) else ""
-    style = obj.data.get("style", {}) if isinstance(obj.data, dict) else {}
-    return {
-        "id": obj.id,
-        "layer": "overlay",
-        "kind": "title",
-        "positioning": "fixed",
-        "anchor": "top",
-        "text": text,
-        "style": style,
-    }

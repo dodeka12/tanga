@@ -5,9 +5,10 @@
 window.__tanga_ready = true;
 
 import * as THREE from 'three';
-import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { setupControls } from './controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from './renderers/factory.js';
+import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from './scene-builder.js';
 import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
@@ -735,28 +736,9 @@ async function upsertObject(msg) {
         sceneObjects.delete(msg.id);
     }
     if (msg.layer === 'scene') {
-        const mesh = await createEntityMesh(msg);
-        if (mesh) {
-            // The node transform is additive on top of the entity geometry.
-            // Identity transforms are skipped so the renderer's geometry
-            // position (ent.position / ent.center / …) is preserved.
-            const node = wrapWithNodeTransform(mesh, msg.transform);
-            if (msg.parent_id) {
-                const parent = sceneObjects.get(msg.parent_id);
-                if (parent && parent.obj) {
-                    parent.obj.add(node);
-                } else {
-                    scene.add(node);
-                }
-            } else {
-                scene.add(node);
-            }
-            node.userData.parentId = msg.parent_id || null;
-            sceneObjects.set(msg.id, { obj: node, mesh, data: { ...msg }, layer: 'scene' });
-            // ── Interaction ──
-            if (msg.interaction) {
-                registerInteractive(msg.id, node, msg.interaction);
-            }
+        const entry = await buildSceneObject(msg, scene, sceneObjects);
+        if (entry && msg.interaction) {
+            registerInteractive(msg.id, entry.obj, msg.interaction);
         }
     } else if (msg.layer === 'overlay') {
         if (msg.kind === 'annotation') {
@@ -768,94 +750,20 @@ async function upsertObject(msg) {
             return;
         }
 
-        const el = buildOverlayElement(msg);
-        if (!el) return;
-
-        let css2d = null;
-        const attachId = msg.attach_to ?? msg.parentId;
-        if (attachId) {
-            const container = document.createElement('div');
-            container.appendChild(el);
-            css2d = new CSS2DObject(container);
-            const pos = msg.position || [0, 0, 0];
-            css2d.position.set(pos[0], pos[1], pos[2]);
-            const off2d = msg.style?.offset_2d || [0, 0];
-            const align = msg.style?.align || [0.5, 0.5];
-            const tx = (0.5 - align[0]) * 100;
-            const ty = (0.5 - align[1]) * 100;
-            el.style.transform = `translate(${off2d[0]}px, ${off2d[1]}px) translate(${tx}%, ${ty}%)`;
-            const parentObj = sceneObjects.get(attachId);
-            if (parentObj && parentObj.obj) {
-                parentObj.obj.add(css2d);
-                parentObj.obj.userData._labels = parentObj.obj.userData._labels || [];
-                parentObj.obj.userData._labels.push(msg.id);
-                css2d.userData._parentId = attachId;
-            } else {
-                scene.add(css2d);
-            }
-        } else {
-            el.style.position = 'absolute';
-            const off = msg.offset || [10, 10];
-            el.style.top = off[1] + 'px';
-            if (msg.anchor === 'top-right') {
-                el.style.right = off[0] + 'px';
-            } else {
-                el.style.left = off[0] + 'px';
-            }
-            document.body.appendChild(el);
-        }
-        sceneObjects.set(msg.id, { obj: css2d, mesh: null, data: { ...msg }, el, layer: 'overlay' });
+        buildOverlay(msg, scene, sceneObjects);
     }
 }
 
 function removeSceneObject(id) {
     unregisterInteractive(id);
     const entry = sceneObjects.get(id);
-    if (!entry) {
-        cancelTween(id);
-        return;
-    }
-    if (entry.layer === 'scene') {
-        if (entry.obj) {
-            if (entry.obj.userData._attachedGroups) {
-                for (const groupId of entry.obj.userData._attachedGroups) {
-                    detachGroup(groupId);
-                }
-            }
-            removeEntityMesh(entry.obj);
+    if (entry && entry.layer === 'scene' && entry.obj && entry.obj.userData._attachedGroups) {
+        for (const groupId of entry.obj.userData._attachedGroups) {
+            detachGroup(groupId);
         }
-    } else {
-        if (entry.obj && entry.obj.removeFromParent) entry.obj.removeFromParent();
-        if (entry.obj && entry.obj.element) entry.obj.element.remove();
-        if (entry.el) entry.el.remove();
     }
-    sceneObjects.delete(id);
+    removeObject(id, sceneObjects);
     cancelTween(id);
-}
-
-function applyTransformToObject(obj, transform) {
-    if (!transform) return;
-    if (transform.position) obj.position.set(transform.position[0], transform.position[1], transform.position[2]);
-    if (transform.rotation) obj.rotation.set(transform.rotation[0], transform.rotation[1], transform.rotation[2]);
-    if (transform.scale) obj.scale.set(transform.scale[0], transform.scale[1], transform.scale[2]);
-}
-
-function isIdentityTransform(transform) {
-    if (!transform) return true;
-    const p = transform.position || [0, 0, 0];
-    const r = transform.rotation || [0, 0, 0];
-    const s = transform.scale || [1, 1, 1];
-    return p[0] === 0 && p[1] === 0 && p[2] === 0
-        && r[0] === 0 && r[1] === 0 && r[2] === 0
-        && s[0] === 1 && s[1] === 1 && s[2] === 1;
-}
-
-function wrapWithNodeTransform(mesh, transform) {
-    if (isIdentityTransform(transform)) return mesh;
-    const node = new THREE.Group();
-    node.add(mesh);
-    applyTransformToObject(node, transform);
-    return node;
 }
 
 async function applyObjectPatch(patch) {
@@ -933,47 +841,6 @@ async function updateEntityContent(id, content) {
     entry.data = { ...prev, ...content };
     if (prev.interaction) {
         registerInteractive(id, entry.obj, prev.interaction);
-    }
-}
-
-function buildOverlayElement(msg) {
-    switch (msg.kind) {
-        case 'label': {
-            if (!msg.text) return null;
-            const div = document.createElement('div');
-            div.textContent = msg.text;
-            const s = msg.style || {};
-            div.style.fontFamily = s.font_family || 'sans-serif';
-            div.style.fontSize = (s.font_size || 14) + 'px';
-            div.style.color = s.color || '#ffffff';
-            div.style.backgroundColor = s.background || 'rgba(0, 0, 0, 0.6)';
-            div.style.padding = '2px 6px';
-            div.style.borderRadius = '3px';
-            div.style.userSelect = 'none';
-            div.style.whiteSpace = 'nowrap';
-            if (typeof renderMathInElement !== 'undefined') {
-                try {
-                    renderMathInElement(div, {
-                        delimiters: [
-                            { left: '$$', right: '$$', display: true },
-                            { left: '$', right: '$', display: false },
-                        ],
-                        throwOnError: false,
-                    });
-                } catch (e) {
-                    console.warn('KaTeX label rendering error:', e);
-                }
-            }
-            return div;
-        }
-        case 'annotation': {
-            if (!msg.text) return null;
-            renderAnnotation(msg.text, msg.style || null);
-            return annotationPanel;
-        }
-        default:
-            console.warn('Unknown overlay kind: ' + msg.kind);
-            return null;
     }
 }
 

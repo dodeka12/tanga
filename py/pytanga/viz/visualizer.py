@@ -1732,13 +1732,10 @@ class Visualizer(_JupyterDisplayMixin):
         from pytanga.viz.export._html import render_export_html
 
         scene = self._scenes[scene_name]
-        all_objects = scene.full_state(styles_map=self._default_styles)
-        entities = [obj for obj in all_objects if obj.get("kind") != "label"]
-        labels = scene._serialize_labels()
+        objects = scene.full_state(styles_map=self._default_styles)
 
         html = render_export_html(
-            entities=entities,
-            labels=labels,
+            objects=objects,
             scene_config=scene.config.to_dict(),
         )
 

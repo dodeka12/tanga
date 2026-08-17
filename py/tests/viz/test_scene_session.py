@@ -267,7 +267,7 @@ class TestScene:
         lbl = Label(text="test", position=(0, 0, 0))
         lid = s.add_label(lbl)
         assert isinstance(lid, str)
-        labels = s._serialize_labels()
+        labels = [o for o in s.full_state() if o.get("kind") == "label"]
         assert len(labels) == 1
         assert labels[0]["text"] == "test"
 
@@ -512,7 +512,7 @@ class TestLabelDefaults:
         viz = Visualizer()
         viz.default_label_styles["Sphere"] = LabelStyle(font_size=18)
         eid = viz.add(Sphere(Point(0, 0, 0), 1.0), label="S")
-        labels = viz._scene._serialize_labels()
+        labels = [o for o in viz._scene.full_state() if o.get("kind") == "label"]
         assert len(labels) == 1
         assert labels[0]["style"]["font_size"] == 18
         assert eid

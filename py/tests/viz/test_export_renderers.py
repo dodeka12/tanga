@@ -76,3 +76,17 @@ def test_bootstrap_defines_every_renderer_function():
             f"Renderer function {func_name} (exported from {rel}) is missing "
             "from the generated HTML export bootstrap."
         )
+
+
+def test_scene_builder_bundled():
+    """The shared scene-builder module must be bundled in the export."""
+    from pytanga.viz.export._bootstrap._html import _SHARED_JS_FILES
+
+    assert _SHARED_JS_FILES, "No shared JS modules configured"
+    for path in _SHARED_JS_FILES:
+        assert path.exists(), f"Shared JS module missing on disk: {path}"
+
+    bootstrap = generate_bootstrap_js("")
+    assert "function buildSceneObject(" in bootstrap
+    assert "function buildOverlay(" in bootstrap
+    assert "function removeObject(" in bootstrap
