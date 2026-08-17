@@ -49,8 +49,8 @@ viz.add(
     ),
 )
 
-# Body entities
-id_1 = viz.add(
+# Body entities — `new()` returns a VizObjectRef; update via `.entity`.
+body_1 = viz.new(
     pos_1,
     label=f"$m_1 = {mass_1}$",
     style=PointStyle(
@@ -58,7 +58,7 @@ id_1 = viz.add(
         color="#ff4444",
     ),
 )
-id_2 = viz.add(
+body_2 = viz.new(
     pos_2,
     label=f"$m_2 ={mass_2}$",
     style=PointStyle(
@@ -103,8 +103,8 @@ for _ in viz.animate(fps=50):
     pos_2 = pos_2 + vel_2 * DT
 
     # ── Render ───────────────────────────────────────────────
-    viz.update_entity(id_1, pos_1)
-    viz.update_entity(id_2, pos_2)
+    body_1.entity = pos_1
+    body_2.entity = pos_2
 
     viz.flush()
 
