@@ -45,6 +45,7 @@ fast rotation/movement of compound objects without recomputing any vertices.
 | 13 | [13-content-update.md](./13-content-update.md) | `content` aspect (in-place entity geometry update) + remove legacy flat-entity path and consolidate frontend maps — **DONE** |
 | 14 | [14-render-pipeline-consolidation.md](./14-render-pipeline-consolidation.md) | Unify live/export render pipeline: shared `scene-builder.js` + single `objects`/`attach_to` wire format — **PLANNED** |
 | 15 | [15-label-anchors-rotation.md](./15-label-anchors-rotation.md) | Per-entity label anchors (`along`) + screen-plane label rotation — **PLANNED** |
+| 16 | [16-style-holder.md](./16-style-holder.md) | Unified style holder (`VizStyles`): `styles` / `global_styles` accessors, per-scene resolution fix, `default_*` API removal — **DONE** |
 
 ## Guiding decisions
 
