@@ -3,8 +3,14 @@
 
 """Tests for the unified style holder (`_viz_styles.py`)."""
 
-from pytanga.geometry.entities import Point
-from pytanga.viz import LabelStyle, PointStyle
+from pytanga.geometry import Direction, Line, Point
+from pytanga.viz import (
+    CylinderLineStyle,
+    LabelStyle,
+    LineStyle,
+    PointStyle,
+    Visualizer,
+)
 from pytanga.viz._style_dict import _StyleDict
 from pytanga.viz._viz_styles import VizStyles, make_styles
 
@@ -60,3 +66,42 @@ def test_act_point_default():
     s = make_styles()
     assert s.act_point.hover_emissive == "#ffff44"
     assert s.act_point.hover_scale == 1.5
+
+
+# ── Visualizer wiring ────────────────────────────────────────
+
+
+def test_viz_styles_is_main_scene_holder():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    assert viz.styles is viz.main_scene.styles
+
+
+def test_viz_styles_mutation_affects_new_entity():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.styles["Line"] = CylinderLineStyle(thickness=0.05)
+    viz.add(Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)))
+    line = [o for o in viz.main_scene.full_state() if o.get("kind") == "Line"][0]
+    assert line["style"]["style_type"] == "CylinderLineStyle"
+    assert line["style"]["thickness"] == 0.05
+
+
+def test_global_styles_independent_of_main_scene():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.styles["Line"] = CylinderLineStyle(thickness=0.05)
+    assert isinstance(viz.global_styles["Line"], LineStyle)
+
+
+def test_new_scene_copies_global_styles():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.global_styles["Line"] = CylinderLineStyle(thickness=0.07)
+    detail = viz.scene("detail")
+    assert isinstance(detail.styles["Line"], CylinderLineStyle)
+    assert isinstance(viz.styles["Line"], LineStyle)
+
+
+def test_named_scene_styles_independent():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    detail = viz.scene("detail")
+    detail.styles["Point"].color = "#000000"
+    assert viz.styles["Point"].color != "#000000"
+

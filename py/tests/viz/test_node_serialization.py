@@ -213,7 +213,7 @@ class TestNodeSerialization:
         s = Scene()
         eid = s.add(Point(1.5, 2.5, 3.5))
         full = s.full_state()[0]
-        prior = serialize_entity(Point(1.5, 2.5, 3.5), eid, styles_map=s.default_styles)
+        prior = serialize_entity(Point(1.5, 2.5, 3.5), eid, styles_map=s.styles.kind)
         for key, value in prior.items():
             assert full[key] == value
         assert full["parent_id"] is None

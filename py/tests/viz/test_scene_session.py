@@ -443,20 +443,20 @@ class TestVisualizer:
         viz = Visualizer()
         from pytanga.geometry import Sphere
 
-        assert "Sphere" in viz.default_styles
-        assert viz.default_styles[Sphere].wireframe is True
-        assert viz.default_styles[Sphere].opacity == 0.4
+        assert "Sphere" in viz.styles.kind
+        assert viz.styles[Sphere].wireframe is True
+        assert viz.styles[Sphere].opacity == 0.4
 
     def test_set_default_color_via_styles(self):
         viz = Visualizer()
         viz.set_default_color("point", "#00ff00")
-        assert viz.default_styles["Point"].color == "#00ff00"
+        assert viz.styles["Point"].color == "#00ff00"
 
     def test_set_default_color_rgba_sets_opacity_too(self):
         viz = Visualizer()
         viz.set_default_color("point", (1.0, 0.0, 0.0, 0.3))
-        assert viz.default_styles["Point"].color == "#ff0000"
-        assert viz.default_styles["Point"].opacity == 0.3
+        assert viz.styles["Point"].color == "#ff0000"
+        assert viz.styles["Point"].opacity == 0.3
 
     def test_set_default_color_unknown_kind_raises(self):
         viz = Visualizer()
@@ -566,22 +566,22 @@ class TestLabelDefaults:
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_styles[Sphere] = LabelStyle(font_size=18)
-        assert viz.default_label_styles["Sphere"].font_size == 18
+        viz.styles.label_kind[Sphere] = LabelStyle(font_size=18)
+        assert viz.styles.label_kind["Sphere"].font_size == 18
 
     def test_default_label_style_setter(self):
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_style = LabelStyle(font_size=22)
-        assert viz._default_label_style.font_size == 22
+        viz.styles.label_base = LabelStyle(font_size=22)
+        assert viz.styles.label_base.font_size == 22
 
     def test_default_label_styles_resolution(self):
         from pytanga.geometry import Sphere
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_styles["Sphere"] = LabelStyle(font_size=18)
+        viz.styles.label_kind["Sphere"] = LabelStyle(font_size=18)
         eid = viz.add(Sphere(Point(0, 0, 0), 1.0), label="S")
         labels = [o for o in viz._scene.full_state() if o.get("kind") == "label"]
         assert len(labels) == 1
@@ -594,9 +594,9 @@ class TestStyleDictMerge:
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
-        original = viz.default_styles["Sphere"].opacity
-        viz.default_styles.merge("Sphere", SphereStyle(color="#00ff00"))
-        s = viz.default_styles["Sphere"]
+        original = viz.styles["Sphere"].opacity
+        viz.styles.kind.merge("Sphere", SphereStyle(color="#00ff00"))
+        s = viz.styles["Sphere"]
         assert s.color == "#00ff00"
         assert s.opacity == original
 
@@ -605,27 +605,27 @@ class TestStyleDictMerge:
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
-        viz.default_styles.merge(Sphere, SphereStyle(opacity=0.9))
-        assert viz.default_styles["Sphere"].opacity == 0.9
+        viz.styles.kind.merge(Sphere, SphereStyle(opacity=0.9))
+        assert viz.styles["Sphere"].opacity == 0.9
 
     def test_setitem_is_full_replacement(self):
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
-        viz.default_styles["Sphere"] = SphereStyle(color="#00ff00")
-        s = viz.default_styles["Sphere"]
+        viz.styles["Sphere"] = SphereStyle(color="#00ff00")
+        s = viz.styles["Sphere"]
         assert s.opacity is None  # lost, not merged
 
     def test_merge_shallow_replaces_nested(self):
         from pytanga.viz._styles import DashedWireframe, SphereStyle, TextureLabelStyle
 
         viz = Visualizer()
-        viz.default_styles.merge(
+        viz.styles.kind.merge(
             "Sphere",
             SphereStyle(texture_label=TextureLabelStyle(font_size=30)),
             deep=False,
         )
-        tl = viz.default_styles["Sphere"].texture_label
+        tl = viz.styles["Sphere"].texture_label
         assert tl.font_size == 30
         assert tl.offset_v is None
         assert tl.repeat_u is None
@@ -634,20 +634,20 @@ class TestStyleDictMerge:
         from pytanga.viz._styles import SphereStyle, TextureLabelStyle
 
         viz = Visualizer()
-        viz.default_styles.merge(
+        viz.styles.kind.merge(
             "Sphere",
             SphereStyle(texture_label=TextureLabelStyle(font_size=30)),
             deep=True,
         )
-        tl = viz.default_styles["Sphere"].texture_label
+        tl = viz.styles["Sphere"].texture_label
         assert tl.font_size == 30
 
     def test_label_merge_has_full_base(self):
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_styles.merge("Point", LabelStyle(font_size=20))
-        ls = viz.default_label_styles["Point"]
+        viz.styles.label_kind.merge("Point", LabelStyle(font_size=20))
+        ls = viz.styles.label_kind["Point"]
         assert ls.font_size == 20
         assert ls.color is not None
 
@@ -871,16 +871,16 @@ class TestGridAxesStyles:
         from pytanga.viz import Axes2DStyle, Axes3DStyle, AxisStyle, GridStyle
 
         viz = Visualizer()
-        assert isinstance(viz.default_styles["Grid"], GridStyle)
-        assert isinstance(viz.default_styles["Axis"], AxisStyle)
-        assert isinstance(viz.default_styles["Axes2D"], Axes2DStyle)
-        assert isinstance(viz.default_styles["Axes3D"], Axes3DStyle)
-        assert viz.default_styles["Grid"].color == "#555555"
-        assert viz.default_styles["Grid"].opacity == 0.8
-        assert viz.default_styles["Grid"].line_thickness == 1.0
-        assert viz.default_styles["Axis"].color == "#888888"
-        assert viz.default_styles["Axis"].opacity == 1.0
-        assert viz.default_styles["Axis"].line_thickness == 2.0
+        assert isinstance(viz.styles["Grid"], GridStyle)
+        assert isinstance(viz.styles["Axis"], AxisStyle)
+        assert isinstance(viz.styles["Axes2D"], Axes2DStyle)
+        assert isinstance(viz.styles["Axes3D"], Axes3DStyle)
+        assert viz.styles["Grid"].color == "#555555"
+        assert viz.styles["Grid"].opacity == 0.8
+        assert viz.styles["Grid"].line_thickness == 1.0
+        assert viz.styles["Axis"].color == "#888888"
+        assert viz.styles["Axis"].opacity == 1.0
+        assert viz.styles["Axis"].line_thickness == 2.0
 
     def test_grid_style_via_add(self):
         from pytanga.viz import GridStyle
@@ -902,14 +902,14 @@ class TestGridAxesStyles:
         from pytanga.viz import GridStyle
 
         viz = Visualizer()
-        viz.default_styles.merge("Grid", GridStyle(color="#00ff00"))
-        assert viz.default_styles["Grid"].color == "#00ff00"
-        assert viz.default_styles["Grid"].opacity == 0.8  # preserved
+        viz.styles.kind.merge("Grid", GridStyle(color="#00ff00"))
+        assert viz.styles["Grid"].color == "#00ff00"
+        assert viz.styles["Grid"].opacity == 0.8  # preserved
 
     def test_grid_set_default_color(self):
         viz = Visualizer()
         viz.set_default_color("grid", "#123456")
-        assert viz.default_styles["Grid"].color == "#123456"
+        assert viz.styles["Grid"].color == "#123456"
 
 
 class TestAxesExpansion:

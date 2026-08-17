@@ -15,7 +15,7 @@ viz = Visualizer(title="Tanga — Custom Defaults")
 viz.set_default_color("point", (0.0, 1.0, 0.0))  # RGB tuple -> green
 viz.set_default_color("line", (0.0, 1.0, 1.0))  # RGB tuple -> cyan
 viz.set_default_color("plane", "#ff00ff")  # hex string -> magenta
-viz.default_styles["Plane"].extent = 15.0
+viz.styles["Plane"].extent = 15.0
 
 # These use the new defaults
 viz.add(Point(2, 0, 0), style=PointStyle(size=0.15), label="green point (default)")

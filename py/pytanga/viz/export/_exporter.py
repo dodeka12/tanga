@@ -114,7 +114,7 @@ class SceneExporter:
 
         from pytanga.viz.export import render_export_html  # noqa: PLC0415
 
-        objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
         html = render_export_html(objects, self._viz._config.to_dict())
         path.write_text(html, encoding="utf-8")
 
@@ -139,7 +139,7 @@ class SceneExporter:
 
         from pytanga.viz.export import build_gltf_scene  # noqa: PLC0415
 
-        all_objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        all_objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
         entities = [o for o in all_objects if o.get("layer") != "overlay"]
         glb_data = build_gltf_scene(entities, self._viz._config)
         path.write_bytes(glb_data)
@@ -204,7 +204,7 @@ class SceneExporter:
         else:
             resolved = self._default_figure_style
 
-        objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
         fig_config = self.figure_config
 
         return render_export_figure(
@@ -454,7 +454,7 @@ class SceneExporter:
 
         return AnimationRecording(
             self._viz._scene,
-            styles_map=self._viz._default_styles,
+            styles_map=self._viz.styles.kind,
         )
 
     def export_animated_figure(

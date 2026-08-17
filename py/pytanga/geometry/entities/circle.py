@@ -71,8 +71,8 @@ class ImagCircle(Circle):
     """An imaginary circle in 3D space.
 
     Inherits all fields from :class:`Circle` with ``is_imaginary=True``.
-    Can be used as a class-based key in :attr:`Visualizer.default_styles`
-    (e.g. ``viz.default_styles[ImagCircle]``).
+    Can be used as a class-based key in :attr:`Visualizer.styles`
+    (e.g. ``viz.styles[ImagCircle]``).
 
     Like :class:`Circle`, the ``normal`` defaults to ``Direction(0, 0, 1)``
     when not provided.

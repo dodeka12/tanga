@@ -157,21 +157,23 @@ The working tree still contains four mistaken edits from an earlier attempt
 
 ### Step 3 — Update tests and non-demo examples (clean-break fallout)
 
-- [ ] `py/tests/viz/test_style_defaults.py` → rework as the `VizStyles` holder
+- [x] `py/tests/viz/test_style_defaults.py` → rework as the `VizStyles` holder
       test (or fold into `test_viz_styles.py`); the independence assertion now
       becomes: `viz.styles` is the main scene's holder, `viz.global_styles` is
       independent, and named scenes get their own copies.
-- [ ] `py/tests/viz/test_scene_session.py` (≈442-464, 547-650, 870-912),
+- [x] `py/tests/viz/test_scene_session.py` (≈442-464, 547-650, 870-912),
       `py/tests/viz/test_imaginary_styles.py` (≈23, 128-345),
       `py/tests/viz/test_node_serialization.py` (≈216),
       `py/tests/viz/test_tex_label_style.py`: replace `default_*` /
       `set_default_color` references with the new accessors.
-- [ ] Examples: `demo_custom_defaults.py` (and any `demo_tex_label_*.py`,
+- [x] Examples: `demo_custom_defaults.py` (and any `demo_tex_label_*.py`,
       `demo_labels.py`) using `default_*` / `set_default_color` → new accessors.
-- [ ] Add behavior tests: `viz.styles["Line"] = ...` changes a subsequently
+      Also `demo_camera_2d.py`, the exporter (`_exporter.py`), and docstrings in
+      `geometry/entities/{circle,point_pair,sphere}.py`.
+- [x] Add behavior tests: `viz.styles["Line"] = ...` changes a subsequently
       added line on the main scene; `viz.global_styles` only affects newly
       created scenes; `viz.scene("x").styles` is independent.
-- [ ] Verify: `uv run pytest py/tests/viz -q` green.
+- [x] Verify: `uv run pytest py/tests/viz -q` green.
 
 ### Step 4 — Demo: cylinder lines in `demo_act_point.py`
 

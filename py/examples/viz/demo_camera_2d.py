@@ -65,8 +65,8 @@ viz.add(
 )
 
 # Configure per-kind defaults once — no need to pass style/label_style on each add.
-viz.default_styles.merge(Point, PointStyle(size=0.15))
-viz.default_label_styles.merge(Point, LabelStyle(align=(0, 0)))
+viz.styles.kind.merge(Point, PointStyle(size=0.15))
+viz.styles.label_kind.merge(Point, LabelStyle(align=(0, 0)))
 
 viz.add(Point(2, 1, 0), color="#ff4444", opacity=1.0, label="$P_1$")
 viz.add(Point(-1, 2, 0), color="#44ff44", label="$P_2$")
