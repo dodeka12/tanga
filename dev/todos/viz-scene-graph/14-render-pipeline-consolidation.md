@@ -1,6 +1,6 @@
 # Phase 14 — Unify live/export render pipeline
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -46,65 +46,65 @@ follow-up, not in this phase.
 
 ### 1. New shared module `templates/scene-builder.js`
 
-- [ ] Move `wrapWithNodeTransform` / `isIdentityTransform` /
+- [x] Move `wrapWithNodeTransform` / `isIdentityTransform` /
       `applyTransformToObject` out of `viewer.js` (exported).
-- [ ] `buildSceneObject(obj, scene, registry)`:
+- [x] `buildSceneObject(obj, scene, registry)`:
       `createEntityMesh(obj)` → `wrapWithNodeTransform(mesh, obj.transform)` →
       parent under `registry.get(obj.parent_id)?.obj` or `scene` →
       `registry.set(obj.id, {obj, mesh, data:{...obj}, layer:'scene'})`.
-- [ ] `buildOverlay(obj, scene, registry)`:
+- [x] `buildOverlay(obj, scene, registry)`:
       dispatch `label` (CSS2DObject + `attach_to` parenting + offset/align),
       `annotation`, `title`; use `obj.attach_to ?? obj.parentId`.
-- [ ] `removeObject(id, registry, scene)`: unified disposal (scene →
+- [x] `removeObject(id, registry, scene)`: unified disposal (scene →
       `removeEntityMesh`; overlay → `removeFromParent`/`element.remove`/
       `el.remove`).
 
 ### 2. `viewer.js` delegates to the module
 
-- [ ] `upsertObject` scene branch → `buildSceneObject`; overlay branch →
+- [x] `upsertObject` scene branch → `buildSceneObject`; overlay branch →
       `buildOverlay`.
-- [ ] `removeSceneObject` → `removeObject`.
-- [ ] Delete the moved local helpers.
+- [x] `removeSceneObject` → `removeObject`.
+- [x] Delete the moved local helpers.
 
 ### 3. Export bootstrap delegates to the module
 
-- [ ] Add `scene-builder.js` to `_RENDERER_FILES`.
-- [ ] Replace `js_entity_creation` + `js_label_creation_static` bodies with a
+- [x] Add `scene-builder.js` to `_RENDERER_FILES`.
+- [x] Replace `js_entity_creation` + `js_label_creation_static` bodies with a
       thin loop calling `buildSceneObject`/`buildOverlay` over one `objects`
       array.
-- [ ] `render_export_html`/`render_export_figure`: embed `objects` JSON only
+- [x] `render_export_html`/`render_export_figure`: embed `objects` JSON only
       (drop the separate `labels` array).
 
 ### 4. Unify the wire format
 
-- [ ] Export consumes `Scene.full_state()` (already unified `objects`).
-- [ ] Remove `Scene._serialize_labels()` + the `parentId` label path if no
+- [x] Export consumes `Scene.full_state()` (already unified `objects`).
+- [x] Remove `Scene._serialize_labels()` + the `parentId` label path if no
       other caller remains (check `visualizer.py`).
-- [ ] Update `test_export_static.py`/`test_export_renderers.py` expectations.
+- [x] Update `test_export_static.py`/`test_export_renderers.py` expectations.
 
 ### 5. Animated export
 
-- [ ] Ensure its initial hierarchy also uses `buildSceneObject`/`buildOverlay`
+- [x] Ensure its initial hierarchy also uses `buildSceneObject`/`buildOverlay`
       (it already reuses `createEntityMesh`/`updateEntityMesh`).
 
 ### 6. Changelog
 
-- [ ] Add a changelog entry per `dev/workflows/changelog.md`.
+- [x] Add a changelog entry per `dev/workflows/changelog.md`.
 
 ## Unit / smoke tests
 
-- [ ] `node --check` on `scene-builder.js` and existing templates.
-- [ ] `uv run pytest py/tests/viz -q`.
-- [ ] Export a `VizGroup` + non-identity transform + `attach_to` label; diff
+- [x] `node --check` on `scene-builder.js` and existing templates.
+- [x] `uv run pytest py/tests/viz -q`.
+- [x] Export a `VizGroup` + non-identity transform + `attach_to` label; diff
       visually against the live viewer (must be identical).
 
 ## Verification
 
-- [ ] Export and live view render identically for the same scene.
-- [ ] `js_entity_creation`/`js_label_creation_static` no longer contain
+- [x] Export and live view render identically for the same scene.
+- [x] `js_entity_creation`/`js_label_creation_static` no longer contain
       transform/parenting logic (delegate to `scene-builder.js`).
-- [ ] No `_serialize_labels`/`parentId` usage remains in the export path.
-- [ ] All viz tests pass.
+- [x] No `_serialize_labels`/`parentId` usage remains in the export path.
+- [x] All viz tests pass.
 
 ## Alternatives (why not)
 
