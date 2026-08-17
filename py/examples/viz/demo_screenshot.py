@@ -12,10 +12,10 @@ from pytanga.viz import PointStyle, SceneExporter, SphereStyle, Visualizer
 viz = Visualizer(title="Tanga — Screenshot")
 viz.start()
 
-viz.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
-viz.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
-viz.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
-viz.add(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.25)
+viz.new(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+viz.new(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
+viz.new(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
+viz.new(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.25)
 viz.flush()
 
 exporter = SceneExporter(viz)

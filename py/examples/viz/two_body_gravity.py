@@ -40,7 +40,7 @@ viz = Visualizer(title="Tanga — Two-Body Gravitational Simulation")
 viz.start()
 
 # Coordinate axes for reference
-viz.add(
+viz.new(
     Point(0, 0, 0),
     label="origin",
     style=PointStyle(

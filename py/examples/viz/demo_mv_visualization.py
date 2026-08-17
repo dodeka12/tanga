@@ -27,7 +27,7 @@ geo_n3 = Geometry(n3)
 viz = Visualizer(title="Tanga — MV → Entity Pipeline")
 
 # ── PGA3 ─────────────────────────────────────────────────
-viz.add(
+viz.new(
     # geo_pga(...) creates for Entity/Operator args; analyzes for MV args
     geo_pga.create(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1))),
     opacity=0.3,
@@ -35,7 +35,7 @@ viz.add(
 )
 
 # Point in OPNS form (grade-3 in PGA3)
-viz.add(
+viz.new(
     geo_pga(Point(5, 0, 0)),
     color="#ff4444",
     style=PointStyle(size=0.15),
@@ -44,14 +44,14 @@ viz.add(
 
 # Same point in IPNS form (grade-1 vector)
 geo_pga_ipns = Geometry(BasisPGA3(opns=False))
-viz.add(
+viz.new(
     geo_pga_ipns(Point(5, 0, 0)),
     color="#44ff44",
     style=PointStyle(size=0.10),
     label="P (IPNS)",
 )
 
-viz.add(
+viz.new(
     # geo_pga(...) creates for Entity/Operator args; analyzes for MV args
     geo_pga.create(Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))),
     color="#44ff44",
@@ -59,33 +59,33 @@ viz.add(
 )
 
 # ── N3 ───────────────────────────────────────────────────
-viz.add(geo_n3(Point(-3, 2, 0)), color="#ff8844", style=PointStyle(size=0.12), label="N3 Point")
-viz.add(
+viz.new(geo_n3(Point(-3, 2, 0)), color="#ff8844", style=PointStyle(size=0.12), label="N3 Point")
+viz.new(
     # geo_n3(...) creates for Entity/Operator args; analyzes for MV args
     geo_n3.create(PointPair(point_a=Point(-3, 0, 0), point_b=Point(0, 2, 0))),
     color="#8844ff",
     label="PtPair",
 )
-viz.add(
+viz.new(
     # geo_n3(...) creates for Entity/Operator args; analyzes for MV args
     geo_n3.create(Line(origin=Point(0, 0, 0), direction=Direction(0, 1, 0))),
     color="#44ffff",
     label="N3 L",
 )
-viz.add(
+viz.new(
     # geo_n3(...) creates for Entity/Operator args; analyzes for MV args
     geo_n3.create(Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)),
     color="#ff44ff",
     label="Circle",
 )
-viz.add(
+viz.new(
     # geo_n3(...) creates for Entity/Operator args; analyzes for MV args
     geo_n3.create(Plane(point=Point(0, 0, 5), normal=Direction(0, 0, 1))),
     opacity=0.2,
     color="#ff88ff",
     label="N3 Plane",
 )
-viz.add(
+viz.new(
     # geo_n3(...) creates for Entity/Operator args; analyzes for MV args
     geo_n3.create(Sphere(center=Point(-2, 0, 0), radius=1.5)),
     style=SphereStyle(wireframe=True),

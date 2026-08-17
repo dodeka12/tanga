@@ -16,10 +16,10 @@ from pytanga.viz import Axis, Grid, PointStyle, Visualizer
 viz = Visualizer(title="Tanga — Custom Axes & Grid")
 
 # Custom X axis: major ticks every 2 units, value labels at each major tick.
-viz.add(Axis(start=(0, 0, 0), end=(10, 0, 0), major_interval=2.0, label="X"))
+viz.new(Axis(start=(0, 0, 0), end=(10, 0, 0), major_interval=2.0, label="X"))
 
 # Custom Y axis: major ticks every 1 unit plus minor ticks every 0.5.
-viz.add(
+viz.new(
     Axis(
         start=(0, 0, 0),
         end=(0, 6, 0),
@@ -30,8 +30,8 @@ viz.add(
 )
 
 # Grid in the XY plane with 1-unit spacing and a 10×6 extent.
-viz.add(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-3, 3)))
+viz.new(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-3, 3)))
 
-viz.add(Point(3, 2, 0), color="#ffcc00", style=PointStyle(size=0.12), label="P")
+viz.new(Point(3, 2, 0), color="#ffcc00", style=PointStyle(size=0.12), label="P")
 
 viz.run()

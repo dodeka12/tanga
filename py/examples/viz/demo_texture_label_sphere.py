@@ -17,7 +17,7 @@ def main():
     viz.set_title("Texture Labels on Spheres")
 
     # ── Sphere with plain text label ──
-    viz.add(
+    viz.new(
         Sphere(Point(-3, 0, 0), 2.0),
         color="#4488ff",
         tex_label="Sphere A",
@@ -39,7 +39,7 @@ def main():
     )
 
     # ── Sphere with KaTeX formula label ──
-    viz.add(
+    viz.new(
         Sphere(Point(0, 0, 0), 2.0),
         tex_label=r"$\mathcal{S}_1$",
         # style=SphereStyle(
@@ -50,7 +50,7 @@ def main():
     )
 
     # ── Sphere with mixed text + embedded formula ──
-    viz.add(
+    viz.new(
         Sphere(Point(5, 0, 0), 2.0),
         style=SphereStyle(
             color="#44ff44",
@@ -70,7 +70,7 @@ def main():
     )
 
     # ── Reference sphere without texture label ──
-    viz.add(
+    viz.new(
         Sphere(Point(0, 4, 0), 1.0),
         style=SphereStyle(
             color="#ffaa00",
