@@ -177,10 +177,10 @@ The working tree still contains four mistaken edits from an earlier attempt
 
 ### Step 4 — Demo: cylinder lines in `demo_act_point.py`
 
-- [ ] After `viz = Visualizer(...)`, add
+- [x] After `viz = Visualizer(...)`, add
       `viz.styles["Line"] = CylinderLineStyle(...)` (before the projection
       lines are first created).
-- [ ] Verify: syntax + a quick serialize check that a line resolves
+- [x] Verify: syntax + a quick serialize check that a line resolves
       `style_type == "CylinderLineStyle"`.
 
 ### Step 5 — Docs

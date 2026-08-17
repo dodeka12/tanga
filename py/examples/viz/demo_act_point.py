@@ -31,7 +31,7 @@ import asyncio
 import logging
 
 from pytanga.geometry import Line, Point
-from pytanga.viz import Visualizer, VizObjectRef
+from pytanga.viz import CylinderLineStyle, Visualizer, VizObjectRef
 from pytanga.viz._active import ActPoint
 
 logging.basicConfig(level=logging.INFO)  # everything
@@ -40,6 +40,10 @@ logging.getLogger("tanga.viz.server").setLevel(logging.DEBUG)  # extra HTTP/WS d
 
 async def main() -> None:
     viz = Visualizer(title="Drag Demo — ActPoint")
+
+    # Render lines as solid cylinders (world-unit radius) instead of the
+    # default screen-space fat lines.
+    viz.styles["Line"] = CylinderLineStyle(thickness=0.03)
 
     # Projection lines to cardinal planes (updated on drag).
     # ``new()`` returns a VizObjectRef; replace its ``.entity`` to update it.
