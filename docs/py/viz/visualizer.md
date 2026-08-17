@@ -277,6 +277,7 @@ viz.clear()  # remove all (main scene)
 | `stop()` | Stop the server and clean up. Waits for graceful WebSocket shutdown before stopping the event loop. |
 | `run(*, wait_for_browser=None)` | Start server, open browser, block until Ctrl+C. In Jupyter, ``wait_for_browser`` defaults to ``False``. |
 | `sleep_ms(ms)` | Convenience: `time.sleep(ms / 1000)` |
+| `animate(*, fps=60.0)` | Yield once per animation frame until Ctrl+C (see [Animation](animation.md)). Paces the loop to ``fps``; ``fps=0`` disables pacing. Calls ``stop()`` automatically when the loop ends. |
 | `url` (property) | The HTTP URL of the viewer (`"http://localhost:8765"`) |
 | `scene(name)` | Get or create a named scene, returns :class:`VizSceneHandle` |
 | `scenes` (property) | All scenes keyed by name (``""`` is the main scene) |
@@ -396,13 +397,12 @@ viz.start()  # waits for browser, then returns
 point_id = viz.add(Point(3, 0, 0))
 viz.flush()
 
-for _ in range(100):
+for dt in viz.animate(fps=60):   # runs until Ctrl+C
     viz.update_entity(point_id, Point(new_x, new_y, new_z))
     viz.flush()
-    viz.sleep_ms(16)
-
-viz.stop()
 ```
+
+`animate()` stops the server cleanly when the loop ends (e.g. on Ctrl+C).
 
 For export-only workflows where no browser is needed:
 

@@ -1,7 +1,7 @@
 # Changelog
 
 ## [Since 0.9.2] — 2026-08-17
-- `CylinderLineStyle` (world-unit cylinder lines) · `content` aspect for in-place updates · unified live/export render pipeline · `Line` length as a content field · screen-space fat-line rendering · single `sceneObjects` registry
+- `CylinderLineStyle` (world-unit cylinder lines) · `content` aspect for in-place updates · unified live/export render pipeline · `Line` length as a content field · screen-space fat-line rendering · single `sceneObjects` registry · `Visualizer.animate()` frame loop
 - Bug fixes: WebSocket reconnect overhaul — IPv4+IPv6 loopback bind · graceful `1001` shutdown · Unicode-safe console/log output · fixed 2s auto-reconnect for 60s then stop
 → [Details](2026-08-17_13b30f7.md)
 

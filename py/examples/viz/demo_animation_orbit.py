@@ -25,9 +25,10 @@ point_id = viz.add(Point(3, 0, 0), color="#ff4444", label="orbit")
 trail_id = viz.add(Point(3, 0, 0), color="#ff8844", style=PointStyle(size=0.08))
 viz.flush()
 
-print("Animating for 5 seconds...")
-for frame in range(300):
-    angle = frame * 0.05
+print("Animating orbit until Ctrl+C...")
+angle = 0.0
+for _ in viz.animate(fps=60):
+    angle += 0.05  # radians per frame (~3 rad/s at 60 FPS)
     x = 3 * math.cos(angle)
     y = 3 * math.sin(angle)
     viz.update_entity(point_id, Point(x, y, 0))
@@ -39,7 +40,5 @@ for frame in range(300):
     )
 
     viz.flush()
-    viz.sleep_ms(16)
 
-viz.stop()
 print("Animation stopped.")

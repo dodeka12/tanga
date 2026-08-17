@@ -44,12 +44,10 @@ L2 = 1.5  # length of rod2 (world units)
 G = 9.81  # gravity (world units / s^2)
 
 # ── Integration / animation timing ───────────────────────────
-FPS = 50          # visual frames per second
-DT = 1.0 / FPS    # seconds per frame
-STEPS = 4         # physics substeps per frame (for stability)
-H = DT / STEPS    # integration step size (seconds)
-DAMPING = 0.0     # per-second angular-velocity damping (0.0 = ideal / chaotic)
-N_FRAMES = 600    # total frames (~12 s)
+FPS = 50                # animation frame rate (passed to viz.animate)
+STEPS = 4               # physics substeps per frame (for stability)
+H = 1.0 / (FPS * STEPS)  # integration step size (seconds)
+DAMPING = 0.0           # per-second angular-velocity damping (0.0 = ideal / chaotic)
 
 # ── Initial state: both rods released from horizontal, pointing at +x ──
 THETA1_0 = math.pi / 2
@@ -122,8 +120,8 @@ viz.flush()
 theta1, theta2 = THETA1_0, THETA2_0
 omega1, omega2 = OMEGA1_0, OMEGA2_0
 
-print("Simulating the double pendulum for ~12 seconds...")
-for _ in range(N_FRAMES):
+print("Simulating the double pendulum until Ctrl+C...")
+for _ in viz.animate(fps=FPS):
     for _ in range(STEPS):
         alpha1, alpha2 = _accel(theta1, theta2, omega1, omega2)
         omega1 += alpha1 * H
@@ -142,7 +140,5 @@ for _ in range(N_FRAMES):
     arm2.set_transform(rotation=(0.0, 0.0, theta2 - theta1))
 
     viz.flush()
-    viz.sleep_ms(int(1000 / FPS))
 
-viz.stop()
 print("Animation stopped.")

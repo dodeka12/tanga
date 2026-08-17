@@ -64,9 +64,10 @@ arm2.new(Point(L2, 0, 0), color="#44ff44", label="tip", style=PointStyle(size=0.
 
 viz.flush()
 
-print("Animating two nested rods for ~6 seconds...")
-for frame in range(300):
-    t = frame * 0.02
+print("Animating two nested rods until Ctrl+C...")
+t = 0.0
+for dt in viz.animate(fps=50):
+    t += dt
 
     # arm1 rotates rod1 + arm2 + rod2 about pivot 1 (its own origin).
     arm1.set_transform(rotation=(0.0, 0.0, math.sin(t) * 1.2))
@@ -75,7 +76,5 @@ for frame in range(300):
     arm2.set_transform(rotation=(0.0, 0.0, math.sin(1.7 * t) * 1.5))
 
     viz.flush()
-    viz.sleep_ms(20)
 
-viz.stop()
 print("Animation stopped.")

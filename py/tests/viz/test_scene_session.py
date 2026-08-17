@@ -4,6 +4,7 @@
 """Tests for CameraConfig, SceneConfig, Scene, and Visualizer basics."""
 
 import json
+import threading
 
 import pytest
 from pytanga.geometry.entities import Point
@@ -293,6 +294,21 @@ class TestVisualizer:
         viz = Visualizer()
         assert viz._port == 8765
         assert viz._host == "localhost"
+
+    def test_animate_yields_frames_and_stops_on_shutdown(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        # Pretend the server is already running so animate() skips start().
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop", lambda: None)
+
+        gen = viz.animate(fps=0)  # fps=0 → no pacing
+        assert next(gen) >= 0.0
+        assert next(gen) >= 0.0
+
+        viz._shutdown_requested.set()
+        with pytest.raises(StopIteration):
+            next(gen)
 
     def test_opns_kwarg_rejected(self):
         with pytest.raises(TypeError):

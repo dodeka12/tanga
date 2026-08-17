@@ -21,18 +21,28 @@ viz.start()
 point_id = viz.add(Point(3, 0, 0), color="#ff4444")
 viz.flush()
 
-for frame in range(300):
-    angle = frame * 0.05
+angle = 0.0
+for dt in viz.animate(fps=60):   # runs until Ctrl+C
+    angle += 3.0 * dt
     viz.update_entity(point_id, Point(3 * math.cos(angle), 3 * math.sin(angle), 0))
     viz.flush()
-    viz.sleep_ms(16)   # ~60 FPS
-
-viz.stop()
 ```
 
-Use `start()` for non-blocking mode, `update_entity()` to replace geometry,
-and `flush()` to push changed state. Only entities marked dirty by the scene
-manager are serialized — stationary entities cost nothing.
+`animate()` is the recommended way to drive a frame loop. It yields once per
+frame (the elapsed wall-clock time in seconds), paces the loop to `fps`, and
+stops the server cleanly when you press Ctrl+C — or whenever the loop ends.
+
+### `animate()` reference
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `fps` | `float` | `60.0` | Target frames per second. `0` disables pacing so the loop body can call `sleep_ms()` itself. |
+
+- `start()` remains the non-blocking entry point; `animate()` starts the server
+  automatically if it isn't running yet.
+- Use `update_entity()` to replace geometry and `flush()` to push changed state.
+  Only entities marked dirty by the scene manager are serialized — stationary
+  entities cost nothing.
 
 ## Keyframe Tweening (Browser-Driven)
 

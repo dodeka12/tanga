@@ -57,10 +57,10 @@ point_id = viz.add(
 viz.flush()
 
 # ── Animation loop ─────────────────────────────────────────
-print("Animating circular orbit with gradient trail for 10 seconds...")
-
-for frame in range(600):
-    angle = frame * 0.04  # radians per frame
+print("Animating circular orbit with gradient trail until Ctrl+C...")
+angle = 0.0
+for _ in viz.animate(fps=60):
+    angle += 0.04  # radians per frame
     x = 3 * math.cos(angle)
     y = 3 * math.sin(angle)
     z = math.sin(angle * 0.5) * 0.5  # slight vertical oscillation
@@ -73,7 +73,5 @@ for frame in range(600):
     viz.update_entity(trail_id, trail)
 
     viz.flush()
-    viz.sleep_ms(16)
 
-viz.stop()
 print("Animation stopped.")

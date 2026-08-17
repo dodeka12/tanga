@@ -16,7 +16,7 @@ import signal
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Iterator
 
 if TYPE_CHECKING:
     from ._object_ref import VizObjectRef
@@ -708,6 +708,45 @@ class Visualizer(_JupyterDisplayMixin):
     def sleep_ms(milliseconds: int) -> None:
         """Pause execution for *milliseconds*."""
         time.sleep(milliseconds / 1000)
+
+    def animate(self, *, fps: float = 60.0) -> Iterator[float]:
+        """Yield once per animation frame until interrupted (Ctrl+C).
+
+        Each iteration yields the elapsed wall-clock time in seconds since the
+        previous frame (``0.0`` on the first frame).  When *fps* is positive the
+        generator sleeps between frames to hold that frame rate; pass ``fps=0``
+        to disable pacing and call :meth:`sleep_ms` from inside the loop body
+        instead.
+
+        The server is started automatically if it isn't already running, and
+        :meth:`stop` is guaranteed to run when the loop ends — including when
+        Ctrl+C is pressed or an exception escapes the loop body.
+
+        Example::
+
+            viz = Visualizer(title="...")
+            for dt in viz.animate(fps=60):
+                ...  # update transforms / entities each frame
+                viz.flush()
+        """
+        if self._server is None:
+            self.start()
+
+        shutdown = getattr(self, "_shutdown_requested", None)
+        frame_time = 1.0 / fps if fps and fps > 0.0 else None
+
+        try:
+            prev = time.monotonic()
+            while shutdown is None or not shutdown.is_set():
+                now = time.monotonic()
+                yield now - prev
+                prev = now
+                if frame_time is not None:
+                    remaining = frame_time - (time.monotonic() - now)
+                    if remaining > 0.0:
+                        time.sleep(remaining)
+        finally:
+            self.stop()
 
     # ── Default style configuration ─────────────────────────
 
