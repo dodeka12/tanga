@@ -148,61 +148,18 @@ class SceneExporter:
                 f"File {path} already exists. Use overwrite=True to replace it."
             )
 
-        from pytanga.viz.export import build_gltf_scene  # noqa: PLC0415
+        from pytanga.viz.export._gltf import build_glb  # noqa: PLC0415
 
         all_objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
         entities = [o for o in all_objects if o.get("layer") != "overlay"]
-        glb_data = build_gltf_scene(entities, self._viz._config)
+        glb_data = build_glb(entities, self._viz._config)
         path.write_bytes(glb_data)
 
     # ── Figure ─────────────────────────────────────────────────
 
-    def export_figure(
-        self,
-        path: str | Path,
-        *,
-        style: _FS | None = None,
-        overwrite: bool = False,
-    ) -> None:
-        """Export the scene as an HTML snippet for embedding in presentations.
-
-        The output is a ``<div>`` + ``<script type="module">`` block — no
-        ``<html>``, no ``<head>``, no global style resets.  Paste it directly
-        into a reveal.js, Slidev, or Marp slide.
-
-        Args:
-            path: Output file path (e.g. ``"figure.html"``).
-            style: Optional ``FigureStyle``.  Non-``None`` fields override
-                ``default_figure_style``.
-            overwrite: If ``False``, raise on existing file.
-        """
-        path = self._resolve_export_path(path, ".html")
-        if not overwrite and path.exists():
-            raise FileExistsError(
-                f"File {path} already exists. Use overwrite=True to replace it."
-            )
-
-        snippet = self.export_figure_html(style=style)
-        path.write_text(snippet, encoding="utf-8")
-
-    def export_figure_html(
-        self,
-        *,
-        style: _FS | None = None,
-    ) -> str:
-        """Return the figure export as an HTML snippet string.
-
-        Args:
-            style: Optional ``FigureStyle``.  Non-``None`` fields override
-                ``default_figure_style``.
-
-        Returns:
-            HTML snippet (``<div>`` + ``<script>``) suitable for direct
-            inclusion in a presentation slide.
-        """
-        from pytanga.viz.export._figure_html import (
-            render_export_figure,  # noqa: PLC0415
-        )
+    def _figure_snippet(self, *, style: _FS | None = None) -> str:
+        """Return the figure HTML snippet for the current scene."""
+        from pytanga.viz.export._figure_html import render_figure  # noqa: PLC0415
 
         # Resolve style: user's non-None fields overlay canonical defaults
         if style is not None:
@@ -218,12 +175,58 @@ class SceneExporter:
         objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
         fig_config = self.figure_config
 
-        return render_export_figure(
+        return render_figure(
             objects,
             self._viz._config.to_dict(),
             resolved.to_dict(),
             fig_config.to_dict(),
         )
+
+    def export_figure(
+        self,
+        path: str | Path | None = None,
+        *,
+        style: _FS | None = None,
+        overwrite: bool = False,
+    ) -> str | None:
+        """Export the scene as an HTML snippet for embedding in presentations.
+
+        The output is a ``<div>`` + ``<script type="module">`` block — no
+        ``<html>``, no ``<head>``, no global style resets.  Paste it directly
+        into a reveal.js, Slidev, or Marp slide.
+
+        Args:
+            path: Output file path (e.g. ``"figure.html"``).  When ``None``,
+                the snippet is returned as a string instead of being written.
+            style: Optional ``FigureStyle``.  Non-``None`` fields override
+                ``default_figure_style``.
+            overwrite: If ``False``, raise on existing file.
+
+        Returns:
+            The snippet string when *path* is ``None``, else ``None``.
+        """
+        snippet = self._figure_snippet(style=style)
+        if path is None:
+            return snippet
+        resolved_path = self._resolve_export_path(path, ".html")
+        if not overwrite and resolved_path.exists():
+            raise FileExistsError(
+                f"File {resolved_path} already exists. "
+                "Use overwrite=True to replace it."
+            )
+        resolved_path.write_text(snippet, encoding="utf-8")
+        return None
+
+    def export_figure_html(self, *, style: _FS | None = None) -> str:
+        """Deprecated: use :meth:`export_figure` with ``path=None``."""
+        import warnings
+
+        warnings.warn(
+            "export_figure_html() is deprecated; use export_figure(path=None)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._figure_snippet(style=style)
 
     def open_snapshot(self) -> None:
         """Open the current scene as a standalone snapshot in a browser window.

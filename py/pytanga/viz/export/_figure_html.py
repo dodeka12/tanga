@@ -30,7 +30,7 @@ from pytanga.viz.export._bootstrap import (
 )
 
 
-def render_export_figure(
+def render_figure(
     objects: List[Dict[str, Any]],
     scene_config: Dict[str, Any],
     figure_style: Dict[str, Any],
@@ -109,6 +109,23 @@ def render_export_figure(
         bootstrap_js=bootstrap,
         config_data_json=config_json,
     )
+
+
+def render_export_figure(
+    objects: List[Dict[str, Any]],
+    scene_config: Dict[str, Any],
+    figure_style: Dict[str, Any],
+    figure_config: Dict[str, Any],
+) -> str:
+    """Deprecated: use :func:`render_figure`."""
+    import warnings
+
+    warnings.warn(
+        "render_export_figure() is deprecated; use render_figure()",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return render_figure(objects, scene_config, figure_style, figure_config)
 
 
 # ======================================================================

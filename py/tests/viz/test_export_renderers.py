@@ -101,3 +101,30 @@ def test_render_export_html_alias_deprecated():
     with pytest.warns(DeprecationWarning):
         result = render_export_html([], {})
     assert result == render_snapshot([], {})
+
+
+def test_render_export_figure_alias_deprecated():
+    """``render_export_figure`` is a deprecated alias for ``render_figure``."""
+    import pytest
+
+    from pytanga.viz.export._figure_html import render_export_figure
+
+    with pytest.warns(DeprecationWarning):
+        result = render_export_figure([], {}, {}, {})
+    assert isinstance(result, str)
+    assert "function createEntityMesh(" in result
+    assert "function buildSceneObject(" in result
+
+
+def test_build_gltf_scene_alias_deprecated():
+    """``build_gltf_scene`` is a deprecated alias for ``build_glb``."""
+    import pytest
+
+    from pytanga.viz.export._gltf import build_glb, build_gltf_scene
+
+    class _Config:
+        camera = None
+
+    with pytest.warns(DeprecationWarning):
+        result = build_gltf_scene([], _Config())
+    assert result == build_glb([], _Config())

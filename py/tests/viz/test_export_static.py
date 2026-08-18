@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytanga.viz
 from pytanga.geometry.entities import Point
-from pytanga.viz.export._figure_html import render_export_figure
+from pytanga.viz.export._figure_html import render_figure
 from pytanga.viz.export._html import render_snapshot
 from pytanga.viz.scene import Scene
 
@@ -45,7 +45,7 @@ class TestExportStatic:
 
     def test_figure_html_generation(self):
         s = _group_scene()
-        html = render_export_figure(
+        html = render_figure(
             s.full_state(),
             s.config.to_dict(),
             {"width": 400, "height": 300},
@@ -70,11 +70,29 @@ class TestExportStatic:
             label_style=pytanga.viz.LabelStyle(rotation=45),
         )
         path = tmp_path / "rotated.html"
-        pytanga.viz.SceneExporter(viz).export_html(str(path), overwrite=True)
+        pytanga.viz.SceneExporter(viz).export_snapshot(str(path), overwrite=True)
         content = path.read_text(encoding="utf-8")
         assert '"rotation": 45' in content
         assert "rotate(${rotation}deg)" in content
         assert "transformOrigin" in content
+
+    def test_export_figure_returns_string_when_no_path(self):
+        viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(1, 2, 3))
+        snippet = pytanga.viz.SceneExporter(viz).export_figure()
+        assert isinstance(snippet, str)
+        assert "function createEntityMesh(" in snippet
+
+    def test_export_figure_html_alias_deprecated(self):
+        import pytest
+
+        viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(1, 2, 3))
+        exporter = pytanga.viz.SceneExporter(viz)
+        with pytest.warns(DeprecationWarning):
+            snippet = exporter.export_figure_html()
+        assert isinstance(snippet, str)
+        assert "function createEntityMesh(" in snippet
 
 
 class TestCdnUnreachableDetection:

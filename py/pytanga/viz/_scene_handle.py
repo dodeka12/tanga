@@ -452,3 +452,15 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def open_snapshot(self) -> None:
         """Open this scene as a standalone snapshot in a browser window."""
         self._viz._open_scene_snapshot(self._name)
+
+    def export_figure(
+        self, path: Any = None, *, style: Any = None, overwrite: bool = False
+    ) -> Any:
+        """Export this scene as an HTML snippet (or return the string)."""
+        return self._viz._export_scene_figure(
+            self._name, path, style=style, overwrite=overwrite
+        )
+
+    def export_glb(self, path: Any, *, overwrite: bool = False) -> None:
+        """Export this scene as a glTF 2.0 binary (``.glb``) file."""
+        self._viz._export_scene_glb(self._name, path, overwrite=overwrite)

@@ -1807,6 +1807,77 @@ class Visualizer(_JupyterDisplayMixin):
         """Open the current scene as a standalone snapshot in a browser window."""
         self._open_scene_snapshot("")
 
+    def _render_figure_html(self, scene_name: str, *, style: Any = None) -> str:
+        from pytanga.viz._figure import FigureConfig
+        from pytanga.viz._styles import FigureStyle
+        from pytanga.viz.export._figure_html import render_figure
+
+        scene = self._scenes[scene_name]
+        objects = scene.full_state(styles_map=scene.styles.kind)
+        resolved = style if style is not None else FigureStyle()
+        fig_config = FigureConfig(
+            title=self._title, annotation=self._annotation, footer=self._annotation
+        )
+        return render_figure(
+            objects,
+            scene.config.to_dict(),
+            resolved.to_dict(),
+            fig_config.to_dict(),
+        )
+
+    def _export_scene_figure(
+        self,
+        scene_name: str,
+        path: Any,
+        *,
+        style: Any = None,
+        overwrite: bool = False,
+    ) -> str | None:
+        from pathlib import Path
+
+        html = self._render_figure_html(scene_name, style=style)
+        if path is None:
+            return html
+        p = Path(path).expanduser()
+        if not p.suffix:
+            p = p.with_suffix(".html")
+        if not overwrite and p.exists():
+            raise FileExistsError(
+                f"File {p} already exists. Use overwrite=True to replace it."
+            )
+        p.write_text(html, encoding="utf-8")
+        return None
+
+    def export_figure(
+        self, path: Any = None, *, style: Any = None, overwrite: bool = False
+    ) -> str | None:
+        """Export the current scene as an HTML snippet (or return the string)."""
+        return self._export_scene_figure("", path, style=style, overwrite=overwrite)
+
+    def _export_scene_glb(
+        self, scene_name: str, path: Any, *, overwrite: bool = False
+    ) -> None:
+        from pathlib import Path
+
+        from pytanga.viz.export._gltf import build_glb
+
+        scene = self._scenes[scene_name]
+        all_objects = scene.full_state(styles_map=scene.styles.kind)
+        entities = [o for o in all_objects if o.get("layer") != "overlay"]
+        glb = build_glb(entities, scene.config)
+        p = Path(path).expanduser()
+        if not p.suffix:
+            p = p.with_suffix(".glb")
+        if not overwrite and p.exists():
+            raise FileExistsError(
+                f"File {p} already exists. Use overwrite=True to replace it."
+            )
+        p.write_bytes(glb)
+
+    def export_glb(self, path: Any, *, overwrite: bool = False) -> None:
+        """Export the current scene as a glTF 2.0 binary (``.glb``) file."""
+        self._export_scene_glb("", path, overwrite=overwrite)
+
     def display_snapshot(
         self,
         width: int | str = "100%",

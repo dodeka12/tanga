@@ -29,7 +29,7 @@ _JSON_CHUNK_TYPE = 0x4E4F534A
 _BIN_CHUNK_TYPE = 0x004E4942
 
 
-def build_gltf_scene(
+def build_glb(
     entities: List[Dict[str, Any]],
     config: Any,
     labels: List[Dict[str, Any]] | None = None,
@@ -46,6 +46,22 @@ def build_gltf_scene(
     if config.camera is not None:
         builder.add_camera(config.camera)
     return builder.finalize()
+
+
+def build_gltf_scene(
+    entities: List[Dict[str, Any]],
+    config: Any,
+    labels: List[Dict[str, Any]] | None = None,
+) -> bytes:
+    """Deprecated: use :func:`build_glb`."""
+    import warnings
+
+    warnings.warn(
+        "build_gltf_scene() is deprecated; use build_glb()",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return build_glb(entities, config, labels)
 
 
 # ═══════════════════════════════════════════════════════════════
