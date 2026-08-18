@@ -1324,130 +1324,41 @@ class Visualizer(_JupyterDisplayMixin):
             for name in self._scenes:
                 self._flush_scene(name, fit_camera=fit_camera)
 
-    def run(self, *, wait_for_browser: bool | None = None) -> None:
-        """Start the server, open the browser, and block until interrupted.
+    def show(self, *, wait_for_browser: bool | None = None) -> bool:
+        """Serve the visualization and open a browser tab (non-blocking).
 
-        In Jupyter, ``wait_for_browser`` defaults to ``False``.
+        Equivalent to :meth:`start_server` followed by :meth:`open_browser`.
         """
-        import secrets
+        if self._server is None:
+            self.start_server()
+        return self.open_browser(wait_for_browser=wait_for_browser)
 
-        if wait_for_browser is None:
-            wait_for_browser = not self._jupyter
-        from .server import VizServer
+    def wait(self) -> None:
+        """Block until Ctrl+C is pressed, then stop the server.
 
-        logger.info("Starting VizServer (run mode) on %s:%d", self._host, self._port)
-        self._server = VizServer(host=self._host, port=self._port)
-
-        async def _run() -> None:
-            await self._server.start(
-                self._full_state_for,
-                self._config.to_dict,
-                control_callback=self._dispatch_control_event,
-                interaction_callback=self._dispatch_interaction_event,
-                on_connect=self._on_client_connect,
-                scene_config_callback=self._scene_config_for,
-                scene_list_callback=self.list_scenes,
-            )
-            if self._open_browser:
-                page_token = secrets.token_hex(4)  # 8 hex chars
-                if self._reuse_existing:
-                    logger.info(
-                        "Server ready at %s - checking for existing browser...",
-                        self._server.url,
-                    )
-                    # Async interactive wait: race ws_ready against stdin read
-                    if wait_for_browser:
-                        enter_task = asyncio.create_task(
-                            asyncio.to_thread(sys.stdin.readline)
-                        )
-                        ws_task = asyncio.create_task(self._server.wait_for_ws_ready())
-
-                        # Print prompt
-                        self._print_connect_prompt()
-
-                        done, pending = await asyncio.wait(
-                            [enter_task, ws_task],
-                            return_when=asyncio.FIRST_COMPLETED,
-                        )
-                        for task in pending:
-                            task.cancel()
-
-                        if ws_task in done:
-                            logger.info("Browser reconnected")
-                        else:
-                            logger.info(
-                                "User pressed Enter - opening new tab (token=%s)",
-                                page_token,
-                            )
-                            self._server._clear_ws_ready_events()
-                            self._server.open_browser(f"/?token={page_token}")
-                            try:
-                                await asyncio.wait_for(
-                                    self._server.wait_for_ws_ready(),
-                                    timeout=30.0,
-                                )
-                            except asyncio.TimeoutError:
-                                self._print_ws_timeout_note()
-                                raise RuntimeError(
-                                    "No browser connected within 30s.  "
-                                    f"Open {self.url} manually."
-                                )
-                        # Clean up enter_task
-                        try:
-                            await enter_task
-                        except (asyncio.CancelledError, Exception):
-                            pass
-                    else:
-                        # Non-blocking: just check if already connected
-                        reconnected = await self._server.wait_for_ws_ready(timeout=3.0)
-                        if not reconnected:
-                            self._server._clear_ws_ready_events()
-                            self._server.open_browser(f"/?token={page_token}")
-                else:
-                    self._server._clear_ws_ready_events()
-                    self._server.open_browser(f"/?token={page_token}")
-
-                    if wait_for_browser:
-                        try:
-                            await asyncio.wait_for(
-                                self._server.wait_for_ws_ready(), timeout=30.0
-                            )
-                        except asyncio.TimeoutError:
-                            self._print_ws_timeout_note()
-                            raise RuntimeError(
-                                "No browser connected within 30s.  "
-                                f"Open {self.url} manually."
-                            )
-
-            # Flush initial state for the main scene
-            await self._flush_scene_async("")
-
-            stop_event = asyncio.Event()
-            loop = asyncio.get_running_loop()
-
-            def _signal_handler() -> None:
-                logger.info("Signal received, shutting down...")
-                stop_event.set()
-
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                try:
-                    loop.add_signal_handler(sig, _signal_handler)
-                except NotImplementedError:
-                    pass
-
-            await stop_event.wait()
-
+        Requires :meth:`start_server` (or :meth:`show`) to have been called so
+        the Ctrl+C handler is installed.
+        """
+        self._ensure_server_running()
+        shutdown = getattr(self, "_shutdown_requested", threading.Event())
         try:
-            asyncio.run(_run())
-        except KeyboardInterrupt:
-            logger.info("Interrupted (KeyboardInterrupt), shutting down...")
+            while not shutdown.is_set():
+                time.sleep(0.25)
         finally:
-            if self._server is not None:
-                try:
-                    asyncio.run(self._server.stop())
-                except Exception:
-                    pass
-            logger.info("Visualizer shut down")
+            self.stop_server()
+
+    def run(self, *, wait_for_browser: bool | None = None) -> None:
+        """Deprecated: use :meth:`show` then :meth:`wait`.
+
+        Starts the server, opens a browser, and blocks until Ctrl+C.
+        """
+        warnings.warn(
+            "run() is deprecated; use show() then wait()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.show(wait_for_browser=wait_for_browser)
+        self.wait()
 
     # ── Object Interaction ─────────────────────────────────
 

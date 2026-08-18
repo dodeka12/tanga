@@ -1,6 +1,6 @@
 # Phase 3 — `show()` and `wait()`
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -15,22 +15,23 @@ then stops the server. Deprecate `run()`.
 
 ## Steps
 
-- [ ] Add `Visualizer.show()` → `start_server()` + `open_browser()`.
-- [ ] Add `Visualizer.wait()` — synchronous block on `self._shutdown_requested`
+- [x] Add `Visualizer.show()` → `start_server()` + `open_browser()`.
+- [x] Add `Visualizer.wait()` — synchronous block on `self._shutdown_requested`
       (poll with `time.sleep`), then `stop_server()` on return. Windows-safe
       (thread-based, not `loop.add_signal_handler`).
-- [ ] Add `VizSceneHandle.show()` → `viz.start_server()` (if needed) +
+- [x] Add `VizSceneHandle.show()` → `viz.start_server()` (if needed) +
       `self.open_browser()`.
-- [ ] Deprecate `run()` as `show(); wait()` (alias with `DeprecationWarning`).
-- [ ] Ensure `animate()` (unchanged) now relies on `start_server()` internally.
+- [x] Deprecate `run()` as `show(); wait()` (alias with `DeprecationWarning`).
+- [x] Ensure `animate()` (unchanged) now relies on `start_server()` internally.
 
 ## Unit tests
 
-- [ ] `py/tests/viz/test_scene_session.py`:
-  - [ ] `run()` emits `DeprecationWarning` (patch `show`/`wait`).
-  - [ ] `wait()` returns after `_shutdown_requested` is set and calls
+- [x] `py/tests/viz/test_scene_session.py`:
+  - [x] `show()` serves and opens the browser.
+  - [x] `run()` emits `DeprecationWarning` (patch `show`/`wait`).
+  - [x] `wait()` returns after `_shutdown_requested` is set and calls
         `stop_server` (patch it).
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/test_scene_session.py` passes.
+- [x] `uv run pytest py/tests/viz/` passes (426 tests).

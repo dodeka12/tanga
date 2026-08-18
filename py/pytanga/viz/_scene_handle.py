@@ -372,6 +372,12 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Open a browser tab for this scene (server must be running)."""
         return self._viz._open_scene_browser(self._name)
 
+    def show(self) -> bool:
+        """Serve (if needed) and open a browser tab for this scene."""
+        if self._viz._server is None:
+            self._viz.start_server()
+        return self.open_browser()
+
     # ── Jupyter support ──────────────────────────────────────
 
     def display(

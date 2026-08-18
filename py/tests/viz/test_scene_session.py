@@ -350,6 +350,38 @@ class TestVisualizer:
             viz.stop()
         assert calls == {"stop_server": True}
 
+    def test_show_serves_and_opens_browser(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        calls: list[str] = []
+        monkeypatch.setattr(viz, "start_server", lambda: calls.append("start_server"))
+        monkeypatch.setattr(
+            viz,
+            "open_browser",
+            lambda **kw: calls.append("open_browser") or True,
+        )
+        result = viz.show()
+        assert result is True
+        assert calls == ["start_server", "open_browser"]
+
+    def test_run_emits_deprecation_warning(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "show", lambda **kw: None)
+        monkeypatch.setattr(viz, "wait", lambda: None)
+        with pytest.warns(DeprecationWarning):
+            viz.run()
+
+    def test_wait_stops_server_after_shutdown(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz._shutdown_requested = threading.Event()
+        viz._shutdown_requested.set()
+        stopped: dict[str, bool] = {}
+        monkeypatch.setattr(
+            viz, "stop_server", lambda: stopped.__setitem__("stopped", True)
+        )
+        viz.wait()
+        assert stopped == {"stopped": True}
+
     def test_obsolete_kwargs_rejected(self):
         with pytest.raises(TypeError):
             Visualizer(space_extent=25)
