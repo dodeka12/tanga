@@ -368,6 +368,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """
         self._viz.navigate_to(scene_name, target=f"scene:{self._name}")
 
+    def open_browser(self) -> bool:
+        """Open a browser tab for this scene (server must be running)."""
+        return self._viz._open_scene_browser(self._name)
+
     # ── Jupyter support ──────────────────────────────────────
 
     def display(

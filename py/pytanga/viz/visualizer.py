@@ -16,6 +16,7 @@ import signal
 import sys
 import threading
 import time
+import warnings
 from typing import TYPE_CHECKING, Any, Iterator
 
 if TYPE_CHECKING:
@@ -49,6 +50,16 @@ from .camera import (
 from .scene import Scene, SceneConfig, SceneObject
 
 
+def _find_free_port(host: str) -> int:
+    """Find an available TCP port on *host*."""
+    import socket
+
+    bind_host = "127.0.0.1" if host in ("localhost", "127.0.0.1") else host
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((bind_host, 0))
+        return int(sock.getsockname()[1])
+
+
 class Visualizer(_JupyterDisplayMixin):
     """Interactive 3D visualization of geometric entities via Three.js in a browser.
 
@@ -80,8 +91,8 @@ class Visualizer(_JupyterDisplayMixin):
     def __init__(
         self,
         *,
-        port: int = 8765,
-        host: str = "localhost",
+        port: int | None = None,
+        host: str | None = None,
         open_browser: bool | None = None,
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
@@ -110,8 +121,15 @@ class Visualizer(_JupyterDisplayMixin):
             name="",
             space_dim=space_dim,
         )
-        self._port = port
-        self._host = host
+        if port is not None or host is not None:
+            warnings.warn(
+                "Visualizer(port=..., host=...) is deprecated; use "
+                "start_server(host=..., port=...) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._port = port if port is not None else 8765
+        self._host = host if host is not None else "localhost"
         self._open_browser = open_browser
         self._reuse_existing = reuse_existing
         self._title = title
@@ -724,7 +742,9 @@ class Visualizer(_JupyterDisplayMixin):
                 viz.flush()
         """
         if self._server is None:
-            self.start()
+            self.start_server()
+            if self._open_browser:
+                self.open_browser()
 
         shutdown = getattr(self, "_shutdown_requested", None)
         frame_time = 1.0 / fps if fps and fps > 0.0 else None
@@ -740,7 +760,7 @@ class Visualizer(_JupyterDisplayMixin):
                     if remaining > 0.0:
                         time.sleep(remaining)
         finally:
-            self.stop()
+            self.stop_server()
 
     # ── Default style configuration ─────────────────────────
 
@@ -881,23 +901,26 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Server lifecycle ───────────────────────────────────
 
-    def start(
-        self, *, wait_for_browser: bool | None = None, timeout: float = 30.0
-    ) -> bool:
-        """Start the WebSocket server in a background thread (non-blocking).
+    def start_server(self, host: str = "localhost", port: int | None = None) -> None:
+        """Start serving the visualization without opening a browser.
 
-        In Jupyter, ``wait_for_browser`` defaults to ``False`` because the
-        iframes connect asynchronously when they render.  Outside Jupyter
-        it defaults to ``True`` so entities are pushed reliably.
+        Parameters
+        ----------
+        host : str
+            Bind host (default ``"localhost"``).
+        port : int | None
+            Port to serve on.  ``None`` auto-picks a free port.
         """
-        import secrets
+        if port is None:
+            port = _find_free_port(host)
+        self._host = host
+        self._port = port
+        self._ensure_server_running()
 
-        if wait_for_browser is None:
-            wait_for_browser = not self._jupyter
-
+    def _ensure_server_running(self) -> None:
+        """Boot the server in a background thread if not already running."""
         if self._server is not None:
-            logger.debug("Stopping previous server instance")
-            self.stop()
+            return
 
         from .server import VizServer
 
@@ -935,14 +958,15 @@ class Visualizer(_JupyterDisplayMixin):
         logger.debug("Server booted in %.1fs", time.monotonic() - _boot_start)
 
         # Graceful shutdown on interpreter exit, even if the script forgets to
-        # call stop() — otherwise the daemon server thread is killed abruptly
-        # and browsers see an abnormal 1006 reset instead of a clean 1001 close.
+        # call stop_server() — otherwise the daemon server thread is killed
+        # abruptly and browsers see an abnormal 1006 reset instead of a clean
+        # 1001 close.
         if not self._atexit_registered:
             import atexit
 
             def _atexit_stop() -> None:
                 try:
-                    self.stop(timeout=2.0)
+                    self.stop_server(timeout=2.0)
                 except Exception:
                     pass
 
@@ -963,42 +987,77 @@ class Visualizer(_JupyterDisplayMixin):
         # Print URLs
         self._print_startup_urls()
 
-        if self._open_browser:
-            page_token = secrets.token_hex(4)  # 8 hex chars
-            if self._reuse_existing:
-                # Interactive wait: user either clicks Reconnect or presses Enter
-                if wait_for_browser:
-                    connected = self.wait_for_browser(timeout=120.0)
-                    if not connected:
-                        return False
-                else:
-                    # wait_for_browser is False (e.g. Jupyter): just check if
-                    # one is already there, otherwise open tab and don't wait.
-                    fut = asyncio.run_coroutine_threadsafe(
-                        self._server.wait_for_ws_ready(timeout=3.0), self._loop
-                    )
-                    try:
-                        reconnected = fut.result(timeout=3.5)
-                    except (
-                        concurrent.futures.TimeoutError,
-                        asyncio.TimeoutError,
-                    ):
-                        reconnected = False
-                    if not reconnected:
-                        if self._loop is not None:
-                            self._loop.call_soon_threadsafe(
-                                self._server._clear_ws_ready_events
-                            )
-                        self._server.open_browser(f"/?token={page_token}")
-            else:
-                # reuse_existing disabled — always open new tab
-                if self._loop is not None:
-                    self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
-                self._server.open_browser(f"/?token={page_token}")
-                if wait_for_browser:
-                    return self.wait_for_browser(timeout=30.0)
-            return True
+    def open_browser(self, *, wait_for_browser: bool | None = None) -> bool:
+        """Open/reconnect a browser tab for the main scene."""
+        return self._open_scene_browser("", wait_for_browser=wait_for_browser)
 
+    def _open_scene_browser(
+        self, scene_name: str, *, wait_for_browser: bool | None = None
+    ) -> bool:
+        """Open/reconnect a browser tab for *scene_name* (``""`` for main)."""
+        import secrets
+
+        if self._server is None:
+            raise RuntimeError("Server not started. Call start_server() first.")
+
+        if wait_for_browser is None:
+            wait_for_browser = not self._jupyter
+
+        page_token = secrets.token_hex(4)  # 8 hex chars
+        url_path = f"/{scene_name}" if scene_name else "/"
+        token_url = f"{url_path}?token={page_token}"
+
+        if self._reuse_existing:
+            # Interactive wait: user either clicks Reconnect or presses Enter
+            if wait_for_browser:
+                connected = self.wait_for_browser(timeout=120.0)
+                if not connected:
+                    return False
+            else:
+                # wait_for_browser is False (e.g. Jupyter): just check if
+                # one is already there, otherwise open tab and don't wait.
+                fut = asyncio.run_coroutine_threadsafe(
+                    self._server.wait_for_ws_ready(timeout=3.0), self._loop
+                )
+                try:
+                    reconnected = fut.result(timeout=3.5)
+                except (
+                    concurrent.futures.TimeoutError,
+                    asyncio.TimeoutError,
+                ):
+                    reconnected = False
+                if not reconnected:
+                    if self._loop is not None:
+                        self._loop.call_soon_threadsafe(
+                            self._server._clear_ws_ready_events
+                        )
+                    self._server.open_browser(token_url)
+        else:
+            # reuse_existing disabled — always open new tab
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
+            self._server.open_browser(token_url)
+            if wait_for_browser:
+                return self.wait_for_browser(timeout=30.0)
+        return True
+
+    def start(
+        self, *, wait_for_browser: bool | None = None, timeout: float = 30.0
+    ) -> bool:
+        """Deprecated: use :meth:`show` (or :meth:`start_server` + :meth:`open_browser`).
+
+        Preserved for backward compatibility — starts the server on the
+        configured ``host``/``port`` and opens a browser (unless
+        ``open_browser=False``).
+        """
+        warnings.warn(
+            "start() is deprecated; use show() or start_server()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.start_server(host=self._host, port=self._port)
+        if self._open_browser:
+            return self.open_browser(wait_for_browser=wait_for_browser)
         return True
 
     def _print_startup_urls(self) -> None:
@@ -1057,10 +1116,10 @@ class Visualizer(_JupyterDisplayMixin):
         while not self._shutdown_requested.is_set():
             await asyncio.sleep(poll_interval)
 
-    def stop(self, *, timeout: float = 5.0) -> None:
+    def stop_server(self, *, timeout: float = 5.0) -> None:
         """Stop the server and clean up."""
         if self._server is None:
-            logger.debug("stop() called but server already None")
+            logger.debug("stop_server() called but server already None")
             return
 
         logger.info("Shutting down server...")
@@ -1099,6 +1158,15 @@ class Visualizer(_JupyterDisplayMixin):
         self._loop = None
         self._thread = None
         logger.debug("Server stopped")
+
+    def stop(self, *, timeout: float = 5.0) -> None:
+        """Deprecated: use :meth:`stop_server`."""
+        warnings.warn(
+            "stop() is deprecated; use stop_server()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.stop_server(timeout=timeout)
 
     def wait_for_browser(self, timeout: float = 120.0) -> bool:
         """Block until a browser connects, or the user opens one interactively.

@@ -300,7 +300,7 @@ class TestVisualizer:
         # Pretend the server is already running so animate() skips start().
         viz._server = object()
         viz._shutdown_requested = threading.Event()
-        monkeypatch.setattr(viz, "stop", lambda: None)
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
 
         gen = viz.animate(fps=0)  # fps=0 → no pacing
         assert next(gen) >= 0.0
@@ -315,9 +315,40 @@ class TestVisualizer:
             Visualizer(opns=False)
 
     def test_custom_port_and_host(self):
-        viz = Visualizer(port=9999, host="127.0.0.1")
+        with pytest.warns(DeprecationWarning):
+            viz = Visualizer(port=9999, host="127.0.0.1")
         assert viz._port == 9999
         assert viz._host == "127.0.0.1"
+
+    def test_start_server_auto_picks_free_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz.start_server()  # port=None → auto-pick a free port
+        assert isinstance(viz._port, int)
+        assert viz._port > 0
+        assert viz._host == "localhost"
+
+    def test_start_emits_deprecation_warning(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._open_browser = False
+        calls: dict[str, bool] = {}
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.__setitem__("start_server", True)
+        )
+        with pytest.warns(DeprecationWarning):
+            result = viz.start()
+        assert result is True
+        assert calls == {"start_server": True}
+
+    def test_stop_emits_deprecation_warning(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        calls: dict[str, bool] = {}
+        monkeypatch.setattr(
+            viz, "stop_server", lambda **kw: calls.__setitem__("stop_server", True)
+        )
+        with pytest.warns(DeprecationWarning):
+            viz.stop()
+        assert calls == {"stop_server": True}
 
     def test_obsolete_kwargs_rejected(self):
         with pytest.raises(TypeError):
