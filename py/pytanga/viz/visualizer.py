@@ -1817,9 +1817,20 @@ class Visualizer(_JupyterDisplayMixin):
         )
 
         if self._jupyter:
+            import html as _html
+
             from IPython.display import HTML
 
-            return HTML(html)
+            width_css = f"{width}px" if isinstance(width, int) else str(width)
+            height_css = f"{height}px" if isinstance(height, int) else str(height)
+            escaped = _html.escape(html, quote=True)
+            iframe = (
+                f'<iframe srcdoc="{escaped}" width="{width_css}" '
+                f'height="{height_css}" '
+                f'style="border: 1px solid #444; border-radius: 4px; '
+                f'max-width: 100%;"></iframe>'
+            )
+            return HTML(iframe)
         else:
             import tempfile
             import webbrowser
