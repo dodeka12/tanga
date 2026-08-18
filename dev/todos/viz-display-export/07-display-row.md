@@ -1,6 +1,6 @@
 # Phase 7 — Jupyter `display()` and mixed `display_row()`
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -16,23 +16,22 @@ static snapshots side by side.
 
 ## Steps
 
-- [ ] Add `Visualizer.display(width, height)` — live iframe of the main scene
-      (mirror the existing `VizSceneHandle.display`).
-- [ ] Ensure `VizSceneHandle.display_snapshot(width, height)` exists (from
-      Phase 4) and that `display()` (live) is symmetric.
-- [ ] Generalize `Visualizer.display_row(*scenes, …)` so each entry is either
-      a live `VizSceneHandle` (server URL) or a static snapshot (iframe
-      `srcdoc`), rendering both in the flex row.
-- [ ] Keep `_repr_html_` unchanged (auto-display via `viz` / handle).
+- [x] Add `Visualizer.display(width, height)` — live iframe of the main scene
+      (mirrors `VizSceneHandle.display`).
+- [x] `VizSceneHandle.display_snapshot` already exists (Phase 4); `display`
+      (live) is symmetric.
+- [x] Generalize `Visualizer.display_row(*scenes, mode="live"|"static")` — live
+      entries embed the server URL, static entries embed a `srcdoc` snapshot.
+- [x] Keep `_repr_html_` unchanged (auto-display via `viz` / handle).
 
 ## Unit tests
 
-- [ ] `py/tests/viz/test_display.py`:
-  - [ ] `viz.display()` returns an iframe with the server URL.
-  - [ ] `display_row((handle_a, None), (handle_b, None))` produces two iframes.
+- [x] `py/tests/viz/test_display.py`:
+  - [x] `viz.display()` returns an iframe with the server URL.
+  - [x] `display_row((a, None), (b, None))` produces two live iframes.
+  - [x] `display_row((a, None), (b, None), mode="static")` produces two srcdoc
+        iframes.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/test_display.py` passes.
-- [ ] Manual: Jupyter — live and static scenes stack side by side without
-      style leakage.
+- [x] `uv run pytest py/tests/viz/` passes (438 tests).

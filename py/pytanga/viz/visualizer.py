@@ -1718,46 +1718,84 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Jupyter support ─────────────────────────────────────
 
+    def display(
+        self,
+        *,
+        width: int | str = "100%",
+        height: int | str = 500,
+    ) -> Any:
+        """Display the live main scene inline (iframe) in a Jupyter notebook."""
+        src = self.url
+        if self._jupyter:
+            from IPython.display import IFrame
+            from IPython.display import display as ipy_display
+
+            iframe = IFrame(src, width=width, height=height)
+            ipy_display(iframe)
+            return None
+        return (
+            f'<iframe src="{src}" width="{width}" height="{height}px" '
+            f'style="border: 1px solid #444; border-radius: 4px;" '
+            f'title="Tanga 3D Viewer"></iframe>'
+        )
+
     def display_row(
         self,
         *scenes: tuple[VizSceneHandle, str | None],
         width: int | str = "100%",
         height: int | str = 500,
         gap: int = 8,
+        mode: str = "live",
     ) -> Any:
         """Display multiple scenes side by side in a single flex row.
 
         Each element in *scenes* is a ``(handle, viewer_name)`` tuple where
         *viewer_name* may be ``None``.
 
+        *mode* is ``"live"`` (default — embeds the server URL) or
+        ``"static"`` (embeds a serverless standalone snapshot).
+
         Usage::
 
-            viz.display_row(
-                (one, "browser-one"),
-                (two, "browser-two"),
-                (three, "browser-three"),
-            )
+            viz.display_row((one, None), (two, None))            # live
+            viz.display_row((one, None), (two, None), mode="static")
 
         Args:
             *scenes: One or more ``(VizSceneHandle, viewer_name | None)`` pairs.
             width: CSS width of the container (default ``"100%"``).
             height: CSS height of each iframe in pixels (default 500).
             gap: Gap between columns in pixels (default 8).
+            mode: ``"live"`` or ``"static"``.
         """
+        import html as _html
+
         from IPython.display import HTML
         from IPython.display import display as ipy_display
 
         columns_html: list[str] = []
         for handle, viewer_name in scenes:
-            src = handle.url
-            if viewer_name:
-                src += f"?viewer={viewer_name}"
+            if mode == "static":
+                snapshot = handle._viz._render_snapshot_html(handle.name)
+                escaped = _html.escape(snapshot, quote=True)
+                iframe = (
+                    f'<iframe srcdoc="{escaped}" width="100%" height="{height}px" '
+                    f'style="border: 1px solid #444; border-radius: 4px;" '
+                    f'title="Tanga 3D Viewer — {handle.name}"></iframe>'
+                )
+            else:
+                src = handle.url
+                if viewer_name:
+                    src += f"?viewer={viewer_name}"
+                iframe = (
+                    f'<iframe src="{src}" width="100%" height="{height}px" '
+                    f'style="border: 1px solid #444; border-radius: 4px;" '
+                    f'title="Tanga 3D Viewer — {handle.name}"></iframe>'
+                )
             columns_html.append(
                 f'<div style="flex: 1; min-width: 0;">'
-                f'<h3 style="margin: 0 0 4px 0; font-size: 14px; color: #ccc;">Scene: {handle.name}</h3>'
-                f'<iframe src="{src}" width="100%" height="{height}px" '
-                f'style="border: 1px solid #444; border-radius: 4px;" '
-                f'title="Tanga 3D Viewer — {handle.name}"></iframe>'
+                f'<h3 style="margin: 0 0 4px 0; font-size: 14px; color: #ccc;">'
+                f"Scene: {handle.name}</h3>"
+                f"{iframe}"
                 f"</div>"
             )
 

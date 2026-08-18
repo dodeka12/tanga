@@ -64,3 +64,33 @@ class TestDisplaySnapshotNonJupyter:
         assert viz.display_snapshot() is None
         assert len(opened) == 1
         assert (tmp_path / "snapshot.html").exists()
+
+
+class TestDisplayRow:
+    def _handles(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        return viz, viz.scene("one"), viz.scene("two")
+
+    def test_display_live_main_scene_non_jupyter(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._jupyter = False
+        html = viz.display()
+        assert "<iframe src=" in html
+        assert viz.url in html
+
+    def test_display_row_live(self, monkeypatch):
+        viz, one, two = self._handles()
+        captured = []
+        monkeypatch.setattr("IPython.display.display", lambda obj: captured.append(obj))
+        viz.display_row((one, None), (two, None))
+        assert len(captured) == 1
+        assert captured[0].data.count("<iframe src=") == 2
+
+    def test_display_row_static(self, monkeypatch):
+        viz, one, two = self._handles()
+        captured = []
+        monkeypatch.setattr("IPython.display.display", lambda obj: captured.append(obj))
+        viz.display_row((one, None), (two, None), mode="static")
+        assert len(captured) == 1
+        assert captured[0].data.count("<iframe srcdoc=") == 2
+        assert "<html" not in captured[0].data
