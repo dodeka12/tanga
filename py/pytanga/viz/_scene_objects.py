@@ -52,19 +52,17 @@ class Axis:
         Spacing between major ticks (and value labels).
     minor_interval:
         Spacing between minor ticks.  ``None`` disables minor ticks.
-    label_at_major:
+    show_value_labels:
         When ``True``, draw a value label at each major tick.
-    label_format:
+    value_format:
         Python format specifier used to render value labels
         (e.g. ``".2f"``).
-    label_size:
-        Font size in pixels for the CSS2D value labels.  ``None`` uses
-        the frontend default.
     show_ticks:
         When ``False``, draw only the axis line without ticks.
     label:
-        Optional axis name label (e.g. ``"X"``) drawn near the end of
-        the axis.  ``None`` draws no name label.
+        Optional axis name label (e.g. ``"X"``).  By default it is drawn
+        at the midpoint of the axis, hanging below it (see
+        ``AxisStyle.label_style``).  ``None`` draws no name label.
     value_start:
         Numeric value at ``start``.
     value_step:
@@ -81,9 +79,8 @@ class Axis:
     end: _Vec3
     major_interval: float = 1.0
     minor_interval: float | None = None
-    label_at_major: bool = True
-    label_format: str = ".1f"
-    label_size: float | None = None
+    show_value_labels: bool = True
+    value_format: str = ".1f"
     show_ticks: bool = True
     label: str | None = None
     value_start: float = 0.0
@@ -168,6 +165,10 @@ class Axes3D:
         Major tick spacing passed to each expanded :class:`Axis`.
     minor_interval:
         Minor tick spacing passed to each expanded :class:`Axis`.
+    show_value_labels:
+        When ``False``, value labels are not drawn (defaults to showing them).
+    value_format:
+        Python format specifier used to render value labels (e.g. ``".2f"``).
     labels:
         Optional ``(u, v, w)`` axis name labels.
 
@@ -190,6 +191,8 @@ class Axes3D:
     range_w: tuple[float, float] = (0.0, 5.0)
     major_interval: float = 1.0
     minor_interval: float | None = None
+    show_value_labels: bool = True
+    value_format: str = ".1f"
     labels: tuple[str, str, str] | None = None
 
     def expand(self) -> list[Axis]:
@@ -216,6 +219,8 @@ class Axes3D:
                 end=end,
                 major_interval=self.major_interval,
                 minor_interval=self.minor_interval,
+                show_value_labels=self.show_value_labels,
+                value_format=self.value_format,
                 label=name_label,
                 value_step=value_step,
             )
@@ -253,6 +258,10 @@ class Axes2D:
         Major tick spacing passed to each expanded :class:`Axis`.
     minor_interval:
         Minor tick spacing passed to each expanded :class:`Axis`.
+    show_value_labels:
+        When ``False``, value labels are not drawn (defaults to showing them).
+    value_format:
+        Python format specifier used to render value labels (e.g. ``".2f"``).
     labels:
         Optional ``(u, v)`` axis name labels.
 
@@ -270,6 +279,8 @@ class Axes2D:
     range_v: tuple[float, float] = (0.0, 5.0)
     major_interval: float = 1.0
     minor_interval: float | None = None
+    show_value_labels: bool = True
+    value_format: str = ".1f"
     labels: tuple[str, str] | None = None
 
     def expand(self) -> list[Axis]:
@@ -299,6 +310,8 @@ class Axes2D:
                 end=end,
                 major_interval=self.major_interval,
                 minor_interval=self.minor_interval,
+                show_value_labels=self.show_value_labels,
+                value_format=self.value_format,
                 label=name_label,
                 value_step=value_step,
             )

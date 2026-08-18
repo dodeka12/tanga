@@ -24,7 +24,7 @@ from pytanga.viz import (
 
 # ── Setup ──────────────────────────────────────────────────
 viz = Visualizer(title="Tanga — PointPath Trail Demo")
-viz.start()
+viz.show()
 
 TRAIL_LENGTH = 150
 
@@ -43,10 +43,10 @@ trail = PointPath(
 for _ in range(TRAIL_LENGTH):
     trail.add((0, 0, 0))
 
-trail_id = viz.add(trail, style=PointPathStyle(line_thickness=2))
+trail_ref = viz.new(trail, style=PointPathStyle(line_thickness=2))
 
 # The moving object itself
-point_id = viz.add(
+point_ref = viz.new(
     Point(3, 0, 0),
     color="#ffaa00",
     label="object",
@@ -57,23 +57,21 @@ point_id = viz.add(
 viz.flush()
 
 # ── Animation loop ─────────────────────────────────────────
-print("Animating circular orbit with gradient trail for 10 seconds...")
-
-for frame in range(600):
-    angle = frame * 0.04  # radians per frame
+print("Animating circular orbit with gradient trail until Ctrl+C...")
+angle = 0.0
+for _ in viz.animate(fps=60):
+    angle += 0.04  # radians per frame
     x = 3 * math.cos(angle)
     y = 3 * math.sin(angle)
     z = math.sin(angle * 0.5) * 0.5  # slight vertical oscillation
 
     # Move the object
-    viz.update_entity(point_id, Point(x, y, z))
+    point_ref.entity = Point(x, y, z)
 
     # Extend the trail
     trail.add((x, y, z))
-    viz.update_entity(trail_id, trail)
+    trail_ref.entity = trail
 
     viz.flush()
-    viz.sleep_ms(16)
 
-viz.stop()
 print("Animation stopped.")

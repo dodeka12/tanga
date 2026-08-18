@@ -12,7 +12,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ._styles import AnnotationStyle, FigureStyle, LabelStyle
+    from ._act_style import ActPointStyle
+    from ._styles import AnnotationStyle, FigureStyle, LabelStyle, TextureLabelStyle
 
 
 class _StyleDict:
@@ -180,6 +181,13 @@ def _make_default_annotation_style() -> "AnnotationStyle":
     )
 
 
+def _make_default_act_point_style() -> "ActPointStyle":
+    """Return a fully-initialised canonical ``ActPointStyle``."""
+    from ._act_style import ActPointStyle as _APS
+
+    return _APS(hover_emissive="#ffff44", hover_scale=1.5)
+
+
 def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:
     """Return per-kind label style overrides, seeded with copies of the default.
 
@@ -215,7 +223,14 @@ def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:
         "GeneralRotor",
         "PointPath",
     ]
-    return {kind: copy(base) for kind in kinds}
+    result = {kind: copy(base) for kind in kinds}
+    # Points: anchor the label's top-left corner to the point (instead of
+    # centering the label on it) with a 5px, 5px screen-space offset.
+    result["Point"].align = (0.0, 0.0)
+    result["Point"].offset_2d = (5.0, 5.0)
+    # Lines: anchor the label at the segment midpoint (fraction 0.5 along it).
+    result["Line"].along = 0.5
+    return result
 
 
 # ── Kind-key mapping ───────────────────────────────────────────

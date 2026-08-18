@@ -34,7 +34,7 @@ viz = Visualizer(
 
 # 2. Axes: X and Y axes spanning the same extent as the camera view.
 #    Each direction gets its own AxisStyle via Axes2DStyle.
-viz.add(
+viz.new(
     Axes2D(
         origin=(0.0, 0.0),
         dir_u=(1.0, 0.0, 0.0),
@@ -51,7 +51,7 @@ viz.add(
 )
 
 # 3. Grid: unit-spaced lines across the full 8×6 view rectangle.
-viz.add(
+viz.new(
     Grid(
         origin=(0.0, 0.0, 0.0),
         dir_u=(1.0, 0.0, 0.0),
@@ -65,8 +65,9 @@ viz.add(
 )
 
 # A few points to make the scene interesting.
-viz.add(Point(2, 1, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
-viz.add(Point(-1, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
-viz.add(Point(0, -2, 0), color="#4444ff", style=PointStyle(size=0.15), label="$P_3$")
+viz.new(Point(2, 1, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+viz.new(Point(-1, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
+viz.new(Point(0, -2, 0), color="#4444ff", style=PointStyle(size=0.15), label="$P_3$")
 
-viz.run()
+viz.show()
+viz.wait()

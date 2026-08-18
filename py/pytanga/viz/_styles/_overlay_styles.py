@@ -36,6 +36,17 @@ class LabelStyle(VizStyle):
     align: tuple[float, float] | None = None
     # (0.5, 0.5) = centered, (0, 0) = top-left, (1, 1) = bottom-right
 
+    # ── Anchor position along the entity's extent ──
+    # Scalar or 2-/3-tuple of fractions parameterizing where on the entity the
+    # label anchors.  Interpreted per entity kind:
+    #   1D (Line/Direction/PointPair): u = fraction along the extent
+    #   2D (Plane/Circle): u, v
+    #   3D (Sphere/Inversion): u, v, w
+    along: float | tuple[float, float] | tuple[float, float, float] | None = None
+
+    # ── Screen-plane rotation about the final anchor (degrees, clockwise) ──
+    rotation: float | None = None
+
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "LabelStyle"}
         if self.font_size is not None:
@@ -56,6 +67,14 @@ class LabelStyle(VizStyle):
             result["offset_2d"] = list(self.offset_2d)
         if self.align is not None:
             result["align"] = list(self.align)
+        if self.along is not None:
+            result["along"] = (
+                list(self.along)
+                if isinstance(self.along, (tuple, list))
+                else self.along
+            )
+        if self.rotation is not None:
+            result["rotation"] = self.rotation
         return result
 
 

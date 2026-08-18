@@ -118,7 +118,7 @@ class TwoSpheresApp(VisualizerApp):
             on_change=self.on_mode,
         )
         self.viz.add_button("reset", label="Reset", on_click=self.on_reset)
-        self.viz.add_group(
+        self.viz.add_control_group(
             "viewport_controls",
             title="",
             controls=["sphere_b_x", "mode", "reset"],

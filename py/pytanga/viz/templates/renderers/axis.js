@@ -1,5 +1,5 @@
 // Axis renderer — a coordinate axis line with optional value labels and a
-// name label placed at the end of the axis.  No tick marks are drawn.
+// name label placed along the axis.  No tick marks are drawn.
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
@@ -33,13 +33,16 @@ function perpendicularTo(v) {
  * Draw a single coordinate axis into `group`.
  *
  * `axis` is a JSON dict with the same shape as a standalone Axis entity:
- * `start`, `end`, `majorInterval`, `labelAtMajor`, `labelFormat`, `labelSize`,
+ * `start`, `end`, `majorInterval`, `showValueLabels`, `valueFormat`,
  * `valueStart`, `valueStep`, `label`, and a resolved `style` (plus optional
  * flat `color`/`opacity`).
  *
- * The value labels are controlled by ``axis.style.label_style`` (a
+ * The value labels are controlled by ``axis.style.value_style`` (a
  * ``LabelStyle`` dict with ``font_size``, ``color``, ``align``,
- * ``offset_2d`` and ``offset_local``) and ``axis.style.label_at_major``.
+ * ``offset_2d`` and ``offset_local``) and ``axis.showValueLabels``.
+ * The name label is controlled by ``axis.style.label_style`` (a
+ * ``LabelStyle`` dict with ``along``, ``align``, ``offset_2d``,
+ * ``font_size``, ``color`` and ``rotation``).
  * These are shared by `createAxis`, `createAxes2D`, and `createAxes3D` so
  * every axis is drawn identically.  `offset_local` is applied in the axis
  * local frame: x = along the axis, y = perpendicular (label separation),
@@ -60,16 +63,13 @@ export function addAxis(group, axis) {
     const major = Math.abs(axis.majorInterval || 1.0);
 
     // Value-label style (LabelStyle dict embedded in the resolved Axis style).
-    const labelStyle = (axis.style && axis.style.label_style) || {};
-    const labelAtMajor = axis.style && axis.style.label_at_major !== undefined
-        ? axis.style.label_at_major
-        : axis.labelAtMajor !== false;
+    const valueStyle = (axis.style && axis.style.value_style) || {};
+    const showValueLabels = axis.showValueLabels !== false;
 
-    const labelFormat = axis.labelFormat || '.1f';
-    const decimals = _parseDecimals(labelFormat);
-    const labelSize = axis.labelSize || 12;
-    const valueLabelSize = labelStyle.font_size ?? labelSize;
-    const valueLabelColor = labelStyle.color ?? colorHex;
+    const valueFormat = axis.valueFormat || '.1f';
+    const decimals = _parseDecimals(valueFormat);
+    const valueLabelSize = valueStyle.font_size ?? 12;
+    const valueLabelColor = valueStyle.color ?? colorHex;
     const valueStart = axis.valueStart != null ? axis.valueStart : 0.0;
     const valueStep = axis.valueStep != null ? axis.valueStep : 1.0;
 
@@ -83,7 +83,7 @@ export function addAxis(group, axis) {
 
     // 3D label offset in the axis local frame:
     //   [0] along the axis, [1] perpendicular separation, [2] binormal.
-    const offLocal = labelStyle.offset_local || [0, 0, 0];
+    const offLocal = valueStyle.offset_local || [0, 0, 0];
 
     function addSegment(a, b) {
         const line = makeFatLine([a, b], color, opacity, lineWidth);
@@ -99,10 +99,11 @@ export function addAxis(group, axis) {
     function makeLabel(text, opts = {}) {
         const {
             bold = false,
-            fontSize = labelSize,
+            fontSize = 12,
             fontColor = colorHex,
             align = null,
             offset = null,
+            rotation = 0,
         } = opts;
 
         const content = document.createElement('div');
@@ -115,15 +116,14 @@ export function addAxis(group, axis) {
         content.style.pointerEvents = 'none';
         content.style.whiteSpace = 'nowrap';
 
-        if (align || offset) {
-            const ax = align ? align[0] : 0.5;
-            const ay = align ? align[1] : 0.5;
-            const ox = offset ? offset[0] : 0;
-            const oy = offset ? offset[1] : 0;
-            const tx = (0.5 - ax) * 100;
-            const ty = (0.5 - ay) * 100;
-            content.style.transform = `translate(${ox}px, ${oy}px) translate(${tx}%, ${ty}%)`;
-        }
+        const ax = align ? align[0] : 0.5;
+        const ay = align ? align[1] : 0.5;
+        const ox = offset ? offset[0] : 0;
+        const oy = offset ? offset[1] : 0;
+        const tx = (0.5 - ax) * 100;
+        const ty = (0.5 - ay) * 100;
+        content.style.transformOrigin = `${ax * 100}% ${ay * 100}%`;
+        content.style.transform = `translate(${ox}px, ${oy}px) translate(${tx}%, ${ty}%) rotate(${rotation}deg)`;
 
         // CSS2DRenderer repositions the element it wraps each frame, so the
         // styled content must be nested inside an outer element.  Otherwise
@@ -138,7 +138,7 @@ export function addAxis(group, axis) {
     addSegment(start, end);
 
     // Value labels at major intervals (no tick marks).
-    if (labelAtMajor && major > 0) {
+    if (showValueLabels && major > 0) {
         const count = Math.floor(length / major);
         for (let i = 1; i <= count; i++) {
             const t = i * major;
@@ -152,18 +152,30 @@ export function addAxis(group, axis) {
             const label = makeLabel(formatValue(value), {
                 fontSize: valueLabelSize,
                 fontColor: valueLabelColor,
-                align: labelStyle.align || null,
-                offset: labelStyle.offset_2d || null,
+                align: valueStyle.align || null,
+                offset: valueStyle.offset_2d || null,
+                rotation: valueStyle.rotation || 0,
             });
             label.position.copy(labelPos);
             group.add(label);
         }
     }
 
-    // Axis name label at the end of the axis.
+    // Axis name label, anchored along the axis via `along` (default 0.5, the
+    // midpoint) and hanging below it by default.
     if (axis.label) {
-        const label = makeLabel(axis.label, { bold: true });
-        label.position.copy(end);
+        const nameStyle = (axis.style && axis.style.label_style) || {};
+        const along = nameStyle.along != null ? nameStyle.along : 0.5;
+        const anchor = start.clone().addScaledVector(dir, length * along);
+        const label = makeLabel(axis.label, {
+            bold: true,
+            fontSize: nameStyle.font_size ?? 12,
+            fontColor: nameStyle.color ?? colorHex,
+            align: nameStyle.align || [0.5, 0.0],
+            offset: nameStyle.offset_2d || [0, 10],
+            rotation: nameStyle.rotation || 0,
+        });
+        label.position.copy(anchor);
         group.add(label);
     }
 }

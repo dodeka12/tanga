@@ -1,28 +1,28 @@
 # Export & Capture
 
-Export is handled by `SceneExporter`, separate from the live `Visualizer`:
+Export is now handled directly on `Visualizer` (and `VizSceneHandle`) —
+`SceneExporter` is deprecated:
 
 ```python
-from pytanga.viz import SceneExporter
-
-exporter = SceneExporter(viz)
+viz.export_snapshot("scene.html")
+viz.export_glb("scene.glb")
+viz.export_figure("figure.html")
 ```
 
-For export-only workflows where no browser is needed, start the server without
-waiting for a client connection:
+For export-only workflows where no browser is needed, no server is required —
+exports read directly from the in-memory scene:
 
 ```python
 viz = Visualizer()
-viz.start(wait_for_browser=False)
 # add entities, then export...
-exporter = SceneExporter(viz)
-exporter.export_html("scene.html")
-viz.stop()
+viz.export_snapshot("scene.html")
 ```
 
-If you also want a live viewer while exporting, the default `start()` with
-`wait_for_browser=True` is appropriate — the server waits for a browser
-connection before returning.
+If you also want a live viewer while exporting, call `viz.show()` first.
+
+Screenshot and video capture still live on `SceneExporter` (deprecated) for
+now — see the [Screenshots](#screenshots) and [Video Capture](#video-capture)
+sections.
 
 See the example scripts [`demo_export_html.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_html.py),
 [`demo_export_figure.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_figure.py),
@@ -34,7 +34,7 @@ See the example scripts [`demo_export_html.py`](https://github.com/dodeka12/tang
 Self-contained HTML file — double-click to view, no Python server needed:
 
 ```python
-exporter.export_html("scene.html")
+viz.export_snapshot("scene.html")
 ```
 
 Embeds entity data and renderer modules inline. Three.js loads from CDN.
@@ -44,7 +44,7 @@ Embeds entity data and renderer modules inline. Three.js loads from CDN.
 Binary `.glb` file for Blender, `<model-viewer>`, or any glTF viewer:
 
 ```python
-exporter.export_glb("scene.glb")
+viz.export_glb("scene.glb")
 ```
 
 ## Figure Export (Presentations)
@@ -55,7 +55,7 @@ any HTML-based presentation:
 ```python
 from pytanga.viz import FigureStyle
 
-exporter.export_figure(
+viz.export_figure(
     "figure.html",
     style=FigureStyle(
         width=800,
@@ -92,9 +92,9 @@ exporter.export_figure(
 | `border_radius` | `str` | `"0"` | CSS border-radius |
 | `responsive` | `bool` | `False` | Fill parent container, resize with window |
 
-**Standalone window:** `exporter.open_figure(style=FigureStyle(width=1024, height=768))`
+**Standalone window:** `viz.open_snapshot()`
 
-**String output:** `snippet = exporter.export_figure_html()`
+**String output:** `snippet = viz.export_figure()`
 
 ### Keyboard Shortcuts in Exported Figures
 
@@ -157,7 +157,7 @@ self-contained HTML file with JS playback controls:
 ```python
 from pytanga.viz import AnimStyle, FigureStyle
 
-recording = exporter.start_animation_recording()
+recording = viz.start_animation_recording()
 
 for frame in range(90):
     viz.update_entity(point_id, Point(...))
@@ -166,17 +166,17 @@ for frame in range(90):
     viz.sleep_ms(33)
 
 # Figure snippet (for presentations)
-exporter.export_animated_figure(
+viz.export_figure(
     "animated_figure.html",
-    recording,
+    animation=recording,
     style=FigureStyle(width=800, height=600, responsive=True),
     anim_style=AnimStyle(fps=30, loop=True),
 )
 
 # Full-page standalone document
-exporter.export_animated_html(
+viz.export_snapshot(
     "animated_scene.html",
-    recording,
+    animation=recording,
     anim_style=AnimStyle(fps=30, loop=True),
 )
 ```

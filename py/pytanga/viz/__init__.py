@@ -43,6 +43,8 @@ from ._interaction import (
     ScrollEvent,
 )
 from ._label import Label
+from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
+from ._object_ref import VizObjectRef
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
 from ._scene_handle import VizSceneHandle
 from ._scene_objects import Axes2D, Axes3D, Axis, Grid
@@ -54,6 +56,7 @@ from ._styles import (
     AxisStyle,
     CircleStyle,
     CrossHairPointStyle,
+    CylinderLineStyle,
     DilatorStyle,
     DirectionStyle,
     FigureStyle,
@@ -80,6 +83,7 @@ from ._styles import (
     VizStyle,
 )
 from ._types import SceneEntity, VizInputType
+from ._viz_styles import VizStyles
 from .camera import (
     CameraConfig,
     CameraConfig2d,
@@ -119,6 +123,7 @@ __all__ = [
     "CircleStyle",
     "ControlGroup",
     "CrossHairPointStyle",
+    "CylinderLineStyle",
     "DilatorStyle",
     "DirectionStyle",
     "DragEvent",
@@ -171,7 +176,12 @@ __all__ = [
     "View3dConfig",
     "Visualizer",
     "VisualizerApp",
-    "VizSceneHandle",
+    "VizGroup",
     "VizInputType",
+    "VizObjectRef",
+    "VizOverlayObject",
+    "VizSceneHandle",
+    "VizSceneObject",
     "VizStyle",
+    "VizStyles",
 ]

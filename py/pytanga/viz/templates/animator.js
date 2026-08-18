@@ -11,8 +11,8 @@ const EASING = {
     'ease-in-out': (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
 };
 
-export function startTween(id, target, duration, easing, entityMeshes) {
-    const mesh = entityMeshes.get(id);
+export function startTween(id, target, duration, easing, map) {
+    const mesh = map.get(id)?.obj;
     if (!mesh) return;
 
     const start = {
@@ -35,13 +35,13 @@ export function startTween(id, target, duration, easing, entityMeshes) {
     });
 }
 
-export function updateTweens(entityMeshes) {
+export function updateTweens(map) {
     if (tweens.size === 0) return false;
     const now = performance.now() / 1000;
     let hasActive = false;
 
     for (const [id, tween] of tweens) {
-        const mesh = entityMeshes.get(id);
+        const mesh = map.get(id)?.obj;
         if (!mesh) { tweens.delete(id); continue; }
 
         const elapsed = now - tween.startTime;

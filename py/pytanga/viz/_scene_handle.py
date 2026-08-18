@@ -14,11 +14,9 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
+    from ._viz_styles import VizStyles
     from .visualizer import Visualizer
 
-from pytanga.geometry.entities import Entity as GeoEntity
-
-from ._act_style import ActPointStyle
 from ._jupyter import _JupyterDisplayMixin
 from ._timeline import Timeline
 from ._types import SceneEntity
@@ -72,33 +70,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
         return self._scene()
 
     @property
-    def default_styles(self) -> Any:
-        """Per-kind style instances (shared across all scenes)."""
-        return self._viz.default_styles
-
-    @property
-    def default_label_style(self) -> LabelStyle:
-        """The global default ``LabelStyle`` instance (shared across scenes)."""
-        return self._viz.default_label_style
-
-    @property
-    def default_label_styles(self) -> Any:
-        """Per-kind default label style overrides (shared across scenes).
-
-        Wrapped in a :class:`_StyleDict`, so entries may be addressed by
-        string key or by class.
-        """
-        return self._viz.default_label_styles
-
-    @property
-    def default_annotation_style(self) -> AnnotationStyle:
-        """The global default ``AnnotationStyle`` instance (shared across scenes)."""
-        return self._viz.default_annotation_style
-
-    @property
-    def default_act_point_style(self) -> ActPointStyle:
-        """The global default ``ActPointStyle`` instance (shared across scenes)."""
-        return self._viz.default_act_point_style
+    def styles(self) -> "VizStyles":
+        """This scene's :class:`VizStyles` holder (its own copy)."""
+        return self._scene().styles
 
     # ── Entity management ───────────────────────────────────
 
@@ -117,6 +91,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: TextureLabelStyle | None = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
     ) -> str:
         """Add an entity, operator, MV, or label to this scene.
 
@@ -135,7 +111,57 @@ class VizSceneHandle(_JupyterDisplayMixin):
             label_style=label_style,
             tex_label=tex_label,
             tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
         )
+
+    def new(
+        self,
+        obj: Any = None,
+        *,
+        entity_id: str | None = None,
+        color: str
+        | tuple[float, float, float]
+        | tuple[float, float, float, float]
+        | None = None,
+        opacity: float | None = None,
+        style: ObjVizStyle | None = None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: TextureLabelStyle | None = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
+    ) -> Any:
+        """Like :meth:`add`, but returns a :class:`VizObjectRef` for the node."""
+        from ._object_ref import VizObjectRef
+
+        eid = self._viz._add_to_scene(
+            self._name,
+            obj=obj,
+            entity_id=entity_id,
+            color=color,
+            opacity=opacity,
+            style=style,
+            label=label,
+            label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
+        )
+        return VizObjectRef(self, self._scene().get_node(eid))
+
+    def add_group(self, name: str | None = None) -> Any:
+        """Create a scene-graph group in this scene and return a :class:`VizObjectRef`."""
+        from ._object_ref import VizObjectRef
+
+        group = self._scene().add_group(name)
+        return VizObjectRef(self, group)
+
+    def update_style(self, entity_id: str, style: ObjVizStyle) -> None:
+        """Update the style of an existing entity in this scene."""
+        self._scene().update(entity_id, style=style)
 
     def update(self, entity_id: str, **properties: Any) -> None:
         """Update rendering properties of an existing entity."""
@@ -286,7 +312,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             parent_id=parent_id,
         )
 
-    def add_group(
+    def add_control_group(
         self,
         gid: str,
         *,
@@ -297,7 +323,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         parent_id: str | None = None,
         on_toggle: Any = None,
     ) -> str:
-        """Create a control group in this scene."""
+        """Create a UI control group in this scene."""
         return self._viz._add_scene_group(
             self._name,
             gid,
@@ -313,8 +339,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Remove a control from this scene."""
         self._viz._remove_scene_control(self._name, cid)
 
-    def remove_group(self, gid: str) -> None:
-        """Remove a control group from this scene."""
+    def remove_control_group(self, gid: str) -> None:
+        """Remove a UI control group from this scene."""
         self._viz._remove_scene_group(self._name, gid)
 
     def clear_controls(self) -> None:
@@ -341,6 +367,20 @@ class VizSceneHandle(_JupyterDisplayMixin):
         Shorthand for ``viz.navigate_to(scene_name, target="scene:<this.name>")``.
         """
         self._viz.navigate_to(scene_name, target=f"scene:{self._name}")
+
+    def open_browser(self) -> bool:
+        """Open a browser tab for this scene (server must be running)."""
+        return self._viz._open_scene_browser(self._name)
+
+    def show(self, *, host: str | None = None, port: int | None = None) -> bool:
+        """Serve (if needed) and open a browser tab for this scene.
+
+        ``host``/``port`` are forwarded to ``Visualizer.start_server`` and
+        only used when the server is not already running.
+        """
+        if self._viz._server is None:
+            self._viz.start_server(host=host or "localhost", port=port)
+        return self.open_browser()
 
     # ── Jupyter support ──────────────────────────────────────
 
@@ -388,10 +428,71 @@ class VizSceneHandle(_JupyterDisplayMixin):
                 f'title="Tanga 3D Viewer — {self._name}"></iframe>'
             )
 
-    def display_static(
+    def display_snapshot(
         self, width: int | str = "100%", height: int | str = "500px"
     ) -> Any:
         """Display this scene as standalone HTML (no server required)."""
-        return self._viz.display_static(
+        return self._viz.display_snapshot(
             width=width, height=height, scene_name=self._name
         )
+
+    def display_static(
+        self, width: int | str = "100%", height: int | str = "500px"
+    ) -> Any:
+        """Deprecated: use :meth:`display_snapshot`."""
+        import warnings
+
+        warnings.warn(
+            "display_static() is deprecated; use display_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.display_snapshot(width=width, height=height)
+
+    def export_snapshot(
+        self,
+        path: Any,
+        *,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> None:
+        """Export this scene as a self-contained HTML file."""
+        self._viz._export_scene_snapshot(
+            self._name,
+            path,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+        )
+
+    def open_snapshot(self) -> None:
+        """Open this scene as a standalone snapshot in a browser window."""
+        self._viz._open_scene_snapshot(self._name)
+
+    def export_figure(
+        self,
+        path: Any = None,
+        *,
+        style: Any = None,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> Any:
+        """Export this scene as an HTML snippet (or return the string)."""
+        return self._viz._export_scene_figure(
+            self._name,
+            path,
+            style=style,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+        )
+
+    def export_glb(self, path: Any, *, overwrite: bool = False) -> None:
+        """Export this scene as a glTF 2.0 binary (``.glb``) file."""
+        self._viz._export_scene_glb(self._name, path, overwrite=overwrite)
+
+    def start_animation_recording(self) -> Any:
+        """Begin recording entity state for animated export (this scene)."""
+        return self._viz._start_scene_animation_recording(self._name)

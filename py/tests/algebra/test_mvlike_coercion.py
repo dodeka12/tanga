@@ -29,7 +29,9 @@ class TestMVLikeCoercion:
         np.testing.assert_array_equal(m1.data, m2.data)
 
     def test_solve_mod_scalar_coercion(self, alg_int):
-        a = alg_int({"e1": 3, "e2": 5, 0: 1})
+        # Use a single-blade versor so A * X = 1 is square (solve_mod requires
+        # a square system); still exercises scalar coercion of the C argument.
+        a = alg_int("e12")
         x1 = solve_mod(a, 1, 97)
         x2 = solve_mod(a, alg_int({0: 1}), 97)
         assert x1.to_dict() == x2.to_dict()

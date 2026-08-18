@@ -165,6 +165,24 @@ class LineStyle(VizStyle):
 
 
 @dataclass
+class CylinderLineStyle(LineStyle):
+    """LineStyle variant that renders :class:`~pytanga.geometry.Line` as a
+    solid 3D cylinder instead of a screen-space fat line.
+
+    ``thickness`` is interpreted in **world units** (the cylinder radius),
+    unlike the base :class:`LineStyle`, whose ``thickness`` is a screen-space
+    pixel width.
+    """
+
+    thickness: float = 0.03
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "CylinderLineStyle"
+        return result
+
+
+@dataclass
 class PlaneStyle(VizStyle):
     """Visual style for :class:`~pytanga.geometry.Plane`.
 
@@ -383,18 +401,19 @@ class AxisStyle(VizStyle):
         color: Axis line and value/name label color.
         opacity: Axis line opacity (0..1).
         line_thickness: Axis line width in screen-space pixels.
-        label_at_major: When ``False``, value labels are not drawn at major
-            intervals (defaults to showing them).
-        label_style: Optional :class:`LabelStyle` controlling the value
-            labels (font size, color, alignment, 2D pixel offset, and 3D
-            ``offset_local``).
+        label_style: Optional :class:`LabelStyle` controlling the axis
+            *name* label (font size, color, alignment, ``along`` anchor, 2D
+            pixel offset, 3D ``offset_local``, and rotation).
+        value_style: Optional :class:`LabelStyle` controlling the numeric
+            value labels at each major interval (font size, color, alignment,
+            2D pixel offset, 3D ``offset_local``, and rotation).
     """
 
     color: str | None = None
     opacity: float | None = None
     line_thickness: float | None = None
-    label_at_major: bool | None = None
     label_style: LabelStyle | None = None
+    value_style: LabelStyle | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "AxisStyle"}
@@ -404,10 +423,10 @@ class AxisStyle(VizStyle):
             result["opacity"] = self.opacity
         if self.line_thickness is not None:
             result["line_thickness"] = self.line_thickness
-        if self.label_at_major is not None:
-            result["label_at_major"] = self.label_at_major
         if self.label_style is not None:
             result["label_style"] = self.label_style.to_dict()
+        if self.value_style is not None:
+            result["value_style"] = self.value_style.to_dict()
         return result
 
 

@@ -11,15 +11,19 @@ Run with:  uv run python py/examples/viz/demo_axes_custom.py
 """
 
 from pytanga.geometry import Point
-from pytanga.viz import Axis, Grid, PointStyle, Visualizer
+from pytanga.viz import Axis, AxisStyle, Grid, LabelStyle, PointStyle, Visualizer
 
-viz = Visualizer(title="Tanga — Custom Axes & Grid")
+viz = Visualizer(
+    title="Tanga — Custom Axes & Grid",
+    add_default_axes=False,
+    add_default_grid=False,
+)
 
 # Custom X axis: major ticks every 2 units, value labels at each major tick.
-viz.add(Axis(start=(0, 0, 0), end=(10, 0, 0), major_interval=2.0, label="X"))
+viz.new(Axis(start=(0, 0, 0), end=(10, 0, 0), major_interval=2.0, label="X"))
 
 # Custom Y axis: major ticks every 1 unit plus minor ticks every 0.5.
-viz.add(
+viz.new(
     Axis(
         start=(0, 0, 0),
         end=(0, 6, 0),
@@ -29,9 +33,19 @@ viz.add(
     )
 )
 
+# Custom Z axis: value labels rotated -90° so they read vertically.
+viz.new(
+    Axis(start=(0, 0, 0), end=(0, 0, 4), major_interval=1.0, label="Z"),
+    style=AxisStyle(
+        value_style=LabelStyle(rotation=45, offset_2d=(0, 10)),
+        label_style=LabelStyle(offset_2d=(0, 20)),
+    ),
+)
+
 # Grid in the XY plane with 1-unit spacing and a 10×6 extent.
-viz.add(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-3, 3)))
+viz.new(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-3, 3)))
 
-viz.add(Point(3, 2, 0), color="#ffcc00", style=PointStyle(size=0.12), label="P")
+viz.new(Point(3, 2, 0), color="#ffcc00", style=PointStyle(size=0.12), label="P")
 
-viz.run()
+viz.show()
+viz.wait()

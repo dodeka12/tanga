@@ -31,6 +31,14 @@ class SceneExporter:
     """
 
     def __init__(self, visualizer: Visualizer) -> None:
+        import warnings
+
+        warnings.warn(
+            "SceneExporter is deprecated; use viz.export_snapshot / "
+            "viz.export_figure / viz.export_glb directly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._viz = visualizer
         self._default_figure_style = _FS(
             width=800,
@@ -93,7 +101,7 @@ class SceneExporter:
 
     # ── HTML / glTF ────────────────────────────────────────────
 
-    def export_html(self, path: str | Path, *, overwrite: bool = False) -> None:
+    def export_snapshot(self, path: str | Path, *, overwrite: bool = False) -> None:
         """Export the current scene as a self-contained HTML file.
 
         The resulting file can be opened by double-clicking — no Python
@@ -112,13 +120,22 @@ class SceneExporter:
                 f"File {path} already exists. Use overwrite=True to replace it."
             )
 
-        from pytanga.viz.export import render_export_html  # noqa: PLC0415
+        from pytanga.viz.export._html import render_snapshot  # noqa: PLC0415
 
-        all_objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
-        entities = [o for o in all_objects if o.get("layer") != "overlay"]
-        labels = self._viz._scene._serialize_labels()
-        html = render_export_html(entities, labels, self._viz._config.to_dict())
+        objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
+        html = render_snapshot(objects, self._viz._config.to_dict())
         path.write_text(html, encoding="utf-8")
+
+    def export_html(self, path: str | Path, *, overwrite: bool = False) -> None:
+        """Deprecated: use :meth:`export_snapshot`."""
+        import warnings
+
+        warnings.warn(
+            "export_html() is deprecated; use export_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.export_snapshot(path, overwrite=overwrite)
 
     def export_glb(self, path: str | Path, *, overwrite: bool = False) -> None:
         """Export the current scene as a glTF 2.0 binary (``.glb``) file.
@@ -139,62 +156,18 @@ class SceneExporter:
                 f"File {path} already exists. Use overwrite=True to replace it."
             )
 
-        from pytanga.viz.export import build_gltf_scene  # noqa: PLC0415
+        from pytanga.viz.export._gltf import build_glb  # noqa: PLC0415
 
-        all_objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
+        all_objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
         entities = [o for o in all_objects if o.get("layer") != "overlay"]
-        labels = self._viz._scene._serialize_labels()
-        glb_data = build_gltf_scene(entities, self._viz._config, labels=labels)
+        glb_data = build_glb(entities, self._viz._config)
         path.write_bytes(glb_data)
 
     # ── Figure ─────────────────────────────────────────────────
 
-    def export_figure(
-        self,
-        path: str | Path,
-        *,
-        style: _FS | None = None,
-        overwrite: bool = False,
-    ) -> None:
-        """Export the scene as an HTML snippet for embedding in presentations.
-
-        The output is a ``<div>`` + ``<script type="module">`` block — no
-        ``<html>``, no ``<head>``, no global style resets.  Paste it directly
-        into a reveal.js, Slidev, or Marp slide.
-
-        Args:
-            path: Output file path (e.g. ``"figure.html"``).
-            style: Optional ``FigureStyle``.  Non-``None`` fields override
-                ``default_figure_style``.
-            overwrite: If ``False``, raise on existing file.
-        """
-        path = self._resolve_export_path(path, ".html")
-        if not overwrite and path.exists():
-            raise FileExistsError(
-                f"File {path} already exists. Use overwrite=True to replace it."
-            )
-
-        snippet = self.export_figure_html(style=style)
-        path.write_text(snippet, encoding="utf-8")
-
-    def export_figure_html(
-        self,
-        *,
-        style: _FS | None = None,
-    ) -> str:
-        """Return the figure export as an HTML snippet string.
-
-        Args:
-            style: Optional ``FigureStyle``.  Non-``None`` fields override
-                ``default_figure_style``.
-
-        Returns:
-            HTML snippet (``<div>`` + ``<script>``) suitable for direct
-            inclusion in a presentation slide.
-        """
-        from pytanga.viz.export._figure_html import (
-            render_export_figure,  # noqa: PLC0415
-        )
+    def _figure_snippet(self, *, style: _FS | None = None) -> str:
+        """Return the figure HTML snippet for the current scene."""
+        from pytanga.viz.export._figure_html import render_figure  # noqa: PLC0415
 
         # Resolve style: user's non-None fields overlay canonical defaults
         if style is not None:
@@ -207,72 +180,93 @@ class SceneExporter:
         else:
             resolved = self._default_figure_style
 
-        all_objects = self._viz._scene.full_state(styles_map=self._viz._default_styles)
-        entities = [o for o in all_objects if o.get("layer") != "overlay"]
-        labels = self._viz._scene._serialize_labels()
+        objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
         fig_config = self.figure_config
 
-        return render_export_figure(
-            entities,
-            labels,
+        return render_figure(
+            objects,
             self._viz._config.to_dict(),
             resolved.to_dict(),
             fig_config.to_dict(),
         )
 
-    def open_figure(
+    def export_figure(
         self,
+        path: str | Path | None = None,
         *,
         style: _FS | None = None,
-    ) -> None:
-        """Open a standalone browser window sized to the figure dimensions.
+        overwrite: bool = False,
+    ) -> str | None:
+        """Export the scene as an HTML snippet for embedding in presentations.
 
-        The window shows only the 3D figure — no browser chrome.
+        The output is a ``<div>`` + ``<script type="module">`` block — no
+        ``<html>``, no ``<head>``, no global style resets.  Paste it directly
+        into a reveal.js, Slidev, or Marp slide.
 
         Args:
+            path: Output file path (e.g. ``"figure.html"``).  When ``None``,
+                the snippet is returned as a string instead of being written.
             style: Optional ``FigureStyle``.  Non-``None`` fields override
                 ``default_figure_style``.
+            overwrite: If ``False``, raise on existing file.
+
+        Returns:
+            The snippet string when *path* is ``None``, else ``None``.
+        """
+        snippet = self._figure_snippet(style=style)
+        if path is None:
+            return snippet
+        resolved_path = self._resolve_export_path(path, ".html")
+        if not overwrite and resolved_path.exists():
+            raise FileExistsError(
+                f"File {resolved_path} already exists. "
+                "Use overwrite=True to replace it."
+            )
+        resolved_path.write_text(snippet, encoding="utf-8")
+        return None
+
+    def export_figure_html(self, *, style: _FS | None = None) -> str:
+        """Deprecated: use :meth:`export_figure` with ``path=None``."""
+        import warnings
+
+        warnings.warn(
+            "export_figure_html() is deprecated; use export_figure(path=None)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._figure_snippet(style=style)
+
+    def open_snapshot(self) -> None:
+        """Open the current scene as a standalone snapshot in a browser window.
+
+        Writes the self-contained HTML to a temporary file and opens it.
         """
         import tempfile as _tempfile
         import webbrowser as _webbrowser
 
-        if style is not None:
-            resolved = _FS()
-            for fld_name, fld_val in self._default_figure_style.__dict__.items():
-                setattr(resolved, fld_name, fld_val)
-            for fld_name, fld_val in style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved, fld_name, fld_val)
-        else:
-            resolved = self._default_figure_style
+        from pytanga.viz.export._html import render_snapshot  # noqa: PLC0415
 
-        snippet = self.export_figure_html(style=style)
-
-        # Wrap in a minimal full HTML page for standalone viewing
-        full_html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{self._viz._title}</title>
-<style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ display: flex; justify-content: center; align-items: center;
-         min-height: 100vh; background: #111; }}
-</style>
-</head>
-<body>
-  {snippet}
-</body>
-</html>"""
+        objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
+        html = render_snapshot(objects, self._viz._config.to_dict())
 
         with _tempfile.NamedTemporaryFile(
             suffix=".html", delete=False, mode="w", encoding="utf-8"
         ) as f:
-            f.write(full_html)
+            f.write(html)
             tmp_path = f.name
 
         _webbrowser.open(f"file://{tmp_path}")
+
+    def open_figure(self, *, style: _FS | None = None) -> None:
+        """Deprecated: use :meth:`open_snapshot`."""
+        import warnings
+
+        warnings.warn(
+            "open_figure() is deprecated; use open_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.open_snapshot()
 
     # ── Screenshot & frame capture ───────────────────────
 
@@ -460,7 +454,7 @@ class SceneExporter:
 
         return AnimationRecording(
             self._viz._scene,
-            styles_map=self._viz._default_styles,
+            styles_map=self._viz.styles.kind,
         )
 
     def export_animated_figure(
@@ -472,69 +466,23 @@ class SceneExporter:
         anim_style: _AS | None = None,
         overwrite: bool = False,
     ) -> None:
-        """Export a recorded animation as an HTML snippet for embedding.
+        """Deprecated: use :meth:`Visualizer.export_figure` with ``animation=``."""
+        import warnings
 
-        The resulting file is a ``<div>`` + ``<script type="module">``
-        block — no ``<html>``, no ``<head>``, no global style resets.
-        Paste it directly into a reveal.js, Slidev, or Marp slide.
-
-        This is the animated equivalent of ``export_figure()``.
-
-        Args:
-            path: Output file path (e.g. ``"animation.html"``).
-            recording: The ``AnimationRecording`` from
-                ``start_animation_recording()``.
-            style: Optional ``FigureStyle``.
-            anim_style: Optional ``AnimStyle`` (fps, loop, show_controls,
-                compress).  Non-``None`` fields are merged over the
-                exporter's ``_default_anim_style``.
-            overwrite: If ``False``, raise on existing file.
-        """
-        from pytanga.viz.export._animated_figure import (
-            render_export_animated_figure,
+        warnings.warn(
+            "export_animated_figure() is deprecated; use "
+            "export_figure(..., animation=recording)",
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        path = self._resolve_export_path(path, ".html")
-        if not overwrite and path.exists():
-            raise FileExistsError(
-                f"File {path} already exists. Use overwrite=True to replace it."
-            )
-
-        if recording.frame_count == 0:
-            raise ValueError(
-                "Recording is empty. Call recording.capture_frame() at "
-                "least once before exporting."
-            )
-
-        # Resolve figure style
-        if style is not None:
-            resolved_style = _FS()
-            for fld_name, fld_val in self._default_figure_style.__dict__.items():
-                setattr(resolved_style, fld_name, fld_val)
-            for fld_name, fld_val in style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved_style, fld_name, fld_val)
-        else:
-            resolved_style = self._default_figure_style
-
-        # Resolve anim style
-        if anim_style is not None:
-            resolved_anim = _AS()
-            for fld_name, fld_val in self._default_anim_style.__dict__.items():
-                setattr(resolved_anim, fld_name, fld_val)
-            for fld_name, fld_val in anim_style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved_anim, fld_name, fld_val)
-        else:
-            resolved_anim = self._default_anim_style
-
-        html = render_export_animated_figure(
-            recording.to_dict(),
-            figure_style=resolved_style.to_dict(),
-            figure_config=self.figure_config.to_dict(),
-            anim_style=resolved_anim.to_dict(),
+        self._viz._export_scene_figure(
+            "",
+            path,
+            style=style,
+            overwrite=overwrite,
+            animation=recording,
+            anim_style=anim_style,
         )
-        path.write_text(html, encoding="utf-8")
 
     def export_animated_html(
         self,
@@ -544,54 +492,19 @@ class SceneExporter:
         anim_style: _AS | None = None,
         overwrite: bool = False,
     ) -> None:
-        """Export a recorded animation as a standalone full-page HTML document.
+        """Deprecated: use :meth:`Visualizer.export_snapshot` with ``animation=``."""
+        import warnings
 
-        The resulting file is a complete HTML document (``<!DOCTYPE html>``,
-        ``<html>``, ``<head>``, ``<body>``) — double-click to open in any
-        browser.  The Three.js canvas fills the entire viewport.
-
-        This is the animated equivalent of ``export_html()``.
-
-        Args:
-            path: Output file path (e.g. ``"animation.html"``).
-            recording: The ``AnimationRecording`` from
-                ``start_animation_recording()``.
-            anim_style: Optional ``AnimStyle`` (fps, loop, show_controls,
-                compress).  Non-``None`` fields are merged over the
-                exporter's ``_default_anim_style``.
-            overwrite: If ``False``, raise on existing file.
-        """
-        from pytanga.viz.export._animated_figure import (
-            render_export_animated_html,
+        warnings.warn(
+            "export_animated_html() is deprecated; use "
+            "export_snapshot(..., animation=recording)",
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        path = self._resolve_export_path(path, ".html")
-        if not overwrite and path.exists():
-            raise FileExistsError(
-                f"File {path} already exists. Use overwrite=True to replace it."
-            )
-
-        if recording.frame_count == 0:
-            raise ValueError(
-                "Recording is empty. Call recording.capture_frame() at "
-                "least once before exporting."
-            )
-
-        # Resolve anim style
-        if anim_style is not None:
-            resolved_anim = _AS()
-            for fld_name, fld_val in self._default_anim_style.__dict__.items():
-                setattr(resolved_anim, fld_name, fld_val)
-            for fld_name, fld_val in anim_style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved_anim, fld_name, fld_val)
-        else:
-            resolved_anim = self._default_anim_style
-
-        html = render_export_animated_html(
-            recording.to_dict(),
-            scene_config=self._viz._config.to_dict(),
-            anim_style=resolved_anim.to_dict(),
-            title=self._viz._title,
+        self._viz._export_scene_snapshot(
+            "",
+            path,
+            overwrite=overwrite,
+            animation=recording,
+            anim_style=anim_style,
         )
-        path.write_text(html, encoding="utf-8")

@@ -20,9 +20,7 @@ from pytanga.viz import PointStyle, Visualizer
 # ═══════════════════════════════════════════════════════════════
 
 G = 2.0  # gravitational constant (tuned for visual appeal)
-DT = 0.02
-DT_MS = DT * 1000  # time step (~60 FPS)
-TOTAL_FRAMES = 600  # ~10 seconds
+DT = 0.02  # physics time step (s) — matches the ~50 FPS animation rate
 
 # Body 1 — heavy, starts near origin
 mass_1 = 5.0
@@ -39,10 +37,10 @@ vel_2 = Direction(0.5, -0.5, 0.0)
 # ═══════════════════════════════════════════════════════════════
 
 viz = Visualizer(title="Tanga — Two-Body Gravitational Simulation")
-viz.start()
+viz.show()
 
 # Coordinate axes for reference
-viz.add(
+viz.new(
     Point(0, 0, 0),
     label="origin",
     style=PointStyle(
@@ -51,8 +49,8 @@ viz.add(
     ),
 )
 
-# Body entities
-id_1 = viz.add(
+# Body entities — `new()` returns a VizObjectRef; update via `.entity`.
+body_1 = viz.new(
     pos_1,
     label=f"$m_1 = {mass_1}$",
     style=PointStyle(
@@ -60,7 +58,7 @@ id_1 = viz.add(
         color="#ff4444",
     ),
 )
-id_2 = viz.add(
+body_2 = viz.new(
     pos_2,
     label=f"$m_2 ={mass_2}$",
     style=PointStyle(
@@ -75,9 +73,9 @@ viz.flush()
 # Simulation loop
 # ═══════════════════════════════════════════════════════════════
 
-print(f"Simulating {TOTAL_FRAMES} frames (~{TOTAL_FRAMES * DT:.0f} s)...")
+print("Simulating two-body gravity until Ctrl+C...")
 
-for _frame in range(TOTAL_FRAMES):
+for _ in viz.animate(fps=50):
     # ── Gravitational force ──────────────────────────────────
     # Vector from body 1 to body 2:  r = pos_2 - pos_1
     r_12: Direction = pos_2 - pos_1
@@ -105,11 +103,9 @@ for _frame in range(TOTAL_FRAMES):
     pos_2 = pos_2 + vel_2 * DT
 
     # ── Render ───────────────────────────────────────────────
-    viz.update_entity(id_1, pos_1)
-    viz.update_entity(id_2, pos_2)
+    body_1.entity = pos_1
+    body_2.entity = pos_2
 
     viz.flush()
-    viz.sleep_ms(DT_MS)
 
-viz.stop()
 print("Simulation stopped.")

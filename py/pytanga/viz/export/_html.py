@@ -18,11 +18,10 @@ from pytanga.viz.export._bootstrap import (
     generate_bootstrap_js,
     js_annotation_panel,
     js_autofit_camera,
-    js_entity_creation,
     js_imports,
-    js_label_creation_static,
     js_render_loop,
     js_resize_handler,
+    js_scene_build,
     js_scene_setup,
     js_title_overlay,
 )
@@ -34,13 +33,16 @@ from pytanga.viz.export._bootstrap._html import (
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
-def render_export_html(
-    entities: list[dict[str, Any]],
-    labels: list[dict[str, Any]] | None,
+def render_snapshot(
+    objects: list[dict[str, Any]],
     scene_config: dict[str, Any],
 ) -> str:
-    """Render a self-contained HTML file from entity data and scene config."""
-    scene_json = json.dumps({"entities": entities, "labels": labels or []}, indent=0)
+    """Render a self-contained HTML file from the unified scene objects.
+
+    *objects* is the ``Scene.full_state()`` output (scene entities and
+    overlay labels in DFS pre-order).
+    """
+    scene_json = json.dumps({"objects": objects}, indent=0)
     config_json = json.dumps(scene_config, indent=0)
 
     html = (_TEMPLATES_DIR / "export_viewer.html").read_text(encoding="utf-8")
@@ -53,6 +55,21 @@ def render_export_html(
         .replace("__SCENE_CONFIG_JSON__", config_json)
         .replace("__BOOTSTRAP_JS__", bootstrap)
     )
+
+
+def render_export_html(
+    objects: list[dict[str, Any]],
+    scene_config: dict[str, Any],
+) -> str:
+    """Deprecated: use :func:`render_snapshot`."""
+    import warnings
+
+    warnings.warn(
+        "render_export_html() is deprecated; use render_snapshot()",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return render_snapshot(objects, scene_config)
 
 
 # ── Bootstrap adapter (composed from shared JS generators) ──
@@ -80,8 +97,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
         "",
         "const sceneData = JSON.parse(document.getElementById('tanga-scene-data').textContent);",
         "const sceneConfig = JSON.parse(document.getElementById('tanga-scene-config').textContent);",
-        "const entities = sceneData.entities || [];",
-        "const labels = sceneData.labels || [];",
+        "const objects = sceneData.objects || [];",
         "",
         js_scene_setup(
             bg_color=bg_color,
@@ -126,57 +142,49 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
 
     parts.append("")
     parts.append(
-        js_entity_creation(
-            entities_expr="entities",
-            mesh_map_var="meshMap",
+        js_scene_build(
+            objects_expr="objects",
             scene_var="adapterScene",
+            registry_var="sceneRegistry",
+            mesh_map_var="meshMap",
+            build_done_var="sceneBuildDone",
         )
     )
 
     parts.append("")
     parts.append(
-        js_label_creation_static(
-            labels_expr="labels",
-            mesh_map_var="meshMap",
-            scene_var="adapterScene",
-        )
-    )
-
-    parts.append("")
-    parts.append(
-        "const adapterCamConfig = sceneConfig.camera;\n"
-        "if (adapterCamConfig) {\n"
-        "    if (adapterCamConfig.position) adapterCamera.position.set(...adapterCamConfig.position);\n"
-        "    if (adapterCamConfig.target) adapterControls.target.set(...adapterCamConfig.target);\n"
-        "    if (adapterCamConfig.fov) { adapterCamera.fov = adapterCamConfig.fov; adapterCamera.updateProjectionMatrix(); }\n"
-        "    if (adapterCamConfig.near) { adapterCamera.near = adapterCamConfig.near; adapterCamera.updateProjectionMatrix(); }\n"
-        "    if (adapterCamConfig.far) { adapterCamera.far = adapterCamConfig.far; adapterCamera.updateProjectionMatrix(); }\n"
-        "    adapterControls.update();\n"
-        "}\n"
-        "if (!adapterCamConfig || (!adapterCamConfig.position && !adapterCamConfig.target)) {"
-    )
-    parts.append(
-        js_autofit_camera(
+        "(async () => {\n"
+        "    await sceneBuildDone;\n"
+        "    const adapterCamConfig = sceneConfig.camera;\n"
+        "    if (adapterCamConfig) {\n"
+        "        if (adapterCamConfig.position) adapterCamera.position.set(...adapterCamConfig.position);\n"
+        "        if (adapterCamConfig.target) adapterControls.target.set(...adapterCamConfig.target);\n"
+        "        if (adapterCamConfig.fov) { adapterCamera.fov = adapterCamConfig.fov; adapterCamera.updateProjectionMatrix(); }\n"
+        "        if (adapterCamConfig.near) { adapterCamera.near = adapterCamConfig.near; adapterCamera.updateProjectionMatrix(); }\n"
+        "        if (adapterCamConfig.far) { adapterCamera.far = adapterCamConfig.far; adapterCamera.updateProjectionMatrix(); }\n"
+        "        adapterControls.update();\n"
+        "    }\n"
+        "    if (!adapterCamConfig || (!adapterCamConfig.position && !adapterCamConfig.target)) {\n"
+        + js_autofit_camera(
             mesh_map_var="meshMap",
             camera_var="adapterCamera",
             controls_var="adapterControls",
             cam_explicit=False,
             space_dim=space_dim,
         )
-    )
-    parts.append(
-        "    const _box = new THREE.Box3();\n"
-        "    meshMap.forEach(m => _box.expandByObject(m));\n"
-        "    if (!_box.isEmpty()) {\n"
-        "        const _sz = new THREE.Vector3();\n"
-        "        _box.getSize(_sz);\n"
-        "        const _d = Math.max(_sz.x, _sz.y, _sz.z, 1) * 1.5 + 2;\n"
-        "        if (!adapterCamConfig || !adapterCamConfig.near) adapterCamera.near = Math.max(0.01, _d * 0.001);\n"
-        "        if (!adapterCamConfig || !adapterCamConfig.far) adapterCamera.far = _d * 10;\n"
-        "        adapterCamera.updateProjectionMatrix();\n"
-        "        adapterControls.update();\n"
+        + "        const _box = new THREE.Box3();\n"
+        "        meshMap.forEach(m => _box.expandByObject(m));\n"
+        "        if (!_box.isEmpty()) {\n"
+        "            const _sz = new THREE.Vector3();\n"
+        "            _box.getSize(_sz);\n"
+        "            const _d = Math.max(_sz.x, _sz.y, _sz.z, 1) * 1.5 + 2;\n"
+        "            if (!adapterCamConfig || !adapterCamConfig.near) adapterCamera.near = Math.max(0.01, _d * 0.001);\n"
+        "            if (!adapterCamConfig || !adapterCamConfig.far) adapterCamera.far = _d * 10;\n"
+        "            adapterCamera.updateProjectionMatrix();\n"
+        "            adapterControls.update();\n"
+        "        }\n"
         "    }\n"
-        "}"
+        "})();"
     )
 
     parts.append("")

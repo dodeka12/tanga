@@ -113,35 +113,51 @@ $$
 
 **Complexity:** $O(|A| \cdot |C|)$.
 
-### 2.3 Inner Product (Left Contraction)
+### 2.3 Inner Product (Symmetric)
 
-The left contraction $A \mathbin{|} X$ (inner product) at the blade level:
+The symmetric inner product $A \mathbin{|} X$ at the blade level is non-zero
+exactly when one blade is contained in the other:
 
 $$
 E_i \mathbin{|} E_k = \begin{cases}
 \pm E_{k \setminus i} & \text{if } i \subseteq k \\
+\pm E_{i \setminus k} & \text{if } k \subseteq i \\
 0 & \text{otherwise}
 \end{cases}
 $$
 
-The result is non-zero when all basis vectors of $E_i$ are present in $E_k$, and
-the result $E_j = E_{k \setminus i}$ is $E_k$ with the vectors of $E_i$ removed.
-Let $j = k \oplus i$ (since $i \subseteq k$ implies $i$ and $j$ are disjoint, so
-XOR equals set-difference).
+The result is the symmetric difference of the two blade sets — the contained
+blade's vectors are removed from the containing blade.  There are therefore
+two inverse cases when solving $E_i \mathbin{|} E_k = E_j$:
 
-To solve for $k$ given $i \in \operatorname{mask}(A)$ and $j \in \operatorname{mask}(C)$,
-we observe that $i$ and $j$ must be disjoint (a vector cannot be both "removed"
-and "present in the result").  With $i \cap j = \varnothing$:
+**Case 1 — $i \subseteq k$** (the result is $j = k \setminus i$).  Here $i$
+and $j$ must be disjoint, since a vector cannot be both "removed" and "present
+in the result":
 
 $$
 k = i \;|\; j \quad \text{when} \quad i \cap j = \varnothing \; ((i \;\&\; j) = 0)
 $$
 
-Thus:
+**Case 2 — $k \subseteq i$** (the result is $j = i \setminus k$).  Here $j$
+must be a subset of $i$:
 
 $$
-\operatorname{mask}(X) = \{\, i \;|\; j \mid i \in \operatorname{mask}(A),\; j \in \operatorname{mask}(C),\; (i \;\&\; j) = 0 \,\}
+k = i \oplus j \quad \text{when} \quad j \subseteq i \; ((i \;\&\; j) = j)
 $$
+
+(When $j \subseteq i$, XOR equals set-difference, so $i \oplus j = i \setminus j$.)
+
+Combining both cases:
+
+$$
+\operatorname{mask}(X) = \{\, i \;|\; j \mid (i \;\&\; j) = 0 \,\}
+                          \;\cup\;
+                          \{\, i \oplus j \mid (i \;\&\; j) = j \,\}
+$$
+
+with $i \in \operatorname{mask}(A)$ and $j \in \operatorname{mask}(C)$.  Because
+the symmetric inner product has the same support in either operand order, this
+mask is identical for $A \mathbin{|} X$ and $X \mathbin{|} A$.
 
 **Complexity:** $O(|A| \cdot |C|)$.
 
@@ -153,7 +169,7 @@ $$
 |---------|----------------------------|------------------------|-------------|
 | GP      | *none*                     | $i \oplus j$           | XOR         |
 | OP      | $i \subseteq j$            | $j \oplus i$           | XOR (subset)|
-| IP      | $i \cap j = \varnothing$   | $i \;|\; j$            | OR          |
+| IP      | $i \cap j = \varnothing$ or $j \subseteq i$ | $i \;\| j$ or $i \oplus j$ | OR / XOR    |
 
 All three are computed in $O(|A| \cdot |C|)$ by iterating over pairs $(i, j)$
 with simple integer bitwise operations—no C++ bindings or $O(2^D)$ exhaustive
@@ -183,7 +199,7 @@ Consider $D=5$ ($32$ blades).  If $A$ has $a$-mask $= \{e_1, e_{23}\}$
 
 - **GP**: $k = \{1 \oplus 3, 1 \oplus 5, 1 \oplus 7, 6 \oplus 3, 6 \oplus 5, 6 \oplus 7\} = \{2, 4, 6, 5, 3, 1\} = [1,2,3,4,5,6]$
 - **OP**: Check $i \subseteq j$ — from $i=1$ only $j=3,5,7$ pass; from $i=6$ only $j=7$ passes.  $k = \{3 \oplus 1, 5 \oplus 1, 7 \oplus 1, 7 \oplus 6\} = \{2, 4, 6, 1\} = [1,2,4,6]$
-- **IP**: Check $i \cap j = \varnothing$ — from $i=1$ only $j=6$ fails; from $i=6$ only $j=1$ fails.  $k = \{1|3, 1|5, 1|7, 6|3, 6|5, 6|7\} = \{3,5,7,7,7,7\} = [3,5,7]$
+- **IP**: No compatible $(i, j)$ pair: for $i \subseteq k$ we need $i \cap j = \varnothing$, and for $k \subseteq i$ we need $j \subseteq i$.  Neither holds for any $i \in \{1, 6\}$, $j \in \{3, 5, 7\}$, so $\operatorname{mask}(X) = \varnothing$.
 
 For sparse MVs the reduction is dramatic compared to searching all 32 blades.
 
@@ -206,9 +222,14 @@ def inverse_blade_mask(a_mask, c_mask, *, product=GP, left=True):
     if product == EProduct.GP:
         ids = sorted({i ^ j for i in a_ids for j in c_ids})
     elif product == EProduct.OP:
-        ids = sorted({j ^ i for i in a_ids for j in c_ids if (i & j) == i})
+        ids = sorted(
+            {j ^ i for i in a_mask.ids for j in c_mask.ids if (i & j) == i}
+        )
     elif product == EProduct.IP:
-        ids = sorted({i | j for i in a_ids for j in c_ids if (i & j) == 0})
+        ids = sorted(
+            {i | j for i in a_mask.ids for j in c_mask.ids if (i & j) == 0}
+            | {i ^ j for i in a_mask.ids for j in c_mask.ids if (i & j) == j}
+        )
     else:
         raise ValueError(f"Unknown product {product!r}")
 

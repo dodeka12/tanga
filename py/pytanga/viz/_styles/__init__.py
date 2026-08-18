@@ -56,6 +56,7 @@ from ._entity_styles import (
     Axes3DStyle,
     AxisStyle,
     CircleStyle,
+    CylinderLineStyle,
     DirectionStyle,
     GridStyle,
     HPointStyle,
@@ -98,6 +99,7 @@ ObjVizStyle: TypeAlias = Union[
     LineStyle,
     PlaneStyle,
     CircleStyle,
+    CylinderLineStyle,
     SphereStyle,
     SpaceStyle,
     ReflectionLineStyle,
@@ -127,14 +129,20 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "PointPair": PointPairStyle(
         color="#44ff44", opacity=1.0, point_size=0.06, line_thickness=1.0
     ),
-    "Line": LineStyle(color="#44ff44", opacity=0.8, length=20.0, thickness=0.03),
+    "Line": LineStyle(color="#44ff44", opacity=0.8, length=20.0, thickness=1.0),
     "Plane": PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0),
     "Circle": CircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
     "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
     "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=2.0),
     "Grid": GridStyle(color="#555555", opacity=0.8, line_thickness=1.0),
-    "Axis": AxisStyle(color="#888888", opacity=1.0, line_thickness=2.0),
+    "Axis": AxisStyle(
+        color="#888888",
+        opacity=1.0,
+        line_thickness=2.0,
+        label_style=LabelStyle(along=0.5, align=(0.5, 0.0), offset_2d=(0.0, 10.0)),
+        value_style=LabelStyle(font_size=12, align=(0.5, 0.5)),
+    ),
     "Axes2D": Axes2DStyle(),
     "Axes3D": Axes3DStyle(),
     # Operators

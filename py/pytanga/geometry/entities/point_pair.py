@@ -83,8 +83,8 @@ class ImagPointPair(PointPair):
     """An imaginary point pair (N3/PGA3 only).
 
     Inherits all fields from :class:`PointPair` with ``is_imaginary=True``.
-    Can be used as a class-based key in :attr:`Visualizer.default_styles`
-    (e.g. ``viz.default_styles[ImagPointPair]``).
+    Can be used as a class-based key in :attr:`Visualizer.styles`
+    (e.g. ``viz.styles[ImagPointPair]``).
     """
 
     is_imaginary: bool = True

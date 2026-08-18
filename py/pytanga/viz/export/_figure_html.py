@@ -19,28 +19,26 @@ from pytanga.viz.export._bootstrap import (
     html_snippet_template,
     js_annotation_panel,
     js_autofit_camera,
-    js_entity_creation,
     js_footer,
     js_imports,
-    js_label_creation_static,
     js_render_loop,
     js_resize_handler,
+    js_scene_build,
     js_scene_setup,
     js_title_overlay,
     katex_css_if_needed,
 )
 
 
-def render_export_figure(
-    entities: List[Dict[str, Any]],
-    labels: List[Dict[str, Any]],
+def render_figure(
+    objects: List[Dict[str, Any]],
     scene_config: Dict[str, Any],
     figure_style: Dict[str, Any],
     figure_config: Dict[str, Any],
 ) -> str:
-    """Render a figure HTML snippet from entity data and config."""
+    """Render a figure HTML snippet from the unified scene objects."""
     fig_id = "tanga-fig-" + uuid4().hex[:8]
-    scene_json = json.dumps({"entities": entities, "labels": labels}, indent=0)
+    scene_json = json.dumps({"objects": objects}, indent=0)
 
     bootstrap = generate_bootstrap_js(
         _build_static_figure_adapter(
@@ -113,6 +111,23 @@ def render_export_figure(
     )
 
 
+def render_export_figure(
+    objects: List[Dict[str, Any]],
+    scene_config: Dict[str, Any],
+    figure_style: Dict[str, Any],
+    figure_config: Dict[str, Any],
+) -> str:
+    """Deprecated: use :func:`render_figure`."""
+    import warnings
+
+    warnings.warn(
+        "render_export_figure() is deprecated; use render_figure()",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return render_figure(objects, scene_config, figure_style, figure_config)
+
+
 # ======================================================================
 # Figure bootstrap adapter (composed from shared JS generators)
 # ======================================================================
@@ -163,8 +178,7 @@ def _build_static_figure_adapter(
         "",
         f"const figContainer = document.getElementById('{fig_id}');",
         f"const figData = {scene_json};",
-        "const figEntities = figData.entities || [];",
-        "const figLabels = figData.labels || [];",
+        "const figObjects = figData.objects || [];",
         "",
         js_scene_setup(
             bg_color=bg,
@@ -203,25 +217,24 @@ def _build_static_figure_adapter(
             show_title=show_title,
         ),
         "",
-        js_entity_creation(
-            entities_expr="figEntities",
-            mesh_map_var="figMeshMap",
+        js_scene_build(
+            objects_expr="figObjects",
             scene_var="figScene",
+            registry_var="figRegistry",
+            mesh_map_var="figMeshMap",
+            build_done_var="figBuildDone",
         ),
         "",
-        js_autofit_camera(
+        "(async () => {\n"
+        "    await figBuildDone;\n"
+        + js_autofit_camera(
             mesh_map_var="figMeshMap",
             camera_var="figCamera",
             controls_var="figControls",
             cam_explicit=cam_explicit,
             space_dim=space_dim,
-        ),
-        "",
-        js_label_creation_static(
-            labels_expr="figLabels",
-            mesh_map_var="figMeshMap",
-            scene_var="figScene",
-        ),
+        )
+        + "\n})();",
         "",
         js_annotation_panel(
             annotation_md=annotation_raw,

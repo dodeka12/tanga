@@ -41,7 +41,7 @@ viz = Visualizer(
     ),
 )
 
-viz.add(
+viz.new(
     Axes3D(),
     style=Axes3DStyle(
         u=AxisStyle(
@@ -54,12 +54,13 @@ viz.add(
         w=AxisStyle(color="blue"),
     ),
 )
-viz.add(Point(2, 1, 3), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
-viz.add(Point(-1, 2, 1), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
-viz.add(
+viz.new(Point(2, 1, 3), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+viz.new(Point(-1, 2, 1), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
+viz.new(
     Sphere(Point(0, 0, 0), radius=2.0),
     style=SphereStyle(wireframe=True),
     opacity=0.3,
 )
 
-viz.run()
+viz.show()
+viz.wait()

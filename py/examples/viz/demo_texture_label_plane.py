@@ -13,11 +13,11 @@ from pytanga.viz import PlaneStyle, TextureLabelStyle, Visualizer
 
 
 def main():
-    viz = Visualizer(port=8766, open_browser=True)
+    viz = Visualizer()
     viz.set_title("Texture Labels on Planes")
 
     # ── Plane with "stretch" align (fills the quad) ──
-    viz.add(
+    viz.new(
         Plane(Point(0, 0, 0), Direction(0, 0, 1)),
         style=PlaneStyle(
             color="#4488ff",
@@ -34,7 +34,7 @@ def main():
     )
 
     # ── Plane with "fit" align (preserves aspect ratio) ──
-    viz.add(
+    viz.new(
         Plane(Point(0, 0, 3), Direction(0, 0, 1)),
         style=PlaneStyle(
             color="#44ff44",
@@ -51,7 +51,7 @@ def main():
     )
 
     # ── Plane with "repeat" align (tiled) ──
-    viz.add(
+    viz.new(
         Plane(Point(0, 0, 6), Direction(0, 0, 1)),
         style=PlaneStyle(
             color="#ff8844",
@@ -70,7 +70,7 @@ def main():
     )
 
     # ── Plane with mixed text + formula ──
-    viz.add(
+    viz.new(
         Plane(Point(-6, 0, 3), Direction(1, 0, 0)),
         style=PlaneStyle(
             color="#ff44ff",
@@ -88,7 +88,7 @@ def main():
     )
 
     # ── Reference plane without texture label ──
-    viz.add(
+    viz.new(
         Plane(Point(0, 0, 9), Direction(0, 0, 1)),
         style=PlaneStyle(
             color="#888888",
@@ -98,8 +98,9 @@ def main():
         ),
     )
 
-    print("Starting viewer — open your browser to http://localhost:8766")
-    viz.run()
+    print("Starting viewer...")
+    viz.show()
+    viz.wait()
 
 
 if __name__ == "__main__":

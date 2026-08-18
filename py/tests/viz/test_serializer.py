@@ -29,7 +29,11 @@ from pytanga.geometry.operators import (
     Translator,
 )
 from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND as _CANONICAL
-from pytanga.viz.serializer import serialize_entity, serialize_scene_update
+from pytanga.viz.serializer import (
+    serialize_entity,
+    serialize_object_update,
+    serialize_scene_update,
+)
 
 # ── Helpers ────────────────────────────────────────────────
 
@@ -94,8 +98,18 @@ class TestSerializeEntities:
         assert d["kind"] == "Line"
         assert d["origin"] == [0, 0, 0]
         assert d["direction"] == [1, 0, 0]
-        assert d["thickness"] == 0.03
+        assert d["thickness"] == 1.0
+        # Infinite line → the content `length` resolves to the style default.
         assert d["length"] == 20.0
+        assert d["style"]["length"] == 20.0
+
+    def test_line_from_points_respects_length(self):
+        l = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
+        d = _serialize(l)
+        # `length` is a content field carrying the explicit segment length.
+        assert d["length"] == 2.0
+        # The style `length` stays the default (used only for infinite lines).
+        assert d["style"]["length"] == 20.0
 
     def test_plane(self):
         p = Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1))
@@ -303,7 +317,8 @@ class TestStyleOverrides:
         assert d["color"] == "#ff0000"
 
     def test_style_mutates_default_line_length(self):
-        """Mutating canonical style changes serialized length."""
+        """Mutating canonical style changes the *default* length (used when
+        the line carries no explicit content length)."""
         from copy import copy
 
         from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND as _CANONICAL
@@ -314,7 +329,10 @@ class TestStyleOverrides:
             Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)),
             styles_map=styles_map,
         )
+        # Infinite line → the content `length` resolves from the mutated
+        # canonical style default.
         assert d["length"] == 50.0
+        assert d["style"]["length"] == 50.0
 
     def test_style_plane_extent(self):
         from copy import copy
@@ -371,3 +389,24 @@ class TestSceneUpdate:
         )
         assert len(msg["objects"]) == 2
         assert msg["objects"][1]["text"] == "X"
+
+
+# ── Object update wrapper ───────────────────────────────────
+
+
+class TestObjectUpdate:
+    def test_wrapper_format(self):
+        msg = serialize_object_update(
+            [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}],
+            ["b"],
+        )
+        assert msg["type"] == "object_update"
+        assert msg["scene"] == ""
+        assert msg["patches"] == [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}]
+        assert msg["removed"] == ["b"]
+
+    def test_empty(self):
+        msg = serialize_object_update([], [])
+        assert msg["type"] == "object_update"
+        assert msg["patches"] == []
+        assert msg["removed"] == []

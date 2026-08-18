@@ -28,10 +28,17 @@ def inverse_blade_mask(
       yields a candidate ``k = i ^ j``.
     - **Outer product**: ``E_i ∧ E_k = E_j`` requires ``i ⊆ j`` (all vectors
       of ``i`` appear in ``j``); then ``k = j \\ i = j ^ i``.
-    - **Inner product**: ``E_i | E_k = E_j`` requires ``i ∩ j = ∅`` (the
-      removed vectors must not be in the result); then ``k = i ∪ j = i | j``.
+    - **Inner product** (symmetric): ``E_i | E_k = E_j`` is non-zero when
+      ``i ⊆ k`` (then ``k = i ∪ j``, requiring ``i ∩ j = ∅``) or ``k ⊆ i``
+      (then ``k = i \\ j = i ^ j``, requiring ``j ⊆ i``).  Because the
+      symmetric inner product has the same support in either operand order,
+      the mask does not depend on *left*.
 
-    When *left* is False the roles of *a_mask* and *c_mask* are swapped.
+    Because exchanging the operands only flips signs (never blade support),
+    the computed mask is the same for ``A ∘ B = C`` and ``B ∘ A = C``.  The
+    *left* argument therefore has no effect for GP, OP, or IP; it is kept for
+    API symmetry with ``product_blade_mask`` and for future products whose
+    mask may depend on direction.
     """
     assert c_mask.algebra is a_mask.algebra, (
         "c_mask belongs to a different algebra than a_mask"
@@ -49,11 +56,24 @@ def inverse_blade_mask(
         # Every (i,j) pair is valid; k = i ^ j
         ids = sorted({i ^ j for i in a_ids for j in c_ids})
     elif product == EProduct.OP:
-        # i ⊆ j required; k = j \ i = j ^ i
-        ids = sorted({j ^ i for i in a_ids for j in c_ids if (i & j) == i})
+        # A ∧ X = C requires A ⊆ C (all vectors of A appear in C); then
+        # k = C \ A = C ^ A.  The X support is the same for X ∧ A = C, so
+        # this is computed from the un-swapped A/C masks and does not depend
+        # on `left`.
+        ids = sorted(
+            {j ^ i for i in a_mask.ids for j in c_mask.ids if (i & j) == i}
+        )
     elif product == EProduct.IP:
-        # i ∩ j = ∅ required; k = i ∪ j = i | j
-        ids = sorted({i | j for i in a_ids for j in c_ids if (i & j) == 0})
+        # Symmetric inner product: E_i | E_k is non-zero exactly when one
+        # blade is contained in the other.  Solving A | X = C for X:
+        #   i ⊆ k  →  j = k \ i  ⇒  k = i ∪ j   (requires i ∩ j = ∅)
+        #   k ⊆ i  →  j = i \ k  ⇒  k = i \ j   (requires j ⊆ i)
+        # The support is symmetric in operand order, so this is computed from
+        # the un-swapped A/C masks and does not depend on `left`.
+        ids = sorted(
+            {i | j for i in a_mask.ids for j in c_mask.ids if (i & j) == 0}
+            | {i ^ j for i in a_mask.ids for j in c_mask.ids if (i & j) == j}
+        )
     else:
         raise ValueError(f"Unknown product {product!r}")
 
@@ -80,7 +100,11 @@ def product_blade_mask(
         Blade mask of the unknown X (B).
     product : 'gp' | 'ip' | 'op'
     left : bool
-        True = A ∘ B → C; False = B ∘ A → C.
+        True = A ∘ B → C; False = B ∘ A → C.  Currently has no effect on
+        the mask: GP, OP, and IP are sign-symmetric, so they produce the
+        same blade set in either operand order.  It is kept for API symmetry
+        with the product-matrix functions and for future products whose mask
+        may depend on direction.
     complete : bool
         When True, iterate to the fixed-point sub-algebra closure.
 

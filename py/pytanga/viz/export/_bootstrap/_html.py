@@ -82,7 +82,17 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "axes2d.js",
     _RENDERERS_DIR / "axes3d.js",
     _RENDERERS_DIR / "grid.js",
+    _RENDERERS_DIR / "group.js",
     _RENDERERS_DIR / "factory.js",
+]
+
+_TEMPLATES_DIR = _RENDERERS_DIR.parent
+
+# Shared (non-renderer) JS modules bundled alongside the renderer modules.
+# ``scene-builder.js`` provides the scene-graph construction shared by the
+# live viewer and the export bootstrap.
+_SHARED_JS_FILES: list[Path] = [
+    _TEMPLATES_DIR / "scene-builder.js",
 ]
 
 
@@ -162,7 +172,7 @@ def generate_bootstrap_js(adapter_js: str) -> str:
     parts: list[str] = []
     parts.append("import * as THREE from 'three';")
 
-    for path in _RENDERER_FILES:
+    for path in _RENDERER_FILES + _SHARED_JS_FILES:
         src = path.read_text(encoding="utf-8")
         src = _strip_imports(src)
         parts.append(src)

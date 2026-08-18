@@ -119,7 +119,7 @@ print("\nGeometric product  u * v  (GP):")
 print("\nOuter product  u ^ v  (wedge):")
 (u ^ v).show("u ^ v")
 
-print("\nInner product  u | v  (left-contraction):")
+print("\nInner product  u | v  (symmetric):")
 (u | v).show("u | v")
 
 print("\nAddition  u + v:")

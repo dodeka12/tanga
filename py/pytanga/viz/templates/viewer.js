@@ -5,21 +5,19 @@
 window.__tanga_ready = true;
 
 import * as THREE from 'three';
-import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { setupControls } from './controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from './renderers/factory.js';
+import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from './scene-builder.js';
 import { startTween, updateTweens, cancelTween } from './animator.js';
 import { setWebSocket, handleControlsDefine, handleControlsClear } from './controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from './controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from './view_mode.js';
-import { updateLineResolutions } from './renderers/utils.js';
+import { updateLineResolutions, applyStyleUpdate } from './renderers/utils.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setWebSocket as setInteractionWebSocket, setSpaceDim } from './interaction.js';
 
 // ── State ───────────────────────────────────────────────────
-const sceneObjects = new Map();   // id → {obj, layer, el?}
-const entityMeshes = new Map();   // id → THREE.Object3D (backward compat for render loop / tween / camera)
-const entityData = new Map();     // id → raw JSON entity data (backward compat)
-const labelObjects = new Map();   // id → CSS2DObject (backward compat for render loop)
+const sceneObjects = new Map();   // id → {obj, mesh, data, layer, el?}
 
 let scene, camera, renderer, controls;
 let ws = null;
@@ -40,6 +38,12 @@ let _viewerName = (() => {
     return params.get('viewer') || null;
 })();
 let _availableScenes = [];
+
+// Frontend build hash injected into the served HTML; compared against the
+// value the backend advertises over the WebSocket handshake to detect a
+// stale, cached copy of the viewer.
+const _frontendVersion =
+    (typeof window !== 'undefined' && window.__tanga_frontend_version) || null;
 
 // ── Scene Setup ──────────────────────────────────────────────
 function initScene() {
@@ -129,18 +133,36 @@ function onResize() {
 let _reconnectAttempts = 0;
 let _savedTitle = document.title || 'Tanga Viewer';
 
-// Exponential backoff
-const _RECONNECT_BASE_MS = 1000;
-const _RECONNECT_MAX_MS = 30000;
-let _reconnectDelay = _RECONNECT_BASE_MS;
+// Auto-reconnect: retry at a fixed 2s interval for the first minute after a
+// disconnect, then stop (manual reconnect via the button remains available).
+const _RECONNECT_INTERVAL_MS = 2000;
+const _RECONNECT_WINDOW_MS = 60000;
+let _reconnectDeadline = 0;  // timestamp when auto-reconnect should stop (0 = none)
 
 // Single-flight guard: increment on teardown so stale onopen/onclose
 // handlers from superseded sockets are ignored.
 let _wsGeneration = 0;
 
+// ── Connection diagnostics ──────────────────────────────────
+// Detailed console logging for the connection/reconnection flow, so the
+// transcript can be correlated with the backend's `WS connect`/`WS ready`/
+// `WS disconnect` log lines.  Every WebSocket state transition, sent message,
+// and received message is logged with a monotonic timestamp and the
+// browser/viewer/scene identity.
+function _log(phase, detail) {
+    const t = (typeof performance !== 'undefined' && performance.now)
+        ? (performance.now() / 1000).toFixed(3) : '0';
+    const parts = ['[tanga:' + phase + ' t=' + t + ']'];
+    if (_browserId) parts.push('id=' + _browserId);
+    if (_viewerName) parts.push('viewer=' + _viewerName);
+    if (_myScene) parts.push('scene=' + _myScene);
+    if (detail) parts.push(detail);
+    console.log(parts.join(' '));
+}
+
 function closeActiveWs() {
     if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
-        _log('ws-teardown', 'closing readyState=' + ws.readyState);
+        _log('ws-teardown', 'closing active socket readyState=' + ws.readyState);
         _wsGeneration++;                          // invalidate stale handlers
         const old = ws;
         old.onopen = old.onclose = old.onerror = old.onmessage = null;
@@ -159,27 +181,32 @@ function connectWebSocket() {
     _reconnectAttempts++;
     updateStatusIndicator('connecting', _reconnectAttempts);
     document.title = 'Connecting… — ' + _savedTitle;
-    _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts);
+
+    _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts + ' gen=' + gen);
 
     ws = new WebSocket(url);
 
     const connectWatchdog = setTimeout(() => {
         if (ws && ws.readyState === WebSocket.CONNECTING && gen === _wsGeneration) {
-            _log('ws-watchdog', 'connect timed out — aborting and retrying');
+            _log('ws-watchdog', 'connect timed out after ' + _RECONNECT_INTERVAL_MS + 'ms - aborting and retrying');
             _wsGeneration++;               // invalidate this socket's handlers
             try { ws.close(); } catch (_) {}
             ws = null;
+            // Respect the auto-reconnect window: stop retrying once it elapses.
+            if (_reconnectDeadline && Date.now() >= _reconnectDeadline) {
+                _log('ws-reconnect', 'auto-reconnect window elapsed - stopping (manual reconnect available)');
+                return;
+            }
             connectWebSocket();            // retry immediately
         }
-    }, 5000);
+    }, _RECONNECT_INTERVAL_MS);
 
     ws.onopen = () => {
         if (gen !== _wsGeneration) return;
         clearTimeout(connectWatchdog);
         const pageToken = window.__tanga_page_token
             || new URLSearchParams(window.location.search).get('token');
-        _log('ws-open', 'attempt=' + _reconnectAttempts
-            + ' token=' + (pageToken || 'none'));
+        _log('ws-open', 'attempt=' + _reconnectAttempts + ' token=' + (pageToken || 'none'));
         setStatus('connected');
         setWebSocket(ws);
         setInteractionWebSocket(ws);
@@ -188,7 +215,7 @@ function connectWebSocket() {
             reconnectTimer = null;
         }
         _reconnectAttempts = 0;
-        _reconnectDelay = _RECONNECT_BASE_MS;
+        _reconnectDeadline = 0;  // connected — clear any pending reconnect window
         hideReconnectButton();
         updateStatusIndicator('connected');
         document.title = _savedTitle;
@@ -196,6 +223,7 @@ function connectWebSocket() {
         if (_browserId) readyPayload.browser_id = _browserId;
         if (_viewerName) readyPayload.viewer_name = _viewerName;
         if (pageToken) readyPayload.page_token = pageToken;
+        _log('ws-send', 'type=ready scene=' + (_myScene || '') + ' token=' + (pageToken || 'none'));
         ws.send(JSON.stringify(readyPayload));
     };
 
@@ -207,27 +235,34 @@ function connectWebSocket() {
             console.error('Failed to parse WebSocket message:', e);
             return;
         }
-        _log('ws-msg', 'type=' + (msg.type || 'unknown'));
+        // _log('ws-msg', 'type=' + (msg.type || 'unknown') + ' size=' + event.data.length);
         handleMessage(msg);
     };
 
     ws.onclose = (event) => {
         if (gen !== _wsGeneration) return;
         clearTimeout(connectWatchdog);
-        _log('ws-close', 'code=' + event.code
-            + ' reason=' + (event.reason || 'none'));
+        _log('ws-close', 'code=' + event.code + ' reason=' + (event.reason || 'none')
+            + ' wasClean=' + event.wasClean);
         setStatus('disconnected');
         updateStatusIndicator('disconnected');
         document.title = 'Disconnected — ' + _savedTitle;
 
-        const jitter = 0.8 + Math.random() * 0.4;  // ±20%
-        const delay = Math.round(Math.min(_reconnectDelay * jitter, _RECONNECT_MAX_MS));
-        _log('ws-reconnect', 'delay=' + delay + 'ms backoff=' + _reconnectDelay + 'ms');
-        _reconnectDelay = Math.min(_reconnectDelay * 2, _RECONNECT_MAX_MS);
-        reconnectTimer = setTimeout(connectWebSocket, delay);
+        // Fixed-interval auto-reconnect for the first minute after the
+        // connection was lost, then stop (the manual button still works).
+        const now = Date.now();
+        if (!_reconnectDeadline) {
+            _reconnectDeadline = now + _RECONNECT_WINDOW_MS;
+        }
+        if (now < _reconnectDeadline) {
+            _log('ws-reconnect', 'delay=' + _RECONNECT_INTERVAL_MS + 'ms deadline_in=' + Math.round((_reconnectDeadline - now) / 1000) + 's');
+            reconnectTimer = setTimeout(connectWebSocket, _RECONNECT_INTERVAL_MS);
+        } else {
+            _log('ws-reconnect', 'auto-reconnect window elapsed - stopping (manual reconnect available)');
+        }
     };
 
-    ws.onerror = () => { /* onclose will fire next */ };
+    ws.onerror = () => { _log('ws-error', 'error event (onclose follows)'); };
 }
 
 function setStatus(cls) {
@@ -239,12 +274,12 @@ function setStatus(cls) {
 // ── Visibility wake-up ────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && ws === null) {
-        _log('ws-visibility', 'tab visible — immediate reconnect');
+        _log('ws-visibility', 'tab visible with no socket — immediate reconnect');
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
         }
-        _reconnectDelay = _RECONNECT_BASE_MS;
+        _reconnectDeadline = Date.now() + _RECONNECT_WINDOW_MS;
         connectWebSocket();
     }
 });
@@ -252,15 +287,6 @@ document.addEventListener('visibilitychange', () => {
 // ── Reconnect Button ──────────────────────────────────────────
 let _reconnectButtonEl = null;
 let _reconnectClickCount = 0;
-
-function _log(phase, detail) {
-    const parts = ['[tanga:' + phase + ']'];
-    if (_browserId) parts.push('id=' + _browserId);
-    if (_viewerName) parts.push('viewer=' + _viewerName);
-    if (_myScene) parts.push('scene=' + _myScene);
-    if (detail) parts.push(detail);
-    console.log(parts.join(' '));
-}
 
 function showReconnectButton(mode) {
     // mode: 'reconnect' (normal reconnect) or 'page-reload' (full refresh)
@@ -301,7 +327,7 @@ function showReconnectButton(mode) {
         _reconnectButtonEl.addEventListener('click', () => {
             _reconnectClickCount++;
             if (_reconnectClickCount >= 3) {
-                console.log('[tanga] 3 reconnect attempts without success — offering page reload');
+                _log('ws-manual', '3 failed clicks — offering page reload');
                 showReconnectButton('page-reload');
                 return;
             }
@@ -311,7 +337,7 @@ function showReconnectButton(mode) {
                 reconnectTimer = null;
             }
             closeActiveWs();
-            _reconnectDelay = _RECONNECT_BASE_MS;
+            _reconnectDeadline = Date.now() + _RECONNECT_WINDOW_MS;
             connectWebSocket();
         });
     }
@@ -367,6 +393,61 @@ function updateStatusIndicator(state, attempts) {
     } else if (labelEl) {
         labelEl.style.display = 'none';
     }
+}
+
+// ── Version Mismatch Banner ───────────────────────────────────
+let _versionBannerEl = null;
+
+function hardReload() {
+    // location.reload(true) is deprecated/ignored; replace with a fresh
+    // cache-busting query param (scene routing is path-based, so this is safe).
+    const url = new URL(window.location.href);
+    url.searchParams.set('t', Date.now().toString());
+    window.location.replace(url.toString());
+}
+
+function showVersionMismatchBanner(serverVersion, clientVersion) {
+    if (_versionBannerEl) return;  // already showing
+
+    const banner = document.createElement('div');
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.zIndex = '100001';
+    banner.style.background = '#cc2222';
+    banner.style.color = '#fff';
+    banner.style.fontFamily = 'sans-serif';
+    banner.style.fontSize = '13px';
+    banner.style.padding = '10px 16px';
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.justifyContent = 'center';
+    banner.style.gap = '12px';
+    banner.style.lineHeight = '1.5';
+
+    const text = document.createElement('span');
+    text.textContent =
+        'The visualizer is out of date — backend expects version ' + serverVersion +
+        ' but this page is running ' + clientVersion + '. Please hard-reload.';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Reload now';
+    btn.style.padding = '4px 12px';
+    btn.style.background = '#fff';
+    btn.style.color = '#cc2222';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '3px';
+    btn.style.cursor = 'pointer';
+    btn.style.fontWeight = 'bold';
+    btn.onclick = hardReload;
+
+    banner.appendChild(text);
+    banner.appendChild(btn);
+    document.body.insertBefore(banner, document.body.firstChild);
+    _versionBannerEl = banner;
+
+    _log('version-mismatch', 'server=' + serverVersion + ' client=' + clientVersion);
 }
 
 // ── Scene Config ─────────────────────────────────────────────
@@ -534,7 +615,7 @@ function removeAnnotation() {
 }
 
 function fitCameraToScene() {
-    fitCamera(entityMeshes, camera, controls, sceneConfig?.space_dim || 3);
+    fitCamera(sceneObjects, camera, controls, sceneConfig?.space_dim || 3);
 }
 
 // ── Helper: rotate mesh to point along a direction vector ───
@@ -550,25 +631,23 @@ function _approx(a, b, eps = 1e-9) {
     return Math.abs(a - b) < eps;
 }
 
-// ── In-place entity updates for frame streaming ─────────────
-function inPlaceUpdate(ent) {
-    const mesh = entityMeshes.get(ent.id);
-    if (!mesh) return false;
-    const previous = entityData.get(ent.id);
-    return updateEntityMesh(mesh, ent, previous);
-}
-
 // ── Message Handler ─────────────────────────────────────────
 function _forMyScene(msg) {
     return !msg.scene || msg.scene === _myScene;
 }
 
-function handleMessage(msg) {
+async function handleMessage(msg) {
     if (msg.type === 'browser_id') {
         _browserId = msg.browser_id;
+        _log('init', 'browser_id=' + msg.browser_id);
+        if (msg.frontend_version && _frontendVersion
+            && msg.frontend_version !== _frontendVersion) {
+            showVersionMismatchBanner(msg.frontend_version, _frontendVersion);
+        }
         return;
     }
     if (msg.type === 'navigate') {
+        _log('init', 'navigate → scene=' + (msg.scene || ''));
         const target = msg.scene || '';
         let newUrl = target ? '/' + target : '/';
         if (_viewerName) {
@@ -578,11 +657,12 @@ function handleMessage(msg) {
         return;
     }
     if (msg.type === 'scene_list') {
+        _log('init', 'scene_list scenes=' + JSON.stringify(msg.scenes || []));
         _availableScenes = msg.scenes || [];
         return;
     }
 
-    if (msg.type === 'scene_config' || msg.type === 'scene_update') {
+    if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update') {
         if (!_forMyScene(msg)) return;
     }
     if (msg.type === 'controls_define' || msg.type === 'controls_clear') {
@@ -590,7 +670,7 @@ function handleMessage(msg) {
     }
 
     if (msg.type === 'clear_all') {
-        console.log('[clear_all] Resetting scene — objects:', sceneObjects.size, 'meshes:', entityMeshes.size, 'labels:', labelObjects.size);
+        _log('init', 'clear_all → resetting scene (objects=' + sceneObjects.size + ')');
         // Remove all scene children (entities, lights, grid, axes)
         while (scene.children.length > 0) {
             const child = scene.children[0];
@@ -610,9 +690,6 @@ function handleMessage(msg) {
         }
         // Clear maps
         clearAllInteractive();
-        entityMeshes.clear();
-        entityData.clear();
-        labelObjects.clear();
         sceneObjects.clear();
         // Clear overlays
         removeAnnotation();
@@ -631,56 +708,41 @@ function handleMessage(msg) {
         const d2 = new THREE.DirectionalLight(0xffffff, 0.3);
         d2.position.set(-5, -2, -8);
         scene.add(d2);
-        console.log('[clear_all] Scene reset complete');
     } else if (msg.type === 'scene_config') {
+        _log('init', 'scene_config name=' + (msg.name || '') + ' space_dim=' + msg.space_dim);
         applySceneConfig(msg);
     } else if (msg.type === 'scene_update') {
+        _log('init', 'scene_update objects=' + (msg.objects ? msg.objects.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
         if (msg.removed) {
             for (const id of msg.removed) {
-                unregisterInteractive(id);
-                const mesh = entityMeshes.get(id);
-                if (mesh) {
-                    if (mesh.userData._attachedGroups) {
-                        for (const groupId of mesh.userData._attachedGroups) {
-                            detachGroup(groupId);
-                        }
-                    }
-                    removeEntityMesh(mesh);
-                }
-                entityMeshes.delete(id);
-                entityData.delete(id);
-                const oldObj = sceneObjects.get(id);
-                if (oldObj) {
-                    if (oldObj.obj && oldObj.obj.removeFromParent) oldObj.obj.removeFromParent();
-                    if (oldObj.el) oldObj.el.remove();
-                    sceneObjects.delete(id);
-                }
-                const lbl = labelObjects.get(id);
-                if (lbl) {
-                    lbl.removeFromParent();
-                    if (lbl.element) lbl.element.remove();
-                    labelObjects.delete(id);
-                }
-                cancelTween(id);
+                removeSceneObject(id);
             }
         }
         if (msg.objects) {
             for (const obj of msg.objects) {
-                if (obj.layer === 'scene' && entityMeshes.has(obj.id)) {
-                    updateEntity(obj);
-                } else {
-                    upsertObject(obj);
-                }
+                await upsertObject(obj);
             }
         }
-        if (msg.entities) {
-            for (const ent of msg.entities) {
-                updateEntity(ent);
+        if (msg.fit_camera) {
+            fitCameraToScene();
+        }
+        // Acknowledge full-state sync so the server only starts streaming
+        // incremental updates after this tab has rebuilt the scene (this
+        // closes the reconnect/init race).
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            _log('ws-send', 'type=scene_synced browser_id=' + _browserId);
+            ws.send(JSON.stringify({ type: 'scene_synced', browser_id: _browserId }));
+        }
+    } else if (msg.type === 'object_update') {
+        // _log('init', 'object_update patches=' + (msg.patches ? msg.patches.length : 0) + ' removed=' + (msg.removed ? msg.removed.length : 0));
+        if (msg.removed) {
+            for (const id of msg.removed) {
+                removeSceneObject(id);
             }
         }
-        if (msg.labels) {
-            for (const lbl of msg.labels) {
-                upsertLabel(lbl);
+        if (msg.patches) {
+            for (const patch of msg.patches) {
+                await applyObjectPatch(patch);
             }
         }
         if (msg.fit_camera) {
@@ -693,12 +755,13 @@ function handleMessage(msg) {
     } else if (msg.type === 'screenshot') {
         handleScreenshot(msg);
     } else if (msg.type === 'controls_define') {
+        _log('init', 'controls_define controls=' + (msg.controls ? msg.controls.length : 0) + ' groups=' + (msg.groups ? msg.groups.length : 0));
         handleControlsDefine(msg);
         const controls2 = msg.controls || [];
         const groups = msg.groups || [];
         for (const g of groups) {
             if (g.parentId) {
-                attachGroup(g, controls2, entityMeshes);
+                attachGroup(g, controls2, sceneObjects);
             }
         }
     } else if (msg.type === 'controls_clear') {
@@ -789,204 +852,113 @@ async function upsertObject(msg) {
         if (old.el) old.el.remove();
         sceneObjects.delete(msg.id);
     }
-    entityMeshes.delete(msg.id);
-    entityData.delete(msg.id);
-    labelObjects.delete(msg.id);
-
     if (msg.layer === 'scene') {
-        const mesh = await createEntityMesh(msg);
-        if (mesh) {
-            scene.add(mesh);
-            sceneObjects.set(msg.id, { obj: mesh, layer: 'scene' });
-            entityMeshes.set(msg.id, mesh);
-            entityData.set(msg.id, { ...msg });
-            // ── Interaction ──
-            if (msg.interaction) {
-                registerInteractive(msg.id, mesh, msg.interaction);
-            }
+        const entry = await buildSceneObject(msg, scene, sceneObjects);
+        if (entry && msg.interaction) {
+            registerInteractive(msg.id, entry.obj, msg.interaction);
         }
     } else if (msg.layer === 'overlay') {
         if (msg.kind === 'annotation') {
             if (!msg.text) return;
             renderAnnotation(msg.text, msg.style || null);
             if (annotationPanel) {
-                sceneObjects.set(msg.id, { obj: null, el: annotationPanel, layer: 'overlay' });
+                sceneObjects.set(msg.id, { obj: null, mesh: null, data: { ...msg }, el: annotationPanel, layer: 'overlay' });
             }
             return;
         }
 
-        const el = buildOverlayElement(msg);
-        if (!el) return;
-
-        let css2d = null;
-        if (msg.parentId) {
-            const container = document.createElement('div');
-            container.appendChild(el);
-            css2d = new CSS2DObject(container);
-            const pos = msg.position || [0, 0, 0];
-            css2d.position.set(pos[0], pos[1], pos[2]);
-            const off2d = msg.style?.offset_2d || [0, 0];
-            const align = msg.style?.align || [0.5, 0.5];
-            const tx = (0.5 - align[0]) * 100;
-            const ty = (0.5 - align[1]) * 100;
-            el.style.transform = `translate(${off2d[0]}px, ${off2d[1]}px) translate(${tx}%, ${ty}%)`;
-            const parentObj = sceneObjects.get(msg.parentId);
-            if (parentObj && parentObj.obj) {
-                parentObj.obj.add(css2d);
-                parentObj.obj.userData._labels = parentObj.obj.userData._labels || [];
-                parentObj.obj.userData._labels.push(msg.id);
-                css2d.userData._parentId = msg.parentId;
-            } else {
-                scene.add(css2d);
-            }
-            labelObjects.set(msg.id, css2d);
-        } else {
-            el.style.position = 'absolute';
-            const off = msg.offset || [10, 10];
-            el.style.top = off[1] + 'px';
-            if (msg.anchor === 'top-right') {
-                el.style.right = off[0] + 'px';
-            } else {
-                el.style.left = off[0] + 'px';
-            }
-            document.body.appendChild(el);
-        }
-        sceneObjects.set(msg.id, { obj: css2d, el, layer: 'overlay' });
+        buildOverlay(msg, scene, sceneObjects);
     }
 }
 
-function buildOverlayElement(msg) {
-    switch (msg.kind) {
-        case 'label': {
-            if (!msg.text) return null;
-            const div = document.createElement('div');
-            div.textContent = msg.text;
-            const s = msg.style || {};
-            div.style.fontFamily = s.font_family || 'sans-serif';
-            div.style.fontSize = (s.font_size || 14) + 'px';
-            div.style.color = s.color || '#ffffff';
-            div.style.backgroundColor = s.background || 'rgba(0, 0, 0, 0.6)';
-            div.style.padding = '2px 6px';
-            div.style.borderRadius = '3px';
-            div.style.userSelect = 'none';
-            div.style.whiteSpace = 'nowrap';
-            if (typeof renderMathInElement !== 'undefined') {
-                try {
-                    renderMathInElement(div, {
-                        delimiters: [
-                            { left: '$$', right: '$$', display: true },
-                            { left: '$', right: '$', display: false },
-                        ],
-                        throwOnError: false,
-                    });
-                } catch (e) {
-                    console.warn('KaTeX label rendering error:', e);
-                }
-            }
-            return div;
+function removeSceneObject(id) {
+    unregisterInteractive(id);
+    const entry = sceneObjects.get(id);
+    if (entry && entry.layer === 'scene' && entry.obj && entry.obj.userData._attachedGroups) {
+        for (const groupId of entry.obj.userData._attachedGroups) {
+            detachGroup(groupId);
         }
-        case 'annotation': {
-            if (!msg.text) return null;
-            renderAnnotation(msg.text, msg.style || null);
-            return annotationPanel;
-        }
-        default:
-            console.warn('Unknown overlay kind: ' + msg.kind);
-            return null;
     }
+    removeObject(id, sceneObjects);
+    cancelTween(id);
 }
 
-function upsertLabel(lbl) {
-    if (!lbl.text) return;
+async function applyObjectPatch(patch) {
+    const id = patch.id;
+    const aspect = patch.aspect;
+    const value = patch.value || {};
 
-    const existing = labelObjects.get(lbl.id);
-    if (existing) {
-        existing.removeFromParent();
-        if (existing.element) existing.element.remove();
-        labelObjects.delete(lbl.id);
-    }
-
-    const div = document.createElement('div');
-    div.textContent = lbl.text;
-    const s = lbl.style || {};
-    div.style.fontFamily = s.font_family || 'sans-serif';
-    div.style.fontSize = (s.font_size || 14) + 'px';
-    div.style.color = s.color || '#ffffff';
-    div.style.backgroundColor = s.background || 'rgba(0, 0, 0, 0.6)';
-    div.style.padding = '2px 6px';
-    div.style.borderRadius = '3px';
-    div.style.userSelect = 'none';
-    div.style.whiteSpace = 'nowrap';
-
-    if (typeof renderMathInElement !== 'undefined') {
-        try {
-            renderMathInElement(div, {
-                delimiters: [
-                    { left: '$$', right: '$$', display: true },
-                    { left: '$', right: '$', display: false },
-                ],
-                throwOnError: false,
-            });
-        } catch (e) {
-            console.warn('KaTeX label rendering error:', e);
-        }
-    }
-
-    const labelObj = new CSS2DObject(div);
-    const pos = lbl.position || [0, 0, 0];
-    const off = s.offset || [0, 0.3, 0];
-    labelObj.position.set(pos[0] + off[0], pos[1] + off[1], pos[2] + off[2]);
-
-    if (lbl.parentId && entityMeshes.has(lbl.parentId)) {
-        const parentMesh = entityMeshes.get(lbl.parentId);
-        parentMesh.add(labelObj);
-        parentMesh.userData._labels = parentMesh.userData._labels || [];
-        parentMesh.userData._labels.push(lbl.id);
-        labelObj.userData._parentId = lbl.parentId;
-    } else {
-        scene.add(labelObj);
-    }
-
-    labelObjects.set(lbl.id, labelObj);
-}
-
-async function updateEntity(ent) {
-    const id = ent.id;
-    const existing = entityData.get(id);
-
-    if (!existing) {
-        const mesh = await createEntityMesh(ent);
-        if (mesh) {
-            scene.add(mesh);
-            entityMeshes.set(id, mesh);
-        }
-        entityData.set(id, { ...ent });
+    if (aspect === 'full') {
+        await upsertObject(value);
         return;
     }
 
-    if (inPlaceUpdate(ent)) {
-        entityData.set(id, { ...existing, ...ent });
+    const entry = sceneObjects.get(id);
+    if (!entry) return;
+
+    if (aspect === 'content') {
+        await updateEntityContent(id, value);
         return;
     }
 
-    const oldMesh = entityMeshes.get(id);
-    const attachedLabels = oldMesh ? (oldMesh.userData._labels || []).slice() : [];
-    if (oldMesh) removeEntityMesh(oldMesh);
-    entityMeshes.delete(id);
-    const mesh = await createEntityMesh({ ...existing, ...ent });
-    if (mesh) {
-        scene.add(mesh);
-        entityMeshes.set(id, mesh);
-        mesh.userData._labels = [];
+    if (aspect === 'transform') {
+        if (entry.obj) applyTransformToObject(entry.obj, value);
+        return;
+    }
+
+    if (aspect === 'style') {
+        if (value.style && entry.obj) {
+            const prev = entry.data || {};
+            entry.data = { ...prev, style: { ...(prev.style || {}), ...value.style } };
+            if (entry.obj.isObject3D) applyStyleUpdate(entry.obj, entry.data);
+        }
+        return;
+    }
+}
+
+async function updateEntityContent(id, content) {
+    const entry = sceneObjects.get(id);
+    if (!entry || entry.layer !== 'scene' || !entry.mesh) return;
+    const prev = entry.data || {};
+
+    if (updateEntityMesh(entry.mesh, content, prev)) {
+        entry.data = { ...prev, ...content };
+        return;
+    }
+
+    // Structural change — rebuild the mesh in place, keeping the node
+    // wrapper (transform) and parent intact.
+    const newMesh = await createEntityMesh({ ...prev, ...content });
+    if (!newMesh) return;
+
+    if (entry.obj === entry.mesh) {
+        // Identity transform: the mesh IS the node. Re-attach any labels
+        // that were children of the old mesh.
+        const attachedLabels = (entry.obj.userData._labels || []).slice();
+        const parent = entry.obj.parent;
+        removeEntityMesh(entry.obj);
+        entry.obj = newMesh;
+        entry.mesh = newMesh;
+        newMesh.userData.parentId = prev.parent_id || null;
+        newMesh.userData._labels = [];
+        if (parent) parent.add(newMesh); else scene.add(newMesh);
         for (const lblId of attachedLabels) {
-            const labelObj = labelObjects.get(lblId);
-            if (labelObj) {
-                mesh.add(labelObj);
-                mesh.userData._labels.push(lblId);
+            const lblEntry = sceneObjects.get(lblId);
+            if (lblEntry && lblEntry.obj) {
+                newMesh.add(lblEntry.obj);
+                newMesh.userData._labels.push(lblId);
             }
         }
+    } else {
+        // Wrapped: replace the child mesh inside the wrapper Group.
+        removeEntityMesh(entry.mesh);
+        entry.obj.add(newMesh);
+        entry.mesh = newMesh;
     }
-    entityData.set(id, { ...existing, ...ent });
+    entry.data = { ...prev, ...content };
+    if (prev.interaction) {
+        registerInteractive(id, entry.obj, prev.interaction);
+    }
 }
 
 function handleAnimate(msg) {
@@ -997,7 +969,7 @@ function handleAnimate(msg) {
             anim.target,
             anim.duration || 1.0,
             anim.easing || 'ease-in-out',
-            entityMeshes
+            sceneObjects
         );
     }
 }
@@ -1016,7 +988,7 @@ function handleTimeline(msg) {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    updateTweens(entityMeshes);
+    updateTweens(sceneObjects);
     renderer.render(scene, camera);
     if (window._labelRenderer) {
         window._labelRenderer.render(scene, camera);

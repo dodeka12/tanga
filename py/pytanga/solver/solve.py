@@ -74,13 +74,16 @@ def solve(
     left: bool = True,
     algebra: "Algebra | None" = None,
 ) -> "MV":
-    r"""Solve A ∘ B = C for a unique B using Gaussian elimination.
+    r"""Solve A ∘ B = C for B.
 
     When *b_mask* is not provided, it is computed from *a_mask* and
-    *c_mask* via ``inverse_blade_mask``, and *c_mask* is set to
-    *b_mask* so the system is square.  When *c_mask* is provided but
+    *c_mask* via ``inverse_blade_mask``.  When *c_mask* is provided but
     *b_mask* is not, *b_mask* is still derived from *a_mask* and
     *c_mask* via ``inverse_blade_mask``.
+
+    If the derived system is square it is solved with ``numpy.linalg.solve``;
+    otherwise the least-squares solution is returned via
+    ``numpy.linalg.lstsq``.
 
     Only available for float dtypes; use ``solve_mod`` for integer algebras.
 
@@ -109,10 +112,8 @@ def solve(
     ------
     TypeError
         When called on an integer-dtype algebra.
-    ValueError
-        When the derived system is not square (use ``solve_lsq`` instead).
     numpy.linalg.LinAlgError
-        When the system is singular.
+        When the (square) system is singular.
     """
     alg = _resolve_alg_from_solver_inputs(a, c, a_mask, b_mask, c_mask, algebra=algebra)
 
@@ -131,7 +132,7 @@ def solve(
         if c_mask is None:
             c_mask = BladeMask(mv_c)
             b_mask = inverse_blade_mask(a_mask, c_mask, product=product, left=left)
-            c_mask = b_mask
+            c_mask = product_blade_mask(a_mask, b_mask, product=product, left=left)
         else:
             b_mask = inverse_blade_mask(a_mask, c_mask, product=product, left=left)
     else:
@@ -150,7 +151,7 @@ def solve(
     c_vec = to_matrix(mv_c, mask=M.c_mask)
     M2d = M.data[0]  # (|c_mask|, |b_mask|)
     if M2d.shape[0] != M2d.shape[1]:
-        b_data, _, _, _ = np.linalg.lstsq(M2d, c_vec.data, rcond=None)[0]
+        b_data = np.linalg.lstsq(M2d, c_vec.data, rcond=None)[0]
         return from_matrix(MVMatrix(b_data.reshape(-1, 1), M.b_mask))
 
     x_arr = np.linalg.solve(M2d, c_vec.data)
@@ -242,7 +243,9 @@ def solve_lsq(
                 b_mask_computed = inverse_blade_mask(
                     a_mask, c_mask_computed, product=product, left=left
                 )
-                c_mask_computed = b_mask_computed
+                c_mask_computed = product_blade_mask(
+                    a_mask, b_mask_computed, product=product, left=left
+                )
             else:
                 b_mask_computed = inverse_blade_mask(
                     a_mask, c_mask_computed, product=product, left=left
@@ -268,7 +271,9 @@ def solve_lsq(
                 b_mask_computed = inverse_blade_mask(
                     a_mask, c_mask_computed, product=product, left=left
                 )
-                c_mask_computed = b_mask_computed
+                c_mask_computed = product_blade_mask(
+                    a_mask, b_mask_computed, product=product, left=left
+                )
             else:
                 b_mask_computed = inverse_blade_mask(
                     a_mask, c_mask_computed, product=product, left=left
@@ -323,7 +328,9 @@ def solve_mod(
     The C++ modular solver currently supports the geometric product only.
 
     When *b_mask* is not provided, it is computed from *a_mask* and
-    *c_mask* via ``inverse_blade_mask``.
+    *c_mask* via ``inverse_blade_mask``.  Gaussian elimination requires a
+    square system, so the derived *b_mask* and *c_mask* must have the same
+    number of blades.
 
     Parameters
     ----------
@@ -346,6 +353,8 @@ def solve_mod(
     ------
     TypeError
         When called on a float-dtype algebra.
+    ValueError
+        When the derived system is not square (``len(b_mask) != len(c_mask)``).
     RuntimeError
         When the system has no unique solution modulo *modulus*.
     """
@@ -380,7 +389,9 @@ def solve_mod(
             b_mask = inverse_blade_mask(
                 a_mask_computed, c_mask, product=product, left=left
             )
-            c_mask = b_mask
+            c_mask = product_blade_mask(
+                a_mask_computed, b_mask, product=product, left=left
+            )
         else:
             b_mask = inverse_blade_mask(
                 a_mask_computed, c_mask, product=product, left=left
@@ -391,6 +402,12 @@ def solve_mod(
                 a_mask_computed, b_mask, product=product, left=left
             )
 
-    # Use the closure as both col and row (square system)
+    if len(b_mask.ids) != len(c_mask.ids):
+        raise ValueError(
+            "solve_mod: the derived system is not square "
+            f"({len(b_mask.ids)} unknown blades vs {len(c_mask.ids)} result blades); "
+            "Gaussian elimination requires a square system"
+        )
+
     impl = alg._mod.solve_mod(mv_a._impl, mv_c._impl, b_mask.ids, c_mask.ids, modulus)
     return MV(impl, alg)

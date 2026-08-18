@@ -29,7 +29,7 @@ import asyncio
 import logging
 
 from pytanga.geometry import Line, Point
-from pytanga.viz import Visualizer
+from pytanga.viz import Visualizer, VizObjectRef
 from pytanga.viz._interaction import (
     DragMode,
     InteractionConfig,
@@ -48,44 +48,44 @@ async def main() -> None:
 
     # The draggable point
     pos = Point(0, 0, 2)
-    point_id = viz.add(pos, color="#ff4444")
+    point = viz.new(pos, color="#ff4444")
 
-    # Projection lines to cardinal planes (updated on drag)
-    line_xy_id: str | None = None
-    line_xz_id: str | None = None
-    line_yz_id: str | None = None
+    # Projection lines to cardinal planes (updated on drag).
+    # `new()` returns a VizObjectRef; replace its `.entity` to update it.
+    line_xy: VizObjectRef | None = None
+    line_xz: VizObjectRef | None = None
+    line_yz: VizObjectRef | None = None
 
     def _update_lines(p: Point) -> None:
         """Create/replace projection lines from (x,y,z) to the three planes."""
-        nonlocal line_xy_id, line_xz_id, line_yz_id
+        nonlocal line_xy, line_xz, line_yz
 
         # XY plane: set z=0
         xy_line = Line.from_points(p, Point(p.x, p.y, 0))
-        if line_xy_id is None:
-            line_xy_id = viz.add(xy_line, color="#00cccc", opacity=1.0)
+        if line_xy is None:
+            line_xy = viz.new(xy_line, color="#00cccc", opacity=1.0)
         else:
-            viz.update_entity(line_xy_id, xy_line)
+            line_xy.entity = xy_line
 
         # XZ plane: set y=0
         xz_line = Line.from_points(p, Point(p.x, 0, p.z))
-        if line_xz_id is None:
-            line_xz_id = viz.add(xz_line, color="#cc00cc", opacity=1.0)
+        if line_xz is None:
+            line_xz = viz.new(xz_line, color="#cc00cc", opacity=1.0)
         else:
-            viz.update_entity(line_xz_id, xz_line)
+            line_xz.entity = xz_line
 
         # YZ plane: set x=0
         yz_line = Line.from_points(p, Point(0, p.y, p.z))
-        if line_yz_id is None:
-            line_yz_id = viz.add(yz_line, color="#cccc00", opacity=1.0)
+        if line_yz is None:
+            line_yz = viz.new(yz_line, color="#cccc00", opacity=1.0)
         else:
-            viz.update_entity(line_yz_id, yz_line)
+            line_yz.entity = yz_line
 
     # Initial projection lines
     _update_lines(pos)
 
     # Enable left-button dragging with multiple constraint planes
-    viz.set_interaction(
-        point_id,
+    point.set_interaction(
         InteractionConfig(
             enabled=True,
             triggers=[
@@ -120,14 +120,14 @@ async def main() -> None:
     async def on_drag(event):
         # event.world_position is a pytanga.geometry.Point
         p = event.world_position
-        viz.update_entity(event.object_id, p)
+        point.entity = p
         _update_lines(p)
         viz.flush()
 
-    viz.on_interaction(point_id, InteractionEventType.DRAG_MOVE, on_drag)
+    point.on_interaction(InteractionEventType.DRAG_MOVE, on_drag)
 
     # Start server + open browser
-    if not viz.start(wait_for_browser=True):
+    if not viz.show(wait_for_browser=True):
         print("Failed to connect to browser. Exiting.")
         return
     viz.flush()
@@ -138,7 +138,7 @@ async def main() -> None:
     try:
         await viz.wait_for_shutdown()
     finally:
-        viz.stop()
+        viz.stop_server()
 
 
 if __name__ == "__main__":

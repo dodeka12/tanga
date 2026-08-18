@@ -13,33 +13,26 @@ import concurrent.futures
 import json
 import logging
 import signal
-import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Any
+import warnings
+from typing import TYPE_CHECKING, Any, Iterator
 
 if TYPE_CHECKING:
-    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle
+    from ._object_ref import VizObjectRef
+    from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
+    from ._viz_styles import VizStyles
 
 from pytanga.geometry.entities import Entity as GeoEntity
-
-logger = logging.getLogger("tanga.viz")
 
 from ._jupyter import _JupyterDisplayMixin
 from ._props import _normalize_color
 from ._scene_handle import VizSceneHandle
 from ._style_dict import (
     _kind_to_key,
-    _make_default_annotation_style,
-    _make_default_label_style,
-    _make_default_label_styles,
-    _make_default_styles,
-    _make_default_tex_label_style,
-    _make_default_tex_label_styles,
     _resolve_annotation_style,
     _resolve_label_style,
     _resolve_tex_label_style,
-    _StyleDict,
 )
 from ._timeline import Timeline
 from ._types import SceneEntity, VizInputType
@@ -52,6 +45,25 @@ from .camera import (
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
+
+logger = logging.getLogger("tanga.viz")
+
+
+# Standard HTTP + WebSocket port.  Kept stable (rather than auto-picking a
+# free port each time) so an already-open browser tab can reconnect to a
+# restarted server.  Override via ``start_server(port=...)``; pass ``port=0``
+# to explicitly auto-pick a free port.
+DEFAULT_PORT = 8765
+
+
+def _find_free_port(host: str) -> int:
+    """Find an available TCP port on *host*."""
+    import socket
+
+    bind_host = "127.0.0.1" if host in ("localhost", "127.0.0.1") else host
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((bind_host, 0))
+        return int(sock.getsockname()[1])
 
 
 class Visualizer(_JupyterDisplayMixin):
@@ -85,8 +97,8 @@ class Visualizer(_JupyterDisplayMixin):
     def __init__(
         self,
         *,
-        port: int = 8765,
-        host: str = "localhost",
+        port: int | None = None,
+        host: str | None = None,
         open_browser: bool | None = None,
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
@@ -115,8 +127,15 @@ class Visualizer(_JupyterDisplayMixin):
             name="",
             space_dim=space_dim,
         )
-        self._port = port
-        self._host = host
+        if port is not None or host is not None:
+            warnings.warn(
+                "Visualizer(port=..., host=...) is deprecated; use "
+                "start_server(host=..., port=...) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._port = port if port is not None else DEFAULT_PORT
+        self._host = host if host is not None else "localhost"
         self._open_browser = open_browser
         self._reuse_existing = reuse_existing
         self._title = title
@@ -126,6 +145,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
+        self._atexit_registered = False
 
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
@@ -133,15 +153,10 @@ class Visualizer(_JupyterDisplayMixin):
             open_browser = not self._jupyter
         self._open_browser = open_browser
 
-        # Per-kind entity/operator style instances (shared across all scenes).
-        self._default_styles = _make_default_styles()
+        # Bundled default style configuration (master instance; scenes copy it).
+        from ._viz_styles import make_styles
 
-        # Default style instances (factory functions in _style_dict.py)
-        self._default_label_style = _make_default_label_style()
-        self._default_annotation_style = _make_default_annotation_style()
-        self._default_label_styles = _make_default_label_styles()
-        self._default_tex_label_style = _make_default_tex_label_style()
-        self._default_tex_label_styles = _make_default_tex_label_styles()
+        self._global_styles = make_styles()
 
         # Control handler registry (shared across all scenes)
         from ._controls import ControlHandlerRegistry
@@ -154,17 +169,12 @@ class Visualizer(_JupyterDisplayMixin):
         self._interaction_registry = InteractionHandlerRegistry()
         self._interaction_configs: dict[str, dict[str, Any]] = {}
 
-        # Default ActPointStyle (shared across all scenes)
-        from ._act_style import ActPointStyle
-
-        self._default_act_point_style = ActPointStyle(
-            hover_emissive="#ffff44", hover_scale=1.5
-        )
-
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
         self._scenes: dict[str, Scene] = {}
-        self._scenes[""] = Scene(self._config, name="")
+        self._scenes[""] = Scene(
+            self._config, name="", styles=self._global_styles.copy()
+        )
         self._default_objects_added: set[str] = set()
 
         # Seed default axes/grid immediately — independent of server start.
@@ -188,7 +198,9 @@ class Visualizer(_JupyterDisplayMixin):
                 name=name,
                 space_dim=self._config.space_dim,
             )
-            self._scenes[name] = Scene(cfg, name=name)
+            self._scenes[name] = Scene(
+                cfg, name=name, styles=self._global_styles.copy()
+            )
             self._add_default_scene_objects(name)
         return VizSceneHandle(self, name)
 
@@ -251,6 +263,8 @@ class Visualizer(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
     ) -> str:
         """Add a geometric entity, operator, multivector, or label to the main scene.
 
@@ -270,7 +284,55 @@ class Visualizer(_JupyterDisplayMixin):
             label_style=label_style,
             tex_label=tex_label,
             tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
         )
+
+    def new(
+        self,
+        obj: VizInputType | None = None,
+        *,
+        entity_id: str | None = None,
+        color: str
+        | tuple[float, float, float]
+        | tuple[float, float, float, float]
+        | None = None,
+        opacity: float | None = None,
+        style: ObjVizStyle | None = None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
+    ) -> "VizObjectRef":
+        """Like :meth:`add`, but returns a :class:`VizObjectRef` instead of a ``str``."""
+        from ._object_ref import VizObjectRef
+
+        eid = self._add_to_scene(
+            "",
+            obj=obj,
+            entity_id=entity_id,
+            color=color,
+            opacity=opacity,
+            style=style,
+            label=label,
+            label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
+        )
+        node = self._scenes[""].get_node(eid)
+        return VizObjectRef(VizSceneHandle(self, ""), node)
+
+    def add_group(self, name: str | None = None, *, scene_name: str = "") -> "VizObjectRef":
+        """Create a scene-graph group and return a :class:`VizObjectRef` for it."""
+        from ._object_ref import VizObjectRef
+
+        scene = self._scenes[scene_name]
+        group = scene.add_group(name)
+        return VizObjectRef(VizSceneHandle(self, scene_name), group)
 
     def _add_to_scene(
         self,
@@ -285,13 +347,32 @@ class Visualizer(_JupyterDisplayMixin):
         label_style: LabelStyle | None = None,
         tex_label: str | None = None,
         tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
     ) -> str:
-        """Add an entity to a specific scene."""
+        """Add an entity to a specific scene.
+
+        ``parent_id`` parents the new scene node under an existing scene node;
+        ``attach_to`` sets the scene-node reference for a label created here.
+        """
         from ._active import ActSceneObject
         from ._label import Label
+        from ._nodes import VizGroup, VizSceneObject
         from ._styles import TextureLabelStyle as _TLS
 
         scene = self._scenes[scene_name]
+
+        if isinstance(obj, VizGroup):
+            from .scene import _generate_id
+
+            gid = entity_id or obj.id or _generate_id()
+            obj.id = gid
+            scene.add_node(obj, object_id=gid)
+            if parent_id is not None:
+                parent = scene.get_node(parent_id)
+                if isinstance(parent, VizSceneObject):
+                    parent.add_child(obj)
+            return gid
 
         if isinstance(obj, ActSceneObject):
             properties: dict[str, Any] = {}
@@ -312,6 +393,8 @@ class Visualizer(_JupyterDisplayMixin):
             return eid
 
         if isinstance(obj, Label):
+            if attach_to is not None:
+                obj.parent_id = attach_to
             return scene.add_label(obj)
 
         properties: dict[str, Any] = {}
@@ -334,8 +417,8 @@ class Visualizer(_JupyterDisplayMixin):
             entity_for_kind = self._resolve(obj)
             kind = type(entity_for_kind).__name__
             _tex_label_merged = _resolve_tex_label_style(
-                self._default_tex_label_style,
-                self._default_tex_label_styles.get(kind),
+                scene.styles.tex_label_base,
+                scene.styles.tex_label_kind.get(kind),
                 tex_label_style,
             )
             _tex_label_merged.text = tex_label
@@ -380,7 +463,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if not isinstance(entity, (GeoEntity, GeoOperator)):
             kind = type(entity).__name__
-            return scene.add_object(
+            oid = scene.add_object(
                 SceneObject(
                     id=entity_id or "",
                     layer="scene",
@@ -391,30 +474,64 @@ class Visualizer(_JupyterDisplayMixin):
                 ),
                 object_id=entity_id,
             )
+            self._attach_to_parent(scene, oid, parent_id)
+            return oid
 
         eid = scene.add(entity, entity_id=entity_id, **properties)
+        self._attach_to_parent(scene, eid, parent_id)
 
         if label is not None:
             from ._label_frame import compute_label_position
+            from .serializer import resolve_line_length
+
+            from pytanga.geometry.entities import Line
+            from pytanga.geometry.operators import ReflectionLine
 
             kind = type(entity).__name__
             resolved_ls = _resolve_label_style(
-                self._default_label_style,
-                self._default_label_styles.get(kind),
+                scene.styles.label_base,
+                scene.styles.label_kind.get(kind),
                 label_style,
             )
 
-            position = compute_label_position(entity, resolved_ls.offset_local)
+            line_length = None
+            if isinstance(entity, Line):
+                line_length = resolve_line_length(
+                    entity, styles_map=scene.styles.kind, props=properties
+                )
+            elif isinstance(entity, ReflectionLine):
+                line_length = resolve_line_length(
+                    entity.line, styles_map=scene.styles.kind, props=properties
+                )
+
+            position = compute_label_position(
+                entity,
+                resolved_ls.offset_local,
+                along=resolved_ls.along,
+                line_length=line_length,
+            )
             lbl = Label(
                 text=label,
                 position=position,
-                parent_id=eid,
+                parent_id=attach_to if attach_to is not None else eid,
                 style=resolved_ls,
             )
             scene.add_label(lbl)
             return eid
 
         return eid
+
+    @staticmethod
+    def _attach_to_parent(scene: Any, oid: str, parent_id: str | None) -> None:
+        """Attach a scene node to a parent scene node (no-op when ``parent_id`` is ``None``)."""
+        if parent_id is None:
+            return
+        from ._nodes import VizSceneObject
+
+        child = scene.get_node(oid)
+        parent = scene.get_node(parent_id)
+        if isinstance(child, VizSceneObject) and isinstance(parent, VizSceneObject):
+            parent.add_child(child)
 
     def update(self, entity_id: str, **properties: Any) -> None:
         """Update rendering properties of an existing entity in the main scene.
@@ -507,7 +624,7 @@ class Visualizer(_JupyterDisplayMixin):
             scene.remove("__annotation__")
         else:
             style_dict = _resolve_annotation_style(
-                self._default_annotation_style, style
+                scene.styles.annotation, style
             )
             obj = SceneObject(
                 id="__annotation__",
@@ -574,14 +691,15 @@ class Visualizer(_JupyterDisplayMixin):
                     range_u=(0.0, 5.0),
                     range_v=(0.0, 5.0),
                     range_w=(0.0, 5.0),
+                    show_value_labels=False,
                 )
                 self._add_to_scene(
                     scene_name,
                     obj=axes,
                     style=Axes3DStyle(
-                        u=AxisStyle(color="#ff0000", label_at_major=False),
-                        v=AxisStyle(color="green", label_at_major=False),
-                        w=AxisStyle(color="blue", label_at_major=False),
+                        u=AxisStyle(color="#ff0000"),
+                        v=AxisStyle(color="green"),
+                        w=AxisStyle(color="blue"),
                     ),
                 )
             if self._add_default_grid:
@@ -602,12 +720,53 @@ class Visualizer(_JupyterDisplayMixin):
         """Return full serialized state for a scene, adding defaults first."""
         self._add_default_scene_objects(scene_name)
         scene = self._scenes.get(scene_name, self._scenes[""])
-        return scene.full_state(styles_map=self._default_styles), []
+        return scene.full_state(styles_map=scene.styles.kind), []
 
     @staticmethod
     def sleep_ms(milliseconds: int) -> None:
         """Pause execution for *milliseconds*."""
         time.sleep(milliseconds / 1000)
+
+    def animate(self, *, fps: float = 60.0) -> Iterator[float]:
+        """Yield once per animation frame until interrupted (Ctrl+C).
+
+        Each iteration yields the elapsed wall-clock time in seconds since the
+        previous frame (``0.0`` on the first frame).  When *fps* is positive the
+        generator sleeps between frames to hold that frame rate; pass ``fps=0``
+        to disable pacing and call :meth:`sleep_ms` from inside the loop body
+        instead.
+
+        The server is started automatically if it isn't already running, and
+        :meth:`stop` is guaranteed to run when the loop ends — including when
+        Ctrl+C is pressed or an exception escapes the loop body.
+
+        Example::
+
+            viz = Visualizer(title="...")
+            for dt in viz.animate(fps=60):
+                ...  # update transforms / entities each frame
+                viz.flush()
+        """
+        if self._server is None:
+            self.start_server()
+            if self._open_browser:
+                self.open_browser()
+
+        shutdown = getattr(self, "_shutdown_requested", None)
+        frame_time = 1.0 / fps if fps and fps > 0.0 else None
+
+        try:
+            prev = time.monotonic()
+            while shutdown is None or not shutdown.is_set():
+                now = time.monotonic()
+                yield now - prev
+                prev = now
+                if frame_time is not None:
+                    remaining = frame_time - (time.monotonic() - now)
+                    if remaining > 0.0:
+                        time.sleep(remaining)
+        finally:
+            self.stop_server()
 
     # ── Default style configuration ─────────────────────────
 
@@ -616,17 +775,20 @@ class Visualizer(_JupyterDisplayMixin):
         kind: str,
         color: str | tuple[float, float, float] | tuple[float, float, float, float],
     ) -> None:
-        """Set the default color (and optionally opacity) for an entity kind."""
+        """Set the default color (and optionally opacity) for an entity kind.
+
+        Targets the main scene's style defaults (``viz.styles``).
+        """
         normalized = _normalize_color(color)
         key = _kind_to_key(kind)
-        if key not in self._default_styles:
+        if key not in self.styles.kind:
             raise ValueError(f"Unknown entity kind: {kind!r}")
 
         if isinstance(normalized, tuple):
-            self._default_styles[key].color = normalized[0]
-            self._default_styles[key].opacity = normalized[1]
+            self.styles.kind[key].color = normalized[0]
+            self.styles.kind[key].opacity = normalized[1]
         else:
-            self._default_styles[key].color = normalized
+            self.styles.kind[key].color = normalized
 
     # ── MV resolution ──────────────────────────────────────
 
@@ -745,23 +907,33 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Server lifecycle ───────────────────────────────────
 
-    def start(
-        self, *, wait_for_browser: bool | None = None, timeout: float = 30.0
-    ) -> bool:
-        """Start the WebSocket server in a background thread (non-blocking).
+    def start_server(self, host: str = "localhost", port: int | None = None) -> None:
+        """Start serving the visualization without opening a browser.
 
-        In Jupyter, ``wait_for_browser`` defaults to ``False`` because the
-        iframes connect asynchronously when they render.  Outside Jupyter
-        it defaults to ``True`` so entities are pushed reliably.
+        Parameters
+        ----------
+        host : str
+            Bind host (default ``"localhost"``).
+        port : int | None
+            Port to serve on.  ``None`` (default) uses the standard Tanga
+            viewer port (8765) so an already-open browser tab can reconnect
+            across server restarts.  ``0`` auto-picks a free port; a positive
+            integer uses that exact port.
         """
-        import secrets
+        if port is None:
+            port = DEFAULT_PORT
+        elif port == 0:
+            port = _find_free_port(host)
+        elif port < 0:
+            raise ValueError(f"port must be 0 or a positive integer, got {port}")
+        self._host = host
+        self._port = port
+        self._ensure_server_running()
 
-        if wait_for_browser is None:
-            wait_for_browser = not self._jupyter
-
+    def _ensure_server_running(self) -> None:
+        """Boot the server in a background thread if not already running."""
         if self._server is not None:
-            logger.debug("Stopping previous server instance")
-            self.stop()
+            return
 
         from .server import VizServer
 
@@ -798,12 +970,28 @@ class Visualizer(_JupyterDisplayMixin):
 
         logger.debug("Server booted in %.1fs", time.monotonic() - _boot_start)
 
+        # Graceful shutdown on interpreter exit, even if the script forgets to
+        # call stop_server() — otherwise the daemon server thread is killed
+        # abruptly and browsers see an abnormal 1006 reset instead of a clean
+        # 1001 close.
+        if not self._atexit_registered:
+            import atexit
+
+            def _atexit_stop() -> None:
+                try:
+                    self.stop_server(timeout=2.0)
+                except Exception:
+                    pass
+
+            atexit.register(_atexit_stop)
+            self._atexit_registered = True
+
         # Threading.Event for Ctrl+C — signal handler sets it, poll loop checks it.
         # Avoids asyncio/signal clashes on Windows.
         self._shutdown_requested = threading.Event()
 
         def _on_sigint(signum: int, frame: object) -> None:
-            logger.info("Ctrl+C received — requesting shutdown")
+            logger.info("Ctrl+C received - requesting shutdown")
             self._shutdown_requested.set()
 
         signal.signal(signal.SIGINT, _on_sigint)
@@ -812,42 +1000,77 @@ class Visualizer(_JupyterDisplayMixin):
         # Print URLs
         self._print_startup_urls()
 
-        if self._open_browser:
-            page_token = secrets.token_hex(4)  # 8 hex chars
-            if self._reuse_existing:
-                # Interactive wait: user either clicks Reconnect or presses Enter
-                if wait_for_browser:
-                    connected = self.wait_for_browser(timeout=120.0)
-                    if not connected:
-                        return False
-                else:
-                    # wait_for_browser is False (e.g. Jupyter): just check if
-                    # one is already there, otherwise open tab and don't wait.
-                    fut = asyncio.run_coroutine_threadsafe(
-                        self._server.wait_for_ws_ready(timeout=3.0), self._loop
-                    )
-                    try:
-                        reconnected = fut.result(timeout=3.5)
-                    except (
-                        concurrent.futures.TimeoutError,
-                        asyncio.TimeoutError,
-                    ):
-                        reconnected = False
-                    if not reconnected:
-                        if self._loop is not None:
-                            self._loop.call_soon_threadsafe(
-                                self._server._clear_ws_ready_events
-                            )
-                        self._server.open_browser(f"/?token={page_token}")
-            else:
-                # reuse_existing disabled — always open new tab
-                if self._loop is not None:
-                    self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
-                self._server.open_browser(f"/?token={page_token}")
-                if wait_for_browser:
-                    return self.wait_for_browser(timeout=30.0)
-            return True
+    def open_browser(self, *, wait_for_browser: bool | None = None) -> bool:
+        """Open/reconnect a browser tab for the main scene."""
+        return self._open_scene_browser("", wait_for_browser=wait_for_browser)
 
+    def _open_scene_browser(
+        self, scene_name: str, *, wait_for_browser: bool | None = None
+    ) -> bool:
+        """Open/reconnect a browser tab for *scene_name* (``""`` for main)."""
+        import secrets
+
+        if self._server is None:
+            raise RuntimeError("Server not started. Call start_server() first.")
+
+        if wait_for_browser is None:
+            wait_for_browser = not self._jupyter
+
+        page_token = secrets.token_hex(4)  # 8 hex chars
+        url_path = f"/{scene_name}" if scene_name else "/"
+        token_url = f"{url_path}?token={page_token}"
+
+        if self._reuse_existing:
+            # Interactive wait: user either clicks Reconnect or presses Enter
+            if wait_for_browser:
+                connected = self.wait_for_browser(timeout=120.0)
+                if not connected:
+                    return False
+            else:
+                # wait_for_browser is False (e.g. Jupyter): just check if
+                # one is already there, otherwise open tab and don't wait.
+                fut = asyncio.run_coroutine_threadsafe(
+                    self._server.wait_for_ws_ready(timeout=3.0), self._loop
+                )
+                try:
+                    reconnected = fut.result(timeout=3.5)
+                except (
+                    concurrent.futures.TimeoutError,
+                    asyncio.TimeoutError,
+                ):
+                    reconnected = False
+                if not reconnected:
+                    if self._loop is not None:
+                        self._loop.call_soon_threadsafe(
+                            self._server._clear_ws_ready_events
+                        )
+                    self._server.open_browser(token_url)
+        else:
+            # reuse_existing disabled — always open new tab
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
+            self._server.open_browser(token_url)
+            if wait_for_browser:
+                return self.wait_for_browser(timeout=30.0)
+        return True
+
+    def start(
+        self, *, wait_for_browser: bool | None = None, timeout: float = 30.0
+    ) -> bool:
+        """Deprecated: use :meth:`show` (or :meth:`start_server` + :meth:`open_browser`).
+
+        Preserved for backward compatibility — starts the server on the
+        configured ``host``/``port`` and opens a browser (unless
+        ``open_browser=False``).
+        """
+        warnings.warn(
+            "start() is deprecated; use show() or start_server()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.start_server(host=self._host, port=self._port)
+        if self._open_browser:
+            return self.open_browser(wait_for_browser=wait_for_browser)
         return True
 
     def _print_startup_urls(self) -> None:
@@ -858,7 +1081,7 @@ class Visualizer(_JupyterDisplayMixin):
             from rich.text import Text
 
             Console().print(Text(http_url, style="bold cyan"))
-        except ImportError:
+        except Exception:
             print(http_url)
 
     def _print_connect_prompt(self) -> None:
@@ -880,14 +1103,14 @@ class Visualizer(_JupyterDisplayMixin):
                     Text("Enter", style="bold"),
                     " to open a new browser tab, or click ",
                     Text("'Reconnect'", style="bold"),
-                    " in an existing tab…",
+                    " in an existing tab...",
                 )
             )
-        except ImportError:
+        except Exception:
             print(
                 f"Server: {self.url}\n"
                 "Press Enter to open a new browser tab, "
-                "or click 'Reconnect' in an existing tab…"
+                "or click 'Reconnect' in an existing tab..."
             )
 
     def _scene_config_for(self, scene_name: str) -> dict[str, Any] | None:
@@ -906,17 +1129,24 @@ class Visualizer(_JupyterDisplayMixin):
         while not self._shutdown_requested.is_set():
             await asyncio.sleep(poll_interval)
 
-    def stop(self, *, timeout: float = 5.0) -> None:
+    def stop_server(self, *, timeout: float = 5.0) -> None:
         """Stop the server and clean up."""
         if self._server is None:
-            logger.debug("stop() called but server already None")
+            logger.debug("stop_server() called but server already None")
             return
 
         logger.info("Shutting down server...")
 
         async def _stop() -> None:
-            # Cancel pending tasks gently to avoid "Task was destroyed but pending"
-            # warnings.  Don't do t.cancel() in a loop — it can recurse on child tasks.
+            # Gracefully close WebSocket connections FIRST, so browsers receive
+            # a clean close frame (1001) instead of an abnormal 1006 reset.
+            # Cancelling the handler tasks before this would let their finally
+            # blocks discard the sockets from _ws_clients before the close
+            # frame can be sent.
+            await self._server.stop()
+
+            # Cancel remaining tasks (heartbeats, handlers) that may still be
+            # pending.  Don't do t.cancel() in a loop — it can recurse on child tasks.
             tasks = [
                 t
                 for t in asyncio.all_tasks(self._loop)
@@ -926,7 +1156,6 @@ class Visualizer(_JupyterDisplayMixin):
                 for t in tasks:
                     t.cancel("server shutting down")
                 await asyncio.gather(*tasks, return_exceptions=True)
-            await self._server.stop()
 
         if self._loop is not None and self._loop.is_running():
             fut = asyncio.run_coroutine_threadsafe(_stop(), self._loop)
@@ -942,6 +1171,15 @@ class Visualizer(_JupyterDisplayMixin):
         self._loop = None
         self._thread = None
         logger.debug("Server stopped")
+
+    def stop(self, *, timeout: float = 5.0) -> None:
+        """Deprecated: use :meth:`stop_server`."""
+        warnings.warn(
+            "stop() is deprecated; use stop_server()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.stop_server(timeout=timeout)
 
     def wait_for_browser(self, timeout: float = 120.0) -> bool:
         """Block until a browser connects, or the user opens one interactively.
@@ -992,7 +1230,7 @@ class Visualizer(_JupyterDisplayMixin):
                 logger.info("Browser reconnected after %.1fs", elapsed)
                 return True
             if enter_pressed.is_set():
-                logger.info("User pressed Enter — opening new tab")
+                logger.info("User pressed Enter - opening new tab")
                 break
             if shutdown.is_set():
                 logger.info("Shutdown requested during wait")
@@ -1045,7 +1283,7 @@ class Visualizer(_JupyterDisplayMixin):
                     style="dim",
                 )
             )
-        except ImportError:
+        except Exception:
             print(
                 f"If the browser loaded the page but shows an empty scene, "
                 f"check that {ws_url} is reachable "
@@ -1060,7 +1298,7 @@ class Visualizer(_JupyterDisplayMixin):
             Console().print(
                 Text(f"Browser disconnected  ({remote_addr}).", style="bold yellow")
             )
-        except ImportError:
+        except Exception:
             print(f"Browser disconnected ({remote_addr}).")
 
     async def _flush_scene_async(
@@ -1072,11 +1310,15 @@ class Visualizer(_JupyterDisplayMixin):
         scene = self._scenes.get(scene_name)
         if scene is None:
             return
-        entities, removed = scene.flush(styles_map=self._default_styles)
-        if entities or removed or fit_camera:
-            await self._server.push(
-                entities, removed, scene=scene_name, fit_camera=fit_camera
-            )
+        patches, removed = scene.flush()
+        if patches or removed or fit_camera:
+            from .serializer import serialize_object_update
+
+            message = serialize_object_update(patches, removed)
+            message["scene"] = scene_name
+            if fit_camera:
+                message["fit_camera"] = True
+            await self._server.push_raw(json.dumps(message))
 
     def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe)."""
@@ -1095,130 +1337,49 @@ class Visualizer(_JupyterDisplayMixin):
             for name in self._scenes:
                 self._flush_scene(name, fit_camera=fit_camera)
 
-    def run(self, *, wait_for_browser: bool | None = None) -> None:
-        """Start the server, open the browser, and block until interrupted.
+    def show(
+        self,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+        wait_for_browser: bool | None = None,
+    ) -> bool:
+        """Serve the visualization and open a browser tab (non-blocking).
 
-        In Jupyter, ``wait_for_browser`` defaults to ``False``.
+        Equivalent to :meth:`start_server` followed by :meth:`open_browser`.
+        ``host``/``port`` are only used when the server is not already
+        running; see :meth:`start_server` for their semantics.
         """
-        import secrets
+        if self._server is None:
+            self.start_server(host=host or "localhost", port=port)
+        return self.open_browser(wait_for_browser=wait_for_browser)
 
-        if wait_for_browser is None:
-            wait_for_browser = not self._jupyter
-        from .server import VizServer
+    def wait(self) -> None:
+        """Block until Ctrl+C is pressed, then stop the server.
 
-        logger.info("Starting VizServer (run mode) on %s:%d", self._host, self._port)
-        self._server = VizServer(host=self._host, port=self._port)
-
-        async def _run() -> None:
-            await self._server.start(
-                self._full_state_for,
-                self._config.to_dict,
-                control_callback=self._dispatch_control_event,
-                interaction_callback=self._dispatch_interaction_event,
-                on_connect=self._on_client_connect,
-                scene_config_callback=self._scene_config_for,
-                scene_list_callback=self.list_scenes,
-            )
-            if self._open_browser:
-                page_token = secrets.token_hex(4)  # 8 hex chars
-                if self._reuse_existing:
-                    logger.info(
-                        "Server ready at %s — checking for existing browser…",
-                        self._server.url,
-                    )
-                    # Async interactive wait: race ws_ready against stdin read
-                    if wait_for_browser:
-                        enter_task = asyncio.create_task(
-                            asyncio.to_thread(sys.stdin.readline)
-                        )
-                        ws_task = asyncio.create_task(self._server.wait_for_ws_ready())
-
-                        # Print prompt
-                        self._print_connect_prompt()
-
-                        done, pending = await asyncio.wait(
-                            [enter_task, ws_task],
-                            return_when=asyncio.FIRST_COMPLETED,
-                        )
-                        for task in pending:
-                            task.cancel()
-
-                        if ws_task in done:
-                            logger.info("Browser reconnected")
-                        else:
-                            logger.info(
-                                "User pressed Enter — opening new tab (token=%s)",
-                                page_token,
-                            )
-                            self._server._clear_ws_ready_events()
-                            self._server.open_browser(f"/?token={page_token}")
-                            try:
-                                await asyncio.wait_for(
-                                    self._server.wait_for_ws_ready(),
-                                    timeout=30.0,
-                                )
-                            except asyncio.TimeoutError:
-                                self._print_ws_timeout_note()
-                                raise RuntimeError(
-                                    "No browser connected within 30s.  "
-                                    f"Open {self.url} manually."
-                                )
-                        # Clean up enter_task
-                        try:
-                            await enter_task
-                        except (asyncio.CancelledError, Exception):
-                            pass
-                    else:
-                        # Non-blocking: just check if already connected
-                        reconnected = await self._server.wait_for_ws_ready(timeout=3.0)
-                        if not reconnected:
-                            self._server._clear_ws_ready_events()
-                            self._server.open_browser(f"/?token={page_token}")
-                else:
-                    self._server._clear_ws_ready_events()
-                    self._server.open_browser(f"/?token={page_token}")
-
-                    if wait_for_browser:
-                        try:
-                            await asyncio.wait_for(
-                                self._server.wait_for_ws_ready(), timeout=30.0
-                            )
-                        except asyncio.TimeoutError:
-                            self._print_ws_timeout_note()
-                            raise RuntimeError(
-                                "No browser connected within 30s.  "
-                                f"Open {self.url} manually."
-                            )
-
-            # Flush initial state for the main scene
-            await self._flush_scene_async("")
-
-            stop_event = asyncio.Event()
-            loop = asyncio.get_running_loop()
-
-            def _signal_handler() -> None:
-                logger.info("Signal received, shutting down...")
-                stop_event.set()
-
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                try:
-                    loop.add_signal_handler(sig, _signal_handler)
-                except NotImplementedError:
-                    pass
-
-            await stop_event.wait()
-
+        Requires :meth:`start_server` (or :meth:`show`) to have been called so
+        the Ctrl+C handler is installed.
+        """
+        self._ensure_server_running()
+        shutdown = getattr(self, "_shutdown_requested", threading.Event())
         try:
-            asyncio.run(_run())
-        except KeyboardInterrupt:
-            logger.info("Interrupted (KeyboardInterrupt), shutting down...")
+            while not shutdown.is_set():
+                time.sleep(0.25)
         finally:
-            if self._server is not None:
-                try:
-                    asyncio.run(self._server.stop())
-                except Exception:
-                    pass
-            logger.info("Visualizer shut down")
+            self.stop_server()
+
+    def run(self, *, wait_for_browser: bool | None = None) -> None:
+        """Deprecated: use :meth:`show` then :meth:`wait`.
+
+        Starts the server, opens a browser, and blocks until Ctrl+C.
+        """
+        warnings.warn(
+            "run() is deprecated; use show() then wait()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.show(wait_for_browser=wait_for_browser)
+        self.wait()
 
     # ── Object Interaction ─────────────────────────────────
 
@@ -1330,6 +1491,16 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
         return cid
 
+    def update_control(self, ctrl_id: str, *, scene_name: str = "", **fields: Any) -> None:
+        """Mutate fields of a stored control and re-push ``controls_define``."""
+        scene = self._scenes[scene_name]
+        ctrl = scene._controls.get(ctrl_id)
+        if ctrl is None:
+            raise KeyError(f"Control {ctrl_id!r} not found")
+        for key, value in fields.items():
+            setattr(ctrl, key, value)
+        self._push_controls(scene_name)
+
     def add_dropdown(
         self,
         cid: str,
@@ -1411,7 +1582,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
         return cid
 
-    def add_group(
+    def add_control_group(
         self,
         gid: str,
         *,
@@ -1422,6 +1593,7 @@ class Visualizer(_JupyterDisplayMixin):
         parent_id: str | None = None,
         on_toggle: Any = None,
     ) -> str:
+        """Create a UI control group (sliders/buttons) in the main scene."""
         return self._add_scene_group(
             "",
             gid,
@@ -1456,7 +1628,7 @@ class Visualizer(_JupyterDisplayMixin):
             parent_id=parent_id,
             on_toggle=on_toggle,
         )
-        self._scenes[scene_name].add_group(group)
+        self._scenes[scene_name].add_control_group(group)
         if on_toggle is not None:
             self._handler_registry.register(f"__group__{gid}", on_toggle)
         self._push_controls(scene_name)
@@ -1470,12 +1642,13 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes[scene_name].remove_control(cid)
         self._push_controls(scene_name)
 
-    def remove_group(self, gid: str) -> None:
+    def remove_control_group(self, gid: str) -> None:
+        """Remove a UI control group from the main scene."""
         self._remove_scene_group("", gid)
 
     def _remove_scene_group(self, scene_name: str, gid: str) -> None:
         self._handler_registry.unregister(f"__group__{gid}")
-        self._scenes[scene_name].remove_group(gid)
+        self._scenes[scene_name].remove_control_group(gid)
         self._push_controls(scene_name)
 
     def clear_controls(self) -> None:
@@ -1566,46 +1739,85 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Jupyter support ─────────────────────────────────────
 
+    def display(
+        self,
+        *,
+        width: int | str = "100%",
+        height: int | str = 500,
+    ) -> Any:
+        """Display the live main scene inline (iframe) in a Jupyter notebook."""
+        src = self.url
+        if self._jupyter:
+            from IPython.display import IFrame
+            from IPython.display import display as ipy_display
+
+            iframe = IFrame(src, width=width, height=height)
+            ipy_display(iframe)
+            return None
+        return (
+            f'<iframe src="{src}" width="{width}" height="{height}px" '
+            f'style="border: 1px solid #444; border-radius: 4px;" '
+            f'title="Tanga 3D Viewer"></iframe>'
+        )
+
     def display_row(
         self,
         *scenes: tuple[VizSceneHandle, str | None],
         width: int | str = "100%",
         height: int | str = 500,
         gap: int = 8,
+        mode: str = "live",
     ) -> Any:
         """Display multiple scenes side by side in a single flex row.
 
         Each element in *scenes* is a ``(handle, viewer_name)`` tuple where
         *viewer_name* may be ``None``.
 
+        *mode* is ``"live"`` (default — embeds the server URL) or
+        ``"static"`` (embeds a serverless standalone snapshot).
+
         Usage::
 
-            viz.display_row(
-                (one, "browser-one"),
-                (two, "browser-two"),
-                (three, "browser-three"),
-            )
+            viz.display_row((one, None), (two, None))            # live
+            viz.display_row((one, None), (two, None), mode="static")
 
         Args:
             *scenes: One or more ``(VizSceneHandle, viewer_name | None)`` pairs.
             width: CSS width of the container (default ``"100%"``).
             height: CSS height of each iframe in pixels (default 500).
             gap: Gap between columns in pixels (default 8).
+            mode: ``"live"`` or ``"static"``.
         """
         from IPython.display import HTML
         from IPython.display import display as ipy_display
 
         columns_html: list[str] = []
         for handle, viewer_name in scenes:
-            src = handle.url
-            if viewer_name:
-                src += f"?viewer={viewer_name}"
+            if mode == "static":
+                import base64
+
+                snapshot = handle._viz._render_snapshot_html(handle.name)
+                b64 = base64.b64encode(snapshot.encode("utf-8")).decode("ascii")
+                iframe = (
+                    f'<iframe src="data:text/html;charset=utf-8;base64,{b64}" '
+                    f'width="100%" height="{height}px" '
+                    f'style="border: 1px solid #444; border-radius: 4px;" '
+                    f'title="Tanga 3D Viewer — {handle.name}"></iframe>'
+                )
+            else:
+                src = handle.url
+                if viewer_name:
+                    src += f"?viewer={viewer_name}"
+                iframe = (
+                    f'<iframe src="{src}" width="100%" height="{height}px" '
+                    f'style="border: 1px solid #444; border-radius: 4px;" '
+                    f'title="Tanga 3D Viewer — {handle.name}"></iframe>'
+                )
             columns_html.append(
                 f'<div style="flex: 1; min-width: 0;">'
-                f'<h3 style="margin: 0 0 4px 0; font-size: 14px; color: #ccc;">Scene: {handle.name}</h3>'
-                f'<iframe src="{src}" width="100%" height="{height}px" '
-                f'style="border: 1px solid #444; border-radius: 4px;" '
-                f'title="Tanga 3D Viewer — {handle.name}"></iframe>'
+                f'<h3 style="margin: 0 0 4px 0; font-size: 14px; color: #ccc;">'
+                f"Scene: {handle.name}</h3>"
+                f"{iframe}"
                 f"</div>"
             )
 
@@ -1615,7 +1827,206 @@ class Visualizer(_JupyterDisplayMixin):
         ipy_display(HTML(html))
         return None
 
-    def display_static(
+    def _render_snapshot_html(
+        self,
+        scene_name: str,
+        *,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> str:
+        scene = self._scenes[scene_name]
+        if animation is not None:
+            from pytanga.viz.export._animated_figure import (
+                render_export_animated_html,
+            )
+
+            return render_export_animated_html(
+                animation.to_dict(),
+                scene_config=scene.config.to_dict(),
+                anim_style=anim_style.to_dict() if anim_style is not None else None,
+                title=self._title,
+            )
+        from pytanga.viz.export._html import render_snapshot
+
+        objects = scene.full_state(styles_map=scene.styles.kind)
+        return render_snapshot(objects=objects, scene_config=scene.config.to_dict())
+
+    def _open_scene_snapshot(self, scene_name: str) -> None:
+        import tempfile
+        import webbrowser
+        from pathlib import Path
+
+        html = self._render_snapshot_html(scene_name)
+        tmp = Path(tempfile.mktemp(suffix=".html"))
+        tmp.write_text(html, encoding="utf-8")
+        webbrowser.open(str(tmp))
+
+    def _export_scene_snapshot(
+        self,
+        scene_name: str,
+        path: Any,
+        *,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> None:
+        from pathlib import Path
+
+        html = self._render_snapshot_html(
+            scene_name, animation=animation, anim_style=anim_style
+        )
+        p = Path(path).expanduser()
+        if not p.suffix:
+            p = p.with_suffix(".html")
+        if not overwrite and p.exists():
+            raise FileExistsError(
+                f"File {p} already exists. Use overwrite=True to replace it."
+            )
+        p.write_text(html, encoding="utf-8")
+
+    def export_snapshot(
+        self,
+        path: Any,
+        *,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> None:
+        """Export the current scene as a self-contained HTML file.
+
+        Pass *animation* (an ``AnimationRecording``) to export an animated
+        snapshot instead of a static one.
+        """
+        self._export_scene_snapshot(
+            "", path, overwrite=overwrite, animation=animation, anim_style=anim_style
+        )
+
+    def open_snapshot(self) -> None:
+        """Open the current scene as a standalone snapshot in a browser window."""
+        self._open_scene_snapshot("")
+
+    def _render_figure_html(
+        self,
+        scene_name: str,
+        *,
+        style: Any = None,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> str:
+        from pytanga.viz._figure import FigureConfig
+        from pytanga.viz._styles import FigureStyle
+
+        scene = self._scenes[scene_name]
+        resolved = style if style is not None else FigureStyle()
+        fig_config = FigureConfig(
+            title=self._title, annotation=self._annotation, footer=self._annotation
+        )
+        if animation is not None:
+            from pytanga.viz.export._animated_figure import (
+                render_export_animated_figure,
+            )
+
+            return render_export_animated_figure(
+                animation.to_dict(),
+                figure_style=resolved.to_dict(),
+                figure_config=fig_config.to_dict(),
+                anim_style=anim_style.to_dict() if anim_style is not None else None,
+            )
+        from pytanga.viz.export._figure_html import render_figure
+
+        objects = scene.full_state(styles_map=scene.styles.kind)
+        return render_figure(
+            objects,
+            scene.config.to_dict(),
+            resolved.to_dict(),
+            fig_config.to_dict(),
+        )
+
+    def _export_scene_figure(
+        self,
+        scene_name: str,
+        path: Any,
+        *,
+        style: Any = None,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> str | None:
+        from pathlib import Path
+
+        html = self._render_figure_html(
+            scene_name, style=style, animation=animation, anim_style=anim_style
+        )
+        if path is None:
+            return html
+        p = Path(path).expanduser()
+        if not p.suffix:
+            p = p.with_suffix(".html")
+        if not overwrite and p.exists():
+            raise FileExistsError(
+                f"File {p} already exists. Use overwrite=True to replace it."
+            )
+        p.write_text(html, encoding="utf-8")
+        return None
+
+    def export_figure(
+        self,
+        path: Any = None,
+        *,
+        style: Any = None,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> str | None:
+        """Export the current scene as an HTML snippet (or return the string).
+
+        Pass *animation* (an ``AnimationRecording``) to export an animated
+        figure instead of a static one.
+        """
+        return self._export_scene_figure(
+            "",
+            path,
+            style=style,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+        )
+
+    def _export_scene_glb(
+        self, scene_name: str, path: Any, *, overwrite: bool = False
+    ) -> None:
+        from pathlib import Path
+
+        from pytanga.viz.export._gltf import build_glb
+
+        scene = self._scenes[scene_name]
+        all_objects = scene.full_state(styles_map=scene.styles.kind)
+        entities = [o for o in all_objects if o.get("layer") != "overlay"]
+        glb = build_glb(entities, scene.config)
+        p = Path(path).expanduser()
+        if not p.suffix:
+            p = p.with_suffix(".glb")
+        if not overwrite and p.exists():
+            raise FileExistsError(
+                f"File {p} already exists. Use overwrite=True to replace it."
+            )
+        p.write_bytes(glb)
+
+    def export_glb(self, path: Any, *, overwrite: bool = False) -> None:
+        """Export the current scene as a glTF 2.0 binary (``.glb``) file."""
+        self._export_scene_glb("", path, overwrite=overwrite)
+
+    def _start_scene_animation_recording(self, scene_name: str) -> Any:
+        from pytanga.viz.export._animation_recording import AnimationRecording
+
+        scene = self._scenes[scene_name]
+        return AnimationRecording(scene, styles_map=scene.styles.kind)
+
+    def start_animation_recording(self) -> Any:
+        """Begin recording entity state for animated export (main scene)."""
+        return self._start_scene_animation_recording("")
+
+    def display_snapshot(
         self,
         width: int | str = "100%",
         height: int | str = "500px",
@@ -1624,106 +2035,60 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> Any:
         """Display a scene as standalone HTML (no server required).
 
-        Parameters
-        ----------
-        width : int | str
-            CSS width of the viewer.
-        height : int | str
-            CSS height of the viewer.
-        scene_name : str
-            The scene to display (``""`` for the main scene).
+        In Jupyter, returns an ``IPython.display.IFrame`` embedding the
+        standalone document via a data URL (no server, no style leakage).
+        Outside Jupyter, opens the snapshot in a browser window.
         """
-        from pytanga.viz.export._html import render_export_html
-
-        scene = self._scenes[scene_name]
-        all_objects = scene.full_state(styles_map=self._default_styles)
-        entities = [obj for obj in all_objects if obj.get("kind") != "label"]
-        labels = scene._serialize_labels()
-
-        html = render_export_html(
-            entities=entities,
-            labels=labels,
-            scene_config=scene.config.to_dict(),
-        )
+        html = self._render_snapshot_html(scene_name)
 
         if self._jupyter:
-            from IPython.display import HTML
+            import base64
 
-            return HTML(html)
-        else:
-            import tempfile
-            import webbrowser
-            from pathlib import Path
+            from IPython.display import IFrame
 
-            tmp = Path(tempfile.mktemp(suffix=".html"))
-            tmp.write_text(html, encoding="utf-8")
-            webbrowser.open(str(tmp))
-            return None
+            width_css = f"{width}px" if isinstance(width, int) else str(width)
+            height_css = f"{height}px" if isinstance(height, int) else str(height)
+            b64 = base64.b64encode(html.encode("utf-8")).decode("ascii")
+            return IFrame(
+                src=f"data:text/html;charset=utf-8;base64,{b64}",
+                width=width_css,
+                height=height_css,
+            )
+
+        self._open_scene_snapshot(scene_name)
+        return None
+
+    def display_static(
+        self,
+        width: int | str = "100%",
+        height: int | str = "500px",
+        *,
+        scene_name: str = "",
+    ) -> Any:
+        """Deprecated: use :meth:`display_snapshot`."""
+        warnings.warn(
+            "display_static() is deprecated; use display_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.display_snapshot(
+            width=width, height=height, scene_name=scene_name
+        )
 
     @property
-    def default_styles(self) -> _StyleDict:
-        """Per-kind style instances used as defaults."""
-        return self._default_styles
+    def global_styles(self) -> "VizStyles":
+        """The master :class:`VizStyles` instance (template for new scenes)."""
+        return self._global_styles
 
     @property
-    def default_label_style(self) -> LabelStyle:
-        """The global default ``LabelStyle`` instance."""
-        return self._default_label_style
-
-    @default_label_style.setter
-    def default_label_style(self, value: LabelStyle) -> None:
-        self._default_label_style = value
-
-    @property
-    def default_label_styles(self) -> _StyleDict:
-        """Per-kind default label style overrides.
-
-        Wrapped in a :class:`_StyleDict`, so entries may be addressed by
-        string key (``"Sphere"``) or by class (``Sphere``)::
-
-            viz.default_label_styles[Sphere] = LabelStyle(font_size=18)
-            viz.default_label_styles["Sphere"]  # same entry
-        """
-        return _StyleDict(self._default_label_styles)
+    def styles(self) -> "VizStyles":
+        """The main scene's :class:`VizStyles` (what gets rendered)."""
+        return self._scenes[""].styles
 
     @property
     def main_scene(self) -> Scene:
         """The underlying main :class:`Scene` instance (backward compat)."""
         return self._scenes[""]
-
-    @property
-    def default_annotation_style(self) -> AnnotationStyle:
-        """The global default ``AnnotationStyle`` instance."""
-        return self._default_annotation_style
-
-    @property
-    def default_act_point_style(self) -> ActPointStyle:
-        """The global default :class:`ActPointStyle` for all active points.
-
-        Can be reassigned to change hover highlighting for all
-        active points at once::
-
-            viz.default_act_point_style = ActPointStyle(
-                hover_emissive="#00ff00", hover_scale=2.0
-            )
-        """
-        return self._default_act_point_style
-
-    @default_act_point_style.setter
-    def default_act_point_style(self, value: ActPointStyle) -> None:
-        self._default_act_point_style = value
-
-    @property
-    def default_tex_label_style(self) -> _StyleDict:
-        """Per-kind texture label style defaults.
-
-        Usage::
-
-            viz.default_tex_label_style["Sphere"] = TextureLabelStyle(
-                repeat_u=4, offset_v=0.25, background=None
-            )
-        """
-        return _StyleDict(self._default_tex_label_styles)
 
     @property
     def url(self) -> str:

@@ -11,10 +11,12 @@ Supports multiple named scenes reachable at ``/{name}`` paths.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import sys
 import threading
+import time
 import webbrowser
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -25,6 +27,81 @@ from uuid import uuid4
 from aiohttp import web
 
 logger = logging.getLogger("tanga.viz.server")
+
+
+def compute_frontend_version(static_dir: Path) -> str:
+    """Return a stable content hash over the frontend assets.
+
+    The hash covers every file under ``static_dir`` (the live viewer's
+    template directory), keyed by its path relative to ``static_dir`` so that
+    renames are detected as well as content edits.  The backend injects this
+    hash into the served ``viewer.html`` and advertises it over the WebSocket
+    handshake so the browser can detect a stale, cached frontend.
+    """
+    h = hashlib.sha256()
+    for p in sorted(static_dir.rglob("*")):
+        if p.is_file():
+            h.update(str(p.relative_to(static_dir)).encode("utf-8"))
+            h.update(b"\0")
+            h.update(p.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def _ws_msg_brief(payload: Any) -> str:
+    """Return a concise description of a WebSocket message for diagnostics."""
+    if isinstance(payload, str):
+        raw = payload
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            return f"<non-json {len(raw)}B>"
+    else:
+        obj = payload
+        raw = json.dumps(obj) if isinstance(obj, dict) else ""
+    size = len(raw)
+    t = obj.get("type", "?") if isinstance(obj, dict) else "?"
+
+    if t == "object_update":
+        return (
+            f"object_update patches={len(obj.get('patches', []))} "
+            f"removed={len(obj.get('removed', []))} "
+            f"scene={obj.get('scene', '')!r} ({size}B)"
+        )
+    if t == "scene_update":
+        return (
+            f"scene_update objects={len(obj.get('objects', []))} "
+            f"removed={len(obj.get('removed', []))} "
+            f"scene={obj.get('scene', '')!r} ({size}B)"
+        )
+    if t == "controls_define":
+        return (
+            f"controls_define controls={len(obj.get('controls', []))} "
+            f"groups={len(obj.get('groups', []))} "
+            f"scene={obj.get('scene', '')!r} ({size}B)"
+        )
+    if t == "scene_config":
+        return (
+            f"scene_config name={obj.get('name', '')!r} "
+            f"space_dim={obj.get('space_dim', '?')} ({size}B)"
+        )
+    if t == "scene_list":
+        return f"scene_list scenes={obj.get('scenes', [])} ({size}B)"
+    if t == "browser_id":
+        return (
+            f"browser_id id={obj.get('browser_id', '')!r} "
+            f"v={obj.get('frontend_version', '?')} ({size}B)"
+        )
+    if t == "ready":
+        return (
+            f"ready scene={obj.get('scene', '')!r} "
+            f"token={obj.get('page_token') or 'none'} "
+            f"browser_id={obj.get('browser_id') or 'none'} ({size}B)"
+        )
+    if t == "clear_all":
+        return f"clear_all ({size}B)"
+    if t == "navigate":
+        return f"navigate scene={obj.get('scene', '')!r} ({size}B)"
+    return f"type={t} ({size}B)"
 
 
 async def _heartbeat(ws: web.WebSocketResponse, interval: float = 15.0) -> None:
@@ -78,9 +155,10 @@ class VizServer:
         self._host = host
         self._port = port
         self._static_dir = static_dir or Path(__file__).parent / "templates"
+        self._frontend_version = compute_frontend_version(self._static_dir)
         self._app: web.Application | None = None
         self._runner: web.AppRunner | None = None
-        self._site: web.TCPSite | None = None
+        self._sites: list[web.TCPSite] = []
         self._ws_clients: set[web.WebSocketResponse] = set()
         self._browser_sessions: dict[str, BrowserSession] = {}
         self._flush_callback: FlushCallback | None = None
@@ -129,12 +207,37 @@ class VizServer:
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
         try:
-            bind_host = "127.0.0.1" if self._host == "localhost" else self._host
+            # When host is "localhost", bind both IPv4 and IPv6 loopback so
+            # browsers that resolve `localhost` to `::1` can still reach the
+            # WebSocket endpoint — otherwise Firefox's WS connection can hang
+            # in CONNECTING on Windows (the server would only listen on IPv4).
             reuse_address = sys.platform != "win32"
-            self._site = web.TCPSite(
-                self._runner, bind_host, self._port, reuse_address=reuse_address
+            bind_hosts = (
+                ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
             )
-            await self._site.start()
+
+            self._sites = []
+            for bind_host in bind_hosts:
+                site = web.TCPSite(
+                    self._runner, bind_host, self._port, reuse_address=reuse_address
+                )
+                try:
+                    await site.start()
+                    self._sites.append(site)
+                except OSError:
+                    # The primary (IPv4) bind must succeed; the IPv6 loopback
+                    # bind is best-effort (may be unavailable on some systems).
+                    if not self._sites:
+                        raise
+                    logger.info("Could not bind to %s (skipping)", bind_host)
+
+            logger.info(
+                "Server listening: bind=%s port=%d (http://%s:%d, ws /ws)",
+                ",".join(bind_hosts[: len(self._sites)]),
+                self._port,
+                self._host,
+                self._port,
+            )
         except OSError as e:
             if (
                 getattr(e, "errno", 0) == 98
@@ -157,8 +260,10 @@ class VizServer:
         self._ws_clients.clear()
         self._browser_sessions.clear()
 
-        if self._site is not None:
-            await self._site.stop()
+        if self._sites:
+            for site in self._sites:
+                await site.stop()
+            self._sites.clear()
         if self._runner is not None:
             await self._runner.cleanup()
 
@@ -183,6 +288,10 @@ class VizServer:
         if fit_camera:
             message["fit_camera"] = True
         data = json.dumps(message)
+        logger.info(
+            "WS SEND t=%.3f %s clients=%d",
+            time.monotonic(), _ws_msg_brief(data), len(self._ws_clients),
+        )
 
         dead: list[web.WebSocketResponse] = []
         for ws in self._ws_clients:
@@ -198,6 +307,10 @@ class VizServer:
         """Send an arbitrary JSON string to all connected clients."""
         if not self._ws_clients:
             return
+        logger.info(
+            "WS SEND t=%.3f %s clients=%d",
+            time.monotonic(), _ws_msg_brief(data), len(self._ws_clients),
+        )
         dead: list[web.WebSocketResponse] = []
         for ws in self._ws_clients:
             try:
@@ -244,14 +357,24 @@ class VizServer:
                 pass
 
     async def _push_full_state(
-        self, ws: web.WebSocketResponse, *, scene_name: str = ""
+        self,
+        ws: web.WebSocketResponse,
+        *,
+        scene_name: str = "",
+        browser_id: str | None = None,
     ) -> None:
         """Send scene config + full entity state to a single client."""
         from .serializer import serialize_scene_update
 
+        logger.info(
+            "WS FULL-STATE-BEGIN t=%.3f id=%s scene=%r",
+            time.monotonic(), browser_id, scene_name,
+        )
+
         # 0. Clear the browser scene first (handles reconnect with new server)
-        logger.debug("Sending clear_all for scene '%s'", scene_name)
-        await ws.send_str(json.dumps({"type": "clear_all"}))
+        clear_payload = json.dumps({"type": "clear_all"})
+        logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(clear_payload))
+        await ws.send_str(clear_payload)
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
 
@@ -265,8 +388,9 @@ class VizServer:
 
         if cfg is not None:
             cfg.setdefault("name", scene_name)
-            logger.debug("Sending scene_config for '%s'", scene_name)
-            await ws.send_str(json.dumps(cfg))
+            cfg_payload = json.dumps(cfg)
+            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(cfg_payload))
+            await ws.send_str(cfg_payload)
 
         # 2. Full state (entities + labels merged)
         if self._flush_callback is not None:
@@ -274,15 +398,23 @@ class VizServer:
             if entities:
                 msg = serialize_scene_update(entities, [])
                 msg["scene"] = scene_name
-                logger.debug("Sending %d entities for scene '%s'", len(entities), scene_name)
-                await ws.send_str(json.dumps(msg))
+                state_payload = json.dumps(msg)
+                logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(state_payload))
+                await ws.send_str(state_payload)
 
         # 3. Scene list (so the frontend knows available scenes)
         if self._scene_list_callback is not None:
             scene_names = self._scene_list_callback()
-            await ws.send_str(
-                json.dumps({"type": "scene_list", "scenes": scene_names, "default": ""})
+            list_payload = json.dumps(
+                {"type": "scene_list", "scenes": scene_names, "default": ""}
             )
+            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(list_payload))
+            await ws.send_str(list_payload)
+
+        logger.info(
+            "WS FULL-STATE-END t=%.3f id=%s scene=%r",
+            time.monotonic(), browser_id, scene_name,
+        )
 
     # ── Browser sessions (read-only access for Visualizer) ─
 
@@ -298,6 +430,15 @@ class VizServer:
         self._any_ws_ready.clear()
         self._any_ws_ready_thread.clear()
         self._ws_error_event.clear()
+
+    def _signal_ws_ready(self) -> None:
+        """Set the ready events and invoke ``_on_ready`` (idempotent)."""
+        if self._any_ws_ready.is_set():
+            return
+        self._any_ws_ready.set()
+        self._any_ws_ready_thread.set()
+        if self._on_ready is not None:
+            self._on_ready()
 
     def get_browser_sessions(self) -> list[dict[str, str | None]]:
         """Return a list of active browser sessions as plain dicts."""
@@ -336,20 +477,22 @@ class VizServer:
         if rel_path:
             file_path = self._static_dir / rel_path
             if file_path.is_file():
-                logger.debug("HTTP GET /%s → static file → %s", rel_path, remote_addr)
-                return web.FileResponse(file_path)
+                logger.debug("HTTP GET /%s -> static file -> %s", rel_path, remote_addr)
+                return web.FileResponse(
+                    file_path, headers={"Cache-Control": "no-cache"}
+                )
             # If the path looks like a static file request (has a file
             # extension, e.g. /favicon.ico), return 404 instead of
             # serving viewer.html — avoids bogus page-load prints.
             if "." in rel_path.rsplit("/", 1)[-1]:
-                logger.debug("HTTP GET /%s → 404 (unknown static) → %s", rel_path, remote_addr)
+                logger.debug("HTTP GET /%s -> 404 (unknown static) -> %s", rel_path, remote_addr)
                 raise web.HTTPNotFound()
 
         # Inject a page token for WS connectivity correlation
         # Use token from URL query param if present, otherwise generate random
         viewer_path = self._static_dir / "viewer.html"
         page_token = request.query.get("token") or uuid4().hex[:8]
-        logger.info("HTTP GET / → serving viewer.html (token=%s) → %s", page_token, remote_addr)
+        logger.info("HTTP GET / -> serving viewer.html (token=%s) -> %s", page_token, remote_addr)
         self._pending_page_tokens[page_token] = {
             "remote_addr": remote_addr,
             "token": page_token,
@@ -360,17 +503,24 @@ class VizServer:
         self._print_page_load(remote_addr, page_token)
 
         html = viewer_path.read_text(encoding="utf-8")
-        token_script = f'<script>window.__tanga_page_token = "{page_token}";</script>'
+        inject = (
+            f'<script>window.__tanga_page_token = "{page_token}";</script>\n'
+            f'<script>window.__tanga_frontend_version = '
+            f'"{self._frontend_version}";</script>'
+        )
         # Inject after <head> or at start of file
         if "</head>" in html:
-            html = html.replace("</head>", f"{token_script}\n</head>")
+            html = html.replace("</head>", f"{inject}\n</head>")
         else:
-            html = token_script + "\n" + html
+            html = inject + "\n" + html
 
         resp = web.StreamResponse(
             status=200,
             reason="OK",
-            headers={"Content-Type": "text/html; charset=utf-8"},
+            headers={
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-cache",
+            },
         )
         resp.content_length = len(html.encode("utf-8"))
         await resp.prepare(request)
@@ -400,7 +550,15 @@ class VizServer:
         heartbeat_task = asyncio.create_task(_heartbeat(ws))
         logger.debug("WS heartbeat started id=%s", browser_id)
 
-        await ws.send_str(json.dumps({"type": "browser_id", "browser_id": browser_id}))
+        bid_payload = json.dumps(
+            {
+                "type": "browser_id",
+                "browser_id": browser_id,
+                "frontend_version": self._frontend_version,
+            }
+        )
+        logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(bid_payload))
+        await ws.send_str(bid_payload)
 
         # The frontend will send a "ready" message with the scene name.
         # We handle initialization inside the message loop.
@@ -424,9 +582,9 @@ class VizServer:
                             current_session = session
                             msg_browser_id = browser_id
 
-                        logger.debug(
-                            "WS msg: %s from %s (id=%s)",
-                            msg_type, remote_addr, msg_browser_id,
+                        logger.info(
+                            "WS RECV t=%.3f %s from %s (id=%s)",
+                            time.monotonic(), _ws_msg_brief(data), remote_addr, msg_browser_id,
                         )
 
                         if msg_type == "ready":
@@ -437,7 +595,7 @@ class VizServer:
                                 self._pending_page_tokens.pop(page_token, None)
                             logger.info(
                                 "WS ready: id=%s token=%s viewer=%s scene=%s remote=%s "
-                                "sessions=%d pending_tokens=%d — signalling ready",
+                                "sessions=%d pending_tokens=%d - signalling ready",
                                 msg_browser_id,
                                 page_token or "reconnect",
                                 data.get("viewer_name") or "none",
@@ -453,7 +611,7 @@ class VizServer:
                                     "error_msg", data.get("error", "unknown error")
                                 )
                                 logger.error(
-                                    "WS ready with error from %s: %s — %s",
+                                    "WS ready with error from %s: %s - %s",
                                     remote_addr,
                                     data.get("error"),
                                     self._ws_error_msg,
@@ -484,16 +642,16 @@ class VizServer:
                             if viewer_name:
                                 current_session.viewer_name = viewer_name
 
-                            # Signal ready BEFORE push operations so the
-                            # wait_for_ws_ready() mechanism is not blocked
-                            # by a failure in push_full_state / push_controls.
-                            self._any_ws_ready.set()
-                            self._any_ws_ready_thread.set()
-                            if self._on_ready is not None:
-                                self._on_ready()
-
+                            # Push the full state first, then signal ready on the
+                            # frontend's "scene_synced" ack, so the user's
+                            # incremental flushes (scheduled after viz.start()
+                            # returns) can't race with the initial full-state
+                            # push. A short fallback timer keeps old/cached
+                            # frontends (that never ack) from hanging start().
                             try:
-                                await self._push_full_state(ws, scene_name=scene_name)
+                                await self._push_full_state(
+                                    ws, scene_name=scene_name, browser_id=browser_id
+                                )
                             except Exception:
                                 pass
                             try:
@@ -501,6 +659,17 @@ class VizServer:
                                     await self._push_controls_cb(scene_name)
                             except Exception:
                                 pass
+                            # Fallback for frontends that never send "scene_synced".
+                            asyncio.get_running_loop().call_later(
+                                1.0, self._signal_ws_ready
+                            )
+
+                        elif msg_type == "scene_synced":
+                            logger.info(
+                                "WS scene_synced from %s (id=%s) - signalling ready",
+                                remote_addr, msg_browser_id,
+                            )
+                            self._signal_ws_ready()
 
                         elif msg_type == "screenshot:data":
                             rid = data.get("request_id")
@@ -535,9 +704,12 @@ class VizServer:
         finally:
             heartbeat_task.cancel()
             logger.debug("WS heartbeat stopped id=%s", browser_id)
+            close_code = getattr(ws, "close_code", None)
             logger.info(
-                "WS disconnect from %s (id=%s, sessions_remaining=%d)",
-                remote_addr, browser_id, len(self._browser_sessions) - 1,
+                "WS disconnect from %s (id=%s, close_code=%s, "
+                "clients_remaining=%d, sessions_remaining=%d)",
+                remote_addr, browser_id, close_code,
+                len(self._ws_clients) - 1, len(self._browser_sessions) - 1,
             )
             # Clean up pending futures for this client
             for rid, future in list(self._pending_screenshots.items()):
@@ -642,7 +814,7 @@ class VizServer:
                     style="dim",
                 )
             )
-        except ImportError:
+        except Exception:
             print(f"Browser at {remote_addr} loaded page (token: {page_token}).")
 
     def _print_ws_connected(
@@ -667,8 +839,11 @@ class VizServer:
             Console().print(
                 Text(f"✓ Browser connected  ({detail})", style="bold green")
             )
-        except ImportError:
-            print(f"✓ Browser connected  ({detail})")
+        except Exception:
+            # rich (or the console encoding) can fail on non-UTF-8 consoles
+            # (e.g. cp1252 on Windows); fall back to an ASCII-safe print so a
+            # display failure can never crash the WebSocket handler.
+            print(f"[OK] Browser connected  ({detail})")
 
     def _print_ws_reachability_note(self) -> None:
         """Print a note about WebSocket reachability for port forwarding setups."""
@@ -678,7 +853,7 @@ class VizServer:
             + ws_url
             + ") must also be reachable from the\n"
             "browser. If using port forwarding or a reverse proxy, ensure WebSocket\n"
-            "upgrade requests are forwarded — otherwise the viewer will render an\n"
+            "upgrade requests are forwarded - otherwise the viewer will render an\n"
             "empty 3D scene.\n"
         )
         try:
@@ -686,7 +861,7 @@ class VizServer:
             from rich.text import Text
 
             Console().print(Text(note, style="dim"))
-        except ImportError:
+        except Exception:
             print(note)
 
     async def check_page_tokens(

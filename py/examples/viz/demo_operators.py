@@ -14,20 +14,20 @@ from pytanga.viz import Visualizer
 viz = Visualizer(title="Tanga — Operators")
 
 # Rotor: disc arc + axis line (90-degree rotation about Z)
-viz.add(
+viz.new(
     Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1)),
     label="Rotor (pi/2, Z)",
 )
 
 # Translator: 3D arrow along X
-viz.add(
+viz.new(
     Translator(vector=Direction(2, 0, 0)),
     color="#44aaff",
     label="Translator (2, 0, 0)",
 )
 
 # Motor: helix curve showing combined rotation + translation
-viz.add(
+viz.new(
     Motor(
         rotor=Rotor(angle=math.pi * 1.5, axis=Direction(0, 0, 1)),
         translator=Translator(vector=Direction(0, 1, 0)),
@@ -37,10 +37,11 @@ viz.add(
 )
 
 # Dilator: concentric expanding rings
-viz.add(
+viz.new(
     Dilator(factor=2.0, origin=Point(0, 0, 0)),
     color="#ffcc44",
     label="Dilator (x2)",
 )
 
-viz.run()
+viz.show()
+viz.wait()

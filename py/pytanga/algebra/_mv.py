@@ -192,7 +192,7 @@ class MV:
         return self._alg.op(self, other)
 
     def ip(self, other: "MV") -> "MV":
-        """Inner (left-contraction) product  (same as ``self | other``)."""
+        """Inner product (symmetric)  (same as ``self | other``)."""
         return self._alg.ip(self, other)
 
     def gp_mod(self, other: "MV", modulus: int) -> "MV":

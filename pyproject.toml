@@ -49,6 +49,7 @@ packages = ["py/pytanga"]
 "docs/py" = "pytanga/_docs/py"
 "docs/cpp" = "pytanga/_docs/cpp"
 "docs/dev" = "pytanga/_docs/dev"
+"docs/changelog" = "pytanga/_docs/changelog"
 "docs/index.md" = "pytanga/_docs/index.md"
 "py/examples" = "pytanga/_examples"
 

@@ -19,10 +19,10 @@ const _attachedGroups = new Map();  // groupId → { css2d, parentMesh }
  *
  * @param {Object} group     - Group definition from controls_define message
  * @param {Array}  controls  - Array of control definitions for this group
- * @param {Map}    entityMeshes - viewer.js entityMeshes Map
+ * @param {Map}    sceneObjects - viewer.js sceneObjects Map
  */
-export function attachGroup(group, controls, entityMeshes) {
-    const parentMesh = entityMeshes.get(group.parentId);
+export function attachGroup(group, controls, sceneObjects) {
+    const parentMesh = sceneObjects.get(group.parentId)?.obj;
     if (!parentMesh) {
         console.warn('Cannot attach group "' + group.id + '": parent entity "' + group.parentId + '" not found');
         return;

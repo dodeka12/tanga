@@ -57,12 +57,22 @@ def js_cdn_check_script() -> str:
     return f"""<script>
 (function() {{
     var ESSENTIAL_FAILED = false;
+    var RUNTIME_ERROR_MESSAGE = null;
     var OPTIONAL_SEEN = {{}};
     var OPTIONAL_MISSING = [];
 
     // ── Detect script load errors ──────────────────────────
     window.addEventListener('error', function(e) {{
         var src = (e.target && e.target.src) || '';
+        var msg = e.message || '';
+
+        // Runtime exception — the scripts loaded, but a bug crashed the page.
+        if (msg) {{
+            if (!RUNTIME_ERROR_MESSAGE) RUNTIME_ERROR_MESSAGE = msg;
+            return;
+        }}
+
+        // Resource / module load failure (no error message attached).
         if (!src) {{
             // Module resolution failure (importmap / Three.js import)
             ESSENTIAL_FAILED = true;
@@ -80,6 +90,15 @@ def js_cdn_check_script() -> str:
         }}
     }}, true);
 
+    window.addEventListener('unhandledrejection', function(e) {{
+        if (!RUNTIME_ERROR_MESSAGE) {{
+            var reason = e.reason;
+            RUNTIME_ERROR_MESSAGE = (reason && reason.message)
+                ? reason.message
+                : String(reason);
+        }}
+    }});
+
     // ── Poll for __tanga_ready ─────────────────────────────
     var _pollCount = 0;
     var _slowNotice = null;
@@ -91,7 +110,10 @@ def js_cdn_check_script() -> str:
             if (_slowNotice) {{ _slowNotice.remove(); _slowNotice = null; }}
             return;
         }}
-        if (ESSENTIAL_FAILED) {{
+        if (window.__tanga_cdn_failed) {{
+            ESSENTIAL_FAILED = true;
+        }}
+        if (ESSENTIAL_FAILED || RUNTIME_ERROR_MESSAGE) {{
             // A definitive error was caught — show error banner immediately
             if (!_resultsShown) {{ _showError(); }}
         }} else if (_pollCount >= 50 && !_slowNotice) {{
@@ -115,17 +137,81 @@ def js_cdn_check_script() -> str:
                 'network connection. The viewer will appear once loading completes.';
             document.body.insertBefore(_slowNotice, document.body.firstChild);
         }}
-        if (!ESSENTIAL_FAILED) {{
+        if (!ESSENTIAL_FAILED && !RUNTIME_ERROR_MESSAGE) {{
             setTimeout(_pollReady, 300);
         }}
     }}
     setTimeout(_pollReady, 500);
+
+    // ── CDN reachability probe ──────────────────────────────
+    // A failed module import (offline / blocked CDN) does not surface a
+    // reliable `src` on the `error` event, so probe the CDN directly and
+    // flag a definitive network failure for the error banner.
+    (function() {{
+        var _probeUrl = 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+        var _controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var _timer = setTimeout(function() {{
+            if (_controller) _controller.abort();
+        }}, 6000);
+        try {{
+            fetch(_probeUrl, {{
+                method: 'GET',
+                mode: 'no-cors',
+                cache: 'no-store',
+                signal: _controller ? _controller.signal : undefined
+            }}).then(function() {{
+                clearTimeout(_timer);
+            }}).catch(function(err) {{
+                clearTimeout(_timer);
+                // Ignore the timeout (handled by the "slow connection"
+                // notice); only flag a definitive network failure.
+                if (!err || err.name !== 'AbortError') {{
+                    window.__tanga_cdn_failed = true;
+                }}
+            }});
+        }} catch (_) {{
+            clearTimeout(_timer);
+            window.__tanga_cdn_failed = true;
+        }}
+    }})();
 
     // ── Show error banner when a definitive failure occurred ─
     function _showError() {{
         _resultsShown = true;
 {hide_loading}
         if (_slowNotice) {{ _slowNotice.remove(); _slowNotice = null; }}
+
+        if (RUNTIME_ERROR_MESSAGE && !ESSENTIAL_FAILED) {{
+            var rtBanner = document.createElement('div');
+            rtBanner.style.position = 'fixed';
+            rtBanner.style.top = '0';
+            rtBanner.style.left = '0';
+            rtBanner.style.right = '0';
+            rtBanner.style.zIndex = '99999';
+            rtBanner.style.background = '#cc2222';
+            rtBanner.style.color = '#fff';
+            rtBanner.style.fontFamily = 'sans-serif';
+            rtBanner.style.fontSize = '14px';
+            rtBanner.style.padding = '12px 20px';
+            rtBanner.style.textAlign = 'center';
+            rtBanner.style.lineHeight = '1.5';
+            rtBanner.innerHTML = '<strong>Viewer error.</strong> ';
+            rtBanner.appendChild(document.createTextNode(
+                'The 3D viewer could not start due to an unexpected error.'
+            ));
+            var rtDetail = document.createElement('div');
+            rtDetail.style.fontSize = '12px';
+            rtDetail.style.marginTop = '4px';
+            rtDetail.style.opacity = '0.85';
+            rtDetail.style.fontFamily = 'monospace';
+            rtDetail.style.textAlign = 'left';
+            rtDetail.style.display = 'inline-block';
+            rtDetail.style.maxWidth = '100%';
+            rtDetail.style.overflow = 'auto';
+            rtDetail.textContent = RUNTIME_ERROR_MESSAGE;
+            rtBanner.appendChild(rtDetail);
+            document.body.insertBefore(rtBanner, document.body.firstChild);
+        }}
 
         if (ESSENTIAL_FAILED) {{
             var banner = document.createElement('div');

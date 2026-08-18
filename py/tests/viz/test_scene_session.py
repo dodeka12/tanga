@@ -4,6 +4,7 @@
 """Tests for CameraConfig, SceneConfig, Scene, and Visualizer basics."""
 
 import json
+import threading
 
 import pytest
 from pytanga.geometry.entities import Point
@@ -19,7 +20,7 @@ from pytanga.viz.camera import (
 )
 from pytanga.viz.scene import Scene, SceneConfig, SceneObject
 from pytanga.viz.serializer import serialize_entity
-from pytanga.viz.visualizer import Visualizer
+from pytanga.viz.visualizer import DEFAULT_PORT, Visualizer
 
 # ── CameraConfig ────────────────────────────────────────────
 
@@ -206,7 +207,8 @@ class TestScene:
         s.add(Point(1, 0, 0))
         dirty, removed = s.flush()
         assert len(dirty) == 1
-        assert dirty[0]["kind"] == "Point"
+        assert dirty[0]["aspect"] == "full"
+        assert dirty[0]["value"]["kind"] == "Point"
         assert removed == []
 
     def test_flush_only_returns_dirty(self):
@@ -227,9 +229,23 @@ class TestScene:
     def test_update_entity_replaces_geometry(self):
         s = Scene()
         eid = s.add(Point(1, 0, 0))
+        s.flush()  # consume the initial "full" dirty flag
         s.update_entity(eid, Point(5, 6, 7))
         dirty, _ = s.flush()
-        assert dirty[0]["position"] == [5, 6, 7]
+        assert dirty[0]["aspect"] == "content"
+        assert dirty[0]["value"]["position"] == [5, 6, 7]
+
+    def test_new_node_with_transform_mutation_still_full(self):
+        # A node that has never reached the client must emit `full` even if a
+        # sub-aspect (transform) is mutated before the first flush; otherwise
+        # the client never learns about the node (regression for nested groups).
+        s = Scene()
+        g = s.add_group("arm")
+        g.set_transform(position=(1, 0, 0))
+        dirty, _ = s.flush()
+        patches = [p for p in dirty if p["id"] == g.id]
+        assert [p["aspect"] for p in patches] == ["full"]
+        assert patches[0]["value"]["transform"]["position"] == [1, 0, 0]
 
     def test_remove_then_flush(self):
         s = Scene()
@@ -265,7 +281,7 @@ class TestScene:
         lbl = Label(text="test", position=(0, 0, 0))
         lid = s.add_label(lbl)
         assert isinstance(lid, str)
-        labels = s._serialize_labels()
+        labels = [o for o in s.full_state() if o.get("kind") == "label"]
         assert len(labels) == 1
         assert labels[0]["text"] == "test"
 
@@ -279,14 +295,118 @@ class TestVisualizer:
         assert viz._port == 8765
         assert viz._host == "localhost"
 
+    def test_animate_yields_frames_and_stops_on_shutdown(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        # Pretend the server is already running so animate() skips start().
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        gen = viz.animate(fps=0)  # fps=0 → no pacing
+        assert next(gen) >= 0.0
+        assert next(gen) >= 0.0
+
+        viz._shutdown_requested.set()
+        with pytest.raises(StopIteration):
+            next(gen)
+
     def test_opns_kwarg_rejected(self):
         with pytest.raises(TypeError):
             Visualizer(opns=False)
 
     def test_custom_port_and_host(self):
-        viz = Visualizer(port=9999, host="127.0.0.1")
+        with pytest.warns(DeprecationWarning):
+            viz = Visualizer(port=9999, host="127.0.0.1")
         assert viz._port == 9999
         assert viz._host == "127.0.0.1"
+
+    def test_start_server_defaults_to_standard_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz.start_server()
+        assert viz._port == DEFAULT_PORT
+        assert viz._host == "localhost"
+
+    def test_start_server_explicit_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz.start_server(port=9000)
+        assert viz._port == 9000
+
+    def test_start_server_zero_auto_picks_free_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz.start_server(port=0)  # auto-pick a free port
+        assert isinstance(viz._port, int)
+        assert viz._port > 0
+
+    def test_start_server_negative_port_raises(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        with pytest.raises(ValueError):
+            viz.start_server(port=-1)
+
+    def test_start_emits_deprecation_warning(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._open_browser = False
+        calls: dict[str, bool] = {}
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.__setitem__("start_server", True)
+        )
+        with pytest.warns(DeprecationWarning):
+            result = viz.start()
+        assert result is True
+        assert calls == {"start_server": True}
+
+    def test_stop_emits_deprecation_warning(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        calls: dict[str, bool] = {}
+        monkeypatch.setattr(
+            viz, "stop_server", lambda **kw: calls.__setitem__("stop_server", True)
+        )
+        with pytest.warns(DeprecationWarning):
+            viz.stop()
+        assert calls == {"stop_server": True}
+
+    def test_show_serves_and_opens_browser(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        calls: list[str] = []
+        monkeypatch.setattr(viz, "start_server", lambda **kw: calls.append("start_server"))
+        monkeypatch.setattr(
+            viz,
+            "open_browser",
+            lambda **kw: calls.append("open_browser") or True,
+        )
+        result = viz.show()
+        assert result is True
+        assert calls == ["start_server", "open_browser"]
+
+    def test_show_forwards_host_and_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        captured: dict[str, object] = {}
+        monkeypatch.setattr(viz, "start_server", lambda **kw: captured.update(kw))
+        monkeypatch.setattr(viz, "open_browser", lambda **kw: True)
+        viz.show(host="127.0.0.1", port=9000)
+        assert captured == {"host": "127.0.0.1", "port": 9000}
+
+    def test_run_emits_deprecation_warning(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "show", lambda **kw: None)
+        monkeypatch.setattr(viz, "wait", lambda: None)
+        with pytest.warns(DeprecationWarning):
+            viz.run()
+
+    def test_wait_stops_server_after_shutdown(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz._shutdown_requested = threading.Event()
+        viz._shutdown_requested.set()
+        stopped: dict[str, bool] = {}
+        monkeypatch.setattr(
+            viz, "stop_server", lambda: stopped.__setitem__("stopped", True)
+        )
+        viz.wait()
+        assert stopped == {"stopped": True}
 
     def test_obsolete_kwargs_rejected(self):
         with pytest.raises(TypeError):
@@ -338,37 +458,37 @@ class TestVisualizer:
     def test_add_with_color_normalizes(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.5, 0.0))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff8000"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff8000"
 
     def test_add_with_4tuple_extracts_opacity(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff0000"
-        assert dirty[0]["opacity"] == 0.3
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff0000"
+        assert state[0]["opacity"] == 0.3
 
     def test_add_with_color_and_explicit_opacity(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3), opacity=0.8)
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff0000"
-        assert dirty[0]["opacity"] == 0.8  # explicit wins
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff0000"
+        assert state[0]["opacity"] == 0.8  # explicit wins
 
     def test_add_with_hex_color_passthrough(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0), color="#abcdef")
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#abcdef"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#abcdef"
 
     def test_add_with_style(self):
         from pytanga.viz._styles import PointStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0), style=PointStyle(size=0.5, color="#00ff00"))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["style"]["size"] == 0.5
-        assert dirty[0]["style"]["color"] == "#00ff00"
+        state = viz._scene.full_state()
+        assert state[0]["style"]["size"] == 0.5
+        assert state[0]["style"]["color"] == "#00ff00"
 
     def test_update_with_color(self):
         viz = Visualizer()
@@ -376,7 +496,8 @@ class TestVisualizer:
         viz._scene.flush()
         viz.update(eid, color="#00ff00")
         dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#00ff00"
+        assert dirty[0]["aspect"] == "style"
+        assert dirty[0]["value"]["style"]["color"] == "#00ff00"
 
     def test_remove_delegates(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -411,20 +532,20 @@ class TestVisualizer:
         viz = Visualizer()
         from pytanga.geometry import Sphere
 
-        assert "Sphere" in viz.default_styles
-        assert viz.default_styles[Sphere].wireframe is True
-        assert viz.default_styles[Sphere].opacity == 0.4
+        assert "Sphere" in viz.styles.kind
+        assert viz.styles[Sphere].wireframe is True
+        assert viz.styles[Sphere].opacity == 0.4
 
     def test_set_default_color_via_styles(self):
         viz = Visualizer()
         viz.set_default_color("point", "#00ff00")
-        assert viz.default_styles["Point"].color == "#00ff00"
+        assert viz.styles["Point"].color == "#00ff00"
 
     def test_set_default_color_rgba_sets_opacity_too(self):
         viz = Visualizer()
         viz.set_default_color("point", (1.0, 0.0, 0.0, 0.3))
-        assert viz.default_styles["Point"].color == "#ff0000"
-        assert viz.default_styles["Point"].opacity == 0.3
+        assert viz.styles["Point"].color == "#ff0000"
+        assert viz.styles["Point"].opacity == 0.3
 
     def test_set_default_color_unknown_kind_raises(self):
         viz = Visualizer()
@@ -487,29 +608,71 @@ class TestLabelDefaults:
         assert ls.offset_2d is None
         assert ls.align is None
 
+    def test_point_label_aligns_top_left(self):
+        from pytanga.geometry import Line, Point
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(0, 0, 0), label="P")
+        viz.add(Line.from_points(Point(0, 0, 0), Point(1, 0, 0)), label="L")
+        labels = {
+            o.get("text"): o["style"]
+            for o in viz._scene.full_state()
+            if o.get("kind") == "label"
+        }
+        assert labels["P"]["align"] == [0.0, 0.0]
+        assert labels["P"]["offset_2d"] == [5.0, 5.0]
+        # Non-point labels keep the centered default.
+        assert labels["L"]["align"] == [0.5, 0.5]
+        assert labels["L"]["offset_2d"] == [0.0, 0.0]
+
+    def test_label_style_along_and_rotation_to_dict(self):
+        from pytanga.viz._styles import LabelStyle
+
+        assert LabelStyle(along=0.5, rotation=45).to_dict()["along"] == 0.5
+        assert LabelStyle(along=0.5, rotation=45).to_dict()["rotation"] == 45
+        assert LabelStyle(along=(0.25, 0.5)).to_dict()["along"] == [0.25, 0.5]
+
+    def test_line_label_default_along(self):
+        from pytanga.viz._style_dict import _make_default_label_styles
+
+        styles = _make_default_label_styles()
+        assert styles["Line"].along == 0.5
+        assert styles["Sphere"].along is None
+
+    def test_label_serialization_strips_along_keeps_rotation(self):
+        from pytanga.geometry import Point
+        from pytanga.viz._styles import LabelStyle
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(0, 0, 0), label="P", label_style=LabelStyle(rotation=45, along=0.5))
+        labels = [o for o in viz._scene.full_state() if o.get("kind") == "label"]
+        assert len(labels) == 1
+        assert "along" not in labels[0]["style"]
+        assert labels[0]["style"]["rotation"] == 45
+
     def test_default_label_styles_accepts_class_key(self):
         from pytanga.geometry import Sphere
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_styles[Sphere] = LabelStyle(font_size=18)
-        assert viz.default_label_styles["Sphere"].font_size == 18
+        viz.styles.label_kind[Sphere] = LabelStyle(font_size=18)
+        assert viz.styles.label_kind["Sphere"].font_size == 18
 
     def test_default_label_style_setter(self):
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_style = LabelStyle(font_size=22)
-        assert viz._default_label_style.font_size == 22
+        viz.styles.label_base = LabelStyle(font_size=22)
+        assert viz.styles.label_base.font_size == 22
 
     def test_default_label_styles_resolution(self):
         from pytanga.geometry import Sphere
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_styles["Sphere"] = LabelStyle(font_size=18)
+        viz.styles.label_kind["Sphere"] = LabelStyle(font_size=18)
         eid = viz.add(Sphere(Point(0, 0, 0), 1.0), label="S")
-        labels = viz._scene._serialize_labels()
+        labels = [o for o in viz._scene.full_state() if o.get("kind") == "label"]
         assert len(labels) == 1
         assert labels[0]["style"]["font_size"] == 18
         assert eid
@@ -520,9 +683,9 @@ class TestStyleDictMerge:
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
-        original = viz.default_styles["Sphere"].opacity
-        viz.default_styles.merge("Sphere", SphereStyle(color="#00ff00"))
-        s = viz.default_styles["Sphere"]
+        original = viz.styles["Sphere"].opacity
+        viz.styles.kind.merge("Sphere", SphereStyle(color="#00ff00"))
+        s = viz.styles["Sphere"]
         assert s.color == "#00ff00"
         assert s.opacity == original
 
@@ -531,27 +694,27 @@ class TestStyleDictMerge:
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
-        viz.default_styles.merge(Sphere, SphereStyle(opacity=0.9))
-        assert viz.default_styles["Sphere"].opacity == 0.9
+        viz.styles.kind.merge(Sphere, SphereStyle(opacity=0.9))
+        assert viz.styles["Sphere"].opacity == 0.9
 
     def test_setitem_is_full_replacement(self):
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
-        viz.default_styles["Sphere"] = SphereStyle(color="#00ff00")
-        s = viz.default_styles["Sphere"]
+        viz.styles["Sphere"] = SphereStyle(color="#00ff00")
+        s = viz.styles["Sphere"]
         assert s.opacity is None  # lost, not merged
 
     def test_merge_shallow_replaces_nested(self):
-        from pytanga.viz._styles import DashedWireframe, SphereStyle, TextureLabelStyle
+        from pytanga.viz._styles import SphereStyle, TextureLabelStyle
 
         viz = Visualizer()
-        viz.default_styles.merge(
+        viz.styles.kind.merge(
             "Sphere",
             SphereStyle(texture_label=TextureLabelStyle(font_size=30)),
             deep=False,
         )
-        tl = viz.default_styles["Sphere"].texture_label
+        tl = viz.styles["Sphere"].texture_label
         assert tl.font_size == 30
         assert tl.offset_v is None
         assert tl.repeat_u is None
@@ -560,20 +723,20 @@ class TestStyleDictMerge:
         from pytanga.viz._styles import SphereStyle, TextureLabelStyle
 
         viz = Visualizer()
-        viz.default_styles.merge(
+        viz.styles.kind.merge(
             "Sphere",
             SphereStyle(texture_label=TextureLabelStyle(font_size=30)),
             deep=True,
         )
-        tl = viz.default_styles["Sphere"].texture_label
+        tl = viz.styles["Sphere"].texture_label
         assert tl.font_size == 30
 
     def test_label_merge_has_full_base(self):
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
-        viz.default_label_styles.merge("Point", LabelStyle(font_size=20))
-        ls = viz.default_label_styles["Point"]
+        viz.styles.label_kind.merge("Point", LabelStyle(font_size=20))
+        ls = viz.styles.label_kind["Point"]
         assert ls.font_size == 20
         assert ls.color is not None
 
@@ -590,13 +753,23 @@ class TestAxisSerialization:
         assert d["end"] == [3, 0, 0]
         assert d["majorInterval"] == 1.0
         assert d["label"] == "X"
-        assert d["labelFormat"] == ".1f"
+        assert d["valueFormat"] == ".1f"
+        assert d["showValueLabels"] is True
         assert d["showTicks"] is True
 
     def test_axis_minor_interval_omitted_when_none(self):
         ent = Axis((0, 0, 0), (3, 0, 0))
         d = serialize_entity(ent, "a1", kind="Axis")
         assert "minorInterval" not in d
+
+    def test_axis_name_and_value_style_defaults(self):
+        ent = Axis((0, 0, 0), (3, 0, 0), label="X")
+        d = serialize_entity(ent, "a1", kind="Axis")
+        assert d["style"]["label_style"]["along"] == 0.5
+        assert d["style"]["label_style"]["align"] == [0.5, 0.0]
+        assert d["style"]["label_style"]["offset_2d"] == [0.0, 10.0]
+        assert d["style"]["value_style"]["font_size"] == 12
+        assert d["style"]["value_style"]["align"] == [0.5, 0.5]
 
 
 class TestGridSerialization:
@@ -694,7 +867,7 @@ class TestAxesSerialization:
         for e in entries:
             assert e["color"] == "#ff0000"
 
-    def test_axes_label_style_flows_into_entries(self):
+    def test_axes_value_style_flows_into_entries(self):
         from pytanga.viz import Axes2DStyle, AxisStyle, LabelStyle
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
@@ -702,21 +875,51 @@ class TestAxesSerialization:
             a, "ax2", kind="Axes2D",
             properties={
                 "style": Axes2DStyle(
-                    u=AxisStyle(
-                        label_at_major=False,
-                        label_style=LabelStyle(font_size=20, align=(0.5, 0.0)),
-                    ),
-                    v=AxisStyle(label_style=LabelStyle(offset_2d=(3, 4))),
+                    u=AxisStyle(value_style=LabelStyle(font_size=20, align=(0.5, 0.0))),
+                    v=AxisStyle(value_style=LabelStyle(offset_2d=(3, 4))),
                 )
             },
         )
         entries = d["axes"]
         u_entry = entries[0]
         v_entry = entries[1]
-        assert u_entry["labelAtMajor"] is False
-        assert u_entry["style"]["label_style"]["font_size"] == 20
-        assert u_entry["style"]["label_style"]["align"] == [0.5, 0.0]
-        assert v_entry["style"]["label_style"]["offset_2d"] == [3, 4]
+        assert u_entry["showValueLabels"] is True
+        assert u_entry["style"]["value_style"]["font_size"] == 20
+        assert u_entry["style"]["value_style"]["align"] == [0.5, 0.0]
+        assert v_entry["style"]["value_style"]["offset_2d"] == [3, 4]
+
+    def test_axes_value_style_rotation_flows_into_entries(self):
+        from pytanga.viz import Axes2DStyle, AxisStyle, LabelStyle
+
+        a = Axes2D(range_u=(0, 1), range_v=(0, 1))
+        d = serialize_entity(
+            a, "ax2", kind="Axes2D",
+            properties={
+                "style": Axes2DStyle(
+                    u=AxisStyle(value_style=LabelStyle(rotation=30)),
+                    v=AxisStyle(value_style=LabelStyle(rotation=-20)),
+                )
+            },
+        )
+        entries = d["axes"]
+        assert entries[0]["style"]["value_style"]["rotation"] == 30
+        assert entries[1]["style"]["value_style"]["rotation"] == -20
+
+    def test_axes_label_and_value_style_defaults(self):
+        a = Axes2D(range_u=(0, 1), range_v=(0, 1), labels=("X", "Y"))
+        d = serialize_entity(a, "ax2", kind="Axes2D")
+        for e in d["axes"]:
+            assert e["style"]["label_style"]["along"] == 0.5
+            assert e["style"]["label_style"]["align"] == [0.5, 0.0]
+            assert e["style"]["label_style"]["offset_2d"] == [0.0, 10.0]
+            assert e["style"]["value_style"]["font_size"] == 12
+            assert e["style"]["value_style"]["align"] == [0.5, 0.5]
+
+    def test_axes_show_value_labels_passthrough(self):
+        a = Axes2D(range_u=(0, 1), range_v=(0, 1), show_value_labels=False)
+        d = serialize_entity(a, "ax2", kind="Axes2D")
+        for e in d["axes"]:
+            assert e["showValueLabels"] is False
 
 
 class TestGridAxesStyles:
@@ -736,24 +939,28 @@ class TestGridAxesStyles:
         assert s.color is None
         assert s.opacity is None
         assert s.line_thickness is None
-        assert s.label_at_major is None
         assert s.label_style is None
+        assert s.value_style is None
         assert s.to_dict() == {"style_type": "AxisStyle"}
 
     def test_axis_style_label_fields(self):
         from pytanga.viz import AxisStyle, LabelStyle
 
         s = AxisStyle(
-            label_at_major=False,
-            label_style=LabelStyle(font_size=18, align=(0.5, 0.0), offset_2d=(2, -4)),
+            label_style=LabelStyle(along=0.5, align=(0.5, 0.0), offset_2d=(2, -4)),
+            value_style=LabelStyle(font_size=18, align=(0.5, 0.5)),
         )
         d = s.to_dict()
-        assert d["label_at_major"] is False
         assert d["label_style"] == {
             "style_type": "LabelStyle",
-            "font_size": 18,
+            "along": 0.5,
             "align": [0.5, 0.0],
             "offset_2d": [2, -4],
+        }
+        assert d["value_style"] == {
+            "style_type": "LabelStyle",
+            "font_size": 18,
+            "align": [0.5, 0.5],
         }
 
     def test_axes2d_style_defaults(self):
@@ -780,45 +987,45 @@ class TestGridAxesStyles:
         from pytanga.viz import Axes2DStyle, Axes3DStyle, AxisStyle, GridStyle
 
         viz = Visualizer()
-        assert isinstance(viz.default_styles["Grid"], GridStyle)
-        assert isinstance(viz.default_styles["Axis"], AxisStyle)
-        assert isinstance(viz.default_styles["Axes2D"], Axes2DStyle)
-        assert isinstance(viz.default_styles["Axes3D"], Axes3DStyle)
-        assert viz.default_styles["Grid"].color == "#555555"
-        assert viz.default_styles["Grid"].opacity == 0.8
-        assert viz.default_styles["Grid"].line_thickness == 1.0
-        assert viz.default_styles["Axis"].color == "#888888"
-        assert viz.default_styles["Axis"].opacity == 1.0
-        assert viz.default_styles["Axis"].line_thickness == 2.0
+        assert isinstance(viz.styles["Grid"], GridStyle)
+        assert isinstance(viz.styles["Axis"], AxisStyle)
+        assert isinstance(viz.styles["Axes2D"], Axes2DStyle)
+        assert isinstance(viz.styles["Axes3D"], Axes3DStyle)
+        assert viz.styles["Grid"].color == "#555555"
+        assert viz.styles["Grid"].opacity == 0.8
+        assert viz.styles["Grid"].line_thickness == 1.0
+        assert viz.styles["Axis"].color == "#888888"
+        assert viz.styles["Axis"].opacity == 1.0
+        assert viz.styles["Axis"].line_thickness == 2.0
 
     def test_grid_style_via_add(self):
         from pytanga.viz import GridStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Grid(), style=GridStyle(color="#ff0000"))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#ff0000"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#ff0000"
 
     def test_axes_style_via_add(self):
         from pytanga.viz import AxisStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Axis((0, 0, 0), (1, 0, 0)), style=AxisStyle(color="#00ff00"))
-        dirty, _ = viz._scene.flush()
-        assert dirty[0]["color"] == "#00ff00"
+        state = viz._scene.full_state()
+        assert state[0]["color"] == "#00ff00"
 
     def test_grid_style_merge(self):
         from pytanga.viz import GridStyle
 
         viz = Visualizer()
-        viz.default_styles.merge("Grid", GridStyle(color="#00ff00"))
-        assert viz.default_styles["Grid"].color == "#00ff00"
-        assert viz.default_styles["Grid"].opacity == 0.8  # preserved
+        viz.styles.kind.merge("Grid", GridStyle(color="#00ff00"))
+        assert viz.styles["Grid"].color == "#00ff00"
+        assert viz.styles["Grid"].opacity == 0.8  # preserved
 
     def test_grid_set_default_color(self):
         viz = Visualizer()
         viz.set_default_color("grid", "#123456")
-        assert viz.default_styles["Grid"].color == "#123456"
+        assert viz.styles["Grid"].color == "#123456"
 
 
 class TestAxesExpansion:

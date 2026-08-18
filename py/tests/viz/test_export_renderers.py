@@ -76,3 +76,55 @@ def test_bootstrap_defines_every_renderer_function():
             f"Renderer function {func_name} (exported from {rel}) is missing "
             "from the generated HTML export bootstrap."
         )
+
+
+def test_scene_builder_bundled():
+    """The shared scene-builder module must be bundled in the export."""
+    from pytanga.viz.export._bootstrap._html import _SHARED_JS_FILES
+
+    assert _SHARED_JS_FILES, "No shared JS modules configured"
+    for path in _SHARED_JS_FILES:
+        assert path.exists(), f"Shared JS module missing on disk: {path}"
+
+    bootstrap = generate_bootstrap_js("")
+    assert "function buildSceneObject(" in bootstrap
+    assert "function buildOverlay(" in bootstrap
+    assert "function removeObject(" in bootstrap
+
+
+def test_render_export_html_alias_deprecated():
+    """``render_export_html`` is a deprecated alias for ``render_snapshot``."""
+    import pytest
+
+    from pytanga.viz.export._html import render_export_html, render_snapshot
+
+    with pytest.warns(DeprecationWarning):
+        result = render_export_html([], {})
+    assert result == render_snapshot([], {})
+
+
+def test_render_export_figure_alias_deprecated():
+    """``render_export_figure`` is a deprecated alias for ``render_figure``."""
+    import pytest
+
+    from pytanga.viz.export._figure_html import render_export_figure
+
+    with pytest.warns(DeprecationWarning):
+        result = render_export_figure([], {}, {}, {})
+    assert isinstance(result, str)
+    assert "function createEntityMesh(" in result
+    assert "function buildSceneObject(" in result
+
+
+def test_build_gltf_scene_alias_deprecated():
+    """``build_gltf_scene`` is a deprecated alias for ``build_glb``."""
+    import pytest
+
+    from pytanga.viz.export._gltf import build_glb, build_gltf_scene
+
+    class _Config:
+        camera = None
+
+    with pytest.warns(DeprecationWarning):
+        result = build_gltf_scene([], _Config())
+    assert result == build_glb([], _Config())

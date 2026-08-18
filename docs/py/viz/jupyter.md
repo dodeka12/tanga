@@ -7,7 +7,8 @@ for notebook environments.
 
 - `open_browser` defaults to `False` (no popup).
 - `run()` is **not** available — it would block the kernel indefinitely.
-- Use the `start()` / `flush()` / `stop()` non-blocking pattern instead.
+- Use the `start_server()` / `flush()` / `stop_server()` non-blocking pattern
+  instead (or `show()` to also open a browser).
 - When the `Visualizer` object is the last expression in a notebook cell,
   it renders an inline `<iframe>` via the `_repr_html_()` method.
 
@@ -21,7 +22,7 @@ from pytanga.geometry import Point, Sphere, Plane, Direction
 viz = Visualizer(
     camera=CameraConfig3d(fov=45),
 )
-viz.start()
+viz.start_server()
 print(f"Viewer available at {viz.url}")
 ```
 
@@ -51,26 +52,26 @@ viz  # re-render iframe for main scene
 
 ```python
 # Cell 5: Cleanup
-viz.stop()
+viz.stop_server()
 print("Server stopped.")
 ```
 
 ## How It Works
 
-- `start()` launches the aiohttp server in a background daemon thread. The
-  server survives across notebook cells until `stop()` is called.
+- `start_server()` launches the aiohttp server in a background daemon thread.
+  The server survives across notebook cells until `stop_server()` is called.
 - `flush()` pushes scene state to all connected browsers — call it after
   adding or modifying entities.
-- `_repr_html_()` returns an `<iframe>` pointing to `localhost:8765`. Jupyter
+- `_repr_html_()` returns an `<iframe>` pointing to the server URL. Jupyter
   calls this automatically when the `Visualizer` object is the last expression
   in a cell.
-- `stop()` releases the port and terminates the background thread. Always call
-  it when done to free resources.
+- `stop_server()` releases the port and terminates the background thread.
+  Always call it when done to free resources.
 
-## Serverless Display — ``display_static()``
+## Serverless Display — ``display_snapshot()``
 
 For quick static snapshots — **no WebSocket server, no daemon threads** —
-use :meth:`display_static()`.  It generates a self-contained Three.js HTML
+use :meth:`display_snapshot()`.  It generates a self-contained Three.js HTML
 document from the current scene state and renders it inline in Jupyter
 (or opens it in a browser tab outside Jupyter).
 
@@ -80,24 +81,24 @@ viz.add(Point(1, 2, 3), color="#ff4444")
 viz.add(Sphere(0, 0, 0, 2), opacity=0.3)
 
 # In Jupyter — renders inline HTML
-viz.display_static()
+viz.display_snapshot()
 
 # Outside Jupyter — opens a browser tab
-viz.display_static(width=800, height=600)
+viz.display_snapshot(width=800, height=600)
 ```
 
 ### When to Use
 
 | Scenario | Use |
 |----------|-----|
-| Live interaction (rotate, zoom, animate) | ``start()`` + ``flush()`` + ``_repr_html_()`` |
-| Quick static visualization | ``display_static()`` |
-| Export to HTML/PDF (nbconvert) | ``display_static()`` |
-| Progressive figure building | Call ``display_static()`` after each add |
+| Live interaction (rotate, zoom, animate) | ``start_server()`` + ``flush()`` + ``_repr_html_()`` |
+| Quick static visualization | ``display_snapshot()`` |
+| Export to HTML/PDF (nbconvert) | ``display_snapshot()`` |
+| Progressive figure building | Call ``display_snapshot()`` after each add |
 
 Each call snapshots the current scene — entities added later appear in
 subsequent calls but not in earlier ones.  Works independently of
-``start()``/``stop()`` — the live server can be running or not.
+``start_server()``/``stop_server()`` — the live server can be running or not.
 
 ## Multi-Scene Display — ``display_row()``
 
@@ -128,6 +129,13 @@ is passed as ``?viewer=`` URL parameter and can be used with
 :meth:`Visualizer.navigate_to` and :meth:`Visualizer.list_browsers` for
 targeted browser control.
 
+To display **static** (serverless) snapshots side by side, pass
+``mode="static"``:
+
+```python
+viz.display_row((overview, None), (detail, None), mode="static")
+```
+
 ## Scene-Specific Inline Display — ``VizSceneHandle.display()``
 
 :meth:`VizSceneHandle.display` renders a single scene inline with an optional
@@ -152,7 +160,7 @@ detail  # renders inline <iframe> pointing to /detail
   `localhost`, which is the **server machine**, not your local browser. The
   viewer won't be reachable. Open the printed URL in a separate browser tab
   on the machine running the kernel.
-- **Port conflicts:** If port `8765` is in use, pass `port=...` to choose
-  another port.
+- **Port conflicts:** `start_server()` defaults to port 8765; pass `port=...`
+  to choose another, or `port=0` to auto-pick a free port.
 - **Multiple scenes:** Create named scenes via ``viz.scene("name")`` instead
   of multiple ``Visualizer`` instances — all scenes share one server on one port.

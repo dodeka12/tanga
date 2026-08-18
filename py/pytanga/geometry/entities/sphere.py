@@ -52,8 +52,8 @@ class ImagSphere(Sphere):
     """An imaginary sphere in 3D space.
 
     Inherits all fields from :class:`Sphere` with ``is_imaginary=True``.
-    Can be used as a class-based key in :attr:`Visualizer.default_styles`
-    (e.g. ``viz.default_styles[ImagSphere]``).
+    Can be used as a class-based key in :attr:`Visualizer.styles`
+    (e.g. ``viz.styles[ImagSphere]``).
     """
 
     is_imaginary: bool = True

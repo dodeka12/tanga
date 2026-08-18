@@ -10,7 +10,6 @@ from pytanga.viz.export._bootstrap._animation import (  # noqa: F401
     embed_animation_data,
     get_anim_data_js,
     get_anim_decompress_js,
-    js_animated_label_function,
     js_animated_render_loop,
     js_animation_data_init,
     js_animation_state,
@@ -19,9 +18,7 @@ from pytanga.viz.export._bootstrap._animation import (  # noqa: F401
     js_reconcile_frame,
 )
 from pytanga.viz.export._bootstrap._entities import (  # noqa: F401
-    js_entity_creation,
-    js_label_creation,
-    js_label_creation_static,
+    js_scene_build,
 )
 from pytanga.viz.export._bootstrap._errors import js_cdn_check_script  # noqa: F401
 from pytanga.viz.export._bootstrap._html import (  # noqa: F401

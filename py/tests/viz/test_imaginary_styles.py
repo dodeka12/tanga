@@ -288,37 +288,37 @@ class TestVisualizerIntegration:
 
         viz = Visualizer()
         viz.set_default_color("imagcircle", "#ff0000")
-        assert viz.default_styles["ImagCircle"].color == "#ff0000"
+        assert viz.styles["ImagCircle"].color == "#ff0000"
 
     def test_set_default_color_imag_sphere(self):
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
         viz.set_default_color("imagsphere", "#00ff00")
-        assert viz.default_styles["ImagSphere"].color == "#00ff00"
+        assert viz.styles["ImagSphere"].color == "#00ff00"
 
     def test_set_default_color_imag_point_pair(self):
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
         viz.set_default_color("imagpointpair", "#0000ff")
-        assert viz.default_styles["ImagPointPair"].color == "#0000ff"
+        assert viz.styles["ImagPointPair"].color == "#0000ff"
 
     def test_set_default_color_imag_circle_with_alpha(self):
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
         viz.set_default_color("imagcircle", (1.0, 0, 0, 0.5))
-        assert viz.default_styles["ImagCircle"].color == "#ff0000"
-        assert viz.default_styles["ImagCircle"].opacity == 0.5
+        assert viz.styles["ImagCircle"].color == "#ff0000"
+        assert viz.styles["ImagCircle"].opacity == 0.5
 
     def test_default_styles_contains_imag_kinds(self):
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
-        assert "ImagCircle" in viz.default_styles
-        assert "ImagSphere" in viz.default_styles
-        assert "ImagPointPair" in viz.default_styles
+        assert "ImagCircle" in viz.styles.kind
+        assert "ImagSphere" in viz.styles.kind
+        assert "ImagPointPair" in viz.styles.kind
 
     def test_real_and_imag_defaults_independent(self):
         from pytanga.viz import Visualizer
@@ -326,20 +326,20 @@ class TestVisualizerIntegration:
         viz = Visualizer()
         viz.set_default_color("circle", "#111111")
         viz.set_default_color("imagcircle", "#222222")
-        assert viz.default_styles["Circle"].color == "#111111"
-        assert viz.default_styles["ImagCircle"].color == "#222222"
+        assert viz.styles["Circle"].color == "#111111"
+        assert viz.styles["ImagCircle"].color == "#222222"
 
     def test_mutating_real_does_not_affect_imag(self):
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
-        original_imag = viz.default_styles["ImagCircle"].color
-        viz.default_styles["Circle"].color = "#000000"
-        assert viz.default_styles["ImagCircle"].color == original_imag
+        original_imag = viz.styles["ImagCircle"].color
+        viz.styles["Circle"].color = "#000000"
+        assert viz.styles["ImagCircle"].color == original_imag
 
     def test_imag_sphere_wireframe_default(self):
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
-        assert viz.default_styles["ImagSphere"].wireframe is True
-        assert viz.default_styles["ImagSphere"].wireframe is True
+        assert viz.styles["ImagSphere"].wireframe is True
+        assert viz.styles["ImagSphere"].wireframe is True

@@ -34,7 +34,7 @@ from pytanga.geometry import (
     Sphere,
     Translator,
 )
-from pytanga.viz import CameraConfig, SceneExporter, Visualizer
+from pytanga.viz import CameraConfig, Visualizer
 
 _GLTF_MAGIC = 0x46546C67
 
@@ -89,7 +89,7 @@ class TestHtmlExport:
         """export_html() produces a file starting with <!DOCTYPE html>."""
         viz = _make_full_scene()
         path = tmp_path / "scene.html"
-        SceneExporter(viz).export_html(str(path))
+        viz.export_snapshot(str(path))
         content = path.read_text()
         assert content.startswith("<!DOCTYPE html>")
 
@@ -97,7 +97,7 @@ class TestHtmlExport:
         """Exported HTML embeds scene data as JSON."""
         viz = _make_full_scene()
         path = tmp_path / "scene.html"
-        SceneExporter(viz).export_html(str(path))
+        viz.export_snapshot(str(path))
         content = path.read_text()
         assert "tanga-scene-data" in content
         assert "tanga-scene-config" in content
@@ -106,7 +106,7 @@ class TestHtmlExport:
         """Exported HTML contains THREE.js rendering code."""
         viz = _make_full_scene()
         path = tmp_path / "scene.html"
-        SceneExporter(viz).export_html(str(path))
+        viz.export_snapshot(str(path))
         content = path.read_text()
         assert "THREE" in content
         assert "OrbitControls" in content
@@ -115,7 +115,7 @@ class TestHtmlExport:
         """Embedded scene data parses as valid JSON."""
         viz = _make_full_scene()
         path = tmp_path / "scene.html"
-        SceneExporter(viz).export_html(str(path))
+        viz.export_snapshot(str(path))
         content = path.read_text()
 
         # Extract the JSON from the script tag
@@ -136,7 +136,7 @@ class TestHtmlExport:
         """Export of an empty scene produces valid HTML."""
         viz = Visualizer()
         path = tmp_path / "empty.html"
-        SceneExporter(viz).export_html(str(path))
+        viz.export_snapshot(str(path))
         content = path.read_text()
         assert content.startswith("<!DOCTYPE html>")
 
@@ -145,7 +145,7 @@ class TestHtmlExport:
         viz = Visualizer()
         viz.add(Point(1, 2, 3), label="MyLabel")
         path = tmp_path / "labeled.html"
-        SceneExporter(viz).export_html(str(path))
+        viz.export_snapshot(str(path))
         content = path.read_text()
         assert "MyLabel" in content
 
@@ -157,7 +157,7 @@ class TestGltfExport:
         """export_glb() produces a file with correct glTF magic and version."""
         viz = _make_full_scene()
         path = tmp_path / "scene.glb"
-        SceneExporter(viz).export_glb(str(path))
+        viz.export_glb(str(path))
         data = path.read_bytes()
         assert len(data) >= 20
         magic = struct.unpack("<I", data[0:4])[0]
@@ -169,7 +169,7 @@ class TestGltfExport:
         """The JSON chunk in the .glb file must be valid JSON."""
         viz = _make_full_scene()
         path = tmp_path / "scene.glb"
-        SceneExporter(viz).export_glb(str(path))
+        viz.export_glb(str(path))
         data = path.read_bytes()
         # Skip 12-byte header
         json_len = struct.unpack("<I", data[12:16])[0]
@@ -184,7 +184,7 @@ class TestGltfExport:
         """A scene with entities produces glTF meshes."""
         viz = _make_full_scene()
         path = tmp_path / "scene.glb"
-        SceneExporter(viz).export_glb(str(path))
+        viz.export_glb(str(path))
         data = path.read_bytes()
         json_len = struct.unpack("<I", data[12:16])[0]
         json_bytes = data[20 : 20 + json_len]
@@ -197,7 +197,7 @@ class TestGltfExport:
         viz = Visualizer(camera=CameraConfig(position=(10, 6, 12), fov=45))
         viz.add(Point(0, 0, 0))
         path = tmp_path / "camera.glb"
-        SceneExporter(viz).export_glb(str(path))
+        viz.export_glb(str(path))
         data = path.read_bytes()
         json_len = struct.unpack("<I", data[12:16])[0]
         json_bytes = data[20 : 20 + json_len]
@@ -208,7 +208,7 @@ class TestGltfExport:
         """Export of an empty scene produces a valid glTF file with no meshes."""
         viz = Visualizer()
         path = tmp_path / "empty.glb"
-        SceneExporter(viz).export_glb(str(path))
+        viz.export_glb(str(path))
         data = path.read_bytes()
         magic = struct.unpack("<I", data[0:4])[0]
         assert magic == _GLTF_MAGIC
@@ -230,7 +230,7 @@ class TestGltfExport:
         for ent in entities:
             viz.add(ent)
         path = tmp_path / "entities.glb"
-        SceneExporter(viz).export_glb(str(path))
+        viz.export_glb(str(path))
         data = path.read_bytes()
         assert struct.unpack("<I", data[0:4])[0] == _GLTF_MAGIC
 
@@ -258,7 +258,7 @@ class TestGltfExport:
         for op in operators:
             viz.add(op)
         path = tmp_path / "operators.glb"
-        SceneExporter(viz).export_glb(str(path))
+        viz.export_glb(str(path))
         data = path.read_bytes()
         assert struct.unpack("<I", data[0:4])[0] == _GLTF_MAGIC
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Any
 
 from pytanga.geometry.entities import (
     Circle,
@@ -196,7 +197,7 @@ def _compute_label_frame(entity: EntityLike) -> LabelFrame:
 
     # ── ReflectionLine ──
     if isinstance(entity, ReflectionLine):
-        d = (entity.direction.x, entity.direction.y, entity.direction.z)
+        d = (entity.line.direction.x, entity.line.direction.y, entity.line.direction.z)
         x = _normalize(d)
         y = _perpendicular(x)
         z = _cross(x, y)
@@ -276,6 +277,9 @@ def _compute_label_frame(entity: EntityLike) -> LabelFrame:
 def compute_label_position(
     entity: EntityLike,
     offset_local: tuple[float, float, float] | None = None,
+    *,
+    along: Any = None,
+    line_length: float | None = None,
 ) -> tuple[float, float, float]:
     """Return the label anchor position relative to the entity's local origin.
 
@@ -283,19 +287,26 @@ def compute_label_position(
     The CSS2DObject is a child of the entity mesh, so its position is
     relative to the parent's origin.
 
+    The position is the per-entity anchor (``compute_label_anchor``) plus the
+    ``offset_local`` applied in the entity's local frame.
+
     Args:
         entity: The geometry entity the label is attached to.
         offset_local: ``(x, y, z)`` in the entity's local frame, scaled
             by the frame's ``scale``.  ``None`` or ``(0, 0, 0)`` means
-            the label sits exactly at the entity's local origin.
+            the label sits exactly at the entity's natural anchor.
+        along: Raw ``LabelStyle.along`` (scalar / 2-/3-tuple / ``None``).
+        line_length: Resolved line length (used only by Line/ReflectionLine).
     """
+    from ._label_anchor import compute_label_anchor
+
     frame = get_label_frame(entity)
     ox, oy, oz = offset_local or (0.0, 0.0, 0.0)
-    return (
-        (ox * frame.x_axis[0] + oy * frame.y_axis[0] + oz * frame.z_axis[0])
-        * frame.scale,
-        (ox * frame.x_axis[1] + oy * frame.y_axis[1] + oz * frame.z_axis[1])
-        * frame.scale,
-        (ox * frame.x_axis[2] + oy * frame.y_axis[2] + oz * frame.z_axis[2])
-        * frame.scale,
-    )
+    fx, fy, fz = frame.x_axis, frame.y_axis, frame.z_axis
+    s = frame.scale
+    px = (ox * fx[0] + oy * fy[0] + oz * fz[0]) * s
+    py = (ox * fx[1] + oy * fy[1] + oz * fz[1]) * s
+    pz = (ox * fx[2] + oy * fy[2] + oz * fz[2]) * s
+
+    nx, ny, nz = compute_label_anchor(entity, along=along, line_length=line_length)
+    return (px + nx, py + ny, pz + nz)

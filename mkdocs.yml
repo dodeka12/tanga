@@ -125,6 +125,7 @@ nav:
       - Axes & Grid: py/viz/axes-grid.md
       - Style system: py/viz/styles.md
       - Labels: py/viz/labels.md
+      - Scene Graph & Transforms: py/viz/scene-graph.md
       - PointPath: py/viz/point-path.md
       - Title & annotation: py/viz/title-annotation.md
       - Animation: py/viz/animation.md

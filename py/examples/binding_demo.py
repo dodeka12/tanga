@@ -183,7 +183,7 @@ print(f"""
     Free functions (all take DynMV arguments, return a new DynMV)
       gp(a, b)             geometric product
       op(a, b)             outer (wedge) product
-      ip(a, b)             left inner product
+      ip(a, b)             inner product
       inv(a)               multiplicative inverse
       add(a, b)            component-wise addition
       sub(a, b)            component-wise subtraction

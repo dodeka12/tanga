@@ -41,6 +41,8 @@ Label(
 | `offset_local` | `(float, float, float)` | `(0, 0, 0)` | 3D offset in the entity's local frame, scaled by entity size |
 | `offset_2d` | `(float, float)` | `(0, 0)` | 2D screen-space pixel offset after projection |
 | `align` | `(float, float)` | `(0.5, 0.5)` | Alignment: `(0,0)` = top-left, `(1,1)` = bottom-right |
+| `along` | `float \| (float, float) \| (float, float, float)` | `None` | Anchor fraction(s) along the entity's extent; line default `0.5` = midpoint |
+| `rotation` | `float` | `0` | Screen-plane rotation in degrees about the anchor (clockwise) |
 
 ## Label Positioning
 
@@ -67,17 +69,46 @@ After the 3D position is projected to screen space, `offset_2d` shifts the
 label in pixels, and `align` controls how the text box is positioned relative
 to the anchor point.
 
+### Per-entity anchors (`along`)
+
+`along` parameterizes where along an entity's extent the label anchors,
+as a scalar or a 2-/3-tuple of fractions:
+
+| Entity | dim | meaning | default |
+|--------|-----|---------|---------|
+| Line | 1 | fraction along the segment (`0` = origin, `1` = end) | `0.5` (midpoint) |
+| Direction | 1 | fraction along the arrow | `0` |
+| PointPair | 1 | fraction A→B | `0.5` |
+| Plane | 2 | fractions along the two in-plane axes | `(0, 0)` = reference point |
+| Circle | 2 | angle fraction, radius fraction | `(0, 0)` = centre |
+| Sphere | 3 | radius fraction, two angle fractions | `(0, 0, 0)` = centre |
+
+```python
+viz.add(Line.from_points(Point(0, 0, 0), Point(4, 0, 0)), label="mid")   # 0.5
+viz.styles.label_kind["Line"].along = 1.0                              # at the end
+```
+
+### Screen-plane rotation (`rotation`)
+
+`rotation` (degrees, clockwise) rotates the label about its final anchor in
+the screen plane — useful for coordinate-axis tick labels so longer labels
+don't overlap:
+
+```python
+viz.styles.label_kind["Axis"] = LabelStyle(rotation=-45)
+```
+
 ## Default Label Styling
 
 ```python
 from pytanga.geometry import Sphere
 
 # Global default — affects all labels
-viz.default_label_style.offset_local = (0.0, 1.1, 0.0)
-viz.default_label_style.align = (0.5, 1.0)
+viz.styles.label_base.offset_local = (0.0, 1.1, 0.0)
+viz.styles.label_base.align = (0.5, 1.0)
 
 # Per-kind override — only for Sphere labels
-viz.default_label_styles["Sphere"] = LabelStyle(offset_local=(0.0, 1.05, 0.0))
+viz.styles.label_kind["Sphere"] = LabelStyle(offset_local=(0.0, 1.05, 0.0))
 ```
 
 Priority: user's `label_style` > per-kind default > global default.

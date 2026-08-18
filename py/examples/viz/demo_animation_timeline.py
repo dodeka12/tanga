@@ -10,7 +10,7 @@ from pytanga.geometry import Direction, Plane, Point, Sphere
 from pytanga.viz import Visualizer
 
 viz = Visualizer(title="Tanga — Keyframe Timeline")
-viz.start()
+viz.show()
 
 p1 = viz.add(Point(0, 0, 0), color="#ff4444", opacity=0.0, label="$P_1$")
 p2 = viz.add(Point(5, 0, 0), color="#44ff44", opacity=0.0, label="$P_2$")
@@ -40,4 +40,4 @@ viz.timeline().wait(0.5).animate_to(p1, opacity=1.0, duration=0.3).animate_to(
 
 viz.sleep_ms(7000)
 print("Timeline complete.")
-viz.stop()
+viz.stop_server()

@@ -65,107 +65,83 @@ def serialize_entity(
         kind: The kind string (``type(entity).__name__``).  When ``None`` it
             is auto-detected from ``entity``.  Passing the pre-computed kind
             from ``SceneObject`` avoids duplicating type checks.
-        styles_map: Per-kind style dict from Visualizer.default_styles.
+        styles_map: Per-kind style dict from ``VizStyles.kind`` (a scene's styles).
 
     Returns:
         A flat dict suitable for ``json.dumps()``.
     """
     props = dict(properties) if properties else {}
-    result: Dict[str, Any] = {"id": entity_id, "layer": "scene"}
-
     if kind is None:
         kind = type(entity).__name__
 
+    result: Dict[str, Any] = {"id": entity_id, "layer": "scene"}
+    result.update(_dispatch_entity(entity, kind, props, styles_map))
+    return result
+
+
+def _dispatch_entity(
+    entity: Any,
+    kind: str,
+    props: Dict[str, Any],
+    styles_map: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Route an entity/operator to its per-kind leaf serializer.
+
+    Returns the flat geometry + style fields (no ``id``/``layer``).  Shared by
+    :func:`serialize_entity` (backward-compat trampoline) and the scene-graph
+    node serializers in ``_nodes.py``.
+    """
     # ── Entities ──
     if isinstance(entity, PointPath):
-        result.update(
-            _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Axes2D):
-        result.update(
-            _serialize_axes2d(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Axes3D):
-        result.update(
-            _serialize_axes3d(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Axis):
-        result.update(
-            _serialize_axis(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Grid):
-        result.update(
-            _serialize_grid(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Point):
-        result.update(_serialize_point(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Direction):
-        result.update(
-            _serialize_direction(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, HPoint):
-        result.update(
-            _serialize_hpoint(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, PointPair):
-        result.update(
-            _serialize_point_pair(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Line):
-        result.update(_serialize_line(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Plane):
-        result.update(_serialize_plane(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Circle):
-        result.update(
-            _serialize_circle(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Sphere):
-        result.update(
-            _serialize_sphere(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Space):
-        result.update(_serialize_space(entity, props, kind=kind, styles_map=styles_map))
+        return _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Axes2D):
+        return _serialize_axes2d(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Axes3D):
+        return _serialize_axes3d(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Axis):
+        return _serialize_axis(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Grid):
+        return _serialize_grid(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Point):
+        return _serialize_point(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Direction):
+        return _serialize_direction(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, HPoint):
+        return _serialize_hpoint(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PointPair):
+        return _serialize_point_pair(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Line):
+        return _serialize_line(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Plane):
+        return _serialize_plane(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Circle):
+        return _serialize_circle(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Sphere):
+        return _serialize_sphere(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Space):
+        return _serialize_space(entity, props, kind=kind, styles_map=styles_map)
 
     # ── Operators ──
-    elif isinstance(entity, ReflectionLine):
-        result.update(
-            _serialize_reflection_line(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, ReflectionPlane):
-        result.update(
-            _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, ReflectionPoint):
-        result.update(
-            _serialize_reflection_origin(
-                entity, props, kind=kind, styles_map=styles_map
-            )
-        )
-    elif isinstance(entity, Inversion):
-        result.update(
-            _serialize_inversion(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Rotor):
-        result.update(_serialize_rotor(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, Translator):
-        result.update(
-            _serialize_translator(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Dilator):
-        result.update(
-            _serialize_dilator(entity, props, kind=kind, styles_map=styles_map)
-        )
-    elif isinstance(entity, Motor):
-        result.update(_serialize_motor(entity, props, kind=kind, styles_map=styles_map))
-    elif isinstance(entity, GeneralRotor):
-        result.update(
-            _serialize_general_rotor(entity, props, kind=kind, styles_map=styles_map)
-        )
+    if isinstance(entity, ReflectionLine):
+        return _serialize_reflection_line(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ReflectionPlane):
+        return _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ReflectionPoint):
+        return _serialize_reflection_origin(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Inversion):
+        return _serialize_inversion(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Rotor):
+        return _serialize_rotor(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Translator):
+        return _serialize_translator(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Dilator):
+        return _serialize_dilator(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Motor):
+        return _serialize_motor(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, GeneralRotor):
+        return _serialize_general_rotor(entity, props, kind=kind, styles_map=styles_map)
 
-    else:
-        raise TypeError(f"Unknown entity type: {kind}")
-
-    return result
+    raise TypeError(f"Unknown entity type: {kind}")
 
 
 def serialize_scene_update(
@@ -185,29 +161,20 @@ def serialize_scene_update(
     }
 
 
-def _serialize_label(label: Any, label_id: str) -> dict[str, Any]:
-    """Serialize a :class:`~pytanga.viz._label.Label` to a JSON-ready dict.
+def serialize_object_update(
+    patches: List[Dict[str, Any]],
+    removed: List[str],
+) -> Dict[str, Any]:
+    """Wrap aspect-scoped patches + removals into the ``object_update`` message.
 
-    The ``position`` is already the parent-relative anchor computed from
-    ``compute_label_position()``.  ``offset_local`` is NOT sent to the
-    frontend — it was already applied when computing ``position``.
+    Each patch is ``{"id", "aspect", "value"}`` (see ``VizNode.patch``).
+    ``scene`` is left empty here; the caller sets the scene name.
     """
-    from ._styles import LabelStyle
-
-    style = label.style if label.style is not None else LabelStyle()
-    style_dict = style.to_dict()
-
-    # offset_local is NOT included in the wire format
-    style_dict.pop("offset_local", None)
-
     return {
-        "id": label_id,
-        "layer": "overlay",
-        "kind": "label",
-        "text": label.text,
-        "position": list(label.position),
-        "parentId": label.parent_id,
-        "style": style_dict,
+        "type": "object_update",
+        "scene": "",
+        "patches": list(patches),
+        "removed": list(removed),
     }
 
 
@@ -317,14 +284,12 @@ def _serialize_axis(
         "start": list(ent.start),
         "end": list(ent.end),
         "majorInterval": ent.major_interval,
-        "labelAtMajor": ent.label_at_major,
-        "labelFormat": ent.label_format,
+        "showValueLabels": ent.show_value_labels,
+        "valueFormat": ent.value_format,
         "showTicks": ent.show_ticks,
     }
     if ent.minor_interval is not None:
         result["minorInterval"] = ent.minor_interval
-    if ent.label_size is not None:
-        result["labelSize"] = ent.label_size
     if ent.label is not None:
         result["label"] = ent.label
     if ent.value_start != 0.0:
@@ -358,6 +323,8 @@ def _serialize_axes2d(
         ],
         styles,
         ent.major_interval,
+        ent.show_value_labels,
+        ent.value_format,
     )
     result: Dict[str, Any] = {
         "kind": kind,
@@ -396,6 +363,8 @@ def _serialize_axes3d(
         ],
         styles,
         ent.major_interval,
+        ent.show_value_labels,
+        ent.value_format,
     )
     result: Dict[str, Any] = {
         "kind": kind,
@@ -467,6 +436,8 @@ def _build_axes_entries(
     directions: List[tuple[Any, tuple[float, float], str | None]],
     styles: List[Dict[str, Any]],
     major_interval: float,
+    show_value_labels: bool,
+    value_format: str,
 ) -> List[Dict[str, Any]]:
     """Expand direction extents into axis-half dicts with per-direction styles."""
     axes: List[Dict[str, Any]] = []
@@ -481,6 +452,8 @@ def _build_axes_entries(
                     1.0,
                     style,
                     major_interval,
+                    show_value_labels,
+                    value_format,
                 )
             )
         if lo != 0.0:
@@ -492,6 +465,8 @@ def _build_axes_entries(
                     -1.0,
                     style,
                     major_interval,
+                    show_value_labels,
+                    value_format,
                 )
             )
     return axes
@@ -504,15 +479,16 @@ def _axis_entry(
     value_step: float,
     style: Dict[str, Any],
     major_interval: float,
+    show_value_labels: bool,
+    value_format: str,
 ) -> Dict[str, Any]:
     """Build a single axis-half dict with a flat color/opacity for the shared renderer."""
-    label_at_major = style.get("label_at_major", True)
     entry: Dict[str, Any] = {
         "start": list(origin),
         "end": list(end),
         "majorInterval": major_interval,
-        "labelAtMajor": label_at_major,
-        "labelFormat": ".1f",
+        "showValueLabels": show_value_labels,
+        "valueFormat": value_format,
         "valueStep": value_step,
         "style": style,
     }
@@ -624,6 +600,39 @@ def _serialize_point_pair(
     return result
 
 
+def resolve_line_length(
+    line: Line,
+    *,
+    styles_map: Dict[str, Any] | None = None,
+    props: Dict[str, Any] | None = None,
+) -> float:
+    """Return the effective rendered length of a Line.
+
+    Finite lines use their explicit ``length``; infinite lines (``length`` is
+    ``None``) fall back to a per-call ``style`` override, then the canonical
+    ``LineStyle.length`` default.  Matches the frontend ``resolveLength()``.
+    """
+    if line.length is not None and line.length > 0:
+        return float(line.length)
+
+    props = props or {}
+    style = props.get("style")
+    if style is not None:
+        override = getattr(style, "length", None)
+        if override is not None and override > 0:
+            return float(override)
+
+    if styles_map is not None:
+        from ._styles import _style_for_kind
+
+        canonical = _style_for_kind("Line", styles_map=styles_map)
+        length = getattr(canonical, "length", None)
+        if length is not None:
+            return float(length)
+
+    return 20.0
+
+
 def _serialize_line(
     ent: Line,
     props: Dict[str, Any],
@@ -631,9 +640,10 @@ def _serialize_line(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    builtins = {"thickness": 0.03, "length": 20.0}
-    if ent.length is not None:
-        props["length"] = ent.length
+    builtins = {"thickness": 1.0}
+    # Resolve the length here so the frontend always receives a valid value
+    # (infinite lines use the canonical `LineStyle.length` default).
+    props["length"] = resolve_line_length(ent, styles_map=styles_map, props=props)
     return _apply_defaults(
         props,
         kind,

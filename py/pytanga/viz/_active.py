@@ -252,9 +252,9 @@ class ActPoint(ActSceneObject):
     def _init(self, viz_handle: VizSceneHandle, entity_id: str) -> None:
         """Resolve style from visualizer default, then register handlers."""
         if self._act_style is None:
-            self._resolved_style = viz_handle.default_act_point_style
+            self._resolved_style = viz_handle.styles.act_point
         else:
-            default = viz_handle.default_act_point_style
+            default = viz_handle.styles.act_point
             self._resolved_style = ActPointStyle(
                 hover_emissive=self._act_style.hover_emissive
                 if self._act_style.hover_emissive is not None

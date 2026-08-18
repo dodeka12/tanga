@@ -18,6 +18,8 @@ from uuid import uuid4
 from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraConfig
+from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
+from ._viz_styles import VizStyles, make_styles
 
 # ── Configuration ──────────────────────────────────────────
 
@@ -86,11 +88,19 @@ class Scene:
     on the frontend.
     """
 
-    def __init__(self, config: SceneConfig | None = None, *, name: str = "") -> None:
+    def __init__(
+        self,
+        config: SceneConfig | None = None,
+        *,
+        name: str = "",
+        styles: VizStyles | None = None,
+    ) -> None:
         self.config = config or SceneConfig()
         self.config.name = name
         self.name: str = name
+        self.styles: VizStyles = styles or make_styles()
         self._objects: dict[str, SceneObject] = {}
+        self._nodes: dict[str, VizNode] = {}
         self._order: list[str] = []
         self._removed_ids: list[str] = []
         self._controls: dict[str, Any] = {}
@@ -105,12 +115,121 @@ class Scene:
         *,
         object_id: str | None = None,
     ) -> str:
-        """Add a SceneObject and return its ID."""
+        """Add a SceneObject and return its ID.
+
+        Also builds and stores the corresponding scene-graph node (with a
+        resolved style) in ``_nodes``.
+        """
         oid = object_id or _generate_id()
         obj.id = oid
         self._objects[oid] = obj
         self._order.append(oid)
+        self._nodes[oid] = self._make_node(obj)
         return oid
+
+    # -- Node construction / accessors -----------------------
+
+    def _make_node(self, obj: SceneObject) -> VizNode:
+        """Build the scene-graph node for *obj*, resolving its style."""
+        if obj.layer == "overlay":
+            return self._make_overlay_node(obj)
+        return self._make_scene_node(obj)
+
+    def _make_scene_node(self, obj: SceneObject) -> VizSceneObject:
+        """Build a scene-layer node with a resolved style (canonical + user)."""
+        from ._styles import _style_to_output
+
+        props = obj.properties or {}
+        kind = obj.kind
+        merged = _style_to_output(
+            props.get("style"), kind, styles_map=self.styles.kind
+        )
+        if props.get("color") is not None:
+            merged["color"] = props["color"]
+        if props.get("opacity") is not None:
+            merged["opacity"] = props["opacity"]
+        return VizSceneObject(
+            obj.id,
+            obj.data,
+            merged,
+            name=obj.kind,
+            kind=kind,
+            props=props,
+            styles_map=self.styles.kind,
+        )
+
+    def _make_overlay_node(self, obj: SceneObject) -> VizOverlayObject:
+        """Build an overlay-layer node from a label/annotation/title object."""
+        if obj.kind == "label":
+            label = obj.data
+            return VizOverlayObject(
+                obj.id,
+                kind="label",
+                style=getattr(label, "style", None) or self.styles.label_base,
+                position=getattr(label, "position", (0.0, 0.0, 0.0)),
+                attach_to=getattr(label, "parent_id", None),
+                payload=getattr(label, "text", None),
+            )
+        data = obj.data if isinstance(obj.data, dict) else {}
+        return VizOverlayObject(
+            obj.id,
+            kind=obj.kind,
+            style=data.get("style", {}),
+            payload=data.get("text", ""),
+        )
+
+    def get_node(self, object_id: str) -> VizNode:
+        """Return the scene-graph node for *object_id*."""
+        node = self._nodes.get(object_id)
+        if node is None:
+            raise KeyError(f"Object {object_id!r} not found")
+        return node
+
+    def add_node(self, node: VizNode, *, object_id: str | None = None) -> str:
+        """Register a scene-graph node and return its ID."""
+        oid = object_id or node.id or _generate_id()
+        node.id = oid
+        self._nodes[oid] = node
+        if oid not in self._order:
+            self._order.append(oid)
+        return oid
+
+    def add_group(self, name: str | None = None) -> VizGroup:
+        """Create and register a scene-graph group (``kind == "VizGroup"``)."""
+        gid = _generate_id()
+        group = VizGroup(gid, name=name or "")
+        self._nodes[gid] = group
+        self._order.append(gid)
+        return group
+
+    @property
+    def group_ids(self) -> list[str]:
+        """IDs of all scene-graph groups."""
+        return [oid for oid, node in self._nodes.items() if node.kind == "VizGroup"]
+
+    def _dfs_preorder(self) -> list[VizNode]:
+        """Return all nodes in DFS pre-order (parents before children)."""
+        result: list[VizNode] = []
+        visited: set[str] = set()
+
+        def visit(node: VizSceneObject) -> None:
+            if node.id in visited:
+                return
+            visited.add(node.id)
+            result.append(node)
+            for child in node.children:
+                visit(child)
+
+        for oid in self._order:
+            node = self._nodes.get(oid)
+            if node is None:
+                continue
+            if isinstance(node, VizSceneObject) and node.parent is None:
+                visit(node)
+            elif node.id not in visited:
+                visited.add(node.id)
+                result.append(node)
+        return result
 
     def _get(self, object_id: str) -> SceneObject:
         ent = self._objects.get(object_id)
@@ -159,6 +278,10 @@ class Scene:
         obj.properties.update(properties)
         obj.dirty = True
 
+        node = self._nodes.get(object_id)
+        if isinstance(node, VizSceneObject):
+            node.apply_props(dict(properties))
+
     def update_label(
         self,
         object_id: str,
@@ -166,17 +289,14 @@ class Scene:
         text: str | None = None,
         style: Any | None = None,
     ) -> None:
-        """Update a label's text and/or style without changing its position.
-
-        Args:
-            object_id: The label's scene object ID (returned by ``add()``
-                when passing a ``Label``, or retrievable via scene introspection).
-            text: New label text.  ``None`` leaves unchanged.
-            style: New ``LabelStyle`` instance.  ``None`` leaves unchanged.
-        """
+        """Update a label's text and/or style (and position when the anchor changes)."""
         obj = self._get(object_id)
+        node = self._nodes.get(object_id)
+
         if text is not None:
             obj.data.text = text
+
+        new_position: tuple[float, float, float] | None = None
         if style is not None:
             if obj.data.style is None:
                 obj.data.style = style
@@ -184,16 +304,49 @@ class Scene:
                 for field_name, value in style.__dict__.items():
                     if value is not None:
                         setattr(obj.data.style, field_name, value)
-            # If offset_local changed, recompute the label position
-            if style.offset_local is not None and obj.data.parent_id is not None:
+            # If the anchor offset or the along parameter changed, recompute
+            # the label position.
+            if (
+                style.offset_local is not None or style.along is not None
+            ) and obj.data.parent_id is not None:
                 parent_obj = self._objects.get(obj.data.parent_id)
                 if parent_obj is not None and parent_obj.layer == "scene":
                     from ._label_frame import compute_label_position
+                    from .serializer import resolve_line_length
 
-                    obj.data.position = compute_label_position(
-                        parent_obj.data, style.offset_local
+                    from pytanga.geometry.entities import Line
+                    from pytanga.geometry.operators import ReflectionLine
+
+                    merged = obj.data.style
+                    parent_entity = parent_obj.data
+                    line_length = None
+                    if isinstance(parent_entity, Line):
+                        line_length = resolve_line_length(
+                            parent_entity, styles_map=self.styles.kind
+                        )
+                    elif isinstance(parent_entity, ReflectionLine):
+                        line_length = resolve_line_length(
+                            parent_entity.line, styles_map=self.styles.kind
+                        )
+
+                    new_position = compute_label_position(
+                        parent_entity,
+                        merged.offset_local,
+                        along=merged.along,
+                        line_length=line_length,
                     )
+
+        if new_position is not None:
+            obj.data.position = new_position
         obj.dirty = True
+
+        if isinstance(node, VizOverlayObject):
+            if text is not None:
+                node.set_payload(text)
+            if style is not None:
+                node.set_style(style)
+            if new_position is not None:
+                node.set_position(new_position)
 
     def update_entity(self, entity_id: str, entity: GeoEntity) -> None:
         """Replace the geometry entity for an existing scene-layer ID."""
@@ -202,16 +355,39 @@ class Scene:
         obj.kind = type(entity).__name__
         obj.dirty = True
 
+        node = self._nodes.get(entity_id)
+        if isinstance(node, VizSceneObject):
+            node.set_entity(entity)
+
     def remove(self, object_id: str) -> None:
-        """Mark an object for removal in the next flush."""
-        if object_id in self._objects:
+        """Mark an object (or group node) for removal in the next flush.
+
+        Removing a group node also removes its whole descendant subtree.
+        """
+        if object_id in self._objects or object_id in self._nodes:
             self._removed_ids.append(object_id)
+        node = self._nodes.get(object_id)
+        if isinstance(node, VizSceneObject):
+            for descendant in self._descendants(node):
+                if descendant.id not in self._removed_ids:
+                    self._removed_ids.append(descendant.id)
+                self._interaction_configs.pop(descendant.id, None)
         self._interaction_configs.pop(object_id, None)
 
+    @staticmethod
+    def _descendants(node: VizSceneObject):
+        """Yield *node*'s descendants in DFS pre-order (children first)."""
+        for child in node.children:
+            yield child
+            yield from Scene._descendants(child)
+
     def clear(self) -> None:
-        """Remove all objects."""
+        """Remove all objects and group nodes."""
         for oid in list(self._objects):
             self._removed_ids.append(oid)
+        for oid in list(self._nodes):
+            if oid not in self._removed_ids:
+                self._removed_ids.append(oid)
         self._interaction_configs.clear()
 
     # -- Interaction config management -----------------------
@@ -227,6 +403,9 @@ class Scene:
         obj = self._objects.get(object_id)
         if obj is not None:
             obj.dirty = True
+        node = self._nodes.get(object_id)
+        if node is not None:
+            node.mark("full")
 
     def get_interaction(self, object_id: str) -> Any | None:
         """Get the interaction config for an entity, or ``None``."""
@@ -243,59 +422,56 @@ class Scene:
         *,
         styles_map: dict[str, Any] | None = None,
     ) -> tuple[list[dict[str, Any]], list[str]]:
-        """Return (dirty_object_dicts, removed_ids) and reset tracking.
+        """Return (aspect_patches, removed_ids) and reset dirty tracking.
 
-        ``styles_map`` is the Visualizer's per-kind style dict.
+        Walks the scene-graph nodes in DFS pre-order and collects one
+        aspect-scoped patch per dirty aspect (``full`` / ``style`` /
+        ``transform`` / ``content``).  Nodes use their scene-snapshotted
+        styles by default.
         """
-        dirty: list[dict[str, Any]] = []
+        patches: list[dict[str, Any]] = []
         removed = list(self._removed_ids)
 
         for oid in list(self._removed_ids):
             self._objects.pop(oid, None)
+            self._nodes.pop(oid, None)
             try:
                 self._order.remove(oid)
             except ValueError:
                 pass
         self._removed_ids.clear()
 
-        for oid in self._order:
-            obj = self._objects.get(oid)
-            if obj is None:
+        for node in self._dfs_preorder():
+            dirty_aspects = node.consume_dirty()
+            if not dirty_aspects:
                 continue
-            if obj.dirty:
-                entity_dict = _serialize_object(obj, styles_map=styles_map)
-                _inject_interaction(entity_dict, oid, self._interaction_configs)
-                dirty.append(entity_dict)
-                obj.dirty = False
+            for aspect in ("full", "style", "transform", "content"):
+                if aspect not in dirty_aspects:
+                    continue
+                patch = node.patch(aspect)
+                if aspect == "full" and node.layer == "scene":
+                    _inject_interaction(
+                        patch["value"], node.id, self._interaction_configs
+                    )
+                patches.append(patch)
 
-        return dirty, removed
+        return patches, removed
 
     def full_state(
         self,
         *,
         styles_map: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        """Return all objects serialized (for initial client sync)."""
+        """Return all nodes serialized (for initial client sync / export)."""
         result: list[dict[str, Any]] = []
-        for oid in self._order:
-            obj = self._objects.get(oid)
-            if obj is not None:
-                entity_dict = _serialize_object(obj, styles_map=styles_map)
-                _inject_interaction(entity_dict, oid, self._interaction_configs)
-                result.append(entity_dict)
-        return result
-
-    # -- Backward-compat helpers (used by visualizer.py) ----
-
-    def _serialize_labels(self) -> list[dict[str, Any]]:
-        """Return all labels serialized (for export, backward compat)."""
-        from .serializer import _serialize_label
-
-        result: list[dict[str, Any]] = []
-        for oid in self._order:
-            obj = self._objects.get(oid)
-            if obj is not None and obj.layer == "overlay" and obj.kind == "label":
-                result.append(_serialize_label(obj.data, oid))
+        for node in self._dfs_preorder():
+            if isinstance(node, VizSceneObject):
+                entity_dict = node.serialize(styles_map=styles_map)
+            else:
+                entity_dict = node.serialize()
+            if node.layer == "scene":
+                _inject_interaction(entity_dict, node.id, self._interaction_configs)
+            result.append(entity_dict)
         return result
 
     # -- Label look-up -----------------------------------------
@@ -322,15 +498,15 @@ class Scene:
         """Register a control on the scene (stored separately from scene objects)."""
         self._controls[ctrl.id] = ctrl
 
-    def add_group(self, group: Any) -> None:
-        """Register a control group on the scene."""
+    def add_control_group(self, group: Any) -> None:
+        """Register a control group (UI controls) on the scene."""
         self._groups[group.id] = group
 
     def remove_control(self, cid: str) -> None:
         """Remove a control by ID."""
         self._controls.pop(cid, None)
 
-    def remove_group(self, gid: str) -> None:
+    def remove_control_group(self, gid: str) -> None:
         """Remove a control group by ID."""
         self._groups.pop(gid, None)
 
@@ -358,71 +534,3 @@ def _inject_interaction(
     ic = interaction_configs.get(object_id)
     if ic is not None and getattr(ic, "enabled", False):
         entity_dict["interaction"] = ic.to_dict()
-
-
-# ── Serialization helper ──────────────────────────────────
-
-
-def _serialize_object(
-    obj: SceneObject,
-    *,
-    styles_map: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Serialize a SceneObject to a JSON-ready dict.
-
-    Dispatches on ``obj.layer`` to the appropriate serializer.
-    """
-    from .serializer import _serialize_label, serialize_entity
-
-    if obj.layer == "overlay":
-        if obj.kind == "label":
-            return _serialize_label(obj.data, obj.id)
-        if obj.kind == "annotation":
-            return _serialize_annotation(obj)
-        if obj.kind == "title":
-            return _serialize_title(obj)
-        # Generic overlay (future: sliders, buttons, etc.)
-        return {
-            "id": obj.id,
-            "layer": "overlay",
-            "kind": obj.kind,
-        }
-
-    # scene layer: serialize as entity
-    return serialize_entity(
-        obj.data,
-        obj.id,
-        obj.properties,
-        kind=obj.kind,
-        styles_map=styles_map,
-    )
-
-
-def _serialize_annotation(obj: SceneObject) -> dict[str, Any]:
-    """Serialize an annotation overlay object."""
-    text = obj.data.get("text", "") if isinstance(obj.data, dict) else ""
-    style = obj.data.get("style", {}) if isinstance(obj.data, dict) else {}
-    return {
-        "id": obj.id,
-        "layer": "overlay",
-        "kind": "annotation",
-        "positioning": "fixed",
-        "anchor": "bottom",
-        "text": text,
-        "style": style,
-    }
-
-
-def _serialize_title(obj: SceneObject) -> dict[str, Any]:
-    """Serialize a title overlay object."""
-    text = obj.data.get("text", "") if isinstance(obj.data, dict) else ""
-    style = obj.data.get("style", {}) if isinstance(obj.data, dict) else {}
-    return {
-        "id": obj.id,
-        "layer": "overlay",
-        "kind": "title",
-        "positioning": "fixed",
-        "anchor": "top",
-        "text": text,
-        "style": style,
-    }

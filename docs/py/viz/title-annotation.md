@@ -60,7 +60,7 @@ Controls the panel's visual appearance:
 | `padding` | `str` | `"10px 16px"` | CSS padding |
 | `border_radius` | `str` | `"4px"` | CSS border-radius |
 
-Mutate the global default via `viz.default_annotation_style`.
+Mutate the global default via `viz.styles.annotation`.
 
 ## LaTeX Math
 

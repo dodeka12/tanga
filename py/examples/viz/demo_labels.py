@@ -12,16 +12,24 @@ from pytanga.geometry import Direction, Plane, Point, Sphere
 from pytanga.viz import LabelStyle, PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Labels")
-viz.start()
+viz.show()
 
 # Default label
 viz.add(Point(1, 2, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
+
+# Rotated label — `rotation` (degrees) tilts the label about its anchor.
+viz.add(
+    Point(-2, 2, 0),
+    color="#44aaff",
+    style=PointStyle(size=0.15),
+    label="$R_1$ (45°)",
+    label_style=LabelStyle(rotation=45),
+)
 
 # Custom label style
 origin_id = viz.add(
     Point(0, 0, 0),
     color="#ffff00",
-    size=0.2,
     label="Origin",
     label_style=LabelStyle(
         offset_local=(0.0, 1.1, 0.0),
@@ -35,13 +43,12 @@ origin_id = viz.add(
 viz.add(
     Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)),
     opacity=0.3,
-    label="$\pi$ (z=3)",
+    label="$\\pi$ (z=3)",
 )
 
 # Label on a sphere — positioned above the surface
 viz.add(
     Sphere(Point(0, 0, 0), radius=2.5),
-    wireframe=True,
     opacity=0.4,
     label="$S_1$",
     label_style=LabelStyle(offset_local=(0.0, 1.05, 0.0)),
@@ -57,7 +64,6 @@ viz.add(
     Point(0, 0, 0),
     entity_id=origin_id,
     color="#ffff00",
-    size=0.2,
     label="O",
     label_style=LabelStyle(
         offset_local=(0.0, 1.1, 0.0),
@@ -75,10 +81,9 @@ viz.add(
     Point(0, 0, 0),
     entity_id=origin_id,
     color="#ffff00",
-    size=0.2,
 )
 viz.flush()
 
 print("Close the browser window or press Ctrl+C to exit.")
 viz.sleep_ms(5000)
-viz.stop()
+viz.stop_server()

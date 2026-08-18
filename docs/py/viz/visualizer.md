@@ -8,8 +8,6 @@ The `Visualizer` class is the main entry point for the 3D viewer.
 from pytanga.viz import Visualizer, CameraConfig3d
 
 Visualizer(
-    port=8765,
-    host="localhost",
     open_browser=None,  # auto: False in Jupyter, True otherwise
     reuse_existing=True,
     title="Tanga 3D Viewer",
@@ -24,8 +22,8 @@ Visualizer(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `port` | `int` | `8765` | HTTP + WebSocket server port |
-| `host` | `str` | `"localhost"` | Bind address |
+| `port` | `int \| None` | `None` | *(deprecated)* HTTP + WebSocket server port. Prefer `start_server(port=...)`. |
+| `host` | `str \| None` | `None` | *(deprecated)* Bind address. Prefer `start_server(host=...)`. |
 | `open_browser` | `bool \| None` | auto | Open viewer URL on start |
 | `reuse_existing` | `bool` | `True` | Wait for existing browser tab to reconnect before opening a new one |
 | `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
@@ -129,7 +127,7 @@ add(color=...)               → explicit per-call (highest)
   ↓ if not provided
 style=SphereStyle(color=…)   → user's style fields (non-None)
   ↓ if None in user's style
-default_styles[Sphere]       → canonical default (lowest)
+styles[Sphere]       → canonical default (lowest)
 ```
 
 ## Multi-Scene Support
@@ -191,7 +189,7 @@ API as ``Visualizer``, but all operations affect only the target scene.
 | `display(*, viewer_name, width, height)` | Jupyter inline display with optional viewer identity |
 | `display_static(width, height)` | Serverless static HTML display |
 
-Properties: `name`, `url`, `scene`, `default_styles`, `default_label_style`.
+Properties: `name`, `url`, `scene`, `styles`.
 
 ### Browser Navigation
 
@@ -277,6 +275,7 @@ viz.clear()  # remove all (main scene)
 | `stop()` | Stop the server and clean up. Waits for graceful WebSocket shutdown before stopping the event loop. |
 | `run(*, wait_for_browser=None)` | Start server, open browser, block until Ctrl+C. In Jupyter, ``wait_for_browser`` defaults to ``False``. |
 | `sleep_ms(ms)` | Convenience: `time.sleep(ms / 1000)` |
+| `animate(*, fps=60.0)` | Yield once per animation frame until Ctrl+C (see [Animation](animation.md)). Paces the loop to ``fps``; ``fps=0`` disables pacing. Calls ``stop()`` automatically when the loop ends. |
 | `url` (property) | The HTTP URL of the viewer (`"http://localhost:8765"`) |
 | `scene(name)` | Get or create a named scene, returns :class:`VizSceneHandle` |
 | `scenes` (property) | All scenes keyed by name (``""`` is the main scene) |
@@ -367,14 +366,15 @@ tab receives a unique browser ID and can independently view different scenes.
 Scene state and controls are scoped per-scene — only the scene currently
 being viewed by a tab is pushed to it.
 
-### Blocking Mode (`run()`)
+### Blocking Mode (`show()` + `wait()`)
 
 Simplest for one-shot scripts:
 
 ```python
 viz = Visualizer()
 viz.add(Point(1, 2, 3), color="#ff4444")
-viz.run()  # waits for browser, opens it, blocks until Ctrl+C
+viz.show()  # serve on port 8765 + open a browser tab
+viz.wait()  # blocks until Ctrl+C, then stops the server
 ```
 
 Under WSL, native Windows, or headless environments where automatic browser
@@ -386,30 +386,63 @@ Waiting for browser to connect at http://localhost:8765 ...
 Browser connected.
 ```
 
-### Non-Blocking Mode (`start()` / `flush()` / `stop()`)
+### Non-Blocking Mode (`start_server()` / `flush()` / `stop_server()`)
 
-For animation loops and Jupyter notebooks.  By default, `start()` blocks until
-a browser connects so that entities added afterwards are delivered reliably:
+For animation loops and Jupyter notebooks:
 
 ```python
-viz.start()  # waits for browser, then returns
+viz.start_server()  # serve only (defaults to port 8765)
 point_id = viz.add(Point(3, 0, 0))
 viz.flush()
 
-for _ in range(100):
+for dt in viz.animate(fps=60):   # serves, opens a browser, runs until Ctrl+C
     viz.update_entity(point_id, Point(new_x, new_y, new_z))
     viz.flush()
-    viz.sleep_ms(16)
-
-viz.stop()
 ```
+
+`animate()` stops the server cleanly when the loop ends (e.g. on Ctrl+C).
+
+`start_server(host=..., port=...)` controls where the server binds:
+
+- `port=None` (default) — use the standard Tanga viewer port **8765**, so an
+  already-open browser tab can reconnect after the server restarts.
+- `port=0` — auto-pick a free port.
+- `port > 0` — use that exact port.
+
+`host` defaults to `"localhost"`.  `show()` accepts the same `host`/`port`
+keywords and forwards them to `start_server()` when the server isn't already
+running.
 
 For export-only workflows where no browser is needed:
 
 ```python
-viz.start(wait_for_browser=False)
 # add entities, export HTML/glTF without a live viewer
-exporter = SceneExporter(viz)
-exporter.export_html("scene.html")
-viz.stop()
+viz.export_snapshot("scene.html")
+viz.export_glb("scene.glb")
 ```
+
+### Serving & Lifecycle Summary
+
+| Method | Purpose |
+|--------|---------|
+| `show(host=None, port=None)` | Serve + open a browser tab (forwards host/port to `start_server`) |
+| `wait()` | Block until Ctrl+C, then stop the server |
+| `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
+| `stop_server()` | Stop the server |
+| `open_browser()` | Open/reconnect a browser tab |
+| `animate(fps)` | Serve, open a browser, yield a frame time each loop, stop on exit |
+
+### Deprecated Aliases
+
+| Old | New |
+|-----|-----|
+| `start()` | `start_server()` + `open_browser()` (i.e. `show()`) |
+| `stop()` | `stop_server()` |
+| `run()` | `show()` + `wait()` |
+| `display_static()` | `display_snapshot()` |
+| `export_html()` | `export_snapshot()` |
+| `export_figure_html()` | `export_figure(path=None)` |
+| `open_figure()` | `open_snapshot()` |
+| `export_animated_html()` | `export_snapshot(animation=rec)` |
+| `export_animated_figure()` | `export_figure(animation=rec)` |
+| `SceneExporter` | `viz` / `viz.scene(name)` |
