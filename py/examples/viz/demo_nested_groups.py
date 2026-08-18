@@ -36,7 +36,7 @@ L1 = 2.0  # length of rod 1
 L2 = 1.5  # length of rod 2
 
 viz = Visualizer(title="Tanga — Nested Groups")
-viz.start()
+viz.show()
 
 # ── arm1: pivot at the world origin ─────────────────────────
 arm1 = viz.add_group("arm1")

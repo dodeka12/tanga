@@ -37,7 +37,7 @@ vel_2 = Direction(0.5, -0.5, 0.0)
 # ═══════════════════════════════════════════════════════════════
 
 viz = Visualizer(title="Tanga — Two-Body Gravitational Simulation")
-viz.start()
+viz.show()
 
 # Coordinate axes for reference
 viz.new(

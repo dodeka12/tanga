@@ -7,7 +7,7 @@ Run with:  uv run python py/examples/viz/demo_export_figure.py
 """
 
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import FigureStyle, PointStyle, SceneExporter, SphereStyle, Visualizer
+from pytanga.viz import FigureStyle, PointStyle, SphereStyle, Visualizer
 
 viz = Visualizer(title="Sphere Construction")
 
@@ -18,14 +18,7 @@ viz.new(Point(0, 0, 0), color="#ffff00", style=PointStyle(size=0.15), label="$O$
 # flush() ensures any pending dirty state is resolved before export.
 viz.flush()
 
-exporter = SceneExporter(viz)
-
-# Set a footer caption with LaTeX math
-exporter.figure_config.footer = (
-    "**Figure 1:** A sphere of radius $r = 2.5$ centered at $O = (0,0,0)$."
-)
-
-exporter.export_figure(
+viz.export_figure(
     "sphere_figure.html",
     style=FigureStyle(
         width=800,

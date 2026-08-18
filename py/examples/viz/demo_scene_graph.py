@@ -18,7 +18,7 @@ from pytanga.geometry.operators import Translator
 from pytanga.viz import PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Scene Graph")
-viz.start()
+viz.show()
 
 # ── Compound object: a "spinner" group ──────────────────────
 spinner = viz.add_group("spinner")

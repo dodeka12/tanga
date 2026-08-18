@@ -10,7 +10,7 @@ from pytanga.geometry import Direction, Plane, Point, Sphere
 from pytanga.viz import PointStyle, SceneExporter, SphereStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Screenshot")
-viz.start()
+viz.show()
 
 viz.new(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
 viz.new(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P_2$")
@@ -25,4 +25,4 @@ print("Screenshot saved to figure.png")
 exporter.screenshot("figure_hd.png", width=1920, height=1080)
 print("HD screenshot saved to figure_hd.png")
 
-viz.stop()
+viz.stop_server()

@@ -24,7 +24,7 @@ from pytanga.viz import (
 
 # ── Setup ──────────────────────────────────────────────────
 viz = Visualizer(title="Tanga — PointPath Trail Demo")
-viz.start()
+viz.show()
 
 TRAIL_LENGTH = 150
 

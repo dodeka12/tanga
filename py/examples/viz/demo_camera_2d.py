@@ -72,4 +72,5 @@ viz.new(Point(2, 1, 0), color="#ff4444", opacity=1.0, label="$P_1$")
 viz.new(Point(-1, 2, 0), color="#44ff44", label="$P_2$")
 viz.new(Point(0, -2, 0), color="#4444ff", label="$P_3$")
 
-viz.run()
+viz.show()
+viz.wait()

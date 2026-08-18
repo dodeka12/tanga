@@ -101,4 +101,5 @@ print(f"  MV analyzed to: {result}")
 print(f"  Type: {type(result).__name__}")
 print(f"  Center: {result.center}, Radius: {result.radius}")
 
-viz.run()
+viz.show()
+viz.wait()

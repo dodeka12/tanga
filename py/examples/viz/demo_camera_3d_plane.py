@@ -62,4 +62,5 @@ viz.new(
     opacity=0.3,
 )
 
-viz.run()
+viz.show()
+viz.wait()

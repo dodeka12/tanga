@@ -13,7 +13,7 @@ from pytanga.viz import SphereStyle, TextureLabelStyle, Visualizer
 
 
 def main():
-    viz = Visualizer(port=8765, open_browser=True)
+    viz = Visualizer()
     viz.set_title("Texture Labels on Spheres")
 
     # ── Sphere with plain text label ──
@@ -79,8 +79,9 @@ def main():
         ),
     )
 
-    print("Starting viewer — open your browser to http://localhost:8765")
-    viz.run()
+    print("Starting viewer...")
+    viz.show()
+    viz.wait()
 
 
 if __name__ == "__main__":

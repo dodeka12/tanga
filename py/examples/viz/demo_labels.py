@@ -12,7 +12,7 @@ from pytanga.geometry import Direction, Plane, Point, Sphere
 from pytanga.viz import LabelStyle, PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Labels")
-viz.start()
+viz.show()
 
 # Default label
 viz.add(Point(1, 2, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")
@@ -86,4 +86,4 @@ viz.flush()
 
 print("Close the browser window or press Ctrl+C to exit.")
 viz.sleep_ms(5000)
-viz.stop()
+viz.stop_server()

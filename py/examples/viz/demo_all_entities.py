@@ -72,4 +72,5 @@ viz.new(HPoint(point=Point(-3, -2, 1)), style=PointStyle(size=0.12), label="H")
 viz.new(Space(), opacity=0.08)
 
 print("Scene ready. Close the browser window or press Ctrl+C to exit.")
-viz.run()
+viz.show()
+viz.wait()

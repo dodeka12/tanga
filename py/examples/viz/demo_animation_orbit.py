@@ -12,7 +12,7 @@ from pytanga.geometry import Direction, Line, Point
 from pytanga.viz import PointStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Animated Orbit")
-viz.start()
+viz.show()
 
 # Reference line — z-axis
 viz.new(

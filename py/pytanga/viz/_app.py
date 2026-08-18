@@ -49,8 +49,8 @@ class VisualizerApp:
     def __init__(
         self,
         *,
-        port: int = 8765,
-        host: str = "localhost",
+        port: int | None = None,
+        host: str | None = None,
         open_browser: bool | None = None,
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
@@ -109,7 +109,7 @@ class VisualizerApp:
             Seconds to wait for a browser connection.  Only used when
             ``wait_for_browser=True``.
         """
-        ok = self.viz.start(wait_for_browser=wait_for_browser, timeout=timeout)
+        ok = self.viz.show(wait_for_browser=wait_for_browser)
         if not ok:
             raise RuntimeError(
                 "Server failed to start or no browser connected "
@@ -120,7 +120,7 @@ class VisualizerApp:
         except KeyboardInterrupt:
             pass
         finally:
-            self.viz.stop()
+            self.viz.stop_server()
             try:
                 from rich.console import Console
                 from rich.text import Text

@@ -43,4 +43,5 @@ viz.new(
     label="Dilator (x2)",
 )
 
-viz.run()
+viz.show()
+viz.wait()

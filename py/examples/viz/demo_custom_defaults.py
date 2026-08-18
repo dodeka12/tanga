@@ -39,4 +39,5 @@ viz.new(
     label="amber sphere (default)",
 )
 
-viz.run()
+viz.show()
+viz.wait()

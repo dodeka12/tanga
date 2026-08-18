@@ -87,7 +87,7 @@ async def main() -> None:
     _update_lines(ap.point)
 
     # Start server + open browser
-    if not viz.start(wait_for_browser=True):
+    if not viz.show(wait_for_browser=True):
         print("Failed to connect to browser. Exiting.")
         return
     viz.flush()
@@ -97,7 +97,7 @@ async def main() -> None:
     try:
         await viz.wait_for_shutdown()
     finally:
-        viz.stop()
+        viz.stop_server()
 
 
 if __name__ == "__main__":

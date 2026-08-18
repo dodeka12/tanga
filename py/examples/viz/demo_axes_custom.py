@@ -47,4 +47,5 @@ viz.new(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-3, 3))
 
 viz.new(Point(3, 2, 0), color="#ffcc00", style=PointStyle(size=0.12), label="P")
 
-viz.run()
+viz.show()
+viz.wait()

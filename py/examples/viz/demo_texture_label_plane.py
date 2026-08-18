@@ -13,7 +13,7 @@ from pytanga.viz import PlaneStyle, TextureLabelStyle, Visualizer
 
 
 def main():
-    viz = Visualizer(port=8766, open_browser=True)
+    viz = Visualizer()
     viz.set_title("Texture Labels on Planes")
 
     # ── Plane with "stretch" align (fills the quad) ──
@@ -98,8 +98,9 @@ def main():
         ),
     )
 
-    print("Starting viewer — open your browser to http://localhost:8766")
-    viz.run()
+    print("Starting viewer...")
+    viz.show()
+    viz.wait()
 
 
 if __name__ == "__main__":

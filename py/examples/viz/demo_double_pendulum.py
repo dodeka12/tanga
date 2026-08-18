@@ -87,7 +87,7 @@ def _accel(theta1, theta2, omega1, omega2):
 
 
 viz = Visualizer(title="Tanga — Double Pendulum")
-viz.start()
+viz.show()
 
 # ── arm1: pivot at the world origin (the ceiling anchor) ─────
 # Both rods are drawn hanging straight *down* (the −y direction); rotation is
