@@ -445,22 +445,50 @@ class VizSceneHandle(_JupyterDisplayMixin):
         )
         return self.display_snapshot(width=width, height=height)
 
-    def export_snapshot(self, path: Any, *, overwrite: bool = False) -> None:
+    def export_snapshot(
+        self,
+        path: Any,
+        *,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> None:
         """Export this scene as a self-contained HTML file."""
-        self._viz._export_scene_snapshot(self._name, path, overwrite=overwrite)
+        self._viz._export_scene_snapshot(
+            self._name,
+            path,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+        )
 
     def open_snapshot(self) -> None:
         """Open this scene as a standalone snapshot in a browser window."""
         self._viz._open_scene_snapshot(self._name)
 
     def export_figure(
-        self, path: Any = None, *, style: Any = None, overwrite: bool = False
+        self,
+        path: Any = None,
+        *,
+        style: Any = None,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
     ) -> Any:
         """Export this scene as an HTML snippet (or return the string)."""
         return self._viz._export_scene_figure(
-            self._name, path, style=style, overwrite=overwrite
+            self._name,
+            path,
+            style=style,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
         )
 
     def export_glb(self, path: Any, *, overwrite: bool = False) -> None:
         """Export this scene as a glTF 2.0 binary (``.glb``) file."""
         self._viz._export_scene_glb(self._name, path, overwrite=overwrite)
+
+    def start_animation_recording(self) -> Any:
+        """Begin recording entity state for animated export (this scene)."""
+        return self._viz._start_scene_animation_recording(self._name)

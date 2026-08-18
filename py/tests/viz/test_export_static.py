@@ -95,6 +95,41 @@ class TestExportStatic:
         assert "function createEntityMesh(" in snippet
 
 
+class TestAnimatedExport:
+    def test_recording_and_export_snapshot(self, tmp_path):
+        viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(1, 2, 3))
+        rec = viz.start_animation_recording()
+        rec.capture_frame()
+        assert rec.frame_count == 1
+        path = tmp_path / "anim.html"
+        viz.export_snapshot(str(path), animation=rec, overwrite=True)
+        content = path.read_text(encoding="utf-8")
+        assert "tanga-fig-" in content
+
+    def test_export_figure_animation_returns_string(self):
+        viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(1, 2, 3))
+        rec = viz.start_animation_recording()
+        rec.capture_frame()
+        snippet = viz.export_figure(animation=rec)
+        assert isinstance(snippet, str)
+        assert "tanga-fig-" in snippet
+
+    def test_export_animated_html_alias_deprecated(self, tmp_path):
+        import pytest
+
+        viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(Point(1, 2, 3))
+        exporter = pytanga.viz.SceneExporter(viz)
+        rec = exporter.start_animation_recording()
+        rec.capture_frame()
+        path = tmp_path / "anim.html"
+        with pytest.warns(DeprecationWarning):
+            exporter.export_animated_html(str(path), rec, overwrite=True)
+        assert path.exists()
+
+
 class TestCdnUnreachableDetection:
     def test_export_cdn_probe_present(self):
         from pytanga.viz.export._bootstrap._errors import js_cdn_check_script

@@ -1767,10 +1767,27 @@ class Visualizer(_JupyterDisplayMixin):
         ipy_display(HTML(html))
         return None
 
-    def _render_snapshot_html(self, scene_name: str) -> str:
+    def _render_snapshot_html(
+        self,
+        scene_name: str,
+        *,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> str:
+        scene = self._scenes[scene_name]
+        if animation is not None:
+            from pytanga.viz.export._animated_figure import (
+                render_export_animated_html,
+            )
+
+            return render_export_animated_html(
+                animation.to_dict(),
+                scene_config=scene.config.to_dict(),
+                anim_style=anim_style.to_dict() if anim_style is not None else None,
+                title=self._title,
+            )
         from pytanga.viz.export._html import render_snapshot
 
-        scene = self._scenes[scene_name]
         objects = scene.full_state(styles_map=scene.styles.kind)
         return render_snapshot(objects=objects, scene_config=scene.config.to_dict())
 
@@ -1785,11 +1802,19 @@ class Visualizer(_JupyterDisplayMixin):
         webbrowser.open(str(tmp))
 
     def _export_scene_snapshot(
-        self, scene_name: str, path: Any, *, overwrite: bool = False
+        self,
+        scene_name: str,
+        path: Any,
+        *,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
     ) -> None:
         from pathlib import Path
 
-        html = self._render_snapshot_html(scene_name)
+        html = self._render_snapshot_html(
+            scene_name, animation=animation, anim_style=anim_style
+        )
         p = Path(path).expanduser()
         if not p.suffix:
             p = p.with_suffix(".html")
@@ -1799,25 +1824,57 @@ class Visualizer(_JupyterDisplayMixin):
             )
         p.write_text(html, encoding="utf-8")
 
-    def export_snapshot(self, path: Any, *, overwrite: bool = False) -> None:
-        """Export the current scene as a self-contained HTML file."""
-        self._export_scene_snapshot("", path, overwrite=overwrite)
+    def export_snapshot(
+        self,
+        path: Any,
+        *,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> None:
+        """Export the current scene as a self-contained HTML file.
+
+        Pass *animation* (an ``AnimationRecording``) to export an animated
+        snapshot instead of a static one.
+        """
+        self._export_scene_snapshot(
+            "", path, overwrite=overwrite, animation=animation, anim_style=anim_style
+        )
 
     def open_snapshot(self) -> None:
         """Open the current scene as a standalone snapshot in a browser window."""
         self._open_scene_snapshot("")
 
-    def _render_figure_html(self, scene_name: str, *, style: Any = None) -> str:
+    def _render_figure_html(
+        self,
+        scene_name: str,
+        *,
+        style: Any = None,
+        animation: Any = None,
+        anim_style: Any = None,
+    ) -> str:
         from pytanga.viz._figure import FigureConfig
         from pytanga.viz._styles import FigureStyle
-        from pytanga.viz.export._figure_html import render_figure
 
         scene = self._scenes[scene_name]
-        objects = scene.full_state(styles_map=scene.styles.kind)
         resolved = style if style is not None else FigureStyle()
         fig_config = FigureConfig(
             title=self._title, annotation=self._annotation, footer=self._annotation
         )
+        if animation is not None:
+            from pytanga.viz.export._animated_figure import (
+                render_export_animated_figure,
+            )
+
+            return render_export_animated_figure(
+                animation.to_dict(),
+                figure_style=resolved.to_dict(),
+                figure_config=fig_config.to_dict(),
+                anim_style=anim_style.to_dict() if anim_style is not None else None,
+            )
+        from pytanga.viz.export._figure_html import render_figure
+
+        objects = scene.full_state(styles_map=scene.styles.kind)
         return render_figure(
             objects,
             scene.config.to_dict(),
@@ -1832,10 +1889,14 @@ class Visualizer(_JupyterDisplayMixin):
         *,
         style: Any = None,
         overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
     ) -> str | None:
         from pathlib import Path
 
-        html = self._render_figure_html(scene_name, style=style)
+        html = self._render_figure_html(
+            scene_name, style=style, animation=animation, anim_style=anim_style
+        )
         if path is None:
             return html
         p = Path(path).expanduser()
@@ -1849,10 +1910,27 @@ class Visualizer(_JupyterDisplayMixin):
         return None
 
     def export_figure(
-        self, path: Any = None, *, style: Any = None, overwrite: bool = False
+        self,
+        path: Any = None,
+        *,
+        style: Any = None,
+        overwrite: bool = False,
+        animation: Any = None,
+        anim_style: Any = None,
     ) -> str | None:
-        """Export the current scene as an HTML snippet (or return the string)."""
-        return self._export_scene_figure("", path, style=style, overwrite=overwrite)
+        """Export the current scene as an HTML snippet (or return the string).
+
+        Pass *animation* (an ``AnimationRecording``) to export an animated
+        figure instead of a static one.
+        """
+        return self._export_scene_figure(
+            "",
+            path,
+            style=style,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+        )
 
     def _export_scene_glb(
         self, scene_name: str, path: Any, *, overwrite: bool = False
@@ -1877,6 +1955,16 @@ class Visualizer(_JupyterDisplayMixin):
     def export_glb(self, path: Any, *, overwrite: bool = False) -> None:
         """Export the current scene as a glTF 2.0 binary (``.glb``) file."""
         self._export_scene_glb("", path, overwrite=overwrite)
+
+    def _start_scene_animation_recording(self, scene_name: str) -> Any:
+        from pytanga.viz.export._animation_recording import AnimationRecording
+
+        scene = self._scenes[scene_name]
+        return AnimationRecording(scene, styles_map=scene.styles.kind)
+
+    def start_animation_recording(self) -> Any:
+        """Begin recording entity state for animated export (main scene)."""
+        return self._start_scene_animation_recording("")
 
     def display_snapshot(
         self,

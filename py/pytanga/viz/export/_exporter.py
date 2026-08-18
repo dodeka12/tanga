@@ -458,69 +458,23 @@ class SceneExporter:
         anim_style: _AS | None = None,
         overwrite: bool = False,
     ) -> None:
-        """Export a recorded animation as an HTML snippet for embedding.
+        """Deprecated: use :meth:`Visualizer.export_figure` with ``animation=``."""
+        import warnings
 
-        The resulting file is a ``<div>`` + ``<script type="module">``
-        block — no ``<html>``, no ``<head>``, no global style resets.
-        Paste it directly into a reveal.js, Slidev, or Marp slide.
-
-        This is the animated equivalent of ``export_figure()``.
-
-        Args:
-            path: Output file path (e.g. ``"animation.html"``).
-            recording: The ``AnimationRecording`` from
-                ``start_animation_recording()``.
-            style: Optional ``FigureStyle``.
-            anim_style: Optional ``AnimStyle`` (fps, loop, show_controls,
-                compress).  Non-``None`` fields are merged over the
-                exporter's ``_default_anim_style``.
-            overwrite: If ``False``, raise on existing file.
-        """
-        from pytanga.viz.export._animated_figure import (
-            render_export_animated_figure,
+        warnings.warn(
+            "export_animated_figure() is deprecated; use "
+            "export_figure(..., animation=recording)",
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        path = self._resolve_export_path(path, ".html")
-        if not overwrite and path.exists():
-            raise FileExistsError(
-                f"File {path} already exists. Use overwrite=True to replace it."
-            )
-
-        if recording.frame_count == 0:
-            raise ValueError(
-                "Recording is empty. Call recording.capture_frame() at "
-                "least once before exporting."
-            )
-
-        # Resolve figure style
-        if style is not None:
-            resolved_style = _FS()
-            for fld_name, fld_val in self._default_figure_style.__dict__.items():
-                setattr(resolved_style, fld_name, fld_val)
-            for fld_name, fld_val in style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved_style, fld_name, fld_val)
-        else:
-            resolved_style = self._default_figure_style
-
-        # Resolve anim style
-        if anim_style is not None:
-            resolved_anim = _AS()
-            for fld_name, fld_val in self._default_anim_style.__dict__.items():
-                setattr(resolved_anim, fld_name, fld_val)
-            for fld_name, fld_val in anim_style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved_anim, fld_name, fld_val)
-        else:
-            resolved_anim = self._default_anim_style
-
-        html = render_export_animated_figure(
-            recording.to_dict(),
-            figure_style=resolved_style.to_dict(),
-            figure_config=self.figure_config.to_dict(),
-            anim_style=resolved_anim.to_dict(),
+        self._viz._export_scene_figure(
+            "",
+            path,
+            style=style,
+            overwrite=overwrite,
+            animation=recording,
+            anim_style=anim_style,
         )
-        path.write_text(html, encoding="utf-8")
 
     def export_animated_html(
         self,
@@ -530,54 +484,19 @@ class SceneExporter:
         anim_style: _AS | None = None,
         overwrite: bool = False,
     ) -> None:
-        """Export a recorded animation as a standalone full-page HTML document.
+        """Deprecated: use :meth:`Visualizer.export_snapshot` with ``animation=``."""
+        import warnings
 
-        The resulting file is a complete HTML document (``<!DOCTYPE html>``,
-        ``<html>``, ``<head>``, ``<body>``) — double-click to open in any
-        browser.  The Three.js canvas fills the entire viewport.
-
-        This is the animated equivalent of ``export_html()``.
-
-        Args:
-            path: Output file path (e.g. ``"animation.html"``).
-            recording: The ``AnimationRecording`` from
-                ``start_animation_recording()``.
-            anim_style: Optional ``AnimStyle`` (fps, loop, show_controls,
-                compress).  Non-``None`` fields are merged over the
-                exporter's ``_default_anim_style``.
-            overwrite: If ``False``, raise on existing file.
-        """
-        from pytanga.viz.export._animated_figure import (
-            render_export_animated_html,
+        warnings.warn(
+            "export_animated_html() is deprecated; use "
+            "export_snapshot(..., animation=recording)",
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        path = self._resolve_export_path(path, ".html")
-        if not overwrite and path.exists():
-            raise FileExistsError(
-                f"File {path} already exists. Use overwrite=True to replace it."
-            )
-
-        if recording.frame_count == 0:
-            raise ValueError(
-                "Recording is empty. Call recording.capture_frame() at "
-                "least once before exporting."
-            )
-
-        # Resolve anim style
-        if anim_style is not None:
-            resolved_anim = _AS()
-            for fld_name, fld_val in self._default_anim_style.__dict__.items():
-                setattr(resolved_anim, fld_name, fld_val)
-            for fld_name, fld_val in anim_style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved_anim, fld_name, fld_val)
-        else:
-            resolved_anim = self._default_anim_style
-
-        html = render_export_animated_html(
-            recording.to_dict(),
-            scene_config=self._viz._config.to_dict(),
-            anim_style=resolved_anim.to_dict(),
-            title=self._viz._title,
+        self._viz._export_scene_snapshot(
+            "",
+            path,
+            overwrite=overwrite,
+            animation=recording,
+            anim_style=anim_style,
         )
-        path.write_text(html, encoding="utf-8")
