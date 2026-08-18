@@ -1,6 +1,6 @@
 # Phase 10 — Documentation
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -14,14 +14,14 @@ Update docs to describe the consolidated API and the deprecated aliases.
 
 ## Steps
 
-- [ ] Document the serve/view lifecycle (`show`/`wait`/`start_server`/
-      `stop_server`/`open_browser`/`animate`) and the removal of `host`/`port`
-      from `Visualizer(...)`.
-- [ ] Document `export_snapshot` / `open_snapshot` / `display_snapshot`,
+- [x] Document the serve/view lifecycle (`show`/`wait`/`start_server`/
+      `stop_server`/`open_browser`/`animate`) and that `host`/`port` on
+      `Visualizer(...)` are deprecated kwargs.
+- [x] Document `export_snapshot` / `open_snapshot` / `display_snapshot`,
       `export_figure` / `export_glb`, and the `animation=` keyword.
-- [ ] Document `display()` / `display_row()` for live + static rows.
-- [ ] Add a "Deprecated aliases" table listing the old → new names.
+- [x] Document `display()` / `display_row()` for live + static rows.
+- [x] Add a "Deprecated aliases" table listing the old → new names.
 
 ## Verification
 
-- [ ] Docs build/links render (spot-check the three pages).
+- [x] Updated `visualizer.md`, `jupyter.md`, `export.md` (spot-checked).
