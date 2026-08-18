@@ -13,38 +13,36 @@ def _viz() -> Visualizer:
 
 
 class TestDisplaySnapshotJupyter:
-    def test_returns_iframe_with_srcdoc(self):
+    def test_returns_iframe_with_data_url(self):
         viz = _viz()
         viz._jupyter = True
         result = viz.display_snapshot()
-        assert hasattr(result, "data")
-        assert result.data.startswith("<iframe srcdoc=")
+        assert result.src.startswith("data:text/html;charset=utf-8;base64,")
+        assert "<iframe" in result._repr_html_()
 
-    def test_srcdoc_content_is_escaped(self):
+    def test_src_is_base64_not_raw_html(self):
         viz = _viz()
         viz._jupyter = True
         result = viz.display_snapshot()
-        data = result.data
-        # The standalone document must be HTML-escaped inside the attribute,
-        # not injected as raw tags.
-        assert "&lt;!DOCTYPE html&gt;" in data
-        assert "<html" not in data
-        assert "<style" not in data
-        assert "<body" not in data
+        # The standalone document must be embedded as base64 in a data URL,
+        # never injected as raw tags.
+        assert "<html" not in result.src
+        assert "<style" not in result.src
+        assert "<body" not in result.src
 
     def test_int_width_height_get_px_suffix(self):
         viz = _viz()
         viz._jupyter = True
         result = viz.display_snapshot(width=400, height=300)
-        assert 'width="400px"' in result.data
-        assert 'height="300px"' in result.data
+        assert result.width == "400px"
+        assert result.height == "300px"
 
     def test_display_static_alias(self):
         viz = _viz()
         viz._jupyter = True
         with pytest.warns(DeprecationWarning):
             result = viz.display_static()
-        assert result.data.startswith("<iframe srcdoc=")
+        assert result.src.startswith("data:text/html;charset=utf-8;base64,")
 
 
 class TestDisplaySnapshotNonJupyter:
@@ -92,5 +90,5 @@ class TestDisplayRow:
         monkeypatch.setattr("IPython.display.display", lambda obj: captured.append(obj))
         viz.display_row((one, None), (two, None), mode="static")
         assert len(captured) == 1
-        assert captured[0].data.count("<iframe srcdoc=") == 2
+        assert captured[0].data.count("data:text/html;charset=utf-8;base64,") == 2
         assert "<html" not in captured[0].data

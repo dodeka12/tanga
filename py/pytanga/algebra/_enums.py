@@ -14,7 +14,7 @@ class EProduct(StrEnum):
     """
 
     GP = "gp"  # geometric product
-    IP = "ip"  # inner (left‑contraction) product
+    IP = "ip"  # inner product (symmetric)
     OP = "op"  # outer (wedge) product
 
 

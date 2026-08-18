@@ -39,6 +39,12 @@ let _viewerName = (() => {
 })();
 let _availableScenes = [];
 
+// Frontend build hash injected into the served HTML; compared against the
+// value the backend advertises over the WebSocket handshake to detect a
+// stale, cached copy of the viewer.
+const _frontendVersion =
+    (typeof window !== 'undefined' && window.__tanga_frontend_version) || null;
+
 // ── Scene Setup ──────────────────────────────────────────────
 function initScene() {
     window._viewerContainer = document.getElementById('viewer-container');
@@ -389,6 +395,61 @@ function updateStatusIndicator(state, attempts) {
     }
 }
 
+// ── Version Mismatch Banner ───────────────────────────────────
+let _versionBannerEl = null;
+
+function hardReload() {
+    // location.reload(true) is deprecated/ignored; replace with a fresh
+    // cache-busting query param (scene routing is path-based, so this is safe).
+    const url = new URL(window.location.href);
+    url.searchParams.set('t', Date.now().toString());
+    window.location.replace(url.toString());
+}
+
+function showVersionMismatchBanner(serverVersion, clientVersion) {
+    if (_versionBannerEl) return;  // already showing
+
+    const banner = document.createElement('div');
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.zIndex = '100001';
+    banner.style.background = '#cc2222';
+    banner.style.color = '#fff';
+    banner.style.fontFamily = 'sans-serif';
+    banner.style.fontSize = '13px';
+    banner.style.padding = '10px 16px';
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.justifyContent = 'center';
+    banner.style.gap = '12px';
+    banner.style.lineHeight = '1.5';
+
+    const text = document.createElement('span');
+    text.textContent =
+        'The visualizer is out of date — backend expects version ' + serverVersion +
+        ' but this page is running ' + clientVersion + '. Please hard-reload.';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Reload now';
+    btn.style.padding = '4px 12px';
+    btn.style.background = '#fff';
+    btn.style.color = '#cc2222';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '3px';
+    btn.style.cursor = 'pointer';
+    btn.style.fontWeight = 'bold';
+    btn.onclick = hardReload;
+
+    banner.appendChild(text);
+    banner.appendChild(btn);
+    document.body.insertBefore(banner, document.body.firstChild);
+    _versionBannerEl = banner;
+
+    _log('version-mismatch', 'server=' + serverVersion + ' client=' + clientVersion);
+}
+
 // ── Scene Config ─────────────────────────────────────────────
 function applySceneConfig(config) {
     sceneConfig = config;
@@ -579,6 +640,10 @@ async function handleMessage(msg) {
     if (msg.type === 'browser_id') {
         _browserId = msg.browser_id;
         _log('init', 'browser_id=' + msg.browser_id);
+        if (msg.frontend_version && _frontendVersion
+            && msg.frontend_version !== _frontendVersion) {
+            showVersionMismatchBanner(msg.frontend_version, _frontendVersion);
+        }
         return;
     }
     if (msg.type === 'navigate') {

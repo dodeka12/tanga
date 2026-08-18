@@ -5,7 +5,8 @@
 
 import pytest
 from pytanga import BladeMask
-from pytanga.blade_mask.predict import product_blade_mask
+from pytanga.algebra import EProduct
+from pytanga.blade_mask.predict import inverse_blade_mask, product_blade_mask
 
 
 class TestBladeMask:
@@ -100,3 +101,27 @@ class TestBladeMask:
     def test_unknown_product_raises(self, alg_float, mask_A_float):
         with pytest.raises(ValueError):
             product_blade_mask( mask_A_float, mask_A_float, product="xy")
+
+    def test_inverse_blade_mask_ip_both_directions(self, alg_float):
+        # A = e12, C = {e1, e2, e3}.  The symmetric inner product is non-zero
+        # when either blade contains the other, so X can be a sub-blade of A
+        # (e1, e2 from k ⊆ i) or a super-blade of A (e123 from i ⊆ k).
+        a = BladeMask(alg_float, "e12")
+        c = BladeMask(alg_float, "e1 + e2 + e3")
+        out = inverse_blade_mask(a, c, product=EProduct.IP)
+        assert out.ids == [1, 2, 7]  # e1, e2, e123
+
+    def test_inverse_blade_mask_ip_independent_of_left(self, alg_float):
+        a = BladeMask(alg_float, "e12")
+        c = BladeMask(alg_float, "e1 + e2 + e3")
+        left = inverse_blade_mask(a, c, product=EProduct.IP, left=True).ids
+        right = inverse_blade_mask(a, c, product=EProduct.IP, left=False).ids
+        assert left == right == [1, 2, 7]
+
+    def test_inverse_blade_mask_op_independent_of_left(self, alg_float):
+        # X ∧ e1 = e12  →  X = e2, same support as e1 ∧ X = e12
+        a = BladeMask(alg_float, "e1")
+        c = BladeMask(alg_float, "e12")
+        left = inverse_blade_mask(a, c, product=EProduct.OP, left=True).ids
+        right = inverse_blade_mask(a, c, product=EProduct.OP, left=False).ids
+        assert left == right == [2]  # e2

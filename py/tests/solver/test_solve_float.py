@@ -4,6 +4,7 @@
 """Tests for float solve."""
 
 import pytest
+from pytanga.algebra import EProduct
 from pytanga.solver.solve import solve, solve_lsq
 
 
@@ -43,3 +44,21 @@ class TestSolveFloat:
         check = a * x
         check.prune()
         assert list(check.to_dict().values())[0] == pytest.approx(1.0, abs=1e-8)
+
+    def test_solve_ip(self, alg_float):
+        # e12 | X = e1  →  X = e2  (symmetric inner product, k ⊆ i direction)
+        a = alg_float("e12")
+        x = solve(a, alg_float("e1"), product=EProduct.IP)
+        d = x.to_dict()
+        assert set(d) == {"e2"}
+        assert d["e2"] == pytest.approx(1.0)
+
+    def test_solve_non_square_gp_uses_lstsq(self, alg_float):
+        # (e1 + e2) * X = e3  →  1 result blade vs 2 unknown blades
+        a = alg_float("e1 + e2")
+        x = solve(a, alg_float("e3"), product=EProduct.GP)
+        check = a * x
+        check.prune()
+        d = check.to_dict()
+        assert set(d) == {"e3"}
+        assert d["e3"] == pytest.approx(1.0)

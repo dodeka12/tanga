@@ -11,6 +11,7 @@ Supports multiple named scenes reachable at ``/{name}`` paths.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import sys
@@ -26,6 +27,24 @@ from uuid import uuid4
 from aiohttp import web
 
 logger = logging.getLogger("tanga.viz.server")
+
+
+def compute_frontend_version(static_dir: Path) -> str:
+    """Return a stable content hash over the frontend assets.
+
+    The hash covers every file under ``static_dir`` (the live viewer's
+    template directory), keyed by its path relative to ``static_dir`` so that
+    renames are detected as well as content edits.  The backend injects this
+    hash into the served ``viewer.html`` and advertises it over the WebSocket
+    handshake so the browser can detect a stale, cached frontend.
+    """
+    h = hashlib.sha256()
+    for p in sorted(static_dir.rglob("*")):
+        if p.is_file():
+            h.update(str(p.relative_to(static_dir)).encode("utf-8"))
+            h.update(b"\0")
+            h.update(p.read_bytes())
+    return h.hexdigest()[:16]
 
 
 def _ws_msg_brief(payload: Any) -> str:
@@ -68,7 +87,10 @@ def _ws_msg_brief(payload: Any) -> str:
     if t == "scene_list":
         return f"scene_list scenes={obj.get('scenes', [])} ({size}B)"
     if t == "browser_id":
-        return f"browser_id id={obj.get('browser_id', '')!r} ({size}B)"
+        return (
+            f"browser_id id={obj.get('browser_id', '')!r} "
+            f"v={obj.get('frontend_version', '?')} ({size}B)"
+        )
     if t == "ready":
         return (
             f"ready scene={obj.get('scene', '')!r} "
@@ -133,6 +155,7 @@ class VizServer:
         self._host = host
         self._port = port
         self._static_dir = static_dir or Path(__file__).parent / "templates"
+        self._frontend_version = compute_frontend_version(self._static_dir)
         self._app: web.Application | None = None
         self._runner: web.AppRunner | None = None
         self._sites: list[web.TCPSite] = []
@@ -455,7 +478,9 @@ class VizServer:
             file_path = self._static_dir / rel_path
             if file_path.is_file():
                 logger.debug("HTTP GET /%s -> static file -> %s", rel_path, remote_addr)
-                return web.FileResponse(file_path)
+                return web.FileResponse(
+                    file_path, headers={"Cache-Control": "no-cache"}
+                )
             # If the path looks like a static file request (has a file
             # extension, e.g. /favicon.ico), return 404 instead of
             # serving viewer.html — avoids bogus page-load prints.
@@ -478,17 +503,24 @@ class VizServer:
         self._print_page_load(remote_addr, page_token)
 
         html = viewer_path.read_text(encoding="utf-8")
-        token_script = f'<script>window.__tanga_page_token = "{page_token}";</script>'
+        inject = (
+            f'<script>window.__tanga_page_token = "{page_token}";</script>\n'
+            f'<script>window.__tanga_frontend_version = '
+            f'"{self._frontend_version}";</script>'
+        )
         # Inject after <head> or at start of file
         if "</head>" in html:
-            html = html.replace("</head>", f"{token_script}\n</head>")
+            html = html.replace("</head>", f"{inject}\n</head>")
         else:
-            html = token_script + "\n" + html
+            html = inject + "\n" + html
 
         resp = web.StreamResponse(
             status=200,
             reason="OK",
-            headers={"Content-Type": "text/html; charset=utf-8"},
+            headers={
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-cache",
+            },
         )
         resp.content_length = len(html.encode("utf-8"))
         await resp.prepare(request)
@@ -518,7 +550,13 @@ class VizServer:
         heartbeat_task = asyncio.create_task(_heartbeat(ws))
         logger.debug("WS heartbeat started id=%s", browser_id)
 
-        bid_payload = json.dumps({"type": "browser_id", "browser_id": browser_id})
+        bid_payload = json.dumps(
+            {
+                "type": "browser_id",
+                "browser_id": browser_id,
+                "frontend_version": self._frontend_version,
+            }
+        )
         logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(bid_payload))
         await ws.send_str(bid_payload)
 

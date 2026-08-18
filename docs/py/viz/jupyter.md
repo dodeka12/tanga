@@ -160,7 +160,7 @@ detail  # renders inline <iframe> pointing to /detail
   `localhost`, which is the **server machine**, not your local browser. The
   viewer won't be reachable. Open the printed URL in a separate browser tab
   on the machine running the kernel.
-- **Port conflicts:** `start_server()` auto-picks a free port; pass `port=...`
-  to choose one explicitly.
+- **Port conflicts:** `start_server()` defaults to port 8765; pass `port=...`
+  to choose another, or `port=0` to auto-pick a free port.
 - **Multiple scenes:** Create named scenes via ``viz.scene("name")`` instead
   of multiple ``Visualizer`` instances — all scenes share one server on one port.

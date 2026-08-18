@@ -13,7 +13,6 @@ import concurrent.futures
 import json
 import logging
 import signal
-import sys
 import threading
 import time
 import warnings
@@ -25,8 +24,6 @@ if TYPE_CHECKING:
     from ._viz_styles import VizStyles
 
 from pytanga.geometry.entities import Entity as GeoEntity
-
-logger = logging.getLogger("tanga.viz")
 
 from ._jupyter import _JupyterDisplayMixin
 from ._props import _normalize_color
@@ -48,6 +45,15 @@ from .camera import (
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
+
+logger = logging.getLogger("tanga.viz")
+
+
+# Standard HTTP + WebSocket port.  Kept stable (rather than auto-picking a
+# free port each time) so an already-open browser tab can reconnect to a
+# restarted server.  Override via ``start_server(port=...)``; pass ``port=0``
+# to explicitly auto-pick a free port.
+DEFAULT_PORT = 8765
 
 
 def _find_free_port(host: str) -> int:
@@ -128,7 +134,7 @@ class Visualizer(_JupyterDisplayMixin):
                 DeprecationWarning,
                 stacklevel=2,
             )
-        self._port = port if port is not None else 8765
+        self._port = port if port is not None else DEFAULT_PORT
         self._host = host if host is not None else "localhost"
         self._open_browser = open_browser
         self._reuse_existing = reuse_existing
@@ -909,10 +915,17 @@ class Visualizer(_JupyterDisplayMixin):
         host : str
             Bind host (default ``"localhost"``).
         port : int | None
-            Port to serve on.  ``None`` auto-picks a free port.
+            Port to serve on.  ``None`` (default) uses the standard Tanga
+            viewer port (8765) so an already-open browser tab can reconnect
+            across server restarts.  ``0`` auto-picks a free port; a positive
+            integer uses that exact port.
         """
         if port is None:
+            port = DEFAULT_PORT
+        elif port == 0:
             port = _find_free_port(host)
+        elif port < 0:
+            raise ValueError(f"port must be 0 or a positive integer, got {port}")
         self._host = host
         self._port = port
         self._ensure_server_running()
@@ -1324,13 +1337,21 @@ class Visualizer(_JupyterDisplayMixin):
             for name in self._scenes:
                 self._flush_scene(name, fit_camera=fit_camera)
 
-    def show(self, *, wait_for_browser: bool | None = None) -> bool:
+    def show(
+        self,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+        wait_for_browser: bool | None = None,
+    ) -> bool:
         """Serve the visualization and open a browser tab (non-blocking).
 
         Equivalent to :meth:`start_server` followed by :meth:`open_browser`.
+        ``host``/``port`` are only used when the server is not already
+        running; see :meth:`start_server` for their semantics.
         """
         if self._server is None:
-            self.start_server()
+            self.start_server(host=host or "localhost", port=port)
         return self.open_browser(wait_for_browser=wait_for_browser)
 
     def wait(self) -> None:
@@ -1767,18 +1788,19 @@ class Visualizer(_JupyterDisplayMixin):
             gap: Gap between columns in pixels (default 8).
             mode: ``"live"`` or ``"static"``.
         """
-        import html as _html
-
         from IPython.display import HTML
         from IPython.display import display as ipy_display
 
         columns_html: list[str] = []
         for handle, viewer_name in scenes:
             if mode == "static":
+                import base64
+
                 snapshot = handle._viz._render_snapshot_html(handle.name)
-                escaped = _html.escape(snapshot, quote=True)
+                b64 = base64.b64encode(snapshot.encode("utf-8")).decode("ascii")
                 iframe = (
-                    f'<iframe srcdoc="{escaped}" width="100%" height="{height}px" '
+                    f'<iframe src="data:text/html;charset=utf-8;base64,{b64}" '
+                    f'width="100%" height="{height}px" '
                     f'style="border: 1px solid #444; border-radius: 4px;" '
                     f'title="Tanga 3D Viewer — {handle.name}"></iframe>'
                 )
@@ -2013,26 +2035,25 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> Any:
         """Display a scene as standalone HTML (no server required).
 
-        In Jupyter, returns an ``IPython.display.HTML`` iframe with ``srcdoc``.
+        In Jupyter, returns an ``IPython.display.IFrame`` embedding the
+        standalone document via a data URL (no server, no style leakage).
         Outside Jupyter, opens the snapshot in a browser window.
         """
         html = self._render_snapshot_html(scene_name)
 
         if self._jupyter:
-            import html as _html
+            import base64
 
-            from IPython.display import HTML
+            from IPython.display import IFrame
 
             width_css = f"{width}px" if isinstance(width, int) else str(width)
             height_css = f"{height}px" if isinstance(height, int) else str(height)
-            escaped = _html.escape(html, quote=True)
-            iframe = (
-                f'<iframe srcdoc="{escaped}" width="{width_css}" '
-                f'height="{height_css}" '
-                f'style="border: 1px solid #444; border-radius: 4px; '
-                f'max-width: 100%;"></iframe>'
+            b64 = base64.b64encode(html.encode("utf-8")).decode("ascii")
+            return IFrame(
+                src=f"data:text/html;charset=utf-8;base64,{b64}",
+                width=width_css,
+                height=height_css,
             )
-            return HTML(iframe)
 
         self._open_scene_snapshot(scene_name)
         return None

@@ -373,7 +373,7 @@ Simplest for one-shot scripts:
 ```python
 viz = Visualizer()
 viz.add(Point(1, 2, 3), color="#ff4444")
-viz.show()  # serve on a free port + open a browser tab
+viz.show()  # serve on port 8765 + open a browser tab
 viz.wait()  # blocks until Ctrl+C, then stops the server
 ```
 
@@ -391,7 +391,7 @@ Browser connected.
 For animation loops and Jupyter notebooks:
 
 ```python
-viz.start_server()  # serve only (auto-picks a free port)
+viz.start_server()  # serve only (defaults to port 8765)
 point_id = viz.add(Point(3, 0, 0))
 viz.flush()
 
@@ -401,6 +401,17 @@ for dt in viz.animate(fps=60):   # serves, opens a browser, runs until Ctrl+C
 ```
 
 `animate()` stops the server cleanly when the loop ends (e.g. on Ctrl+C).
+
+`start_server(host=..., port=...)` controls where the server binds:
+
+- `port=None` (default) — use the standard Tanga viewer port **8765**, so an
+  already-open browser tab can reconnect after the server restarts.
+- `port=0` — auto-pick a free port.
+- `port > 0` — use that exact port.
+
+`host` defaults to `"localhost"`.  `show()` accepts the same `host`/`port`
+keywords and forwards them to `start_server()` when the server isn't already
+running.
 
 For export-only workflows where no browser is needed:
 
@@ -414,9 +425,9 @@ viz.export_glb("scene.glb")
 
 | Method | Purpose |
 |--------|---------|
-| `show()` | Serve (auto-pick a free port) + open a browser tab |
+| `show(host=None, port=None)` | Serve + open a browser tab (forwards host/port to `start_server`) |
 | `wait()` | Block until Ctrl+C, then stop the server |
-| `start_server(host, port)` | Serve only (no browser) |
+| `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |
 | `open_browser()` | Open/reconnect a browser tab |
 | `animate(fps)` | Serve, open a browser, yield a frame time each loop, stop on exit |

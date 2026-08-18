@@ -20,7 +20,7 @@ from pytanga.viz.camera import (
 )
 from pytanga.viz.scene import Scene, SceneConfig, SceneObject
 from pytanga.viz.serializer import serialize_entity
-from pytanga.viz.visualizer import Visualizer
+from pytanga.viz.visualizer import DEFAULT_PORT, Visualizer
 
 # ── CameraConfig ────────────────────────────────────────────
 
@@ -320,13 +320,31 @@ class TestVisualizer:
         assert viz._port == 9999
         assert viz._host == "127.0.0.1"
 
-    def test_start_server_auto_picks_free_port(self, monkeypatch):
+    def test_start_server_defaults_to_standard_port(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
-        viz.start_server()  # port=None → auto-pick a free port
+        viz.start_server()
+        assert viz._port == DEFAULT_PORT
+        assert viz._host == "localhost"
+
+    def test_start_server_explicit_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz.start_server(port=9000)
+        assert viz._port == 9000
+
+    def test_start_server_zero_auto_picks_free_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        viz.start_server(port=0)  # auto-pick a free port
         assert isinstance(viz._port, int)
         assert viz._port > 0
-        assert viz._host == "localhost"
+
+    def test_start_server_negative_port_raises(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
+        with pytest.raises(ValueError):
+            viz.start_server(port=-1)
 
     def test_start_emits_deprecation_warning(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -353,7 +371,7 @@ class TestVisualizer:
     def test_show_serves_and_opens_browser(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         calls: list[str] = []
-        monkeypatch.setattr(viz, "start_server", lambda: calls.append("start_server"))
+        monkeypatch.setattr(viz, "start_server", lambda **kw: calls.append("start_server"))
         monkeypatch.setattr(
             viz,
             "open_browser",
@@ -362,6 +380,14 @@ class TestVisualizer:
         result = viz.show()
         assert result is True
         assert calls == ["start_server", "open_browser"]
+
+    def test_show_forwards_host_and_port(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        captured: dict[str, object] = {}
+        monkeypatch.setattr(viz, "start_server", lambda **kw: captured.update(kw))
+        monkeypatch.setattr(viz, "open_browser", lambda **kw: True)
+        viz.show(host="127.0.0.1", port=9000)
+        assert captured == {"host": "127.0.0.1", "port": 9000}
 
     def test_run_emits_deprecation_warning(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -680,7 +706,7 @@ class TestStyleDictMerge:
         assert s.opacity is None  # lost, not merged
 
     def test_merge_shallow_replaces_nested(self):
-        from pytanga.viz._styles import DashedWireframe, SphereStyle, TextureLabelStyle
+        from pytanga.viz._styles import SphereStyle, TextureLabelStyle
 
         viz = Visualizer()
         viz.styles.kind.merge(
