@@ -27,17 +27,16 @@ import time
 
 from pytanga.basis import BasisN3
 from pytanga.geometry import Geometry, Point, Sphere
-from pytanga.viz import AnimStyle, FigureStyle, SceneExporter, Visualizer
+from pytanga.viz import AnimStyle, FigureStyle, Visualizer
 
 
 def main() -> None:
     viz = Visualizer(title="Sphere intersection $S_1 \\wedge S_2$", opns=False)
-    exporter = SceneExporter(viz)
     viz.set_annotation(
         "## Hello World\n\nRecording sphere intersection $S_1 \\wedge S_2$."
     )
 
-    viz.start()  # non‑blocking — server runs in background thread
+    viz.show()  # non‑blocking — server runs in background thread
 
     # ── Geometry setup (IPNS) ──────────────────────────────
     b = BasisN3()
@@ -65,7 +64,7 @@ def main() -> None:
     t_start = time.monotonic()
     duration = 5.0  # seconds
 
-    recording = exporter.start_animation_recording()
+    recording = viz.start_animation_recording()
 
     while (time.monotonic() - t_start) < duration:
         elapsed = time.monotonic() - t_start
@@ -92,24 +91,24 @@ def main() -> None:
     print(f"Recorded {recording.frame_count} frames.")
 
     # ── Export ─────────────────────────────────────────────
-    exporter.export_animated_figure(
+    viz.export_figure(
         "_output/anim_figure.html",
-        recording,
+        animation=recording,
         style=FigureStyle(auto_rotate=True, background="transparent"),
         anim_style=AnimStyle(fps=30, loop=True, compress=True),
         overwrite=True,
     )
     print("Exported: _output/anim_figure.html (embeddable snippet)")
 
-    exporter.export_animated_html(
+    viz.export_snapshot(
         "_output/anim_standalone.html",
-        recording,
+        animation=recording,
         anim_style=AnimStyle(fps=30, loop=True, compress=True),
         overwrite=True,
     )
     print("Exported: _output/anim_standalone.html (standalone full-page)")
 
-    viz.stop()
+    viz.stop_server()
     print("Done.")
 
 

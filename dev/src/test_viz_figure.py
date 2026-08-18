@@ -12,7 +12,7 @@ Run with:  uv run python dev/src/test_viz_play.py
 
 from pytanga.basis import BasisN3
 from pytanga.geometry import Geometry, Point, Sphere
-from pytanga.viz import FigureStyle, LabelStyle, SceneExporter, Visualizer
+from pytanga.viz import FigureStyle, LabelStyle, Visualizer
 
 
 def main() -> None:
@@ -77,16 +77,16 @@ There are three spheres $S_1$, $S_2$ and $S_3$.
 """
     viz.set_annotation(annotation)
 
-    viz_ex = SceneExporter(viz)
-    viz_ex.export_figure(
+    viz.export_figure(
         "~/code/present/tanga/figure.html",
         # "_output/figure.html",
         style=FigureStyle(responsive=True, background="transparent", auto_rotate=True),
         overwrite=True,
     )
 
-    viz_ex.open_figure(style=FigureStyle(width=1024, height=768))
-    viz.run()
+    viz.open_snapshot()
+    viz.show()
+    viz.wait()
 
 
 if __name__ == "__main__":

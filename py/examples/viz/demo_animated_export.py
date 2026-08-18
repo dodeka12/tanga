@@ -9,16 +9,15 @@ Run with:  uv run python py/examples/viz/demo_animated_export.py
 import math
 
 from pytanga.geometry import Point
-from pytanga.viz import AnimStyle, SceneExporter, Visualizer
+from pytanga.viz import AnimStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Animated Export")
-viz.start()
+viz.show()
 
 point = viz.new(Point(3, 0, 0), color="#ff4444", label="orbit")
 viz.flush()
 
-exporter = SceneExporter(viz)
-recording = exporter.start_animation_recording()
+recording = viz.start_animation_recording()
 
 for frame in range(90):
     angle = frame * 0.07
@@ -27,12 +26,12 @@ for frame in range(90):
     recording.capture_frame()
     viz.sleep_ms(33)
 
-exporter.export_animated_html(
+viz.export_snapshot(
     "animated_orbit.html",
-    recording,
     overwrite=True,
+    animation=recording,
     anim_style=AnimStyle(fps=30, loop=True, compress=True),
 )
 
 print("Exported to animated_orbit.html — open it in any browser.")
-viz.stop()
+viz.stop_server()

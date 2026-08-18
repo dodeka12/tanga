@@ -70,7 +70,7 @@ class TestExportStatic:
             label_style=pytanga.viz.LabelStyle(rotation=45),
         )
         path = tmp_path / "rotated.html"
-        pytanga.viz.SceneExporter(viz).export_snapshot(str(path), overwrite=True)
+        viz.export_snapshot(str(path), overwrite=True)
         content = path.read_text(encoding="utf-8")
         assert '"rotation": 45' in content
         assert "rotate(${rotation}deg)" in content
@@ -79,7 +79,7 @@ class TestExportStatic:
     def test_export_figure_returns_string_when_no_path(self):
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
-        snippet = pytanga.viz.SceneExporter(viz).export_figure()
+        snippet = viz.export_figure()
         assert isinstance(snippet, str)
         assert "function createEntityMesh(" in snippet
 
