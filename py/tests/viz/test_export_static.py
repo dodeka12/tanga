@@ -8,7 +8,7 @@ from pathlib import Path
 import pytanga.viz
 from pytanga.geometry.entities import Point
 from pytanga.viz.export._figure_html import render_export_figure
-from pytanga.viz.export._html import render_export_html
+from pytanga.viz.export._html import render_snapshot
 from pytanga.viz.scene import Scene
 
 
@@ -37,7 +37,7 @@ class TestExportStatic:
 
     def test_static_render_html(self):
         s = _group_scene()
-        html = render_export_html(s.full_state(), s.config.to_dict())
+        html = render_snapshot(s.full_state(), s.config.to_dict())
         assert "function createEntityMesh(" in html
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html

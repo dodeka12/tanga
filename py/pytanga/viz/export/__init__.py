@@ -11,6 +11,6 @@ Usage::
 """
 
 from ._gltf import build_gltf_scene
-from ._html import render_export_html
+from ._html import render_export_html, render_snapshot
 
-__all__ = ["build_gltf_scene", "render_export_html"]
+__all__ = ["build_gltf_scene", "render_export_html", "render_snapshot"]

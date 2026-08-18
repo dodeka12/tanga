@@ -33,7 +33,7 @@ from pytanga.viz.export._bootstrap._html import (
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
-def render_export_html(
+def render_snapshot(
     objects: list[dict[str, Any]],
     scene_config: dict[str, Any],
 ) -> str:
@@ -55,6 +55,21 @@ def render_export_html(
         .replace("__SCENE_CONFIG_JSON__", config_json)
         .replace("__BOOTSTRAP_JS__", bootstrap)
     )
+
+
+def render_export_html(
+    objects: list[dict[str, Any]],
+    scene_config: dict[str, Any],
+) -> str:
+    """Deprecated: use :func:`render_snapshot`."""
+    import warnings
+
+    warnings.warn(
+        "render_export_html() is deprecated; use render_snapshot()",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return render_snapshot(objects, scene_config)
 
 
 # ── Bootstrap adapter (composed from shared JS generators) ──

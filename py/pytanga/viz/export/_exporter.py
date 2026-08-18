@@ -93,7 +93,7 @@ class SceneExporter:
 
     # ── HTML / glTF ────────────────────────────────────────────
 
-    def export_html(self, path: str | Path, *, overwrite: bool = False) -> None:
+    def export_snapshot(self, path: str | Path, *, overwrite: bool = False) -> None:
         """Export the current scene as a self-contained HTML file.
 
         The resulting file can be opened by double-clicking — no Python
@@ -112,11 +112,22 @@ class SceneExporter:
                 f"File {path} already exists. Use overwrite=True to replace it."
             )
 
-        from pytanga.viz.export import render_export_html  # noqa: PLC0415
+        from pytanga.viz.export._html import render_snapshot  # noqa: PLC0415
 
         objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
-        html = render_export_html(objects, self._viz._config.to_dict())
+        html = render_snapshot(objects, self._viz._config.to_dict())
         path.write_text(html, encoding="utf-8")
+
+    def export_html(self, path: str | Path, *, overwrite: bool = False) -> None:
+        """Deprecated: use :meth:`export_snapshot`."""
+        import warnings
+
+        warnings.warn(
+            "export_html() is deprecated; use export_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.export_snapshot(path, overwrite=overwrite)
 
     def export_glb(self, path: str | Path, *, overwrite: bool = False) -> None:
         """Export the current scene as a glTF 2.0 binary (``.glb``) file.
@@ -214,59 +225,37 @@ class SceneExporter:
             fig_config.to_dict(),
         )
 
-    def open_figure(
-        self,
-        *,
-        style: _FS | None = None,
-    ) -> None:
-        """Open a standalone browser window sized to the figure dimensions.
+    def open_snapshot(self) -> None:
+        """Open the current scene as a standalone snapshot in a browser window.
 
-        The window shows only the 3D figure — no browser chrome.
-
-        Args:
-            style: Optional ``FigureStyle``.  Non-``None`` fields override
-                ``default_figure_style``.
+        Writes the self-contained HTML to a temporary file and opens it.
         """
         import tempfile as _tempfile
         import webbrowser as _webbrowser
 
-        if style is not None:
-            resolved = _FS()
-            for fld_name, fld_val in self._default_figure_style.__dict__.items():
-                setattr(resolved, fld_name, fld_val)
-            for fld_name, fld_val in style.__dict__.items():
-                if fld_val is not None:
-                    setattr(resolved, fld_name, fld_val)
-        else:
-            resolved = self._default_figure_style
+        from pytanga.viz.export._html import render_snapshot  # noqa: PLC0415
 
-        snippet = self.export_figure_html(style=style)
-
-        # Wrap in a minimal full HTML page for standalone viewing
-        full_html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{self._viz._title}</title>
-<style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ display: flex; justify-content: center; align-items: center;
-         min-height: 100vh; background: #111; }}
-</style>
-</head>
-<body>
-  {snippet}
-</body>
-</html>"""
+        objects = self._viz._scene.full_state(styles_map=self._viz.styles.kind)
+        html = render_snapshot(objects, self._viz._config.to_dict())
 
         with _tempfile.NamedTemporaryFile(
             suffix=".html", delete=False, mode="w", encoding="utf-8"
         ) as f:
-            f.write(full_html)
+            f.write(html)
             tmp_path = f.name
 
         _webbrowser.open(f"file://{tmp_path}")
+
+    def open_figure(self, *, style: _FS | None = None) -> None:
+        """Deprecated: use :meth:`open_snapshot`."""
+        import warnings
+
+        warnings.warn(
+            "open_figure() is deprecated; use open_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.open_snapshot()
 
     # ── Screenshot & frame capture ───────────────────────
 

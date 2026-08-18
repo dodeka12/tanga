@@ -1767,7 +1767,47 @@ class Visualizer(_JupyterDisplayMixin):
         ipy_display(HTML(html))
         return None
 
-    def display_static(
+    def _render_snapshot_html(self, scene_name: str) -> str:
+        from pytanga.viz.export._html import render_snapshot
+
+        scene = self._scenes[scene_name]
+        objects = scene.full_state(styles_map=scene.styles.kind)
+        return render_snapshot(objects=objects, scene_config=scene.config.to_dict())
+
+    def _open_scene_snapshot(self, scene_name: str) -> None:
+        import tempfile
+        import webbrowser
+        from pathlib import Path
+
+        html = self._render_snapshot_html(scene_name)
+        tmp = Path(tempfile.mktemp(suffix=".html"))
+        tmp.write_text(html, encoding="utf-8")
+        webbrowser.open(str(tmp))
+
+    def _export_scene_snapshot(
+        self, scene_name: str, path: Any, *, overwrite: bool = False
+    ) -> None:
+        from pathlib import Path
+
+        html = self._render_snapshot_html(scene_name)
+        p = Path(path).expanduser()
+        if not p.suffix:
+            p = p.with_suffix(".html")
+        if not overwrite and p.exists():
+            raise FileExistsError(
+                f"File {p} already exists. Use overwrite=True to replace it."
+            )
+        p.write_text(html, encoding="utf-8")
+
+    def export_snapshot(self, path: Any, *, overwrite: bool = False) -> None:
+        """Export the current scene as a self-contained HTML file."""
+        self._export_scene_snapshot("", path, overwrite=overwrite)
+
+    def open_snapshot(self) -> None:
+        """Open the current scene as a standalone snapshot in a browser window."""
+        self._open_scene_snapshot("")
+
+    def display_snapshot(
         self,
         width: int | str = "100%",
         height: int | str = "500px",
@@ -1776,24 +1816,10 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> Any:
         """Display a scene as standalone HTML (no server required).
 
-        Parameters
-        ----------
-        width : int | str
-            CSS width of the viewer.
-        height : int | str
-            CSS height of the viewer.
-        scene_name : str
-            The scene to display (``""`` for the main scene).
+        In Jupyter, returns an ``IPython.display.HTML`` iframe with ``srcdoc``.
+        Outside Jupyter, opens the snapshot in a browser window.
         """
-        from pytanga.viz.export._html import render_export_html
-
-        scene = self._scenes[scene_name]
-        objects = scene.full_state(styles_map=scene.styles.kind)
-
-        html = render_export_html(
-            objects=objects,
-            scene_config=scene.config.to_dict(),
-        )
+        html = self._render_snapshot_html(scene_name)
 
         if self._jupyter:
             import html as _html
@@ -1810,15 +1836,26 @@ class Visualizer(_JupyterDisplayMixin):
                 f'max-width: 100%;"></iframe>'
             )
             return HTML(iframe)
-        else:
-            import tempfile
-            import webbrowser
-            from pathlib import Path
 
-            tmp = Path(tempfile.mktemp(suffix=".html"))
-            tmp.write_text(html, encoding="utf-8")
-            webbrowser.open(str(tmp))
-            return None
+        self._open_scene_snapshot(scene_name)
+        return None
+
+    def display_static(
+        self,
+        width: int | str = "100%",
+        height: int | str = "500px",
+        *,
+        scene_name: str = "",
+    ) -> Any:
+        """Deprecated: use :meth:`display_snapshot`."""
+        warnings.warn(
+            "display_static() is deprecated; use display_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.display_snapshot(
+            width=width, height=height, scene_name=scene_name
+        )
 
     @property
     def global_styles(self) -> "VizStyles":

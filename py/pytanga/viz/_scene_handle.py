@@ -424,10 +424,31 @@ class VizSceneHandle(_JupyterDisplayMixin):
                 f'title="Tanga 3D Viewer — {self._name}"></iframe>'
             )
 
-    def display_static(
+    def display_snapshot(
         self, width: int | str = "100%", height: int | str = "500px"
     ) -> Any:
         """Display this scene as standalone HTML (no server required)."""
-        return self._viz.display_static(
+        return self._viz.display_snapshot(
             width=width, height=height, scene_name=self._name
         )
+
+    def display_static(
+        self, width: int | str = "100%", height: int | str = "500px"
+    ) -> Any:
+        """Deprecated: use :meth:`display_snapshot`."""
+        import warnings
+
+        warnings.warn(
+            "display_static() is deprecated; use display_snapshot()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.display_snapshot(width=width, height=height)
+
+    def export_snapshot(self, path: Any, *, overwrite: bool = False) -> None:
+        """Export this scene as a self-contained HTML file."""
+        self._viz._export_scene_snapshot(self._name, path, overwrite=overwrite)
+
+    def open_snapshot(self) -> None:
+        """Open this scene as a standalone snapshot in a browser window."""
+        self._viz._open_scene_snapshot(self._name)

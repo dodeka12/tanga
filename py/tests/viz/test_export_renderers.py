@@ -90,3 +90,14 @@ def test_scene_builder_bundled():
     assert "function buildSceneObject(" in bootstrap
     assert "function buildOverlay(" in bootstrap
     assert "function removeObject(" in bootstrap
+
+
+def test_render_export_html_alias_deprecated():
+    """``render_export_html`` is a deprecated alias for ``render_snapshot``."""
+    import pytest
+
+    from pytanga.viz.export._html import render_export_html, render_snapshot
+
+    with pytest.warns(DeprecationWarning):
+        result = render_export_html([], {})
+    assert result == render_snapshot([], {})
