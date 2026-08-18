@@ -1,6 +1,6 @@
 # Phase 11 — Changelog
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -13,16 +13,16 @@ Add a changelog entry per `dev/workflows/changelog.md`.
 
 ## Steps
 
-- [ ] Create the changelog with the sections that apply:
+- [x] Create the changelog with the sections that apply:
       - **Bug Fixes** — `display_static()` no longer leaks styles / crashes
         the notebook (now renders via `<iframe srcdoc>`).
-      - **Breaking Changes** — `host`/`port` moved to `start_server`;
-        `open_figure` removed in favor of `open_snapshot`.
+      - **Breaking Changes** — `host`/`port` deprecated on `Visualizer(...)`;
+        `open_figure` replaced by `open_snapshot`.
       - **Refactor** — consolidated display/export/serving naming
         (`snapshot`/`figure`/`glb`; `show`/`wait`/`start_server`/`stop_server`;
         `animation=` keyword) with deprecated aliases.
-- [ ] Add the index entry to `docs/changelog/index.md`.
+- [x] Add the index entry to `docs/changelog/index.md`.
 
 ## Verification
 
-- [ ] Changelog follows the structure in `dev/workflows/changelog.md`.
+- [x] Changelog follows the structure in `dev/workflows/changelog.md`.

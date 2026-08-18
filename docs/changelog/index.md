@@ -1,5 +1,11 @@
 # Changelog
 
+## [Since 0.9.2] — 2026-08-18
+- Consolidated display/export/serving API (`show`/`wait`/`start_server`/`stop_server` · `export_snapshot`/`export_figure`/`export_glb` · `animation=` keyword) · `display_snapshot()` · `display_row(mode="static")`
+- Breaking: `open_figure()` → `open_snapshot()`; `Visualizer(port=..., host=...)` deprecated in favor of `start_server(...)`
+- Bug fixes: `display_static()`/`display_snapshot()` renders via `<iframe srcdoc>` (no notebook style leakage)
+→ [Details](2026-08-18_95486fd.md)
+
 ## [Since 0.9.2] — 2026-08-17
 - `CylinderLineStyle` (world-unit cylinder lines) · `content` aspect for in-place updates · unified live/export render pipeline · `Line` length as a content field · screen-space fat-line rendering · single `sceneObjects` registry · `Visualizer.animate()` frame loop · `VizStyles` style holder (`styles` / `global_styles`)
 - Breaking: removed the `default_*` style API (use `viz.styles.*`); `set_default_color()` targets the main scene
