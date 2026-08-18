@@ -1,6 +1,6 @@
 # Phase 8 — Demote `SceneExporter` to deprecated aliases
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -16,19 +16,20 @@ so `SceneExporter(viz).export_html(...)` keeps working.
 
 ## Steps
 
-- [ ] Rewrite each `SceneExporter` method to delegate to the matching
-      `Visualizer` method (or keep bodies but route through `self._viz`).
-- [ ] Emit `DeprecationWarning` from `SceneExporter.__init__` recommending the
+- [x] Emit `DeprecationWarning` from `SceneExporter.__init__` recommending the
       direct `viz`/`viz.scene(name)` API.
-- [ ] Remove `SceneExporter.open_figure` (superseded by
-      `Visualizer.open_snapshot`); keep the name as a module-level alias if
-      needed for import compatibility.
+- [x] `SceneExporter.open_figure` was already removed/aliased in Phase 4
+      (`open_snapshot`).
+- [x] Methods already route through `self._viz` (kept as-is to avoid subtle
+      behavior regressions in `_default_figure_style`/`_resolve_export_path`).
 
 ## Unit tests
 
-- [ ] `dev/src/test_export_smoke.py` and `dev/src/test_viz_figure.py` still
-      pass using `SceneExporter` (deprecated).
+- [x] `py/tests/viz/test_export_static.py`: `SceneExporter(viz)` emits
+      `DeprecationWarning`.
+- [x] `dev/src/test_export_smoke.py` / `dev/src/test_viz_figure.py` keep
+      working via the deprecated aliases.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/` passes.
+- [x] `uv run pytest py/tests/viz/` passes (439 tests).

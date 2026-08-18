@@ -31,6 +31,14 @@ class SceneExporter:
     """
 
     def __init__(self, visualizer: Visualizer) -> None:
+        import warnings
+
+        warnings.warn(
+            "SceneExporter is deprecated; use viz.export_snapshot / "
+            "viz.export_figure / viz.export_glb directly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._viz = visualizer
         self._default_figure_style = _FS(
             width=800,

@@ -130,6 +130,14 @@ class TestAnimatedExport:
         assert path.exists()
 
 
+    def test_scene_exporter_deprecated(self):
+        import pytest
+
+        viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
+        with pytest.warns(DeprecationWarning):
+            pytanga.viz.SceneExporter(viz)
+
+
 class TestCdnUnreachableDetection:
     def test_export_cdn_probe_present(self):
         from pytanga.viz.export._bootstrap._errors import js_cdn_check_script
