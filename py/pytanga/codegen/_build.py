@@ -5,8 +5,10 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -81,12 +83,22 @@ def build_binding(
     if gen:
         configure_cmd += ["-G", gen]
 
-    _run(configure_cmd, verbose=verbose)
+    run_env = None
+    if (
+        _SYSTEM == "Windows"
+        and os.environ.get("PYTANGA_CXX_COMPILER") is None
+        and shutil.which("cl.exe") is None
+    ):
+        msvc_env = _msvc_environment()
+        if msvc_env:
+            run_env = {**os.environ, **msvc_env}
+
+    _run(configure_cmd, verbose=verbose, env=run_env)
 
     build_cmd = ["cmake", "--build", str(build_dir), "--config", "Release"]
     if verbose:
         build_cmd.append("--verbose")
-    _run(build_cmd, verbose=verbose)
+    _run(build_cmd, verbose=verbose, env=run_env)
 
     return _find_extension(build_dir, module_name)
 
@@ -161,6 +173,95 @@ def _detect_default_compiler() -> str:
     return _DEFAULT_COMPILER.get(_SYSTEM, "g++")
 
 
+def _locate_vcvars64() -> str | None:
+    """Locate MSVC's ``vcvars64.bat`` on Windows, or return ``None``.
+
+    Uses ``vswhere.exe`` (the Visual Studio Installer query tool) to find the
+    latest MSVC installation that provides the x64 native tools, then resolves
+    the toolchain environment batch file.
+    """
+    if _SYSTEM != "Windows":
+        return None
+
+    vswhere: str | None = None
+    program_files_x86 = os.environ.get("ProgramFiles(x86)")
+    if program_files_x86:
+        candidate = (
+            Path(program_files_x86)
+            / "Microsoft Visual Studio"
+            / "Installer"
+            / "vswhere.exe"
+        )
+        if candidate.is_file():
+            vswhere = str(candidate)
+    if vswhere is None:
+        vswhere = shutil.which("vswhere")
+    if not vswhere:
+        return None
+
+    try:
+        result = subprocess.run(
+            [
+                vswhere,
+                "-latest",
+                "-products",
+                "*",
+                "-requires",
+                "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                "-property",
+                "installationPath",
+            ],
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    install_path = result.stdout.strip()
+    if not install_path:
+        return None
+
+    vcvars = Path(install_path) / "VC" / "Auxiliary" / "Build" / "vcvars64.bat"
+    return str(vcvars) if vcvars.is_file() else None
+
+
+@functools.lru_cache(maxsize=1)
+def _msvc_environment() -> dict[str, str]:
+    """Capture the full MSVC toolchain environment (cached once per process).
+
+    Runs ``vcvars64.bat`` in a sub-shell and parses the resulting ``set``
+    output into a dict. Returns ``{}`` if MSVC cannot be located or the
+    environment cannot be captured.
+    """
+    vcvars = _locate_vcvars64()
+    if not vcvars:
+        return {}
+
+    try:
+        result = subprocess.run(
+            f'call "{vcvars}" >nul && set',
+            shell=True,
+            capture_output=True,
+            text=True,
+            errors="replace",
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {}
+
+    if result.returncode != 0:
+        return {}
+
+    env: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        if "=" in line:
+            key, _, value = line.partition("=")
+            env[key] = value
+    return env
+
+
 def _resolve_generator() -> str | None:
     """Return an explicit CMake generator if one should be used, else None.
 
@@ -177,7 +278,11 @@ def _resolve_generator() -> str | None:
     return None
 
 
-def _run(cmd: list[str], verbose: bool) -> None:
+def _run(
+    cmd: list[str],
+    verbose: bool,
+    env: dict[str, str] | None = None,
+) -> None:
     result = subprocess.run(
         cmd,
         stdout=None if verbose else subprocess.PIPE,
@@ -185,6 +290,7 @@ def _run(cmd: list[str], verbose: bool) -> None:
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=env,
     )
     if result.returncode != 0:
         output = result.stdout or ""
@@ -194,14 +300,15 @@ def _run(cmd: list[str], verbose: bool) -> None:
 
 
 def _ninja_available() -> bool:
-    return (
-        subprocess.run(
+    try:
+        result = subprocess.run(
             ["ninja", "--version"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        ).returncode
-        == 0
-    )
+        )
+    except (FileNotFoundError, OSError):
+        return False
+    return result.returncode == 0
 
 
 def _find_extension(build_dir: Path, module_name: str) -> Path:

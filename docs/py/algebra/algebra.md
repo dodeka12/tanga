@@ -230,11 +230,12 @@ These operate on pure blades (homogeneous multivectors of a single grade):
 
 ```python
 alg.blade_inverse(blade)          # inverse of a blade
-alg.blade_pseudo_inverse(blade)   # pseudo-inverse (uses conjugate)
+alg.blade_pseudo_inverse(blade)   # inner-product inverse; reciprocal of a null blade
 alg.blade_factorize(blade)        # → list of k grade-1 vectors
-alg.blade_join(a, b)              # smallest blade containing both
-alg.blade_project(a, blade)       # project a onto blade
-alg.blade_reject(a, blade)        # reject a from blade
+alg.join(a, b)                    # smallest blade containing both
+alg.meet(a, b)                    # largest blade contained in both
+alg.blade_project(a, blade)       # project a onto a non-degenerate blade
+alg.blade_reject(a, blade)        # reject a from a non-degenerate blade
 ```
 
 ### Integer modular operations

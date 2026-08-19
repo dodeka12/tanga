@@ -146,31 +146,37 @@ def _circle_normal(circle: Circle) -> tuple[float, float, float]:
 
 
 def _anchor_circle(circle: Circle, uvw, line_length) -> tuple[float, float, float]:
-    u = uvw[0] if uvw is not None else 0.0
-    v = uvw[1] if uvw is not None else 0.0
+    radius_frac = uvw[0] if uvw is not None else 0.0
+    angle_frac = uvw[1] if uvw is not None else 0.0
     n = _normalize(_circle_normal(circle))
     x_axis = _perpendicular(n)
     y_axis = _normalize(_cross(n, x_axis))
-    angle = u * 2 * math.pi
-    r = v * circle.radius
+    r = radius_frac * circle.radius
+    angle = angle_frac * math.pi
+    cos_a = math.cos(angle)
+    sin_a = math.sin(angle)
     return (
-        r * math.cos(angle) * x_axis[0] + r * math.sin(angle) * y_axis[0],
-        r * math.cos(angle) * x_axis[1] + r * math.sin(angle) * y_axis[1],
-        r * math.cos(angle) * x_axis[2] + r * math.sin(angle) * y_axis[2],
+        r * cos_a * x_axis[0] + r * sin_a * y_axis[0],
+        r * cos_a * x_axis[1] + r * sin_a * y_axis[1],
+        r * cos_a * x_axis[2] + r * sin_a * y_axis[2],
     )
 
 
 def _anchor_sphere(sphere: Sphere, uvw, line_length) -> tuple[float, float, float]:
-    u = uvw[0] if uvw is not None else 0.0
-    v = uvw[1] if uvw is not None else 0.0
-    w = uvw[2] if uvw is not None else 0.0
-    r = u * sphere.radius
-    theta = v * 2 * math.pi  # azimuth
-    phi = w * math.pi  # polar
+    radius_frac = uvw[0] if uvw is not None else 0.0
+    azimuth_frac = uvw[1] if uvw is not None else 0.0
+    polar_frac = uvw[2] if uvw is not None else 0.0
+    r = radius_frac * sphere.radius
+    theta = azimuth_frac * math.pi  # azimuth (around the polar axis)
+    phi = polar_frac * math.pi  # polar (from the +z axis)
+    sin_phi = math.sin(phi)
+    cos_phi = math.cos(phi)
+    sin_theta = math.sin(theta)
+    cos_theta = math.cos(theta)
     return (
-        r * math.sin(phi) * math.cos(theta),
-        r * math.sin(phi) * math.sin(theta),
-        r * math.cos(phi),
+        r * sin_phi * cos_theta,
+        r * sin_phi * sin_theta,
+        r * cos_phi,
     )
 
 

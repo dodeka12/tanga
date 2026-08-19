@@ -40,8 +40,9 @@ class LabelStyle(VizStyle):
     # Scalar or 2-/3-tuple of fractions parameterizing where on the entity the
     # label anchors.  Interpreted per entity kind:
     #   1D (Line/Direction/PointPair): u = fraction along the extent
-    #   2D (Plane/Circle): u, v
-    #   3D (Sphere/Inversion): u, v, w
+    #   2D (Plane: u, v in-plane fractions; Circle: u = radius fraction,
+    #       v = angle fraction × π)
+    #   3D (Sphere/Inversion): u = radius fraction, v, w = angle fractions × π
     along: float | tuple[float, float] | tuple[float, float, float] | None = None
 
     # ── Screen-plane rotation about the final anchor (degrees, clockwise) ──

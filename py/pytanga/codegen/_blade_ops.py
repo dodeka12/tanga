@@ -35,14 +35,25 @@ def blade_factorize_def() -> str:
 """
 
 
-def blade_join_def() -> str:
+def join_def() -> str:
     return """
-    m.def("blade_join", [](const TDynMV& a, const TDynMV& b) {
+    m.def("join", [](const TDynMV& a, const TDynMV& b) {
         TDynMV c = Tan::GA::Join(a, b);
         c.Prune();
         return c;
     }, py::arg("a"), py::arg("b"),
        "Compute the join of two blades: the smallest-grade blade that contains both A and B.");
+"""
+
+
+def meet_def() -> str:
+    return """
+    m.def("meet", [](const TDynMV& a, const TDynMV& b) {
+        TDynMV c = Tan::GA::Meet(a, b);
+        c.Prune();
+        return c;
+    }, py::arg("a"), py::arg("b"),
+       "Compute the meet of two blades: the largest-grade blade contained in both A and B.");
 """
 
 
@@ -63,7 +74,7 @@ def blade_project_def() -> str:
         c.Prune();
         return c;
     }, py::arg("a"), py::arg("n"),
-       "Project a multivector onto a blade N_l: proj_N(A) = IP(IP(A, conj(N)), N).");
+       "Project a multivector onto a blade N_l: proj_N(A) = (A . N) N^-1, where N^-1 = conj(N) / IP(N, conj(N)).");
 """
 
 

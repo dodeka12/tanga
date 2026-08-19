@@ -441,25 +441,46 @@ class MV:
         return self._alg.blade_inverse(self)
 
     def blade_pseudo_inverse(self) -> "MV":
-        """Compute the pseudo-inverse of this blade (uses conjugate instead of reverse)."""
+        """Compute the pseudo-inverse of this blade: conjugate(A) / IP(A, conjugate(A)).
+
+        This is an inverse only w.r.t. the inner product (<A . A^-1>_0 = 1), not
+        the geometric product (except in a positive-definite metric).  A null
+        (degenerate) blade has no geometric inverse at all; this is the only
+        reciprocal such a blade has.  Use ``blade_inverse`` only for non-degenerate
+        blades, where a geometric inverse exists.
+        """
         return self._alg.blade_pseudo_inverse(self)
 
     def blade_factorize(self) -> list["MV"]:
         """Factorize this blade into k normalized grade-1 vectors."""
         return self._alg.blade_factorize(self)
 
-    def blade_join(self, other: "MV") -> "MV":
-        """Compute the join of self and other (both must be blades)."""
-        return self._alg.blade_join(self, other)
+    def join(self, other: "MV") -> "MV":
+        """Compute the join of self and other: the smallest-grade blade containing both."""
+        return self._alg.join(self, other)
+
+    def meet(self, other: "MV") -> "MV":
+        """Compute the meet of self and other: the largest-grade blade contained in both."""
+        return self._alg.meet(self, other)
 
     def blade_factorize_versor(self) -> "tuple[MV, list[MV]]":
         """Factorize this versor into (scale, factor_vectors)."""
         return self._alg.blade_factorize_versor(self)
 
     def project(self, blade: "MV") -> "MV":
-        """Project this multivector onto a blade."""
+        """Project this multivector onto a non-degenerate blade: proj_N(A) = (A . N) N^-1.
+
+        For a null (degenerate) blade there is no geometric inverse, so the
+        pseudo-inverse is used as a fallback and the result is not a true
+        orthogonal projection.
+        """
         return self._alg.blade_project(self, blade)
 
     def reject(self, blade: "MV") -> "MV":
-        """Compute the rejection of this multivector from a blade."""
+        """Compute the rejection of this multivector from a non-degenerate blade: A - proj_N(A).
+
+        For a null (degenerate) blade there is no geometric inverse, so the
+        pseudo-inverse is used as a fallback and the result is not a true
+        orthogonal rejection.
+        """
         return self._alg.blade_reject(self, blade)

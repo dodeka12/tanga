@@ -310,6 +310,106 @@ void Test_Join_Disjoint()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
+/// Test Join: join of non-orthonormal vectors (regression: non-unit intermediate blade)
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void Test_Join_NonOrthonormal()
+{
+	printf("Test_Join_NonOrthonormal: ");
+
+	TMultivector wE1 = g_basis.E1();
+	TMultivector wE2 = g_basis.E2();
+	TMultivector wE3 = g_basis.E3();
+
+	// a = e1 + e2 (non-unit vector), b = e3
+	TMultivector wA = wE1 + wE2;
+	TMultivector wB = wE3;
+
+	TMultivector wJoin = GA::Join(wA, wB);
+
+	TMultivector wRejA = GA::Reject(wA, wJoin);
+	TValue fMagRejA = GA::Magnitude(wRejA);
+	TEST_ASSERT(fMagRejA < TValue(1e-8), "Join(e1+e2, e3) should contain e1+e2");
+
+	TMultivector wRejB = GA::Reject(wB, wJoin);
+	TValue fMagRejB = GA::Magnitude(wRejB);
+	TEST_ASSERT(fMagRejB < TValue(1e-8), "Join(e1+e2, e3) should contain e3");
+
+	printf("PASS\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+/// Test Meet: meet of two planes through the origin (e1^e2 and e1^e3) -> the e1 line
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void Test_Meet()
+{
+	printf("Test_Meet: ");
+
+	TMultivector wE1 = g_basis.E1();
+	TMultivector wE2 = g_basis.E2();
+	TMultivector wE3 = g_basis.E3();
+
+	// A = e1^e2 (xy-plane), B = e1^e3 (xz-plane)
+	TMultivector wA(TValue(1e-10));
+	GA::OP(wA, wE1, wE2);
+
+	TMultivector wB(TValue(1e-10));
+	GA::OP(wB, wE1, wE3);
+
+	TMultivector wMeet = GA::Meet(wA, wB);
+
+	// The meet is the x-axis: it must contain e1 ...
+	TMultivector wRej = GA::Reject(wE1, wMeet);
+	TValue fMagRej = GA::Magnitude(wRej);
+	TEST_ASSERT(fMagRej < TValue(1e-8), "Meet(e1^e2, e1^e3) should contain e1");
+
+	// ... and must be exactly the 1D line: OP(meet, e1) == 0
+	TMultivector wCheck(TValue(1e-10));
+	GA::OP(wCheck, wMeet, wE1);
+	TValue fMagOP = GA::Magnitude(wCheck);
+	TEST_ASSERT(fMagOP < TValue(1e-8), "Meet(e1^e2, e1^e3) should be the e1 line");
+
+	printf("PASS\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+/// Test Meet: meet of a bivector with the pseudoscalar -> the bivector itself
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void Test_Meet_Pseudoscalar()
+{
+	printf("Test_Meet_Pseudoscalar: ");
+
+	TMultivector wE1 = g_basis.E1();
+	TMultivector wE2 = g_basis.E2();
+	TMultivector wE3 = g_basis.E3();
+
+	// A = e1^e2 (bivector), I = e1^e2^e3 (pseudoscalar)
+	TMultivector wA(TValue(1e-10));
+	GA::OP(wA, wE1, wE2);
+
+	TMultivector wI(TValue(1e-10));
+	GA::OP(wI, wA, wE3);
+
+	// meet(A, I) must equal A (up to sign): contains e1 and e2, grade 2
+	TMultivector wMeet = GA::Meet(wA, wI);
+
+	TMultivector wRej1 = GA::Reject(wE1, wMeet);
+	TValue fMagRej1 = GA::Magnitude(wRej1);
+	TEST_ASSERT(fMagRej1 < TValue(1e-8), "Meet(e1^e2, I) should contain e1");
+
+	TMultivector wRej2 = GA::Reject(wE2, wMeet);
+	TValue fMagRej2 = GA::Magnitude(wRej2);
+	TEST_ASSERT(fMagRej2 < TValue(1e-8), "Meet(e1^e2, I) should contain e2");
+
+	// The meet is exactly the e1^e2 blade: wedging with e3 spans the full space
+	TMultivector wCheck(TValue(1e-10));
+	GA::OP(wCheck, wMeet, wE3);
+	TValue fMagCheck = GA::Magnitude(wCheck);
+	TEST_ASSERT(fMagCheck > TValue(1.0 - 1e-8), "Meet(e1^e2, I) ^ e3 should be the full space");
+
+	printf("PASS\n");
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
 /// Test ProjectUnsafe vector overload: project basis vectors onto bivector e1^e2
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void Test_ProjectUnsafe_Vector()
@@ -459,6 +559,9 @@ int main(int argc, char** argv)
 	Test_FactorizeBlade();
 	Test_Join();
 	Test_Join_Disjoint();
+	Test_Join_NonOrthonormal();
+	Test_Meet();
+	Test_Meet_Pseudoscalar();
 	Test_ProjectUnsafe_Vector();
 	Test_FactorizeVersor();
 	Test_FactorizeVersor_G5();
