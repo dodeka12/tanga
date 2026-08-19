@@ -88,8 +88,8 @@ class TestExportStatic:
 
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
-        exporter = pytanga.viz.SceneExporter(viz)
         with pytest.warns(DeprecationWarning):
+            exporter = pytanga.viz.SceneExporter(viz)
             snippet = exporter.export_figure_html()
         assert isinstance(snippet, str)
         assert "function createEntityMesh(" in snippet
@@ -121,11 +121,11 @@ class TestAnimatedExport:
 
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
-        exporter = pytanga.viz.SceneExporter(viz)
-        rec = exporter.start_animation_recording()
-        rec.capture_frame()
-        path = tmp_path / "anim.html"
         with pytest.warns(DeprecationWarning):
+            exporter = pytanga.viz.SceneExporter(viz)
+            rec = exporter.start_animation_recording()
+            rec.capture_frame()
+            path = tmp_path / "anim.html"
             exporter.export_animated_html(str(path), rec, overwrite=True)
         assert path.exists()
 
