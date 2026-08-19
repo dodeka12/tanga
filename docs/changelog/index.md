@@ -2,8 +2,9 @@
 
 ## [Since 0.9.2] — 2026-08-19
 - `meet` operator · `blade_join` renamed to `join` (meet exposed as `meet`) · Windows MSVC auto-detection for JIT compile (no developer shell required)
+- Breaking: `LabelStyle.along` for `Circle` now (radius fraction, angle fraction × π) and for `Sphere` (radius fraction, two angle fractions × π)
 - Bug fixes: `join` no longer hangs on non-unit blades — projection now uses the conjugate-based pseudo-inverse `conjugate(N) / IP(N, conjugate(N))`
-→ [Details](2026-08-19_fix-join-meet.md)
+→ [Details](2026-08-19_3745321.md)
 
 ## [Since 0.9.2] — 2026-08-18
 - Consolidated display/export/serving API (`show`/`wait`/`start_server`/`stop_server` · `export_snapshot`/`export_figure`/`export_glb` · `animation=` keyword) · `display_snapshot()` · `display_row(mode="static")` · frontend version check
