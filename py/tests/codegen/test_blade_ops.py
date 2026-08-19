@@ -6,7 +6,7 @@
 import pytest
 import numpy as np
 import pytanga
-from pytanga.basis import BasisE3
+from pytanga.basis import BasisE3, BasisN3
 
 
 @pytest.fixture(scope="module")
@@ -125,7 +125,7 @@ def test_join_adjacent(e3):
     """Join of e1 and e2 should contain both vectors."""
     e1 = e3.e1
     e2 = e3.e2
-    j = e1.blade_join(e2)
+    j = e1.join(e2)
 
     rej1 = e1.reject(j)
     assert rej1.mag < 1e-8, "Rejection of e1 from Join(e1, e2) should be zero"
@@ -138,7 +138,7 @@ def test_join_disjoint(e3):
     """Join of e1 and e3 (disjoint) should contain both."""
     e1 = e3.e1
     e3v = e3.e3
-    j = e1.blade_join(e3v)
+    j = e1.join(e3v)
 
     rej1 = e1.reject(j)
     assert rej1.mag < 1e-8, "Join(e1, e3) should contain e1"
@@ -147,22 +147,57 @@ def test_join_disjoint(e3):
     assert rej3.mag < 1e-8, "Join(e1, e3) should contain e3"
 
 
+def test_join_non_orthonormal(e3):
+    """Join of a non-unit blade (e1+e2) with e3 must terminate and contain both."""
+    a = e3.e1 + e3.e2
+    b = e3.e3
+    j = a.join(b)
+
+    rej_a = a.reject(j)
+    assert rej_a.mag < 1e-8, "Join(e1+e2, e3) should contain e1+e2"
+
+    rej_b = b.reject(j)
+    assert rej_b.mag < 1e-8, "Join(e1+e2, e3) should contain e3"
+
+
+def test_meet_planes(e3):
+    """Meet of two planes e1^e2 and e1^e3 should be the e1 line."""
+    plane1 = e3.e1 ^ e3.e2
+    plane2 = e3.e1 ^ e3.e3
+    m = plane1.meet(plane2)
+
+    rej = e3.e1.reject(m)
+    assert rej.mag < 1e-8, "Meet(e1^e2, e1^e3) should contain e1"
+
+    # The meet is exactly the e1 line: wedging it with e1 gives zero
+    assert (m ^ e3.e1).mag < 1e-8, "Meet(e1^e2, e1^e3) should be the e1 line"
+
+
+def test_meet_with_pseudoscalar(e3):
+    """Meet of a bivector with the pseudoscalar should be the bivector.
+
+    Regression: the dual of the pseudoscalar is a scalar (grade 0), which
+    cannot be factorized into vectors; Join must short-circuit this case.
+    """
+    bivec = e3.e1 ^ e3.e2
+    pseudoscalar = e3.I
+
+    m = bivec.meet(pseudoscalar)
+    assert (m - bivec).mag < 1e-8 or (m + bivec).mag < 1e-8, \
+        "Meet(e1^e2, I) should be e1^e2 (up to sign)"
+
+    m = pseudoscalar.meet(bivec)
+    assert (m - bivec).mag < 1e-8 or (m + bivec).mag < 1e-8, \
+        "Meet(I, e1^e2) should be e1^e2 (up to sign)"
+
+    m = pseudoscalar.meet(pseudoscalar)
+    assert (m - pseudoscalar).mag < 1e-8 or (m + pseudoscalar).mag < 1e-8, \
+        "Meet(I, I) should be I (up to sign)"
+
+
 # ---------------------------------------------------------------------------
 # FactorizeVersor tests
-# NOTE: FactorizeVersor internally calls GetGradeProjection which relies on
-# ForEachBladePair iteration. This works on dense multivector types
-# (CMultivector) but does not correctly iterate over sparse types
-# (CDynamicMultivector) when the target MV starts empty,
-# because ForEachBladePair only visits blades already present in the target.
-# These tests are marked as expected failures until either a dense MV type
-# is available or the algorithm is adapted for sparse MVs.
 # ---------------------------------------------------------------------------
-@pytest.mark.xfail(
-    reason="FactorizeVersor requires dense MV type (CMultivector); "
-           "CDynamicMultivector's ForEachBladePair does not iterate over "
-           "blades absent from the target MV, causing GetGradeProjection "
-           "to return an empty result on a fresh target."
-)
 def test_factorize_versor(e3):
     """Factorize versor e1 * e2 (geometric product of two vectors)."""
     e1 = e3.e1
@@ -181,9 +216,6 @@ def test_factorize_versor(e3):
     assert diff.mag < 1e-8, "Reconstructed versor should equal original V"
 
 
-@pytest.mark.xfail(
-    reason="Same sparse-MV / GetGradeProjection limitation as test_factorize_versor."
-)
 def test_factorize_versor_g5():
     """Factorize a random versor in G(5)."""
     alg = pytanga.Algebra(5, 0)
@@ -209,3 +241,199 @@ def test_factorize_versor_g5():
 
     diff = reconstructed - versor
     assert diff.mag < 1e-4, "G(5) random versor reconstruction should match original"
+
+
+# ---------------------------------------------------------------------------
+# N3 (conformal) regression tests — ProjectUnsafe must use the true inverse
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def n3():
+    """N3 basis (conformal model Cl(4,1)) — cached for the whole module."""
+    return BasisN3()
+
+
+def test_join_ipns_spheres_n3_is_bivector(n3):
+    """Join of two IPNS sphere vectors must be a bivector.
+
+    Regression: ``ProjectUnsafe`` used the pseudo-inverse
+    ``conjugate(N) / IP(N, conjugate(N))``, which differs from the true inverse
+    ``reverse(N) / IP(N, reverse(N))`` for a non-degenerate blade in a
+    mixed-signature metric.  That made the join grow an extra grade
+    (trivector instead of bivector).
+    """
+    from pytanga.geometry import Geometry, Point, Sphere
+
+    geo = Geometry(n3)
+    s1 = geo(Sphere(Point(0, 0, 0), 2)).dual()
+    s2 = geo(Sphere(Point(1, 0, 0), 2)).dual()
+
+    assert s1.grades == [1]
+    assert s2.grades == [1]
+
+    j = s1.join(s2)
+    assert j.grades == [2]
+
+    # The join must contain both input vectors.
+    assert s1.reject(j).mag < 1e-8
+    assert s2.reject(j).mag < 1e-8
+
+
+def test_factorize_point_pair_n3_clean_factors(n3):
+    """Factorizing a point pair yields two clean grade-1 factors.
+
+    Regression: the basis-projection step inside ``FactorizeBlade`` also used
+    the pseudo-inverse, returning a mixed-grade (grade 1 + 3) first factor.
+    """
+    from pytanga.geometry import Geometry, Point
+
+    geo = Geometry(n3)
+    pp = geo(Point(0, 0, 0)) ^ geo(Point(1, 0, 0))
+
+    factors = pp.blade_factorize()
+    assert len(factors) == 2
+    for f in factors:
+        assert f.grades == [1]
+
+    # The factors span the same plane as the original point pair.
+    recon = factors[0] ^ factors[1]
+    assert pp.reject(recon).mag < 1e-8
+
+
+def test_join_conformal_points_n3_is_bivector(n3):
+    """Join of two conformal points (null vectors) must be a bivector.
+
+    Regression: ``Join`` rejected each factor from ``J`` using projection and
+    rejection, which is undefined for a null blade (a conformal point squares
+    to zero), so joining two points threw ``PseudoInverseBlade: Blade is not
+    pseudo-invertible``.  The join now uses the metric-free wedge test
+    ``J ^ n_j == 0``.
+    """
+    from pytanga.geometry import Geometry, Point
+
+    geo = Geometry(n3)
+    p1 = geo(Point(0, 0, 0))
+    p2 = geo(Point(1, 0, 0))
+
+    assert p1.grades == [1]
+    assert p2.grades == [1]
+    assert abs(p1.ip(p1).scalar) < 1e-10  # conformal points are null vectors
+
+    j = p1.join(p2)
+    assert j.grades == [2]
+
+    # Both points must be contained in the join (x contained in J iff x ^ J == 0).
+    assert (p1 ^ j).mag < 1e-8
+    assert (p2 ^ j).mag < 1e-8
+
+
+def test_join_point_sphere_n3_is_bivector(n3):
+    """Join of a null conformal point and a non-null IPNS sphere is a bivector."""
+    from pytanga.geometry import Geometry, Point, Sphere
+
+    geo = Geometry(n3)
+    p = geo(Point(0, 0, 0))
+    s = geo(Sphere(Point(1, 0, 0), 2)).dual()
+
+    assert s.grades == [1]
+
+    j = p.join(s)
+    assert j.grades == [2]
+    assert (p ^ j).mag < 1e-8
+    assert (s ^ j).mag < 1e-8
+
+
+def test_join_equal_points_n3_is_vector(n3):
+    """Join of a conformal point with itself stays grade-1."""
+    from pytanga.geometry import Geometry, Point
+
+    geo = Geometry(n3)
+    p = geo(Point(1, 2, 3))
+
+    j = p.join(p)
+    assert j.grades == [1]
+    assert (p ^ j).mag < 1e-8
+
+
+def test_factorize_null_bivector_n3_clean_factors(n3):
+    """Factorizing a null bivector yields clean grade-1 factors.
+
+    Regression: the projection-based factorization used the pseudo-inverse
+    for null blades, returning a mixed-grade (grade 1 + 3) first factor and
+    failing to reconstruct the blade.  ``FactorizeBlade`` now extracts factors
+    metric-free (Option A probe, with a null-space fallback).
+    """
+    t = 0.5 * n3.e1 + 0.3 * n3.e2 + 0.1 * n3.e3
+    b = t ^ n3.einf
+    assert abs(b.ip(b).scalar) < 1e-10  # null bivector
+
+    factors = b.blade_factorize()
+    assert len(factors) == 2
+    for f in factors:
+        assert f.grades == [1]
+
+    # The factors span the same subspace as the original null bivector.
+    recon = factors[0] ^ factors[1]
+    assert (b ^ recon).mag < 1e-8
+
+
+def test_meet_conformal_points_n3(n3):
+    """Meet of two distinct conformal points is a scalar (empty intersection)."""
+    from pytanga.geometry import Geometry, Point
+
+    geo = Geometry(n3)
+    p1 = geo(Point(0, 0, 0))
+    p2 = geo(Point(1, 0, 0))
+
+    m = p1.meet(p2)
+    assert m.grades == [0]
+
+    # A point met with itself is the point.
+    m_self = p1.meet(p1)
+    assert m_self.grades == [1]
+
+
+def test_meet_spheres_n3_round_trip(n3):
+    """Meet of two OPNS spheres round-trips to their intersection circle.
+
+    Two spheres of radius 2, centred at (0,0,0) and (1,0,0), intersect in a
+    circle centred at (0.5,0,0) with radius sqrt(2^2 - 0.5^2).
+    """
+    from pytanga.geometry import Circle, Geometry, Point, Sphere
+
+    geo = Geometry(n3)
+    s1 = geo(Sphere(Point(0, 0, 0), 2))
+    s2 = geo(Sphere(Point(1, 0, 0), 2))
+
+    m = s1.meet(s2)
+    c = geo(m)
+    assert isinstance(c, Circle)
+    assert abs(c.center.x - 0.5) < 1e-6
+    assert abs(c.center.y) < 1e-6
+    assert abs(c.center.z) < 1e-6
+    assert abs(c.radius - (4 - 0.25) ** 0.5) < 1e-6
+
+
+def test_factorize_versor_motor_n3(n3):
+    """A conformal Motor (grades {0,2,4}) factorizes into 4 grade-1 factors.
+
+    Regression: null factors (from the degenerate conformal metric) used to
+    make the versor factorization return the wrong factor count.
+    """
+    from pytanga.geometry.create_n3 import create_motor
+    from pytanga.geometry.entities import Direction
+    from pytanga.geometry.operators import Motor, Rotor, Translator
+
+    # Translation along the rotation axis (z) keeps the grade-4 part non-zero.
+    motor = create_motor(
+        n3,
+        Rotor(angle=0.7, axis=Direction(0, 0, 1)),
+        Translator(vector=Direction(0, 0, 1)),
+    )
+    assert sorted(motor.grades) == [0, 2, 4]
+
+    scale, factors = motor.blade_factorize_versor()
+    assert len(factors) == 4
+    for f in factors:
+        assert f.grades == [1]

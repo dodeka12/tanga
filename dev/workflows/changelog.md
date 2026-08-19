@@ -5,8 +5,16 @@ How to create and maintain changelog entries for this repository.
 ## Location & naming
 
 - New changelogs live in `docs/changelog/`.
-- Filename: `YYYY-MM-DD_<short-commit-hash>.md`, e.g. `2026-08-16_7cb2db1.md`.
-  The hash is the commit that introduces the file (use the full commit's short hash).
+- **On a feature/fix branch (any branch other than `main`)** name the file
+  `YYYY-MM-DD_<branch-name>.md`, e.g. `2026-08-19_fix-join-meet.md`.
+  - Replace `/` in the branch name with `-` (branch names commonly contain
+    `/`, which would be read as a path separator in a filename).
+  - Integrate **all** changes made on the branch into this single branch
+    changelog — append to it as the branch evolves; do **not** create a new
+    file per commit.
+- **When opening a PR**, the file is renamed to its final
+  `YYYY-MM-DD_<short-commit-hash>.md` form (the hash of the branch's last
+  commit). See `dev/workflows/pull-request.md`.
 
 ## Title
 
@@ -47,7 +55,8 @@ at ~80 columns. Keep each bullet self-contained (no context from other bullets).
 ## Index update (`docs/changelog/index.md`)
 
 `docs/changelog/index.md` keeps a top-level, newest-first list of releases.
-When adding a new changelog:
+The entry is added when the changelog is finalized at PR time (after the rename
+to the hash-based filename). When adding a changelog:
 
 1. Add a new entry at the top, directly below `# Changelog`.
 2. Head the entry with the same since-relative label as the title:

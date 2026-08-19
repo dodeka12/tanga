@@ -96,12 +96,13 @@ the scalar is automatically promoted to a scalar multivector.
 | `a.sp(b)` | — | Scalar product: scalar part of a * b |
 | `a.project_to(b)` | — | Restrict a to the blade set of b (also accepts `int` mask / `list[int]`) |
 | `a.blade_inverse()` | — | Proper blade inverse $A^{-1} = \tilde{A} / \mathrm{IP}(A, \tilde{A})$ |
-| `a.blade_pseudo_inverse()` | — | Pseudo-inverse of a blade (uses conjugate instead of reverse) |
+| `a.blade_pseudo_inverse()` | — | Pseudo-inverse of a blade: an inverse only w.r.t. the inner product $\langle A \cdot A^{-1} \rangle_0 = 1$; the reciprocal of a null blade |
 | `a.blade_factorize()` | — | Factorize blade into $k$ normalized grade-1 vectors |
-| `a.blade_join(b)` | — | Join of two blades: smallest-grade blade containing both |
+| `a.join(b)` | — | Join of two blades: smallest-grade blade containing both |
+| `a.meet(b)` | — | Meet of two blades: largest-grade blade contained in both |
 | `a.blade_factorize_versor()` | — | Factorize versor into `(scale, [factor_vectors])` |
-| `a.project(blade)` | — | Project multivector onto a blade: $\mathrm{proj}_N(A)$ |
-| `a.reject(blade)` | — | Reject multivector from a blade: $A - \mathrm{proj}_N(A)$ |
+| `a.project(blade)` | — | Project multivector onto a non-degenerate blade: $\mathrm{proj}_N(A)$ (null blade → pseudo-inverse fallback, not a true projection) |
+| `a.reject(blade)` | — | Reject multivector from a non-degenerate blade: $A - \mathrm{proj}_N(A)$ (null blade → pseudo-inverse fallback, not a true rejection) |
 | `a.show(label, fmt)` | — | Print in algebra display basis |
 
 ### Grade‑based Involutions

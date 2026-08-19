@@ -91,6 +91,14 @@ namespace Tan
 		/// 	where IP(A, reverse(A)) vanishes but IP(A, conjugate(A)) does not (e.g. for
 		/// 	null blades in PGA).
 		///
+		/// 	NOTE: the pseudo-inverse is an inverse only w.r.t. the inner product /
+		/// 	scalar projection (<A . A^{-1}>_0 = 1), NOT w.r.t. the geometric product
+		/// 	(A * A^{-1} = 1 + higher grades) except in a positive-definite metric, where
+		/// 	it coincides with the ordinary inverse reverse(A) / IP(A, reverse(A)).  A null
+		/// 	(degenerate) blade has no geometric inverse at all; the pseudo-inverse is the
+		/// 	only reciprocal such a blade has.  Use InverseBlade() only for non-degenerate
+		/// 	blades, where a geometric inverse exists.
+		///
 		/// 	The denominator IP(A, conjugate(A)) is a scalar for any blade. If it is zero,
 		/// 	the blade is not pseudo-invertible.
 		///
@@ -136,14 +144,17 @@ namespace Tan
 		/// <summary>
 		/// 	Factorize a blade A_k of grade k into k normalized grade-1 vectors.
 		///
-		/// 	The algorithm:
+		/// 	The algorithm (metric-free, so valid for null blades too):
 		/// 	  1. Verify all non-zero elements of wA have the same grade k.
 		/// 	  2. Set B = wA.
-		/// 	  3. For j = 1 .. k-1:
-		/// 	     a. Project all standard basis vectors onto B (using ProjectUnsafe).
-		/// 	     b. Select the basis-vector projection with the largest magnitude.
-		/// 	     c. Normalize it and store as factor n_j.
-		/// 	     d. B = IP(conjugate(n_j), B)  (peel off one factor).
+		/// 	  3. Repeat while the grade of B is >= 2:
+		/// 	     a. Find a factor a of B: probe each coordinate blade E of grade
+		/// 	        one less than B and take a = E << B (Option A).  This always
+		/// 	        succeeds for a genuine blade; otherwise solve a ^ B == 0 by
+		/// 	        Gaussian elimination (Option B, metric-free fallback).
+		/// 	     b. Choose a partner b with a . b != 0 (a itself if non-null, else
+		/// 	        any basis vector with non-zero scalar product).
+		/// 	     c. B = IP(b, B) / SP(a, b)  (peel off one factor, null-safe).
 		/// 	  4. Normalize the final B and store as the last factor n_k.
 		///
 		/// 	Returns a vector of k normalized grade-1 multivectors whose outer product
@@ -215,43 +226,241 @@ namespace Tan
 
 				// Step 2: Set running blade B = wA
 				TMultivector wB(wA);
+				unsigned uGradeB = uGradeK;
 
-				// Step 3: Loop j = 1 .. k-1
-				for (unsigned uJ = 1; uJ < uGradeK; ++uJ)
+				// Step 3: Peel off one factor at a time (null-safe, metric-free).
+				while (uGradeB > 1)
 				{
-					// Project all basis vectors onto B
-					std::vector<TMultivector> vecProj;
-					ProjectUnsafe(vecProj, wB, vecBasis);
+					// Option A: probe every coordinate blade E of grade (uGradeB-1);
+					// a = E << B is a factor of B (grade 1).  This always succeeds
+					// for a genuine blade.
+					TMultivector wAFactor;
+					bool bFound = false;
 
-					// Find the projection with the largest magnitude
-					TValue fMaxMag = TValue(0);
-					size_t uMaxIdx = 0;
-
-					for (size_t uIdx = 0; uIdx < vecProj.size(); ++uIdx)
+					for (unsigned uId = 1; uId < (1u << TMultivector::VectorSpaceDimension); ++uId)
 					{
-						TValue fMag = MagnitudeSquared(vecProj[uIdx]);
-						if (fMag > fMaxMag)
+						TBlade bl;
+						bl.SetBlade(uId);
+
+						unsigned uGrade;
+						bl.GetGrade(uGrade);
+
+						if (uGrade != uGradeB - 1)
 						{
-							fMaxMag = fMag;
-							uMaxIdx = uIdx;
+							continue;
+						}
+
+						TMultivector wE(wA.GetValuePrecision());
+						wE.SetValueBlade(TValue(1), bl);
+
+						TMultivector wV(wA.GetValuePrecision());
+						IP(wV, wE, wB);
+
+						if (!wV.IsZero(MagnitudeSquared(wV)))
+						{
+							wAFactor = std::move(wV);
+							bFound = true;
+							break;
 						}
 					}
 
-					if (fMaxMag == TValue(0))
+					// Option B (fallback; should not trigger for a genuine blade):
+					// solve a ^ B == 0 for one non-trivial a via elimination on
+					// the linear map a -> a ^ B.
+					if (!bFound)
 					{
-						TAN_THROW_RT("Cannot factorize blade: largest basis-vector projection has zero magnitude");
+						const unsigned uGradeK1 = uGradeB + 1;
+
+						std::vector<unsigned> vecRowIds;
+						for (unsigned uId = 1; uId < (1u << TMultivector::VectorSpaceDimension); ++uId)
+						{
+							TBlade bl;
+							bl.SetBlade(uId);
+
+							unsigned uGrade;
+							bl.GetGrade(uGrade);
+
+							if (uGrade == uGradeK1)
+							{
+								vecRowIds.push_back(uId);
+							}
+						}
+
+						const size_t nRows = vecRowIds.size();
+						const size_t nCols = (size_t)TMultivector::VectorSpaceDimension;
+
+						std::vector<std::vector<TValue>> M(nRows, std::vector<TValue>(nCols, TValue(0)));
+
+						for (size_t c = 0; c < nCols; ++c)
+						{
+							TMultivector wWedge(wA.GetValuePrecision());
+							OP(wWedge, vecBasis[c], wB);
+
+							for (size_t r = 0; r < nRows; ++r)
+							{
+								TBlade bl;
+								bl.SetBlade(vecRowIds[r]);
+
+								TValue fVal;
+								if (!wWedge.GetValueBlade(fVal, bl))
+								{
+									fVal = TValue(0);
+								}
+								M[r][c] = fVal;
+							}
+						}
+
+						const TValue fPrec = wB.GetValuePrecision();
+						auto xAbs = [](const TValue& v) -> TValue { return (v < TValue(0)) ? -v : v; };
+						auto xIsZero = [&](const TValue& v) -> bool { return v >= -fPrec && v <= fPrec; };
+
+						std::vector<size_t> vecPivotRow(nCols, 0);
+						std::vector<bool> vecIsPivotCol(nCols, false);
+
+						size_t uRow = 0;
+						for (size_t uCol = 0; uCol < nCols && uRow < nRows; ++uCol)
+						{
+							size_t uPiv = uRow;
+							for (size_t r = uRow + 1; r < nRows; ++r)
+							{
+								if (xAbs(M[r][uCol]) > xAbs(M[uPiv][uCol]))
+								{
+									uPiv = r;
+								}
+							}
+
+							if (xIsZero(M[uPiv][uCol]))
+							{
+								continue;
+							}
+
+							std::swap(M[uRow], M[uPiv]);
+
+							TValue fPiv = M[uRow][uCol];
+							for (size_t c = uCol; c < nCols; ++c)
+							{
+								M[uRow][c] /= fPiv;
+							}
+
+							for (size_t r = 0; r < nRows; ++r)
+							{
+								if (r == uRow)
+								{
+									continue;
+								}
+
+								TValue f = M[r][uCol];
+								if (xIsZero(f))
+								{
+									continue;
+								}
+
+								for (size_t c = uCol; c < nCols; ++c)
+								{
+									M[r][c] -= f * M[uRow][c];
+								}
+							}
+
+							vecIsPivotCol[uCol] = true;
+							vecPivotRow[uCol] = uRow;
+							++uRow;
+						}
+
+						int iFreeCol = -1;
+						for (size_t c = 0; c < nCols; ++c)
+						{
+							if (!vecIsPivotCol[c])
+							{
+								iFreeCol = (int)c;
+								break;
+							}
+						}
+
+						if (iFreeCol >= 0)
+						{
+							std::vector<TValue> vecX(nCols, TValue(0));
+							vecX[(size_t)iFreeCol] = TValue(1);
+
+							for (size_t c = 0; c < nCols; ++c)
+							{
+								if (vecIsPivotCol[c])
+								{
+									vecX[c] = -M[vecPivotRow[c]][(size_t)iFreeCol];
+								}
+							}
+
+							TMultivector wResult(wA.GetValuePrecision());
+							for (size_t c = 0; c < nCols; ++c)
+							{
+								if (!xIsZero(vecX[c]))
+								{
+									TBlade bl;
+									bl.SetBlade(1u << c);
+									wResult.SetValueBlade(vecX[c], bl);
+								}
+							}
+
+							if (!wResult.IsZero(MagnitudeSquared(wResult)))
+							{
+								wAFactor = std::move(wResult);
+								bFound = true;
+							}
+						}
 					}
 
-					// Normalize the selected projection
-					TValue fMag = Magnitude(vecProj[uMaxIdx]);
-					TMultivector wN_j = vecProj[uMaxIdx] / fMag;
-					vecFactors.push_back(std::move(wN_j));
+					if (!bFound)
+					{
+						TAN_THROW_RT("Cannot factorize blade: no factor vector found");
+					}
 
-					// Peel off the factor: B = IP(conjugate(n_j), B)
-					TMultivector wNewB(wA.GetValuePrecision());
-					IP_Conjugate(wNewB, /* wA = */ vecFactors.back(), /* bConjA = */ true,
-													/* wB = */ wB,               /* bConjB = */ false);
+					// Choose a partner b with a . b != 0 (a itself if non-null).
+					TValue fAA;
+					SP(fAA, wAFactor, wAFactor);
+
+					TMultivector wPartner;
+					bool bPartnerFound = false;
+
+					if (!wAFactor.IsZero(fAA))
+					{
+						wPartner = wAFactor;
+						bPartnerFound = true;
+					}
+					else
+					{
+						for (size_t uIdx = 0; uIdx < vecBasis.size(); ++uIdx)
+						{
+							TValue fAB;
+							SP(fAB, wAFactor, vecBasis[uIdx]);
+
+							if (!wAFactor.IsZero(fAB))
+							{
+								wPartner = vecBasis[uIdx];
+								bPartnerFound = true;
+								break;
+							}
+						}
+					}
+
+					if (!bPartnerFound)
+					{
+						TAN_THROW_RT("Cannot factorize blade: factor has no non-null partner vector");
+					}
+
+					// Peel off the factor: B = IP(b, B) / SP(a, b).
+					TValue fDenom;
+					SP(fDenom, wAFactor, wPartner);
+
+					TMultivector wPeeled(wA.GetValuePrecision());
+					IP(wPeeled, wPartner, wB);
+
+					TMultivector wNewB = wPeeled / fDenom;
 					wB = std::move(wNewB);
+
+					// Normalize the extracted factor and store it.
+					TValue fMagA = Magnitude(wAFactor);
+					vecFactors.push_back(wAFactor / fMagA);
+
+					--uGradeB;
 				}
 
 				// Step 4: Normalize the final B and store as the last factor
@@ -280,15 +489,18 @@ namespace Tan
 		/// 	The join J is the blade of smallest grade that contains both A_k and B_l,
 		/// 	i.e. the span of the union of their factor vectors.
 		///
-		/// 	Algorithm:
+		/// 	Algorithm (metric-free, so also valid when J is a null blade):
 		/// 	  1. Let J be the blade of higher grade, factorize the lower-grade blade
-		/// 	     into an orthonormal set {n_j} via FactorizeBlade().
-		/// 	  2. Repeat:
-		/// 	     a. Reject all n_j from J using RejectUnsafe.
-		/// 	     b. Select the rejection with the largest magnitude.
-		/// 	     c. If its magnitude is zero (up to precision), normalize J and return.
-		/// 	     d. Normalize the selected rejection vector.
-		/// 	     e. J = OP(J, normalized rejection vector).
+		/// 	     into a factor set {n_j} via FactorizeBlade().
+		/// 	  2. Repeat until every factor is contained in J:
+		/// 	     a. For each remaining n_j compute OP(J, n_j).
+		/// 	     b. Select the n_j with the largest |OP(J, n_j)|^2.
+		/// 	     c. If it is zero (up to precision), normalize J and return.
+		/// 	     d. Otherwise set J = OP(J, n_j) and drop n_j from the set.
+		///
+		/// 	The wedge test OP(J, n_j) = 0 decides containment without using the
+		/// 	metric, unlike the former projection/rejection approach, which is
+		/// 	undefined when J is a null (degenerate) blade (e.g. conformal points).
 		///
 		/// 	The caller must ensure that both wA and wB are blades. Behaviour is
 		/// 	undefined otherwise.
@@ -330,6 +542,20 @@ namespace Tan
 							return true;
 						});
 
+				// If either blade is a scalar (grade 0), it spans the trivial
+				// subspace, so the join is just the other blade, normalized.
+				// Handle this before FactorizeBlade(), which requires grade >= 1.
+				if (uGradeA == 0 || uGradeB == 0)
+				{
+					const TMultivector& wResult = (uGradeA == 0) ? wB : wA;
+					TValue fMag = Magnitude(wResult);
+					if (fMag == TValue(0))
+					{
+						TAN_THROW_RT("Join result has zero magnitude");
+					}
+					return wResult / fMag;
+				}
+
 				// Select the larger blade as J, factorize the smaller one
 				TMultivector wJ;
 				std::vector<TMultivector> vecN;
@@ -347,19 +573,22 @@ namespace Tan
 
 				TValue fPrecision = wJ.GetValuePrecision();
 
+				// Metric-free join: factor n_j is contained in J iff OP(J, n_j) == 0.
+				// This avoids projection/rejection, which is undefined for null blades
+				// (e.g. conformal points in N3).  Each step grows J by the factor that
+				// is most linearly independent of it (largest |OP(J, n_j)|^2), mirroring
+				// the former largest-rejection selection for numerical conditioning.
 				while (true)
 				{
-					// Reject all factor vectors from J
-					std::vector<TMultivector> vecRej;
-					RejectUnsafe(vecRej, wJ, vecN);
-
-					// Find the rejection with the largest magnitude
 					TValue fMaxMag = TValue(0);
 					size_t uMaxIdx = 0;
 
-					for (size_t uIdx = 0; uIdx < vecRej.size(); ++uIdx)
+					for (size_t uIdx = 0; uIdx < vecN.size(); ++uIdx)
 					{
-						TValue fMag = MagnitudeSquared(vecRej[uIdx]);
+						TMultivector wWedge(wJ.GetValuePrecision());
+						OP(wWedge, wJ, vecN[uIdx]);
+
+						TValue fMag = MagnitudeSquared(wWedge);
 						if (fMag > fMaxMag)
 						{
 							fMaxMag = fMag;
@@ -367,7 +596,7 @@ namespace Tan
 						}
 					}
 
-					// If all rejections are zero (up to precision), we are done
+					// If every remaining factor is already contained in J, we are done
 					if (fMaxMag <= fPrecision)
 					{
 						TValue fMagJ = Magnitude(wJ);
@@ -378,19 +607,79 @@ namespace Tan
 						return wJ / fMagJ;
 					}
 
-					// Normalize the selected rejection vector
-					TValue fMag = Magnitude(vecRej[uMaxIdx]);
-					TMultivector wV = vecRej[uMaxIdx] / fMag;
+					// Grow J by the selected factor: J = OP(J, n_j)
+					TValue fMag = Magnitude(vecN[uMaxIdx]);
+					TMultivector wV = vecN[uMaxIdx] / fMag;
 
-					// J = OP(J, wV)
 					TMultivector wNewJ(wJ.GetValuePrecision());
 					OP(wNewJ, wJ, wV);
 					wJ = std::move(wNewJ);
+
+					// The selected factor is now contained in J; drop it from the set
+					vecN.erase(vecN.begin() + uMaxIdx);
 				}
 			}
 			catch (std::exception& xEx)
 			{
 				TAN_RETHROW("Error computing blade join", xEx);
+			}
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		/// <summary>
+		/// 	Compute the meet of two blades A_k and B_l.
+		///
+		/// 	The meet M is the blade of largest grade contained in both A_k and
+		/// 	B_l, i.e. the intersection of their subspaces.
+		///
+		/// 	It is computed via the signed dual and the join:
+		/// 	  meet(A, B) = dual( join( dual(A), dual(B) ) )
+		///
+		/// 	where dual(X) = X . I^{-1} (the same Dual() used elsewhere). The
+		/// 	result is defined up to scale and sign, matching the Join()
+		/// 	convention, and is normalized to unit magnitude.
+		///
+		/// 	The caller must ensure that both wA and wB are blades. Behaviour is
+		/// 	undefined otherwise.
+		/// </summary>
+		///
+		/// <typeparam name="TMultivector">Type of the multivector.</typeparam>
+		/// <param name="wA">The first blade.</param>
+		/// <param name="wB">The second blade.</param>
+		///
+		/// <returns>The meet blade M.</returns>
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		template<typename TMultivector>
+		TMultivector Meet(const TMultivector& wA, const TMultivector& wB)
+		{
+			typedef typename TMultivector::TValue TValue;
+
+			try
+			{
+				// meet(A, B) = dual( join( dual(A), dual(B) ) )
+				TMultivector wDualA(wA.GetValuePrecision());
+				Dual(wDualA, wA);
+
+				TMultivector wDualB(wB.GetValuePrecision());
+				Dual(wDualB, wB);
+
+				TMultivector wJoin = Join(wDualA, wDualB);
+
+				TMultivector wMeet(wJoin.GetValuePrecision());
+				Dual(wMeet, wJoin);
+
+				// Normalize the result, like Join().
+				TValue fMag = Magnitude(wMeet);
+				if (fMag == TValue(0))
+				{
+					TAN_THROW_RT("Meet result has zero magnitude");
+				}
+
+				return wMeet / fMag;
+			}
+			catch (std::exception& xEx)
+			{
+				TAN_RETHROW("Error computing blade meet", xEx);
 			}
 		}
 
@@ -457,10 +746,18 @@ namespace Tan
 					TMultivector wN_j;
 					bool bFound = false;
 
+					// Pick the first factor with a non-zero geometric norm
+					// (a . a != 0), so the geometric-product peel below does not
+					// vanish.  (For a null factor a, the grade-(m-1) part of
+					// GP(V, a) is zero, which skips a factor.)  A null blade of
+					// grade >= 2 always has a non-null factor in a non-degenerate
+					// metric; only a null vector (grade 1) has none.
 					for (size_t uIdx = 0; uIdx < vecA.size(); ++uIdx)
 					{
-						TValue fMagSq = MagnitudeSquared(vecA[uIdx]);
-						if (fMagSq != TValue(0))
+						TValue fNorm;
+						SP(fNorm, vecA[uIdx], vecA[uIdx]);
+
+						if (!vecA[uIdx].IsZero(fNorm))
 						{
 							wN_j = vecA[uIdx];
 							bFound = true;
@@ -470,7 +767,9 @@ namespace Tan
 
 					if (!bFound)
 					{
-						TAN_THROW_RT("Cannot factorize versor: all factor vectors of max-grade blade are null");
+						// Only a null vector (grade 1) has no non-null factor;
+						// use it directly as the last factor.
+						wN_j = vecA[0];
 					}
 
 					TValue fMag = Magnitude(wN_j);
@@ -496,7 +795,19 @@ namespace Tan
 		/// <summary>
 		/// 	Project a multivector onto a blade without grade validation.
 		///
-		/// 	Performs proj_{N_l}(A_k) = IP( IP(A_k, conjugate(N_l)), N_l ) directly.
+		/// 	The "Unsafe" suffix means this routine performs no validation of the
+		/// 	grade preconditions below; the safe variant Project() checks them and
+		/// 	then delegates here.
+		///
+		/// 	Performs proj_{N_l}(A_k) = (A_k . N_l) N_l^{-1}, where
+		/// 	N_l^{-1} = reverse(N_l) / IP(N_l, reverse(N_l)) is the ordinary
+		/// 	blade inverse.  For a non-degenerate blade this is the correct
+		/// 	orthogonal projection.  For a null (degenerate) blade no geometric
+		/// 	inverse exists; the pseudo-inverse
+		/// 	conjugate(N_l) / IP(N_l, conjugate(N_l)) is used as a fallback, but
+		/// 	it is an inverse only w.r.t. the inner product (<N_l . P>_0 = 1),
+		/// 	not the geometric product, so it does not give a true projection
+		/// 	onto a null blade.
 		///
 		/// 	The caller must ensure that:
 		/// 	  - N_l has components of only one grade (say l).
@@ -513,15 +824,45 @@ namespace Tan
 		template<typename TMultivector>
 		TMultivector ProjectUnsafe(const TMultivector& wA, const TMultivector& wN)
 		{
+			typedef typename TMultivector::TValue TValue;
+
 			try
 			{
-				// Step 1: wX = IP(A_k, conjugate(N_l))
-				TMultivector wX(wA.GetValuePrecision());
-				IP_Conjugate(wX, wA, false, wN, true);
+				// Step 1: compute the inverse of the blade.  Step 3 multiplies it
+				// with a geometric product (GP), so it must be the true geometric
+				// inverse where one exists (a contraction would be equivalent here,
+				// since IP(A, N) is a sub-blade of N):
+				//   - Non-degenerate blade: N^{-1} = reverse(N) / IP(N, reverse(N)).
+				//   - Null blade: no geometric inverse exists.  The pseudo-inverse
+				//     conjugate(N) / IP(N, conjugate(N)) is an inverse only w.r.t.
+				//     the inner product (<N . P>_0 = 1), not the geometric product,
+				//     so it cannot give a true projection onto a null blade; it is
+				//     kept as a best-effort fallback for contraction-based callers
+				//     (e.g. FactorizeVersor).
+				TMultivector wNorm(wN.GetValuePrecision());
+				IP_Reverse(wNorm, wN, false, wN, true);
+				TValue fNorm = Scalar(wNorm);
 
-				// Step 2: wResult = IP(wX, N_l)
+				TMultivector wNInv;
+				if (wN.IsZero(fNorm))
+				{
+					wNInv = PseudoInverseBlade(wN);
+				}
+				else
+				{
+					wNInv = InverseBlade(wN);
+				}
+
+				// Step 2: wX = IP(A_k, N_l)   (symmetric inner product)
+				//         == (A_k . N_l); this is a scalar when grade(A) == grade(N).
+				TMultivector wX(wA.GetValuePrecision());
+				IP(wX, wA, wN);
+
+				// Step 3: wResult = GP(wX, N_l^{-1})  == (A_k . N_l) N_l^{-1}
+				//         The geometric product (not IP) is required here because
+				//         the symmetric inner product gives IP(scalar, blade) == 0.
 				TMultivector wResult(wA.GetValuePrecision());
-				IP(wResult, wX, wN);
+				GP(wResult, wX, wNInv);
 
 				return wResult;
 			}
@@ -569,7 +910,7 @@ namespace Tan
 		/// 	blade N_l of grade l.
 		///
 		/// 	The projection is defined as:
-		/// 	  proj_{N_l}(A_k) = IP( IP(A_k, conjugate(N_l)), N_l )
+		/// 	  proj_{N_l}(A_k) = (A_k . N_l) N_l^{-1}
 		///
 		/// 	Validates grade constraints, then delegates to ProjectUnsafe().
 		///

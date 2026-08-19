@@ -281,7 +281,12 @@ PYBIND11_MODULE({MODULE_NAME}, m)
     }
     {
         {
-            BLADE_JOIN_DEF
+            JOIN_DEF
+        }
+    }
+    {
+        {
+            MEET_DEF
         }
     }
     {

@@ -20,12 +20,13 @@ from ._blade_ops import (
     blade_factorize_def,
     blade_factorize_versor_def,
     blade_inverse_def,
-    blade_join_def,
     blade_project_def,
     blade_project_vec_def,
     blade_pseudo_inverse_def,
     blade_reject_def,
     blade_reject_vec_def,
+    join_def,
+    meet_def,
 )
 from ._float_products import gp_float_def, inv_float_def, ip_float_def, op_float_def
 from ._int_products import (
@@ -132,7 +133,8 @@ def generate(dim: int, sig: int, dtype: str, output: Path) -> None:
         template, "BLADE_PSEUDO_INVERSE_DEF", blade_pseudo_inverse_def()
     )
     template = sub_bare(template, "BLADE_FACTORIZE_DEF", blade_factorize_def())
-    template = sub_bare(template, "BLADE_JOIN_DEF", blade_join_def())
+    template = sub_bare(template, "JOIN_DEF", join_def())
+    template = sub_bare(template, "MEET_DEF", meet_def())
     template = sub_bare(
         template, "BLADE_FACTORIZE_VERSOR_DEF", blade_factorize_versor_def()
     )
