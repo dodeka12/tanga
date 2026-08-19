@@ -80,9 +80,24 @@ class TestOtherAnchors:
         assert compute_label_anchor(Circle(Point(1, 2, 3), 2.0)) == (0.0, 0.0, 0.0)
 
     def test_circle_rim(self):
+        # (radius fraction, angle fraction): 1.0 → full radius, 0.25 → 90° (π/2)
         c = Circle(Point(0, 0, 0), 2.0)
-        x, y, z = compute_label_anchor(c, along=(0.25, 1.0))
+        x, y, z = compute_label_anchor(c, along=(1.0, 0.25))
         assert math.sqrt(x * x + y * y + z * z) == pytest.approx(2.0)
+
+    def test_circle_along_radius_and_angle(self):
+        # The first component is the fraction of the radius, the second the
+        # fraction of π (180°), so (1, 1) is on the rim, 180° from the start.
+        c = Circle(Point(0, 0, 0), 2.0)
+
+        # (1, 0) → on the rim at the reference angle (0°).
+        assert compute_label_anchor(c, along=(1.0, 0.0)) == pytest.approx((0.0, 2.0, 0.0))
+
+        # (1, 1) → on the rim, 180° (π) around from the reference angle.
+        assert compute_label_anchor(c, along=(1.0, 1.0)) == pytest.approx((0.0, -2.0, 0.0))
+
+        # (0.5, 1) → half radius, 180° (π) around from the reference angle.
+        assert compute_label_anchor(c, along=(0.5, 1.0)) == pytest.approx((0.0, -1.0, 0.0))
 
     def test_sphere_default_center(self):
         assert compute_label_anchor(Sphere(Point(1, 2, 3), 2.0)) == (0.0, 0.0, 0.0)
@@ -90,6 +105,26 @@ class TestOtherAnchors:
     def test_sphere_pole(self):
         s = Sphere(Point(0, 0, 0), 3.0)
         assert compute_label_anchor(s, along=(1, 0, 0)) == (0.0, 0.0, 3.0)
+
+    def test_sphere_along_radius_and_angles(self):
+        # First component is the radius fraction; the other two are azimuth and
+        # polar angle fractions of π (180°).
+        s = Sphere(Point(0, 0, 0), 3.0)
+
+        # (1, 0, 0.5) → rim, +x (azimuth 0, polar 90°).
+        assert compute_label_anchor(s, along=(1.0, 0.0, 0.5)) == pytest.approx((3.0, 0.0, 0.0))
+
+        # (1, 0.5, 0.5) → rim, +y (azimuth 90°, polar 90°).
+        assert compute_label_anchor(s, along=(1.0, 0.5, 0.5)) == pytest.approx((0.0, 3.0, 0.0))
+
+        # (1, 1, 0.5) → rim, −x (azimuth 180°, polar 90°).
+        assert compute_label_anchor(s, along=(1.0, 1.0, 0.5)) == pytest.approx((-3.0, 0.0, 0.0))
+
+        # (1, 0, 1) → rim, south pole (polar 180°).
+        assert compute_label_anchor(s, along=(1.0, 0.0, 1.0)) == pytest.approx((0.0, 0.0, -3.0))
+
+        # (0.5, 0, 0.5) → half radius, +x.
+        assert compute_label_anchor(s, along=(0.5, 0.0, 0.5)) == pytest.approx((1.5, 0.0, 0.0))
 
     def test_plane_default_point(self):
         p = Plane(Point(0, 0, 0), Direction(0, 0, 1))

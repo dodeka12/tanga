@@ -80,8 +80,8 @@ as a scalar or a 2-/3-tuple of fractions:
 | Direction | 1 | fraction along the arrow | `0` |
 | PointPair | 1 | fraction A→B | `0.5` |
 | Plane | 2 | fractions along the two in-plane axes | `(0, 0)` = reference point |
-| Circle | 2 | angle fraction, radius fraction | `(0, 0)` = centre |
-| Sphere | 3 | radius fraction, two angle fractions | `(0, 0, 0)` = centre |
+| Circle | 2 | radius fraction, angle fraction (× π) | `(0, 0)` = centre |
+| Sphere | 3 | radius fraction, two angle fractions (× π) | `(0, 0, 0)` = centre |
 
 ```python
 viz.add(Line.from_points(Point(0, 0, 0), Point(4, 0, 0)), label="mid")   # 0.5

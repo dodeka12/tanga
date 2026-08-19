@@ -13,6 +13,15 @@
 - **`blade_join` renamed to `join`** — the join operator is now
   `Algebra.join(a, b)` / `MV.join(other)` (the `blade_` prefix is dropped), and
   the new meet is exposed as `meet` rather than `blade_meet`.
+- **`LabelStyle.along` for `Circle` now means (radius fraction, angle fraction
+  × π)** — previously the first component was the angle fraction (0→2π) and the
+  second the radius fraction; they are swapped and the angle is now a fraction
+  of π (180°), so `along=(1, 1)` anchors the label on the rim, 180° around from
+  the circle's reference point.
+- **`LabelStyle.along` for `Sphere` angles are now fractions of π** — the two
+  angle components (azimuth and polar) previously used 0→2π and 0→π
+  respectively; both now use 0→π (a fraction of π / 180°), so `along=(1, 1, 1)`
+  anchors the label on the surface, 180° around and 180° down from the +z pole.
 
 ## Bug Fixes
 - **`join` hangs on non-unit blades** — `ProjectUnsafe` computed the projection
