@@ -243,6 +243,31 @@ def test_factorize_versor_g5():
     assert diff.mag < 1e-4, "G(5) random versor reconstruction should match original"
 
 
+def _reconstruct_versor(scale, factors):
+    """Reconstruct a versor from ``blade_factorize_versor``'s return value.
+
+    ``FactorizeVersor`` peels factors right-to-left, so the versor equals
+    ``scale`` times the factors multiplied in reverse order.
+    """
+    r = scale
+    for f in reversed(factors):
+        r = r * f
+    return r
+
+
+def _versor_up_to_scale(mv):
+    """Normalize a versor by its scalar part for up-to-scale comparison.
+
+    In the degenerate conformal metric a versor with null factors (translator,
+    dilator, motor) loses its scalar scale during factorization, so the
+    reconstructed versor matches the input only up to a scalar multiple.
+    Dividing both sides by the scalar part removes that ambiguity.
+    """
+    s = mv.scalar
+    assert abs(s) > 1e-12, "versor must have a non-zero scalar part"
+    return mv / s
+
+
 # ---------------------------------------------------------------------------
 # N3 (conformal) regression tests — ProjectUnsafe must use the true inverse
 # ---------------------------------------------------------------------------
@@ -419,7 +444,8 @@ def test_factorize_versor_motor_n3(n3):
     """A conformal Motor (grades {0,2,4}) factorizes into 4 grade-1 factors.
 
     Regression: null factors (from the degenerate conformal metric) used to
-    make the versor factorization return the wrong factor count.
+    make the versor factorization return the wrong factor count.  The motor
+    also round-trips: its factors reconstruct it up to scale.
     """
     from pytanga.geometry.create_n3 import create_motor
     from pytanga.geometry.entities import Direction
@@ -438,6 +464,11 @@ def test_factorize_versor_motor_n3(n3):
     for f in factors:
         assert f.grades == [1]
 
+    # A motor has null factors, so compare the reconstruction up to scale.
+    recon = _reconstruct_versor(scale, factors)
+    diff = _versor_up_to_scale(recon) - _versor_up_to_scale(motor)
+    assert diff.mag < 1e-8
+
 
 def test_factorize_versor_null_vector_scale_fallback(n3):
     """A null vector versor falls back to a unit scale.
@@ -451,3 +482,50 @@ def test_factorize_versor_null_vector_scale_fallback(n3):
     scale, factors = einf.blade_factorize_versor()
     assert len(factors) == 1
     assert abs(scale.scalar - 1.0) < 1e-8
+
+
+def test_factorize_versor_translator_n3_round_trip(n3):
+    """A translator round-trips through versor factorization up to scale.
+
+    A translator is the geometric product of two parallel reflection planes:
+    their absolute positions are irrelevant (only their separation sets the
+    displacement), so one plane may pass through the origin.  It therefore
+    factorizes into exactly two grade-1 factors.  Because the conformal
+    metric is degenerate the scalar scale is lost, so compare the
+    reconstruction up to scale.
+    """
+    from pytanga.geometry.create_n3 import create_translator
+
+    translator = create_translator(n3, 0.5, 0.3, 0.1)
+    assert sorted(translator.grades) == [0, 2]
+
+    scale, factors = translator.blade_factorize_versor()
+    assert len(factors) == 2
+    for f in factors:
+        assert f.grades == [1]
+
+    recon = _reconstruct_versor(scale, factors)
+    diff = _versor_up_to_scale(recon) - _versor_up_to_scale(translator)
+    assert diff.mag < 1e-8
+
+
+def test_factorize_versor_dilator_n3_round_trip(n3):
+    """A dilator round-trips through versor factorization up to scale.
+
+    A dilator about the origin is ``1 + c·(e∞∧e₀)`` (grades {0,2}); like the
+    translator it is a two-reflection versor whose scalar scale is lost in the
+    degenerate metric, so compare up to scale.
+    """
+    from pytanga.geometry.create_n3 import create_dilator
+
+    dilator = create_dilator(n3, 2.0)
+    assert sorted(dilator.grades) == [0, 2]
+
+    scale, factors = dilator.blade_factorize_versor()
+    assert len(factors) == 2
+    for f in factors:
+        assert f.grades == [1]
+
+    recon = _reconstruct_versor(scale, factors)
+    diff = _versor_up_to_scale(recon) - _versor_up_to_scale(dilator)
+    assert diff.mag < 1e-8
