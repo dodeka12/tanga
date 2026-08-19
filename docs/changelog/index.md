@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 0.9.2] — 2026-08-20
+- Bug fixes: macOS (Apple Clang/libc++) wheel build fails with an ambiguous `operator-` — the generic multivector `operator+`/`operator-` templates are now SFINAE-constrained so they no longer clash with std iterator subtraction via ADL
+→ [Details](2026-08-20_8270b99.md)
+
 ## [Since 0.9.2] — 2026-08-19
 - `meet` operator · `blade_join` renamed to `join` (meet exposed as `meet`) · Windows MSVC auto-detection for JIT compile (no developer shell required)
 - Breaking: `LabelStyle.along` for `Circle` now (radius fraction, angle fraction × π) and for `Sphere` (radius fraction, two angle fractions × π)

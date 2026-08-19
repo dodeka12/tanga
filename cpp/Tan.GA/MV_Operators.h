@@ -893,7 +893,9 @@ namespace Tan
 		///
 		/// <returns>	The result of the operation. </returns>
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		template <typename TMultivector>
+		template <typename TMultivector,
+				  typename = typename TMultivector::TValue,
+				  typename = typename TMultivector::TBlade>
 		TMultivector operator+(const TMultivector &wA, const TMultivector &wB)
 		{
 			try
@@ -919,7 +921,9 @@ namespace Tan
 		///
 		/// <returns>	The result of the operation. </returns>
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		template <typename TMultivector>
+		template <typename TMultivector,
+				  typename = typename TMultivector::TValue,
+				  typename = typename TMultivector::TBlade>
 		TMultivector operator-(const TMultivector &wA, const TMultivector &wB)
 		{
 			try
