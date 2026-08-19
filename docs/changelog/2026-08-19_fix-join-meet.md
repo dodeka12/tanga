@@ -50,4 +50,6 @@
   with a Gaussian-elimination null-space fallback (Option B), and peels each
   factor off with a partner vector, `B = (b << B) / (a . b)`. `FactorizeVersor`
   now also selects non-null factors (by geometric norm) so its geometric-product
-  peel does not vanish. This fixes `meet` of null blades (e.g. two points).
+  peel does not vanish, and falls back to a unit scale when a versor has no
+  non-null factor (e.g. a single null vector). This fixes `meet` of null blades
+  (e.g. two points).

@@ -783,6 +783,22 @@ namespace Tan
 
 				TMultivector wScale = GetGradeProjection(wRemaining, 0);
 
+				// A versor with null factors has no meaningful scale: peeling a
+				// null factor via the geometric product yields zero.  Substitute a
+				// unit scale in that case, so the returned versor is well-defined
+				// (up to scale), while the exact scale is preserved for ordinary
+				// (non-degenerate) versors.
+				if (wScale.IsZero(Scalar(wScale)))
+				{
+					TBlade blScalar;
+					blScalar.SetBlade(0);
+
+					TMultivector wOne(wRemaining.GetValuePrecision());
+					wOne.SetValueBlade(TValue(1), blScalar);
+
+					wScale = std::move(wOne);
+				}
+
 				return std::make_pair(wScale, vecFactors);
 			}
 			catch (std::exception& xEx)

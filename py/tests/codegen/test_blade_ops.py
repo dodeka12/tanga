@@ -437,3 +437,17 @@ def test_factorize_versor_motor_n3(n3):
     assert len(factors) == 4
     for f in factors:
         assert f.grades == [1]
+
+
+def test_factorize_versor_null_vector_scale_fallback(n3):
+    """A null vector versor falls back to a unit scale.
+
+    Regression: ``FactorizeVersor`` peeled the (null) factor via the geometric
+    product, yielding scale 0, so a null vector versor (e.g. ``e_inf``) got a
+    zero scale.  It now substitutes a unit scale when the computed scale is
+    zero, while keeping the exact scale for non-degenerate versors.
+    """
+    einf = n3.einf
+    scale, factors = einf.blade_factorize_versor()
+    assert len(factors) == 1
+    assert abs(scale.scalar - 1.0) < 1e-8
