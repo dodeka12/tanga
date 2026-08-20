@@ -333,6 +333,115 @@ class Expression:
         labeled = MVLabeledTensor(result, OUT_LABEL + new_label)
         return Expression(labeled, {var_name: (new_label,)}, {var_name: out_mask})
 
+    def _variable_matrix(self):
+        """Return ``(var_mask, matrix)`` for the single remaining variable.
+
+        Flattens every non-variable axis (the output axis and any counting
+        axes) into the rows of a 2-D matrix whose columns are the blades of the
+        variable's mask.  Raises ``ValueError`` unless the expression has
+        exactly one variable occurring exactly once.
+        """
+        if len(self._names) != 1:
+            raise ValueError(
+                f"requires a single-variable expression (got {sorted(self._names)})"
+            )
+        (var_name,) = self._names
+        labels = self._names[var_name]
+        if len(labels) != 1:
+            raise ValueError(
+                f"requires {var_name!r} to appear exactly once "
+                f"(got {len(labels)} occurrences)"
+            )
+        var_label = labels[0]
+        var_mask = self._masks[var_name]
+
+        raw = _raw_names(self._tensor.labels)
+        var_axis = raw.index(var_label)
+        data = np.asarray(self._tensor.tensor.data, dtype=np.float64)
+        n_var = data.shape[var_axis]
+
+        flat = np.moveaxis(data, var_axis, -1)
+        matrix = flat.reshape(-1, n_var)
+        return var_mask, matrix
+
+    def lstsq(self, rhs=None) -> "MV":
+        """Solve this single-variable expression in the least-squares sense.
+
+        The expression must have exactly one remaining variable, which must
+        occur exactly once.  All non-variable axes (the output axis and any
+        counting axes left by a partial evaluation) are flattened into the
+        rows of a linear system whose columns are the blades of the variable's
+        mask.
+
+        - ``rhs=None`` (default): solve the homogeneous system
+          ``M · vec(x) = 0``.  Returns the smallest-singular-vector solution
+          (the right singular vector of the least singular value).
+        - otherwise: solve ``M · vec(x) = rhs`` via ``numpy.linalg.lstsq``.
+          This requires a non-stacked expression (no counting axes) and *rhs*
+          must be an ``MV`` over the expression's output mask.
+
+        Returns
+        -------
+        MV
+            The variable value (coefficients over the variable mask).
+
+        Raises
+        ------
+        ValueError
+            If the expression has more than one variable, has no variable, or
+            the sole variable occurs more than once, or *rhs* is given on a
+            stacked expression.
+        """
+        from pytanga.tensor import MVTensor as _MVTensor
+
+        var_mask, matrix = self._variable_matrix()
+
+        if rhs is None:
+            if matrix.shape[0] == 0:
+                raise ValueError("lstsq(): empty linear system")
+            _, _, vt = np.linalg.svd(matrix, full_matrices=False)
+            x = vt[-1]
+        else:
+            if self._has_counting_axes():
+                raise ValueError(
+                    "lstsq() with rhs requires a non-stacked expression "
+                    "(no counting axes); use a homogeneous fit or evaluate "
+                    "batches separately"
+                )
+            if isinstance(rhs, (int, float)):
+                rhs = self.algebra.multivector({0: float(rhs)})
+            if not isinstance(rhs, MV):
+                raise TypeError(f"lstsq() rhs must be an MV, got {type(rhs).__name__}")
+            rhs_vec = to_tensor(rhs, mask=self.out_mask).data
+            x, _, _, _ = np.linalg.lstsq(matrix, rhs_vec, rcond=None)
+
+        result = _MVTensor(data=x.astype(np.float64), masks=(var_mask,))
+        return from_tensor(result)
+
+    def svd(self):
+        """Return the singular values and right-singular multivectors.
+
+        Treats this single-variable expression as a linear map and returns
+        ``(values, mvs)`` where *values* is the list of singular values (in
+        descending order) and *mvs* is the list of the corresponding
+        right-singular vectors, each reconstructed as an ``MV`` over the
+        variable's blade mask.
+
+        Raises ``ValueError`` if the expression has no variable, more than one
+        variable, or the sole variable occurs more than once.
+        """
+        from pytanga.tensor import MVTensor as _MVTensor
+
+        var_mask, matrix = self._variable_matrix()
+        if matrix.shape[0] == 0:
+            raise ValueError("svd(): empty linear system")
+        _u, s, vt = np.linalg.svd(matrix, full_matrices=False)
+        mvs = [
+            from_tensor(_MVTensor(data=vec.astype(np.float64), masks=(var_mask,)))
+            for vec in vt
+        ]
+        return s.tolist(), mvs
+
 
 class AffineExpression:
     """A sum of :class:`Expression` terms that could not be merged into one tensor.

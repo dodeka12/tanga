@@ -32,6 +32,21 @@
   returns `False` early when interrupted (instead of blindly sleeping), so
   user-defined nested animation loops can break out cleanly.  (`sleep_ms` is no
   longer a `@staticmethod`; it now returns a `bool`.)
+- **Geometry-derived variable blade masks** — `Geometry.mask_for(typ)` returns
+  the `BladeMask` a geometric entity/operator type occupies in the bound
+  algebra (derived from the creation pipeline, so it respects OPNS/IPNS and the
+  per-algebra support matrix), and `Geometry.create_var(name, typ)` wraps it in
+  an expression-system `Variable`.  `Geometry.__call__` also accepts a
+  `(name, type)` pair (`geo("R1", Rotor)`).
+- **Expression least-squares solve** — `Expression.lstsq(rhs=None)` solves a
+  single-variable expression as a linear system, returning the
+  smallest-singular-vector solution for homogeneous fittings (e.g. line
+  incidence ``P ^ L = 0``) or a `numpy.linalg.lstsq` solution given an explicit
+  right-hand side.
+- **Expression SVD** — `Expression.svd()` returns the descending singular
+  values of a single-variable expression's linear map together with the
+  corresponding right-singular vectors as `MV`s over the variable's blade
+  mask.
 
 ## Bug Fixes
 - **Snapshot export default camera matches the live view** — the exported HTML

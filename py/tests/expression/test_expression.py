@@ -342,6 +342,92 @@ class TestInverse:
             e.inv("V2")
 
 
+class TestLeastSquares:
+    def setup_method(self):
+        _reset_allocator()
+        self.alg = BasisE3()
+        self.full = BladeMask.full(self.alg)
+
+    def _mv(self, coeffs):
+        return self.alg.multivector(coeffs)
+
+    def test_lstsq_rhs_recovers_solution(self):
+        v = Variable("V1", self.full)
+        R = create_rotor(self.alg, 0.5, Direction(1, 0, 0))
+        e = v * R
+        x = self._mv({"e1": 1.0, "e2": 2.0, "e3": 3.0})
+        y = e(V1=x)
+        assert _close(e.lstsq(rhs=y), x)
+
+    def test_lstsq_homogeneous_recovers_line_direction(self):
+        from pytanga.basis import BasisP3
+        from pytanga.geometry import Geometry, Line, Point
+
+        alg = BasisP3()
+        geo = Geometry(alg)
+        P = geo.create_var("P", Point)
+        L = geo.create_var("L", Line)
+
+        pts = [geo.create(Point(t, 0.0, 0.0)) for t in (1.0, 2.0, 3.0, 4.0)]
+        constraints = (P ^ L)(P=pts)
+        L_est = constraints.lstsq()
+
+        # A point on the fitted line should satisfy incidence ~ 0.
+        p = geo.create(Point(2.0, 0.0, 0.0))
+        assert (p ^ L_est).mag < 1e-8
+
+    def test_lstsq_rejects_multivariable(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        with pytest.raises(ValueError):
+            (v * w).lstsq()
+
+    def test_lstsq_rejects_repeated_variable(self):
+        v = Variable("V1", self.full)
+        with pytest.raises(ValueError):
+            (v * v).lstsq()
+
+    def test_svd_returns_sorted_values_and_mvs(self):
+        v = Variable("V1", BladeMask(self.alg, [1, 2, 4]))
+        a = self._mv({0: 2.0, 1: 1.0})  # 2-scalar + e1 -> diagonal-ish map
+        e = v * a
+
+        values, mvs = e.svd()
+        assert isinstance(values, list)
+        assert len(values) == len(mvs)
+        assert values == sorted(values, reverse=True)
+        assert all(_is_mv(mv) for mv in mvs)
+
+    def test_svd_smallest_singular_mv_matches_lstsq(self):
+        from pytanga.basis import BasisP3
+        from pytanga.geometry import Geometry, Line, Point
+
+        alg = BasisP3()
+        geo = Geometry(alg)
+        P = geo.create_var("P", Point)
+        L = geo.create_var("L", Line)
+        pts = [geo.create(Point(t, 0.0, 0.0)) for t in (1.0, 2.0, 3.0, 4.0)]
+        constraints = (P ^ L)(P=pts)
+
+        values, mvs = constraints.svd()
+        L_svd = mvs[-1]  # smallest singular vector
+        L_lstsq = constraints.lstsq()
+        # Same homogeneous solution up to sign/scale.
+        assert abs(L_svd.sp(L_lstsq)) > 0.99 * L_svd.mag * L_lstsq.mag
+
+    def test_svd_rejects_multivariable(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        with pytest.raises(ValueError):
+            (v * w).svd()
+
+
+def _is_mv(obj) -> bool:
+    from pytanga.algebra import MV
+
+    return isinstance(obj, MV)
+
+
 class TestPartial:
     def setup_method(self):
         _reset_allocator()

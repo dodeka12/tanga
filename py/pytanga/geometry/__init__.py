@@ -22,6 +22,10 @@ from .create import (
     create_entity,
     create_operator,
 )
+from .mask import (
+    create_var,
+    mask_for,
+)
 from .random import (
     Distribution,
     Normal,
@@ -100,6 +104,9 @@ __all__ = [
     "create",
     "create_entity",
     "create_operator",
+    # Variable / blade-mask helpers
+    "create_var",
+    "mask_for",
     # Random generation
     "Distribution",
     "Normal",

@@ -110,6 +110,39 @@ x = e_inv(V2=y)
 Multi-variable, repeated-variable, non-square, or singular expressions raise
 `ValueError`.
 
+## Least squares (`lstsq`)
+
+For a single-variable expression whose tensor is a linear map in that
+variable, `lstsq()` solves it in the least-squares sense (the single variable
+is inferred, so no name is needed):
+
+```python
+x = e.lstsq()              # homogeneous: smallest singular vector
+x = e.lstsq(rhs=y)         # M · vec(x) = y via np.linalg.lstsq
+```
+
+When no `rhs` is given, the homogeneous system `M · vec(x) = 0` is solved and
+the smallest-singular-vector solution is returned (the right singular vector of
+the least singular value) — the standard approach for fitting entities from an
+incidence constraint such as `P ^ L = 0`.  With an explicit `rhs` (an `MV`
+over the output mask), `numpy.linalg.lstsq` is used, requiring a non-stacked
+expression.  See `py/examples/expression/line_fitting_p3.py`.
+
+## Singular-value decomposition (`svd`)
+
+`svd()` returns `(values, mvs)` — the descending list of singular values of
+the expression's linear map plus the corresponding right-singular vectors as
+`MV`s over the variable's blade mask:
+
+```python
+values, mvs = e.svd()
+smallest = mvs[-1]   # == e.lstsq()
+```
+
+It applies to a single-variable expression (with stacked/batch axes allowed),
+and raises `ValueError` for no-variable, multi-variable, or repeated-variable
+expressions.
+
 ## The internal tensor
 
 `Expression.tensor` exposes the reduced `MVLabeledTensor` (one output axis, one
