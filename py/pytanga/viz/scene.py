@@ -474,6 +474,17 @@ class Scene:
             result.append(entity_dict)
         return result
 
+    def clear_dirty(self) -> None:
+        """Reset dirty tracking on all nodes.
+
+        Called after an initial full-state sync so a subsequent :meth:`flush`
+        only sends changes made after the sync — not a redundant re-send of the
+        whole scene, which would otherwise force the frontend to rebuild every
+        object and orphan their CSS2D labels.
+        """
+        for node in self._dfs_preorder():
+            node.consume_dirty()
+
     # -- Label look-up -----------------------------------------
 
     def get_label_ids(self, entity_id: str) -> list[str]:

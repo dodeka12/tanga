@@ -68,12 +68,11 @@ def to_tensor(
 
     if isinstance(a, list):
         mvs = [_as_mv(alg, x) for x in a]
-        n = len(mvs)
-        dtype = np.float64 if alg.dtype.startswith("float") else np.int64
-        arr = np.zeros((len(mask), n), dtype=dtype)
-        for i, mv in enumerate(mvs):
-            mat = to_matrix(mv, mask=mask)
-            arr[:, i] = mat.data[:, 0]
+        if mvs:
+            arr = alg._mod.to_matrix_batch([mv._impl for mv in mvs], mask.ids)
+        else:
+            dtype = np.float64 if alg.dtype.startswith("float") else np.int64
+            arr = np.zeros((len(mask), 0), dtype=dtype)
         return MVTensor(data=arr, masks=(mask, None))
 
     # Single MV
@@ -113,6 +112,12 @@ def from_tensor(t: MVTensor) -> "MV | list":
 
     # Build nested list structure for the non‑blade axes
     other_shape = data.shape[1:]  # the None‑axis dimensions
+
+    # Fast path: rank-2 (one blade-mask axis + one batch axis) → list[MV]
+    if len(other_shape) == 1:
+        arr = np.ascontiguousarray(data.reshape(n_blades, other_shape[0]))
+        impls = alg._mod.from_matrix_batch(arr, mask.ids)
+        return [MV(impl, alg) for impl in impls]
 
     def _build(idx: tuple[int, ...]) -> MV:
         """Construct a single MV from a sub‑array indexed by *idx*."""

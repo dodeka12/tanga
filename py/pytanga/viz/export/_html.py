@@ -172,18 +172,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             cam_explicit=False,
             space_dim=space_dim,
         )
-        + "        const _box = new THREE.Box3();\n"
-        "        meshMap.forEach(m => _box.expandByObject(m));\n"
-        "        if (!_box.isEmpty()) {\n"
-        "            const _sz = new THREE.Vector3();\n"
-        "            _box.getSize(_sz);\n"
-        "            const _d = Math.max(_sz.x, _sz.y, _sz.z, 1) * 1.5 + 2;\n"
-        "            if (!adapterCamConfig || !adapterCamConfig.near) adapterCamera.near = Math.max(0.01, _d * 0.001);\n"
-        "            if (!adapterCamConfig || !adapterCamConfig.far) adapterCamera.far = _d * 10;\n"
-        "            adapterCamera.updateProjectionMatrix();\n"
-        "            adapterControls.update();\n"
-        "        }\n"
-        "    }\n"
+        + "    }\n"
         "})();"
     )
 

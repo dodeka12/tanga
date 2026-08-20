@@ -109,6 +109,9 @@ nav:
       - Labeled tensors: py/tensors/labeled-tensor.md
       - Label iterator: py/tensors/iterator.md
       - Product tensor: py/tensors/product-tensor.md
+    - Expressions:
+      - Overview: py/expression/index.md
+      - Usage: py/expression/usage.md
     - Geometry:
       - Overview: py/geometry/index.md
       - Entities: py/geometry/entities.md

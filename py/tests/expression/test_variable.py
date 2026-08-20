@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""Tests for the Variable class."""
+
+import pytest
+
+from pytanga import BladeMask
+from pytanga.basis import BasisE3
+from pytanga.expression._labels import MAX_DEGREE, _reset_allocator, max_variables
+from pytanga.expression._variable import Variable
+
+
+class TestVariable:
+    def test_construction_and_properties(self):
+        _reset_allocator()
+        alg = BasisE3()
+        mask = BladeMask(alg, grades=[0, 2])
+        v = Variable("V1", mask)
+        assert v.name == "V1"
+        assert v.mask is mask
+        assert v.algebra is alg
+        assert v.label == "a"
+        assert v.labels[0] == v.label
+        assert len(v.labels) == MAX_DEGREE
+
+    def test_label_blocks_are_distinct(self):
+        _reset_allocator()
+        alg = BasisE3()
+        mask = BladeMask(alg, grades=[0, 2])
+        v = Variable("V1", mask)
+        w = Variable("V2", mask)
+        assert v.labels != w.labels
+        assert not (set(v.labels) & set(w.labels))
+
+    def test_too_many_variables(self):
+        _reset_allocator()
+        alg = BasisE3()
+        mask = BladeMask(alg, grades=[0, 2])
+        for i in range(max_variables()):
+            Variable(f"V{i}", mask)
+        with pytest.raises(RuntimeError):
+            Variable("over", mask)
+
+    def test_repr(self):
+        _reset_allocator()
+        alg = BasisE3()
+        v = Variable("V1", BladeMask(alg, grades=[0, 2]))
+        assert "V1" in repr(v)
+
+    def test_mask_type_error(self):
+        with pytest.raises(TypeError):
+            Variable("V1", "not a mask")
+
+    def test_public_imports(self):
+        from pytanga import Expression, Variable as TopVar
+        from pytanga.expression import Expression as PkgExpr, Variable as PkgVar
+
+        assert TopVar is Variable
+        assert PkgVar is Variable
+        assert PkgExpr is Expression

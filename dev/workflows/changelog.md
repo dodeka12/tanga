@@ -24,17 +24,28 @@ How to create and maintain changelog entries for this repository.
 - Use the current-tag-relative form:
 
   ```
-  # Changes since version <last-public-release>
+  # Changes since version <last-stable-release>
   ```
 
-  e.g. `# Changes since version 0.9.2`.
+  Determine `<last-stable-release>` by running (prints the newest non-prerelease
+  tag reachable from the commit the branch is based on, without the leading
+  `v`):
+
+  ```
+  uv run python tools/last-release.py
+  ```
+
+  e.g. if it prints `0.10.0`, use `# Changes since version 0.10.0`.
+  Do **not** copy a version from this document or from another changelog — it
+  must reflect the tag your branch actually forked from, and it changes
+  frequently.
 
 ## Structure
 
 Use these sections in this order (only include the sections that apply):
 
 ```
-# Changes since version <last-public-release>
+# Changes since version <last-stable-release>
 
 ## New Features
 - **<Headline>** — one-sentence explanation.
@@ -62,11 +73,12 @@ to the hash-based filename). When adding a changelog:
 2. Head the entry with the same since-relative label as the title:
 
    ```
-   ## [Since 0.9.2] — 2026-08-16
+   ## [Since <version>] — <YYYY-MM-DD>
    ```
 
-   (use `## [Since <version>] — <YYYY-MM-DD>`; do **not** use an `[Unreleased]`
-   tag, since the version is not yet known).
+   where `<version>` is the same value printed by `tools/last-release.py`
+   (e.g. `## [Since 0.10.0] — 2026-08-18`). Do **not** use an `[Unreleased]`
+   tag, since the version is not yet known.
 3. Add a one-line summary of the main features (dot-separated, `·`), a second
    line for breaking/bug highlights if needed, and a details link:
 

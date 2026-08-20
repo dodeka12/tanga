@@ -26,7 +26,6 @@ def main():
     # ── Create a 2D visualizer ──────────────────────────────
     viz = Visualizer(
         space_dim=2,
-        space_extent=8,
         annotation="""
 ## 2D Algebra Demo
 
@@ -51,7 +50,7 @@ def main():
     viz.add(Direction(0, 1, 0), color="#44ff44", label="e2 (green)")
 
     # A direction between e1 and e2
-    d = e2.vector(1.5, 2.5)
+    d = e2.multivector({1: 1.5, 2: 2.5})
     viz.add(d, color="#ffaa00", label="dir(1.5, 2.5)")
 
     # Space (pseudoscalar) — translucent
@@ -115,7 +114,8 @@ def main():
     # )
 
     # ── Run the viewer ─────────────────────────────────────
-    viz.run()
+    viz.show()
+    viz.wait()
 
 
 if __name__ == "__main__":

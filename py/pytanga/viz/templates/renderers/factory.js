@@ -164,6 +164,14 @@ export function updateEntityMesh(mesh, ent, prev) {
 
 export function removeEntityMesh(mesh) {
     if (!mesh) return;
+    // Detach nested CSS2D label elements before removing from the scene so
+    // they don't linger as ghost labels. Object3D.remove() only dispatches
+    // 'removed' on the object itself, not its CSS2D descendants.
+    mesh.traverse((c) => {
+        if (c.isCSS2DObject && c.element && c.element.parentNode) {
+            c.element.parentNode.removeChild(c.element);
+        }
+    });
     if (mesh.parent) mesh.parent.remove(mesh);
     mesh.traverse((c) => {
         if (c.geometry) c.geometry.dispose();

@@ -44,6 +44,32 @@ stops the server cleanly when you press Ctrl+C — or whenever the loop ends.
   Only entities marked dirty by the scene manager are serialized — stationary
   entities cost nothing.
 
+### Custom and nested loops
+
+`animate()` drives a single flat loop. For sweeps over multiple variables, run
+your own loops and check for Ctrl+C with `interrupted()` / `sleep_ms()`:
+
+```python
+viz.show()
+try:
+    for a in range(10):
+        for b in range(20):
+            # ... update entities ...
+            viz.flush()
+            if not viz.sleep_ms(16):   # False == interrupted
+                break
+        if viz.interrupted():          # True == interrupted
+            break
+finally:
+    viz.stop_server()
+```
+
+- `interrupted()` returns `True` once Ctrl+C / SIGTERM has been received
+  (requires the server to be started so the signal handler is installed).
+- `sleep_ms(ms)` sleeps for `ms` milliseconds, returning `False` early if a
+  break signal arrives, `True` otherwise. Use its result to pace *and* break
+  nested loops without busy-waiting.
+
 ## Keyframe Tweening (Browser-Driven)
 
 Smooth transitions without a Python loop:
