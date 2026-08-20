@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 0.11.0] — 2026-08-20
+- `Variable`/`Expression` symbolic layer · vectorized batch MV↔tensor conversion · expression inverse/`lstsq`/`svd` · `AffineExpression` · repeated-variable polynomial terms · geometry-derived variable masks · interruptible animation loops
+- Bug fixes: snapshot export default camera now matches the live view
+→ [Details](2026-08-20_0f11790.md)
+
 ## [Since 0.10.0] — 2026-08-20
 - Bug fixes: macOS (Apple Clang/libc++) wheel build fails with an ambiguous `operator-` — the generic multivector `operator+`/`operator-` templates are now SFINAE-constrained so they no longer clash with std iterator subtraction via ADL
 → [Details](2026-08-20_8270b99.md)
