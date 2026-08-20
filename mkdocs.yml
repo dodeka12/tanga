@@ -109,6 +109,9 @@ nav:
       - Labeled tensors: py/tensors/labeled-tensor.md
       - Label iterator: py/tensors/iterator.md
       - Product tensor: py/tensors/product-tensor.md
+    - Expressions:
+      - Overview: py/expression/index.md
+      - Usage: py/expression/usage.md
     - Geometry:
       - Overview: py/geometry/index.md
       - Entities: py/geometry/entities.md
@@ -116,6 +119,7 @@ nav:
       - Operators: py/geometry/operators.md
       - Analysis pipeline: py/geometry/analysis.md
       - Creation pipeline: py/geometry/create.md
+      - Variables & blade masks: py/geometry/variables.md
       - Random generation: py/geometry/random.md
       - Round-trip examples: py/geometry/round-trip.md
     - 3D Visualization:

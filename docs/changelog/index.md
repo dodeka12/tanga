@@ -1,30 +1,25 @@
 # Changelog
 
-## [Since 0.9.2] — 2026-08-20
+## [Since 0.11.0] — 2026-08-20
+- `Variable`/`Expression` symbolic layer · vectorized batch MV↔tensor conversion · expression inverse/`lstsq`/`svd` · `AffineExpression` · repeated-variable polynomial terms · geometry-derived variable masks · interruptible animation loops
+- Bug fixes: snapshot export default camera now matches the live view
+→ [Details](2026-08-20_0f11790.md)
+
+## [Since 0.10.0] — 2026-08-20
 - Bug fixes: macOS (Apple Clang/libc++) wheel build fails with an ambiguous `operator-` — the generic multivector `operator+`/`operator-` templates are now SFINAE-constrained so they no longer clash with std iterator subtraction via ADL
 → [Details](2026-08-20_8270b99.md)
 
-## [Since 0.9.2] — 2026-08-19
+## [Since 0.10.0] — 2026-08-19
 - `meet` operator · `blade_join` renamed to `join` (meet exposed as `meet`) · Windows MSVC auto-detection for JIT compile (no developer shell required)
 - Breaking: `LabelStyle.along` for `Circle` now (radius fraction, angle fraction × π) and for `Sphere` (radius fraction, two angle fractions × π)
 - Bug fixes: `join` no longer hangs on non-unit blades — projection now uses the conjugate-based pseudo-inverse `conjugate(N) / IP(N, conjugate(N))`
 → [Details](2026-08-19_3745321.md)
 
-## [Since 0.9.2] — 2026-08-18
+## [Since 0.10.0] — 2026-08-18
 - Consolidated display/export/serving API (`show`/`wait`/`start_server`/`stop_server` · `export_snapshot`/`export_figure`/`export_glb` · `animation=` keyword) · `display_snapshot()` · `display_row(mode="static")` · frontend version check
 - Breaking: `open_figure()` → `open_snapshot()`; `Visualizer(port=..., host=...)` deprecated in favor of `start_server(...)`
 - Bug fixes: `display_static()`/`display_snapshot()` renders via `<iframe srcdoc>` (no notebook style leakage) · frontend assets served with `Cache-Control: no-cache` · `start_server()`/`show()` default to port 8765 for reconnect
 → [Details](2026-08-18_95486fd.md)
-
-## [Since 0.9.2] — 2026-08-17
-- `CylinderLineStyle` (world-unit cylinder lines) · `content` aspect for in-place updates · unified live/export render pipeline · `Line` length as a content field · screen-space fat-line rendering · single `sceneObjects` registry · `Visualizer.animate()` frame loop · `VizStyles` style holder (`styles` / `global_styles`)
-- Breaking: removed the `default_*` style API (use `viz.styles.*`); `set_default_color()` targets the main scene
-- Bug fixes: WebSocket reconnect overhaul — IPv4+IPv6 loopback bind · graceful `1001` shutdown · Unicode-safe console/log output · fixed 2s auto-reconnect for 60s then stop
-→ [Details](2026-08-17_13b30f7.md)
-
-## [Since 0.9.2] — 2026-08-16
-- Scene graph (`VizGroup`) · `VizObjectRef` · per-object transforms · aspect patches · overlay `attach_to`
-→ [Details](2026-08-16_5877a61.md)
 
 ## [Since 0.9.2] — 2026-08-16
 - OPNS/IPNS flag on `Algebra.opns` · typed analyzers · MV-accepting constructors · `Geometry.__call__` · random entity generators · macOS compilation + Apple Silicon wheels · extended algebra/MV operators · `MV.prune(tol)` · `Color` enum · entities-module split

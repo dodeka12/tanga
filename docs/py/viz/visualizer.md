@@ -274,7 +274,8 @@ viz.clear()  # remove all (main scene)
 | `flush(*, fit_camera=False)` | Push all dirty scenes to connected browsers.  Pass ``fit_camera=True`` after all entities are added to have the frontend auto‑adjust the camera to encompass them. |
 | `stop()` | Stop the server and clean up. Waits for graceful WebSocket shutdown before stopping the event loop. |
 | `run(*, wait_for_browser=None)` | Start server, open browser, block until Ctrl+C. In Jupyter, ``wait_for_browser`` defaults to ``False``. |
-| `sleep_ms(ms)` | Convenience: `time.sleep(ms / 1000)` |
+| `sleep_ms(ms)` | Sleep for ``ms`` milliseconds, returning early on Ctrl+C. Returns ``True`` if it slept the full interval, ``False`` if interrupted. |
+| `interrupted()` | Returns ``True`` once Ctrl+C / SIGTERM has been received (requires the server to be started). Use it to break custom/nested loops. |
 | `animate(*, fps=60.0)` | Yield once per animation frame until Ctrl+C (see [Animation](animation.md)). Paces the loop to ``fps``; ``fps=0`` disables pacing. Calls ``stop()`` automatically when the loop ends. |
 | `url` (property) | The HTTP URL of the viewer (`"http://localhost:8765"`) |
 | `scene(name)` | Get or create a named scene, returns :class:`VizSceneHandle` |

@@ -99,6 +99,28 @@ def matrix_common_def(ctype: str) -> str:
     }}, py::arg("a"), py::arg("blade_ids"),
        "Extract coefficient column of a as a (n,1) numpy array.");
 
+    m.def("to_matrix_batch", [_mat_to_arr](const std::vector<TDynMV>& mvs,
+            const std::vector<uint32_t>& blade_ids) -> py::array_t<{ctype}> {{
+        Tan::GA::CBladeMask<TBlade> mask;
+        for (auto id : blade_ids) mask.Insert(TBlade(id));
+
+        Tan::CMatrix<{ctype}> mat;
+        mat.SetSize(blade_ids.size(), mvs.size());
+        mat.Zero();
+
+        size_t col = 0;
+        for (const auto& mv : mvs) {{
+            mask.ForEachBlade([&](unsigned uRow, const TBlade& bl) {{
+                {ctype} val{{}};
+                if (mv.GetValueBlade(val, bl))
+                    mat(uRow, col) = val;
+            }});
+            ++col;
+        }}
+        return _mat_to_arr(mat);
+    }}, py::arg("mvs"), py::arg("blade_ids"),
+       "Extract coefficients of a list of MVs into an (n_blades, n_mvs) array.");
+
     m.def("from_matrix", [](py::array_t<{ctype}> arr,
             const std::vector<uint32_t>& blade_ids) {{
         auto buf = arr.unchecked<2>();
@@ -116,6 +138,32 @@ def matrix_common_def(ctype: str) -> str:
         return c;
     }}, py::arg("arr"), py::arg("blade_ids"),
        "Reconstruct a DynMV from a (n,1) numpy array and blade_ids.");
+
+    m.def("from_matrix_batch", [](py::array_t<{ctype}> arr,
+            const std::vector<uint32_t>& blade_ids) -> std::vector<TDynMV> {{
+        auto buf = arr.unchecked<2>();
+        size_t n_rows = static_cast<size_t>(buf.shape(0));
+        size_t n_cols = static_cast<size_t>(buf.shape(1));
+        if (n_rows != blade_ids.size())
+            throw std::runtime_error(
+                "from_matrix_batch: array rows != len(blade_ids)");
+        Tan::GA::CBladeMask<TBlade> mask;
+        for (auto id : blade_ids) mask.Insert(TBlade(id));
+
+        std::vector<TDynMV> out;
+        out.reserve(n_cols);
+        for (size_t c = 0; c < n_cols; ++c) {{
+            TDynMV mv;
+            mask.ForEachBlade([&](unsigned uRow, const TBlade& bl) {{
+                {ctype} val = buf(uRow, c);
+                if (val != {ctype}(0))
+                    mv.SetValueBlade(val, bl);
+            }});
+            out.push_back(std::move(mv));
+        }}
+        return out;
+    }}, py::arg("arr"), py::arg("blade_ids"),
+       "Reconstruct a list of DynMV from an (n_blades, n_mvs) array.");
 
     // -----------------------------------------------------------------------
     // Product-matrix construction

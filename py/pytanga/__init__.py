@@ -6,6 +6,7 @@
 from .algebra import MV, Algebra, EInv, EProduct, random_mask, random_mv
 from .blade_mask import BladeMask
 from .codegen import precompile
+from .expression import AffineExpression, Expression, Variable
 from .geometry import (
     Circle,
     Direction,
@@ -22,6 +23,7 @@ from .matrix import MVMatrix, MVProductMatrix
 from .tensor import MVTensor
 
 __all__ = [
+    "AffineExpression",
     "Algebra",
     "BladeMask",
     "install_docs",
@@ -30,6 +32,7 @@ __all__ = [
     "Direction",
     "EInv",
     "EProduct",
+    "Expression",
     "Line",
     "MVMatrix",
     "MVProductMatrix",
@@ -40,6 +43,7 @@ __all__ = [
     "PointPair",
     "Space",
     "Sphere",
+    "Variable",
     "precompile",
     "random_mask",
     "random_mv",

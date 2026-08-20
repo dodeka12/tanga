@@ -720,12 +720,41 @@ class Visualizer(_JupyterDisplayMixin):
         """Return full serialized state for a scene, adding defaults first."""
         self._add_default_scene_objects(scene_name)
         scene = self._scenes.get(scene_name, self._scenes[""])
-        return scene.full_state(styles_map=scene.styles.kind), []
+        state = scene.full_state(styles_map=scene.styles.kind)
+        # The full state is the authoritative snapshot the frontend just
+        # received; consume the dirty flags so the next flush() doesn't re-send
+        # the whole scene (which would force a rebuild and orphan CSS2D labels).
+        scene.clear_dirty()
+        return state, []
 
-    @staticmethod
-    def sleep_ms(milliseconds: int) -> None:
-        """Pause execution for *milliseconds*."""
-        time.sleep(milliseconds / 1000)
+    def sleep_ms(self, milliseconds: int) -> bool:
+        """Sleep for *milliseconds*, returning early if interrupted.
+
+        Returns ``True`` if the full interval elapsed, or ``False`` if a break
+        signal (Ctrl+C / SIGTERM) arrived before it finished — the caller
+        should then stop animating.
+
+        Blocks on the shutdown event with a timeout (no busy-wait / polling).
+        If the server hasn't been started (no signal handler installed), it
+        sleeps the full interval and returns ``True``.
+        """
+        shutdown = getattr(self, "_shutdown_requested", None)
+        if shutdown is None:
+            time.sleep(milliseconds / 1000)
+            return True
+        # threading.Event.wait(timeout) returns True when the shutdown flag is
+        # set and False on timeout — invert so True = "completed", False =
+        # "interrupted".
+        return not shutdown.wait(timeout=milliseconds / 1000)
+
+    def interrupted(self) -> bool:
+        """True once a break signal (Ctrl+C / SIGTERM) has been received.
+
+        Requires :meth:`start_server` (or :meth:`show` / :meth:`animate`) to
+        have been called so the signal handler is installed.
+        """
+        shutdown = getattr(self, "_shutdown_requested", None)
+        return shutdown is not None and shutdown.is_set()
 
     def animate(self, *, fps: float = 60.0) -> Iterator[float]:
         """Yield once per animation frame until interrupted (Ctrl+C).

@@ -88,6 +88,68 @@ function _orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, aspect) {
 }
 
 /**
+ * Return a finite aspect ratio (width / height), or NaN when the size is not
+ * usable (zero, negative, or non-finite).  Callers must never write NaN into a
+ * camera frustum, so they guard on this result.
+ *
+ * @param {number} width
+ * @param {number} height
+ * @returns {number}
+ */
+function _finiteAspect(width, height) {
+    if (!Number.isFinite(width) || !Number.isFinite(height)) return NaN;
+    if (width <= 0 || height <= 0) return NaN;
+    return width / height;
+}
+
+/**
+ * Set the 2D orthographic frustum (left/right/top/bottom) for the given aspect
+ * ratio.  Recomputed from the stored fit (``camera.userData._view2d``) when
+ * available; otherwise the current full height is preserved.  Never writes
+ * NaN/Infinity — a corrupt frustum is reset to a sane default box.
+ *
+ * @param {THREE.OrthographicCamera} camera
+ * @param {number} aspect  finite width/height ratio
+ */
+function _applyOrthoFrustum(camera, aspect) {
+    const v2d = camera.userData?._view2d;
+    const finiteRect = v2d
+        && Number.isFinite(v2d.xmin) && Number.isFinite(v2d.xmax)
+        && Number.isFinite(v2d.ymin) && Number.isFinite(v2d.ymax);
+
+    if (finiteRect) {
+        const f = _orthoFrustum(
+            v2d.xmin, v2d.xmax, v2d.ymin, v2d.ymax,
+            v2d.uniform !== false, v2d.border_px || 0, aspect
+        );
+        camera.left = f.left;
+        camera.right = f.right;
+        camera.top = f.top;
+        camera.bottom = f.bottom;
+        return;
+    }
+
+    // Fall back to preserving the current full height, but never propagate a
+    // non-finite/corrupt frustum (Math.max(NaN, …) === NaN).
+    const extX = Math.abs(camera.right - camera.left);
+    const extY = Math.abs(camera.top - camera.bottom);
+    if (!Number.isFinite(extX) || !Number.isFinite(extY) || extX <= 0 || extY <= 0) {
+        const height = 10;  // sane default full height
+        camera.left = -height * aspect / 2;
+        camera.right = height * aspect / 2;
+        camera.top = height / 2;
+        camera.bottom = -height / 2;
+        return;
+    }
+
+    const fit = Math.max(extX / aspect, extY);
+    camera.left = -fit * aspect / 2;
+    camera.right = fit * aspect / 2;
+    camera.top = fit / 2;
+    camera.bottom = -fit / 2;
+}
+
+/**
  * Apply the camera described by ``cameraConfig`` to the scene.
  *
  * The config carries a ``type`` discriminator (``"2d"`` or ``"3d"``) rather
@@ -186,13 +248,23 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig) {
     // ── Default 2D (no explicit view config) ──
     if (spaceDim === 2 && !camera.isOrthographicCamera) {
         const frustumSize = 20;  // sensible default full height
+        const safeAspect = Number.isFinite(aspect) ? aspect : 1.0;
         const newCam = _newOrthographic();
-        newCam.left = frustumSize * aspect / -2;
-        newCam.right = frustumSize * aspect / 2;
+        newCam.left = frustumSize * safeAspect / -2;
+        newCam.right = frustumSize * safeAspect / 2;
         newCam.top = frustumSize / 2;
         newCam.bottom = frustumSize / -2;
         newCam.position.set(0, 0, 20);
         newCam.lookAt(0, 0, 0);
+        newCam.updateProjectionMatrix();
+        newCam.userData._view2d = {
+            xmin: -frustumSize * safeAspect / 2,
+            xmax: frustumSize * safeAspect / 2,
+            ymin: -frustumSize / 2,
+            ymax: frustumSize / 2,
+            uniform: true,
+            border_px: 0,
+        };
         controls.object = newCam;
         return newCam;
     }
@@ -251,9 +323,10 @@ export function fitCamera(sceneObjects, camera, controls, spaceDim) {
 
     if (spaceDim === 2) {
         const frustumSize = Math.max(size.x, size.y, 1) * 1.2;
-        const aspect = window.innerWidth / window.innerHeight;
-        camera.left = frustumSize * aspect / -2;
-        camera.right = frustumSize * aspect / 2;
+        const aspect = _finiteAspect(window.innerWidth, window.innerHeight);
+        const safeAspect = Number.isFinite(aspect) ? aspect : 1.0;
+        camera.left = frustumSize * safeAspect / -2;
+        camera.right = frustumSize * safeAspect / 2;
         camera.top = frustumSize / 2;
         camera.bottom = frustumSize / -2;
         camera.position.set(center.x, center.y, 20);
@@ -261,6 +334,16 @@ export function fitCamera(sceneObjects, camera, controls, spaceDim) {
         camera.updateProjectionMatrix();
         controls.target.set(center.x, center.y, 0);
         controls.update();
+        // Persist the fitted rectangle so resize recomputes from the original
+        // fit (letterbox) rather than the current, possibly-corrupt frustum.
+        camera.userData._view2d = {
+            xmin: center.x - frustumSize * safeAspect / 2,
+            xmax: center.x + frustumSize * safeAspect / 2,
+            ymin: center.y - frustumSize / 2,
+            ymax: center.y + frustumSize / 2,
+            uniform: true,
+            border_px: 0,
+        };
         return;
     }
 
@@ -283,52 +366,33 @@ export function fitCamera(sceneObjects, camera, controls, spaceDim) {
 }
 
 /**
- * Handle window resize.  Recomputes 2D orthographic frusta from the new
- * aspect ratio and keeps every camera's aspect updated.
+ * Handle a viewport resize.  Recomputes 2D orthographic frusta from the new
+ * aspect ratio and keeps every camera's aspect updated.  The size is passed in
+ * explicitly (from a ResizeObserver / window event) rather than read from
+ * ``window``, and non-finite sizes are ignored so a not-yet-laid-out container
+ * can never corrupt the frustum.
  *
  * @param {THREE.Camera} camera
  * @param {THREE.WebGLRenderer} renderer
  * @param {object|null} labelRenderer  window._labelRenderer
- * @param {HTMLElement|null} viewerContainer  window._viewerContainer
  * @param {number} spaceDim  2 or 3
+ * @param {number} width   renderer width in CSS pixels
+ * @param {number} height  renderer height in CSS pixels
  */
-export function handleResize(camera, renderer, labelRenderer, viewerContainer, spaceDim) {
-    const aspect = window.innerWidth / window.innerHeight;
+export function handleResize(camera, renderer, labelRenderer, spaceDim, width, height) {
+    const aspect = _finiteAspect(width, height);
+    if (!Number.isFinite(aspect)) return;
 
     if (spaceDim === 2 && camera.isOrthographicCamera) {
-        // Recompute the frustum from the rectangle stored by switchToCamera;
-        // otherwise preserve the current visible full height.
-        const v2d = camera.userData?._view2d;
-        if (v2d && v2d.xmin !== undefined) {
-            const f = _orthoFrustum(
-                v2d.xmin, v2d.xmax, v2d.ymin, v2d.ymax,
-                v2d.uniform !== false, v2d.border_px || 0, aspect
-            );
-            camera.left = f.left;
-            camera.right = f.right;
-            camera.top = f.top;
-            camera.bottom = f.bottom;
-        } else {
-            const extX = Math.abs(camera.right - camera.left);
-            const extY = Math.abs(camera.top - camera.bottom);
-            const fit = Math.max(extX / aspect, extY);
-            camera.left = -fit * aspect / 2;
-            camera.right = fit * aspect / 2;
-            camera.top = fit / 2;
-            camera.bottom = -fit / 2;
-        }
+        _applyOrthoFrustum(camera, aspect);
     }
 
     camera.aspect = aspect;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(width, height);
 
     if (labelRenderer) {
-        labelRenderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    if (viewerContainer) {
-        viewerContainer.style.width = '100%';
-        viewerContainer.style.height = '100%';
+        labelRenderer.setSize(width, height);
     }
 }
 

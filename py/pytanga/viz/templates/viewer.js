@@ -116,15 +116,26 @@ function initScene() {
 
     window.addEventListener('resize', onResize);
 
+    // Observe the render container so container/iframe resizes (and the
+    // initial layout settling) recompute the camera, not just window resizes.
+    if (typeof ResizeObserver !== 'undefined' && window._viewerContainer) {
+        window._viewerResizeObserver = new ResizeObserver(() => onResize());
+        window._viewerResizeObserver.observe(window._viewerContainer);
+    }
+
 }
 
 function onResize() {
+    const container = window._viewerContainer;
+    const width = container?.clientWidth || window.innerWidth;
+    const height = container?.clientHeight || window.innerHeight;
     handleResize(
         camera,
         renderer,
         window._labelRenderer,
-        window._viewerContainer,
-        sceneConfig?.space_dim || 3
+        sceneConfig?.space_dim || 3,
+        width,
+        height
     );
     updateLineResolutions();
 }
@@ -481,6 +492,11 @@ function applySceneConfig(config) {
     // Tell the interaction module about the current space dimension
     setSpaceDim(spaceDim);
 
+    // Recompute the camera from the real container size now that the camera
+    // type has been switched — the switch itself may have used a stale
+    // window.innerWidth/innerHeight (e.g. before the page finished laying out).
+    onResize();
+
     // Title
     if (config.title !== undefined) {
         renderTitle(config.title);
@@ -772,6 +788,12 @@ async function handleMessage(msg) {
             renderer.setPixelRatio(_savedPixelRatio);
             _savedPixelRatio = null;
         }
+        // Clear the temporary screenshot size so the container returns to its
+        // CSS 100%×100% layout before recomputing the camera from its real size.
+        if (window._viewerContainer) {
+            window._viewerContainer.style.width = '';
+            window._viewerContainer.style.height = '';
+        }
         updateLineResolutions();
         const statusEl2 = document.getElementById('status');
         if (statusEl2) {
@@ -793,13 +815,10 @@ function handleScreenshot(msg) {
         const w = msg.width, h = msg.height;
         _savedPixelRatio = renderer.getPixelRatio();
         renderer.setPixelRatio(1);
-        renderer.setSize(w, h);
+        // Reuse the shared resize path so a 2D ortho frustum is recomputed for
+        // the capture size (not just the perspective aspect).
+        handleResize(camera, renderer, window._labelRenderer, sceneConfig?.space_dim || 3, w, h);
         updateLineResolutions();
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        if (window._labelRenderer) {
-            window._labelRenderer.setSize(w, h);
-        }
         if (window._viewerContainer) {
             window._viewerContainer.style.width = w + 'px';
             window._viewerContainer.style.height = h + 'px';
@@ -848,7 +867,13 @@ function handleScreenshot(msg) {
 async function upsertObject(msg) {
     const old = sceneObjects.get(msg.id);
     if (old) {
-        if (old.obj && old.obj.removeFromParent) old.obj.removeFromParent();
+        if (old.layer === 'scene' && old.obj) {
+            // removeEntityMesh also detaches nested CSS2D label elements, so
+            // rebuilding a scene object (e.g. axes) leaves no ghost labels.
+            removeEntityMesh(old.obj);
+        } else if (old.obj && old.obj.removeFromParent) {
+            old.obj.removeFromParent();
+        }
         if (old.el) old.el.remove();
         sceneObjects.delete(msg.id);
     }

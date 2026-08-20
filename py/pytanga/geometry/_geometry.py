@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from pytanga.blade_mask import BladeMask
+from pytanga.expression import Variable
+
 from .analysis import analyze as _analyze
 from .analysis import analyze_entity, analyze_operator
 from .create import create
@@ -81,11 +84,12 @@ class Geometry:
         """
         return create(self._algebra, obj)
 
-    def __call__(self, obj):
-        """Create MVs from entities, operators, random generators, or analyzes MVs.
+    def __call__(self, obj, typ=None):
+        """Create MVs, create variables, or analyze MVs.
 
         Dispatch rules, in order:
 
+        - ``geo(name, type)`` → :meth:`create_var` (e.g. ``geo("R1", Rotor)``).
         - :class:`~.random.RndEntity` (e.g. ``RndPoint``) → materialize with this
           instance's ``rng`` and create the resulting entity or list of entities.
         - ``list`` / ``tuple`` → recurse over each element (e.g. a list of
@@ -93,6 +97,8 @@ class Geometry:
         - :class:`Entity` / :class:`Operator` → :meth:`create`.
         - :class:`MV` → :meth:`analyze`.
         """
+        if isinstance(obj, str) and typ is not None:
+            return self.create_var(obj, typ)
         if isinstance(obj, RndEntity):
             result = obj(self._rng)
             if isinstance(result, (list, tuple)):
@@ -105,8 +111,8 @@ class Geometry:
         if _is_mv(obj):
             return self.analyze(obj)
         raise TypeError(
-            f"Geometry.__call__() expects RndEntity, Entity, Operator, list, or MV, "
-            f"got {type(obj).__name__}"
+            f"Geometry.__call__() expects RndEntity, Entity, Operator, list, MV, "
+            f"or (name, type) tuple, got {type(obj).__name__}"
         )
 
     def which_entity(self, mv: MV) -> Entity:
@@ -163,3 +169,24 @@ class Geometry:
         Entity, Operator, or None
         """
         return _analyze(mv)
+
+    # ── variable / blade-mask helpers ──────────────────────────
+
+    def mask_for(self, typ) -> BladeMask:
+        """Return the :class:`BladeMask` a type or instance occupies in this algebra.
+
+        A class (e.g. ``Rotor``) yields the full type blade set; an instance
+        yields the mask of that instance's non-zero blades.  Entities respect
+        ``self.algebra.opns``; operators are unaffected.
+        """
+        from .mask import mask_for
+
+        return mask_for(self._algebra, typ)
+
+    def create_var(self, name: str, typ) -> Variable:
+        """Create a :class:`~pytanga.Variable` whose mask matches *typ*.
+
+        ``geo.create_var("R1", Rotor)`` creates a variable that may hold any
+        rotor of ``self.algebra``.
+        """
+        return Variable(name, self.mask_for(typ))

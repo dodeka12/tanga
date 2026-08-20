@@ -5,6 +5,7 @@
 
 import json
 import threading
+import time
 
 import pytest
 from pytanga.geometry.entities import Point
@@ -309,6 +310,46 @@ class TestVisualizer:
         viz._shutdown_requested.set()
         with pytest.raises(StopIteration):
             next(gen)
+    def test_interrupted_false_without_server(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        assert viz.interrupted() is False
+
+    def test_interrupted_tracks_shutdown_event(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+        assert viz.interrupted() is False
+        viz._shutdown_requested.set()
+        assert viz.interrupted() is True
+
+    def test_sleep_ms_completes_when_not_interrupted(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+        assert viz.sleep_ms(1) is True
+
+    def test_sleep_ms_completes_without_server(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        assert viz.sleep_ms(1) is True
+
+    def test_sleep_ms_returns_false_when_already_interrupted(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+        viz._shutdown_requested.set()
+        assert viz.sleep_ms(1) is False
+
+    def test_sleep_ms_returns_false_when_interrupted_mid_wait(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+
+        def _interrupt_later() -> None:
+            time.sleep(0.05)
+            viz._shutdown_requested.set()
+
+        thread = threading.Thread(target=_interrupt_later)
+        thread.start()
+        started = time.monotonic()
+        assert viz.sleep_ms(5000) is False
+        thread.join()
+        assert time.monotonic() - started < 1.0
 
     def test_opns_kwarg_rejected(self):
         with pytest.raises(TypeError):
@@ -1116,6 +1157,17 @@ class TestDefaultSceneObjects:
         kinds = self._kinds(viz)
         assert "Axes3D" in kinds
         assert "Grid" in kinds
+
+    def test_full_state_sync_clears_dirty(self):
+        viz = Visualizer()
+        scene = viz._scenes[""]
+        # A full-state sync snapshots everything and clears the dirty flags so
+        # the next flush() doesn't redundantly re-send the whole scene (which
+        # would force the frontend to rebuild objects and orphan CSS2D labels).
+        viz._full_state_for("")
+        patches, removed = scene.flush()
+        assert patches == []
+        assert removed == []
 
     def test_add_default_axes_false(self):
         viz = Visualizer(add_default_axes=False)

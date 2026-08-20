@@ -276,13 +276,17 @@ if ({mesh_map_var}.size > 0) {{
         box.getSize(sz);
         const maxDim = Math.max(sz.x, sz.y, sz.z, 1);
         const distance = maxDim * 1.5 + 2;
-        {controls_var}.target.copy(center);
+        // Keep the orbit target at the world origin so rotation always
+        // orbits around (0,0,0) regardless of entity placement.
+        {controls_var}.target.set(0, 0, 0);
         {camera_var}.position.set(
             center.x + distance * 0.6,
             center.y + distance * 0.5,
             center.z + distance * 0.7
         );
         {camera_var}.lookAt({controls_var}.target);
+        {camera_var}.near = Math.max(0.01, distance * 0.001);
+        {camera_var}.far = distance * 10;
         {camera_var}.updateProjectionMatrix();
         {controls_var}.update();
     }}
