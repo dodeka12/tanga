@@ -155,7 +155,7 @@ Specifically:
 
 - [x] Update the relevant public docstrings/examples as needed
       (e.g. `py/pytanga/viz/visualizer.py`, `py/examples/viz/*`).
-- [x] Add one branch changelog `2026-08-21_feat-interrupt-handling.md` under
+- [x] Add one branch changelog `2026-08-21_3b2483e.md` under
       `docs/changelog/`, following `dev/workflows/changelog.md`.
 
 ## Notes / edge cases

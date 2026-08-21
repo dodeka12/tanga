@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 0.12.0] — 2026-08-21
+- Per-scene browser interrupt key (`animate(stop_key=...)`, default `q`) · `KeyModifier` enum
+- Breaking: `animate()` no longer stops the server on loop exit (teardown moves to the `atexit` hook)
+→ [Details](2026-08-21_3b2483e.md)
+
 ## [Since 0.11.0] — 2026-08-20
 - `Variable`/`Expression` symbolic layer · vectorized batch MV↔tensor conversion · expression inverse/`lstsq`/`svd` · `AffineExpression` · repeated-variable polynomial terms · geometry-derived variable masks · interruptible animation loops
 - Bug fixes: snapshot export default camera now matches the live view
