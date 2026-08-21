@@ -166,6 +166,8 @@ class VizServer:
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
         self._control_callback: ControlCallback | None = None
+        self._animation_stop_callback: Callable[[str], Awaitable[None]] | None = None
+        self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
         self._pending_screenshots: dict[str, asyncio.Future[Any]] = {}
@@ -187,6 +189,8 @@ class VizServer:
         on_connect: Callable[[str], Awaitable[None]] | None = None,
         on_disconnect: Callable[[str], Awaitable[None]] | None = None,
         push_controls: PushControlsCallback | None = None,
+        animation_stop_callback: Callable[[str], Awaitable[None]] | None = None,
+        push_animation_stop: Callable[[str], Awaitable[None]] | None = None,
         scene_config_callback: SceneConfigCallback | None = None,
         scene_list_callback: SceneListCallback | None = None,
         on_ready: Callable[[], None] | None = None,
@@ -201,6 +205,8 @@ class VizServer:
         self._on_connect = on_connect
         self._on_disconnect = on_disconnect
         self._push_controls_cb = push_controls
+        self._animation_stop_callback = animation_stop_callback
+        self._push_animation_stop = push_animation_stop
         self._on_ready = on_ready
         self._app = self._build_app()
 
@@ -659,6 +665,11 @@ class VizServer:
                                     await self._push_controls_cb(scene_name)
                             except Exception:
                                 pass
+                            try:
+                                if self._push_animation_stop is not None:
+                                    await self._push_animation_stop(scene_name)
+                            except Exception:
+                                pass
                             # Fallback for frontends that never send "scene_synced".
                             asyncio.get_running_loop().call_later(
                                 1.0, self._signal_ws_ready
@@ -671,6 +682,13 @@ class VizServer:
                             )
                             self._signal_ws_ready()
 
+                        elif msg_type == "animation_stop":
+                            if self._animation_stop_callback is not None:
+                                asyncio.create_task(
+                                    self._animation_stop_callback(
+                                        data.get("scene", "")
+                                    )
+                                )
                         elif msg_type == "screenshot:data":
                             rid = data.get("request_id")
                             if rid and rid in self._pending_screenshots:

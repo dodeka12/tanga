@@ -321,6 +321,29 @@ class TestVisualizer:
         viz._shutdown_requested.set()
         assert viz.interrupted() is True
 
+    def test_interrupted_is_scoped_per_scene(self):
+        import asyncio
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+        assert viz.interrupted("a") is False
+        assert viz.interrupted("b") is False
+        asyncio.run(viz._on_browser_animation_stop("a"))
+        assert viz.interrupted("a") is True
+        assert viz.interrupted("b") is False
+
+    def test_normalize_stop_modifiers_accepts_enum_and_strings(self):
+        from pytanga.viz import KeyModifier
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        result = viz._normalize_stop_modifiers([KeyModifier.CTRL, "shift"])
+        assert result == [KeyModifier.CTRL, KeyModifier.SHIFT]
+
+    def test_normalize_stop_modifiers_rejects_unknown(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        with pytest.raises(ValueError):
+            viz._normalize_stop_modifiers(["banana"])
+
     def test_sleep_ms_completes_when_not_interrupted(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._shutdown_requested = threading.Event()
@@ -437,7 +460,7 @@ class TestVisualizer:
         with pytest.warns(DeprecationWarning):
             viz.run()
 
-    def test_wait_stops_server_after_shutdown(self, monkeypatch):
+    def test_wait_returns_after_shutdown_without_stopping_server(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
         viz._shutdown_requested = threading.Event()
@@ -447,7 +470,8 @@ class TestVisualizer:
             viz, "stop_server", lambda: stopped.__setitem__("stopped", True)
         )
         viz.wait()
-        assert stopped == {"stopped": True}
+        # Server teardown is handled by the registered atexit hook, not wait().
+        assert stopped == {}
 
     def test_obsolete_kwargs_rejected(self):
         with pytest.raises(TypeError):

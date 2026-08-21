@@ -16,7 +16,7 @@ import signal
 import threading
 import time
 import warnings
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, Sequence
 
 if TYPE_CHECKING:
     from ._object_ref import VizObjectRef
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 from pytanga.geometry.entities import Entity as GeoEntity
 
 from ._jupyter import _JupyterDisplayMixin
+from ._keys import KeyModifier
 from ._props import _normalize_color
 from ._scene_handle import VizSceneHandle
 from ._style_dict import (
@@ -146,6 +147,11 @@ class Visualizer(_JupyterDisplayMixin):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._atexit_registered = False
+
+        # Interrupt handling: a global shutdown event (terminal Ctrl+C/SIGTERM)
+        # plus lazily-created per-scene events (browser-side stop key).
+        self._interrupt_events: dict[str, threading.Event] = {}
+        self._scene_interrupt_configs: dict[str, dict[str, Any]] = {}
 
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
@@ -727,37 +733,141 @@ class Visualizer(_JupyterDisplayMixin):
         scene.clear_dirty()
         return state, []
 
-    def sleep_ms(self, milliseconds: int) -> bool:
+    def _interrupt_event(self, scene_name: str = "") -> threading.Event:
+        """Return (creating if needed) the interrupt :class:`threading.Event`
+        for *scene_name* (``""`` = main scene)."""
+        if scene_name not in self._interrupt_events:
+            self._interrupt_events[scene_name] = threading.Event()
+        return self._interrupt_events[scene_name]
+
+    def _normalize_stop_modifiers(
+        self, stop_modifiers: Sequence[KeyModifier | str] | None
+    ) -> list[KeyModifier]:
+        """Normalize a stop-modifier sequence into ``KeyModifier`` members.
+
+        Accepts ``KeyModifier`` members or raw strings matching a member value
+        (e.g. ``"ctrl"``).  Unknown values raise :class:`ValueError`.
+        """
+        if not stop_modifiers:
+            return []
+        normalized: list[KeyModifier] = []
+        for mod in stop_modifiers:
+            if isinstance(mod, KeyModifier):
+                normalized.append(mod)
+                continue
+            try:
+                normalized.append(KeyModifier(str(mod).lower()))
+            except ValueError:
+                raise ValueError(
+                    f"Unknown key modifier {mod!r}; expected one of "
+                    f"{[m.value for m in KeyModifier]}"
+                ) from None
+        return normalized
+
+    def _register_animation_stop(
+        self,
+        scene_name: str,
+        stop_key: str | None,
+        stop_modifiers: Sequence[KeyModifier | str] | None,
+    ) -> None:
+        """Normalize, store, and push an animation-stop binding for a scene.
+
+        ``stop_key=None`` disables the browser binding for that scene.
+        """
+        modifiers = self._normalize_stop_modifiers(stop_modifiers)
+        enabled = stop_key is not None
+        config: dict[str, Any] = {
+            "enabled": enabled,
+            "key": stop_key if enabled else None,
+            "modifiers": [m.value for m in modifiers],
+        }
+        self._scene_interrupt_configs[scene_name] = config
+        self._push_animation_stop(scene_name)
+
+    def _push_animation_stop(self, scene_name: str = "") -> None:
+        """Push the stored animation-stop config to the frontend (thread-safe)."""
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._push_animation_stop_async(scene_name), self._loop
+        )
+
+    async def _push_animation_stop_async(self, scene_name: str = "") -> None:
+        """Async variant — must be called from the server's event loop."""
+        if self._server is None:
+            return
+        config = self._scene_interrupt_configs.get(
+            scene_name, {"enabled": False, "key": None, "modifiers": []}
+        )
+        message: dict[str, Any] = {
+            "type": "animation_stop_config",
+            "scene": scene_name,
+        }
+        message.update(config)
+        await self._server.push_raw(json.dumps(message))
+
+    async def _on_browser_animation_stop(self, scene_name: str) -> None:
+        """Handle an ``animation_stop`` message from the browser.
+
+        Sets only the requested scene's interrupt event (unless a global
+        shutdown is already requested).  Never tears the server down — that is
+        the job of the SIGINT handler / ``atexit`` hook.
+        """
+        logger.info("Browser requested animation stop for scene %r", scene_name)
+        self._interrupt_event(scene_name).set()
+
+    def sleep_ms(self, milliseconds: int, scene_name: str = "") -> bool:
         """Sleep for *milliseconds*, returning early if interrupted.
 
-        Returns ``True`` if the full interval elapsed, or ``False`` if a break
-        signal (Ctrl+C / SIGTERM) arrived before it finished — the caller
-        should then stop animating.
+        Returns ``True`` if the full interval elapsed, or ``False`` if an
+        interrupt (terminal Ctrl+C/SIGTERM, or the scene's browser stop key)
+        arrived before it finished — the caller should then stop animating.
 
-        Blocks on the shutdown event with a timeout (no busy-wait / polling).
+        Blocks on the scene's interrupt event with a timeout (no busy-wait).
         If the server hasn't been started (no signal handler installed), it
         sleeps the full interval and returns ``True``.
         """
+        if self.interrupted(scene_name):
+            return False
         shutdown = getattr(self, "_shutdown_requested", None)
         if shutdown is None:
             time.sleep(milliseconds / 1000)
             return True
-        # threading.Event.wait(timeout) returns True when the shutdown flag is
-        # set and False on timeout — invert so True = "completed", False =
-        # "interrupted".
-        return not shutdown.wait(timeout=milliseconds / 1000)
+        # Wait in short windows so both the global and the scene event are
+        # observed without busy-spinning.
+        scene_event = self._interrupt_event(scene_name)
+        deadline = time.monotonic() + milliseconds / 1000
+        while not self.interrupted(scene_name):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return True
+            scene_event.wait(timeout=min(remaining, 0.05))
+        return False
 
-    def interrupted(self) -> bool:
-        """True once a break signal (Ctrl+C / SIGTERM) has been received.
+    def interrupted(self, scene_name: str = "") -> bool:
+        """True once an interrupt for *scene_name* has been requested.
+
+        An interrupt is requested either by terminal Ctrl+C / SIGTERM (global,
+        applies to every scene) or by the scene's browser stop key (scoped to
+        just this scene).
 
         Requires :meth:`start_server` (or :meth:`show` / :meth:`animate`) to
         have been called so the signal handler is installed.
         """
         shutdown = getattr(self, "_shutdown_requested", None)
-        return shutdown is not None and shutdown.is_set()
+        if shutdown is not None and shutdown.is_set():
+            return True
+        return self._interrupt_event(scene_name).is_set()
 
-    def animate(self, *, fps: float = 60.0) -> Iterator[float]:
-        """Yield once per animation frame until interrupted (Ctrl+C).
+    def animate(
+        self,
+        *,
+        fps: float = 60.0,
+        stop_key: str | None = "q",
+        stop_modifiers: Sequence[KeyModifier | str] | None = None,
+        scene_name: str = "",
+    ) -> Iterator[float]:
+        """Yield once per animation frame until interrupted.
 
         Each iteration yields the elapsed wall-clock time in seconds since the
         previous frame (``0.0`` on the first frame).  When *fps* is positive the
@@ -765,9 +875,15 @@ class Visualizer(_JupyterDisplayMixin):
         to disable pacing and call :meth:`sleep_ms` from inside the loop body
         instead.
 
-        The server is started automatically if it isn't already running, and
-        :meth:`stop` is guaranteed to run when the loop ends — including when
-        Ctrl+C is pressed or an exception escapes the loop body.
+        The loop stops when an interrupt for *scene_name* is requested: either
+        terminal Ctrl+C / SIGTERM (global) or the scene's browser stop key.
+        *stop_key* (default ``"q"``) with optional *stop_modifiers*
+        (``KeyModifier`` values) configures that browser binding per scene;
+        pass ``stop_key=None`` to disable it.
+
+        The server is started automatically if it isn't already running, and is
+        stopped automatically at interpreter exit via the registered ``atexit``
+        hook (so a per-scene ``q`` interrupt does not shut the server down).
 
         Example::
 
@@ -781,21 +897,19 @@ class Visualizer(_JupyterDisplayMixin):
             if self._open_browser:
                 self.open_browser()
 
-        shutdown = getattr(self, "_shutdown_requested", None)
+        self._register_animation_stop(scene_name, stop_key, stop_modifiers)
+
         frame_time = 1.0 / fps if fps and fps > 0.0 else None
 
-        try:
-            prev = time.monotonic()
-            while shutdown is None or not shutdown.is_set():
-                now = time.monotonic()
-                yield now - prev
-                prev = now
-                if frame_time is not None:
-                    remaining = frame_time - (time.monotonic() - now)
-                    if remaining > 0.0:
-                        time.sleep(remaining)
-        finally:
-            self.stop_server()
+        prev = time.monotonic()
+        while not self.interrupted(scene_name):
+            now = time.monotonic()
+            yield now - prev
+            prev = now
+            if frame_time is not None:
+                remaining = frame_time - (time.monotonic() - now)
+                if remaining > 0.0:
+                    time.sleep(remaining)
 
     # ── Default style configuration ─────────────────────────
 
@@ -981,6 +1095,8 @@ class Visualizer(_JupyterDisplayMixin):
                 on_connect=self._on_client_connect,
                 on_disconnect=self._on_client_disconnect,
                 push_controls=self._push_controls_async,
+                animation_stop_callback=self._on_browser_animation_stop,
+                push_animation_stop=self._push_animation_stop_async,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
             )
@@ -1022,6 +1138,8 @@ class Visualizer(_JupyterDisplayMixin):
         def _on_sigint(signum: int, frame: object) -> None:
             logger.info("Ctrl+C received - requesting shutdown")
             self._shutdown_requested.set()
+            for event in self._interrupt_events.values():
+                event.set()
 
         signal.signal(signal.SIGINT, _on_sigint)
         signal.signal(signal.SIGTERM, _on_sigint)
@@ -1391,11 +1509,8 @@ class Visualizer(_JupyterDisplayMixin):
         """
         self._ensure_server_running()
         shutdown = getattr(self, "_shutdown_requested", threading.Event())
-        try:
-            while not shutdown.is_set():
-                time.sleep(0.25)
-        finally:
-            self.stop_server()
+        while not shutdown.is_set():
+            time.sleep(0.25)
 
     def run(self, *, wait_for_browser: bool | None = None) -> None:
         """Deprecated: use :meth:`show` then :meth:`wait`.

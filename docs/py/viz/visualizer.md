@@ -274,9 +274,9 @@ viz.clear()  # remove all (main scene)
 | `flush(*, fit_camera=False)` | Push all dirty scenes to connected browsers.  Pass ``fit_camera=True`` after all entities are added to have the frontend auto‑adjust the camera to encompass them. |
 | `stop()` | Stop the server and clean up. Waits for graceful WebSocket shutdown before stopping the event loop. |
 | `run(*, wait_for_browser=None)` | Start server, open browser, block until Ctrl+C. In Jupyter, ``wait_for_browser`` defaults to ``False``. |
-| `sleep_ms(ms)` | Sleep for ``ms`` milliseconds, returning early on Ctrl+C. Returns ``True`` if it slept the full interval, ``False`` if interrupted. |
-| `interrupted()` | Returns ``True`` once Ctrl+C / SIGTERM has been received (requires the server to be started). Use it to break custom/nested loops. |
-| `animate(*, fps=60.0)` | Yield once per animation frame until Ctrl+C (see [Animation](animation.md)). Paces the loop to ``fps``; ``fps=0`` disables pacing. Calls ``stop()`` automatically when the loop ends. |
+| `sleep_ms(ms)` | Sleep for ``ms`` milliseconds, returning early on the scene's stop key or Ctrl+C. Returns ``True`` if it slept the full interval, ``False`` if interrupted. |
+| `interrupted()` | Returns ``True`` once the scene's browser stop key (default `q`) or Ctrl+C / SIGTERM has been received (requires the server to be started). Use it to break custom/nested loops. |
+| `animate(*, fps=60.0, stop_key="q", stop_modifiers=None, scene_name="")` | Yield once per animation frame until interrupted (see [Animation](animation.md)). Paces the loop to ``fps``; ``fps=0`` disables pacing. The browser key defaults to `q` (matches `Q` too); ``stop_modifiers`` accepts `KeyModifier` values. The loop is scoped to ``scene_name``. |
 | `url` (property) | The HTTP URL of the viewer (`"http://localhost:8765"`) |
 | `scene(name)` | Get or create a named scene, returns :class:`VizSceneHandle` |
 | `scenes` (property) | All scenes keyed by name (``""`` is the main scene) |
@@ -396,12 +396,14 @@ viz.start_server()  # serve only (defaults to port 8765)
 point_id = viz.add(Point(3, 0, 0))
 viz.flush()
 
-for dt in viz.animate(fps=60):   # serves, opens a browser, runs until Ctrl+C
+for dt in viz.animate(fps=60):   # serves, opens a browser, runs until Q/Ctrl+C
     viz.update_entity(point_id, Point(new_x, new_y, new_z))
     viz.flush()
 ```
 
-`animate()` stops the server cleanly when the loop ends (e.g. on Ctrl+C).
+`animate()` ends when the scene's browser stop key (default `q`) or terminal
+Ctrl+C / SIGTERM is received. The server is stopped automatically at
+interpreter exit.
 
 `start_server(host=..., port=...)` controls where the server binds:
 
@@ -431,7 +433,7 @@ viz.export_glb("scene.glb")
 | `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |
 | `open_browser()` | Open/reconnect a browser tab |
-| `animate(fps)` | Serve, open a browser, yield a frame time each loop, stop on exit |
+| `animate(fps)` | Serve, open a browser, yield a frame time each loop, stop on the scene's key or Ctrl+C |
 
 ### Deprecated Aliases
 
