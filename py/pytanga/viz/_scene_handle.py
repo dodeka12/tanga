@@ -10,7 +10,7 @@ the same entity, label, control, animation, and title/annotation API as
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Iterator, Sequence
 
 if TYPE_CHECKING:
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .visualizer import Visualizer
 
 from ._jupyter import _JupyterDisplayMixin
+from ._keys import KeyModifier
 from ._timeline import Timeline
 from ._types import SceneEntity
 from .scene import Scene
@@ -246,6 +247,35 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def timeline(self) -> Timeline:
         """Create a :class:`Timeline` targeting this scene."""
         return self._viz._scene_timeline(self._name)
+
+    def animate(
+        self,
+        *,
+        fps: float = 60.0,
+        stop_key: str | None = "q",
+        stop_modifiers: Sequence[KeyModifier | str] | None = None,
+    ) -> Iterator[float]:
+        """Yield once per animation frame until this scene is interrupted.
+
+        See :meth:`Visualizer.animate`; the loop is scoped to this scene.
+        """
+        return self._viz.animate(
+            fps=fps,
+            stop_key=stop_key,
+            stop_modifiers=stop_modifiers,
+            scene_name=self._name,
+        )
+
+    def interrupted(self) -> bool:
+        """True once this scene has been interrupted (browser or terminal)."""
+        return self._viz.interrupted(scene_name=self._name)
+
+    def sleep_ms(self, milliseconds: int) -> bool:
+        """Sleep, returning early if this scene is interrupted.
+
+        See :meth:`Visualizer.sleep_ms`.
+        """
+        return self._viz.sleep_ms(milliseconds, scene_name=self._name)
 
     # ── Interactive Controls ─────────────────────────────────
 

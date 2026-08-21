@@ -39,6 +39,9 @@ let _viewerName = (() => {
 })();
 let _availableScenes = [];
 
+// Per-scene browser-side animation stop binding.
+let _animationStopConfig = { enabled: false, key: null, modifiers: [] };
+
 // Frontend build hash injected into the served HTML; compared against the
 // value the backend advertises over the WebSocket handshake to detect a
 // stale, cached copy of the viewer.
@@ -46,6 +49,52 @@ const _frontendVersion =
     (typeof window !== 'undefined' && window.__tanga_frontend_version) || null;
 
 // ── Scene Setup ──────────────────────────────────────────────
+function _stopKeyMatches(event) {
+    if (!_animationStopConfig.enabled || !_animationStopConfig.key) return false;
+    if ((event.key || '').toLowerCase() !== String(_animationStopConfig.key).toLowerCase()) {
+        return false;
+    }
+    for (const mod of _animationStopConfig.modifiers) {
+        switch (mod) {
+            case 'ctrl':
+                if (!(event.ctrlKey || event.metaKey)) return false;
+                break;
+            case 'shift':
+                if (!event.shiftKey) return false;
+                break;
+            case 'alt':
+                if (!event.altKey) return false;
+                break;
+            case 'meta':
+                if (!event.metaKey) return false;
+                break;
+            default:
+                return false;
+        }
+    }
+    return true;
+}
+
+function _handleAnimationStopKey(event) {
+    if (!_stopKeyMatches(event)) return;
+    // Don't hijack keys while the user is editing text.
+    const target = event.target;
+    if (target && (
+        target.tagName === 'INPUT'
+        || target.tagName === 'TEXTAREA'
+        || target.isContentEditable
+    )) return;
+    event.preventDefault();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        _log('ws-send', 'type=animation_stop scene=' + (_myScene || ''));
+        ws.send(JSON.stringify({
+            type: 'animation_stop',
+            scene: _myScene,
+            browser_id: _browserId,
+        }));
+    }
+}
+
 function initScene() {
     window._viewerContainer = document.getElementById('viewer-container');
 
@@ -115,6 +164,8 @@ function initScene() {
     }
 
     window.addEventListener('resize', onResize);
+    // Global animation-stop keybinding (per-scene config from the server).
+    window.addEventListener('keydown', _handleAnimationStopKey);
 
     // Observe the render container so container/iframe resizes (and the
     // initial layout settling) recompute the camera, not just window resizes.
@@ -675,6 +726,19 @@ async function handleMessage(msg) {
     if (msg.type === 'scene_list') {
         _log('init', 'scene_list scenes=' + JSON.stringify(msg.scenes || []));
         _availableScenes = msg.scenes || [];
+        return;
+    }
+    if (msg.type === 'animation_stop_config') {
+        if ((msg.scene ?? '') === _myScene) {
+            _animationStopConfig = {
+                enabled: !!msg.enabled,
+                key: msg.key ?? null,
+                modifiers: Array.isArray(msg.modifiers) ? msg.modifiers : [],
+            };
+            _log('init', 'animation_stop_config enabled=' + _animationStopConfig.enabled
+                + ' key=' + _animationStopConfig.key
+                + ' modifiers=' + JSON.stringify(_animationStopConfig.modifiers));
+        }
         return;
     }
 

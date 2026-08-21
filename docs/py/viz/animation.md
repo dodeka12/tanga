@@ -22,24 +22,32 @@ point_id = viz.add(Point(3, 0, 0), color="#ff4444")
 viz.flush()
 
 angle = 0.0
-for dt in viz.animate(fps=60):   # runs until Ctrl+C
+for dt in viz.animate(fps=60):   # runs until Q (browser) or Ctrl+C (terminal)
     angle += 3.0 * dt
     viz.update_entity(point_id, Point(3 * math.cos(angle), 3 * math.sin(angle), 0))
     viz.flush()
 ```
 
 `animate()` is the recommended way to drive a frame loop. It yields once per
-frame (the elapsed wall-clock time in seconds), paces the loop to `fps`, and
-stops the server cleanly when you press Ctrl+C — or whenever the loop ends.
+frame (the elapsed wall-clock time in seconds) and paces the loop to `fps`.
+The loop ends when the scene's stop key is pressed in the browser (default
+**Q**, no modifiers) or when Ctrl+C / SIGTERM is received in the terminal.
+The server is stopped automatically at interpreter exit, not when the loop
+ends, so a per-scene interrupt never tears down the server.
 
 ### `animate()` reference
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `fps` | `float` | `60.0` | Target frames per second. `0` disables pacing so the loop body can call `sleep_ms()` itself. |
+| `stop_key` | `str \| None` | `"q"` | Browser key that ends the loop (matches both `q` and `Q`). `None` disables the browser binding. |
+| `stop_modifiers` | `Sequence[KeyModifier \| str] \| None` | `None` | Modifiers required alongside `stop_key` (`ctrl`, `shift`, `alt`, `meta`). |
+| `scene_name` | `str` | `""` | Scene the loop (and its stop key) is scoped to. `""` is the main scene. |
 
 - `start()` remains the non-blocking entry point; `animate()` starts the server
   automatically if it isn't running yet.
+- The browser binding is per scene: pressing `q` (or `Q`) in scene `A` stops only
+  scene `A`'s loop; terminal Ctrl+C / SIGTERM is global and stops every scene.
 - Use `update_entity()` to replace geometry and `flush()` to push changed state.
   Only entities marked dirty by the scene manager are serialized — stationary
   entities cost nothing.
@@ -64,10 +72,11 @@ finally:
     viz.stop_server()
 ```
 
-- `interrupted()` returns `True` once Ctrl+C / SIGTERM has been received
+- `interrupted()` returns `True` once Ctrl+C / SIGTERM has been received, or
+  once the scene's browser stop key (default `q`) has been pressed
   (requires the server to be started so the signal handler is installed).
-- `sleep_ms(ms)` sleeps for `ms` milliseconds, returning `False` early if a
-  break signal arrives, `True` otherwise. Use its result to pace *and* break
+- `sleep_ms(ms)` sleeps for `ms` milliseconds, returning `False` early if an
+  interrupt arrives, `True` otherwise. Use its result to pace *and* break
   nested loops without busy-waiting.
 
 ## Keyframe Tweening (Browser-Driven)

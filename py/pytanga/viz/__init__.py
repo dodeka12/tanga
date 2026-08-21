@@ -42,6 +42,7 @@ from ._interaction import (
     MouseButton,
     ScrollEvent,
 )
+from ._keys import KeyModifier
 from ._label import Label
 from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
@@ -144,6 +145,7 @@ __all__ = [
     "InteractionHandlerRegistry",
     "InteractionTrigger",
     "InversionStyle",
+    "KeyModifier",
     "Label",
     "LabelStyle",
     "LineStyle",
