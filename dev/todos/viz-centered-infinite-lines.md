@@ -1,6 +1,6 @@
 # Centered Infinite Lines in the Visualizer (and glTF line fix)
 
-**Created:** 2026-08-22 | **Status:** Plan — do not implement yet
+**Created:** 2026-08-22 | **Status:** Done
 
 ## Goal
 
