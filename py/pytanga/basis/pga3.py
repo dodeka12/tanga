@@ -42,6 +42,10 @@ class BasisPGA3(Algebra):
         ep, em: Internal 5D embedding vectors (private; prefer e0).
     """
 
+    # User-facing meet/join follow the Gunn/Dorst convention
+    # (meet = intersection ∧, join = union/span ∨).
+    _swap_meet_join: bool = True
+
     # Blade bitmask IDs (dim=5: e₁=1, e₂=2, e₃=4, ep=8, em=16)
     E1: int = 1
     E2: int = 2

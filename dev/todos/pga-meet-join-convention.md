@@ -136,8 +136,8 @@ fixes this and does not affect the other algebras.
 
 ### Phase 2 — Meet/join inversion for PGA2/3
 
-- [ ] 2.1 `_algebra.py`: add `_swap_meet_join: bool = False` class attribute.
-- [ ] 2.2 `_algebra.py`: rename the current bodies to `_join` (C++ `join`) and
+- [x] 2.1 `_algebra.py`: add `_swap_meet_join: bool = False` class attribute.
+- [x] 2.2 `_algebra.py`: rename the current bodies to `_join` (C++ `join`) and
   `_meet` (C++ `meet`), and add user-facing `join`/`meet`:
   ```python
   def join(self, a, b):
@@ -150,9 +150,9 @@ fixes this and does not affect the other algebras.
           return self._join(a, b)   # Gunn/Dorst meet = progressive/outer
       return self._meet(a, b)
   ```
-- [ ] 2.3 `basis/pga3.py` and `basis/pga2.py`: set `_swap_meet_join = True`
+- [x] 2.3 `basis/pga3.py` and `basis/pga2.py`: set `_swap_meet_join = True`
   (class attribute, documented as the Gunn/Dorst convention).
-- [ ] 2.4 `_mv.py`: update `MV.join`/`MV.meet` docstrings to state the
+- [x] 2.4 `_mv.py`: update `MV.join`/`MV.meet` docstrings to state the
   convention: non-PGA = smallest/largest blade; PGA2/3 = Gunn/Dorst
   `join`(union)/`meet`(intersection). No logic change.
 
