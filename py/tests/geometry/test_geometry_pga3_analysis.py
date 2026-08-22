@@ -192,6 +192,64 @@ def test_scale2_space_doubles(b):
 
 
 # ═══════════════════════════════════════════════════════════════
+# 1b. Meet/join convention + incidence (PGA3 follows Gunn/Dorst)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_meet_join_pga3_convention(b):
+    """PGA3 meet = intersection, join = union/span (Gunn/Dorst)."""
+    p1 = create_entity(b, Point(1, 0, 0))
+    p2 = create_entity(b, Point(0, 1, 0))
+    # join of two points is the connecting line (grade 2)
+    assert p1.join(p2).grades == [2]
+    # meet of two points is the empty intersection (progressive → grade 4)
+    assert p1.meet(p2).grades == [4]
+    # meet of two planes is their intersection line (grade 2)
+    pl1 = create_entity(b, Plane(Point(0, 0, 0), Direction(1, 0, 0)))
+    pl2 = create_entity(b, Plane(Point(0, 0, 0), Direction(0, 1, 0)))
+    assert pl1.meet(pl2).grades == [2]
+
+
+def test_meet_join_non_pga_unchanged():
+    """Non-PGA algebras keep the DFM07 convention (join = span, meet = regressive)."""
+    from pytanga.basis import BasisE3
+
+    e = BasisE3()
+    assert e.e1.join(e.e2).grades == [2]
+    assert (e.e1 ^ e.e2).meet(e.e1 ^ e.e3).grades == [1]
+
+
+def test_entity_line_from_two_points_join_round_trip(b):
+    """Join of two points is the connecting line; analyze → closest point to origin."""
+    a = create_entity(b, Point(1, 0, 0))
+    c = create_entity(b, Point(0, 1, 0))
+    line_mv = a.join(c)
+    r = analyze_entity(line_mv)
+    assert isinstance(r, Line), f"Got {type(r).__name__}"
+    # Closest point to origin on x + y = 1, z = 0 is (0.5, 0.5, 0)
+    assert r.origin.x == pytest.approx(0.5, abs=1e-6)
+    assert r.origin.y == pytest.approx(0.5, abs=1e-6)
+    assert r.origin.z == pytest.approx(0, abs=1e-6)
+    # Direction is ±(-1, 1, 0)/√2
+    assert abs(r.direction.x) == pytest.approx(1 / math.sqrt(2), abs=1e-6)
+    assert abs(r.direction.y) == pytest.approx(1 / math.sqrt(2), abs=1e-6)
+    assert r.direction.z == pytest.approx(0, abs=1e-6)
+
+
+def test_point_on_line_incidence_dual_outer(b):
+    """Incidence in PGA3: ⋆P ∧ ⋆L == 0 iff P lies on L (P.dual() ^ L.dual())."""
+    a = create_entity(b, Point(1, 0, 0))
+    c = create_entity(b, Point(0, 1, 0))
+    line = a.join(c)
+    for x, y, z in [(0.5, 0.5, 0), (1, 0, 0), (0, 1, 0), (2, -1, 0)]:
+        p = create_entity(b, Point(x, y, z))
+        assert p.dual().op(line.dual()).is_zero, f"Point({x},{y},{z}) on line"
+    for x, y, z in [(0, 0, 0), (5, 5, 5)]:
+        p = create_entity(b, Point(x, y, z))
+        assert not p.dual().op(line.dual()).is_zero, f"Point({x},{y},{z}) off line"
+
+
+# ═══════════════════════════════════════════════════════════════
 # 2. Operator Round-Trips
 # ═══════════════════════════════════════════════════════════════
 
@@ -244,7 +302,9 @@ def test_operator_motor_round_trip(b):
 
 def test_operator_reflection_plane_round_trip(b):
     """O4: create ReflectionPlane(plane=xy-plane) -> analyze -> assert."""
-    mv: MV = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1))))
+    mv: MV = create_operator(
+        b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1)))
+    )
     r = analyze_operator(mv)
     assert isinstance(r, ReflectionPlane), f"Got {type(r).__name__}"
     assert r.plane.normal.x == pytest.approx(0)
@@ -273,17 +333,17 @@ def test_operator_general_rotor_round_trip(b):
 
 def test_operator_triple_reflection_round_trip(b):
     """O6: triple reflection via three non-parallel displaced planes."""
-    # e0 = ep + em (blades 8 and 16)
-    e0 = b.multivector({8: 1.0, 16: 1.0})
     # Three non-orthogonal displaced planes to get multi-grade product
-    p1 = b.multivector({1: 1.0, 8: -1.0, 16: -1.0})     # e1 - e0
+    p1 = b.multivector({1: 1.0, 8: -1.0, 16: -1.0})  # e1 - e0
     p2 = b.multivector({1: 1.0, 2: 1.0, 8: -3.0, 16: -3.0})  # e1+e2 - 3e0
     p3 = b.multivector({2: 1.0, 4: 1.0, 8: -5.0, 16: -5.0})  # e2+e3 - 5e0
     mv = p1.gp(p2).gp(p3)
 
     r = analyze_operator(mv)
     # Non-orthogonal planes produce a motor-like versor, not plain triple-reflection
-    assert isinstance(r, (TripleReflection, Motor, GeneralRotor)), f"Got {type(r).__name__}"
+    assert isinstance(r, (TripleReflection, Motor, GeneralRotor)), (
+        f"Got {type(r).__name__}"
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -371,7 +431,9 @@ def test_apply_motor_point_rigid_motion(b):
 def test_apply_reflection_plane_point_mirror(b):
     """A4: ReflectionPlane(z=0) on (1,2,5) -> Point(1,2,-5)."""
     p: MV = create_entity(b, Point(1, 2, 5))
-    F: MV = create_operator(b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1))))
+    F: MV = create_operator(
+        b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1)))
+    )
     result: MV = F.gp(p).gp(F.rev())
     r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
@@ -439,8 +501,8 @@ def test_operator_reflection_line_round_trip(b):
 def test_apply_reflection_point_origin_negation(b):
     """A6: ReflectionPoint(0,0,0) on (5,-3,2) -> Point(-5,3,-2)."""
     p = create_entity(b, Point(5, -3, 2))
-    O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
-    result = O.gp(p).gp(O.rev())
+    op_mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
+    result = op_mv.gp(p).gp(op_mv.rev())
     r = analyze_entity(result)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
     assert r.x == pytest.approx(-5, abs=1e-6)
@@ -461,4 +523,3 @@ def test_apply_reflection_line_point_mirror_x(b):
     assert r.x == pytest.approx(3, abs=1e-6)
     assert r.y == pytest.approx(-1, abs=1e-6)
     assert r.z == pytest.approx(0, abs=1e-6)
-

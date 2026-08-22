@@ -158,23 +158,23 @@ fixes this and does not affect the other algebras.
 
 ### Phase 3 — Tests
 
-- [ ] 3.1 Add `test_entity_line_from_two_points_join_round_trip` in
+- [x] 3.1 Add `test_entity_line_from_two_points_join_round_trip` in
   `test_geometry_pga3_analysis.py`:
   `a = create_entity(b, Point(1,0,0)); c = create_entity(b, Point(0,1,0));
   L = analyze_entity(a.join(c))` → `Line` with origin `(0.5, 0.5, 0)` and
   direction `±(-1,1,0)/√2`.
-- [ ] 3.2 Add incidence regression tests using the documented predicate:
+- [x] 3.2 Add incidence regression tests using the documented predicate:
   for points `(1,0,0)`, `(0,1,0)`, `(0.5,0.5,0)`, `(2,-1,0)` assert
   `P.dual().op(L.dual()).is_zero is True`; for `(0,0,0)`, `(5,5,5)` assert
   `False`. (This is the correct point-on-line test; `P.op(L)` is always zero for
   grade-3 ∧ grade-2 and must not be used.)
-- [ ] 3.3 Add PGA meet/join convention tests (PGA3 and PGA2):
+- [x] 3.3 Add PGA meet/join convention tests (PGA3 and PGA2):
   - `Point.join(Point)` → grade-2 line (PGA3) / the connecting line.
   - `Point.meet(Point)` → degenerate (empty intersection) on PGA3.
   - `Plane.meet(Plane)` → grade-2 line (intersection) on PGA3.
   - A non-PGA algebra (e.g. `BasisE3`) still has the old semantics
     (`e1.join(e2)` = bivector span; `(e1^e2).meet(e1^e3)` = e1 line).
-- [ ] 3.4 Run the full geometry + algebra suites:
+- [x] 3.4 Run the full geometry + algebra suites:
   `uv run pytest py/tests/geometry py/tests/algebra py/tests/codegen -q`.
 
 ### Phase 4 — Docs
