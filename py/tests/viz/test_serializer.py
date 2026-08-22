@@ -93,19 +93,30 @@ class TestSerializeEntities:
         assert d["pointSize"] == 0.06
 
     def test_line(self):
-        l = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
-        d = _serialize(l)
+        line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+        d = _serialize(line)
         assert d["kind"] == "Line"
-        assert d["origin"] == [0, 0, 0]
+        # Infinite line → centered on the closest point to the origin, so the
+        # serialized `origin` is the start point (closest - d̂·length/2).
+        assert d["origin"] == [-10.0, 0.0, 0.0]
         assert d["direction"] == [1, 0, 0]
         assert d["thickness"] == 1.0
         # Infinite line → the content `length` resolves to the style default.
         assert d["length"] == 20.0
         assert d["style"]["length"] == 20.0
 
+    def test_infinite_line_centered(self):
+        # An offset infinite line is centered on its closest point to the origin:
+        # origin = closest - d̂·length/2.
+        line = Line(origin=Point(0, 1, 0), direction=Direction(1, 0, 0))
+        d = _serialize(line)
+        assert d["origin"] == [-10.0, 1.0, 0.0]
+        assert d["direction"] == [1.0, 0.0, 0.0]
+        assert d["length"] == 20.0
+
     def test_line_from_points_respects_length(self):
-        l = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
-        d = _serialize(l)
+        line = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
+        d = _serialize(line)
         # `length` is a content field carrying the explicit segment length.
         assert d["length"] == 2.0
         # The style `length` stays the default (used only for infinite lines).
@@ -402,7 +413,9 @@ class TestObjectUpdate:
         )
         assert msg["type"] == "object_update"
         assert msg["scene"] == ""
-        assert msg["patches"] == [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}]
+        assert msg["patches"] == [
+            {"id": "a", "aspect": "full", "value": {"kind": "Point"}}
+        ]
         assert msg["removed"] == ["b"]
 
     def test_empty(self):

@@ -123,11 +123,17 @@ def _dispatch_entity(
 
     # ── Operators ──
     if isinstance(entity, ReflectionLine):
-        return _serialize_reflection_line(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_reflection_line(
+            entity, props, kind=kind, styles_map=styles_map
+        )
     if isinstance(entity, ReflectionPlane):
-        return _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_reflection_plane(
+            entity, props, kind=kind, styles_map=styles_map
+        )
     if isinstance(entity, ReflectionPoint):
-        return _serialize_reflection_origin(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_reflection_origin(
+            entity, props, kind=kind, styles_map=styles_map
+        )
     if isinstance(entity, Inversion):
         return _serialize_inversion(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Rotor):
@@ -643,14 +649,25 @@ def _serialize_line(
     builtins = {"thickness": 1.0}
     # Resolve the length here so the frontend always receives a valid value
     # (infinite lines use the canonical `LineStyle.length` default).
-    props["length"] = resolve_line_length(ent, styles_map=styles_map, props=props)
+    length = resolve_line_length(ent, styles_map=styles_map, props=props)
+    props["length"] = length
+
+    # The frontend draws `origin -> origin + normalize(direction) * length`.
+    # For an infinite line (no explicit length) `origin` is the closest point to
+    # the origin, so shift it back by half the length to draw the line centered
+    # on that point.  Segments (Line.from_points) keep `origin` as their start.
+    origin = ent.origin
+    if ent.length is None and ent.direction.mag() > 0:
+        unit = ent.direction.normalized()
+        origin = ent.origin - unit * (length / 2.0)
+
     return _apply_defaults(
         props,
         kind,
         builtins,
         styles_map=styles_map,
     ) | {
-        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
+        "origin": [origin.x, origin.y, origin.z],
         "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
     }
 

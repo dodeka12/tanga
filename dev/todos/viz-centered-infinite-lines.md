@@ -63,7 +63,7 @@ fix needs a companion glTF fix.
 
 ### Phase 1 — Serializer: center infinite lines
 
-- [ ] In `_serialize_line`, after resolving `length`:
+- [x] In `_serialize_line`, after resolving `length`:
   ```python
   origin = ent.origin
   if ent.length is None:                    # infinite line → center on closest point
@@ -75,31 +75,31 @@ fix needs a companion glTF fix.
 
 ### Phase 2 — glTF line: direction + midpoint
 
-- [ ] `_gltf.py::_get_rotation`: add a `Line` branch that rotates the Y-axis
+- [x] `_gltf.py::_get_rotation`: add a `Line` branch that rotates the Y-axis
   cylinder to `ent["direction"]` (a Y→direction rotation; the existing helper
   rotates Z→normal, so add a small dedicated path).
-- [ ] `_gltf.py::_get_position` (or `_make_primitives`): position the centered
+- [x] `_gltf.py::_get_position` (or `_make_primitives`): position the centered
   cylinder at the segment midpoint `origin + d̂·length/2` so the line spans
   `origin → origin + d̂·length`, consistent with the new `origin`-as-start-point
   semantics.
 
 ### Phase 3 — Tests
 
-- [ ] Update `test_serializer.py::test_line`: infinite `Line((0,0,0), (1,0,0))`
+- [x] Update `test_serializer.py::test_line`: infinite `Line((0,0,0), (1,0,0))`
   now serializes `origin == [-10, 0, 0]` with `direction == [1,0,0]`,
   `length == 20.0`.
-- [ ] Add `test_infinite_line_centered`: assert `origin == closest − d̂·length/2`
+- [x] Add `test_infinite_line_centered`: assert `origin == closest − d̂·length/2`
   for an offset line (e.g. line through `(0,1,0)` dir `(1,0,0)` → closest
   `(0,1,0)`, start `(-10,1,0)`).
-- [ ] Keep `test_line_from_points_respects_length` and
+- [x] Keep `test_line_from_points_respects_length` and
   `test_infinite_line_resolves_default_length` green (update only if they assert
   `origin`).
-- [ ] Add a glTF line direction assertion if none exists; run the viz + export
+- [x] Add a glTF line direction assertion if none exists; run the viz + export
   test suites.
 
 ### Phase 4 — Changelog
 
-- [ ] Add a Bug Fixes bullet: infinite lines are drawn centered on their closest
+- [x] Add a Bug Fixes bullet: infinite lines are drawn centered on their closest
   point to the origin (previously one-directional); glTF lines now honor
   direction and center consistently. Planes were already centered (no change).
 
