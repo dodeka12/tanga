@@ -221,6 +221,14 @@ signedness, they require a signed distance function (`scalar_pseudo` or
   (`opIntersect` with a finite slab/capsule shell).
 - **Reuse, don't fork.** `server.py` and the WS protocol are shared unchanged;
   the JS lives in a separate `sdf/` library reusing the existing HTML bootstrap.
+- **Camera parity.** The SDF viewer's default camera and custom-camera handling
+  are identical to the standard viewer: the same `view_mode.js`
+  `createCamera` / `switchToCamera` (3D branch) and `controls.js` defaults are
+  reused, and the camera travels through the shared `scene_config.camera`
+  field. Default (`PerspectiveCamera(50, aspect, 0.1, 1000)` at
+  `position=(8,6,10)` looking at the origin) and any custom `CameraConfig3d`
+  therefore match the standard viewer 1:1. `fit_camera` auto-fit is a known
+  gap (see Risks).
 
 ## Risks
 
@@ -245,3 +253,7 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 - **Volumetric opacity cost:** soft/volumetric transfer requires accumulation
   along the ray (more samples) and depends on a unit-scaled distance (Phase 9);
   `step`/`linear`/`sigmoid` are cheap, true absorption is the optional follow-on.
+- **`fit_camera` auto-fit gap:** the standard viewer's `fitCamera` derives a
+  bounding box from entity meshes, which the SDF path does not build. SDF
+  auto-fit needs its own bounds computation; deferred to a later phase. Until
+  then the SDF viewer relies on the default/custom camera only.

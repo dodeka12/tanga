@@ -54,6 +54,16 @@ unchanged.
   - [ ] Port the WebSocket client (connect/reconnect/ready/scene messages)
         from `viewer.js`, delegating message handling to the SDF
         scene-builder and the distance-function recompile hook.
+- [ ] Camera parity (shared `scene_config.camera`, identical to the standard
+      viewer):
+  - [ ] Emit the camera through the same `scene_config.camera` field used by
+        `scene.py` / `camera.py` (`CameraConfig3d`), so `sdf_viewer.js` applies
+        it via the shared `view_mode.js` `switchToCamera` (3D branch) — no SDF
+        fork.
+  - [ ] `fit_camera` auto-fit is **not** handled here: the standard viewer
+        computes a bounding box from meshes the SDF path does not have. This is
+        a known gap, tackled in a later phase with an SDF-specific bounds
+        computation.
 - [ ] `server.py` integration: register `sdf_viewer.html` + `sdf/` static
       assets with the existing content-hash versioning.
 
@@ -67,6 +77,9 @@ File: `py/tests/viz/sdf/test_visualizer.py`
       emits the `sdf_viewer_config` message with the right value.
 - [ ] `test_serve_sdf_viewer_html` — the server serves `sdf_viewer.html` and
       the `sdf/` static assets (mock transport, no real browser).
+- [ ] `test_camera_config_parity` — the `scene_config.camera` dict emitted by
+      `SdfVisualizer` equals the one emitted by the standard `Visualizer` for an
+      identical `CameraConfig3d`.
 
 ## Verification
 

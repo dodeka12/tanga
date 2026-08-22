@@ -1,6 +1,6 @@
 # Phase 1 — SDF primitive + combinator GLSL library
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -31,28 +31,30 @@ primitives for bounded infinite entities.
 
 ## Steps
 
-- [ ] Add `primitives.glsl` with the primitive set:
-  - [ ] `sdSphere`, `sdEllipsoid`
-  - [ ] `sdBox`, `sdRoundBox`
-  - [ ] `sdPlane` (infinite; used only with an explicit bound in later phases)
-  - [ ] `sdSegment` (rounded line), `sdCapsule` (two-point)
-  - [ ] `sdCylinder` (infinite), `sdCappedCylinder`
-  - [ ] `sdCone` (infinite), `sdCappedCone`
-  - [ ] `sdTorus`
-- [ ] Add `combinators.glsl`:
-  - [ ] `opUnion`, `opSubtract`, `opIntersect` (min/max forms with exact
+- [x] Add `primitives.glsl` with the primitive set:
+  - [x] `sdSphere`, `sdEllipsoid`
+  - [x] `sdBox`, `sdRoundBox`
+  - [x] `sdPlane` (infinite; used only with an explicit bound in later phases)
+  - [x] `sdSegment` (rounded line), `sdCapsule` (two-point)
+  - [x] `sdCylinder` (infinite), `sdCappedCylinder`
+  - [x] `sdCone` (infinite), `sdCappedCone`
+  - [x] `sdTorus`
+- [x] Add `combinators.glsl`:
+  - [x] `opUnion`, `opSubtract`, `opIntersect` (min/max forms with exact
         distance signs preserved)
-  - [ ] `opSmoothUnion`, `opSmoothSubtract`, `opSmoothIntersect` (vec2 blend)
-- [ ] Add a small `sdf_common.glsl` header for shared constants
+  - [x] `opSmoothUnion`, `opSmoothSubtract`, `opSmoothIntersect` (vec2 blend)
+- [x] Add a small `sdf_common.glsl` header for shared constants
       (`SDF_EPSILON`, `MAX_DIST`) and the IQ rotation helpers if needed.
 
 ## Verification
 
-- [ ] Both files contain no accidental `main()` and are valid GLSL ES 3.0 on
+- [x] Both files contain no accidental `main()` and are valid GLSL ES 3.0 on
       inspection (they will only compile once the raymarcher concatenates
       them in Phase 2).
-- [ ] Primitive formulas cross-checked against IQ reference for argument order
+- [x] Primitive formulas cross-checked against IQ reference for argument order
       and sign conventions.
 - [ ] A headless compile smoke check (e.g. `glslangValidator` or a Node
       `three` shader-probe harness) parses `primitives.glsl` +
-      `combinators.glsl` with no syntax errors.
+      `combinators.glsl` with no syntax errors. *(deferred to Phase 2, which
+      compiles the assembled shader via a Node+`three` harness — no
+      `glslangValidator`/`glslc` installed locally)*

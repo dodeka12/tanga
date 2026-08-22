@@ -55,9 +55,21 @@ every later phase plugs into.
         shading/raymarch structure.
   - [ ] Keep `opacityOf` in a dedicated snippet string so Phase 12 swaps it
         in without touching the raymarch body.
-- [ ] Camera uniform plumbing:
-  - [ ] Camera position + inverse projection/view matrices as uniforms so the
-        orbit camera (reused from the existing viewer) drives the rays.
+- [ ] Camera parity (identical default + custom view to the standard viewer):
+  - [ ] Reuse the standard viewer's `view_mode.js` `createCamera` /
+        `switchToCamera` (3D branch) unchanged — do not fork a copy. Default
+        camera is therefore `PerspectiveCamera(fov=50, aspect, 0.1, 1000)` at
+        `position=(8, 6, 10)` looking at the origin, matching `viewer.js`.
+  - [ ] Reuse `controls.js` `setupControls` unchanged so the OrbitControls
+        defaults (`target=(0,0,0)`, `minDistance=1`, `maxDistance=100`) match.
+  - [ ] Apply a custom `CameraConfig3d` exactly as `viewer.js` does
+        (`fov = cc.fov || 50`; `near`/`far`/`up`/`position`/`target` applied
+        only when provided; `target` also sets the controls target).
+- [ ] Camera uniform plumbing (feed that shared camera into the raymarcher):
+  - [ ] `cameraPosition` (for `ro`), `cameraWorldMatrix`,
+        `cameraProjectionMatrixInverse` (inverse view-projection for `rd`),
+        and `cameraNear` / `cameraFar` as uniforms, so `MAX_DIST` / the step
+        range track the camera far rather than a hardcoded constant.
 - [ ] Hardcoded sphere smoke check: render a centered sphere and verify it
       shades correctly from all angles.
 
