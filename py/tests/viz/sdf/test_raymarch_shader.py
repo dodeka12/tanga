@@ -55,15 +55,43 @@ def test_raymarch_has_exactly_one_main() -> None:
     assert _read(RAYMARCH_FILE).count("void main") == 1
 
 
+def test_raymarch_uses_glsl3_fragment_output() -> None:
+    # GLSL ES 3.0 (WebGL2) has no legacy `gl_FragColor`; the fragment output
+    # must be declared as an `out vec4` and assigned instead. Examine code
+    # lines only so the explanatory comments do not trip the check.
+    body = _read(RAYMARCH_FILE)
+    code_lines = [ln for ln in body.splitlines() if not ln.strip().startswith("//")]
+    code = "\n".join(code_lines)
+    assert "out vec4" in code
+    assert "gl_FragColor" not in code
+
+
+def test_raymarch_ndc_uses_full_resolution() -> None:
+    # The ray is reconstructed through the camera's inverse projection matrix,
+    # which already applies the aspect ratio. NDC must therefore divide X and Y
+    # independently (`/ uResolution`); dividing only by `uResolution.y` double-
+    # scales X and stretches the render vertically.
+    body = _read(RAYMARCH_FILE)
+    assert "/ uResolution;" in body
+    assert "/ uResolution.y" not in body
+
+
+def test_raymarch_opacity_step_treats_hit_band_as_opaque() -> None:
+    # The loop breaks on `d < SDF_EPSILON`, so at a hit the distance is a small
+    # value within that band (usually slightly positive). The solid `step`
+    # transfer must therefore use SDF_EPSILON, not `d < 0.0`, or every surface
+    # shades to black.
+    body = _read(RAYMARCH_FILE)
+    assert "return d < SDF_EPSILON" in body
+
+
 def test_no_version_or_precision_directives() -> None:
     # three.js prepends `#version 300 es` + `precision highp float;` for a
     # GLSL3 ShaderMaterial; the concatenated sources must not duplicate them.
     for name in LIB_FILES + [RAYMARCH_FILE]:
         for line in _read(name).splitlines():
             stripped = line.lstrip()
-            assert not stripped.startswith("#version"), (
-                f"{name} must not set #version"
-            )
+            assert not stripped.startswith("#version"), f"{name} must not set #version"
             assert not stripped.startswith("precision"), (
                 f"{name} must not set precision"
             )

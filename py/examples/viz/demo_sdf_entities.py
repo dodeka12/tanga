@@ -4,7 +4,8 @@
 """demo_sdf_entities.py — First vertical slice for the SDF viewer.
 
 Draws a finite ``Line`` and a ``Sphere`` from ``pytanga.geometry`` in the
-ray-marched signed-distance-function viewer.
+ray-marched signed-distance-function viewer, then carves a partial bite out of
+the sphere with a second, subtracting sphere.
 
 Run with:  uv run python py/examples/viz/demo_sdf_entities.py
 """
@@ -12,7 +13,7 @@ Run with:  uv run python py/examples/viz/demo_sdf_entities.py
 from pytanga.geometry import Line, Point, Sphere
 from pytanga.viz.sdf import SdfVisualizer
 
-viz = SdfVisualizer(title="Tanga SDF — Line + Sphere")
+viz = SdfVisualizer(title="Tanga SDF — Line + Sphere − Sphere")
 
 # A finite line segment (origin + length via from_points).
 viz.add(
@@ -27,8 +28,18 @@ viz.add(
     color="#ffaa00",
 )
 
-print("Opening the SDF viewer. A green line and an orange sphere should be")
-print("visible; drag to orbit, right/middle-drag to pan, scroll to zoom.")
+# A second sphere that partially subtracts from the orange sphere. It overlaps
+# the sphere's surface on the upper-right, so `combine="subtract"` carves a
+# concave bite out of it (the carved wall keeps the orange sphere's color).
+viz.add(
+    Sphere(Point(1.2, 2.0, 0), radius=0.9),
+    combine="subtract",
+)
+
+print("Opening the SDF viewer. A green line and an orange sphere with a carved")
+print(
+    "bite should be visible; drag to orbit, right/middle-drag to pan, scroll to zoom."
+)
 
 viz.show()
 viz.wait()

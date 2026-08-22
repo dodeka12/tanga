@@ -10,7 +10,8 @@
 //                                     `M·a → distOf` evaluator (Phase 8).
 //   · `vec4 materialColor(float m)` — resolves the per-object color/opacity.
 //
-// Uses three.js ShaderMaterial GLSL3 conventions: `gl_FragColor`, and no
+// Uses three.js ShaderMaterial GLSL3 conventions: a declared `out vec4`
+// fragment output (GLSL ES 3.0 has no `gl_FragColor`), and no
 // `#version`/`precision` directive (the host shader prepends them).
 
 uniform vec2 uResolution;
@@ -20,12 +21,18 @@ uniform mat4 uCameraProjectionMatrixInverse;
 uniform float uCameraNear;
 uniform float uCameraFar;
 
+// GLSL ES 3.0 fragment output (there is no `gl_FragColor` in WebGL2).
+out vec4 fragColor;
+
 // ── Opacity transfer (step stub) ───────────────────────────
 // The call site and its `step` default are fixed now so Phase 12 only swaps
 // this snippet for `linear`/`sigmoid` without touching the raymarch body.
 
 float opacityOf(float d) {
-    return d < 0.0 ? 1.0 : 0.0;
+    // The ray-march loop breaks on `d < SDF_EPSILON`, so a confirmed hit has a
+    // distance within that (usually slightly positive) band. The solid `step`
+    // must treat that band as opaque — a bare `d < 0.0` would zero every color.
+    return d < SDF_EPSILON ? 1.0 : 0.0;
 }
 
 // ── Gradient normal (tetrahedral) ──────────────────────────
@@ -79,7 +86,7 @@ vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float matId) {
 
 void main() {
     vec2 fragCoord = gl_FragCoord.xy;
-    vec2 ndc = (2.0 * fragCoord - uResolution) / uResolution.y;
+    vec2 ndc = (2.0 * fragCoord - uResolution) / uResolution;
 
     // Reconstruct the world-space ray from the shared camera (camera parity).
     vec4 clip = vec4(ndc, 1.0, 1.0);
@@ -112,5 +119,5 @@ void main() {
         col = vec3(0.10, 0.10, 0.18);
     }
 
-    gl_FragColor = vec4(col, 1.0);
+    fragColor = vec4(col, 1.0);
 }

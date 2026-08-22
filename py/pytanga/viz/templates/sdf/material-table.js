@@ -47,3 +47,13 @@ export function buildMaterialRows(objects) {
         return [r, g, b, opacity];
     });
 }
+
+// Pad the per-object rows up to the fixed uniform-array capacity. The shader
+// declares `uMaterial[MAX_SDF_OBJECTS]`, so the uploaded array must have that
+// many elements — otherwise three.js's `flatten` walks past the end of the
+// array and throws while calling `.toArray()` on an undefined slot.
+export function padMaterialRows(rows) {
+    const padded = rows.slice();
+    while (padded.length < MAX_SDF_OBJECTS) padded.push([0, 0, 0, 0]);
+    return padded;
+}

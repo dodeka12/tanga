@@ -21,10 +21,10 @@ import {
 import { setupControls } from '../controls.js';
 import { composeObjects } from './composer.js';
 import {
-    MAX_SDF_OBJECTS,
     materialColorSrc,
     materialPreamble,
     buildMaterialRows,
+    padMaterialRows,
 } from './material-table.js';
 
 const VERTEX_SHADER = /* glsl */ `
@@ -74,7 +74,11 @@ function buildFragment() {
 
 function buildUniforms() {
     const list = objects.length ? objects : DEFAULT_OBJECTS;
-    const rows = buildMaterialRows(list);
+    const actualRows = buildMaterialRows(list);
+    // The shader declares `uMaterial[MAX_SDF_OBJECTS]`, so the uniform value
+    // must be a full-length array (three.js flattens the whole declared array);
+    // pad unused slots with a transparent black material.
+    const rows = padMaterialRows(actualRows);
     return {
         uResolution: { value: new THREE.Vector2() },
         uCameraPosition: { value: new THREE.Vector3() },
@@ -83,7 +87,7 @@ function buildUniforms() {
         uCameraNear: { value: 0.1 },
         uCameraFar: { value: 1000.0 },
         uMaterial: { value: rows.map((r) => new THREE.Vector4(r[0], r[1], r[2], r[3])) },
-        uMaterialCount: { value: rows.length },
+        uMaterialCount: { value: actualRows.length },
     };
 }
 
@@ -239,6 +243,10 @@ const viewerState = {
 
 let _rebuilding = false;
 
+// Diagnostic guard: set once the render loop has hit a fatal error so we stop
+// scheduling frames and keep the console readable while the root cause is fixed.
+let _renderLoopStopped = false;
+
 function rebuildProgram() {
     if (!_shaderParts || !viewerState.renderer) return;
     _rebuilding = true;
@@ -257,6 +265,22 @@ function rebuildProgram() {
     _rebuilding = false;
 }
 
+function formatShaderError(gl, shader, type) {
+    const log = gl.getShaderInfoLog(shader).trim();
+    const source = gl.getShaderSource(shader);
+    const m = /ERROR: 0:(\d+)/.exec(log);
+    if (!m) return `${type}\n\n${log}`;
+    const errLine = parseInt(m[1], 10);
+    const lines = source.split('\n');
+    const from = Math.max(errLine - 6, 0);
+    const to = Math.min(errLine + 6, lines.length);
+    const ctx = [];
+    for (let i = from; i < to; i++) {
+        ctx.push(`${i + 1 === errLine ? '>' : ' '} ${i + 1}: ${lines[i]}`);
+    }
+    return `${type}\n\n${log}\n\n${ctx.join('\n')}`;
+}
+
 async function init() {
     let renderer;
     try {
@@ -271,6 +295,20 @@ async function init() {
         renderer.dispose();
         return;
     }
+
+    // Diagnostic guard: if the shader fails to compile/link, three.js reports
+    // it on first use; stop the loop too so the "current program is not linked"
+    // WebGL warnings can't spam every frame and hide the original error.
+    renderer.debug.onShaderError = (gl, program, glVertexShader, glFragmentShader) => {
+        _renderLoopStopped = true;
+        console.error(
+            'THREE.WebGLProgram: Shader Error (render loop stopped) - ' +
+            'VALIDATE_STATUS ' + gl.getProgramParameter(program, gl.VALIDATE_STATUS) + '\n\n' +
+            'Program Info Log: ' + gl.getProgramInfoLog(program).trim() + '\n' +
+            formatShaderError(gl, glVertexShader, 'VERTEX') + '\n' +
+            formatShaderError(gl, glFragmentShader, 'FRAGMENT')
+        );
+    };
 
     const container = document.getElementById('viewer-container') || document.body;
     container.appendChild(renderer.domElement);
@@ -312,23 +350,36 @@ function onResize() {
 }
 
 function animate() {
-    requestAnimationFrame(animate);
-    const { renderer, camera, controls, quadCamera, scene, material } = viewerState;
-    if (!renderer || !camera || !material) return;
-    controls.update();
-    camera.updateMatrixWorld();
+    if (_renderLoopStopped) return;
 
-    const u = material.uniforms;
-    if (u) {
-        u.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
-        u.uCameraPosition.value.copy(camera.position);
-        u.uCameraWorldMatrix.value.copy(camera.matrixWorld);
-        u.uCameraProjectionMatrixInverse.value.copy(camera.projectionMatrixInverse);
-        u.uCameraNear.value = camera.near;
-        u.uCameraFar.value = camera.far;
+    const { renderer, camera, controls, quadCamera, scene, material } = viewerState;
+    if (!renderer || !camera || !controls || !scene || !material) {
+        requestAnimationFrame(animate);
+        return;
     }
 
-    renderer.render(scene, quadCamera);
+    try {
+        controls.update();
+        camera.updateMatrixWorld();
+
+        const u = material.uniforms;
+        if (u) {
+            u.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
+            u.uCameraPosition.value.copy(camera.position);
+            u.uCameraWorldMatrix.value.copy(camera.matrixWorld);
+            u.uCameraProjectionMatrixInverse.value.copy(camera.projectionMatrixInverse);
+            u.uCameraNear.value = camera.near;
+            u.uCameraFar.value = camera.far;
+        }
+
+        renderer.render(scene, quadCamera);
+    } catch (e) {
+        _renderLoopStopped = true;
+        console.error('[sdf_viewer] render loop stopped after an error:', e);
+        return;
+    }
+
+    requestAnimationFrame(animate);
 }
 
 init().catch((e) => {
