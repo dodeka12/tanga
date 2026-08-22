@@ -1,0 +1,72 @@
+# Phase 5 — Composed global SDF + material-ID hit tracking
+
+**Status:** Planned
+
+## Goal
+
+Combine all per-object SDF subtrees into a **single** global SDF function
+(`min`/`max` fold over objects with per-object combine modes) and track which
+object each ray hit, so color/opacity can be applied per object in one
+ray-march pass.
+
+## Background
+
+Because all objects share one SDF, the raymarcher evaluates one function per
+step. We need two outputs from that function:
+1. the combined **distance**, and
+2. the **material id** (object index) at the current sample, so the shader can
+   blend colors correctly on the smoothed boundaries.
+
+This mirrors IQ's "combining materials" technique: distance combinators carry
+a second channel (`mat`) using their blend factor.
+
+## Files
+
+- New: `py/pytanga/viz/templates/sdf/scene-builder.js` (compose objects +
+  material table — finalized from Phase 4)
+- New: `py/pytanga/viz/templates/sdf/material-table.js` (color/opacity table
+  upload + sampler)
+
+## Steps
+
+- [ ] Extend the SDF evaluation to return `vec2(distance, matId)` per object
+      subtree (matId assigned by serialization order); apply the object's
+      `combine` mode (see below) so the signed distance folds correctly.
+- [ ] Global `map(in vec3 p, out float d, out float mat)` with per-object
+      combine modes:
+  - [ ] `union`: `acc = min(acc, d)` (default), propagate the winner's `matId`.
+  - [ ] `intersection`: `acc = max(acc, d)`.
+  - [ ] `subtract` (negative object): `acc = max(acc, -d)`, and **prefer the
+        positive operand's `matId`** on the carved surface (a negative object
+        emits no surface of its own color).
+  - [ ] Use smooth-union/-subtract blend factors to interpolate `matId` on
+        boundaries (smooth booleans blend colors, hard booleans pick the
+        closer operand).
+- [ ] Signedness gate for booleans:
+  - [ ] `intersection`/`subtract` require a signed distance function
+        (`scalar_pseudo` or `scalar`); warn/reject when the active distance is
+        unsigned `magnitude`.
+- [ ] Material table:
+  - [ ] Serialize per-object `color` + `opacity` as a small uniform array
+        (fixed max count in v1; texture escalation later).
+  - [ ] `material-table.js` packs/upload the table and exposes a
+        `materialOf(matId)` lookup in GLSL.
+- [ ] Shading pass uses the resolved `matId` to look up color before applying
+      the Phase 2 lighting.
+- [ ] Bounding-box pruning:
+  - [ ] Per-object AABB sent as uniforms; early-out objects whose box is far
+        from the current ray (coarse precheck in `map`).
+- [ ] Step-count cap + early termination from Phase 2 tuned for multi-object
+      scenes.
+
+## Verification
+
+- [ ] A multi-object scene (sphere + box + direction arrow) renders with
+      distinct per-object colors.
+- [ ] Smooth-union boundary between two objects blends their colors.
+- [ ] A negative sphere carving a positive box shows the box's material on the
+      carved wall; intersection of two positive objects keeps only the overlap.
+- [ ] Selecting unsigned `magnitude` while a `subtract`/`intersection` object
+      is present warns/rejects per the signedness gate.
+- [ ] Object removal updates the composed SDF and the material table without
+      leaking uniforms.
