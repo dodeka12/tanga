@@ -335,6 +335,22 @@ class Visualizer(_JupyterDisplayMixin):
         node = self._scenes[""].get_node(eid)
         return VizObjectRef(VizSceneHandle(self, ""), node)
 
+    def __call__(
+        self, obj: VizInputType | None = None, **kwargs: Any
+    ) -> "VizObjectRef":
+        """Shorthand for :meth:`new`: ``viz(point, color=...)``.
+
+        Adds *obj* to the main scene and returns a :class:`VizObjectRef`, just
+        like :meth:`new`.  This keeps the pre-create + update animation pattern
+        concise::
+
+            p = viz(Point(3, 0, 0), color="#ff4444")
+            for dt in viz.animate(fps=30):
+                p.entity = Point(...)
+                viz.flush()
+        """
+        return self.new(obj, **kwargs)
+
     def add_group(
         self, name: str | None = None, *, scene_name: str = ""
     ) -> "VizObjectRef":
@@ -879,6 +895,7 @@ class Visualizer(_JupyterDisplayMixin):
         stop_key: str | None = "q",
         stop_modifiers: Sequence[KeyModifier | str] | None = None,
         scene_name: str = "",
+        auto_clear: bool = False,
     ) -> Iterator[float]:
         """Yield once per animation frame until interrupted.
 
@@ -898,6 +915,18 @@ class Visualizer(_JupyterDisplayMixin):
         stopped automatically at interpreter exit via the registered ``atexit``
         hook (so a per-scene ``q`` interrupt does not shut the server down).
 
+        When *auto_clear* is ``True``, each frame first flushes the scene (so the
+        previous frame's changes appear), then removes every object that was
+        added after the loop began — i.e. anything not present on the first
+        frame.  This lets you ``add()`` fresh objects every frame without
+        accumulating them::
+
+            for dt in viz.animate(fps=30, auto_clear=True):
+                viz.add(Point(math.cos(t), math.sin(t), 0), color="#ff4444")
+                viz.flush()
+
+        Objects added *before* the loop persist across frames.
+
         Example::
 
             viz = Visualizer(title="...")
@@ -914,8 +943,22 @@ class Visualizer(_JupyterDisplayMixin):
 
         frame_time = 1.0 / fps if fps and fps > 0.0 else None
 
+        baseline: set[str] | None = None
         prev = time.monotonic()
         while not self.interrupted(scene_name):
+            if auto_clear:
+                # Push the previous frame's dirty state, then drop everything
+                # added since the first frame (diffed against the live objects
+                # at loop entry) so per-frame `add()` calls don't accumulate.
+                self._flush_scene(scene_name)
+                scene = self._scenes[scene_name]
+                current = set(scene._objects.keys())
+                if baseline is None:
+                    baseline = current
+                else:
+                    for object_id in current - baseline:
+                        scene.remove(object_id)
+
             now = time.monotonic()
             yield now - prev
             prev = now

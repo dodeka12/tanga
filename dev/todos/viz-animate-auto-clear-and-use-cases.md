@@ -134,19 +134,19 @@ New subfolder `py/examples/jupyter/` with:
 
 ### Phase 1 — `__call__` + `animate(auto_clear=...)`
 
-- [ ] Add `Visualizer.__call__(obj, **kwargs)` → `self.new(obj, **kwargs)`.
-- [ ] Add `auto_clear: bool = False` to `Visualizer.animate` and the
+- [x] Add `Visualizer.__call__(obj, **kwargs)` → `self.new(obj, **kwargs)`.
+- [x] Add `auto_clear: bool = False` to `Visualizer.animate` and the
       flush-first / baseline / diff-remove reconcile described above.
-- [ ] Plumb `auto_clear` through `VizSceneHandle.animate()`.
+- [x] Plumb `auto_clear` through `VizSceneHandle.animate()`.
 
 ### Phase 2 — Tests
 
-- [ ] `viz(point, color=...)` returns a `VizObjectRef` equal to `viz.new(...)`
+- [x] `viz(point, color=...)` returns a `VizObjectRef` equal to `viz.new(...)`
       and `.entity` updates mark the node dirty.
-- [ ] `auto_clear`: baseline captured on first frame; objects added inside the
+- [x] `auto_clear`: baseline captured on first frame; objects added inside the
       loop (incl. labels) are removed on the next frame; pre-loop objects persist;
       an empty scene is handled; scoping respects `scene_name`.
-- [ ] `auto_clear=False` (default) preserves existing `animate()` behaviour.
+- [x] `auto_clear=False` (default) preserves existing `animate()` behaviour.
 
 ### Phase 3 — Docs
 

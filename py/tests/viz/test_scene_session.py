@@ -21,6 +21,7 @@ from pytanga.viz.camera import (
 )
 from pytanga.viz.scene import Scene, SceneConfig, SceneObject
 from pytanga.viz.serializer import serialize_entity
+from pytanga.viz._object_ref import VizObjectRef
 from pytanga.viz.visualizer import DEFAULT_PORT, Visualizer
 
 # ── CameraConfig ────────────────────────────────────────────
@@ -312,6 +313,54 @@ class TestVisualizer:
         viz._shutdown_requested.set()
         with pytest.raises(StopIteration):
             next(gen)
+
+    def test_call_is_new_shorthand(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        ref = viz(Point(1, 2, 3), color="#ff4444")
+        assert isinstance(ref, VizObjectRef)
+        assert ref.id in viz._scenes[""]._objects
+        # Equivalent to viz.new().
+        ref2 = viz.new(Point(4, 5, 6), color="#44ff44")
+        assert isinstance(ref2, VizObjectRef)
+        assert ref2.id in viz._scenes[""]._objects
+
+    def test_animate_auto_clear_removes_added_objects(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        scene = viz._scenes[""]
+        baseline_id = viz.add(Point(0, 0, 0))
+        scene.flush()  # consume initial dirty state
+
+        gen = viz.animate(fps=0, auto_clear=True)
+        next(gen)  # frame 0: baseline captured
+
+        added_id = viz.add(Point(1, 0, 0), label="P")
+        label_ids = scene.get_label_ids(added_id)
+        assert label_ids
+
+        next(gen)  # frame 1: reconcile removes the added entity + its label
+        assert added_id in scene._removed_ids
+        for lid in label_ids:
+            assert lid in scene._removed_ids
+        # The pre-loop entity persists.
+        assert baseline_id not in scene._removed_ids
+
+    def test_animate_auto_clear_empty_scene(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        scene = viz._scenes[""]
+        gen = viz.animate(fps=0, auto_clear=True)
+        next(gen)  # frame 0: baseline = empty set (not "unset")
+
+        added_id = viz.add(Point(1, 0, 0))
+        next(gen)  # frame 1: empty baseline → the addition is removed
+        assert added_id in scene._removed_ids
 
     def test_interrupted_false_without_server(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)

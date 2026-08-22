@@ -264,6 +264,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         fps: float = 60.0,
         stop_key: str | None = "q",
         stop_modifiers: Sequence[KeyModifier | str] | None = None,
+        auto_clear: bool = False,
     ) -> Iterator[float]:
         """Yield once per animation frame until this scene is interrupted.
 
@@ -273,6 +274,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             fps=fps,
             stop_key=stop_key,
             stop_modifiers=stop_modifiers,
+            auto_clear=auto_clear,
             scene_name=self._name,
         )
 
