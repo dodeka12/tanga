@@ -6,8 +6,8 @@
 
 Expose SDF set operations as first-class per-object controls: an object can be
 `positive` or `negative`, and the compositor folds it into the global SDF as a
-`union`, `intersection`, or `subtract`. This lets a user carve a box with a
-sphere, intersect overlapping solids, etc.
+`union`, `intersection`, or `subtract`. This lets a user carve one object with
+another and intersect overlapping solids, etc.
 
 ## Background
 
@@ -78,8 +78,8 @@ File: `py/tests/viz/sdf/test_combine.py`
 
 ## Verification
 
-- [ ] A negative sphere carves a cavity out of a positive box (visual + the
-      box's material is visible inside the cavity).
+- [ ] A negative sphere carves a cavity out of a positive sphere (visual + the
+      positive sphere's material is visible inside the cavity).
 - [ ] Intersection of two overlapping spheres renders only the lens of overlap.
 - [ ] Union remains the default and behaves as before.
 - [ ] Boolean ops with unsigned `magnitude` are rejected/warned.

@@ -6,8 +6,8 @@
 
 Create the GLSL base library of signed-distance primitives and Boolean
 combinators, ported from inigo quilez's SDF reference. This is the "base
-modules" vocabulary every analytic entity and operator builds on, and the
-fallback primitives for bounded infinite entities.
+modules" vocabulary every analytic entity builds on, and the fallback
+primitives for bounded infinite entities.
 
 ## Files
 

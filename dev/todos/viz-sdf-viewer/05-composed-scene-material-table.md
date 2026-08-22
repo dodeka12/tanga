@@ -61,11 +61,12 @@ a second channel (`mat`) using their blend factor.
 
 ## Verification
 
-- [ ] A multi-object scene (sphere + box + direction arrow) renders with
-      distinct per-object colors.
+- [ ] A multi-object scene (sphere + line + point) renders with distinct
+      per-object colors.
 - [ ] Smooth-union boundary between two objects blends their colors.
-- [ ] A negative sphere carving a positive box shows the box's material on the
-      carved wall; intersection of two positive objects keeps only the overlap.
+- [ ] A negative sphere carving a positive sphere shows the positive sphere's
+      material on the carved wall; intersection of two positive spheres keeps
+      only the overlap.
 - [ ] Selecting unsigned `magnitude` while a `subtract`/`intersection` object
       is present warns/rejects per the signedness gate.
 - [ ] Object removal updates the composed SDF and the material table without

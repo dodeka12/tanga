@@ -35,8 +35,8 @@ unchanged.
 ## Steps
 
 - [ ] `SdfVisualizer` class:
-  - [ ] Mirrors `Visualizer`'s `add()` / scene-handle API, serializing entities
-        and operators via `sdf/serializer.py` and MVs via
+  - [ ] Mirrors `Visualizer`'s `add()` / scene-handle API, serializing the six
+        supported entities via `sdf/serializer.py` and MVs via
         `sdf/algebra_embedding.py` (Phase 7).
   - [ ] Holds the viewer-level `distance` setting (default `"scalar_pseudo"`),
         and `opacity` (default `"step"`), exposed via setters that emit the

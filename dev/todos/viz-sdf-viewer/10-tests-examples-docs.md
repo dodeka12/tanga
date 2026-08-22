@@ -41,7 +41,7 @@ changelog entry, and a pull request following the repository workflows.
 - [ ] `uv run python py/examples/viz/demo_sdf_algebra.py` renders MVs and
       responds to distance-function changes.
 - [ ] `uv run python py/examples/viz/demo_sdf_booleans.py` renders a subtract
-      (negative sphere carving a box) and an intersection correctly.
+      (negative sphere carving a positive sphere) and an intersection correctly.
 - [ ] `uv run python py/examples/viz/demo_sdf_opacity.py` renders `linear` and
       `sigmoid` transfers with soft translucent edges.
 - [ ] Docs render and build (`mkdocs`); no broken links.

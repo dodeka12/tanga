@@ -11,10 +11,10 @@ primitives and combinators.
 
 There are two rendering paths:
 
-1. **Analytic path** — the standard geometric entities (Point, Direction, Line,
-   Plane, Circle, Sphere, PointPair, Space) and operators are mapped to
-   compositions of a SDF primitive library. A direction, for example, is a
-   cylinder with a cone at one end (`opUnion(sdCylinder, sdCone)`).
+1. **Analytic path** — the initially-supported geometric entities (`Point`,
+   `Line`, `Plane`, `Sphere`, `Circle`, `PointPair`) are mapped to compositions
+   of a SDF primitive library. Operators, `Direction`, `Space`, and other
+   entity kinds are deferred.
 2. **Algebra path** — an MV is drawn by directly evaluating `ip(point, mv)` or
    `op(point, mv)` (chosen by the MV's algebra `opns` setting) and mapping the
    resulting multivector to a signed distance via a registered distance
@@ -32,7 +32,7 @@ HTML bootstrap (CDN import map, status, loading, error/fallback handling).
 
 ```
 Python backend
-  Entity/Operator          MV
+  Entity (six kinds)       MV
       │                     │
       │ analytic            │ algebra
       ▼                     ▼
@@ -191,6 +191,11 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 - **WebGL2 is a hard requirement.** If unavailable, the viewer shows an in-page
   error banner and logs; there is no silent WebGL1 fallback.
 - **3D only** for the SDF viewer; 2D is deferred.
+- **Style scope is minimal**: initially only `color` and `opacity` are read
+  from entity styles; other flags (`wireframe`, sizes, …) are ignored until a
+  later phase.
+- **Initial entity scope**: only `Point`, `Line`, `Plane`, `Sphere`, `Circle`,
+  `PointPair`; other entities/operators are deferred and raise `TypeError`.
 - **Unit tests are phase-scoped and run per phase** (fail early) — no waiting
   until a late integration pass.
 - **The default algebra distance is `scalar_pseudo`**: the signed scalar +
