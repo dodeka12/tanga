@@ -98,7 +98,7 @@ beyond a `switch`-on-kind dispatcher, exactly like the existing `factory.js`.
 
 ## Unit tests
 
-Files: `py/tests/viz/sdf/test_primitives.py`, `py/tests/viz/sdf/test_serializer.py`
+Files: `py/tests/viz/sdf/test_primitives.py`, `py/tests/viz/sdf/test_sdf_serializer.py`
 
 - [x] `test_primitives_to_dict` — each primitive dataclass serializes to the
       expected `kind` + typed params + `transform`.
@@ -128,4 +128,4 @@ Files: `py/tests/viz/sdf/test_primitives.py`, `py/tests/viz/sdf/test_serializer.
       emits valid expression strings (syntax-checked via Node), but real GLSL
       compile happens in the Phase 6/6a browser slice)*
 - [x] Infinite line/plane serialize with a non-empty `bound`.
-- [x] `uv run pytest py/tests/viz/sdf/test_primitives.py py/tests/viz/sdf/test_serializer.py` passes.
+- [x] `uv run pytest py/tests/viz/sdf/test_primitives.py py/tests/viz/sdf/test_sdf_serializer.py` passes.

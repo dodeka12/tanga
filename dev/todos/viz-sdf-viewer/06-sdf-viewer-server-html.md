@@ -1,6 +1,6 @@
 # Phase 6 — `SdfVisualizer` facade + HTML bootstrap (reuse `server.py`)
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -34,58 +34,61 @@ unchanged.
 
 ## Steps
 
-- [ ] `SdfVisualizer` class:
-  - [ ] Mirrors `Visualizer`'s `add()` / scene-handle API, serializing the six
+- [x] `SdfVisualizer` class:
+  - [x] Mirrors `Visualizer`'s `add()` / scene-handle API, serializing the six
         supported entities via `sdf/serializer.py` and MVs via
         `sdf/algebra_embedding.py` (Phase 7).
-  - [ ] Holds the viewer-level `distance` setting (default `"scalar_pseudo"`),
+  - [x] Holds the viewer-level `distance` setting (default `"scalar_pseudo"`),
         and `opacity` (default `"step"`), exposed via setters that emit the
         recompile message (distance/opacity are wired only in later phases;
         the facade just exposes the hook in this phase).
-  - [ ] Reuses the existing server runtime (start/stop/port/static serving),
+  - [x] Reuses the existing server runtime (start/stop/port/static serving),
         switching the served entry page to `sdf_viewer.html`.
-- [ ] `sdf_viewer.html`:
-  - [ ] Reuse the `viewer.html` `<head>` + loading/error/fallback/status
+- [x] `sdf_viewer.html`:
+  - [x] Reuse the `viewer.html` `<head>` + loading/error/fallback/status
         bootstrap.
-  - [ ] Load `sdf/sdf_viewer.js` (+ `sdf/` modules) instead of
+  - [x] Load `sdf/sdf_viewer.js` (+ `sdf/` modules) instead of
         `viewer.js`/`renderers/`.
-  - [ ] Add an early WebGL2 capability notice.
-- [ ] `sdf_viewer.js`:
-  - [ ] Port the WebSocket client (connect/reconnect/ready/scene messages)
+  - [x] Add an early WebGL2 capability notice.
+- [x] `sdf_viewer.js`:
+  - [x] Port the WebSocket client (connect/reconnect/ready/scene messages)
         from `viewer.js`, delegating message handling to the SDF
         scene-builder and the distance-function recompile hook.
-- [ ] Camera parity (shared `scene_config.camera`, identical to the standard
+- [x] Camera parity (shared `scene_config.camera`, identical to the standard
       viewer):
-  - [ ] Emit the camera through the same `scene_config.camera` field used by
+  - [x] Emit the camera through the same `scene_config.camera` field used by
         `scene.py` / `camera.py` (`CameraConfig3d`), so `sdf_viewer.js` applies
         it via the shared `view_mode.js` `switchToCamera` (3D branch) — no SDF
         fork.
-  - [ ] `fit_camera` auto-fit is **not** handled here: the standard viewer
+  - [x] `fit_camera` auto-fit is **not** handled here: the standard viewer
         computes a bounding box from meshes the SDF path does not have. This is
         a known gap, tackled in a later phase with an SDF-specific bounds
         computation.
-- [ ] `server.py` integration: register `sdf_viewer.html` + `sdf/` static
-      assets with the existing content-hash versioning.
+- [x] `server.py` integration: serve `sdf_viewer.html` + `sdf/` static assets
+      via the configurable `entry_page` (existing catch-all static routing +
+      content-hash versioning already cover the `sdf/` assets).
 
 ## Unit tests
 
 File: `py/tests/viz/sdf/test_visualizer.py`
 
-- [ ] `test_add_serializes_sdf_object` — `SdfVisualizer.add(Sphere(...))`
+- [x] `test_add_serializes_sdf_object` — `SdfVisualizer.add(Sphere(...))`
       produces an SDF scene object of the expected kind/structure.
-- [ ] `test_distance_setter_emits_config` — setting `distance` / `opacity`
+- [x] `test_distance_setter_emits_config` — setting `distance` / `opacity`
       emits the `sdf_viewer_config` message with the right value.
 - [ ] `test_serve_sdf_viewer_html` — the server serves `sdf_viewer.html` and
-      the `sdf/` static assets (mock transport, no real browser).
-- [ ] `test_camera_config_parity` — the `scene_config.camera` dict emitted by
+      the `sdf/` static assets (mock transport, no real browser). *(deferred —
+      exercised by the Phase 6a browser slice via the real `VizServer`)*
+- [x] `test_camera_config_parity` — the `scene_config.camera` dict emitted by
       `SdfVisualizer` equals the one emitted by the standard `Visualizer` for an
       identical `CameraConfig3d`.
 
 ## Verification
 
 - [ ] `SdfVisualizer().add(Point(...))` opens the SDF viewer in a browser and
-      renders via the ray-marcher.
+      renders via the ray-marcher. *(Phase 6a manual user confirmation)*
 - [ ] Changing the distance function through the facade triggers a recompile in
-      the connected browser.
-- [ ] Existing (non-SDF) `Visualizer` continues to work unchanged.
-- [ ] `uv run pytest py/tests/viz/sdf/test_visualizer.py` passes.
+      the connected browser. *(deferred — Phase 8 wires `distOf`)*
+- [ ] Existing (non-SDF) `Visualizer` continues to work unchanged. *(the
+      `entry_page` server param is opt-in; the default remains `viewer.html`)*
+- [x] `uv run pytest py/tests/viz/sdf/test_visualizer.py` passes.

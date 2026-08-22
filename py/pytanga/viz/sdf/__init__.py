@@ -14,10 +14,12 @@ from __future__ import annotations
 from .distance import DistanceFunction, DistanceFunctionMeta
 from .primitives import SdfNode
 from .serializer import serialize_entity
+from .visualizer import SdfVisualizer
 
 __all__ = [
     "DistanceFunction",
     "DistanceFunctionMeta",
     "SdfNode",
+    "SdfVisualizer",
     "serialize_entity",
 ]

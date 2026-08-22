@@ -38,7 +38,7 @@
   `scene-builder.js` and `objects/*` GLSL emitters that dispatch a serialized
   tree to a single distance expression. Infinite lines/planes carry an explicit
   finite `bound`; unsupported kinds raise `TypeError`. Unit tests in
-  `py/tests/viz/sdf/test_primitives.py` and `test_serializer.py`.
+  `py/tests/viz/sdf/test_primitives.py` and `test_sdf_serializer.py`.
 - **Composed global SDF + material table (Phase 5)** — added the per-object
   composer (`templates/sdf/composer.js`) that folds all object distances into
   one `vec2 map(vec3 p)` returning `(distance, materialId)`, and the material
@@ -48,3 +48,11 @@
   `materialColor` contract). Signed combine modes / smooth-blend / signedness
   gate / AABB pruning are deferred to Phase 11 (CSG booleans). A headless Node
   smoke test (`dev/src/sdf_composer_smoke.mjs`) exercises the composed map.
+- **`SdfVisualizer` facade + HTML bootstrap (Phase 6)** — added the
+  `SdfVisualizer` facade (`sdf/visualizer.py`) mirroring the standard
+  viewer's `add`/`show`/`wait` API, the `sdf_viewer.html` entry page, and a
+  WebSocket + camera-parity wiring in `sdf_viewer.js`. The shared `VizServer`
+  gains an opt-in `entry_page` parameter (default unchanged) so the SDF viewer
+  serves `sdf_viewer.html` while the standard viewer still serves
+  `viewer.html`. Camera parity is verified against the standard viewer in
+  `py/tests/viz/sdf/test_visualizer.py`.
