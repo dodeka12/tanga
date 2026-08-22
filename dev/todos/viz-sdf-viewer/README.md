@@ -191,9 +191,10 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 - **WebGL2 is a hard requirement.** If unavailable, the viewer shows an in-page
   error banner and logs; there is no silent WebGL1 fallback.
 - **3D only** for the SDF viewer; 2D is deferred.
-- **Style scope is minimal**: initially only `color` and `opacity` are read
-  from entity styles; other flags (`wireframe`, sizes, …) are ignored until a
-  later phase.
+- **Style scope is minimal per kind**: `Point` reads `size` (sphere radius),
+  `Line`/`Circle`/`PointPair` read `thickness` (tube/cylinder radius), and all
+  kinds read `color`/`opacity`; other flags (`wireframe`, …) are ignored until
+  a later phase.
 - **Initial entity scope**: only `Point`, `Line`, `Plane`, `Sphere`, `Circle`,
   `PointPair`; other entities/operators are deferred and raise `TypeError`.
 - **Unit tests are phase-scoped and run per phase** (fail early) — no waiting
