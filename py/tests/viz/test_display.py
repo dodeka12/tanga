@@ -92,3 +92,61 @@ class TestDisplayRow:
         assert len(captured) == 1
         assert captured[0].data.count("data:text/html;charset=utf-8;base64,") == 2
         assert "<html" not in captured[0].data
+
+
+class TestDisplayLiveJupyter:
+    """``display()`` must hint instead of rendering an empty iframe when the
+    server has not been started."""
+
+    def test_no_server_prints_hint_and_skips_iframe(self, monkeypatch, capsys):
+        viz = _viz()
+        viz._jupyter = True
+        displayed = []
+        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
+
+        result = viz.display()
+
+        assert result is None
+        assert displayed == []
+        assert "start_server()" in capsys.readouterr().out
+
+    def test_server_running_displays_iframe(self, monkeypatch):
+        viz = _viz()
+        viz._jupyter = True
+        viz._server = object()  # non-None → treated as running
+        displayed = []
+        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
+
+        result = viz.display()
+
+        assert result is None
+        assert len(displayed) == 1
+        assert displayed[0].src == viz.url
+
+    def test_scene_handle_no_server_prints_hint(self, monkeypatch, capsys):
+        viz = _viz()
+        viz._jupyter = True
+        handle = viz.scene("detail")
+        displayed = []
+        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
+
+        result = handle.display()
+
+        assert result is None
+        assert displayed == []
+        assert "start_server()" in capsys.readouterr().out
+
+    def test_scene_handle_server_running_displays_iframe(self, monkeypatch):
+        viz = _viz()
+        viz._jupyter = True
+        viz._server = object()
+        handle = viz.scene("detail")
+        displayed = []
+        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
+
+        result = handle.display()
+
+        assert result is None
+        assert len(displayed) == 1
+        assert displayed[0].src == handle.url
+

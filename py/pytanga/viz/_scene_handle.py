@@ -445,6 +445,11 @@ class VizSceneHandle(_JupyterDisplayMixin):
             src += f"?viewer={self._viewer_name}"
 
         if self._viz._jupyter:
+            if self._server is None:
+                print(
+                    "Visualizer server is not running. Call start_server() first."
+                )
+                return None
             from IPython.display import IFrame
             from IPython.display import display as ipy_display
 

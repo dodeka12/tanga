@@ -1892,6 +1892,11 @@ class Visualizer(_JupyterDisplayMixin):
         """Display the live main scene inline (iframe) in a Jupyter notebook."""
         src = self.url
         if self._jupyter:
+            if self._server is None:
+                print(
+                    "Visualizer server is not running. Call start_server() first."
+                )
+                return None
             from IPython.display import IFrame
             from IPython.display import display as ipy_display
 
