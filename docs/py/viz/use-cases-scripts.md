@@ -7,7 +7,8 @@ see [Use Cases — Notebooks](use-cases-notebooks.md); for the full API see
 ## Interactive Visualizer
 
 The simplest way to show a one-off scene is the context manager. It clears the
-scene on entry and calls `show()` on exit — no server bookkeeping to remember:
+scene, shows it on entry, and flushes on exit — no server bookkeeping to
+remember:
 
 ```python
 from pytanga.geometry import Direction, Plane, Point, Sphere
@@ -15,7 +16,7 @@ from pytanga.viz import Visualizer
 
 viz = Visualizer(title="My Scene")
 
-with viz:  # clear scene on entry, show() on exit
+with viz:  # clear + show on entry, flush on exit
     viz(Point(1, 2, 3), color="#ff4444")
     viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.3)
     viz(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.25)

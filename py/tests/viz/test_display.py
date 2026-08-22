@@ -198,37 +198,43 @@ class TestDisplayLiveJupyter:
 
 
 class TestContextManager:
-    def test_with_viz_resets_and_shows(self, monkeypatch):
+    def test_with_viz_shows_on_entry_and_flushes_on_exit(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        reset = []
-        shown = []
-        monkeypatch.setattr(viz, "_reset_scene", lambda name: reset.append(name))
-        monkeypatch.setattr(viz, "show", lambda: shown.append(True))
+        calls = []
+        monkeypatch.setattr(
+            viz, "_reset_scene", lambda name: calls.append(("reset", name))
+        )
+        monkeypatch.setattr(viz, "show", lambda: calls.append(("show",)))
+        monkeypatch.setattr(viz, "flush", lambda **kw: calls.append(("flush",)))
 
         with viz as v:
             assert v is viz
+            # show() happens on entry, before the body runs
+            assert calls == [("reset", ""), ("show",)]
 
-        assert reset == [""]
-        assert shown == [True]
+        assert calls == [("reset", ""), ("show",), ("flush",)]
 
-    def test_with_scene_resets_and_shows(self, monkeypatch):
+    def test_with_scene_shows_on_entry_and_flushes_on_exit(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         handle = viz.scene("detail")
-        reset = []
-        shown = []
-        monkeypatch.setattr(viz, "_reset_scene", lambda name: reset.append(name))
-        monkeypatch.setattr(handle, "show", lambda: shown.append(True))
+        calls = []
+        monkeypatch.setattr(
+            viz, "_reset_scene", lambda name: calls.append(("reset", name))
+        )
+        monkeypatch.setattr(handle, "show", lambda: calls.append(("show",)))
+        monkeypatch.setattr(handle, "flush", lambda **kw: calls.append(("flush",)))
 
         with handle as h:
             assert h is handle
+            assert calls == [("reset", "detail"), ("show",)]
 
-        assert reset == ["detail"]
-        assert shown == [True]
+        assert calls == [("reset", "detail"), ("show",), ("flush",)]
 
     def test_exit_propagates_exception(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_reset_scene", lambda name: None)
         monkeypatch.setattr(viz, "show", lambda: None)
+        monkeypatch.setattr(viz, "flush", lambda **kw: None)
 
         with pytest.raises(RuntimeError):
             with viz:
@@ -237,6 +243,7 @@ class TestContextManager:
     def test_with_viz_preserves_default_axes_grid(self, monkeypatch):
         viz = Visualizer()  # defaults: axes + grid enabled
         monkeypatch.setattr(viz, "show", lambda: None)
+        monkeypatch.setattr(viz, "flush", lambda **kw: None)
 
         def kinds():
             return sorted(o.kind for o in viz._scenes[""]._objects.values())

@@ -111,7 +111,7 @@ viz.show()          # no new viewer — just flushes the update
 ```
 
 `Visualizer` and `VizSceneHandle` are also context managers: they clear the
-scene on entry and call `show()` on exit.
+scene and call `show()` on entry, then `flush()` on exit.
 
 ```python
 with viz:                          # main scene: clear, then show

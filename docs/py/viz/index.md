@@ -18,7 +18,7 @@ from pytanga.viz import Visualizer
 from pytanga.geometry import Point, Sphere, Plane, Direction
 
 viz = Visualizer()
-with viz:  # clear scene on entry, show() on exit
+with viz:  # clear + show on entry, flush on exit
     viz(Point(1, 2, 3), color="#ff4444")
     viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.4)
     viz(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.3)

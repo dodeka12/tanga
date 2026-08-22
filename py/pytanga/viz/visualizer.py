@@ -1576,13 +1576,19 @@ class Visualizer(_JupyterDisplayMixin):
         return self.open_browser(wait_for_browser=wait_for_browser)
 
     def __enter__(self) -> "Visualizer":
-        """Reset the main scene on entry; :meth:`show` is called on exit."""
+        """Reset the main scene and show it immediately on entry.
+
+        ``show()`` here starts the server (if needed) and makes the viewer
+        visible *before* the block body runs, so each ``flush()`` inside the
+        block updates the live viewer (e.g. an ``animate()`` loop).
+        """
         self._reset_scene("")
+        self.show()
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Show the main scene on exit (any exception still propagates)."""
-        self.show()
+        """Flush the main scene on exit (any exception still propagates)."""
+        self.flush()
         return None
 
     def wait(self) -> None:

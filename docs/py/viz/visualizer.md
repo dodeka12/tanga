@@ -406,13 +406,13 @@ Browser connected.
 ### Context Managers
 
 `Visualizer` and `VizSceneHandle` can be used as context managers: they clear
-the scene on entry and call `show()` on exit.
+the scene and call `show()` on entry, then `flush()` on exit.
 
 ```python
-with viz:                       # clear main scene, then show
+with viz:                       # clear + show main scene on entry
     viz.add(Point(1, 2, 3))
 
-with viz.scene("detail"):       # clear named scene, then show
+with viz.scene("detail"):       # clear + show named scene on entry
     viz.scene("detail").add(Point(4, 5, 6))
 ```
 

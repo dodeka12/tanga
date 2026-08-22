@@ -6,8 +6,8 @@ kernel). For a deep dive, see [Jupyter notebooks](jupyter.md).
 
 ## Interactive Visualizer
 
-The context manager is the simplest pattern — it clears the scene on entry and
-shows it on exit:
+The context manager is the simplest pattern — it clears the scene and shows it
+on entry (then flushes on exit):
 
 ```python
 from pytanga.geometry import Point, Sphere
@@ -15,7 +15,7 @@ from pytanga.viz import Visualizer
 
 viz = Visualizer()
 
-with viz:  # clear scene on entry, show() inline on exit
+with viz:  # clear + show on entry, flush on exit
     viz(Point(1, 2, 3), color="#ff4444")
     viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.3)
 ```
