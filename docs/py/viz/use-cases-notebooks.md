@@ -22,17 +22,17 @@ with viz:  # clear scene on entry, show() inline on exit
 
 ### Executed repeatedly
 
-Re-running a cell that calls `display()` does **not** open a second viewer — it
-flushes the latest state into the already-open one. `viz(...)` is shorthand for
-`viz.new(...)`:
+Re-running a cell that calls `show()` (or `display()`) does **not** open a
+second viewer — it flushes the latest state into the already-open one.
+`viz(...)` is shorthand for `viz.new(...)`:
 
 ```python
 viz = Visualizer()
 viz(Point(1, 2, 3), color="#ff4444")
-viz.display()          # opens the inline viewer
+viz.show()          # opens the inline viewer (starts the server)
 
 viz(Point(4, 5, 6), color="#44ff44")
-viz.display()          # no new viewer — just flushes the update
+viz.show()          # no new viewer — just flushes the update
 ```
 
 ## Animation
@@ -46,7 +46,7 @@ from pytanga.geometry import Point
 from pytanga.viz import Visualizer
 
 viz = Visualizer()
-viz.display()  # open the inline viewer first
+viz.show()  # start the server and render inline
 p = viz(Point(3, 0, 0), color="#ff4444")
 
 angle = 0.0
@@ -90,6 +90,6 @@ Runnable notebooks live under `py/examples/jupyter/`:
 
 | Notebook | Topic |
 |----------|-------|
-| [`interactive.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/jupyter/interactive.ipynb) | Context manager + idempotent `display()` |
+| [`interactive.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/jupyter/interactive.ipynb) | Context manager + idempotent `show()`/`display()` |
 | [`animation.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/jupyter/animation.ipynb) | Pre-create + update, and `auto_clear` |
 | [`export.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/jupyter/export.ipynb) | HTML / glTF / figure export |

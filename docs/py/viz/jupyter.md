@@ -74,6 +74,7 @@ Pre-create objects once and update them in place each frame — only changed
 entities are pushed:
 
 ```python
+viz.show()  # start the server and render inline
 p = viz(Point(3, 0, 0), color="#ff4444")   # viz(...) == viz.new(...)
 
 for dt in viz.animate(fps=30):
@@ -104,9 +105,9 @@ flushes the latest scene state into the already-open viewer:
 ```python
 viz = Visualizer()
 viz.add(Point(1, 2, 3))
-viz.display()          # opens the inline viewer
+viz.show()          # opens the inline viewer (starts the server)
 viz.add(Point(4, 5, 6))
-viz.display()          # no new viewer — just flushes the update
+viz.show()          # no new viewer — just flushes the update
 ```
 
 `Visualizer` and `VizSceneHandle` are also context managers: they clear the
