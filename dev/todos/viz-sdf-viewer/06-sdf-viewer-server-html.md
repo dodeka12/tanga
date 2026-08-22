@@ -38,8 +38,10 @@ unchanged.
   - [ ] Mirrors `Visualizer`'s `add()` / scene-handle API, serializing entities
         and operators via `sdf/serializer.py` and MVs via
         `sdf/algebra_embedding.py` (Phase 7).
-  - [ ] Holds the viewer-level `distance` setting (default `"magnitude"`),
-        exposed via a setter that emits the recompile message.
+  - [ ] Holds the viewer-level `distance` setting (default `"scalar_pseudo"`),
+        and `opacity` (default `"step"`), exposed via setters that emit the
+        recompile message (distance/opacity are wired only in later phases;
+        the facade just exposes the hook in this phase).
   - [ ] Reuses the existing server runtime (start/stop/port/static serving),
         switching the served entry page to `sdf_viewer.html`.
 - [ ] `sdf_viewer.html`:

@@ -20,8 +20,8 @@ changelog entry, and a pull request following the repository workflows.
 - [ ] Smoke test (Python):
   - [ ] `dev/src/test_viz_sdf.py` driving `SdfVisualizer` headless where
         feasible (server boot, config message, basic scene serialization).
-- [ ] Examples:
-  - [ ] `py/examples/viz/demo_sdf_entities.py` — analytic entities.
+- [ ] Examples (the basic `demo_sdf_entities.py` is already delivered in
+      Phase 6a):
   - [ ] `py/examples/viz/demo_sdf_algebra.py` — MV rendering with
         OPNS/IPNS + distance-function switching.
   - [ ] `py/examples/viz/demo_sdf_booleans.py` — positive/negative objects
@@ -42,8 +42,6 @@ changelog entry, and a pull request following the repository workflows.
 ## Verification
 
 - [ ] `uv run pytest py/tests/viz/sdf` passes.
-- [ ] `uv run python py/examples/viz/demo_sdf_entities.py` renders analytic
-      entities in the browser.
 - [ ] `uv run python py/examples/viz/demo_sdf_algebra.py` renders MVs and
       responds to distance-function changes.
 - [ ] `uv run python py/examples/viz/demo_sdf_booleans.py` renders a subtract

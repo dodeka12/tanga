@@ -150,12 +150,20 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 | 4 | [04-entity-sdf-serializer.md](./04-entity-sdf-serializer.md) | Analytic entity → SDF primitive-tree mapping |
 | 5 | [05-composed-scene-material-table.md](./05-composed-scene-material-table.md) | Composed global SDF + material-ID hit tracking |
 | 6 | [06-sdf-viewer-server-html.md](./06-sdf-viewer-server-html.md) | `SdfVisualizer` facade + `sdf_viewer.html`, reusing `server.py` + WS protocol |
+| 6a | [06a-first-vertical-slice.md](./06a-first-vertical-slice.md) | First vertical slice: `demo_sdf_entities.py` (line + sphere) with manual user confirmation |
 | 7 | [07-algebra-embedding-python.md](./07-algebra-embedding-python.md) | `algebra_embedding.py`: ordering, `M`, `embed_src`, normalize, bound |
 | 8 | [08-algebra-eval-shader-compile.md](./08-algebra-eval-shader-compile.md) | `algebra/eval.js`: `embed → M·a → distOf → opacityOf` with per-`(algebra,distance,opacity)` program cache |
 | 9 | [09-calibration-validation.md](./09-calibration-validation.md) | `|∇d|≈1` calibration + algebra-SDF vs analytic-SDF validation |
-| 10 | [10-tests-examples-docs.md](./10-tests-examples-docs.md) | Tests, `py/examples/viz/demo_sdf_*.py`, docs, changelog, PR |
+| 10 | [10-tests-examples-docs.md](./10-tests-examples-docs.md) | Tests, remaining `py/examples/viz/demo_sdf_*.py`, docs, changelog, PR |
 | 11 | [11-csg-booleans.md](./11-csg-booleans.md) | Positive/negative objects: `union`/`intersection`/`subtract` combine modes |
 | 12 | [12-opacity-transfer.md](./12-opacity-transfer.md) | Populate non-`step` opacity transfers + volumetric (mechanism from Phases 2/3/8) |
+
+## Milestones
+
+- **First vertical slice (Phase 6a)** — the analytic entity path works
+  end-to-end: `py/examples/viz/demo_sdf_entities.py` opens the viewer and
+  draws a `Line` and a `Sphere` from `pytanga.geometry`, confirmed manually by
+  the user in the browser before any algebra/CSG/opacity work starts.
 
 ## Guiding decisions
 
