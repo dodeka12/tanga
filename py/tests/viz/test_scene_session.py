@@ -425,6 +425,24 @@ class TestVisualizer:
         assert viz.interrupted("a") is True
         assert viz.interrupted("b") is False
 
+    def test_animate_clears_previous_scene_interrupt(self, monkeypatch):
+        # A browser "q" stop sets the per-scene interrupt; a fresh animate()
+        # loop must clear it (but not the global shutdown event) so re-running
+        # the cell restarts the animation.
+        import asyncio
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        asyncio.run(viz._on_browser_animation_stop(""))
+        assert viz.interrupted() is True
+
+        gen = viz.animate(fps=0, stop_key=None)
+        next(gen)  # entering the loop clears the interrupt and yields a frame
+        assert viz.interrupted() is False
+
     def test_normalize_stop_modifiers_accepts_enum_and_strings(self):
         from pytanga.viz import KeyModifier
 

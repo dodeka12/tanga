@@ -769,6 +769,18 @@ class Visualizer(_JupyterDisplayMixin):
             self._interrupt_events[scene_name] = threading.Event()
         return self._interrupt_events[scene_name]
 
+    def _clear_interrupt(self, scene_name: str = "") -> None:
+        """Clear a previous per-scene interrupt for *scene_name*.
+
+        Called at the start of a new :meth:`animate` loop so that re-running
+        an animation after a browser ``q`` stop starts cleanly.  The global
+        shutdown event (terminal Ctrl+C/SIGTERM) is intentionally left
+        untouched so a terminal interrupt still ends every loop.
+        """
+        event = self._interrupt_events.get(scene_name)
+        if event is not None:
+            event.clear()
+
     def _normalize_stop_modifiers(
         self, stop_modifiers: Sequence[KeyModifier | str] | None
     ) -> list[KeyModifier]:
@@ -909,7 +921,9 @@ class Visualizer(_JupyterDisplayMixin):
         terminal Ctrl+C / SIGTERM (global) or the scene's browser stop key.
         *stop_key* (default ``"q"``) with optional *stop_modifiers*
         (``KeyModifier`` values) configures that browser binding per scene;
-        pass ``stop_key=None`` to disable it.
+        pass ``stop_key=None`` to disable it.  Starting a loop clears any
+        earlier per-scene interrupt for *scene_name*, so a cell that ended via
+        the browser stop key can be re-run to restart the animation.
 
         The server is started automatically (headless) if it isn't already
         running, and is stopped automatically at interpreter exit via the
@@ -940,6 +954,11 @@ class Visualizer(_JupyterDisplayMixin):
         """
         if self._server is None:
             self.start_server()
+
+        # Start each loop with a clean per-scene interrupt so re-running the
+        # animation after a browser "q" stop restarts instead of immediately
+        # ending.  (The global Ctrl+C/SIGTERM event is left untouched.)
+        self._clear_interrupt(scene_name)
 
         self._register_animation_stop(scene_name, stop_key, stop_modifiers)
 
