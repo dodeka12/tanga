@@ -1,6 +1,6 @@
 # PGA3 Line Sign Fix + PGA2/3 Meet/Join Convention
 
-**Created:** 2026-08-22 | **Status:** Plan — do not implement yet
+**Created:** 2026-08-22 | **Status:** Done
 
 ## Goal
 
