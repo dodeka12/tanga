@@ -9,14 +9,10 @@ changelog entry, and a pull request following the repository workflows.
 
 ## Steps
 
-- [ ] Unit tests (Python):
-  - [ ] `py/tests/viz/sdf/test_distance.py` — `sdf/distance.py` (distance enum)
-        and primitive-tree serialization.
-  - [ ] `py/tests/viz/sdf/test_serializer.py` — entity → SDF tree structure
-        and parameters for every supported kind.
-  - [ ] `py/tests/viz/sdf/test_algebra_embedding.py` — `M` vs direct
-        `ip/op` reconstruction, ordering consistency, normalize on/off, P3
-        trivector case, N3 quadratic case.
+- [ ] Full-suite run:
+  - [ ] `uv run pytest py/tests/viz/sdf` — runs the accumulated per-phase
+        tests (each already run in its phase); this is the integration
+        regression pass, not the first time the tests execute.
 - [ ] Smoke test (Python):
   - [ ] `dev/src/test_viz_sdf.py` driving `SdfVisualizer` headless where
         feasible (server boot, config message, basic scene serialization).
@@ -41,7 +37,7 @@ changelog entry, and a pull request following the repository workflows.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/sdf` passes.
+- [ ] `uv run pytest py/tests/viz/sdf` passes (accumulated suite).
 - [ ] `uv run python py/examples/viz/demo_sdf_algebra.py` renders MVs and
       responds to distance-function changes.
 - [ ] `uv run python py/examples/viz/demo_sdf_booleans.py` renders a subtract

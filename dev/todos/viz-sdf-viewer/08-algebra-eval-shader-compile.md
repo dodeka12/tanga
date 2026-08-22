@@ -76,3 +76,5 @@ global-map pattern as analytic objects.
       in generated shader source (assert by string inspection).
 - [ ] Two different algebras can coexist in the scene (program cache has two
       entries) without shader branching.
+- [ ] A headless Node smoke test compiles the assembled fragment (per algebra +
+      distance + opacity) and asserts no GLSL compile errors.

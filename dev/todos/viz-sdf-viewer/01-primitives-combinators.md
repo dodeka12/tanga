@@ -53,3 +53,6 @@ fallback primitives for bounded infinite entities.
       them in Phase 2).
 - [ ] Primitive formulas cross-checked against IQ reference for argument order
       and sign conventions.
+- [ ] A headless compile smoke check (e.g. `glslangValidator` or a Node
+      `three` shader-probe harness) parses `primitives.glsl` +
+      `combinators.glsl` with no syntax errors.

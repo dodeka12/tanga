@@ -57,6 +57,17 @@ unchanged.
 - [ ] `server.py` integration: register `sdf_viewer.html` + `sdf/` static
       assets with the existing content-hash versioning.
 
+## Unit tests
+
+File: `py/tests/viz/sdf/test_visualizer.py`
+
+- [ ] `test_add_serializes_sdf_object` — `SdfVisualizer.add(Sphere(...))`
+      produces an SDF scene object of the expected kind/structure.
+- [ ] `test_distance_setter_emits_config` — setting `distance` / `opacity`
+      emits the `sdf_viewer_config` message with the right value.
+- [ ] `test_serve_sdf_viewer_html` — the server serves `sdf_viewer.html` and
+      the `sdf/` static assets (mock transport, no real browser).
+
 ## Verification
 
 - [ ] `SdfVisualizer().add(Point(...))` opens the SDF viewer in a browser and
@@ -64,3 +75,4 @@ unchanged.
 - [ ] Changing the distance function through the facade triggers a recompile in
       the connected browser.
 - [ ] Existing (non-SDF) `Visualizer` continues to work unchanged.
+- [ ] `uv run pytest py/tests/viz/sdf/test_visualizer.py` passes.

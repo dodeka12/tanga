@@ -68,3 +68,5 @@ every later phase plugs into.
 - [ ] WebGL1 context (or a stubbed `isWebGL2 === false`) triggers the error
       banner and aborts.
 - [ ] No JS console errors from shader compilation.
+- [ ] A headless Node smoke test compiles the assembled raymarch shader (common
+      + primitives + `main`) and asserts no GLSL compile errors.

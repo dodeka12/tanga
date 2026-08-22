@@ -63,6 +63,19 @@ positive object via `max` (difference).
 - [ ] Smooth variants: `smooth_subtract`/`smooth_intersection` blend `matId`
       using the blend factor (Phase 1 vec2 combinators).
 
+## Unit tests
+
+File: `py/tests/viz/sdf/test_combine.py`
+
+- [ ] `test_combine_serialized` — `combine`/`polarity` round-trips into the
+      wire object for analytic and `mv_sdf` objects.
+- [ ] `test_polarity_maps_to_combine` — `positive`→`union`, `negative`→
+      `subtract`.
+- [ ] `test_signedness_gate` — `intersection`/`subtract` with unsigned
+      `magnitude` is rejected/warned.
+- [ ] `test_default_is_union` — an object without `combine` defaults to
+      `union`.
+
 ## Verification
 
 - [ ] A negative sphere carves a cavity out of a positive box (visual + the
@@ -72,3 +85,4 @@ positive object via `max` (difference).
 - [ ] Boolean ops with unsigned `magnitude` are rejected/warned.
 - [ ] Changing an object from `positive` to `negative` re-emits the composed
       map and renders correctly without a full scene reload.
+- [ ] `uv run pytest py/tests/viz/sdf/test_combine.py` passes.

@@ -86,6 +86,22 @@ pseudoscalar blade at a fixed, algebra-specific slot `I`.
   `algebra`, `product`, `distance`, `normalize`, `point_ids`, `result_ids`
   (with the pseudoscalar slot `I` identified), `M`, `bound`, `combine`, `style`.
 
+## Unit tests
+
+File: `py/tests/viz/sdf/test_algebra_embedding.py`
+
+- [ ] `test_m_reconstruction` — for a known entity (e.g. PGA3 plane), `M`
+      contracted against the embedded point reproduces the direct `ip/op`
+      result MV (using `tensor.ops.contract`).
+- [ ] `test_shape_and_ordering` — `M` shape is `(len(result_ids) ×
+      len(point_ids))` and matches the emitted `embed_src` ordering.
+- [ ] `test_p3_trivector` — P3 `point op line` yields a nonzero `|r|` even
+      though the scalar blade is zero.
+- [ ] `test_normalize_scales` — `normalize=True` and `False` produce
+      scaled-but-proportional `M`.
+- [ ] `test_embed_src_consistency` — `embed_src` generated for an algebra
+      fills the same `point_ids` the `M` matrix expects.
+
 ## Verification
 
 - [ ] Unit test: for a known entity (e.g. PGA3 plane), `M` reconstructions
@@ -99,3 +115,4 @@ pseudoscalar blade at a fixed, algebra-specific slot `I`.
 - [ ] `normalize=True` and `False` produce scaled-but-proportional `M`.
 - [ ] The `mv_sdf` wire form carries `combine` so `algebra_embedding.py`
       output participates in Phase 5/11 booleans like analytic objects.
+- [ ] `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py` passes.

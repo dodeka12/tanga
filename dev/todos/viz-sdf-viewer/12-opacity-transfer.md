@@ -73,6 +73,18 @@ Knobs:
 - [ ] Expose `SdfVisualizer.opacity_transfer` setter and a per-object
       `opacity`/`thickness` style value.
 
+## Unit tests
+
+File: `py/tests/viz/sdf/test_opacity.py`
+
+- [ ] `test_enum_values` — every `OpacityTransfer` value string is a valid,
+      known key (matches the JS registry names).
+- [ ] `test_default_is_step` — `OpacityTransfer.default()` returns `STEP`.
+- [ ] `test_params_metadata` — `linear`/`sigmoid` require an `ε`; `step`
+      requires none.
+- [ ] `test_snippet_purity` — generated snippets contain no `main()`, no
+      algebra/entity branch keywords.
+
 ## Verification
 
 - [ ] Default (`step`) renders identically to Phase 2/8 with no behavior
@@ -84,3 +96,4 @@ Knobs:
 - [ ] A volumetric scene accumulates opacity along the ray (soft volume look).
 - [ ] No `if(opacity…)` branches remain in the generated shader (string
       assertion).
+- [ ] `uv run pytest py/tests/viz/sdf/test_opacity.py` passes.

@@ -154,9 +154,28 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 | 7 | [07-algebra-embedding-python.md](./07-algebra-embedding-python.md) | `algebra_embedding.py`: ordering, `M`, `embed_src`, normalize, bound |
 | 8 | [08-algebra-eval-shader-compile.md](./08-algebra-eval-shader-compile.md) | `algebra/eval.js`: `embed → M·a → distOf → opacityOf` with per-`(algebra,distance,opacity)` program cache |
 | 9 | [09-calibration-validation.md](./09-calibration-validation.md) | `|∇d|≈1` calibration + algebra-SDF vs analytic-SDF validation |
-| 10 | [10-tests-examples-docs.md](./10-tests-examples-docs.md) | Tests, remaining `py/examples/viz/demo_sdf_*.py`, docs, changelog, PR |
+| 10 | [10-tests-examples-docs.md](./10-tests-examples-docs.md) | Examples, docs, changelog, PR (per-phase unit tests live in their phases) |
 | 11 | [11-csg-booleans.md](./11-csg-booleans.md) | Positive/negative objects: `union`/`intersection`/`subtract` combine modes |
 | 12 | [12-opacity-transfer.md](./12-opacity-transfer.md) | Populate non-`step` opacity transfers + volumetric (mechanism from Phases 2/3/8) |
+
+## Testing strategy (fail early)
+
+- **Every implementation phase ships its own unit tests** under
+  `py/tests/viz/sdf/` and runs them in its Verification step
+  (`uv run pytest py/tests/viz/sdf/<file>`). Failures surface in the phase that
+  introduced the code, not in a late integration pass.
+- Phase-local test files:
+  - Phase 3 → `test_distance.py`
+  - Phase 4 → `test_primitives.py` + `test_serializer.py`
+  - Phase 6 → `test_visualizer.py`
+  - Phase 7 → `test_algebra_embedding.py`
+  - Phase 9 → `test_calibration.py`
+  - Phase 11 → `test_combine.py`
+  - Phase 12 → `test_opacity.py`
+- JS phases (2, 5, 8) add a headless Node smoke / GLSL compile check in their
+  Verification steps, so the shader/compiler fails early too.
+- Phase 10 runs the **accumulated full suite** and finalizes examples/docs/
+  changelog/PR; it does not re-own the per-phase tests.
 
 ## Milestones
 
@@ -172,6 +191,8 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 - **WebGL2 is a hard requirement.** If unavailable, the viewer shows an in-page
   error banner and logs; there is no silent WebGL1 fallback.
 - **3D only** for the SDF viewer; 2D is deferred.
+- **Unit tests are phase-scoped and run per phase** (fail early) — no waiting
+  until a late integration pass.
 - **The default algebra distance is `scalar_pseudo`**: the signed scalar +
   pseudoscalar (`r[0] + r[I]`) plus the magnitude of every other grade.
   `magnitude` and `scalar` remain explicit alternatives.

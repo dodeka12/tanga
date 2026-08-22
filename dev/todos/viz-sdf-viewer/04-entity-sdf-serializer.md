@@ -75,6 +75,19 @@ Operator glyphs (Phase 4 initial set, refine in later phases):
 - [ ] `renderers`-style per-kind module split so adding an entity = one
       `objects/<kind>.js` + one serializer branch.
 
+## Unit tests
+
+Files: `py/tests/viz/sdf/test_primitives.py`, `py/tests/viz/sdf/test_serializer.py`
+
+- [ ] `test_primitives_to_dict` — each primitive dataclass serializes to the
+      expected `kind` + typed params + `transform`.
+- [ ] `test_serialize_every_kind` — `serializer.py` emits a valid tree for
+      every supported entity/operator kind (structure + params asserted).
+- [ ] `test_serialize_infinite_bound` — infinite Line / Plane emit a non-empty
+      `bound` region.
+- [ ] `test_serialize_combine` — `combine`/`polarity` are forwarded to the
+      emitted object.
+
 ## Verification
 
 - [ ] `serializer.py` produces a valid SDF tree for every supported entity and
@@ -82,3 +95,4 @@ Operator glyphs (Phase 4 initial set, refine in later phases):
 - [ ] JS dispatcher emits compilable GLSL for a sphere + a direction arrow
       (manually concatenated into the Phase 2 raymarcher).
 - [ ] Infinite line/plane serialize with a non-empty `bound`.
+- [ ] `uv run pytest py/tests/viz/sdf/test_primitives.py py/tests/viz/sdf/test_serializer.py` passes.

@@ -85,6 +85,19 @@ program specialization.
   - [ ] A tiny, temporary switch (UI button or JS console hook) to exercise
         the recompile path now.
 
+## Unit tests
+
+File: `py/tests/viz/sdf/test_distance.py`
+
+- [ ] `test_enum_values` — every `DistanceFunction` value string is a valid,
+      known key (matches the JS registry names).
+- [ ] `test_default_is_scalar_pseudo` — `DistanceFunction.default()` returns
+      `SCALAR_PSEUDO`.
+- [ ] `test_params_metadata` — `grade` requires an `int k`, `component` requires
+      an `int blade_id`; `magnitude`/`scalar`/`scalar_pseudo` require none.
+- [ ] `test_snippet_purity` — generated snippets contain no `main()`, no
+      algebra/entity branch keywords.
+
 ## Verification
 
 - [ ] Python enum serializes to the exact string keys the JS registry expects.
@@ -94,3 +107,4 @@ program specialization.
 - [ ] `scalar_pseudo` equals `scalar` on a result whose only non-scalar,
       non-pseudoscalar grades vanish; `magnitude` and `scalar` agree on a pure
       scalar result; `grade` with `k=0` equals `|scalar|`.
+- [ ] `uv run pytest py/tests/viz/sdf/test_distance.py` passes.

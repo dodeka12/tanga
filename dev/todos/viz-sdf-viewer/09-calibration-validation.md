@@ -42,6 +42,22 @@ step too far (miss) or too short (slow / banding).
   - [ ] N3 quadratic embedding: confirm the `½ρ²·e∞` term yields a correct
         sphere/point distance.
 
+## Unit tests
+
+File: `py/tests/viz/sdf/test_calibration.py`
+
+- [ ] `test_gradient_near_unit` — finite-difference `|∇d|` of the calibrated
+      field is within tolerance of 1 at a surface point for each supported
+      algebra/entity.
+- [ ] `test_zero_set_matches_analytic` — the algebra-SDF zero-set matches the
+      analytic SDF zero-set (sampling grid) within tolerance.
+- [ ] `test_scale_applied` — the per-object `scale` corrected the raw `|r|` to
+      unit gradient (overshoot/undershoot guard).
+- [ ] `test_sign_calibration` — signed-mode interior/exterior sign is correct
+      (flipped where needed) per algebra.
+- [ ] `test_p3_trivector` / `test_n3_quadratic` — special-case zero-sets are
+      correct.
+
 ## Verification
 
 - [ ] A documented per-algebra/entity calibration table (scale + sign) exists
@@ -50,3 +66,4 @@ step too far (miss) or too short (slow / banding).
       viewer (side-by-side scene).
 - [ ] Sphere-tracing step counts stay within the cap for all supported
       entities (no overshoot-induced failures).
+- [ ] `uv run pytest py/tests/viz/sdf/test_calibration.py` passes.
