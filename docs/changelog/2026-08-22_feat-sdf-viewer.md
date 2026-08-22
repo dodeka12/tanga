@@ -31,3 +31,11 @@
   name-keyed GLSL snippet registry in `templates/sdf/algebra/distances.js`, and
   unit tests in `py/tests/viz/sdf/test_distance.py`. This is the shared
   function-registry mechanism the opacity transfer axis (Phase 12) reuses.
+- **Analytic entity SDF serializer (Phase 4)** — added the Python SDF
+  primitive/combinator descriptor model (`sdf/primitives.py`) and the entity →
+  SDF-tree serializer (`sdf/serializer.py`) for the six supported entities
+  (`Point`/`Line`/`Plane`/`Sphere`/`Circle`/`PointPair`), plus the frontend
+  `scene-builder.js` and `objects/*` GLSL emitters that dispatch a serialized
+  tree to a single distance expression. Infinite lines/planes carry an explicit
+  finite `bound`; unsupported kinds raise `TypeError`. Unit tests in
+  `py/tests/viz/sdf/test_primitives.py` and `test_serializer.py`.

@@ -1,6 +1,6 @@
 # Phase 4 — Analytic entity → SDF primitive-tree mapping
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -76,54 +76,56 @@ beyond a `switch`-on-kind dispatcher, exactly like the existing `factory.js`.
 
 ## Steps
 
-- [ ] `primitives.py`: dataclasses for primitive/combinator descriptors and a
+- [x] `primitives.py`: dataclasses for primitive/combinator descriptors and a
       `to_dict()` serializer.
-- [ ] `serializer.py`: per-kind functions for the six supported entities above,
+- [x] `serializer.py`: per-kind functions for the six supported entities above,
       each returning an SDF tree; handle infinite entities by adding an
       explicit `bound` region.
-  - [ ] Map `Point`→sphere (`size`), `Line`→capped cylinder (`thickness`),
+  - [x] Map `Point`→sphere (`size`), `Line`→capped cylinder (`thickness`),
         `Circle`→torus (`thickness`), `Sphere`→filled sphere,
         `Plane`→bounded slab, `PointPair`→two spheres + connecting segment.
-  - [ ] Read `color`/`opacity` plus the per-kind `size`/`thickness`; ignore
+  - [x] Read `color`/`opacity` plus the per-kind `size`/`thickness`; ignore
         `wireframe` and other flags.
-  - [ ] Raise `TypeError` for unsupported kinds (operators, `Direction`,
+  - [x] Raise `TypeError` for unsupported kinds (operators, `Direction`,
         `Space`, …).
-- [ ] `sdf/scene-builder.js` + `objects/*`:
-  - [ ] `switch (obj.kind)` dispatcher that builds the GLSL `sd*`/`op*`
+- [x] `sdf/scene-builder.js` + `objects/*`:
+  - [x] `switch (obj.kind)` dispatcher that builds the GLSL `sd*`/`op*`
         expression string and collects its uniforms.
-  - [ ] Uniform packing (primitive params + transform) with per-object stable
+  - [x] Uniform packing (primitive params + transform) with per-object stable
         uniform naming.
-- [ ] `renderers`-style per-kind module split so adding an entity = one
+- [x] `renderers`-style per-kind module split so adding an entity = one
       `objects/<kind>.js` + one serializer branch.
 
 ## Unit tests
 
 Files: `py/tests/viz/sdf/test_primitives.py`, `py/tests/viz/sdf/test_serializer.py`
 
-- [ ] `test_primitives_to_dict` — each primitive dataclass serializes to the
+- [x] `test_primitives_to_dict` — each primitive dataclass serializes to the
       expected `kind` + typed params + `transform`.
-- [ ] `test_serialize_every_supported_kind` — `serializer.py` emits a valid
+- [x] `test_serialize_every_supported_kind` — `serializer.py` emits a valid
       tree for each of the six supported entities (structure + params asserted):
-  - [ ] Point → sphere with `radius == size`
-  - [ ] Line → capped cylinder with `radius == thickness`
-  - [ ] Circle → torus with `tubeRadius == thickness`
-  - [ ] Sphere → filled sphere with entity `radius`
-  - [ ] PointPair → two spheres + connecting capped cylinder
-  - [ ] Plane → bounded slab
-- [ ] `test_serialize_infinite_bound` — infinite Line / Plane emit a non-empty
+  - [x] Point → sphere with `radius == size`
+  - [x] Line → capped cylinder with `radius == thickness`
+  - [x] Circle → torus with `tubeRadius == thickness`
+  - [x] Sphere → filled sphere with entity `radius`
+  - [x] PointPair → two spheres + connecting capped cylinder
+  - [x] Plane → bounded slab
+- [x] `test_serialize_infinite_bound` — infinite Line / Plane emit a non-empty
       `bound` region.
-- [ ] `test_unsupported_kind_raises` — operators / `Direction` / `Space` raise
+- [x] `test_unsupported_kind_raises` — operators / `Direction` / `Space` raise
       `TypeError`.
-- [ ] `test_style_scope` — `color`/`opacity` + `size`/`thickness` are
+- [x] `test_style_scope` — `color`/`opacity` + `size`/`thickness` are
       forwarded on the relevant kinds; `wireframe` is ignored.
-- [ ] `test_serialize_combine` — `combine`/`polarity` are forwarded to the
+- [x] `test_serialize_combine` — `combine`/`polarity` are forwarded to the
       emitted object.
 
 ## Verification
 
-- [ ] `serializer.py` produces a valid SDF tree for every supported entity kind
+- [x] `serializer.py` produces a valid SDF tree for every supported entity kind
       (unit test asserts structure/params).
 - [ ] JS dispatcher emits compilable GLSL for a sphere + a line + a circle
-      (manually concatenated into the Phase 2 raymarcher).
-- [ ] Infinite line/plane serialize with a non-empty `bound`.
-- [ ] `uv run pytest py/tests/viz/sdf/test_primitives.py py/tests/viz/sdf/test_serializer.py` passes.
+      (manually concatenated into the Phase 2 raymarcher). *(deferred — the JS
+      emits valid expression strings (syntax-checked via Node), but real GLSL
+      compile happens in the Phase 6/6a browser slice)*
+- [x] Infinite line/plane serialize with a non-empty `bound`.
+- [x] `uv run pytest py/tests/viz/sdf/test_primitives.py py/tests/viz/sdf/test_serializer.py` passes.

@@ -12,5 +12,12 @@ distance-function registry (Phase 3). The frontend assets live alongside under
 from __future__ import annotations
 
 from .distance import DistanceFunction, DistanceFunctionMeta
+from .primitives import SdfNode
+from .serializer import serialize_entity
 
-__all__ = ["DistanceFunction", "DistanceFunctionMeta"]
+__all__ = [
+    "DistanceFunction",
+    "DistanceFunctionMeta",
+    "SdfNode",
+    "serialize_entity",
+]
