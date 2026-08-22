@@ -1,15 +1,13 @@
-#version 300 es
 // SDF primitives — ported from inigo quilez's signed-distance reference.
 //
 // Each primitive takes the point p in the primitive's LOCAL space (the
 // transform is applied by the caller before invoking these functions).
-// This file is concatenated with sdf_common.glsl; it must not contain main().
+// This file is concatenated with sdf_common.glsl; it must not contain main(),
+// nor a `#version`/`precision` directive (the host shader supplies them).
 //
 // Axis conventions (IQ reference):
 //   · cylinders/cones are aligned with the +Y axis (radius in XZ, height in Y)
 //   · a torus lies in the XZ plane (major ring in XZ, tube in Y)
-
-precision highp float;
 
 // ── Spheres ─────────────────────────────────────────────────
 

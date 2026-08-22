@@ -14,3 +14,14 @@
   combinators (`opUnion`, `opSubtract`, `opIntersect`, `opSmoothUnion`,
   `opSmoothSubtract`, `opSmoothIntersect`), and a shared constant/rotation
   header under `py/pytanga/viz/templates/sdf/shaders/`.
+- **WebGL2 raymarcher core (Phase 2)** — added the SDF viewer entry module
+  (`sdf_viewer.js`) with a WebGL2 gate (in-page error banner, no WebGL1
+  fallback), a fullscreen-quad `ShaderMaterial` ray-marcher, gradient normals,
+  IQ-style shading with soft shadows/fog, and a `raymarch.glsl` fragment body.
+  The raymarcher reuses the standard viewer's `view_mode.js` camera and
+  `controls.js` OrbitControls so the default/custom camera matches the
+  non-SDF viewer 1:1; camera position/matrices/near/far are plumbed in as
+  uniforms. Structural shader-assembly smoke tests live in
+  `py/tests/viz/sdf/test_raymarch_shader.py`. *(The hardcoded-sphere visual
+  smoke check and real GLSL compile are deferred to the Phase 6/6a browser
+  slice — no local `glslangValidator`/`glslc`/Node-`three` is available.)*

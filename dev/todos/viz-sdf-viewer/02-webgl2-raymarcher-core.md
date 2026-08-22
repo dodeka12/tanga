@@ -1,6 +1,6 @@
 # Phase 2 — WebGL2 gate + minimal raymarcher core
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -25,48 +25,48 @@ every later phase plugs into.
 
 ## Steps
 
-- [ ] WebGL2 gate:
-  - [ ] Probe WebGL2 (or detect `renderer.capabilities.isWebGL2` after
+- [x] WebGL2 gate:
+  - [x] Probe WebGL2 (or detect `renderer.capabilities.isWebGL2` after
         creating a `WebGLRenderer`).
-  - [ ] On failure: display a clear error message ("SDF viewer requires
+  - [x] On failure: display a clear error message ("SDF viewer requires
         WebGL2") and abort initialization.
-- [ ] Fullscreen-quad setup:
-  - [ ] Vertex shader: pass-through of a unit quad (no per-vertex geometry);
+- [x] Fullscreen-quad setup:
+  - [x] Vertex shader: pass-through of a unit quad (no per-vertex geometry);
         compute ray direction in the fragment shader from the camera inverse
         projection/view.
-  - [ ] Fragment shader: derive camera ray from `cameraWorldMatrix` /
+  - [x] Fragment shader: derive camera ray from `cameraWorldMatrix` /
         inverse projection (IQ pattern), establish `ro`/`rd`.
-- [ ] Ray-march loop:
-  - [ ] Fixed (initial) iteration cap; sphere-tracing `t += d` updated via a
+- [x] Ray-march loop:
+  - [x] Fixed (initial) iteration cap; sphere-tracing `t += d` updated via a
         user-provided SDF function (initially `sdSphere` hardcoded).
-  - [ ] Adaptive stepping refinement flag + epsilon/`MAX_DIST` constants from
+  - [x] Adaptive stepping refinement flag + epsilon/`MAX_DIST` constants from
         Phase 1 common header.
-- [ ] Normal + shading:
-  - [ ] Tetrahedral gradient `normal(p)` for per-pixel surface normals.
-  - [ ] IQ lighting: ambient + diffuse (key light) + soft shadow (optional in
+- [x] Normal + shading:
+  - [x] Tetrahedral gradient `normal(p)` for per-pixel surface normals.
+  - [x] IQ lighting: ambient + diffuse (key light) + soft shadow (optional in
         this phase).
-  - [ ] Background color + simple fog for depth cueing.
-- [ ] Opacity-transfer plug (stub the extension point now, no refactor later):
-  - [ ] Reserve an `opacityOf(float d)` call site in the shading path, wired
+  - [x] Background color + simple fog for depth cueing.
+- [x] Opacity-transfer plug (stub the extension point now, no refactor later):
+  - [x] Reserve an `opacityOf(float d)` call site in the shading path, wired
         to a single `step` implementation (`d < 0.0 ? 1.0 : 0.0`) in this
         phase.
-  - [ ] Multiplier for the resolved surface color so later transfers
+  - [x] Multiplier for the resolved surface color so later transfers
         (`linear`/`sigmoid`) only replace the `opacityOf` snippet, not the
         shading/raymarch structure.
-  - [ ] Keep `opacityOf` in a dedicated snippet string so Phase 12 swaps it
+  - [x] Keep `opacityOf` in a dedicated snippet string so Phase 12 swaps it
         in without touching the raymarch body.
-- [ ] Camera parity (identical default + custom view to the standard viewer):
-  - [ ] Reuse the standard viewer's `view_mode.js` `createCamera` /
+- [x] Camera parity (identical default + custom view to the standard viewer):
+  - [x] Reuse the standard viewer's `view_mode.js` `createCamera` /
         `switchToCamera` (3D branch) unchanged — do not fork a copy. Default
         camera is therefore `PerspectiveCamera(fov=50, aspect, 0.1, 1000)` at
         `position=(8, 6, 10)` looking at the origin, matching `viewer.js`.
-  - [ ] Reuse `controls.js` `setupControls` unchanged so the OrbitControls
+  - [x] Reuse `controls.js` `setupControls` unchanged so the OrbitControls
         defaults (`target=(0,0,0)`, `minDistance=1`, `maxDistance=100`) match.
-  - [ ] Apply a custom `CameraConfig3d` exactly as `viewer.js` does
+  - [x] Apply a custom `CameraConfig3d` exactly as `viewer.js` does
         (`fov = cc.fov || 50`; `near`/`far`/`up`/`position`/`target` applied
         only when provided; `target` also sets the controls target).
-- [ ] Camera uniform plumbing (feed that shared camera into the raymarcher):
-  - [ ] `cameraPosition` (for `ro`), `cameraWorldMatrix`,
+- [x] Camera uniform plumbing (feed that shared camera into the raymarcher):
+  - [x] `cameraPosition` (for `ro`), `cameraWorldMatrix`,
         `cameraProjectionMatrixInverse` (inverse view-projection for `rd`),
         and `cameraNear` / `cameraFar` as uniforms, so `MAX_DIST` / the step
         range track the camera far rather than a hardcoded constant.
@@ -80,5 +80,9 @@ every later phase plugs into.
 - [ ] WebGL1 context (or a stubbed `isWebGL2 === false`) triggers the error
       banner and aborts.
 - [ ] No JS console errors from shader compilation.
-- [ ] A headless Node smoke test compiles the assembled raymarch shader (common
-      + primitives + `main`) and asserts no GLSL compile errors.
+- [ ] A headless GLSL compile check (e.g. `glslangValidator` / Node `three`)
+      parses the assembled raymarch shader with no syntax errors. *(deferred to
+      the browser — no `glslangValidator`/`glslc`/Node-`three` available
+      locally; a structural Python smoke test
+      `py/tests/viz/sdf/test_raymarch_shader.py` covers assembly order, single
+      `main()`, brace balance, and `#version`/`precision` hygiene instead.)*

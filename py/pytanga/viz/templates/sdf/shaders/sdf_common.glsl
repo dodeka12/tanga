@@ -1,15 +1,14 @@
-#version 300 es
 // SDF shared constants + rotation helpers (inigo quilez reference).
 //
-// This header is concatenated (never compiled standalone) into the raymarch
-// program. It must not contain a main().
-
-precision highp float;
+// Concatenated (never compiled standalone) into the raymarch shader. It must
+// not contain a main(), nor a `#version`/`precision` directive — the host
+// assembles a single shader and three.js prepends GLSL3 `#version 300 es` and
+// `precision highp float;`.
 
 // Small surface accuracy for the sphere-tracing loop.
-float SDF_EPSILON = 0.0005;
-// Hard clip distance for the ray march (overridden per-camera by cameraFar).
-float MAX_DIST = 1000.0;
+const float SDF_EPSILON = 0.0005;
+// Fallback hard clip distance for the ray march (the camera far is preferred).
+const float MAX_DIST = 1000.0;
 
 // ── IQ rotation helpers ─────────────────────────────────────
 

@@ -1,4 +1,3 @@
-#version 300 es
 // SDF Boolean/combinator helpers — ported from inigo quilez's reference.
 //
 // Hard combinators fold two scalar distances with exact sign preservation:
@@ -9,9 +8,8 @@
 // Smooth combinators return vec2(d, h) where d is the blended distance and h
 // is the blend/material factor IQ uses to drive material-ID mixing.
 //
-// This file is concatenated with sdf_common.glsl; it must not contain main().
-
-precision highp float;
+// This file is concatenated with sdf_common.glsl; it must not contain main(),
+// nor a `#version`/`precision` directive (the host shader supplies them).
 
 // ── Hard combinators ────────────────────────────────────────
 
