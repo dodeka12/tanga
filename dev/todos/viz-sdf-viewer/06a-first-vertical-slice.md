@@ -1,6 +1,6 @@
 # Phase 6a — First vertical slice: example script + manual user confirmation
 
-**Status:** Planned
+**Status:** Implemented (awaiting manual user confirmation)
 
 ## Goal
 
@@ -20,13 +20,13 @@ any algebra/CSG/opacity work begins.
 
 ## Steps
 
-- [ ] Write `py/examples/viz/demo_sdf_entities.py`:
-  - [ ] Construct `Sphere(...)` and `Line(...)` from `pytanga.geometry`.
-  - [ ] Add both via `SdfVisualizer.add(...)` (analytic path — no MV objects),
+- [x] Write `py/examples/viz/demo_sdf_entities.py`:
+  - [x] Construct `Sphere(...)` and `Line(...)` from `pytanga.geometry`.
+  - [x] Add both via `SdfVisualizer.add(...)` (analytic path — no MV objects),
         with distinct colors/styles.
-  - [ ] Follow the existing `py/examples/viz/demo_*.py` conventions (module
+  - [x] Follow the existing `py/examples/viz/demo_*.py` conventions (module
         docstring, `if __name__ == "__main__"` guard, brief usage comment).
-- [ ] Run it with `uv run python py/examples/viz/demo_sdf_entities.py` and
+- [x] Run it with `uv run python py/examples/viz/demo_sdf_entities.py` and
       confirm it launches the `sdf_viewer.html` page in a browser.
 - [ ] Wait for **manual user confirmation**: the user visually checks that the
       sphere and line render correctly (shape, position, color, orbit controls),
@@ -40,3 +40,7 @@ any algebra/CSG/opacity work begins.
       output in the browser (this is a hard stop; later phases are not started
       until confirmation).
 - [ ] The example runs without JS console errors / shader compile errors.
+      *(structural smoke checks pass: the SDF facade serializes the Line →
+      capped cylinder and Sphere → sphere, and the server serves
+      `sdf_viewer.html` + the `sdf/` assets; the real browser/GLSL compile is
+      the user's visual check.)*

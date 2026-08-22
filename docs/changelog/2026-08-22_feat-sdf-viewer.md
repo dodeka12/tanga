@@ -56,3 +56,7 @@
   serves `sdf_viewer.html` while the standard viewer still serves
   `viewer.html`. Camera parity is verified against the standard viewer in
   `py/tests/viz/sdf/test_visualizer.py`.
+- **First vertical slice example (Phase 6a)** — added `demo_sdf_entities.py`
+  (`py/examples/viz/demo_sdf_entities.py`) drawing a Line + Sphere through the
+  analytic path, as the gate for manual user confirmation in the browser before
+  any algebra/CSG/opacity work continues.
