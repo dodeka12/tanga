@@ -16,15 +16,12 @@ from pytanga.viz import Visualizer
 from pytanga.geometry import Point
 
 viz = Visualizer()
-viz.start()
-
-point_id = viz.add(Point(3, 0, 0), color="#ff4444")
-viz.flush()
+p = viz(Point(3, 0, 0), color="#ff4444")  # viz(...) == viz.new(...)
 
 angle = 0.0
 for dt in viz.animate(fps=60):   # runs until Q (browser) or Ctrl+C (terminal)
     angle += 3.0 * dt
-    viz.update_entity(point_id, Point(3 * math.cos(angle), 3 * math.sin(angle), 0))
+    p.entity = Point(3 * math.cos(angle), 3 * math.sin(angle), 0)  # update in place
     viz.flush()
 ```
 
@@ -43,14 +40,40 @@ ends, so a per-scene interrupt never tears down the server.
 | `stop_key` | `str \| None` | `"q"` | Browser key that ends the loop (matches both `q` and `Q`). `None` disables the browser binding. |
 | `stop_modifiers` | `Sequence[KeyModifier \| str] \| None` | `None` | Modifiers required alongside `stop_key` (`ctrl`, `shift`, `alt`, `meta`). |
 | `scene_name` | `str` | `""` | Scene the loop (and its stop key) is scoped to. `""` is the main scene. |
+| `auto_clear` | `bool` | `False` | When `True`, each frame flushes then removes objects added after the loop began (see below). |
 
-- `start()` remains the non-blocking entry point; `animate()` starts the server
-  automatically if it isn't running yet.
+- `animate()` starts the server automatically if it isn't running yet.
 - The browser binding is per scene: pressing `q` (or `Q`) in scene `A` stops only
   scene `A`'s loop; terminal Ctrl+C / SIGTERM is global and stops every scene.
 - Use `update_entity()` to replace geometry and `flush()` to push changed state.
   Only entities marked dirty by the scene manager are serialized — stationary
   entities cost nothing.
+
+### Add-per-frame with `auto_clear`
+
+Instead of pre-creating objects, you can `add()` fresh objects every frame and
+let `auto_clear=True` remove the previous frame's objects for you. Anything
+added *before* the loop persists:
+
+```python
+import math
+from pytanga.geometry import Point
+
+viz = Visualizer()
+viz(Point(0, 0, 0), color="#ffffff")  # persists across frames
+
+angle = 0.0
+for dt in viz.animate(fps=60, auto_clear=True):
+    angle += 3.0 * dt
+    viz(Point(3 * math.cos(angle), 3 * math.sin(angle), 0), color="#ff4444")
+    viz.flush()
+```
+
+Each frame flushes first (so the previous frame's additions appear), then
+removes every object that was not present on the first frame. Labels created
+alongside the added entities are removed too. Pre-creating objects with
+`viz(...)` and updating them in place (above) remains the most efficient,
+allocation-free loop.
 
 ### Custom and nested loops
 

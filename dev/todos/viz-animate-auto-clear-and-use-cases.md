@@ -1,6 +1,6 @@
 # Animate `auto_clear`, `viz(...)` shorthand, and use-case docs/examples
 
-**Created:** 2026-08-22 | **Status:** Plan
+**Created:** 2026-08-22 | **Status:** Done
 
 ## Goal
 
@@ -150,21 +150,21 @@ New subfolder `py/examples/jupyter/` with:
 
 ### Phase 3 — Docs
 
-- [ ] Add `use-cases-scripts.md`, `use-cases-notebooks.md`, `app.md`.
-- [ ] Reorder/insert them in `mkdocs.yml` nav; update `index.md` topic table and
+- [x] Add `use-cases-scripts.md`, `use-cases-notebooks.md`, `app.md`.
+- [x] Reorder/insert them in `mkdocs.yml` nav; update `index.md` topic table and
       example links.
-- [ ] Update `animation.md`, `visualizer.md`, `jupyter.md` for `auto_clear` and
+- [x] Update `animation.md`, `visualizer.md`, `jupyter.md` for `auto_clear` and
       the `viz(...)` shorthand.
 
 ### Phase 4 — Notebook examples
 
-- [ ] Add `py/examples/jupyter/interactive.ipynb`.
-- [ ] Add `py/examples/jupyter/animation.ipynb`.
-- [ ] Add `py/examples/jupyter/export.ipynb`.
+- [x] Add `py/examples/jupyter/interactive.ipynb`.
+- [x] Add `py/examples/jupyter/animation.ipynb`.
+- [x] Add `py/examples/jupyter/export.ipynb`.
 
 ### Phase 5 — Changelog
 
-- [ ] Append New Features bullets for `animate(auto_clear=...)` and `viz(...)`.
+- [x] Append New Features bullets for `animate(auto_clear=...)` and `viz(...)`.
 
 ## Notes / edge cases
 

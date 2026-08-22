@@ -130,6 +130,22 @@ style=SphereStyle(color=…)   → user's style fields (non-None)
 styles[Sphere]       → canonical default (lowest)
 ```
 
+## `new()` and the `viz(...)` shorthand
+
+`new()` is like `add()` but returns a `VizObjectRef` (with a mutable `.entity`
+and `.style`) instead of a `str` id. `viz(obj, ...)` is shorthand for
+`viz.new(...)`:
+
+```python
+p = viz(Point(3, 0, 0), color="#ff4444")   # == viz.new(...)
+p.entity = Point(4, 0, 0)                  # update in place (marks dirty)
+p.opacity = 0.5
+viz.flush()
+```
+
+This is the idiomatic way to pre-create objects for an animation loop (see
+[Animation](animation.md)).
+
 ## Multi-Scene Support
 
 The visualizer supports multiple named scenes, each reachable at a unique URL
@@ -449,7 +465,7 @@ viz.export_glb("scene.glb")
 | `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |
 | `open_browser()` | Open/reconnect a browser tab |
-| `animate(fps)` | Serve, open a browser, yield a frame time each loop, stop on the scene's key or Ctrl+C |
+| `animate(fps, auto_clear=False)` | Serve, open a browser, yield a frame time each loop, stop on the scene's key or Ctrl+C. With `auto_clear=True`, objects added inside the loop are removed each frame |
 
 ### Deprecated Aliases
 

@@ -68,6 +68,31 @@ print("Server stopped.")
 - `stop_server()` releases the port and terminates the background thread.
   Always call it when done to free resources.
 
+## Animation
+
+Pre-create objects once and update them in place each frame — only changed
+entities are pushed:
+
+```python
+p = viz(Point(3, 0, 0), color="#ff4444")   # viz(...) == viz.new(...)
+
+for dt in viz.animate(fps=30):
+    p.entity = Point(...)   # update in place
+    viz.flush()
+```
+
+Or add fresh objects each frame with `auto_clear=True` (anything added *before*
+the loop persists):
+
+```python
+for dt in viz.animate(fps=30, auto_clear=True):
+    viz(Point(...), color="#ff4444")
+    viz.flush()
+```
+
+See [Use Cases — Notebooks](use-cases-notebooks.md) and
+[Animation](animation.md) for the full patterns.
+
 ## Idempotent `display()` / `show()` and Context Managers
 
 Re-running a cell that calls `display()` or `show()` does **not** open a

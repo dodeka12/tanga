@@ -18,10 +18,10 @@ from pytanga.viz import Visualizer
 from pytanga.geometry import Point, Sphere, Plane, Direction
 
 viz = Visualizer()
-viz.add(Point(1, 2, 3), color="#ff4444")
-viz.add(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.4)
-viz.add(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.3)
-viz.run()  # Opens browser, blocks until Ctrl+C
+with viz:  # clear scene on entry, show() on exit
+    viz(Point(1, 2, 3), color="#ff4444")
+    viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.4)
+    viz(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.3)
 ```
 
 ### Multiple Scenes
@@ -43,6 +43,9 @@ viz.display_row(
 
 | Guide | What you will learn |
 |-------|---------------------|
+| [Use Cases — Scripts](use-cases-scripts.md) | Interactive viewer, animation, and export in plain Python scripts |
+| [Use Cases — Notebooks](use-cases-notebooks.md) | Interactive viewer (re-run), animation, and export in Jupyter |
+| [Visualizer App](app.md) | `VisualizerApp` base class for interactive apps with controls and a managed lifecycle |
 | [Visualizer API](visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
 | [Camera & Controls](camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`, `View3dConfig`, auto-fit vs explicit, orbit controls, Ctrl+S screenshots |
 | [Axes & Grid](axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, value labels, defaults |
@@ -94,6 +97,9 @@ uv run python py/examples/viz/<script>.py
 | [`demo_drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_drag_point.py) | Interactive point dragging with four constraint planes (low-level API) |
 | [`demo_act_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_act_point.py) | Interactive point dragging with `ActPoint` convenience class |
 | [`two_body_gravity.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_body_gravity.py) | Gravitational two-body simulation using `Point`/`Direction` arithmetic |
+
+Jupyter notebook examples live under `py/examples/jupyter/` — see
+[Use Cases — Notebooks](use-cases-notebooks.md).
 
 ## Dependencies
 
