@@ -949,10 +949,13 @@ class Visualizer(_JupyterDisplayMixin):
         prev = time.monotonic()
         while not self.interrupted(scene_name):
             if auto_clear:
-                # Push the previous frame's dirty state, then drop everything
-                # added since the first frame (diffed against the live objects
-                # at loop entry) so per-frame `add()` calls don't accumulate.
-                self._flush_scene(scene_name)
+                # Flush synchronously first so the previous frame's additions
+                # are actually pushed to the browser *before* we mark them for
+                # removal.  (A fire-and-forget flush races with the synchronous
+                # remove() below: the flush can observe the object already
+                # pending removal and send "remove" without ever sending "add",
+                # so the object never appears.)
+                self._flush_scene(scene_name, wait=True)
                 scene = self._scenes[scene_name]
                 current = set(scene._objects.keys())
                 if baseline is None:
@@ -1525,12 +1528,22 @@ class Visualizer(_JupyterDisplayMixin):
                 message["fit_camera"] = True
             await self._server.push_raw(json.dumps(message))
 
-    def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
-        """Schedule a scene update on the server's event loop (thread-safe)."""
-        if self._loop is not None and self._server is not None:
-            asyncio.run_coroutine_threadsafe(
-                self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
-            )
+    def _flush_scene(
+        self, scene_name: str, *, fit_camera: bool = False, wait: bool = False
+    ) -> None:
+        """Schedule a scene update on the server's event loop (thread-safe).
+
+        When *wait* is ``True``, block until the flush has been processed so the
+        caller can rely on the pushed state before making further changes (e.g.
+        ``auto_clear`` flushes before removing objects).
+        """
+        if self._loop is None or self._server is None:
+            return
+        fut = asyncio.run_coroutine_threadsafe(
+            self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
+        )
+        if wait:
+            fut.result(timeout=10.0)
 
     def flush(self, *, fit_camera: bool = False) -> None:
         """Schedule all dirty scenes to be pushed to the server (thread-safe).

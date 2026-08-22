@@ -384,6 +384,25 @@ class TestVisualizer:
         next(gen)  # frame 1: empty baseline → the addition is removed
         assert added_id in scene._removed_ids
 
+    def test_animate_auto_clear_flushes_before_removing(self, monkeypatch):
+        # auto_clear must flush *before* marking objects for removal, so the
+        # previous frame's additions actually reach the browser (an async,
+        # fire-and-forget flush races with the synchronous remove() and the
+        # object would be deleted without ever being shown).
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        waits: list[bool] = []
+        monkeypatch.setattr(
+            viz, "_flush_scene", lambda name, **kw: waits.append(kw.get("wait"))
+        )
+
+        next(viz.animate(fps=0, auto_clear=True))  # first frame
+
+        assert waits == [True]
+
     def test_interrupted_false_without_server(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         assert viz.interrupted() is False
