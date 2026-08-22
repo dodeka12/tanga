@@ -4,14 +4,21 @@
 // raymarcher. It reuses the standard viewer's camera (`view_mode.js`) and
 // OrbitControls (`controls.js`) so the default/custom camera matches the
 // non-SDF viewer 1:1.
+//
+// The fragment is assembled by concatenation: common → primitives →
+// combinators → material preamble → materialColor → injected `map(p)` →
+// raymarch body. `map` and the material table are composed from the live
+// object list (Phase 5).
 
 import * as THREE from 'three';
 import { createCamera } from '../view_mode.js';
 import { setupControls } from '../controls.js';
-
-// ── Fullscreen-quad vertex shader ──────────────────────────
-// The quad's local XY is used directly as clip-space; the fragment shader
-// reconstructs the ray from the shared perspective camera.
+import { composeObjects } from './composer.js';
+import {
+    materialColorSrc,
+    materialPreamble,
+    buildMaterialRows,
+} from './material-table.js';
 
 const VERTEX_SHADER = /* glsl */ `
 void main() {
@@ -19,10 +26,19 @@ void main() {
 }
 `;
 
-// ── Shader source assembly ─────────────────────────────────
-// The GLSL snippets are fetched from their files at runtime (single source of
-// truth). Assemble order mirrors the plan: common → primitives → combinators →
-// raymarch body.
+// A single centered sphere so an empty scene still renders via the real
+// composed-map path (carries a default material in slot 0).
+const DEFAULT_OBJECTS = [
+    { id: '__default__', tree: { kind: 'sphere', params: { radius: 1.0 } } },
+];
+
+// ── Live object state (replaced by the WebSocket scene in Phase 6) ──
+let objects = [];
+
+function mapSource() {
+    const list = objects.length ? objects : DEFAULT_OBJECTS;
+    return composeObjects(list);
+}
 
 async function _loadShaderSources() {
     const base = new URL('./shaders/', import.meta.url);
@@ -32,13 +48,8 @@ async function _loadShaderSources() {
         fetch(new URL('combinators.glsl', base)).then((r) => r.text()),
         fetch(new URL('raymarch.glsl', base)).then((r) => r.text()),
     ]);
-    return {
-        fragment: [common, primitives, combinators, raymarch].join('\n'),
-        vertex: VERTEX_SHADER,
-    };
+    return { common, primitives, combinators, raymarch };
 }
-
-// ── WebGL2 gate ────────────────────────────────────────────
 
 function showError(message) {
     const banner = document.createElement('div');
@@ -58,7 +69,6 @@ function showError(message) {
 }
 
 async function init() {
-    // WebGLRenderer: three.js r168 uses WebGL2 when available.
     let renderer;
     try {
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -82,15 +92,26 @@ async function init() {
     // Shared camera + controls (camera parity with the standard viewer).
     const camera = createCamera(3, window.innerWidth / window.innerHeight);
     const controls = setupControls(camera, renderer);
-
-    // Identity camera for the fullscreen quad.
     const quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
     const scene = new THREE.Scene();
 
-    const { fragment, vertex } = await _loadShaderSources();
+    const { common, primitives, combinators, raymarch } = await _loadShaderSources();
+
+    const rows = buildMaterialRows(objects.length ? objects : DEFAULT_OBJECTS);
+    const materialArray = rows.map((r) => new THREE.Vector4(r[0], r[1], r[2], r[3]));
+
+    const fragment = [
+        common,
+        primitives,
+        combinators,
+        materialPreamble,
+        materialColorSrc,
+        mapSource(),
+        raymarch,
+    ].join('\n');
+
     const material = new THREE.ShaderMaterial({
-        vertexShader: vertex,
+        vertexShader: VERTEX_SHADER,
         fragmentShader: fragment,
         uniforms: {
             uResolution: { value: new THREE.Vector2() },
@@ -99,6 +120,8 @@ async function init() {
             uCameraProjectionMatrixInverse: { value: new THREE.Matrix4() },
             uCameraNear: { value: 0.1 },
             uCameraFar: { value: 1000.0 },
+            uMaterial: { value: materialArray },
+            uMaterialCount: { value: materialArray.length },
         },
         glslVersion: THREE.GLSL3,
         depthWrite: false,

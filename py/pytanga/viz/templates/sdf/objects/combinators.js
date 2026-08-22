@@ -38,5 +38,10 @@ function emitNode(node) {
 }
 
 export function emitTree(tree) {
-    return emitNode(tree);
+    // A root can be a bare primitive (e.g. a point = a single sphere) or a
+    // combinator tree.
+    if (tree.children) {
+        return emitNode(tree);
+    }
+    return emitPrimitive(tree, transformExpr(tree.transform));
 }

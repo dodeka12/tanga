@@ -39,3 +39,12 @@
   tree to a single distance expression. Infinite lines/planes carry an explicit
   finite `bound`; unsupported kinds raise `TypeError`. Unit tests in
   `py/tests/viz/sdf/test_primitives.py` and `test_serializer.py`.
+- **Composed global SDF + material table (Phase 5)** — added the per-object
+  composer (`templates/sdf/composer.js`) that folds all object distances into
+  one `vec2 map(vec3 p)` returning `(distance, materialId)`, and the material
+  table (`templates/sdf/material-table.js`) packing per-object color/opacity
+  into a uniform array with a `materialColor(matId)` GLSL sampler. The raymarch
+  body now resolves the hit material for lighting (injected `map` +
+  `materialColor` contract). Signed combine modes / smooth-blend / signedness
+  gate / AABB pruning are deferred to Phase 11 (CSG booleans). A headless Node
+  smoke test (`dev/src/sdf_composer_smoke.mjs`) exercises the composed map.

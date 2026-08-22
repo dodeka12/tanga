@@ -1,23 +1,23 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Headless smoke checks for the assembled SDF raymarch shader (Phase 2).
+"""Headless smoke checks for the assembled SDF raymarch shader (Phases 2/5).
 
 The real GLSL compile check needs a WebGL2 context (exercised in the browser
 during Phases 6/6a). These tests catch the structural/assembly errors early:
 the concatenation order, the single ``main()``, the absence of stray
 ``#version``/``precision`` directives (three.js prepends them for a
-``GLSL3`` ShaderMaterial), missing function definitions, and brace balance.
+``GLSL3`` ShaderMaterial), missing function definitions, the injected
+`map`/`materialColor` contract, and brace balance.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-SHADER_DIR = (
-    Path(__file__).parents[3] / "pytanga" / "viz" / "templates" / "sdf" / "shaders"
-)
+SDC_DIR = Path(__file__).parents[3] / "pytanga" / "viz" / "templates" / "sdf"
 
+SHADER_DIR = SDC_DIR / "shaders"
 LIB_FILES = ["sdf_common.glsl", "primitives.glsl", "combinators.glsl"]
 RAYMARCH_FILE = "raymarch.glsl"
 
@@ -101,23 +101,24 @@ def test_primitive_functions_present_in_assembly() -> None:
         assert fn in primitives or fn in combined, f"{fn} definition missing"
 
 
-def test_raymarch_references_available_symbols() -> None:
-    combined = "\n".join(_read(n) for n in LIB_FILES + [RAYMARCH_FILE])
+def test_raymarch_map_and_material_contract() -> None:
     body = _read(RAYMARCH_FILE)
-    # The body references these; each must be defined somewhere in the assembly.
-    for symbol in (
-        "sdSphere",
-        "opacityOf",
-        "calcNormal",
-        "softShadow",
-        "shade",
-        "SDF_EPSILON",
-        "MAX_DIST",
-        "uCameraPosition",
-        "uCameraWorldMatrix",
-        "uCameraProjectionMatrixInverse",
-        "uCameraNear",
-        "uCameraFar",
-    ):
-        assert symbol in body, f"{symbol} not referenced by raymarch body"
-        assert symbol in combined, f"{symbol} not defined in assembly"
+    # `map(p)` is injected by the host (composer / algebra evaluator), never
+    # defined in the body; the body must NOT define it, only call it. Examine
+    # only code lines (ignore the contract comment).
+    code_lines = [ln for ln in body.splitlines() if not ln.strip().startswith("//")]
+    code = "\n".join(code_lines)
+    assert ".x" in code and "map(p" in code, "raymarch body must call map(p)"
+    assert "vec2 map(" not in code, "raymarch body must not define map"
+    # `materialColor` is injected by the material table.
+    assert "materialColor(" in code
+    # The body must define its own helpers.
+    for symbol in ("opacityOf", "calcNormal", "softShadow", "shade"):
+        assert f"{symbol}(" in code, f"raymarch body must define {symbol}"
+
+
+def test_material_table_and_composer_exist() -> None:
+    composer = (SDC_DIR / "composer.js").read_text(encoding="utf-8")
+    material = (SDC_DIR / "material-table.js").read_text(encoding="utf-8")
+    assert "composeObjects" in composer
+    assert "materialColor" in material and "materialPreamble" in material
