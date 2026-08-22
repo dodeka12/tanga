@@ -35,9 +35,6 @@ from ._pga3_utils import (
     E1,
     E2,
     E3,
-    E12,
-    E13,
-    E23,
     # E123,
     EM,
     EP,
@@ -236,8 +233,8 @@ def _line_origin_from_planes(p1: Plane, p2: Plane) -> Point:
     """Closest point to origin on the intersection of two planes."""
     n1x, n1y, n1z = p1.normal.x, p1.normal.y, p1.normal.z
     n2x, n2y, n2z = p2.normal.x, p2.normal.y, p2.normal.z
-    d1 = -(n1x * p1.point.x + n1y * p1.point.y + n1z * p1.point.z)
-    d2 = -(n2x * p2.point.x + n2y * p2.point.y + n2z * p2.point.z)
+    d1 = +(n1x * p1.point.x + n1y * p1.point.y + n1z * p1.point.z)
+    d2 = +(n2x * p2.point.x + n2y * p2.point.y + n2z * p2.point.z)
 
     # Direction = n1 × n2
     dx = n1y * n2z - n1z * n2y

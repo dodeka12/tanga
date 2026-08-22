@@ -70,9 +70,9 @@ def _line_opns(basis: Algebra, origin: Point, direction: Direction) -> MV:
     n2y = dz * n1[0] - dx * n1[2]
     n2z = dx * n1[1] - dy * n1[0]
 
-    # Signed distances: n·origin
-    d1 = n1[0] * origin.x + n1[1] * origin.y + n1[2] * origin.z
-    d2 = n2x * origin.x + n2y * origin.y + n2z * origin.z
+    # Signed distances: d = -(n·origin)  (plane convention: n + d·e₀)
+    d1 = -(n1[0] * origin.x + n1[1] * origin.y + n1[2] * origin.z)
+    d2 = -(n2x * origin.x + n2y * origin.y + n2z * origin.z)
 
     # OPNS: wedge of two planes
     p1 = basis.multivector({E1: n1[0], E2: n1[1], E3: n1[2], EP: d1, EM: d1})
