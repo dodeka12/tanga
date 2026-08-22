@@ -823,24 +823,27 @@ class Algebra:
         """Compute the join of two blades.
 
         For the plane-based PGA models (``BasisPGA2``/``BasisPGA3``) this follows
-        Gunn/Dorst: the ``join`` is the union/span (regressive product).  For all
-        other algebras it is the progressive product (the smallest-grade blade
+        Gunn/Dorst: the ``join`` is the union/span (regressive product)
+        ``⋆(⋆A ∧ ⋆B)``, which vanishes for incident elements.  For all other
+        algebras it is the progressive product (the smallest-grade blade
         containing both).
         """
         if self._swap_meet_join:
-            return self._meet(a, b)
+            # Gunn/Dorst join = regressive product ⋆(⋆A ∧ ⋆B)
+            return a.dual().op(b.dual()).dual()
         return self._join(a, b)
 
     def meet(self, a: MV, b: MV) -> MV:
         """Compute the meet of two blades.
 
         For the plane-based PGA models (``BasisPGA2``/``BasisPGA3``) this follows
-        Gunn/Dorst: the ``meet`` is the intersection (progressive/outer product).
-        For all other algebras it is the regressive product (the largest-grade
-        blade contained in both).
+        Gunn/Dorst: the ``meet`` is the intersection (outer product ``∧``).  For
+        all other algebras it is the regressive product (the largest-grade blade
+        contained in both).
         """
         if self._swap_meet_join:
-            return self._join(a, b)
+            # Gunn/Dorst meet = outer product (intersection)
+            return a.op(b)
         return self._meet(a, b)
 
     def blade_factorize_versor(self, versor: MV) -> tuple[MV, list[MV]]:

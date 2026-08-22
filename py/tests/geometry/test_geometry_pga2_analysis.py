@@ -79,14 +79,14 @@ def test_meet_join_pga2_convention(b):
     p2 = create_entity(b, Point(0, 1, 0))
     # join of two points is the connecting line (grade 1)
     assert p1.join(p2).grades == [1]
-    # meet of two points is the empty intersection (progressive → grade 3)
-    assert p1.meet(p2).grades == [3]
+    # meet of two points is the empty intersection (outer product → zero)
+    assert p1.meet(p2).is_zero
     # meet of two lines is their intersection point (grade 2)
     l1 = create_entity(b, Line(Point(0, 0, 0), Direction(1, 0, 0)))
     l2 = create_entity(b, Line(Point(0, 0, 0), Direction(0, 1, 0)))
     assert l1.meet(l2).grades == [2]
-    # join of two lines is the scalar chirality measure (grade 0)
-    assert l1.join(l2).grades == [0]
+    # join of two intersecting lines is degenerate (zero)
+    assert l1.join(l2).is_zero
 
 
 # ═══════════════════════════════════════════════════════════════

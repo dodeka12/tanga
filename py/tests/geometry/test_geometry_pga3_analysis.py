@@ -202,8 +202,8 @@ def test_meet_join_pga3_convention(b):
     p2 = create_entity(b, Point(0, 1, 0))
     # join of two points is the connecting line (grade 2)
     assert p1.join(p2).grades == [2]
-    # meet of two points is the empty intersection (progressive → grade 4)
-    assert p1.meet(p2).grades == [4]
+    # meet of two points is the empty intersection (outer product → zero)
+    assert p1.meet(p2).is_zero
     # meet of two planes is their intersection line (grade 2)
     pl1 = create_entity(b, Plane(Point(0, 0, 0), Direction(1, 0, 0)))
     pl2 = create_entity(b, Plane(Point(0, 0, 0), Direction(0, 1, 0)))
@@ -247,6 +247,19 @@ def test_point_on_line_incidence_dual_outer(b):
     for x, y, z in [(0, 0, 0), (5, 5, 5)]:
         p = create_entity(b, Point(x, y, z))
         assert not p.dual().op(line.dual()).is_zero, f"Point({x},{y},{z}) off line"
+
+
+def test_point_on_line_join_degenerate(b):
+    """Gunn/Dorst join of a point on a line with that line is zero (incidence)."""
+    a = create_entity(b, Point(1, 0, 0))
+    c = create_entity(b, Point(0, 1, 0))
+    line = a.join(c)
+    # (0.5, 0.5, 0) is the midpoint of a and c, hence on the line
+    on_line = create_entity(b, Point(0.5, 0.5, 0))
+    assert on_line.join(line).is_zero
+    # A point off the line joins with it to a plane (grade 1)
+    off_line = create_entity(b, Point(0, 0, 1))
+    assert off_line.join(line).grades == [1]
 
 
 # ═══════════════════════════════════════════════════════════════
