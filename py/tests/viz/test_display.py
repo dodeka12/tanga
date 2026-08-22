@@ -95,58 +95,142 @@ class TestDisplayRow:
 
 
 class TestDisplayLiveJupyter:
-    """``display()`` must hint instead of rendering an empty iframe when the
-    server has not been started."""
+    """Idempotent ``display()`` for the live viewer."""
+
+    def _patch_display(self, monkeypatch, captured):
+        monkeypatch.setattr(
+            "IPython.display.display", lambda obj, **kw: captured.append((obj, kw))
+        )
 
     def test_no_server_prints_hint_and_skips_iframe(self, monkeypatch, capsys):
         viz = _viz()
         viz._jupyter = True
-        displayed = []
-        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
+        captured = []
+        self._patch_display(monkeypatch, captured)
 
         result = viz.display()
 
         assert result is None
-        assert displayed == []
+        assert captured == []
         assert "start_server()" in capsys.readouterr().out
 
-    def test_server_running_displays_iframe(self, monkeypatch):
+    def test_emits_iframe_when_no_viewer_connected(self, monkeypatch):
         viz = _viz()
         viz._jupyter = True
-        viz._server = object()  # non-None → treated as running
-        displayed = []
-        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
+        viz._server = object()  # non-None → "running"
+        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
+        flushes = []
+        monkeypatch.setattr(viz, "flush", lambda: flushes.append(True))
+        captured = []
+        self._patch_display(monkeypatch, captured)
 
         result = viz.display()
 
         assert result is None
-        assert len(displayed) == 1
-        assert displayed[0].src == viz.url
+        assert len(captured) == 1
+        _, kwargs = captured[0]
+        assert kwargs["display_id"] == "tanga-main"
+        assert flushes == [True]
 
-    def test_scene_handle_no_server_prints_hint(self, monkeypatch, capsys):
-        viz = _viz()
-        viz._jupyter = True
-        handle = viz.scene("detail")
-        displayed = []
-        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
-
-        result = handle.display()
-
-        assert result is None
-        assert displayed == []
-        assert "start_server()" in capsys.readouterr().out
-
-    def test_scene_handle_server_running_displays_iframe(self, monkeypatch):
+    def test_repeat_display_flushes_without_emitting(self, monkeypatch):
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
+        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: True)
+        flushes = []
+        monkeypatch.setattr(viz, "flush", lambda: flushes.append(True))
+        captured = []
+        self._patch_display(monkeypatch, captured)
+
+        result = viz.display()
+
+        assert result is None
+        assert captured == []
+        assert flushes == [True]
+
+    def test_pending_guards_connect_race(self, monkeypatch):
+        viz = _viz()
+        viz._jupyter = True
+        viz._server = object()
+        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
+        flushes = []
+        monkeypatch.setattr(viz, "flush", lambda: flushes.append(True))
+        captured = []
+        self._patch_display(monkeypatch, captured)
+
+        viz.display()
+        viz.display()
+
+        assert len(captured) == 1
+        assert flushes == [True, True]
+
+    def test_caller_viewer_name_is_used(self, monkeypatch):
+        viz = _viz()
+        viz._jupyter = True
+        viz._server = object()
+        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
+        captured = []
+        self._patch_display(monkeypatch, captured)
+
+        viz.display(viewer_name="cell-a")
+
+        assert len(captured) == 1
+        iframe, kwargs = captured[0]
+        assert kwargs["display_id"] == "tanga-cell-a"
+        assert iframe.src.endswith("?viewer=cell-a")
+
+    def test_scene_handle_emits_for_its_scene(self, monkeypatch):
+        viz = _viz()
+        viz._jupyter = True
+        viz._server = object()
+        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
+        monkeypatch.setattr(viz, "flush", lambda: None)
         handle = viz.scene("detail")
-        displayed = []
-        monkeypatch.setattr("IPython.display.display", lambda obj: displayed.append(obj))
+        captured = []
+        self._patch_display(monkeypatch, captured)
 
         result = handle.display()
 
         assert result is None
-        assert len(displayed) == 1
-        assert displayed[0].src == handle.url
+        assert len(captured) == 1
+        iframe, kwargs = captured[0]
+        assert kwargs["display_id"] == "tanga-detail"
+        assert iframe.src.endswith("?viewer=detail")
 
+
+class TestContextManager:
+    def test_with_viz_clears_and_shows(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        cleared = []
+        shown = []
+        monkeypatch.setattr(viz, "clear", lambda: cleared.append(True))
+        monkeypatch.setattr(viz, "show", lambda: shown.append(True))
+
+        with viz as v:
+            assert v is viz
+
+        assert cleared == [True]
+        assert shown == [True]
+
+    def test_with_scene_clears_and_shows(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        handle = viz.scene("detail")
+        cleared = []
+        shown = []
+        monkeypatch.setattr(handle, "clear", lambda: cleared.append(True))
+        monkeypatch.setattr(handle, "show", lambda: shown.append(True))
+
+        with handle as h:
+            assert h is handle
+
+        assert cleared == [True]
+        assert shown == [True]
+
+    def test_exit_propagates_exception(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        monkeypatch.setattr(viz, "clear", lambda: None)
+        monkeypatch.setattr(viz, "show", lambda: None)
+
+        with pytest.raises(RuntimeError):
+            with viz:
+                raise RuntimeError("boom")

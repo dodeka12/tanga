@@ -195,6 +195,16 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Remove all entities from this scene."""
         self._scene().clear()
 
+    def __enter__(self) -> "VizSceneHandle":
+        """Clear this scene on entry; :meth:`show` is called on exit."""
+        self.clear()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Show this scene on exit (any exception still propagates)."""
+        self.show()
+        return None
+
     def flush(self, *, fit_camera: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe).
 
@@ -406,6 +416,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         host: str | None = None,
         port: int | None = None,
         jupyter: bool | None = None,
+        viewer_name: str | None = None,
     ) -> Any:
         """Serve (if needed) and show this scene in the current environment.
 
@@ -413,7 +424,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         automatically: in a Jupyter notebook this delegates to :meth:`display`
         (inline iframe); otherwise it opens a browser tab.  Pass
         ``jupyter=True`` to force the notebook display, or ``jupyter=False`` to
-        force the standard browser tab.
+        force the standard browser tab.  ``viewer_name`` is forwarded to
+        :meth:`display` in Jupyter.
 
         ``host``/``port`` are forwarded to ``Visualizer.start_server`` and
         only used when the server is not already running.
@@ -424,7 +436,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._viz.start_server(host=host or "localhost", port=port)
 
         if use_jupyter:
-            return self.display()
+            return self.display(viewer_name=viewer_name)
 
         return self.open_browser()
 
@@ -443,15 +455,19 @@ class VizSceneHandle(_JupyterDisplayMixin):
         reliable rendering.  Outside Jupyter, returns a raw HTML ``<iframe>``
         string.
 
+        Repeated calls for the same viewer do not create a new iframe — they
+        only flush the latest scene state into the already-open viewer.  The
+        viewer is identified by *viewer_name* (if given), otherwise by the
+        current notebook cell id, otherwise by the scene name.
+
         Args:
-            viewer_name: Optional friendly label passed via ``?viewer=`` URL param.
-                Used by ``list_browsers()`` and ``navigate_to(target="viewer:...")``.
+            viewer_name: Optional label passed via ``?viewer=`` URL param. Used
+                to deduplicate notebook outputs and by ``navigate_to``.
             width: CSS width of the iframe (default ``"100%"``).
-            height: CSS height of the iframe (auto-computed from ``space_extent``
-                when *None*, defaulting to a minimum of 400px).
+            height: CSS height of the iframe (defaults to 500px).
         """
-        if viewer_name is not None:
-            self._viewer_name = viewer_name
+        key = self._viz._resolve_viewer_key(viewer_name, self._name)
+        self._viewer_name = key
 
         if height is None:
             height = 500
@@ -461,21 +477,13 @@ class VizSceneHandle(_JupyterDisplayMixin):
             src += f"?viewer={self._viewer_name}"
 
         if self._viz._jupyter:
-            if self._server is None:
-                print("Visualizer server is not running. Call start_server() first.")
-                return None
-            from IPython.display import IFrame
-            from IPython.display import display as ipy_display
-
-            iframe = IFrame(src, width=width, height=height)
-            ipy_display(iframe)
+            self._viz._display_live(src, key, width, height)
             return None
-        else:
-            return (
-                f'<iframe src="{src}" width="{width}" height="{height}px" '
-                f'style="border: 1px solid #444; border-radius: 4px;" '
-                f'title="Tanga 3D Viewer — {self._name}"></iframe>'
-            )
+        return (
+            f'<iframe src="{src}" width="{width}" height="{height}px" '
+            f'style="border: 1px solid #444; border-radius: 4px;" '
+            f'title="Tanga 3D Viewer — {self._name}"></iframe>'
+        )
 
     def display_snapshot(
         self, width: int | str = "100%", height: int | str = "500px"

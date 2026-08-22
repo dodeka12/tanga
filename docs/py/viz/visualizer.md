@@ -387,6 +387,22 @@ Waiting for browser to connect at http://localhost:8765 ...
 Browser connected.
 ```
 
+### Context Managers
+
+`Visualizer` and `VizSceneHandle` can be used as context managers: they clear
+the scene on entry and call `show()` on exit.
+
+```python
+with viz:                       # clear main scene, then show
+    viz.add(Point(1, 2, 3))
+
+with viz.scene("detail"):       # clear named scene, then show
+    viz.scene("detail").add(Point(4, 5, 6))
+```
+
+In Jupyter, `show()` renders inline (delegating to `display()`); in scripts it
+opens a browser tab — follow the block with `wait()` to keep the script alive.
+
 ### Non-Blocking Mode (`start_server()` / `flush()` / `stop_server()`)
 
 For animation loops and Jupyter notebooks:
@@ -428,7 +444,7 @@ viz.export_glb("scene.glb")
 
 | Method | Purpose |
 |--------|---------|
-| `show(host=None, port=None)` | Serve + open a browser tab (forwards host/port to `start_server`) |
+| `show(host=None, port=None, jupyter=None, viewer_name=None)` | Serve + show: opens a browser tab, or renders inline in Jupyter (delegates to `display()`). `viewer_name` dedupes notebook outputs. |
 | `wait()` | Block until Ctrl+C, then stop the server |
 | `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |

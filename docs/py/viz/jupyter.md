@@ -68,6 +68,44 @@ print("Server stopped.")
 - `stop_server()` releases the port and terminates the background thread.
   Always call it when done to free resources.
 
+## Idempotent `display()` / `show()` and Context Managers
+
+Re-running a cell that calls `display()` or `show()` does **not** open a
+second viewer.  The viewer is identified by an optional `viewer_name`; if you
+omit it, the current notebook cell id is used automatically (via the IPython
+`pre_run_cell` event), falling back to the scene name.  A repeated call just
+flushes the latest scene state into the already-open viewer:
+
+```python
+viz = Visualizer()
+viz.add(Point(1, 2, 3))
+viz.display()          # opens the inline viewer
+viz.add(Point(4, 5, 6))
+viz.display()          # no new viewer — just flushes the update
+```
+
+`Visualizer` and `VizSceneHandle` are also context managers: they clear the
+scene on entry and call `show()` on exit.
+
+```python
+with viz:                          # main scene: clear, then show
+    viz.add(Point(1, 2, 3))
+
+with viz.scene("detail"):          # named scene: clear, then show
+    viz.scene("detail").add(Point(4, 5, 6))
+```
+
+Pass an explicit `viewer_name` to keep two cells pointing at the **same**
+scene independent of each other:
+
+```python
+viz.scene("detail").display(viewer_name="cell-a")
+viz.scene("detail").display(viewer_name="cell-b")
+```
+
+Outside Jupyter, `display()` returns an HTML `<iframe>` string and `show()`
+opens a browser tab, as before.
+
 ## Serverless Display — ``display_snapshot()``
 
 For quick static snapshots — **no WebSocket server, no daemon threads** —
