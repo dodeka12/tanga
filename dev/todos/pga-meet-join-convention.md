@@ -192,7 +192,7 @@ fixes this and does not affect the other algebras.
 
 ### Phase 5 — Changelog + notebook
 
-- [ ] 5.1 Add a branch changelog per `dev/workflows/changelog.md`
+- [x] 5.1 Add a branch changelog per `dev/workflows/changelog.md`
   (`docs/changelog/YYYY-MM-DD_<branch>.md`). The meet/join inversion is the
   headline **Breaking Changes** bullet:
   - **Breaking: `meet()`/`join()` inverted for PGA2/3 to match Gunn/Dorst** —
@@ -205,7 +205,7 @@ fixes this and does not affect the other algebras.
     lines round-trip and analyze to the correct side of the origin.
   - **Docs: PGA incidence** — incidence in PGA2/3 is
     `A.dual() ^ B.dual() == 0`; see the basis docs.
-- [ ] 5.2 `dev/src/dev_pga_1.ipynb`: replace `line = a.meet(b)` with
+- [x] 5.2 `dev/src/dev_pga_1.ipynb`: replace `line = a.meet(b)` with
   `line = a.join(b)` (and update the comment) — the connecting line of two
   points is the Gunn/Dorst **join**.
 
