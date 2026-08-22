@@ -25,3 +25,9 @@
   `py/tests/viz/sdf/test_raymarch_shader.py`. *(The hardcoded-sphere visual
   smoke check and real GLSL compile are deferred to the Phase 6/6a browser
   slice — no local `glslangValidator`/`glslc`/Node-`three` is available.)*
+- **Distance-function registry (Phase 3)** — added the Python
+  `DistanceFunction` enum (`scalar_pseudo` default, plus `magnitude`, `scalar`,
+  `grade`, `component`) with params metadata in `sdf/distance.py`, a matching
+  name-keyed GLSL snippet registry in `templates/sdf/algebra/distances.js`, and
+  unit tests in `py/tests/viz/sdf/test_distance.py`. This is the shared
+  function-registry mechanism the opacity transfer axis (Phase 12) reuses.

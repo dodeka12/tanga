@@ -1,6 +1,6 @@
 # Phase 3 — Fixed distance-function set (registry + selectable recompile)
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -28,8 +28,10 @@ program specialization.
 ## Files
 
 - New: `py/pytanga/viz/sdf/distance.py` (Python enum + metadata)
-- New: `py/pytanga/viz/templates/sdf/algebra/distances.glsl` (GLSL snippets,
-  keyed by the same names)
+- New: `py/pytanga/viz/templates/sdf/algebra/distances.js` (GLSL snippet
+  registry keyed by the same names — a `.js` module with embedded GLSL strings
+  rather than a `.glsl` file, so the shared key/value registry is directly
+  importable and the snippets are assembled into the shader as strings)
 
 ## Distance-function set (fixed)
 
@@ -68,15 +70,15 @@ program specialization.
 
 ## Steps
 
-- [ ] Python `DistanceFunction` enum in `sdf/distance.py`:
-  - [ ] Members: `SCALAR_PSEUDO`, `MAGNITUDE`, `SCALAR`, `GRADE`, `COMPONENT`.
-  - [ ] `name`/`value` strings that key the JS registry (e.g. `"magnitude"`).
-  - [ ] Metadata describing required params (`grade` → `int k`; `component` →
+- [x] Python `DistanceFunction` enum in `sdf/distance.py`:
+  - [x] Members: `SCALAR_PSEUDO`, `MAGNITUDE`, `SCALAR`, `GRADE`, `COMPONENT`.
+  - [x] `name`/`value` strings that key the JS registry (e.g. `"magnitude"`).
+  - [x] Metadata describing required params (`grade` → `int k`; `component` →
         `int blade_id`) and a plain-text description.
-  - [ ] A `default()` returning `SCALAR_PSEUDO`.
-- [ ] JS `distances.glsl` keyed registry:
-  - [ ] `distanceFuncs: Map<string, {params: [..], snippet: string}>`.
-  - [ ] Snippets are pure functions of `r[]` (+ params), no `main()`, no
+  - [x] A `default()` returning `SCALAR_PSEUDO`.
+- [x] JS `distances.js` keyed registry:
+  - [x] `distanceFuncs: Map<string, {params: [..], snippet: string}>`.
+  - [x] Snippets are pure functions of `r[]` (+ params), no `main()`, no
         algebra or entity branching.
 - [ ] Viewer-level selection plumbing (stubs until Phase 6 wires the server):
   - [ ] `sdf_viewer.js` holds `activeDistance` (default `"scalar_pseudo"`).
@@ -89,22 +91,24 @@ program specialization.
 
 File: `py/tests/viz/sdf/test_distance.py`
 
-- [ ] `test_enum_values` — every `DistanceFunction` value string is a valid,
+- [x] `test_enum_values` — every `DistanceFunction` value string is a valid,
       known key (matches the JS registry names).
-- [ ] `test_default_is_scalar_pseudo` — `DistanceFunction.default()` returns
+- [x] `test_default_is_scalar_pseudo` — `DistanceFunction.default()` returns
       `SCALAR_PSEUDO`.
-- [ ] `test_params_metadata` — `grade` requires an `int k`, `component` requires
+- [x] `test_params_metadata` — `grade` requires an `int k`, `component` requires
       an `int blade_id`; `magnitude`/`scalar`/`scalar_pseudo` require none.
-- [ ] `test_snippet_purity` — generated snippets contain no `main()`, no
+- [x] `test_snippet_purity` — generated snippets contain no `main()`, no
       algebra/entity branch keywords.
 
 ## Verification
 
-- [ ] Python enum serializes to the exact string keys the JS registry expects.
+- [x] Python enum serializes to the exact string keys the JS registry expects.
 - [ ] Toggling the distance function recompiles the shader and renders (verify
       with a sphere whose `r[]` is a known analytic vector via a hand-made
-      test object).
+      test object). *(deferred — needs the `r[] = M·a` path from Phase 8 and a
+      live recompile hook wired by Phase 6)*
 - [ ] `scalar_pseudo` equals `scalar` on a result whose only non-scalar,
       non-pseudoscalar grades vanish; `magnitude` and `scalar` agree on a pure
-      scalar result; `grade` with `k=0` equals `|scalar|`.
-- [ ] `uv run pytest py/tests/viz/sdf/test_distance.py` passes.
+      scalar result; `grade` with `k=0` equals `|scalar|`. *(deferred — GLSL
+      evaluation needs a compiled shader from Phase 8)*
+- [x] `uv run pytest py/tests/viz/sdf/test_distance.py` passes.
