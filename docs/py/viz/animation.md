@@ -16,6 +16,7 @@ from pytanga.viz import Visualizer
 from pytanga.geometry import Point
 
 viz = Visualizer()
+viz.show()  # open the viewer (inline in Jupyter, browser tab in a script)
 p = viz(Point(3, 0, 0), color="#ff4444")  # viz(...) == viz.new(...)
 
 angle = 0.0
@@ -42,7 +43,8 @@ ends, so a per-scene interrupt never tears down the server.
 | `scene_name` | `str` | `""` | Scene the loop (and its stop key) is scoped to. `""` is the main scene. |
 | `auto_clear` | `bool` | `False` | When `True`, each frame flushes then removes objects added after the loop began (see below). |
 
-- `animate()` starts the server automatically if it isn't running yet.
+- `animate()` starts the server automatically (headless) if it isn't running
+  yet; it never opens the viewer — call `show()` first (or use `with viz:`).
 - The browser binding is per scene: pressing `q` (or `Q`) in scene `A` stops only
   scene `A`'s loop; terminal Ctrl+C / SIGTERM is global and stops every scene.
 - Use `update_entity()` to replace geometry and `flush()` to push changed state.
@@ -60,6 +62,7 @@ import math
 from pytanga.geometry import Point
 
 viz = Visualizer()
+viz.show()  # open the viewer
 viz(Point(0, 0, 0), color="#ffffff")  # persists across frames
 
 angle = 0.0
@@ -129,7 +132,7 @@ The browser's `animator.js` captures start state, interpolates in
 Orchestrate multiple animations with a fluent builder:
 
 ```python
-viz.start()
+viz.show()
 
 p1 = viz.add(Point(0, 0, 0), color="#ff4444")
 p2 = viz.add(Point(5, 0, 0), color="#44ff44")
@@ -143,7 +146,7 @@ viz.timeline() \
     .play()
 
 viz.sleep_ms(5000)
-viz.stop()
+viz.stop_server()
 ```
 
 - `wait(seconds)` — pause between steps

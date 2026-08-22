@@ -465,7 +465,7 @@ viz.export_glb("scene.glb")
 | `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |
 | `open_browser()` | Open/reconnect a browser tab |
-| `animate(fps, auto_clear=False)` | Serve, open a browser, yield a frame time each loop, stop on the scene's key or Ctrl+C. With `auto_clear=True`, objects added inside the loop are removed each frame |
+| `animate(fps, auto_clear=False)` | Serve (headless), yield a frame time each loop, stop on the scene's key or Ctrl+C. Never opens the viewer — call `show()` first. With `auto_clear=True`, objects added inside the loop are removed each frame |
 
 ### Deprecated Aliases
 

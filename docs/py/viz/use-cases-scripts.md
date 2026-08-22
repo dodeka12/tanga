@@ -50,6 +50,7 @@ from pytanga.geometry import Point
 from pytanga.viz import Visualizer
 
 viz = Visualizer()
+viz.show()  # open the viewer (browser tab in a script)
 p = viz(Point(3, 0, 0), color="#ff4444")
 
 angle = 0.0
@@ -71,6 +72,7 @@ from pytanga.geometry import Point
 from pytanga.viz import Visualizer
 
 viz = Visualizer()
+viz.show()  # open the viewer
 viz(Point(0, 0, 0), color="#ffffff")  # persists across frames
 
 angle = 0.0

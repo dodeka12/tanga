@@ -314,6 +314,28 @@ class TestVisualizer:
         with pytest.raises(StopIteration):
             next(gen)
 
+    def test_animate_starts_server_but_does_not_open_browser(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._open_browser = True  # simulate a script (would open a browser before)
+        viz._shutdown_requested = threading.Event()
+        viz._shutdown_requested.set()  # loop exits on the first iteration
+
+        calls: list[str] = []
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
+        monkeypatch.setattr(
+            viz, "open_browser", lambda **kw: calls.append("open_browser")
+        )
+
+        with pytest.raises(StopIteration):
+            next(viz.animate(fps=0))
+
+        # animate() boots a headless server but never shows the viewer; show()
+        # is the single display entry point.
+        assert "start_server" in calls
+        assert "open_browser" not in calls
+
     def test_call_is_new_shorthand(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         ref = viz(Point(1, 2, 3), color="#ff4444")

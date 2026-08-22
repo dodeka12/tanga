@@ -911,9 +911,12 @@ class Visualizer(_JupyterDisplayMixin):
         (``KeyModifier`` values) configures that browser binding per scene;
         pass ``stop_key=None`` to disable it.
 
-        The server is started automatically if it isn't already running, and is
-        stopped automatically at interpreter exit via the registered ``atexit``
-        hook (so a per-scene ``q`` interrupt does not shut the server down).
+        The server is started automatically (headless) if it isn't already
+        running, and is stopped automatically at interpreter exit via the
+        registered ``atexit`` hook (so a per-scene ``q`` interrupt does not
+        shut the server down).  ``animate`` never makes the viewer visible —
+        call :meth:`show` first (or use ``with viz:``) to open it, then drive
+        the loop.
 
         When *auto_clear* is ``True``, each frame first flushes the scene (so the
         previous frame's changes appear), then removes every object that was
@@ -930,14 +933,13 @@ class Visualizer(_JupyterDisplayMixin):
         Example::
 
             viz = Visualizer(title="...")
+            viz.show()  # make the viewer visible (inline in Jupyter)
             for dt in viz.animate(fps=60):
                 ...  # update transforms / entities each frame
                 viz.flush()
         """
         if self._server is None:
             self.start_server()
-            if self._open_browser:
-                self.open_browser()
 
         self._register_animation_stop(scene_name, stop_key, stop_modifiers)
 
