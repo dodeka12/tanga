@@ -383,9 +383,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Set the interaction configuration for an entity in this scene."""
         self._viz.set_interaction(object_id, config, scene_name=self._name)
 
-    def on_interaction(
-        self, object_id: str, event_type: Any, handler: Any
-    ) -> None:
+    def on_interaction(self, object_id: str, event_type: Any, handler: Any) -> None:
         """Register an async handler for interaction events on an entity."""
         self._viz.on_interaction(object_id, event_type, handler, scene_name=self._name)
 
@@ -402,14 +400,32 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Open a browser tab for this scene (server must be running)."""
         return self._viz._open_scene_browser(self._name)
 
-    def show(self, *, host: str | None = None, port: int | None = None) -> bool:
-        """Serve (if needed) and open a browser tab for this scene.
+    def show(
+        self,
+        *,
+        host: str | None = None,
+        port: int | None = None,
+        jupyter: bool | None = None,
+    ) -> Any:
+        """Serve (if needed) and show this scene in the current environment.
+
+        With ``jupyter=None`` (the default) the display mode is chosen
+        automatically: in a Jupyter notebook this delegates to :meth:`display`
+        (inline iframe); otherwise it opens a browser tab.  Pass
+        ``jupyter=True`` to force the notebook display, or ``jupyter=False`` to
+        force the standard browser tab.
 
         ``host``/``port`` are forwarded to ``Visualizer.start_server`` and
         only used when the server is not already running.
         """
+        use_jupyter = self._viz._jupyter if jupyter is None else jupyter
+
         if self._viz._server is None:
             self._viz.start_server(host=host or "localhost", port=port)
+
+        if use_jupyter:
+            return self.display()
+
         return self.open_browser()
 
     # ── Jupyter support ──────────────────────────────────────
@@ -446,9 +462,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
         if self._viz._jupyter:
             if self._server is None:
-                print(
-                    "Visualizer server is not running. Call start_server() first."
-                )
+                print("Visualizer server is not running. Call start_server() first.")
                 return None
             from IPython.display import IFrame
             from IPython.display import display as ipy_display

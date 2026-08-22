@@ -332,7 +332,9 @@ class Visualizer(_JupyterDisplayMixin):
         node = self._scenes[""].get_node(eid)
         return VizObjectRef(VizSceneHandle(self, ""), node)
 
-    def add_group(self, name: str | None = None, *, scene_name: str = "") -> "VizObjectRef":
+    def add_group(
+        self, name: str | None = None, *, scene_name: str = ""
+    ) -> "VizObjectRef":
         """Create a scene-graph group and return a :class:`VizObjectRef` for it."""
         from ._object_ref import VizObjectRef
 
@@ -629,9 +631,7 @@ class Visualizer(_JupyterDisplayMixin):
         if text is None or text == "":
             scene.remove("__annotation__")
         else:
-            style_dict = _resolve_annotation_style(
-                scene.styles.annotation, style
-            )
+            style_dict = _resolve_annotation_style(scene.styles.annotation, style)
             obj = SceneObject(
                 id="__annotation__",
                 layer="overlay",
@@ -1490,15 +1490,29 @@ class Visualizer(_JupyterDisplayMixin):
         host: str | None = None,
         port: int | None = None,
         wait_for_browser: bool | None = None,
-    ) -> bool:
-        """Serve the visualization and open a browser tab (non-blocking).
+        jupyter: bool | None = None,
+    ) -> Any:
+        """Serve the visualization and show it in the current environment.
 
-        Equivalent to :meth:`start_server` followed by :meth:`open_browser`.
-        ``host``/``port`` are only used when the server is not already
-        running; see :meth:`start_server` for their semantics.
+        With ``jupyter=None`` (the default) the display mode is chosen
+        automatically: in a Jupyter notebook this delegates to :meth:`display`
+        (inline iframe); otherwise it opens a browser tab.  Pass
+        ``jupyter=True`` to force the notebook display, or ``jupyter=False`` to
+        force the standard browser tab.
+
+        Equivalent to :meth:`start_server` followed by either :meth:`display`
+        or :meth:`open_browser`.  ``host``/``port`` are only used when the
+        server is not already running; see :meth:`start_server` for their
+        semantics.
         """
+        use_jupyter = self._jupyter if jupyter is None else jupyter
+
         if self._server is None:
             self.start_server(host=host or "localhost", port=port)
+
+        if use_jupyter:
+            return self.display()
+
         return self.open_browser(wait_for_browser=wait_for_browser)
 
     def wait(self) -> None:
@@ -1635,7 +1649,9 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
         return cid
 
-    def update_control(self, ctrl_id: str, *, scene_name: str = "", **fields: Any) -> None:
+    def update_control(
+        self, ctrl_id: str, *, scene_name: str = "", **fields: Any
+    ) -> None:
         """Mutate fields of a stored control and re-push ``controls_define``."""
         scene = self._scenes[scene_name]
         ctrl = scene._controls.get(ctrl_id)
@@ -1893,9 +1909,7 @@ class Visualizer(_JupyterDisplayMixin):
         src = self.url
         if self._jupyter:
             if self._server is None:
-                print(
-                    "Visualizer server is not running. Call start_server() first."
-                )
+                print("Visualizer server is not running. Call start_server() first.")
                 return None
             from IPython.display import IFrame
             from IPython.display import display as ipy_display
@@ -2220,9 +2234,7 @@ class Visualizer(_JupyterDisplayMixin):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.display_snapshot(
-            width=width, height=height, scene_name=scene_name
-        )
+        return self.display_snapshot(width=width, height=height, scene_name=scene_name)
 
     @property
     def global_styles(self) -> "VizStyles":
