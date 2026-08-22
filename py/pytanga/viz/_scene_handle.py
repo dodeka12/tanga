@@ -196,8 +196,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         self._scene().clear()
 
     def __enter__(self) -> "VizSceneHandle":
-        """Clear this scene on entry; :meth:`show` is called on exit."""
-        self.clear()
+        """Reset this scene on entry; :meth:`show` is called on exit."""
+        self._viz._reset_scene(self._name)
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:

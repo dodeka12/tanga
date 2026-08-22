@@ -13,11 +13,13 @@ viewer key without requiring a separate setup cell.
 from __future__ import annotations
 
 _cell_id: str | None = None
+_execution_counter = 0
 
 
 def _on_pre_run_cell(info: object) -> None:
-    global _cell_id
+    global _cell_id, _execution_counter
     _cell_id = getattr(info, "cell_id", None) or None
+    _execution_counter += 1
 
 
 def _register() -> None:
@@ -40,3 +42,12 @@ _register()
 def current_cell_id() -> str | None:
     """Return the id of the notebook cell currently executing, or ``None``."""
     return _cell_id
+
+
+def execution_token() -> int:
+    """Return a token that changes each time a notebook cell starts executing.
+
+    Used to scope the "already displayed" state to a single cell execution.
+    Outside a notebook this stays constant (``0``).
+    """
+    return _execution_counter

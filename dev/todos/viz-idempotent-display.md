@@ -56,18 +56,19 @@ This plan only covers what is **not** yet implemented.
 2. **The viewer key doubles as the IPython `display_id`.** The iframe is
    emitted with `display(iframe, display_id=f"tanga-{key}")` so re-running the
    same cell **replaces** the same output instead of stacking new ones.
-3. **Liveness check reuses `viewer_name`.** A viewer is "already shown" when
-   `list_browsers()` contains a session with `viewer_name == key` (empty list
-   when the server is `None`).
-4. **`display()`/`show()` always `flush()`.** If the scene is already shown the
-   call becomes *just* a flush (no new iframe). Otherwise it emits the iframe
-   and then flushes.
-5. **Connect race guard.** A short-lived per-scene "pending" flag, set when the
-   iframe is emitted and cleared on connect/disconnect, prevents two back-to-back
-   `display()` calls (before the browser's `ready` lands) from emitting twice.
-6. **Reconnect on close.** Clearing the active state on disconnect means a
-   manually-closed output re-opens on the next `display()`/`show()`.
-7. **Context managers.** `__enter__` clears the target scene and returns the
+3. **Per-execution scoping.** The "already shown" state is scoped to the
+   current notebook cell execution, tracked via an execution token that
+   increments on every `pre_run_cell` event. A fresh execution re-emits the
+   iframe (Jupyter destroys the previous one when a cell is re-run); repeated
+   calls within one execution only flush.
+4. **`display()`/`show()` always `flush()`.** If the viewer is already shown
+   this execution, the call becomes *just* a flush (no new iframe). Otherwise
+   it emits the iframe and then flushes.
+5. **Connect race guard.** A pending flag (set when the iframe is emitted)
+   prevents two back-to-back `display()` calls within one execution from
+   emitting twice. It is reset at the start of each cell execution.
+6. **Context managers reset to defaults.** `__enter__` clears the target scene
+   and re-adds the default axes/grid (via `_reset_scene`), then returns the
    object; `__exit__` calls `show()` (always, even on exception) and returns
    `None` so exceptions propagate. No dedicated `show_scene()` function.
 
@@ -85,72 +86,40 @@ This plan only covers what is **not** yet implemented.
 
 ## Steps
 
-### Step 1 — Scene-keyed idempotency helper (visualizer.py)
+### Step 1 — Cell-id / execution-token helper (`_notebook_cell.py`)
 
-- [ ] Add `Visualizer._has_connected_viewer(scene_name: str) -> bool`:
-      return `any(s["scene"] == scene_name for s in self.list_browsers())`
-      (and `False` when `self._server is None`).
-- [ ] Add a per-scene pending guard, e.g. `self._display_pending: set[str]`
-      (keyed by scene name), initialised in `__init__`.
+- [x] Add `current_cell_id()` and `execution_token()` backed by an IPython
+      `pre_run_cell` listener (registered at import time).
 
-### Step 2 — Idempotent `display()` (visualizer.py + _scene_handle.py)
+### Step 2 — Viewer-key helpers + idempotent `display()` (visualizer.py + _scene_handle.py)
 
-- [ ] In the Jupyter branch of both `display()` methods, before emitting:
-      1. Determine `scene = self._name` (`""` for the Visualizer).
-      2. If `self._has_connected_viewer(scene)` **and** `scene` is not in the
-         pending set → call `self.flush()` and return (no new iframe).
-      3. Otherwise mark the scene pending, emit
-         `display(iframe, display_id=f"tanga-{scene or 'main'}")`, then
-         `self.flush()`.
-- [ ] Leave the non-Jupyter branch of `display()` (returns the raw HTML string)
-      unchanged.
+- [x] Add `_resolve_viewer_key()` (viewer_name → cell id → scene name).
+- [x] Add `_display_pending: set[str]` and `_display_execution` to `__init__`.
+- [x] Add `_display_live()`: reset pending when `execution_token()` changes,
+      then emit-or-flush; `display()` delegates to it with the resolved key.
+- [x] Add `viewer_name` to `display()` and `show()` (forwarded through).
+- [x] Leave the non-Jupyter branch of `display()` (raw HTML string) unchanged.
 
-### Step 3 — Clear pending state on connect/disconnect (visualizer.py)
+### Step 3 — Context managers reset to defaults
 
-- [ ] In `_on_client_connect` / `_on_client_disconnect`, clear the pending flag
-      for the relevant scene(s). The exact wiring point is the `ready` handler
-      where `current_session.scene` is set (`server.py`); if threading a
-      per-scene callback through `VizServer.start()` is too invasive, fall back
-      to clearing on any connect/disconnect as a short-window guard and rely on
-      the scene-keyed `list_browsers()` check as the source of truth.
+- [x] Add `Visualizer._reset_scene(scene_name)` (clear + re-add default axes/grid).
+- [x] `Visualizer.__enter__` → `_reset_scene("")`; `__exit__` → `show()`.
+- [x] `VizSceneHandle.__enter__` → `self._viz._reset_scene(self._name)`;
+      `__exit__` → `show()`.
 
-### Step 4 — `show()` parity (no code change expected)
+### Step 4 — Tests
 
-- [ ] Confirm `show(jupyter=None/True)` in a notebook routes through `display()`
-      and therefore inherits idempotency + flush. `show(jupyter=False)` keeps
-      its existing browser-open behaviour.
+- [x] `display()` called twice → second call emits no new iframe and flushes.
+- [x] New execution token → re-emits.
+- [x] `display()` with server down → prints hint, no emit.
+- [x] caller `viewer_name` and scene-handle `display()` use the right key/display_id.
+- [x] `with viz:` / `with viz.scene("name"):` reset the scene and call `show()`.
+- [x] `__exit__` propagates exceptions; `_reset_scene` preserves default axes/grid.
 
-### Step 5 — Context managers (visualizer.py + _scene_handle.py)
+### Step 5 — Docs & changelog
 
-- [ ] `Visualizer.__enter__` → `self.clear()` (main scene) → return `self`.
-- [ ] `Visualizer.__exit__(exc_type, exc_val, exc_tb)` → `self.show()` → return
-      `None` (never suppress exceptions).
-- [ ] `VizSceneHandle.__enter__` → `self.clear()` (this scene) → return `self`.
-- [ ] `VizSceneHandle.__exit__(...)` → `self.show()` → return `None`.
-- [ ] Note in docstrings that `__exit__` uses non-blocking `show()`, so scripts
-      should follow the block with `wait()`.
-
-### Step 6 — Tests
-
-- [ ] `display()` called twice → second call emits no new iframe and calls
-      `flush()` (monkeypatch `IPython.display.display` and `flush`).
-- [ ] `display()` with a connected browser for the scene → no emit, flush only.
-- [ ] `display()` with server down → starts server and emits once.
-- [ ] disconnect clears active state → next `display()` re-emits.
-- [ ] `show(jupyter=None)` with `_jupyter=True` → routes to `display()`;
-      `show(jupyter=False)` → opens a browser.
-- [ ] `with viz:` clears the main scene and calls `show()` on exit.
-- [ ] `with viz.scene("name") as s:` clears/shows that scene.
-- [ ] `__exit__` propagates an exception raised inside the `with` body.
-
-### Step 7 — Docs & changelog
-
-- [ ] Update `docs/py/viz/jupyter.md`: idempotent `display()`/`show()` and the
-      context-manager usage.
-- [ ] Update `docs/py/viz/visualizer.md`: context manager + idempotent display
-      notes.
-- [ ] Append a changelog entry under **New Features** in
-      `docs/changelog/2026-08-22_fix-viz.md`.
+- [x] Update `docs/py/viz/jupyter.md` and `docs/py/viz/visualizer.md`.
+- [x] Append changelog entries.
 
 ## Notes / edge cases
 

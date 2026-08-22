@@ -27,7 +27,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
-from ._notebook_cell import current_cell_id
+from ._notebook_cell import current_cell_id, execution_token
 from ._props import _normalize_color
 from ._scene_handle import VizSceneHandle
 from ._style_dict import (
@@ -149,6 +149,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._thread: threading.Thread | None = None
         self._atexit_registered = False
         self._display_pending: set[str] = set()
+        self._display_execution: int | None = None
 
         # Interrupt handling: a global shutdown event (terminal Ctrl+C/SIGTERM)
         # plus lazily-created per-scene events (browser-side stop key).
@@ -606,6 +607,16 @@ class Visualizer(_JupyterDisplayMixin):
     def clear(self) -> None:
         """Remove all entities from the main scene."""
         self._scenes[""].clear()
+
+    def _reset_scene(self, scene_name: str) -> None:
+        """Clear a scene and re-add its default axes/grid.
+
+        Used by the context managers so ``with viz:`` / ``with viz.scene(name):``
+        reset to the default scene (axes/grid present), not an empty one.
+        """
+        self._scenes[scene_name].clear()
+        self._default_objects_added.discard(scene_name)
+        self._add_default_scene_objects(scene_name)
 
     # ── Title & annotation ──────────────────────────────────
 
@@ -1520,8 +1531,8 @@ class Visualizer(_JupyterDisplayMixin):
         return self.open_browser(wait_for_browser=wait_for_browser)
 
     def __enter__(self) -> "Visualizer":
-        """Clear the main scene on entry; :meth:`show` is called on exit."""
-        self.clear()
+        """Reset the main scene on entry; :meth:`show` is called on exit."""
+        self._reset_scene("")
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -1906,8 +1917,7 @@ class Visualizer(_JupyterDisplayMixin):
         await self._push_controls_async("")
 
     async def _on_client_disconnect(self, remote_addr: str) -> None:
-        """Log when a client disconnects and clear pending display emits."""
-        self._display_pending.clear()
+        """Log when a client disconnects."""
         self._print_disconnect(remote_addr)
 
     # ── Properties ──────────────────────────────────────────
@@ -1927,15 +1937,6 @@ class Visualizer(_JupyterDisplayMixin):
             return cell_id
         return scene_name or "main"
 
-    def _has_connected_viewer(self, viewer_key: str) -> bool:
-        """Return whether a browser session tagged *viewer_key* is connected."""
-        if self._server is None:
-            return False
-        return any(
-            s.get("viewer_name") == viewer_key
-            for s in self._server.get_browser_sessions()
-        )
-
     def _display_live(
         self,
         src: str,
@@ -1943,19 +1944,21 @@ class Visualizer(_JupyterDisplayMixin):
         width: int | str,
         height: int | str,
     ) -> None:
-        """Emit the live iframe for *viewer_key* unless it is already shown.
+        """Emit the live iframe for *viewer_key* unless already shown this run.
 
-        If the viewer is already active (or its iframe was just emitted and is
-        still awaiting the browser's ``ready``), this only flushes pending scene
-        state so the open viewer stays up to date.
+        The "shown" state is scoped to the current notebook cell execution: a
+        fresh execution re-emits the iframe (Jupyter destroys the previous one
+        when a cell is re-run), while repeated calls within the same execution
+        only flush pending state into the open viewer.
         """
         if self._server is None:
             print("Visualizer server is not running. Call start_server() first.")
             return
-        connected = self._has_connected_viewer(viewer_key)
-        if connected:
-            self._display_pending.discard(viewer_key)
-        if connected or viewer_key in self._display_pending:
+        token = execution_token()
+        if token != self._display_execution:
+            self._display_pending.clear()
+            self._display_execution = token
+        if viewer_key in self._display_pending:
             self.flush()
             return
         self._display_pending.add(viewer_key)
@@ -1976,10 +1979,11 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> Any:
         """Display the live main scene inline (iframe) in a Jupyter notebook.
 
-        Repeated calls for the same viewer do not create a new iframe — they
-        only flush the latest scene state into the already-open viewer.  The
-        viewer is identified by *viewer_name* (if given), otherwise by the
-        current notebook cell id, otherwise by the scene name (``"main"``).
+        Within a single cell execution, repeated calls for the same viewer do
+        not create a new iframe — they only flush the latest scene state into
+        the already-open viewer.  The viewer is identified by *viewer_name*
+        (if given), otherwise by the current notebook cell id, otherwise by the
+        scene name (``"main"``).
         """
         key = self._resolve_viewer_key(viewer_name, "")
         self._viewer_name = key

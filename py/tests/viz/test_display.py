@@ -114,11 +114,10 @@ class TestDisplayLiveJupyter:
         assert captured == []
         assert "start_server()" in capsys.readouterr().out
 
-    def test_emits_iframe_when_no_viewer_connected(self, monkeypatch):
+    def test_emits_iframe_once(self, monkeypatch):
         viz = _viz()
         viz._jupyter = True
         viz._server = object()  # non-None → "running"
-        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
         flushes = []
         monkeypatch.setattr(viz, "flush", lambda: flushes.append(True))
         captured = []
@@ -136,23 +135,6 @@ class TestDisplayLiveJupyter:
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
-        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: True)
-        flushes = []
-        monkeypatch.setattr(viz, "flush", lambda: flushes.append(True))
-        captured = []
-        self._patch_display(monkeypatch, captured)
-
-        result = viz.display()
-
-        assert result is None
-        assert captured == []
-        assert flushes == [True]
-
-    def test_pending_guards_connect_race(self, monkeypatch):
-        viz = _viz()
-        viz._jupyter = True
-        viz._server = object()
-        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
         flushes = []
         monkeypatch.setattr(viz, "flush", lambda: flushes.append(True))
         captured = []
@@ -164,11 +146,29 @@ class TestDisplayLiveJupyter:
         assert len(captured) == 1
         assert flushes == [True, True]
 
+    def test_new_execution_emits_again(self, monkeypatch):
+        viz = _viz()
+        viz._jupyter = True
+        viz._server = object()
+        monkeypatch.setattr(viz, "flush", lambda: None)
+        captured = []
+        self._patch_display(monkeypatch, captured)
+
+        import pytanga.viz.visualizer as vizmod
+
+        tokens = iter([1, 1, 2])
+        monkeypatch.setattr(vizmod, "execution_token", lambda: next(tokens))
+
+        viz.display()  # token 1 → new execution → emit
+        viz.display()  # token 1 → same execution → no emit
+        viz.display()  # token 2 → new execution → emit
+
+        assert len(captured) == 2
+
     def test_caller_viewer_name_is_used(self, monkeypatch):
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
-        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
         captured = []
         self._patch_display(monkeypatch, captured)
 
@@ -183,7 +183,6 @@ class TestDisplayLiveJupyter:
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
-        monkeypatch.setattr(viz, "_has_connected_viewer", lambda key: False)
         monkeypatch.setattr(viz, "flush", lambda: None)
         handle = viz.scene("detail")
         captured = []
@@ -199,38 +198,54 @@ class TestDisplayLiveJupyter:
 
 
 class TestContextManager:
-    def test_with_viz_clears_and_shows(self, monkeypatch):
+    def test_with_viz_resets_and_shows(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        cleared = []
+        reset = []
         shown = []
-        monkeypatch.setattr(viz, "clear", lambda: cleared.append(True))
+        monkeypatch.setattr(viz, "_reset_scene", lambda name: reset.append(name))
         monkeypatch.setattr(viz, "show", lambda: shown.append(True))
 
         with viz as v:
             assert v is viz
 
-        assert cleared == [True]
+        assert reset == [""]
         assert shown == [True]
 
-    def test_with_scene_clears_and_shows(self, monkeypatch):
+    def test_with_scene_resets_and_shows(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         handle = viz.scene("detail")
-        cleared = []
+        reset = []
         shown = []
-        monkeypatch.setattr(handle, "clear", lambda: cleared.append(True))
+        monkeypatch.setattr(viz, "_reset_scene", lambda name: reset.append(name))
         monkeypatch.setattr(handle, "show", lambda: shown.append(True))
 
         with handle as h:
             assert h is handle
 
-        assert cleared == [True]
+        assert reset == ["detail"]
         assert shown == [True]
 
     def test_exit_propagates_exception(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        monkeypatch.setattr(viz, "clear", lambda: None)
+        monkeypatch.setattr(viz, "_reset_scene", lambda name: None)
         monkeypatch.setattr(viz, "show", lambda: None)
 
         with pytest.raises(RuntimeError):
             with viz:
                 raise RuntimeError("boom")
+
+    def test_with_viz_preserves_default_axes_grid(self, monkeypatch):
+        viz = Visualizer()  # defaults: axes + grid enabled
+        monkeypatch.setattr(viz, "show", lambda: None)
+
+        def kinds():
+            return sorted(o.kind for o in viz._scenes[""]._objects.values())
+
+        assert "Axes3D" in kinds()
+        assert "Grid" in kinds()
+
+        with viz:
+            pass
+
+        assert "Axes3D" in kinds()
+        assert "Grid" in kinds()
