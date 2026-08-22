@@ -302,6 +302,60 @@ bivector is a simple blade (``B ∧ B = 0``). A non‑simple bivector
 3. **No native null vector.** A true G(3, 0, 1) implementation with a
    proper null basis vector may be considered in a future release.
 
+### 6.4 Meet / Join Convention (Gunn/Dorst)
+
+For ``BasisPGA2``/``BasisPGA3`` the user-facing ``MV.meet`` / ``MV.join``
+follow the **Gunn/Dorst** convention, which is the opposite of the
+Hestenes/DFM07 convention used by the other algebras (E2/E3/P2/P3/N2/N3):
+
+| Operation | PGA2/3 (Gunn/Dorst) | Other algebras |
+|---|---|---|
+| ``meet`` | intersection (progressive/outer product ``∧``) | regressive (largest blade contained in both) |
+| ``join`` | union/span (regressive product ``∨``) | progressive (smallest blade containing both) |
+
+The outer (``^``/``op``) and inner (``|``/``ip``) products are **unchanged**;
+only the ``meet``/``join`` names swap for the PGA models.
+
+```python
+from pytanga.basis import BasisPGA3
+from pytanga.geometry import Geometry, Point, Plane, Direction
+
+pga = BasisPGA3()
+geo = Geometry(pga)
+a = geo(Point(1, 0, 0))
+b = geo(Point(0, 1, 0))
+
+line = a.join(b)      # the connecting line (grade 2) — the *join* of two points
+a.meet(b)             # empty intersection (two points do not meet)
+
+# meet of two planes is their intersection line
+p1 = geo(Plane(Point(0, 0, 0), Direction(1, 0, 0)))
+p2 = geo(Plane(Point(0, 0, 0), Direction(0, 1, 0)))
+p1.meet(p2)           # grade-2 line (the x/y-plane intersection)
+```
+
+### 6.5 Incidence
+
+Incidence in PGA is tested with the complement dual (J‑map / Hodge star ``⋆``):
+
+$$\star A \wedge \star B = 0 \quad\Longleftrightarrow\quad A \text{ and } B \text{ are incident}$$
+
+equivalently ``A.dual() ^ B.dual() == 0``. For example, a point ``P`` lies on a
+line ``L`` iff:
+
+```python
+P.dual().op(L.dual()).is_zero   # True iff P is on L
+```
+
+This works because the join satisfies ``A ∨ B = ⋆(⋆A ∧ ⋆B)`` (PGA4CS §9.2,
+eq. 133): the join degenerates exactly when the dual outer product vanishes.
+
+> **Note:** the metric-contraction form ``A.dual() | B`` (used in algebras with
+> an invertible pseudoscalar, e.g. CGA) is **not** valid in PGA. The PGA
+> pseudoscalar ``I₄ = e₀∧e₁∧e₂∧e₃`` is null (``I₄² = 0``), so there is no
+> ``I₄⁻¹`` and dualization is a complement map, not the metric dual
+> (PGA4CS §3.2, §9.1).
+
 ---
 
 ## 7. References

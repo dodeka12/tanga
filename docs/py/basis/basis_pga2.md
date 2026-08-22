@@ -111,6 +111,53 @@ they are different models:
 | Sphere/Circle | Not available | Grade‑4 blade (IPNS) |
 | Translations | Known limitation | Full support |
 
+## Meet / Join Convention (Gunn/Dorst)
+
+For `BasisPGA2`/`BasisPGA3` the user-facing `MV.meet`/`MV.join` follow the
+Gunn/Dorst convention, which is the opposite of the Hestenes/DFM07 convention
+used by the other algebras (E2/E3/P2/P3/N2/N3):
+
+| Operation | PGA2/3 (Gunn/Dorst) | Other algebras |
+|---|---|---|
+| `meet` | intersection (progressive/outer product `∧`) | regressive (largest blade contained in both) |
+| `join` | union/span (regressive product `∨`) | progressive (smallest blade containing both) |
+
+The outer (`^`/`op`) and inner (`|`/`ip`) products are **unchanged**; only the
+`meet`/`join` names swap for the PGA models.
+
+```python
+from pytanga.basis import BasisPGA2
+from pytanga.geometry import Geometry, Point, Line, Direction
+
+pga2 = BasisPGA2()
+geo = Geometry(pga2)
+a = geo(Point(1, 0, 0))
+b = geo(Point(0, 1, 0))
+
+line = a.join(b)        # the connecting line (grade 1) — the *join* of two points
+
+# meet of two lines is their intersection point
+l1 = geo(Line(Point(0, 0, 0), Direction(1, 0, 0)))
+l2 = geo(Line(Point(0, 0, 0), Direction(0, 1, 0)))
+l1.meet(l2)             # grade-2 point (the origin)
+```
+
+## Incidence
+
+Incidence in PGA is tested with the complement dual (J‑map / Hodge star `⋆`):
+`⋆A ∧ ⋆B == 0`, equivalently `A.dual() ^ B.dual() == 0`. For example, a point
+`P` lies on a line `L` iff:
+
+```python
+P.dual().op(L.dual()).is_zero   # True iff P is on L
+```
+
+This follows from the join identity `A ∨ B = ⋆(⋆A ∧ ⋆B)` (PGA4CS §9.2).
+
+> **Note:** the metric-contraction form `A.dual() | B` is **not** valid in PGA:
+> the PGA pseudoscalar `I₃ = e₀∧e₁∧e₂` is null (`I₃² = 0`), so dualization is a
+> complement map, not the metric dual (PGA4CS §3.2, §9.1).
+
 ## Three Patterns for Accessing Blades
 
 The same three patterns described in [Bases](bases.md#three-patterns-for-accessing-named-blades)

@@ -179,15 +179,15 @@ fixes this and does not affect the other algebras.
 
 ### Phase 4 — Docs
 
-- [ ] 4.1 `docs/py/basis/basis_pga3.md` (and `basis_pga2.md`): add a
+- [x] 4.1 `docs/py/basis/basis_pga3.md` (and `basis_pga2.md`): add a
   "Meet / join convention" subsection — `meet` = intersection (∧),
   `join` = union (∨), matching Gunn/Dorst; note the names are inverted relative
   to the other (DFM07-convention) algebras.
-- [ ] 4.2 Same docs: add an "Incidence" subsection with the complement-dual test
+- [x] 4.2 Same docs: add an "Incidence" subsection with the complement-dual test
   `A.dual() ^ B.dual() == 0` (= `⋆A ∧ ⋆B = 0`), the point-on-line / point-on-plane
   / line-on-plane examples, and the note that `A.dual() | B` is *not* valid in
   PGA because `I₄² = 0` (PGA4CS §3.2, §9.2).
-- [ ] 4.3 `docs/py/algebra/algebra.md`: update the `join`/`meet` rows to mention
+- [x] 4.3 `docs/py/algebra/algebra.md`: update the `join`/`meet` rows to mention
   the PGA2/3 exception.
 
 ### Phase 5 — Changelog + notebook

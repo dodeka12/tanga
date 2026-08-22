@@ -232,11 +232,17 @@ These operate on pure blades (homogeneous multivectors of a single grade):
 alg.blade_inverse(blade)          # inverse of a blade
 alg.blade_pseudo_inverse(blade)   # inner-product inverse; reciprocal of a null blade
 alg.blade_factorize(blade)        # → list of k grade-1 vectors
-alg.join(a, b)                    # smallest blade containing both
-alg.meet(a, b)                    # largest blade contained in both
+alg.join(a, b)                    # join of two blades
+alg.meet(a, b)                    # meet of two blades
 alg.blade_project(a, blade)       # project a onto a non-degenerate blade
 alg.blade_reject(a, blade)        # reject a from a non-degenerate blade
 ```
+
+For the plane‑based PGA models (`BasisPGA2`/`BasisPGA3`) the `join`/`meet`
+names follow Gunn/Dorst and are swapped relative to the other algebras: `meet`
+is the intersection (outer product) and `join` is the union (regressive
+product). See [`basis_pga3.md`](../basis/basis_pga3.md) and
+[`basis_pga2.md`](../basis/basis_pga2.md).
 
 ### Integer modular operations
 
