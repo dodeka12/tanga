@@ -130,12 +130,28 @@ def scale_at(
 
     Evaluates the gradient offset from the surface point, so the (possibly
     unsigned) distance field's ``|·|`` cusp at ``d = 0`` does not zero the
-    central difference.
+    central difference. A single offset direction can be parallel to the entity
+    (e.g. ``(step, step, step)`` along a line through the origin in that
+    direction), so several offset directions are probed and the largest gradient
+    norm is taken.
     """
-    g = gradient(
-        mv, x + step, y + step, z + step, normalize=normalize, distance=distance, step=step
-    )
-    gn = float(np.linalg.norm(g))
+    gn = 0.0
+    # Offset well beyond the central-difference step so the samples stay off the
+    # `|·|` cusp (and off the entity), but close enough that `|∇d|` is still the
+    # surface value. `offset` is the distance the probe point sits from the
+    # surface; `step` is the finite-difference spacing around it.
+    offset = 10.0 * step
+    for dx, dy, dz in ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (1.0, 1.0, 1.0)):
+        g = gradient(
+            mv,
+            x + offset * dx,
+            y + offset * dy,
+            z + offset * dz,
+            normalize=normalize,
+            distance=distance,
+            step=step,
+        )
+        gn = max(gn, float(np.linalg.norm(g)))
     if gn < 1e-9:
         return 1.0
     return 1.0 / gn

@@ -67,6 +67,18 @@ viz.distance = "scalar_pseudo"  # default; try "magnitude" or "scalar"
 scale is calibrated per object so `|∇d| ≈ 1` for sphere tracing
 (`add(..., calibrate=True)`).
 
+Zero-thickness MVs (a line, a point) have a 1D/0D zero-set that the raymarcher
+cannot hit; pass `thickness=` (a distance cutoff) to render them as a tube/ball:
+
+```python
+viz.add(line_mv, color="#ffaa00", calibrate=True, thickness=0.1)
+```
+
+The shader evaluates `d = distOf(M·a)·scale − thickness`. Combined with a
+non-`step` opacity transfer (`viz.opacity = "linear"`/`"sigmoid"`), the opacity
+becomes distance-dependent — full inside the cutoff, fading to transparent near
+the boundary.
+
 ## Opacity transfers
 
 The distance is mapped to opacity through a selectable transfer function:

@@ -190,15 +190,19 @@ def embed_entity_mv(
     bound: Any | None = None,
     distance: str = "scalar_pseudo",
     calibrate: bool = False,
+    thickness: float = 0.0,
 ) -> dict[str, Any]:
     """Reduce *mv* to the ``mv_sdf`` wire core (no id/color/style fields).
 
     Returns a dict with ``algebra``, ``product``, ``distance``, ``normalize``,
     ``point_ids``, ``result_ids``, ``slot_pseudo``, ``M`` (flattened row-major
-    over result × point), ``scale``, and ``bound``.
+    over result × point), ``scale``, ``thickness``, and ``bound``.
 
     ``scale`` defaults to ``1.0``. When ``calibrate=True`` the per-object
     gradient scale is computed (Phase 9) so ``|∇d| ≈ 1`` for sphere-tracing.
+    ``thickness`` is a per-object distance cutoff: the shader subtracts it from
+    the distance (``d − thickness``), so a zero-thickness MV (a line, a point)
+    renders as a tube/ball of that radius.
     """
     alg = mv.algebra
     spec = get_spec(alg)
@@ -242,6 +246,7 @@ def embed_entity_mv(
         "slot_pseudo": slot_pseudo,
         "M": np.asarray(m_tensor.data, dtype=float).reshape(-1).tolist(),
         "scale": scale,
+        "thickness": float(thickness),
         "bound": _bound_wire(bound, spec),
     }
 

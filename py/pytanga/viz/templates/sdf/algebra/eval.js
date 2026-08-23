@@ -80,6 +80,7 @@ export function matrixUniformDecls(totalFloats) {
     return `
 uniform float u_M[${size}];
 uniform float u_Scale[${MAX_SDF_OBJECTS}];
+uniform float u_Thickness[${MAX_SDF_OBJECTS}];
 `;
 }
 
@@ -153,7 +154,7 @@ export function emitAlgebraLeaf(obj, info, activeDistance) {
         }
         lines.push(`    r[${j}] = ${terms.join(' + ')};`);
     }
-    const distExpr = `${distCall(activeDistance, algebra)} * u_Scale[${index}]`;
+    const distExpr = `${distCall(activeDistance, algebra)} * u_Scale[${index}] - u_Thickness[${index}]`;
     if (obj.bound && obj.bound.halfExtents) {
         const he = obj.bound.halfExtents;
         const box = `sdBox(p, vec3(${floatParam(he[0])}, ${floatParam(he[1])}, ${floatParam(he[2])}))`;
@@ -180,6 +181,7 @@ export function buildAlgebraUniforms(objects) {
     const { infos, totalFloats } = mvLayout(objects);
     const uM = new Float32Array(Math.max(totalFloats, 1));
     const uScale = new Float32Array(MAX_SDF_OBJECTS).fill(1.0);
+    const uThickness = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
     infos.forEach((info) => {
         if (!info) return;
         const obj = objects[info.index];
@@ -189,6 +191,7 @@ export function buildAlgebraUniforms(objects) {
             uM[info.offset + i] = (typeof M[i] === 'number') ? M[i] : 0.0;
         }
         uScale[info.index] = (typeof obj.scale === 'number') ? obj.scale : 1.0;
+        uThickness[info.index] = (typeof obj.thickness === 'number') ? obj.thickness : 0.0;
     });
-    return { uM, uScale, totalFloats };
+    return { uM, uScale, uThickness, totalFloats };
 }

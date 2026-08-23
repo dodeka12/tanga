@@ -54,6 +54,13 @@ assert(leaf.includes('opIntersect'), 'bound clips via opIntersect');
 assert(leaf.includes('sdBox(p, vec3(10.0, 10.0, 10.0))'), 'bound uses sdBox');
 assert(leaf.includes('u_M[23] * a[2]'), 'last matmul term indexed correctly');
 
+// thickness (per-object distance cutoff) is subtracted from the scaled distance
+// and packed into its own uniform.
+const thickLeaf = emitAlgebraLeaves([{ ...e3plane, thickness: 0.1 }], 'scalar_pseudo');
+assert(thickLeaf.includes('- u_Thickness[0]'), 'thickness subtracted in the leaf');
+const { uThickness } = buildAlgebraUniforms([{ ...e3plane, thickness: 0.1 }]);
+assert(Math.abs(uThickness[0] - 0.1) < 1e-6, 'thickness packed into u_Thickness');
+
 const dists = emitDistanceFunctions([e3plane], 'scalar_pseudo');
 assert(dists.includes('distOfScalarPseudo_E3(in float r[8])'), 'distance instantiated per algebra');
 assert(!dists.includes('SLOT_PSEUDO'), 'SLOT_PSEUDO token substituted away');

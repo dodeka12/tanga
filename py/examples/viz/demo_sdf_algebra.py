@@ -28,15 +28,15 @@ plane = create_entity(pga3, Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1
 viz.add(plane, color="#44ff44", calibrate=True)
 
 # A P3 line (OPNS): `op(point, line)` is a trivector that vanishes on the line.
+# `thickness=0.1` turns the zero-thickness line into a visible tube of radius
+# 0.1; `calibrate=True` scales the distance so sphere tracing steps well.
 p3 = BasisP3(opns=True)
-line = create_entity(
-    p3, Line(origin=Point(-2, 0, 0), direction=Direction(1, 0, 0))
-)
-viz.add(line, color="#ffaa00", calibrate=True)
+line = create_entity(p3, Line(origin=Point(0, 0, 0), direction=Direction(1, 1, 1)))
+viz.add(line, color="#ffaa00", calibrate=True, thickness=0.1)
 
-print("Algebra path: a green PGA3 plane and an orange P3 line, both evaluated")
-print("as mv_sdf objects (M·a → distOf). The default distance function is")
-print("'scalar_pseudo'; switch with viz.distance = 'magnitude' | 'scalar'.")
+print("Algebra path: a green PGA3 plane and an orange P3 line (a tube of radius")
+print("0.1), both evaluated as mv_sdf objects (M·a → distOf). The default distance")
+print("function is 'scalar_pseudo'; switch with viz.distance = 'magnitude' | 'scalar'.")
 
 viz.show()
 viz.wait()

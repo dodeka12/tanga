@@ -139,6 +139,7 @@ def serialize_mv(
         normalize=props.get("normalize", True),
         bound=props.get("bound"),
         calibrate=bool(props.get("calibrate", False)),
+        thickness=float(props.get("thickness", 0.0)),
     )
 
     result: dict[str, Any] = {

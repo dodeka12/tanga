@@ -96,7 +96,7 @@ def test_shape_and_ordering(name: str) -> None:
     assert wire["result_ids"][wire["slot_pseudo"]] == basis.pseudoscalar_id
     assert wire["slot_pseudo"] == len(wire["result_ids"]) - 1
     # the wire form carries the fields Phase 8 consumes.
-    for key in ("algebra", "product", "distance", "normalize", "M", "scale"):
+    for key in ("algebra", "product", "distance", "normalize", "M", "scale", "thickness"):
         assert key in wire
 
 
@@ -151,3 +151,22 @@ def test_embed_src_consistency(name: str) -> None:
     assert f"NP: {len(spec.point_ids)}" in js
     assert f"NR: {basis.algebra_dim}" in js
     assert f"SLOT_PSEUDO: {basis.pseudoscalar_id}" in js
+
+
+def test_thickness_wire() -> None:
+    from pytanga.viz.sdf.serializer import serialize_mv
+
+    basis = _basis("p3")
+    line = create_entity(
+        basis, Line(origin=Point(0.0, 0.0, 0.0), direction=Direction(1.0, 1.0, 1.0))
+    )
+
+    wire = embed_entity_mv(line, normalize=False, thickness=0.1)
+    assert wire["thickness"] == 0.1
+
+    # The `thickness` prop is forwarded through the serializer (the mv_sdf path).
+    out = serialize_mv(line, "line", {"thickness": 0.25})
+    assert out["thickness"] == 0.25
+    # Default is zero (no cutoff).
+    assert serialize_mv(line, "line2", {})["thickness"] == 0.0
+
