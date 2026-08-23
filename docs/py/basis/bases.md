@@ -118,7 +118,7 @@ Demo: [`base_pga3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examp
 `BasisPGA3` extends `Algebra` directly and implements the **Gunn/Dorst
 plane‑based projective geometric algebra** (Gunn 2016, Dorst 2020).
 It uses the Gunn/Dorst naming convention (``e₀`` for the null vector,
-``e₀^{\text{inv}}`` for its inverse).  The names ``einf`` and ``eo``
+``e₀^{\text{recip}}`` for its reciprocal).  The names ``einf`` and ``eo``
 (which belong to the N3 conformal model) are **not** exposed on this class.
 
 A detailed description is in [`basis_pga3.md`](basis_pga3.md).
@@ -135,7 +135,7 @@ pga = BasisPGA3()
 |---|---|---|
 | `e1`, `e2`, `e3` | Euclidean basis vectors | $e_1$, $e_2$, $e_3$ |
 | `e0` | $e_p + e_m$ | Gunn/Dorst null vector, $e₀² = 0$ |
-| `e0_inv` | $0.5·e_p - 0.5·e_m$ | Inverse of $e₀$, $⟨e₀·e₀^{\text{inv}}⟩₀ = 1$ |
+| `e0_recip` | $0.5·e_p - 0.5·e_m$ | Reciprocal of $e₀$, $⟨e₀·e₀^{\text{recip}}⟩₀ = 1$ |
 | `ep` | $e_4$ ($e_p² = +1$) | Internal embedding (prefer `e0`) |
 | `em` | $e_5$ ($e_m² = -1$) | Internal embedding (prefer `e0`) |
 
@@ -266,7 +266,7 @@ Detailed documentation: [basis\_n2.md](basis_n2.md).
 `BasisPGA2` extends `Algebra` directly and implements the **Gunn/Dorst
 plane‑based projective geometric algebra** (Gunn 2016, Dorst 2020) for 2D
 Euclidean geometry.  It uses the Gunn/Dorst naming convention (``e₀`` for
-the null vector, ``e₀^{\text{inv}}`` for its inverse).  The names ``einf``
+the null vector, ``e₀^{\text{recip}}`` for its reciprocal).  The names ``einf``
 and ``eo`` (which belong to the N2 conformal model) are **not** exposed
 on this class.
 
@@ -287,7 +287,7 @@ pga2 = BasisPGA2()
 |-----------|-------|-------------|
 | `e1`, `e2` | Euclidean basis vectors | $e_1$, $e_2$ |
 | `e0` | $e_p + e_m$ | Gunn/Dorst null vector, $e_0^2 = 0$ |
-| `e0_inv` | $0.5 \cdot e_p - 0.5 \cdot e_m$ | Inverse of $e_0$ |
+| `e0_recip` | $0.5 \cdot e_p - 0.5 \cdot e_m$ | Reciprocal of $e_0$ |
 | `ep` | $e_3$ ($e_p^2 = +1$) | Internal embedding (prefer `e0`) |
 | `em` | $e_4$ ($e_m^2 = -1$) | Internal embedding (prefer `e0`) |
 

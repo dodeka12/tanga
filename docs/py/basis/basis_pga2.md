@@ -29,10 +29,10 @@ pga2 = BasisPGA2()        # default dtype='float64'
 `BasisPGA2` uses the Gunn/Dorst null vector convention:
 
 $$e_0 = e_p + e_m, \quad e_0^2 = 0$$
-$$e_0^{\text{inv}} = \tfrac{1}{2}e_p - \tfrac{1}{2}e_m, \quad \langle e_0 \cdot e_0^{\text{inv}} \rangle_0 = 1$$
+$$e_0^{\text{recip}} = \tfrac{1}{2}e_p - \tfrac{1}{2}e_m, \quad \langle e_0 \cdot e_0^{\text{recip}} \rangle_0 = 1$$
 
 The names `einf` and `eo` (which belong to the N2 conformal model) are
-**not** exposed on this class. Use `e0` and `e0_inv` instead.
+**not** exposed on this class. Use `e0` and `e0_recip` instead.
 
 Background: [pga\_null\_embedding.md](pga_null_embedding.md).
 
@@ -42,7 +42,7 @@ Background: [pga\_null\_embedding.md](pga_null_embedding.md).
 |-----------|-------|-------------|
 | `e1`, `e2` | Euclidean basis vectors | $e_1$, $e_2$ |
 | `e0` | $e_p + e_m$ | Gunn/Dorst null vector, $e_0^2 = 0$ |
-| `e0_inv` | $0.5 \cdot e_p - 0.5 \cdot e_m$ | Inverse of $e_0$ |
+| `e0_recip` | $0.5 \cdot e_p - 0.5 \cdot e_m$ | Reciprocal of $e_0$ |
 | `ep` | $e_3$ ($e_p^2 = +1$) | Internal embedding (prefer `e0`) |
 | `em` | $e_4$ ($e_m^2 = -1$) | Internal embedding (prefer `e0`) |
 

@@ -10,7 +10,7 @@ Create the four 2D algebra basis classes: `BasisE2`, `BasisP2`, `BasisN2`,
 | `BasisE2` | 2 | 0 | 4 | e1, e2, e12 (pseudoscalar I) |
 | `BasisP2` | 3 | 0 | 8 | e1, e2, e3 (homogeneous), e123 (I) |
 | `BasisN2` | 4 | 0b1000 | 16 | e1, e2, ep, em; einf=ep+em, eo=-0.5·ep+0.5·em |
-| `BasisPGA2` | 4 | 0b1000 | 16 | Inherits `BasisN2`; e0=ep+em, e0_inv=0.5·ep−0.5·em |
+| `BasisPGA2` | 4 | 0b1000 | 16 | Inherits `BasisN2`; e0=ep+em, e0_recip=0.5·ep−0.5·em |
 
 ## Files to Create
 
@@ -44,7 +44,7 @@ Create the four 2D algebra basis classes: `BasisE2`, `BasisP2`, `BasisN2`,
 ### `py/pytanga/basis/pga2.py` — `BasisPGA2`
 
 - Extends `BasisN2` (same dim=4, sig=0b1000)
-- Named blades: `e1`, `e2`, `e0=ep+em`, `e0_inv=0.5·ep−0.5·em`
+- Named blades: `e1`, `e2`, `e0=ep+em`, `e0_recip=0.5·ep−0.5·em`
 - Methods: `point(x, y)` → `{1:x, 2:y, EP:1, EM:1}`, `direction(x, y)` → `{1:x, 2:y}`
 - `plane(nx, ny, d)` → `{1:nx, 2:ny, EP:d, EM:d}`
 - `_display_basis`: `[(e1,"e1"), (e2,"e2"), (e0,"e0")]`

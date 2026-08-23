@@ -57,8 +57,8 @@ PGA.op(P, Q).show("P ∧ Q")
 print("\nPlane through P, Q, d (outer product of three elements):")
 PGA.op(PGA.op(P, Q), d).show("P ∧ Q ∧ d")
 
-print("\ne0_inv exists — its geometric product with e0 is the scalar 1:")
-(e0 * PGA.e0_inv).show("e0 * e0_inv")
+print("\ne0_recip exists — its geometric product with e0 is the scalar 1:")
+(e0 * PGA.e0_recip).show("e0 * e0_recip")
 
 print("\nHigher-grade PGA3 blade — e1 ∧ e2 ∧ e0 (grade-3):")
 PGA.op(PGA.op(e1, e2), e0).show("e1 ∧ e2 ∧ e0")

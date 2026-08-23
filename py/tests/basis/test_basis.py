@@ -73,10 +73,10 @@ class TestImports:
         b = BasisPGA3()
         assert hasattr(b, "e0")
 
-    def test_basis_pga3_has_e0_inv(self):
-        """BasisPGA3 exposes e0_inv (inverse of e0)."""
+    def test_basis_pga3_has_e0_recip(self):
+        """BasisPGA3 exposes e0_recip (reciprocal of e0)."""
         b = BasisPGA3()
-        assert hasattr(b, "e0_inv")
+        assert hasattr(b, "e0_recip")
 
 
 # ---------------------------------------------------------------------------
@@ -212,16 +212,16 @@ class TestBasisPGA3:
         assert p[8] == pytest.approx(1.0)  # ep component of e₀
         assert p[16] == pytest.approx(1.0)  # em component of e₀
 
-    def test_point_inner_product_with_e0_inv(self):
-        """ip(point, e0_inv) must equal +1 for any finite point in PGA3."""
+    def test_point_inner_product_with_e0_recip(self):
+        """ip(point, e0_recip) must equal +1 for any finite point in PGA3."""
         p = self.b.multivector({1: 1, 2: 2, 4: 3, 8: 1, 16: 1})
-        result = self.b.ip(p, self.b.e0_inv)
+        result = self.b.ip(p, self.b.e0_recip)
         assert abs(scalar(result) - 1.0) < 1e-12
 
-    def test_ideal_direction_inner_product_with_e0_inv_is_zero(self):
-        """ip(direction, e0_inv) = 0 for ideal points."""
+    def test_ideal_direction_inner_product_with_e0_recip_is_zero(self):
+        """ip(direction, e0_recip) = 0 for ideal points."""
         v = self.b.multivector({1: 1})
-        result = self.b.ip(v, self.b.e0_inv)
+        result = self.b.ip(v, self.b.e0_recip)
         assert is_zero(result)
 
     def test_direction_factory(self):

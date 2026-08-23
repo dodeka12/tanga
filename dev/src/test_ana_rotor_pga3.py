@@ -47,7 +47,7 @@ def ana_versor(versor):
     q = versor.grade(4)
 
     # Project out e₀ bivector parts: bi_e is the pure Euclidean bivector
-    bi_e = bi.op(P3.e0).ip(P3.e0_inv)
+    bi_e = bi.op(P3.e0).ip(P3.e0_recip)
     bi_e_mag = bi_e.mag
 
     q_mag = q.mag
@@ -69,7 +69,7 @@ def ana_versor(versor):
         rot_pure = versor.grade(0) + bi_e
         trans = versor * rot_pure.inv()
         t_bi = trans.grade(2)
-        tv = 2.0 * t_bi.ip(P3.e0_inv) / trans.grade(0)[0]
+        tv = 2.0 * t_bi.ip(P3.e0_recip) / trans.grade(0)[0]
 
         return Motor(
             rotor=Rotor(angle=angle, axis=axis),
@@ -80,7 +80,7 @@ def ana_versor(versor):
     if bi_e_mag < 1e-15:
         if abs(s) < 1e-15:
             raise ValueError("Zero scalar — not a valid versor")
-        tv = 2.0 * bi.ip(P3.e0_inv) / s
+        tv = 2.0 * bi.ip(P3.e0_recip) / s
         return Translator(Direction(tv["e1"], tv["e2"], tv["e3"]))
 
     # ── Angle + axis (shared by Rotor & GeneralRotor) ──
@@ -92,7 +92,7 @@ def ana_versor(versor):
     axis = axis.norm()
 
     # ── Pure Rotor vs GeneralRotor ──
-    tb = bi.ip(P3.e0_inv)  # null bivector part
+    tb = bi.ip(P3.e0_recip)  # null bivector part
     if tb.mag < 1e-15:
         return Rotor(angle=angle, axis=axis)
 

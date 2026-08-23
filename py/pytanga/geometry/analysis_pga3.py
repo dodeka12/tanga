@@ -388,17 +388,19 @@ def _ana_versor(
     """Analyze a PGA3 versor by grade content.
 
     Delegates to the generic :func:`ana_versor_generic` with PGA3 parameters:
-    ``einf_like = e0``, ``e0_inv_like = e0_inv``.
+    ``einf_like = e0``, ``e0_recip_like = e0_recip``.
     """
     alg = mv._alg
     e0 = alg.e0 if hasattr(alg, "e0") else alg.multivector({EP: 1.0, EM: 1.0})
-    e0_inv = (
-        alg.e0_inv if hasattr(alg, "e0_inv") else alg.multivector({EP: 0.5, EM: -0.5})
+    e0_recip = (
+        alg.e0_recip
+        if hasattr(alg, "e0_recip")
+        else alg.multivector({EP: 0.5, EM: -0.5})
     )
     return ana_versor_generic(
         mv,
         einf_like=e0,
-        e0_inv_like=e0_inv,
+        e0_recip_like=e0_recip,
         is_2d=False,
     )
 

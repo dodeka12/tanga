@@ -25,7 +25,7 @@ in the `geometry.create_*` / `analysis_*` code to build blades directly.
 | `BasisN3` | — (raw basis; no geometry-creating methods) |
 
 The classes keep **raw** named-basis blades (`e1`, `e2`, `einf`, `eo`, `e0`,
-`e0_inv`, `I`, etc.) and any non-geometry conveniences (none of the above remain).
+`e0_recip`, `I`, etc.) and any non-geometry conveniences (none of the above remain).
 
 ---
 

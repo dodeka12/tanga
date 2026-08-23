@@ -26,12 +26,12 @@ Classify the versor by directly testing its geometric content, not its factors:
 
 | Test | Meaning |
 |---|---|
-| `V · e0_inv` contains non-zero E1/E2/E3 parts | V has null bivector (translational) content |
+| `V · e0_recip` contains non-zero E1/E2/E3 parts | V has null bivector (translational) content |
 | `V ^ e0` contains grade > 1 components | V has Euclidean bivector (rotational) content |
 
 Classification:
 
-| `V · e0_inv` has E1/E2/E3 | `V ^ e0` has grade > 1 | Result |
+| `V · e0_recip` has E1/E2/E3 | `V ^ e0` has grade > 1 | Result |
 |---|---|---|
 | No | Yes | **Rotor** |
 | Yes | No | **Translator** |
@@ -39,7 +39,7 @@ Classification:
 | No | No | Error: unrecognized |
 
 Implement two helper functions:
-- `_versor_has_null_part(versor, basis)` — compute `V · e0_inv`, check for E1/E2/E3 components
+- `_versor_has_null_part(versor, basis)` — compute `V · e0_recip`, check for E1/E2/E3 components
 - `_versor_has_euclidean_bivector(versor, basis)` — compute `V ^ e0`, check for grade > 1
 
 ### 3. Triple reflection (n == 3)

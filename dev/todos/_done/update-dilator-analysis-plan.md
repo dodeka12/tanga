@@ -223,7 +223,7 @@ def _classify_double_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
         return ana_versor_generic(
             mv,
             einf_like=einf,
-            e0_inv_like=-eo,
+            e0_recip_like=-eo,
             extract_translator=_translator_from_versor,
             is_2d=False,
         )

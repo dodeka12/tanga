@@ -7,12 +7,9 @@ from __future__ import annotations
 
 import math
 
-from pytanga.algebra._algebra import Algebra
 from pytanga.basis import BasisPGA3
 from pytanga.geometry import Geometry
-from pytanga.geometry.analysis import analyze_entity, analyze_operator
-from pytanga.geometry.create import create_entity, create_operator
-from pytanga.geometry.entities import Direction, Line, Plane, Point
+from pytanga.geometry.entities import Direction, Plane, Point
 from pytanga.geometry.operators import (
     GeneralRotor,
     Motor,
@@ -35,7 +32,7 @@ def ana_rotor(rot):
     bi = rot.grade(2)
     q = rot.grade(4)
 
-    bi_e = bi.op(P3.e0).ip(P3.e0_inv)
+    bi_e = bi.op(P3.e0).ip(P3.e0_recip)
     bi_e.show("bi_e")
     bi_e_mag = bi_e.mag
 
@@ -55,7 +52,7 @@ def ana_rotor(rot):
         if bi_e_mag < 1e-15:
             raise ValueError("Given multivector cannot be interpreted as operator")
 
-        tb = bi.ip(P3.e0_inv)
+        tb = bi.ip(P3.e0_recip)
         tb.show("tb")
         if tb.mag < 1e-15 or abs(s) < 1e-15:
             raise ValueError("Given multivector cannot be interpreted as operator")
@@ -63,7 +60,7 @@ def ana_rotor(rot):
         rot_pure = rot.grade(0) + bi_e
         trans = rot * rot_pure.inv()
         t_bi = trans.grade(2)
-        tb = 2.0 * t_bi.ip(P3.e0_inv) / trans.grade(0)[0]
+        tb = 2.0 * t_bi.ip(P3.e0_recip) / trans.grade(0)[0]
         tb.show("tb")
 
         return Motor(
@@ -78,11 +75,11 @@ def ana_rotor(rot):
         print("test for translator")
         if abs(s) < 1e-15:
             raise ValueError("Given multivector cannot be interpreted as operator")
-        tb = 2.0 * bi.ip(P3.e0_inv) / s
+        tb = 2.0 * bi.ip(P3.e0_recip) / s
         tb.show("tb")
         return Translator(Direction(tb["e1"], tb["e2"], tb["e3"]))
 
-    tb = bi.ip(P3.e0_inv)
+    tb = bi.ip(P3.e0_recip)
     tb.show("tb")
     if tb.mag < 1e-15:
         return Rotor(angle, axis=Direction(axis["e1"], axis["e2"], axis["e3"]))

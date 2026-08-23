@@ -56,12 +56,12 @@ The pair ``(e_p, e_m)`` generates the 5‑dimensional algebra
 **G(5, 0b10000)**. The subspace ``{e₁, e₂, e₃, e₀}`` where
 ``e₀ = e_p + e_m`` is algebraically isomorphic to the Gunn/Dorst 4D PGA.
 
-The inverse of the null vector is:
+The reciprocal of the null vector is:
 
 $$
-e₀^{\text{inv}} = \tfrac{1}{2}\,e_p - \tfrac{1}{2}\,e_m
+e₀^{\text{recip}} = \tfrac{1}{2}\,e_p - \tfrac{1}{2}\,e_m
 \qquad
-\langle e₀ \cdot e₀^{\text{inv}} \rangle_0 = 1
+\langle e₀ \cdot e₀^{\text{recip}} \rangle_0 = 1
 $$
 
 This embedding technique is fully documented in
@@ -83,7 +83,7 @@ pga.e1      # e₁, blade ID 1
 pga.e2      # e₂, blade ID 2
 pga.e3      # e₃, blade ID 4
 pga.e0      # e₀ = ep + em, the Gunn/Dorst null vector
-pga.e0_inv  # inverse of e₀ = 0.5·ep − 0.5·em
+pga.e0_recip  # reciprocal of e₀ = 0.5·ep − 0.5·em
 
 # Internal embedding vectors (private; prefer e0)
 pga.ep      # e₄, blade ID 8, ep² = +1
@@ -265,7 +265,7 @@ Euclidean factors) and translator (from versor coefficients).
 | GeneralRotor | ✓ | ✓ | Rotation about displaced axis |
 | Motor | ✓ | ✓ | |
 | Inversion | ✗ | ✓ | Requires eo as independent element |
-| Dilator | ✗ | ✓ | Requires ``E = e₀ ∧ e₀^{\text{inv}}`` |
+| Dilator | ✗ | ✓ | Requires ``E = e₀ ∧ e₀^{\text{recip}}`` |
 
 ---
 
@@ -278,7 +278,7 @@ grade‑1 IPNS point vector ``P = x·e₁ + y·e₂ + z·e₃ + α·e₀``, the
 homogeneous weight ``α`` is extracted via:
 
 $$
-\alpha = \langle P \cdot e₀^{\text{inv}} \rangle_0
+\alpha = \langle P \cdot e₀^{\text{recip}} \rangle_0
 $$
 
 The Euclidean coordinates are then ``(x/α, y/α, z/α)``. This handles
