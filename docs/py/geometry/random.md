@@ -3,7 +3,7 @@
 The `pytanga.geometry` submodule provides deterministic, seedable random
 generators for geometric entities.  Instead of hand-rolling random
 coordinates, you build a **generator** object (`RndPoint`, `RndDirection`)
-and pass it to a [`Geometry`](_geometry.py) instance, which materializes it
+and pass it to a [`Geometry`](https://github.com/dodeka12/tanga/blob/main/py/pytanga/geometry/_geometry.py) instance, which materializes it
 with the geometry's own random number generator and produces multivectors.
 
 ## Seeding

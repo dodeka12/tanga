@@ -335,11 +335,11 @@ plugins:
       their embedded viewers
 - [x] Grep built HTML to confirm no stray `localhost:8765` iframes
 
-Validation notes: `mkdocs build --strict` is clean for all viz changes — both
+Validation notes: `mkdocs build --strict` passes cleanly (exit 0). Both
 notebooks execute (`entities.ipynb` embeds 10 static viewers, `static.ipynb`
-embeds 2) and no live `localhost` iframes remain. Four pre-existing warnings
-persist for `py/geometry/*.md` linking `_geometry.py`; they are unrelated to
-this restructure and were present before it.
+embeds 2) and no live `localhost` iframes remain. Four pre-existing
+`_geometry.py` link warnings in `py/geometry/*.md` were also fixed (links now
+point at the GitHub source file).
 
 ## Validation
 

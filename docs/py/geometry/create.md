@@ -3,7 +3,7 @@
 The creation pipeline constructs multivectors from geometric entity/operator
 dataclasses. It is the inverse of the [analysis pipeline](analysis.md).
 
-The recommended API is a bound [`Geometry`](_geometry.py) instance:
+The recommended API is a bound [`Geometry`](https://github.com/dodeka12/tanga/blob/main/py/pytanga/geometry/_geometry.py) instance:
 
 ```python
 from pytanga.geometry import Geometry
