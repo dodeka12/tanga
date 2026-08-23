@@ -59,12 +59,26 @@ for dt in viz.animate(fps=30):
 ```
 
 To add fresh objects each frame instead, use `auto_clear=True` (anything added
-before the loop persists):
+before the loop persists). This is concise for **quick, short scripts** and
+one-off demos, but **less performant** than updating in place above (each frame
+removes and recreates the previous frame's objects):
 
 ```python
+import math
+from pytanga.geometry import Point
+from pytanga.viz import Visualizer
+
+viz = Visualizer()
+viz.show()  # start the server and render inline
+viz(Point(0, 0, 0), color="#ffffff")  # persists across frames
+
+angle = 0.0
 for dt in viz.animate(fps=30, auto_clear=True):
+    angle += 3.0 * dt
     viz(Point(3 * math.cos(angle), 3 * math.sin(angle), 0), color="#ff4444")
     viz.flush()
+    if angle > 2 * math.pi:  # stop after one orbit
+        break
 ```
 
 ## Export

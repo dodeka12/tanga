@@ -17,8 +17,7 @@ load from CDN — zero frontend build step, no npm, no bundler.
 from pytanga.viz import Visualizer
 from pytanga.geometry import Point, Sphere, Plane, Direction
 
-viz = Visualizer()
-with viz:  # clear + show on entry, flush on exit
+with Visualizer() as viz:  # clear + show on entry, flush on exit
     viz(Point(1, 2, 3), color="#ff4444")
     viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.4)
     viz(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.3)
@@ -26,18 +25,73 @@ with viz:  # clear + show on entry, flush on exit
 
 ### Multiple Scenes
 
-```python
-# Create additional named scenes
-details = viz.scene("details")
-details.add(Sphere(Point(0, 0, 0), radius=2), opacity=0.3)
-details.set_title("Close-up Detail")
+A `Visualizer` owns one server; named scenes are just additional URL paths on
+that server (`http://localhost:8765/<name>`). You get a scene handle with
+`viz.scene("name")` and use it like the main visualizer — `add()`, styles,
+labels, controls, and animation all work per scene:
 
-# Side-by-side display in Jupyter
-viz.display_row(
-    (viz.scene(""), None),        # main scene
-    (details, "browser-right"),   # named scene
-)
+```python
+from pytanga.geometry import Point, Sphere
+from pytanga.viz import Visualizer
+
+viz = Visualizer(reuse_existing=False)
+
+overview = viz.scene("overview")
+detail = viz.scene("detail")
+
+with overview:  # reset + show() this scene, then flush on exit
+    overview.set_title("Overview")
+    overview.add(Sphere(Point(0, 0, 0), radius=2), color="#4488ff", opacity=0.3)
+
+with detail:    # reset + show() this scene in its own tab, then flush
+    detail.set_title("Detail")
+    detail.add(Sphere(Point(2, 1, 0), radius=1), color="#ffcc00", opacity=0.8)
+
+viz.wait()  # keep running until Ctrl+C
 ```
+
+`VizSceneHandle` is a context manager, so `with scene:` clears the scene,
+opens it in a browser, and flushes on exit — the same ergonomics as the main
+`Visualizer`.
+
+!!! info "Does `show()` open a new tab?"
+    With `reuse_existing=False`, yes — each scene's `show()` opens a fresh tab
+    for that scene's URL immediately.
+
+    The default is `reuse_existing=True`, where `show()` prints a prompt and
+    waits for an already-open tab to reconnect (press Enter to open a new tab
+    instead of waiting). Pass `Visualizer(reuse_existing=False)` for the
+    open-a-tab-per-scene behaviour shown above.
+
+    In Jupyter, `show()` renders inline instead of opening a browser tab — use
+    `viz.display_row((overview, None), (detail, None))` for side-by-side views.
+
+Runnable example: [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_multi_scene.py).
+
+## Use Cases
+
+- **Python script** — [Use Cases — Scripts](use-cases-scripts.md)
+    - **One-off demo**
+        - **No animation** — context manager (`with viz: …`), see [Interactive Visualizer](use-cases-scripts.md#interactive-visualizer)
+        - **Animation** — `animate(auto_clear=True)` for quick short scripts, see [Animation](use-cases-scripts.md#animation)
+    - **Performance / long-running**
+        - **No animation** — build the scene, then `show()` + `wait()`
+        - **Animation** — pre-create with `viz(...)` and update `.entity` in place, see [Frame streaming](use-cases-scripts.md#frame-streaming-python-driven)
+    - **Interactive** — [VisualizerApp](app.md)
+    - **Static snapshot**
+        - **Single snapshot** — `viz.export_snapshot("scene.html")` (standalone HTML file), see [Standalone HTML](export/html.md)
+        - **Animation recording** — record a loop with `start_animation_recording()` and export standalone animated HTML, see [Animated HTML](export/html.md#animated-html)
+- **Jupyter notebook** — [Use Cases — Notebooks](use-cases-notebooks.md)
+    - **One-off demo**
+        - **No animation** — context manager, see [Interactive Visualizer](use-cases-notebooks.md#interactive-visualizer)
+        - **Animation** — `animate(auto_clear=True)`, see [Animation](use-cases-notebooks.md#animation)
+    - **Performance / long-running**
+        - **No animation** — idempotent `show()`/`display()` re-renders
+        - **Animation** — pre-create with `viz(...)` and update `.entity` in place, see [Animation](use-cases-notebooks.md#animation)
+    - **Interactive** — [VisualizerApp](app.md)
+    - **Static snapshot**
+        - **Single snapshot** — `viz.display_snapshot()` (embedded inline), see [Serverless Display](jupyter.md#serverless-display-display_snapshot)
+        - **Animation recording** — record a loop and export standalone animated HTML, see [Animated HTML](export/html.md#animated-html)
 
 ## Topics
 
@@ -56,7 +110,7 @@ viz.display_row(
 | [PointPath](point-path.md) | Connected line segments, object trails, per-point colors, FIFO capping, gradient utilities |
 | [Title & Annotation](title-annotation.md) | Title overlay, Markdown annotation panel, LaTeX math with KaTeX |
 | [Animation](animation.md) | Frame streaming, keyframe tweening (`animate_to`), scene-aware `Timeline` sequencer |
-| [Export & Capture](export.md) | `SceneExporter`: HTML/glTF/figure export, screenshots, video capture, animated HTML |
+| [Export](export/index.md) | Standalone HTML (static + animated), glTF, figure snippets, screenshots, MP4 video |
 | [Jupyter Notebooks](jupyter.md) | Auto-detection, inline iframe, multi-scene `display_row()`, `start()`/`flush()`/`stop()` pattern |
 | [Object Interaction](object-interaction.md) | Pointer-based 3D object interaction: click, drag, scroll; `Camera` projection; event dispatch |
 | [Active Elements](active-elements/index.md) | Simplified high-level API: `ActPoint` and future self-registering interactive entities |
@@ -87,7 +141,7 @@ uv run python py/examples/viz/<script>.py
 | [`demo_scene_graph.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_scene_graph.py) | `VizGroup` + `VizObjectRef` transforms and compound animation |
 | [`demo_title_annotation.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_title_annotation.py) | Title overlay and Markdown + LaTeX annotation |
 | [`demo_screenshot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_screenshot.py) | Programmatic PNG screenshot |
-| [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/dev/src/test_viz_multi_scene.py) | Multi-scene viewer with browser targeting and navigation |
+| [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_multi_scene.py) | Two named scenes, each opened in its own browser tab via context managers |
 | [`demo_export_html.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_html.py) | Self-contained HTML and glTF export |
 | [`demo_export_figure.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_figure.py) | Presentation figure export with `FigureStyle` |
 | [`demo_animated_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animated_export.py) | Animated HTML export with JS playback engine |

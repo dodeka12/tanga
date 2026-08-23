@@ -155,6 +155,18 @@ class TestSceneConfig:
         assert d["type"] == "scene_config"
         assert "camera" not in d  # None camera should be omitted
 
+    def test_to_dict_includes_scene_field(self):
+        # The frontend filters messages via `_forMyScene(msg)` which reads
+        # `msg.scene`; scene_config must carry its scene name so a broadcast
+        # title/camera update is only applied by the matching tab.
+        sc = SceneConfig(name="overview")
+        d = sc.to_dict()
+        assert d["scene"] == "overview"
+
+        main = SceneConfig()
+        d_main = main.to_dict()
+        assert d_main["scene"] == ""
+
     def test_to_dict_omits_obsolete_keys(self):
         sc = SceneConfig()
         d = sc.to_dict()
@@ -424,6 +436,83 @@ class TestVisualizer:
         asyncio.run(viz._on_browser_animation_stop("a"))
         assert viz.interrupted("a") is True
         assert viz.interrupted("b") is False
+
+    def test_server_stop_sets_shutdown_and_all_scene_events(self):
+        import asyncio
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+        viz._interrupt_event("a")
+        viz._interrupt_event("b")
+
+        asyncio.run(viz._on_browser_animation_stop("a", scope="server"))
+
+        assert viz._shutdown_requested.is_set()
+        assert viz._interrupt_events["a"].is_set()
+        assert viz._interrupt_events["b"].is_set()
+
+    def test_server_stop_default_scope_is_scene(self):
+        import asyncio
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+
+        asyncio.run(viz._on_browser_animation_stop("detail"))
+
+        assert viz.interrupted("detail") is True
+        assert not viz._shutdown_requested.is_set()
+        # The main scene is unaffected.
+        assert viz.interrupted() is False
+
+    def test_enable_server_stop_key_stores_default_cfg(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        # _server/_loop are None, so _push_animation_stop is a no-op here; we
+        # verify the stored config only.
+        viz.enable_server_stop_key()
+        cfg = viz._server_stop_configs[""]
+        assert cfg["enabled"] is True
+        assert cfg["key"] == "q"
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_enable_server_stop_key_false_disables(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.enable_server_stop_key()
+        viz.enable_server_stop_key(enabled=False)
+        cfg = viz._server_stop_configs[""]
+        assert cfg["enabled"] is False
+        assert cfg["key"] is None
+        # Modifiers are preserved so re-enabling keeps the last config.
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_constructor_enable_server_stop_key_flag(self):
+        viz = Visualizer(
+            add_default_axes=False, add_default_grid=False, enable_server_stop_key=True
+        )
+        cfg = viz._server_stop_configs[""]
+        assert cfg["enabled"] is True
+        assert cfg["key"] == "q"
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_scene_handle_enable_server_stop_key_scoped(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        handle = viz.scene("detail")
+        handle.enable_server_stop_key()
+        assert "detail" in viz._server_stop_configs
+        assert "" not in viz._server_stop_configs
+        assert viz._server_stop_configs["detail"]["enabled"] is True
+
+    def test_scene_kwarg_enable_server_stop_key(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.scene("detail", enable_server_stop_key=True)
+        cfg = viz._server_stop_configs["detail"]
+        assert cfg["enabled"] is True
+        assert cfg["key"] == "q"
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_scene_kwarg_default_does_not_enable(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.scene("detail")
+        assert "detail" not in viz._server_stop_configs
 
     def test_animate_clears_previous_scene_interrupt(self, monkeypatch):
         # A browser "q" stop sets the per-scene interrupt; a fresh animate()

@@ -33,6 +33,30 @@ The loop ends when the scene's stop key is pressed in the browser (default
 The server is stopped automatically at interpreter exit, not when the loop
 ends, so a per-scene interrupt never tears down the server.
 
+### Stopping the whole script from the browser
+
+A second, opt-in binding — default **Ctrl+Q** — sets the global shutdown event
+(like a terminal Ctrl+C), so both `wait()` and every `animate()` loop end.
+Unlike the per-scene `q` key, it is **disabled by default** to avoid accidental
+termination. Enable it per scene with `enable_server_stop_key()`:
+
+```python
+from pytanga.viz import KeyModifier, Visualizer
+
+viz = Visualizer()
+viz.enable_server_stop_key()  # main scene: Ctrl+Q ends the whole script
+
+# Or on a named scene (only that scene's tab may stop the server):
+overview = viz.scene("overview")
+overview.enable_server_stop_key(key="x", modifiers=[KeyModifier.CTRL, KeyModifier.SHIFT])
+```
+
+The `Visualizer(enable_server_stop_key=True)` constructor flag enables the
+default Ctrl+Q binding for the **main scene**. Named scenes can opt in when
+created via `viz.scene("name", enable_server_stop_key=True)`, or afterward via
+their handle's `enable_server_stop_key()`. A scene without the binding can
+still stop its own `animate()` loop (with `q`) but cannot end the script.
+
 ### `animate()` reference
 
 | Parameter | Type | Default | Description |

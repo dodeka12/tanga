@@ -65,7 +65,9 @@ for dt in viz.animate(fps=30):  # runs until Q / Ctrl+C
 
 When you prefer to `add()` new objects every frame, pass `auto_clear=True` so
 the previous frame's objects are removed automatically (anything added *before*
-the loop persists):
+the loop persists). This is concise for **quick, short scripts** and one-off
+demos, but **less performant** than updating in place above (each frame removes
+and recreates the previous frame's objects):
 
 ```python
 import math
@@ -127,7 +129,7 @@ viz.export_snapshot("animated.html", animation=recording,
                     anim_style=AnimStyle(fps=30, loop=True))
 ```
 
-See [Export & Capture](export.md) for the full set of options.
+See [Export](export/index.md) for the full set of options.
 
 ## Example scripts
 

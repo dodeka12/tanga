@@ -37,7 +37,7 @@ one roof.
     - **glTF / GLB** for use in other 3D tools,
     - **PNG screenshots** and **MP4 video** (requires a local browser).
 
-  → [Export & Capture](py/viz/export.md)
+  → [Export](py/viz/export/index.md)
 
 - **Interactivity** — Interactive controls (sliders, dropdowns, buttons),
   pointer-based object interaction (click, drag, scroll), and a simplified

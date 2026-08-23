@@ -1,6 +1,6 @@
 # Animate `auto_clear`, `viz(...)` shorthand, and use-case docs/examples
 
-**Created:** 2026-08-22 | **Status:** Done (Phases 1–5) — Phase 6 pending
+**Created:** 2026-08-22 | **Status:** Done (Phases 1–8)
 
 ## Goal
 
@@ -20,11 +20,20 @@
      loop remove the previous frame's; concise for **quick short scripts** but
      **less performant** (per-frame remove/recreate).
 
-4. Add a **workflow overview decision tree** page that routes readers by
-   environment (notebook vs. Python script) → short test vs. performance →
-   animation vs. no-animation → interaction vs. no-interaction, and positions
-   `VisualizerApp` as the target for performant, interactive, possibly animated
-   Python scripts.
+4. Surface the **use-case routing** as a compact nested list in
+   `docs/py/viz/index.md` (above the Topics table) that routes readers by
+   environment (notebook vs. Python script) → one-off vs. performance →
+   interactive, with **animation vs. no-animation** under one-off/performance,
+   and positions `VisualizerApp` as the target for interactive use cases.
+5. Re-scope `docs/py/index.md` to introduce only the geometric algebra part.
+   After the manual `mkdocs.yml` restructure, **Visualization** has its own
+   top-level section (with `py/viz/index.md` as its overview) and
+   `docs/py/index.md` is the **Geometric Algebra** overview — but it still
+   covers the visualizer. Trim it to the GA folders under `docs/py/`
+   (algebra, basis, blade-mask, expression, geometry, matrix, solver, tensors)
+   and remove the viz overview (topics-table row, the "2D + 3D algebras"
+   `Visualizer` note, and the Three.js intro), pointing readers to the
+   Visualization section (`docs/py/viz/index.md`) instead.
 
 ## Implementation status
 
@@ -39,27 +48,47 @@ restarting after a browser stop key).
 | 3 — docs | `use-cases-scripts.md`, `use-cases-notebooks.md`, `app.md`, nav, `index.md`, `animation.md`, `visualizer.md`, `jupyter.md` | Done (see note) |
 | 4 — notebooks | `interactive.ipynb`, `animation.ipynb`, `export.ipynb` | Done (`a5eb12a`) |
 | 5 — changelog | New Features bullets for `auto_clear` and `viz(...)` | Done |
-| 6 — workflow decision tree | `workflow-overview.md` + nav + `index.md` link + `VisualizerApp` positioning | Pending |
+| 6 — use-case routing | nested use-case list in `docs/py/viz/index.md` + `VisualizerApp` positioning | Done |
+| 7 — GA-only `index.md` | Re-scope `docs/py/index.md` to geometric algebra only | Done |
+| 8 — export docs split | `docs/py/viz/export/` (index/html/gltf/video-image) + nav + use-case snapshot entries | Done |
 
 Open follow-ups:
 
-- **Workflow overview decision tree (Phase 6).** A new overview page
-  (`workflow-overview.md`) routes readers by environment — notebook vs. Python
-  script — then short test vs. performance, then animation vs. no-animation,
-  then interaction vs. no-interaction. It positions `VisualizerApp` as the
-  target for **performant, interactive, possibly animated Python scripts** and
-  links each branch to its use-case page. Not yet implemented.
+- **Use-case routing in `index.md` (Phase 6).** A standalone
+  `workflow-overview.md` decision tree was replaced with a compact nested list
+  above the `docs/py/viz/index.md` Topics table. It routes readers by
+  environment — notebook vs. Python script — then one-off vs. performance →
+  interactive, with animation vs. no-animation under one-off/performance.
+  `VisualizerApp` is positioned as the target for **interactive** use cases, and
+  each branch links to the page/pattern that covers it.
 - **Docs/examples performance framing.** `auto_clear` is a *second* way to run
   a frame loop — next to pre-creating objects with `viz(...)` and updating them
   in place. It is concise for **quick, short scripts** but **less performant**
   (per-frame remove/recreate). `animation.md` already calls the update-in-place
-  pattern "the most efficient, allocation-free loop"; the use-cases pages and
-  the animation notebook should state this trade-off explicitly so readers know
-  when to pick each.
+  pattern "the most efficient, allocation-free loop"; the use-case pages and
+  the animation notebook now state this trade-off explicitly, and
+  `use-cases-scripts.md`/`use-cases-notebooks.md` both carry complete
+  `auto_clear` examples.
 - **`auto_clear` scene-scoping test.** `VizSceneHandle.animate` passes
   `auto_clear` through, but there is no dedicated test that `auto_clear`
   respects a named `scene_name` (the Phase 2 checklist item is only covered
   indirectly).
+- **Export docs split (Phase 8).** `docs/py/viz/export.md` was split into an
+  `export/` subsection with separate `index.md`, `html.md`, `gltf.md`, and
+  `video-image.md` pages. The `mkdocs.yml` nav now nests them under
+  Visualization. The use-case routing list in `docs/py/viz/index.md` gained
+  **Static snapshot** branches (single snapshot + animation recording) for both
+  scripts and notebooks; Jupyter single snapshots use `display_snapshot()`.
+  `docs/index.md`, `camera.md`, `styles.md`, and `use-cases-scripts.md`
+  references were updated, and the old `export.md` was removed.
+- **`docs/py/index.md` GA-only restructure (Phase 7).** `mkdocs.yml` was
+  manually restructured so **Visualization** is its own top-level section
+  (with `py/viz/index.md` as its overview) and `docs/py/index.md` is the
+  **Geometric Algebra** overview. `docs/py/index.md` now introduces only the
+  geometric algebra part (algebra, basis, blade-mask, expression, geometry,
+  matrix, solver, tensors) — the "3D & 2D Visualizer" topics-table row, the
+  "2D + 3D algebras" `Visualizer` note, and the Three.js viewer intro were
+  removed, and the intro now points to the Visualization section.
 
 ## Background (current behaviour)
 
@@ -150,22 +179,20 @@ The use-case docs are organized around two primary axes — **environment**
 performance**, then **animation vs. no-animation**, then **interaction vs.
 no-interaction**.
 
-A new **workflow overview decision tree** (`workflow-overview.md`) is inserted
-first after the Overview. It walks readers through those axes and points each
-branch at the page that covers it:
+A compact **use-case routing list** in `docs/py/viz/index.md` (above the
+Topics table) walks readers through those axes and points each branch at the
+page that covers it:
 
 - **Jupyter vs. Python script**
-  - **short test vs. performance** (allocation-sensitive / long-running)
+  - **one-off demo vs. performance**
     - **animation vs. no animation**
-      - **interaction vs. no interaction**
+  - **interactive**
 
-`VisualizerApp` is the target for **performant, interactive, possibly animated
-Python scripts** (managed lifecycle + controls + `animate()`/timeline); see
-`app.md`.
+`VisualizerApp` is the target for **interactive** use cases (managed lifecycle
++ controls + `animate()`/timeline); see `app.md`.
 
-The three use-case pages are inserted directly after it in the `mkdocs.yml`
-nav, then the existing files follow (Jupyter stays last as the detailed
-reference):
+The two use-case pages sit directly after the Overview in the `mkdocs.yml` nav,
+then the existing files follow (Jupyter stays last as the detailed reference):
 
 - `use-cases-scripts.md` — interactive / animation / export in plain scripts.
 - `use-cases-notebooks.md` — interactive (re-run), animation, export in notebooks.
@@ -203,10 +230,10 @@ New subfolder `py/examples/jupyter/` with:
 - Modify: `py/pytanga/viz/visualizer.py` (`animate(auto_clear=...)`, `__call__`)
 - Modify: `py/pytanga/viz/_scene_handle.py` (`animate(auto_clear=...)` passthrough)
 - Tests: `py/tests/viz/test_scene_session.py` (or a new `test_auto_clear.py`)
-- Add docs: `docs/py/viz/workflow-overview.md`, `docs/py/viz/use-cases-scripts.md`,
+- Add docs: `docs/py/viz/use-cases-scripts.md`,
   `docs/py/viz/use-cases-notebooks.md`, `docs/py/viz/app.md`
-- Modify docs: `mkdocs.yml`, `docs/py/viz/index.md`, `docs/py/viz/animation.md`,
-  `docs/py/viz/visualizer.md`, `docs/py/viz/jupyter.md`
+- Modify docs: `mkdocs.yml`, `docs/py/index.md`, `docs/py/viz/index.md`,
+  `docs/py/viz/animation.md`, `docs/py/viz/visualizer.md`, `docs/py/viz/jupyter.md`
 - Add examples: `py/examples/jupyter/interactive.ipynb`, `animation.ipynb`, `export.ipynb`
 - Changelog: append to `docs/changelog/2026-08-22_fix-viz.md`
 
@@ -246,15 +273,36 @@ New subfolder `py/examples/jupyter/` with:
 
 - [x] Append New Features bullets for `animate(auto_clear=...)` and `viz(...)`.
 
-### Phase 6 — Workflow overview decision tree
+### Phase 6 — Use-case routing in `index.md`
 
-- [ ] Add `docs/py/viz/workflow-overview.md`: decision tree by environment
-      (notebook vs. script) → short test vs. performance → animation vs.
-      no-animation → interaction vs. no-interaction.
-- [ ] Position `VisualizerApp` as the target for performant, interactive,
-      possibly animated Python scripts.
-- [ ] Insert it first after the Overview in `mkdocs.yml`; add an `index.md`
-      topic-table entry.
+- [x] Insert a compact nested list above the `docs/py/viz/index.md` Topics
+      table by environment (notebook vs. script) → one-off vs. performance →
+      interactive, with animation vs. no-animation under one-off/performance.
+- [x] Position `VisualizerApp` as the target for interactive use cases.
+- [x] Remove the standalone `workflow-overview.md` and its nav entry; link each
+      branch to its use-case page/pattern inline.
+
+### Phase 7 — `docs/py/index.md` GA-only restructure
+
+- [x] Re-scope `docs/py/index.md` to introduce only the geometric algebra part
+      (algebra, basis, blade-mask, expression, geometry, matrix, solver,
+      tensors) and remove the visualizer overview — the "3D & 2D Visualizer"
+      topics-table row, the "2D + 3D algebras" `Visualizer` note, and the
+      Three.js viewer intro text — pointing readers to the Visualization
+      section (`py/viz/index.md`) instead.
+
+### Phase 8 — Export docs split
+
+- [x] Split `docs/py/viz/export.md` into `docs/py/viz/export/` with
+      `index.md` (overview + topics), `html.md` (standalone + animated + figure),
+      `gltf.md` (binary glTF), and `video-image.md` (PNG screenshots + MP4
+      video via `ffmpeg`).
+- [x] Nest the four pages under Visualization in `mkdocs.yml` nav.
+- [x] Add **Static snapshot** branches (single snapshot + animation recording)
+      to the use-case routing list in `docs/py/viz/index.md` for both scripts
+      (`export_snapshot`) and notebooks (`display_snapshot`).
+- [x] Update `docs/index.md`, `camera.md`, `styles.md`, `use-cases-scripts.md`
+      references; remove the old `export.md`.
 
 ## Notes / edge cases
 

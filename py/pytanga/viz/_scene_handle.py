@@ -259,6 +259,21 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Create a :class:`Timeline` targeting this scene."""
         return self._viz._scene_timeline(self._name)
 
+    def enable_server_stop_key(
+        self,
+        enabled: bool = True,
+        key: str = "q",
+        modifiers: list[KeyModifier] = [KeyModifier.CTRL],
+    ) -> None:
+        """Enable or disable a browser-triggered full-server stop key for this scene.
+
+        When enabled and pressed in this scene's tab, it sets the global
+        shutdown event so ``wait()`` returns and every ``animate()`` loop ends.
+        """
+        self._viz._set_server_stop_key(
+            self._name, enabled=enabled, key=key, modifiers=modifiers
+        )
+
     def animate(
         self,
         *,

@@ -212,7 +212,7 @@ zoom while entities move.
 The `Ctrl+S` shortcut captures the WebGL canvas (3D scene). It does not
 capture DOM overlays (labels, title, annotation panel) — for full-viewport
 captures including overlays, use `SceneExporter.screenshot()` (see
-[Export & Capture](export.md)).
+[Video & Image Export](export/video-image.md)).
 
 ## Scene Configuration
 

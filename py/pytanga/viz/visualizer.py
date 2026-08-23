@@ -116,6 +116,10 @@ class Visualizer(_JupyterDisplayMixin):
         # each scene.  Independent of the server and fully authoritative.
         add_default_axes: bool = True,
         add_default_grid: bool = True,
+        # When True, enable the browser-triggered full-server stop key
+        # (Ctrl+Q by default) for the main scene only.  Named scenes opt in via
+        # ``VizSceneHandle.enable_server_stop_key()``.
+        enable_server_stop_key: bool = False,
     ) -> None:
         if space_dim is None:
             space_dim = _deduce_space_dim(camera) or 3
@@ -155,6 +159,8 @@ class Visualizer(_JupyterDisplayMixin):
         # plus lazily-created per-scene events (browser-side stop key).
         self._interrupt_events: dict[str, threading.Event] = {}
         self._scene_interrupt_configs: dict[str, dict[str, Any]] = {}
+        # Per-scene browser-triggered full-server stop bindings (opt-in).
+        self._server_stop_configs: dict[str, dict[str, Any]] = {}
 
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
@@ -189,15 +195,31 @@ class Visualizer(_JupyterDisplayMixin):
         # Seed default axes/grid immediately — independent of server start.
         self._add_default_scene_objects("")
 
+        # Opt-in browser-triggered server stop for the main scene.
+        if enable_server_stop_key:
+            self.enable_server_stop_key()
+
     # ── Scene access ─────────────────────────────────────────
 
-    def scene(self, name: str) -> VizSceneHandle:
+    def scene(
+        self,
+        name: str,
+        *,
+        enable_server_stop_key: bool = False,
+    ) -> VizSceneHandle:
         """Get or create a named scene, returning a :class:`VizSceneHandle`.
 
         The handle exposes the full entity/control/animation API scoped to
         that scene.  Scenes inherit the visualizer's default styles.
 
         Names may contain slashes for grouping, e.g. ``"slides/intro"``.
+
+        Args:
+            name: Scene name (URL-path-friendly).
+            enable_server_stop_key: When ``True``, enable the
+                browser-triggered full-server stop key (Ctrl+Q) for this
+                scene, equivalent to calling
+                ``viz.scene(name).enable_server_stop_key()`` afterward.
         """
         if name not in self._scenes:
             cfg = SceneConfig(
@@ -211,6 +233,10 @@ class Visualizer(_JupyterDisplayMixin):
                 cfg, name=name, styles=self._global_styles.copy()
             )
             self._add_default_scene_objects(name)
+        if enable_server_stop_key:
+            self._set_server_stop_key(
+                name, enabled=True, key="q", modifiers=[KeyModifier.CTRL]
+            )
         return VizSceneHandle(self, name)
 
     @property
@@ -825,6 +851,46 @@ class Visualizer(_JupyterDisplayMixin):
         self._scene_interrupt_configs[scene_name] = config
         self._push_animation_stop(scene_name)
 
+    def enable_server_stop_key(
+        self,
+        enabled: bool = True,
+        key: str = "q",
+        modifiers: list[KeyModifier] = [KeyModifier.CTRL],
+    ) -> None:
+        """Enable or disable the browser-triggered full-server stop key.
+
+        Configures the binding for the **main scene**.  When pressed in that
+        scene's browser tab, it sets the global shutdown event so
+        :meth:`wait` returns and every running :meth:`animate` loop ends —
+        mirroring a terminal Ctrl+C / SIGTERM.  Server teardown still happens
+        via :meth:`wait` / the ``atexit`` hook; the key only requests shutdown.
+
+        Args:
+            enabled: ``True`` activates the binding, ``False`` disables it.
+            key: The key to match (case-insensitive), default ``"q"``.
+            modifiers: Modifiers that must be held, default ``[KeyModifier.CTRL]``
+                (i.e. Ctrl+Q).
+        """
+        self._set_server_stop_key(
+            "", enabled=enabled, key=key, modifiers=modifiers
+        )
+
+    def _set_server_stop_key(
+        self,
+        scene_name: str,
+        *,
+        enabled: bool,
+        key: str,
+        modifiers: list[KeyModifier],
+    ) -> None:
+        normalized = self._normalize_stop_modifiers(modifiers)
+        self._server_stop_configs[scene_name] = {
+            "enabled": enabled,
+            "key": key if enabled else None,
+            "modifiers": [m.value for m in normalized],
+        }
+        self._push_animation_stop(scene_name)
+
     def _push_animation_stop(self, scene_name: str = "") -> None:
         """Push the stored animation-stop config to the frontend (thread-safe)."""
         if self._server is None or self._loop is None:
@@ -840,20 +906,41 @@ class Visualizer(_JupyterDisplayMixin):
         config = self._scene_interrupt_configs.get(
             scene_name, {"enabled": False, "key": None, "modifiers": []}
         )
+        server_config = self._server_stop_configs.get(
+            scene_name, {"enabled": False, "key": None, "modifiers": []}
+        )
         message: dict[str, Any] = {
             "type": "animation_stop_config",
             "scene": scene_name,
         }
         message.update(config)
+        message["server_enabled"] = server_config["enabled"]
+        message["server_key"] = server_config["key"]
+        message["server_modifiers"] = server_config["modifiers"]
         await self._server.push_raw(json.dumps(message))
 
-    async def _on_browser_animation_stop(self, scene_name: str) -> None:
+    async def _on_browser_animation_stop(
+        self, scene_name: str, scope: str = "scene"
+    ) -> None:
         """Handle an ``animation_stop`` message from the browser.
 
-        Sets only the requested scene's interrupt event (unless a global
-        shutdown is already requested).  Never tears the server down — that is
-        the job of the SIGINT handler / ``atexit`` hook.
+        With ``scope="scene"`` (the default) only the requested scene's
+        interrupt event is set.  With ``scope="server"`` the global shutdown
+        event is set (and every per-scene interrupt event), so :meth:`wait`
+        returns and all :meth:`animate` loops end — mirroring a terminal
+        Ctrl+C / SIGTERM.  Never tears the server down here: teardown is the
+        job of :meth:`wait` / the ``atexit`` hook.
         """
+        if scope == "server":
+            logger.info(
+                "Browser requested full server stop (scene %r)", scene_name
+            )
+            shutdown = getattr(self, "_shutdown_requested", None)
+            if shutdown is not None:
+                shutdown.set()
+            for event in self._interrupt_events.values():
+                event.set()
+            return
         logger.info("Browser requested animation stop for scene %r", scene_name)
         self._interrupt_event(scene_name).set()
 
