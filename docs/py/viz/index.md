@@ -43,6 +43,7 @@ viz.display_row(
 
 | Guide | What you will learn |
 |-------|---------------------|
+| [SDF Viewer](sdf-viewer.md) | Ray-marched signed-distance-function viewer: analytic + algebra paths, distance/opacity functions, boolean combine modes |
 | [Visualizer API](visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
 | [Camera & Controls](camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`, `View3dConfig`, auto-fit vs explicit, orbit controls, Ctrl+S screenshots |
 | [Axes & Grid](axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, value labels, defaults |

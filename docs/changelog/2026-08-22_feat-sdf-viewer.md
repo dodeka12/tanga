@@ -114,6 +114,63 @@
   viewer's `AxesHelper`), hidden behind objects in front and drawn over
   objects behind.
 
+- **Algebra SDF embedding backend (Phase 7)** — added
+  `sdf/algebra_embedding.py`, which reduces a raw MV to a partially-contracted
+  product matrix `M` (result-blade × point-blade) so the shader computes
+  `r = M·a`, `d = distOf(r)` with no algebra branching. Covers `e3`/`p3`/`n3`/
+  `pga3` with per-algebra OPNS point embeddings (including N3's quadratic
+  `½ρ²·e∞` term); the point embedding is emitted as a GLSL `evalPoint` snippet
+  in `templates/sdf/algebra/embeds.js`, kept in lockstep with `M`'s blade
+  ordering. `SdfVisualizer.add()` now accepts a raw `MV` (serialized as an
+  `mv_sdf` object without routing through `geometry.analyze()`), with
+  `normalize`/`bound`/`calibrate` controls. Unit tests in
+  `py/tests/viz/sdf/test_algebra_embedding.py`.
+
+- **Algebra SDF shader evaluator (Phase 8)** — added
+  `templates/sdf/algebra/eval.js`, which emits each `mv_sdf` object as a
+  `dist_mv_<i>` algebra leaf *inside* the single composed `map()`: per-object
+  `M`/`bound`/`scale` pack into flat `u_M[]`/`u_Scale[]` uniforms, the active
+  distance function is instantiated per distinct algebra (so `NR`/`SLOT_PSEUDO`
+  are correct), and mixed-algebra scenes fold with analytic objects and material
+  ids. `rebuildProgram()` now splits a program's *structure* (kinds/combines/
+  embeds/distance/opacity) from its *data* (matrix/material uniforms), so
+  data-only changes upload uniforms without recompiling. A Node smoke test
+  (`dev/src/sdf_algebra_smoke.mjs`) and `py/tests/viz/sdf/test_algebra_eval.py`
+  assert the assembly has no `if (algebra/distance/entity/opacity …)` branching.
+
+- **Algebra SDF gradient calibration + validation (Phase 9)** — added
+  `sdf/calibration.py` (finite-difference gradient probe, surface-point finder,
+  per-object `scale = 1/|∇d|`), wired into `embed_entity_mv(..., calibrate=True)`
+  and `SdfVisualizer.add(..., calibrate=True)`. Cross-validates the algebra SDF
+  zero-set against the analytic plane per algebra, verifies `|∇d| ≈ 1` after
+  calibration, and locks in the per-algebra signedness (e3/n3 plane → `-z`,
+  p3 → `+z`, pga3 → unsigned `|z|·√2`). Unit tests in
+  `py/tests/viz/sdf/test_calibration.py`.
+
+- **CSG boolean combine modes + signedness gate + smooth variants (Phase 11)** —
+  the per-object `combine`/`polarity` fold (union/intersection/subtract) now has
+  a signedness gate (`DistanceFunction.signed`; backend warns and the frontend
+  `warnUnsignedBooleans` warns when `intersection`/`subtract` are used with the
+  unsigned `magnitude` mode), and smooth variants (`smooth_union`/
+  `smooth_intersection`/`smooth_subtract` with a per-object `smoothness`) fold
+  via the Phase 1 `vec2` smooth combinators, blending the material id by the
+  blend factor. Unit tests in `py/tests/viz/sdf/test_combine.py`.
+
+- **Opacity transfer functions (Phase 12)** — added the
+  `sdf/opacity.py` `OpacityTransfer` enum (`step` default, `linear`, `sigmoid`)
+  and the `templates/sdf/algebra/opacities.js` GLSL snippet registry. The
+  `opacityOf(d, ε)` function is now emitted through the Phase 8 assembly (the
+  Phase 2 step stub moved out of `raymarch.glsl`), and the surface path applies
+  `col *= opacityOf(d, ε)` where the per-object `opacity` is the falloff breadth
+  ε (surface alpha for `step`). Unit tests in
+  `py/tests/viz/sdf/test_opacity.py`.
+
+- **SDF viewer examples + docs** — added `demo_sdf_algebra.py` (MV rendering
+  with mixed algebras + calibration), `demo_sdf_booleans.py` (per-object
+  `combine=`/`polarity=`), and `demo_sdf_opacity.py` (distance → opacity
+  transfers), a headless smoke test (`dev/src/test_viz_sdf.py`), and a
+  `docs/py/viz/sdf-viewer.md` guide (linked from the viz index and mkdocs nav).
+
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed
   `-angle` to IQ's `rotationAxisAngle`, which already negates the angle

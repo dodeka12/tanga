@@ -1,11 +1,9 @@
 # Viz SDF Viewer — Overview
 
-**Created:** 2026-08-22 | **Status:** In progress — Phases 1–6c implemented
-(plus configurable lighting, shader-drawn grid/axes overlays, the object/light
-update API, and browser reconnect/version parity); Phases 7–9, 11 and 12
-(algebra embedding backend + shader eval + calibration + CSG booleans + opacity
-transfers) implemented; Phase 10 (finalize: examples, docs, changelog, PR)
-remains.
+**Created:** 2026-08-22 | **Status:** Implemented — Phases 1–12 complete (analytic
+path, WebGL2 raymarcher, distance/opacity registries, algebra embedding + shader
+eval + calibration, CSG booleans, opacity transfers, examples, docs, changelog).
+Only the final pull request remains (see `dev/workflows/pull-request.md`).
 
 ## Target
 

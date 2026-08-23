@@ -124,6 +124,7 @@ nav:
       - Round-trip examples: py/geometry/round-trip.md
     - 3D Visualization:
       - Overview: py/viz/index.md
+      - SDF Viewer: py/viz/sdf-viewer.md
       - Visualizer API: py/viz/visualizer.md
       - Camera & Controls: py/viz/camera.md
       - Axes & Grid: py/viz/axes-grid.md
