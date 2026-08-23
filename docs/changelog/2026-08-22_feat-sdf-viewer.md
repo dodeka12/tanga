@@ -106,6 +106,14 @@
   (mirroring the standard viewer's `renderers/factory.js`) are the seam for
   future overlay kinds (axes, crosshair, …).
 
+- **Shader-drawn coordinate axes overlays (`SdfOverlay` / `Axes`)** —
+  `SdfVisualizer` gained `add_default_axes` (three default X/Y/Z axis lines
+  from the origin) and accepts `Axes` objects through `add()`: three infinite
+  red/green/blue lines drawn as depth-composited, `fwidth()`-AA'd overlays
+  that extend only along their positive directions (like the standard
+  viewer's `AxesHelper`), hidden behind objects in front and drawn over
+  objects behind.
+
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed
   `-angle` to IQ's `rotationAxisAngle`, which already negates the angle

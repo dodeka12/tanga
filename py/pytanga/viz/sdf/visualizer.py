@@ -28,7 +28,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 from .composed import Composed
 from .distance import DistanceFunction
 from .lights import DirectionalLight, Light, serialize_light
-from .overlay import Grid, SdfOverlay, serialize_overlay
+from .overlay import Axes, Grid, SdfOverlay, serialize_overlay
 from .primitives import SdfNode
 from .serializer import serialize_entity
 
@@ -63,6 +63,7 @@ class SdfVisualizer:
         camera: Any | None = None,  # CameraConfig | View3dConfig | None
         add_default_light: bool = True,
         add_default_grid: bool = True,
+        add_default_axes: bool = True,
     ) -> None:
         from pytanga.viz.camera import _normalize_camera_config
 
@@ -100,11 +101,13 @@ class SdfVisualizer:
         if add_default_light:
             self._add_default_light_source()
 
-        # Overlays: one default ground grid, unless disabled (mirrors
-        # add_default_grid).
+        # Overlays: one default ground grid + default coordinate axes, unless
+        # disabled (mirrors add_default_grid / add_default_axes).
         self._overlays: dict[str, SdfOverlay] = {}
         if add_default_grid:
             self._overlays["__default_grid__"] = Grid()
+        if add_default_axes:
+            self._overlays["__default_axes__"] = Axes()
 
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None

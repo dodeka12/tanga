@@ -57,8 +57,41 @@ class Grid(SdfOverlay):
         self.opacity = float(opacity)
 
 
+class Axes(SdfOverlay):
+    """Three infinite coordinate axes (X/Y/Z) drawn from ``origin``.
+
+    Each axis extends only along its positive direction (like the standard
+    viewer's ``AxesHelper``); ``color_x`` / ``color_y`` / ``color_z`` set the
+    three line colors and ``opacity`` the shared line opacity.
+    """
+
+    def __init__(
+        self,
+        *,
+        origin: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        color_x: str = "#ff0000",
+        color_y: str = "#00ff00",
+        color_z: str = "#0000ff",
+        opacity: float = 1.0,
+    ) -> None:
+        self.origin = (float(origin[0]), float(origin[1]), float(origin[2]))
+        self.color_x = color_x
+        self.color_y = color_y
+        self.color_z = color_z
+        self.opacity = float(opacity)
+
+
 def serialize_overlay(overlay: SdfOverlay) -> dict[str, Any]:
     """Serialize an overlay to its wire form (shared with the frontend)."""
+    if isinstance(overlay, Axes):
+        return {
+            "kind": "axes",
+            "origin": list(overlay.origin),
+            "color_x": overlay.color_x,
+            "color_y": overlay.color_y,
+            "color_z": overlay.color_z,
+            "opacity": overlay.opacity,
+        }
     if isinstance(overlay, Grid):
         return {
             "kind": "grid",

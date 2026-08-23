@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from pytanga.viz.sdf.overlay import Grid, SdfOverlay, serialize_overlay
+from pytanga.viz.sdf.overlay import Axes, Grid, SdfOverlay, serialize_overlay
 
 
 def test_grid_normalizes_directions() -> None:
@@ -46,6 +46,31 @@ def test_serialize_overlay() -> None:
         "color": "#ff0000",
         "opacity": 0.8,
     }
+
+
+def test_serialize_axes() -> None:
+    axes = Axes(origin=(1, 2, 3), color_x="#010203", color_y="#040506", color_z="#070809", opacity=0.5)
+    assert serialize_overlay(axes) == {
+        "kind": "axes",
+        "origin": [1.0, 2.0, 3.0],
+        "color_x": "#010203",
+        "color_y": "#040506",
+        "color_z": "#070809",
+        "opacity": 0.5,
+    }
+
+
+def test_axes_is_an_overlay() -> None:
+    assert isinstance(Axes(), SdfOverlay)
+
+
+def test_axes_default_colors() -> None:
+    axes = Axes()
+    assert axes.color_x == "#ff0000"
+    assert axes.color_y == "#00ff00"
+    assert axes.color_z == "#0000ff"
+    assert axes.origin == (0.0, 0.0, 0.0)
+    assert axes.opacity == 1.0
 
 
 def test_serialize_overlay_rejects_unknown() -> None:
