@@ -32,6 +32,13 @@ import {
     buildOverlayUniforms,
     applyOverlayUniforms,
 } from './overlays/factory.js';
+import {
+    distinctEmbedSrcs,
+    matrixUniformDecls,
+    emitDistanceFunctions,
+    emitAlgebraLeaves,
+    buildAlgebraUniforms,
+} from './algebra/eval.js';
 
 const VERTEX_SHADER = /* glsl */ `
 void main() {
@@ -158,6 +165,10 @@ function buildFragment() {
         materialColorSrc,
         lightPreamble,
         overlaySrc(),
+        distinctEmbedSrcs(list).join('\n'),
+        matrixUniformDecls(),
+        emitDistanceFunctions(list, activeDistance),
+        emitAlgebraLeaves(list, activeDistance),
         composeObjects(list),
         raymarch,
     ].join('\n');
@@ -170,6 +181,7 @@ function buildUniforms() {
     // must be a full-length array (three.js flattens the whole declared array);
     // pad unused slots with a transparent black material.
     const rows = padMaterialRows(actualRows);
+    const { uM, uScale } = buildAlgebraUniforms(list);
     const uniforms = {
         uResolution: { value: new THREE.Vector2() },
         uCameraPosition: { value: new THREE.Vector3() },
@@ -179,6 +191,8 @@ function buildUniforms() {
         uCameraFar: { value: 1000.0 },
         uMaterial: { value: rows.map((r) => new THREE.Vector4(r[0], r[1], r[2], r[3])) },
         uMaterialCount: { value: actualRows.length },
+        u_M: { value: uM },
+        u_Scale: { value: uScale },
         uLightCount: { value: lighting.lights.length },
         uLightDir: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
         uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
@@ -633,8 +647,42 @@ let _rebuilding = false;
 // scheduling frames and keep the console readable while the root cause is fixed.
 let _renderLoopStopped = false;
 
+let _structureKey = null;
+
+function structureKey(list) {
+    const parts = ['d:' + activeDistance, 'o:' + activeOpacity];
+    for (const obj of list) {
+        const kind = obj.sdfKind || 'analytic';
+        const combine = obj.combine || 'union';
+        const alg = obj.sdfKind === 'mv_sdf' ? (obj.algebra || '?') : '';
+        parts.push(`${kind}/${combine}/${alg}`);
+    }
+    return parts.join('|');
+}
+
+function applyDataUniforms(u, list) {
+    const actualRows = buildMaterialRows(list);
+    const rows = padMaterialRows(actualRows);
+    u.uMaterial.value.forEach((v, i) => v.set(rows[i][0], rows[i][1], rows[i][2], rows[i][3]));
+    u.uMaterialCount.value = actualRows.length;
+    const { uM, uScale } = buildAlgebraUniforms(list);
+    u.u_M.value = uM;
+    u.u_Scale.value = uScale;
+}
+
 function rebuildProgram() {
     if (!_shaderParts || !viewerState.renderer) return;
+    const list = objects.length ? objects : DEFAULT_OBJECTS;
+    const key = structureKey(list);
+
+    // Data-only change (same object kinds/combines/embeds + same distance/
+    // opacity): update uniforms in place without recompiling the shader.
+    if (_structureKey === key && viewerState.material) {
+        applyDataUniforms(viewerState.material.uniforms, list);
+        return;
+    }
+
+    _structureKey = key;
     _rebuilding = true;
     const material = new THREE.ShaderMaterial({
         vertexShader: VERTEX_SHADER,

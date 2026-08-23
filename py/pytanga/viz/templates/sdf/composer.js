@@ -14,7 +14,7 @@ import { buildObjectExpr } from './scene-builder.js';
 export function composeObjects(objects) {
     const lines = ['vec2 map(vec3 p) {', '    float d = MAX_DIST;', '    float m = -1.0;'];
     objects.forEach((obj, index) => {
-        const expr = buildObjectExpr(obj);
+        const expr = buildObjectExpr(obj, index);
         const mode = (obj.combine || 'union').toLowerCase();
         lines.push('    {');
         lines.push(`        float d${index} = ${expr};`);

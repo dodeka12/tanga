@@ -12,7 +12,15 @@
 
 import { emitTree } from './objects/combinators.js';
 
-export function buildObjectExpr(obj) {
+export function buildObjectExpr(obj, index) {
+    // Algebra path: a `mv_sdf` object is emitted as a call to its pre-declared
+    // `dist_mv_<i>` leaf function (defined by `algebra/eval.js` in the preamble).
+    if (obj.sdfKind === 'mv_sdf') {
+        if (typeof index !== 'number') {
+            throw new Error(`mv_sdf object ${obj.id} needs an object index`);
+        }
+        return `dist_mv_${index}(p)`;
+    }
     if (!obj.tree) {
         throw new Error(`SDF object ${obj.id} has no tree`);
     }
