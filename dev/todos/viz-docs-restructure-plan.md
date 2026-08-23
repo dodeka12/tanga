@@ -319,9 +319,9 @@ plugins:
 
 ### Phase 7 — Config
 
-- [ ] `mkdocs.yml` nav + `mkdocs-jupyter` plugin.
-- [ ] `pyproject.toml` dev dependency.
-- [ ] `.gitignore` `.cache/`.
+- [x] `mkdocs.yml` nav + `mkdocs-jupyter` plugin.
+- [x] `pyproject.toml` dev dependency.
+- [x] `.gitignore` `.cache/`.
 
 ### Phase 8 — Changelog
 
