@@ -282,8 +282,8 @@ plugins:
 
 ### Phase 1 — Folders + moves
 
-- [ ] `git mv` each file per the move table.
-- [ ] Create empty folders `scene-objects/`, `visualizer/`, `visualizerapp/`,
+- [x] `git mv` each file per the move table.
+- [x] Create empty folders `scene-objects/`, `visualizer/`, `visualizerapp/`,
       `jupyter/`, `styles/`.
 
 ### Phase 2 — Overview pages
