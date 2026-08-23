@@ -27,6 +27,11 @@ import {
     padMaterialRows,
     parseHexColor,
 } from './material-table.js';
+import {
+    overlaySrc,
+    buildOverlayUniforms,
+    applyOverlayUniforms,
+} from './overlays/factory.js';
 
 const VERTEX_SHADER = /* glsl */ `
 void main() {
@@ -113,6 +118,16 @@ function applyLighting(wireLighting) {
     }
 }
 
+let overlays = [];
+
+function applyOverlayState(wireOverlays) {
+    if (!wireOverlays) return;
+    overlays = wireOverlays;
+    if (viewerState.material && viewerState.material.uniforms) {
+        applyOverlayUniforms(viewerState.material.uniforms, overlays);
+    }
+}
+
 // ── GLSL source loading ───────────────────────────────────
 
 let _shaderParts = null;
@@ -142,6 +157,7 @@ function buildFragment() {
         materialPreamble,
         materialColorSrc,
         lightPreamble,
+        overlaySrc(),
         composeObjects(list),
         raymarch,
     ].join('\n');
@@ -169,6 +185,7 @@ function buildUniforms() {
         uAmbientColor: { value: new THREE.Vector3() },
     };
     setLightUniforms(uniforms);
+    Object.assign(uniforms, buildOverlayUniforms(overlays));
     return uniforms;
 }
 
@@ -529,6 +546,7 @@ async function handleMessage(msg) {
         sceneConfig = msg;
         applySceneConfig(msg);
         applyLighting(msg.sdf_lighting);
+        applyOverlayState(msg.sdf_overlays);
         return;
     }
     if (msg.type === 'scene_update') {
@@ -567,6 +585,9 @@ async function handleMessage(msg) {
         }
         if (msg.lights || msg.ambient) {
             applyLighting({ ambient: msg.ambient, lights: msg.lights });
+        }
+        if (msg.overlays) {
+            applyOverlayState(msg.overlays);
         }
         return;
     }

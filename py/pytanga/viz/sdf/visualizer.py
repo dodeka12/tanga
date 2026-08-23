@@ -28,6 +28,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 from .composed import Composed
 from .distance import DistanceFunction
 from .lights import DirectionalLight, Light, serialize_light
+from .overlay import Grid, SdfOverlay, serialize_overlay
 from .primitives import SdfNode
 from .serializer import serialize_entity
 
@@ -61,6 +62,7 @@ class SdfVisualizer:
         background_color: str = "#1a1a2e",
         camera: Any | None = None,  # CameraConfig | View3dConfig | None
         add_default_light: bool = True,
+        add_default_grid: bool = True,
     ) -> None:
         from pytanga.viz.camera import _normalize_camera_config
 
@@ -98,6 +100,12 @@ class SdfVisualizer:
         if add_default_light:
             self._add_default_light_source()
 
+        # Overlays: one default ground grid, unless disabled (mirrors
+        # add_default_grid).
+        self._overlays: dict[str, SdfOverlay] = {}
+        if add_default_grid:
+            self._overlays["__default_grid__"] = Grid()
+
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
@@ -131,6 +139,8 @@ class SdfVisualizer:
 
         if isinstance(obj, Light):
             return self._add_light(obj)
+        if isinstance(obj, SdfOverlay):
+            return self._add_overlay(obj)
 
         entity = self._resolve(obj)
         props = self._build_props(
@@ -213,9 +223,13 @@ class SdfVisualizer:
         return props
 
     def remove(self, entity_id: str) -> None:
-        """Remove an entity or a light from the SDF scene."""
+        """Remove an entity, light, or overlay from the SDF scene."""
         if entity_id in self._lights:
             del self._lights[entity_id]
+            self._push_config()
+            return
+        if entity_id in self._overlays:
+            del self._overlays[entity_id]
             self._push_config()
             return
         self._objects.pop(entity_id, None)
@@ -223,12 +237,13 @@ class SdfVisualizer:
         self._push_removed([entity_id])
 
     def clear(self) -> None:
-        """Remove all entities and lights."""
+        """Remove all entities, lights, and overlays."""
         removed = list(self._objects)
         self._objects.clear()
         self._props.clear()
         self._push_removed(removed)
         self._lights.clear()
+        self._overlays.clear()
         self._push_config()
 
     def _resolve(self, obj: Any) -> Any:
@@ -292,6 +307,21 @@ class SdfVisualizer:
         self._ambient_intensity = float(intensity)
         self._push_config()
 
+    # ── Overlays ────────────────────────────────────────────
+
+    def _add_overlay(self, overlay: SdfOverlay) -> str:
+        """Add a shader-drawn overlay and return its ID."""
+        from uuid import uuid4
+
+        oid = "overlay-" + uuid4().hex[:8]
+        self._overlays[oid] = overlay
+        self._push_config()
+        return oid
+
+    def _overlay_dict(self) -> list[dict[str, Any]]:
+        """Wire form of the current overlay list."""
+        return [serialize_overlay(overlay) for overlay in self._overlays.values()]
+
     # ── Viewer-level settings (stubs until later phases) ────
 
     @property
@@ -326,6 +356,7 @@ class SdfVisualizer:
                 "distance": self.distance,
                 "opacity": self.opacity,
                 **self._lighting_dict(),
+                "overlays": self._overlay_dict(),
             }
         )
         asyncio.run_coroutine_threadsafe(self._server.push_raw(message), self._loop)
@@ -358,9 +389,11 @@ class SdfVisualizer:
             name=scene_name,
             space_dim=3,
         ).to_dict()
-        # Lighting rides along with the scene config so it reaches the frontend
-        # on the initial connect; runtime changes go via `sdf_viewer_config`.
+        # Lighting and overlays ride along with the scene config so they reach
+        # the frontend on the initial connect; runtime changes go via
+        # `sdf_viewer_config`.
         cfg["sdf_lighting"] = self._lighting_dict()
+        cfg["sdf_overlays"] = self._overlay_dict()
         return cfg
 
     def _scene_list(self) -> list[str]:

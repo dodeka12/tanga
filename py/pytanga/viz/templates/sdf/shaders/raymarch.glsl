@@ -137,5 +137,9 @@ void main() {
         col = vec3(0.10, 0.10, 0.18);
     }
 
+    // Depth-composited shader overlays (grid, …): each overlay is drawn over
+    // the surface/background only when its plane is in front of the hit.
+    col = applyOverlays(col, ro, rd, t, hit, maxDist);
+
     fragColor = vec4(col, 1.0);
 }

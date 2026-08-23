@@ -97,6 +97,14 @@
   compares the server-injected frontend build hash against the `browser_id`
   message's `frontend_version`, showing the standard "Reload now" version-
   mismatch banner on a stale cached copy (matching the standard viewer).
+- **Shader-drawn grid overlays (`SdfOverlay` / `Grid`)** — `SdfVisualizer`
+  gained `add_default_grid` (a default ground grid) and accepts `Grid` objects
+  through `add()`: an arbitrary-plane, infinite grid drawn as a depth-composited
+  `fract()`-based overlay rather than a raymarched volume (the grid draws over
+  objects behind its plane and is hidden behind objects in front). A new
+  `SdfOverlay` base class and a frontend `overlays/factory.js` dispatch
+  (mirroring the standard viewer's `renderers/factory.js`) are the seam for
+  future overlay kinds (axes, crosshair, …).
 
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed

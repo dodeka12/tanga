@@ -15,6 +15,7 @@ from __future__ import annotations
 from .composed import Composed
 from .distance import DistanceFunction, DistanceFunctionMeta
 from .lights import DirectionalLight, Light
+from .overlay import Grid, SdfOverlay
 from .primitives import (
     SdfNode,
     bound_box,
@@ -42,8 +43,10 @@ __all__ = [
     "DirectionalLight",
     "DistanceFunction",
     "DistanceFunctionMeta",
+    "Grid",
     "Light",
     "SdfNode",
+    "SdfOverlay",
     "SdfVisualizer",
     "bound_box",
     "box",

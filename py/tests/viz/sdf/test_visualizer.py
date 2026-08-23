@@ -161,3 +161,33 @@ def test_reuse_existing_flag_and_open_browser_guard() -> None:
     assert SdfVisualizer(open_browser=False, reuse_existing=False)._reuse_existing is False
     with pytest.raises(RuntimeError):
         SdfVisualizer(open_browser=False).open_browser()
+
+
+def test_default_grid_added_by_default() -> None:
+    viz = SdfVisualizer(open_browser=False)
+    overlays = viz._overlay_dict()
+    assert len(overlays) == 1
+    assert overlays[0]["kind"] == "grid"
+
+
+def test_add_default_grid_false() -> None:
+    viz = SdfVisualizer(open_browser=False, add_default_grid=False)
+    assert viz._overlay_dict() == []
+
+
+def test_add_and_remove_overlay() -> None:
+    from pytanga.viz.sdf.overlay import Grid
+
+    viz = SdfVisualizer(open_browser=False, add_default_grid=False)
+    gid = viz.add(Grid(interval_u=0.5))
+    assert gid.startswith("overlay-")
+    assert len(viz._overlay_dict()) == 1
+    viz.remove(gid)
+    assert viz._overlay_dict() == []
+
+
+def test_scene_config_carries_overlays() -> None:
+    viz = SdfVisualizer(open_browser=False)
+    cfg = viz._scene_config_for("")
+    assert "sdf_overlays" in cfg
+    assert len(cfg["sdf_overlays"]) == 1
