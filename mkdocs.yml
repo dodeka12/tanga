@@ -87,6 +87,7 @@ nav:
     - Visualizer:
       - Overview: py/viz/visualizer/index.md
       - Visualizer: py/viz/visualizer/visualizer.md
+      - Multi-Scene: py/viz/visualizer/multi-scene.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
       - Camera & Controls: py/viz/visualizer/camera.md
       - Animation: py/viz/visualizer/animation.md

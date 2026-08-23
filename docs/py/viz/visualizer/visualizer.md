@@ -149,7 +149,9 @@ This is the idiomatic way to pre-create objects for an animation loop (see
 ## Multi-Scene Support
 
 The visualizer supports multiple named scenes, each reachable at a unique URL
-path and independently manageable via :class:`VizSceneHandle`.
+path and independently manageable via :class:`VizSceneHandle`. For a dedicated
+walkthrough — including Jupyter side-by-side display, navigation targets, and
+browser-identity-driven switching — see [Multi-Scene](multi-scene.md).
 
 ### Creating Named Scenes
 
