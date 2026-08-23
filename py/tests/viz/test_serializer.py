@@ -348,15 +348,42 @@ class TestStyleOverrides:
     def test_style_plane_extent(self):
         from copy import copy
 
-        from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND as _CANONICAL
+        from pytanga.viz._styles import PlaneStyle
 
         styles_map = {k: copy(v) for k, v in _CANONICAL.items()}
         styles_map["Plane"].extent = 25.0
+
+        # Canonical default (mutated) resolves the flat extent.
         d = _serialize(
             Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1)),
             styles_map=styles_map,
         )
         assert d["extent"] == 25.0
+        assert d["style"]["extent"] == 25.0
+
+        # Per-call style override wins over the canonical default.
+        d = _serialize(
+            Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1)),
+            props={"style": PlaneStyle(extent=3.0)},
+            styles_map=styles_map,
+        )
+        assert d["extent"] == 3.0
+        assert d["style"]["extent"] == 3.0
+
+    def test_plane_style_extent_via_full_state(self):
+        """Per-call PlaneStyle(extent=...) survives scene-graph serialization."""
+        from pytanga.geometry import Direction, Plane, Point
+        from pytanga.viz import PlaneStyle, Visualizer
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(
+            Plane(point=Point(0, 0, 2), normal=Direction(0, 0, 1)),
+            style=PlaneStyle(extent=3.0),
+        )
+        objs = viz._scene.full_state(styles_map=viz.styles.kind)
+        plane = next(o for o in objs if o.get("kind") == "Plane")
+        assert plane["extent"] == 3.0
+        assert plane["style"]["extent"] == 3.0
 
     def test_sphere_style_opacity(self):
         """Sphere default opacity comes from canonical style."""

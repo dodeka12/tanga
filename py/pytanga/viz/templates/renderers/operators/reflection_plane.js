@@ -10,7 +10,7 @@ export function createReflectionPlane(ent) {
     const opacity = styleParam(ent, 'opacity', 0.35);
     const col = new THREE.Color(color);
     const n = ent.normal || [0, 0, 1];
-    const ext = ent.extent || 5;
+    const ext = ent.extent ?? 5;
     const g = new THREE.Group();
     const pg = new THREE.PlaneGeometry(ext * 2, ext * 2);
     const pm = new THREE.MeshPhongMaterial({
