@@ -152,3 +152,12 @@ def test_flush_and_sleep_ms() -> None:
     start = time.monotonic()
     assert viz.sleep_ms(40) is True
     assert time.monotonic() - start >= 0.03
+
+
+def test_reuse_existing_flag_and_open_browser_guard() -> None:
+    import pytest
+
+    assert SdfVisualizer(open_browser=False)._reuse_existing is True
+    assert SdfVisualizer(open_browser=False, reuse_existing=False)._reuse_existing is False
+    with pytest.raises(RuntimeError):
+        SdfVisualizer(open_browser=False).open_browser()

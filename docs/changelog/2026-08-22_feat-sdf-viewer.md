@@ -105,3 +105,10 @@
   come from different directions per object, and producing unmotivated soft
   shadows. The step is now `0.001`; the remaining subtractive-CSG soft-shadow
   penumbra is documented as a known limitation.
+- **SDF viewer browser connect/reconnect parity** — the SDF viewer's frontend
+  and backend now mirror the standard viewer's behaviour: the frontend
+  auto-reconnects (2s interval, 60s window, connect watchdog, single-flight
+  guard, reconnect button, visibility wake-up), and `SdfVisualizer` gained
+  `reuse_existing`, `open_browser(wait_for_browser=…)`, `wait_for_browser()`,
+  and the interactive connect prompt, so a script re-run reuses the already-open
+  tab instead of opening a new one.

@@ -199,20 +199,91 @@ function setStatus(cls) {
 
 let ws = null;
 let browserId = null;
+let reconnectTimer = null;
+
+// Auto-reconnect: retry at a fixed 2s interval for the first minute after a
+// disconnect, then stop (manual reconnect via the button remains available).
+const _RECONNECT_INTERVAL_MS = 2000;
+const _RECONNECT_WINDOW_MS = 60000;
+let _reconnectDeadline = 0;  // timestamp when auto-reconnect should stop (0 = none)
+let _reconnectAttempts = 0;
+const _savedTitle = document.title || 'Tanga SDF Viewer';
+
+// Single-flight guard: increment on teardown so stale onopen/onclose handlers
+// from superseded sockets are ignored.
+let _wsGeneration = 0;
+
+function _log(phase, detail) {
+    const t = (typeof performance !== 'undefined' && performance.now)
+        ? (performance.now() / 1000).toFixed(3) : '0';
+    const parts = ['[tanga:' + phase + ' t=' + t + ']'];
+    if (browserId) parts.push('id=' + browserId);
+    if (detail) parts.push(detail);
+    console.log(parts.join(' '));
+}
+
+function closeActiveWs() {
+    if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+        _log('ws-teardown', 'closing active socket readyState=' + ws.readyState);
+        _wsGeneration++;                          // invalidate stale handlers
+        const old = ws;
+        old.onopen = old.onclose = old.onerror = old.onmessage = null;
+        try { old.close(); } catch (_) {}
+    }
+    ws = null;
+}
 
 function connectWebSocket() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${protocol}//${location.host}/ws`);
+    const url = `${protocol}//${location.host}/ws`;
+
+    closeActiveWs();
+    const gen = _wsGeneration;
+
+    _reconnectAttempts++;
+    updateStatusIndicator('connecting', _reconnectAttempts);
+    document.title = 'Connecting… — ' + _savedTitle;
+
+    _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts + ' gen=' + gen);
+
+    ws = new WebSocket(url);
+
+    const connectWatchdog = setTimeout(() => {
+        if (ws && ws.readyState === WebSocket.CONNECTING && gen === _wsGeneration) {
+            _log('ws-watchdog', 'connect timed out after ' + _RECONNECT_INTERVAL_MS + 'ms - aborting and retrying');
+            _wsGeneration++;               // invalidate this socket's handlers
+            try { ws.close(); } catch (_) {}
+            ws = null;
+            // Respect the auto-reconnect window: stop retrying once it elapses.
+            if (_reconnectDeadline && Date.now() >= _reconnectDeadline) {
+                _log('ws-reconnect', 'auto-reconnect window elapsed - stopping (manual reconnect available)');
+                return;
+            }
+            connectWebSocket();            // retry immediately
+        }
+    }, _RECONNECT_INTERVAL_MS);
 
     ws.onopen = () => {
-        setStatus('connected');
+        if (gen !== _wsGeneration) return;
+        clearTimeout(connectWatchdog);
         const pageToken = window.__tanga_page_token
             || new URLSearchParams(window.location.search).get('token');
-        ws.send(JSON.stringify({
-            type: 'ready',
-            scene: '',
-            page_token: pageToken || undefined,
-        }));
+        _log('ws-open', 'attempt=' + _reconnectAttempts + ' token=' + (pageToken || 'none'));
+        setStatus('connected');
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+        _reconnectAttempts = 0;
+        _reconnectDeadline = 0;  // connected — clear any pending reconnect window
+        hideReconnectButton();
+        updateStatusIndicator('connected');
+        document.title = _savedTitle;
+        const readyPayload = { type: 'ready', scene: '' };
+        if (browserId) readyPayload.browser_id = browserId;
+        if (pageToken) readyPayload.page_token = pageToken;
+        _log('ws-send', 'type=ready token=' + (pageToken || 'none'));
+        ws.send(JSON.stringify(readyPayload));
     };
 
     ws.onmessage = (event) => {
@@ -220,13 +291,161 @@ function connectWebSocket() {
         try {
             msg = JSON.parse(event.data);
         } catch (e) {
+            console.error('Failed to parse WebSocket message:', e);
             return;
         }
         handleMessage(msg);
     };
 
-    ws.onclose = () => setStatus('disconnected');
+    ws.onclose = (event) => {
+        if (gen !== _wsGeneration) return;
+        clearTimeout(connectWatchdog);
+        _log('ws-close', 'code=' + event.code + ' reason=' + (event.reason || 'none')
+            + ' wasClean=' + event.wasClean);
+        setStatus('disconnected');
+        updateStatusIndicator('disconnected');
+        document.title = 'Disconnected — ' + _savedTitle;
+
+        // Fixed-interval auto-reconnect for the first minute after the
+        // connection was lost, then stop (the manual button still works).
+        const now = Date.now();
+        if (!_reconnectDeadline) {
+            _reconnectDeadline = now + _RECONNECT_WINDOW_MS;
+        }
+        if (now < _reconnectDeadline) {
+            _log('ws-reconnect', 'delay=' + _RECONNECT_INTERVAL_MS + 'ms deadline_in=' + Math.round((_reconnectDeadline - now) / 1000) + 's');
+            reconnectTimer = setTimeout(connectWebSocket, _RECONNECT_INTERVAL_MS);
+        } else {
+            _log('ws-reconnect', 'auto-reconnect window elapsed - stopping (manual reconnect available)');
+        }
+    };
+
+    ws.onerror = () => { _log('ws-error', 'error event (onclose follows)'); };
 }
+
+// ── Visibility wake-up ────────────────────────────────────────
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && ws === null) {
+        _log('ws-visibility', 'tab visible with no socket — immediate reconnect');
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+        _reconnectDeadline = Date.now() + _RECONNECT_WINDOW_MS;
+        connectWebSocket();
+    }
+});
+
+// ── Reconnect Button ──────────────────────────────────────────
+let _reconnectButtonEl = null;
+let _reconnectClickCount = 0;
+
+function showReconnectButton(mode) {
+    if (_reconnectButtonEl) {
+        _reconnectButtonEl.remove();
+        _reconnectButtonEl = null;
+    }
+
+    _reconnectButtonEl = document.createElement('button');
+    _reconnectButtonEl.id = 'tanga-reconnect-btn';
+    _reconnectButtonEl.style.padding = '2px 8px';
+    _reconnectButtonEl.style.fontSize = '11px';
+    _reconnectButtonEl.style.fontFamily = 'sans-serif';
+    _reconnectButtonEl.style.color = '#fff';
+    _reconnectButtonEl.style.background = 'rgba(255,255,255,0.15)';
+    _reconnectButtonEl.style.border = '1px solid rgba(255,255,255,0.3)';
+    _reconnectButtonEl.style.borderRadius = '3px';
+    _reconnectButtonEl.style.cursor = 'pointer';
+    _reconnectButtonEl.style.zIndex = '11';
+    _reconnectButtonEl.style.transition = 'background 0.2s';
+
+    _reconnectButtonEl.addEventListener('mouseenter', () => {
+        _reconnectButtonEl.style.background = 'rgba(255,255,255,0.25)';
+    });
+    _reconnectButtonEl.addEventListener('mouseleave', () => {
+        _reconnectButtonEl.style.background = 'rgba(255,255,255,0.15)';
+    });
+
+    if (mode === 'page-reload') {
+        _reconnectButtonEl.textContent = '↻ Reload';
+        _reconnectButtonEl.title = 'Reconnect failed — reload page';
+        _reconnectButtonEl.addEventListener('click', () => {
+            window.location.reload();
+        });
+    } else {
+        _reconnectButtonEl.textContent = 'Reconnect';
+        _reconnectButtonEl.title = 'Click to reconnect immediately';
+        _reconnectButtonEl.addEventListener('click', () => {
+            _reconnectClickCount++;
+            if (_reconnectClickCount >= 3) {
+                _log('ws-manual', '3 failed clicks — offering page reload');
+                showReconnectButton('page-reload');
+                return;
+            }
+            _log('ws-manual', 'reconnect click=' + _reconnectClickCount);
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            closeActiveWs();
+            _reconnectDeadline = Date.now() + _RECONNECT_WINDOW_MS;
+            connectWebSocket();
+        });
+    }
+
+    const statusArea = document.getElementById('tanga-status-area');
+    if (statusArea) {
+        statusArea.appendChild(_reconnectButtonEl);
+    } else {
+        document.body.appendChild(_reconnectButtonEl);
+    }
+}
+
+function hideReconnectButton() {
+    if (_reconnectButtonEl) {
+        _reconnectButtonEl.remove();
+        _reconnectButtonEl = null;
+    }
+    _reconnectClickCount = 0;
+}
+
+function updateStatusIndicator(state, attempts) {
+    const el = document.getElementById('status');
+    if (!el) return;
+    if (state === 'connected') {
+        el.className = 'connected';
+        hideReconnectButton();
+    } else {
+        el.className = 'disconnected';
+        if (!_reconnectButtonEl) {
+            showReconnectButton('reconnect');
+        }
+    }
+
+    let labelEl = document.getElementById('status-label');
+    if (state === 'connecting' && attempts > 0) {
+        if (!labelEl) {
+            labelEl = document.createElement('span');
+            labelEl.id = 'status-label';
+            labelEl.style.color = '#888';
+            labelEl.style.fontFamily = 'sans-serif';
+            labelEl.style.fontSize = '11px';
+            labelEl.style.pointerEvents = 'none';
+            labelEl.style.whiteSpace = 'nowrap';
+            const statusArea = document.getElementById('tanga-status-area');
+            if (statusArea) {
+                statusArea.appendChild(labelEl);
+            } else {
+                document.body.appendChild(labelEl);
+            }
+        }
+        labelEl.textContent = 'attempt ' + attempts;
+        labelEl.style.display = '';
+    } else if (labelEl) {
+        labelEl.style.display = 'none';
+    }
+}
+
 
 async function handleMessage(msg) {
     if (msg.type === 'browser_id') {

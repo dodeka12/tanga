@@ -56,6 +56,7 @@ class SdfVisualizer:
         port: int | None = None,
         host: str | None = None,
         open_browser: bool | None = None,
+        reuse_existing: bool = True,
         title: str = "Tanga SDF Viewer",
         background_color: str = "#1a1a2e",
         camera: Any | None = None,  # CameraConfig | View3dConfig | None
@@ -63,9 +64,15 @@ class SdfVisualizer:
     ) -> None:
         from pytanga.viz.camera import _normalize_camera_config
 
+        from pytanga.viz._utils import _is_jupyter
+
         self._host = host or "localhost"
         self._port = port if port is not None else DEFAULT_PORT
+        self._jupyter = _is_jupyter()
+        if open_browser is None:
+            open_browser = not self._jupyter
         self._open_browser = open_browser
+        self._reuse_existing = reuse_existing
         self._title = title
         self._background_color = background_color
         self._camera = _normalize_camera_config(camera)
@@ -415,24 +422,203 @@ class SdfVisualizer:
         signal.signal(signal.SIGINT, lambda *_: self._shutdown_requested.set())
         signal.signal(signal.SIGTERM, lambda *_: self._shutdown_requested.set())
 
-    def open_browser(self) -> bool:
-        """Open the SDF viewer in a browser."""
+    def open_browser(self, *, wait_for_browser: bool | None = None) -> bool:
+        """Open or reconnect a browser tab for the SDF scene (single scene ``""``).
+
+        Mirrors the standard viewer: with ``reuse_existing`` (the default) this
+        either waits interactively for an existing tab to reconnect (or the user
+        to press Enter), or — when ``wait_for_browser`` is ``False`` (e.g.
+        Jupyter) — does a short non-interactive reconnect check. With
+        ``reuse_existing=False`` a new tab is always opened.
+        """
+        import concurrent.futures
+        import secrets
+
         if self._server is None:
             raise RuntimeError("Server not started. Call start_server() first.")
-        self._server.open_browser("/")
+
+        if wait_for_browser is None:
+            wait_for_browser = not self._jupyter
+
+        page_token = secrets.token_hex(4)  # 8 hex chars
+        token_url = f"/?token={page_token}"
+
+        if self._reuse_existing:
+            # Interactive wait: user either clicks Reconnect or presses Enter.
+            if wait_for_browser:
+                connected = self.wait_for_browser(timeout=120.0)
+                if not connected:
+                    return False
+            else:
+                # wait_for_browser is False (e.g. Jupyter): just check if one is
+                # already there, otherwise open a tab and don't wait.
+                fut = asyncio.run_coroutine_threadsafe(
+                    self._server.wait_for_ws_ready(timeout=3.0), self._loop
+                )
+                try:
+                    reconnected = fut.result(timeout=3.5)
+                except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
+                    reconnected = False
+                if not reconnected:
+                    if self._loop is not None:
+                        self._loop.call_soon_threadsafe(
+                            self._server._clear_ws_ready_events
+                        )
+                    self._server.open_browser(token_url)
+        else:
+            # reuse_existing disabled — always open a new tab.
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
+            self._server.open_browser(token_url)
+            if wait_for_browser:
+                return self.wait_for_browser(timeout=30.0)
         return True
+
+    def wait_for_browser(self, timeout: float = 120.0) -> bool:
+        """Block until a browser connects, or the user opens one interactively.
+
+        Prints a prompt and waits for EITHER an existing browser to reconnect,
+        OR the user to press Enter (opens a new tab with a fresh token).
+
+        Returns ``True`` if a browser connected, ``False`` if cancelled by the
+        user (Ctrl+C) or on timeout after opening a tab.
+        """
+        import secrets
+
+        if self._server is None or self._loop is None:
+            raise RuntimeError("Server not started. Call start_server() first.")
+
+        # Already connected?
+        if self._server._any_ws_ready_thread.is_set():
+            logger.info("Browser already connected")
+            return True
+
+        self._print_connect_prompt()
+
+        enter_pressed = threading.Event()
+        shutdown = getattr(self, "_shutdown_requested", threading.Event())
+
+        def _wait_for_enter() -> None:
+            try:
+                input()
+                enter_pressed.set()
+            except (EOFError, KeyboardInterrupt):
+                pass
+
+        enter_thread = threading.Thread(target=_wait_for_enter, daemon=True)
+        enter_thread.start()
+
+        start_ts = time.monotonic()
+        poll_interval = 0.2
+
+        while True:
+            if self._server._any_ws_ready_thread.is_set():
+                logger.info(
+                    "Browser reconnected after %.1fs", time.monotonic() - start_ts
+                )
+                return True
+            if enter_pressed.is_set():
+                logger.info("User pressed Enter - opening new tab")
+                break
+            if shutdown.is_set():
+                logger.info("Shutdown requested during wait")
+                return False
+            time.sleep(poll_interval)
+
+        page_token = secrets.token_hex(4)
+        logger.info("Opening new tab with token=%s", page_token)
+
+        if self._loop is not None:
+            self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
+
+        self._server.open_browser(f"/?token={page_token}")
+
+        logger.info(
+            "Waiting up to %.0fs for new tab to connect at %s ...", timeout, self.url
+        )
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self._server._any_ws_ready_thread.is_set():
+                logger.info(
+                    "New tab connected after %.1fs", time.monotonic() - start_ts
+                )
+                return True
+            if shutdown.is_set():
+                logger.info("Shutdown requested during tab wait")
+                return False
+            time.sleep(poll_interval)
+
+        logger.warning("No browser connected within %.0fs after opening tab", timeout)
+        self._print_ws_timeout_note()
+        return False
+
+    def _print_connect_prompt(self) -> None:
+        """Print the interactive connect prompt including the server URL.
+
+        The URL is printed on its own line so terminals (e.g. VS Code) can
+        detect it as a clickable link.
+        """
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(
+                Text.assemble(
+                    "Server: ",
+                    Text(self.url, style="bold cyan"),
+                    "\n",
+                    "Press ",
+                    Text("Enter", style="bold"),
+                    " to open a new browser tab, or click ",
+                    Text("'Reconnect'", style="bold"),
+                    " in an existing tab...",
+                )
+            )
+        except Exception:
+            print(
+                f"Server: {self.url}\n"
+                "Press Enter to open a new browser tab, "
+                "or click 'Reconnect' in an existing tab..."
+            )
+
+    def _print_ws_timeout_note(self) -> None:
+        """Print a note about WebSocket reachability when the browser didn't connect."""
+        ws_url = f"ws://{self._host}:{self._port}/ws"
+        try:
+            from rich.console import Console
+            from rich.text import Text
+
+            Console().print(
+                Text(
+                    f"If the browser loaded the page but shows an empty scene, "
+                    f"check that\n{ws_url} is reachable "
+                    f"(port forwarding/proxy must support WebSocket upgrades).",
+                    style="dim",
+                )
+            )
+        except Exception:
+            print(
+                f"If the browser loaded the page but shows an empty scene, "
+                f"check that {ws_url} is reachable "
+                f"(port forwarding/proxy must support WebSocket upgrades)."
+            )
 
     def show(
         self,
         *,
         host: str | None = None,
         port: int | None = None,
+        wait_for_browser: bool | None = None,
     ) -> bool:
-        """Serve the SDF viewer and open a browser tab (non-blocking)."""
-        self.start_server(host=host, port=port)
-        if self._open_browser is not False:
-            return self.open_browser()
-        return True
+        """Serve the SDF viewer and open a browser tab (non-blocking).
+
+        Equivalent to :meth:`start_server` followed by :meth:`open_browser`.
+        ``host``/``port`` are only used when the server is not already
+        running; see :meth:`start_server` for their semantics.
+        """
+        if self._server is None:
+            self.start_server(host=host or "localhost", port=port)
+        return self.open_browser(wait_for_browser=wait_for_browser)
 
     def wait(self) -> None:
         """Block until Ctrl+C, then stop the server."""
