@@ -1,6 +1,9 @@
 # Viz SDF Viewer — Overview
 
-**Created:** 2026-08-22 | **Status:** Planned
+**Created:** 2026-08-22 | **Status:** In progress — Phases 1–6c implemented
+(plus configurable lighting, shader-drawn grid/axes overlays, the object/light
+update API, and browser reconnect/version parity); Phases 7–12 (algebra path,
+calibration, opacity transfers, finalize) remain.
 
 ## Target
 
@@ -11,10 +14,14 @@ primitives and combinators.
 
 There are two rendering paths:
 
-1. **Analytic path** — the initially-supported geometric entities (`Point`,
-   `Line`, `Plane`, `Sphere`, `Circle`, `PointPair`) are mapped to compositions
-   of a SDF primitive library. Operators, `Direction`, `Space`, and other
-   entity kinds are deferred.
+1. **Analytic path** — geometry entities and operators are mapped to
+   compositions of a SDF primitive library, with the primitive set exposed
+   directly as `SdfNode` objects and grouped via `Composed` (Phases 06b/06c).
+   `Point`→sphere, crosshair point→3-axis crosshair, `Line`→segment,
+   `Sphere`→sphere, `Rotor`→disc+ring+axis, `Translator`/`Direction`→arrow,
+   `Dilator`→rings, `Motor`→disc+arrow, etc. `wireframe` is not honoured
+   (a true wireframe cage cannot be expressed as a solid); only
+   `TripleReflection`/`VersorFactors` remain deferred (`TypeError`).
 2. **Algebra path** — an MV is drawn by directly evaluating `ip(point, mv)` or
    `op(point, mv)` (chosen by the MV's algebra `opns` setting) and mapping the
    resulting multivector to a signed distance via a registered distance
@@ -32,33 +39,36 @@ HTML bootstrap (CDN import map, status, loading, error/fallback handling).
 
 ```
 Python backend
-  Entity (six kinds)       MV
-      │                     │
-      │ analytic            │ algebra
-      ▼                     ▼
-  sdf/serializer.py    sdf/algebra_embedding.py
+  Entity/Operator          MV              SdfNode/Composed   Light/Overlay
+      │                     │                   │                 │
+      │ analytic            │ algebra           │ fundamental     │ config
+      ▼                     ▼                   ▼                 ▼
+  sdf/serializer.py    sdf/algebra_embedding.py   sdf/primitives.py + sdf/composed.py
   (SDF primitive tree)   · canonical blade ordering (point/result masks)
                          · product_tensor(ip|op) contracted over entity blade
                            → M[c,a]   ("the general MV already in the matrix")
                          · embed_src: algebra-specific point-embedding GLSL
                          · normalize option (entity normalized before forming M)
                          · bound: finite clip for infinite planes/lines
-      └──────────┬────────────┘
-                 ▼
-        WS (scene_update / object_update / sdf_viewer_config)
-                 ▼
+      └────────────────────┬──────────────────────────────────────────┘
+                           ▼
+        WS (scene_update / object_update / sdf_viewer_config:
+            distance, opacity, sdf_lighting, sdf_overlays)
+                           ▼
 Frontend (py/pytanga/viz/templates/sdf/)
-  sdf_viewer.js  →  program cache keyed by (algebra, distance, opacity)
-      fragment = common + embed_src(algebra) + distOf(distance)
-                 + opacityOf(opacity) + raymarch_body
-  one composed global SDF, material-ID hit tracking
+  sdf_viewer.js  →  ONE composed global SDF (single fullscreen-quad ShaderMaterial)
+      fragment = common + primitives + combinators + material + lighting
+                 + overlays + embed_src(algebra)… + composeObjects() + raymarch
+      rebuild split: structure changes recompile, data-only changes update uniforms
+  material-ID hit tracking + combine modes + depth-composited overlays
 ```
 
 ### The three shader-specialization axes (no if-branching)
 
 - **Point embedding is algebra-specific** and (for N3) nonlinear in the point,
   so it is *code*, not a matrix. Each algebra contributes an `embed_src` GLSL
-  snippet `evalPoint(vec3 p, out float a[NP])`.
+  snippet `evalPoint(vec3 p, out float a[NP])`, deduped by identity and emitted
+  once per distinct algebra present in the scene.
 - **Distance functions are a fixed algebra-agnostic set**, applied to the result
   vector `r[] = M·a`. The backend selects the active distance function for the
   viewer; the frontend recompiles the shader with the selected `distOf` snippet.
@@ -66,11 +76,15 @@ Frontend (py/pytanga/viz/templates/sdf/)
   backend selects the active transfer; the frontend recompiles with the
   selected `opacityOf` snippet.
 
-All three axes are handled by string-concatenation compilation with a program
-cache keyed by `(algebra, distance, opacity)`. The shader therefore contains
-**no** `if (algebra == …)` / `if (entity == …)` / `if (distance == …)` /
-`if (opacity == …)` branching — the selection is resolved entirely at compile
-time, and switching any axis triggers a recompile.
+All axes are handled by string-concatenation compilation into the **single
+composed `map()`**. Algebra is per-object data (each `mv_sdf` leaf carries its
+own `M`/`bound`), while distance and opacity are viewer-level. Recompilation is
+keyed on a program's *structure* (`(distance, opacity, distinct embeds, object
+kinds/combines)`); data-only changes (matrix/material/lighting uniforms) update
+uniforms without recompiling. The shader therefore contains **no** `if (algebra
+== …)` / `if (entity == …)` / `if (distance == …)` / `if (opacity == …)`
+branching — the selection is resolved entirely at compile time, and switching a
+viewer axis (or changing object structure) triggers a recompile.
 
 ## SDF object hierarchy (two layers)
 
@@ -165,12 +179,15 @@ transfer is not `step`, and optionally a global `density` scale `σ₀` for the
 volumetric path.
 
 The `opacityOf` call site and its `step` default are **stubbed in Phase 2**, and
-the shared function-registry mechanism is built in Phase 3 (and compiled by
-`(algebra, distance, opacity)` in Phase 8), so Phase 12 only *populates* the
-registry with `linear`/`sigmoid` and adds the volumetric accumulation — no
-refactor.
+the shared function-registry mechanism is built in Phase 3 (and emitted through
+the Phase 8 single-`map()` assembly), so Phase 12 only *populates* the registry
+with `linear`/`sigmoid` and adds the volumetric accumulation — no refactor.
 
 ## Boolean combine modes (positive/negative objects)
+
+*(Implemented in Phases 5/6b/6c — `serializer._normalize_combine`,
+`SdfVisualizer.add(..., combine=/polarity=)`, and the `composer.js` fold; the
+signedness gate and smooth variants are the remaining Phase 11 work.)*
 
 A signed distance is negative inside. Combinators produce:
 
@@ -198,11 +215,11 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 | 6a | [06a-first-vertical-slice.md](./06a-first-vertical-slice.md) | First vertical slice: `demo_sdf_entities.py` (line + sphere) with manual user confirmation |
 | 6b | [06b-composed-objects.md](./06b-composed-objects.md) | Primitive object library + `Composed` objects (per-constituent combine modes) |
 | 6c | [06c-entity-operator-drawstyles.md](./06c-entity-operator-drawstyles.md) | Entity/operator → SDF-object mapping per draw style |
-| 7 | [07-algebra-embedding-python.md](./07-algebra-embedding-python.md) | `algebra_embedding.py`: ordering, `M`, `embed_src`, normalize, bound |
-| 8 | [08-algebra-eval-shader-compile.md](./08-algebra-eval-shader-compile.md) | `algebra/eval.js`: `embed → M·a → distOf → opacityOf` with per-`(algebra,distance,opacity)` program cache |
+| 7 | [07-algebra-embedding-python.md](./07-algebra-embedding-python.md) | `algebra_embedding.py`: ordering, `M`, `embeds.js`, normalize, bound |
+| 8 | [08-algebra-eval-shader-compile.md](./08-algebra-eval-shader-compile.md) | `algebra/eval.js`: `embed → M·a → distOf → opacityOf` inside the single composed `map()` (structure-vs-data rebuild split) |
 | 9 | [09-calibration-validation.md](./09-calibration-validation.md) | `|∇d|≈1` calibration + algebra-SDF vs analytic-SDF validation |
 | 10 | [10-tests-examples-docs.md](./10-tests-examples-docs.md) | Examples, docs, changelog, PR (per-phase unit tests live in their phases) |
-| 11 | [11-csg-booleans.md](./11-csg-booleans.md) | Positive/negative objects: `union`/`intersection`/`subtract` combine modes |
+| 11 | [11-csg-booleans.md](./11-csg-booleans.md) | Positive/negative objects: `union`/`intersection`/`subtract` combine modes (core shipped in 5/6b/6c; gate + smooth variants remain) |
 | 12 | [12-opacity-transfer.md](./12-opacity-transfer.md) | Populate non-`step` opacity transfers + volumetric (mechanism from Phases 2/3/8) |
 
 ## Testing strategy (fail early)
@@ -238,12 +255,17 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 - **WebGL2 is a hard requirement.** If unavailable, the viewer shows an in-page
   error banner and logs; there is no silent WebGL1 fallback.
 - **3D only** for the SDF viewer; 2D is deferred.
-- **Style scope is minimal per kind**: `Point` reads `size` (sphere radius),
-  `Line`/`Circle`/`PointPair` read `thickness` (tube/cylinder radius), and all
-  kinds read `color`/`opacity`; other flags (`wireframe`, …) are ignored until
-  a later phase.
-- **Initial entity scope**: only `Point`, `Line`, `Plane`, `Sphere`, `Circle`,
-  `PointPair`; other entities/operators are deferred and raise `TypeError`.
+- **Full entity/operator mapping** (Phase 06c): every entity/operator kind maps
+  to a basic or composed SDF object per draw style (`style=` honoured); only
+  `TripleReflection`/`VersorFactors` still raise `TypeError`. `wireframe` is
+  not honoured (a true wireframe cage is a 1D structure the ray-marcher cannot
+  express as a solid).
+- **Configurable lighting** mirrors the standard viewer's add/update API:
+  `DirectionalLight` via `add()`, `set_ambient_light()`, `add_default_light`.
+- **Shader-drawn overlays** (`Grid`, `Axes`) are depth-composited in the
+  fragment shader, not raymarched volumes; `add_default_grid`/`add_default_axes`.
+- **Object/light updates** via `update_entity()`/`update_light()` + `flush()` /
+  `sleep_ms()` support animation without a full scene reload.
 - **Unit tests are phase-scoped and run per phase** (fail early) — no waiting
   until a late integration pass.
 - **The default algebra distance is `scalar_pseudo`**: the signed scalar +
@@ -297,6 +319,12 @@ signedness, they require a signed distance function (`scalar_pseudo` or
   lives in `embed_src`, keeping the algebra module the single source of truth.
 - **Multi-object performance:** one global SDF per ray step is costly; mitigate
   with AABB coarse culling, step caps, adaptive stepping and early-out.
+- **Algebra-leaf uniform budget:** each `mv_sdf` `M` matrix is a per-object
+  float array; with large result spaces (N3 ≈ 32 blades) the fragment-uniform
+  budget (`GL_MAX_FRAGMENT_UNIFORM_VECTORS`) is reached after only a few
+  objects. Mitigate by packing all `M` into one flat `u_M[]` uniform and, past
+  a threshold, a data texture (the material table's planned "texture
+  escalation").
 - **Volumetric opacity cost:** soft/volumetric transfer requires accumulation
   along the ray (more samples) and depends on a unit-scaled distance (Phase 9);
   `step`/`linear`/`sigmoid` are cheap, true absorption is the optional follow-on.

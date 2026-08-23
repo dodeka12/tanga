@@ -60,11 +60,12 @@ program specialization.
 - Each function axis (`distance`, `opacity`) has:
   1. a Python enum (name → value string + params metadata + `default()`),
   2. a JS `Map<string, {params, snippet}>` keyed by the same value strings,
-  3. a viewer-level `active*` field whose change invalidates the program-cache
-     entry for that axis and triggers recompile.
-- The compiles are driven by one `buildProgram(algebra, distance, opacity)`
-  entry point (Phase 8). Adding the `opacity` axis later is therefore a
-  **registry population**, not a refactor of the compilation mechanism.
+  3. a viewer-level `active*` field whose change updates the program's
+     structure key and triggers a rebuild (Phase 8's structure-vs-data split).
+- The compiles are driven by the single-`map()` assembly in Phase 8 (the
+  distance/opacity snippets are emitted into the one composed shader). Adding
+  the `opacity` axis later is therefore a **registry population**, not a
+  refactor of the compilation mechanism.
 - The distance `snippet`s are pure functions of `r[]`; the opacity `snippet`s
   (Phase 12) are pure functions of `d` (and `ε`).
 
@@ -82,8 +83,8 @@ program specialization.
         algebra or entity branching.
 - [ ] Viewer-level selection plumbing (stubs until Phase 6 wires the server):
   - [ ] `sdf_viewer.js` holds `activeDistance` (default `"scalar_pseudo"`).
-  - [ ] A change to `activeDistance` invalidates the program cache entry and
-        triggers a recompile.
+  - [ ] A change to `activeDistance` updates the structure key and triggers a
+        rebuild (Phase 8's structure-vs-data split).
   - [ ] A tiny, temporary switch (UI button or JS console hook) to exercise
         the recompile path now.
 

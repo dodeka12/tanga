@@ -16,16 +16,23 @@ changelog entry, and a pull request following the repository workflows.
 - [ ] Smoke test (Python):
   - [ ] `dev/src/test_viz_sdf.py` driving `SdfVisualizer` headless where
         feasible (server boot, config message, basic scene serialization).
-- [ ] Examples (the basic `demo_sdf_entities.py` is already delivered in
-      Phase 6a):
+- [ ] Examples. Already delivered (not re-done here): `demo_sdf_entities.py`
+      (6a), `demo_sdf_composed.py` (6b — already demonstrates subtraction via
+      `Composed`), `demo_sdf_arrowhead.py`, `demo_sdf_light_animation.py`.
+      Remaining:
   - [ ] `py/examples/viz/demo_sdf_algebra.py` — MV rendering with
         OPNS/IPNS + distance-function switching.
-  - [ ] `py/examples/viz/demo_sdf_booleans.py` — positive/negative objects
-        (`combine`/`polarity`) demonstrating union, intersection, subtraction.
+  - [ ] `py/examples/viz/demo_sdf_booleans.py` — the per-object
+        `combine=`/`polarity=` API (union/intersection/subtract across
+        *separate* scene objects — distinct from `Composed`, which
+        `demo_sdf_composed.py` already covers).
   - [ ] `py/examples/viz/demo_sdf_opacity.py` — distance → opacity transfer
         functions (`step`/`linear`/`sigmoid`) and soft translucent objects.
   - [ ] Cross-check each example runs with `uv run python …`.
 - [ ] Docs:
+  - [ ] The plan README (`dev/todos/viz-sdf-viewer/README.md`) already exists
+        and must be brought up to date with the shipped phases 1–6c and the
+        lighting/overlay/update additions before finalizing.
   - [ ] New `docs/py/viz/sdf-viewer.md` (or similar) covering architecture,
         the two rendering paths, distance functions, normalization, and the
         WebGL2 requirement.

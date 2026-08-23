@@ -19,12 +19,17 @@ step too far (miss) or too short (slow / banding).
 
 - [ ] Analytic gradient probe:
   - [ ] Add a finite-difference check in Python (evaluate the SDF `|r|` on a
-        small stencil) to estimate `|∇d|` at a surface point.
+        small stencil) to estimate `|∇d|` at a surface point. (The in-shader
+        `calcNormal` in `raymarch.glsl`, step `0.001`, already serves the
+        analytic path; this probe validates the *algebra* SDF and drives the
+        per-object scale.)
   - [ ] Compute the required per-object scale `s` so `|∇(s·d)| ≈ 1`.
 - [ ] Wire a per-object `scale` uniform:
-  - [ ] Backend computes/persists `scale` alongside `M` (and exposes it as a
-        calibration override).
-  - [ ] JS multiplies the distance by `scale` before ray-marching.
+  - [ ] Backend computes/persists `scale` in the `mv_sdf` wire object
+        (alongside `M`) and exposes it as a calibration override.
+  - [ ] JS multiplies the distance by `scale` before ray-marching; the value
+        is packed in `buildUniforms()`/`buildFragment()` in `sdf_viewer.js`
+        and applied in the Phase 8 algebra leaf (`dist_mv_<i>`).
 - [ ] Inside/outside sign calibration:
   - [ ] For signed distance modes (`scalar`), determine and (if needed) flip
         the per-algebra global sign so interior/exterior shading is correct.

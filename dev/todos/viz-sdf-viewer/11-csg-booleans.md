@@ -1,6 +1,8 @@
 # Phase 11 — CSG booleans: positive/negative objects (union/intersection/subtract)
 
-**Status:** Planned
+**Status:** Mostly done — the per-object `combine`/`polarity` fold and the
+`Composed` per-constituent modes shipped in Phases 5/6b/6c; remaining work is
+the signedness gate, smooth variants, and a dedicated test file.
 
 ## Goal
 
@@ -23,12 +25,18 @@ positive object via `max` (difference).
 
 ## Files
 
-- Modify: `py/pytanga/viz/sdf/serializer.py` (emit `combine`/`polarity`)
-- Modify: `py/pytanga/viz/sdf/visualizer.py` (accept `combine="subtract"` /
-  `polarity="negative"` in `add()`)
-- Modify: `py/pytanga/viz/templates/sdf/scene-builder.js` (combine-mode fold)
-- Modify: `py/pytanga/viz/templates/sdf/material-table.js` (material preference
-  under subtraction)
+- Done: `py/pytanga/viz/sdf/serializer.py` (`_normalize_combine` emits
+  `combine`/`polarity`)
+- Done: `py/pytanga/viz/sdf/visualizer.py` (`add()`/`update_entity()` accept
+  `combine=`/`polarity=`)
+- Done: `py/pytanga/viz/templates/sdf/composer.js` (ordered
+  union/intersection/subtract fold with the positive accumulator's `matId`
+  preferred on subtract)
+- Modify (remaining): `py/pytanga/viz/sdf/visualizer.py` + `serializer.py`
+  (signedness gate — warn/reject `intersection`/`subtract` under unsigned
+  `magnitude`)
+- Modify (remaining): `py/pytanga/viz/templates/sdf/composer.js` (smooth
+  variants using the Phase 1 `vec2` combinators)
 
 ## Combine model
 
@@ -44,19 +52,19 @@ positive object via `max` (difference).
 
 ## Steps
 
-- [ ] Serializer: accept and forward `combine`/`polarity` on both analytic
-      entity trees and `mv_sdf` objects (a single `combine` field in the wire
-      object).
-- [ ] Visualizer API: `add(obj, ..., combine=...)` / `add(obj, ...,
+- [x] Serializer: accept and forward `combine`/`polarity` on analytic entity
+      trees (a single `combine` field in the wire object). *(the `mv_sdf`
+      forwarding lands with Phase 7)*
+- [x] Visualizer API: `add(obj, ..., combine=...)` / `add(obj, ...,
       polarity="negative")`; validate the value and store it as per-object
       metadata emitted in serialization.
-- [ ] Scene builder fold:
-  - [ ] `union` → `acc = min(acc, d)`; winner's `matId` propagated.
-  - [ ] `intersection` → `acc = max(acc, d)`; `matId` from the closer operand.
-  - [ ] `subtract` → `acc = max(acc, -d)`; `matId` **forced to the positive
+- [x] Scene builder fold (`composer.js`):
+  - [x] `union` → `acc = min(acc, d)`; winner's `matId` propagated.
+  - [x] `intersection` → `acc = max(acc, d)`; `matId` from the closer operand.
+  - [x] `subtract` → `acc = max(acc, -d)`; `matId` **forced to the positive
         accumulator's material** (a negative object emits no colored surface).
-- [ ] Material table: record which objects are negative so subtraction prefers
-      the positive `matId` on carved surfaces.
+- [x] Material table: subtraction prefers the positive `matId` on carved
+      surfaces (the `composer.js` fold keeps the accumulator's material).
 - [ ] Signedness gate: inspect the active distance function; when
       `intersection`/`subtract` objects exist and the function is unsigned
       (`magnitude`), surface a warning (backend) / reject (frontend).
@@ -66,6 +74,9 @@ positive object via `max` (difference).
 ## Unit tests
 
 File: `py/tests/viz/sdf/test_combine.py`
+
+*(`test_sdf_serializer.py::test_serialize_combine_and_polarity` already covers
+round-trip; the new file consolidates the combine-specific cases.)*
 
 - [ ] `test_combine_serialized` — `combine`/`polarity` round-trips into the
       wire object for analytic and `mv_sdf` objects.
