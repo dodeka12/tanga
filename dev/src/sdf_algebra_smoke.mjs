@@ -59,6 +59,8 @@ const dists = emitDistanceFunctions([e3plane], 'scalar_pseudo');
 assert(dists.includes('distOfScalarPseudo_E3(in float r[8])'), 'distance instantiated per algebra');
 assert(!dists.includes('SLOT_PSEUDO'), 'SLOT_PSEUDO token substituted away');
 assert(dists.includes('r[7]'), 'SLOT_PSEUDO becomes 7 for e3');
+assert(dists.includes('i < 8'), 'loop bound NR substituted');
+assert(!dists.includes('NR'), 'no bare NR token remains');
 
 const embeds = distinctEmbedSrcs([e3plane]);
 assert(embeds.length === 1, 'one distinct embed for a single e3 object');

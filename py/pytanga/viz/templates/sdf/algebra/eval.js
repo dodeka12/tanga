@@ -86,7 +86,9 @@ function instantiateDist(name, nr, slotPseudo, suffix) {
     if (!base) throw new Error(`Unknown distance function '${name}'`);
     const fn = distFnName(name);
     let src = base.snippet;
-    src = src.replaceAll('r[NR]', `r[${nr}]`).replaceAll('SLOT_PSEUDO', String(slotPseudo));
+    // Replace the bare `NR` token (array size in `r[NR]` *and* the loop bound
+    // `i < NR`) and the `SLOT_PSEUDO` constant with the algebra's values.
+    src = src.replaceAll('NR', String(nr)).replaceAll('SLOT_PSEUDO', String(slotPseudo));
     src = src.replace(fn, fn + '_' + suffix);
     if (name === 'grade') {
         src = src.replace('gradeNorm(r', `gradeNorm_${suffix}(r`);
