@@ -79,6 +79,19 @@
   `GeneralRotor`→sector disc+ring+axis at origin, etc.). Added the
   `demo_sdf_composed.py` example (sphere with a bored-out cylinder plus
   torus/box/rotor) and the `demo_sdf_arrowhead.py` diagnostic.
+- **Configurable SDF lighting** — `SdfVisualizer` now accepts
+  `DirectionalLight` objects through `add()`, has an `add_default_light` flag
+  (mirroring the standard viewer's `add_default_axes`/`add_default_grid`), and
+  exposes `set_ambient_light()` (plus an `ambient` property) to tune the
+  ambient term. The raymarcher shades with a uniform-driven set of up to 8
+  directional lights plus a vec3 ambient; the previous hardcoded single light
+  is now the built-in default.
+- **SDF object/light updates + animation loop** — `SdfVisualizer` gained
+  `update_entity()` / `update_light()` (replace an object or light by id),
+  `flush()`, and `sleep_ms()` so objects and lights can be modified after
+  `add()` and animated. `DirectionalLight.direction` now normalizes on
+  assignment. Added the `demo_sdf_light_animation.py` example (a light orbiting
+  a sphere).
 
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed

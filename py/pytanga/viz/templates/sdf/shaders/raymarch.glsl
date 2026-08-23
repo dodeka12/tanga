@@ -78,11 +78,17 @@ vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float matId) {
     vec3 albedo = materialColor(matId).rgb;
     float surfaceOpacity = materialColor(matId).a;
 
-    vec3 lightDir = normalize(vec3(10.0, 20.0, 10.0));
-    float amb = 0.45;
-    float dif = max(dot(n, lightDir), 0.0) * 0.8;
-    float sh = softShadow(p + n * 0.01, lightDir);
-    vec3 col = albedo * (amb + dif * sh) * (0.5 + 0.5 * n.y);
+    // Ambient term + the directional-light set (uniforms declared by the host's
+    // `lightPreamble`; `uLightColor` already includes each light's intensity).
+    vec3 col = albedo * uAmbientColor;
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        if (i >= uLightCount) break;
+        vec3 L = normalize(uLightDir[i]);
+        float dif = max(dot(n, L), 0.0);
+        float sh = softShadow(p + n * 0.01, L);
+        col += albedo * uLightColor[i] * dif * sh;
+    }
+    col *= (0.5 + 0.5 * n.y);
 
     // Fog for depth cueing.
     float dist = length(p - ro);

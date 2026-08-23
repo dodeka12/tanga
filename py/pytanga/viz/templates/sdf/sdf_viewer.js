@@ -25,6 +25,7 @@ import {
     materialPreamble,
     buildMaterialRows,
     padMaterialRows,
+    parseHexColor,
 } from './material-table.js';
 
 const VERTEX_SHADER = /* glsl */ `
@@ -38,6 +39,72 @@ let objects = [];
 let activeDistance = 'scalar_pseudo';
 let activeOpacity = 'step';
 let sceneConfig = null;
+
+// ── Lighting (directional lights + ambient) ───────────────
+const MAX_LIGHTS = 8;
+
+// Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then
+// injected into the assembled fragment before the raymarch body.
+const lightPreamble = `
+const int MAX_LIGHTS = ${MAX_LIGHTS};
+uniform int uLightCount;
+uniform vec3 uLightDir[MAX_LIGHTS];
+uniform vec3 uLightColor[MAX_LIGHTS];
+uniform vec3 uAmbientColor;
+`;
+
+// Frontend defaults mirror the Python defaults (a white light from (10,20,10)
+// at intensity 0.8 plus a white 0.45 ambient), so an empty scene renders the
+// same even before the server's first lighting config arrives.
+const DEFAULT_LIGHTING = {
+    ambient: { color: '#ffffff', intensity: 0.45 },
+    lights: [{ direction: [10, 20, 10], color: '#ffffff', intensity: 0.8 }],
+};
+
+function parseAmbient(a) {
+    const [r, g, b] = parseHexColor(a && a.color);
+    const i = a && typeof a.intensity === 'number' ? a.intensity : 1.0;
+    return [r * i, g * i, b * i];
+}
+
+function parseLight(l) {
+    const [r, g, b] = parseHexColor(l && l.color);
+    const i = l && typeof l.intensity === 'number' ? l.intensity : 1.0;
+    let d = (l && l.direction) || [0, 0, 1];
+    const len = Math.hypot(d[0], d[1], d[2]);
+    d = len > 1e-9 ? [d[0] / len, d[1] / len, d[2] / len] : [0, 0, 1];
+    return { direction: d, color: [r * i, g * i, b * i] };
+}
+
+let lighting = {
+    ambient: parseAmbient(DEFAULT_LIGHTING.ambient),
+    lights: DEFAULT_LIGHTING.lights.map(parseLight),
+};
+
+function setLightUniforms(u) {
+    if (!u) return;
+    u.uLightCount.value = lighting.lights.length;
+    for (let i = 0; i < MAX_LIGHTS; i++) {
+        const l = lighting.lights[i];
+        if (l) {
+            u.uLightDir.value[i].set(l.direction[0], l.direction[1], l.direction[2]);
+            u.uLightColor.value[i].set(l.color[0], l.color[1], l.color[2]);
+        } else {
+            u.uLightDir.value[i].set(0, 0, 0);
+            u.uLightColor.value[i].set(0, 0, 0);
+        }
+    }
+    u.uAmbientColor.value.set(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2]);
+}
+
+function applyLighting(wireLighting) {
+    if (!wireLighting) return;
+    if (wireLighting.ambient) lighting.ambient = parseAmbient(wireLighting.ambient);
+    if (wireLighting.lights) lighting.lights = wireLighting.lights.map(parseLight);
+    if (viewerState.material && viewerState.material.uniforms) {
+        setLightUniforms(viewerState.material.uniforms);
+    }
+}
 
 // ── GLSL source loading ───────────────────────────────────
 
@@ -67,6 +134,7 @@ function buildFragment() {
         combinators,
         materialPreamble,
         materialColorSrc,
+        lightPreamble,
         composeObjects(list),
         raymarch,
     ].join('\n');
@@ -79,7 +147,7 @@ function buildUniforms() {
     // must be a full-length array (three.js flattens the whole declared array);
     // pad unused slots with a transparent black material.
     const rows = padMaterialRows(actualRows);
-    return {
+    const uniforms = {
         uResolution: { value: new THREE.Vector2() },
         uCameraPosition: { value: new THREE.Vector3() },
         uCameraWorldMatrix: { value: new THREE.Matrix4() },
@@ -88,7 +156,13 @@ function buildUniforms() {
         uCameraFar: { value: 1000.0 },
         uMaterial: { value: rows.map((r) => new THREE.Vector4(r[0], r[1], r[2], r[3])) },
         uMaterialCount: { value: actualRows.length },
+        uLightCount: { value: lighting.lights.length },
+        uLightDir: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uAmbientColor: { value: new THREE.Vector3() },
     };
+    setLightUniforms(uniforms);
+    return uniforms;
 }
 
 // A single centered sphere so an empty scene still renders via the composed
@@ -167,6 +241,7 @@ async function handleMessage(msg) {
     if (msg.type === 'scene_config') {
         sceneConfig = msg;
         applySceneConfig(msg);
+        applyLighting(msg.sdf_lighting);
         return;
     }
     if (msg.type === 'scene_update') {
@@ -202,6 +277,9 @@ async function handleMessage(msg) {
         if (msg.opacity && msg.opacity !== activeOpacity) {
             activeOpacity = msg.opacity;
             rebuildProgram();
+        }
+        if (msg.lights || msg.ambient) {
+            applyLighting({ ambient: msg.ambient, lights: msg.lights });
         }
         return;
     }

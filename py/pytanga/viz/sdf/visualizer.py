@@ -27,6 +27,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 from .composed import Composed
 from .distance import DistanceFunction
+from .lights import DirectionalLight, Light, serialize_light
 from .primitives import SdfNode
 from .serializer import serialize_entity
 
@@ -58,6 +59,7 @@ class SdfVisualizer:
         title: str = "Tanga SDF Viewer",
         background_color: str = "#1a1a2e",
         camera: Any | None = None,  # CameraConfig | View3dConfig | None
+        add_default_light: bool = True,
     ) -> None:
         from pytanga.viz.camera import _normalize_camera_config
 
@@ -80,6 +82,14 @@ class SdfVisualizer:
         # into the shader at Phase 8 / populated at Phase 12).
         self._distance = DistanceFunction.default()
         self._opacity = "step"
+
+        # Lighting: one default directional light + ambient term, unless the
+        # caller disabled the default light (mirrors add_default_axes/grid).
+        self._lights: dict[str, Light] = {}
+        self._ambient_color = "#ffffff"
+        self._ambient_intensity = 0.45
+        if add_default_light:
+            self._add_default_light_source()
 
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -105,13 +115,79 @@ class SdfVisualizer:
         """Add an object to the SDF scene and return its ID.
 
         Accepts a geometry entity, an operator, a bare :class:`SdfNode`
-        primitive/combinator tree, or a :class:`Composed` object. ``style``
-        selects an alternative draw style (e.g. ``CrossHairPointStyle``).
+        primitive/combinator tree, a :class:`Composed` object, or a
+        :class:`~pytanga.viz.sdf.lights.Light` (a ``DirectionalLight``).
+        ``style`` selects an alternative draw style (e.g.
+        ``CrossHairPointStyle``).
         """
         from uuid import uuid4
 
-        entity = self._resolve(obj)
+        if isinstance(obj, Light):
+            return self._add_light(obj)
 
+        entity = self._resolve(obj)
+        props = self._build_props(
+            color=color,
+            opacity=opacity,
+            size=size,
+            thickness=thickness,
+            style=style,
+            combine=combine,
+            polarity=polarity,
+        )
+
+        oid = entity_id or uuid4().hex[:8]
+        self._objects[oid] = entity
+        self._props[oid] = props
+        self._flush()
+        return oid
+
+    def update_entity(
+        self,
+        entity_id: str,
+        obj: Any,
+        *,
+        color: str | None = None,
+        opacity: float | None = None,
+        size: float | None = None,
+        thickness: float | None = None,
+        style: Any | None = None,
+        combine: str | None = None,
+        polarity: str | None = None,
+    ) -> None:
+        """Replace the object at ``entity_id`` and re-push it.
+
+        ``obj`` may be a geometry entity, an operator, a bare :class:`SdfNode`,
+        or a :class:`Composed`; a :class:`~pytanga.viz.sdf.lights.Light` is
+        routed to :meth:`update_light`.
+        """
+        if isinstance(obj, Light):
+            self.update_light(entity_id, obj)
+            return
+        self._objects[entity_id] = self._resolve(obj)
+        self._props[entity_id] = self._build_props(
+            color=color,
+            opacity=opacity,
+            size=size,
+            thickness=thickness,
+            style=style,
+            combine=combine,
+            polarity=polarity,
+        )
+        self._push_update([entity_id])
+
+    def _build_props(
+        self,
+        *,
+        color: str | None = None,
+        opacity: float | None = None,
+        size: float | None = None,
+        thickness: float | None = None,
+        style: Any | None = None,
+        combine: str | None = None,
+        polarity: str | None = None,
+    ) -> dict[str, Any]:
+        """Assemble the per-object property dict (``None`` = inherit default)."""
         props: dict[str, Any] = {}
         if color is not None:
             props["color"] = color
@@ -127,25 +203,26 @@ class SdfVisualizer:
             props["combine"] = combine
         if polarity is not None:
             props["polarity"] = polarity
-
-        oid = entity_id or uuid4().hex[:8]
-        self._objects[oid] = entity
-        self._props[oid] = props
-        self._flush()
-        return oid
+        return props
 
     def remove(self, entity_id: str) -> None:
-        """Remove an entity from the SDF scene."""
+        """Remove an entity or a light from the SDF scene."""
+        if entity_id in self._lights:
+            del self._lights[entity_id]
+            self._push_config()
+            return
         self._objects.pop(entity_id, None)
         self._props.pop(entity_id, None)
         self._push_removed([entity_id])
 
     def clear(self) -> None:
-        """Remove all entities."""
+        """Remove all entities and lights."""
         removed = list(self._objects)
         self._objects.clear()
         self._props.clear()
         self._push_removed(removed)
+        self._lights.clear()
+        self._push_config()
 
     def _resolve(self, obj: Any) -> Any:
         from pytanga.geometry.operators import Operator as GeoOperator
@@ -164,6 +241,49 @@ class SdfVisualizer:
                 f"Object of type {type(obj).__name__} is not a recognized "
                 f"geometry entity."
             ) from None
+
+    # ── Lighting ────────────────────────────────────────────
+
+    def _add_light(self, light: Light) -> str:
+        """Add a light and return its ID."""
+        from uuid import uuid4
+
+        lid = "light-" + uuid4().hex[:8]
+        self._lights[lid] = light
+        self._push_config()
+        return lid
+
+    def update_light(self, light_id: str, light: Light) -> None:
+        """Replace the light at ``light_id`` and push the light config."""
+        self._lights[light_id] = light
+        self._push_config()
+
+    def _add_default_light_source(self) -> None:
+        """Add the built-in default directional light (stable ID)."""
+        self._lights["__default_light__"] = DirectionalLight()
+
+    def _lighting_dict(self) -> dict[str, Any]:
+        """Wire form of the ambient term plus the current light set."""
+        return {
+            "ambient": {
+                "color": self._ambient_color,
+                "intensity": self._ambient_intensity,
+            },
+            "lights": [serialize_light(light) for light in self._lights.values()],
+        }
+
+    @property
+    def ambient(self) -> dict[str, Any]:
+        """The current ambient light as ``{"color", "intensity"}``."""
+        return {"color": self._ambient_color, "intensity": self._ambient_intensity}
+
+    def set_ambient_light(
+        self, *, color: str = "#ffffff", intensity: float = 0.45
+    ) -> None:
+        """Set the ambient light color and intensity (pushed to the viewer)."""
+        self._ambient_color = color
+        self._ambient_intensity = float(intensity)
+        self._push_config()
 
     # ── Viewer-level settings (stubs until later phases) ────
 
@@ -198,6 +318,7 @@ class SdfVisualizer:
                 "type": "sdf_viewer_config",
                 "distance": self.distance,
                 "opacity": self.opacity,
+                **self._lighting_dict(),
             }
         )
         asyncio.run_coroutine_threadsafe(self._server.push_raw(message), self._loop)
@@ -229,8 +350,11 @@ class SdfVisualizer:
             title=self._title,
             name=scene_name,
             space_dim=3,
-        )
-        return cfg.to_dict()
+        ).to_dict()
+        # Lighting rides along with the scene config so it reaches the frontend
+        # on the initial connect; runtime changes go via `sdf_viewer_config`.
+        cfg["sdf_lighting"] = self._lighting_dict()
+        return cfg
 
     def _scene_list(self) -> list[str]:
         return [""]
@@ -316,6 +440,22 @@ class SdfVisualizer:
             time.sleep(0.25)
         self.stop_server()
 
+    def sleep_ms(self, milliseconds: int) -> bool:
+        """Sleep for ``milliseconds``; return ``False`` if interrupted.
+
+        Returns ``True`` when the full interval elapsed, or ``False`` if a
+        terminal interrupt (Ctrl+C / SIGTERM) arrived first — the caller should
+        then stop animating. Sleeps in short windows so an interrupt is observed
+        promptly without busy-spinning.
+        """
+        deadline = time.monotonic() + milliseconds / 1000.0
+        while not self._shutdown_requested.is_set():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0.0:
+                return True
+            time.sleep(min(remaining, 0.05))
+        return False
+
     def stop_server(self, *, timeout: float = 5.0) -> None:
         """Stop the SDF server and clean up."""
         if self._server is None:
@@ -352,6 +492,11 @@ class SdfVisualizer:
 
     def _flush(self) -> None:
         self._push_update(list(self._objects))
+
+    def flush(self) -> None:
+        """Push all objects and the lighting/config to the viewer."""
+        self._flush()
+        self._push_config()
 
     def _push_update(self, ids: list[str]) -> None:
         if self._loop is None or self._server is None or not ids:
