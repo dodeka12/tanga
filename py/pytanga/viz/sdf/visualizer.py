@@ -29,6 +29,7 @@ from pytanga.algebra import MV
 from .composed import Composed
 from .distance import DistanceFunction
 from .lights import DirectionalLight, Light, serialize_light
+from .opacity import OpacityTransfer
 from .overlay import Axes, Grid, SdfOverlay, serialize_overlay
 from .primitives import SdfNode
 from .serializer import serialize_entity
@@ -89,10 +90,10 @@ class SdfVisualizer:
         self._objects: dict[str, Any] = {}
         self._props: dict[str, dict[str, Any]] = {}
 
-        # Viewer-level distance / opacity transfer setting (stub hooks; wired
-        # into the shader at Phase 8 / populated at Phase 12).
+        # Viewer-level distance / opacity transfer setting (wired into the shader
+        # at Phase 8 / populated at Phase 12).
         self._distance = DistanceFunction.default()
-        self._opacity = "step"
+        self._opacity = OpacityTransfer.default()
 
         # Lighting: one default directional light + ambient term, unless the
         # caller disabled the default light (mirrors add_default_axes/grid).
@@ -399,11 +400,14 @@ class SdfVisualizer:
     @property
     def opacity(self) -> str:
         """The active opacity transfer key (default ``"step"``)."""
-        return self._opacity
+        return self._opacity.value
 
     @opacity.setter
-    def opacity(self, value: str) -> None:
-        self._opacity = value
+    def opacity(self, value: str | OpacityTransfer) -> None:
+        if isinstance(value, OpacityTransfer):
+            self._opacity = value
+        else:
+            self._opacity = OpacityTransfer(value)
         self._push_config()
 
     def _push_config(self) -> None:

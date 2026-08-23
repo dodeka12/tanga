@@ -25,6 +25,7 @@ from .calibration import (
 from .composed import Composed
 from .distance import DistanceFunction, DistanceFunctionMeta
 from .lights import DirectionalLight, Light
+from .opacity import OpacityTransfer
 from .overlay import Axes, Grid, SdfOverlay
 from .primitives import (
     SdfNode,
@@ -56,6 +57,7 @@ __all__ = [
     "DistanceFunctionMeta",
     "Grid",
     "Light",
+    "OpacityTransfer",
     "SdfNode",
     "SdfOverlay",
     "SdfVisualizer",

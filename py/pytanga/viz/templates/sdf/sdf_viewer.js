@@ -39,6 +39,7 @@ import {
     emitAlgebraLeaves,
     buildAlgebraUniforms,
 } from './algebra/eval.js';
+import { opacityFuncs } from './algebra/opacities.js';
 
 const VERTEX_SHADER = /* glsl */ `
 void main() {
@@ -169,9 +170,16 @@ function buildFragment() {
         matrixUniformDecls(),
         emitDistanceFunctions(list, activeDistance),
         emitAlgebraLeaves(list, activeDistance),
+        emitOpacityFunction(),
         composeObjects(list),
         raymarch,
     ].join('\n');
+}
+
+function emitOpacityFunction() {
+    const entry = opacityFuncs.get(activeOpacity);
+    if (!entry) throw new Error(`Unknown opacity transfer '${activeOpacity}'`);
+    return entry.snippet;
 }
 
 function buildUniforms() {

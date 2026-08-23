@@ -24,16 +24,11 @@ uniform float uCameraFar;
 // GLSL ES 3.0 fragment output (there is no `gl_FragColor` in WebGL2).
 out vec4 fragColor;
 
-// ── Opacity transfer (step stub) ───────────────────────────
-// The call site and its `step` default are fixed now so Phase 12 only swaps
-// this snippet for `linear`/`sigmoid` without touching the raymarch body.
-
-float opacityOf(float d) {
-    // The ray-march loop breaks on `d < SDF_EPSILON`, so a confirmed hit has a
-    // distance within that (usually slightly positive) band. The solid `step`
-    // must treat that band as opaque — a bare `d < 0.0` would zero every color.
-    return d < SDF_EPSILON ? 1.0 : 0.0;
-}
+// ── Opacity transfer (call site; the function is injected by the host) ──
+// The `opacityOf(float d, float epsilon)` function is emitted by the host
+// assembler (`sdf_viewer.js`) from `algebra/opacities.js` — the active transfer
+// (`step`/`linear`/`sigmoid`) is a registry lookup, never a shader branch. The
+// Phase 2 call site is fixed here; only the injected snippet changes.
 
 // ── Gradient normal (tetrahedral) ──────────────────────────
 
@@ -96,9 +91,9 @@ vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float matId) {
     vec3 bg = vec3(0.10, 0.10, 0.18);
     col = mix(col, bg, fog);
 
-    // Per-object surface opacity (blended color, depthWrite:false) and the
-    // `opacityOf` transfer stub multiplied in.
-    col *= surfaceOpacity * opacityOf(map(p).x);
+    // Per-object surface opacity (the per-object `opacity` is ε: the surface
+    // alpha for `step`, the soft-edge breadth for `linear`/`sigmoid`).
+    col *= opacityOf(map(p).x, surfaceOpacity);
     return col;
 }
 

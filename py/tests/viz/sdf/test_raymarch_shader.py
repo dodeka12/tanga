@@ -80,9 +80,10 @@ def test_raymarch_opacity_step_treats_hit_band_as_opaque() -> None:
     # The loop breaks on `d < SDF_EPSILON`, so at a hit the distance is a small
     # value within that band (usually slightly positive). The solid `step`
     # transfer must therefore use SDF_EPSILON, not `d < 0.0`, or every surface
-    # shades to black.
-    body = _read(RAYMARCH_FILE)
-    assert "return d < SDF_EPSILON" in body
+    # shades to black. The `opacityOf` function is now emitted from
+    # `algebra/opacities.js` (Phase 12), so the step stub lives there.
+    opacities = (SDC_DIR / "algebra" / "opacities.js").read_text(encoding="utf-8")
+    assert "return d < SDF_EPSILON ? epsilon : 0.0;" in opacities
 
 
 def test_no_version_or_precision_directives() -> None:
@@ -140,8 +141,10 @@ def test_raymarch_map_and_material_contract() -> None:
     assert "vec2 map(" not in code, "raymarch body must not define map"
     # `materialColor` is injected by the material table.
     assert "materialColor(" in code
-    # The body must define its own helpers.
-    for symbol in ("opacityOf", "calcNormal", "softShadow", "shade"):
+    # `opacityOf` is a call site (the function is injected by the host from
+    # `algebra/opacities.js`); the other helpers are defined in the body.
+    assert "opacityOf(" in code
+    for symbol in ("calcNormal", "softShadow", "shade"):
         assert f"{symbol}(" in code, f"raymarch body must define {symbol}"
 
 

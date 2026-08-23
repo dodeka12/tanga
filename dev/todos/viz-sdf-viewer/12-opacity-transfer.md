@@ -1,6 +1,8 @@
 # Phase 12 — Opacity transfer functions: non-`step` transfers + volumetric
 
-**Status:** Planned
+**Status:** Implemented (surface path) — the full opacity registry, the
+`opacityOf` emission through the Phase 8 assembly, and the surface path landed
+here; the volumetric accumulation path is deferred (optional follow-on).
 
 ## Goal
 
@@ -70,45 +72,47 @@ Knobs:
 
 ## Steps
 
-- [ ] Populate the opacity registry (no new mechanism):
-  - [ ] `opacity.py` enum: `STEP`, `LINEAR`, `SIGMOID`; `default()` → `STEP`.
-  - [ ] `algebra/opacities.js`: `opacityFuncs` map with `linear`/`sigmoid`
+- [x] Populate the opacity registry (no new mechanism):
+  - [x] `opacity.py` enum: `STEP`, `LINEAR`, `SIGMOID`; `default()` → `STEP`.
+  - [x] `algebra/opacities.js`: `opacityFuncs` map with `linear`/`sigmoid`
         snippets (mirroring `algebra/distances.js`).
-  - [ ] Wire `sdf_viewer.js` `activeOpacity` (default `"step"`) to the existing
+  - [x] Wire `sdf_viewer.js` `activeOpacity` (default `"step"`) to the existing
         `rebuildProgram()` hook (it already triggers a rebuild on change).
-- [ ] Emit the `opacityOf(...)` snippet through the existing Phase 8 builder
-      (replacing the Phase 2 `step` stub only when a non-default transfer is
-      active).
-- [ ] Surface path: multiply the resolved color alpha by the per-object
-      `opacity` factor, then by `opacityOf(d)`.
+- [x] Emit the `opacityOf(...)` snippet through the existing Phase 8 builder
+      (`emitOpacityFunction()` in `sdf_viewer.js`; the Phase 2 step stub was
+      removed from `raymarch.glsl` and moved into `opacities.js`).
+- [x] Surface path: `col *= opacityOf(d, ε)` where the per-object `opacity` is
+      `ε` — the surface alpha for `step`, the soft-edge breadth for
+      `linear`/`sigmoid`.
 - [ ] Volumetric path: for non-`step` transfers, accumulate
-      `1 − exp(−σ·Δt)` along the ray using `opacityOf(d)` as the density and
-      the per-object `ε` as the falloff. *(A second absorption march loop in the
-      raymarch `main()`, not a snippet swap — see the Background note.)*
-- [ ] `SdfVisualizer.opacity` setter already exists; add the per-object
-      `opacity`/`thickness` style value as the `ε` falloff knob.
+      `1 − exp(−σ·Δt)` along the ray — **deferred** (a second absorption march
+      loop in the raymarch `main()`, not a snippet swap; optional follow-on).
+- [x] `SdfVisualizer.opacity` setter now uses the `OpacityTransfer` enum and
+      accepts a string or enum member.
 
 ## Unit tests
 
 File: `py/tests/viz/sdf/test_opacity.py`
 
-- [ ] `test_enum_values` — every `OpacityTransfer` value string is a valid,
+- [x] `test_enum_values` — every `OpacityTransfer` value string is a valid,
       known key (matches the JS registry names).
-- [ ] `test_default_is_step` — `OpacityTransfer.default()` returns `STEP`.
-- [ ] `test_params_metadata` — `linear`/`sigmoid` require an `ε`; `step`
+- [x] `test_default_is_step` — `OpacityTransfer.default()` returns `STEP`.
+- [x] `test_params_metadata` — `linear`/`sigmoid` require an `ε`; `step`
       requires none.
-- [ ] `test_snippet_purity` — generated snippets contain no `main()`, no
+- [x] `test_snippet_purity` — generated snippets contain no `main()`, no
       algebra/entity branch keywords.
 
 ## Verification
 
-- [ ] Default (`step`) renders identically to Phase 2/8 with no behavior
-      change — confirming this is additive, not a refactor.
-- [ ] Toggling `step` ↔ `linear` ↔ `sigmoid` recompiles the shader and updates
-      the render via the Phase 8 structure-vs-data rebuild split.
-- [ ] `linear`/`sigmoid` produce a soft/translucent edge whose breadth follows
-      the per-object `opacity` (`ε`).
-- [ ] A volumetric scene accumulates opacity along the ray (soft volume look).
-- [ ] No `if(opacity…)` branches remain in the generated shader (string
-      assertion).
-- [ ] `uv run pytest py/tests/viz/sdf/test_opacity.py` passes.
+- [x] Default (`step`) preserves the Phase 2/8 behavior — the `step` transfer
+      is `d < SDF_EPSILON ? ε : 0` (the per-object α), so the render is
+      unchanged — confirming this is additive, not a refactor.
+- [x] Toggling `step` ↔ `linear` ↔ `sigmoid` recompiles the shader (the
+      structure key includes `activeOpacity`).
+- [x] `linear`/`sigmoid` produce a soft edge whose breadth is the per-object
+      `opacity` (`ε`) — surface path.
+- [ ] A volumetric scene accumulates opacity along the ray (soft volume look) —
+      deferred (optional follow-on).
+- [x] No `if(opacity…)` branches remain in the generated shader (the active
+      transfer is a registry lookup).
+- [x] `uv run pytest py/tests/viz/sdf/test_opacity.py` passes (6 passed).
