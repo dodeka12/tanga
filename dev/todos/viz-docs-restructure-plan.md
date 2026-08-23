@@ -325,7 +325,7 @@ plugins:
 
 ### Phase 8 — Changelog
 
-- [ ] Append a Refactor bullet plus a Bug Fix bullet (three missing nav entries)
+- [x] Append a Refactor bullet plus a Bug Fix bullet (three missing nav entries)
       to `docs/changelog/2026-08-22_fix-viz.md`.
 
 ### Phase 9 — Validation
