@@ -18,7 +18,7 @@ import math
 from typing import TYPE_CHECKING
 
 from .entities import Direction, Point
-from .operators import GeneralRotor, Motor, Rotor, Translator
+from .operators import GeneralRotor, Motor, Rotor, Translator, _motor_screw
 
 if TYPE_CHECKING:
     from pytanga.algebra._mv import MV
@@ -79,10 +79,9 @@ def ana_versor_generic(
         t_bi = trans.grade(2)
         tv = 2.0 * t_bi.ip(e0_inv_like) / t_s_val * blade_order_sign
 
-        return Motor(
-            rotor=Rotor(angle=angle, axis=axis),
-            translator=Translator(Direction(tv["e1"], tv["e2"], tv["e3"])),
-        )
+        t_dir = Direction(tv["e1"], tv["e2"], tv["e3"])
+        gen, trans = _motor_screw(angle, axis, t_dir)
+        return Motor(rotor=gen, translator=trans)
 
     # ── No Euclidean bivector → Translator ──
     if bi_e_mag < 1e-15:

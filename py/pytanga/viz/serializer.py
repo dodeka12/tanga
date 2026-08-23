@@ -959,6 +959,7 @@ def _serialize_motor(
         "rotor": {
             "angle": ent.rotor.angle,
             "axis": [ent.rotor.axis.x, ent.rotor.axis.y, ent.rotor.axis.z],
+            "origin": [ent.rotor.origin.x, ent.rotor.origin.y, ent.rotor.origin.z],
         },
         "translator": {
             "vector": [

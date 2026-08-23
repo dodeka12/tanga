@@ -78,6 +78,7 @@ nav:
       - Overview: py/viz/scene-objects/index.md
       - Entities: py/viz/scene-objects/entities.ipynb
       - Operators: py/viz/scene-objects/operators.ipynb
+      - Motor decomposition: py/viz/scene-objects/motor-decomposition.md
       - Axes & Grid: py/viz/scene-objects/axes-grid.md
       - PointPath: py/viz/scene-objects/point-path.md
       - Active Elements:

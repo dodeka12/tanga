@@ -246,13 +246,15 @@ class TestSerializeOperators:
     def test_motor(self):
         m = Motor(
             rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
-            translator=Translator(vector=Direction(2, 0, 0)),
+            translator=Translator(vector=Direction(0, 0, 2)),
         )
         d = _serialize(m)
         assert d["kind"] == "Motor"
         assert d["rotor"]["angle"] == 0.5
         assert d["rotor"]["axis"] == [0, 0, 1]
-        assert d["translator"]["vector"] == [2, 0, 0]
+        # Axial translation stays in the translator; the axis is undisplaced.
+        assert d["rotor"]["origin"] == [0, 0, 0]
+        assert d["translator"]["vector"] == [0, 0, 2]
 
     def test_general_rotor(self):
         gr = GeneralRotor(
