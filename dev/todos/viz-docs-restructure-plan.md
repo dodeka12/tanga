@@ -296,9 +296,9 @@ plugins:
 
 ### Phase 3 — Scene objects
 
-- [ ] `scene-objects/entities.ipynb` (per-entity sections + `display_snapshot()`
+- [x] `scene-objects/entities.ipynb` (per-entity sections + `display_snapshot()`
       cells)
-- [ ] `scene-objects/operators.md`
+- [x] `scene-objects/operators.md`
 
 ### Phase 4 — VisualizerApp split
 
