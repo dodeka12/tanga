@@ -1,8 +1,8 @@
 # Phase 11 — CSG booleans: positive/negative objects (union/intersection/subtract)
 
-**Status:** Mostly done — the per-object `combine`/`polarity` fold and the
-`Composed` per-constituent modes shipped in Phases 5/6b/6c; remaining work is
-the signedness gate, smooth variants, and a dedicated test file.
+**Status:** Implemented — the per-object `combine`/`polarity` fold and the
+`Composed` per-constituent modes shipped in Phases 5/6b/6c; the signedness gate,
+smooth variants, and the dedicated test file landed here.
 
 ## Goal
 
@@ -69,8 +69,13 @@ positive object via `max` (difference).
       component; unsigned = magnitude/grade); backend warns via
       `SdfVisualizer._warn_signedness()` (on `add`/`update_entity`/`distance`
       set), frontend warns via `warnUnsignedBooleans()` in `sdf_viewer.js`.
-- [ ] Smooth variants: `smooth_subtract`/`smooth_intersection` blend `matId`
-      using the blend factor (Phase 1 vec2 combinators).
+- [x] Smooth variants: `smooth_union`/`smooth_intersection`/`smooth_subtract`
+      combine modes + per-object `smoothness` (default 0.1). The composer uses
+      the Phase 1 vec2 combinators for the distance and blends the material id
+      by the blend factor (`m = mix(index, m, h)`); `smooth_subtract` keeps the
+      positive accumulator's material (a negative object has no surface).
+      *(Scope decision: minimal — smooth geometry, material hard-switched by the
+      blend factor; no `map()`/shade contract change.)*
 
 ## Unit tests
 
@@ -92,10 +97,13 @@ round-trip; the new file consolidates the combine-specific cases.)*
 ## Verification
 
 - [ ] A negative sphere carves a cavity out of a positive sphere (visual + the
-      positive sphere's material is visible inside the cavity).
-- [ ] Intersection of two overlapping spheres renders only the lens of overlap.
+      positive sphere's material is visible inside the cavity) — browser check,
+      deferred to the Phase 10 example.
+- [ ] Intersection of two overlapping spheres renders only the lens of overlap
+      — browser check, deferred to the Phase 10 example.
 - [ ] Union remains the default and behaves as before.
-- [ ] Boolean ops with unsigned `magnitude` are rejected/warned.
+- [x] Boolean ops with unsigned `magnitude` are warned (backend
+      `_warn_signedness` + frontend `warnUnsignedBooleans`).
 - [ ] Changing an object from `positive` to `negative` re-emits the composed
-      map and renders correctly without a full scene reload.
-- [ ] `uv run pytest py/tests/viz/sdf/test_combine.py` passes.
+      map and renders correctly without a full scene reload — browser check.
+- [x] `uv run pytest py/tests/viz/sdf/test_combine.py` passes (11 passed).

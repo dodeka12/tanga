@@ -655,7 +655,8 @@ function structureKey(list) {
         const kind = obj.sdfKind || 'analytic';
         const combine = obj.combine || 'union';
         const alg = obj.sdfKind === 'mv_sdf' ? (obj.algebra || '?') : '';
-        parts.push(`${kind}/${combine}/${alg}`);
+        const smooth = obj.smoothness != null ? obj.smoothness : '';
+        parts.push(`${kind}/${combine}/${alg}/${smooth}`);
     }
     return parts.join('|');
 }

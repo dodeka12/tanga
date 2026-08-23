@@ -110,6 +110,9 @@ def serialize_entity(
     combine_mode = _normalize_combine(props)
     result["combine"] = combine_mode["combine"]
     result["polarity"] = combine_mode["polarity"]
+    smoothness = props.get("smoothness")
+    if smoothness is not None:
+        result["smoothness"] = smoothness
 
     return result
 
@@ -156,6 +159,9 @@ def serialize_mv(
     combine_mode = _normalize_combine(props)
     result["combine"] = combine_mode["combine"]
     result["polarity"] = combine_mode["polarity"]
+    smoothness = props.get("smoothness")
+    if smoothness is not None:
+        result["smoothness"] = smoothness
 
     return result
 
@@ -208,7 +214,14 @@ def _normalize_combine(props: dict[str, Any]) -> dict[str, str]:
     combine_value = props.get("combine")
     polarity_value = props.get("polarity")
 
-    valid_combine = {"union", "intersection", "subtract"}
+    valid_combine = {
+        "union",
+        "intersection",
+        "subtract",
+        "smooth_union",
+        "smooth_intersection",
+        "smooth_subtract",
+    }
     valid_polarity = {"positive", "negative"}
 
     combine = combine_value if combine_value in valid_combine else "union"
@@ -216,7 +229,7 @@ def _normalize_combine(props: dict[str, Any]) -> dict[str, str]:
 
     if combine_value is None and polarity_value == "negative":
         combine = "subtract"
-    if polarity_value is None and combine_value == "subtract":
+    if polarity_value is None and combine_value in ("subtract", "smooth_subtract"):
         polarity = "negative"
 
     return {"combine": combine, "polarity": polarity}

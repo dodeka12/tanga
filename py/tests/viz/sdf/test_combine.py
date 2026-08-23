@@ -79,3 +79,30 @@ def test_signedness_gate_silent_when_signed(caplog) -> None:
 def test_frontend_signedness_gate_present() -> None:
     js = SDF_VIEWER_JS.read_text(encoding="utf-8")
     assert "warnUnsignedBooleans" in js
+
+
+def test_smooth_combine_serialized() -> None:
+    result = serialize_entity(
+        Sphere(Point(0.0, 0.0, 0.0), 1.0),
+        "s",
+        {"combine": "smooth_union", "smoothness": 0.2},
+    )
+    assert result["combine"] == "smooth_union"
+    assert result["smoothness"] == 0.2
+
+
+def test_smooth_subtract_polarity_negative() -> None:
+    result = serialize_entity(
+        Sphere(Point(0.0, 0.0, 0.0), 1.0), "s", {"combine": "smooth_subtract"}
+    )
+    assert result["combine"] == "smooth_subtract"
+    assert result["polarity"] == "negative"
+
+
+def test_smooth_subtract_signedness_gate(caplog) -> None:
+    viz = SdfVisualizer()
+    viz.distance = DistanceFunction.MAGNITUDE
+    with caplog.at_level(logging.WARNING):
+        viz.add(Sphere(Point(0.0, 0.0, 0.0), 1.0), combine="smooth_subtract")
+    assert any("require a signed" in r.message for r in caplog.records)
+

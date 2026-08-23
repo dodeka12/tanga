@@ -117,4 +117,25 @@ assert(padded[63][0] === 0 && padded[63][3] === 0, 'padding row is transparent b
 assert(materialPreamble.includes('uMaterial'), 'material preamble declares array');
 assert(materialColorSrc.includes('materialColor'), 'material sampler present');
 
+// Smooth variants (Phase 11): vec2 smooth combinators + blended material id.
+const smoothUnion = composeObjects([
+    sphere,
+    { id: 's2', combine: 'smooth_union', smoothness: 0.2, tree: { kind: 'sphere', params: { radius: 0.8 } } },
+]);
+assert(smoothUnion.includes('opSmoothUnion(d, d1, 0.2)'), 'smooth_union uses opSmoothUnion');
+assert(smoothUnion.includes('m = mix(1.0, m, sm1.y)'), 'smooth_union blends material by blend factor');
+
+const smoothSub = composeObjects([
+    sphere,
+    { id: 's3', combine: 'smooth_subtract', tree: { kind: 'sphere', params: { radius: 0.8 } } },
+]);
+assert(smoothSub.includes('opSmoothSubtract(d, d1, 0.1)'), 'smooth_subtract uses default smoothness');
+assert(!smoothSub.includes('mix(1.0, m'), 'smooth_subtract keeps the positive material (no blend)');
+
+const smoothInter = composeObjects([
+    sphere,
+    { id: 's4', combine: 'smooth_intersection', tree: { kind: 'sphere', params: { radius: 0.5 } } },
+]);
+assert(smoothInter.includes('opSmoothIntersect(d, d1, 0.1)'), 'smooth_intersection uses opSmoothIntersect');
+
 console.log('OK: SDF composer / scene-builder / material-table smoke');

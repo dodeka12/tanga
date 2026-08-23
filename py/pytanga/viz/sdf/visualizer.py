@@ -133,6 +133,7 @@ class SdfVisualizer:
         bound: Any | None = None,
         normalize: bool | None = None,
         calibrate: bool | None = None,
+        smoothness: float | None = None,
     ) -> str:
         """Add an object to the SDF scene and return its ID.
 
@@ -165,6 +166,7 @@ class SdfVisualizer:
             bound=bound,
             normalize=normalize,
             calibrate=calibrate,
+            smoothness=smoothness,
         )
 
         oid = entity_id or uuid4().hex[:8]
@@ -189,6 +191,7 @@ class SdfVisualizer:
         bound: Any | None = None,
         normalize: bool | None = None,
         calibrate: bool | None = None,
+        smoothness: float | None = None,
     ) -> None:
         """Replace the object at ``entity_id`` and re-push it.
 
@@ -211,6 +214,7 @@ class SdfVisualizer:
             bound=bound,
             normalize=normalize,
             calibrate=calibrate,
+            smoothness=smoothness,
         )
         self._warn_signedness()
         self._push_update([entity_id])
@@ -228,6 +232,7 @@ class SdfVisualizer:
         bound: Any | None = None,
         normalize: bool | None = None,
         calibrate: bool | None = None,
+        smoothness: float | None = None,
     ) -> dict[str, Any]:
         """Assemble the per-object property dict (``None`` = inherit default)."""
         props: dict[str, Any] = {}
@@ -251,6 +256,8 @@ class SdfVisualizer:
             props["normalize"] = normalize
         if calibrate is not None:
             props["calibrate"] = calibrate
+        if smoothness is not None:
+            props["smoothness"] = smoothness
         return props
 
     def _warn_signedness(self) -> None:
@@ -258,7 +265,12 @@ class SdfVisualizer:
         unsigned distance function (Phase 11 signedness gate)."""
         if self._distance.signed:
             return
-        needs_signed = {"intersection", "subtract"}
+        needs_signed = {
+            "intersection",
+            "subtract",
+            "smooth_intersection",
+            "smooth_subtract",
+        }
         for props in self._props.values():
             if props.get("combine") in needs_signed:
                 logger.warning(
