@@ -157,6 +157,18 @@ def scale_at(
     return 1.0 / gn
 
 
+_PROBE_STEPS = (
+    (1.0, 0.0, 0.0),
+    (-1.0, 0.0, 0.0),
+    (0.0, 1.0, 0.0),
+    (0.0, -1.0, 0.0),
+    (0.0, 0.0, 1.0),
+    (0.0, 0.0, -1.0),
+    (1.0, 1.0, 1.0),
+    (-1.0, -1.0, -1.0),
+)
+
+
 def find_surface_point(
     mv: MV,
     *,
@@ -166,7 +178,14 @@ def find_surface_point(
     iters: int = 200,
     tol: float = 1e-6,
 ) -> tuple[float, float, float]:
-    """Gradient-descent to a surface point (``d ≈ 0``) starting at *start*."""
+    """Gradient-descent to a surface point (``d ≈ 0``) starting at *start*.
+
+    The algebra "distance" of a closed entity (a circle, a sphere) is *not*
+    monotonic: it has a stationary point at the centre (gradient ≈ 0 with d > 0).
+    When the descent lands on such a point it nudges outward — toward whichever
+    probe direction most reduces ``|d|`` — and continues, so it still reaches the
+    surface instead of getting stuck.
+    """
     p = np.array(start, dtype=float)
     for _ in range(iters):
         d = evaluate_sdf(mv, *p, normalize=normalize, distance=distance)
@@ -174,8 +193,20 @@ def find_surface_point(
             break
         g = gradient(mv, *p, normalize=normalize, distance=distance)
         gn = float(np.linalg.norm(g))
-        if gn < 1e-12:
-            break
+        if gn < 1e-9:
+            step = max(abs(d), 0.1)
+            best = None
+            best_abs = abs(d)
+            for dx, dy, dz in _PROBE_STEPS:
+                q = p + np.array((dx, dy, dz), dtype=float) * step
+                qd = abs(evaluate_sdf(mv, *q, normalize=normalize, distance=distance))
+                if qd < best_abs:
+                    best_abs = qd
+                    best = q
+            if best is None:
+                break
+            p = best
+            continue
         p = p - (d / gn) * g
     return (float(p[0]), float(p[1]), float(p[2]))
 

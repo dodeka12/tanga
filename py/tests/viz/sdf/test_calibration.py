@@ -146,3 +146,18 @@ def test_sign_observed() -> None:
     assert evaluate_sdf(plane, 0.0, 0.0, -1.0, normalize=False) == pytest.approx(
         math.sqrt(2.0), abs=1e-9
     )
+
+
+def test_calibrate_scale_circle_not_stuck_at_center() -> None:
+    from pytanga.basis.n3 import BasisN3
+    from pytanga.geometry.entities import Circle, Direction, Point
+
+    basis = BasisN3(opns=True)
+    circle = create_entity(
+        basis, Circle(center=Point(0.0, 0.0, 0.0), normal=Direction(0.0, 0.0, 1.0), radius=1.0)
+    )
+    s = calibrate_scale(circle, normalize=False)
+    # The circle's centre is a stationary point (gradient ≈ 0, d = 0.5); the
+    # surface finder must escape it and return a sane scale (~1), not a huge one.
+    assert 0.1 < s < 10.0, f"calibrated scale {s} is not sane for a circle"
+
