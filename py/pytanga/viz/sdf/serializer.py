@@ -426,26 +426,31 @@ def _arrow_node(
 def _axis_arrow_node(
     center: tuple[float, float, float],
     axis: tuple[float, float, float],
-    half_height: float,
+    length: float,
 ) -> SdfNode:
-    """Symmetric axis line through ``center`` with an arrowhead at the +axis end."""
+    """Axis arrow along +``axis`` (the dual of the rotor bivector).
+
+    The shaft runs from ``center`` to ``center + axis·length``; the arrowhead's
+    base sits at the shaft end and its apex points further along +``axis``.
+    """
     axis = _normalize(axis)
     if axis == (0.0, 0.0, 0.0):
         axis = _Z
     rotation = _rotation_align(_Y, axis)
-    shaft_radius = max(0.006, half_height * 0.02)
+    shaft_radius = max(0.006, length * 0.02)
+    tip_height = length * 0.3
+    tip_radius = max(shaft_radius * 2.5, 0.05)
+    shaft_length = max(length - tip_height, 0.0)
     shaft = primitive(
         "cappedCylinder",
-        {"halfHeight": half_height, "radius": shaft_radius},
-        position=center,
+        {"halfHeight": shaft_length / 2.0, "radius": shaft_radius},
+        position=_along(center, axis, shaft_length / 2.0),
         rotation=rotation,
     )
-    tip_height = half_height * 0.3
-    tip_radius = max(shaft_radius * 2.5, 0.05)
     tip = primitive(
         "cappedCone",
         {"halfHeight": tip_height / 2.0, "radius1": tip_radius, "radius2": 0.0},
-        position=_along(center, axis, half_height - tip_height / 2.0),
+        position=_along(center, axis, shaft_length + tip_height / 2.0),
         rotation=rotation,
     )
     return combine("union", shaft, tip)
