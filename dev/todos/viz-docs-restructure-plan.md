@@ -1,6 +1,6 @@
 # Viz docs restructure — implementation plan
 
-**Created:** 2026-08-23 | **Branch:** `fix/viz` | **Status:** In progress
+**Created:** 2026-08-23 | **Branch:** `fix/viz` | **Status:** Done (Phases 0–9)
 
 This is the implementation plan for the visualization docs restructure. It
 supersedes the earlier analysis in `dev/todos/viz-docs-restructure.md` and
