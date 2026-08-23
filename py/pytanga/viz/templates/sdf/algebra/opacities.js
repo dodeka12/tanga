@@ -14,9 +14,9 @@ export const opacityFuncs = new Map([
         params: [],
         snippet: `
 float opacityOf(float d, float epsilon) {
-    // The ray-march loop breaks on `d < SDF_EPSILON`, so a hit is within that
+    // The ray-march loop breaks on d < SDF_EPSILON, so a hit is within that
     // (usually slightly positive) band; treat it as opaque (scaled by the
-    // per-object alpha `epsilon`).
+    // per-object alpha, epsilon).
     return d < SDF_EPSILON ? epsilon : 0.0;
 }`,
     }],
