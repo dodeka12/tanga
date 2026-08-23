@@ -344,6 +344,55 @@ export function createArrow(color, opacity, vec, length, origin) {
     return g;
 }
 
+
+/**
+ * Build the shared rotor visualization (disc arc, outer torus, and axis line)
+ * in local coordinates with the rotation axis along local +Z. Callers rotate
+ * and position the returned group.
+ */
+export function buildRotorVisual(color, opacity, lineWidth, angle, discRadius) {
+    const col = typeof color === 'string' ? new THREE.Color(color) : color;
+    const dr = discRadius;
+    const absA = Math.abs(angle);
+    const segs = Math.max(8, Math.ceil(absA / (Math.PI / 32)));
+    const g = new THREE.Group();
+
+    // Disc arc swept by the rotation angle
+    g.add(
+        new THREE.Mesh(
+            new THREE.RingGeometry(dr * 0.15, dr, segs, 1, 0, absA),
+            new THREE.MeshBasicMaterial({
+                color: col,
+                opacity: opacity * 0.8,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+            })
+        )
+    );
+
+    // Outer torus (full circle)
+    g.add(
+        new THREE.Mesh(
+            new THREE.TorusGeometry(dr, 0.03, 16, 64),
+            makeMaterial(col, opacity * 0.5)
+        )
+    );
+
+    // Axis line
+    const al = dr * 1.6;
+    g.add(
+        makeFatLine(
+            [new THREE.Vector3(0, 0, -al), new THREE.Vector3(0, 0, al)],
+            col,
+            opacity,
+            lineWidth
+        )
+    );
+
+    return g;
+}
+
 /**
  * Add a wireframe overlay to a parent mesh/group using ``WireframeGeometry``
  * and ``LineSegments`` (solid or dashed).
