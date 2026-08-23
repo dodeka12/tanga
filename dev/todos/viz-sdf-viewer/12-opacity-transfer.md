@@ -36,6 +36,12 @@ There are two opacity application points:
   `transmittance = exp(−Σ σ(p)·Δt)`, `opacity = 1 − transmittance`, where the
   density `σ(p)` is derived from the distance by the transfer function.
 
+*(Note: the Phase 2 `opacityOf` seam only covers **surface** opacity — the
+snippet swaps in without touching the raymarch body. **Volumetric** opacity
+needs a separate absorption march loop in the raymarch `main()` that integrates
+`σ(p)` along the ray; it is a new code path, not a snippet swap, and remains
+optional.)*
+
 ## Transfer functions (populated here)
 
 | Name | GLSL snippet | Formula | Effect |
@@ -77,7 +83,8 @@ Knobs:
       `opacity` factor, then by `opacityOf(d)`.
 - [ ] Volumetric path: for non-`step` transfers, accumulate
       `1 − exp(−σ·Δt)` along the ray using `opacityOf(d)` as the density and
-      the per-object `ε` as the falloff.
+      the per-object `ε` as the falloff. *(A second absorption march loop in the
+      raymarch `main()`, not a snippet swap — see the Background note.)*
 - [ ] `SdfVisualizer.opacity` setter already exists; add the per-object
       `opacity`/`thickness` style value as the `ε` falloff knob.
 

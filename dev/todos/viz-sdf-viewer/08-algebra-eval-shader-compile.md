@@ -53,7 +53,7 @@ fragment =
   + lightPreamble + overlaySrc          // lighting + overlays
   + embed_src(algebra)…                 // one evalPoint per distinct algebra
                                           //   present (deduped by identity)
-  + matrix_uniform_decls                 // packed flat float u_M[] for all mv_sdf
+  + matrix_uniform_decls                 // packed flat u_M[] + u_Scale[] for all mv_sdf
   + composeObjects(objects)              // folds analytic trees AND algebra
                                           //   leaves into one vec2 map()
   + raymarch                             // Phase 2 body (calls map())
@@ -65,7 +65,7 @@ Each `mv_sdf` leaf expands (in `eval.js`) to:
 float dist_mv_<i>(vec3 p) {
     float a[NP]; evalPoint<algebra>(p, a);
     float r[NR]; // r[j] = Σ_k u_M[<i>*NP*NR + j*NP + k] · a[k]
-    return distOf<distance>(r);   // from distances.js
+    return distOf<distance>(r) * u_Scale[<i>];  // per-object calibration (Phase 9)
 }
 ```
 
@@ -81,11 +81,12 @@ applies `bound` via `opIntersect`, exactly like analytic trees.
         using the object's `algebra`, `M`, `bound`, and the active distance
         snippet from `distances.js`.
   - [ ] `algebraPreamble(objects)` → emits the deduped `evalPoint` set, the
-        `NR`/`NP`/`SLOT_PSEUDO` constants, and the packed `u_M[]` declaration
-        (one flat float array; escalate to a data texture later — see README
-        "texture escalation").
+        `NR`/`NP`/`SLOT_PSEUDO` constants, and the packed `u_M[]` + `u_Scale[]`
+        declarations (one flat float array; escalate to a data texture later —
+        see README "texture escalation").
   - [ ] `buildAlgebraUniforms(objects)` → packs every `mv_sdf` `M` into the
-        flat `u_M` uniform (row-major per object).
+        flat `u_M` uniform (row-major per object) and every per-object `scale`
+        into `u_Scale` (default `1.0`; Phase 9 fills in the calibrated value).
 - [ ] `scene-builder.js` integration:
   - [ ] Treat `kind:"mv_sdf"` objects as algebra leaves (delegate to
         `eval.js`), fold them with analytic objects, and assign `matId` for the
