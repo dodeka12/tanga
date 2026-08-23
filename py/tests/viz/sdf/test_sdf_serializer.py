@@ -16,7 +16,18 @@ from pytanga.geometry.entities import (
     Space,
     Sphere,
 )
-from pytanga.geometry.operators import Rotor
+from pytanga.geometry.operators import (
+    Dilator,
+    GeneralRotor,
+    Inversion,
+    Motor,
+    ReflectionLine,
+    ReflectionPlane,
+    ReflectionPoint,
+    Rotor,
+    Translator,
+)
+from pytanga.viz import CrossHairPointStyle
 from pytanga.viz.sdf.serializer import serialize_entity
 
 
@@ -100,12 +111,12 @@ def test_serialize_plane_with_spans() -> None:
 
 
 def test_unsupported_kind_raises() -> None:
+    from pytanga.geometry.operators import VersorFactors
+
     with pytest.raises(TypeError):
-        serialize_entity(Direction(1, 0, 0), "d")
+        serialize_entity(VersorFactors(), "v")
     with pytest.raises(TypeError):
-        serialize_entity(Space(Point(0, 0, 0)), "sp")
-    with pytest.raises(TypeError):
-        serialize_entity(Rotor(angle=0.5, axes=(0, 0, 1)), "r")
+        serialize_entity(object(), "o")
 
 
 def test_style_scope_ignores_wireframe() -> None:
@@ -138,3 +149,98 @@ def test_color_opacity_forwarded() -> None:
     )
     assert result["color"] == "#ff0000"
     assert result["opacity"] == 0.5
+
+
+def test_serialize_space_box() -> None:
+    result = serialize_entity(Space(), "sp")
+    tree = result["tree"]
+    assert tree["kind"] == "box"
+    assert tree["params"]["halfExtents"] == [10.0, 10.0, 10.0]
+
+
+def test_serialize_direction_arrow() -> None:
+    result = serialize_entity(Direction(0, 0, 1), "d")
+    tree = result["tree"]
+    assert tree["kind"] == "union"
+    assert [c["kind"] for c in tree["children"]] == ["cappedCylinder", "cappedCone"]
+
+
+def test_serialize_crosshair_point() -> None:
+    result = serialize_entity(
+        Point(1, 2, 3), "p", {"style": CrossHairPointStyle(size=0.2)}
+    )
+    tree = result["tree"]
+    assert tree["kind"] == "union"
+    assert [c["kind"] for c in tree["children"]] == ["box", "box", "box"]
+
+
+def test_operator_mapping() -> None:
+    # ReflectionLine → capped cylinder
+    refl_line = ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0)))
+    assert serialize_entity(refl_line, "rl")["tree"]["kind"] == "cappedCylinder"
+
+    # ReflectionPlane → bounded slab
+    refl_plane = ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1)))
+    assert serialize_entity(refl_plane, "rp")["tree"]["kind"] == "box"
+
+    # ReflectionPoint → sphere
+    refl_point = ReflectionPoint(Point(1, 2, 3))
+    assert serialize_entity(refl_point, "rpt")["tree"]["kind"] == "sphere"
+
+    # Inversion → sphere
+    inversion = Inversion(Point(0, 0, 0), 2.0)
+    assert serialize_entity(inversion, "inv")["tree"]["kind"] == "sphere"
+
+    # Rotor → sector disc (filled to angle) + full rim ring + axis arrow
+    rotor = Rotor(0.5, Direction(0, 0, 1))
+    rot = serialize_entity(rotor, "rot")["tree"]
+    assert rot["kind"] == "union"
+    assert [c["kind"] for c in rot["children"]] == [
+        "intersect",
+        "torus",
+        "union",
+    ]
+    sector = rot["children"][0]
+    assert [c["kind"] for c in sector["children"]] == [
+        "cappedCylinder",
+        "plane",
+        "plane",
+    ]
+    assert rot["children"][1]["kind"] == "torus"
+    axis = rot["children"][2]
+    assert [c["kind"] for c in axis["children"]] == ["cappedCylinder", "cappedCone"]
+
+    # Translator → arrow (cylinder + cone)
+    translator = Translator(Direction(1, 0, 0))
+    tr = serialize_entity(translator, "tr")["tree"]
+    assert tr["kind"] == "union"
+    assert [c["kind"] for c in tr["children"]] == ["cappedCylinder", "cappedCone"]
+
+    # Dilator → concentric torus rings
+    dilator = Dilator(2.0)
+    dl = serialize_entity(dilator, "dl")["tree"]
+    assert dl["kind"] == "union"
+    assert all(c["kind"] == "torus" for c in dl["children"])
+
+    # Motor → disc + arrow
+    motor = Motor(Rotor(0.5, Direction(0, 0, 1)), Translator(Direction(1, 0, 0)))
+    assert serialize_entity(motor, "mo")["tree"]["kind"] == "union"
+
+    # GeneralRotor → sector disc + full rim ring + axis arrow
+    gen = GeneralRotor(0.5, Direction(0, 0, 1), Point(1, 0, 0))
+    gr = serialize_entity(gen, "gr")["tree"]
+    assert gr["kind"] == "union"
+    assert [c["kind"] for c in gr["children"]] == [
+        "intersect",
+        "torus",
+        "union",
+    ]
+    sector = gr["children"][0]
+    assert [c["kind"] for c in sector["children"]] == [
+        "cappedCylinder",
+        "plane",
+        "plane",
+    ]
+    assert gr["children"][1]["kind"] == "torus"
+    axis = gr["children"][2]
+    assert [c["kind"] for c in axis["children"]] == ["cappedCylinder", "cappedCone"]

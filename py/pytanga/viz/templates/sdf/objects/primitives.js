@@ -24,6 +24,18 @@ export function emitPrimitive(node, p) {
             return `sdCappedCylinder(${p}, ${floatParam(params.halfHeight)}, ${floatParam(params.radius)})`;
         case 'torus':
             return `sdTorus(${p}, ${vec2([params.mainRadius, params.tubeRadius])})`;
+        case 'cone':
+            return `sdCone(${p}, ${floatParam(params.angle)})`;
+        case 'cappedCone':
+            return `sdCappedCone(${p}, ${floatParam(params.halfHeight)}, ${floatParam(params.radius1)}, ${floatParam(params.radius2)})`;
+        case 'ellipsoid':
+            return `sdEllipsoid(${p}, ${vec3(params.radii)})`;
+        case 'capsule':
+            return `sdCapsule(${p}, ${vec3(params.a)}, ${vec3(params.b)}, ${floatParam(params.radiusA)}, ${floatParam(params.radiusB)})`;
+        case 'segment':
+            return `sdSegment(${p}, ${vec3(params.a)}, ${vec3(params.b)})`;
+        case 'plane':
+            return `sdPlane(${p}, ${vec3(params.normal)}, ${floatParam(params.offset)})`;
         default:
             throw new Error(`Unknown SDF primitive kind: ${node.kind}`);
     }

@@ -3,10 +3,17 @@
 // Maps a combinator node `kind` to an expression folding its already-emitted
 // child distance strings. Hard combinators use IQ min/max with sign
 // preservation; `bound` is an alias for a finite clip box (intersect with an
-// `sdBox`).
+// `sdBox`). A `group` node folds its children in order, each with its own
+// `combine` mode (the nested-CSG shape used by `Composed` objects).
 
 import { emitPrimitive } from './primitives.js';
 import { transformExpr } from './transform.js';
+
+function foldOp(op, a, b) {
+    if (op === 'intersection' || op === 'intersect') return `opIntersect(${a}, ${b})`;
+    if (op === 'subtract') return `opSubtract(${a}, ${b})`;
+    return `opUnion(${a}, ${b})`;
+}
 
 function childExpr(node, child) {
     // A primitive child evaluates in its local space; a combinator child has
@@ -22,15 +29,24 @@ function emitNode(node) {
         case 'union':
         case 'intersect':
         case 'subtract': {
+            // Uniform fold: every child combines with the node's single op.
             const [first, ...rest] = node.children;
             let acc = childExpr(node, first);
             for (const child of rest) {
                 const d = childExpr(node, child);
-                if (node.kind === 'union') acc = `opUnion(${acc}, ${d})`;
-                else if (node.kind === 'intersect') acc = `opIntersect(${acc}, ${d})`;
-                else acc = `opSubtract(${acc}, ${d})`;
+                acc = foldOp(node.kind, acc, d);
             }
             return acc;
+        }
+        case 'group': {
+            // Ordered fold: each child carries its own `combine` mode.
+            const children = node.children || [];
+            let acc = null;
+            for (const child of children) {
+                const d = childExpr(node, child);
+                acc = acc === null ? d : foldOp(child.combine || 'union', acc, d);
+            }
+            return acc === null ? 'MAX_DIST' : acc;
         }
         default:
             throw new Error(`Unknown SDF combinator kind: ${node.kind}`);
@@ -38,8 +54,8 @@ function emitNode(node) {
 }
 
 export function emitTree(tree) {
-    // A root can be a bare primitive (e.g. a point = a single sphere) or a
-    // combinator tree.
+    // A root can be a bare primitive (e.g. a point = a single sphere), a
+    // combinator tree, or a `group` of combined constituents.
     if (tree.children) {
         return emitNode(tree);
     }

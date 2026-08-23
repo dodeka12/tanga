@@ -38,7 +38,11 @@ float opacityOf(float d) {
 // ── Gradient normal (tetrahedral) ──────────────────────────
 
 vec3 calcNormal(vec3 p) {
-    const float e = 0.5773;
+    // Finite-difference step. Must be small relative to surface features (thin
+    // cylinders, ring tubes) so the gradient samples stay on the same surface;
+    // `0.5773` (1/√3) is the *tetrahedral vertex coefficient*, not a step, and
+    // is ~1000× too large — it made normals/lighting look patchy and per-object.
+    const float e = 0.001;
     vec2 k = vec2(1.0, -1.0);
     return normalize(
         k.xyy * map(p + k.xyy * e).x +
@@ -49,6 +53,14 @@ vec3 calcNormal(vec3 p) {
 }
 
 // ── IQ-style shading ───────────────────────────────────────
+//
+// Known limitation: softShadow marches the merged `map()`, so it only sees the
+// distance to the nearest *boundary* — it cannot tell a solid occluder from the
+// wall/rim of a subtracted (CSG) hole. A `subtract` volume can therefore cast a
+// faint penumbra even though a hole has no material to block light (e.g. the
+// cylinder bored through the `demo_sdf_composed.py` bead). A correct fix would
+// trace the shadow ray against a solid-only distance field (excluding
+// subtractive volumes); deferred as a known limitation.
 
 float softShadow(vec3 ro, vec3 rd) {
     float res = 1.0;

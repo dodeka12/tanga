@@ -5,7 +5,14 @@
 
 from __future__ import annotations
 
-from pytanga.viz.sdf.primitives import bound_box, combine, primitive
+from pytanga.viz.sdf.primitives import (
+    bound_box,
+    combine,
+    group,
+    primitive,
+    sphere,
+    torus,
+)
 
 
 def test_primitive_to_dict_minimal() -> None:
@@ -50,3 +57,29 @@ def test_bound_box() -> None:
 def test_identity_transform_is_none() -> None:
     node = primitive("sphere", {"radius": 1.0})
     assert node.transform is None
+
+
+def test_group_serializes_children_with_combine() -> None:
+    a = primitive("sphere", {"radius": 1.0})
+    b = primitive("box", {"halfExtents": [0.5, 0.5, 0.5]})
+    b.combine = "subtract"
+    node = group([a, b])
+    assert node.to_dict() == {
+        "kind": "group",
+        "children": [
+            {"kind": "sphere", "params": {"radius": 1.0}},
+            {
+                "kind": "box",
+                "params": {"halfExtents": [0.5, 0.5, 0.5]},
+                "combine": "subtract",
+            },
+        ],
+    }
+
+
+def test_named_primitive_helpers() -> None:
+    assert sphere(2.0).to_dict() == {"kind": "sphere", "params": {"radius": 2.0}}
+    assert torus(1.0, 0.2).to_dict() == {
+        "kind": "torus",
+        "params": {"mainRadius": 1.0, "tubeRadius": 0.2},
+    }

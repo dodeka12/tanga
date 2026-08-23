@@ -25,7 +25,9 @@ from typing import Any
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
+from .composed import Composed
 from .distance import DistanceFunction
+from .primitives import SdfNode
 from .serializer import serialize_entity
 
 logger = logging.getLogger("tanga.viz.sdf")
@@ -71,7 +73,7 @@ class SdfVisualizer:
         self._styles = make_styles()
 
         # Ordered for stable serialization (equals material-id order).
-        self._objects: dict[str, GeoEntity] = {}
+        self._objects: dict[str, Any] = {}
         self._props: dict[str, dict[str, Any]] = {}
 
         # Viewer-level distance / opacity transfer setting (stub hooks; wired
@@ -89,17 +91,23 @@ class SdfVisualizer:
 
     def add(
         self,
-        obj: GeoEntity | Any,
+        obj: Any,
         *,
         entity_id: str | None = None,
         color: str | None = None,
         opacity: float | None = None,
         size: float | None = None,
         thickness: float | None = None,
+        style: Any | None = None,
         combine: str | None = None,
         polarity: str | None = None,
     ) -> str:
-        """Add a geometry entity to the SDF scene and return its ID."""
+        """Add an object to the SDF scene and return its ID.
+
+        Accepts a geometry entity, an operator, a bare :class:`SdfNode`
+        primitive/combinator tree, or a :class:`Composed` object. ``style``
+        selects an alternative draw style (e.g. ``CrossHairPointStyle``).
+        """
         from uuid import uuid4
 
         entity = self._resolve(obj)
@@ -113,6 +121,8 @@ class SdfVisualizer:
             props["size"] = size
         if thickness is not None:
             props["thickness"] = thickness
+        if style is not None:
+            props["style"] = style
         if combine is not None:
             props["combine"] = combine
         if polarity is not None:
@@ -137,10 +147,10 @@ class SdfVisualizer:
         self._props.clear()
         self._push_removed(removed)
 
-    def _resolve(self, obj: Any) -> GeoEntity:
+    def _resolve(self, obj: Any) -> Any:
         from pytanga.geometry.operators import Operator as GeoOperator
 
-        if isinstance(obj, (GeoEntity, GeoOperator)):
+        if isinstance(obj, (SdfNode, Composed, GeoEntity, GeoOperator)):
             return obj
         try:
             from pytanga.geometry import analyze

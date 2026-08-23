@@ -1,9 +1,15 @@
 // Local-space transform expression for an SDF node.
 //
-// A node's `transform` places its primitive in world space. To evaluate the
-// primitive (which expects LOCAL coordinates), we build the inverse transform
-// as an inline GLSL expression: translate by `-position`, then rotate by
-// `-angle` (via the shared `rotationAxisAngle` helper from `sdf_common.glsl`).
+// A node's `transform` places its primitive in world space: the serializer
+// emits an axis-angle pair `(axis, angle)` that rotates the LOCAL frame onto
+// the world frame (a +angle rotation maps local → world). To evaluate the
+// primitive — which expects LOCAL coordinates — we must apply the *inverse*,
+// i.e. a −angle rotation, to the world point after translating by `-position`.
+//
+// IQ's `rotationAxisAngle(axis, θ)` already negates the angle internally: it
+// returns the transpose of the standard Rodrigues matrix, so it rotates a
+// point by −θ around `axis`. To obtain a −angle rotation we therefore pass
+// **+angle** (not −angle).
 
 export function transformExpr(transform, p = 'p') {
     const pos = transform?.position || [0, 0, 0];
@@ -11,7 +17,7 @@ export function transformExpr(transform, p = 'p') {
     if (transform?.rotation) {
         const axis = transform.rotation.axis;
         const angle = transform.rotation.angle;
-        expr = `rotationAxisAngle(normalize(vec3(${floatParam(axis[0])}, ${floatParam(axis[1])}, ${floatParam(axis[2])})), ${floatParam(-angle)}) * ${expr}`;
+        expr = `rotationAxisAngle(normalize(vec3(${floatParam(axis[0])}, ${floatParam(axis[1])}, ${floatParam(axis[2])})), ${floatParam(angle)}) * ${expr}`;
     }
     return expr;
 }

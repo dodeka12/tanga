@@ -60,3 +60,35 @@
   (`py/examples/viz/demo_sdf_entities.py`) drawing a Line + Sphere through the
   analytic path, as the gate for manual user confirmation in the browser before
   any algebra/CSG/opacity work continues.
+- **Primitive object library + `Composed` objects (Phase 06b)** — exposed the
+  SDF primitive library as first-class, directly addable objects (`sphere`,
+  `box`, `cylinder`, `capped_cylinder`, `cone`, `capped_cone`, `torus`,
+  `ellipsoid`, `round_box`, `capsule`, `segment`, `plane`) via named
+  constructors in `pytanga.viz.sdf`, and added `Composed` to bundle constituents
+  into a single object with one material and a per-constituent combine mode
+  (`union`/`intersection`/`subtract`). `SdfNode` gains a `combine` field and a
+  `group()` helper; `SdfVisualizer.add` and the serializer accept `SdfNode`/
+  `Composed` directly; the frontend `group` fold and the previously-unwired
+  primitive emitters were added. Tests in `py/tests/viz/sdf/test_composed.py`
+  and `test_primitives.py`.
+- **Entity/operator draw-style SDF mapping (Phase 06c)** — mapped every entity
+  and operator kind to a basic or composed SDF tree with `style=` support
+  (`Point`→sphere, crosshair point→3-axis crosshair, `Line`→segment,
+  `Sphere`→sphere, `Rotor`→sector disc + rim ring + axis arrow,
+  `Translator`/`Direction`→arrow, `Dilator`→rings, `Motor`→disc+arrow,
+  `GeneralRotor`→sector disc+ring+axis at origin, etc.). Added the
+  `demo_sdf_composed.py` example (sphere with a bored-out cylinder plus
+  torus/box/rotor) and the `demo_sdf_arrowhead.py` diagnostic.
+
+## Bug Fixes
+- **Fixed inverted rotations in the SDF viewer** — `transform.js` passed
+  `-angle` to IQ's `rotationAxisAngle`, which already negates the angle
+  internally, so every rotation was applied with the wrong sign (cone apex
+  pointed −Z, rotor sector handedness mirrored). Passing `+angle` now yields the
+  intended inverse/local-space rotation.
+- **Fixed patchy, direction-inconsistent SDF lighting** — the gradient normal
+  used a finite-difference step of `0.5773` (the tetrahedral vertex coefficient
+  `1/√3`) rather than a small epsilon, making normals patchy, lighting appear to
+  come from different directions per object, and producing unmotivated soft
+  shadows. The step is now `0.001`; the remaining subtractive-CSG soft-shadow
+  penumbra is documented as a known limitation.

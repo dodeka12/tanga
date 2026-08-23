@@ -82,6 +82,33 @@ const infiniteLine = {
 const infExpr = buildObjectExpr(infiniteLine);
 assert(infExpr.includes('opIntersect'), 'nested tree uses opIntersect');
 
+// A `group` node (a `Composed` object): per-child combine modes fold in order.
+const bead = {
+    id: 'bead',
+    tree: {
+        kind: 'group',
+        children: [
+            { kind: 'sphere', params: { radius: 1.5 }, combine: 'union' },
+            {
+                kind: 'cappedCylinder',
+                params: { halfHeight: 1.0, radius: 0.45 },
+                combine: 'subtract',
+            },
+        ],
+    },
+};
+const beadExpr = buildObjectExpr(bead);
+assert(beadExpr.includes('opSubtract'), 'group folds the subtract constituent');
+assert(beadExpr.includes('sdSphere'), 'group includes the sphere constituent');
+assert(beadExpr.includes('sdCappedCylinder'), 'group includes the cylinder constituent');
+
+// New primitive emitters (cone / cappedCone / ellipsoid / capsule / segment / plane).
+const coneExpr = buildObjectExpr({
+    id: 'cone',
+    tree: { kind: 'cone', params: { angle: 0.5 } },
+});
+assert(coneExpr.includes('sdCone'), 'cone emits sdCone');
+
 const rows = buildMaterialRows([line, sphere]);
 assert(rows.length === 2, 'two material rows');
 const padded = padMaterialRows(rows);

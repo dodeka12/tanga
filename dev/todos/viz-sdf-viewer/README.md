@@ -72,6 +72,51 @@ cache keyed by `(algebra, distance, opacity)`. The shader therefore contains
 `if (opacity == …)` branching — the selection is resolved entirely at compile
 time, and switching any axis triggers a recompile.
 
+## SDF object hierarchy (two layers)
+
+The analytic path is layered, keeping fundamentals and compositions separate:
+
+- **Layer 1 — fundamental objects.** Each is described directly by a distance
+  function: `sphere`, `box`, `cylinder`, `torus`, `cone`, `capsule`, `segment`,
+  … (the Phase 1 GLSL set), exposed as addable `SdfNode` objects via named
+  constructors in `pytanga.viz.sdf`.
+- **Layer 2 — composed drawables.** A `Composed` object bundles several
+  constituents into **one** scene entry / material, with a **per-constituent
+  combine mode** (`union` / `intersection` / `subtract`). It serializes to a
+  `group` node folded in order, and nests `Composed` recursively.
+
+Geometry entities and operators each map to a **basic or composed** SDF object
+per draw style (Phase 06c): `Point`→sphere, `CrossHairPointStyle`→3-axis
+crosshair, `Rotor`→disc, `Translator`→arrow, `Motor`→disc+arrow, etc.
+
+### Reserved future seams (not implemented yet)
+
+Three seams are intentionally left open so texture-based features can be added
+later without refactoring:
+
+- **UV mode** — a per-object surface parameterization (planar/spherical/
+  cylindrical/triplanar) will be an additive `SdfNode` field plus a parallel
+  `emitUv` emitter, and `map()` will widen from `vec2` to also carry `uv`.
+- **Signed displacement field** — a per-object distance modifier folded with
+  `add`/`min`/`max` at the object-expression boundary. This covers continuous
+  displacement maps and emboss/engrave glyph relief (an MSDF atlas is one such
+  "distance texture"; a true per-glyph SDF is the future fallback for deep
+  extrusion).
+- **Texture binding** — `sampler2D` uniforms join the `uMaterial` array
+  ("texture escalation"); `materialColor(matId)` becomes
+  `materialColor(matId, uv)` inside the single material-table module.
+
+### Known limitations
+
+- **Subtractive CSG vs. soft shadows.** The soft-shadow term marches the single
+  composed distance field, so it only knows the distance to the nearest
+  *boundary*, not whether that boundary is a solid occluder or the wall/rim of a
+  subtracted hole. A `subtract` volume (e.g. the cylinder bored through the
+  `demo_sdf_composed.py` bead) can consequently cast a faint penumbra even
+  though a hole has no material to block light. A proper fix would trace shadow
+  rays against a solid-only distance field (excluding subtractive volumes) and
+  is deferred as a known limitation.
+
 ## Distance functions (fixed set, all algebras, algebra-agnostic)
 
 `distOf(r[], …)` maps the result MV coefficient vector to a scalar distance:
@@ -151,6 +196,8 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 | 5 | [05-composed-scene-material-table.md](./05-composed-scene-material-table.md) | Composed global SDF + material-ID hit tracking |
 | 6 | [06-sdf-viewer-server-html.md](./06-sdf-viewer-server-html.md) | `SdfVisualizer` facade + `sdf_viewer.html`, reusing `server.py` + WS protocol |
 | 6a | [06a-first-vertical-slice.md](./06a-first-vertical-slice.md) | First vertical slice: `demo_sdf_entities.py` (line + sphere) with manual user confirmation |
+| 6b | [06b-composed-objects.md](./06b-composed-objects.md) | Primitive object library + `Composed` objects (per-constituent combine modes) |
+| 6c | [06c-entity-operator-drawstyles.md](./06c-entity-operator-drawstyles.md) | Entity/operator → SDF-object mapping per draw style |
 | 7 | [07-algebra-embedding-python.md](./07-algebra-embedding-python.md) | `algebra_embedding.py`: ordering, `M`, `embed_src`, normalize, bound |
 | 8 | [08-algebra-eval-shader-compile.md](./08-algebra-eval-shader-compile.md) | `algebra/eval.js`: `embed → M·a → distOf → opacityOf` with per-`(algebra,distance,opacity)` program cache |
 | 9 | [09-calibration-validation.md](./09-calibration-validation.md) | `|∇d|≈1` calibration + algebra-SDF vs analytic-SDF validation |
