@@ -63,9 +63,24 @@ mapping the result coefficient vector `r[] = M·a` to a scalar:
 viz.distance = "scalar_pseudo"  # default; try "magnitude" or "scalar"
 ```
 
-`normalize` (default `True`) normalizes the MV before forming `M`. The gradient
-scale is calibrated per object so `|∇d| ≈ 1` for sphere tracing
-(`add(..., calibrate=True)`).
+`normalize` (default `True`) normalizes the MV before forming `M`.
+
+### Rendering the algebra field
+
+The algebra "distance" `distOf(M·a)` is the raw null-space measure — zero on the
+entity, but *not* a signed distance function (its gradient `|∇d|` is not bounded
+by 1 and can even grow, and closed entities have a stationary centre). The
+viewer therefore uses a **local-gradient step rule for algebraic objects only**:
+
+```glsl
+t += d / max(|∇d|, 1.0)     // mv_sdf objects
+t += d                      // analytic objects (proper SDFs, unchanged)
+```
+
+This is the per-point first-order distance to the surface, so it never overshoots
+while preserving the exact null-space zero-set. `calibrate=True` (a single global
+scale) is still available to re-scale the field, but it is no longer required for
+correct rendering.
 
 Zero-thickness MVs (a line, a point) have a 1D/0D zero-set that the raymarcher
 cannot hit; pass `thickness=` (a distance cutoff) to render them as a tube/ball:

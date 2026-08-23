@@ -83,6 +83,7 @@ uniform float u_Scale[${MAX_SDF_OBJECTS}];
 uniform float u_Thickness[${MAX_SDF_OBJECTS}];
 uniform float u_Falloff[${MAX_SDF_OBJECTS}];
 uniform float u_MaxDistance[${MAX_SDF_OBJECTS}];
+uniform float u_IsAlgebra[${MAX_SDF_OBJECTS}];
 `;
 }
 
@@ -186,6 +187,7 @@ export function buildAlgebraUniforms(objects) {
     const uThickness = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
     const uFalloff = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
     const uMaxDistance = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
+    const uIsAlgebra = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
     infos.forEach((info) => {
         if (!info) return;
         const obj = objects[info.index];
@@ -198,6 +200,7 @@ export function buildAlgebraUniforms(objects) {
         uThickness[info.index] = (typeof obj.thickness === 'number') ? obj.thickness : 0.0;
         uFalloff[info.index] = (typeof obj.falloff === 'number') ? obj.falloff : 0.0;
         uMaxDistance[info.index] = (typeof obj.max_distance === 'number') ? obj.max_distance : 0.0;
+        uIsAlgebra[info.index] = 1.0;
     });
-    return { uM, uScale, uThickness, uFalloff, uMaxDistance, totalFloats };
+    return { uM, uScale, uThickness, uFalloff, uMaxDistance, uIsAlgebra, totalFloats };
 }

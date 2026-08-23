@@ -47,6 +47,23 @@ vec3 calcNormal(vec3 p) {
     );
 }
 
+// ── Gradient magnitude (tetrahedral, unnormalized) ──────────
+//
+// The *norm* of the field gradient at `p` — the same tetrahedral stencil as
+// `calcNormal`, but without normalization. Used to scale the sphere-tracing
+// step for non-1-Lipschitz (algebraic) fields, where `d` alone overshoots.
+
+float calcGradientNorm(vec3 p) {
+    const float e = 0.001;
+    vec2 k = vec2(1.0, -1.0);
+    vec3 g =
+        k.xyy * map(p + k.xyy * e).x +
+        k.yyx * map(p + k.yyx * e).x +
+        k.yxy * map(p + k.yxy * e).x +
+        k.xxx * map(p + k.xxx * e).x;
+    return length(g) / (4.0 * e);
+}
+
 // ── IQ-style shading ───────────────────────────────────────
 //
 // Known limitation: softShadow marches the merged `map()`, so it only sees the
@@ -147,7 +164,16 @@ void main() {
             hit = true;
             break;
         }
-        t += d;
+        // Analytic objects are proper SDFs (|∇d| = 1), so step `d` directly.
+        // Algebraic (`mv_sdf`) objects are not 1-Lipschitz (|∇d| can exceed 1
+        // and even grow), so step `d / max(|∇d|, 1)` — the local first-order
+        // distance to the surface — to avoid overshooting the thin surface.
+        float stepSize = d;
+        int matId = int(m.y + 0.5);
+        if (matId >= 0 && matId < uMaterialCount && u_IsAlgebra[matId] > 0.5) {
+            stepSize = d / max(calcGradientNorm(p), 1.0);
+        }
+        t += stepSize;
         if (t > maxDist || transmittance < 0.01) break;
     }
 
