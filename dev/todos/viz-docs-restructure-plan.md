@@ -330,10 +330,16 @@ plugins:
 
 ### Phase 9 — Validation
 
-- [ ] `uv run mkdocs build --strict`
-- [ ] `uv run mkdocs serve` and spot-check Entities + Static-display pages render
+- [x] `uv run mkdocs build --strict`
+- [x] `uv run mkdocs serve` and spot-check Entities + Static-display pages render
       their embedded viewers
-- [ ] Grep built HTML to confirm no stray `localhost:8765` iframes
+- [x] Grep built HTML to confirm no stray `localhost:8765` iframes
+
+Validation notes: `mkdocs build --strict` is clean for all viz changes — both
+notebooks execute (`entities.ipynb` embeds 10 static viewers, `static.ipynb`
+embeds 2) and no live `localhost` iframes remain. Four pre-existing warnings
+persist for `py/geometry/*.md` linking `_geometry.py`; they are unrelated to
+this restructure and were present before it.
 
 ## Validation
 

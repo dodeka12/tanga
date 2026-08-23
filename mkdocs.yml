@@ -53,6 +53,8 @@ plugins:
       ignore_h1_titles: true
       include_source: true
       kernel_name: python3
+      include:
+        - "*.ipynb"
 
 extra:
   version:
