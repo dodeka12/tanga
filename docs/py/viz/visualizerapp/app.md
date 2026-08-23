@@ -81,4 +81,4 @@ changes.
 See [`two_spheres_interact.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_spheres_interact.py)
 for a full working app — two IPNS spheres with a moving slider, a visibility
 dropdown, and a reset button. The full control reference is in
-[Interactive Controls](interactive.md).
+[Controls](controls.md).

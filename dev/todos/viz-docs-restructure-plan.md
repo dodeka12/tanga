@@ -302,9 +302,9 @@ plugins:
 
 ### Phase 4 — VisualizerApp split
 
-- [ ] `visualizerapp/controls.md`
-- [ ] `visualizerapp/handlers.md`
-- [ ] Remove `interactive.md` (content migrated)
+- [x] `visualizerapp/controls.md`
+- [x] `visualizerapp/handlers.md`
+- [x] Remove `interactive.md` (content migrated)
 
 ### Phase 5 — Jupyter split
 
