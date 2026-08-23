@@ -105,5 +105,5 @@ modifier keys), subclass `ActPoint` and override `interaction_config`.
 ## See Also
 
 - [Active Elements Overview](index.md) — common behaviour, handler contract, writing custom active elements
-- [Object Interaction](../object-interaction.md) — low-level interaction API
+- [Object Interaction](../../visualizer/object-interaction.md) — low-level interaction API
 - [`demo_act_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_act_point.py) — full working example with projection lines

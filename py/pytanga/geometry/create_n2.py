@@ -27,7 +27,7 @@ from ._n2_helpers import (
     get_eo,
 )
 from .entities import Direction, Line, Point
-from .operators import Rotor, Translator
+from .operators import GeneralRotor, Translator
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -76,9 +76,7 @@ def create_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
     return mv
 
 
-def create_homogeneous_point(
-    basis: Algebra, point: Point, weight: float = 1.0
-) -> MV:
+def create_homogeneous_point(basis: Algebra, point: Point, weight: float = 1.0) -> MV:
     """OPNS: ``A ∧ e∞``."""
     mv = _homogeneous_point_opns(basis, point, weight)
     if not basis.opns:
@@ -86,9 +84,7 @@ def create_homogeneous_point(
     return mv
 
 
-def create_homogeneous_direction(
-    basis: Algebra, x: float, y: float, z: float
-) -> MV:
+def create_homogeneous_direction(basis: Algebra, x: float, y: float, z: float) -> MV:
     """OPNS: ``d∧e∞`` (grade 2) where d is a 2D Euclidean direction.
 
     IPNS: dual of OPNS.  The *z* parameter is ignored (2D).
@@ -143,9 +139,7 @@ def create_sphere(
     (plus sign: ``S = Cop(c) + ½·r²·e∞``, has ``S² = −r²``).
     """
     if is_imaginary:
-        raise NotImplementedError(
-            "Imaginary spheres/circles are not supported yet."
-        )
+        raise NotImplementedError("Imaginary spheres/circles are not supported yet.")
 
     ipns = _sphere_ipns(basis, center, radius)
     if basis.opns:
@@ -245,11 +239,11 @@ def create_dilator(
     return t.gp(d).gp(t.rev())
 
 
-def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
-    """``M = T·R`` — translation followed by rotation."""
+def create_motor(basis: Algebra, rotor: GeneralRotor, translator: Translator) -> MV:
+    """``M = T_u·(T_v·R·T̃_v)`` — screw: translation along a general rotor's axis."""
     t = create_translator(basis, translator.vector.x, translator.vector.y, 0.0)
-    r = create_rotor(basis, rotor.angle, rotor.axis)
-    return t.gp(r)
+    g = create_general_rotor(basis, rotor.angle, rotor.axis, rotor.origin)
+    return t.gp(g)
 
 
 def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:

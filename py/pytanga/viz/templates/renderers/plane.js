@@ -16,7 +16,7 @@ import {
 export async function createPlane(ent) {
     const color = parseColor(ent, '#4488ff');
     const opacity = styleParam(ent, 'opacity', 0.3);
-    const extent = styleParam(ent, 'extent', 10.0);
+    const extent = ent.extent ?? styleParam(ent, 'extent', 10.0);
     const point = ent.point || [0, 0, 0];
     const normal = ent.normal || [0, 0, 1];
 

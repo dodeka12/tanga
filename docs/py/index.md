@@ -1,12 +1,13 @@
 # pytanga User Documentation
 
 This section describes the public Python API of **pytanga** — the Python
-interface to TanGA's geometric algebra engine.
+interface to TanGA's geometric algebra engine. For the interactive 3D/2D
+visualizer, see the [Visualization](viz/index.md) section.
 
 !!! info "2D + 3D algebras"
     TANGA supports both 2D and 3D geometric algebras. Use `BasisE2()`,
     `"P2"`, `"N2"`, or `"PGA2"` for 2D; `"E3"`, `"P3"`, `"N3"`, or `"PGA3"`
-    for 3D. The visualizer supports both modes via `Visualizer(space_dim=2)`.
+    for 3D.
 
 ## Topics
 
@@ -20,7 +21,6 @@ interface to TanGA's geometric algebra engine.
 | [Equation Solving](solver/index.md) | `solve`, `solve_lsq`, `solve_mod` — automatic blade‑mask derivation and linear system solving via free functions |
 | [Tensor Operations](tensors/index.md) | `MVTensor`, `MVLabeledTensor`, `product_tensor()` — label‑driven tensor contractions, broadcasts, and slicing |
 | [Geometry Submodule](geometry/index.md) | `Point`, `Line`, `Plane`, `Rotor`, `Motor` — algebra-independent entity/operator types usable in 2D and 3D, `analyze()` and `create()` pipelines |
-| [3D & 2D Visualizer](viz/index.md) | Interactive Three.js visualization in the browser — 3D viewer (default) and 2D viewer (`space_dim=2`), add entities, apply styles, animate, export to HTML/glTF/MP4 |
 
 ## Quick Start
 

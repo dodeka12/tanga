@@ -21,6 +21,7 @@ from pytanga.viz.camera import (
 )
 from pytanga.viz.scene import Scene, SceneConfig, SceneObject
 from pytanga.viz.serializer import serialize_entity
+from pytanga.viz._object_ref import VizObjectRef
 from pytanga.viz.visualizer import DEFAULT_PORT, Visualizer
 
 # ── CameraConfig ────────────────────────────────────────────
@@ -126,7 +127,9 @@ class TestCameraBuilders:
         assert cam.up == (0.2, 0.3, 1.0)
 
     def test_get_camera_dispatches(self):
-        assert isinstance(get_camera(View2DConfig(xmin=0, xmax=1, ymin=0, ymax=1)), CameraConfig2d)
+        assert isinstance(
+            get_camera(View2DConfig(xmin=0, xmax=1, ymin=0, ymax=1)), CameraConfig2d
+        )
         assert isinstance(
             get_camera(View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0)),
             CameraConfig3d,
@@ -151,6 +154,18 @@ class TestSceneConfig:
         d = sc.to_dict()
         assert d["type"] == "scene_config"
         assert "camera" not in d  # None camera should be omitted
+
+    def test_to_dict_includes_scene_field(self):
+        # The frontend filters messages via `_forMyScene(msg)` which reads
+        # `msg.scene`; scene_config must carry its scene name so a broadcast
+        # title/camera update is only applied by the matching tab.
+        sc = SceneConfig(name="overview")
+        d = sc.to_dict()
+        assert d["scene"] == "overview"
+
+        main = SceneConfig()
+        d_main = main.to_dict()
+        assert d_main["scene"] == ""
 
     def test_to_dict_omits_obsolete_keys(self):
         sc = SceneConfig()
@@ -310,6 +325,96 @@ class TestVisualizer:
         viz._shutdown_requested.set()
         with pytest.raises(StopIteration):
             next(gen)
+
+    def test_animate_starts_server_but_does_not_open_browser(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._open_browser = True  # simulate a script (would open a browser before)
+        viz._shutdown_requested = threading.Event()
+        viz._shutdown_requested.set()  # loop exits on the first iteration
+
+        calls: list[str] = []
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
+        monkeypatch.setattr(
+            viz, "open_browser", lambda **kw: calls.append("open_browser")
+        )
+
+        with pytest.raises(StopIteration):
+            next(viz.animate(fps=0))
+
+        # animate() boots a headless server but never shows the viewer; show()
+        # is the single display entry point.
+        assert "start_server" in calls
+        assert "open_browser" not in calls
+
+    def test_call_is_new_shorthand(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        ref = viz(Point(1, 2, 3), color="#ff4444")
+        assert isinstance(ref, VizObjectRef)
+        assert ref.id in viz._scenes[""]._objects
+        # Equivalent to viz.new().
+        ref2 = viz.new(Point(4, 5, 6), color="#44ff44")
+        assert isinstance(ref2, VizObjectRef)
+        assert ref2.id in viz._scenes[""]._objects
+
+    def test_animate_auto_clear_removes_added_objects(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        scene = viz._scenes[""]
+        baseline_id = viz.add(Point(0, 0, 0))
+        scene.flush()  # consume initial dirty state
+
+        gen = viz.animate(fps=0, auto_clear=True)
+        next(gen)  # frame 0: baseline captured
+
+        added_id = viz.add(Point(1, 0, 0), label="P")
+        label_ids = scene.get_label_ids(added_id)
+        assert label_ids
+
+        next(gen)  # frame 1: reconcile removes the added entity + its label
+        assert added_id in scene._removed_ids
+        for lid in label_ids:
+            assert lid in scene._removed_ids
+        # The pre-loop entity persists.
+        assert baseline_id not in scene._removed_ids
+
+    def test_animate_auto_clear_empty_scene(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        scene = viz._scenes[""]
+        gen = viz.animate(fps=0, auto_clear=True)
+        next(gen)  # frame 0: baseline = empty set (not "unset")
+
+        added_id = viz.add(Point(1, 0, 0))
+        next(gen)  # frame 1: empty baseline → the addition is removed
+        assert added_id in scene._removed_ids
+
+    def test_animate_auto_clear_flushes_before_removing(self, monkeypatch):
+        # auto_clear must flush *before* marking objects for removal, so the
+        # previous frame's additions actually reach the browser (an async,
+        # fire-and-forget flush races with the synchronous remove() and the
+        # object would be deleted without ever being shown).
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        waits: list[bool] = []
+        monkeypatch.setattr(
+            viz, "_flush_scene", lambda name, **kw: waits.append(kw.get("wait"))
+        )
+
+        next(viz.animate(fps=0, auto_clear=True))  # first frame
+
+        assert waits == [True]
+
     def test_interrupted_false_without_server(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         assert viz.interrupted() is False
@@ -331,6 +436,101 @@ class TestVisualizer:
         asyncio.run(viz._on_browser_animation_stop("a"))
         assert viz.interrupted("a") is True
         assert viz.interrupted("b") is False
+
+    def test_server_stop_sets_shutdown_and_all_scene_events(self):
+        import asyncio
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+        viz._interrupt_event("a")
+        viz._interrupt_event("b")
+
+        asyncio.run(viz._on_browser_animation_stop("a", scope="server"))
+
+        assert viz._shutdown_requested.is_set()
+        assert viz._interrupt_events["a"].is_set()
+        assert viz._interrupt_events["b"].is_set()
+
+    def test_server_stop_default_scope_is_scene(self):
+        import asyncio
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._shutdown_requested = threading.Event()
+
+        asyncio.run(viz._on_browser_animation_stop("detail"))
+
+        assert viz.interrupted("detail") is True
+        assert not viz._shutdown_requested.is_set()
+        # The main scene is unaffected.
+        assert viz.interrupted() is False
+
+    def test_enable_server_stop_key_stores_default_cfg(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        # _server/_loop are None, so _push_animation_stop is a no-op here; we
+        # verify the stored config only.
+        viz.enable_server_stop_key()
+        cfg = viz._server_stop_configs[""]
+        assert cfg["enabled"] is True
+        assert cfg["key"] == "q"
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_enable_server_stop_key_false_disables(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.enable_server_stop_key()
+        viz.enable_server_stop_key(enabled=False)
+        cfg = viz._server_stop_configs[""]
+        assert cfg["enabled"] is False
+        assert cfg["key"] is None
+        # Modifiers are preserved so re-enabling keeps the last config.
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_constructor_enable_server_stop_key_flag(self):
+        viz = Visualizer(
+            add_default_axes=False, add_default_grid=False, enable_server_stop_key=True
+        )
+        cfg = viz._server_stop_configs[""]
+        assert cfg["enabled"] is True
+        assert cfg["key"] == "q"
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_scene_handle_enable_server_stop_key_scoped(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        handle = viz.scene("detail")
+        handle.enable_server_stop_key()
+        assert "detail" in viz._server_stop_configs
+        assert "" not in viz._server_stop_configs
+        assert viz._server_stop_configs["detail"]["enabled"] is True
+
+    def test_scene_kwarg_enable_server_stop_key(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.scene("detail", enable_server_stop_key=True)
+        cfg = viz._server_stop_configs["detail"]
+        assert cfg["enabled"] is True
+        assert cfg["key"] == "q"
+        assert cfg["modifiers"] == ["ctrl"]
+
+    def test_scene_kwarg_default_does_not_enable(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.scene("detail")
+        assert "detail" not in viz._server_stop_configs
+
+    def test_animate_clears_previous_scene_interrupt(self, monkeypatch):
+        # A browser "q" stop sets the per-scene interrupt; a fresh animate()
+        # loop must clear it (but not the global shutdown event) so re-running
+        # the cell restarts the animation.
+        import asyncio
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._server = object()
+        viz._shutdown_requested = threading.Event()
+        monkeypatch.setattr(viz, "stop_server", lambda: None)
+
+        asyncio.run(viz._on_browser_animation_stop(""))
+        assert viz.interrupted() is True
+
+        gen = viz.animate(fps=0, stop_key=None)
+        next(gen)  # entering the loop clears the interrupt and yields a frame
+        assert viz.interrupted() is False
 
     def test_normalize_stop_modifiers_accepts_enum_and_strings(self):
         from pytanga.viz import KeyModifier
@@ -435,7 +635,9 @@ class TestVisualizer:
     def test_show_serves_and_opens_browser(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         calls: list[str] = []
-        monkeypatch.setattr(viz, "start_server", lambda **kw: calls.append("start_server"))
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
         monkeypatch.setattr(
             viz,
             "open_browser",
@@ -452,6 +654,81 @@ class TestVisualizer:
         monkeypatch.setattr(viz, "open_browser", lambda **kw: True)
         viz.show(host="127.0.0.1", port=9000)
         assert captured == {"host": "127.0.0.1", "port": 9000}
+
+    def test_show_autodetects_jupyter(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._jupyter = True
+        calls: list[str] = []
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
+        monkeypatch.setattr(
+            viz, "display", lambda **kw: calls.append("display") or None
+        )
+        result = viz.show()
+        assert result is None
+        assert calls == ["start_server", "display"]
+
+    def test_show_jupyter_true_delegates_to_display(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        calls: list[str] = []
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
+        monkeypatch.setattr(
+            viz, "display", lambda **kw: calls.append("display") or None
+        )
+        result = viz.show(jupyter=True)
+        assert result is None
+        assert calls == ["start_server", "display"]
+
+    def test_show_jupyter_false_forces_browser(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._jupyter = True
+        calls: list[str] = []
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
+        monkeypatch.setattr(
+            viz,
+            "open_browser",
+            lambda **kw: calls.append("open_browser") or True,
+        )
+        result = viz.show(jupyter=False)
+        assert result is True
+        assert calls == ["start_server", "open_browser"]
+
+    def test_scene_handle_show_autodetects_jupyter(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._jupyter = True
+        handle = viz.scene("detail")
+        calls: list[str] = []
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
+        monkeypatch.setattr(
+            handle, "display", lambda **kw: calls.append("display") or None
+        )
+        result = handle.show()
+        assert result is None
+        assert calls == ["start_server", "display"]
+
+    def test_scene_handle_show_jupyter_false_forces_browser(self, monkeypatch):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz._jupyter = True
+        handle = viz.scene("detail")
+        calls: list[str] = []
+        monkeypatch.setattr(
+            viz, "start_server", lambda **kw: calls.append("start_server")
+        )
+        monkeypatch.setattr(
+            handle,
+            "open_browser",
+            lambda: calls.append("open_browser") or True,
+        )
+        result = handle.show(jupyter=False)
+        assert result is True
+        assert calls == ["start_server", "open_browser"]
 
     def test_run_emits_deprecation_warning(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -512,7 +789,9 @@ class TestVisualizer:
         assert viz._config.space_dim == 3
 
     def test_space_dim_explicit_overrides_camera(self):
-        viz = Visualizer(camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1), space_dim=3)
+        viz = Visualizer(
+            camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1), space_dim=3
+        )
         assert viz._config.space_dim == 3
 
     def test_add_entity_returns_id(self):
@@ -709,7 +988,9 @@ class TestLabelDefaults:
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.add(Point(0, 0, 0), label="P", label_style=LabelStyle(rotation=45, along=0.5))
+        viz.add(
+            Point(0, 0, 0), label="P", label_style=LabelStyle(rotation=45, along=0.5)
+        )
         labels = [o for o in viz._scene.full_state() if o.get("kind") == "label"]
         assert len(labels) == 1
         assert "along" not in labels[0]["style"]
@@ -861,8 +1142,14 @@ class TestAxesSerialization:
 
         a = Axes2D(range_u=(-2, 3), range_v=(-1, 2), labels=("X", "Y"))
         d = serialize_entity(
-            a, "ax2", kind="Axes2D",
-            properties={"style": Axes2DStyle(u=AxisStyle(color="#ff0000"), v=AxisStyle(color="#00ff00"))},
+            a,
+            "ax2",
+            kind="Axes2D",
+            properties={
+                "style": Axes2DStyle(
+                    u=AxisStyle(color="#ff0000"), v=AxisStyle(color="#00ff00")
+                )
+            },
         )
         assert d["kind"] == "Axes2D"
         assert d["origin"] == [0.0, 0.0, -0.5]
@@ -879,14 +1166,20 @@ class TestAxesSerialization:
     def test_axes3d_per_direction_style(self):
         from pytanga.viz import Axes3DStyle, AxisStyle
 
-        a = Axes3D(range_u=(0, 2), range_v=(0, 2), range_w=(0, 2), labels=("X", "Y", "Z"))
+        a = Axes3D(
+            range_u=(0, 2), range_v=(0, 2), range_w=(0, 2), labels=("X", "Y", "Z")
+        )
         d = serialize_entity(
-            a, "ax3", kind="Axes3D",
-            properties={"style": Axes3DStyle(
-                u=AxisStyle(color="#ff0000"),
-                v=AxisStyle(color="#00ff00"),
-                w=AxisStyle(color="#0000ff"),
-            )},
+            a,
+            "ax3",
+            kind="Axes3D",
+            properties={
+                "style": Axes3DStyle(
+                    u=AxisStyle(color="#ff0000"),
+                    v=AxisStyle(color="#00ff00"),
+                    w=AxisStyle(color="#0000ff"),
+                )
+            },
         )
         assert d["kind"] == "Axes3D"
         entries = d["axes"]
@@ -901,8 +1194,12 @@ class TestAxesSerialization:
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
         d = serialize_entity(
-            a, "ax2", kind="Axes2D",
-            properties={"style": Axes2DStyle(u=AxisStyle(color="#ff0000"), v=AxisStyle())},
+            a,
+            "ax2",
+            kind="Axes2D",
+            properties={
+                "style": Axes2DStyle(u=AxisStyle(color="#ff0000"), v=AxisStyle())
+            },
         )
         entries = d["axes"]
         u_entry = entries[0]  # positive half of u, red
@@ -925,8 +1222,12 @@ class TestAxesSerialization:
     def test_axes_scalar_axis_style_applies_to_all_directions(self):
         from pytanga.viz import AxisStyle
 
-        a = Axes3D(range_u=(0, 1), range_v=(0, 1), range_w=(0, 1), labels=("X", "Y", "Z"))
-        d = serialize_entity(a, "ax3", kind="Axes3D", properties={"style": AxisStyle(color="#ff0000")})
+        a = Axes3D(
+            range_u=(0, 1), range_v=(0, 1), range_w=(0, 1), labels=("X", "Y", "Z")
+        )
+        d = serialize_entity(
+            a, "ax3", kind="Axes3D", properties={"style": AxisStyle(color="#ff0000")}
+        )
         entries = d["axes"]
         assert len(entries) == 3
         for e in entries:
@@ -937,7 +1238,9 @@ class TestAxesSerialization:
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
         d = serialize_entity(
-            a, "ax2", kind="Axes2D",
+            a,
+            "ax2",
+            kind="Axes2D",
             properties={
                 "style": Axes2DStyle(
                     u=AxisStyle(value_style=LabelStyle(font_size=20, align=(0.5, 0.0))),
@@ -958,7 +1261,9 @@ class TestAxesSerialization:
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
         d = serialize_entity(
-            a, "ax2", kind="Axes2D",
+            a,
+            "ax2",
+            kind="Axes2D",
             properties={
                 "style": Axes2DStyle(
                     u=AxisStyle(value_style=LabelStyle(rotation=30)),
@@ -1095,7 +1400,9 @@ class TestGridAxesStyles:
 
 class TestAxesExpansion:
     def test_axes_3d_expands_to_three_axes(self):
-        a = Axes3D(range_u=(0, 4), range_v=(0, 5), range_w=(0, 6), labels=("X", "Y", "Z"))
+        a = Axes3D(
+            range_u=(0, 4), range_v=(0, 5), range_w=(0, 6), labels=("X", "Y", "Z")
+        )
         axes = a.expand()
         assert len(axes) == 3
         assert [x.label for x in axes] == ["X", "Y", "Z"]
@@ -1131,7 +1438,9 @@ class TestAxesExpansion:
 
     def test_axes_3d_asymmetric_expands_correctly(self):
         a = Axes3D(
-            range_u=(-1.0, 2.0), range_v=(-2.0, 3.0), range_w=(0.0, 4.0),
+            range_u=(-1.0, 2.0),
+            range_v=(-2.0, 3.0),
+            range_w=(0.0, 4.0),
             labels=("X", "Y", "Z"),
         )
         axes = a.expand()

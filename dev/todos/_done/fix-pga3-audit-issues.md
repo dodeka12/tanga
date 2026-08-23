@@ -10,7 +10,7 @@
 
 The PGA3 code audit found **two critical bugs**, **four feature gaps**, and **four minor issues**. This plan addresses all ten findings in dependency order so that no step requires refactoring an earlier step.
 
-The **very first phase** establishes a standalone `BasisPGA3` that uses the Gunn/Dorst naming convention (`e0` for the null vector, `e0_inv` for its inverse). The old names `einf` and `eo` are **not** present on the class — they belong to the N3 conformal model, not to PGA3.
+The **very first phase** establishes a standalone `BasisPGA3` that uses the Gunn/Dorst naming convention (`e0` for the null vector, `e0_recip` for its reciprocal). The old names `einf` and `eo` are **not** present on the class — they belong to the N3 conformal model, not to PGA3.
 
 | # | Issue | Location | Type |
 |---|-------|----------|------|
@@ -23,26 +23,26 @@ The **very first phase** establishes a standalone `BasisPGA3` that uses the Gunn
 | 7 | No blade‑ness check before `blade_factorize()` | `analysis_pga3.py:_line_from_bivector` | Defensive coding |
 | 8 | Dead code in `_line_origin_from_planes` | `analysis_pga3.py:_line_origin_from_planes` | Code quality |
 | 9 | `create_space` is fragile (manual blade ID assignment) | `create_pga3.py:create_space` | Robustness |
-| 10 | Use `e0` / `e0_inv` instead of `einf` / `eo` everywhere (Gunn/Dorst convention) | `basis/pga3.py`, `create_pga3.py`, `analysis_pga3.py` | API consistency |
+| 10 | Use `e0` / `e0_recip` instead of `einf` / `eo` everywhere (Gunn/Dorst convention) | `basis/pga3.py`, `create_pga3.py`, `analysis_pga3.py` | API consistency |
 
 ---
 
-## Phase 1 — Standalone BasisPGA3 with `e0` / `e0_inv` + shared PGA3 utilities
+## Phase 1 — Standalone BasisPGA3 with `e0` / `e0_recip` + shared PGA3 utilities
 
 **Files:**
-- `py/pytanga/basis/pga3.py` — **rewrite**: extend `Algebra` directly; expose `e0` & `e0_inv`; no `einf`/`eo`
+- `py/pytanga/basis/pga3.py` — **rewrite**: extend `Algebra` directly; expose `e0` & `e0_recip`; no `einf`/`eo`
 - **NEW:** `py/pytanga/geometry/_pga3_utils.py` — shared PGA3 helpers (dual, pseudo‑inverse, `e0`‑coeff extraction)
 - `py/pytanga/geometry/create_pga3.py` — adapt imports & call sites
 - `py/pytanga/geometry/analysis_pga3.py` — adapt imports & call sites
 
-**Motivation:** `BasisPGA3` currently inherits from `BasisN3` and carries the N3 names `einf`/`eo`.  PGA3 (Gunn/Dorst) uses a single null vector **e₀**; the conformal pair e∞/eₒ belongs to N3.  The PGA3 basis must stand alone, define `e0` (= old `einf`) and `e0_inv` (= old `−eo`), and never expose `einf` or `eo`.
+**Motivation:** `BasisPGA3` currently inherits from `BasisN3` and carries the N3 names `einf`/`eo`.  PGA3 (Gunn/Dorst) uses a single null vector **e₀**; the conformal pair e∞/eₒ belongs to N3.  The PGA3 basis must stand alone, define `e0` (= old `einf`) and `e0_recip` (= old `−eo`), and never expose `einf` or `eo`.
 
 **Design:**
 
 | Concept | PGA3 name | Internal embedding |
 |---------|-----------|-------------------|
 | Null vector | `e0` | `ep + em` (5D proxy) |
-| Inverse of null vector | `e0_inv` | `0.5·ep − 0.5·em` (satisfies ⟨e0·e0_inv⟩₀ = 1) |
+| Reciprocal of null vector | `e0_recip` | `0.5·ep − 0.5·em` (satisfies ⟨e0·e0_recip⟩₀ = 1) |
 | Basis vectors | `e1, e2, e3` | dim=3 subspace of the 5D algebra |
 | Algebra | G(3, 0, 1) — 4D PGA via 5D embedding | `Algebra(5, 0b10000)` |
 
@@ -79,7 +79,7 @@ Gunn/Dorst 4D PGA.
 
 This class does **not** expose ``einf`` or ``eo`` — those belong to the
 N3 conformal model.  Instead it exposes ``e0`` (the null vector) and
-``e0_inv`` (its inverse, satisfying ⟨e0·e0_inv⟩₀ = 1).
+``e0_recip`` (its reciprocal, satisfying ⟨e0·e0_recip⟩₀ = 1).
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ class BasisPGA3(Algebra):
 
     Attributes:
         e0: The Gunn/Dorst null vector (embedding: ep + em).
-        e0_inv: Inverse of e0 (embedding: 0.5·ep − 0.5·em).
+        e0_recip: Reciprocal of e0 (embedding: 0.5·ep − 0.5·em).
         e1, e2, e3: Euclidean basis vectors.
         ep, em: Internal 5D embedding vectors (private; prefer e0).
     """
@@ -121,8 +121,8 @@ class BasisPGA3(Algebra):
         self.em = mv({self.EM: 1})   # internal — e5
         # e0 = ep + em — the Gunn/Dorst null vector
         self.e0 = mv({self.EP: 1.0, self.EM: 1.0})
-        # e0_inv = 0.5·ep − 0.5·em  →  ⟨e0·e0_inv⟩₀ = 1
-        self.e0_inv = mv({self.EP: 0.5, self.EM: -0.5})
+        # e0_recip = 0.5·ep − 0.5·em  →  ⟨e0·e0_recip⟩₀ = 1
+        self.e0_recip = mv({self.EP: 0.5, self.EM: -0.5})
 
     # ── convenience constructors ──────────────────────────────────
 
@@ -161,7 +161,7 @@ class BasisPGA3(Algebra):
 
 Key changes from current code:
 - **No `BasisN3` inheritance.** `BasisPGA3` extends `Algebra` directly.
-- **No `einf` or `eo` attributes.**  `e0` replaces `einf`; `e0_inv` replaces `−eo`.
+- **No `einf` or `eo` attributes.**  `e0` replaces `einf`; `e0_recip` replaces `−eo`.
 - **Blade IDs are class attributes** (`E1..E123, EP, EM`), following the `BasisE3` pattern.
 - **`_display_basis`** uses `e0` (not `einf`) as the null basis generator.
 
@@ -228,9 +228,9 @@ def _pga3_dual(mv: MV) -> MV:
 def _get_e0_coeff(mv: MV) -> float:
     """Extract the e₀ coefficient from a grade‑1 IPNS vector.
 
-    Uses the algebraic identity ⟨e₀ · e0_inv⟩₀ = 1, so:
+    Uses the algebraic identity ⟨e₀ · e0_recip⟩₀ = 1, so:
 
-        α = ⟨mv · e0_inv⟩₀
+        α = ⟨mv · e0_recip⟩₀
 
     On ``BasisPGA3`` instances this is exactly the coefficient of the
     e₀ component.  For other algebras the correct dual vector is
@@ -240,19 +240,19 @@ def _get_e0_coeff(mv: MV) -> float:
         The e₀ coefficient of the grade‑1 portion of *mv*.
     """
     alg = mv.algebra
-    if hasattr(alg, "e0_inv"):
-        e0_inv = alg.e0_inv
+    if hasattr(alg, "e0_recip"):
+        e0_recip = alg.e0_recip
     else:
-        e0_inv = alg.multivector({EP: 0.5, EM: -0.5})
-    return float(mv.sp(e0_inv))
+        e0_recip = alg.multivector({EP: 0.5, EM: -0.5})
+    return float(mv.sp(e0_recip))
 ```
 
-The `_get_e0_coeff` function uses the algebraic identity ⟨e0·e0_inv⟩₀ = 1.  
-Because `e0 = ep + em` and `e0_inv = 0.5·ep − 0.5·em`:
+The `_get_e0_coeff` function uses the algebraic identity ⟨e0·e0_recip⟩₀ = 1.  
+Because `e0 = ep + em` and `e0_recip = 0.5·ep − 0.5·em`:
 
-    e0 · e0_inv = (ep)(0.5·ep) + (em)(−0.5·em) = 0.5 + 0.5 = 1
+    e0 · e0_recip = (ep)(0.5·ep) + (em)(−0.5·em) = 0.5 + 0.5 = 1
 
-so the scalar product with `e0_inv` directly yields the `e0` coefficient.
+so the scalar product with `e0_recip` directly yields the `e0` coefficient.
 
 ### 1c — Update `create_pga3.py`
 
@@ -443,7 +443,7 @@ def _line_from_bivector(mv: MV) -> Line:
 
 **Problem:** Both functions read Euclidean coordinates from blade coefficients without dividing by the homogeneous weight $\alpha$ (the $e₀$ coefficient). This produces wrong Euclidean positions for any non‑unit‑weight point (centroids, interpolations, scaled versor applications).
 
-**Key insight:** The PGA3 model lives in the 5D embedding where $e₀ = e_p + e_m$. The coefficient $\alpha$ is distributed across two blade IDs (`EP` and `EM`). The correct extraction uses $\alpha = \langle X \cdot e_0^{\text{inv}} \rangle_0$ (since $\langle e₀ \cdot e_0^{\text{inv}} \rangle_0 = 1$), which is algebraically robust.  `_get_e0_coeff` from Phase 1 already provides this.
+**Key insight:** The PGA3 model lives in the 5D embedding where $e₀ = e_p + e_m$. The coefficient $\alpha$ is distributed across two blade IDs (`EP` and `EM`). The correct extraction uses $\alpha = \langle X \cdot e_0^{\text{recip}} \rangle_0$ (since $\langle e₀ \cdot e_0^{\text{recip}} \rangle_0 = 1$), which is algebraically robust.  `_get_e0_coeff` from Phase 1 already provides this.
 
 ### 4.1 Apply normalization in `_point_or_direction_from_ipns`
 
@@ -687,7 +687,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
 
 | Phase | Files | Changes | New tests | Risk |
 |-------|-------|---------|-----------|------|
-| 1 | `basis/pga3.py` (rewrite), **NEW** `_pga3_utils.py`, `create_pga3.py`, `analysis_pga3.py` | Standalone `BasisPGA3` with `e0`/`e0_inv` (no `einf`/`eo`); shared utils | None — existing suite must pass | Medium — rewrites `BasisPGA3` |
+| 1 | `basis/pga3.py` (rewrite), **NEW** `_pga3_utils.py`, `create_pga3.py`, `analysis_pga3.py` | Standalone `BasisPGA3` with `e0`/`e0_recip` (no `einf`/`eo`); shared utils | None — existing suite must pass | Medium — rewrites `BasisPGA3` |
 | 2.1 | `create_pga3.py:create_direction` | Fix OPNS form via `_pga3_dual(ipns)` | +2 | None — fixes a bug |
 | 2.2 | `analysis_pga3.py:_analyze_entity_ipns` | Fix grade‑3 path to dualize before plane extraction | +1 | None — fixes a bug |
 | 3.1 | `analysis_pga3.py:_line_from_bivector` | Add blade‑ness check before factorization | +1 | None — defensive |
@@ -704,7 +704,7 @@ def create_space(basis: Algebra, *, scale: float = 1.0, opns: bool = True) -> MV
 ## Dependency graph
 
 ```
-Phase 1 (standalone BasisPGA3 with e0/e0_inv + shared utils) ── FIRST
+Phase 1 (standalone BasisPGA3 with e0/e0_recip + shared utils) ── FIRST
     ↓
 Phase 2.1 + Phase 2.2 (critical bugs, either order)
     ↓
@@ -721,7 +721,7 @@ Phase 5.4 (wiring dispatchers)
 
 ### Rationale for ordering
 
-1. **Basis rewrite first.** Phase 1 makes `BasisPGA3` standalone with `e0`/`e0_inv` and no `einf`/`eo`. All other phases depend on `_pga3_utils` which sources blade IDs and the dual from `BasisPGA3`.
+1. **Basis rewrite first.** Phase 1 makes `BasisPGA3` standalone with `e0`/`e0_recip` and no `einf`/`eo`. All other phases depend on `_pga3_utils` which sources blade IDs and the dual from `BasisPGA3`.
 
 2. **Bug fixes next.** Phase 2 fixes broken functionality. Everything else builds on correct behavior.
 

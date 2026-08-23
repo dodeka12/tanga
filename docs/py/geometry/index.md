@@ -12,7 +12,7 @@ MV ←──[create]─── Entity/Operator    # construct MV from geometry
 ```
 
 The recommended way to work with the geometry pipeline is via a
-[`Geometry`](_geometry.py) instance, which binds an algebra.  The OPNS/IPNS
+[`Geometry`](https://github.com/dodeka12/tanga/blob/main/py/pytanga/geometry/_geometry.py) instance, which binds an algebra.  The OPNS/IPNS
 interpretation is read from the algebra's `opns` flag — so you don't need to
 pass it on every call.
 

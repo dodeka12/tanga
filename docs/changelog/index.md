@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 0.13.0] — 2026-08-22
+- `show()` in Jupyter · idempotent `display()`/`show()` · scene context managers · `animate(auto_clear=True)` · `viz(...)` shorthand · viz docs restructure · multi-scene guide · browser full-server stop key · operator visualizations reworked
+- Breaking: `animate()` no longer opens the viewer · PGA2/PGA3 `meet`/`join` inverted (Gunn/Dorst) · `e0_inv` → `e0_recip`
+→ [Details](2026-08-22_fae3c1e.md)
+
 ## [Since 0.12.0] — 2026-08-21
 - Per-scene browser interrupt key (`animate(stop_key=...)`, default `q`) · `KeyModifier` enum
 - Breaking: `animate()` no longer stops the server on loop exit (teardown moves to the `atexit` hook)

@@ -53,3 +53,4 @@ _input/
 _output/
 site/
 .dep-docs/
+.cache/

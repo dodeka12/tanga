@@ -65,7 +65,7 @@ Helper module for PGA2 dual and blade IDs.
 
 - Blade IDs: `E1=1, E2=2, EP=4, EM=8, E12=3`
 - `_get_e0(basis)` → `{EP:1, EM:1}`
-- `_get_e0_inv(basis)` → `{EP:0.5, EM:-0.5}`
+- `_get_e0_recip(basis)` → `{EP:0.5, EM:-0.5}`
 - `_pga2_dual(mv)` → Dual via Gunn/Dorst convention for 4D PGA
 
 ### `py/pytanga/geometry/create_n2.py`
@@ -113,7 +113,7 @@ PGA2 (Gunn/Dorst 4D PGA for 2D via null embedding).
 ## Implementation Checklist
 
 - [ ] 2.1  Create `py/pytanga/geometry/_n2_helpers.py` — blade IDs + `get_einf`/`get_eo`
-- [ ] 2.2  Create `py/pytanga/geometry/_pga2_utils.py` — blade IDs + `_get_e0`/`_get_e0_inv`/`_pga2_dual`
+- [ ] 2.2  Create `py/pytanga/geometry/_pga2_utils.py` — blade IDs + `_get_e0`/`_get_e0_recip`/`_pga2_dual`
 - [ ] 2.3  Create `py/pytanga/geometry/create_e2.py` — all E2 entity + operator creation functions
 - [ ] 2.4  Create `py/pytanga/geometry/create_p2.py` — all P2 entity + operator creation functions
 - [ ] 2.5  Create `py/pytanga/geometry/create_n2.py` — all N2 entity + operator creation functions

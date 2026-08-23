@@ -8,8 +8,6 @@ theme:
   name: material
   custom_dir: docs/overrides
   features:
-    - navigation.sections
-    - navigation.expand
     - navigation.indexes
     - search.highlight
     - search.suggest
@@ -50,6 +48,13 @@ extra_javascript:
 
 plugins:
   - search
+  - mkdocs-jupyter:
+      execute: true
+      ignore_h1_titles: true
+      include_source: true
+      kernel_name: python3
+      include:
+        - "*.ipynb"
 
 extra:
   version:
@@ -60,22 +65,56 @@ docs_dir: docs
 nav:
   - Home: index.md
 
-  - C++ Documentation:
-    - Overview: cpp/index.md
-    - Fixed-space multivectors: cpp/multivectors-e3-p3-n3.md
-    - Subspace multivectors: cpp/subspace-multivectors.md
-    - Dynamic multivectors: cpp/dynamic-multivectors.md
-    - Matrix mapping & equations: cpp/matrix-mapping-and-equations.md
-    - Product matrices: cpp/product-matrices.md
-    - Congruence maps: cpp/congruence.md
-    - Duals: cpp/duals.md
+  - Environment:
+    - Overview: py/env/index.md
+    - Installation: py/env/installation.md
+    - Compile & binding: py/env/compile-and-binding.md
 
-  - Python Documentation:
+  - Visualization:
+    - Overview: py/viz/index.md
+    - Use cases - Scripts: py/viz/use-cases-scripts.md
+    - Use cases - Jupyter: py/viz/use-cases-notebooks.md
+    - Scene Objects:
+      - Overview: py/viz/scene-objects/index.md
+      - Entities: py/viz/scene-objects/entities.ipynb
+      - Operators: py/viz/scene-objects/operators.ipynb
+      - Motor decomposition: py/viz/scene-objects/motor-decomposition.md
+      - Axes & Grid: py/viz/scene-objects/axes-grid.md
+      - PointPath: py/viz/scene-objects/point-path.md
+      - Active Elements:
+        - Overview: py/viz/scene-objects/active-elements/index.md
+        - ActPoint: py/viz/scene-objects/active-elements/act-point.md
+    - Visualizer:
+      - Overview: py/viz/visualizer/index.md
+      - Visualizer: py/viz/visualizer/visualizer.md
+      - Multi-Scene: py/viz/visualizer/multi-scene.md
+      - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
+      - Camera & Controls: py/viz/visualizer/camera.md
+      - Animation: py/viz/visualizer/animation.md
+      - Object Interaction: py/viz/visualizer/object-interaction.md
+    - Visualizer App:
+      - Overview: py/viz/visualizerapp/index.md
+      - Quickstart: py/viz/visualizerapp/app.md
+      - Controls: py/viz/visualizerapp/controls.md
+      - Handlers & Lifecycle: py/viz/visualizerapp/handlers.md
+    - Jupyter Notebooks:
+      - Overview: py/viz/jupyter/index.md
+      - Live inline display: py/viz/jupyter/live.md
+      - Static inline display: py/viz/jupyter/static.ipynb
+    - Styles:
+      - Overview: py/viz/styles/index.md
+      - Style System: py/viz/styles/styles.md
+      - Labels: py/viz/styles/labels.md
+      - Texture Labels: py/viz/styles/texture-labels.md
+      - Title & Annotation: py/viz/styles/title-annotation.md
+    - Export:
+      - Overview: py/viz/export/index.md
+      - Standalone HTML: py/viz/export/html.md
+      - glTF export: py/viz/export/gltf.md
+      - Video & Image: py/viz/export/video-image.md
+
+  - Geometric Algebra:
     - Overview: py/index.md
-    - Environment & Setup:
-      - Overview: py/env/index.md
-      - Installation: py/env/installation.md
-      - Compile & binding: py/env/compile-and-binding.md
     - Algebra:
       - Overview: py/algebra/index.md
       - Algebra class: py/algebra/algebra.md
@@ -122,20 +161,16 @@ nav:
       - Variables & blade masks: py/geometry/variables.md
       - Random generation: py/geometry/random.md
       - Round-trip examples: py/geometry/round-trip.md
-    - 3D Visualization:
-      - Overview: py/viz/index.md
-      - Visualizer API: py/viz/visualizer.md
-      - Camera & Controls: py/viz/camera.md
-      - Axes & Grid: py/viz/axes-grid.md
-      - Style system: py/viz/styles.md
-      - Labels: py/viz/labels.md
-      - Scene Graph & Transforms: py/viz/scene-graph.md
-      - PointPath: py/viz/point-path.md
-      - Title & annotation: py/viz/title-annotation.md
-      - Animation: py/viz/animation.md
-      - Export & capture: py/viz/export.md
-      - Interactive Controls: py/viz/interactive.md
-      - Jupyter notebooks: py/viz/jupyter.md
+
+  - C++ Documentation:
+    - Overview: cpp/index.md
+    - Fixed-space multivectors: cpp/multivectors-e3-p3-n3.md
+    - Subspace multivectors: cpp/subspace-multivectors.md
+    - Dynamic multivectors: cpp/dynamic-multivectors.md
+    - Matrix mapping & equations: cpp/matrix-mapping-and-equations.md
+    - Product matrices: cpp/product-matrices.md
+    - Congruence maps: cpp/congruence.md
+    - Duals: cpp/duals.md
 
   - Developer Documentation:
     - Overview: dev/index.md

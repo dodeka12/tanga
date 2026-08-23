@@ -41,6 +41,8 @@ let _availableScenes = [];
 
 // Per-scene browser-side animation stop binding.
 let _animationStopConfig = { enabled: false, key: null, modifiers: [] };
+// Per-scene browser-side full-server stop binding (opt-in).
+let _serverStopConfig = { enabled: false, key: null, modifiers: [] };
 
 // Frontend build hash injected into the served HTML; compared against the
 // value the backend advertises over the WebSocket handshake to detect a
@@ -49,12 +51,12 @@ const _frontendVersion =
     (typeof window !== 'undefined' && window.__tanga_frontend_version) || null;
 
 // ── Scene Setup ──────────────────────────────────────────────
-function _stopKeyMatches(event) {
-    if (!_animationStopConfig.enabled || !_animationStopConfig.key) return false;
-    if ((event.key || '').toLowerCase() !== String(_animationStopConfig.key).toLowerCase()) {
+function _stopKeyMatches(event, config) {
+    if (!config.enabled || !config.key) return false;
+    if ((event.key || '').toLowerCase() !== String(config.key).toLowerCase()) {
         return false;
     }
-    for (const mod of _animationStopConfig.modifiers) {
+    for (const mod of config.modifiers) {
         switch (mod) {
             case 'ctrl':
                 if (!(event.ctrlKey || event.metaKey)) return false;
@@ -76,7 +78,10 @@ function _stopKeyMatches(event) {
 }
 
 function _handleAnimationStopKey(event) {
-    if (!_stopKeyMatches(event)) return;
+    // Scope: full-server stop takes precedence over the per-scene stop.
+    const serverMatch = _stopKeyMatches(event, _serverStopConfig);
+    const sceneMatch = !serverMatch && _stopKeyMatches(event, _animationStopConfig);
+    if (!serverMatch && !sceneMatch) return;
     // Don't hijack keys while the user is editing text.
     const target = event.target;
     if (target && (
@@ -86,10 +91,12 @@ function _handleAnimationStopKey(event) {
     )) return;
     event.preventDefault();
     if (ws && ws.readyState === WebSocket.OPEN) {
-        _log('ws-send', 'type=animation_stop scene=' + (_myScene || ''));
+        _log('ws-send', 'type=animation_stop scene=' + (_myScene || '')
+            + ' scope=' + (serverMatch ? 'server' : 'scene'));
         ws.send(JSON.stringify({
             type: 'animation_stop',
             scene: _myScene,
+            scope: serverMatch ? 'server' : 'scene',
             browser_id: _browserId,
         }));
     }
@@ -513,6 +520,12 @@ function showVersionMismatchBanner(serverVersion, clientVersion) {
 }
 
 // ── Scene Config ─────────────────────────────────────────────
+function _shortenTitle(text, max = 40) {
+    if (!text) return '';
+    if (text.length <= max) return text;
+    return text.slice(0, max - 1).trimEnd() + '…';
+}
+
 function applySceneConfig(config) {
     sceneConfig = config;
     const spaceDim = config.space_dim || 3;
@@ -548,9 +561,15 @@ function applySceneConfig(config) {
     // window.innerWidth/innerHeight (e.g. before the page finished laying out).
     onResize();
 
-    // Title
+    // Title — set the viewport overlay (full text) and the browser tab
+    // (truncated with an ellipsis so very long titles stay visible).
     if (config.title !== undefined) {
         renderTitle(config.title);
+        const tabTitle = _shortenTitle(config.title);
+        if (tabTitle) {
+            _savedTitle = tabTitle;
+            document.title = tabTitle;
+        }
     }
 
     // Annotation
@@ -735,9 +754,17 @@ async function handleMessage(msg) {
                 key: msg.key ?? null,
                 modifiers: Array.isArray(msg.modifiers) ? msg.modifiers : [],
             };
+            _serverStopConfig = {
+                enabled: !!msg.server_enabled,
+                key: msg.server_key ?? null,
+                modifiers: Array.isArray(msg.server_modifiers) ? msg.server_modifiers : [],
+            };
             _log('init', 'animation_stop_config enabled=' + _animationStopConfig.enabled
                 + ' key=' + _animationStopConfig.key
-                + ' modifiers=' + JSON.stringify(_animationStopConfig.modifiers));
+                + ' modifiers=' + JSON.stringify(_animationStopConfig.modifiers)
+                + ' server_enabled=' + _serverStopConfig.enabled
+                + ' server_key=' + _serverStopConfig.key
+                + ' server_modifiers=' + JSON.stringify(_serverStopConfig.modifiers));
         }
         return;
     }

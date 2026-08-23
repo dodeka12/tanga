@@ -35,9 +35,6 @@ from ._pga3_utils import (
     E1,
     E2,
     E3,
-    E12,
-    E13,
-    E23,
     # E123,
     EM,
     EP,
@@ -236,8 +233,8 @@ def _line_origin_from_planes(p1: Plane, p2: Plane) -> Point:
     """Closest point to origin on the intersection of two planes."""
     n1x, n1y, n1z = p1.normal.x, p1.normal.y, p1.normal.z
     n2x, n2y, n2z = p2.normal.x, p2.normal.y, p2.normal.z
-    d1 = -(n1x * p1.point.x + n1y * p1.point.y + n1z * p1.point.z)
-    d2 = -(n2x * p2.point.x + n2y * p2.point.y + n2z * p2.point.z)
+    d1 = +(n1x * p1.point.x + n1y * p1.point.y + n1z * p1.point.z)
+    d2 = +(n2x * p2.point.x + n2y * p2.point.y + n2z * p2.point.z)
 
     # Direction = n1 × n2
     dx = n1y * n2z - n1z * n2y
@@ -391,17 +388,19 @@ def _ana_versor(
     """Analyze a PGA3 versor by grade content.
 
     Delegates to the generic :func:`ana_versor_generic` with PGA3 parameters:
-    ``einf_like = e0``, ``e0_inv_like = e0_inv``.
+    ``einf_like = e0``, ``e0_recip_like = e0_recip``.
     """
     alg = mv._alg
     e0 = alg.e0 if hasattr(alg, "e0") else alg.multivector({EP: 1.0, EM: 1.0})
-    e0_inv = (
-        alg.e0_inv if hasattr(alg, "e0_inv") else alg.multivector({EP: 0.5, EM: -0.5})
+    e0_recip = (
+        alg.e0_recip
+        if hasattr(alg, "e0_recip")
+        else alg.multivector({EP: 0.5, EM: -0.5})
     )
     return ana_versor_generic(
         mv,
         einf_like=e0,
-        e0_inv_like=e0_inv,
+        e0_recip_like=e0_recip,
         is_2d=False,
     )
 

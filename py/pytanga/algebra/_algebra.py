@@ -30,6 +30,10 @@ class Algebra:
     compiled (~5–20 s). Subsequent constructions load the cached binary (~ms).
     """
 
+    #: If True, the user-facing ``meet``/``join`` swap meanings (Gunn/Dorst
+    #: convention).  Set by the plane-based PGA bases (BasisPGA2/BasisPGA3).
+    _swap_meet_join: bool = False
+
     def __init__(
         self,
         dim: int,
@@ -471,8 +475,7 @@ class Algebra:
         a_sq = self.gp(a, a)
         if not self.is_scalar(a_sq):
             raise ValueError(
-                "exp() requires A² to be a scalar; "
-                "the multivector is not blade‑like."
+                "exp() requires A² to be a scalar; the multivector is not blade‑like."
             )
         s = self.scalar(a_sq)
 
@@ -511,8 +514,8 @@ class Algebra:
 
         Subclasses (BasisPGA3, BasisPGA2) override this for the J‑map.
         """
-        I = self.multivector({self.pseudoscalar_id: 1.0})
-        return self.gp(a, I)
+        pseudo = self.multivector({self.pseudoscalar_id: 1.0})
+        return self.gp(a, pseudo)
 
     # -----------------------------------------------------------------------
     # Phase D — Commutator and anti‑commutator
@@ -622,14 +625,15 @@ class Algebra:
 
     def is_base(self, a: MV) -> bool:
         """True if *a* is exactly one basis blade with coefficient 1."""
-        d = {bid: v for bid, v in a._impl.to_dict().items() if abs(v) >= self._precision}
+        d = {
+            bid: v for bid, v in a._impl.to_dict().items() if abs(v) >= self._precision
+        }
         return len(d) == 1 and abs(next(iter(d.values())) - 1.0) < self._precision
 
     def is_blade(self, a: MV) -> bool:
         """True if *a* is a simple r‑vector (blade factorizable into vectors)."""
         if self.is_scalar(a):
             return True
-        tol = self._precision
         # A pure‑grade MV that can be factored into grade‑1 vectors
         if not self._is_pure_blade(a):
             return False
@@ -703,9 +707,7 @@ class Algebra:
         """True if all non-scalar coefficients are within ``precision`` of zero."""
         tol = self._precision
         return all(
-            abs(v) < tol
-            for blade_id, v in a._impl.to_dict().items()
-            if blade_id != 0
+            abs(v) < tol for blade_id, v in a._impl.to_dict().items() if blade_id != 0
         )
 
     def project_to(self, a: MV, other: MV | int | list[int]) -> MV:
@@ -809,13 +811,40 @@ class Algebra:
         impls = self._mod.blade_factorize(blade._impl)
         return [MV(impl, self) for impl in impls]
 
-    def join(self, a: MV, b: MV) -> MV:
-        """Compute the join of two blades: the smallest-grade blade containing both."""
+    def _join(self, a: MV, b: MV) -> MV:
+        """Internal join: progressive product (smallest blade containing both)."""
         return MV(self._mod.join(a._impl, b._impl), self)
 
-    def meet(self, a: MV, b: MV) -> MV:
-        """Compute the meet of two blades: the largest-grade blade contained in both."""
+    def _meet(self, a: MV, b: MV) -> MV:
+        """Internal meet: regressive product (largest blade contained in both)."""
         return MV(self._mod.meet(a._impl, b._impl), self)
+
+    def join(self, a: MV, b: MV) -> MV:
+        """Compute the join of two blades.
+
+        For the plane-based PGA models (``BasisPGA2``/``BasisPGA3``) this follows
+        Gunn/Dorst: the ``join`` is the union/span (regressive product)
+        ``⋆(⋆A ∧ ⋆B)``, which vanishes for incident elements.  For all other
+        algebras it is the progressive product (the smallest-grade blade
+        containing both).
+        """
+        if self._swap_meet_join:
+            # Gunn/Dorst join = regressive product ⋆(⋆A ∧ ⋆B)
+            return a.dual().op(b.dual()).dual()
+        return self._join(a, b)
+
+    def meet(self, a: MV, b: MV) -> MV:
+        """Compute the meet of two blades.
+
+        For the plane-based PGA models (``BasisPGA2``/``BasisPGA3``) this follows
+        Gunn/Dorst: the ``meet`` is the intersection (outer product ``∧``).  For
+        all other algebras it is the regressive product (the largest-grade blade
+        contained in both).
+        """
+        if self._swap_meet_join:
+            # Gunn/Dorst meet = outer product (intersection)
+            return a.op(b)
+        return self._meet(a, b)
 
     def blade_factorize_versor(self, versor: MV) -> tuple[MV, list[MV]]:
         """Factorize a versor into (scale, factor_vectors)."""

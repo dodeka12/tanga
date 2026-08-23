@@ -93,19 +93,30 @@ class TestSerializeEntities:
         assert d["pointSize"] == 0.06
 
     def test_line(self):
-        l = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
-        d = _serialize(l)
+        line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+        d = _serialize(line)
         assert d["kind"] == "Line"
-        assert d["origin"] == [0, 0, 0]
+        # Infinite line → centered on the closest point to the origin, so the
+        # serialized `origin` is the start point (closest - d̂·length/2).
+        assert d["origin"] == [-10.0, 0.0, 0.0]
         assert d["direction"] == [1, 0, 0]
         assert d["thickness"] == 1.0
         # Infinite line → the content `length` resolves to the style default.
         assert d["length"] == 20.0
         assert d["style"]["length"] == 20.0
 
+    def test_infinite_line_centered(self):
+        # An offset infinite line is centered on its closest point to the origin:
+        # origin = closest - d̂·length/2.
+        line = Line(origin=Point(0, 1, 0), direction=Direction(1, 0, 0))
+        d = _serialize(line)
+        assert d["origin"] == [-10.0, 1.0, 0.0]
+        assert d["direction"] == [1.0, 0.0, 0.0]
+        assert d["length"] == 20.0
+
     def test_line_from_points_respects_length(self):
-        l = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
-        d = _serialize(l)
+        line = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
+        d = _serialize(line)
         # `length` is a content field carrying the explicit segment length.
         assert d["length"] == 2.0
         # The style `length` stays the default (used only for infinite lines).
@@ -235,13 +246,15 @@ class TestSerializeOperators:
     def test_motor(self):
         m = Motor(
             rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
-            translator=Translator(vector=Direction(2, 0, 0)),
+            translator=Translator(vector=Direction(0, 0, 2)),
         )
         d = _serialize(m)
         assert d["kind"] == "Motor"
         assert d["rotor"]["angle"] == 0.5
         assert d["rotor"]["axis"] == [0, 0, 1]
-        assert d["translator"]["vector"] == [2, 0, 0]
+        # Axial translation stays in the translator; the axis is undisplaced.
+        assert d["rotor"]["origin"] == [0, 0, 0]
+        assert d["translator"]["vector"] == [0, 0, 2]
 
     def test_general_rotor(self):
         gr = GeneralRotor(
@@ -337,15 +350,42 @@ class TestStyleOverrides:
     def test_style_plane_extent(self):
         from copy import copy
 
-        from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND as _CANONICAL
+        from pytanga.viz._styles import PlaneStyle
 
         styles_map = {k: copy(v) for k, v in _CANONICAL.items()}
         styles_map["Plane"].extent = 25.0
+
+        # Canonical default (mutated) resolves the flat extent.
         d = _serialize(
             Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1)),
             styles_map=styles_map,
         )
         assert d["extent"] == 25.0
+        assert d["style"]["extent"] == 25.0
+
+        # Per-call style override wins over the canonical default.
+        d = _serialize(
+            Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1)),
+            props={"style": PlaneStyle(extent=3.0)},
+            styles_map=styles_map,
+        )
+        assert d["extent"] == 3.0
+        assert d["style"]["extent"] == 3.0
+
+    def test_plane_style_extent_via_full_state(self):
+        """Per-call PlaneStyle(extent=...) survives scene-graph serialization."""
+        from pytanga.geometry import Direction, Plane, Point
+        from pytanga.viz import PlaneStyle, Visualizer
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(
+            Plane(point=Point(0, 0, 2), normal=Direction(0, 0, 1)),
+            style=PlaneStyle(extent=3.0),
+        )
+        objs = viz._scene.full_state(styles_map=viz.styles.kind)
+        plane = next(o for o in objs if o.get("kind") == "Plane")
+        assert plane["extent"] == 3.0
+        assert plane["style"]["extent"] == 3.0
 
     def test_sphere_style_opacity(self):
         """Sphere default opacity comes from canonical style."""
@@ -402,7 +442,9 @@ class TestObjectUpdate:
         )
         assert msg["type"] == "object_update"
         assert msg["scene"] == ""
-        assert msg["patches"] == [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}]
+        assert msg["patches"] == [
+            {"id": "a", "aspect": "full", "value": {"kind": "Point"}}
+        ]
         assert msg["removed"] == ["b"]
 
     def test_empty(self):

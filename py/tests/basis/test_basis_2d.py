@@ -73,9 +73,9 @@ class TestImports:
         b = BasisPGA2()
         assert hasattr(b, "e0")
 
-    def test_basis_pga2_has_e0_inv(self):
+    def test_basis_pga2_has_e0_recip(self):
         b = BasisPGA2()
-        assert hasattr(b, "e0_inv")
+        assert hasattr(b, "e0_recip")
 
     def test_basis_n2_has_einf(self):
         b = BasisN2()
@@ -253,9 +253,9 @@ class TestBasisPGA2:
         """e0² = 0 (Gunn/Dorst null vector)."""
         assert is_zero(self.b.e0 * self.b.e0)
 
-    def test_e0_inv_inner_product(self):
-        """ip(e0, e0_inv) = 1."""
-        result = self.b.e0.sp(self.b.e0_inv)
+    def test_e0_recip_inner_product(self):
+        """ip(e0, e0_recip) = 1."""
+        result = self.b.e0.sp(self.b.e0_recip)
         assert abs(scalar(result) - 1.0) < 1e-6
 
     def test_point_has_correct_blades(self):
@@ -265,16 +265,16 @@ class TestBasisPGA2:
         assert float(p[4]) == pytest.approx(1.0)  # ep component of e0
         assert float(p[8]) == pytest.approx(1.0)  # em component of e0
 
-    def test_point_inner_product_with_e0_inv(self):
-        """ip(point, e0_inv) must equal +1 for any finite point in PGA2."""
+    def test_point_inner_product_with_e0_recip(self):
+        """ip(point, e0_recip) must equal +1 for any finite point in PGA2."""
         p = self.b.multivector({1: 3, 2: 4, 4: 1.0, 8: 1.0})
-        result = self.b.ip(p, self.b.e0_inv)
+        result = self.b.ip(p, self.b.e0_recip)
         assert abs(scalar(result) - 1.0) < 1e-12
 
-    def test_ideal_direction_inner_product_with_e0_inv_is_zero(self):
-        """ip(direction, e0_inv) = 0 for ideal points."""
+    def test_ideal_direction_inner_product_with_e0_recip_is_zero(self):
+        """ip(direction, e0_recip) = 0 for ideal points."""
         v = self.b.multivector({1: 1.0})
-        result = self.b.ip(v, self.b.e0_inv)
+        result = self.b.ip(v, self.b.e0_recip)
         assert is_zero(result)
 
     def test_direction_factory(self):

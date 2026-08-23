@@ -166,7 +166,7 @@ class VizServer:
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
         self._control_callback: ControlCallback | None = None
-        self._animation_stop_callback: Callable[[str], Awaitable[None]] | None = None
+        self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = None
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -189,7 +189,7 @@ class VizServer:
         on_connect: Callable[[str], Awaitable[None]] | None = None,
         on_disconnect: Callable[[str], Awaitable[None]] | None = None,
         push_controls: PushControlsCallback | None = None,
-        animation_stop_callback: Callable[[str], Awaitable[None]] | None = None,
+        animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = None,
         push_animation_stop: Callable[[str], Awaitable[None]] | None = None,
         scene_config_callback: SceneConfigCallback | None = None,
         scene_list_callback: SceneListCallback | None = None,
@@ -686,7 +686,8 @@ class VizServer:
                             if self._animation_stop_callback is not None:
                                 asyncio.create_task(
                                     self._animation_stop_callback(
-                                        data.get("scene", "")
+                                        data.get("scene", ""),
+                                        data.get("scope", "scene"),
                                     )
                                 )
                         elif msg_type == "screenshot:data":

@@ -41,7 +41,7 @@ Document the `BasisPGA2` class:
 
 - `Algebra.from_name("PGA2")` usage
 - Gunn/Dorst plane‑based PGA for 2D, null vector `e0` via ep+em embedding
-- Named blades: `e1`, `e2`, `e0`, `e0_inv`
+- Named blades: `e1`, `e2`, `e0`, `e0_recip`
 - Methods: `point(x, y)`, `direction(x, y)`, `plane(nx, ny, d)`
 - Example: PGA2 planes as 2D lines, point intersection of two lines
 

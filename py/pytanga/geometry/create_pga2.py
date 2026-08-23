@@ -32,7 +32,7 @@ from ._pga2_utils import (
     _get_e0,
 )
 from .entities import Direction, Line, Point
-from .operators import Rotor, Translator
+from .operators import GeneralRotor, Translator
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -158,11 +158,11 @@ def create_translator(basis: Algebra, dx: float, dy: float, dz: float) -> MV:
     )
 
 
-def create_motor(basis: Algebra, rotor: Rotor, translator: Translator) -> MV:
-    """``T · R`` = translation followed by rotation."""
+def create_motor(basis: Algebra, rotor: GeneralRotor, translator: Translator) -> MV:
+    """``T_u · (T_v · R · T̃_v)`` = screw: translation along a general rotor's axis."""
     t_mv = create_translator(basis, translator.vector.x, translator.vector.y, 0.0)
-    r_mv = create_rotor(basis, rotor.angle, rotor.axis)
-    return t_mv.gp(r_mv)
+    g_mv = create_general_rotor(basis, rotor.angle, rotor.axis, rotor.origin)
+    return t_mv.gp(g_mv)
 
 
 def create_general_rotor(
@@ -222,9 +222,7 @@ def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     )
 
 
-def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0
-) -> MV:
+def create_homogeneous_point(basis: Algebra, pt: Point, weight: float = 1.0) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N2); not available in PGA2."
     )

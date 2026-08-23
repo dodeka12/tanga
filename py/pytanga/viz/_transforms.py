@@ -52,7 +52,9 @@ def translation_matrix(tx: float, ty: float, tz: float) -> np.ndarray:
     return m
 
 
-def rotation_matrix(axis: Direction | tuple[float, float, float], angle: float) -> np.ndarray:
+def rotation_matrix(
+    axis: Direction | tuple[float, float, float], angle: float
+) -> np.ndarray:
     """Return a 4×4 rotation matrix from an axis-angle representation.
 
     The axis is normalized before building the rotation (Rodrigues' formula).
@@ -83,7 +85,9 @@ def rotation_matrix(axis: Direction | tuple[float, float, float], angle: float) 
     return m
 
 
-def scale_matrix(sx: float, sy: float | None = None, sz: float | None = None) -> np.ndarray:
+def scale_matrix(
+    sx: float, sy: float | None = None, sz: float | None = None
+) -> np.ndarray:
     """Return a 4×4 scale matrix.
 
     ``scale_matrix(f)`` applies a uniform scale by ``f`` on all axes;
@@ -111,7 +115,7 @@ def _mat3_to_euler(r: np.ndarray) -> tuple[float, float, float]:
     """
     r00, r01, r02 = r[0, 0], r[0, 1], r[0, 2]
     r10, r11, r12 = r[1, 0], r[1, 1], r[1, 2]
-    r20, r21, r22 = r[2, 0], r[2, 1], r[2, 2]
+    r22 = r[2, 2]
 
     y = float(np.arcsin(np.clip(r02, -1.0, 1.0)))
     cy = float(np.cos(y))
@@ -124,7 +128,11 @@ def _mat3_to_euler(r: np.ndarray) -> tuple[float, float, float]:
     return (x, y, z)
 
 
-def to_trs(m: np.ndarray) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]]:
+def to_trs(
+    m: np.ndarray,
+) -> tuple[
+    tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
+]:
     """Decompose a 4×4 matrix into ``(position, euler, scale)``.
 
     ``position`` is the last column, ``scale`` the column norms of the 3×3
@@ -178,9 +186,10 @@ def general_rotor_to_matrix(general_rotor: GeneralRotor) -> np.ndarray:
 def motor_to_matrix(motor: Motor) -> np.ndarray:
     """Return the 4×4 matrix of a :class:`Motor`.
 
-    The motor applies ``T(t) @ R`` (rotation followed by translation).
+    The motor is a screw: ``T(u) @ (T(v) @ R @ T(-v))`` — translation along
+    the axis of a displaced rotation.
     """
-    return translator_to_matrix(motor.translator) @ rotor_to_matrix(motor.rotor)
+    return translator_to_matrix(motor.translator) @ general_rotor_to_matrix(motor.rotor)
 
 
 def dilator_to_matrix(dilator: Dilator) -> np.ndarray:
@@ -210,7 +219,11 @@ def operator_to_matrix(op) -> np.ndarray:
     raise TypeError(f"Unsupported operator type: {type(op).__name__}")
 
 
-def operator_to_trs(op) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]]:
+def operator_to_trs(
+    op,
+) -> tuple[
+    tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
+]:
     """Return ``(position, euler, scale)`` for a supported operator.
 
     Analytical decompositions are used where possible to avoid round-trip
@@ -230,13 +243,27 @@ def operator_to_trs(op) -> tuple[tuple[float, float, float], tuple[float, float,
         return (float(v.x), float(v.y), float(v.z)), (0.0, 0.0, 0.0), (1.0, 1.0, 1.0)
     if isinstance(op, Motor):
         r = rotation_matrix(op.rotor.axis, op.rotor.angle)[:3, :3]
-        v = op.translator.vector
-        return (float(v.x), float(v.y), float(v.z)), _mat3_to_euler(r), (1.0, 1.0, 1.0)
+        v = np.array(
+            [op.rotor.origin.x, op.rotor.origin.y, op.rotor.origin.z],
+            dtype=np.float64,
+        )
+        gr_pos = (np.eye(3) - r) @ v
+        u = op.translator.vector
+        p = gr_pos + np.array([u.x, u.y, u.z], dtype=np.float64)
+        return (
+            (float(p[0]), float(p[1]), float(p[2])),
+            _mat3_to_euler(r),
+            (1.0, 1.0, 1.0),
+        )
     if isinstance(op, GeneralRotor):
         r = rotation_matrix(op.axis, op.angle)[:3, :3]
         origin = np.array([op.origin.x, op.origin.y, op.origin.z], dtype=np.float64)
         p = (np.eye(3) - r) @ origin
-        return (float(p[0]), float(p[1]), float(p[2])), _mat3_to_euler(r), (1.0, 1.0, 1.0)
+        return (
+            (float(p[0]), float(p[1]), float(p[2])),
+            _mat3_to_euler(r),
+            (1.0, 1.0, 1.0),
+        )
     if isinstance(op, Dilator):
         f = float(op.factor)
         origin = np.array([op.origin.x, op.origin.y, op.origin.z], dtype=np.float64)
@@ -259,10 +286,22 @@ def to_matrix(obj) -> np.ndarray:
     return operator_to_matrix(obj)
 
 
-def to_trs_tuple(obj) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]]:
+def to_trs_tuple(
+    obj,
+) -> tuple[
+    tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
+]:
     """Return ``(position, euler, scale)`` for a supported entity/operator."""
     if isinstance(obj, Point):
-        return (float(obj.x), float(obj.y), float(obj.z)), (0.0, 0.0, 0.0), (1.0, 1.0, 1.0)
+        return (
+            (float(obj.x), float(obj.y), float(obj.z)),
+            (0.0, 0.0, 0.0),
+            (1.0, 1.0, 1.0),
+        )
     if isinstance(obj, Direction):
-        return (float(obj.x), float(obj.y), float(obj.z)), (0.0, 0.0, 0.0), (1.0, 1.0, 1.0)
+        return (
+            (float(obj.x), float(obj.y), float(obj.z)),
+            (0.0, 0.0, 0.0),
+            (1.0, 1.0, 1.0),
+        )
     return operator_to_trs(obj)

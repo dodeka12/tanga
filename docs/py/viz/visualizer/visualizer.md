@@ -31,8 +31,8 @@ Visualizer(
 | `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
 | `background_color` | `str` | `"#1a1a2e"` | CSS background color |
 | `camera` | `CameraConfig \| View2DConfig \| View3dConfig \| None` | `None` | Explicit camera settings. Also accepts a `View2DConfig` / `View3dConfig` input spec, which is converted via `get_camera()` (see [Camera & Controls](camera.md)). |
-| `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](axes-grid.md). |
-| `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](axes-grid.md). |
+| `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](../scene-objects/axes-grid.md). |
+| `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](../scene-objects/axes-grid.md). |
 
 ## 2D Visualization
 
@@ -65,7 +65,7 @@ When `space_dim=2`:
     - **Pan:** left-click drag *or* right-click drag
     - **Zoom:** scroll wheel
     - No orbit rotation (rotation around the view axis is locked).
-- Grids and axes are explicit scene objects (see [Axes & Grid](axes-grid.md)).
+- Grids and axes are explicit scene objects (see [Axes & Grid](../scene-objects/axes-grid.md)).
 - **Full 3D entities render in 2D mode.** Any 3D entity (e.g. `Sphere`,
   `Plane`, `Circle` with non‑zero `z`) can be added and renders correctly
   from the orthographic top‑down perspective. This works out of the box
@@ -130,10 +130,28 @@ style=SphereStyle(color=…)   → user's style fields (non-None)
 styles[Sphere]       → canonical default (lowest)
 ```
 
+## `new()` and the `viz(...)` shorthand
+
+`new()` is like `add()` but returns a `VizObjectRef` (with a mutable `.entity`
+and `.style`) instead of a `str` id. `viz(obj, ...)` is shorthand for
+`viz.new(...)`:
+
+```python
+p = viz(Point(3, 0, 0), color="#ff4444")   # == viz.new(...)
+p.entity = Point(4, 0, 0)                  # update in place (marks dirty)
+p.opacity = 0.5
+viz.flush()
+```
+
+This is the idiomatic way to pre-create objects for an animation loop (see
+[Animation](animation.md)).
+
 ## Multi-Scene Support
 
 The visualizer supports multiple named scenes, each reachable at a unique URL
-path and independently manageable via :class:`VizSceneHandle`.
+path and independently manageable via :class:`VizSceneHandle`. For a dedicated
+walkthrough — including Jupyter side-by-side display, navigation targets, and
+browser-identity-driven switching — see [Multi-Scene](multi-scene.md).
 
 ### Creating Named Scenes
 
@@ -283,7 +301,7 @@ viz.clear()  # remove all (main scene)
 | `list_scenes()` | Return all scene names |
 | `list_browsers()` | Return connected browser sessions as ``[{id, scene, remote_addr, viewer_name}]`` |
 | `navigate_to(scene_name, *, target)` | Redirect matching browser sessions to another scene URL |
-| `display_row(*scenes, width, height, gap)` | Display multiple scenes side-by-side in Jupyter (see [Jupyter Notebooks](jupyter.md)) |
+| `display_row(*scenes, width, height, gap)` | Display multiple scenes side-by-side in Jupyter (see [Jupyter Notebooks](../jupyter/index.md)) |
 
 Both `start()` and `run()` accept a `wait_for_browser` keyword-only argument.
 When ``None`` (the default), it auto-detects: ``False`` in Jupyter (since
@@ -387,6 +405,22 @@ Waiting for browser to connect at http://localhost:8765 ...
 Browser connected.
 ```
 
+### Context Managers
+
+`Visualizer` and `VizSceneHandle` can be used as context managers: they clear
+the scene and call `show()` on entry, then `flush()` on exit.
+
+```python
+with viz:                       # clear + show main scene on entry
+    viz.add(Point(1, 2, 3))
+
+with viz.scene("detail"):       # clear + show named scene on entry
+    viz.scene("detail").add(Point(4, 5, 6))
+```
+
+In Jupyter, `show()` renders inline (delegating to `display()`); in scripts it
+opens a browser tab — follow the block with `wait()` to keep the script alive.
+
 ### Non-Blocking Mode (`start_server()` / `flush()` / `stop_server()`)
 
 For animation loops and Jupyter notebooks:
@@ -428,12 +462,12 @@ viz.export_glb("scene.glb")
 
 | Method | Purpose |
 |--------|---------|
-| `show(host=None, port=None)` | Serve + open a browser tab (forwards host/port to `start_server`) |
+| `show(host=None, port=None, jupyter=None, viewer_name=None)` | Serve + show: opens a browser tab, or renders inline in Jupyter (delegates to `display()`). `viewer_name` dedupes notebook outputs. |
 | `wait()` | Block until Ctrl+C, then stop the server |
 | `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |
 | `open_browser()` | Open/reconnect a browser tab |
-| `animate(fps)` | Serve, open a browser, yield a frame time each loop, stop on the scene's key or Ctrl+C |
+| `animate(fps, auto_clear=False)` | Serve (headless), yield a frame time each loop, stop on the scene's key or Ctrl+C. Never opens the viewer — call `show()` first. With `auto_clear=True`, objects added inside the loop are removed each frame |
 
 ### Deprecated Aliases
 
