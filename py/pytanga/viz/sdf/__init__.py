@@ -12,6 +12,7 @@ frontend assets live alongside under ``templates/sdf/``.
 
 from __future__ import annotations
 
+from .algebra_embedding import algebra_name, embed_entity_mv, embed_src
 from .composed import Composed
 from .distance import DistanceFunction, DistanceFunctionMeta
 from .lights import DirectionalLight, Light
@@ -35,7 +36,7 @@ from .primitives import (
     sphere,
     torus,
 )
-from .serializer import serialize_entity
+from .serializer import serialize_entity, serialize_mv
 from .visualizer import SdfVisualizer
 
 __all__ = [
@@ -49,6 +50,7 @@ __all__ = [
     "SdfNode",
     "SdfOverlay",
     "SdfVisualizer",
+    "algebra_name",
     "bound_box",
     "box",
     "capsule",
@@ -58,12 +60,15 @@ __all__ = [
     "cone",
     "cylinder",
     "ellipsoid",
+    "embed_entity_mv",
+    "embed_src",
     "group",
     "plane",
     "primitive",
     "round_box",
     "segment",
     "serialize_entity",
+    "serialize_mv",
     "sphere",
     "torus",
 ]

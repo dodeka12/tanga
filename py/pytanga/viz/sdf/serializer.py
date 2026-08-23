@@ -59,7 +59,9 @@ from pytanga.geometry.operators import (
     Rotor,
     Translator,
 )
+from pytanga.algebra import MV
 
+from .algebra_embedding import embed_entity_mv
 from .composed import Composed
 from .primitives import SdfNode, combine, group, primitive
 
@@ -82,6 +84,9 @@ def serialize_entity(
     ``opacity``, and the per-object ``combine``/``polarity`` mode.
     """
     props = dict(properties) if properties else {}
+    if isinstance(entity, MV):
+        return serialize_mv(entity, entity_id, props, styles_map)
+
     tree, resolved, sdf_kind = _dispatch_object(entity, props, styles_map)
 
     result: dict[str, Any] = {
@@ -102,6 +107,51 @@ def serialize_entity(
 
     # per-object combine / polarity. Both representations are forwarded; the
     # compositor (Phase 5) folds a negative/signed mode with max + negation.
+    combine_mode = _normalize_combine(props)
+    result["combine"] = combine_mode["combine"]
+    result["polarity"] = combine_mode["polarity"]
+
+    return result
+
+
+def serialize_mv(
+    mv: MV,
+    entity_id: str,
+    properties: dict[str, Any] | None = None,
+    styles_map: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Serialize a raw MV to an ``mv_sdf`` scene object (the algebra path).
+
+    Unlike the analytic path, the MV is *not* routed through
+    ``geometry.analyze()``; it is reduced directly to its product matrix via
+    :func:`~pytanga.viz.sdf.algebra_embedding.embed_entity_mv`. The result
+    carries ``sdfKind: "mv_sdf"`` plus the wire fields (``algebra``, ``M``,
+    ``point_ids``, …), the resolved ``color``/``opacity``, and the per-object
+    ``combine``/``polarity`` mode.
+    """
+    props = dict(properties) if properties else {}
+
+    wire = embed_entity_mv(
+        mv,
+        normalize=props.get("normalize", True),
+        bound=props.get("bound"),
+    )
+
+    result: dict[str, Any] = {
+        "id": entity_id,
+        "layer": "scene",
+        "kind": "sdf",
+        "sdfKind": "mv_sdf",
+        **wire,
+    }
+
+    color = props.get("color")
+    if color is not None:
+        result["color"] = color
+    opacity = props.get("opacity")
+    if opacity is not None:
+        result["opacity"] = opacity
+
     combine_mode = _normalize_combine(props)
     result["combine"] = combine_mode["combine"]
     result["polarity"] = combine_mode["polarity"]

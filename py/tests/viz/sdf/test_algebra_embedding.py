@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""Tests for the algebra SDF embedding backend (Phase 7)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from pytanga.blade_mask import BladeMask
+from pytanga.geometry import create_entity
+from pytanga.geometry.entities import Direction, Line, Plane, Point
+from pytanga.viz.sdf.algebra_embedding import (
+    algebra_name,
+    embed_entity_mv,
+    embed_src,
+    get_spec,
+)
+
+EMBEDS_JS = (
+    Path(__file__).parents[3]
+    / "pytanga"
+    / "viz"
+    / "templates"
+    / "sdf"
+    / "algebra"
+    / "embeds.js"
+)
+
+ALGEBRAS = ["e3", "p3", "n3", "pga3"]
+
+
+def _basis(name: str):
+    if name == "e3":
+        from pytanga.basis.e3 import BasisE3
+
+        return BasisE3(opns=True)
+    if name == "p3":
+        from pytanga.basis.p3 import BasisP3
+
+        return BasisP3(opns=True)
+    if name == "n3":
+        from pytanga.basis.n3 import BasisN3
+
+        return BasisN3(opns=True)
+    if name == "pga3":
+        from pytanga.basis.pga3 import BasisPGA3
+
+        return BasisPGA3(opns=True)
+    raise ValueError(name)
+
+
+def _plane_mv(basis):
+    return create_entity(
+        basis, Plane(point=Point(0.0, 0.0, 0.0), normal=Direction(0.0, 0.0, 1.0))
+    )
+
+
+def _m_matrix(wire: dict) -> np.ndarray:
+    return np.array(wire["M"], dtype=float).reshape(
+        len(wire["result_ids"]), len(wire["point_ids"])
+    )
+
+
+@pytest.mark.parametrize("name", ALGEBRAS)
+def test_m_reconstruction(name: str) -> None:
+    basis = _basis(name)
+    entity_mv = _plane_mv(basis)
+    point_mv = create_entity(basis, Point(1.0, 2.0, 3.0))
+
+    wire = embed_entity_mv(entity_mv, normalize=False)
+    m = _m_matrix(wire)
+    point_coeffs = np.array(
+        [point_mv[bid] for bid in wire["point_ids"]], dtype=float
+    )
+
+    expected = basis.op(point_mv, entity_mv)
+    expected_coeffs = np.array(
+        [expected[bid] for bid in wire["result_ids"]], dtype=float
+    )
+
+    assert np.allclose(m @ point_coeffs, expected_coeffs, atol=1e-9)
+
+
+@pytest.mark.parametrize("name", ALGEBRAS)
+def test_shape_and_ordering(name: str) -> None:
+    basis = _basis(name)
+    wire = embed_entity_mv(_plane_mv(basis), normalize=False)
+
+    assert len(wire["M"]) == len(wire["result_ids"]) * len(wire["point_ids"])
+    # scalar at slot 0, pseudoscalar at the reported (last) slot.
+    assert wire["result_ids"][0] == 0
+    assert wire["result_ids"][wire["slot_pseudo"]] == basis.pseudoscalar_id
+    assert wire["slot_pseudo"] == len(wire["result_ids"]) - 1
+    # the wire form carries the fields Phase 8 consumes.
+    for key in ("algebra", "product", "distance", "normalize", "M", "scale"):
+        assert key in wire
+
+
+def test_p3_trivector() -> None:
+    basis = _basis("p3")
+    line_mv = create_entity(
+        basis, Line(origin=Point(0.0, 0.0, 0.0), direction=Direction(1.0, 0.0, 0.0))
+    )
+    point_mv = create_entity(basis, Point(0.0, 1.0, 2.0))
+
+    wire = embed_entity_mv(line_mv, normalize=False)
+    m = _m_matrix(wire)
+    point_coeffs = np.array(
+        [point_mv[bid] for bid in wire["point_ids"]], dtype=float
+    )
+    r = m @ point_coeffs
+
+    # grade-1 op grade-2 = grade-3 trivector: scalar blade zero, |r| nonzero.
+    assert abs(r[0]) < 1e-9
+    assert np.linalg.norm(r) > 1e-6
+
+
+def test_normalize_scales() -> None:
+    basis = _basis("p3")
+    entity_mv = _plane_mv(basis)
+
+    m_norm = np.array(embed_entity_mv(entity_mv, normalize=True)["M"], dtype=float)
+    m_raw = np.array(embed_entity_mv(entity_mv, normalize=False)["M"], dtype=float)
+
+    mag = float(entity_mv.mag)
+    assert mag > 0.0
+    assert np.allclose(m_norm * mag, m_raw, atol=1e-9)
+
+
+@pytest.mark.parametrize("name", ALGEBRAS)
+def test_embed_src_consistency(name: str) -> None:
+    basis = _basis(name)
+    spec = get_spec(basis)
+    src = embed_src(basis)
+
+    # point_ids match the support of the OPNS point.
+    point_mv = create_entity(basis, Point(1.0, 2.0, 3.0))
+    assert BladeMask(point_mv).ids == list(spec.point_ids)
+
+    # the emitted function declares `a[NP]` and the canonical name.
+    assert f"out float a[{len(spec.point_ids)}]" in src
+    assert f"evalPoint{name.upper()}" in src
+
+    # embeds.js carries a matching key with the same NP/NR/SLOT_PSEUDO.
+    js = EMBEDS_JS.read_text(encoding="utf-8")
+    assert f"'{name}'" in js
+    assert f"NP: {len(spec.point_ids)}" in js
+    assert f"NR: {basis.algebra_dim}" in js
+    assert f"SLOT_PSEUDO: {basis.pseudoscalar_id}" in js

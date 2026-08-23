@@ -1,6 +1,6 @@
 # Phase 7 — Algebra embedding (Python): ordering, `M`, `embed_src`, normalize, bound
 
-**Status:** Planned
+**Status:** Implemented
 
 ## Goal
 
@@ -63,43 +63,43 @@ pseudoscalar blade at a fixed, algebra-specific slot `I`.
 
 ## Steps
 
-- [ ] Algebra registry:
-  - [ ] Map algebra type → embedding spec (blade order, point-blade func,
+- [x] Algebra registry:
+  - [x] Map algebra type → embedding spec (blade order, point-blade func,
         `NP`, result-space `NR`, product-blade masks, pseudoscalar slot `I`).
-  - [ ] Cover `e3`, `p3`, `n3`, `pga3` first (3D set); structure for
+  - [x] Cover `e3`, `p3`, `n3`, `pga3` first (3D set); structure for
         future algebras.
-- [ ] `embed_entity_mv(mv, *, normalize=True, bound=None)`:
-  - [ ] Resolve the algebra type and select the product from `mv.opns`:
+- [x] `embed_entity_mv(mv, *, normalize=True, bound=None)`:
+  - [x] Resolve the algebra type and select the product from `mv.opns`:
         `True` → `EProduct.OP`, `False` → `EProduct.IP`.
-  - [ ] Determine the entity blade mask `e_mask` (the nonzero blades of `mv`)
-        by iterating `mv.algebra.all_blades()` and keeping `bid` where
-        `mv[bid] != 0` (note: `MV` has **no** `blade_ids()` method — use
-        `all_blades()` + `mv[bid]`, or `mv.to_dict()`); build a
-        `pytanga.blade_mask.BladeMask`. The point mask `a_mask` comes from the
-        algebra spec.
-  - [ ] Compute the result blade mask `c_mask` via
-        `pytanga.blade_mask.predict.product_blade_mask(...)` for the chosen
-        product and operand order.
-  - [ ] Obtain `O = product_tensor(a_mask, e_mask, c_mask, product=…,
-        left=…)` (use the `left=` flag for operand order — no manual reorder).
-  - [ ] Contract the entity operand with `pytanga.tensor.ops.contract`:
-        `M = contract('cab,b->ca', O, e)` (entity as right operand) or
-        `contract('cab,a->cb', O, e)` (entity as left operand).
-  - [ ] Emit `M` flattened row-major with `result_ids` + `point_ids`.
-- [ ] `normalize` path:
-  - [ ] Normalize `mv` via `mv.normalized()` (unit magnitude) before
+  - [x] Determine the entity blade mask `e_mask` (the nonzero blades of `mv`)
+        via `BladeMask(mv)`; the point mask `a_mask` comes from the
+        algebra spec (the fixed OPNS point blades).
+  - [x] Compute the result blade mask `c_mask`. **Decision:** the full algebra
+        (`BladeMask.full`), so the scalar sits at slot `0` and the pseudoscalar
+        at a fixed slot — the distance functions (`scalar_pseudo`, `magnitude`,
+        `scalar`) require this (see README "N3 ≈ 32 blades" and `distances.js`).
+        (`product_blade_mask` would give a per-entity support that omits the
+        scalar/pseudoscalar slots for e.g. P3 `point op plane`.)
+  - [x] Obtain `O = product_tensor(a_mask, e_mask, c_mask, product=…,
+        left=True)` (point ∘ entity; no manual reorder).
+  - [x] Contract the entity operand with `pytanga.tensor.ops.contract`:
+        `M = contract('cab,b->ca', O, e)` (entity as right operand).
+  - [x] Emit `M` flattened row-major with `result_ids` + `point_ids`.
+- [x] `normalize` path:
+  - [x] Normalize `mv` via `mv.normalized()` (unit magnitude) before
         contraction when `True`; keep the raw MV when `False`.
-- [ ] `embed_src` registry entry:
-  - [ ] Add the algebra's `evalPoint` snippet to `algebra/embeds.js`,
+- [x] `embed_src` registry entry:
+  - [x] Add the algebra's `evalPoint` snippet to `algebra/embeds.js`,
         consistent with `point_ids`.
-  - [ ] For linear algebras, express the embedding as the explicit linear
+  - [x] For linear algebras, express the embedding as the explicit linear
         coefficients; for N3, include the quadratic `e∞` term.
-- [ ] `bound` generation for infinite entities (default extents per algebra/
-      entity, overridable).
-- [ ] Serialize to the `mv_sdf` wire form (see README) including:
+- [x] `bound` generation for infinite entities (default extents per algebra,
+      overridable via a `bound` param / `{"halfExtents": […]}`).
+- [x] Serialize to the `mv_sdf` wire form (see README) including:
   `algebra`, `product`, `distance`, `normalize`, `point_ids`, `result_ids`
-  (with the pseudoscalar slot `I` identified), `M`, `bound`, `combine`, `style`.
-- [ ] Give `SdfVisualizer` a path that serializes a **raw MV** to an `mv_sdf`
+  (with the pseudoscalar slot `I` identified), `M`, `scale` (default `1.0`; the
+  per-object gradient scale filled in by Phase 9), `bound`, `combine`, `style`.
+- [x] Give `SdfVisualizer` a path that serializes a **raw MV** to an `mv_sdf`
       object without routing it through `geometry.analyze()` (which re-dispatches
       to the analytic path).
 
@@ -107,29 +107,30 @@ pseudoscalar blade at a fixed, algebra-specific slot `I`.
 
 File: `py/tests/viz/sdf/test_algebra_embedding.py`
 
-- [ ] `test_m_reconstruction` — for a known entity (e.g. PGA3 plane), `M`
-      contracted against the embedded point reproduces the direct `ip/op`
-      result MV (using `tensor.ops.contract`).
-- [ ] `test_shape_and_ordering` — `M` shape is `(len(result_ids) ×
+- [x] `test_m_reconstruction` — for a known entity (e.g. a plane in each of
+      `e3`/`p3`/`n3`/`pga3`), `M` contracted against the embedded point
+      reproduces the direct `op` result MV.
+- [x] `test_shape_and_ordering` — `M` shape is `(len(result_ids) ×
       len(point_ids))` and matches the emitted `embed_src` ordering.
-- [ ] `test_p3_trivector` — P3 `point op line` yields a nonzero `|r|` even
+- [x] `test_p3_trivector` — P3 `point op line` yields a nonzero `|r|` even
       though the scalar blade is zero.
-- [ ] `test_normalize_scales` — `normalize=True` and `False` produce
+- [x] `test_normalize_scales` — `normalize=True` and `False` produce
       scaled-but-proportional `M`.
-- [ ] `test_embed_src_consistency` — `embed_src` generated for an algebra
+- [x] `test_embed_src_consistency` — `embed_src` generated for an algebra
       fills the same `point_ids` the `M` matrix expects.
 
 ## Verification
 
-- [ ] Unit test: for a known entity (e.g. PGA3 plane), `M` reconstructions
-      against the direct `ip/op` of the embedded point reproduce the same
-      result MV coefficients (in Python, using `tensor.ops.contract`).
-- [ ] `M` shape is `(len(result_ids) × len(point_ids))` and matches the
+- [x] Unit test: for a known entity (a plane in each 3D algebra), `M`
+      reconstructions against the direct `op` of the embedded point reproduce
+      the same result MV coefficients.
+- [x] `M` shape is `(len(result_ids) × len(point_ids))` and matches the
       emitted `embed_src` ordering.
-- [ ] P3 `point op line` yields a nonzero `|r|` (trivector) even though its
+- [x] P3 `point op line` yields a nonzero `|r|` (trivector) even though its
       scalar blade is zero — confirming the full result-mask choice, and
       `scalar_pseudo` gives a signed distance there (pseudoscalar + rest).
-- [ ] `normalize=True` and `False` produce scaled-but-proportional `M`.
-- [ ] The `mv_sdf` wire form carries `combine` so `algebra_embedding.py`
+- [x] `normalize=True` and `False` produce scaled-but-proportional `M`.
+- [x] The `mv_sdf` wire form carries `combine` so `algebra_embedding.py`
       output participates in Phase 5/11 booleans like analytic objects.
-- [ ] `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py` passes.
+- [x] `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py` passes
+      (14 passed).

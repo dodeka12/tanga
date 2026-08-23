@@ -24,6 +24,7 @@ import time
 from typing import Any
 
 from pytanga.geometry.entities import Entity as GeoEntity
+from pytanga.algebra import MV
 
 from .composed import Composed
 from .distance import DistanceFunction
@@ -129,14 +130,19 @@ class SdfVisualizer:
         style: Any | None = None,
         combine: str | None = None,
         polarity: str | None = None,
+        bound: Any | None = None,
+        normalize: bool | None = None,
     ) -> str:
         """Add an object to the SDF scene and return its ID.
 
         Accepts a geometry entity, an operator, a bare :class:`SdfNode`
-        primitive/combinator tree, a :class:`Composed` object, or a
+        primitive/combinator tree, a :class:`Composed` object, a raw
+        :class:`~pytanga.algebra.MV` (the algebra path), or a
         :class:`~pytanga.viz.sdf.lights.Light` (a ``DirectionalLight``).
         ``style`` selects an alternative draw style (e.g.
-        ``CrossHairPointStyle``).
+        ``CrossHairPointStyle``). For a raw MV, ``bound`` (half-extents or a
+        ``{"halfExtents": [..]}`` dict) clips infinite entities and ``normalize``
+        (default ``True``) normalizes the MV before embedding.
         """
         from uuid import uuid4
 
@@ -154,6 +160,8 @@ class SdfVisualizer:
             style=style,
             combine=combine,
             polarity=polarity,
+            bound=bound,
+            normalize=normalize,
         )
 
         oid = entity_id or uuid4().hex[:8]
@@ -174,12 +182,14 @@ class SdfVisualizer:
         style: Any | None = None,
         combine: str | None = None,
         polarity: str | None = None,
+        bound: Any | None = None,
+        normalize: bool | None = None,
     ) -> None:
         """Replace the object at ``entity_id`` and re-push it.
 
         ``obj`` may be a geometry entity, an operator, a bare :class:`SdfNode`,
-        or a :class:`Composed`; a :class:`~pytanga.viz.sdf.lights.Light` is
-        routed to :meth:`update_light`.
+        a :class:`Composed`, or a raw :class:`~pytanga.algebra.MV`; a
+        :class:`~pytanga.viz.sdf.lights.Light` is routed to :meth:`update_light`.
         """
         if isinstance(obj, Light):
             self.update_light(entity_id, obj)
@@ -193,6 +203,8 @@ class SdfVisualizer:
             style=style,
             combine=combine,
             polarity=polarity,
+            bound=bound,
+            normalize=normalize,
         )
         self._push_update([entity_id])
 
@@ -206,6 +218,8 @@ class SdfVisualizer:
         style: Any | None = None,
         combine: str | None = None,
         polarity: str | None = None,
+        bound: Any | None = None,
+        normalize: bool | None = None,
     ) -> dict[str, Any]:
         """Assemble the per-object property dict (``None`` = inherit default)."""
         props: dict[str, Any] = {}
@@ -223,6 +237,10 @@ class SdfVisualizer:
             props["combine"] = combine
         if polarity is not None:
             props["polarity"] = polarity
+        if bound is not None:
+            props["bound"] = bound
+        if normalize is not None:
+            props["normalize"] = normalize
         return props
 
     def remove(self, entity_id: str) -> None:
@@ -252,7 +270,7 @@ class SdfVisualizer:
     def _resolve(self, obj: Any) -> Any:
         from pytanga.geometry.operators import Operator as GeoOperator
 
-        if isinstance(obj, (SdfNode, Composed, GeoEntity, GeoOperator)):
+        if isinstance(obj, (SdfNode, Composed, GeoEntity, GeoOperator, MV)):
             return obj
         try:
             from pytanga.geometry import analyze

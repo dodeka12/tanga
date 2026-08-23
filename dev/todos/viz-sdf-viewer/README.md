@@ -2,8 +2,9 @@
 
 **Created:** 2026-08-22 | **Status:** In progress — Phases 1–6c implemented
 (plus configurable lighting, shader-drawn grid/axes overlays, the object/light
-update API, and browser reconnect/version parity); Phases 7–12 (algebra path,
-calibration, opacity transfers, finalize) remain.
+update API, and browser reconnect/version parity); Phase 7 (algebra embedding
+backend) implemented; Phases 8–12 (algebra shader eval, calibration, opacity
+transfers, finalize) remain.
 
 ## Target
 
@@ -221,6 +222,17 @@ signedness, they require a signed distance function (`scalar_pseudo` or
 | 10 | [10-tests-examples-docs.md](./10-tests-examples-docs.md) | Examples, docs, changelog, PR (per-phase unit tests live in their phases) |
 | 11 | [11-csg-booleans.md](./11-csg-booleans.md) | Positive/negative objects: `union`/`intersection`/`subtract` combine modes (core shipped in 5/6b/6c; gate + smooth variants remain) |
 | 12 | [12-opacity-transfer.md](./12-opacity-transfer.md) | Populate non-`step` opacity transfers + volumetric (mechanism from Phases 2/3/8) |
+
+The table above is a **file index** keyed by the plan filename. The recommended
+**build order** is:
+
+`1 → 2 → 3 → 4 → 5 → 6 → 6a → 6b → 6c → 7 → 8 → 9 → 11 → 12 → 10`
+
+Phases 11 (CSG booleans) and 12 (opacity transfers) are implemented *before*
+Phase 10 (finalize), which runs last and folds their examples
+(`demo_sdf_booleans.py`, `demo_sdf_opacity.py`) and tests (`test_combine.py`,
+`test_opacity.py`) into the accumulated full suite. The filenames/numbers are
+left unchanged to avoid renaming churn.
 
 ## Testing strategy (fail early)
 
