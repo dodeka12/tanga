@@ -132,6 +132,7 @@ class SdfVisualizer:
         polarity: str | None = None,
         bound: Any | None = None,
         normalize: bool | None = None,
+        calibrate: bool | None = None,
     ) -> str:
         """Add an object to the SDF scene and return its ID.
 
@@ -141,8 +142,9 @@ class SdfVisualizer:
         :class:`~pytanga.viz.sdf.lights.Light` (a ``DirectionalLight``).
         ``style`` selects an alternative draw style (e.g.
         ``CrossHairPointStyle``). For a raw MV, ``bound`` (half-extents or a
-        ``{"halfExtents": [..]}`` dict) clips infinite entities and ``normalize``
-        (default ``True``) normalizes the MV before embedding.
+        ``{"halfExtents": [..]}`` dict) clips infinite entities, ``normalize``
+        (default ``True``) normalizes the MV before embedding, and ``calibrate``
+        (default ``False``) computes the per-object gradient scale (Phase 9).
         """
         from uuid import uuid4
 
@@ -162,6 +164,7 @@ class SdfVisualizer:
             polarity=polarity,
             bound=bound,
             normalize=normalize,
+            calibrate=calibrate,
         )
 
         oid = entity_id or uuid4().hex[:8]
@@ -184,6 +187,7 @@ class SdfVisualizer:
         polarity: str | None = None,
         bound: Any | None = None,
         normalize: bool | None = None,
+        calibrate: bool | None = None,
     ) -> None:
         """Replace the object at ``entity_id`` and re-push it.
 
@@ -205,6 +209,7 @@ class SdfVisualizer:
             polarity=polarity,
             bound=bound,
             normalize=normalize,
+            calibrate=calibrate,
         )
         self._push_update([entity_id])
 
@@ -220,6 +225,7 @@ class SdfVisualizer:
         polarity: str | None = None,
         bound: Any | None = None,
         normalize: bool | None = None,
+        calibrate: bool | None = None,
     ) -> dict[str, Any]:
         """Assemble the per-object property dict (``None`` = inherit default)."""
         props: dict[str, Any] = {}
@@ -241,6 +247,8 @@ class SdfVisualizer:
             props["bound"] = bound
         if normalize is not None:
             props["normalize"] = normalize
+        if calibrate is not None:
+            props["calibrate"] = calibrate
         return props
 
     def remove(self, entity_id: str) -> None:

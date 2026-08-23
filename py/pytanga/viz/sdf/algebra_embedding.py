@@ -143,8 +143,8 @@ def _result_ids(alg) -> list[int]:
     return sorted(range(alg.algebra_dim))
 
 
-def _point_coeffs(alg, x: float, y: float, z: float) -> dict[int, float]:
-    """OPNS point coefficients for *alg* (used by tests/validation only)."""
+def point_coeffs(alg, x: float, y: float, z: float) -> dict[int, float]:
+    """OPNS point coefficients for *alg* (the Python mirror of ``evalPoint``)."""
     name = algebra_name(alg)
     if name == "e3":
         return {1: x, 2: y, 4: z}
@@ -189,12 +189,16 @@ def embed_entity_mv(
     normalize: bool = True,
     bound: Any | None = None,
     distance: str = "scalar_pseudo",
+    calibrate: bool = False,
 ) -> dict[str, Any]:
     """Reduce *mv* to the ``mv_sdf`` wire core (no id/color/style fields).
 
     Returns a dict with ``algebra``, ``product``, ``distance``, ``normalize``,
     ``point_ids``, ``result_ids``, ``slot_pseudo``, ``M`` (flattened row-major
-    over result × point), ``scale`` (1.0; calibrated in Phase 9), and ``bound``.
+    over result × point), ``scale``, and ``bound``.
+
+    ``scale`` defaults to ``1.0``. When ``calibrate=True`` the per-object
+    gradient scale is computed (Phase 9) so ``|∇d| ≈ 1`` for sphere-tracing.
     """
     alg = mv.algebra
     spec = get_spec(alg)
@@ -222,6 +226,12 @@ def embed_entity_mv(
     point_ids = list(spec.point_ids)
     slot_pseudo = result_ids.index(alg.pseudoscalar_id)
 
+    scale = 1.0
+    if calibrate:
+        from .calibration import calibrate_scale
+
+        scale = calibrate_scale(mv, normalize=False, distance=distance)
+
     return {
         "algebra": spec.name,
         "product": "op" if product is EProduct.OP else "ip",
@@ -231,7 +241,7 @@ def embed_entity_mv(
         "result_ids": result_ids,
         "slot_pseudo": slot_pseudo,
         "M": np.asarray(m_tensor.data, dtype=float).reshape(-1).tolist(),
-        "scale": 1.0,
+        "scale": scale,
         "bound": _bound_wire(bound, spec),
     }
 

@@ -135,6 +135,7 @@ def serialize_mv(
         mv,
         normalize=props.get("normalize", True),
         bound=props.get("bound"),
+        calibrate=bool(props.get("calibrate", False)),
     )
 
     result: dict[str, Any] = {

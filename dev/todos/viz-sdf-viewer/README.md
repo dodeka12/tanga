@@ -2,9 +2,9 @@
 
 **Created:** 2026-08-22 | **Status:** In progress — Phases 1–6c implemented
 (plus configurable lighting, shader-drawn grid/axes overlays, the object/light
-update API, and browser reconnect/version parity); Phases 7–8 (algebra
-embedding backend + shader eval) implemented; Phases 9–12 (calibration, opacity
-transfers, finalize) remain.
+update API, and browser reconnect/version parity); Phases 7–9 (algebra
+embedding backend + shader eval + calibration) implemented; Phases 10–12
+(finalize, CSG gate/smooth variants, opacity transfers) remain.
 
 ## Target
 

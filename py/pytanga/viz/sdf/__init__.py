@@ -13,6 +13,15 @@ frontend assets live alongside under ``templates/sdf/``.
 from __future__ import annotations
 
 from .algebra_embedding import algebra_name, embed_entity_mv, embed_src
+from .calibration import (
+    calibrate_scale,
+    distance_value,
+    evaluate_sdf,
+    find_surface_point,
+    gradient,
+    gradient_norm,
+    scale_at,
+)
 from .composed import Composed
 from .distance import DistanceFunction, DistanceFunctionMeta
 from .lights import DirectionalLight, Light
@@ -53,19 +62,26 @@ __all__ = [
     "algebra_name",
     "bound_box",
     "box",
+    "calibrate_scale",
     "capsule",
     "capped_cone",
     "capped_cylinder",
     "combine",
     "cone",
     "cylinder",
+    "distance_value",
     "ellipsoid",
     "embed_entity_mv",
     "embed_src",
+    "evaluate_sdf",
+    "find_surface_point",
+    "gradient",
+    "gradient_norm",
     "group",
     "plane",
     "primitive",
     "round_box",
+    "scale_at",
     "segment",
     "serialize_entity",
     "serialize_mv",
