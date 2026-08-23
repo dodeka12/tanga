@@ -9,7 +9,7 @@ paths, and the active (interactive) elements.
 | Guide | What you will learn |
 |-------|---------------------|
 | [Entities](entities.ipynb) | Every geometric entity, its style class and parameters, with a live example |
-| [Operators](operators.md) | Versors (rotor, translator, motor, …) and their style classes/parameters |
+| [Operators](operators.ipynb) | Versors (rotor, translator, motor, …) and their style classes/parameters |
 | [Axes & Grid](axes-grid.md) | `Axes2D`/`Axes3D`, custom `Axis`, and `Grid` |
 | [PointPath](point-path.md) | Trail/curve rendering with `PointPath` and `PointPathStyle` |
 | [Active Elements](active-elements/index.md) | High-level interactive entities (`ActPoint`) |
@@ -27,14 +27,14 @@ paths, and the active (interactive) elements.
 | Circle / ImagCircle | CircleStyle | [Entities](entities.ipynb) |
 | Sphere / ImagSphere | SphereStyle | [Entities](entities.ipynb) |
 | Space | SpaceStyle | [Entities](entities.ipynb) |
-| ReflectionPlane / ReflectionLine | ReflectionPlaneStyle / ReflectionLineStyle | [Operators](operators.md) |
-| ReflectionPoint | ReflectionPointStyle | [Operators](operators.md) |
-| Inversion | InversionStyle | [Operators](operators.md) |
-| Rotor | RotorStyle | [Operators](operators.md) |
-| Translator | TranslatorStyle | [Operators](operators.md) |
-| Dilator | DilatorStyle | [Operators](operators.md) |
-| Motor | MotorStyle | [Operators](operators.md) |
-| GeneralRotor | GeneralRotorStyle | [Operators](operators.md) |
+| ReflectionPlane / ReflectionLine | ReflectionPlaneStyle / ReflectionLineStyle | [Operators](operators.ipynb) |
+| ReflectionPoint | ReflectionPointStyle | [Operators](operators.ipynb) |
+| Inversion | InversionStyle | [Operators](operators.ipynb) |
+| Rotor | RotorStyle | [Operators](operators.ipynb) |
+| Translator | TranslatorStyle | [Operators](operators.ipynb) |
+| Dilator | DilatorStyle | [Operators](operators.ipynb) |
+| Motor | MotorStyle | [Operators](operators.ipynb) |
+| GeneralRotor | GeneralRotorStyle | [Operators](operators.ipynb) |
 | Axes2D / Axes3D / Axis / Grid | Axes2DStyle / Axes3DStyle / AxisStyle / GridStyle | [Axes & Grid](axes-grid.md) |
 | PointPath | PointPathStyle | [PointPath](point-path.md) |
 
