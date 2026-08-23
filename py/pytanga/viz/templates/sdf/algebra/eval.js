@@ -72,9 +72,13 @@ export function distinctEmbedSrcs(objects) {
     return srcs;
 }
 
-export function matrixUniformDecls() {
+export function matrixUniformDecls(totalFloats) {
+    // Size the flat u_M uniform to the *actual* total matrix floats (not a fixed
+    // capacity): GL_MAX_FRAGMENT_UNIFORM_VECTORS is limited, so a fixed 1024-float
+    // array alone can exceed the budget even for small scenes.
+    const size = Math.max(totalFloats || 0, 1);
     return `
-uniform float u_M[${MAX_MV_FLOATS}];
+uniform float u_M[${size}];
 uniform float u_Scale[${MAX_SDF_OBJECTS}];
 `;
 }
@@ -174,7 +178,7 @@ export function emitAlgebraLeaves(objects, activeDistance) {
 
 export function buildAlgebraUniforms(objects) {
     const { infos, totalFloats } = mvLayout(objects);
-    const uM = new Float32Array(MAX_MV_FLOATS);
+    const uM = new Float32Array(Math.max(totalFloats, 1));
     const uScale = new Float32Array(MAX_SDF_OBJECTS).fill(1.0);
     infos.forEach((info) => {
         if (!info) return;

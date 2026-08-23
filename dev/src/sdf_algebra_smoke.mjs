@@ -15,7 +15,6 @@ import {
     emitDistanceFunctions,
     emitAlgebraLeaves,
     buildAlgebraUniforms,
-    MAX_MV_FLOATS,
 } from '../../py/pytanga/viz/templates/sdf/algebra/eval.js';
 
 function assert(cond, msg) {
@@ -78,8 +77,9 @@ assert(!/if\s*\(\s*algebra\s*==/.test(fragment), 'no algebra branching');
 assert(!/if\s*\(\s*distance\s*==/.test(fragment), 'no distance branching');
 assert(!/if\s*\(\s*entity\s*==/.test(fragment), 'no entity branching');
 
-const { uM, uScale } = buildAlgebraUniforms([e3plane]);
-assert(uM.length === MAX_MV_FLOATS, 'uM padded to capacity');
+const { uM, uScale, totalFloats } = buildAlgebraUniforms([e3plane]);
+assert(totalFloats === 24, 'total floats for e3 plane is 24');
+assert(uM.length === 24, 'uM sized to the actual total, not a fixed capacity');
 assert(uM[0] === 1 && uM[23] === 24, 'M packed row-major');
 assert(uScale[0] === 1.0, 'scale default 1.0');
 

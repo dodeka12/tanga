@@ -35,6 +35,7 @@ import {
 import {
     distinctEmbedSrcs,
     matrixUniformDecls,
+    mvLayout,
     emitDistanceFunctions,
     emitAlgebraLeaves,
     buildAlgebraUniforms,
@@ -158,6 +159,7 @@ async function _loadShaderSources() {
 function buildFragment() {
     const { common, primitives, combinators, raymarch } = _shaderParts;
     const list = objects.length ? objects : DEFAULT_OBJECTS;
+    const { totalFloats } = mvLayout(list);
     return [
         common,
         primitives,
@@ -167,7 +169,7 @@ function buildFragment() {
         lightPreamble,
         overlaySrc(),
         distinctEmbedSrcs(list).join('\n'),
-        matrixUniformDecls(),
+        matrixUniformDecls(totalFloats),
         emitDistanceFunctions(list, activeDistance),
         emitAlgebraLeaves(list, activeDistance),
         emitOpacityFunction(),
