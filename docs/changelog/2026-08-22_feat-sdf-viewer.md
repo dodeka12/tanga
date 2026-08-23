@@ -92,6 +92,11 @@
   `add()` and animated. `DirectionalLight.direction` now normalizes on
   assignment. Added the `demo_sdf_light_animation.py` example (a light orbiting
   a sphere).
+- **SDF viewer identity + version check parity** — the SDF frontend now sends a
+  `viewer_name` (from the `?viewer=` URL param) in its `ready` message and
+  compares the server-injected frontend build hash against the `browser_id`
+  message's `frontend_version`, showing the standard "Reload now" version-
+  mismatch banner on a stale cached copy (matching the standard viewer).
 
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed
