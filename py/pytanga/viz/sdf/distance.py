@@ -54,6 +54,20 @@ class DistanceFunction(Enum):
     def description(self) -> str:
         return self.meta.description
 
+    @property
+    def signed(self) -> bool:
+        """True if this distance function yields a signed distance.
+
+        ``intersection``/``subtract`` (which negate and ``max`` distances)
+        require a signed distance; ``magnitude`` and ``grade`` are unsigned
+        (norm-of-vector), so they are unsuited to those boolean ops.
+        """
+        return self in (
+            DistanceFunction.SCALAR_PSEUDO,
+            DistanceFunction.SCALAR,
+            DistanceFunction.COMPONENT,
+        )
+
     @classmethod
     def default(cls) -> "DistanceFunction":
         return cls.SCALAR_PSEUDO

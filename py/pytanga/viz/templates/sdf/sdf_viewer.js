@@ -660,6 +660,19 @@ function structureKey(list) {
     return parts.join('|');
 }
 
+function warnUnsignedBooleans(list) {
+    if (activeDistance !== 'magnitude' && activeDistance !== 'grade') return;
+    const bad = list.some(
+        (o) => o.combine === 'intersection' || o.combine === 'subtract'
+    );
+    if (bad) {
+        console.warn(
+            "[sdf_viewer] 'intersection'/'subtract' require a signed distance " +
+            "function, but '" + activeDistance + "' is unsigned"
+        );
+    }
+}
+
 function applyDataUniforms(u, list) {
     const actualRows = buildMaterialRows(list);
     const rows = padMaterialRows(actualRows);
@@ -674,6 +687,7 @@ function rebuildProgram() {
     if (!_shaderParts || !viewerState.renderer) return;
     const list = objects.length ? objects : DEFAULT_OBJECTS;
     const key = structureKey(list);
+    warnUnsignedBooleans(list);
 
     // Data-only change (same object kinds/combines/embeds + same distance/
     // opacity): update uniforms in place without recompiling the shader.

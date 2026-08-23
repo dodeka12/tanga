@@ -170,6 +170,7 @@ class SdfVisualizer:
         oid = entity_id or uuid4().hex[:8]
         self._objects[oid] = entity
         self._props[oid] = props
+        self._warn_signedness()
         self._flush()
         return oid
 
@@ -211,6 +212,7 @@ class SdfVisualizer:
             normalize=normalize,
             calibrate=calibrate,
         )
+        self._warn_signedness()
         self._push_update([entity_id])
 
     def _build_props(
@@ -250,6 +252,21 @@ class SdfVisualizer:
         if calibrate is not None:
             props["calibrate"] = calibrate
         return props
+
+    def _warn_signedness(self) -> None:
+        """Warn when boolean ``intersection``/``subtract`` is used with an
+        unsigned distance function (Phase 11 signedness gate)."""
+        if self._distance.signed:
+            return
+        needs_signed = {"intersection", "subtract"}
+        for props in self._props.values():
+            if props.get("combine") in needs_signed:
+                logger.warning(
+                    "SDF viewer: 'intersection'/'subtract' require a signed "
+                    "distance function, but '%s' is unsigned",
+                    self.distance,
+                )
+                return
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity, light, or overlay from the SDF scene."""
@@ -364,6 +381,7 @@ class SdfVisualizer:
             self._distance = value
         else:
             self._distance = DistanceFunction(value)
+        self._warn_signedness()
         self._push_config()
 
     @property

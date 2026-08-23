@@ -65,9 +65,10 @@ positive object via `max` (difference).
         accumulator's material** (a negative object emits no colored surface).
 - [x] Material table: subtraction prefers the positive `matId` on carved
       surfaces (the `composer.js` fold keeps the accumulator's material).
-- [ ] Signedness gate: inspect the active distance function; when
-      `intersection`/`subtract` objects exist and the function is unsigned
-      (`magnitude`), surface a warning (backend) / reject (frontend).
+- [x] Signedness gate: `DistanceFunction.signed` (signed = scalar_pseudo/scalar/
+      component; unsigned = magnitude/grade); backend warns via
+      `SdfVisualizer._warn_signedness()` (on `add`/`update_entity`/`distance`
+      set), frontend warns via `warnUnsignedBooleans()` in `sdf_viewer.js`.
 - [ ] Smooth variants: `smooth_subtract`/`smooth_intersection` blend `matId`
       using the blend factor (Phase 1 vec2 combinators).
 
@@ -78,13 +79,14 @@ File: `py/tests/viz/sdf/test_combine.py`
 *(`test_sdf_serializer.py::test_serialize_combine_and_polarity` already covers
 round-trip; the new file consolidates the combine-specific cases.)*
 
-- [ ] `test_combine_serialized` — `combine`/`polarity` round-trips into the
+- [x] `test_combine_serialized` — `combine`/`polarity` round-trips into the
       wire object for analytic and `mv_sdf` objects.
-- [ ] `test_polarity_maps_to_combine` — `positive`→`union`, `negative`→
+- [x] `test_polarity_maps_to_combine` — `positive`→`union`, `negative`→
       `subtract`.
-- [ ] `test_signedness_gate` — `intersection`/`subtract` with unsigned
-      `magnitude` is rejected/warned.
-- [ ] `test_default_is_union` — an object without `combine` defaults to
+- [x] `test_signedness_gate` — `intersection`/`subtract` with unsigned
+      `magnitude` is warned (backend) / `warnUnsignedBooleans` present
+      (frontend).
+- [x] `test_default_is_union` — an object without `combine` defaults to
       `union`.
 
 ## Verification
