@@ -314,8 +314,8 @@ plugins:
 
 ### Phase 6 — Cross-references
 
-- [ ] Rewrite links in all moved files per the table above.
-- [ ] Update top-level `index.md` Topics + Use-Cases routing.
+- [x] Rewrite links in all moved files per the table above.
+- [x] Update top-level `index.md` Topics + Use-Cases routing.
 
 ### Phase 7 — Config
 

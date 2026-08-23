@@ -2,7 +2,7 @@
 
 Typical ways to run the visualizer from a plain Python script. For notebooks,
 see [Use Cases — Notebooks](use-cases-notebooks.md); for the full API see
-[Visualizer API](visualizer.md).
+[Visualizer API](visualizer/visualizer.md).
 
 ## Interactive Visualizer
 
@@ -37,7 +37,7 @@ viz.wait()  # block until Ctrl+C, then stop the server
 
 ## Animation
 
-Two strategies are available; see [Animation](animation.md) for the full
+Two strategies are available; see [Animation](visualizer/animation.md) for the full
 reference.
 
 ### Frame streaming (Python-driven)

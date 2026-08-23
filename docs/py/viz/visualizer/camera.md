@@ -212,7 +212,7 @@ zoom while entities move.
 The `Ctrl+S` shortcut captures the WebGL canvas (3D scene). It does not
 capture DOM overlays (labels, title, annotation panel) — for full-viewport
 captures including overlays, use `SceneExporter.screenshot()` (see
-[Video & Image Export](export/video-image.md)).
+[Video & Image Export](../export/video-image.md)).
 
 ## Scene Configuration
 
@@ -225,7 +225,7 @@ Visualizer(
 )
 ```
 
-Grid and axes are explicit scene objects (see [Axes & Grid](axes-grid.md)).
+Grid and axes are explicit scene objects (see [Axes & Grid](../scene-objects/axes-grid.md)).
 Whether a default axes/grid is inserted automatically is controlled by the
 `add_default_axes` / `add_default_grid` constructor flags (both `True` by
 default).

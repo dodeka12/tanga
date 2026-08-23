@@ -233,5 +233,5 @@ viz.run()
 
 ## See Also
 
-- [Active Elements](active-elements/index.md) — simplified high-level API for common interactive objects
+- [Active Elements](../scene-objects/active-elements/index.md) — simplified high-level API for common interactive objects
 - [`demo_drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_drag_point.py) — full working example with four drag modes and projection lines

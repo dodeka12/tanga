@@ -77,7 +77,7 @@ Runnable example: [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob
     - **Performance / long-running**
         - **No animation** — build the scene, then `show()` + `wait()`
         - **Animation** — pre-create with `viz(...)` and update `.entity` in place, see [Frame streaming](use-cases-scripts.md#frame-streaming-python-driven)
-    - **Interactive** — [VisualizerApp](app.md)
+    - **Interactive** — [VisualizerApp](visualizerapp/app.md)
     - **Static snapshot**
         - **Single snapshot** — `viz.export_snapshot("scene.html")` (standalone HTML file), see [Standalone HTML](export/html.md)
         - **Animation recording** — record a loop with `start_animation_recording()` and export standalone animated HTML, see [Animated HTML](export/html.md#animated-html)
@@ -88,9 +88,9 @@ Runnable example: [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob
     - **Performance / long-running**
         - **No animation** — idempotent `show()`/`display()` re-renders
         - **Animation** — pre-create with `viz(...)` and update `.entity` in place, see [Animation](use-cases-notebooks.md#animation)
-    - **Interactive** — [VisualizerApp](app.md)
+    - **Interactive** — [VisualizerApp](visualizerapp/app.md)
     - **Static snapshot**
-        - **Single snapshot** — `viz.display_snapshot()` (embedded inline), see [Serverless Display](jupyter.md#serverless-display-display_snapshot)
+        - **Single snapshot** — `viz.display_snapshot()` (embedded inline), see [Serverless Display](jupyter/static.ipynb)
         - **Animation recording** — record a loop and export standalone animated HTML, see [Animated HTML](export/html.md#animated-html)
 
 ## Topics
@@ -99,22 +99,22 @@ Runnable example: [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob
 |-------|---------------------|
 | [Use Cases — Scripts](use-cases-scripts.md) | Interactive viewer, animation, and export in plain Python scripts |
 | [Use Cases — Notebooks](use-cases-notebooks.md) | Interactive viewer (re-run), animation, and export in Jupyter |
-| [Visualizer App](app.md) | `VisualizerApp` base class for interactive apps with controls and a managed lifecycle |
-| [Visualizer API](visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
-| [Camera & Controls](camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`, `View3dConfig`, auto-fit vs explicit, orbit controls, Ctrl+S screenshots |
-| [Axes & Grid](axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, value labels, defaults |
-| [Style System](styles.md) | `*Style` dataclasses, `styles`, `set_default_color()`, `CrossHairPointStyle` |
-| [Texture Labels](texture-labels.md) | Text, KaTeX formulas, and mixed content on entity surfaces (Sphere, Plane) |
-| [Labels](labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
-| [Scene Graph & Transforms](scene-graph.md) | `VizGroup`, `VizObjectRef`, parent/child hierarchy, transforms, aspect patches |
-| [PointPath](point-path.md) | Connected line segments, object trails, per-point colors, FIFO capping, gradient utilities |
-| [Title & Annotation](title-annotation.md) | Title overlay, Markdown annotation panel, LaTeX math with KaTeX |
-| [Animation](animation.md) | Frame streaming, keyframe tweening (`animate_to`), scene-aware `Timeline` sequencer |
+| [Visualizer App](visualizerapp/app.md) | `VisualizerApp` base class for interactive apps with controls and a managed lifecycle |
+| [Visualizer API](visualizer/visualizer.md) | `Visualizer` class, constructor, `add()`, MV input, multi-scene support, server lifecycle |
+| [Camera & Controls](visualizer/camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`, `View3dConfig`, auto-fit vs explicit, orbit controls, Ctrl+S screenshots |
+| [Axes & Grid](scene-objects/axes-grid.md) | `Axis`, `Grid`, `Axes3D`, `Axes2D` as explicit scene objects, intervals, value labels, defaults |
+| [Style System](styles/styles.md) | `*Style` dataclasses, `styles`, `set_default_color()`, `CrossHairPointStyle` |
+| [Texture Labels](styles/texture-labels.md) | Text, KaTeX formulas, and mixed content on entity surfaces (Sphere, Plane) |
+| [Labels](styles/labels.md) | `Label` dataclass, `LabelStyle`, local-frame positioning, `update_label()` |
+| [Scene Graph & Transforms](visualizer/scene-graph.md) | `VizGroup`, `VizObjectRef`, parent/child hierarchy, transforms, aspect patches |
+| [PointPath](scene-objects/point-path.md) | Connected line segments, object trails, per-point colors, FIFO capping, gradient utilities |
+| [Title & Annotation](styles/title-annotation.md) | Title overlay, Markdown annotation panel, LaTeX math with KaTeX |
+| [Animation](visualizer/animation.md) | Frame streaming, keyframe tweening (`animate_to`), scene-aware `Timeline` sequencer |
 | [Export](export/index.md) | Standalone HTML (static + animated), glTF, figure snippets, screenshots, MP4 video |
-| [Jupyter Notebooks](jupyter.md) | Auto-detection, inline iframe, multi-scene `display_row()`, `start()`/`flush()`/`stop()` pattern |
-| [Object Interaction](object-interaction.md) | Pointer-based 3D object interaction: click, drag, scroll; `Camera` projection; event dispatch |
-| [Active Elements](active-elements/index.md) | Simplified high-level API: `ActPoint` and future self-registering interactive entities |
-| [Interactive Controls](interactive.md) | `VisualizerApp` base class, sliders, dropdowns, buttons, groups, lifecycle hooks |
+| [Jupyter Notebooks](jupyter/index.md) | Auto-detection, inline iframe, multi-scene `display_row()`, `start()`/`flush()`/`stop()` pattern |
+| [Object Interaction](visualizer/object-interaction.md) | Pointer-based 3D object interaction: click, drag, scroll; `Camera` projection; event dispatch |
+| [Active Elements](scene-objects/active-elements/index.md) | Simplified high-level API: `ActPoint` and future self-registering interactive entities |
+| [Controls](visualizerapp/controls.md) | Sliders, dropdowns, buttons, groups; scene-scoped controls |
 
 ## Example Scripts
 

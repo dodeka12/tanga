@@ -2,7 +2,7 @@
 
 The visualizer detects Jupyter automatically: `show()` renders inline instead
 of opening a browser tab, and `run()` is unavailable (it would block the
-kernel). For a deep dive, see [Jupyter notebooks](jupyter.md).
+kernel). For a deep dive, see [Jupyter notebooks](jupyter/index.md).
 
 ## Interactive Visualizer
 

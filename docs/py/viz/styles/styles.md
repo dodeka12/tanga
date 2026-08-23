@@ -139,7 +139,7 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 | `FigureStyle` | figure export | `width`, `height`, `background`, `auto_rotate`, `show_title`, `show_annotation`, `border_radius`, `responsive` |
 | `AnimStyle` | animated export | `fps`, `loop`, `show_controls`, `compress` |
 
-See [Standalone HTML](export/html.md) for `FigureStyle` and `AnimStyle` defaults
+See [Standalone HTML](../export/html.md) for `FigureStyle` and `AnimStyle` defaults
 and usage.
 
 ## Default Colors
