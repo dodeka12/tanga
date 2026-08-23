@@ -96,7 +96,10 @@ def test_shape_and_ordering(name: str) -> None:
     assert wire["result_ids"][wire["slot_pseudo"]] == basis.pseudoscalar_id
     assert wire["slot_pseudo"] == len(wire["result_ids"]) - 1
     # the wire form carries the fields Phase 8 consumes.
-    for key in ("algebra", "product", "distance", "normalize", "M", "scale", "thickness"):
+    for key in (
+        "algebra", "product", "distance", "normalize", "M", "scale",
+        "thickness", "falloff", "max_distance",
+    ):
         assert key in wire
 
 
@@ -169,4 +172,25 @@ def test_thickness_wire() -> None:
     assert out["thickness"] == 0.25
     # Default is zero (no cutoff).
     assert serialize_mv(line, "line2", {})["thickness"] == 0.0
+
+
+def test_soft_opacity_wire() -> None:
+    from pytanga.viz.sdf.serializer import serialize_mv
+
+    basis = _basis("p3")
+    line = create_entity(
+        basis, Line(origin=Point(0.0, 0.0, 0.0), direction=Direction(1.0, 1.0, 1.0))
+    )
+
+    wire = embed_entity_mv(line, normalize=False, falloff=0.2, max_distance=1.0)
+    assert wire["falloff"] == 0.2
+    assert wire["max_distance"] == 1.0
+
+    out = serialize_mv(line, "line", {"falloff": 0.2, "max_distance": 1.0})
+    assert out["falloff"] == 0.2
+    assert out["max_distance"] == 1.0
+    # Defaults are zero (no soft edge / no hard cutoff).
+    assert serialize_mv(line, "line2", {})["falloff"] == 0.0
+    assert serialize_mv(line, "line2", {})["max_distance"] == 0.0
+
 

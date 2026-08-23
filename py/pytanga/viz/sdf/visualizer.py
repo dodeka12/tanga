@@ -135,6 +135,8 @@ class SdfVisualizer:
         normalize: bool | None = None,
         calibrate: bool | None = None,
         smoothness: float | None = None,
+        falloff: float | None = None,
+        max_distance: float | None = None,
     ) -> str:
         """Add an object to the SDF scene and return its ID.
 
@@ -168,6 +170,8 @@ class SdfVisualizer:
             normalize=normalize,
             calibrate=calibrate,
             smoothness=smoothness,
+            falloff=falloff,
+            max_distance=max_distance,
         )
 
         oid = entity_id or uuid4().hex[:8]
@@ -193,6 +197,8 @@ class SdfVisualizer:
         normalize: bool | None = None,
         calibrate: bool | None = None,
         smoothness: float | None = None,
+        falloff: float | None = None,
+        max_distance: float | None = None,
     ) -> None:
         """Replace the object at ``entity_id`` and re-push it.
 
@@ -216,6 +222,8 @@ class SdfVisualizer:
             normalize=normalize,
             calibrate=calibrate,
             smoothness=smoothness,
+            falloff=falloff,
+            max_distance=max_distance,
         )
         self._warn_signedness()
         self._push_update([entity_id])
@@ -234,6 +242,8 @@ class SdfVisualizer:
         normalize: bool | None = None,
         calibrate: bool | None = None,
         smoothness: float | None = None,
+        falloff: float | None = None,
+        max_distance: float | None = None,
     ) -> dict[str, Any]:
         """Assemble the per-object property dict (``None`` = inherit default)."""
         props: dict[str, Any] = {}
@@ -259,6 +269,10 @@ class SdfVisualizer:
             props["calibrate"] = calibrate
         if smoothness is not None:
             props["smoothness"] = smoothness
+        if falloff is not None:
+            props["falloff"] = falloff
+        if max_distance is not None:
+            props["max_distance"] = max_distance
         return props
 
     def _warn_signedness(self) -> None:

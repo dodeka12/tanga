@@ -191,18 +191,26 @@ def embed_entity_mv(
     distance: str = "scalar_pseudo",
     calibrate: bool = False,
     thickness: float = 0.0,
+    falloff: float = 0.0,
+    max_distance: float = 0.0,
 ) -> dict[str, Any]:
     """Reduce *mv* to the ``mv_sdf`` wire core (no id/color/style fields).
 
     Returns a dict with ``algebra``, ``product``, ``distance``, ``normalize``,
     ``point_ids``, ``result_ids``, ``slot_pseudo``, ``M`` (flattened row-major
-    over result × point), ``scale``, ``thickness``, and ``bound``.
+    over result × point), ``scale``, ``thickness``, ``falloff``,
+    ``max_distance``, and ``bound``.
 
-    ``scale`` defaults to ``1.0``. When ``calibrate=True`` the per-object
-    gradient scale is computed (Phase 9) so ``|∇d| ≈ 1`` for sphere-tracing.
-    ``thickness`` is a per-object distance cutoff: the shader subtracts it from
-    the distance (``d − thickness``), so a zero-thickness MV (a line, a point)
-    renders as a tube/ball of that radius.
+    - ``scale`` defaults to ``1.0``; ``calibrate=True`` computes the per-object
+      gradient scale (Phase 9) so ``|∇d| ≈ 1`` for sphere-tracing.
+    - ``thickness`` is a distance cutoff: the shader subtracts it (``d −
+      thickness``), so a zero-thickness MV renders as a tube/ball of that radius.
+    - ``falloff`` (default ``0.0``) is the exponential *volumetric* density
+      scale: ``σ(d) = exp(−d/falloff)/falloff`` for the soft halo outside the
+      core. ``0.0`` disables the soft edge (a hard surface).
+    - ``max_distance`` (default ``0.0``) is the hard cutoff: the density is
+      zero beyond this distance (clips the exponential tail). ``0.0`` defaults
+      the cutoff to ``5·falloff``.
     """
     alg = mv.algebra
     spec = get_spec(alg)
@@ -247,6 +255,8 @@ def embed_entity_mv(
         "M": np.asarray(m_tensor.data, dtype=float).reshape(-1).tolist(),
         "scale": scale,
         "thickness": float(thickness),
+        "falloff": float(falloff),
+        "max_distance": float(max_distance),
         "bound": _bound_wire(bound, spec),
     }
 

@@ -74,10 +74,30 @@ cannot hit; pass `thickness=` (a distance cutoff) to render them as a tube/ball:
 viz.add(line_mv, color="#ffaa00", calibrate=True, thickness=0.1)
 ```
 
-The shader evaluates `d = distOf(M·a)·scale − thickness`. Combined with a
-non-`step` opacity transfer (`viz.opacity = "linear"`/`"sigmoid"`), the opacity
-becomes distance-dependent — full inside the cutoff, fading to transparent near
-the boundary.
+The shader evaluates `d = distOf(M·a)·scale − thickness`.
+
+### Soft opacity (distance-dependent, per object)
+
+Each algebraic object can get a soft, distance-dependent opacity edge, independent
+of the viewer-level opacity transfer:
+
+```python
+viz.add(
+    line_mv,
+    color="#ffaa00",
+    calibrate=True,
+    thickness=0.1,      # solid core radius
+    falloff=0.15,       # exponential density falloff scale (Beer–Lambert)
+    max_distance=0.5,   # hard cutoff: density is zero beyond this distance
+)
+```
+
+The density outside the core is `σ(d) = exp(−d/falloff)/falloff`, hard-clipped to
+zero at `max_distance` (default `5·falloff` when unset). The raymarcher integrates
+this along the ray (`transmittance = exp(−∫σ dt)`), so a grazing ray renders a
+soft translucent edge that fades to transparent — `falloff` sets how quickly it
+fades (exponential), `max_distance` sets where it is hard-cut off. `falloff=0`
+(default) keeps a hard surface.
 
 ## Opacity transfers
 

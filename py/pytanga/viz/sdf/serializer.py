@@ -140,6 +140,8 @@ def serialize_mv(
         bound=props.get("bound"),
         calibrate=bool(props.get("calibrate", False)),
         thickness=float(props.get("thickness", 0.0)),
+        falloff=float(props.get("falloff", 0.0)),
+        max_distance=float(props.get("max_distance", 0.0)),
     )
 
     result: dict[str, Any] = {

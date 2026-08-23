@@ -153,3 +153,13 @@ def test_material_table_and_composer_exist() -> None:
     material = (SDC_DIR / "material-table.js").read_text(encoding="utf-8")
     assert "composeObjects" in composer
     assert "materialColor" in material and "materialPreamble" in material
+
+
+def test_volumetric_density_present() -> None:
+    # The raymarch body defines the per-object volumetric density (exponential
+    # Beer–Lambert falloff + hard cutoff) driven by the algebra uniforms.
+    body = _read(RAYMARCH_FILE)
+    assert "float mapDensity(" in body
+    assert "u_Falloff" in body
+    assert "u_MaxDistance" in body
+    assert "exp(-d / falloff)" in body

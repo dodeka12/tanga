@@ -191,7 +191,7 @@ function buildUniforms() {
     // must be a full-length array (three.js flattens the whole declared array);
     // pad unused slots with a transparent black material.
     const rows = padMaterialRows(actualRows);
-    const { uM, uScale, uThickness } = buildAlgebraUniforms(list);
+    const { uM, uScale, uThickness, uFalloff, uMaxDistance } = buildAlgebraUniforms(list);
     const uniforms = {
         uResolution: { value: new THREE.Vector2() },
         uCameraPosition: { value: new THREE.Vector3() },
@@ -204,6 +204,8 @@ function buildUniforms() {
         u_M: { value: uM },
         u_Scale: { value: uScale },
         u_Thickness: { value: uThickness },
+        u_Falloff: { value: uFalloff },
+        u_MaxDistance: { value: uMaxDistance },
         uLightCount: { value: lighting.lights.length },
         uLightDir: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
         uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
@@ -690,10 +692,12 @@ function applyDataUniforms(u, list) {
     const rows = padMaterialRows(actualRows);
     u.uMaterial.value.forEach((v, i) => v.set(rows[i][0], rows[i][1], rows[i][2], rows[i][3]));
     u.uMaterialCount.value = actualRows.length;
-    const { uM, uScale, uThickness } = buildAlgebraUniforms(list);
+    const { uM, uScale, uThickness, uFalloff, uMaxDistance } = buildAlgebraUniforms(list);
     u.u_M.value = uM;
     u.u_Scale.value = uScale;
     u.u_Thickness.value = uThickness;
+    u.u_Falloff.value = uFalloff;
+    u.u_MaxDistance.value = uMaxDistance;
 }
 
 function rebuildProgram() {

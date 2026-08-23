@@ -81,6 +81,8 @@ export function matrixUniformDecls(totalFloats) {
 uniform float u_M[${size}];
 uniform float u_Scale[${MAX_SDF_OBJECTS}];
 uniform float u_Thickness[${MAX_SDF_OBJECTS}];
+uniform float u_Falloff[${MAX_SDF_OBJECTS}];
+uniform float u_MaxDistance[${MAX_SDF_OBJECTS}];
 `;
 }
 
@@ -182,6 +184,8 @@ export function buildAlgebraUniforms(objects) {
     const uM = new Float32Array(Math.max(totalFloats, 1));
     const uScale = new Float32Array(MAX_SDF_OBJECTS).fill(1.0);
     const uThickness = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
+    const uFalloff = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
+    const uMaxDistance = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
     infos.forEach((info) => {
         if (!info) return;
         const obj = objects[info.index];
@@ -192,6 +196,8 @@ export function buildAlgebraUniforms(objects) {
         }
         uScale[info.index] = (typeof obj.scale === 'number') ? obj.scale : 1.0;
         uThickness[info.index] = (typeof obj.thickness === 'number') ? obj.thickness : 0.0;
+        uFalloff[info.index] = (typeof obj.falloff === 'number') ? obj.falloff : 0.0;
+        uMaxDistance[info.index] = (typeof obj.max_distance === 'number') ? obj.max_distance : 0.0;
     });
-    return { uM, uScale, uThickness, totalFloats };
+    return { uM, uScale, uThickness, uFalloff, uMaxDistance, totalFloats };
 }
