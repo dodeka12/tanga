@@ -1,6 +1,6 @@
 # Animate `auto_clear`, `viz(...)` shorthand, and use-case docs/examples
 
-**Created:** 2026-08-22 | **Status:** Done
+**Created:** 2026-08-22 | **Status:** Done (Phases 1–5) — Phase 6 pending
 
 ## Goal
 
@@ -12,7 +12,54 @@
    as `viz.new(...)` (returns a `VizObjectRef`), making the pre-create + update
    pattern more concise.
 3. Restructure the visualizer docs around *use cases* and add Jupyter notebook
-   examples under `py/examples/jupyter/`.
+   examples under `py/examples/jupyter/`.  The animation docs/examples present
+   **two ways to run a frame loop** side by side:
+   - **Pre-create + update in place** — allocate objects once with `viz(...)`,
+     then update `.entity` each frame; the performant, allocation-free default.
+   - **`animate(auto_clear=True)`** — add fresh objects each frame and let the
+     loop remove the previous frame's; concise for **quick short scripts** but
+     **less performant** (per-frame remove/recreate).
+
+4. Add a **workflow overview decision tree** page that routes readers by
+   environment (notebook vs. Python script) → short test vs. performance →
+   animation vs. no-animation → interaction vs. no-interaction, and positions
+   `VisualizerApp` as the target for performant, interactive, possibly animated
+   Python scripts.
+
+## Implementation status
+
+All five phases are implemented; the plan was completed while also fixing two
+follow-up animation-loop bugs along the way (flush-before-remove ordering and
+restarting after a browser stop key).
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 — code | `Visualizer.__call__` + `animate(auto_clear=...)` (+ `VizSceneHandle.animate` passthrough) | Done (`f08e879`, refined `e0e082e`, `cef445b`) |
+| 2 — tests | `__call__` == `new`; `auto_clear` baseline, labels, pre-loop persist, empty scene, flush-before-remove | Done (see note) |
+| 3 — docs | `use-cases-scripts.md`, `use-cases-notebooks.md`, `app.md`, nav, `index.md`, `animation.md`, `visualizer.md`, `jupyter.md` | Done (see note) |
+| 4 — notebooks | `interactive.ipynb`, `animation.ipynb`, `export.ipynb` | Done (`a5eb12a`) |
+| 5 — changelog | New Features bullets for `auto_clear` and `viz(...)` | Done |
+| 6 — workflow decision tree | `workflow-overview.md` + nav + `index.md` link + `VisualizerApp` positioning | Pending |
+
+Open follow-ups:
+
+- **Workflow overview decision tree (Phase 6).** A new overview page
+  (`workflow-overview.md`) routes readers by environment — notebook vs. Python
+  script — then short test vs. performance, then animation vs. no-animation,
+  then interaction vs. no-interaction. It positions `VisualizerApp` as the
+  target for **performant, interactive, possibly animated Python scripts** and
+  links each branch to its use-case page. Not yet implemented.
+- **Docs/examples performance framing.** `auto_clear` is a *second* way to run
+  a frame loop — next to pre-creating objects with `viz(...)` and updating them
+  in place. It is concise for **quick, short scripts** but **less performant**
+  (per-frame remove/recreate). `animation.md` already calls the update-in-place
+  pattern "the most efficient, allocation-free loop"; the use-cases pages and
+  the animation notebook should state this trade-off explicitly so readers know
+  when to pick each.
+- **`auto_clear` scene-scoping test.** `VizSceneHandle.animate` passes
+  `auto_clear` through, but there is no dedicated test that `auto_clear`
+  respects a named `scene_name` (the Phase 2 checklist item is only covered
+  indirectly).
 
 ## Background (current behaviour)
 
@@ -98,12 +145,42 @@ for dt in viz.animate(fps=30):
 
 ### 3. Docs structure
 
-Three new pages inserted directly after the Overview in the `mkdocs.yml` nav,
-then the existing files follow (Jupyter stays last as the detailed reference):
+The use-case docs are organized around two primary axes — **environment**
+(notebook vs. plain Python script) and, within each, **short test vs.
+performance**, then **animation vs. no-animation**, then **interaction vs.
+no-interaction**.
+
+A new **workflow overview decision tree** (`workflow-overview.md`) is inserted
+first after the Overview. It walks readers through those axes and points each
+branch at the page that covers it:
+
+- **Jupyter vs. Python script**
+  - **short test vs. performance** (allocation-sensitive / long-running)
+    - **animation vs. no animation**
+      - **interaction vs. no interaction**
+
+`VisualizerApp` is the target for **performant, interactive, possibly animated
+Python scripts** (managed lifecycle + controls + `animate()`/timeline); see
+`app.md`.
+
+The three use-case pages are inserted directly after it in the `mkdocs.yml`
+nav, then the existing files follow (Jupyter stays last as the detailed
+reference):
 
 - `use-cases-scripts.md` — interactive / animation / export in plain scripts.
 - `use-cases-notebooks.md` — interactive (re-run), animation, export in notebooks.
 - `app.md` — `VisualizerApp` (most flexible: controls + lifecycle).
+
+The animation sections present **two ways to run a frame loop** and state when
+to pick each:
+
+1. **Pre-create + update in place** — `viz(...)` once, then `.entity = ...`
+   each frame. The **performant** default: objects are allocated once and only
+   dirty entities are serialized. Recommended for real-time/long-running loops.
+2. **`animate(auto_clear=True)`** — `viz(...)`/`add(...)` fresh objects each
+   frame; the loop flushes then removes the previous frame's objects. Concise
+   and ideal for **quick, short scripts** and one-off demos, but **less
+   performant** than updating in place (per-frame remove/recreate).
 
 Also update `index.md` (topic table + example links), `animation.md`
 (document `auto_clear` and `viz(...)`), `visualizer.md` (`viz(...)` shorthand),
@@ -114,8 +191,11 @@ and `jupyter.md` (correct animation pattern).
 New subfolder `py/examples/jupyter/` with:
 
 - `interactive.ipynb` — context manager + idempotent `display()`.
-- `animation.ipynb` — Pattern A (`viz(...)` pre-create + `.entity` update) and
-  Pattern B (`animate(auto_clear=True)`).
+- `animation.ipynb` — the **two animation ways** side by side:
+  - Pattern A — pre-create with `viz(...)`, update `.entity` in place
+    (performant default).
+  - Pattern B — `animate(auto_clear=True)` with fresh objects each frame
+    (concise for quick short scripts; less performant).
 - `export.ipynb` — HTML / glTF / figure export from a notebook.
 
 ## Files
@@ -123,8 +203,8 @@ New subfolder `py/examples/jupyter/` with:
 - Modify: `py/pytanga/viz/visualizer.py` (`animate(auto_clear=...)`, `__call__`)
 - Modify: `py/pytanga/viz/_scene_handle.py` (`animate(auto_clear=...)` passthrough)
 - Tests: `py/tests/viz/test_scene_session.py` (or a new `test_auto_clear.py`)
-- Add docs: `docs/py/viz/use-cases-scripts.md`, `docs/py/viz/use-cases-notebooks.md`,
-  `docs/py/viz/app.md`
+- Add docs: `docs/py/viz/workflow-overview.md`, `docs/py/viz/use-cases-scripts.md`,
+  `docs/py/viz/use-cases-notebooks.md`, `docs/py/viz/app.md`
 - Modify docs: `mkdocs.yml`, `docs/py/viz/index.md`, `docs/py/viz/animation.md`,
   `docs/py/viz/visualizer.md`, `docs/py/viz/jupyter.md`
 - Add examples: `py/examples/jupyter/interactive.ipynb`, `animation.ipynb`, `export.ipynb`
@@ -165,6 +245,16 @@ New subfolder `py/examples/jupyter/` with:
 ### Phase 5 — Changelog
 
 - [x] Append New Features bullets for `animate(auto_clear=...)` and `viz(...)`.
+
+### Phase 6 — Workflow overview decision tree
+
+- [ ] Add `docs/py/viz/workflow-overview.md`: decision tree by environment
+      (notebook vs. script) → short test vs. performance → animation vs.
+      no-animation → interaction vs. no-interaction.
+- [ ] Position `VisualizerApp` as the target for performant, interactive,
+      possibly animated Python scripts.
+- [ ] Insert it first after the Overview in `mkdocs.yml`; add an `index.md`
+      topic-table entry.
 
 ## Notes / edge cases
 
