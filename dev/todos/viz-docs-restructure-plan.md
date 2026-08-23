@@ -308,9 +308,9 @@ plugins:
 
 ### Phase 5 — Jupyter split
 
-- [ ] `jupyter/live.md`
-- [ ] `jupyter/static.ipynb`
-- [ ] Remove `jupyter.md` (content migrated)
+- [x] `jupyter/live.md`
+- [x] `jupyter/static.ipynb`
+- [x] Remove `jupyter.md` (content migrated)
 
 ### Phase 6 — Cross-references
 
