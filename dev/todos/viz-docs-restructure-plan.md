@@ -288,11 +288,11 @@ plugins:
 
 ### Phase 2 — Overview pages
 
-- [ ] `scene-objects/index.md`
-- [ ] `visualizer/index.md`
-- [ ] `styles/index.md`
-- [ ] `visualizerapp/index.md`
-- [ ] `jupyter/index.md`
+- [x] `scene-objects/index.md`
+- [x] `visualizer/index.md`
+- [x] `styles/index.md`
+- [x] `visualizerapp/index.md`
+- [x] `jupyter/index.md`
 
 ### Phase 3 — Scene objects
 
