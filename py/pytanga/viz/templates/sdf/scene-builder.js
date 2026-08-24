@@ -24,7 +24,6 @@ export function buildObjectExpr(obj, index) {
     if (!obj.tree) {
         throw new Error(`SDF object ${obj.id} has no tree`);
     }
-    // Analytic path: the tree carries its own primitive params/transforms; the
-    // per-object color/opacity are attached at the material table (Phase 5).
-    return emitTree(obj.tree);
+    // Analytic path: a proper SDF has |∇d| = 1, so its gradient norm is 1.0.
+    return `vec2(${emitTree(obj.tree)}, 1.0)`;
 }

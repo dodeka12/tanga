@@ -1,5 +1,5 @@
 // SDF composer — fold all per-object distance expressions into one global
-// `vec2 map(vec3 p)` returning (distance, materialId).
+// `vec3 map(vec3 p)` returning (distance, materialId, gradientNorm).
 //
 // Fold order follows serialization (insertion) order. Each object folds with
 // its `combine` mode:
@@ -10,7 +10,10 @@
 //                    the distance; the material is blended by the blend factor
 //                    (smooth_subtract keeps the positive accumulator material).
 //
-// `d` starts at MAX_DIST (an empty scene is far away) and `m` at -1.
+// The gradient norm `g` is threaded through the fold exactly like `m`: the
+// winner's `g` follows the winner's material; smooth folds `mix` `g` by the
+// blend factor; `subtract`/`smooth_subtract` keep the positive accumulator's
+// `g`. `d` starts at MAX_DIST (an empty scene is far away), `m` at -1, `g` at 1.0.
 
 import { buildObjectExpr } from './scene-builder.js';
 import { floatParam } from './objects/transform.js';
@@ -22,34 +25,36 @@ function smoothnessOf(obj) {
 }
 
 export function composeObjects(objects) {
-    const lines = ['vec2 map(vec3 p) {', '    float d = MAX_DIST;', '    float m = -1.0;'];
+    const lines = ['vec3 map(vec3 p) {', '    float d = MAX_DIST;', '    float m = -1.0;', '    float g = 1.0;'];
     objects.forEach((obj, index) => {
         const expr = buildObjectExpr(obj, index);
         const mode = (obj.combine || 'union').toLowerCase();
         lines.push('    {');
-        lines.push(`        float d${index} = ${expr};`);
+        lines.push(`        vec2 d${index} = ${expr};`);
         if (mode === 'subtract') {
-            lines.push(`        d = max(d, -d${index});`);
+            lines.push(`        d = max(d, -d${index}.x);`);
         } else if (mode === 'intersection') {
-            lines.push(`        if (d${index} > d) { d = d${index}; m = ${index}.0; }`);
+            lines.push(`        if (d${index}.x > d) { d = d${index}.x; m = ${index}.0; g = d${index}.y; }`);
         } else if (mode === 'smooth_subtract') {
-            lines.push(`        vec2 sm${index} = opSmoothSubtract(d, d${index}, ${smoothnessOf(obj)});`);
+            lines.push(`        vec2 sm${index} = opSmoothSubtract(d, d${index}.x, ${smoothnessOf(obj)});`);
             lines.push(`        d = sm${index}.x;`);
-            // a negative object emits no surface: keep the positive material
+            // a negative object emits no surface: keep the positive material + g
         } else if (mode === 'smooth_intersection') {
-            lines.push(`        vec2 sm${index} = opSmoothIntersect(d, d${index}, ${smoothnessOf(obj)});`);
+            lines.push(`        vec2 sm${index} = opSmoothIntersect(d, d${index}.x, ${smoothnessOf(obj)});`);
             lines.push(`        d = sm${index}.x;`);
             lines.push(`        m = mix(${index}.0, m, sm${index}.y);`);
+            lines.push(`        g = mix(d${index}.y, g, sm${index}.y);`);
         } else if (mode === 'smooth_union') {
-            lines.push(`        vec2 sm${index} = opSmoothUnion(d, d${index}, ${smoothnessOf(obj)});`);
+            lines.push(`        vec2 sm${index} = opSmoothUnion(d, d${index}.x, ${smoothnessOf(obj)});`);
             lines.push(`        d = sm${index}.x;`);
             lines.push(`        m = mix(${index}.0, m, sm${index}.y);`);
+            lines.push(`        g = mix(d${index}.y, g, sm${index}.y);`);
         } else {
-            lines.push(`        if (d${index} < d) { d = d${index}; m = ${index}.0; }`);
+            lines.push(`        if (d${index}.x < d) { d = d${index}.x; m = ${index}.0; g = d${index}.y; }`);
         }
         lines.push('    }');
     });
-    lines.push('    return vec2(d, m);');
+    lines.push('    return vec3(d, m, g);');
     lines.push('}');
     return lines.join('\n');
 }

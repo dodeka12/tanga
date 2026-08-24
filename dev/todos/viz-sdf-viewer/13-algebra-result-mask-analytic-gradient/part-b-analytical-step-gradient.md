@@ -81,9 +81,9 @@ inside the leaf (no recomputation, no `matId` dispatch) and returned alongside
 
 ### B4 — `scene-builder.js` + `composer.js`: `vec2`/`vec3`
 
-- [ ] `buildObjectExpr`: analytic → `vec2(<treeExpr>, 1.0)`; `mv_sdf` →
+- [x] `buildObjectExpr`: analytic → `vec2(<treeExpr>, 1.0)`; `mv_sdf` →
       `dist_mv_<i>(p)` (now `vec2`).
-- [ ] `composeObjects`: `map()` returns `vec3(d, m, g)`; hard folds take the
+- [x] `composeObjects`: `map()` returns `vec3(d, m, g)`; hard folds take the
       winner's `g`; `smooth_*` folds `mix` `g` with `sm.y` like `m`;
       `subtract`/`smooth_subtract` keep the positive accumulator's `g`.
 - **Verify:** `node dev/src/sdf_composer_smoke.mjs` (update `vec2 map` →
