@@ -4,10 +4,13 @@
 """Tests for Entity/Operator → JSON serialization."""
 
 import json
+import math
 
 import pytest
 from pytanga.geometry.entities import (
+    Arc,
     Circle,
+    Cylinder,
     Direction,
     HPoint,
     Line,
@@ -93,19 +96,30 @@ class TestSerializeEntities:
         assert d["pointSize"] == 0.06
 
     def test_line(self):
-        l = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
-        d = _serialize(l)
+        line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
+        d = _serialize(line)
         assert d["kind"] == "Line"
-        assert d["origin"] == [0, 0, 0]
+        # Infinite line → centered on the closest point to the origin, so the
+        # serialized `origin` is the start point (closest - d̂·length/2).
+        assert d["origin"] == [-10.0, 0.0, 0.0]
         assert d["direction"] == [1, 0, 0]
         assert d["thickness"] == 1.0
         # Infinite line → the content `length` resolves to the style default.
         assert d["length"] == 20.0
         assert d["style"]["length"] == 20.0
 
+    def test_infinite_line_centered(self):
+        # An offset infinite line is centered on its closest point to the origin:
+        # origin = closest - d̂·length/2.
+        line = Line(origin=Point(0, 1, 0), direction=Direction(1, 0, 0))
+        d = _serialize(line)
+        assert d["origin"] == [-10.0, 1.0, 0.0]
+        assert d["direction"] == [1.0, 0.0, 0.0]
+        assert d["length"] == 20.0
+
     def test_line_from_points_respects_length(self):
-        l = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
-        d = _serialize(l)
+        line = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
+        d = _serialize(line)
         # `length` is a content field carrying the explicit segment length.
         assert d["length"] == 2.0
         # The style `length` stays the default (used only for infinite lines).
@@ -235,13 +249,15 @@ class TestSerializeOperators:
     def test_motor(self):
         m = Motor(
             rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
-            translator=Translator(vector=Direction(2, 0, 0)),
+            translator=Translator(vector=Direction(0, 0, 2)),
         )
         d = _serialize(m)
         assert d["kind"] == "Motor"
         assert d["rotor"]["angle"] == 0.5
         assert d["rotor"]["axis"] == [0, 0, 1]
-        assert d["translator"]["vector"] == [2, 0, 0]
+        # Axial translation stays in the translator; the axis is undisplaced.
+        assert d["rotor"]["origin"] == [0, 0, 0]
+        assert d["translator"]["vector"] == [0, 0, 2]
 
     def test_general_rotor(self):
         gr = GeneralRotor(
@@ -337,15 +353,42 @@ class TestStyleOverrides:
     def test_style_plane_extent(self):
         from copy import copy
 
-        from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND as _CANONICAL
+        from pytanga.viz._styles import PlaneStyle
 
         styles_map = {k: copy(v) for k, v in _CANONICAL.items()}
         styles_map["Plane"].extent = 25.0
+
+        # Canonical default (mutated) resolves the flat extent.
         d = _serialize(
             Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1)),
             styles_map=styles_map,
         )
         assert d["extent"] == 25.0
+        assert d["style"]["extent"] == 25.0
+
+        # Per-call style override wins over the canonical default.
+        d = _serialize(
+            Plane(point=Point(0, 0, 0), normal=Direction(0, 0, 1)),
+            props={"style": PlaneStyle(extent=3.0)},
+            styles_map=styles_map,
+        )
+        assert d["extent"] == 3.0
+        assert d["style"]["extent"] == 3.0
+
+    def test_plane_style_extent_via_full_state(self):
+        """Per-call PlaneStyle(extent=...) survives scene-graph serialization."""
+        from pytanga.geometry import Direction, Plane, Point
+        from pytanga.viz import PlaneStyle, Visualizer
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add(
+            Plane(point=Point(0, 0, 2), normal=Direction(0, 0, 1)),
+            style=PlaneStyle(extent=3.0),
+        )
+        objs = viz._scene.full_state(styles_map=viz.styles.kind)
+        plane = next(o for o in objs if o.get("kind") == "Plane")
+        assert plane["extent"] == 3.0
+        assert plane["style"]["extent"] == 3.0
 
     def test_sphere_style_opacity(self):
         """Sphere default opacity comes from canonical style."""
@@ -356,6 +399,59 @@ class TestStyleOverrides:
         styles_map = {k: copy(v) for k, v in _CANONICAL.items()}
         d = _serialize(Sphere(Point(0, 0, 0), 1.0), styles_map=styles_map)
         assert d["style"]["opacity"] == 0.4
+
+    def test_cylinder(self):
+        d = _serialize(Cylinder(Point(1, 2, 3), Direction(0, 1, 0), 2.0, 0.2))
+        assert d["kind"] == "Cylinder"
+        assert d["origin"] == [1, 2, 3]
+        assert d["axis"] == [0, 1, 0]
+        assert d["length"] == 2.0
+        assert d["radius"] == 0.2
+        assert d["alignCenter"] == 0.0
+        assert d["style"]["style_type"] == "CylinderStyle"
+
+    def test_cylinder_align_center(self):
+        d = _serialize(Cylinder(align_center=0.5))
+        assert d["alignCenter"] == 0.5
+
+    def test_cylinder_color_override(self):
+        d = _serialize(Cylinder(), {"color": "#00ff00"})
+        assert d["color"] == "#00ff00"
+        assert d["style"]["color"] == "#00ff00"
+
+    def test_arc(self):
+        d = _serialize(Arc(Point(0, 0, 0), Direction(0, 0, 1), 1.5, 0.05, math.pi))
+        assert d["kind"] == "Arc"
+        assert d["origin"] == [0, 0, 0]
+        assert d["axis"] == [0, 0, 1]
+        assert d["radius"] == 1.5
+        assert d["tubeRadius"] == 0.05
+        assert d["angle"] == pytest.approx(math.pi)
+        assert d["arrow"] is None
+        start = d["startDirection"]
+        assert len(start) == 3
+        assert sum(c * c for c in start) == pytest.approx(1.0)
+        assert start[2] == pytest.approx(0.0)  # perpendicular to +z
+
+    def test_arc_respects_start_direction(self):
+        d = _serialize(Arc(start_direction=Direction(1, 0, 0)))
+        assert d["startDirection"] == [1.0, 0.0, 0.0]
+
+    def test_arc_arrow_defaults(self):
+        d = _serialize(Arc(show_arrow=True, tube_radius=0.1))
+        assert d["arrow"] is not None
+        assert d["arrow"]["length"] == pytest.approx(0.3)
+        assert d["arrow"]["radius"] == pytest.approx(0.2)
+
+    def test_arc_arrow_explicit(self):
+        d = _serialize(Arc(show_arrow=True, arrow_length=0.5, arrow_radius=0.25))
+        assert d["arrow"] == {"length": 0.5, "radius": 0.25}
+
+    def test_arc_style_override(self):
+        from pytanga.viz import ArcStyle
+
+        d = _serialize(Arc(), {"style": ArcStyle(color="#00ff00")})
+        assert d["style"]["color"] == "#00ff00"
 
     def test_unknown_type_raises(self):
         with pytest.raises(TypeError, match="Unknown entity type"):
@@ -402,7 +498,9 @@ class TestObjectUpdate:
         )
         assert msg["type"] == "object_update"
         assert msg["scene"] == ""
-        assert msg["patches"] == [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}]
+        assert msg["patches"] == [
+            {"id": "a", "aspect": "full", "value": {"kind": "Point"}}
+        ]
         assert msg["removed"] == ["b"]
 
     def test_empty(self):
@@ -410,3 +508,47 @@ class TestObjectUpdate:
         assert msg["type"] == "object_update"
         assert msg["patches"] == []
         assert msg["removed"] == []
+
+
+# ── Viz-only entities scene-graph integration ────────────────
+
+
+def test_viz_entities_scene_graph_integration():
+    from pytanga.geometry import Arc, Cylinder, Direction, Point
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.add(
+        Cylinder(origin=Point(0, 0, 0), axis=Direction(0, 0, 1), length=2.0, radius=0.2)
+    )
+    viz.add(
+        Arc(
+            origin=Point(0, 0, 0),
+            axis=Direction(0, 0, 1),
+            radius=1.5,
+            tube_radius=0.05,
+            angle=math.pi * 1.5,
+            show_arrow=True,
+        )
+    )
+    viz.add(Arc(radius=2.0, tube_radius=0.04))
+
+    objs = viz.main_scene.full_state(styles_map=viz.styles.kind)
+
+    cylinder = next(o for o in objs if o["kind"] == "Cylinder")
+    assert cylinder["origin"] == [0, 0, 0]
+    assert cylinder["axis"] == [0, 0, 1]
+    assert cylinder["length"] == 2.0
+    assert cylinder["radius"] == 0.2
+
+    arcs = [o for o in objs if o["kind"] == "Arc"]
+    assert len(arcs) == 2
+    partial = next(o for o in arcs if o["arrow"] is not None)
+    full = next(o for o in arcs if o["arrow"] is None)
+
+    start = partial["startDirection"]
+    assert sum(c * c for c in start) == pytest.approx(1.0)
+    assert partial["arrow"]["length"] == pytest.approx(0.15)
+    assert partial["arrow"]["radius"] == pytest.approx(0.1)
+    assert full["arrow"] is None
+    assert full["angle"] == pytest.approx(2 * math.pi)

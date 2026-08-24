@@ -27,7 +27,7 @@ one roof.
 
 - **Animations** — Frame-by-frame streaming at ~60 FPS and keyframe tweening
   (`animate_to`) with a scene-aware `Timeline` sequencer.
-  → [Animation](py/viz/animation.md)
+  → [Animation](py/viz/visualizer/animation.md)
 
 - **Standalone HTML export** — Export self-contained, shareable HTML that
   supports animations:
@@ -37,14 +37,14 @@ one roof.
     - **glTF / GLB** for use in other 3D tools,
     - **PNG screenshots** and **MP4 video** (requires a local browser).
 
-  → [Export & Capture](py/viz/export.md)
+  → [Export](py/viz/export/index.md)
 
 - **Interactivity** — Interactive controls (sliders, dropdowns, buttons),
   pointer-based object interaction (click, drag, scroll), and a simplified
   `ActPoint` API.  Jupyter notebook support with inline iframes.
-  → [Interactive Controls](py/viz/interactive.md)
-  · [Object Interaction](py/viz/object-interaction.md)
-  · [Jupyter Notebooks](py/viz/jupyter.md)
+  → [Controls](py/viz/visualizerapp/controls.md)
+  · [Object Interaction](py/viz/visualizer/object-interaction.md)
+  · [Jupyter Notebooks](py/viz/jupyter/index.md)
 
 ### Geometric Algebra / Clifford Algebra
 

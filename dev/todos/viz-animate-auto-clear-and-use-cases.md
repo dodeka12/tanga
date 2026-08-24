@@ -1,0 +1,318 @@
+# Animate `auto_clear`, `viz(...)` shorthand, and use-case docs/examples
+
+**Created:** 2026-08-22 | **Status:** Done (Phases 1–8)
+
+## Goal
+
+1. Fix the two problems in the animation loop: entities never appear (no
+   `flush()`), and per-frame `viz.add(...)` calls accumulate objects forever.
+   Fix the latter with an `auto_clear` flag on `animate()` that removes objects
+   added inside the loop at the start of the next frame.
+2. Add a `Visualizer.__call__` shorthand so `viz(point, color=...)` is the same
+   as `viz.new(...)` (returns a `VizObjectRef`), making the pre-create + update
+   pattern more concise.
+3. Restructure the visualizer docs around *use cases* and add Jupyter notebook
+   examples under `py/examples/jupyter/`.  The animation docs/examples present
+   **two ways to run a frame loop** side by side:
+   - **Pre-create + update in place** — allocate objects once with `viz(...)`,
+     then update `.entity` each frame; the performant, allocation-free default.
+   - **`animate(auto_clear=True)`** — add fresh objects each frame and let the
+     loop remove the previous frame's; concise for **quick short scripts** but
+     **less performant** (per-frame remove/recreate).
+
+4. Surface the **use-case routing** as a compact nested list in
+   `docs/py/viz/index.md` (above the Topics table) that routes readers by
+   environment (notebook vs. Python script) → one-off vs. performance →
+   interactive, with **animation vs. no-animation** under one-off/performance,
+   and positions `VisualizerApp` as the target for interactive use cases.
+5. Re-scope `docs/py/index.md` to introduce only the geometric algebra part.
+   After the manual `mkdocs.yml` restructure, **Visualization** has its own
+   top-level section (with `py/viz/index.md` as its overview) and
+   `docs/py/index.md` is the **Geometric Algebra** overview — but it still
+   covers the visualizer. Trim it to the GA folders under `docs/py/`
+   (algebra, basis, blade-mask, expression, geometry, matrix, solver, tensors)
+   and remove the viz overview (topics-table row, the "2D + 3D algebras"
+   `Visualizer` note, and the Three.js intro), pointing readers to the
+   Visualization section (`docs/py/viz/index.md`) instead.
+
+## Implementation status
+
+All five phases are implemented; the plan was completed while also fixing two
+follow-up animation-loop bugs along the way (flush-before-remove ordering and
+restarting after a browser stop key).
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 — code | `Visualizer.__call__` + `animate(auto_clear=...)` (+ `VizSceneHandle.animate` passthrough) | Done (`f08e879`, refined `e0e082e`, `cef445b`) |
+| 2 — tests | `__call__` == `new`; `auto_clear` baseline, labels, pre-loop persist, empty scene, flush-before-remove | Done (see note) |
+| 3 — docs | `use-cases-scripts.md`, `use-cases-notebooks.md`, `app.md`, nav, `index.md`, `animation.md`, `visualizer.md`, `jupyter.md` | Done (see note) |
+| 4 — notebooks | `interactive.ipynb`, `animation.ipynb`, `export.ipynb` | Done (`a5eb12a`) |
+| 5 — changelog | New Features bullets for `auto_clear` and `viz(...)` | Done |
+| 6 — use-case routing | nested use-case list in `docs/py/viz/index.md` + `VisualizerApp` positioning | Done |
+| 7 — GA-only `index.md` | Re-scope `docs/py/index.md` to geometric algebra only | Done |
+| 8 — export docs split | `docs/py/viz/export/` (index/html/gltf/video-image) + nav + use-case snapshot entries | Done |
+
+Open follow-ups:
+
+- **Use-case routing in `index.md` (Phase 6).** A standalone
+  `workflow-overview.md` decision tree was replaced with a compact nested list
+  above the `docs/py/viz/index.md` Topics table. It routes readers by
+  environment — notebook vs. Python script — then one-off vs. performance →
+  interactive, with animation vs. no-animation under one-off/performance.
+  `VisualizerApp` is positioned as the target for **interactive** use cases, and
+  each branch links to the page/pattern that covers it.
+- **Docs/examples performance framing.** `auto_clear` is a *second* way to run
+  a frame loop — next to pre-creating objects with `viz(...)` and updating them
+  in place. It is concise for **quick, short scripts** but **less performant**
+  (per-frame remove/recreate). `animation.md` already calls the update-in-place
+  pattern "the most efficient, allocation-free loop"; the use-case pages and
+  the animation notebook now state this trade-off explicitly, and
+  `use-cases-scripts.md`/`use-cases-notebooks.md` both carry complete
+  `auto_clear` examples.
+- **`auto_clear` scene-scoping test.** `VizSceneHandle.animate` passes
+  `auto_clear` through, but there is no dedicated test that `auto_clear`
+  respects a named `scene_name` (the Phase 2 checklist item is only covered
+  indirectly).
+- **Export docs split (Phase 8).** `docs/py/viz/export.md` was split into an
+  `export/` subsection with separate `index.md`, `html.md`, `gltf.md`, and
+  `video-image.md` pages. The `mkdocs.yml` nav now nests them under
+  Visualization. The use-case routing list in `docs/py/viz/index.md` gained
+  **Static snapshot** branches (single snapshot + animation recording) for both
+  scripts and notebooks; Jupyter single snapshots use `display_snapshot()`.
+  `docs/index.md`, `camera.md`, `styles.md`, and `use-cases-scripts.md`
+  references were updated, and the old `export.md` was removed.
+- **`docs/py/index.md` GA-only restructure (Phase 7).** `mkdocs.yml` was
+  manually restructured so **Visualization** is its own top-level section
+  (with `py/viz/index.md` as its overview) and `docs/py/index.md` is the
+  **Geometric Algebra** overview. `docs/py/index.md` now introduces only the
+  geometric algebra part (algebra, basis, blade-mask, expression, geometry,
+  matrix, solver, tensors) — the "3D & 2D Visualizer" topics-table row, the
+  "2D + 3D algebras" `Visualizer` note, and the Three.js viewer intro were
+  removed, and the intro now points to the Visualization section.
+
+## Background (current behaviour)
+
+- `Visualizer.animate(*, fps, stop_key, stop_modifiers, scene_name)` yields once
+  per frame and paces to `fps`, but never flushes. Users are expected to call
+  `flush()` themselves (per `docs/py/viz/animation.md`), which is easy to forget.
+- `viz.add(...)` allocates a fresh 8-char UUID id on every call
+  (`Scene.add` → `_generate_id()`), so a loop that calls `add()` per frame keeps
+  every frame's objects in the scene.
+- `Scene.flush()` pops removed ids from `_objects`/`_nodes` and clears
+  `_removed_ids`; `Scene.remove(id)` marks an id for removal (cascading to node
+  descendants) and is flushed on the next `flush()`. `_objects` keys therefore
+  are the authoritative set of *live* objects (scene entities **and** overlay
+  labels) after a flush.
+- `viz.new(...)` returns a `VizObjectRef` whose `.entity` setter marks the node
+  dirty (so `flush()` sends only changed entities). `VizObjectRef` has no
+  `__call__`; `Visualizer` has none either.
+
+## Design decisions
+
+### 1. `animate(auto_clear=False)`
+
+State lives in the generator frame (a local variable), **not** on the
+`Visualizer`, so each `animate()` call gets its own baseline and there is no
+cross-call leakage — this also sidesteps the "each context manager call creates
+a new context" concern that motivated the `viz.block()` idea (we are *not*
+adding `viz.block()`).
+
+At the top of every iteration, only when `auto_clear=True`:
+
+1. `flush()` the target scene (push the previous frame's dirty state → fixes
+   "no show").
+2. On the first iteration, capture `baseline = set(scene._objects.keys())`.
+3. On later iterations, `scene.remove(id)` for every live id not in `baseline`
+   (marks for removal; flushed together with the frame's additions).
+
+Pseudo-diff in the generator body:
+
+```python
+baseline: set[str] | None = None
+while not self.interrupted(scene_name):
+    if auto_clear:
+        self._flush_scene(scene_name)
+        scene = self._scenes[scene_name]
+        current = set(scene._objects.keys())
+        if baseline is None:
+            baseline = current
+        else:
+            for oid in current - baseline:
+                scene.remove(oid)
+    now = time.monotonic()
+    yield now - prev
+    prev = now
+    ...
+```
+
+- `baseline is None` (not "empty set") distinguishes "not captured yet" from a
+  legitimately empty scene.
+- Diffing `_objects` keys covers entities **and** their labels in one pass
+  (labels are overlay objects stored in the same dict), so `viz.add(..., label=...)`
+  inside the loop cleans up fully.
+- `baseline` is captured *before* the first body runs → anything added before
+  the loop persists; everything added inside the loop is cleared each frame.
+- Plumb `auto_clear` through `VizSceneHandle.animate()` (which delegates to
+  `self._viz.animate(..., scene_name=self._name)`).
+
+### 2. `Visualizer.__call__`
+
+```python
+def __call__(self, obj: VizInputType | None = None, **kwargs: Any) -> "VizObjectRef":
+    """``viz(obj, ...)`` is shorthand for :meth:`new`."""
+    return self.new(obj, **kwargs)
+```
+
+Returns a `VizObjectRef`, enabling the concise pattern:
+
+```python
+p = viz(Point(3, 0, 0), color="#ff4444")
+for dt in viz.animate(fps=30):
+    p.entity = Point(...)     # update in place
+    viz.flush()
+```
+
+### 3. Docs structure
+
+The use-case docs are organized around two primary axes — **environment**
+(notebook vs. plain Python script) and, within each, **short test vs.
+performance**, then **animation vs. no-animation**, then **interaction vs.
+no-interaction**.
+
+A compact **use-case routing list** in `docs/py/viz/index.md` (above the
+Topics table) walks readers through those axes and points each branch at the
+page that covers it:
+
+- **Jupyter vs. Python script**
+  - **one-off demo vs. performance**
+    - **animation vs. no animation**
+  - **interactive**
+
+`VisualizerApp` is the target for **interactive** use cases (managed lifecycle
++ controls + `animate()`/timeline); see `app.md`.
+
+The two use-case pages sit directly after the Overview in the `mkdocs.yml` nav,
+then the existing files follow (Jupyter stays last as the detailed reference):
+
+- `use-cases-scripts.md` — interactive / animation / export in plain scripts.
+- `use-cases-notebooks.md` — interactive (re-run), animation, export in notebooks.
+- `app.md` — `VisualizerApp` (most flexible: controls + lifecycle).
+
+The animation sections present **two ways to run a frame loop** and state when
+to pick each:
+
+1. **Pre-create + update in place** — `viz(...)` once, then `.entity = ...`
+   each frame. The **performant** default: objects are allocated once and only
+   dirty entities are serialized. Recommended for real-time/long-running loops.
+2. **`animate(auto_clear=True)`** — `viz(...)`/`add(...)` fresh objects each
+   frame; the loop flushes then removes the previous frame's objects. Concise
+   and ideal for **quick, short scripts** and one-off demos, but **less
+   performant** than updating in place (per-frame remove/recreate).
+
+Also update `index.md` (topic table + example links), `animation.md`
+(document `auto_clear` and `viz(...)`), `visualizer.md` (`viz(...)` shorthand),
+and `jupyter.md` (correct animation pattern).
+
+### 4. Notebook examples
+
+New subfolder `py/examples/jupyter/` with:
+
+- `interactive.ipynb` — context manager + idempotent `display()`.
+- `animation.ipynb` — the **two animation ways** side by side:
+  - Pattern A — pre-create with `viz(...)`, update `.entity` in place
+    (performant default).
+  - Pattern B — `animate(auto_clear=True)` with fresh objects each frame
+    (concise for quick short scripts; less performant).
+- `export.ipynb` — HTML / glTF / figure export from a notebook.
+
+## Files
+
+- Modify: `py/pytanga/viz/visualizer.py` (`animate(auto_clear=...)`, `__call__`)
+- Modify: `py/pytanga/viz/_scene_handle.py` (`animate(auto_clear=...)` passthrough)
+- Tests: `py/tests/viz/test_scene_session.py` (or a new `test_auto_clear.py`)
+- Add docs: `docs/py/viz/use-cases-scripts.md`,
+  `docs/py/viz/use-cases-notebooks.md`, `docs/py/viz/app.md`
+- Modify docs: `mkdocs.yml`, `docs/py/index.md`, `docs/py/viz/index.md`,
+  `docs/py/viz/animation.md`, `docs/py/viz/visualizer.md`, `docs/py/viz/jupyter.md`
+- Add examples: `py/examples/jupyter/interactive.ipynb`, `animation.ipynb`, `export.ipynb`
+- Changelog: append to `docs/changelog/2026-08-22_fix-viz.md`
+
+## Steps
+
+### Phase 1 — `__call__` + `animate(auto_clear=...)`
+
+- [x] Add `Visualizer.__call__(obj, **kwargs)` → `self.new(obj, **kwargs)`.
+- [x] Add `auto_clear: bool = False` to `Visualizer.animate` and the
+      flush-first / baseline / diff-remove reconcile described above.
+- [x] Plumb `auto_clear` through `VizSceneHandle.animate()`.
+
+### Phase 2 — Tests
+
+- [x] `viz(point, color=...)` returns a `VizObjectRef` equal to `viz.new(...)`
+      and `.entity` updates mark the node dirty.
+- [x] `auto_clear`: baseline captured on first frame; objects added inside the
+      loop (incl. labels) are removed on the next frame; pre-loop objects persist;
+      an empty scene is handled; scoping respects `scene_name`.
+- [x] `auto_clear=False` (default) preserves existing `animate()` behaviour.
+
+### Phase 3 — Docs
+
+- [x] Add `use-cases-scripts.md`, `use-cases-notebooks.md`, `app.md`.
+- [x] Reorder/insert them in `mkdocs.yml` nav; update `index.md` topic table and
+      example links.
+- [x] Update `animation.md`, `visualizer.md`, `jupyter.md` for `auto_clear` and
+      the `viz(...)` shorthand.
+
+### Phase 4 — Notebook examples
+
+- [x] Add `py/examples/jupyter/interactive.ipynb`.
+- [x] Add `py/examples/jupyter/animation.ipynb`.
+- [x] Add `py/examples/jupyter/export.ipynb`.
+
+### Phase 5 — Changelog
+
+- [x] Append New Features bullets for `animate(auto_clear=...)` and `viz(...)`.
+
+### Phase 6 — Use-case routing in `index.md`
+
+- [x] Insert a compact nested list above the `docs/py/viz/index.md` Topics
+      table by environment (notebook vs. script) → one-off vs. performance →
+      interactive, with animation vs. no-animation under one-off/performance.
+- [x] Position `VisualizerApp` as the target for interactive use cases.
+- [x] Remove the standalone `workflow-overview.md` and its nav entry; link each
+      branch to its use-case page/pattern inline.
+
+### Phase 7 — `docs/py/index.md` GA-only restructure
+
+- [x] Re-scope `docs/py/index.md` to introduce only the geometric algebra part
+      (algebra, basis, blade-mask, expression, geometry, matrix, solver,
+      tensors) and remove the visualizer overview — the "3D & 2D Visualizer"
+      topics-table row, the "2D + 3D algebras" `Visualizer` note, and the
+      Three.js viewer intro text — pointing readers to the Visualization
+      section (`py/viz/index.md`) instead.
+
+### Phase 8 — Export docs split
+
+- [x] Split `docs/py/viz/export.md` into `docs/py/viz/export/` with
+      `index.md` (overview + topics), `html.md` (standalone + animated + figure),
+      `gltf.md` (binary glTF), and `video-image.md` (PNG screenshots + MP4
+      video via `ffmpeg`).
+- [x] Nest the four pages under Visualization in `mkdocs.yml` nav.
+- [x] Add **Static snapshot** branches (single snapshot + animation recording)
+      to the use-case routing list in `docs/py/viz/index.md` for both scripts
+      (`export_snapshot`) and notebooks (`display_snapshot`).
+- [x] Update `docs/index.md`, `camera.md`, `styles.md`, `use-cases-scripts.md`
+      references; remove the old `export.md`.
+
+## Notes / edge cases
+
+- **Flush ordering matters.** Flush *before* removing so the previous frame's
+  additions actually appear; with a body `flush()` the removal rides along with
+  the next frame's additions (no one-frame lag).
+- **Groups are not covered.** The diff uses `_objects` (scene entities + labels).
+  Group nodes created via `add_group` inside the loop are out of scope; document
+  that `add()`/`new()` entities are the supported case.
+- **Body `flush()` still recommended.** Even with the top-of-loop flush, a final
+  `flush()` in the body guarantees the last frame is pushed before the loop ends.
+- **`__call__` vs `add`.** `viz(...)` returns a `VizObjectRef` (like `new`), not
+  a `str` id (like `add`). Document this distinction.

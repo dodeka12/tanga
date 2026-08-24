@@ -71,7 +71,7 @@ Legend for the two change categories:
   `pga2.line(nx=1, ny=0, d=2)`, `line_x`/`line_y`, `pga2.point(2, 3)` —
   **removed**.
 - **Changes:** replace with `geometry.create_entity(pga2, Point/Direction/Line(...))`
-  or raw `pga2("...")`; keep the grade tables and the correct `e0`/`e0_inv`
+  or raw `pga2("...")`; keep the grade tables and the correct `e0`/`e0_recip`
   naming (already correct).
 
 ### `basis/basis_pga3.md`

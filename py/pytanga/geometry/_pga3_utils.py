@@ -44,9 +44,9 @@ def _get_e0(alg: Algebra) -> MV:
 def _get_e0_coeff(mv: MV) -> float:
     """Extract the e₀ coefficient from a grade‑1 IPNS vector.
 
-    Uses the algebraic identity ⟨e₀ · e0_inv⟩₀ = 1, so::
+    Uses the algebraic identity ⟨e₀ · e0_recip⟩₀ = 1, so::
 
-        α = ⟨mv · e0_inv⟩₀
+        α = ⟨mv · e0_recip⟩₀
 
     On ``BasisPGA3`` instances this is exactly the coefficient of the
     e₀ component.  For other algebras the correct dual vector is
@@ -56,8 +56,8 @@ def _get_e0_coeff(mv: MV) -> float:
         The e₀ coefficient of the grade‑1 portion of *mv*.
     """
     alg = mv.algebra
-    if hasattr(alg, "e0_inv"):
-        e0_inv = alg.e0_inv
+    if hasattr(alg, "e0_recip"):
+        e0_recip = alg.e0_recip
     else:
-        e0_inv = alg.multivector({EP: 0.5, EM: -0.5})
-    return float(mv.sp(e0_inv))
+        e0_recip = alg.multivector({EP: 0.5, EM: -0.5})
+    return float(mv.sp(e0_recip))

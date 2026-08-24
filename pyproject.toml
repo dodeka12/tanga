@@ -57,9 +57,10 @@ packages = ["py/pytanga"]
 dev = [
     "mike>=2.0",
     "mkdocs-material>=9.7.7",
+    "mkdocs-jupyter>=0.25",
     "pre-commit>=4.3",
     "pytest>=9.1.1",
-    "ruff>=0.14.0",
+    "ruff==0.14.0",
     "tanga-py[compile,examples,galgebra]",
     "twine>=6.0",
 ]

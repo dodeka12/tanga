@@ -25,7 +25,7 @@ function isCylinderStyle(ent) {
     return !!(ent.style && ent.style.style_type === 'CylinderLineStyle');
 }
 
-function resolveLength(ent) {
+function resolveLineLength(ent) {
     // `0` is the "infinite line" sentinel → fall back to the style default.
     return ent.length ? ent.length : styleParam(ent, 'length', 20.0);
 }
@@ -33,7 +33,7 @@ function resolveLength(ent) {
 export function createLine(ent) {
     const color = parseColor(ent, '#44ff44');
     const opacity = styleParam(ent, 'opacity', 0.8);
-    const length = resolveLength(ent);
+    const length = resolveLineLength(ent);
     const origin = ent.origin || [0, 0, 0];
     const dir = ent.direction || [1, 0, 0];
 
@@ -65,9 +65,9 @@ export function updateLine(mesh, ent, prev) {
     // Switching between fat-line and cylinder rendering requires a rebuild.
     if (prev && isCylinderStyle(ent) !== isCylinderStyle(prev)) return false;
 
-    const length = resolveLength(ent);
+    const length = resolveLineLength(ent);
     // A length change alters the segment geometry; cheaper to rebuild.
-    if (prev && !approxEqual(length, resolveLength(prev))) return false;
+    if (prev && !approxEqual(length, resolveLineLength(prev))) return false;
 
     const origin = ent.origin || prev?.origin || [0, 0, 0];
     const dir = ent.direction || prev?.direction || [1, 0, 0];

@@ -37,10 +37,14 @@ class BasisPGA2(Algebra):
 
     Attributes:
         e0: The Gunn/Dorst null vector (embedding: ep + em).
-        e0_inv: Inverse of e0 (embedding: 0.5·ep − 0.5·em).
+        e0_recip: Reciprocal of e0 (embedding: 0.5·ep − 0.5·em).
         e1, e2: Euclidean basis vectors.
         ep, em: Internal 4D embedding vectors (private; prefer e0).
     """
+
+    # User-facing meet/join follow the Gunn/Dorst convention
+    # (meet = intersection ∧, join = union/span ∨).
+    _swap_meet_join: bool = True
 
     # Blade bitmask IDs (dim=4: e₁=1, e₂=2, ep=4, em=8)
     E1: int = 1
@@ -66,24 +70,20 @@ class BasisPGA2(Algebra):
     #   J(e₂)    = e₀₁         J(e₀₁)   = -e₂
 
     _DUAL_MAP: dict[int, dict[int, float]] = {
-        # Grade 0 (scalar)
-        0: {7: 1.0, 11: 1.0},  # J(1) = I₃ = ep∧e₁₂ + em∧e₁₂
-        # Grade 1 — pure Euclidean lines
-        1: {6: -1.0, 10: -1.0},  # J(e₁) = -e₀₂
-        2: {5: 1.0, 9: 1.0},  # J(e₂) = e₀₁
-        # Grade 1 — e₀ halves (ep, em)
-        4: {3: -0.5},  # J(ep) = J(e₀)/2 = -e₁₂/2
-        8: {3: -0.5},  # J(em) = J(e₀)/2 = -e₁₂/2
-        # Grade 2 — pure Euclidean bivector
-        3: {4: -1.0, 8: -1.0},  # J(e₁₂) = -e₀  (PGA4CS convention)
-        # Grade 2 — vanishing line halves
-        5: {2: 0.5},  # J(ep∧e₁) = e₂/2
-        9: {2: 0.5},  # J(em∧e₁) = e₂/2
-        6: {1: -0.5},  # J(ep∧e₂) = -e₁/2
-        10: {1: -0.5},  # J(em∧e₂) = -e₁/2
-        # Grade 3 — pseudoscalar halves
-        7: {0: 0.5},  # J(ep∧e₁₂) = 1/2
-        11: {0: 0.5},  # J(em∧e₁₂) = 1/2
+        # Bitmask IDs encode blades with ep/em last (e.g. 7 = e₁₂∧ep).
+        # PGA blades below are written with e₀ = ep + em first.
+        0: {7: 1.0, 11: 1.0},  # J(1)    = I₃ = e₀₁₂ = e₁₂∧ep + e₁₂∧em
+        1: {6: 1.0, 10: 1.0},  # J(e₁)   = -e₀₂ = e₂∧ep + e₂∧em
+        2: {5: -1.0, 9: -1.0},  # J(e₂)   = e₀₁ = -(e₁∧ep + e₁∧em)
+        4: {3: 0.5},  # J(ep) = e₁₂/2
+        8: {3: 0.5},  # J(em) = e₁₂/2
+        3: {4: 1.0, 8: 1.0},  # J(e₁₂) = e₀
+        5: {2: -0.5},  # J(e₁∧ep) = -e₂/2
+        9: {2: -0.5},  # J(e₁∧em) = -e₂/2
+        6: {1: 0.5},  # J(e₂∧ep) = e₁/2
+        10: {1: 0.5},  # J(e₂∧em) = e₁/2
+        7: {0: 0.5},  # J(e₁₂∧ep) = 1/2
+        11: {0: 0.5},  # J(e₁₂∧em) = 1/2
     }
 
     def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
@@ -95,8 +95,8 @@ class BasisPGA2(Algebra):
         self.em = mv({self.EM: 1})  # internal — e4
         # e0 = ep + em — the Gunn/Dorst null vector
         self.e0 = mv({self.EP: 1.0, self.EM: 1.0})
-        # e0_inv = 0.5·ep − 0.5·em  →  ⟨e0·e0_inv⟩₀ = 1
-        self.e0_inv = mv({self.EP: 0.5, self.EM: -0.5})
+        # e0_recip = 0.5·ep − 0.5·em  →  ⟨e0·e0_recip⟩₀ = 1
+        self.e0_recip = mv({self.EP: 0.5, self.EM: -0.5})
 
     # ── PGA‑specific dual ─────────────────────────────────────────
 
@@ -106,7 +106,9 @@ class BasisPGA2(Algebra):
         Overrides ``Algebra.dual()`` which computes ``★A = A·I⁻¹`` using
         the 4D pseudoscalar.  In PGA the 3D pseudoscalar ``I₃ = e₀∧e₁∧e₂``
         is null (``I₃² = 0``), so the metric dual does not exist.  Instead
-        we use a combinatorial complement map.
+        we use a combinatorial complement map that swaps each basis blade
+        with its index‑complement, satisfying ``e_A ∧ J(e_A) = +I₃`` for
+        every subspace blade.
 
         The 4D embedding ``e₀ = ep + em`` is handled by splitting each
         3D blade into halves.
@@ -121,8 +123,11 @@ class BasisPGA2(Algebra):
         return self.multivector(result)
 
     def undual(self, a: MV) -> MV:
-        """Inverse of the signed dual.  In PGA the J‑map is its own inverse,
-        so ``undual == dual``.
+        """Hodge undualization ``⋆⁻¹`` of the PGA complement dual.
+
+        In 3D PGA (2D Euclidean) the double Hodge dual is the identity
+        (Dorst §9.1: "no sign in even‑D"), so the J‑map is involutive and
+        ``undual == dual``.
         """
         return self.dual(a)
 
@@ -134,7 +139,7 @@ class BasisPGA2(Algebra):
 
         Each entry is ``(name, blade, pinv, blade_id | None)``.
         """
-        e0, e1, e2, e0i = self.e0, self.e1, self.e2, self.e0_inv
+        e0, e1, e2, e0i = self.e0, self.e1, self.e2, self.e0_recip
 
         def _entry(name, blade):
             pinv = self.blade_pseudo_inverse(blade)

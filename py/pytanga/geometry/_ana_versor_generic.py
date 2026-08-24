@@ -3,13 +3,13 @@
 
 """Generic versor analysis shared across PGA and N-algebras.
 
-The key trick ``bi.op(einf_like).ip(e0_inv_like)`` projects out null
+The key trick ``bi.op(einf_like).ip(e0_recip_like)`` projects out null
 bivectors, leaving the pure Euclidean bivector.  This works for both:
 
-- PGA:  ``einf_like = e0``,  ``e0_inv_like = e0_inv``
-- N:    ``einf_like = einf``, ``e0_inv_like = −eo``
+- PGA:  ``einf_like = e0``,  ``e0_recip_like = e0_recip``
+- N:    ``einf_like = einf``, ``e0_recip_like = −eo``
 
-because ``e0 = einf = ep+em`` and ``e0_inv = −eo = 0.5·ep − 0.5·em``.
+because ``e0 = einf = ep+em`` and ``e0_recip = −eo = 0.5·ep − 0.5·em``.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import math
 from typing import TYPE_CHECKING
 
 from .entities import Direction, Point
-from .operators import GeneralRotor, Motor, Rotor, Translator
+from .operators import GeneralRotor, Motor, Rotor, Translator, _motor_screw
 
 if TYPE_CHECKING:
     from pytanga.algebra._mv import MV
@@ -28,7 +28,7 @@ def ana_versor_generic(
     mv: MV,
     *,
     einf_like: MV,
-    e0_inv_like: MV,
+    e0_recip_like: MV,
     blade_order_sign: int = 1,
     is_2d: bool = False,
 ) -> Rotor | Translator | Motor | GeneralRotor:
@@ -40,8 +40,8 @@ def ana_versor_generic(
         The versor to analyze.
     einf_like : MV
         The null vector (e₀ in PGA, e∞ in N).
-    e0_inv_like : MV
-        The inverse/dual of the null vector (e₀⁻¹ in PGA, −eₒ in N).
+    e0_recip_like : MV
+        The reciprocal of the null vector (e₀_recip in PGA, −eₒ in N).
     blade_order_sign : int
         +1 for PGA (bivector form e0∧t), −1 for N (bivector form t∧einf).
         Applied to translation vector extraction.
@@ -55,7 +55,7 @@ def ana_versor_generic(
     q = mv.grade(4)
 
     # Project out null bivector parts → pure Euclidean bivector
-    bi_e = bi.op(einf_like).ip(e0_inv_like)
+    bi_e = bi.op(einf_like).ip(e0_recip_like)
     bi_e_mag = bi_e.mag
 
     q_mag = q.mag
@@ -77,18 +77,17 @@ def ana_versor_generic(
         if abs(t_s_val) < 1e-15:
             raise ValueError("Motor translation scalar is zero")
         t_bi = trans.grade(2)
-        tv = 2.0 * t_bi.ip(e0_inv_like) / t_s_val * blade_order_sign
+        tv = 2.0 * t_bi.ip(e0_recip_like) / t_s_val * blade_order_sign
 
-        return Motor(
-            rotor=Rotor(angle=angle, axis=axis),
-            translator=Translator(Direction(tv["e1"], tv["e2"], tv["e3"])),
-        )
+        t_dir = Direction(tv["e1"], tv["e2"], tv["e3"])
+        gen, trans = _motor_screw(angle, axis, t_dir)
+        return Motor(rotor=gen, translator=trans)
 
     # ── No Euclidean bivector → Translator ──
     if bi_e_mag < 1e-15:
         if abs(s_val) < 1e-15:
             raise ValueError("Zero scalar — not a valid versor")
-        tv = 2.0 * bi.ip(e0_inv_like) / s_val * blade_order_sign
+        tv = 2.0 * bi.ip(e0_recip_like) / s_val * blade_order_sign
         return Translator(Direction(tv["e1"], tv["e2"], tv["e3"]))
 
     # ── Angle + axis (shared by Rotor & GeneralRotor) ──
@@ -98,7 +97,7 @@ def ana_versor_generic(
     axis = _extract_axis(bi_e, is_2d)
 
     # ── Pure Rotor vs GeneralRotor ──
-    tb = bi.ip(e0_inv_like)  # null bivector part
+    tb = bi.ip(e0_recip_like)  # null bivector part
     if tb.mag < 1e-15:
         return Rotor(angle=angle, axis=axis)
 

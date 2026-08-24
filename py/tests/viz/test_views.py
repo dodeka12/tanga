@@ -1,0 +1,322 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""Tests for the declarative view/layout model (`views.py`)."""
+
+import pytest
+
+from pytanga.viz._size import Size
+from pytanga.viz.views import (
+    ButtonView,
+    DropdownView,
+    GroupView,
+    SceneView,
+    SliderView,
+    SpacerView,
+    SplitView,
+    StackView,
+    View,
+    iter_scene_names,
+    serialize_layout,
+)
+
+
+class _Handle:
+    """Minimal stand-in for a ``VizSceneHandle``/``Scene`` with a ``name``."""
+
+    name = "xyz"
+
+
+class TestViewBase:
+    def test_size_sets_both_preferred(self):
+        v = View(size=Size.px(250))
+        assert v.preferred_width == Size.px(250)
+        assert v.preferred_height == Size.px(250)
+
+    def test_size_does_not_override_explicit_preferred(self):
+        v = View(size=Size.px(250), preferred_width=Size.percent(50))
+        assert v.preferred_width == Size.percent(50)
+        assert v.preferred_height == Size.px(250)
+
+    def test_fixed_x(self):
+        assert View(min_width=Size.px(200), max_width=Size.px(200)).fixed_x
+
+    def test_not_fixed_x_when_only_min(self):
+        assert not View(min_width=Size.px(200)).fixed_x
+
+    def test_not_fixed_x_when_min_max_differ(self):
+        assert not View(min_width=Size.px(100), max_width=Size.px(200)).fixed_x
+
+    def test_fixed_y(self):
+        assert View(min_height=Size.px(100), max_height=Size.px(100)).fixed_y
+
+
+class TestSceneView:
+    def test_scene_from_string(self):
+        assert SceneView("main").scene == "main"
+
+    def test_scene_from_handle(self):
+        assert SceneView(_Handle()).scene == "xyz"
+
+    def test_scene_rejects_bare_object(self):
+        with pytest.raises(TypeError, match="scene name or handle"):
+            SceneView(object())
+
+    def test_default_min_size(self):
+        assert SceneView("main").min_width == Size.px(120)
+        assert SceneView("main").min_height == Size.px(120)
+
+    def test_min_override(self):
+        v = SceneView("main", min_width=Size.px(50))
+        assert v.min_width == Size.px(50)
+        assert v.min_height == Size.px(120)
+
+    def test_min_disable(self):
+        v = SceneView("main", min_width=None, min_height=None)
+        assert v.min_width is None
+        assert v.min_height is None
+
+    def test_overlay_serialize(self):
+        node = serialize_layout(SceneView("main", overlay=[GroupView("Actions")]))[
+            "root"
+        ]
+        assert node["scene"] == "main"
+        assert node["children"][0]["type"] == "group"
+        assert node["children"][0]["title"] == "Actions"
+
+    def test_no_overlay_omits_children(self):
+        node = serialize_layout(SceneView("main"))["root"]
+        assert "children" not in node
+
+    def test_camera_serialize(self):
+        from pytanga.viz.camera import CameraConfig3d
+
+        node = serialize_layout(
+            SceneView("main", camera=CameraConfig3d(position=(1, 2, 3), target=(0, 0, 0)))
+        )["root"]
+        assert node["camera"]["type"] == "3d"
+        assert node["camera"]["position"] == [1.0, 2.0, 3.0]
+        assert node["camera"]["target"] == [0.0, 0.0, 0.0]
+
+    def test_camera_normalizes_view_config(self):
+        from pytanga.viz.camera import View3dConfig
+
+        v = SceneView(
+            "main",
+            camera=View3dConfig(point=(0, 0, 0), normal=(0, 0, 1), extent_u=2, extent_v=2),
+        )
+        assert v.camera.type == "3d"
+        assert v.camera.position is not None
+        assert v.camera.target == (0.0, 0.0, 0.0)
+
+    def test_no_camera_omits_key(self):
+        node = serialize_layout(SceneView("main"))["root"]
+        assert "camera" not in node
+
+    def test_auto_id_assigned_and_serialized(self):
+        v = SceneView("main")
+        assert isinstance(v.id, str) and v.id
+        assert serialize_layout(v)["root"]["id"] == v.id
+
+    def test_explicit_id(self):
+        v = SceneView("main", id="top")
+        assert v.id == "top"
+        assert serialize_layout(v)["root"]["id"] == "top"
+
+    def test_auto_ids_unique(self):
+        assert SceneView("a").id != SceneView("b").id
+
+
+class TestGroupView:
+    def test_defaults(self):
+        g = GroupView("Actions")
+        assert g.title == "Actions"
+        assert g.direction == "vertical"
+        assert g.position is None
+        assert g.collapsed is False
+        assert g.children == []
+
+    def test_children_and_options(self):
+        g = GroupView(
+            "Actions",
+            [SpacerView()],
+            direction="horizontal",
+            position="bottom-right",
+            collapsed=True,
+        )
+        assert g.direction == "horizontal"
+        assert g.position == "bottom-right"
+        assert g.collapsed is True
+        assert len(g.children) == 1
+
+    def test_serialize(self):
+        node = serialize_layout(GroupView("Actions", [SpacerView()]))["root"]
+        assert node["type"] == "group"
+        assert node["title"] == "Actions"
+        assert node["direction"] == "vertical"
+        assert node["position"] is None
+        assert node["collapsed"] is False
+        assert node["children"][0]["type"] == "spacer"
+
+
+class TestControlViews:
+    def test_slider_serialize(self):
+        s = SliderView("s1", label="Radius", min=0.0, max=5.0, step=0.1, default=2.0)
+        node = serialize_layout(s)["root"]
+        assert node["type"] == "slider_view"
+        assert node["id"] == "s1"
+        assert node["label"] == "Radius"
+        assert node["min"] == 0.0
+        assert node["max"] == 5.0
+        assert node["step"] == 0.1
+        assert node["default"] == 2.0
+
+    def test_slider_default_defaults_to_min(self):
+        assert SliderView("s1", min=1.0, max=3.0).default == 1.0
+
+    def test_button_serialize(self):
+        node = serialize_layout(ButtonView("b1", label="Go"))["root"]
+        assert node["type"] == "button_view"
+        assert node["id"] == "b1"
+        assert node["label"] == "Go"
+
+    def test_dropdown_serialize(self):
+        node = serialize_layout(
+            DropdownView("d1", label="Mode", options=["a", "b"], default="a")
+        )["root"]
+        assert node["type"] == "dropdown_view"
+        assert node["options"] == ["a", "b"]
+        assert node["default"] == "a"
+
+
+class TestStackView:
+    def test_direction_validation(self):
+        with pytest.raises(ValueError, match="direction"):
+            StackView("diagonal")
+
+    def test_allows_empty_children(self):
+        assert StackView("vertical").children == []
+
+    def test_serialize(self):
+        node = serialize_layout(
+            StackView("horizontal", [SpacerView(), SpacerView()])
+        )["root"]
+        assert node["type"] == "stack"
+        assert node["direction"] == "horizontal"
+        assert len(node["children"]) == 2
+        assert node["children"][0]["type"] == "spacer"
+
+
+class TestSplitView:
+    def test_requires_two_children(self):
+        with pytest.raises(ValueError, match="at least 2"):
+            SplitView("horizontal", [SceneView("a")])
+
+    def test_bad_orientation(self):
+        with pytest.raises(ValueError, match="orientation"):
+            SplitView("diagonal", [SceneView("a"), SceneView("b")])
+
+    def test_sizes_length_mismatch(self):
+        with pytest.raises(ValueError, match="sizes must match"):
+            SplitView(
+                "horizontal",
+                [SceneView("a"), SceneView("b")],
+                sizes=[Size.px(1)],
+            )
+
+
+class TestSerialize:
+    def test_scene_view_shape(self):
+        data = serialize_layout(SceneView("main"), name="demo")
+        assert data["type"] == "view_layout"
+        assert data["name"] == "demo"
+        node = data["root"]
+        assert node["type"] == "scene_view"
+        assert node["scene"] == "main"
+        assert node["min_width"] == {"value": 120.0, "unit": "px"}
+        assert node["min_height"] == {"value": 120.0, "unit": "px"}
+        assert node["preferred_width"] is None
+
+    def test_nested_split_shape(self):
+        layout = SplitView(
+            orientation="horizontal",
+            children=[
+                SceneView("main"),
+                SplitView(
+                    orientation="vertical",
+                    sizes=[Size.percent(70), Size.percent(30)],
+                    children=[
+                        SceneView("side"),
+                        GroupView("Controls"),
+                    ],
+                ),
+            ],
+        )
+        root = serialize_layout(layout)["root"]
+
+        assert root["type"] == "split"
+        assert root["orientation"] == "horizontal"
+        assert root["movable"] is None
+        assert root["sizes"] == [None, None]
+
+        assert root["children"][0]["type"] == "scene_view"
+        assert root["children"][0]["scene"] == "main"
+
+        inner = root["children"][1]
+        assert inner["orientation"] == "vertical"
+        assert inner["sizes"] == [
+            {"value": 70.0, "unit": "%"},
+            {"value": 30.0, "unit": "%"},
+        ]
+        assert inner["children"][0]["type"] == "scene_view"
+        assert inner["children"][0]["scene"] == "side"
+        assert inner["children"][1]["type"] == "group"
+        assert inner["children"][1]["title"] == "Controls"
+
+    def test_ids_are_unique_and_deterministic(self):
+        layout = SplitView("horizontal", [SceneView("a"), SceneView("b"), SpacerView()])
+        first = serialize_layout(layout)["root"]
+        second = serialize_layout(layout)["root"]
+        ids = [first["id"]] + [c["id"] for c in first["children"]]
+        assert len(ids) == len(set(ids))
+        assert [c["id"] for c in first["children"]] == [
+            c["id"] for c in second["children"]
+        ]
+
+    def test_size_fields_serialize(self):
+        node = serialize_layout(View(min_width=Size.px(100), max_width=Size.px(100)))[
+            "root"
+        ]
+        assert node["min_width"] == {"value": 100.0, "unit": "px"}
+        assert node["max_width"] == {"value": 100.0, "unit": "px"}
+        assert node["min_height"] is None
+
+
+class TestIterSceneNames:
+    def test_dedup_and_order(self):
+        layout = SplitView(
+            "horizontal",
+            [
+                SceneView("main"),
+                SplitView(
+                    "vertical",
+                    [
+                        SceneView("side"),
+                        SceneView("main"),  # duplicate reference
+                        SceneView("extra"),
+                    ],
+                ),
+            ],
+        )
+        assert iter_scene_names(layout) == ["main", "side", "extra"]
+
+    def test_recurses_into_stack_and_overlay(self):
+        layout = StackView(
+            "vertical",
+            [
+                SceneView("a"),
+                GroupView("g", [ButtonView("b1")]),
+                SceneView("b", overlay=[GroupView("g2", [SliderView("s1")])]),
+            ],
+        )
+        assert iter_scene_names(layout) == ["a", "b"]

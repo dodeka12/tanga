@@ -183,16 +183,19 @@ def test_meet_with_pseudoscalar(e3):
     pseudoscalar = e3.I
 
     m = bivec.meet(pseudoscalar)
-    assert (m - bivec).mag < 1e-8 or (m + bivec).mag < 1e-8, \
+    assert (m - bivec).mag < 1e-8 or (m + bivec).mag < 1e-8, (
         "Meet(e1^e2, I) should be e1^e2 (up to sign)"
+    )
 
     m = pseudoscalar.meet(bivec)
-    assert (m - bivec).mag < 1e-8 or (m + bivec).mag < 1e-8, \
+    assert (m - bivec).mag < 1e-8 or (m + bivec).mag < 1e-8, (
         "Meet(I, e1^e2) should be e1^e2 (up to sign)"
+    )
 
     m = pseudoscalar.meet(pseudoscalar)
-    assert (m - pseudoscalar).mag < 1e-8 or (m + pseudoscalar).mag < 1e-8, \
+    assert (m - pseudoscalar).mag < 1e-8 or (m + pseudoscalar).mag < 1e-8, (
         "Meet(I, I) should be I (up to sign)"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -448,13 +451,13 @@ def test_factorize_versor_motor_n3(n3):
     also round-trips: its factors reconstruct it up to scale.
     """
     from pytanga.geometry.create_n3 import create_motor
-    from pytanga.geometry.entities import Direction
-    from pytanga.geometry.operators import Motor, Rotor, Translator
+    from pytanga.geometry.entities import Direction, Point
+    from pytanga.geometry.operators import GeneralRotor, Translator
 
     # Translation along the rotation axis (z) keeps the grade-4 part non-zero.
     motor = create_motor(
         n3,
-        Rotor(angle=0.7, axis=Direction(0, 0, 1)),
+        GeneralRotor(angle=0.7, axis=Direction(0, 0, 1), origin=Point(0, 0, 0)),
         Translator(vector=Direction(0, 0, 1)),
     )
     assert sorted(motor.grades) == [0, 2, 4]

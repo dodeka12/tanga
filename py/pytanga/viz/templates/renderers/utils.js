@@ -302,9 +302,27 @@ export function applyStyleUpdate(mesh, ent) {
  */
 export function entityRequiresRebuild(ent, prev) {
     if (ent.kind === 'PointPath') return true;
+    // Axes/grids are drawn fresh (axis line + CSS2D value labels; many grid
+    // segments) and their geometry derives from many fields, so rebuild whenever
+    // their content changes — e.g. a live time axis whose ticks move each frame.
+    if (ent.kind === 'Axis' || ent.kind === 'Axes2D' || ent.kind === 'Axes3D') return true;
+    if (ent.kind === 'Grid') return true;
     if (ent.radius !== undefined && (!prev || !approxEqual(ent.radius, prev.radius))) return true;
+    if (ent.alignCenter !== undefined && (!prev || !approxEqual(ent.alignCenter, prev.alignCenter))) return true;
     if (ent.extent !== undefined && (!prev || !approxEqual(ent.extent, prev.extent))) return true;
     if (ent.length !== undefined && (!prev || !approxEqual(ent.length, prev.length))) return true;
+    if (ent.tubeRadius !== undefined && (!prev || !approxEqual(ent.tubeRadius, prev.tubeRadius))) return true;
+    if (ent.angle !== undefined && (!prev || !approxEqual(ent.angle, prev.angle))) return true;
+    if (ent.span_u !== undefined || ent.span_v !== undefined) {
+        const a = JSON.stringify([ent.span_u ?? null, ent.span_v ?? null]);
+        const b = JSON.stringify([prev?.span_u ?? null, prev?.span_v ?? null]);
+        if (!prev || a !== b) return true;
+    }
+    if (ent.arrow !== undefined) {
+        const a = JSON.stringify(ent.arrow ?? null);
+        const b = JSON.stringify(prev?.arrow ?? null);
+        if (!prev || a !== b) return true;
+    }
     if (ent.kind !== undefined && ent.kind !== prev?.kind) return true;
     return false;
 }
@@ -341,6 +359,55 @@ export function createArrow(color, opacity, vec, length, origin) {
         new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d)
     );
     g.position.set(origin[0], origin[1], origin[2]);
+    return g;
+}
+
+
+/**
+ * Build the shared rotor visualization (disc arc, outer torus, and axis line)
+ * in local coordinates with the rotation axis along local +Z. Callers rotate
+ * and position the returned group.
+ */
+export function buildRotorVisual(color, opacity, lineWidth, angle, discRadius) {
+    const col = typeof color === 'string' ? new THREE.Color(color) : color;
+    const dr = discRadius;
+    const absA = Math.abs(angle);
+    const segs = Math.max(8, Math.ceil(absA / (Math.PI / 32)));
+    const g = new THREE.Group();
+
+    // Disc arc swept by the rotation angle
+    g.add(
+        new THREE.Mesh(
+            new THREE.RingGeometry(dr * 0.15, dr, segs, 1, 0, absA),
+            new THREE.MeshBasicMaterial({
+                color: col,
+                opacity: opacity * 0.8,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+            })
+        )
+    );
+
+    // Outer torus (full circle)
+    g.add(
+        new THREE.Mesh(
+            new THREE.TorusGeometry(dr, 0.03, 16, 64),
+            makeMaterial(col, opacity * 0.5)
+        )
+    );
+
+    // Axis line
+    const al = dr * 1.6;
+    g.add(
+        makeFatLine(
+            [new THREE.Vector3(0, 0, -al), new THREE.Vector3(0, 0, al)],
+            col,
+            opacity,
+            lineWidth
+        )
+    );
+
     return g;
 }
 

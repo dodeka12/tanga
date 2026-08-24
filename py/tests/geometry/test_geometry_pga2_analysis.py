@@ -25,7 +25,6 @@ from pytanga.geometry.operators import (
     ReflectionPoint,
     Rotor,
     Translator,
-    TripleReflection,
 )
 
 
@@ -72,6 +71,22 @@ def test_entity_space_round_trip(b):
     r = analyze_entity(mv)
     assert isinstance(r, Space)
     assert r.scale == pytest.approx(3.0)
+
+
+def test_meet_join_pga2_convention(b):
+    """PGA2 meet = intersection, join = union/span (Gunn/Dorst)."""
+    p1 = create_entity(b, Point(1, 0, 0))
+    p2 = create_entity(b, Point(0, 1, 0))
+    # join of two points is the connecting line (grade 1)
+    assert p1.join(p2).grades == [1]
+    # meet of two points is the empty intersection (outer product → zero)
+    assert p1.meet(p2).is_zero
+    # meet of two lines is their intersection point (grade 2)
+    l1 = create_entity(b, Line(Point(0, 0, 0), Direction(1, 0, 0)))
+    l2 = create_entity(b, Line(Point(0, 0, 0), Direction(0, 1, 0)))
+    assert l1.meet(l2).grades == [2]
+    # join of two intersecting lines is degenerate (zero)
+    assert l1.join(l2).is_zero
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -153,7 +168,9 @@ def test_operator_reflection_point_origin_round_trip(b):
     """O5: create ReflectionPoint(0,0,0) -> analyze -> assert."""
     mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
-    assert isinstance(r, ReflectionPoint), f"Expected ReflectionPoint, got {type(r).__name__}"
+    assert isinstance(r, ReflectionPoint), (
+        f"Expected ReflectionPoint, got {type(r).__name__}"
+    )
 
 
 def test_operator_general_rotor_round_trip(b):
@@ -172,7 +189,6 @@ def test_operator_general_rotor_round_trip(b):
     assert r.axis.z == pytest.approx(1)
     assert r.origin.x == pytest.approx(1)
     assert r.origin.y == pytest.approx(0)
-
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -218,8 +234,8 @@ def test_apply_motor_point_motion(b):
 def test_apply_reflection_point_origin_reflection(b):
     """A5: ReflectionPoint(0,0,0) on (5,-3,0) -> Point(-5,3,0)."""
     p = create_entity(b, Point(5, -3, 0))
-    O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
-    pt = O * p * O.rev()
+    op_mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
+    pt = op_mv * p * op_mv.rev()
     r = analyze_entity(pt)
     assert isinstance(r, Point)
     assert r.x == pytest.approx(-5)
@@ -267,4 +283,3 @@ def test_apply_reflection_line_point_mirror_x(b):
     assert isinstance(r, Point)
     assert r.x == pytest.approx(3, abs=1e-6)
     assert r.y == pytest.approx(-1, abs=1e-6)
-

@@ -27,6 +27,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
+from ._notebook_cell import current_cell_id, execution_token
 from ._props import _normalize_color
 from ._scene_handle import VizSceneHandle
 from ._style_dict import (
@@ -46,6 +47,7 @@ from .camera import (
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
+from .views import SceneView, View, serialize_layout
 
 logger = logging.getLogger("tanga.viz")
 
@@ -115,6 +117,10 @@ class Visualizer(_JupyterDisplayMixin):
         # each scene.  Independent of the server and fully authoritative.
         add_default_axes: bool = True,
         add_default_grid: bool = True,
+        # When True, enable the browser-triggered full-server stop key
+        # (Ctrl+Q by default) for the main scene only.  Named scenes opt in via
+        # ``VizSceneHandle.enable_server_stop_key()``.
+        enable_server_stop_key: bool = False,
     ) -> None:
         if space_dim is None:
             space_dim = _deduce_space_dim(camera) or 3
@@ -147,11 +153,15 @@ class Visualizer(_JupyterDisplayMixin):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._atexit_registered = False
+        self._display_pending: set[str] = set()
+        self._display_execution: int | None = None
 
         # Interrupt handling: a global shutdown event (terminal Ctrl+C/SIGTERM)
         # plus lazily-created per-scene events (browser-side stop key).
         self._interrupt_events: dict[str, threading.Event] = {}
         self._scene_interrupt_configs: dict[str, dict[str, Any]] = {}
+        # Per-scene browser-triggered full-server stop bindings (opt-in).
+        self._server_stop_configs: dict[str, dict[str, Any]] = {}
 
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
@@ -181,20 +191,44 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes[""] = Scene(
             self._config, name="", styles=self._global_styles.copy()
         )
+        # ── Split-view layouts ──
+        # Key "" is the default layout (shown at "/?view=").
+        self._layouts: dict[str, View] = {}
+        self._layouts_serialized: dict[str, dict[str, Any]] = {}
+        # Control ids registered by the currently-registered layout, so they can
+        # be unregistered cleanly when the layout is overwritten.
+        self._layout_control_ids: set[str] = set()
+
         self._default_objects_added: set[str] = set()
 
         # Seed default axes/grid immediately — independent of server start.
         self._add_default_scene_objects("")
 
+        # Opt-in browser-triggered server stop for the main scene.
+        if enable_server_stop_key:
+            self.enable_server_stop_key()
+
     # ── Scene access ─────────────────────────────────────────
 
-    def scene(self, name: str) -> VizSceneHandle:
+    def scene(
+        self,
+        name: str,
+        *,
+        enable_server_stop_key: bool = False,
+    ) -> VizSceneHandle:
         """Get or create a named scene, returning a :class:`VizSceneHandle`.
 
         The handle exposes the full entity/control/animation API scoped to
         that scene.  Scenes inherit the visualizer's default styles.
 
         Names may contain slashes for grouping, e.g. ``"slides/intro"``.
+
+        Args:
+            name: Scene name (URL-path-friendly).
+            enable_server_stop_key: When ``True``, enable the
+                browser-triggered full-server stop key (Ctrl+Q) for this
+                scene, equivalent to calling
+                ``viz.scene(name).enable_server_stop_key()`` afterward.
         """
         if name not in self._scenes:
             cfg = SceneConfig(
@@ -208,6 +242,10 @@ class Visualizer(_JupyterDisplayMixin):
                 cfg, name=name, styles=self._global_styles.copy()
             )
             self._add_default_scene_objects(name)
+        if enable_server_stop_key:
+            self._set_server_stop_key(
+                name, enabled=True, key="q", modifiers=[KeyModifier.CTRL]
+            )
         return VizSceneHandle(self, name)
 
     @property
@@ -227,6 +265,40 @@ class Visualizer(_JupyterDisplayMixin):
     def list_scenes(self) -> list[str]:
         """Return all scene names (main scene is ``""``)."""
         return list(self._scenes.keys())
+
+    def set_layout(self, root: View, name: str = "") -> str:
+        """Register a split-view layout and return its name.
+
+        The layout is validated, serialized once, and served (plus subscribed
+        to) as the ``view_layout`` message when a browser opens
+        ``/?view=<name>``.
+        """
+        if not isinstance(root, View):
+            raise TypeError(f"layout must be a View, got {type(root).__name__}")
+        self._layouts[name] = root
+        self._layouts_serialized[name] = serialize_layout(root, name=name)
+        self._register_control_handlers(root)
+        return name
+
+    def _register_control_handlers(self, root: View) -> None:
+        """Register control-view handlers into the control handler registry."""
+        from .views import iter_control_views
+
+        for cid in self._layout_control_ids:
+            self._handler_registry.unregister(cid)
+        self._layout_control_ids.clear()
+
+        for view in iter_control_views(root):
+            handler = getattr(view, "on_change", None) or getattr(
+                view, "on_click", None
+            )
+            if handler is not None:
+                self._handler_registry.register(view.id, handler)
+                self._layout_control_ids.add(view.id)
+
+    def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
+        """Callback: return the serialized layout for *layout_name*, or None."""
+        return self._layouts_serialized.get(layout_name)
 
     def list_browsers(self) -> list[dict[str, str]]:
         """Return connected browser sessions as ``[{id, scene, remote_addr}]``.
@@ -332,7 +404,25 @@ class Visualizer(_JupyterDisplayMixin):
         node = self._scenes[""].get_node(eid)
         return VizObjectRef(VizSceneHandle(self, ""), node)
 
-    def add_group(self, name: str | None = None, *, scene_name: str = "") -> "VizObjectRef":
+    def __call__(
+        self, obj: VizInputType | None = None, **kwargs: Any
+    ) -> "VizObjectRef":
+        """Shorthand for :meth:`new`: ``viz(point, color=...)``.
+
+        Adds *obj* to the main scene and returns a :class:`VizObjectRef`, just
+        like :meth:`new`.  This keeps the pre-create + update animation pattern
+        concise::
+
+            p = viz(Point(3, 0, 0), color="#ff4444")
+            for dt in viz.animate(fps=30):
+                p.entity = Point(...)
+                viz.flush()
+        """
+        return self.new(obj, **kwargs)
+
+    def add_group(
+        self, name: str | None = None, *, scene_name: str = ""
+    ) -> "VizObjectRef":
         """Create a scene-graph group and return a :class:`VizObjectRef` for it."""
         from ._object_ref import VizObjectRef
 
@@ -603,6 +693,16 @@ class Visualizer(_JupyterDisplayMixin):
         """Remove all entities from the main scene."""
         self._scenes[""].clear()
 
+    def _reset_scene(self, scene_name: str) -> None:
+        """Clear a scene and re-add its default axes/grid.
+
+        Used by the context managers so ``with viz:`` / ``with viz.scene(name):``
+        reset to the default scene (axes/grid present), not an empty one.
+        """
+        self._scenes[scene_name].clear()
+        self._default_objects_added.discard(scene_name)
+        self._add_default_scene_objects(scene_name)
+
     # ── Title & annotation ──────────────────────────────────
 
     def set_title(self, title: str) -> None:
@@ -629,9 +729,7 @@ class Visualizer(_JupyterDisplayMixin):
         if text is None or text == "":
             scene.remove("__annotation__")
         else:
-            style_dict = _resolve_annotation_style(
-                scene.styles.annotation, style
-            )
+            style_dict = _resolve_annotation_style(scene.styles.annotation, style)
             obj = SceneObject(
                 id="__annotation__",
                 layer="overlay",
@@ -665,6 +763,40 @@ class Visualizer(_JupyterDisplayMixin):
         scene = self._scenes[scene_name]
         scene.config.camera = _normalize_camera_config(camera)
         self._push_scene_config(scene_name)
+
+    def set_view_camera(
+        self,
+        view: SceneView,
+        camera: CameraConfig | View2DConfig | View3dConfig,
+    ) -> None:
+        """Update the camera of a single pane (:class:`SceneView`) at runtime.
+
+        Unlike :meth:`set_camera` (which changes a scene for **every** pane
+        showing it), this targets one specific pane, identified by the
+        ``SceneView`` instance.  The pane keeps its own orbit/zoom; this only
+        moves the camera to the requested configuration.
+
+        Args:
+            view: The :class:`SceneView` pane to update.  It must be part of a
+                registered layout (see :meth:`set_layout`).
+            camera: A :class:`CameraConfig`, or a :class:`View2DConfig` /
+                :class:`View3dConfig` input spec.
+        """
+        if not isinstance(view, SceneView):
+            raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
+        view.camera = _normalize_camera_config(camera)
+        if view.camera is None:
+            return
+        data = json.dumps(
+            {
+                "type": "view_camera",
+                "view_id": view.id,
+                "camera": view.camera.to_dict(),
+            }
+        )
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
 
     # ── Default scene objects ───────────────────────────────
 
@@ -740,6 +872,18 @@ class Visualizer(_JupyterDisplayMixin):
             self._interrupt_events[scene_name] = threading.Event()
         return self._interrupt_events[scene_name]
 
+    def _clear_interrupt(self, scene_name: str = "") -> None:
+        """Clear a previous per-scene interrupt for *scene_name*.
+
+        Called at the start of a new :meth:`animate` loop so that re-running
+        an animation after a browser ``q`` stop starts cleanly.  The global
+        shutdown event (terminal Ctrl+C/SIGTERM) is intentionally left
+        untouched so a terminal interrupt still ends every loop.
+        """
+        event = self._interrupt_events.get(scene_name)
+        if event is not None:
+            event.clear()
+
     def _normalize_stop_modifiers(
         self, stop_modifiers: Sequence[KeyModifier | str] | None
     ) -> list[KeyModifier]:
@@ -784,6 +928,46 @@ class Visualizer(_JupyterDisplayMixin):
         self._scene_interrupt_configs[scene_name] = config
         self._push_animation_stop(scene_name)
 
+    def enable_server_stop_key(
+        self,
+        enabled: bool = True,
+        key: str = "q",
+        modifiers: list[KeyModifier] = [KeyModifier.CTRL],
+    ) -> None:
+        """Enable or disable the browser-triggered full-server stop key.
+
+        Configures the binding for the **main scene**.  When pressed in that
+        scene's browser tab, it sets the global shutdown event so
+        :meth:`wait` returns and every running :meth:`animate` loop ends —
+        mirroring a terminal Ctrl+C / SIGTERM.  Server teardown still happens
+        via :meth:`wait` / the ``atexit`` hook; the key only requests shutdown.
+
+        Args:
+            enabled: ``True`` activates the binding, ``False`` disables it.
+            key: The key to match (case-insensitive), default ``"q"``.
+            modifiers: Modifiers that must be held, default ``[KeyModifier.CTRL]``
+                (i.e. Ctrl+Q).
+        """
+        self._set_server_stop_key(
+            "", enabled=enabled, key=key, modifiers=modifiers
+        )
+
+    def _set_server_stop_key(
+        self,
+        scene_name: str,
+        *,
+        enabled: bool,
+        key: str,
+        modifiers: list[KeyModifier],
+    ) -> None:
+        normalized = self._normalize_stop_modifiers(modifiers)
+        self._server_stop_configs[scene_name] = {
+            "enabled": enabled,
+            "key": key if enabled else None,
+            "modifiers": [m.value for m in normalized],
+        }
+        self._push_animation_stop(scene_name)
+
     def _push_animation_stop(self, scene_name: str = "") -> None:
         """Push the stored animation-stop config to the frontend (thread-safe)."""
         if self._server is None or self._loop is None:
@@ -799,20 +983,41 @@ class Visualizer(_JupyterDisplayMixin):
         config = self._scene_interrupt_configs.get(
             scene_name, {"enabled": False, "key": None, "modifiers": []}
         )
+        server_config = self._server_stop_configs.get(
+            scene_name, {"enabled": False, "key": None, "modifiers": []}
+        )
         message: dict[str, Any] = {
             "type": "animation_stop_config",
             "scene": scene_name,
         }
         message.update(config)
+        message["server_enabled"] = server_config["enabled"]
+        message["server_key"] = server_config["key"]
+        message["server_modifiers"] = server_config["modifiers"]
         await self._server.push_raw(json.dumps(message))
 
-    async def _on_browser_animation_stop(self, scene_name: str) -> None:
+    async def _on_browser_animation_stop(
+        self, scene_name: str, scope: str = "scene"
+    ) -> None:
         """Handle an ``animation_stop`` message from the browser.
 
-        Sets only the requested scene's interrupt event (unless a global
-        shutdown is already requested).  Never tears the server down — that is
-        the job of the SIGINT handler / ``atexit`` hook.
+        With ``scope="scene"`` (the default) only the requested scene's
+        interrupt event is set.  With ``scope="server"`` the global shutdown
+        event is set (and every per-scene interrupt event), so :meth:`wait`
+        returns and all :meth:`animate` loops end — mirroring a terminal
+        Ctrl+C / SIGTERM.  Never tears the server down here: teardown is the
+        job of :meth:`wait` / the ``atexit`` hook.
         """
+        if scope == "server":
+            logger.info(
+                "Browser requested full server stop (scene %r)", scene_name
+            )
+            shutdown = getattr(self, "_shutdown_requested", None)
+            if shutdown is not None:
+                shutdown.set()
+            for event in self._interrupt_events.values():
+                event.set()
+            return
         logger.info("Browser requested animation stop for scene %r", scene_name)
         self._interrupt_event(scene_name).set()
 
@@ -866,6 +1071,7 @@ class Visualizer(_JupyterDisplayMixin):
         stop_key: str | None = "q",
         stop_modifiers: Sequence[KeyModifier | str] | None = None,
         scene_name: str = "",
+        auto_clear: bool = False,
     ) -> Iterator[float]:
         """Yield once per animation frame until interrupted.
 
@@ -879,30 +1085,68 @@ class Visualizer(_JupyterDisplayMixin):
         terminal Ctrl+C / SIGTERM (global) or the scene's browser stop key.
         *stop_key* (default ``"q"``) with optional *stop_modifiers*
         (``KeyModifier`` values) configures that browser binding per scene;
-        pass ``stop_key=None`` to disable it.
+        pass ``stop_key=None`` to disable it.  Starting a loop clears any
+        earlier per-scene interrupt for *scene_name*, so a cell that ended via
+        the browser stop key can be re-run to restart the animation.
 
-        The server is started automatically if it isn't already running, and is
-        stopped automatically at interpreter exit via the registered ``atexit``
-        hook (so a per-scene ``q`` interrupt does not shut the server down).
+        The server is started automatically (headless) if it isn't already
+        running, and is stopped automatically at interpreter exit via the
+        registered ``atexit`` hook (so a per-scene ``q`` interrupt does not
+        shut the server down).  ``animate`` never makes the viewer visible —
+        call :meth:`show` first (or use ``with viz:``) to open it, then drive
+        the loop.
+
+        When *auto_clear* is ``True``, each frame first flushes the scene (so the
+        previous frame's changes appear), then removes every object that was
+        added after the loop began — i.e. anything not present on the first
+        frame.  This lets you ``add()`` fresh objects every frame without
+        accumulating them::
+
+            for dt in viz.animate(fps=30, auto_clear=True):
+                viz.add(Point(math.cos(t), math.sin(t), 0), color="#ff4444")
+                viz.flush()
+
+        Objects added *before* the loop persist across frames.
 
         Example::
 
             viz = Visualizer(title="...")
+            viz.show()  # make the viewer visible (inline in Jupyter)
             for dt in viz.animate(fps=60):
                 ...  # update transforms / entities each frame
                 viz.flush()
         """
         if self._server is None:
             self.start_server()
-            if self._open_browser:
-                self.open_browser()
+
+        # Start each loop with a clean per-scene interrupt so re-running the
+        # animation after a browser "q" stop restarts instead of immediately
+        # ending.  (The global Ctrl+C/SIGTERM event is left untouched.)
+        self._clear_interrupt(scene_name)
 
         self._register_animation_stop(scene_name, stop_key, stop_modifiers)
 
         frame_time = 1.0 / fps if fps and fps > 0.0 else None
 
+        baseline: set[str] | None = None
         prev = time.monotonic()
         while not self.interrupted(scene_name):
+            if auto_clear:
+                # Flush synchronously first so the previous frame's additions
+                # are actually pushed to the browser *before* we mark them for
+                # removal.  (A fire-and-forget flush races with the synchronous
+                # remove() below: the flush can observe the object already
+                # pending removal and send "remove" without ever sending "add",
+                # so the object never appears.)
+                self._flush_scene(scene_name, wait=True)
+                scene = self._scenes[scene_name]
+                current = set(scene._objects.keys())
+                if baseline is None:
+                    baseline = current
+                else:
+                    for object_id in current - baseline:
+                        scene.remove(object_id)
+
             now = time.monotonic()
             yield now - prev
             prev = now
@@ -1099,6 +1343,7 @@ class Visualizer(_JupyterDisplayMixin):
                 push_animation_stop=self._push_animation_stop_async,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
+                layout_callback=self._layout_serialized_for,
             )
             _boot_done.set()
 
@@ -1160,12 +1405,30 @@ class Visualizer(_JupyterDisplayMixin):
         if self._server is None:
             raise RuntimeError("Server not started. Call start_server() first.")
 
-        if wait_for_browser is None:
-            wait_for_browser = not self._jupyter
-
         page_token = secrets.token_hex(4)  # 8 hex chars
         url_path = f"/{scene_name}" if scene_name else "/"
         token_url = f"{url_path}?token={page_token}"
+        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+
+    def _open_layout_browser(
+        self, layout_name: str, *, wait_for_browser: bool | None = None
+    ) -> bool:
+        """Open/reconnect a browser tab for the split-view layout *layout_name*."""
+        import secrets
+
+        if self._server is None:
+            raise RuntimeError("Server not started. Call start_server() first.")
+
+        page_token = secrets.token_hex(4)
+        token_url = f"/?view={layout_name}&token={page_token}"
+        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+
+    def _open_browser_url(
+        self, token_url: str, *, wait_for_browser: bool | None
+    ) -> bool:
+        """Open *token_url* in a (possibly reused) browser tab."""
+        if wait_for_browser is None:
+            wait_for_browser = not self._jupyter
 
         if self._reuse_existing:
             # Interactive wait: user either clicks Reconnect or presses Enter
@@ -1467,12 +1730,22 @@ class Visualizer(_JupyterDisplayMixin):
                 message["fit_camera"] = True
             await self._server.push_raw(json.dumps(message))
 
-    def _flush_scene(self, scene_name: str, *, fit_camera: bool = False) -> None:
-        """Schedule a scene update on the server's event loop (thread-safe)."""
-        if self._loop is not None and self._server is not None:
-            asyncio.run_coroutine_threadsafe(
-                self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
-            )
+    def _flush_scene(
+        self, scene_name: str, *, fit_camera: bool = False, wait: bool = False
+    ) -> None:
+        """Schedule a scene update on the server's event loop (thread-safe).
+
+        When *wait* is ``True``, block until the flush has been processed so the
+        caller can rely on the pushed state before making further changes (e.g.
+        ``auto_clear`` flushes before removing objects).
+        """
+        if self._loop is None or self._server is None:
+            return
+        fut = asyncio.run_coroutine_threadsafe(
+            self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
+        )
+        if wait:
+            fut.result(timeout=10.0)
 
     def flush(self, *, fit_camera: bool = False) -> None:
         """Schedule all dirty scenes to be pushed to the server (thread-safe).
@@ -1490,16 +1763,56 @@ class Visualizer(_JupyterDisplayMixin):
         host: str | None = None,
         port: int | None = None,
         wait_for_browser: bool | None = None,
-    ) -> bool:
-        """Serve the visualization and open a browser tab (non-blocking).
+        jupyter: bool | None = None,
+        viewer_name: str | None = None,
+        layout: View | None = None,
+        layout_name: str | None = None,
+    ) -> Any:
+        """Serve the visualization and show it in the current environment.
 
-        Equivalent to :meth:`start_server` followed by :meth:`open_browser`.
-        ``host``/``port`` are only used when the server is not already
-        running; see :meth:`start_server` for their semantics.
+        With ``jupyter=None`` (the default) the display mode is chosen
+        automatically: in a Jupyter notebook this delegates to :meth:`display`
+        (inline iframe); otherwise it opens a browser tab.  Pass
+        ``jupyter=True`` to force the notebook display, or ``jupyter=False`` to
+        force the standard browser tab.  ``viewer_name`` is forwarded to
+        :meth:`display` in Jupyter.
+
+        Equivalent to :meth:`start_server` followed by either :meth:`display`
+        or :meth:`open_browser`.  ``host``/``port`` are only used when the
+        server is not already running; see :meth:`start_server` for their
+        semantics.
         """
+        use_jupyter = self._jupyter if jupyter is None else jupyter
+
         if self._server is None:
             self.start_server(host=host or "localhost", port=port)
+
+        if layout is not None:
+            self.set_layout(layout, layout_name or "")
+            return self._open_layout_browser(
+                layout_name or "", wait_for_browser=wait_for_browser
+            )
+
+        if use_jupyter:
+            return self.display(viewer_name=viewer_name)
+
         return self.open_browser(wait_for_browser=wait_for_browser)
+
+    def __enter__(self) -> "Visualizer":
+        """Reset the main scene and show it immediately on entry.
+
+        ``show()`` here starts the server (if needed) and makes the viewer
+        visible *before* the block body runs, so each ``flush()`` inside the
+        block updates the live viewer (e.g. an ``animate()`` loop).
+        """
+        self._reset_scene("")
+        self.show()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Flush the main scene on exit (any exception still propagates)."""
+        self.flush()
+        return None
 
     def wait(self) -> None:
         """Block until Ctrl+C is pressed, then stop the server.
@@ -1512,7 +1825,13 @@ class Visualizer(_JupyterDisplayMixin):
         while not shutdown.is_set():
             time.sleep(0.25)
 
-    def run(self, *, wait_for_browser: bool | None = None) -> None:
+    def run(
+        self,
+        *,
+        wait_for_browser: bool | None = None,
+        layout: View | None = None,
+        layout_name: str | None = None,
+    ) -> None:
         """Deprecated: use :meth:`show` then :meth:`wait`.
 
         Starts the server, opens a browser, and blocks until Ctrl+C.
@@ -1522,7 +1841,9 @@ class Visualizer(_JupyterDisplayMixin):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.show(wait_for_browser=wait_for_browser)
+        self.show(
+            wait_for_browser=wait_for_browser, layout=layout, layout_name=layout_name
+        )
         self.wait()
 
     # ── Object Interaction ─────────────────────────────────
@@ -1635,7 +1956,9 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
         return cid
 
-    def update_control(self, ctrl_id: str, *, scene_name: str = "", **fields: Any) -> None:
+    def update_control(
+        self, ctrl_id: str, *, scene_name: str = "", **fields: Any
+    ) -> None:
         """Mutate fields of a stored control and re-push ``controls_define``."""
         scene = self._scenes[scene_name]
         ctrl = scene._controls.get(ctrl_id)
@@ -1883,20 +2206,76 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Jupyter support ─────────────────────────────────────
 
+    def _resolve_viewer_key(self, viewer_name: str | None, scene_name: str) -> str:
+        """Resolve the stable viewer key used to dedupe notebook outputs.
+
+        Priority: an explicit *viewer_name*, otherwise the current notebook cell
+        id, otherwise the scene name (``"main"`` for the main scene).
+        """
+        if viewer_name is not None:
+            return viewer_name
+        cell_id = current_cell_id()
+        if cell_id:
+            return cell_id
+        return scene_name or "main"
+
+    def _display_live(
+        self,
+        src: str,
+        viewer_key: str,
+        width: int | str,
+        height: int | str,
+    ) -> None:
+        """Emit the live iframe for *viewer_key* unless already shown this run.
+
+        The "shown" state is scoped to the current notebook cell execution: a
+        fresh execution re-emits the iframe (Jupyter destroys the previous one
+        when a cell is re-run), while repeated calls within the same execution
+        only flush pending state into the open viewer.
+        """
+        if self._server is None:
+            print("Visualizer server is not running. Call start_server() first.")
+            return
+        token = execution_token()
+        if token != self._display_execution:
+            self._display_pending.clear()
+            self._display_execution = token
+        if viewer_key in self._display_pending:
+            self.flush()
+            return
+        self._display_pending.add(viewer_key)
+        from IPython.display import IFrame
+        from IPython.display import display as ipy_display
+
+        ipy_display(
+            IFrame(src, width=width, height=height), display_id=f"tanga-{viewer_key}"
+        )
+        self.flush()
+
     def display(
         self,
         *,
+        viewer_name: str | None = None,
         width: int | str = "100%",
         height: int | str = 500,
     ) -> Any:
-        """Display the live main scene inline (iframe) in a Jupyter notebook."""
-        src = self.url
-        if self._jupyter:
-            from IPython.display import IFrame
-            from IPython.display import display as ipy_display
+        """Display the live main scene inline (iframe) in a Jupyter notebook.
 
-            iframe = IFrame(src, width=width, height=height)
-            ipy_display(iframe)
+        Within a single cell execution, repeated calls for the same viewer do
+        not create a new iframe — they only flush the latest scene state into
+        the already-open viewer.  The viewer is identified by *viewer_name*
+        (if given), otherwise by the current notebook cell id, otherwise by the
+        scene name (``"main"``).
+        """
+        key = self._resolve_viewer_key(viewer_name, "")
+        self._viewer_name = key
+
+        src = self.url
+        if self._viewer_name:
+            src += f"?viewer={self._viewer_name}"
+
+        if self._jupyter:
+            self._display_live(src, key, width, height)
             return None
         return (
             f'<iframe src="{src}" width="{width}" height="{height}px" '
@@ -2215,9 +2594,7 @@ class Visualizer(_JupyterDisplayMixin):
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.display_snapshot(
-            width=width, height=height, scene_name=scene_name
-        )
+        return self.display_snapshot(width=width, height=height, scene_name=scene_name)
 
     @property
     def global_styles(self) -> "VizStyles":

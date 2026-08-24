@@ -19,7 +19,7 @@ import threading
 import time
 import webbrowser
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -124,18 +124,20 @@ SceneConfigCallback = Callable[[str], dict[str, Any] | None]
 ControlCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 InteractionCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 SceneListCallback = Callable[[], list[str]]
+LayoutCallback = Callable[[str], dict[str, Any] | None]
 PushControlsCallback = Callable[[str], Awaitable[None]]
 
 
 @dataclass
 class BrowserSession:
-    """A connected WebSocket client browsing a specific scene."""
+    """A connected WebSocket client browsing one or more scenes."""
 
     id: str  # unique browser ID (UUID)
-    scene: str  # currently viewed scene name ("" = main)
+    scene: str  # currently viewed scene name ("" = main; first scene for layouts)
     remote_addr: str
     ws: web.WebSocketResponse
     viewer_name: str | None = None  # optional friendly label from ?viewer= URL param
+    scenes: list[str] = field(default_factory=list)  # all subscribed scene names
 
 
 class VizServer:
@@ -167,8 +169,9 @@ class VizServer:
         self._config_callback: ConfigCallback | None = None
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
+        self._layout_callback: LayoutCallback | None = None
         self._control_callback: ControlCallback | None = None
-        self._animation_stop_callback: Callable[[str], Awaitable[None]] | None = None
+        self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = None
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -191,10 +194,11 @@ class VizServer:
         on_connect: Callable[[str], Awaitable[None]] | None = None,
         on_disconnect: Callable[[str], Awaitable[None]] | None = None,
         push_controls: PushControlsCallback | None = None,
-        animation_stop_callback: Callable[[str], Awaitable[None]] | None = None,
+        animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = None,
         push_animation_stop: Callable[[str], Awaitable[None]] | None = None,
         scene_config_callback: SceneConfigCallback | None = None,
         scene_list_callback: SceneListCallback | None = None,
+        layout_callback: LayoutCallback | None = None,
         on_ready: Callable[[], None] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
@@ -202,6 +206,7 @@ class VizServer:
         self._config_callback = config_callback
         self._scene_config_callback = scene_config_callback
         self._scene_list_callback = scene_list_callback
+        self._layout_callback = layout_callback
         self._control_callback = control_callback
         self._interaction_callback = interaction_callback
         self._on_connect = on_connect
@@ -368,60 +373,66 @@ class VizServer:
         self,
         ws: web.WebSocketResponse,
         *,
-        scene_name: str = "",
+        scene_names: list[str],
+        layout_payload: dict[str, Any] | None = None,
         browser_id: str | None = None,
     ) -> None:
-        """Send scene config + full entity state to a single client."""
+        """Send optional ``view_layout`` then per-scene config + full state."""
         from .serializer import serialize_scene_update
 
         logger.info(
-            "WS FULL-STATE-BEGIN t=%.3f id=%s scene=%r",
-            time.monotonic(), browser_id, scene_name,
+            "WS FULL-STATE-BEGIN t=%.3f id=%s scenes=%r",
+            time.monotonic(), browser_id, scene_names,
         )
 
-        # 0. Clear the browser scene first (handles reconnect with new server)
+        # 0. Clear the browser first (handles reconnect with new server)
         clear_payload = json.dumps({"type": "clear_all"})
         logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(clear_payload))
         await ws.send_str(clear_payload)
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
 
-        # 1. Scene configuration (scoped to the specific scene if available)
-        if self._scene_config_callback is not None:
-            cfg = self._scene_config_callback(scene_name)
-        elif self._config_callback is not None:
-            cfg = self._config_callback()
-        else:
+        # 1. Layout (if any) — sent before any scene data
+        if layout_payload is not None:
+            layout_json = json.dumps(layout_payload)
+            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(layout_json))
+            await ws.send_str(layout_json)
+
+        # 2. Per scene: configuration + full state
+        for scene_name in scene_names:
             cfg = None
+            if self._scene_config_callback is not None:
+                cfg = self._scene_config_callback(scene_name)
+            elif self._config_callback is not None:
+                cfg = self._config_callback()
 
-        if cfg is not None:
-            cfg.setdefault("name", scene_name)
-            cfg_payload = json.dumps(cfg)
-            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(cfg_payload))
-            await ws.send_str(cfg_payload)
+            if cfg is not None:
+                cfg.setdefault("name", scene_name)
+                cfg_payload = json.dumps(cfg)
+                logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(cfg_payload))
+                await ws.send_str(cfg_payload)
 
-        # 2. Full state (entities + labels merged)
-        if self._flush_callback is not None:
-            entities, _ = self._flush_callback(scene_name)
-            if entities:
-                msg = serialize_scene_update(entities, [])
-                msg["scene"] = scene_name
-                state_payload = json.dumps(msg)
-                logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(state_payload))
-                await ws.send_str(state_payload)
+            if self._flush_callback is not None:
+                entities, _ = self._flush_callback(scene_name)
+                if entities:
+                    msg = serialize_scene_update(entities, [])
+                    msg["scene"] = scene_name
+                    state_payload = json.dumps(msg)
+                    logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(state_payload))
+                    await ws.send_str(state_payload)
 
         # 3. Scene list (so the frontend knows available scenes)
         if self._scene_list_callback is not None:
-            scene_names = self._scene_list_callback()
+            scene_names_all = self._scene_list_callback()
             list_payload = json.dumps(
-                {"type": "scene_list", "scenes": scene_names, "default": ""}
+                {"type": "scene_list", "scenes": scene_names_all, "default": ""}
             )
             logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(list_payload))
             await ws.send_str(list_payload)
 
         logger.info(
-            "WS FULL-STATE-END t=%.3f id=%s scene=%r",
-            time.monotonic(), browser_id, scene_name,
+            "WS FULL-STATE-END t=%.3f id=%s scenes=%r",
+            time.monotonic(), browser_id, scene_names,
         )
 
     # ── Browser sessions (read-only access for Visualizer) ─
@@ -597,6 +608,7 @@ class VizServer:
 
                         if msg_type == "ready":
                             scene_name = data.get("scene", "")
+                            layout_name = data.get("layout")
                             # Correlate page token if present (HTTP→WS round-trip diagnostic)
                             page_token = data.get("page_token")
                             if page_token:
@@ -634,17 +646,35 @@ class VizServer:
                                 msg_browser_id,
                                 data.get("viewer_name"),
                             )
-                            # Validate scene exists
-                            if self._scene_list_callback is not None:
-                                available = self._scene_list_callback()
-                                if scene_name and scene_name not in available:
-                                    # Scene doesn't exist — navigate to main
+                            # Resolve the set of scenes to subscribe to.
+                            layout_payload: dict[str, Any] | None = None
+                            if layout_name is not None:
+                                # Layout mode: subscribe to every scene in the layout.
+                                if self._layout_callback is not None:
+                                    layout_payload = self._layout_callback(layout_name)
+                                if layout_payload is None:
+                                    # Unknown layout — navigate to main.
                                     await ws.send_str(
                                         json.dumps({"type": "navigate", "scene": ""})
                                     )
-                                    scene_name = ""
+                                    scene_names = [""]
+                                else:
+                                    names = layout_payload.get("scenes") or []
+                                    scene_names = list(names) if names else [""]
+                            else:
+                                # Single-scene mode (existing behaviour).
+                                if self._scene_list_callback is not None:
+                                    available = self._scene_list_callback()
+                                    if scene_name and scene_name not in available:
+                                        # Scene doesn't exist — navigate to main
+                                        await ws.send_str(
+                                            json.dumps({"type": "navigate", "scene": ""})
+                                        )
+                                        scene_name = ""
+                                scene_names = [scene_name]
 
-                            current_session.scene = scene_name
+                            current_session.scenes = list(scene_names)
+                            current_session.scene = scene_names[0]
                             # Store viewer_name from the ready message
                             viewer_name = data.get("viewer_name")
                             if viewer_name:
@@ -658,20 +688,24 @@ class VizServer:
                             # frontends (that never ack) from hanging start().
                             try:
                                 await self._push_full_state(
-                                    ws, scene_name=scene_name, browser_id=browser_id
+                                    ws,
+                                    scene_names=scene_names,
+                                    layout_payload=layout_payload,
+                                    browser_id=browser_id,
                                 )
                             except Exception:
                                 pass
-                            try:
-                                if self._push_controls_cb is not None:
-                                    await self._push_controls_cb(scene_name)
-                            except Exception:
-                                pass
-                            try:
-                                if self._push_animation_stop is not None:
-                                    await self._push_animation_stop(scene_name)
-                            except Exception:
-                                pass
+                            for scene_name in scene_names:
+                                try:
+                                    if self._push_controls_cb is not None:
+                                        await self._push_controls_cb(scene_name)
+                                except Exception:
+                                    pass
+                                try:
+                                    if self._push_animation_stop is not None:
+                                        await self._push_animation_stop(scene_name)
+                                except Exception:
+                                    pass
                             # Fallback for frontends that never send "scene_synced".
                             asyncio.get_running_loop().call_later(
                                 1.0, self._signal_ws_ready
@@ -688,7 +722,8 @@ class VizServer:
                             if self._animation_stop_callback is not None:
                                 asyncio.create_task(
                                     self._animation_stop_callback(
-                                        data.get("scene", "")
+                                        data.get("scene", ""),
+                                        data.get("scope", "scene"),
                                     )
                                 )
                         elif msg_type == "screenshot:data":

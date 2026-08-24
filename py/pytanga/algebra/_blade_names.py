@@ -3,7 +3,7 @@
 
 """pytanga._blade_names — bit-arithmetic blade name utilities (no C++)."""
 
-__all__ = ["grade", "all_blades", "blade_name", "blade_id"]
+__all__ = ["grade", "all_blades", "blade_name", "blade_id", "blade_id_signed"]
 
 
 def grade(blade_id: int) -> int:
@@ -38,19 +38,40 @@ def blade_name(blade_id: int, dim: int) -> str:
     return "e" + "".join(indices)
 
 
-def blade_id(name: str, dim: int) -> int:
-    """Parse a blade name back to its bitmask id.
+def _permutation_sign(indices: list[int]) -> int:
+    """Return ``+1`` for an even permutation, ``-1`` for an odd one.
 
-    Accepts:
-    - ``"s"`` or ``"0"`` → scalar (0)
-    - ``"I"`` → pseudoscalar (``(1 << dim) - 1``)
-    - ``"e"`` + distinct decimal digits in ``[1, dim]`` in any order.
-      For ``dim > 9`` use comma-separated format, e.g. ``"e1,2,10"``.
+    The permutation is the one that sorts *indices* into ascending order; its
+    parity is computed as the parity of the number of inversions.
+    """
+    sign = 1
+    n = len(indices)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if indices[i] > indices[j]:
+                sign = -sign
+    return sign
+
+
+def blade_id_signed(name: str, dim: int) -> tuple[int, int]:
+    """Parse a blade name to its ``(bitmask, sign)``.
+
+    Returns the canonical bitmask together with the sign of the permutation
+    needed to sort the given indices into ascending order, so reversed names
+    resolve to the canonical blade with the correct sign:
+
+    - ``"e13"``  → ``(5, 1)``
+    - ``"e31"``  → ``(5, -1)``
+    - ``"e321"`` → ``(7, -1)``
+
+    Accepts the same inputs as :func:`blade_id`: ``"s"``/``"0"`` → scalar,
+    ``"I"`` → pseudoscalar, or ``"e"`` + distinct 1-based indices in ``[1, dim]``
+    (comma-separated for ``dim > 9``).
     """
     if name in ("s", "0"):
-        return 0
+        return 0, 1
     if name == "I":
-        return (1 << dim) - 1
+        return (1 << dim) - 1, 1
     if not name.startswith("e"):
         raise ValueError(f"Cannot parse blade name: {name!r}")
     tail = name[1:]
@@ -75,7 +96,18 @@ def blade_id(name: str, dim: int) -> int:
         raise ValueError(f"Repeated basis-vector index in: {name!r}")
     if any(i < 1 or i > dim for i in indices):
         raise ValueError(f"Index out of range [1, {dim}] in: {name!r}")
-    result = 0
+
+    bitmask = 0
     for i in indices:
-        result |= 1 << (i - 1)
-    return result
+        bitmask |= 1 << (i - 1)
+    return bitmask, _permutation_sign(indices)
+
+
+def blade_id(name: str, dim: int) -> int:
+    """Parse a blade name back to its canonical (unsigned) bitmask id.
+
+    The returned bitmask is order-independent (``"e21"`` and ``"e12"`` give the
+    same id).  Use :func:`blade_id_signed` when the permutation sign matters,
+    e.g. string parsing of reversed names such as ``"e31"``.
+    """
+    return blade_id_signed(name, dim)[0]

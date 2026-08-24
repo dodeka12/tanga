@@ -6,7 +6,7 @@
 from pathlib import Path
 
 import pytanga.viz
-from pytanga.geometry.entities import Point
+from pytanga.geometry.entities import Arc, Cylinder, Point
 from pytanga.viz.export._figure_html import render_figure
 from pytanga.viz.export._html import render_snapshot
 from pytanga.viz.scene import Scene
@@ -42,6 +42,14 @@ class TestExportStatic:
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html
         assert "function buildOverlay(" in html
+
+    def test_static_render_viz_entities(self):
+        s = Scene()
+        s.add(Cylinder())
+        s.add(Arc())
+        html = render_snapshot(s.full_state(), s.config.to_dict())
+        assert "function createCylinder(" in html
+        assert "function createArc(" in html
 
     def test_figure_html_generation(self):
         s = _group_scene()
@@ -128,7 +136,6 @@ class TestAnimatedExport:
             path = tmp_path / "anim.html"
             exporter.export_animated_html(str(path), rec, overwrite=True)
         assert path.exists()
-
 
     def test_scene_exporter_deprecated(self):
         import pytest

@@ -3,9 +3,11 @@
 
 """Tests for the unified style holder (`_viz_styles.py`)."""
 
-from pytanga.geometry import Direction, Line, Point
+from pytanga.geometry import Arc, Cylinder, Direction, Line, Point
 from pytanga.viz import (
+    ArcStyle,
     CylinderLineStyle,
+    CylinderStyle,
     LabelStyle,
     LineStyle,
     PointStyle,
@@ -105,3 +107,33 @@ def test_named_scene_styles_independent():
     detail.styles["Point"].color = "#000000"
     assert viz.styles["Point"].color != "#000000"
 
+
+# ── Viz-only entities (Cylinder / Arc) ────────────────────────
+
+
+def test_viz_entity_style_defaults_registered():
+    s = make_styles()
+    assert "Cylinder" in s.kind
+    assert "Arc" in s.kind
+    assert s.kind["Cylinder"].color is not None
+    assert s.kind["Arc"].color is not None
+
+
+def test_cylinder_style_to_dict_omits_unset_fields():
+    d = CylinderStyle(color="#123456").to_dict()
+    assert d["style_type"] == "CylinderStyle"
+    assert d["color"] == "#123456"
+    assert "opacity" not in d
+
+
+def test_arc_style_to_dict_omits_unset_fields():
+    d = ArcStyle(color="#123456").to_dict()
+    assert d["style_type"] == "ArcStyle"
+    assert d["color"] == "#123456"
+    assert "opacity" not in d
+
+
+def test_viz_entity_style_class_key_access():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    assert viz.styles[Cylinder] is viz.styles["Cylinder"]
+    assert viz.styles[Arc] is viz.styles["Arc"]

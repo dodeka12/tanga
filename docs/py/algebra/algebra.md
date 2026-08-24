@@ -183,8 +183,11 @@ operands and raise `ValueError` otherwise.
 u = alg.undual(a)      # inverse of dual ★
 ```
 
-`undual` is algebra‑specific: `A · I` in E3/P3/N3; the J‑map (same as `dual`)
-in PGA3/PGA2, where the pseudoscalar is not invertible.  See [Duals](duals.md).
+`undual` is algebra‑specific: `A · I` in E3/P3/N3.  In PGA the pseudoscalar is
+not invertible, so `undual` inverts the complement dual (J‑map / Hodge star):
+in PGA2 the J‑map is involutive (`undual == dual`), while in PGA3 it is
+`grade_involution(dual(a))` because the double Hodge dual is the grade
+involution.  See [Duals](duals.md).
 
 ### Products with reverse/conjugate flags
 
@@ -232,11 +235,17 @@ These operate on pure blades (homogeneous multivectors of a single grade):
 alg.blade_inverse(blade)          # inverse of a blade
 alg.blade_pseudo_inverse(blade)   # inner-product inverse; reciprocal of a null blade
 alg.blade_factorize(blade)        # → list of k grade-1 vectors
-alg.join(a, b)                    # smallest blade containing both
-alg.meet(a, b)                    # largest blade contained in both
+alg.join(a, b)                    # join of two blades
+alg.meet(a, b)                    # meet of two blades
 alg.blade_project(a, blade)       # project a onto a non-degenerate blade
 alg.blade_reject(a, blade)        # reject a from a non-degenerate blade
 ```
+
+For the plane‑based PGA models (`BasisPGA2`/`BasisPGA3`) the `join`/`meet`
+names follow Gunn/Dorst and are swapped relative to the other algebras: `meet`
+is the intersection (outer product) and `join` is the union (regressive
+product). See [`basis_pga3.md`](../basis/basis_pga3.md) and
+[`basis_pga2.md`](../basis/basis_pga2.md).
 
 ### Integer modular operations
 

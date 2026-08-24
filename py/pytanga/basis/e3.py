@@ -29,9 +29,9 @@ class BasisE3(Algebra):
         self.e2 = mv({2: 1})
         self.e3 = mv({4: 1})
         self.e12 = self.op(self.e1, self.e2)
-        self.e31 = self.op(self.e3, self.e1)
-        self.e13 = -self.e31  # alias matching Perwass notation e₁₃ = −e₃₁
+        self.e13 = self.op(self.e1, self.e3)  # canonical basis blade
         self.e23 = self.op(self.e2, self.e3)
+        self.e31 = -self.e13  # compat alias: e3∧e1 = −e1∧e3
         self.I = mv({self.pseudoscalar_id: 1})
 
     @cached_property

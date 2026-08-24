@@ -202,23 +202,68 @@ class Dilator:
         return f"Dilator(×{self.factor:.2f} at {self.origin})"
 
 
+def _motor_screw(
+    angle: float,
+    axis: Direction,
+    t: Direction,
+) -> tuple[GeneralRotor, Translator]:
+    """Decompose a motor (rotation + translation) into its screw form.
+
+    ``T(t)·R(angle, axis) = T(u)·(T(v)·R(angle, axis)·T̃(v))`` where ``u`` is
+    along the rotation axis and ``v`` is perpendicular to it.  Returns
+    ``(GeneralRotor, Translator)``.
+    """
+    a = axis.normalized() if axis.mag() > 1e-15 else Direction(0.0, 0.0, 1.0)
+
+    if t.mag() < 1e-15:
+        # Pure rotation: no translation and no axis displacement.
+        return GeneralRotor(angle, a, Point(0.0, 0.0, 0.0)), Translator(
+            Direction(0.0, 0.0, 0.0)
+        )
+
+    if abs(angle) < 1e-15:
+        # Pure translation: infinite-pitch screw (no rotation).
+        return GeneralRotor(0.0, a, Point(0.0, 0.0, 0.0)), Translator(t)
+
+    t_par = a * t.dot(a)
+    t_perp = t - t_par
+
+    if t_perp.mag() < 1e-15:
+        v = Direction(0.0, 0.0, 0.0)
+    else:
+        cot = 1.0 / math.tan(angle / 2.0)
+        v = 0.5 * (t_perp + cot * a.cross(t_perp))
+
+    return GeneralRotor(angle, a, Point(v.x, v.y, v.z)), Translator(t_par)
+
+
 @dataclass(frozen=True)
 class Motor:
-    """A rigid body motion: rotation followed by translation.
+    """A rigid body motion (screw): rotation about a displaced axis plus a
+    translation along that axis.
+
+    Stored as a :class:`GeneralRotor` and a :class:`Translator`; a ``Rotor`` +
+    ``Translator`` input is normalized to this screw form on construction.
 
     Supported algebras: N3/PGA3
     """
 
-    rotor: Rotor
+    rotor: GeneralRotor
     translator: Translator
 
-    def __init__(self, rotor: Rotor, translator: Translator):
-        if not isinstance(rotor, Rotor):
-            raise TypeError(f"Expected Rotor, got {type(rotor).__name__}")
+    def __init__(self, rotor: Rotor | GeneralRotor, translator: Translator):
         if not isinstance(translator, Translator):
             raise TypeError(f"Expected Translator, got {type(translator).__name__}")
-        object.__setattr__(self, "rotor", rotor)
-        object.__setattr__(self, "translator", translator)
+        if isinstance(rotor, GeneralRotor):
+            gen, trans = rotor, translator
+        elif isinstance(rotor, Rotor):
+            gen, trans = _motor_screw(rotor.angle, rotor.axis, translator.vector)
+        else:
+            raise TypeError(
+                f"Expected Rotor or GeneralRotor, got {type(rotor).__name__}"
+            )
+        object.__setattr__(self, "rotor", gen)
+        object.__setattr__(self, "translator", trans)
 
     def __repr__(self) -> str:
         return f"Motor({self.rotor}, {self.translator})"

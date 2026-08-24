@@ -31,9 +31,9 @@ export function setWebSocket(ws) {
  * Process a controls_define message: tear down the old panel tree and
  * rebuild everything from the message payload.
  */
-export function handleControlsDefine(msg) {
+export function handleControlsDefine(msg, targetEl = null) {
     _destroyAll();
-    _ensureRoot();
+    if (!targetEl) _ensureRoot();
 
     const controls = msg.controls || [];
     const groups = msg.groups || [];
@@ -52,8 +52,7 @@ export function handleControlsDefine(msg) {
         const groupCtrls = (g.controls || []).map(id => ctrlById[id]).filter(Boolean);
         const panel = _createGroupPanel(g, groupCtrls);
         if (panel) {
-            _positionPanel(panel, g.position || 'bottom-right');
-            document.body.appendChild(panel);
+            _mountPanel(panel, g.position || 'bottom-right', targetEl);
             _panelEls.push(panel);
         }
         // Track whether this group has a server-side on_toggle
@@ -66,14 +65,13 @@ export function handleControlsDefine(msg) {
         if (orphanCtrls.length > 0) {
             const panel = _createOrphanPanel(orphanCtrls);
             if (panel) {
-                _positionPanel(panel, 'bottom-right');
-                document.body.appendChild(panel);
+                _mountPanel(panel, 'bottom-right', targetEl);
                 _panelEls.push(panel);
             }
         }
     }
 
-    _ensureToggleButton();
+    if (!targetEl) _ensureToggleButton();
 }
 
 /**
@@ -282,6 +280,18 @@ function _setupDrag(panelEl, handleEl) {
 }
 
 // ── Internal: position panel ────────────────────────────────
+
+function _mountPanel(panel, anchor, targetEl) {
+    if (targetEl) {
+        // Inside a pane: stack panels normally (no fixed positioning).
+        panel.style.position = 'relative';
+        panel.style.margin = '4px 0';
+        targetEl.appendChild(panel);
+    } else {
+        _positionPanel(panel, anchor);
+        document.body.appendChild(panel);
+    }
+}
 
 function _positionPanel(panel, anchor) {
     panel.style.position = 'fixed';

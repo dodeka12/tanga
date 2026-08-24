@@ -29,12 +29,12 @@ class MV:
     # Coefficient access — accept both blade names and integer blade ids
     # -----------------------------------------------------------------------
     def __getitem__(self, key: str | int) -> float | int:
-        blade_id = self._alg._resolve_key(key)
-        return self._impl.get(blade_id)
+        blade_id, sign = self._alg._resolve_key_signed(key)
+        return sign * self._impl.get(blade_id)
 
     def __setitem__(self, key: str | int, value: float | int) -> None:
-        blade_id = self._alg._resolve_key(key)
-        self._impl.set(blade_id, value)
+        blade_id, sign = self._alg._resolve_key_signed(key)
+        self._impl.set(blade_id, sign * value)
 
     # -----------------------------------------------------------------------
     # Arithmetic operators
@@ -456,11 +456,23 @@ class MV:
         return self._alg.blade_factorize(self)
 
     def join(self, other: "MV") -> "MV":
-        """Compute the join of self and other: the smallest-grade blade containing both."""
+        """Compute the join of self and other.
+
+        For the plane-based PGA models (``BasisPGA2``/``BasisPGA3``) this is the
+        Gunn/Dorst ``join`` (union/span, regressive product).  For all other
+        algebras it is the progressive product (the smallest-grade blade
+        containing both).
+        """
         return self._alg.join(self, other)
 
     def meet(self, other: "MV") -> "MV":
-        """Compute the meet of self and other: the largest-grade blade contained in both."""
+        """Compute the meet of self and other.
+
+        For the plane-based PGA models (``BasisPGA2``/``BasisPGA3``) this is the
+        Gunn/Dorst ``meet`` (intersection, progressive/outer product).  For all
+        other algebras it is the regressive product (the largest-grade blade
+        contained in both).
+        """
         return self._alg.meet(self, other)
 
     def blade_factorize_versor(self) -> "tuple[MV, list[MV]]":

@@ -11,7 +11,9 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from pytanga.geometry.entities import (
+    Arc,
     Circle,
+    Cylinder,
     Direction,
     Entity,
     HPoint,
@@ -120,14 +122,24 @@ def _dispatch_entity(
         return _serialize_sphere(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Space):
         return _serialize_space(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Cylinder):
+        return _serialize_cylinder(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Arc):
+        return _serialize_arc(entity, props, kind=kind, styles_map=styles_map)
 
     # ── Operators ──
     if isinstance(entity, ReflectionLine):
-        return _serialize_reflection_line(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_reflection_line(
+            entity, props, kind=kind, styles_map=styles_map
+        )
     if isinstance(entity, ReflectionPlane):
-        return _serialize_reflection_plane(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_reflection_plane(
+            entity, props, kind=kind, styles_map=styles_map
+        )
     if isinstance(entity, ReflectionPoint):
-        return _serialize_reflection_origin(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_reflection_origin(
+            entity, props, kind=kind, styles_map=styles_map
+        )
     if isinstance(entity, Inversion):
         return _serialize_inversion(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Rotor):
@@ -296,6 +308,8 @@ def _serialize_axis(
         result["valueStart"] = ent.value_start
     if ent.value_step != 1.0:
         result["valueStep"] = ent.value_step
+    if ent.ticks is not None:
+        result["ticks"] = [[pos, label] for pos, label in ent.ticks]
     return result
 
 
@@ -521,6 +535,16 @@ def _serialize_grid(
         "range_v": list(ent.range_v),
         "interval_u": ent.interval_u,
         "interval_v": ent.interval_v,
+        **(
+            {"line_positions_u": list(ent.line_positions_u)}
+            if ent.line_positions_u is not None
+            else {}
+        ),
+        **(
+            {"line_positions_v": list(ent.line_positions_v)}
+            if ent.line_positions_v is not None
+            else {}
+        ),
     }
 
 
@@ -633,6 +657,41 @@ def resolve_line_length(
     return 20.0
 
 
+def _resolve_extent(
+    kind: str,
+    entity: Any,
+    *,
+    styles_map: Dict[str, Any] | None = None,
+    props: Dict[str, Any] | None = None,
+    fallback: float,
+) -> float:
+    """Return the effective rendered half-extent for an entity kind.
+
+    Precedence: explicit entity ``extent`` -> per-call ``style`` override ->
+    canonical style default -> ``fallback``. Mirrors ``resolve_line_length``.
+    """
+    entity_extent = getattr(entity, "extent", None)
+    if entity_extent is not None and entity_extent > 0:
+        return float(entity_extent)
+
+    props = props or {}
+    style = props.get("style")
+    if style is not None:
+        override = getattr(style, "extent", None)
+        if override is not None and override > 0:
+            return float(override)
+
+    if styles_map is not None:
+        from ._styles import _style_for_kind
+
+        canonical = _style_for_kind(kind, styles_map=styles_map)
+        extent = getattr(canonical, "extent", None)
+        if extent is not None:
+            return float(extent)
+
+    return float(fallback)
+
+
 def _serialize_line(
     ent: Line,
     props: Dict[str, Any],
@@ -643,14 +702,25 @@ def _serialize_line(
     builtins = {"thickness": 1.0}
     # Resolve the length here so the frontend always receives a valid value
     # (infinite lines use the canonical `LineStyle.length` default).
-    props["length"] = resolve_line_length(ent, styles_map=styles_map, props=props)
+    length = resolve_line_length(ent, styles_map=styles_map, props=props)
+    props["length"] = length
+
+    # The frontend draws `origin -> origin + normalize(direction) * length`.
+    # For an infinite line (no explicit length) `origin` is the closest point to
+    # the origin, so shift it back by half the length to draw the line centered
+    # on that point.  Segments (Line.from_points) keep `origin` as their start.
+    origin = ent.origin
+    if ent.length is None and ent.direction.mag() > 0:
+        unit = ent.direction.normalized()
+        origin = ent.origin - unit * (length / 2.0)
+
     return _apply_defaults(
         props,
         kind,
         builtins,
         styles_map=styles_map,
     ) | {
-        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
+        "origin": [origin.x, origin.y, origin.z],
         "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
     }
 
@@ -662,10 +732,15 @@ def _serialize_plane(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    builtins: dict[str, Any] = {"extent": 10.0}
-    if ent.extent is not None:
-        props["extent"] = ent.extent
-    result = _apply_defaults(props, kind, builtins, styles_map=styles_map) | {
+    extent = _resolve_extent(
+        kind,
+        ent,
+        styles_map=styles_map,
+        props=props,
+        fallback=10.0,
+    )
+    props["extent"] = extent
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "point": [ent.point.x, ent.point.y, ent.point.z],
         "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
     }
@@ -733,12 +808,78 @@ def _serialize_space(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
+    extent = _resolve_extent(
+        kind,
+        ent,
+        styles_map=styles_map,
+        props=props,
+        fallback=10.0,
+    )
+    props["extent"] = extent
     return _apply_defaults(
         props,
         kind,
-        {"extent": 10.0},
+        {},
         styles_map=styles_map,
     ) | {"scale": ent.scale}
+
+
+def _serialize_cylinder(
+    ent: Cylinder,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {},
+        styles_map=styles_map,
+    ) | {
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "length": ent.length,
+        "radius": _clamp_positive(ent.radius),
+        "alignCenter": ent.align_center,
+    }
+
+
+def _serialize_arc(
+    ent: Arc,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    arrow = None
+    if ent.show_arrow:
+        length = (
+            ent.arrow_length if ent.arrow_length is not None else 3.0 * ent.tube_radius
+        )
+        radius = (
+            ent.arrow_radius if ent.arrow_radius is not None else 2.0 * ent.tube_radius
+        )
+        arrow = {"length": length, "radius": radius}
+
+    return _apply_defaults(
+        props,
+        kind,
+        {},
+        styles_map=styles_map,
+    ) | {
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "radius": _clamp_positive(ent.radius),
+        "tubeRadius": _clamp_positive(ent.tube_radius),
+        "angle": ent.angle,
+        "startDirection": [
+            ent.start_direction.x,
+            ent.start_direction.y,
+            ent.start_direction.z,
+        ],
+        "arrow": arrow,
+    }
 
 
 # ── Operators ──────────────────────────────────────────────
@@ -769,10 +910,18 @@ def _serialize_reflection_plane(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
+    extent = _resolve_extent(
+        kind,
+        ent,
+        styles_map=styles_map,
+        props=props,
+        fallback=5.0,
+    )
+    props["extent"] = extent
     return _apply_defaults(
         props,
         kind,
-        {"extent": 5.0},
+        {},
         styles_map=styles_map,
     ) | {
         "normal": [ent.plane.normal.x, ent.plane.normal.y, ent.plane.normal.z],
@@ -886,6 +1035,7 @@ def _serialize_motor(
         "rotor": {
             "angle": ent.rotor.angle,
             "axis": [ent.rotor.axis.x, ent.rotor.axis.y, ent.rotor.axis.z],
+            "origin": [ent.rotor.origin.x, ent.rotor.origin.y, ent.rotor.origin.z],
         },
         "translator": {
             "vector": [

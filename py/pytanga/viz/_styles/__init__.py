@@ -19,7 +19,9 @@ from __future__ import annotations
 from typing import Any, TypeAlias, Union
 
 from pytanga.geometry.entities import (
+    Arc,
     Circle,
+    Cylinder,
     Direction,
     HPoint,
     ImagCircle,
@@ -52,11 +54,13 @@ from ._base import (
     WireframeDashPattern,
 )
 from ._entity_styles import (
+    ArcStyle,
     Axes2DStyle,
     Axes3DStyle,
     AxisStyle,
     CircleStyle,
     CylinderLineStyle,
+    CylinderStyle,
     DirectionStyle,
     GridStyle,
     HPointStyle,
@@ -100,6 +104,8 @@ ObjVizStyle: TypeAlias = Union[
     PlaneStyle,
     CircleStyle,
     CylinderLineStyle,
+    CylinderStyle,
+    ArcStyle,
     SphereStyle,
     SpaceStyle,
     ReflectionLineStyle,
@@ -133,6 +139,8 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Plane": PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0),
     "Circle": CircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
     "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
+    "Cylinder": CylinderStyle(color="#44aaff", opacity=0.9),
+    "Arc": ArcStyle(color="#ffcc44", opacity=0.9),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
     "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=2.0),
     "Grid": GridStyle(color="#555555", opacity=0.8, line_thickness=1.0),
@@ -202,6 +210,8 @@ def _default_style_for(
         | Sphere
         | ImagSphere
         | Space
+        | Cylinder
+        | Arc
         | ReflectionLine
         | ReflectionPlane
         | ReflectionPoint

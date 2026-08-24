@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""Tests for the server's multi-scene full-state push (`_push_full_state`)."""
+
+import asyncio
+import json
+
+from pytanga.viz.server import VizServer
+
+
+class _FakeWS:
+    def __init__(self):
+        self.sent: list[dict] = []
+
+    async def send_str(self, payload: str) -> None:
+        self.sent.append(json.loads(payload))
+
+
+def _server() -> VizServer:
+    server = VizServer()
+    server._flush_callback = lambda name: ([{"id": f"{name}-obj", "kind": "Point"}], [])
+    server._scene_config_callback = lambda name: {"type": "scene_config", "name": name}
+    server._scene_list_callback = lambda: ["", "a", "b"]
+    server._layout_callback = lambda name: {
+        "type": "view_layout",
+        "name": name,
+        "scenes": ["a", "b"],
+        "root": {},
+    }
+    return server
+
+
+class TestPushFullState:
+    def test_layout_push_orders_messages(self):
+        server = _server()
+        ws = _FakeWS()
+        asyncio.run(
+            server._push_full_state(
+                ws,
+                scene_names=["a", "b"],
+                layout_payload=server._layout_callback("demo"),
+                browser_id="b1",
+            )
+        )
+        types = [m["type"] for m in ws.sent]
+        assert types[0] == "clear_all"
+        assert types[1] == "view_layout"
+        assert ws.sent[2]["type"] == "scene_config" and ws.sent[2]["name"] == "a"
+        assert ws.sent[3]["type"] == "scene_update" and ws.sent[3]["scene"] == "a"
+        assert ws.sent[4]["type"] == "scene_config" and ws.sent[4]["name"] == "b"
+        assert ws.sent[5]["type"] == "scene_update" and ws.sent[5]["scene"] == "b"
+        assert types[-1] == "scene_list"
+
+    def test_single_scene_push(self):
+        server = _server()
+        ws = _FakeWS()
+        asyncio.run(server._push_full_state(ws, scene_names=["main"], browser_id="b1"))
+        types = [m["type"] for m in ws.sent]
+        assert types == ["clear_all", "scene_config", "scene_update", "scene_list"]
+
+    def test_layout_payload_omitted_when_none(self):
+        server = _server()
+        ws = _FakeWS()
+        asyncio.run(server._push_full_state(ws, scene_names=["a"], browser_id="b1"))
+        types = [m["type"] for m in ws.sent]
+        assert "view_layout" not in types

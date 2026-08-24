@@ -1,5 +1,20 @@
 # Changelog
 
+## [Since 1.0.1] — 2026-08-24
+- Split views (`SplitView` panes) · `StackView` + control views (`SliderView`/`ButtonView`/`DropdownView`) · multi-scene WebSocket subscription · per-pane scene cameras · viz-only `Cylinder`/`Arc` entities · `CoordinateSystem` plotting helper
+- Bug fixes: standalone HTML export no longer crashes on duplicate renderer helper declarations
+→ [Details](2026-08-24_d31afff.md)
+
+## [Since 1.0.0] — 2026-08-24
+- `VisualizerApp` shutdown (opt-in Ctrl+Q + `request_shutdown()`) · PGA3/PGA2 `dual`/`undual` Hodge-star sign fixes · blade-name parsing sign fix (`e31` → `-e13`)
+- Bug fixes: canonical bivector attributes on 3D-space bases
+→ [Details](2026-08-24_b7423f2.md)
+
+## [Since 0.13.0] — 2026-08-22
+- `show()` in Jupyter · idempotent `display()`/`show()` · scene context managers · `animate(auto_clear=True)` · `viz(...)` shorthand · viz docs restructure · multi-scene guide · browser full-server stop key · operator visualizations reworked
+- Breaking: `animate()` no longer opens the viewer · PGA2/PGA3 `meet`/`join` inverted (Gunn/Dorst) · `e0_inv` → `e0_recip`
+→ [Details](2026-08-22_fae3c1e.md)
+
 ## [Since 0.12.0] — 2026-08-21
 - Per-scene browser interrupt key (`animate(stop_key=...)`, default `q`) · `KeyModifier` enum
 - Breaking: `animate()` no longer stops the server on loop exit (teardown moves to the `atexit` hook)

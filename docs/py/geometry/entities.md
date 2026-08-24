@@ -304,6 +304,76 @@ space = Space()
 |---------|-----------|
 | E3, P3, PGA3, N3 | ✓ |
 
+## Visualization-only entities
+
+`Cylinder` and `Arc` exist **purely for visualization** and have **no**
+multivector representation — they cannot be passed to [`create()`](create.md) /
+`Geometry.create()` nor produced by [`analyze()`](analysis.md).  Pass them to
+`Visualizer.add()` / `Visualizer.new()` just like any other entity.
+
+### Cylinder
+
+A solid cylinder with a given length, radius, main axis, and origin.  `origin`
+is anchored along the main axis by `align_center`: at `0` (the default) the
+cylinder starts at `origin` and extends `length` in the direction of `axis`; at
+`0.5` it is centered on `origin`.
+
+```python
+from pytanga.geometry import Cylinder, Direction, Point
+
+c = Cylinder(
+    origin=Point(0, 0, 0),
+    axis=Direction(0, 0, 1),
+    length=2.0,
+    radius=0.2,
+    align_center=0.0,  # 0 = starts at origin; 0.5 = centered on origin
+)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `origin` | `Point` | Anchor point (default `(0, 0, 0)`); position along the axis set by `align_center`. |
+| `axis` | `Direction` | Main axis (default `+z`). |
+| `length` | `float` | Total length along `axis` (default `1.0`). |
+| `radius` | `float` | Cross-section radius (default `0.1`). |
+| `align_center` | `float` | Fraction of `length` where `origin` sits — `0` = start/base, `0.5` = center (default `0.0`). |
+
+### Arc
+
+An arcing cylinder (partial torus): a circle of radius `radius` centered on
+`origin` in the plane perpendicular to `axis`, swept over `angle` (in
+**radians**), drawn as a cylinder of radius `tube_radius`.  A cone arrow tip is
+optionally drawn at the arc's end.
+
+```python
+import math
+
+from pytanga.geometry import Arc, Direction, Point
+
+arc = Arc(
+    origin=Point(0, 0, 0),
+    axis=Direction(0, 0, 1),
+    radius=1.5,
+    tube_radius=0.05,
+    angle=math.pi * 1.5,  # radians; 2π = full torus (the default)
+    show_arrow=True,      # draw a cone arrow tip at the end
+)
+
+torus = Arc(radius=2.0, tube_radius=0.04)  # full torus (angle defaults to 2π)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `origin` | `Point` | Center of the arc circle (default `(0, 0, 0)`). |
+| `axis` | `Direction` | Rotation axis (default `+z`). |
+| `radius` | `float` | Arc centerline radius (default `1.0`). |
+| `tube_radius` | `float` | Cylinder cross-section radius (default `0.05`). |
+| `angle` | `float` | Sweep angle in radians (default `2π`). |
+| `start_direction` | `Direction \| None` | Unit direction to the arc start; auto-computed ⊥ `axis` when `None`. |
+| `show_arrow` | `bool` | Draw a cone arrow tip at the end (default `False`). |
+| `arrow_length` | `float \| None` | Arrow cone length (default `3 × tube_radius`). |
+| `arrow_radius` | `float \| None` | Arrow cone base radius (default `2 × tube_radius`). |
+
 ## Entity Coverage Matrix
 
 | Entity | E3 | P3 | PGA3 | N3 | E2 | P2 | PGA2 | N2 |

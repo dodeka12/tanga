@@ -334,9 +334,9 @@ class _GltfBuilder:
         if length < 1e-9:
             return []
 
-        segments: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = [
-            (tuple(start.tolist()), tuple(end.tolist()))
-        ]
+        segments: list[
+            tuple[tuple[float, float, float], tuple[float, float, float]]
+        ] = [(tuple(start.tolist()), tuple(end.tolist()))]
 
         prim = _prims.lines_from_segments(segments)
         return [prim] if prim is not None else []
@@ -366,7 +366,9 @@ class _GltfBuilder:
 
         corner = origin + dir_u * min_u + dir_v * min_v
 
-        segments: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = []
+        segments: list[
+            tuple[tuple[float, float, float], tuple[float, float, float]]
+        ] = []
 
         v_steps = int(extent_v // interval_v)
         for i in range(v_steps + 1):
@@ -391,7 +393,18 @@ class _GltfBuilder:
         if kind in ("Direction", "Translator"):
             return tuple(ent.get("origin", [0, 0, 0]))  # type: ignore[return-value]
         if kind in ("Line",):
-            return tuple(ent.get("origin", [0, 0, 0]))  # type: ignore[return-value]
+            # The cylinder primitive is centered on its Y axis; position it at
+            # the segment midpoint so it spans origin -> origin + d̂·length.
+            origin = np.array(ent.get("origin", [0.0, 0.0, 0.0]), dtype=np.float64)
+            direction = np.array(
+                ent.get("direction", [1.0, 0.0, 0.0]), dtype=np.float64
+            )
+            length = float(ent.get("length") or 20.0)
+            d_len = float(np.linalg.norm(direction))
+            if d_len > 1e-10:
+                direction = direction / d_len
+            mid = origin + direction * (length / 2.0)
+            return (float(mid[0]), float(mid[1]), float(mid[2]))
         if kind in ("Plane", "ReflectionPlane"):
             return tuple(ent.get("point", ent.get("origin", [0, 0, 0])))  # type: ignore[return-value]
         if kind in ("Circle", "Sphere", "Inversion"):
@@ -408,27 +421,40 @@ class _GltfBuilder:
     @staticmethod
     def _get_rotation(ent: Dict[str, Any]) -> tuple[float, float, float, float] | None:
         kind = ent.get("kind", "")
-        normal: list[float] | None = None
+        # Source axis the primitive is aligned with: +Z for planes/circles,
+        # +Y for the line cylinder.
+        source = np.array([0.0, 0.0, 1.0])
+        target: list[float] | None = None
         if kind in ("Plane", "ReflectionPlane", "Circle"):
-            normal = ent.get("normal")
+            target = ent.get("normal")
         elif kind in ("Rotor", "GeneralRotor"):
-            normal = ent.get("axis")
+            target = ent.get("axis")
         elif kind == "Motor":
-            rotor = ent.get("rotor", {})
-            normal = rotor.get("axis")
+            target = ent.get("rotor", {}).get("axis")
         elif kind == "ReflectionLine":
-            normal = ent.get("direction")
-        if normal and any(n != 0 for n in normal):
-            n = np.array(normal, dtype=np.float64)
+            target = ent.get("direction")
+        elif kind == "Line":
+            source = np.array([0.0, 1.0, 0.0])
+            target = ent.get("direction")
+        if target and any(n != 0 for n in target):
+            n = np.array(target, dtype=np.float64)
             n_len = np.linalg.norm(n)
             if n_len > 1e-10:
                 n = n / n_len
-                z = np.array([0.0, 0.0, 1.0])
-                v = np.cross(z, n)
-                w = 1.0 + np.dot(z, n)
+                v = np.cross(source, n)
+                w = 1.0 + np.dot(source, n)
                 q_len = math.sqrt(w * w + v.dot(v))
                 if q_len > 1e-10:
                     return (v[0] / q_len, v[1] / q_len, v[2] / q_len, w / q_len)
+                # Anti-parallel: 180° about an axis perpendicular to `source`.
+                aux = (
+                    np.array([1.0, 0.0, 0.0])
+                    if abs(source[0]) < 0.9
+                    else np.array([0.0, 1.0, 0.0])
+                )
+                v = np.cross(source, aux)
+                v = v / np.linalg.norm(v)
+                return (float(v[0]), float(v[1]), float(v[2]), 0.0)
         return None
 
     @staticmethod

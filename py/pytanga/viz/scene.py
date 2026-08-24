@@ -46,6 +46,7 @@ class SceneConfig:
             "background_color": self.background_color,
             "title": self.title,
             "name": self.name,
+            "scene": self.name,
             "space_dim": self.space_dim,
         }
         if self.camera is not None:

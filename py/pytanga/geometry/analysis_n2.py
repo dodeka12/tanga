@@ -24,15 +24,12 @@ from ._n2_helpers import (
     E1,
     E2,
     E12,
-    E_coefficient,
-    bivec_has_null,
     einf_coeff,
     eo_coeff,
     eucl_part,
     get_einf,
     get_eo,
     has_E_component,
-    has_translator_components,
     translator_coeffs,
 )
 from .entities import (
@@ -654,7 +651,7 @@ def _classify_double_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
         return ana_versor_generic(
             mv,
             einf_like=einf,
-            e0_inv_like=-eo,
+            e0_recip_like=-eo,
             blade_order_sign=-1,
             is_2d=True,
         )
@@ -669,7 +666,7 @@ def _classify_quad_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
     return ana_versor_generic(
         mv,
         einf_like=einf,
-        e0_inv_like=-eo,
+        e0_recip_like=-eo,
         blade_order_sign=-1,
         is_2d=True,
     )
