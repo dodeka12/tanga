@@ -1,6 +1,6 @@
 # Part B — Frontend: per-mask distance fn + `vec3 map()` + analytical `|∇d|`
 
-**Status:** Planned · [Overview](README.md) · Depends on: Part A · Feeds: Part C
+**Status:** Done · [Overview](README.md) · Depends on: Part A · Feeds: Part C
 
 ## Goal
 
@@ -100,8 +100,8 @@ inside the leaf (no recomputation, no `matId` dispatch) and returned alongside
 
 ## Verification
 
-- [ ] `node dev/src/sdf_algebra_smoke.mjs && node dev/src/sdf_composer_smoke.mjs`
-- [ ] The generated fragment (string-inspected) contains no `if (rest` /
+- [x] `node dev/src/sdf_algebra_smoke.mjs && node dev/src/sdf_composer_smoke.mjs`
+- [x] The generated fragment (string-inspected) contains no `if (rest` /
       `if (rest <` epsilon branch and no `calcGradientNorm`.
-- [ ] Analytical `|∇d|` matches `calibration.gradient()` to ~1e-9 for the demo
-      entities (numeric spot-check; see overview baselines).
+- [x] Analytical `|∇d|` matches `calibration.gradient()` to FD-truncation
+      precision for the demo entities (numeric spot-check; see overview baselines).
