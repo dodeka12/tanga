@@ -91,9 +91,9 @@ inside the leaf (no recomputation, no `matId` dispatch) and returned alongside
 
 ### B5 — `raymarch.glsl`: consume `m.z`, delete the finite-difference step
 
-- [ ] `vec3 m = map(p)`; `d = m.x`; `stepSize = d / max(m.z, 1.0);` (unconditional).
-- [ ] Delete `calcGradientNorm` and the `u_ObjectParams.w > -0.5` gate.
-- [ ] Keep `mapDensity(d, m.y)`, `calcNormal`, `softShadow`, `shade`, halo on
+- [x] `vec3 m = map(p)`; `d = m.x`; `stepSize = d / max(m.z, 1.0);` (unconditional).
+- [x] Delete `calcGradientNorm` and the `u_ObjectParams.w > -0.5` gate.
+- [x] Keep `mapDensity(d, m.y)`, `calcNormal`, `softShadow`, `shade`, halo on
       their `.x`/`.y` reads (now on a `vec3`).
 - **Verify:** after Part C updates `test_raymarch_shader.py` (no
       `calcGradientNorm`, `stepSize = d / max(m.z, 1.0);`, no sentinel gate).

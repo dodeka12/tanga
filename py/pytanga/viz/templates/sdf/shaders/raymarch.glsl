@@ -5,9 +5,10 @@
 // `main()`.
 //
 // Contracts injected by the host assembler (sdf_viewer.js) BEFORE this body:
-//   · `vec2 map(vec3 p)`            — returns (distance, materialId) for the
-//                                     composed global SDF (Phase 5) or the
-//                                     `M·a → distOf` evaluator (Phase 8).
+//   · `vec3 map(vec3 p)`            — returns (distance, materialId, gradient
+//                                     norm) for the composed global SDF
+//                                     (Phase 5) or the `M·a → distOf` evaluator
+//                                     (Phase 8; gradient norm added in Phase 13).
 //   · `vec4 materialColor(float m)` — resolves the per-object color/opacity.
 //
 // Uses three.js ShaderMaterial GLSL3 conventions: a declared `out vec4`
@@ -45,23 +46,6 @@ vec3 calcNormal(vec3 p) {
         k.yxy * map(p + k.yxy * e).x +
         k.xxx * map(p + k.xxx * e).x
     );
-}
-
-// ── Gradient magnitude (tetrahedral, unnormalized) ──────────
-//
-// The *norm* of the field gradient at `p` — the same tetrahedral stencil as
-// `calcNormal`, but without normalization. Used to scale the sphere-tracing
-// step for non-1-Lipschitz (algebraic) fields, where `d` alone overshoots.
-
-float calcGradientNorm(vec3 p) {
-    const float e = 0.001;
-    vec2 k = vec2(1.0, -1.0);
-    vec3 g =
-        k.xyy * map(p + k.xyy * e).x +
-        k.yyx * map(p + k.yyx * e).x +
-        k.yxy * map(p + k.yxy * e).x +
-        k.xxx * map(p + k.xxx * e).x;
-    return length(g) / (4.0 * e);
 }
 
 // ── IQ-style shading ───────────────────────────────────────
@@ -152,7 +136,7 @@ void main() {
     float maxSigma = 0.0;
     for (int i = 0; i < 256; i++) {
         vec3 p = ro + rd * t;
-        vec2 m = map(p);
+        vec3 m = map(p);
         float d = m.x;
         float sigma = mapDensity(d, m.y);
         if (sigma > maxSigma) {
@@ -164,17 +148,11 @@ void main() {
             hit = true;
             break;
         }
-        // Analytic objects are proper SDFs (|∇d| = 1), so step `d` directly.
-        // Algebraic (`mv_sdf`) objects are not 1-Lipschitz (|∇d| can exceed 1
-        // and even grow), so step `d / max(|∇d|, 1)` — the local first-order
-        // distance to the surface — to avoid overshooting the thin surface.
-        // The per-object `u_ObjectParams.w` is `max_distance >= 0` for algebraic
-        // objects and the sentinel `-1` for analytic ones.
-        float stepSize = d;
-        int matId = int(m.y + 0.5);
-        if (matId >= 0 && matId < uMaterialCount && u_ObjectParams[matId].w > -0.5) {
-            stepSize = d / max(calcGradientNorm(p), 1.0);
-        }
+        // `m.z` is the carried gradient norm: 1.0 for analytic (proper SDF)
+        // objects, scale·|∇d| for algebraic (`mv_sdf`) objects (Phase 13). Step
+        // the local first-order distance d / max(|∇d|, 1) so a non-1-Lipschitz
+        // algebraic field can't overshoot its thin surface.
+        float stepSize = d / max(m.z, 1.0);
         t += stepSize;
         if (t > maxDist || transmittance < 0.01) break;
     }
