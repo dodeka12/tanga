@@ -126,6 +126,14 @@ def test_distance_value_matches_reference() -> None:
     assert abs(distance_value(r, slot, "magnitude") - float(np.linalg.norm(r))) < 1e-12
     assert abs(distance_value(r, slot, "scalar") - 1.0) < 1e-12
 
+    # grade (k=1) resolves the *blade* grade from result_ids, not the slot index:
+    # slots map to blade ids [1, 2, 3, 4, 5]; grade-1 blades are ids 1/2/4 → slots
+    # 0/1/3 → sqrt(2² + 3² + 5²) = sqrt(38).
+    r_g = np.array([2.0, 3.0, 4.0, 5.0, 0.0], dtype=float)
+    assert abs(
+        distance_value(r_g, slot, "grade", result_ids=[1, 2, 3, 4, 5]) - math.sqrt(38.0)
+    ) < 1e-12
+
 
 def test_sign_observed() -> None:
     # Signed modes: e3/n3 plane evaluates to -z (negative on the +z normal

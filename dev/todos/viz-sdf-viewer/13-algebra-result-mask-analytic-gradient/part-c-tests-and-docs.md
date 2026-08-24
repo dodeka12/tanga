@@ -31,7 +31,7 @@ contract, add the new coverage from Parts A/B, and refresh the docs/changelog.
 
 ### C2 — `test_calibration.py`
 
-- [ ] Add a `grade` case to `test_distance_value_matches_reference` using
+- [x] Add a `grade` case to `test_distance_value_matches_reference` using
       `result_ids`; confirm `scalar_pseudo`/`magnitude`/`scalar` cases unchanged.
 - **Verify:** `uv run pytest py/tests/viz/sdf/test_calibration.py -q`
 
