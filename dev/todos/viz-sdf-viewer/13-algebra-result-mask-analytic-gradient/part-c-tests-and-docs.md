@@ -21,11 +21,11 @@ contract, add the new coverage from Parts A/B, and refresh the docs/changelog.
 
 ### C1 — `test_algebra_embedding.py`
 
-- [ ] `test_embeds_registry_complete`: drop the `NR:`/`SLOT_PSEUDO:` token checks;
+- [x] `test_embeds_registry_complete`: drop the `NR:`/`SLOT_PSEUDO:` token checks;
       assert `NP:` + `snippet:` + `gradient:`.
-- [ ] `test_embed_src_consistency`: drop the `NR:`/`SLOT_PSEUDO:` assertions;
+- [x] `test_embed_src_consistency`: drop the `NR:`/`SLOT_PSEUDO:` assertions;
       assert the `gradient` field is present per algebra.
-- [ ] Add `test_active_result_mask` (from Part A) and confirm existing tests
+- [x] Add `test_active_result_mask` (from Part A) and confirm existing tests
       (`test_m_reconstruction`, `test_shape_and_ordering`, …) are unchanged.
 - **Verify:** `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py -q`
 

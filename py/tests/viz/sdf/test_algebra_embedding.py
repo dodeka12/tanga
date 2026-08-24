@@ -148,12 +148,14 @@ def test_embed_src_consistency(name: str) -> None:
     assert f"out float a[{len(spec.point_ids)}]" in src
     assert f"evalPoint{name.upper()}" in src
 
-    # embeds.js carries a matching key with the same NP/NR/SLOT_PSEUDO.
+    # embeds.js carries a matching key with the same NP and a per-algebra
+    # gradient snippet (Phase 13); NR/SLOT_PSEUDO are now per-object wire data.
     js = EMBEDS_JS.read_text(encoding="utf-8")
     assert f"'{name}'" in js
     assert f"NP: {len(spec.point_ids)}" in js
-    assert f"NR: {basis.algebra_dim}" in js
-    assert f"SLOT_PSEUDO: {basis.pseudoscalar_id}" in js
+    assert "gradient:" in js
+    assert "NR:" not in js
+    assert "SLOT_PSEUDO:" not in js
 
 
 def test_thickness_wire() -> None:
@@ -192,5 +194,73 @@ def test_soft_opacity_wire() -> None:
     # Defaults are zero (no soft edge / no hard cutoff).
     assert serialize_mv(line, "line2", {})["falloff"] == 0.0
     assert serialize_mv(line, "line2", {})["max_distance"] == 0.0
+
+
+def test_active_result_mask() -> None:
+    """The result mask is the active product mask plus scalar + pseudoscalar.
+
+    For the four demo entities, ``result_ids`` equals the exact non-zero result
+    blades of ``point ∘ entity`` (plus the scalar and pseudoscalar blades), and
+    the active ``M`` is the full-algebra ``M`` with its all-zero rows dropped.
+    """
+    from pytanga.algebra import EProduct
+    from pytanga.blade_mask.predict import product_blade_mask
+    from pytanga.geometry.entities import Circle, Sphere
+    from pytanga.tensor import MVTensor
+    from pytanga.tensor.ops import contract
+    from pytanga.tensor.product import product_tensor
+
+    entities = [
+        create_entity(
+            _basis("pga3"),
+            Plane(point=Point(0.0, 0.0, 0.0), normal=Direction(0.0, 0.0, 1.0)),
+        ),
+        create_entity(
+            _basis("p3"),
+            Line(origin=Point(0.0, 0.0, 0.0), direction=Direction(1.0, 1.0, 1.0)),
+        ),
+        create_entity(
+            _basis("n3"), Sphere(center=Point(1.0, 0.0, 0.0), radius=2.0)
+        ),
+        create_entity(
+            _basis("n3"),
+            Circle(center=Point(1.0, 1.0, 1.0), radius=4.0, normal=Direction(1.0, 1.0, 1.0)),
+        ),
+    ]
+    for mv in entities:
+        alg = mv.algebra
+        wire = embed_entity_mv(mv, normalize=False)
+        spec = get_spec(alg)
+        product = EProduct.OP if mv.opns else EProduct.IP
+        point_mask = BladeMask(alg, spec.point_ids)
+        entity_mask = BladeMask(mv)
+
+        # result_ids == active product mask ∪ {scalar, pseudoscalar}.
+        active_ids = product_blade_mask(point_mask, entity_mask, product=product).ids
+        assert wire["result_ids"] == sorted(set(active_ids) | {0, alg.pseudoscalar_id})
+
+        # active M == full M with its all-zero rows dropped.
+        full_mask = BladeMask(alg, sorted(range(alg.algebra_dim)))
+        entity_tensor = MVTensor(
+            data=np.array([mv[bid] for bid in entity_mask.ids], dtype=float),
+            masks=(entity_mask,),
+        )
+        op_tensor = product_tensor(
+            point_mask, entity_mask, full_mask, product=product, left=True
+        )
+        full_m = np.asarray(
+            contract("cab,b->ca", op_tensor, entity_tensor).data, dtype=float
+        ).reshape(len(full_mask.ids), len(spec.point_ids))
+        active_m = _m_matrix(wire)
+        full_by_id = {bid: full_m[i] for i, bid in enumerate(full_mask.ids)}
+        expected_m = np.array([full_by_id[bid] for bid in wire["result_ids"]], dtype=float)
+        assert np.allclose(active_m, expected_m, atol=1e-9)
+
+        nonzero_ids = {
+            full_mask.ids[i]
+            for i in range(len(full_mask.ids))
+            if not np.allclose(full_m[i], 0.0, atol=1e-12)
+        }
+        assert set(wire["result_ids"]) == nonzero_ids | {0, alg.pseudoscalar_id}
 
 
