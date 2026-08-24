@@ -6,7 +6,9 @@ import { createCrossHairPoint } from './crosshair_point.js';
 import { createDirection, updateDirection } from './direction.js';
 import { createLine, updateLine } from './line.js';
 import { createPlane } from './plane.js';
+import { createArc, updateArc } from './arc.js';
 import { createCircle } from './circle.js';
+import { createCylinder, updateCylinder } from './cylinder.js';
 import { createSphere } from './sphere.js';
 import { createSpace } from './space.js';
 import { createPointPair } from './operators/point_pair.js';
@@ -56,8 +58,14 @@ export async function createEntityMesh(ent) {
         case 'Circle':
             mesh = createCircle(ent);
             break;
+        case 'Arc':
+            mesh = createArc(ent);
+            break;
         case 'Sphere':
             mesh = await createSphere(ent);
+            break;
+        case 'Cylinder':
+            mesh = createCylinder(ent);
             break;
         case 'Space':
             mesh = createSpace(ent);
@@ -138,6 +146,10 @@ export function updateEntityMesh(mesh, ent, prev) {
             return updatePointPath(mesh, ent, prev);
         case 'Direction':
             return updateDirection(mesh, ent, prev);
+        case 'Arc':
+            return updateArc(mesh, ent, prev);
+        case 'Cylinder':
+            return updateCylinder(mesh, ent, prev);
         default:
             break;
     }

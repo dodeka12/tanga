@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>View base class smoke test</title>
+    <style>
+        #host { width: 400px; height: 300px; background: #222; }
+        #tanga-view-box { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <h3>View base class smoke test</h3>
+    <pre id="log"></pre>
+    <div id="host">
+        <div id="tanga-view-box"></div>
+    </div>
+    <script type="module">
+        import { View } from '../../py/pytanga/viz/templates/views/view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...args) => {
+            logEl.textContent += args.join(' ') + '\n';
+        };
+
+        const view = new View({ el: document.getElementById('tanga-view-box') });
+        view.on('extentchange', (e) => log('extentchange', JSON.stringify(e.detail)));
+        view.on('constraintschange', (e) => log('constraintschange', JSON.stringify(e.detail)));
+
+        log('initial extent', JSON.stringify(view.extent));
+
+        // Resize the host to exercise the ResizeObserver.
+        document.getElementById('host').style.width = '250px';
+        setTimeout(() => {
+            log('after resize', JSON.stringify(view.extent));
+            log('fixedX before constraints', view.fixedX);
+            view.minWidth = { value: 100, unit: 'px' };
+            view.maxWidth = { value: 100, unit: 'px' };
+            log('fixedX after constraints', view.fixedX);
+        }, 100);
+    </script>
+</body>
+</html>

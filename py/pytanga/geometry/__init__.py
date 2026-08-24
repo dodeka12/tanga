@@ -35,7 +35,9 @@ from .random import (
     Uniform,
 )
 from .entities import (
+    Arc,
     Circle,
+    Cylinder,
     Direction,
     Entity,
     HDirection,
@@ -67,7 +69,9 @@ from .operators import (
 
 __all__ = [
     # Entities
+    "Arc",
     "Circle",
+    "Cylinder",
     "Direction",
     "Entity",
     "HDirection",

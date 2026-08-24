@@ -11,7 +11,9 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from pytanga.geometry.entities import (
+    Arc,
     Circle,
+    Cylinder,
     Direction,
     Entity,
     HPoint,
@@ -120,6 +122,10 @@ def _dispatch_entity(
         return _serialize_sphere(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Space):
         return _serialize_space(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Cylinder):
+        return _serialize_cylinder(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Arc):
+        return _serialize_arc(entity, props, kind=kind, styles_map=styles_map)
 
     # ── Operators ──
     if isinstance(entity, ReflectionLine):
@@ -302,6 +308,8 @@ def _serialize_axis(
         result["valueStart"] = ent.value_start
     if ent.value_step != 1.0:
         result["valueStep"] = ent.value_step
+    if ent.ticks is not None:
+        result["ticks"] = [[pos, label] for pos, label in ent.ticks]
     return result
 
 
@@ -527,6 +535,16 @@ def _serialize_grid(
         "range_v": list(ent.range_v),
         "interval_u": ent.interval_u,
         "interval_v": ent.interval_v,
+        **(
+            {"line_positions_u": list(ent.line_positions_u)}
+            if ent.line_positions_u is not None
+            else {}
+        ),
+        **(
+            {"line_positions_v": list(ent.line_positions_v)}
+            if ent.line_positions_v is not None
+            else {}
+        ),
     }
 
 
@@ -804,6 +822,64 @@ def _serialize_space(
         {},
         styles_map=styles_map,
     ) | {"scale": ent.scale}
+
+
+def _serialize_cylinder(
+    ent: Cylinder,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {},
+        styles_map=styles_map,
+    ) | {
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "length": ent.length,
+        "radius": _clamp_positive(ent.radius),
+        "alignCenter": ent.align_center,
+    }
+
+
+def _serialize_arc(
+    ent: Arc,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    arrow = None
+    if ent.show_arrow:
+        length = (
+            ent.arrow_length if ent.arrow_length is not None else 3.0 * ent.tube_radius
+        )
+        radius = (
+            ent.arrow_radius if ent.arrow_radius is not None else 2.0 * ent.tube_radius
+        )
+        arrow = {"length": length, "radius": radius}
+
+    return _apply_defaults(
+        props,
+        kind,
+        {},
+        styles_map=styles_map,
+    ) | {
+        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "radius": _clamp_positive(ent.radius),
+        "tubeRadius": _clamp_positive(ent.tube_radius),
+        "angle": ent.angle,
+        "startDirection": [
+            ent.start_direction.x,
+            ent.start_direction.y,
+            ent.start_direction.z,
+        ],
+        "arrow": arrow,
+    }
 
 
 # ── Operators ──────────────────────────────────────────────

@@ -47,6 +47,7 @@ from .camera import (
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
+from .views import SceneView, View, serialize_layout
 
 logger = logging.getLogger("tanga.viz")
 
@@ -190,6 +191,14 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes[""] = Scene(
             self._config, name="", styles=self._global_styles.copy()
         )
+        # ── Split-view layouts ──
+        # Key "" is the default layout (shown at "/?view=").
+        self._layouts: dict[str, View] = {}
+        self._layouts_serialized: dict[str, dict[str, Any]] = {}
+        # Control ids registered by the currently-registered layout, so they can
+        # be unregistered cleanly when the layout is overwritten.
+        self._layout_control_ids: set[str] = set()
+
         self._default_objects_added: set[str] = set()
 
         # Seed default axes/grid immediately — independent of server start.
@@ -256,6 +265,40 @@ class Visualizer(_JupyterDisplayMixin):
     def list_scenes(self) -> list[str]:
         """Return all scene names (main scene is ``""``)."""
         return list(self._scenes.keys())
+
+    def set_layout(self, root: View, name: str = "") -> str:
+        """Register a split-view layout and return its name.
+
+        The layout is validated, serialized once, and served (plus subscribed
+        to) as the ``view_layout`` message when a browser opens
+        ``/?view=<name>``.
+        """
+        if not isinstance(root, View):
+            raise TypeError(f"layout must be a View, got {type(root).__name__}")
+        self._layouts[name] = root
+        self._layouts_serialized[name] = serialize_layout(root, name=name)
+        self._register_control_handlers(root)
+        return name
+
+    def _register_control_handlers(self, root: View) -> None:
+        """Register control-view handlers into the control handler registry."""
+        from .views import iter_control_views
+
+        for cid in self._layout_control_ids:
+            self._handler_registry.unregister(cid)
+        self._layout_control_ids.clear()
+
+        for view in iter_control_views(root):
+            handler = getattr(view, "on_change", None) or getattr(
+                view, "on_click", None
+            )
+            if handler is not None:
+                self._handler_registry.register(view.id, handler)
+                self._layout_control_ids.add(view.id)
+
+    def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
+        """Callback: return the serialized layout for *layout_name*, or None."""
+        return self._layouts_serialized.get(layout_name)
 
     def list_browsers(self) -> list[dict[str, str]]:
         """Return connected browser sessions as ``[{id, scene, remote_addr}]``.
@@ -720,6 +763,40 @@ class Visualizer(_JupyterDisplayMixin):
         scene = self._scenes[scene_name]
         scene.config.camera = _normalize_camera_config(camera)
         self._push_scene_config(scene_name)
+
+    def set_view_camera(
+        self,
+        view: SceneView,
+        camera: CameraConfig | View2DConfig | View3dConfig,
+    ) -> None:
+        """Update the camera of a single pane (:class:`SceneView`) at runtime.
+
+        Unlike :meth:`set_camera` (which changes a scene for **every** pane
+        showing it), this targets one specific pane, identified by the
+        ``SceneView`` instance.  The pane keeps its own orbit/zoom; this only
+        moves the camera to the requested configuration.
+
+        Args:
+            view: The :class:`SceneView` pane to update.  It must be part of a
+                registered layout (see :meth:`set_layout`).
+            camera: A :class:`CameraConfig`, or a :class:`View2DConfig` /
+                :class:`View3dConfig` input spec.
+        """
+        if not isinstance(view, SceneView):
+            raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
+        view.camera = _normalize_camera_config(camera)
+        if view.camera is None:
+            return
+        data = json.dumps(
+            {
+                "type": "view_camera",
+                "view_id": view.id,
+                "camera": view.camera.to_dict(),
+            }
+        )
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
 
     # ── Default scene objects ───────────────────────────────
 
@@ -1266,6 +1343,7 @@ class Visualizer(_JupyterDisplayMixin):
                 push_animation_stop=self._push_animation_stop_async,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
+                layout_callback=self._layout_serialized_for,
             )
             _boot_done.set()
 
@@ -1327,12 +1405,30 @@ class Visualizer(_JupyterDisplayMixin):
         if self._server is None:
             raise RuntimeError("Server not started. Call start_server() first.")
 
-        if wait_for_browser is None:
-            wait_for_browser = not self._jupyter
-
         page_token = secrets.token_hex(4)  # 8 hex chars
         url_path = f"/{scene_name}" if scene_name else "/"
         token_url = f"{url_path}?token={page_token}"
+        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+
+    def _open_layout_browser(
+        self, layout_name: str, *, wait_for_browser: bool | None = None
+    ) -> bool:
+        """Open/reconnect a browser tab for the split-view layout *layout_name*."""
+        import secrets
+
+        if self._server is None:
+            raise RuntimeError("Server not started. Call start_server() first.")
+
+        page_token = secrets.token_hex(4)
+        token_url = f"/?view={layout_name}&token={page_token}"
+        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+
+    def _open_browser_url(
+        self, token_url: str, *, wait_for_browser: bool | None
+    ) -> bool:
+        """Open *token_url* in a (possibly reused) browser tab."""
+        if wait_for_browser is None:
+            wait_for_browser = not self._jupyter
 
         if self._reuse_existing:
             # Interactive wait: user either clicks Reconnect or presses Enter
@@ -1669,6 +1765,8 @@ class Visualizer(_JupyterDisplayMixin):
         wait_for_browser: bool | None = None,
         jupyter: bool | None = None,
         viewer_name: str | None = None,
+        layout: View | None = None,
+        layout_name: str | None = None,
     ) -> Any:
         """Serve the visualization and show it in the current environment.
 
@@ -1688,6 +1786,12 @@ class Visualizer(_JupyterDisplayMixin):
 
         if self._server is None:
             self.start_server(host=host or "localhost", port=port)
+
+        if layout is not None:
+            self.set_layout(layout, layout_name or "")
+            return self._open_layout_browser(
+                layout_name or "", wait_for_browser=wait_for_browser
+            )
 
         if use_jupyter:
             return self.display(viewer_name=viewer_name)
@@ -1721,7 +1825,13 @@ class Visualizer(_JupyterDisplayMixin):
         while not shutdown.is_set():
             time.sleep(0.25)
 
-    def run(self, *, wait_for_browser: bool | None = None) -> None:
+    def run(
+        self,
+        *,
+        wait_for_browser: bool | None = None,
+        layout: View | None = None,
+        layout_name: str | None = None,
+    ) -> None:
         """Deprecated: use :meth:`show` then :meth:`wait`.
 
         Starts the server, opens a browser, and blocks until Ctrl+C.
@@ -1731,7 +1841,9 @@ class Visualizer(_JupyterDisplayMixin):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.show(wait_for_browser=wait_for_browser)
+        self.show(
+            wait_for_browser=wait_for_browser, layout=layout, layout_name=layout_name
+        )
         self.wait()
 
     # ── Object Interaction ─────────────────────────────────

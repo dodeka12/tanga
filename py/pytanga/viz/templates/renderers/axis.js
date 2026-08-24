@@ -137,27 +137,37 @@ export function addAxis(group, axis) {
     // Axis line
     addSegment(start, end);
 
-    // Value labels at major intervals (no tick marks).
-    if (showValueLabels && major > 0) {
+    function placeValueLabel(p, text) {
+        const labelPos = p.clone()
+            .addScaledVector(dir, offLocal[0] || 0)
+            .addScaledVector(perp, (offLocal[1] || 0) + valueLabelOffset)
+            .addScaledVector(binormal, offLocal[2] || 0);
+        const label = makeLabel(text, {
+            fontSize: valueLabelSize,
+            fontColor: valueLabelColor,
+            align: valueStyle.align || null,
+            offset: valueStyle.offset_2d || null,
+            rotation: valueStyle.rotation || 0,
+        });
+        label.position.copy(labelPos);
+        group.add(label);
+    }
+
+    // Value labels: an explicit tick list (position, label) takes precedence
+    // over the uniform `majorInterval` spacing, enabling non-uniform scales.
+    const ticks = axis.ticks;
+    if (showValueLabels && Array.isArray(ticks) && ticks.length > 0) {
+        for (const tick of ticks) {
+            const t = tick[0];
+            const text = tick[1] != null ? String(tick[1]) : '';
+            placeValueLabel(start.clone().addScaledVector(dir, t), text);
+        }
+    } else if (showValueLabels && major > 0) {
         const count = Math.floor(length / major);
         for (let i = 1; i <= count; i++) {
             const t = i * major;
             const value = valueStart + i * major * valueStep;
-            const p = start.clone().addScaledVector(dir, t);
-            const labelPos = p.clone()
-                .addScaledVector(dir, offLocal[0] || 0)
-                .addScaledVector(perp, (offLocal[1] || 0) + valueLabelOffset)
-                .addScaledVector(binormal, offLocal[2] || 0);
-
-            const label = makeLabel(formatValue(value), {
-                fontSize: valueLabelSize,
-                fontColor: valueLabelColor,
-                align: valueStyle.align || null,
-                offset: valueStyle.offset_2d || null,
-                rotation: valueStyle.rotation || 0,
-            });
-            label.position.copy(labelPos);
-            group.add(label);
+            placeValueLabel(start.clone().addScaledVector(dir, t), formatValue(value));
         }
     }
 

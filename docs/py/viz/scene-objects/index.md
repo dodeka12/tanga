@@ -12,6 +12,7 @@ paths, and the active (interactive) elements.
 | [Operators](operators.ipynb) | Versors (rotor, translator, motor, …) and their style classes/parameters |
 | [Axes & Grid](axes-grid.md) | `Axes2D`/`Axes3D`, custom `Axis`, and `Grid` |
 | [PointPath](point-path.md) | Trail/curve rendering with `PointPath` and `PointPathStyle` |
+| [Coordinate System](coordinate-system.md) | Plotting helper: axes/grid/plane, scales, `size`/`align`/`axis_origin`, live trails |
 | [Active Elements](active-elements/index.md) | High-level interactive entities (`ActPoint`) |
 
 ## Quick reference

@@ -4,10 +4,13 @@
 """Tests for Entity/Operator → JSON serialization."""
 
 import json
+import math
 
 import pytest
 from pytanga.geometry.entities import (
+    Arc,
     Circle,
+    Cylinder,
     Direction,
     HPoint,
     Line,
@@ -397,6 +400,59 @@ class TestStyleOverrides:
         d = _serialize(Sphere(Point(0, 0, 0), 1.0), styles_map=styles_map)
         assert d["style"]["opacity"] == 0.4
 
+    def test_cylinder(self):
+        d = _serialize(Cylinder(Point(1, 2, 3), Direction(0, 1, 0), 2.0, 0.2))
+        assert d["kind"] == "Cylinder"
+        assert d["origin"] == [1, 2, 3]
+        assert d["axis"] == [0, 1, 0]
+        assert d["length"] == 2.0
+        assert d["radius"] == 0.2
+        assert d["alignCenter"] == 0.0
+        assert d["style"]["style_type"] == "CylinderStyle"
+
+    def test_cylinder_align_center(self):
+        d = _serialize(Cylinder(align_center=0.5))
+        assert d["alignCenter"] == 0.5
+
+    def test_cylinder_color_override(self):
+        d = _serialize(Cylinder(), {"color": "#00ff00"})
+        assert d["color"] == "#00ff00"
+        assert d["style"]["color"] == "#00ff00"
+
+    def test_arc(self):
+        d = _serialize(Arc(Point(0, 0, 0), Direction(0, 0, 1), 1.5, 0.05, math.pi))
+        assert d["kind"] == "Arc"
+        assert d["origin"] == [0, 0, 0]
+        assert d["axis"] == [0, 0, 1]
+        assert d["radius"] == 1.5
+        assert d["tubeRadius"] == 0.05
+        assert d["angle"] == pytest.approx(math.pi)
+        assert d["arrow"] is None
+        start = d["startDirection"]
+        assert len(start) == 3
+        assert sum(c * c for c in start) == pytest.approx(1.0)
+        assert start[2] == pytest.approx(0.0)  # perpendicular to +z
+
+    def test_arc_respects_start_direction(self):
+        d = _serialize(Arc(start_direction=Direction(1, 0, 0)))
+        assert d["startDirection"] == [1.0, 0.0, 0.0]
+
+    def test_arc_arrow_defaults(self):
+        d = _serialize(Arc(show_arrow=True, tube_radius=0.1))
+        assert d["arrow"] is not None
+        assert d["arrow"]["length"] == pytest.approx(0.3)
+        assert d["arrow"]["radius"] == pytest.approx(0.2)
+
+    def test_arc_arrow_explicit(self):
+        d = _serialize(Arc(show_arrow=True, arrow_length=0.5, arrow_radius=0.25))
+        assert d["arrow"] == {"length": 0.5, "radius": 0.25}
+
+    def test_arc_style_override(self):
+        from pytanga.viz import ArcStyle
+
+        d = _serialize(Arc(), {"style": ArcStyle(color="#00ff00")})
+        assert d["style"]["color"] == "#00ff00"
+
     def test_unknown_type_raises(self):
         with pytest.raises(TypeError, match="Unknown entity type"):
             _serialize("not_an_entity")
@@ -452,3 +508,47 @@ class TestObjectUpdate:
         assert msg["type"] == "object_update"
         assert msg["patches"] == []
         assert msg["removed"] == []
+
+
+# ── Viz-only entities scene-graph integration ────────────────
+
+
+def test_viz_entities_scene_graph_integration():
+    from pytanga.geometry import Arc, Cylinder, Direction, Point
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.add(
+        Cylinder(origin=Point(0, 0, 0), axis=Direction(0, 0, 1), length=2.0, radius=0.2)
+    )
+    viz.add(
+        Arc(
+            origin=Point(0, 0, 0),
+            axis=Direction(0, 0, 1),
+            radius=1.5,
+            tube_radius=0.05,
+            angle=math.pi * 1.5,
+            show_arrow=True,
+        )
+    )
+    viz.add(Arc(radius=2.0, tube_radius=0.04))
+
+    objs = viz.main_scene.full_state(styles_map=viz.styles.kind)
+
+    cylinder = next(o for o in objs if o["kind"] == "Cylinder")
+    assert cylinder["origin"] == [0, 0, 0]
+    assert cylinder["axis"] == [0, 0, 1]
+    assert cylinder["length"] == 2.0
+    assert cylinder["radius"] == 0.2
+
+    arcs = [o for o in objs if o["kind"] == "Arc"]
+    assert len(arcs) == 2
+    partial = next(o for o in arcs if o["arrow"] is not None)
+    full = next(o for o in arcs if o["arrow"] is None)
+
+    start = partial["startDirection"]
+    assert sum(c * c for c in start) == pytest.approx(1.0)
+    assert partial["arrow"]["length"] == pytest.approx(0.15)
+    assert partial["arrow"]["radius"] == pytest.approx(0.1)
+    assert full["arrow"] is None
+    assert full["angle"] == pytest.approx(2 * math.pi)

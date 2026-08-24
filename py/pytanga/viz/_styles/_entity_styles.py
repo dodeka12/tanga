@@ -323,6 +323,84 @@ class SphereStyle(VizStyle):
 
 
 @dataclass
+class CylinderStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Cylinder`.
+
+    Attributes:
+        wireframe: When ``True``, a wireframe cage is drawn over the
+            cylinder surface.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "CylinderStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class ArcStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Arc`.
+
+    Attributes:
+        wireframe: When ``True``, a wireframe cage is drawn over the
+            arcing-cylinder surface.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "ArcStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
 class SpaceStyle(VizStyle):
     """Visual style for :class:`~pytanga.geometry.Space`."""
 
