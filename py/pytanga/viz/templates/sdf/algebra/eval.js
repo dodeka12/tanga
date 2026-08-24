@@ -1,4 +1,4 @@
-// Algebra leaf expression emitter (Phase 8).
+// Algebra leaf expression emitter (Phase 8, analytical gradient in Phase 13).
 //
 // Emits the `evalPoint → M·a → distOf` algebra leaves *inside* the single
 // composed `map()`: each `mv_sdf` object becomes a `dist_mv_<i>` function that
@@ -7,10 +7,12 @@
 // by the per-object `u_ObjectParams[i].x` calibration factor. An optional
 // `bound` clips infinite entities via `opIntersect` with an `sdBox`.
 //
-// Because the result vector is the *full* algebra (ascending blade ids), the
-// distance functions are instantiated per distinct algebra with that algebra's
-// `NR`/`SLOT_PSEUDO` constants substituted in, so `scalar_pseudo` reads the
-// scalar at slot 0 and the pseudoscalar at slot NR-1 for every algebra.
+// Phase 13: the result vector is the object's *active result mask* (the backend
+// `result_ids`, scalar always at slot 0, pseudoscalar at `slot_pseudo`), so the
+// distance functions are instantiated per distinct result mask with that mask's
+// `NR`/`SLOT_PSEUDO` substituted. Each leaf also returns `vec2(d, g)` carrying
+// the analytical gradient norm `g = scale·|∇d|` (distance-function derivative
+// `g[k] = ∂D/∂r[k]`, transposed matvec `h = Mᵀg`, per-algebra point Jacobian).
 
 import { distanceFuncs } from './distances.js';
 import { embedFuncs } from './embeds.js';
@@ -38,19 +40,26 @@ export function algebraSuffix(algebra) {
 
 export function mvLayout(objects) {
     let cursor = 0;
+    const maskFirst = new Map(); // mask key → first object index (stable suffix)
     const infos = objects.map((obj, index) => {
         if (!obj || obj.sdfKind !== 'mv_sdf') return null;
         const entry = embedFuncs.get(obj.algebra);
         if (!entry) throw new Error(`No embedding registered for algebra '${obj.algebra}'`);
+        const ids = obj.result_ids || [];
+        const key = ids.join(',');
+        if (!maskFirst.has(key)) maskFirst.set(key, index);
         const info = {
             index,
             algebra: obj.algebra,
             np: entry.NP,
-            nr: entry.NR,
-            slotPseudo: entry.SLOT_PSEUDO,
+            nr: ids.length,
+            slotPseudo: obj.slot_pseudo,
+            resultIds: ids,
+            maskKey: key,
+            maskSuffix: String(maskFirst.get(key)),
             offset: cursor,
         };
-        cursor += entry.NP * entry.NR;
+        cursor += entry.NP * ids.length;
         if (cursor > MAX_MV_FLOATS) {
             throw new Error(`mv_sdf matrix budget exceeded (${cursor} > ${MAX_MV_FLOATS})`);
         }
@@ -101,30 +110,31 @@ function instantiateDist(name, nr, slotPseudo, suffix) {
     return src;
 }
 
-function gradeNormSrc(nr, suffix) {
+function gradeNormSrc(resultIds, nr, suffix) {
+    const ids = resultIds.join(', ');
     return `
+const int RESULT_IDS_${suffix}[${nr}] = int[](${ids});
 float gradeNorm_${suffix}(in float r[${nr}], int k) {
     float s = 0.0;
     for (int i = 0; i < ${nr}; i++) {
-        if (bitCount(i) == k) s += r[i] * r[i];
+        if (bitCount(RESULT_IDS_${suffix}[i]) == k) s += r[i] * r[i];
     }
     return sqrt(s);
 }`;
 }
 
 export function emitDistanceFunctions(objects, activeDistance) {
+    const { infos } = mvLayout(objects);
     const seen = new Set();
     const parts = [];
-    for (const obj of objects) {
-        if (!obj || obj.sdfKind !== 'mv_sdf') continue;
-        if (seen.has(obj.algebra)) continue;
-        seen.add(obj.algebra);
-        const entry = embedFuncs.get(obj.algebra);
-        const suffix = algebraSuffix(obj.algebra);
+    for (const info of infos) {
+        if (!info) continue;
+        if (seen.has(info.maskKey)) continue;
+        seen.add(info.maskKey);
         if (activeDistance === 'grade') {
-            parts.push(gradeNormSrc(entry.NR, suffix));
+            parts.push(gradeNormSrc(info.resultIds, info.nr, info.maskSuffix));
         }
-        parts.push(instantiateDist(activeDistance, entry.NR, entry.SLOT_PSEUDO, suffix));
+        parts.push(instantiateDist(activeDistance, info.nr, info.slotPseudo, info.maskSuffix));
     }
     return parts.join('\n');
 }
@@ -132,18 +142,54 @@ export function emitDistanceFunctions(objects, activeDistance) {
 
 // ── Leaf emission ────────────────────────────────────────
 
-export function distCall(activeDistance, algebra, resultVar = 'r') {
-    const fn = distFnName(activeDistance) + '_' + algebraSuffix(algebra);
+export function distCall(activeDistance, maskSuffix, resultVar = 'r') {
+    const fn = distFnName(activeDistance) + '_' + maskSuffix;
     if (activeDistance === 'grade') return `${fn}(${resultVar}, 1)`;
     if (activeDistance === 'component') return `${fn}(${resultVar}, 0)`;
     return `${fn}(${resultVar})`;
 }
 
+// Emit the `g[k] = ∂D/∂r[k]` derivative coefficients for the active distance
+// function over the object's result mask. The `1/sqrt` denominators use a
+// branchless guard (`inversesqrt(x + float(x < EPS_SQ) * EPS_SQ)`), never an
+// `if (rest < eps)` branch.
+function emitGradientCoeffs(distance, nr, slotPseudo, resultIds, suffix) {
+    const lines = [`    float g[${nr}];`];
+    if (distance === 'scalar_pseudo') {
+        lines.push('    float rest = 0.0;');
+        lines.push(`    for (int i = 0; i < ${nr}; i++) { if (i != 0 && i != ${slotPseudo}) rest += r[i] * r[i]; }`);
+        lines.push('    float invRest = inversesqrt(rest + float(rest < 1e-6) * 1e-6);');
+        lines.push('    g[0] = 1.0;');
+        lines.push(`    g[${slotPseudo}] = 1.0;`);
+        for (let k = 0; k < nr; k++) {
+            if (k !== 0 && k !== slotPseudo) lines.push(`    g[${k}] = r[${k}] * invRest;`);
+        }
+    } else if (distance === 'magnitude') {
+        lines.push('    float norm2 = 0.0;');
+        lines.push(`    for (int i = 0; i < ${nr}; i++) norm2 += r[i] * r[i];`);
+        lines.push('    float invNorm = inversesqrt(norm2 + float(norm2 < 1e-6) * 1e-6);');
+        for (let k = 0; k < nr; k++) lines.push(`    g[${k}] = r[${k}] * invNorm;`);
+    } else if (distance === 'grade') {
+        lines.push('    float grade2 = 0.0;');
+        lines.push(`    for (int i = 0; i < ${nr}; i++) { if (bitCount(RESULT_IDS_${suffix}[i]) == 1) grade2 += r[i] * r[i]; }`);
+        lines.push('    float invGrade = inversesqrt(grade2 + float(grade2 < 1e-6) * 1e-6);');
+        for (let k = 0; k < nr; k++) {
+            lines.push(`    g[${k}] = (bitCount(RESULT_IDS_${suffix}[${k}]) == 1) ? r[${k}] * invGrade : 0.0;`);
+        }
+    } else {
+        // scalar / component (default params select the scalar slot 0).
+        lines.push('    g[0] = 1.0;');
+        for (let k = 1; k < nr; k++) lines.push(`    g[${k}] = 0.0;`);
+    }
+    return lines;
+}
+
 export function emitAlgebraLeaf(obj, info, activeDistance) {
-    const { index, algebra, np, nr, offset } = info;
+    const { index, algebra, np, nr, slotPseudo, offset, resultIds, maskSuffix } = info;
     const embedFn = `evalPoint${algebraSuffix(algebra)}`;
+    const entry = embedFuncs.get(algebra);
     const lines = [
-        `float dist_mv_${index}(vec3 p) {`,
+        `vec2 dist_mv_${index}(vec3 p) {`,
         `    float a[${np}]; ${embedFn}(p, a);`,
         `    float r[${nr}];`,
     ];
@@ -155,14 +201,27 @@ export function emitAlgebraLeaf(obj, info, activeDistance) {
         }
         lines.push(`    r[${j}] = ${terms.join(' + ')};`);
     }
-    const distExpr = `${distCall(activeDistance, algebra)} * u_ObjectParams[${index}].x - u_ObjectParams[${index}].y`;
+    const distExpr = `${distCall(activeDistance, maskSuffix)} * u_ObjectParams[${index}].x - u_ObjectParams[${index}].y`;
     if (obj.bound && obj.bound.halfExtents) {
         const he = obj.bound.halfExtents;
         const box = `sdBox(p, vec3(${floatParam(he[0])}, ${floatParam(he[1])}, ${floatParam(he[2])}))`;
-        lines.push(`    return opIntersect(${distExpr}, ${box});`);
+        lines.push(`    float d = opIntersect(${distExpr}, ${box});`);
     } else {
-        lines.push(`    return ${distExpr};`);
+        lines.push(`    float d = ${distExpr};`);
     }
+    // Analytical gradient: g[k] = ∂D/∂r[k], h = Mᵀg, grad = Jᵀh, g = scale·|∇d|.
+    lines.push(...emitGradientCoeffs(activeDistance, nr, slotPseudo, resultIds, maskSuffix));
+    lines.push(`    float h[${np}];`);
+    for (let m = 0; m < np; m++) {
+        const terms = [];
+        for (let k = 0; k < nr; k++) {
+            const slot = offset + k * np + m;
+            terms.push(`u_M[${slot >> 2}][${slot & 3}] * g[${k}]`);
+        }
+        lines.push(`    h[${m}] = ${terms.join(' + ')};`);
+    }
+    lines.push(`    ${entry.gradient}`);
+    lines.push(`    return vec2(d, u_ObjectParams[${index}].x * length(grad));`);
     lines.push('}');
     return lines.join('\n');
 }
@@ -183,12 +242,9 @@ export function buildAlgebraUniforms(objects) {
     // u_M is packed into vec4 slots (padded to a multiple of 4).
     const vec4Count = Math.ceil(Math.max(totalFloats, 1) / 4);
     const uM = new Float32Array(vec4Count * 4);
-    // vec4 per object: (scale, thickness, falloff, max_distance); w = -1 marks
-    // a non-algebraic (analytic) object.
+    // vec4 per object: (scale, thickness, falloff, max_distance). Analytic
+    // objects stay (0, 0, 0, 0): falloff 0 → no density; max_distance is unused.
     const uObjectParams = new Float32Array(MAX_SDF_OBJECTS * 4);
-    for (let i = 0; i < MAX_SDF_OBJECTS; i++) {
-        uObjectParams[i * 4 + 3] = -1.0;
-    }
     infos.forEach((info) => {
         if (!info) return;
         const obj = objects[info.index];

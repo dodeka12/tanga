@@ -62,19 +62,19 @@ inside the leaf (no recomputation, no `matId` dispatch) and returned alongside
 
 ### B3 — `eval.js`: per-mask distance fn + `vec2` leaf with analytical `|∇d|`
 
-- [ ] `mvLayout`: `nr = obj.result_ids.length`, `np = entry.NP`,
+- [x] `mvLayout`: `nr = obj.result_ids.length`, `np = entry.NP`,
       `slotPseudo = obj.slot_pseudo` (always valid from Part A); stride `np*nr`.
       No `embeds.js` `NR`.
-- [ ] `emitDistanceFunctions` (per-mask, dedup key = `result_ids.join(',')`):
+- [x] `emitDistanceFunctions` (per-mask, dedup key = `result_ids.join(',')`):
       `distOf<Dist>_<suffix>` with per-mask `NR`/`SLOT_PSEUDO` substituted;
       `gradeNorm_<suffix>` uses `const int RESULT_IDS_<suffix>[NR] = int[](…)`
       and `bitCount(RESULT_IDS_<suffix>[i]) == k`.
-- [ ] `emitAlgebraLeaves`: leaf returns `vec2` — compute `r`, then `d` (via
+- [x] `emitAlgebraLeaves`: leaf returns `vec2` — compute `r`, then `d` (via
       `distOf`, scaled + thickness + bound) and `g = scale·length(grad)`, where
       `grad` comes from the inlined derivative (`h[m] = Σₖ u_M[slot(k,m)]·g[k]`
       unrolled) + the per-algebra `gradient` field. Use the branchless guard
       `inversesqrt(rest + float(rest < 1e-6) * 1e-6)` (no `if`).
-- [ ] `buildAlgebraUniforms`: drop the `-1` sentinel fill (plain `max_distance`
+- [x] `buildAlgebraUniforms`: drop the `-1` sentinel fill (plain `max_distance`
       defaults, analytic objects stay `(0,0,0,0)`).
 - **Verify:** `node dev/src/sdf_algebra_smoke.mjs` (update its assertions in
       Part C to match the new leaf/distOf/`vec2` output).
