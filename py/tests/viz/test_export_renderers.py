@@ -23,6 +23,18 @@ from pytanga.viz.export._bootstrap._html import (
 
 _EXPORT_FUNC_RE = re.compile(r"^export\s+(?:async\s+)?function\s+(\w+)")
 
+# Matches a top-level binding declaration at column 0.  The export pipeline
+# strips ``import``/``export`` and concatenates every module into a single
+# ``<script type="module">`` scope, so a duplicate of any of these names throws
+# ``SyntaxError: Identifier '…' has already been declared`` at runtime.
+_TOP_LEVEL_DECL_RE = re.compile(
+    r"^(?:export\s+)?(?:async\s+)?"
+    r"(?:function\s+([A-Za-z_$][\w$]*)"
+    r"|(?:const|let|var)\s+([A-Za-z_$][\w$]*)"
+    r"|class\s+([A-Za-z_$][\w$]*))",
+    re.MULTILINE,
+)
+
 
 def _renderer_js_files():
     """Return all ``*.js`` renderer modules on disk, relative to the renderers dir."""
@@ -90,6 +102,34 @@ def test_scene_builder_bundled():
     assert "function buildSceneObject(" in bootstrap
     assert "function buildOverlay(" in bootstrap
     assert "function removeObject(" in bootstrap
+
+
+def test_bootstrap_has_no_duplicate_top_level_declarations():
+    """Concatenated renderer modules must not declare the same top-level name.
+
+    Each renderer module is its own ES-module scope in the live viewer, but the
+    HTML export concatenates them into a single ``<script type="module">``
+    block.  Two modules declaring the same top-level binding (e.g. a private
+    ``resolveLength`` helper) therefore crash with ``SyntaxError: Identifier
+    'resolveLength' has already been declared``.
+    """
+    from collections import Counter
+
+    bootstrap = generate_bootstrap_js("")
+    names = [
+        group
+        for match in _TOP_LEVEL_DECL_RE.findall(bootstrap)
+        for group in match
+        if group
+    ]
+    duplicates = sorted(
+        name for name, count in Counter(names).items() if count > 1
+    )
+    assert not duplicates, (
+        "Duplicate top-level declarations in the HTML export bundle: "
+        f"{duplicates}. Rename the colliding helpers so each renderer module "
+        "owns a unique name."
+    )
 
 
 def test_render_export_html_alias_deprecated():

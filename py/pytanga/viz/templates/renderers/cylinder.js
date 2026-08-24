@@ -15,11 +15,11 @@ import {
     addWireframeOverlay,
 } from './utils.js';
 
-function resolveLength(ent) {
+function resolveCylinderLength(ent) {
     return Math.max(ent.length || 1.0, 0.001);
 }
 
-function resolveRadius(ent) {
+function resolveCylinderRadius(ent) {
     return Math.max(ent.radius || 0.1, 0.001);
 }
 
@@ -30,8 +30,8 @@ function resolveAlignCenter(ent) {
 export function createCylinder(ent) {
     const color = parseColor(ent, '#44aaff');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const radius = resolveRadius(ent);
-    const length = resolveLength(ent);
+    const radius = resolveCylinderRadius(ent);
+    const length = resolveCylinderLength(ent);
     const origin = ent.origin || [0, 0, 0];
     const axis = ent.axis || [0, 0, 1];
     const alignCenter = resolveAlignCenter(ent);
@@ -71,13 +71,13 @@ export function createCylinder(ent) {
 
 export function updateCylinder(mesh, ent, prev) {
     // A radius/length/align change alters the geometry; cheaper to rebuild.
-    if (prev && !approxEqual(resolveLength(ent), resolveLength(prev))) return false;
-    if (prev && !approxEqual(resolveRadius(ent), resolveRadius(prev))) return false;
+    if (prev && !approxEqual(resolveCylinderLength(ent), resolveCylinderLength(prev))) return false;
+    if (prev && !approxEqual(resolveCylinderRadius(ent), resolveCylinderRadius(prev))) return false;
     if (prev && !approxEqual(resolveAlignCenter(ent), resolveAlignCenter(prev))) return false;
 
     const origin = ent.origin || prev?.origin || [0, 0, 0];
     const axis = ent.axis || prev?.axis || [0, 0, 1];
-    const length = resolveLength(ent);
+    const length = resolveCylinderLength(ent);
     const offset = length * (0.5 - resolveAlignCenter(ent));
 
     const d = new THREE.Vector3(axis[0], axis[1], axis[2]).normalize();
