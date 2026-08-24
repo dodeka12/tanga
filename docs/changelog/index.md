@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.0.0] — 2026-08-24
+- `VisualizerApp` shutdown (opt-in Ctrl+Q + `request_shutdown()`) · PGA3/PGA2 `dual`/`undual` Hodge-star sign fixes · blade-name parsing sign fix (`e31` → `-e13`)
+- Bug fixes: canonical bivector attributes on 3D-space bases
+→ [Details](2026-08-24_b7423f2.md)
+
 ## [Since 0.13.0] — 2026-08-22
 - `show()` in Jupyter · idempotent `display()`/`show()` · scene context managers · `animate(auto_clear=True)` · `viz(...)` shorthand · viz docs restructure · multi-scene guide · browser full-server stop key · operator visualizations reworked
 - Breaking: `animate()` no longer opens the viewer · PGA2/PGA3 `meet`/`join` inverted (Gunn/Dorst) · `e0_inv` → `e0_recip`
