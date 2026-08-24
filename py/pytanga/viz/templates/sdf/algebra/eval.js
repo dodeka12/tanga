@@ -152,10 +152,10 @@ export function distCall(activeDistance, maskSuffix, resultVar = 'r') {
 // Emit the `g[k] = ∂D/∂r[k]` derivative coefficients for the active distance
 // function over the object's result mask. The `1/sqrt` denominators use a
 // branchless guard (`inversesqrt(x + float(x < EPS_SQ) * EPS_SQ)`), never an
-// `if (rest < eps)` branch.
-function emitGradientCoeffs(distance, nr, slotPseudo, resultIds, suffix) {
+// epsilon-guard branch.
+function emitGradientCoeffs(activeDistance, nr, slotPseudo, resultIds, suffix) {
     const lines = [`    float g[${nr}];`];
-    if (distance === 'scalar_pseudo') {
+    if (activeDistance === 'scalar_pseudo') {
         lines.push('    float rest = 0.0;');
         lines.push(`    for (int i = 0; i < ${nr}; i++) { if (i != 0 && i != ${slotPseudo}) rest += r[i] * r[i]; }`);
         lines.push('    float invRest = inversesqrt(rest + float(rest < 1e-6) * 1e-6);');
@@ -164,12 +164,12 @@ function emitGradientCoeffs(distance, nr, slotPseudo, resultIds, suffix) {
         for (let k = 0; k < nr; k++) {
             if (k !== 0 && k !== slotPseudo) lines.push(`    g[${k}] = r[${k}] * invRest;`);
         }
-    } else if (distance === 'magnitude') {
+    } else if (activeDistance === 'magnitude') {
         lines.push('    float norm2 = 0.0;');
         lines.push(`    for (int i = 0; i < ${nr}; i++) norm2 += r[i] * r[i];`);
         lines.push('    float invNorm = inversesqrt(norm2 + float(norm2 < 1e-6) * 1e-6);');
         for (let k = 0; k < nr; k++) lines.push(`    g[${k}] = r[${k}] * invNorm;`);
-    } else if (distance === 'grade') {
+    } else if (activeDistance === 'grade') {
         lines.push('    float grade2 = 0.0;');
         lines.push(`    for (int i = 0; i < ${nr}; i++) { if (bitCount(RESULT_IDS_${suffix}[i]) == 1) grade2 += r[i] * r[i]; }`);
         lines.push('    float invGrade = inversesqrt(grade2 + float(grade2 < 1e-6) * 1e-6);');
