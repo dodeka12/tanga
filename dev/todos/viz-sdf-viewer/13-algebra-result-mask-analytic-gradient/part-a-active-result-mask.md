@@ -49,13 +49,13 @@ the same function `product_tensor(..., c_mask=None)` uses internally.
 
 ### A2 — calibration on the masked vector
 
-- [ ] `distance_value(r, slot_pseudo, distance, result_ids=None)`: when
+- [x] `distance_value(r, slot_pseudo, distance, result_ids=None)`: when
       `result_ids` is `None`, default to `list(range(len(r)))` (full-layout
       backward compatibility). Fix the `grade` branch to use the *blade* grade
       `bin(result_ids[i]).count("1")` instead of the slot index `bin(i)`.
       `scalar_pseudo`/`magnitude`/`scalar`/`component` stay unchanged (scalar at
       `r[0]`, pseudo at `r[slot_pseudo]`).
-- [ ] `evaluate_sdf` passes `result_ids=wire["result_ids"]` into `distance_value`.
+- [x] `evaluate_sdf` passes `result_ids=wire["result_ids"]` into `distance_value`.
 - **Verify:** `uv run pytest py/tests/viz/sdf/test_calibration.py -q` (existing
       `test_distance_value_matches_reference`, `test_sign_observed`,
       `test_zero_set_matches_analytic_plane`, `test_scale_calibration_pga3`, etc.

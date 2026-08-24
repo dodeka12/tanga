@@ -35,13 +35,22 @@ from .algebra_embedding import embed_entity_mv, point_coeffs
 
 
 def distance_value(
-    r, slot_pseudo: int, distance: str = "scalar_pseudo"
+    r,
+    slot_pseudo: int,
+    distance: str = "scalar_pseudo",
+    result_ids: list[int] | None = None,
 ) -> float:
     """Apply a distance function to a result coefficient vector ``r``.
 
     Mirrors the fixed ``distOf`` set (``distances.js``); ``grade``/``component``
     use the same defaults the Phase 8 shader uses (``k=1``, ``blade_id=0``).
+
+    ``result_ids`` maps each ``r`` slot to its blade id (the active result mask).
+    When omitted, the full-layout ``0..len(r)-1`` is assumed (backward
+    compatible); ``grade`` uses it to resolve the *blade* grade of each slot.
     """
+    if result_ids is None:
+        result_ids = list(range(len(r)))
     if distance == "scalar_pseudo":
         rest = sum(
             float(v) ** 2 for i, v in enumerate(r) if i != 0 and i != slot_pseudo
@@ -53,7 +62,9 @@ def distance_value(
         return float(r[0])
     if distance == "grade":
         return float(
-            np.linalg.norm([v for i, v in enumerate(r) if bin(i).count("1") == 1])
+            np.linalg.norm(
+                [v for i, v in enumerate(r) if bin(result_ids[i]).count("1") == 1]
+            )
         )
     if distance == "component":
         return float(r[0])
@@ -77,7 +88,9 @@ def evaluate_sdf(
     pc = point_coeffs(mv.algebra, x, y, z)
     a = np.array([pc[bid] for bid in wire["point_ids"]], dtype=float)
     r = m @ a
-    return distance_value(r, wire["slot_pseudo"], distance)
+    return distance_value(
+        r, wire["slot_pseudo"], distance, result_ids=wire["result_ids"]
+    )
 
 
 def gradient(
