@@ -1,6 +1,6 @@
 # Phase 13 — Active result mask + per-object analytical step gradient
 
-**Status:** Planned
+**Status:** Done (Parts A/B/C implemented and committed)
 
 ## Goal
 
