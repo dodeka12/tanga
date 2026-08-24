@@ -125,9 +125,9 @@ vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float matId) {
 float mapDensity(float d, float matIdF) {
     int matId = int(matIdF + 0.5);
     if (matId < 0 || matId >= uMaterialCount) return 0.0;
-    float falloff = u_Falloff[matId];
+    float falloff = u_ObjectParams[matId].z;
     if (falloff <= 0.0) return 0.0;
-    float cutoff = u_MaxDistance[matId];
+    float cutoff = u_ObjectParams[matId].w;
     if (cutoff <= 0.0) cutoff = 5.0 * falloff;
     if (d <= 0.0 || d >= cutoff) return 0.0;
     return exp(-d / falloff) / falloff;
@@ -168,9 +168,11 @@ void main() {
         // Algebraic (`mv_sdf`) objects are not 1-Lipschitz (|∇d| can exceed 1
         // and even grow), so step `d / max(|∇d|, 1)` — the local first-order
         // distance to the surface — to avoid overshooting the thin surface.
+        // The per-object `u_ObjectParams.w` is `max_distance >= 0` for algebraic
+        // objects and the sentinel `-1` for analytic ones.
         float stepSize = d;
         int matId = int(m.y + 0.5);
-        if (matId >= 0 && matId < uMaterialCount && u_IsAlgebra[matId] > 0.5) {
+        if (matId >= 0 && matId < uMaterialCount && u_ObjectParams[matId].w > -0.5) {
             stepSize = d / max(calcGradientNorm(p), 1.0);
         }
         t += stepSize;

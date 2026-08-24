@@ -160,8 +160,8 @@ def test_volumetric_density_present() -> None:
     # Beer–Lambert falloff + hard cutoff) driven by the algebra uniforms.
     body = _read(RAYMARCH_FILE)
     assert "float mapDensity(" in body
-    assert "u_Falloff" in body
-    assert "u_MaxDistance" in body
+    assert "u_ObjectParams[matId].z" in body
+    assert "u_ObjectParams[matId].w" in body
     assert "exp(-d / falloff)" in body
 
 
@@ -170,6 +170,6 @@ def test_algebra_local_gradient_step() -> None:
     # and `d / max(|∇d|, 1)` for algebraic (non-1-Lipschitz) objects only.
     body = _read(RAYMARCH_FILE)
     assert "float calcGradientNorm(" in body
-    assert "u_IsAlgebra" in body
+    assert "u_ObjectParams[matId].w > -0.5" in body
     assert "stepSize = d / max(calcGradientNorm(p), 1.0);" in body
     assert "t += stepSize;" in body

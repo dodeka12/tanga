@@ -15,7 +15,7 @@ Run with:  uv run python py/examples/viz/demo_sdf_algebra.py
 from pytanga.basis import BasisN3, BasisP3
 from pytanga.basis.pga3 import BasisPGA3
 from pytanga.geometry import create_entity
-from pytanga.geometry.entities import Direction, Line, Plane, Point, Sphere
+from pytanga.geometry.entities import Circle, Direction, Line, Plane, Point, Sphere
 from pytanga.viz.sdf import SdfVisualizer
 
 viz = SdfVisualizer(title="Tanga SDF — Algebra path (mixed algebras)")
@@ -38,13 +38,18 @@ viz.add(
     color="#ffaa00",
     calibrate=True,
     thickness=0.1,
-    falloff=0.15,
-    max_distance=0.5,
+    falloff=1,
+    max_distance=0.01,
 )
 
 n3 = BasisN3()
 sphere = create_entity(n3, Sphere(center=Point(1, 0, 0), radius=2.0))
 viz.add(sphere, color="#4400ff", calibrate=True, thickness=0.0)
+
+circle = create_entity(
+    n3, Circle(center=Point(1, 1, 1), radius=4.0, normal=Direction(1, 1, 1))
+)
+viz.add(circle, color="#b412d4", calibrate=False, thickness=0.6)
 
 print("Algebra path: a green PGA3 plane, an orange P3 line (a soft tube), and a")
 print("blue N3 sphere, all evaluated as mv_sdf objects (M·a → distOf). The default")

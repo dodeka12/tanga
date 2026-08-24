@@ -2,10 +2,10 @@
 //
 // Emits the `evalPoint → M·a → distOf` algebra leaves *inside* the single
 // composed `map()`: each `mv_sdf` object becomes a `dist_mv_<i>` function that
-// embeds the point, multiplies by the object's packed `M` matrix (from the flat
-// `u_M[]` uniform), applies the active distance function, and scales by the
-// per-object `u_Scale[i]` calibration factor. An optional `bound` clips
-// infinite entities via `opIntersect` with an `sdBox`.
+// embeds the point, multiplies by the object's packed `M` matrix (from the
+// vec4-packed `u_M[]` uniform), applies the active distance function, and scales
+// by the per-object `u_ObjectParams[i].x` calibration factor. An optional
+// `bound` clips infinite entities via `opIntersect` with an `sdBox`.
 //
 // Because the result vector is the *full* algebra (ascending blade ids), the
 // distance functions are instantiated per distinct algebra with that algebra's
@@ -73,17 +73,14 @@ export function distinctEmbedSrcs(objects) {
 }
 
 export function matrixUniformDecls(totalFloats) {
-    // Size the flat u_M uniform to the *actual* total matrix floats (not a fixed
-    // capacity): GL_MAX_FRAGMENT_UNIFORM_VECTORS is limited, so a fixed 1024-float
-    // array alone can exceed the budget even for small scenes.
-    const size = Math.max(totalFloats || 0, 1);
+    // Pack the flat M matrices into vec4s (4 floats each) and all per-object
+    // scalars into a single vec4 array: ANGLE/D3D drivers count every *float* of
+    // a scalar uniform array as one full vec4 slot, so float arrays blow the
+    // GL_MAX_FRAGMENT_UNIFORM_VECTORS budget very fast.
+    const vec4Count = Math.ceil(Math.max(totalFloats || 0, 1) / 4);
     return `
-uniform float u_M[${size}];
-uniform float u_Scale[${MAX_SDF_OBJECTS}];
-uniform float u_Thickness[${MAX_SDF_OBJECTS}];
-uniform float u_Falloff[${MAX_SDF_OBJECTS}];
-uniform float u_MaxDistance[${MAX_SDF_OBJECTS}];
-uniform float u_IsAlgebra[${MAX_SDF_OBJECTS}];
+uniform vec4 u_M[${vec4Count}];
+uniform vec4 u_ObjectParams[${MAX_SDF_OBJECTS}];
 `;
 }
 
@@ -153,11 +150,12 @@ export function emitAlgebraLeaf(obj, info, activeDistance) {
     for (let j = 0; j < nr; j++) {
         const terms = [];
         for (let k = 0; k < np; k++) {
-            terms.push(`u_M[${offset + j * np + k}] * a[${k}]`);
+            const slot = offset + j * np + k;
+            terms.push(`u_M[${slot >> 2}][${slot & 3}] * a[${k}]`);
         }
         lines.push(`    r[${j}] = ${terms.join(' + ')};`);
     }
-    const distExpr = `${distCall(activeDistance, algebra)} * u_Scale[${index}] - u_Thickness[${index}]`;
+    const distExpr = `${distCall(activeDistance, algebra)} * u_ObjectParams[${index}].x - u_ObjectParams[${index}].y`;
     if (obj.bound && obj.bound.halfExtents) {
         const he = obj.bound.halfExtents;
         const box = `sdBox(p, vec3(${floatParam(he[0])}, ${floatParam(he[1])}, ${floatParam(he[2])}))`;
@@ -182,12 +180,15 @@ export function emitAlgebraLeaves(objects, activeDistance) {
 
 export function buildAlgebraUniforms(objects) {
     const { infos, totalFloats } = mvLayout(objects);
-    const uM = new Float32Array(Math.max(totalFloats, 1));
-    const uScale = new Float32Array(MAX_SDF_OBJECTS).fill(1.0);
-    const uThickness = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
-    const uFalloff = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
-    const uMaxDistance = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
-    const uIsAlgebra = new Float32Array(MAX_SDF_OBJECTS).fill(0.0);
+    // u_M is packed into vec4 slots (padded to a multiple of 4).
+    const vec4Count = Math.ceil(Math.max(totalFloats, 1) / 4);
+    const uM = new Float32Array(vec4Count * 4);
+    // vec4 per object: (scale, thickness, falloff, max_distance); w = -1 marks
+    // a non-algebraic (analytic) object.
+    const uObjectParams = new Float32Array(MAX_SDF_OBJECTS * 4);
+    for (let i = 0; i < MAX_SDF_OBJECTS; i++) {
+        uObjectParams[i * 4 + 3] = -1.0;
+    }
     infos.forEach((info) => {
         if (!info) return;
         const obj = objects[info.index];
@@ -196,11 +197,11 @@ export function buildAlgebraUniforms(objects) {
         for (let i = 0; i < stride; i++) {
             uM[info.offset + i] = (typeof M[i] === 'number') ? M[i] : 0.0;
         }
-        uScale[info.index] = (typeof obj.scale === 'number') ? obj.scale : 1.0;
-        uThickness[info.index] = (typeof obj.thickness === 'number') ? obj.thickness : 0.0;
-        uFalloff[info.index] = (typeof obj.falloff === 'number') ? obj.falloff : 0.0;
-        uMaxDistance[info.index] = (typeof obj.max_distance === 'number') ? obj.max_distance : 0.0;
-        uIsAlgebra[info.index] = 1.0;
+        const base = info.index * 4;
+        uObjectParams[base + 0] = (typeof obj.scale === 'number') ? obj.scale : 1.0;
+        uObjectParams[base + 1] = (typeof obj.thickness === 'number') ? obj.thickness : 0.0;
+        uObjectParams[base + 2] = (typeof obj.falloff === 'number') ? obj.falloff : 0.0;
+        uObjectParams[base + 3] = (typeof obj.max_distance === 'number') ? obj.max_distance : 0.0;
     });
-    return { uM, uScale, uThickness, uFalloff, uMaxDistance, uIsAlgebra, totalFloats };
+    return { uM, uObjectParams, totalFloats };
 }

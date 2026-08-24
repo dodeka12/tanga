@@ -49,17 +49,17 @@ const leaf = emitAlgebraLeaves([e3plane], 'scalar_pseudo');
 assert(leaf.includes('float dist_mv_0(vec3 p)'), 'leaf named dist_mv_0');
 assert(leaf.includes('evalPointE3(p, a)'), 'leaf calls evalPointE3');
 assert(leaf.includes('float r[8]'), 'e3 result vector is 8');
-assert(leaf.includes('distOfScalarPseudo_E3(r) * u_Scale[0]'), 'leaf calls per-algebra distOf');
+assert(leaf.includes('distOfScalarPseudo_E3(r) * u_ObjectParams[0].x'), 'leaf calls per-algebra distOf');
 assert(leaf.includes('opIntersect'), 'bound clips via opIntersect');
 assert(leaf.includes('sdBox(p, vec3(10.0, 10.0, 10.0))'), 'bound uses sdBox');
-assert(leaf.includes('u_M[23] * a[2]'), 'last matmul term indexed correctly');
+assert(leaf.includes('u_M[5][3] * a[2]'), 'last matmul term indexed correctly (vec4-packed)');
 
 // thickness (per-object distance cutoff) is subtracted from the scaled distance
-// and packed into its own uniform.
+// and packed into u_ObjectParams.y.
 const thickLeaf = emitAlgebraLeaves([{ ...e3plane, thickness: 0.1 }], 'scalar_pseudo');
-assert(thickLeaf.includes('- u_Thickness[0]'), 'thickness subtracted in the leaf');
-const { uThickness } = buildAlgebraUniforms([{ ...e3plane, thickness: 0.1 }]);
-assert(Math.abs(uThickness[0] - 0.1) < 1e-6, 'thickness packed into u_Thickness');
+assert(thickLeaf.includes('- u_ObjectParams[0].y'), 'thickness subtracted in the leaf');
+const { uObjectParams: thickParams } = buildAlgebraUniforms([{ ...e3plane, thickness: 0.1 }]);
+assert(Math.abs(thickParams[1] - 0.1) < 1e-6, 'thickness packed into u_ObjectParams.y');
 
 const dists = emitDistanceFunctions([e3plane], 'scalar_pseudo');
 assert(dists.includes('distOfScalarPseudo_E3(in float r[8])'), 'distance instantiated per algebra');
@@ -84,11 +84,12 @@ assert(!/if\s*\(\s*algebra\s*==/.test(fragment), 'no algebra branching');
 assert(!/if\s*\(\s*distance\s*==/.test(fragment), 'no distance branching');
 assert(!/if\s*\(\s*entity\s*==/.test(fragment), 'no entity branching');
 
-const { uM, uScale, totalFloats } = buildAlgebraUniforms([e3plane]);
+const { uM, uObjectParams, totalFloats } = buildAlgebraUniforms([e3plane]);
 assert(totalFloats === 24, 'total floats for e3 plane is 24');
-assert(uM.length === 24, 'uM sized to the actual total, not a fixed capacity');
+assert(uM.length === 24, 'uM sized to the actual total (vec4-padded), not a fixed capacity');
 assert(uM[0] === 1 && uM[23] === 24, 'M packed row-major');
-assert(uScale[0] === 1.0, 'scale default 1.0');
+assert(uObjectParams[0] === 1.0, 'scale default 1.0 (u_ObjectParams.x)');
+assert(uObjectParams[3] === 0.0, 'max_distance default 0.0 (u_ObjectParams.w)');
 
 // Mixed-algebra scene: two distinct embeds + two distinct distOf instances.
 const pga3point = {
