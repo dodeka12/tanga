@@ -37,7 +37,7 @@ contract, add the new coverage from Parts A/B, and refresh the docs/changelog.
 
 ### C3 — `test_algebra_eval.py`
 
-- [ ] Assert per-mask `distOf` emission; assert **no** `if (rest` / epsilon
+- [x] Assert per-mask `distOf` emission; assert **no** `if (rest` / epsilon
       `if` in generated source; assert the branchless guard string
       (`inversesqrt(rest + float(rest <`).
 - **Verify:** `uv run pytest py/tests/viz/sdf/test_algebra_eval.py -q`

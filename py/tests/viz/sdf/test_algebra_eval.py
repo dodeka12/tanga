@@ -29,8 +29,10 @@ def test_embeds_registry_complete() -> None:
     assert "embedFuncs" in js
     for name in ("e3", "p3", "n3", "pga3"):
         assert f"'{name}'" in js, f"{name} missing from embeds.js"
-    for token in ("NP:", "NR:", "SLOT_PSEUDO:", "snippet:"):
+    for token in ("NP:", "snippet:", "gradient:"):
         assert token in js, f"{token} missing from an embeds.js entry"
+    assert "NR:" not in js, "NR: should be gone (now per-object wire data)"
+    assert "SLOT_PSEUDO:" not in js, "SLOT_PSEUDO: should be gone (now per-object wire data)"
 
 
 def test_eval_exports() -> None:
@@ -68,6 +70,22 @@ def test_no_shader_identity_branching_in_eval() -> None:
         "if (opacity ==",
     ):
         assert pattern not in js, f"shader identity-branch pattern {pattern!r} in eval.js"
+
+
+def test_distance_registry_derivative_documented() -> None:
+    # Each distance function documents its closed-form derivative (Phase 13).
+    js = _read("distances.js")
+    assert js.count("derivative:") == len(list(DistanceFunction))
+
+
+def test_branchless_gradient_guard() -> None:
+    # The per-mask gradient uses a branchless 1/sqrt guard, never `if (rest < eps)`,
+    # and distance functions are deduped per distinct result mask.
+    js = _read("eval.js")
+    assert "inversesqrt(rest + float(rest < 1e-6) * 1e-6)" in js
+    assert "if (rest <" not in js
+    assert "ids.join(',')" in js
+    assert "maskSuffix" in js
 
 
 def test_scene_builder_delegates_mv_sdf() -> None:
