@@ -1,6 +1,6 @@
 # Part A — Backend: active result mask
 
-**Status:** Planned · [Overview](README.md) · Depends on: — · Feeds: Part B
+**Status:** Done · [Overview](README.md) · Depends on: — · Feeds: Part B
 
 ## Goal
 
@@ -63,7 +63,7 @@ the same function `product_tensor(..., c_mask=None)` uses internally.
 
 ### A3 — serializer passthrough (verify only)
 
-- [ ] Confirm `serialize_mv` (`**wire`) already forwards `result_ids` and
+- [x] Confirm `serialize_mv` (`**wire`) already forwards `result_ids` and
       `slot_pseudo` unchanged — no code change expected.
 - **Verify:** `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py::test_thickness_wire py/tests/viz/sdf/test_algebra_embedding.py::test_soft_opacity_wire -q`.
 
@@ -78,6 +78,6 @@ the same function `product_tensor(..., c_mask=None)` uses internally.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py py/tests/viz/sdf/test_calibration.py -q`
-- [ ] Spot-check: `embed_entity_mv` on the demo entities reports `u_M`-relevant
+- [x] `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py py/tests/viz/sdf/test_calibration.py -q`
+- [x] Spot-check: `embed_entity_mv` on the demo entities reports `u_M`-relevant
       `M` lengths 28 / 20 / 10 / 35 (see overview baselines).
