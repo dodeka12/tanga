@@ -43,11 +43,33 @@ if __name__ == "__main__":
 
 1. `run()` starts the server (and waits for a browser, by default).
 2. `init()` is called once — add entities and register controls here.
-3. The event loop blocks until **Ctrl+C**.
+3. The event loop blocks until shutdown is requested.
 4. `cleanup()` runs, then the server stops.
 
 The `viz` attribute is a `Visualizer` instance, available in every method.
 `run()` accepts `wait_for_browser=True` and `timeout=30.0`.
+
+## Stopping the app
+
+Shutdown can be requested three ways:
+
+1. Terminal **Ctrl+C** — always available.
+2. Browser **Ctrl+Q** — opt-in. Create the app with
+   `VisualizerApp(enable_server_stop_key=True)` to enable the default Ctrl+Q
+   binding on the main scene (it mirrors a terminal Ctrl+C).
+3. A **handler-triggered stop** — call `self.request_shutdown()` from any
+   control or interaction handler, e.g. a "Quit" button:
+
+```python
+class MyApp(VisualizerApp):
+    async def init(self) -> None:
+        self.viz.add_button("quit", label="Quit", on_click=self.on_quit)
+
+    async def on_quit(self, _value, _event) -> None:
+        self.request_shutdown()
+```
+
+In every case `cleanup()` runs and the server stops.
 
 ## Controls
 

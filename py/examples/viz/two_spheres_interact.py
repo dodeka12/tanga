@@ -24,7 +24,7 @@ INTERSECTION_ID = "intersection_circle"
 
 class TwoSpheresApp(VisualizerApp):
     """Two IPNS spheres + wedge-product intersection circle with interactive
-    slider, dropdown, and reset button.
+    slider, dropdown, reset button, and quit button.
 
     State is stored as plain instance attributes — accessible from all
     handler methods via ``self``.
@@ -98,6 +98,9 @@ class TwoSpheresApp(VisualizerApp):
         self.viz.clear_controls()
         self._setup_controls()
 
+    async def on_quit(self, _value: None, _event: ControlEvent) -> None:
+        self.request_shutdown()
+
     # ── internal helpers ────────────────────────────────────
 
     def _setup_controls(self) -> None:
@@ -118,10 +121,11 @@ class TwoSpheresApp(VisualizerApp):
             on_change=self.on_mode,
         )
         self.viz.add_button("reset", label="Reset", on_click=self.on_reset)
+        self.viz.add_button("quit", label="Quit", on_click=self.on_quit)
         self.viz.add_control_group(
             "viewport_controls",
             title="",
-            controls=["sphere_b_x", "mode", "reset"],
+            controls=["sphere_b_x", "mode", "reset", "quit"],
             position="bottom-right",
         )
 

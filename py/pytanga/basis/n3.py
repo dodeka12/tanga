@@ -42,6 +42,10 @@ class BasisN3(Algebra):
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})
         self.e3 = mv({4: 1})
+        self.e12 = self.op(self.e1, self.e2)
+        self.e13 = self.op(self.e1, self.e3)
+        self.e23 = self.op(self.e2, self.e3)
+        self.e31 = -self.e13  # compat alias: e3∧e1 = −e1∧e3
         self.ep = mv({_EP: 1})
         self.em = mv({_EM: 1})
         # Composed null vectors (from _CBasisN3::_Init())

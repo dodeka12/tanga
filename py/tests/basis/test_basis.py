@@ -119,6 +119,12 @@ class TestBasisE3:
         assert v[2] == pytest.approx(2.0)
         assert v[4] == pytest.approx(3.0)
 
+    def test_bivector_members(self):
+        assert (self.b.e12 - (self.b.e1 ^ self.b.e2)).is_zero
+        assert (self.b.e13 - (self.b.e1 ^ self.b.e3)).is_zero
+        assert (self.b.e23 - (self.b.e2 ^ self.b.e3)).is_zero
+        assert (self.b.e31 + self.b.e13).is_zero
+
 
 # ---------------------------------------------------------------------------
 # 9.4 — BasisP3 algebra dimensions and named blades
@@ -142,6 +148,10 @@ class TestBasisP3:
         assert p[2] == pytest.approx(2.0)
         assert p[4] == pytest.approx(3.0)
         assert p[8] == pytest.approx(1.0)  # homogeneous coordinate
+
+    def test_bivector_members(self):
+        assert (self.b.e13 - (self.b.e1 ^ self.b.e3)).is_zero
+        assert (self.b.e31 + self.b.e13).is_zero
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +201,10 @@ class TestBasisN3:
         assert self.b.eo[8] == pytest.approx(-0.5)  # ep component
         assert self.b.eo[16] == pytest.approx(0.5)  # em component
 
+    def test_bivector_members(self):
+        assert (self.b.e13 - (self.b.e1 ^ self.b.e3)).is_zero
+        assert (self.b.e31 + self.b.e13).is_zero
+
 
 # ---------------------------------------------------------------------------
 # 9.6 — BasisPGA3 factory methods and null condition
@@ -229,3 +243,7 @@ class TestBasisPGA3:
         assert v[1] == pytest.approx(3.0)
         assert v[2] == pytest.approx(0.0)
         assert v[4] == pytest.approx(0.0)
+
+    def test_bivector_members(self):
+        assert (self.b.e13 - (self.b.e1 ^ self.b.e3)).is_zero
+        assert (self.b.e31 + self.b.e13).is_zero

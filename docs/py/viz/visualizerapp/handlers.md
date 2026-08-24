@@ -46,12 +46,14 @@ VisualizerApp(
     annotation=None,
     background_color="#1a1a2e",
     camera=None,
+    enable_server_stop_key=False,
 )
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `reuse_existing` | `bool` | `True` | Wait for existing browser tab before opening a new one |
+| `enable_server_stop_key` | `bool` | `False` | Opt-in Ctrl+Q browser key that ends the app (mirrors Ctrl+C) |
 
 See [Visualizer API](../visualizer/visualizer.md) for the full parameter list.
 
@@ -59,7 +61,8 @@ See [Visualizer API](../visualizer/visualizer.md) for the full parameter list.
 
 1. `start()` — server boots in a background thread, browser connects
 2. `init()` — user overrides this method to add entities and controls
-3. (wait) — the event loop blocks until the user presses **Ctrl+C**
+3. (wait) — the event loop blocks until shutdown is requested (terminal **Ctrl+C**,
+   browser **Ctrl+Q** when enabled, or `request_shutdown()`)
 4. `cleanup()` — user overrides for graceful teardown
 5. `stop()` — server shuts down, all connections closed
 
@@ -104,6 +107,21 @@ The :class:`ControlEvent` currently carries a ``browser_id`` attribute that
 can be used with :meth:`~pytanga.viz.Visualizer.navigate_to` to redirect a
 specific browser tab.  Additional metadata fields may be added in the future
 without breaking existing handler signatures.
+
+## Ending the app
+
+Any handler (button, slider, dropdown, or interaction) can end the app by
+calling `self.request_shutdown()`. It unblocks the event loop, runs
+`cleanup()`, and stops the server:
+
+```python
+async def on_quit(self, _value: None, event: ControlEvent) -> None:
+    self.request_shutdown()
+```
+
+The same happens when the user presses **Ctrl+C** in the terminal, or
+**Ctrl+Q** in the browser when the app was created with
+`enable_server_stop_key=True`.
 
 ## Complete example
 

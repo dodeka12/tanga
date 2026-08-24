@@ -83,38 +83,34 @@ class BasisPGA3(Algebra):
     #   J(e₀₃)   = e₁₂         J(e₁₂)   = e₀₃
 
     _DUAL_MAP: dict[int, dict[int, float]] = {
-        # Grade 0 (scalar)
-        0: {15: 1.0, 23: 1.0},  # J(1) = I₄ = ep∧e₁₂₃ + em∧e₁₂₃
-        # Grade 1 — pure Euclidean planes
-        1: {14: -1.0, 22: -1.0},  # J(e₁) = -e₀₂₃
-        2: {13: 1.0, 21: 1.0},  # J(e₂) = e₀₁₃
-        4: {11: -1.0, 19: -1.0},  # J(e₃) = -e₀₁₂
-        # Grade 1 — e₀ halves (ep, em)
+        # Bitmask IDs encode blades with ep/em last (e.g. 15 = e₁₂₃∧ep).
+        # PGA blades below are written with e₀ = ep + em first; since
+        # ep∧e₁₂₃ = −e₁₂₃∧ep, the even‑grade rows carry a sign so that
+        # e_A ∧ J(e_A) = +I₄ for every subspace blade.
+        0: {15: -1.0, 23: -1.0},  # J(1)   = I₄ = ep∧e₁₂₃ + em∧e₁₂₃
+        1: {14: -1.0, 22: -1.0},  # J(e₁)  = -e₀₂₃
+        2: {13: 1.0, 21: 1.0},  # J(e₂)  = e₀₁₃
+        4: {11: -1.0, 19: -1.0},  # J(e₃)  = -e₀₁₂
         8: {7: 0.5},  # J(ep) = e₁₂₃/2
         16: {7: 0.5},  # J(em) = e₁₂₃/2
-        # Grade 2 — pure Euclidean bivectors
-        3: {12: 1.0, 20: 1.0},  # J(e₁₂) = e₀₃
-        5: {10: -1.0, 18: -1.0},  # J(e₁₃) = -e₀₂
-        6: {9: 1.0, 17: 1.0},  # J(e₂₃) = e₀₁
-        # Grade 2 — vanishing line halves
-        9: {6: 0.5},  # J(e₁∧ep) = e₂₃/2
-        17: {6: 0.5},  # J(e₁∧em)
-        10: {5: -0.5},  # J(e₂∧ep) = -e₁₃/2
-        18: {5: -0.5},  # J(e₂∧em)
-        12: {3: 0.5},  # J(e₃∧ep) = e₁₂/2
-        20: {3: 0.5},  # J(e₃∧em)
-        # Grade 3 — pure Euclidean trivector
+        3: {12: -1.0, 20: -1.0},  # J(e₁₂) = e₀₃
+        5: {10: 1.0, 18: 1.0},  # J(e₁₃) = -e₀₂
+        6: {9: -1.0, 17: -1.0},  # J(e₂₃) = e₀₁
+        9: {6: -0.5},  # J(e₁∧ep) = -e₂₃/2
+        17: {6: -0.5},  # J(e₁∧em) = -e₂₃/2
+        10: {5: 0.5},  # J(e₂∧ep) = e₁₃/2
+        18: {5: 0.5},  # J(e₂∧em) = e₁₃/2
+        12: {3: -0.5},  # J(e₃∧ep) = -e₁₂/2
+        20: {3: -0.5},  # J(e₃∧em) = -e₁₂/2
         7: {8: -1.0, 16: -1.0},  # J(e₁₂₃) = -e₀
-        # Grade 3 — point halves
         11: {4: 0.5},  # J(e₁₂∧ep) = e₃/2
-        19: {4: 0.5},  # J(e₁₂∧em)
+        19: {4: 0.5},  # J(e₁₂∧em) = e₃/2
         13: {2: -0.5},  # J(e₁₃∧ep) = -e₂/2
-        21: {2: -0.5},  # J(e₁₃∧em)
+        21: {2: -0.5},  # J(e₁₃∧em) = -e₂/2
         14: {1: 0.5},  # J(e₂₃∧ep) = e₁/2
-        22: {1: 0.5},  # J(e₂₃∧em)
-        # Grade 4 — pseudoscalar halves
-        15: {0: 0.5},  # J(e₁₂₃∧ep) = 1/2
-        23: {0: 0.5},  # J(e₁₂₃∧em)
+        22: {1: 0.5},  # J(e₂₃∧em) = e₁/2
+        15: {0: -0.5},  # J(e₁₂₃∧ep) = -1/2
+        23: {0: -0.5},  # J(e₁₂₃∧em) = -1/2
     }
 
     def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
@@ -123,6 +119,10 @@ class BasisPGA3(Algebra):
         self.e1 = mv({1: 1})
         self.e2 = mv({2: 1})
         self.e3 = mv({4: 1})
+        self.e12 = self.op(self.e1, self.e2)
+        self.e13 = self.op(self.e1, self.e3)
+        self.e23 = self.op(self.e2, self.e3)
+        self.e31 = -self.e13  # compat alias: e3∧e1 = −e1∧e3
         self.ep = mv({self.EP: 1})  # internal — e4
         self.em = mv({self.EM: 1})  # internal — e5
         # e0 = ep + em — the Gunn/Dorst null vector
@@ -139,9 +139,13 @@ class BasisPGA3(Algebra):
         the 5D pseudoscalar.  In PGA the 4D pseudoscalar ``I₄ = e₀∧e₁∧e₂∧e₃``
         is null (``I₄² = 0``), so the metric dual does not exist.  Instead
         we use a combinatorial complement map that swaps each basis blade
-        with its index‑complement, satisfying ``e_A ∧ J(e_A) = +I₄``.
+        with its index‑complement, satisfying ``e_A ∧ J(e_A) = +I₄`` for
+        every subspace blade.
 
         This is Gunn's J‑map / Dorst's Hodge star (§9.1, PGA4CS Table 4).
+        Note that Table 4 writes ``e₀`` (= ep + em) first, whereas the
+        bitmask IDs encode blades with ep/em last; the even‑grade rows
+        absorb that sign so ``e_A ∧ J(e_A) = +I₄`` holds.
 
         The 5D embedding ``e₀ = ep + em`` is handled by splitting each
         4D blade into halves.
@@ -156,10 +160,14 @@ class BasisPGA3(Algebra):
         return self.multivector(result)
 
     def undual(self, a: MV) -> MV:
-        """Inverse of the signed dual.  In PGA the J‑map is its own inverse,
-        so ``undual == dual``.
+        """Hodge undualization ``⋆⁻¹`` of the PGA complement dual.
+
+        In 4D PGA the double Hodge dual is the grade involution
+        (``+1`` on even grades, ``−1`` on odd grades — Dorst §9.1), so
+        ``undual(a) = grade_involution(dual(a))``.  This is the true
+        inverse of :meth:`dual` for every subspace blade.
         """
-        return self.dual(a)
+        return self.grade_involution(self.dual(a))
 
     # ── display ───────────────────────────────────────────────────
 
