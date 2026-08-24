@@ -29,12 +29,12 @@ class MV:
     # Coefficient access — accept both blade names and integer blade ids
     # -----------------------------------------------------------------------
     def __getitem__(self, key: str | int) -> float | int:
-        blade_id = self._alg._resolve_key(key)
-        return self._impl.get(blade_id)
+        blade_id, sign = self._alg._resolve_key_signed(key)
+        return sign * self._impl.get(blade_id)
 
     def __setitem__(self, key: str | int, value: float | int) -> None:
-        blade_id = self._alg._resolve_key(key)
-        self._impl.set(blade_id, value)
+        blade_id, sign = self._alg._resolve_key_signed(key)
+        self._impl.set(blade_id, sign * value)
 
     # -----------------------------------------------------------------------
     # Arithmetic operators

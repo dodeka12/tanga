@@ -39,6 +39,10 @@ class BasisP3(Algebra):
         self.e2 = mv({2: 1})
         self.e3 = mv({4: 1})
         self.e4 = mv({8: 1})  # homogeneous direction
+        self.e12 = self.op(self.e1, self.e2)
+        self.e13 = self.op(self.e1, self.e3)
+        self.e23 = self.op(self.e2, self.e3)
+        self.e31 = -self.e13  # compat alias: e3∧e1 = −e1∧e3
         self.e123 = mv({7: 1})
         self.I = mv({self.pseudoscalar_id: 1})
         # self.point_mask = BladeMask(self, )

@@ -10,6 +10,7 @@ Derive from :class:`VisualizerApp`, override :meth:`init` and
 from __future__ import annotations
 
 import asyncio
+import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -58,6 +59,7 @@ class VisualizerApp:
         background_color: str = "#1a1a2e",
         camera: CameraConfig | View2DConfig | View3dConfig | None = None,
         space_dim: int | None = None,  # 2 or 3; None = deduce from camera
+        enable_server_stop_key: bool = False,
     ) -> None:
         """Create the app and the underlying :class:`~pytanga.viz.Visualizer`.
 
@@ -76,7 +78,9 @@ class VisualizerApp:
             background_color=background_color,
             camera=camera,
             space_dim=space_dim,
+            enable_server_stop_key=enable_server_stop_key,
         )
+        self._stop_requested = threading.Event()
 
     # ── lifecycle hooks (override in subclass) ──────────────
 
@@ -88,17 +92,47 @@ class VisualizerApp:
         """
 
     async def cleanup(self) -> None:
-        """Called after the user presses Ctrl+C, before the server stops.
+        """Called once shutdown has been requested, before the server stops.
 
-        Override for graceful teardown (save state, close resources, …).
-        Default implementation is a no-op.
+        Shutdown is requested by terminal Ctrl+C, the browser Ctrl+Q key (when
+        enabled), or :meth:`request_shutdown`.  Override for graceful teardown
+        (save state, close resources, …).  Default implementation is a no-op.
         """
 
     # ── app runner ──────────────────────────────────────────
 
+    def request_shutdown(self) -> None:
+        """Request that the app shut down.
+
+        Callable from any context — including an async control or interaction
+        handler (e.g. a "Quit" button) — to end :meth:`run`.  The event loop
+        unblocks, :meth:`cleanup` runs, and the server stops.  Also sets the
+        underlying :class:`~pytanga.viz.Visualizer` shutdown event so any
+        running :meth:`~pytanga.viz.Visualizer.animate` loop ends as well.
+        """
+        self._stop_requested.set()
+        shutdown = getattr(self.viz, "_shutdown_requested", None)
+        if shutdown is not None:
+            shutdown.set()
+
+    def _is_stop_requested(self) -> bool:
+        """Return ``True`` once shutdown has been requested.
+
+        Shutdown is requested by terminal Ctrl+C / SIGTERM, the browser Ctrl+Q
+        server-stop key, or an explicit :meth:`request_shutdown` call.
+        """
+        if self._stop_requested.is_set():
+            return True
+        shutdown = getattr(self.viz, "_shutdown_requested", None)
+        return shutdown is not None and shutdown.is_set()
+
     def run(self, *, wait_for_browser: bool = True, timeout: float = 30.0) -> None:
-        """Start the server, run :meth:`init`, block until Ctrl+C, then
+        """Start the server, run :meth:`init`, block until shutdown, then
         run :meth:`cleanup` and stop the server.
+
+        Shutdown is requested by terminal Ctrl+C, the browser Ctrl+Q key (when
+        the app was created with ``enable_server_stop_key=True``), or an
+        explicit :meth:`request_shutdown` call (e.g. from a control handler).
 
         Parameters
         ----------
@@ -130,7 +164,7 @@ class VisualizerApp:
                 print("Visualizer shut down.")
 
     async def _app_main(self) -> None:
-        """Core asyncio body: init → block until cancelled → cleanup."""
+        """Core asyncio body: init → block until shutdown → cleanup."""
         import logging
 
         # 1. User setup
@@ -140,10 +174,11 @@ class VisualizerApp:
             logging.getLogger(__name__).exception("Error in app.init()")
             raise
 
-        # 2. Block until Ctrl+C cancels the task
+        # 2. Block until shutdown is requested (Ctrl+C, Ctrl+Q, or
+        #    request_shutdown()), or the task is cancelled.
         try:
-            while True:
-                await asyncio.sleep(3600)
+            while not self._is_stop_requested():
+                await asyncio.sleep(0.05)
         except asyncio.CancelledError:
             pass
 

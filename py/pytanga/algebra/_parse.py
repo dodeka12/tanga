@@ -57,7 +57,7 @@ def _parse_mv_string(
         "1"          # scalar 1
         "e1 - e2"    # 1·e1 − 1·e2
     """
-    from ._blade_names import blade_id as _to_id
+    from ._blade_names import blade_id_signed as _to_id_signed
 
     coeffs: dict[int, float] = {}
     for m in _TERM_RE.finditer(s):
@@ -72,6 +72,9 @@ def _parse_mv_string(
             for bid, base_val in named_basis[blade_s].items():
                 coeffs[bid] = coeffs.get(bid, 0) + coeff * base_val
         else:
-            bid = _to_id(blade_s, dim) if blade_s else 0
-            coeffs[bid] = coeffs.get(bid, 0) + coeff
+            if blade_s:
+                bid, sign = _to_id_signed(blade_s, dim)
+                coeffs[bid] = coeffs.get(bid, 0) + coeff * sign
+            else:
+                coeffs[0] = coeffs.get(0, 0) + coeff
     return coeffs

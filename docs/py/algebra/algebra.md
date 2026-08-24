@@ -183,8 +183,11 @@ operands and raise `ValueError` otherwise.
 u = alg.undual(a)      # inverse of dual ★
 ```
 
-`undual` is algebra‑specific: `A · I` in E3/P3/N3; the J‑map (same as `dual`)
-in PGA3/PGA2, where the pseudoscalar is not invertible.  See [Duals](duals.md).
+`undual` is algebra‑specific: `A · I` in E3/P3/N3.  In PGA the pseudoscalar is
+not invertible, so `undual` inverts the complement dual (J‑map / Hodge star):
+in PGA2 the J‑map is involutive (`undual == dual`), while in PGA3 it is
+`grade_involution(dual(a))` because the double Hodge dual is the grade
+involution.  See [Duals](duals.md).
 
 ### Products with reverse/conjugate flags
 

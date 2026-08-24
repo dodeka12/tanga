@@ -70,24 +70,20 @@ class BasisPGA2(Algebra):
     #   J(e₂)    = e₀₁         J(e₀₁)   = -e₂
 
     _DUAL_MAP: dict[int, dict[int, float]] = {
-        # Grade 0 (scalar)
-        0: {7: 1.0, 11: 1.0},  # J(1) = I₃ = ep∧e₁₂ + em∧e₁₂
-        # Grade 1 — pure Euclidean lines
-        1: {6: -1.0, 10: -1.0},  # J(e₁) = -e₀₂
-        2: {5: 1.0, 9: 1.0},  # J(e₂) = e₀₁
-        # Grade 1 — e₀ halves (ep, em)
-        4: {3: -0.5},  # J(ep) = J(e₀)/2 = -e₁₂/2
-        8: {3: -0.5},  # J(em) = J(e₀)/2 = -e₁₂/2
-        # Grade 2 — pure Euclidean bivector
-        3: {4: -1.0, 8: -1.0},  # J(e₁₂) = -e₀  (PGA4CS convention)
-        # Grade 2 — vanishing line halves
-        5: {2: 0.5},  # J(ep∧e₁) = e₂/2
-        9: {2: 0.5},  # J(em∧e₁) = e₂/2
-        6: {1: -0.5},  # J(ep∧e₂) = -e₁/2
-        10: {1: -0.5},  # J(em∧e₂) = -e₁/2
-        # Grade 3 — pseudoscalar halves
-        7: {0: 0.5},  # J(ep∧e₁₂) = 1/2
-        11: {0: 0.5},  # J(em∧e₁₂) = 1/2
+        # Bitmask IDs encode blades with ep/em last (e.g. 7 = e₁₂∧ep).
+        # PGA blades below are written with e₀ = ep + em first.
+        0: {7: 1.0, 11: 1.0},  # J(1)    = I₃ = e₀₁₂ = e₁₂∧ep + e₁₂∧em
+        1: {6: 1.0, 10: 1.0},  # J(e₁)   = -e₀₂ = e₂∧ep + e₂∧em
+        2: {5: -1.0, 9: -1.0},  # J(e₂)   = e₀₁ = -(e₁∧ep + e₁∧em)
+        4: {3: 0.5},  # J(ep) = e₁₂/2
+        8: {3: 0.5},  # J(em) = e₁₂/2
+        3: {4: 1.0, 8: 1.0},  # J(e₁₂) = e₀
+        5: {2: -0.5},  # J(e₁∧ep) = -e₂/2
+        9: {2: -0.5},  # J(e₁∧em) = -e₂/2
+        6: {1: 0.5},  # J(e₂∧ep) = e₁/2
+        10: {1: 0.5},  # J(e₂∧em) = e₁/2
+        7: {0: 0.5},  # J(e₁₂∧ep) = 1/2
+        11: {0: 0.5},  # J(e₁₂∧em) = 1/2
     }
 
     def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
@@ -110,7 +106,9 @@ class BasisPGA2(Algebra):
         Overrides ``Algebra.dual()`` which computes ``★A = A·I⁻¹`` using
         the 4D pseudoscalar.  In PGA the 3D pseudoscalar ``I₃ = e₀∧e₁∧e₂``
         is null (``I₃² = 0``), so the metric dual does not exist.  Instead
-        we use a combinatorial complement map.
+        we use a combinatorial complement map that swaps each basis blade
+        with its index‑complement, satisfying ``e_A ∧ J(e_A) = +I₃`` for
+        every subspace blade.
 
         The 4D embedding ``e₀ = ep + em`` is handled by splitting each
         3D blade into halves.
@@ -125,8 +123,11 @@ class BasisPGA2(Algebra):
         return self.multivector(result)
 
     def undual(self, a: MV) -> MV:
-        """Inverse of the signed dual.  In PGA the J‑map is its own inverse,
-        so ``undual == dual``.
+        """Hodge undualization ``⋆⁻¹`` of the PGA complement dual.
+
+        In 3D PGA (2D Euclidean) the double Hodge dual is the identity
+        (Dorst §9.1: "no sign in even‑D"), so the J‑map is involutive and
+        ``undual == dual``.
         """
         return self.dual(a)
 

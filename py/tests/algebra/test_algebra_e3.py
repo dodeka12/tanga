@@ -6,7 +6,6 @@ Integration tests for G(3,0,0) — the 3D Euclidean geometric algebra.
 These tests compile the binding on first run (may take ~10 s).
 """
 
-import math
 import pytest
 import pytanga
 
@@ -18,10 +17,10 @@ def alg():
 
 class TestConstants:
     def test_algebra_dim(self, alg):
-        assert alg.algebra_dim == 8   # 2^3
+        assert alg.algebra_dim == 8  # 2^3
 
     def test_pseudoscalar_id(self, alg):
-        assert alg.pseudoscalar_id == 7   # 0b111
+        assert alg.pseudoscalar_id == 7  # 0b111
 
 
 class TestBasisVectorSquares:
@@ -37,7 +36,7 @@ class TestBasisVectorSquares:
     def test_e1_e2_anticommute(self, alg):
         e1 = alg.multivector({"e1": 1.0})
         e2 = alg.multivector({"e2": 1.0})
-        assert (e1 * e2)["e12"] == pytest.approx( 1.0, abs=1e-9)
+        assert (e1 * e2)["e12"] == pytest.approx(1.0, abs=1e-9)
         assert (e2 * e1)["e12"] == pytest.approx(-1.0, abs=1e-9)
 
 
@@ -57,7 +56,7 @@ class TestOuterProduct:
 class TestInverse:
     def test_inv_e12(self, alg):
         """In G(3,0), e12 * e12 = -1, so inv(e12) = -e12."""
-        e12    = alg.multivector({"e12": 1.0})
+        e12 = alg.multivector({"e12": 1.0})
         inv_e12 = ~e12
         assert inv_e12["e12"] == pytest.approx(-1.0, abs=1e-9)
 
@@ -122,8 +121,8 @@ class TestMultivectorTupleKeys:
 
     def test_mixed_grades(self, alg):
         mv = alg.multivector({(0,): 1.0, (1,): 2.0, (1, 2): 3.0})
-        assert mv["s"]   == pytest.approx(1.0)
-        assert mv["e1"]  == pytest.approx(2.0)
+        assert mv["s"] == pytest.approx(1.0)
+        assert mv["e1"] == pytest.approx(2.0)
         assert mv["e12"] == pytest.approx(3.0)
 
     def test_invalid_index_zero_raises(self, alg):
@@ -133,7 +132,7 @@ class TestMultivectorTupleKeys:
 
     def test_index_out_of_range_raises(self, alg):
         with pytest.raises(ValueError):
-            alg.multivector({(4,): 1.0})   # dim=3, so e4 doesn't exist
+            alg.multivector({(4,): 1.0})  # dim=3, so e4 doesn't exist
 
 
 class TestPrecision:
@@ -216,8 +215,8 @@ class TestMultivectorStringInput:
 
     def test_sum_of_terms(self, alg):
         mv = alg.multivector("2.3 + 4 e2 + 5 e1,2")
-        assert mv["s"]   == pytest.approx(2.3)
-        assert mv["e2"]  == pytest.approx(4.0)
+        assert mv["s"] == pytest.approx(2.3)
+        assert mv["e2"] == pytest.approx(4.0)
         assert mv["e12"] == pytest.approx(5.0)
 
     def test_comma_separated_high_dim_blade(self, alg):
@@ -227,7 +226,7 @@ class TestMultivectorStringInput:
 
     def test_negative_blade_no_coeff(self, alg):
         mv = alg.multivector("e1 - e2")
-        assert mv["e1"] == pytest.approx( 1.0)
+        assert mv["e1"] == pytest.approx(1.0)
         assert mv["e2"] == pytest.approx(-1.0)
 
     def test_star_separator(self, alg):
@@ -236,7 +235,7 @@ class TestMultivectorStringInput:
 
     def test_scalar_plus_blade(self, alg):
         mv = alg.multivector("1 + e12")
-        assert mv["s"]   == pytest.approx(1.0)
+        assert mv["s"] == pytest.approx(1.0)
         assert mv["e12"] == pytest.approx(1.0)
 
     def test_compact_bivector_name(self, alg):
@@ -246,7 +245,36 @@ class TestMultivectorStringInput:
 
     def test_full_multivector(self, alg):
         mv = alg.multivector("1 e1 + 2 e2 - 3 e3 + 4 e12")
-        assert mv["e1"]  == pytest.approx( 1.0)
-        assert mv["e2"]  == pytest.approx( 2.0)
-        assert mv["e3"]  == pytest.approx(-3.0)
-        assert mv["e12"] == pytest.approx( 4.0)
+        assert mv["e1"] == pytest.approx(1.0)
+        assert mv["e2"] == pytest.approx(2.0)
+        assert mv["e3"] == pytest.approx(-3.0)
+        assert mv["e12"] == pytest.approx(4.0)
+
+
+class TestReversedBladeNames:
+    """Reversed-order blade names must carry the permutation sign (e31 → -e13)."""
+
+    def test_string_reversed_bivector(self, alg):
+        assert (alg("1 e31") + alg("1 e13")).is_zero
+        assert alg("1 e31")["e13"] == pytest.approx(-1.0)
+
+    def test_string_reversed_trivector(self, alg):
+        mv = alg("1 e321")
+        assert mv["e123"] == pytest.approx(-1.0)
+
+    def test_bracket_read_sign(self, alg):
+        mv = alg("2 e13")
+        assert mv["e31"] == pytest.approx(-2.0)
+        assert mv["e13"] == pytest.approx(2.0)
+
+    def test_bracket_write_sign(self, alg):
+        mv = alg()
+        mv["e31"] = 3.0
+        assert mv["e13"] == pytest.approx(-3.0)
+        assert mv["e31"] == pytest.approx(3.0)
+
+    def test_tuple_key_reversed(self, alg):
+        a = alg({(3, 1): 2.0})
+        b = alg({(1, 3): 2.0})
+        assert (a + b).is_zero
+        assert a["e13"] == pytest.approx(-2.0)

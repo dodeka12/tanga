@@ -194,8 +194,8 @@ class Algebra:
                 impl.set(bid, val)
         else:
             for key, val in coeffs.items():
-                bid = self._resolve_key(key)
-                impl.set(bid, val)
+                bid, sign = self._resolve_key_signed(key)
+                impl.set(bid, sign * val)
         return MV(impl, self)
 
     __call__ = multivector
@@ -913,13 +913,19 @@ class Algebra:
         """
         return {k: v for k, v in self.__dict__.items() if isinstance(v, MV)}
 
-    def _resolve_key(self, key: str | int | tuple) -> int:
+    def _resolve_key_signed(self, key: str | int | tuple) -> tuple[int, int]:
+        """Resolve a blade key to ``(blade_id, sign)``.
+
+        ``sign`` is the parity of the permutation needed to sort the indices
+        into ascending order: ``+1`` for canonical ascending keys (``"e13"``,
+        ``(1, 3)``) and ``-1`` for reversed keys (``"e31"``, ``(3, 1)``).
+        """
         if isinstance(key, int):
-            return key
+            return key, 1
         if isinstance(key, tuple):
             # (0,) or () → scalar; (i, j, ...) → bitmask with bits i-1, j-1, ...
             if not key or key == (0,):
-                return 0
+                return 0, 1
             result = 0
             for i in key:
                 if i < 1:
@@ -932,10 +938,16 @@ class Algebra:
                         f"Basis-vector index {i} out of range for dim={self._dim}."
                     )
                 result |= 1 << (i - 1)
-            return result
-        from ._blade_names import blade_id
+            from ._blade_names import _permutation_sign
 
-        return blade_id(key, self._dim)
+            return result, _permutation_sign(list(key))
+        from ._blade_names import blade_id_signed
+
+        return blade_id_signed(key, self._dim)
+
+    def _resolve_key(self, key: str | int | tuple) -> int:
+        """Resolve a blade key to its canonical (unsigned) blade id."""
+        return self._resolve_key_signed(key)[0]
 
     def _get_display_basis(self) -> list | None:
         """Return the display basis to use, or None for the default primitive basis.

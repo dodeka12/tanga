@@ -4,7 +4,13 @@
 """Tests for pytanga._blade_names — pure Python, no C++ compilation needed."""
 
 import pytest
-from pytanga.algebra._blade_names import blade_id, blade_name, grade, all_blades
+from pytanga.algebra._blade_names import (
+    all_blades,
+    blade_id,
+    blade_id_signed,
+    blade_name,
+    grade,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +56,7 @@ class TestBladeName:
 
     def test_out_of_range(self):
         with pytest.raises(ValueError):
-            blade_name(8, 3)   # 8 >= 2^3
+            blade_name(8, 3)  # 8 >= 2^3
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +86,7 @@ class TestBladeId:
 
     def test_index_out_of_range(self):
         with pytest.raises(ValueError):
-            blade_id("e4", 3)   # dim=3, max index is 3
+            blade_id("e4", 3)  # dim=3, max index is 3
 
     def test_repeated_index(self):
         with pytest.raises(ValueError):
@@ -91,6 +97,47 @@ class TestBladeId:
             for b in range(1 << dim):
                 name = blade_name(b, dim)
                 assert blade_id(name, dim) == b
+
+
+# ---------------------------------------------------------------------------
+# blade_id_signed
+# ---------------------------------------------------------------------------
+class TestBladeIdSigned:
+    def test_scalar(self):
+        assert blade_id_signed("s", 3) == (0, 1)
+        assert blade_id_signed("0", 3) == (0, 1)
+
+    def test_pseudoscalar(self):
+        assert blade_id_signed("I", 3) == (7, 1)
+
+    def test_canonical_order_is_positive(self):
+        assert blade_id_signed("e12", 3) == (3, 1)
+        assert blade_id_signed("e13", 3) == (5, 1)
+        assert blade_id_signed("e23", 3) == (6, 1)
+
+    def test_reversed_bivector_is_negative(self):
+        assert blade_id_signed("e21", 3) == (3, -1)
+        assert blade_id_signed("e31", 3) == (5, -1)
+        assert blade_id_signed("e32", 3) == (6, -1)
+
+    def test_reversed_trivector_is_negative(self):
+        assert blade_id_signed("e123", 3) == (7, 1)
+        assert blade_id_signed("e321", 3) == (7, -1)
+
+    def test_two_transpositions_are_positive(self):
+        # e312 → indices [3, 1, 2]; two inversions → even → +1
+        assert blade_id_signed("e312", 3) == (7, 1)
+
+    def test_matches_blade_id_bitmask(self):
+        for name in ("e12", "e21", "e13", "e31", "e123", "e321"):
+            bitmask, _sign = blade_id_signed(name, 3)
+            assert bitmask == blade_id(name, 3)
+
+    def test_roundtrip_is_positive(self):
+        for dim in (3, 4, 5):
+            for b in range(1 << dim):
+                name = blade_name(b, dim)
+                assert blade_id_signed(name, dim) == (b, 1)
 
 
 # ---------------------------------------------------------------------------

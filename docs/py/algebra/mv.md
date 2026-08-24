@@ -135,7 +135,7 @@ the scalar is automatically promoted to a scalar multivector.
 
 | Method | Description |
 |--------|-------------|
-| `a.undual()` | Inverse of the signed dual. $A·I$ in E3/P3/N3; J‑map (same as `dual()`) in PGA |
+| `a.undual()` | Inverse of the signed dual. $A·I$ in E3/P3/N3; Hodge undualization of the J‑map in PGA (involutive in PGA2, `grade_involution` of `dual` in PGA3) |
 | `a.duals_inverse()` | Synonym for `undual()` |
 
 See [Duals](duals.md) for `dual()`, `complement()`, `ldual()`.
@@ -246,6 +246,13 @@ bitmask `7` (`0b111`).
 String names follow the pattern `e<indices>` where indices are either
 concatenated (compact form for dim ≤ 9) or comma-separated.
 The scalar blade is named `s`.
+
+Blade names are interpreted in canonical ascending order.  A name whose
+indices are not ascending is accepted but carries the sign of the permutation
+needed to sort them: `e31` resolves to `-e13` (because
+$e_3 \wedge e_1 = -e_1 \wedge e_3$), `e321` resolves to `-e123`, and so on.
+This sign applies to string expressions, dict string keys, tuple keys, and
+bracket access — so `alg("1 e31") == -alg("1 e13")` and `mv["e31"] == -mv["e13"]`.
 
 ## Clifford Conjugates
 
