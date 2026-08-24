@@ -40,9 +40,9 @@ inside the leaf (no recomputation, no `matId` dispatch) and returned alongside
 
 ### B1 — `embeds.js`: per-algebra gradient, drop `NR`/`SLOT_PSEUDO`
 
-- [ ] Remove `NR` and `SLOT_PSEUDO` from each entry (they become per-object wire
+- [x] Remove `NR` and `SLOT_PSEUDO` from each entry (they become per-object wire
       data; keep `NP` + `snippet`).
-- [ ] Add a `gradient` field per entry: the GLSL `vec3 grad = …` contraction of
+- [x] Add a `gradient` field per entry: the GLSL `vec3 grad = …` contraction of
       `h[NP]` and `p` (e3/p3: `vec3(h[0],h[1],h[2])`; n3: the `x/y/z·(h[3]+h[4])`
       form; pga3: `vec3(-h[3]-h[6], h[2]+h[5], -h[1]-h[4])`).
 - **Verify:** after Part C updates `test_embeds_registry_complete` /
