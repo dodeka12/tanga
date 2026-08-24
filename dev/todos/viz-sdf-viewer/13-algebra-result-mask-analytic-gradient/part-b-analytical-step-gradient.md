@@ -52,7 +52,7 @@ inside the leaf (no recomputation, no `matId` dispatch) and returned alongside
 
 ### B2 — `distances.js`: document the derivative
 
-- [ ] Add a `derivative` field to each entry documenting the `g[k]` formula
+- [x] Add a `derivative` field to each entry documenting the `g[k]` formula
       (scalar/pseudo slots → `1.0`; rest → `r[k]·invRest`; `magnitude` →
       `r[k]·invNorm`; `scalar`/`component` → `δ[k,0]`; `grade` → `r[k]·invGrade`
       on the grade). The concrete emission is generated per-mask in `eval.js`
