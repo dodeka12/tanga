@@ -1,9 +1,10 @@
 # Viz SDF Viewer — Overview
 
-**Created:** 2026-08-22 | **Status:** Implemented — Phases 1–12 complete (analytic
+**Created:** 2026-08-22 | **Status:** Implemented — Phases 1–13 complete (analytic
 path, WebGL2 raymarcher, distance/opacity registries, algebra embedding + shader
-eval + calibration, CSG booleans, opacity transfers, examples, docs, changelog).
-Only the final pull request remains (see `dev/workflows/pull-request.md`).
+eval + calibration, CSG booleans, opacity transfers, active result mask +
+analytical step gradient, examples, docs, changelog). Only the final pull
+request remains (see `dev/workflows/pull-request.md`).
 
 ## Target
 
@@ -315,7 +316,10 @@ left unchanged to avoid renaming churn.
 - **Gradient scale:** the distance (whether `scalar_pseudo`, `magnitude`, or
   `scalar`) is proportional to, but not exactly, metric distance.
   `normalize=True` is the hedge; a residual per-algebra/entity scale must be
-  calibrated so sphere-tracing steps are well-scaled (`|∇d|≈1`).
+  calibrated so sphere-tracing steps are well-scaled (`|∇d|≈1`). Phase 13 now
+  computes the per-step `|∇d|` analytically inside each leaf (replacing the
+  finite-difference `calcGradientNorm`), so the step rule `d / max(|∇d|, 1)` is
+  exact even for non-1-Lipschitz algebraic fields.
 - **Signedness for booleans:** `subtract`/`intersection` negate and `max`
   distances, so they only behave correctly with a signed distance
   (`scalar_pseudo` or `scalar`); the unsigned `magnitude` mode must not be
@@ -323,6 +327,8 @@ left unchanged to avoid renaming churn.
 - **`scalar_pseudo` gradient scale:** the scalar-pseudoscalar sum plus
   magnitude-of-rest is a heuristic — its gradient is not guaranteed to be
   unit-norm and its global sign must be calibrated per algebra (Phase 9).
+  Phase 13 computes that gradient in closed form inside each leaf (with a
+  branchless `1/sqrt` guard), replacing the hot-loop finite-difference probe.
 - **`scalar` degeneracy:** some products (P3 `point op line`) never produce a
   scalar blade, so `scalar` is degenerate there; `scalar_pseudo` avoids this by
   adding the magnitude of the remaining grades.
@@ -333,9 +339,10 @@ left unchanged to avoid renaming churn.
 - **Algebra-leaf uniform budget:** each `mv_sdf` `M` matrix is a per-object
   float array; with large result spaces (N3 ≈ 32 blades) the fragment-uniform
   budget (`GL_MAX_FRAGMENT_UNIFORM_VECTORS`) is reached after only a few
-  objects. Mitigate by packing all `M` into one flat `u_M[]` uniform and, past
-  a threshold, a data texture (the material table's planned "texture
-  escalation").
+  objects. Phase 13's active result mask shrinks `M` to the non-zero result
+  blades (~6.5× for the demo, 608 → 93 floats); all `M` still pack into one
+  flat `u_M[]` uniform, and, past a threshold, a data texture (the material
+  table's planned "texture escalation").
 - **Volumetric opacity cost:** soft/volumetric transfer requires accumulation
   along the ray (more samples) and depends on a unit-scaled distance (Phase 9);
   `step`/`linear`/`sigmoid` are cheap, true absorption is the optional follow-on.

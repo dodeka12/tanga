@@ -171,6 +171,19 @@
   transfers), a headless smoke test (`dev/src/test_viz_sdf.py`), and a
   `docs/py/viz/sdf-viewer.md` guide (linked from the viz index and mkdocs nav).
 
+- **Active result mask + analytical step gradient (Phase 13)** — the algebra
+  (`mv_sdf`) path now shrinks each object's `M` matrix to its *active result
+  mask* (the exact non-zero result blades of `point ∘ entity`, plus the scalar
+  and pseudoscalar), cutting `u_M` by ~6.5× for the demo (608 → 93 floats), and
+  computes the sphere-tracing gradient norm `|∇d|` in closed form inside each
+  leaf (distance-function derivative `g[k] = ∂D/∂r[k]`, the transposed matvec
+  `h = Mᵀg`, and the per-algebra point Jacobian). The composed `map()` now
+  returns `vec3(d, m, g)` and the raymarch loop steps `d / max(m.z, 1.0)` with a
+  branchless `1/sqrt` guard, replacing the 4-probe finite-difference
+  `calcGradientNorm` and the analytic-sentinel gate. Distance functions are
+  instantiated per distinct result mask instead of per algebra. Tests in
+  `py/tests/viz/sdf/` (601) + `dev/src/sdf_{algebra,composer}_smoke.mjs`.
+
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed
   `-angle` to IQ's `rotationAxisAngle`, which already negates the angle

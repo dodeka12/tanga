@@ -1,6 +1,6 @@
 # Part C — Tests, docs & changelog
 
-**Status:** Planned · [Overview](README.md) · Depends on: Parts A + B
+**Status:** Done · [Overview](README.md) · Depends on: Parts A + B
 
 ## Goal
 
@@ -61,14 +61,15 @@ contract, add the new coverage from Parts A/B, and refresh the docs/changelog.
 
 ### C6 — docs & changelog
 
-- [ ] Update `dev/todos/viz-sdf-viewer/README.md` risks (algebra-leaf uniform
+- [x] Update `dev/todos/viz-sdf-viewer/README.md` risks (algebra-leaf uniform
       budget → active mask; gradient-scale → analytical step).
-- [ ] Write the changelog entry per `dev/workflows/changelog.md`.
+- [x] Write the changelog entry per `dev/workflows/changelog.md`.
 - **Verify:** markdown renders; changelog follows the naming/format rules.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz/` green (full suite, 598 currently + new).
-- [ ] `node dev/src/sdf_algebra_smoke.mjs && node dev/src/sdf_composer_smoke.mjs`
-- [ ] `demo_sdf_algebra.py` renders: `u_M` total ~93 floats (was 608), the step
-      uses the analytical `|∇d|`, no `if (rest < eps)` in the generated fragment.
+- [x] `uv run pytest py/tests/viz/` green (full suite, 601 tests).
+- [x] `node dev/src/sdf_algebra_smoke.mjs && node dev/src/sdf_composer_smoke.mjs`
+- [x] `demo_sdf_algebra.py` headless check: `u_M` total 93 floats (28+20+10+35),
+      the step uses the analytical `|∇d|` (verified against `calibration.gradient()`),
+      no `if (rest < eps)` in the generated fragment (smoke-checked).
