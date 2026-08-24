@@ -19,7 +19,7 @@ import {
 
 const TWO_PI = 2 * Math.PI;
 
-function resolveRadius(ent) {
+function resolveArcRadius(ent) {
     return Math.max(ent.radius || 1.0, 0.001);
 }
 
@@ -52,7 +52,7 @@ function orientArc(group, ent) {
 export function createArc(ent) {
     const color = parseColor(ent, '#ffcc44');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const radius = resolveRadius(ent);
+    const radius = resolveArcRadius(ent);
     const tubeRadius = resolveTubeRadius(ent);
     const angle = resolveAngle(ent);
 
@@ -106,7 +106,7 @@ export function createArc(ent) {
 
 export function updateArc(mesh, ent, prev) {
     // Any structural change alters the swept geometry; cheaper to rebuild.
-    if (prev && !approxEqual(resolveRadius(ent), resolveRadius(prev))) return false;
+    if (prev && !approxEqual(resolveArcRadius(ent), resolveArcRadius(prev))) return false;
     if (prev && !approxEqual(resolveTubeRadius(ent), resolveTubeRadius(prev))) return false;
     if (prev && !approxEqual(resolveAngle(ent), resolveAngle(prev))) return false;
 
