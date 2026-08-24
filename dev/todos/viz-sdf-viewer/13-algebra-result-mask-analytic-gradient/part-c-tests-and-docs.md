@@ -44,19 +44,19 @@ contract, add the new coverage from Parts A/B, and refresh the docs/changelog.
 
 ### C4 — `test_raymarch_shader.py`
 
-- [ ] `test_algebra_local_gradient_step`: assert `vec3 m = map(p)`,
+- [x] `test_algebra_local_gradient_step`: assert `vec3 m = map(p)`,
       `stepSize = d / max(m.z, 1.0);`, no `calcGradientNorm`, no
       `u_ObjectParams[matId].w > -0.5`.
-- [ ] Keep `test_volumetric_density_present` (still reads `u_ObjectParams.*`).
+- [x] Keep `test_volumetric_density_present` (still reads `u_ObjectParams.*`).
 - **Verify:** `uv run pytest py/tests/viz/sdf/test_raymarch_shader.py -q`
 
 ### C5 — Node smoke checks
 
-- [ ] `dev/src/sdf_algebra_smoke.mjs`: active `result_ids`, smaller `u_M`, the
+- [x] `dev/src/sdf_algebra_smoke.mjs`: active `result_ids`, smaller `u_M`, the
       `vec2` leaf + per-mask `distOf`, branchless guard present, `if (rest`
-      absent.
-- [ ] `dev/src/sdf_composer_smoke.mjs`: `vec3 map(vec3 p)`; analytic
-      `buildObjectExpr` emits `vec2(…, 1.0)`.
+      absent. (Updated + committed as part of B3.)
+- [x] `dev/src/sdf_composer_smoke.mjs`: `vec3 map(vec3 p)`; analytic
+      `buildObjectExpr` emits `vec2(…, 1.0)`. (Updated + committed as part of B4.)
 - **Verify:** `node dev/src/sdf_algebra_smoke.mjs && node dev/src/sdf_composer_smoke.mjs`
 
 ### C6 — docs & changelog

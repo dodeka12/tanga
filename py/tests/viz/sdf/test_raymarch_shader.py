@@ -166,10 +166,12 @@ def test_volumetric_density_present() -> None:
 
 
 def test_algebra_local_gradient_step() -> None:
-    # The step rule uses the standard `t += d` for analytic (proper SDF) objects
-    # and `d / max(|∇d|, 1)` for algebraic (non-1-Lipschitz) objects only.
+    # The step rule is unconditional: `map(p)` carries the analytical gradient
+    # norm (m.z), so the finite-difference `calcGradientNorm` and its per-object
+    # analytic sentinel gate are gone.
     body = _read(RAYMARCH_FILE)
-    assert "float calcGradientNorm(" in body
-    assert "u_ObjectParams[matId].w > -0.5" in body
-    assert "stepSize = d / max(calcGradientNorm(p), 1.0);" in body
+    assert "vec3 m = map(p);" in body
+    assert "stepSize = d / max(m.z, 1.0);" in body
     assert "t += stepSize;" in body
+    assert "calcGradientNorm" not in body
+    assert "u_ObjectParams[matId].w > -0.5" not in body
