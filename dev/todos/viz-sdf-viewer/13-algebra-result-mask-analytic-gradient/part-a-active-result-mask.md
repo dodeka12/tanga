@@ -37,11 +37,11 @@ the same function `product_tensor(..., c_mask=None)` uses internally.
 
 ### A1 — active result mask in `embed_entity_mv`
 
-- [ ] Import `product_blade_mask` from `pytanga.blade_mask.predict`.
-- [ ] Replace `result_mask = BladeMask(alg, _result_ids(alg))` with
+- [x] Import `product_blade_mask` from `pytanga.blade_mask.predict`.
+- [x] Replace `result_mask = BladeMask(alg, _result_ids(alg))` with
       `result_mask = BladeMask(alg, sorted(set(product_blade_mask(point_mask, entity_mask, product=product).ids) | {0, alg.pseudoscalar_id}))`.
-- [ ] `slot_pseudo = result_ids.index(alg.pseudoscalar_id)` (now always valid).
-- [ ] Remove the now-unused `_result_ids` helper and update the module docstring
+- [x] `slot_pseudo = result_ids.index(alg.pseudoscalar_id)` (now always valid).
+- [x] Remove the now-unused `_result_ids` helper and update the module docstring
       (the "full result mask" decision is superseded).
 - **Verify:** `uv run pytest py/tests/viz/sdf/test_algebra_embedding.py -q`
   (existing `test_m_reconstruction` / `test_shape_and_ordering` / `test_p3_trivector`

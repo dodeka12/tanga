@@ -22,10 +22,12 @@ Design decisions (see the Phase 7 plan and the README):
   (quadratic in ρ); ``pga3`` → the J-map dual trivector point. The entity's
   ``opns`` flag selects the *product* only: ``opns=True → op``,
   ``opns=False → ip``.
-- **The result blade mask is the full algebra** (all blades, scalar at slot 0,
-  pseudoscalar at the last slot), because the distance functions (e.g. the
-  default ``scalar_pseudo``) read the scalar, the pseudoscalar, and the
-  magnitude of every other grade.
+- **The result blade mask is the active output mask** of the point/entity
+  product — ``product_blade_mask(point_mask, entity_mask, product)`` — plus the
+  scalar (blade ``0``) and pseudoscalar blades. The two extra rows are
+  structurally zero when an entity doesn't produce them, so they contribute
+  nothing to any distance function; keeping them means the scalar always sits at
+  slot ``0`` and ``slot_pseudo`` is always valid.
 - **``normalize=True``** (default) normalizes the MV before contraction so
   ``|r|`` is a usable sphere-tracing step size.
 """
@@ -39,6 +41,7 @@ import numpy as np
 
 from pytanga.algebra import EProduct, MV
 from pytanga.blade_mask import BladeMask
+from pytanga.blade_mask.predict import product_blade_mask
 from pytanga.tensor import MVTensor
 from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
@@ -138,11 +141,6 @@ def get_spec(alg) -> AlgebraSpec:
     return _SPECS[algebra_name(alg)]
 
 
-def _result_ids(alg) -> list[int]:
-    """Full-algebra result blade ids (ascending; scalar at slot 0)."""
-    return sorted(range(alg.algebra_dim))
-
-
 def point_coeffs(alg, x: float, y: float, z: float) -> dict[int, float]:
     """OPNS point coefficients for *alg* (the Python mirror of ``evalPoint``)."""
     name = algebra_name(alg)
@@ -222,7 +220,12 @@ def embed_entity_mv(
 
     point_mask = BladeMask(alg, spec.point_ids)
     entity_mask = BladeMask(mv)
-    result_mask = BladeMask(alg, _result_ids(alg))
+    # The result mask is the *active* output mask of `point ∘ entity` (the exact
+    # non-zero result blades) plus the scalar and pseudoscalar blades. The two
+    # extra rows are structurally zero when an entity doesn't produce them, so
+    # the scalar always sits at slot 0 and `slot_pseudo` is always valid.
+    active_ids = product_blade_mask(point_mask, entity_mask, product=product).ids
+    result_mask = BladeMask(alg, sorted(set(active_ids) | {0, alg.pseudoscalar_id}))
 
     entity_coeffs = np.array([mv[bid] for bid in entity_mask.ids], dtype=float)
     entity_tensor = MVTensor(data=entity_coeffs, masks=(entity_mask,))
