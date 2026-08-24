@@ -1117,6 +1117,16 @@ class TestAxisSerialization:
         assert d["style"]["value_style"]["font_size"] == 12
         assert d["style"]["value_style"]["align"] == [0.5, 0.5]
 
+    def test_axis_ticks_serialization(self):
+        ent = Axis((0, 0, 0), (3, 0, 0), ticks=[(0.0, "1"), (1.0, "10")])
+        d = serialize_entity(ent, "a1", kind="Axis")
+        assert d["ticks"] == [[0.0, "1"], [1.0, "10"]]
+
+    def test_axis_ticks_omitted_when_none(self):
+        ent = Axis((0, 0, 0), (3, 0, 0))
+        d = serialize_entity(ent, "a1", kind="Axis")
+        assert "ticks" not in d
+
 
 class TestGridSerialization:
     def test_grid_serialization(self):
@@ -1134,6 +1144,18 @@ class TestGridSerialization:
         d = serialize_entity(g, "g2", kind="Grid")
         assert d["range_u"] == [-2.0, 3.0]
         assert d["range_v"] == [-1.0, 4.0]
+
+    def test_grid_line_positions_serialization(self):
+        g = Grid(line_positions_u=[-2.0, 0.0, 2.0], line_positions_v=[-1.0, 1.0])
+        d = serialize_entity(g, "g1", kind="Grid")
+        assert d["line_positions_u"] == [-2.0, 0.0, 2.0]
+        assert d["line_positions_v"] == [-1.0, 1.0]
+
+    def test_grid_line_positions_omitted_when_none(self):
+        g = Grid(range_u=(-5.0, 5.0), range_v=(-3.0, 3.0))
+        d = serialize_entity(g, "g1", kind="Grid")
+        assert "line_positions_u" not in d
+        assert "line_positions_v" not in d
 
 
 class TestAxesSerialization:

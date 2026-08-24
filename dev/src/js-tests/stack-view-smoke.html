@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>StackView smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 500px; height: 400px; background: #222; }
+        .box { background: #334; border: 1px solid #556; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">StackView smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { StackView } from '../../py/pytanga/viz/templates/views/stack-view.js';
+        import { View } from '../../py/pytanga/viz/templates/views/view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+
+        function box(name, w, h) {
+            const v = new View();
+            v.el.classList.add('box');
+            v.el.textContent = name;
+            if (w) v.preferredWidth = { value: w, unit: 'px' };
+            if (h) v.preferredHeight = { value: h, unit: 'px' };
+            v.minHeight = { value: 20, unit: 'px' };
+            return v;
+        }
+
+        const stack = new StackView({ direction: 'vertical', children: [box('A', 200, 60), box('B', 200, 40)] });
+        stack.mount(document.getElementById('host'));
+        log('vertical stack preferred:', JSON.stringify({ w: stack.preferredPx('x', 0), h: stack.preferredPx('y', 0) }));
+
+        const wrap = new StackView({ direction: 'wrap' });
+        for (let i = 0; i < 8; i++) wrap.addChild(box('w' + i, 90, 30));
+        wrap.mount(document.getElementById('host'));
+        log('wrap stack mounted with 8 boxes');
+    </script>
+</body>
+</html>

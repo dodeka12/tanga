@@ -26,7 +26,9 @@ from ._util import (
     _is_mv,
     register_analyzer,
 )
+from .arc import Arc
 from .circle import Circle, ImagCircle
+from .cylinder import Cylinder
 from .direction import Direction
 from .hdirection import HDirection
 from .hpoint import HPoint
@@ -55,7 +57,9 @@ Entity = (
 )
 
 __all__ = [
+    "Arc",
     "Circle",
+    "Cylinder",
     "Direction",
     "Entity",
     "HDirection",

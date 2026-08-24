@@ -10,4 +10,5 @@ controls (sliders, dropdowns, buttons, groups) and async handlers.
 |-------|---------------------|
 | [Quickstart](app.md) | Subclassing `VisualizerApp`, the lifecycle, your first controls |
 | [Controls](controls.md) | `add_slider`/`add_dropdown`/`add_button`/`add_group`, scene-scoped controls |
+| [Layouts — Split Views & Controls](layouts.md) | `SplitView`/`SceneView`/`GroupView` panes and control views inside a `VisualizerApp` |
 | [Handlers & Lifecycle](handlers.md) | The handler contract, `ControlEvent`, async patterns, the full lifecycle |

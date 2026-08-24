@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>ControlGroupView smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 300px; height: 400px; background: #222; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">ControlGroupView smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { ControlGroupView } from '../../py/pytanga/viz/templates/views/control-group-view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...args) => { logEl.textContent += args.join(' ') + '\n'; };
+
+        const view = new ControlGroupView('side');
+        view.mount(document.getElementById('host'));
+        view.on('constraintschange', (e) => log('constraintschange', JSON.stringify(e.detail), 'minHeight=', JSON.stringify(view.minHeight)));
+
+        const msg = {
+            type: 'controls_define',
+            controls: [
+                { id: 's1', kind: 'slider', label: 'Radius', min: 0, max: 10, step: 0.1, default: 1 },
+                { id: 'b1', kind: 'button', label: 'Go' },
+            ],
+            groups: [{ id: 'g1', title: 'Params', controls: ['s1', 'b1'], position: 'bottom-right' }],
+            orphanControls: [],
+        };
+
+        view.handleMessage(msg).then(() => {
+            log('rendered; minHeight=', JSON.stringify(view.minHeight));
+            view.handleMessage({ type: 'controls_clear' }).then(() => {
+                log('cleared; minHeight=', JSON.stringify(view.minHeight));
+            });
+        });
+    </script>
+</body>
+</html>

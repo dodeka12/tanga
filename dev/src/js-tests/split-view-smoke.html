@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>SplitView smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 600px; height: 400px; background: #222; }
+        .pane { box-sizing: border-box; border: 1px solid #555; background: #2a2a3e; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">SplitView smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { SplitView } from '../../py/pytanga/viz/templates/views/split-view.js';
+        import { View } from '../../py/pytanga/viz/templates/views/view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...args) => { logEl.textContent += args.join(' ') + '\n'; };
+
+        const makePane = (label) => {
+            const v = new View();
+            v.el.classList.add('pane');
+            v.el.textContent = label;
+            return v;
+        };
+
+        const left = makePane('left (flexible)');
+        const right = makePane('right (flexible)');
+        const fixed = makePane('fixed 150px');
+        fixed.minWidth = { value: 150, unit: 'px' };
+        fixed.maxWidth = { value: 150, unit: 'px' };
+
+        const split = new SplitView({ orientation: 'horizontal' });
+        split.addChild(left);
+        split.addChild(fixed);
+        split.addChild(right);
+
+        const host = document.getElementById('host');
+        split.mount(host);
+        split.on('extentchange', () => log('split extent', JSON.stringify(split.extent)));
+
+        setTimeout(() => {
+            log('layout sizes (left/fixed/right):', JSON.stringify(split._sizes));
+            log('splitter 0 movable:', split._splitters[0].dataset.movable);
+            log('splitter 1 movable:', split._splitters[1].dataset.movable);
+            log('Drag the first splitter to resize the left pane.');
+        }, 200);
+    </script>
+</body>
+</html>

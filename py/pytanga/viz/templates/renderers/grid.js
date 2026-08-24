@@ -45,22 +45,42 @@ export function createGrid(ent) {
         group.add(line);
     }
 
-    // Lines parallel to dir_u (step along dir_v)
-    const vSteps = Math.floor(extentV / intervalV);
-    for (let i = 0; i <= vSteps; i++) {
-        const t = i * intervalV;
-        const a = corner.clone().addScaledVector(dirV, t);
-        const b = a.clone().addScaledVector(dirU, extentU);
-        addLine(a, b);
+    // Lines parallel to dir_u (positioned along dir_v).
+    if (Array.isArray(ent.line_positions_v)) {
+        for (const vp of ent.line_positions_v) {
+            const a = origin.clone()
+                .addScaledVector(dirU, minU)
+                .addScaledVector(dirV, vp);
+            const b = a.clone().addScaledVector(dirU, extentU);
+            addLine(a, b);
+        }
+    } else {
+        const vSteps = Math.floor(extentV / intervalV);
+        for (let i = 0; i <= vSteps; i++) {
+            const t = i * intervalV;
+            const a = corner.clone().addScaledVector(dirV, t);
+            const b = a.clone().addScaledVector(dirU, extentU);
+            addLine(a, b);
+        }
     }
 
-    // Lines parallel to dir_v (step along dir_u)
-    const uSteps = Math.floor(extentU / intervalU);
-    for (let i = 0; i <= uSteps; i++) {
-        const t = i * intervalU;
-        const a = corner.clone().addScaledVector(dirU, t);
-        const b = a.clone().addScaledVector(dirV, extentV);
-        addLine(a, b);
+    // Lines parallel to dir_v (positioned along dir_u).
+    if (Array.isArray(ent.line_positions_u)) {
+        for (const up of ent.line_positions_u) {
+            const a = origin.clone()
+                .addScaledVector(dirU, up)
+                .addScaledVector(dirV, minV);
+            const b = a.clone().addScaledVector(dirV, extentV);
+            addLine(a, b);
+        }
+    } else {
+        const uSteps = Math.floor(extentU / intervalU);
+        for (let i = 0; i <= uSteps; i++) {
+            const t = i * intervalU;
+            const a = corner.clone().addScaledVector(dirU, t);
+            const b = a.clone().addScaledVector(dirV, extentV);
+            addLine(a, b);
+        }
     }
 
     tagEntity(group, ent);

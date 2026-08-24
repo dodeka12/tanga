@@ -121,6 +121,8 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 | `LineStyle` | `Line` | `color`, `opacity`, `length`, `thickness`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
 | `PlaneStyle` | `Plane` | `color`, `opacity`, `extent`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
 | `CircleStyle` | `Circle`, `ImagCircle` | `color`, `opacity`, `tube_radius`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
+| `CylinderStyle` | `Cylinder` | `color`, `opacity`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
+| `ArcStyle` | `Arc` | `color`, `opacity`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
 | `SphereStyle` | `Sphere`, `ImagSphere` | `color`, `opacity`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
 | `SpaceStyle` | `Space` | `color`, `opacity`, `extent` |
 | `GridStyle` | `Grid` | `color`, `opacity`, `line_thickness` |
@@ -154,6 +156,8 @@ and usage.
 | Plane | `#4488ff` (blue) |
 | Circle | `#ff44ff` (magenta) |
 | Sphere | `#ffaa00` (amber) |
+| Cylinder | `#44aaff` (blue) |
+| Arc | `#ffcc44` (amber) |
 | Space | `#888888` (grey) |
 | Grid | `#555555` (grey) |
 | Axis | `#888888` (grey) |
@@ -174,8 +178,9 @@ and usage.
 
 ## Wireframe & Dash Patterns
 
-`LineStyle`, `PlaneStyle`, `CircleStyle`, `SphereStyle`, and `PointPairStyle`
-all support wireframe rendering via these fields:
+`LineStyle`, `PlaneStyle`, `CircleStyle`, `SphereStyle`, `PointPairStyle`,
+`CylinderStyle`, and `ArcStyle` all support wireframe rendering via these
+fields:
 
 | Field | Type | Description |
 |-------|------|-------------|

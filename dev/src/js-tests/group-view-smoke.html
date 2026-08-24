@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>GroupView smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 300px; background: #222; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">GroupView smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { GroupView } from '../../py/pytanga/viz/templates/views/group-view.js';
+        import { SliderView } from '../../py/pytanga/viz/templates/views/slider-view.js';
+        import { ButtonView } from '../../py/pytanga/viz/templates/views/button-view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+
+        const group = new GroupView({
+            title: 'Actions',
+            children: [
+                new SliderView({ id: 's1', label: 'Radius', min: 0, max: 5, default: 2 }),
+                new ButtonView({ id: 'b1', label: 'Go' }),
+            ],
+        });
+        group.mount(document.getElementById('host'));
+
+        log('title:', group.el.querySelector('.tanga-group-title')?.textContent);
+        log('children:', group.children.map((c) => c.controlId).join(', '));
+        log('content is flex:', getComputedStyle(group._content).display);
+        log('has slider:', !!group.el.querySelector('.tanga-slider'));
+        log('has button:', !!group.el.querySelector('.tanga-action-button'));
+        log('preferred height:', group.preferredPx('y', 0));
+    </script>
+</body>
+</html>

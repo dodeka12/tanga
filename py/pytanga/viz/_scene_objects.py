@@ -67,6 +67,11 @@ class Axis:
         Numeric value at ``start``.
     value_step:
         Numeric value increment per world unit along ``start`` → ``end``.
+    ticks:
+        Optional explicit ``(offset, label)`` pairs, each measured in world
+        units along the axis from ``start``.  When set, these replace the
+        uniform ``major_interval`` / ``value_start`` / ``value_step`` value
+        labels (e.g. for logarithmic or otherwise non-uniform scales).
 
     Examples
     --------
@@ -85,6 +90,7 @@ class Axis:
     label: str | None = None
     value_start: float = 0.0
     value_step: float = 1.0
+    ticks: list[tuple[float, str]] | None = None
 
 
 @dataclass
@@ -118,6 +124,14 @@ class Grid:
         Spacing between lines parallel to ``dir_v``.
     interval_v:
         Spacing between lines parallel to ``dir_u``.
+    line_positions_u:
+        Optional explicit offsets from ``origin`` along ``dir_u`` at which
+        lines parallel to ``dir_v`` are drawn.  When set, this replaces the
+        uniform ``interval_u`` spacing.
+    line_positions_v:
+        Optional explicit offsets from ``origin`` along ``dir_v`` at which
+        lines parallel to ``dir_u`` are drawn.  When set, this replaces the
+        uniform ``interval_v`` spacing.
 
     Examples
     --------
@@ -131,6 +145,8 @@ class Grid:
     range_v: tuple[float, float] = (0.0, 5.0)
     interval_u: float = 1.0
     interval_v: float = 1.0
+    line_positions_u: list[float] | None = None
+    line_positions_v: list[float] | None = None
 
     def __post_init__(self) -> None:
         # A 2-tuple origin (x, y) is placed behind all other objects.

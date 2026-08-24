@@ -81,6 +81,8 @@ nav:
       - Motor decomposition: py/viz/scene-objects/motor-decomposition.md
       - Axes & Grid: py/viz/scene-objects/axes-grid.md
       - PointPath: py/viz/scene-objects/point-path.md
+      - Coordinate System: py/viz/scene-objects/coordinate-system.md
+      - Coordinate System (examples): py/viz/scene-objects/coordinate-system.ipynb
       - Active Elements:
         - Overview: py/viz/scene-objects/active-elements/index.md
         - ActPoint: py/viz/scene-objects/active-elements/act-point.md
@@ -88,6 +90,7 @@ nav:
       - Overview: py/viz/visualizer/index.md
       - Visualizer: py/viz/visualizer/visualizer.md
       - Multi-Scene: py/viz/visualizer/multi-scene.md
+      - Split Views: py/viz/visualizer/split-views.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
       - Camera & Controls: py/viz/visualizer/camera.md
       - Animation: py/viz/visualizer/animation.md
@@ -96,6 +99,7 @@ nav:
       - Overview: py/viz/visualizerapp/index.md
       - Quickstart: py/viz/visualizerapp/app.md
       - Controls: py/viz/visualizerapp/controls.md
+      - Layouts (Split Views & Controls): py/viz/visualizerapp/layouts.md
       - Handlers & Lifecycle: py/viz/visualizerapp/handlers.md
     - Jupyter Notebooks:
       - Overview: py/viz/jupyter/index.md

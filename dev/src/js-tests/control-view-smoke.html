@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Control view smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 300px; background: #222; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">Control view smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { StackView } from '../../py/pytanga/viz/templates/views/stack-view.js';
+        import { SliderView } from '../../py/pytanga/viz/templates/views/slider-view.js';
+        import { ButtonView } from '../../py/pytanga/viz/templates/views/button-view.js';
+        import { DropdownView } from '../../py/pytanga/viz/templates/views/dropdown-view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+
+        const stack = new StackView({
+            direction: 'vertical',
+            children: [
+                new SliderView({ id: 's1', label: 'Radius', min: 0, max: 5, step: 0.1, default: 2 }),
+                new DropdownView({ id: 'd1', label: 'Mode', options: ['a', 'b'], default: 'a' }),
+                new ButtonView({ id: 'b1', label: 'Go' }),
+            ],
+        });
+        stack.mount(document.getElementById('host'));
+        log('controls mounted:', stack.children.map((c) => c.controlId).join(', '));
+        log('preferred height:', stack.preferredPx('y', 0));
+        log('slider el children:', stack.children[0].el.querySelector('.tanga-slider') ? 'ok' : 'MISSING');
+        log('button el children:', stack.children[2].el.querySelector('.tanga-action-button') ? 'ok' : 'MISSING');
+    </script>
+</body>
+</html>

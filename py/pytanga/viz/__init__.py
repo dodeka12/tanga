@@ -27,6 +27,7 @@ from ._active import ActHandler, ActPoint, ActSceneObject
 from ._app import VisualizerApp
 from ._colors import Color
 from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
+from ._coordinate_system import CoordinateSystem
 from ._figure import FigureConfig
 from ._interaction import (
     Camera,
@@ -47,17 +48,21 @@ from ._label import Label
 from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
+from ._scale import LinearScale, LogScale, Scale
 from ._scene_handle import VizSceneHandle
 from ._scene_objects import Axes2D, Axes3D, Axis, Grid
+from ._size import Size, SizeSpec
 from ._styles import (
     AnimStyle,
     AnnotationStyle,
+    ArcStyle,
     Axes2DStyle,
     Axes3DStyle,
     AxisStyle,
     CircleStyle,
     CrossHairPointStyle,
     CylinderLineStyle,
+    CylinderStyle,
     DilatorStyle,
     DirectionStyle,
     FigureStyle,
@@ -97,6 +102,18 @@ from .camera import (
 )
 from .export._exporter import SceneExporter
 from .scene import SceneConfig
+from .views import (
+    ButtonView,
+    ControlView,
+    DropdownView,
+    GroupView,
+    SceneView,
+    SliderView,
+    SpacerView,
+    SplitView,
+    StackView,
+    View,
+)
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
@@ -107,6 +124,7 @@ __all__ = [
     "ActSceneObject",
     "AnimStyle",
     "AnnotationStyle",
+    "ArcStyle",
     "Axes2D",
     "Axes2DStyle",
     "Axes3D",
@@ -114,22 +132,28 @@ __all__ = [
     "Axis",
     "AxisStyle",
     "Button",
+    "ButtonView",
     "Camera",
     "CameraConfig",
     "CameraConfig2d",
     "CameraConfig3d",
     "Color",
+    "CoordinateSystem",
     "ClickEvent",
     "ControlEvent",
     "CircleStyle",
     "ControlGroup",
+    "ControlView",
+    "GroupView",
     "CrossHairPointStyle",
     "CylinderLineStyle",
+    "CylinderStyle",
     "DilatorStyle",
     "DirectionStyle",
     "DragEvent",
     "DragMode",
     "Dropdown",
+    "DropdownView",
     "FigureConfig",
     "FigureStyle",
     "GeneralRotorStyle",
@@ -149,6 +173,8 @@ __all__ = [
     "Label",
     "LabelStyle",
     "LineStyle",
+    "LinearScale",
+    "LogScale",
     "ModifierKey",
     "MouseButton",
     "MotorStyle",
@@ -161,19 +187,28 @@ __all__ = [
     "ReflectionLineStyle",
     "ReflectionPlaneStyle",
     "RotorStyle",
+    "Scale",
     "SceneConfig",
     "SceneEntity",
     "SceneExporter",
+    "SceneView",
     "ScrollEvent",
+    "Size",
+    "SizeSpec",
     "Slider",
+    "SliderView",
     "SpaceStyle",
+    "SpacerView",
     "SphereStyle",
+    "SplitView",
+    "StackView",
     "TextureLabelStyle",
     "Timeline",
     "gradient_colors",
     "multi_gradient_colors",
     "TitleStyle",
     "TranslatorStyle",
+    "View",
     "View2DConfig",
     "View3dConfig",
     "Visualizer",
