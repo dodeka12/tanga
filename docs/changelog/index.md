@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.0.1] — 2026-08-24
+- Split views (`SplitView` panes) · `StackView` + control views (`SliderView`/`ButtonView`/`DropdownView`) · multi-scene WebSocket subscription · per-pane scene cameras · viz-only `Cylinder`/`Arc` entities · `CoordinateSystem` plotting helper
+→ [Details](2026-08-24_e13c44a.md)
+
 ## [Since 1.0.0] — 2026-08-24
 - `VisualizerApp` shutdown (opt-in Ctrl+Q + `request_shutdown()`) · PGA3/PGA2 `dual`/`undual` Hodge-star sign fixes · blade-name parsing sign fix (`e31` → `-e13`)
 - Bug fixes: canonical bivector attributes on 3D-space bases
