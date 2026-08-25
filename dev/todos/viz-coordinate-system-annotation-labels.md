@@ -125,8 +125,9 @@ So piping labels is purely additive: add the kwargs and forward them to
 
 **File:** branch changelog per `dev/workflows/changelog.md`
 
-- [ ] Add a New Features bullet for labels on the CS annotation helpers (and the
-      `Line`-based line drawing).
+- [x] Add a New Features bullet for labels on the CS annotation helpers (and the
+      `Line`-based line drawing), plus a Bug Fixes bullet for the line label
+      anchor fix.
 
 ## Verification
 
