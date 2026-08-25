@@ -12,7 +12,7 @@ from pytanga.viz.sdf._compose import Combine, ECompose, SdfElement, _coerce, _co
 from pytanga.viz.sdf.primitives import box, sphere
 
 
-@dataclass(frozen=True, init=False)
+@dataclass(init=False)
 class _Leaf(SdfElement):
     """Test stub: an SdfElement wrapping a prebuilt SdfNode."""
 

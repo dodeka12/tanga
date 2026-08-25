@@ -59,8 +59,10 @@ from pytanga.geometry.operators import (
     Rotor,
     Translator,
 )
+from ._compose import Combine, ECompose, SdfElement
 from .composed import Composed
 from .group import SdfGroup
+from .object import SdfObject
 from .bounds import compute_bounds
 from .primitives import SdfNode, combine, group, primitive
 
@@ -178,6 +180,11 @@ def serialize_entity_local(
         },
     }
 
+    # Multi-member foldables (Composed) carry a per-member material array, one
+    # ``{color, opacity}`` per member (``None`` = inherit the object default).
+    if isinstance(entity, Composed):
+        result["materials"] = [_member_material(m) for m, _ in entity.parts]
+
     _finalize_sdf_object(result, resolved)
     return result
 
@@ -232,9 +239,9 @@ def _serialize_sdf_group(
     children: list[SdfNode] = []
     centers: list[tuple[float, float, float]] = []
     halves: list[tuple[float, float, float]] = []
+    materials: list[dict[str, Any]] = []
     for obj, combine_mode in group.parts:
-        obj = _resolve_constituent(obj)
-        tree, _, _ = _dispatch_object(obj, {}, styles_map)
+        tree = _lower_member(obj)
 
         bounds = compute_bounds(tree, padding=padding)
         center = (
@@ -250,10 +257,11 @@ def _serialize_sdf_group(
 
         local_tree = _translate_tree(tree, (-center[0], -center[1], -center[2]))
         child = copy.copy(local_tree)
-        child.combine = combine_mode
+        child.combine = combine_mode.value
         children.append(child)
         centers.append(center)
         halves.append(half)
+        materials.append(_member_material(obj))
 
     # 2. Group origin = union centre of the members' *intrinsic* placements.
     lo = [math.inf, math.inf, math.inf]
@@ -312,6 +320,7 @@ def _serialize_sdf_group(
         "sdfKind": "SdfGroup",
         "tree": {"kind": "group", "children": [c.to_dict() for c in children]},
         "members": members,
+        "materials": materials,
         "bound": {
             "min": [-half[0], -half[1], -half[2]],
             "max": [half[0], half[1], half[2]],
@@ -378,8 +387,20 @@ def _dispatch_object(
         return entity, dict(props), entity.kind
     if isinstance(entity, Composed):
         return _composed_tree(entity, styles_map), dict(props), "Composed"
+    if isinstance(entity, SdfObject):
+        return entity.to_sdf_node(), _sdf_object_props(entity, props), "SdfObject"
+    if isinstance(entity, Combine):
+        return entity.to_sdf_node(), dict(props), "Combine"
     tree, resolved = _dispatch_tree(entity, props, styles_map)
     return tree, resolved, type(entity).__name__
+
+
+def _sdf_object_props(entity: SdfObject, props: dict[str, Any]) -> dict[str, Any]:
+    """Build resolved props for an ``SdfObject`` (its bundled style wins)."""
+    resolved = dict(props)
+    if entity.style is not None:
+        resolved["style"] = entity.style
+    return resolved
 
 
 def _resolve_constituent(obj: Any) -> Any:
@@ -403,20 +424,33 @@ def _resolve_constituent(obj: Any) -> Any:
 
 
 def _composed_tree(composed: Composed, styles_map: dict[str, Any] | None) -> SdfNode:
-    """Build a ``group`` node from a :class:`Composed`'s constituents.
+    """Build a ``group`` node from a :class:`Composed`'s members.
 
-    Each constituent is serialized independently (so it may be an entity, an
-    ``SdfNode``, or a nested ``Composed``) and tagged with its own ``combine``
-    mode for the ordered group fold.
+    Each member is an ``SdfElement`` (lowered via ``to_sdf_node()``) or an
+    ``SdfNode``, tagged with its own ``combine`` mode for the ordered fold.
     """
     children: list[SdfNode] = []
     for part_obj, combine_mode in composed.parts:
-        part_obj = _resolve_constituent(part_obj)
-        child, _, _ = _dispatch_object(part_obj, {}, styles_map)
-        child = copy.copy(child)
-        child.combine = combine_mode
+        child = copy.copy(_lower_member(part_obj))
+        child.combine = combine_mode.value
         children.append(child)
     return group(children)
+
+
+def _lower_member(element: Any) -> SdfNode:
+    """Lower a member (``SdfElement`` or ``SdfNode``) to an ``SdfNode``."""
+    if isinstance(element, SdfElement):
+        return element.to_sdf_node()
+    return element
+
+
+def _member_material(element: Any) -> dict[str, Any]:
+    """Return a member's per-member ``{color, opacity}`` (``None`` = inherit)."""
+    style = getattr(element, "style", None)
+    return {
+        "color": getattr(style, "color", None) if style is not None else None,
+        "opacity": getattr(style, "opacity", None) if style is not None else None,
+    }
 
 
 def _normalize_combine(props: dict[str, Any]) -> dict[str, str]:

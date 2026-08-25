@@ -69,7 +69,7 @@ def _coerce_mode(value: Any, *, allow_xor: bool = False) -> ECompose:
     return mode
 
 
-@dataclass(frozen=True)
+@dataclass
 class SdfElement:
     """Base class for SDF drawables: a combine mode + operator composition.
 
@@ -130,7 +130,7 @@ class SdfElement:
         )
 
 
-@dataclass(frozen=True, init=False)
+@dataclass(init=False)
 class Combine(SdfElement):
     """A binary CSG node ``op(a, b)``, produced by the arithmetic operators."""
 
@@ -157,25 +157,62 @@ class Combine(SdfElement):
         return combine(_COMBINE_KIND[self.op], self.a.to_sdf_node(), self.b.to_sdf_node())
 
 
-def _coerce(obj: Any) -> SdfElement:
-    """Coerce an operand to an ``SdfElement``.
+def _resolve_mv(obj: Any) -> Any:
+    """Resolve a raw multivector to a geometry entity/operator (else unchanged)."""
+    from pytanga.algebra import MV
 
-    ``SdfElement`` operands pass through; geometry entities are wrapped in an
-    ``SdfObject`` (default style). ``None`` and other types raise.
+    if isinstance(obj, MV):
+        from pytanga.geometry import analyze
+
+        resolved = analyze(obj)
+        if resolved is None:
+            raise TypeError(f"Could not analyze object: {obj!r}")
+        return resolved
+    return obj
+
+
+def _coerce(obj: Any) -> Any:
+    """Coerce an operand/member to an SDF element (``SdfElement`` or ``SdfNode``).
+
+    ``SdfElement``/``SdfNode`` pass through; geometry entities are wrapped in an
+    ``SdfObject`` (default style); raw multivectors are analyzed first. ``None``
+    and other types raise.
     """
     if isinstance(obj, SdfElement):
         return obj
 
+    obj = _resolve_mv(obj)
+
     from pytanga.geometry.entities import Cylinder, Entity as GeoEntity
 
     from .object import SdfObject
+    from .primitives import SdfNode
 
+    if isinstance(obj, SdfNode):
+        return obj
     if isinstance(obj, GeoEntity) or isinstance(obj, Cylinder):
         return SdfObject(obj)
     raise TypeError(
-        f"Cannot combine {type(obj).__name__} with an SdfElement; "
+        f"Cannot use {type(obj).__name__} as an SDF element; "
         "wrap it in SdfObject first"
     )
+
+
+def _normalize_part(part: Any) -> tuple[Any, ECompose]:
+    """Normalize a ``Composed``/``SdfGroup`` part to ``(element, fold_mode)``.
+
+    Accepts a bare element (its own ``combine`` is the mode), a unary-tagged
+    element (``-el``/``~el``), or a legacy ``(obj, mode)`` tuple/string.
+    """
+    if (
+        isinstance(part, tuple)
+        and len(part) == 2
+        and isinstance(part[1], (ECompose, str))
+    ):
+        return _coerce(part[0]), _coerce_mode(part[1])
+    element = _coerce(part)
+    mode = element.combine if isinstance(element, SdfElement) else ECompose.UNION
+    return element, mode
 
 
 def _with_combine(el: SdfElement, mode: ECompose) -> SdfElement:

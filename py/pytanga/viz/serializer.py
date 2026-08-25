@@ -93,8 +93,10 @@ def _dispatch_entity(
     :func:`serialize_entity` (backward-compat trampoline) and the scene-graph
     node serializers in ``_nodes.py``.
     """
-    # ── SDF-styled entities → per-object ray-marched proxy objects ──
-    if _is_sdf_styled(props, kind, styles_map):
+    # ── SDF elements / SDF-styled entities → per-object ray-marched proxies ──
+    from .sdf._compose import SdfElement
+
+    if isinstance(entity, SdfElement) or _is_sdf_styled(props, kind, styles_map):
         from .sdf.serializer import serialize_entity_local
 
         body = serialize_entity_local(entity, kind, props, styles_map=styles_map)

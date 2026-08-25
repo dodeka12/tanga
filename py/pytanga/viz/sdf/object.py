@@ -35,7 +35,7 @@ _DEFAULT_LINE_LENGTH = 20.0
 _DEFAULT_PLANE_EXTENT = 10.0
 
 
-@dataclass(frozen=True, init=False)
+@dataclass(init=False)
 class SdfObject(SdfElement):
     """A single SDF drawable: a geometry entity + optional id + per-entity style.
 

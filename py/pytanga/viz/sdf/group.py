@@ -8,62 +8,46 @@ whose members are rendered as **one** ray-marched solid (so cross-object CSG,
 smooth shading, and self-shadowing work across members), yet each member keeps
 its own runtime transform so it can be animated independently without
 recompiling the shader.
-
-Member transforms are uploaded as shader uniforms and the proxy bounding box is
-the union of the members' AABBs, updated dynamically as members move (see the
-frontend ``createSdfProxy``/``updateSdfProxy``).
 """
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from pytanga.viz._types import TransformRotation, Triple, Vec3, _as_euler, _as_vec3
 
-_COMBINE_MODES = ("union", "intersection", "subtract")
+from ._compose import ECompose, SdfElement, _normalize_part
+from .composed import _member_node
+from .primitives import SdfNode, group
 
 
-@dataclass
-class SdfGroup:
+@dataclass(init=False)
+class SdfGroup(SdfElement):
     """A grouped SDF object with per-member combine modes + runtime transforms.
 
-    Each part is either a bare object (defaults to ``"union"``) or an
-    ``(object, combine_mode)`` pair. ``object`` may be a geometry entity, an
-    operator, a :class:`~pytanga.viz.sdf.primitives.SdfNode`, or a
-    :class:`~pytanga.viz.sdf.composed.Composed`.
+    Each part is a bare element (defaults to union), a unary-tagged element
+    (``-el`` / ``~el``), or a legacy ``(obj, mode)`` tuple/string. ``obj`` may be
+    a geometry entity, an ``SdfNode``, an ``SdfObject``/``Combine``, or a nested
+    ``Composed``/``SdfGroup``.
 
     Example::
 
         SdfGroup(sphere(1.0), (capped_cylinder(0.6, 0.4), "subtract"))
     """
 
-    parts: tuple[tuple[Any, str], ...] = ()
+    parts: tuple[tuple[Any, ECompose], ...]
     transforms: dict[int, dict[str, Any]] = field(default_factory=dict)
     on_change: Callable[[], None] | None = field(
         default=None, init=False, repr=False, compare=False
     )
 
-    def __init__(self, *parts: Any) -> None:
-        normalized: list[tuple[Any, str]] = []
-        for part in parts:
-            if (
-                isinstance(part, tuple)
-                and len(part) == 2
-                and isinstance(part[1], str)
-            ):
-                obj, combine_mode = part
-            else:
-                obj, combine_mode = part, "union"
-            if combine_mode not in _COMBINE_MODES:
-                raise ValueError(
-                    f"Invalid combine mode {combine_mode!r}; expected one of "
-                    f"{_COMBINE_MODES}"
-                )
-            normalized.append((obj, combine_mode))
-        self.parts = tuple(normalized)
+    def __init__(self, *parts: Any, combine: ECompose = ECompose.UNION) -> None:
+        self.parts = tuple(_normalize_part(p) for p in parts)
         self.transforms = {}
         self.on_change = None
+        self.combine = combine
 
     # ── Member addressing ─────────────────────────────────────
 
@@ -114,4 +98,15 @@ class SdfGroup:
             transform["scale"] = list(_as_vec3(scale))
         if self.on_change is not None:
             self.on_change()
+
+    # ── Lowering (fixed-tree snapshot, used when nested) ──────
+
+    def to_sdf_node(self) -> SdfNode:
+        children: list[SdfNode] = []
+        for element, mode in self.parts:
+            child = copy.copy(_member_node(element))
+            child.combine = mode.value
+            children.append(child)
+        return group(children)
+
 

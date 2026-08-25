@@ -24,26 +24,26 @@ material table lands in Phase 5.
 
 ## Steps
 
-- [ ] **4.1 — `Composed` on `SdfElement`** (`composed.py`)
+- [x] **4.1 — `Composed` on `SdfElement`** (`composed.py`)
   - Parts normalize to `(SdfElement, ECompose)`: wrap raw entities/`SdfNode`
     via `_entity_to_sdf`; accept unary-tagged elements (`-el`, `~el`) and legacy
     `(obj, mode)` tuples + strings.
   - `Composed.id` stays; `Composed` inherits `SdfElement` (so it composes too).
 
-- [ ] **4.2 — `SdfGroup` on `SdfElement`** (`group.py`)
+- [x] **4.2 — `SdfGroup` on `SdfElement`** (`group.py`)
   - Same member normalization as `Composed`, plus the existing runtime-transform
     machinery (`transforms`, `member_ids`, `_resolve_member_index`,
     `set_member_transform`, `on_change`). Members keep `id` addressing + Rotor→
     Euler rotation (from the shared `_types`).
 
-- [ ] **4.3 — `viz.add()`/`new()` accept SDF elements** (`visualizer.py`,
+- [x] **4.3 — `viz.add()`/`new()` accept SDF elements** (`visualizer.py`,
     `serializer.py`)
   - `_resolve` passes `SdfObject`/`Combine` through.
   - `_dispatch_entity` routes `isinstance(entity, (SdfObject, Combine))` to the
     SDF serializer (before the per-kind leaf dispatch), regardless of a
     `SdfStyle` marker.
 
-- [ ] **4.4 — Serialization** (`sdf/serializer.py`)
+- [x] **4.4 — Serialization** (`sdf/serializer.py`)
   - `SdfObject` → single `kind:"sdf"` object (tree = `to_sdf_node()`, color/
     opacity from `entity.style`, bound from the tree).
   - `Combine` → `kind:"sdf"`, `sdfKind:"Combine"`, nested `combine` tree; XOR →
@@ -53,20 +53,20 @@ material table lands in Phase 5.
     only) `members` + `bound`. Member `combine` modes come from the elements'
     `combine`.
 
-- [ ] **4.5 — Backward compatibility**
+- [x] **4.5 — Backward compatibility**
   - `viz.add(Sphere(...), style=SdfStyle(...))` still emits `kind:"sdf"` (the
     marker path is untouched).
   - Legacy `Composed(sphere(1.0), (capped_cylinder(...), "subtract"))` and
     `SdfGroup(...)` positional/tuple forms keep working.
 
-- [ ] **4.6 — Tests**
+- [x] **4.6 — Tests**
   - `SdfObject`/`Combine` via `viz.add()`/`new()` → `kind:"sdf"`.
   - `Composed`/`SdfGroup` emit a `materials` array matching member order, and
     per-member color/opacity comes from the member's style.
   - Operator-built `Combine` serializes to the expected nested tree.
   - Regression: marker path and fullscreen `SdfVisualizer` unchanged.
 
-- [ ] **4.7 — Validate**
+- [x] **4.7 — Validate**
   - `uv run pytest py/tests/viz/ -q` + `py/tests/viz/sdf/ -q`.
 
 ## Validation

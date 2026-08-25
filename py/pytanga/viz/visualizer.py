@@ -1209,14 +1209,12 @@ class Visualizer(_JupyterDisplayMixin):
         if isinstance(obj, SceneEntity):
             return obj  # type: ignore[return-value]
 
-        # SDF drawables (Composed / SdfNode / SdfGroup) — pass through
-        # unchanged; they are serialized by the SDF path when combined with an
-        # `SdfStyle`.
-        from .sdf.composed import Composed as _Composed
-        from .sdf.group import SdfGroup as _SdfGroup
+        # SDF drawables (SdfElement / SdfNode) — pass through unchanged; they
+        # are serialized by the SDF path (SdfElements carry their own style).
+        from .sdf._compose import SdfElement as _SdfElement
         from .sdf.primitives import SdfNode as _SdfNode
 
-        if isinstance(obj, (_Composed, _SdfNode, _SdfGroup)):
+        if isinstance(obj, (_SdfElement, _SdfNode)):
             return obj  # type: ignore[return-value]
 
         # Geo entities and operators — pass through

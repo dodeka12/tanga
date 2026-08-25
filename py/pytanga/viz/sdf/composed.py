@@ -1,55 +1,62 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Composed SDF drawable object.
+"""Composed SDF drawable object (a fixed combine tree).
 
-A :class:`Composed` bundles several constituents into a single drawable SDF
-object: one scene entry, one material (color/opacity), and a per-constituent
-combine mode (``union`` / ``intersection`` / ``subtract``). It serializes to a
-``group`` combinator node whose children each carry their own ``combine``.
+A :class:`Composed` folds several members into one SDF object using each
+member's ``combine`` mode. Members are :class:`~pytanga.viz.sdf.SdfElement`s
+(``SdfObject``/``Combine``/nested ``Composed``/``SdfGroup``) or low-level
+``SdfNode`` primitives, coerced at construction.
 """
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from typing import Any
 
-_COMBINE_MODES = ("union", "intersection", "subtract")
+from ._compose import ECompose, SdfElement, _normalize_part
+from .primitives import SdfNode, group
 
 
-@dataclass(frozen=True)
-class Composed:
-    """A drawable SDF object built from constituents, each with its own combine mode.
+@dataclass(init=False)
+class Composed(SdfElement):
+    """A fixed SDF combine tree: members folded by their ``combine`` modes.
 
-    Each part is either a bare object (defaults to ``"union"``) or an
-    ``(object, combine_mode)`` pair. ``object`` may be a geometry entity, an
-    operator, a :class:`~pytanga.viz.sdf.primitives.SdfNode`, or another
-    ``Composed`` (nesting).
+    Each part is a bare element (defaults to union), a unary-tagged element
+    (``-el`` / ``~el``), or a legacy ``(obj, mode)`` tuple/string. ``obj`` may be
+    a geometry entity, an ``SdfNode``, an ``SdfObject``/``Combine``, or a nested
+    ``Composed``/``SdfGroup``.
 
     Example::
 
         Composed(sphere(1.0), (capped_cylinder(0.6, 0.4), "subtract"), id="bead")
     """
 
-    parts: tuple[tuple[Any, str], ...]
-    id: str | None = None
+    parts: tuple[tuple[Any, ECompose], ...]
+    id: str | None
 
-    def __init__(self, *parts: Any, id: str | None = None) -> None:
-        normalized: list[tuple[Any, str]] = []
-        for part in parts:
-            if (
-                isinstance(part, tuple)
-                and len(part) == 2
-                and isinstance(part[1], str)
-            ):
-                obj, combine_mode = part
-            else:
-                obj, combine_mode = part, "union"
-            if combine_mode not in _COMBINE_MODES:
-                raise ValueError(
-                    f"Invalid combine mode {combine_mode!r}; expected one of "
-                    f"{_COMBINE_MODES}"
-                )
-            normalized.append((obj, combine_mode))
-        object.__setattr__(self, "parts", tuple(normalized))
+    def __init__(
+        self,
+        *parts: Any,
+        id: str | None = None,
+        combine: ECompose = ECompose.UNION,
+    ) -> None:
+        object.__setattr__(self, "parts", tuple(_normalize_part(p) for p in parts))
         object.__setattr__(self, "id", id)
+        object.__setattr__(self, "combine", combine)
+
+    def to_sdf_node(self) -> SdfNode:
+        children: list[SdfNode] = []
+        for element, mode in self.parts:
+            child = copy.copy(_member_node(element))
+            child.combine = mode.value
+            children.append(child)
+        return group(children, id=self.id)
+
+
+def _member_node(element: Any) -> SdfNode:
+    """Lower a member (``SdfNode`` or ``SdfElement``) to an ``SdfNode``."""
+    if isinstance(element, SdfNode):
+        return element
+    return element.to_sdf_node()
