@@ -5,7 +5,8 @@
 
 Builds a log-log coordinate system with :class:`~pytanga.viz.CoordinateSystem`.
 The world stays linear, but the axis value labels and grid spacing are
-logarithmic.  ``plot()`` maps data through the scales automatically.
+logarithmic.  ``plot()`` maps data through the scales automatically, and
+``vline``/``hline`` draw annotation lines at fixed data values.
 
 Run with:  uv run python py/examples/viz/demo_log_plot.py
 """
@@ -32,6 +33,10 @@ cs = CoordinateSystem(
 xs = [0.1 * (10 ** (0.1 * i)) for i in range(40)]
 ys = [x * x for x in xs]
 cs.plot(xs, ys, color="#ffcc00", style=PointPathStyle(line_thickness=3))
+
+# Annotation lines at fixed data values (log axes map the endpoints).
+cs.vline(x=100.0, name="freq", color="#44aaff")
+cs.hline(y=1000.0, name="power", color="#ff44ff")
 
 viz.show()
 viz.wait()

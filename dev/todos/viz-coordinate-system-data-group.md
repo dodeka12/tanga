@@ -255,7 +255,8 @@ code-symmetry benefit is worth the refactor.
 
 ### Step 7 — Examples
 
-**Files:** `py/examples/viz/demo_cs_annotations.py` (new)
+**Files:** `py/examples/viz/demo_cs_annotations.py` (new),
+`py/examples/viz/demo_log_plot.py`, `py/examples/viz/demo_plot_3d.py`
 
 - [x] Add a runnable example demonstrating the new features:
       - a `plot()` in a 2D coordinate system,
@@ -265,6 +266,8 @@ code-symmetry benefit is worth the refactor.
       - drawing directly into `cs.data_group`.
 - [x] Match the existing example style (header docstring with a
       `uv run python ...` run line, `viz.show()` / `viz.animate(...)` loop).
+- [x] Add `vline`/`hline` annotations to the existing `demo_log_plot.py` (log
+      axes) and `demo_plot_3d.py` (tilted 3D plane) examples.
 
 ### Step 8 — Changelog
 
