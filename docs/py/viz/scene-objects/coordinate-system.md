@@ -243,9 +243,31 @@ cs.remove_line("seg")
   returns its `VizObjectRef`.
 - `remove_line(name)` removes a named line.
 
+### point
+
+Draw a point marker at a data location, given as an `(x, y)` 2-tuple or a
+`Point()` instance:
+
+```python
+from pytanga.geometry.entities import Point
+from pytanga.viz import PointStyle
+
+cs.point((2.0, 0.5), color="#ffffff")
+cs.point(Point(3.0, 1.0), name="marker", color="#ff8888", style=PointStyle(size=0.1))
+cs.point(Point(4.0, -0.5), name="marker")  # update in place
+cs.remove_point("marker")
+```
+
+- `point(p, *, name=None, color=None, style=None)` creates a point marker (or
+  updates it in place when `name` is given) and returns its `VizObjectRef`.
+- `remove_point(name)` removes a named point marker.
+- The marker is added to the outer group at its local position (not the data
+  group), so its `size` is not stretched by the data group's non-uniform scale.
+
 > **Note:** `data_group` applies a non-uniform scale (it stretches data onto the
-> plot's `size`), so it is ideal for paths/lines. For shaded markers (points,
-> spheres, …) place them with `to_world()` instead.
+> plot's `size`), so it is ideal for paths/lines. The `point()` helper places
+> shaded markers in the outer group (undistorted); for other shaded entities
+> place them with `to_world()` instead.
 
 See `py/examples/viz/demo_cs_annotations.py` for a full example.
 

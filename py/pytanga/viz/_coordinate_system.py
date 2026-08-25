@@ -309,6 +309,7 @@ class CoordinateSystem:
         self._vlines: dict[str, dict[str, Any]] = {}
         self._hlines: dict[str, dict[str, Any]] = {}
         self._lines: dict[str, dict[str, Any]] = {}
+        self._points: dict[str, dict[str, Any]] = {}
 
         self._build()
         self._apply_transform()
@@ -424,6 +425,7 @@ class CoordinateSystem:
 
         self._apply_data_transform()
         self._sync_lines()
+        self._sync_points()
 
     def _upsert(self, key: str, obj, style) -> None:
         ref = self._refs.get(key)
@@ -712,6 +714,21 @@ class CoordinateSystem:
         p1 = self._normalize_point(end)
         return self._upsert_segment(p0, p1, name, color, style)
 
+    def point(self, p, *, name=None, color=None, style=None):
+        """Create or update a point marker at a data location.
+
+        ``p`` is a data coordinate, given as an ``(x, y)`` 2-tuple or a
+        :class:`~pytanga.geometry.entities.Point`.  Pass ``name`` to update the
+        same marker in place; without a name a new marker is created each call.
+        Returns the :class:`~pytanga.viz.VizObjectRef` of the marker.
+
+        The marker is added to the outer group at its local position (not the
+        data group), so it is not stretched by the data group's non-uniform
+        scale.
+        """
+        px, py = self._normalize_point(p)
+        return self._upsert_point((px, py), name, color, style)
+
     def remove_vline(self, name: str) -> None:
         """Remove a named vertical line (a no-op if the name is unknown)."""
         entry = self._vlines.pop(name, None)
@@ -727,6 +744,12 @@ class CoordinateSystem:
     def remove_line(self, name: str) -> None:
         """Remove a named line (a no-op if the name is unknown)."""
         entry = self._lines.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def remove_point(self, name: str) -> None:
+        """Remove a named point marker (a no-op if the name is unknown)."""
+        entry = self._points.pop(name, None)
         if entry is not None:
             entry["ref"].remove()
 
@@ -800,6 +823,34 @@ class CoordinateSystem:
             entry["p1"] = p1
         self._sync_line(entry, "l")
         return entry["ref"]
+
+    def _upsert_point(self, p, name, color, style):
+        if name is None:
+            prefix = "point"
+            index = len(self._points)
+            name = f"{prefix}_{index}"
+            while name in self._points:
+                index += 1
+                name = f"{prefix}_{index}"
+        entry = self._points.get(name)
+        if entry is None:
+            obj = Point(0.0, 0.0, self._plot_z)
+            kwargs = {} if style is None else {"style": style}
+            ref = self._group.new(obj, color=color, **kwargs)
+            entry = {"name": name, "p": p, "color": color, "ref": ref}
+            self._points[name] = entry
+        else:
+            entry["p"] = p
+        self._sync_point(entry)
+        return entry["ref"]
+
+    def _sync_points(self) -> None:
+        for entry in self._points.values():
+            self._sync_point(entry)
+
+    def _sync_point(self, entry: dict[str, Any]) -> None:
+        lx, ly = self._local_xy(*entry["p"])
+        entry["ref"].entity = Point(lx, ly, self._plot_z)
 
     def _sync_lines(self) -> None:
         for entry in self._vlines.values():

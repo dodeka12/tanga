@@ -210,6 +210,9 @@ code-symmetry benefit is worth the refactor.
 - [x] Add a general `line(start, end, *, name=None, color=None, style=None)`
       helper (start/end as `(x, y)` tuples or `Point` instances), plus
       `remove_line(name)`.
+- [x] Add a `point(p, *, name=None, color=None, style=None)` helper (p as an
+      `(x, y)` tuple or `Point` instance), plus `remove_point(name)`; placed in
+      the outer group so the marker is not stretched by the data group's scale.
 
 ### Step 5 — Tests
 
@@ -238,6 +241,9 @@ code-symmetry benefit is worth the refactor.
         names are a no-op.
       - `line`: accepts `(x, y)` tuples and `Point` instances, updates by name,
         and `remove_line` removes it.
+      - `point`: accepts `(x, y)` tuples and `Point` instances, placed in the
+        outer group at the correct local position, updates by name, and
+        `remove_point` removes it.
 - [x] Ensure existing tests `test_transform_and_plot`, `test_2d_size_up_rotates_plane`,
       `test_to_world_applies_group_transform`, `test_align_*`,
       `test_position_accepts_point_and_direction`, and the scale tests stay green

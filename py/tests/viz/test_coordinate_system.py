@@ -451,6 +451,7 @@ class TestCoordinateSystemLines:
         cs.remove_vline("does-not-exist")  # should not raise
         cs.remove_hline("does-not-exist")
         cs.remove_line("does-not-exist")
+        cs.remove_point("does-not-exist")
 
     def test_line_tuple(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
@@ -479,5 +480,34 @@ class TestCoordinateSystemLines:
         assert pts[1] == pytest.approx((3.0, 3.0, 0.0))
         assert cs.line((2.0, 2.0), (3.0, 3.0), name="seg").id == ref.id
         cs.remove_line("seg")
+        viz._scenes[""].flush()
+        assert ref.id not in viz._scenes[""]._nodes
+
+    def test_point_tuple(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.point((2.0, 3.0), name="pt", color="#ffffff")
+        # Placed in the outer group (not the data group) at its local position.
+        assert ref.parent.id == cs.group.id
+        assert ref.entity.x == pytest.approx(-3.0)
+        assert ref.entity.y == pytest.approx(-2.0)
+        assert ref.entity.z == pytest.approx(0.0)
+
+    def test_point_accepts_point_instance(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.point(Point(7.0, 8.0), name="pt")
+        assert ref.entity.x == pytest.approx(2.0)
+        assert ref.entity.y == pytest.approx(3.0)
+
+    def test_point_update_by_name_and_remove(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.point((0.0, 0.0), name="pt")
+        cs.point((9.0, 9.0), name="pt")
+        assert ref.entity.x == pytest.approx(4.0)
+        assert ref.entity.y == pytest.approx(4.0)
+        assert cs.point((9.0, 9.0), name="pt").id == ref.id
+        cs.remove_point("pt")
         viz._scenes[""].flush()
         assert ref.id not in viz._scenes[""]._nodes

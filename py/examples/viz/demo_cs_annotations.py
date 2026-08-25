@@ -9,6 +9,7 @@ Demonstrates the data-space drawing features of
 - ``plot()`` in a 2D coordinate system,
 - fixed ``vline``/``hline`` annotations at data values,
 - a ``line`` between two data points (tuples or ``Point``s),
+- a ``point`` marker at a data location (tuples or ``Point``s),
 - a named, animated ``vline`` (create once, move each frame), and
 - drawing a custom ``PointPath`` directly into ``cs.data_group``.
 
@@ -50,6 +51,10 @@ cs.hline(y=0.0, name="zero", color="#8888ff")
 # Line helpers between two data points (accept (x, y) tuples or Point()).
 cs.line((1.0, -1.0), (3.0, 1.0), color="#ff88ff")
 cs.line(Point(5.0, -1.0), Point(7.0, 1.0), color="#00ffff")
+
+# Point markers at data locations (accept (x, y) tuples or Point()).
+cs.point((math.pi, math.sin(math.pi)), color="#ffffff")
+cs.point(Point(2.0 * math.pi, 0.0), name="peak", color="#ffaa00")
 
 # A custom annotation drawn directly in the data group.
 spike = PointPath()
