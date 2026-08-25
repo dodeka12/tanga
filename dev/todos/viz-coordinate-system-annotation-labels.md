@@ -98,11 +98,11 @@ So piping labels is purely additive: add the kwargs and forward them to
 
 - [x] Update vline/hline/line tests: `ref.entity` is now a `Line`; assert
       `origin`/`direction`/`length` (or `.start`/`.end`) instead of `.points`.
-- [ ] Add label tests: each helper accepts `label`/`label_style`; the label is
+- [x] Add label tests: each helper accepts `label`/`label_style`; the label is
       attached to the entity; `label_style` (e.g. `along`/`offset_2d`) is
       respected; the label persists across a `name` update; `point` label anchors
       at the point.
-- [ ] Keep `test_point_*`, `test_plot_*`, `test_add_plot_*`, and scale tests green.
+- [x] Keep `test_point_*`, `test_plot_*`, `test_add_plot_*`, and scale tests green.
 
 ### Step 4 — Documentation
 

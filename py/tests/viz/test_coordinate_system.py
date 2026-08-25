@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from pytanga.geometry.entities import Direction, Plane, Point
-from pytanga.viz import PointPath, Visualizer
+from pytanga.viz import LabelStyle, PointPath, Visualizer
 from pytanga.viz._coordinate_system import CoordinateSystem
 from pytanga.viz._scale import LinearScale, LogScale
 from pytanga.viz.camera import CameraConfig2d, View2DConfig
@@ -491,6 +491,59 @@ class TestCoordinateSystemLines:
         cs.remove_line("seg")
         viz._scenes[""].flush()
         assert ref.id not in viz._scenes[""]._nodes
+
+    def _labels(self, viz):
+        return [o for o in viz._scenes[""].full_state() if o.get("kind") == "label"]
+
+    def test_vline_label_anchors_at_midpoint(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.vline(x=3.0, name="v", label="x=3")
+        labels = self._labels(viz)
+        assert len(labels) == 1
+        assert labels[0]["text"] == "x=3"
+        assert labels[0]["attach_to"] == ref.id
+        assert labels[0]["position"] == pytest.approx([3.0, 5.0, 0.0])
+
+    def test_hline_label_anchors_at_midpoint(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        cs.hline(y=4.0, name="h", label="y=4")
+        labels = self._labels(viz)
+        assert labels[0]["position"] == pytest.approx([5.0, 4.0, 0.0])
+
+    def test_line_label_anchors_at_midpoint(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        cs.line((1.0, 2.0), (3.0, 4.0), label="seg")
+        labels = self._labels(viz)
+        assert labels[0]["position"] == pytest.approx([2.0, 3.0, 0.0])
+
+    def test_point_label_anchors_at_point(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        cs.point((7.0, 8.0), name="pt", label="P")
+        labels = self._labels(viz)
+        assert labels[0]["text"] == "P"
+        # The point mesh sits at (2, 3, 0); the label anchor is (0, 0, 0) relative.
+        assert labels[0]["position"] == pytest.approx([0.0, 0.0, 0.0])
+
+    def test_line_label_style_along(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        cs.vline(x=3.0, name="v", label="start", label_style=LabelStyle(along=0.0))
+        labels = self._labels(viz)
+        assert labels[0]["position"] == pytest.approx([3.0, 0.0, 0.0])
+
+    def test_label_persists_across_update(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.vline(x=3.0, name="v", label="x=3")
+        cs.vline(x=7.0, name="v")  # geometry moves; the label persists
+        labels = self._labels(viz)
+        assert len(labels) == 1
+        assert labels[0]["text"] == "x=3"
+        assert labels[0]["attach_to"] == ref.id
 
     def test_point_tuple(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
