@@ -303,6 +303,7 @@ class CoordinateSystem:
         self._plot_z = 0.0
 
         self._group = self._handle.add_group(group_name)
+        self._data_group = self._group.add_group(f"{group_name}_data")
         self._refs: dict[str, object] = {}
         self._plots: list[dict[str, Any]] = []
 
@@ -408,6 +409,8 @@ class CoordinateSystem:
             )
             self._upsert("plane", plane, self.plane_style)
 
+        self._apply_data_transform()
+
     def _upsert(self, key: str, obj, style) -> None:
         ref = self._refs.get(key)
         if ref is None:
@@ -467,6 +470,31 @@ class CoordinateSystem:
         m[:3, 1] = v
         m[:3, 2] = n
         return m
+
+    def _apply_data_transform(self) -> None:
+        """Set the inner data group's translate+scale (data → local frame).
+
+        The group maps scale-world coordinates ``(to_world(x), to_world(y))``
+        onto the centred local frame used by the grid/axes.  Degenerate data
+        spans map the single value to the local origin.
+        """
+        if self._raw_span_x == 0.0:
+            sx = 1.0
+            tx = -self._raw_xlo
+        else:
+            sx = self._size_x / self._raw_span_x
+            tx = -self._size_x / 2.0 - sx * self._raw_xlo
+        if self._raw_span_y == 0.0:
+            sy = 1.0
+            ty = -self._raw_ylo
+        else:
+            sy = self._size_y / self._raw_span_y
+            ty = -self._size_y / 2.0 - sy * self._raw_ylo
+        self._data_group.set_transform(
+            position=(tx, ty, self._plot_z),
+            rotation=(0.0, 0.0, 0.0),
+            scale=(sx, sy, 1.0),
+        )
 
     def _apply_transform(self) -> None:
         if self._space_dim == 2 and not self._size_given:
