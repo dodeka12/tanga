@@ -17,14 +17,14 @@ operators and fixes the combine-mode strings in one place.
 
 ## Steps
 
-- [ ] **2.1 — `ECompose(StrEnum)`** (`_compose.py`)
+- [x] **2.1 — `ECompose(StrEnum)`** (`_compose.py`)
   - `UNION = "union"`, `INTERSECTION = "intersection"`, `SUBTRACT = "subtract"`,
     `XOR = "xor"`. String-compatible (`ECompose.SUBTRACT == "subtract"`).
   - A `_coerce_mode(value)` helper accepting `ECompose` or a legacy string
     (`"union"`/`"intersection"`/`"subtract"`), raising on `"xor"` in fold
     contexts (XOR is binary-only).
 
-- [ ] **2.2 — `SdfElement` base** (`_compose.py`)
+- [x] **2.2 — `SdfElement` base** (`_compose.py`)
   - `@dataclass(frozen=True)` with `combine: ECompose = ECompose.UNION`.
   - Unary operators: `__neg__` → `dataclasses.replace(self,
     combine=ECompose.SUBTRACT)`; `__invert__` → `... combine=ECompose.INTERSECTION`.
@@ -35,25 +35,25 @@ operators and fixes the combine-mode strings in one place.
     `__rxor__`) so `entity + sdf_element` also works once `_coerce` understands
     raw entities.
 
-- [ ] **2.3 — `Combine`** (`_compose.py`)
+- [x] **2.3 — `Combine`** (`_compose.py`)
   - `@dataclass(frozen=True) class Combine(SdfElement): op: ECompose; a:
     SdfElement; b: SdfElement`.
   - `to_sdf_node()` lowers to a `combine(op, a.to_sdf_node(), b.to_sdf_node())`
     `SdfNode` (delegating to `primitives.combine`); XOR lowers to a dedicated
     `xor` combinator node (Phase 5 adds the GLSL `opXor`).
 
-- [ ] **2.4 — `_coerce()`** (`_compose.py`)
+- [x] **2.4 — `_coerce()`** (`_compose.py`)
   - `SdfElement` → pass through; `None` → error. (Raw-entity wrapping is added in
     Phase 3 once `SdfObject` exists.)
 
-- [ ] **2.5 — Tests** (`test_ecompose_operators.py`)
+- [x] **2.5 — Tests** (`test_ecompose_operators.py`)
   - `ECompose.SUBTRACT == "subtract"`; `_coerce_mode("subtract")` round-trips.
   - `-el.combine == SUBTRACT`, `~el.combine == INTERSECTION`.
   - `el1 + el2` / `el1 - el2` / `el1 & el2` / `el1 | el2` / `el1 ^ el2` produce
     `Combine` with the right `op` and operand order.
   - `Combine(UNION, a, b).to_sdf_node()` shape.
 
-- [ ] **2.6 — Validate**
+- [x] **2.6 — Validate**
   - `uv run pytest py/tests/viz/sdf/test_ecompose_operators.py -q` +
     `uv run pytest py/tests/viz/ -q`.
 
