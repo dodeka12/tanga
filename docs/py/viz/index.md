@@ -116,6 +116,7 @@ Runnable example: [`multi_scene.py`](https://github.com/dodeka12/tanga/blob/main
 | [Object Interaction](visualizer/object-interaction.md) | Pointer-based 3D object interaction: click, drag, scroll; `Camera` projection; event dispatch |
 | [Active Elements](scene-objects/active-elements/index.md) | Simplified high-level API: `ActPoint` and future self-registering interactive entities |
 | [Controls](visualizerapp/controls.md) | Sliders, dropdowns, buttons, groups; scene-scoped controls |
+| [SDF Viewer](sdf-viewer.md) | Ray-marched signed-distance-function viewer: analytic + algebra paths, distance/opacity functions, boolean combine modes |
 
 ## Example Scripts
 

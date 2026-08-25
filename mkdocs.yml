@@ -116,6 +116,9 @@ nav:
       - Standalone HTML: py/viz/export/html.md
       - glTF export: py/viz/export/gltf.md
       - Video & Image: py/viz/export/video-image.md
+    - SDF Viewer:
+      - Overview: py/viz/sdf-viewer.md
+      - SDF Objects in the Standard Viewer: py/viz/sdf-objects.md
 
   - Geometric Algebra:
     - Overview: py/index.md

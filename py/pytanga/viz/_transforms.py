@@ -19,6 +19,8 @@ Conventions:
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 
 from pytanga.geometry.entities import Direction, Point
@@ -36,6 +38,7 @@ __all__ = [
     "general_rotor_to_matrix",
     "motor_to_matrix",
     "dilator_to_matrix",
+    "TransformOperator",
     "operator_to_matrix",
     "operator_to_trs",
     "to_matrix",
@@ -204,7 +207,12 @@ def dilator_to_matrix(dilator: Dilator) -> np.ndarray:
     return t @ s @ t_inv
 
 
-def operator_to_matrix(op) -> np.ndarray:
+#: Union of the operator dataclasses :func:`operator_to_matrix` can convert
+#: to a 4×4 matrix: Rotor/GeneralRotor/Translator/Motor/Dilator.
+TransformOperator: TypeAlias = Translator | Rotor | GeneralRotor | Motor | Dilator
+
+
+def operator_to_matrix(op: TransformOperator) -> np.ndarray:
     """Return the 4×4 matrix for a supported operator dataclass."""
     if isinstance(op, Translator):
         return translator_to_matrix(op)
@@ -220,7 +228,7 @@ def operator_to_matrix(op) -> np.ndarray:
 
 
 def operator_to_trs(
-    op,
+    op: TransformOperator,
 ) -> tuple[
     tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
 ]:

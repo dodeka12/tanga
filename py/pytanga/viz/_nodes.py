@@ -27,20 +27,7 @@ import numpy as np
 
 from . import _transforms as _T
 from ._style_dict import _merge_style
-
-
-def _as_vec3(value: Any) -> tuple[float, float, float]:
-    """Best-effort convert *value* to a 3-vector of floats.
-
-    Accepts objects with ``x``/``y``/``z`` attributes (``Point``,
-    ``Direction``, …) or any 3-sequence.
-    """
-    if hasattr(value, "x") and hasattr(value, "y") and hasattr(value, "z"):
-        return (float(value.x), float(value.y), float(value.z))
-    seq = tuple(value)
-    if len(seq) != 3:
-        raise ValueError(f"Expected a 3-vector, got {value!r}")
-    return (float(seq[0]), float(seq[1]), float(seq[2]))
+from ._types import TransformOperator, TransformRotation, Triple, Vec3, _as_euler, _as_vec3
 
 
 def _is_vector_like(value: Any) -> bool:
@@ -127,12 +114,12 @@ class Transform:
 
     def __init__(
         self,
-        position: Any = (0.0, 0.0, 0.0),
-        rotation: Any = (0.0, 0.0, 0.0),
-        scale: Any = (1.0, 1.0, 1.0),
+        position: Vec3 = (0.0, 0.0, 0.0),
+        rotation: TransformRotation = (0.0, 0.0, 0.0),
+        scale: Triple = (1.0, 1.0, 1.0),
     ) -> None:
         self.position: tuple[float, float, float] = _as_vec3(position)
-        self.rotation: tuple[float, float, float] = _as_vec3(rotation)
+        self.rotation: tuple[float, float, float] = _as_euler(rotation)
         self.scale: tuple[float, float, float] = _as_vec3(scale)
 
     def matrix(self) -> np.ndarray:
@@ -141,11 +128,7 @@ class Transform:
         ry = _T.rotation_matrix((0.0, 1.0, 0.0), self.rotation[1])
         rz = _T.rotation_matrix((0.0, 0.0, 1.0), self.rotation[2])
         r = rx @ ry @ rz
-        return (
-            _T.translation_matrix(*self.position)
-            @ r
-            @ _T.scale_matrix(*self.scale)
-        )
+        return _T.translation_matrix(*self.position) @ r @ _T.scale_matrix(*self.scale)
 
     def set_matrix(self, m: Any) -> "Transform":
         """Set position/rotation/scale from a 4×4 matrix (decompose)."""
@@ -213,15 +196,15 @@ class Transform:
 
     def set(
         self,
-        position: Any = None,
-        rotation: Any = None,
-        scale: Any = None,
+        position: Vec3 = None,
+        rotation: TransformRotation = None,
+        scale: Triple = None,
     ) -> "Transform":
         """Set position / rotation / scale (only the provided components)."""
         if position is not None:
             self.position = _as_vec3(position)
         if rotation is not None:
-            self.rotation = _as_vec3(rotation)
+            self.rotation = _as_euler(rotation)
         if scale is not None:
             self.scale = _as_vec3(scale)
         return self
@@ -309,7 +292,9 @@ class VizSceneObject(VizNode):
             id,
             name=name,
             layer="scene",
-            kind=kind if kind is not None else (type(entity).__name__ if entity is not None else ""),
+            kind=kind
+            if kind is not None
+            else (type(entity).__name__ if entity is not None else ""),
             visible=visible,
         )
         self.entity: Any = entity
@@ -487,9 +472,9 @@ class VizSceneObject(VizNode):
 
     def set_transform(
         self,
-        position: Any = None,
-        rotation: Any = None,
-        scale: Any = None,
+        position: Vec3 = None,
+        rotation: TransformRotation = None,
+        scale: Triple = None,
     ) -> None:
         """Set transform components (marks ``transform``)."""
         self.transform.set(position=position, rotation=rotation, scale=scale)
@@ -515,7 +500,7 @@ class VizSceneObject(VizNode):
         self.transform.scale_by(x, y, z)
         self.mark("transform")
 
-    def apply_transform(self, op: Any) -> None:
+    def apply_transform(self, op: TransformOperator) -> None:
         """Apply an operator (Rotor/Motor/Translator/Dilator/…) in local space.
 
         Marks ``transform``.  Supports the same operator dataclasses as

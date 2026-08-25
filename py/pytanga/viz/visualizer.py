@@ -37,7 +37,7 @@ from ._style_dict import (
     _resolve_tex_label_style,
 )
 from ._timeline import Timeline
-from ._types import SceneEntity, VizInputType
+from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._utils import _is_jupyter
 from .camera import (
     CameraConfig,
@@ -671,6 +671,26 @@ class Visualizer(_JupyterDisplayMixin):
         entity: SceneEntity = self._resolve(obj)
         self._scenes[""].update_entity(entity_id, entity)
 
+    def update_sdf_group_member(
+        self,
+        group_id: str,
+        member: int | str,
+        *,
+        position: Vec3 = None,
+        rotation: TransformRotation = None,
+        scale: Triple = None,
+    ) -> None:
+        """Update an :class:`~pytanga.viz.sdf.SdfGroup` member's runtime transform.
+
+        The member is addressed by *member* — either its 0-based index or its
+        ``id``. Only the provided components are changed. Call :meth:`flush` to
+        push the update (the member can then be animated frame-by-frame in an
+        ``animate`` loop).
+        """
+        self._scenes[""].update_sdf_group_member(
+            group_id, member, position=position, rotation=rotation, scale=scale
+        )
+
     def update_label(
         self,
         object_id: str,
@@ -1187,6 +1207,14 @@ class Visualizer(_JupyterDisplayMixin):
 
         # Viz-level drawables — pass through
         if isinstance(obj, SceneEntity):
+            return obj  # type: ignore[return-value]
+
+        # SDF drawables (SdfElement / SdfNode) — pass through unchanged; they
+        # are serialized by the SDF path (SdfElements carry their own style).
+        from .sdf._compose import SdfElement as _SdfElement
+        from .sdf.primitives import SdfNode as _SdfNode
+
+        if isinstance(obj, (_SdfElement, _SdfNode)):
             return obj  # type: ignore[return-value]
 
         # Geo entities and operators — pass through

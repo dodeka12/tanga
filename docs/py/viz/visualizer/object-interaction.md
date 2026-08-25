@@ -52,8 +52,14 @@ config = InteractionConfig(
     enabled=True,
     triggers=[...],
     throttle_ms=40,   # max rate for drag_move / scroll events
+    hover_emissive="#ffff44",  # optional glow color on hover
+    hover_opacity=0.5,         # optional opacity override on hover
 )
 ```
+
+Optional hover feedback fields (`hover_emissive` glow color, `hover_scale`
+uniform scale multiplier, `hover_opacity` opacity override) default to no
+change when unset.
 
 ### Registering on a Specific Entity
 

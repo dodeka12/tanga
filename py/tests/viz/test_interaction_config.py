@@ -70,6 +70,25 @@ class TestInteractionConfig:
         assert d["triggers"] == []
         assert d["throttle_ms"] == 50
 
+    def test_to_dict_hover_fields(self):
+        ic = InteractionConfig(
+            enabled=True,
+            hover_emissive="#ffff44",
+            hover_scale=1.5,
+            hover_opacity=0.5,
+        )
+        d = ic.to_dict()
+        assert d["hover_emissive"] == "#ffff44"
+        assert d["hover_scale"] == 1.5
+        assert d["hover_opacity"] == 0.5
+
+    def test_to_dict_hover_fields_omitted_when_none(self):
+        ic = InteractionConfig(enabled=True)
+        d = ic.to_dict()
+        assert "hover_emissive" not in d
+        assert "hover_scale" not in d
+        assert "hover_opacity" not in d
+
 
 class TestParseEvent:
     def test_parse_click(self):

@@ -43,24 +43,32 @@ const _hoverState = new Map();  // objectId → { originalEmissive, originalScal
 
 // ── Hover effect helpers ───────────────────────────────────────
 
+function _materialState(m) {
+    const usesUniformOpacity = !!(m.uniforms && m.uniforms.uOpacity);
+    return {
+        ref: m,
+        // MeshPhong/Standard emissive (hex); null = not applicable.
+        emissive: m.emissive ? m.emissive.getHex() : null,
+        // SDF proxy ShaderMaterial hover-glow uniform (hex); null = n/a.
+        hover: (m.uniforms && m.uniforms.uHover) ? m.uniforms.uHover.value.getHex() : null,
+        // Opacity: the SDF ShaderMaterial drives alpha via `uOpacity`; regular
+        // materials use `.opacity` (Material always exposes `.opacity`, so check
+        // the uniform first).
+        opacity: usesUniformOpacity ? m.uniforms.uOpacity.value : m.opacity,
+        usesUniformOpacity,
+        transparent: m.transparent !== undefined ? m.transparent : null,
+        depthWrite: m.depthWrite !== undefined ? m.depthWrite : null,
+    };
+}
+
 function _saveMeshState(mesh) {
-    const state = {};
+    const state = { _materials: [] };
     mesh.traverse(child => {
-        if (child.material) {
-            if (!state._materials) state._materials = [];
-            if (Array.isArray(child.material)) {
-                state._materials.push(...child.material.map(m => ({
-                    ref: m,
-                    emissive: m.emissive ? m.emissive.getHex() : 0,
-                    emissiveIsSet: m.emissive ? true : false,
-                })));
-            } else {
-                state._materials.push({
-                    ref: child.material,
-                    emissive: child.material.emissive ? child.material.emissive.getHex() : 0,
-                    emissiveIsSet: child.material.emissive ? true : false,
-                });
-            }
+        if (!child.material) return;
+        if (Array.isArray(child.material)) {
+            for (const m of child.material) state._materials.push(_materialState(m));
+        } else {
+            state._materials.push(_materialState(child.material));
         }
     });
     state._originalScale = mesh.scale.clone();
@@ -70,28 +78,44 @@ function _saveMeshState(mesh) {
 function _applyHover(mesh, config) {
     const emissiveColor = config.hover_emissive;
     const scale = config.hover_scale;
+    const opacity = config.hover_opacity;
 
     // Save original state
     const state = _saveMeshState(mesh);
     _hoverState.set(mesh.uuid, state);
 
-    // Apply emissive
+    // Apply emissive glow — MeshPhong/Standard use `.emissive`, the SDF proxy
+    // ShaderMaterial uses its `uHover` uniform.
     if (emissiveColor) {
         const c = new THREE.Color(emissiveColor);
-        mesh.traverse(child => {
-            if (child.material) {
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(m => {
-                        if (m.emissive) m.emissive.copy(c);
-                    });
-                } else if (child.material.emissive) {
-                    child.material.emissive.copy(c);
-                }
-            }
-        });
+        for (const { ref: m } of state._materials) {
+            if (m.emissive) m.emissive.copy(c);
+            else if (m.uniforms && m.uniforms.uHover) m.uniforms.uHover.value.copy(c);
+        }
     }
 
-    // Apply scale
+    // Apply opacity override.
+    if (typeof opacity === 'number') {
+        const translucent = opacity < 1.0;
+        for (const entry of state._materials) {
+            const m = entry.ref;
+            if (entry.usesUniformOpacity) {
+                m.uniforms.uOpacity.value = opacity;
+                m.transparent = translucent;
+                // keep depthWrite: SDF depth is written for correct occlusion.
+            } else if (m.opacity !== undefined) {
+                m.opacity = opacity;
+                m.transparent = translucent;
+                m.depthWrite = !translucent;
+            }
+        }
+    }
+
+    // Apply scale — `Object3D.scale` is universal, so this already works for
+    // SDF proxies too: the shader marches in the mesh's *local* space and the
+    // scale is carried to world space through `modelMatrix` / `uModelMatrix`
+    // (unlike emissive/opacity, which needed explicit `uHover`/`uOpacity`
+    // handling because a `ShaderMaterial` has no `.emissive`/`.opacity`).
     if (scale) {
         mesh.scale.multiplyScalar(scale);
     }
@@ -104,13 +128,20 @@ function _resetHover(mesh) {
     const state = _hoverState.get(mesh.uuid);
     if (!state) return;
 
-    // Restore emissive
-    if (state._materials) {
-        state._materials.forEach(({ ref, emissive, emissiveIsSet }) => {
-            if (emissiveIsSet && ref.emissive) {
-                ref.emissive.setHex(emissive);
+    for (const entry of state._materials) {
+        const { ref: m, emissive, hover, opacity, transparent, depthWrite } = entry;
+        if (emissive !== null && m.emissive) m.emissive.setHex(emissive);
+        if (hover !== null && m.uniforms && m.uniforms.uHover) m.uniforms.uHover.value.setHex(hover);
+        if (opacity !== null) {
+            if (entry.usesUniformOpacity) {
+                m.uniforms.uOpacity.value = opacity;
+                m.transparent = transparent;
+            } else if (m.opacity !== undefined) {
+                m.opacity = opacity;
+                m.transparent = transparent;
+                m.depthWrite = depthWrite;
             }
-        });
+        }
     }
 
     // Restore scale

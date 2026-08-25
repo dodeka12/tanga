@@ -153,10 +153,12 @@ class VizServer:
         host: str = "localhost",
         port: int = 8765,
         static_dir: Path | None = None,
+        entry_page: str = "viewer.html",
     ) -> None:
         self._host = host
         self._port = port
         self._static_dir = static_dir or Path(__file__).parent / "templates"
+        self._entry_page = entry_page
         self._frontend_version = compute_frontend_version(self._static_dir)
         self._app: web.Application | None = None
         self._runner: web.AppRunner | None = None
@@ -507,7 +509,7 @@ class VizServer:
 
         # Inject a page token for WS connectivity correlation
         # Use token from URL query param if present, otherwise generate random
-        viewer_path = self._static_dir / "viewer.html"
+        viewer_path = self._static_dir / self._entry_page
         page_token = request.query.get("token") or uuid4().hex[:8]
         logger.info("HTTP GET / -> serving viewer.html (token=%s) -> %s", page_token, remote_addr)
         self._pending_page_tokens[page_token] = {

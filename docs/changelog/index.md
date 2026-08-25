@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.3.0] — 2026-08-25
+- WebGL2 SDF viewer (`SdfVisualizer`) · SDF primitive/combinator GLSL library · analytic entity→SDF serializer · SDF objects in the standard viewer (proxy renderer, `Composed`/`SdfGroup`, per-object CSG + materials) · `SdfObject`/`Combine` + `ECompose` operator object model · per-entity `Sdf*Style` classes · configurable lighting + grid/axes overlays
+- Bug fixes: inverted SDF rotations · patchy lighting normals · SDF browser connect/reconnect parity
+→ [Details](2026-08-25_cbc7adc7.md)
+
 ## [Since 1.2.0] — 2026-08-25
 - Per-frame camera playback in animated HTML export · default 2D view now uses an orthographic camera · HTML export honors the live scene camera · viz examples reorganized into topic subfolders
 - Bug fixes: default 2D orthographic camera · HTML export applies the full camera config
