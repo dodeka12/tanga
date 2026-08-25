@@ -46,7 +46,7 @@ def _bounds_of(node: SdfNode) -> tuple[list[float], list[float]] | None:
     kind = node.kind
     children = node.children or []
 
-    if kind in ("union", "group"):
+    if kind in ("union", "group", "xor"):
         lo = [math.inf, math.inf, math.inf]
         hi = [-math.inf, -math.inf, -math.inf]
         for child in children:

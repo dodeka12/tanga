@@ -14,7 +14,7 @@ pipeline). No new machinery here — only examples, tests, and manual checks.
 
 ## Steps
 
-- [ ] **6.1 — Example `py/examples/viz/sdf/object_model.py`**
+- [x] **6.1 — Example `py/examples/viz/sdf/object_model.py`**
   - Per-entity styles + `SdfObject` + operators:
     ```python
     left  = SdfObject(Sphere(Point(-1,0,0), 1.0), id="left", style=SdfSphereStyle(color="#ffaa00"))
@@ -26,12 +26,12 @@ pipeline). No new machinery here — only examples, tests, and manual checks.
     (`sdf_grp.set_member_transform("drill", position=Point(...))`).
   - A `-`/`&`/`^` example showing the operator forms.
 
-- [ ] **6.2 — Full Python regression**
+- [x] **6.2 — Full Python regression**
   - `uv run pytest py/tests/viz/ -q` and `py/tests/viz/sdf/ -q`.
   - Confirm the marker path, fullscreen `SdfVisualizer`, and mesh pipeline
     tests still pass unchanged.
 
-- [ ] **6.3 — JS regression**
+- [x] **6.3 — JS regression**
   - `node --test 'dev/src/js-tests/*.test.mjs'` + `node dev/src/sdf_proxy_smoke.mjs`.
 
 - [ ] **6.4 — Browser smoke (manual)**
@@ -40,7 +40,7 @@ pipeline). No new machinery here — only examples, tests, and manual checks.
     changes emissive/opacity per member; animated member orbits; the proxy box
     resizes.
 
-- [ ] **6.5 — Validate**
+- [x] **6.5 — Validate**
   - The three command suites above + the manual browser check.
 
 ## Validation

@@ -58,6 +58,17 @@ def test_operator_combine_serializes_nested_tree() -> None:
     assert len(node.children) == 2
 
 
+def test_xor_combine_bounds() -> None:
+    from pytanga.viz.sdf.bounds import compute_bounds
+
+    node = (_obj() ^ _obj()).to_sdf_node()
+    assert node.kind == "xor"
+    bounds = compute_bounds(node, padding=0.0)
+    # Union of two unit spheres centred at the origin → [-1, +1] in each axis.
+    assert bounds["min"] == [-1.0, -1.0, -1.0]
+    assert bounds["max"] == [1.0, 1.0, 1.0]
+
+
 def test_fullscreen_composed_still_works() -> None:
     # Legacy fullscreen viewer path (SdfNode members + string modes) unchanged.
     composed = Composed(sphere(1.0), (capped_cylinder(0.5, 0.3), "subtract"))
