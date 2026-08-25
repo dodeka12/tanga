@@ -25,8 +25,16 @@ import {
     materialPreamble,
     buildMaterialRows,
     padMaterialRows,
-    parseHexColor,
 } from './material-table.js';
+import {
+    DEFAULT_LIGHTING,
+    MAX_LIGHTS,
+    lightPreamble,
+    parseAmbient,
+    parseHexColor,
+    parseLight,
+    setLightUniforms,
+} from '../renderers/sdf/lighting.js';
 import {
     overlaySrc,
     buildOverlayUniforms,
@@ -51,68 +59,21 @@ const _frontendVersion =
     (typeof window !== 'undefined' && window.__tanga_frontend_version) || null;
 
 // ── Lighting (directional lights + ambient) ───────────────
-const MAX_LIGHTS = 8;
-
-// Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then
-// injected into the assembled fragment before the raymarch body.
-const lightPreamble = `
-const int MAX_LIGHTS = ${MAX_LIGHTS};
-uniform int uLightCount;
-uniform vec3 uLightDir[MAX_LIGHTS];
-uniform vec3 uLightColor[MAX_LIGHTS];
-uniform vec3 uAmbientColor;
-`;
-
-// Frontend defaults mirror the Python defaults (a white light from (10,20,10)
-// at intensity 0.8 plus a white 0.45 ambient), so an empty scene renders the
-// same even before the server's first lighting config arrives.
-const DEFAULT_LIGHTING = {
-    ambient: { color: '#ffffff', intensity: 0.45 },
-    lights: [{ direction: [10, 20, 10], color: '#ffffff', intensity: 0.8 }],
-};
-
-function parseAmbient(a) {
-    const [r, g, b] = parseHexColor(a && a.color);
-    const i = a && typeof a.intensity === 'number' ? a.intensity : 1.0;
-    return [r * i, g * i, b * i];
-}
-
-function parseLight(l) {
-    const [r, g, b] = parseHexColor(l && l.color);
-    const i = l && typeof l.intensity === 'number' ? l.intensity : 1.0;
-    let d = (l && l.direction) || [0, 0, 1];
-    const len = Math.hypot(d[0], d[1], d[2]);
-    d = len > 1e-9 ? [d[0] / len, d[1] / len, d[2] / len] : [0, 0, 1];
-    return { direction: d, color: [r * i, g * i, b * i] };
-}
+// The light preamble, parsers, and uniform setter are shared with the standard
+// viewer's per-object SDF proxies (`../renderers/sdf/lighting.js`); the live
+// lighting state stays module-local to this viewer.
 
 let lighting = {
     ambient: parseAmbient(DEFAULT_LIGHTING.ambient),
     lights: DEFAULT_LIGHTING.lights.map(parseLight),
 };
 
-function setLightUniforms(u) {
-    if (!u) return;
-    u.uLightCount.value = lighting.lights.length;
-    for (let i = 0; i < MAX_LIGHTS; i++) {
-        const l = lighting.lights[i];
-        if (l) {
-            u.uLightDir.value[i].set(l.direction[0], l.direction[1], l.direction[2]);
-            u.uLightColor.value[i].set(l.color[0], l.color[1], l.color[2]);
-        } else {
-            u.uLightDir.value[i].set(0, 0, 0);
-            u.uLightColor.value[i].set(0, 0, 0);
-        }
-    }
-    u.uAmbientColor.value.set(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2]);
-}
-
 function applyLighting(wireLighting) {
     if (!wireLighting) return;
     if (wireLighting.ambient) lighting.ambient = parseAmbient(wireLighting.ambient);
     if (wireLighting.lights) lighting.lights = wireLighting.lights.map(parseLight);
     if (viewerState.material && viewerState.material.uniforms) {
-        setLightUniforms(viewerState.material.uniforms);
+        setLightUniforms(viewerState.material.uniforms, lighting);
     }
 }
 
@@ -182,7 +143,7 @@ function buildUniforms() {
         uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
         uAmbientColor: { value: new THREE.Vector3() },
     };
-    setLightUniforms(uniforms);
+    setLightUniforms(uniforms, lighting);
     Object.assign(uniforms, buildOverlayUniforms(overlays));
     return uniforms;
 }

@@ -28,5 +28,5 @@ e = v * a
 e(V1=alg.multivector({"e1": 1.0}))  # -> e1 * (2 e1) = 2
 ```
 
-See [usage](usage.md) for the full API, and the `py/examples/expression/`
+See [usage](usage.md) for the full API, and the `py/examples/ga/expression/`
 scripts for runnable examples.

@@ -28,12 +28,13 @@ class Composed:
 
     Example::
 
-        Composed(sphere(1.0), (capped_cylinder(0.6, 0.4), "subtract"))
+        Composed(sphere(1.0), (capped_cylinder(0.6, 0.4), "subtract"), id="bead")
     """
 
     parts: tuple[tuple[Any, str], ...]
+    id: str | None = None
 
-    def __init__(self, *parts: Any) -> None:
+    def __init__(self, *parts: Any, id: str | None = None) -> None:
         normalized: list[tuple[Any, str]] = []
         for part in parts:
             if (
@@ -51,3 +52,4 @@ class Composed:
                 )
             normalized.append((obj, combine_mode))
         object.__setattr__(self, "parts", tuple(normalized))
+        object.__setattr__(self, "id", id)

@@ -5,17 +5,9 @@
 // emit a `materialColor(float matId)` GLSL function so the raymarch body can
 // resolve the hit object's albedo + opacity by material id.
 
-export function parseHexColor(hex, fallback = [0.7, 0.6, 0.5]) {
-    if (typeof hex !== 'string') return fallback;
-    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-    if (!m) return fallback;
-    const n = parseInt(m[1], 16);
-    return [
-        ((n >> 16) & 255) / 255,
-        ((n >> 8) & 255) / 255,
-        (n & 255) / 255,
-    ];
-}
+import { parseHexColor } from '../renderers/sdf/lighting.js';
+
+export { parseHexColor };
 
 // A fixed compile-time capacity so the uniform array is sized without a
 // runtime texture. Escalation to a texture is a later optimization.

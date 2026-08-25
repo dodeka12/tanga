@@ -60,6 +60,8 @@ from pytanga.geometry.operators import (
     Translator,
 )
 from .composed import Composed
+from .group import SdfGroup
+from .bounds import compute_bounds
 from .primitives import SdfNode, combine, group, primitive
 
 # ── Public API ─────────────────────────────────────────────
@@ -110,6 +112,254 @@ def serialize_entity(
         result["smoothness"] = smoothness
 
     return result
+
+
+def serialize_entity_local(
+    entity: Entity | Any,
+    entity_id: str,
+    properties: dict[str, Any] | None = None,
+    *,
+    styles_map: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Serialize an entity for the standard viewer's per-object SDF renderer.
+
+    Returns the full ``kind:"sdf"`` object shape from the wire contract (the
+    README), including ``id``/``layer``. Unlike :func:`serialize_entity` (the
+    fullscreen SDF viewer), this entry targets the standard viewer's
+    bounding-volume proxy technique: a single object marches only its own tree
+    in **local space**, and the node ``transform`` carries all placement.
+
+    Phase 1 delegates to :func:`_dispatch_object` for the world-space tree and
+    color/opacity resolution, and emits identity ``bound``/``transform`` stubs
+    so the object shape is stable. Phase 2 replaces those stubs with a
+    conservative local-space AABB and the placement transform.
+    """
+    props = dict(properties) if properties else {}
+
+    if isinstance(entity, SdfGroup):
+        return _serialize_sdf_group(entity, entity_id, props, styles_map)
+
+
+    tree, resolved, sdf_kind = _dispatch_object(entity, props, styles_map)
+
+    # Conservative AABB of the world-space tree (inflated by the SDF style's
+    # ``bound_padding``).
+    padding = _bound_padding(resolved)
+    bounds = compute_bounds(tree, padding=padding)
+    center = (
+        (bounds["min"][0] + bounds["max"][0]) / 2.0,
+        (bounds["min"][1] + bounds["max"][1]) / 2.0,
+        (bounds["min"][2] + bounds["max"][2]) / 2.0,
+    )
+    half = (
+        (bounds["max"][0] - bounds["min"][0]) / 2.0,
+        (bounds["max"][1] - bounds["min"][1]) / 2.0,
+        (bounds["max"][2] - bounds["min"][2]) / 2.0,
+    )
+
+    # Emit the tree in object-local space: shift the whole tree so the AABB is
+    # centred at the origin; the node ``transform`` carries all placement.
+    local_tree = _translate_tree(tree, (-center[0], -center[1], -center[2]))
+
+    result: dict[str, Any] = {
+        "id": entity_id,
+        "layer": "scene",
+        "kind": "sdf",
+        "sdfKind": sdf_kind,
+        "tree": local_tree.to_dict(),
+        "bound": {
+            "min": [-half[0], -half[1], -half[2]],
+            "max": [half[0], half[1], half[2]],
+        },
+        "transform": {
+            "position": list(center),
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0],
+        },
+    }
+
+    _finalize_sdf_object(result, resolved)
+    return result
+
+
+def _finalize_sdf_object(result: dict[str, Any], resolved: dict[str, Any]) -> None:
+    """Attach color/opacity/style to an SDF object result dict (in place).
+
+    For bare ``SdfNode``/``Composed``/``SdfGroup`` objects the color/opacity may
+    arrive only via the style instance (e.g. ``SdfStyle(color=…)``), not as
+    top-level props.
+    """
+    color = resolved.get("color")
+    opacity = resolved.get("opacity")
+    style = resolved.get("style")
+    if isinstance(style, dict):
+        style_dict = style
+    elif style is not None and hasattr(style, "to_dict"):
+        style_dict = style.to_dict()
+    else:
+        style_dict = {"style_type": "SdfStyle"}
+
+    if color is None:
+        color = style_dict.get("color")
+    if opacity is None:
+        opacity = style_dict.get("opacity")
+
+    if color is not None:
+        result["color"] = color
+    if opacity is not None:
+        result["opacity"] = opacity
+
+    result["style"] = style_dict if style_dict else {"style_type": "SdfStyle"}
+
+
+def _serialize_sdf_group(
+    group: SdfGroup,
+    entity_id: str,
+    props: dict[str, Any],
+    styles_map: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Serialize an :class:`SdfGroup` for the standard viewer's proxy renderer.
+
+    Each member is emitted in its own local space with a runtime transform; the
+    group tree is a ``group`` node whose children carry the per-member
+    ``combine`` mode. The proxy ``bound`` is the union of the members' AABBs
+    (recomputed dynamically by the frontend as members move).
+    """
+    resolved = dict(props)
+    padding = _bound_padding(resolved)
+
+    # 1. Serialize each member to a local tree + intrinsic centre + half-extent.
+    children: list[SdfNode] = []
+    centers: list[tuple[float, float, float]] = []
+    halves: list[tuple[float, float, float]] = []
+    for obj, combine_mode in group.parts:
+        obj = _resolve_constituent(obj)
+        tree, _, _ = _dispatch_object(obj, {}, styles_map)
+
+        bounds = compute_bounds(tree, padding=padding)
+        center = (
+            (bounds["min"][0] + bounds["max"][0]) / 2.0,
+            (bounds["min"][1] + bounds["max"][1]) / 2.0,
+            (bounds["min"][2] + bounds["max"][2]) / 2.0,
+        )
+        half = (
+            (bounds["max"][0] - bounds["min"][0]) / 2.0,
+            (bounds["max"][1] - bounds["min"][1]) / 2.0,
+            (bounds["max"][2] - bounds["min"][2]) / 2.0,
+        )
+
+        local_tree = _translate_tree(tree, (-center[0], -center[1], -center[2]))
+        child = copy.copy(local_tree)
+        child.combine = combine_mode
+        children.append(child)
+        centers.append(center)
+        halves.append(half)
+
+    # 2. Group origin = union centre of the members' *intrinsic* placements.
+    lo = [math.inf, math.inf, math.inf]
+    hi = [-math.inf, -math.inf, -math.inf]
+    for center, half in zip(centers, halves):
+        for i in range(3):
+            lo[i] = min(lo[i], center[i] - half[i])
+            hi[i] = max(hi[i], center[i] + half[i])
+    origin = (
+        (lo[0] + hi[0]) / 2.0,
+        (lo[1] + hi[1]) / 2.0,
+        (lo[2] + hi[2]) / 2.0,
+    )
+
+    # 3. Build members, applying any per-member transform overrides (absolute,
+    #    group-local; defaults to the intrinsic placement relative to origin).
+    members: list[dict[str, Any]] = []
+    for idx, (center, half) in enumerate(zip(centers, halves)):
+        override = group.transforms.get(idx, {})
+        position = override.get(
+            "position",
+            [center[0] - origin[0], center[1] - origin[1], center[2] - origin[2]],
+        )
+        rotation = override.get("rotation", [0.0, 0.0, 0.0])
+        scale = override.get("scale", [1.0, 1.0, 1.0])
+        members.append(
+            {
+                "transform": {
+                    "position": list(position),
+                    "rotation": list(rotation),
+                    "scale": list(scale),
+                },
+                "bound": {
+                    "min": [-half[0], -half[1], -half[2]],
+                    "max": [half[0], half[1], half[2]],
+                },
+            }
+        )
+
+    # 4. Proxy box = union AABB of the members, centred at the (fixed) origin.
+    lo = [math.inf, math.inf, math.inf]
+    hi = [-math.inf, -math.inf, -math.inf]
+    for member in members:
+        pos = member["transform"]["position"]
+        mlo = member["bound"]["min"]
+        mhi = member["bound"]["max"]
+        for i in range(3):
+            lo[i] = min(lo[i], pos[i] + mlo[i])
+            hi[i] = max(hi[i], pos[i] + mhi[i])
+    half = [max(abs(lo[i]), abs(hi[i])) for i in range(3)]
+
+    result: dict[str, Any] = {
+        "id": entity_id,
+        "layer": "scene",
+        "kind": "sdf",
+        "sdfKind": "SdfGroup",
+        "tree": {"kind": "group", "children": [c.to_dict() for c in children]},
+        "members": members,
+        "bound": {
+            "min": [-half[0], -half[1], -half[2]],
+            "max": [half[0], half[1], half[2]],
+        },
+        "transform": {
+            "position": list(origin),
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0],
+        },
+    }
+
+    _finalize_sdf_object(result, resolved)
+    return result
+
+
+
+def _bound_padding(resolved: dict[str, Any]) -> float:
+    """Extract the SDF ``bound_padding`` knob from a resolved style."""
+    style = resolved.get("style")
+    if isinstance(style, dict):
+        return float(style.get("bound_padding", 0.05))
+    if style is not None and hasattr(style, "bound_padding"):
+        return float(style.bound_padding)
+    return 0.05
+
+
+def _translate_tree(node: SdfNode, delta: tuple[float, float, float]) -> SdfNode:
+    """Return a copy of *node* with every primitive position shifted by *delta*.
+
+    Combinator nodes are copied recursively; only leaf primitives carry a
+    ``transform`` (their ``position``). The world-space ``SdfVisualizer`` path
+    never calls this, so its output is unchanged.
+    """
+    new = copy.copy(node)
+    if node.children:
+        new.children = [_translate_tree(c, delta) for c in node.children]
+        return new
+
+    position = node.transform.get("position") if node.transform else None
+    new_position = (
+        [position[0] + delta[0], position[1] + delta[1], position[2] + delta[2]]
+        if position is not None
+        else [delta[0], delta[1], delta[2]]
+    )
+    new_transform = dict(node.transform) if node.transform is not None else {}
+    new_transform["position"] = new_position
+    new.transform = new_transform
+    return new
 
 
 def _dispatch_object(

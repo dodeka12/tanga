@@ -53,8 +53,8 @@ use the `vec2` smooth combinators for the distance, with a per-object
 
 | Script | Topic |
 |--------|-------|
-| [`demo_sdf_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_sdf_entities.py) | Analytic entities (line + sphere − sphere) |
-| [`demo_sdf_composed.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_sdf_composed.py) | `Composed` objects + the primitive library |
-| [`demo_sdf_booleans.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_sdf_booleans.py) | Per-object `combine=` / `polarity=` |
+| [`entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/sdf/entities.py) | Analytic entities (line + sphere − sphere) |
+| [`composed.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/sdf/composed.py) | `Composed` objects + the primitive library |
+| [`booleans.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/sdf/booleans.py) | Per-object `combine=` / `polarity=` |
 
-Run with `uv run python py/examples/viz/<script>.py`.
+Run with `uv run python py/examples/viz/sdf/<script>.py`.

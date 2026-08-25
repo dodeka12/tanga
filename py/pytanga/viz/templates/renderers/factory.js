@@ -27,6 +27,7 @@ import { createAxes2D } from './axes2d.js';
 import { createAxes3D } from './axes3d.js';
 import { createGrid } from './grid.js';
 import { createVizGroup } from './group.js';
+import { createSdfProxy, updateSdfProxy } from './sdf.js';
 import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
 
 /**
@@ -124,6 +125,10 @@ export async function createEntityMesh(ent) {
             mesh = createVizGroup(ent);
             break;
 
+        case 'sdf':
+            mesh = await createSdfProxy(ent);
+            break;
+
         default:
             console.warn(`Unknown entity kind: ${ent.kind}`);
             return null;
@@ -140,6 +145,11 @@ export function updateEntityMesh(mesh, ent, prev) {
     // handle bespoke placement (e.g. Line's segment midpoint) and return false
     // when the geometry must be rebuilt instead of updated in place.
     switch (ent.kind) {
+        case 'sdf':
+            // Structural (tree/bound/sdfKind) changes rebuild the shader;
+            // transform/style changes are applied in place by updateSdfProxy.
+            if (entityRequiresRebuild(ent, prev)) return false;
+            return updateSdfProxy(mesh, ent, prev);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -86,6 +87,9 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "grid.js",
     _RENDERERS_DIR / "group.js",
     _RENDERERS_DIR / "factory.js",
+    _RENDERERS_DIR / "sdf.js",
+    _RENDERERS_DIR / "sdf" / "lighting.js",
+    _RENDERERS_DIR / "sdf" / "glsl.js",
 ]
 
 _TEMPLATES_DIR = _RENDERERS_DIR.parent
@@ -95,6 +99,10 @@ _TEMPLATES_DIR = _RENDERERS_DIR.parent
 # live viewer and the export bootstrap.
 _SHARED_JS_FILES: list[Path] = [
     _TEMPLATES_DIR / "scene-builder.js",
+    # SDF tree emitters used by the per-object SDF proxy renderer (`sdf.js`).
+    _TEMPLATES_DIR / "sdf" / "objects" / "transform.js",
+    _TEMPLATES_DIR / "sdf" / "objects" / "primitives.js",
+    _TEMPLATES_DIR / "sdf" / "objects" / "combinators.js",
 ]
 
 
@@ -173,6 +181,7 @@ def generate_bootstrap_js(adapter_js: str) -> str:
     """
     parts: list[str] = []
     parts.append("import * as THREE from 'three';")
+    parts.append(_sdf_shader_injection())
 
     for path in _RENDERER_FILES + _SHARED_JS_FILES:
         src = path.read_text(encoding="utf-8")
@@ -181,6 +190,27 @@ def generate_bootstrap_js(adapter_js: str) -> str:
 
     parts.append(adapter_js)
     return "\n\n".join(parts)
+
+
+def _sdf_shader_injection() -> str:
+    """Inline the SDF proxy GLSL as a global for standalone HTML exports.
+
+    The live viewer fetches these ``.glsl`` files from the server; a standalone
+    export has no server, so ``sdf.js`` falls back to this inlined global.
+    """
+    parts = {
+        "common": (_TEMPLATES_DIR / "sdf" / "shaders" / "sdf_common.glsl").read_text(
+            encoding="utf-8"
+        ),
+        "primitives": (
+            _TEMPLATES_DIR / "sdf" / "shaders" / "primitives.glsl"
+        ).read_text(encoding="utf-8"),
+        "combinators": (
+            _TEMPLATES_DIR / "sdf" / "shaders" / "combinators.glsl"
+        ).read_text(encoding="utf-8"),
+        "proxy": (_RENDERERS_DIR / "sdf" / "proxy.glsl").read_text(encoding="utf-8"),
+    }
+    return "window.__tanga_sdf_shaders = " + json.dumps(parts) + ";"
 
 
 # ── KaTeX CSS helper ──────────────────────────────────────────────

@@ -30,11 +30,6 @@ def js_scene_setup(
     scene_var: str,
     width_expr: str,
     height_expr: str,
-    cam_fov: float = 50,
-    cam_pos: tuple[float, float, float] = (8, 6, 10),
-    cam_target: tuple[float, float, float] = (0, 0, 0),
-    cam_near: float = 0.1,
-    cam_far: float = 1000,
     auto_rotate: bool = False,
     space_dim: int = 3,
     pixel_ratio_expr: str = "window.devicePixelRatio",
@@ -60,11 +55,6 @@ def js_scene_setup(
         scene_var: JS variable name for ``Scene``.
         width_expr: JS expression for renderer width.
         height_expr: JS expression for renderer height.
-        cam_fov: Camera field-of-view (3D only).
-        cam_pos: Initial camera position.
-        cam_target: OrbitControls target.
-        cam_near: Camera near plane.
-        cam_far: Camera far plane.
         auto_rotate: Whether OrbitControls auto-rotate.
         space_dim: 2 for 2D orthographic view, 3 for 3D perspective.
         pixel_ratio_expr: JS expression for device pixel ratio.
@@ -119,9 +109,9 @@ const {camera_var} = new THREE.OrthographicCamera(
 {camera_var}.lookAt(0, 0, 0);"""
     else:
         camera_js = f"""const {camera_var} = new THREE.PerspectiveCamera(
-    {cam_fov}, {width_expr} / {height_expr}, {cam_near}, {cam_far}
+    50, {width_expr} / {height_expr}, 0.1, 1000
 );
-{camera_var}.position.set({cam_pos[0]}, {cam_pos[1]}, {cam_pos[2]});"""
+{camera_var}.position.set(8, 6, 10);"""
 
     # ── Controls extras for 2D ─────────────────────────────
     controls_2d_extras = ""
@@ -154,7 +144,7 @@ const {controls_var} = new OrbitControls({camera_var}, {renderer_var}.domElement
 {mouse_buttons_block}{controls_var}.enableDamping = true;
 {controls_var}.dampingFactor = 0.08;
 {controls_var}.screenSpacePanning = true;
-{controls_var}.target.set({cam_target[0]}, {cam_target[1]}, {cam_target[2]});
+{controls_var}.target.set(0, 0, 0);
 {controls_var}.autoRotate = {_format_js_bool(auto_rotate)};{controls_2d_extras}
 {controls_var}.update();
 
@@ -291,3 +281,113 @@ if ({mesh_map_var}.size > 0) {{
         {controls_var}.update();
     }}
 }}"""
+
+
+def js_apply_camera() -> str:
+    """Generate the shared camera-application helper for export bootstraps.
+
+    Emits ``_orthoFrustum2d(...)`` and ``applyCameraConfig(camera, controls,
+    cfg, w, h)``.  ``applyCameraConfig`` dispatches on ``cfg.type``
+    (``"2d"`` / ``"3d"``) and applies the full camera config, falling back to
+    the flat fields for legacy/partial configs and doing nothing when ``cfg``
+    is null/undefined.  The 2D ortho math mirrors ``view_mode.js`` so the
+    export matches the live viewer (uniform letterbox by default, stretch when
+    ``uniform`` is false, ``border_px`` applied in pixels).
+    """
+    return """// ── Shared camera applier (mirrors view_mode.js switchToCamera) ──
+function _finiteAspectExport(w, h) {
+    const width = Number(w);
+    const height = Number(h);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return NaN;
+    }
+    return width / height;
+}
+
+function _orthoFrustum2d(xmin, xmax, ymin, ymax, uniform, borderPx, w, h) {
+    const extX = Math.abs(xmax - xmin) || 10;
+    const extY = Math.abs(ymax - ymin) || 10;
+    const bp = borderPx || 0;
+    const cw = w - 2 * bp;
+    const ch = h - 2 * bp;
+
+    if (uniform === false) {
+        const fX = cw > 0 ? w / cw : 1;
+        const fY = ch > 0 ? h / ch : 1;
+        return {
+            left: -(extX / 2) * fX,
+            right: (extX / 2) * fX,
+            top: (extY / 2) * fY,
+            bottom: -(extY / 2) * fY,
+        };
+    }
+
+    const aspect = _finiteAspectExport(w, h);
+    const safeAspect = Number.isFinite(aspect) ? aspect : 1;
+    const aspectContent = (cw > 0 && ch > 0) ? (cw / ch) : safeAspect;
+    const fit = Math.max(extX / aspectContent, extY);
+    const fitFull = (bp > 0 && cw > 0 && ch > 0) ? (fit * h / ch) : fit;
+
+    return {
+        left: -fitFull * safeAspect / 2,
+        right: fitFull * safeAspect / 2,
+        top: fitFull / 2,
+        bottom: -fitFull / 2,
+    };
+}
+
+function applyCameraConfig(camera, controls, cfg, w, h) {
+    if (!cfg) return;
+    const width = Number(w);
+    const height = Number(h);
+
+    if (cfg.type === '2d') {
+        if (
+            typeof cfg.xmin === 'number' && typeof cfg.xmax === 'number' &&
+            typeof cfg.ymin === 'number' && typeof cfg.ymax === 'number'
+        ) {
+            const f = _orthoFrustum2d(
+                cfg.xmin, cfg.xmax, cfg.ymin, cfg.ymax,
+                cfg.uniform !== false, cfg.border_px || 0, width, height
+            );
+            camera.left = f.left;
+            camera.right = f.right;
+            camera.top = f.top;
+            camera.bottom = f.bottom;
+        }
+        if (cfg.position) camera.position.set(cfg.position[0], cfg.position[1], cfg.position[2]);
+        const t2 = cfg.target || [0, 0, 0];
+        camera.lookAt(t2[0], t2[1], t2[2]);
+        controls.target.set(t2[0], t2[1], t2[2]);
+        camera.updateProjectionMatrix();
+        controls.update();
+        return;
+    }
+
+    if (cfg.type === '3d') {
+        if (cfg.fov) camera.fov = cfg.fov;
+        if (cfg.near) camera.near = cfg.near;
+        if (cfg.far) camera.far = cfg.far;
+        if (cfg.position) camera.position.set(cfg.position[0], cfg.position[1], cfg.position[2]);
+        if (cfg.up) camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
+        const t3 = cfg.target || [0, 0, 0];
+        camera.lookAt(t3[0], t3[1], t3[2]);
+        controls.target.set(t3[0], t3[1], t3[2]);
+        camera.updateProjectionMatrix();
+        controls.update();
+        return;
+    }
+
+    // Legacy / partial config (no type discriminator)
+    if (cfg.position) camera.position.set(cfg.position[0], cfg.position[1], cfg.position[2]);
+    if (cfg.target) {
+        camera.lookAt(cfg.target[0], cfg.target[1], cfg.target[2]);
+        controls.target.set(cfg.target[0], cfg.target[1], cfg.target[2]);
+    }
+    if (cfg.fov) camera.fov = cfg.fov;
+    if (cfg.near) camera.near = cfg.near;
+    if (cfg.far) camera.far = cfg.far;
+    if (cfg.up) camera.up.set(cfg.up[0], cfg.up[1], cfg.up[2]);
+    camera.updateProjectionMatrix();
+    controls.update();
+}"""

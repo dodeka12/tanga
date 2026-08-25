@@ -118,6 +118,7 @@ nav:
       - Video & Image: py/viz/export/video-image.md
     - SDF Viewer:
       - Overview: py/viz/sdf-viewer.md
+      - SDF Objects in the Standard Viewer: py/viz/sdf-objects.md
 
   - Geometric Algebra:
     - Overview: py/index.md

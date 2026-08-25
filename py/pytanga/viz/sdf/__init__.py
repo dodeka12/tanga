@@ -13,6 +13,7 @@ frontend assets live alongside under ``templates/sdf/``.
 from __future__ import annotations
 
 from .composed import Composed
+from .group import SdfGroup
 from .lights import DirectionalLight, Light
 from .overlay import Axes, Grid, SdfOverlay
 from .primitives import (
@@ -45,6 +46,7 @@ __all__ = [
     "Light",
     "SdfNode",
     "SdfOverlay",
+    "SdfGroup",
     "SdfVisualizer",
     "bound_box",
     "box",

@@ -1,4 +1,4 @@
-# Changes since version 0.13.0
+# Changes since version 1.1.0
 
 ## New Features
 - **SDF viewer implementation plan (container entry)** — initial branch
@@ -25,12 +25,6 @@
   `py/tests/viz/sdf/test_raymarch_shader.py`. *(The hardcoded-sphere visual
   smoke check and real GLSL compile are deferred to the Phase 6/6a browser
   slice — no local `glslangValidator`/`glslc`/Node-`three` is available.)*
-- **Distance-function registry (Phase 3)** — added the Python
-  `DistanceFunction` enum (`scalar_pseudo` default, plus `magnitude`, `scalar`,
-  `grade`, `component`) with params metadata in `sdf/distance.py`, a matching
-  name-keyed GLSL snippet registry in `templates/sdf/algebra/distances.js`, and
-  unit tests in `py/tests/viz/sdf/test_distance.py`. This is the shared
-  function-registry mechanism the opacity transfer axis (Phase 12) reuses.
 - **Analytic entity SDF serializer (Phase 4)** — added the Python SDF
   primitive/combinator descriptor model (`sdf/primitives.py`) and the entity →
   SDF-tree serializer (`sdf/serializer.py`) for the six supported entities
@@ -45,8 +39,8 @@
   table (`templates/sdf/material-table.js`) packing per-object color/opacity
   into a uniform array with a `materialColor(matId)` GLSL sampler. The raymarch
   body now resolves the hit material for lighting (injected `map` +
-  `materialColor` contract). Signed combine modes / smooth-blend / signedness
-  gate / AABB pruning are deferred to Phase 11 (CSG booleans). A headless Node
+  `materialColor` contract). Signed combine modes / smooth-blend / AABB pruning
+  are deferred to Phase 11 (CSG booleans). A headless Node
   smoke test (`dev/src/sdf_composer_smoke.mjs`) exercises the composed map.
 - **`SdfVisualizer` facade + HTML bootstrap (Phase 6)** — added the
   `SdfVisualizer` facade (`sdf/visualizer.py`) mirroring the standard
@@ -56,10 +50,10 @@
   serves `sdf_viewer.html` while the standard viewer still serves
   `viewer.html`. Camera parity is verified against the standard viewer in
   `py/tests/viz/sdf/test_visualizer.py`.
-- **First vertical slice example (Phase 6a)** — added `demo_sdf_entities.py`
-  (`py/examples/viz/demo_sdf_entities.py`) drawing a Line + Sphere through the
+- **First vertical slice example (Phase 6a)** — added `entities.py`
+  (`py/examples/viz/sdf/entities.py`) drawing a Line + Sphere through the
   analytic path, as the gate for manual user confirmation in the browser before
-  any algebra/CSG/opacity work continues.
+  any CSG work continues.
 - **Primitive object library + `Composed` objects (Phase 06b)** — exposed the
   SDF primitive library as first-class, directly addable objects (`sphere`,
   `box`, `cylinder`, `capped_cylinder`, `cone`, `capped_cone`, `torus`,
@@ -77,8 +71,8 @@
   `Sphere`→sphere, `Rotor`→sector disc + rim ring + axis arrow,
   `Translator`/`Direction`→arrow, `Dilator`→rings, `Motor`→disc+arrow,
   `GeneralRotor`→sector disc+ring+axis at origin, etc.). Added the
-  `demo_sdf_composed.py` example (sphere with a bored-out cylinder plus
-  torus/box/rotor) and the `demo_sdf_arrowhead.py` diagnostic.
+  `composed.py` example (sphere with a bored-out cylinder plus
+  torus/box/rotor) and the `arrowhead.py` diagnostic.
 - **Configurable SDF lighting** — `SdfVisualizer` now accepts
   `DirectionalLight` objects through `add()`, has an `add_default_light` flag
   (mirroring the standard viewer's `add_default_axes`/`add_default_grid`), and
@@ -90,7 +84,7 @@
   `update_entity()` / `update_light()` (replace an object or light by id),
   `flush()`, and `sleep_ms()` so objects and lights can be modified after
   `add()` and animated. `DirectionalLight.direction` now normalizes on
-  assignment. Added the `demo_sdf_light_animation.py` example (a light orbiting
+  assignment. Added the `light_animation.py` example (a light orbiting
   a sphere).
 - **SDF viewer identity + version check parity** — the SDF frontend now sends a
   `viewer_name` (from the `?viewer=` URL param) in its `ready` message and
@@ -114,86 +108,68 @@
   viewer's `AxesHelper`), hidden behind objects in front and drawn over
   objects behind.
 
-- **Algebra SDF embedding backend (Phase 7)** — added
-  `sdf/algebra_embedding.py`, which reduces a raw MV to a partially-contracted
-  product matrix `M` (result-blade × point-blade) so the shader computes
-  `r = M·a`, `d = distOf(r)` with no algebra branching. Covers `e3`/`p3`/`n3`/
-  `pga3` with per-algebra OPNS point embeddings (including N3's quadratic
-  `½ρ²·e∞` term); the point embedding is emitted as a GLSL `evalPoint` snippet
-  in `templates/sdf/algebra/embeds.js`, kept in lockstep with `M`'s blade
-  ordering. `SdfVisualizer.add()` now accepts a raw `MV` (serialized as an
-  `mv_sdf` object without routing through `geometry.analyze()`), with
-  `normalize`/`bound`/`calibrate` controls. Unit tests in
-  `py/tests/viz/sdf/test_algebra_embedding.py`.
+- **CSG boolean combine modes + smooth variants (Phase 11)** — the per-object
+  `combine`/`polarity` fold (union/intersection/subtract), and smooth variants
+  (`smooth_union`/`smooth_intersection`/`smooth_subtract` with a per-object
+  `smoothness`) fold via the Phase 1 `vec2` smooth combinators, blending the
+  material id by the blend factor. Unit tests in
+  `py/tests/viz/sdf/test_combine.py`.
 
-- **Algebra SDF shader evaluator (Phase 8)** — added
-  `templates/sdf/algebra/eval.js`, which emits each `mv_sdf` object as a
-  `dist_mv_<i>` algebra leaf *inside* the single composed `map()`: per-object
-  `M`/`bound`/`scale` pack into flat `u_M[]`/`u_Scale[]` uniforms, the active
-  distance function is instantiated per distinct algebra (so `NR`/`SLOT_PSEUDO`
-  are correct), and mixed-algebra scenes fold with analytic objects and material
-  ids. `rebuildProgram()` now splits a program's *structure* (kinds/combines/
-  embeds/distance/opacity) from its *data* (matrix/material uniforms), so
-  data-only changes upload uniforms without recompiling. A Node smoke test
-  (`dev/src/sdf_algebra_smoke.mjs`) and `py/tests/viz/sdf/test_algebra_eval.py`
-  assert the assembly has no `if (algebra/distance/entity/opacity …)` branching.
+- **SDF viewer examples + docs** — added `booleans.py` (per-object
+  `combine=`/`polarity=`), a headless smoke test (`dev/src/test_viz_sdf.py`),
+  and a `docs/py/viz/sdf-viewer.md` guide (linked from the viz index and mkdocs
+  nav).
 
-- **Algebra SDF gradient calibration + validation (Phase 9)** — added
-  `sdf/calibration.py` (finite-difference gradient probe, surface-point finder,
-  per-object `scale = 1/|∇d|`), wired into `embed_entity_mv(..., calibrate=True)`
-  and `SdfVisualizer.add(..., calibrate=True)`. Cross-validates the algebra SDF
-  zero-set against the analytic plane per algebra, verifies `|∇d| ≈ 1` after
-  calibration, and locks in the per-algebra signedness (e3/n3 plane → `-z`,
-  p3 → `+z`, pga3 → unsigned `|z|·√2`). Unit tests in
-  `py/tests/viz/sdf/test_calibration.py`.
+- **Per-object SDF objects in the standard viewer (viz-sdf-objects)** — added an
+  `SdfStyle` marker style that opts an entity into ray-marched SDF rendering
+  *inside the standard viewer* (emitted as `kind:"sdf"` on the wire), mixed with
+  the normal vertex/mesh pipeline. The Python serializer emits the tree in
+  object-local space with a conservative AABB `bound` and a placement
+  `transform` (`sdf/bounds.py` + `serialize_entity_local`), so SDF objects
+  animate/parent/interact exactly like meshes; per-object CSG works via
+  `Composed`. `Visualizer.add(..., style=SdfStyle(...))` accepts `Composed` and
+  bare `SdfNode` drawables alongside entities.
+- **SDF proxy renderer (frontend)** — added `createSdfProxy()` (a BoxGeometry
+  sized to the object's `bound` plus a `ShaderMaterial` whose fragment shader
+  marches the single-object SDF in local space and writes `gl_FragDepth`, so the
+  standard depth buffer occludes it against meshes and other SDF proxies). The
+  directional-light model is factored into `renderers/sdf/lighting.js` (one
+  source of truth for both viewers), and the HTML export bundles the SDF renderer
+  with its GLSL inlined. On WebGL1 SDF objects are skipped with a single yellow
+  warning banner. Cross-object CSG and mutual shadows are deferred.
+  Tests in `py/tests/viz/sdf/` (`test_bounds.py`, `test_standard_serializer_sdf.py`,
+  `test_proxy_shader.py`) + `dev/src/sdf_proxy_smoke.mjs`; example
+  `py/examples/viz/sdf/objects.py`.
+- **SDF object groups (`SdfGroup`)** — added a grouped SDF drawable whose
+  members are folded into one ray-marched solid (cross-object CSG via
+  `union`/`intersection`/`subtract`), each with an independent runtime transform
+  uploaded as shader uniforms so members can be animated separately without
+  recompiling. The proxy bounding box is the union of the members' AABBs and
+  resizes dynamically as they move; `update_sdf_group_member()` updates a member
+  and pushes a content patch. Tests in `py/tests/viz/sdf/test_sdf_group.py`;
+  example `py/examples/viz/sdf/group.py`.
+- **`Point`/`Direction`/`Rotor` accepted by SDF constructors** — every SDF
+  object creation function (`sphere`, `box`, `capped_cylinder`, `cone`, `torus`,
+  `ellipsoid`, `plane`, `bound_box`, …) now accepts a `Point`/`Direction` for
+  `position` and a `Rotor` (or an `(axis, angle)` pair) for `rotation`, coercing
+  them to the wire transform. Tests in `py/tests/viz/sdf/test_primitives.py`.
+- **SDF node ids + `viz.new()` refs** — every SDF constructor and `Composed`
+  accepts an optional `id`, and an `SdfGroup` member can be addressed by that id
+  or by index in `update_sdf_group_member` / `set_member_transform`. `viz.new(…)`
+  returns a `VizObjectRef` whose `entity` is the group and whose
+  `set_member_transform(…)` marks the node dirty. Tests in
+  `py/tests/viz/sdf/test_sdf_group.py` + `test_primitives.py`; example
+  `py/examples/viz/sdf/group.py` updated.
+- **Shared transform/SDF argument types (`Vec3`/`Rotation`/`Triple`)** — added
+  `py/pytanga/viz/_types.py` with shared aliases (`Vec3`, `Triple`, `Rotation`,
+  `TransformRotation`) plus `_as_vec3`/`_as_euler` coercion (deduplicating the
+  per-module `_as_vec3` helpers). `set_transform` / `set_member_transform` /
+  `update_sdf_group_member` / `Transform` now accept `Point`/`Rotor` for
+  position/rotation (a `Rotor` is converted to Euler internally) and a 3-tuple
+  for scale, instead of `Any`. Tests in `py/tests/viz/test_object_ref.py` +
+  `py/tests/viz/sdf/test_sdf_group.py`.
 
-- **CSG boolean combine modes + signedness gate + smooth variants (Phase 11)** —
-  the per-object `combine`/`polarity` fold (union/intersection/subtract) now has
-  a signedness gate (`DistanceFunction.signed`; backend warns and the frontend
-  `warnUnsignedBooleans` warns when `intersection`/`subtract` are used with the
-  unsigned `magnitude` mode), and smooth variants (`smooth_union`/
-  `smooth_intersection`/`smooth_subtract` with a per-object `smoothness`) fold
-  via the Phase 1 `vec2` smooth combinators, blending the material id by the
-  blend factor. Unit tests in `py/tests/viz/sdf/test_combine.py`.
 
-- **Opacity transfer functions (Phase 12)** — added the
-  `sdf/opacity.py` `OpacityTransfer` enum (`step` default, `linear`, `sigmoid`)
-  and the `templates/sdf/algebra/opacities.js` GLSL snippet registry. The
-  `opacityOf(d, ε)` function is now emitted through the Phase 8 assembly (the
-  Phase 2 step stub moved out of `raymarch.glsl`), and the surface path applies
-  `col *= opacityOf(d, ε)` where the per-object `opacity` is the falloff breadth
-  ε (surface alpha for `step`). Unit tests in
-  `py/tests/viz/sdf/test_opacity.py`.
-
-- **SDF viewer examples + docs** — added `demo_sdf_algebra.py` (MV rendering
-  with mixed algebras + calibration), `demo_sdf_booleans.py` (per-object
-  `combine=`/`polarity=`), and `demo_sdf_opacity.py` (distance → opacity
-  transfers), a headless smoke test (`dev/src/test_viz_sdf.py`), and a
-  `docs/py/viz/sdf-viewer.md` guide (linked from the viz index and mkdocs nav).
-
-- **Active result mask + analytical step gradient (Phase 13)** — the algebra
-  (`mv_sdf`) path now shrinks each object's `M` matrix to its *active result
-  mask* (the exact non-zero result blades of `point ∘ entity`, plus the scalar
-  and pseudoscalar), cutting `u_M` by ~6.5× for the demo (608 → 93 floats), and
-  computes the sphere-tracing gradient norm `|∇d|` in closed form inside each
-  leaf (distance-function derivative `g[k] = ∂D/∂r[k]`, the transposed matvec
-  `h = Mᵀg`, and the per-algebra point Jacobian). The composed `map()` now
-  returns `vec3(d, m, g)` and the raymarch loop steps `d / max(m.z, 1.0)` with a
-  branchless `1/sqrt` guard, replacing the 4-probe finite-difference
-  `calcGradientNorm` and the analytic-sentinel gate. Distance functions are
-  instantiated per distinct result mask instead of per algebra. Tests in
-  `py/tests/viz/sdf/` (601) + `dev/src/sdf_{algebra,composer}_smoke.mjs`.
-
-## Breaking Changes
-- **Removed the algebra (`mv_sdf`) SDF rendering path** — the SDF viewer now
-  renders only the analytic (geometric-entity) path. Raw multivectors passed to
-  `SdfVisualizer.add()` are resolved through `geometry.analyze()` to their
-  recognized geometric entity (an unrecognizable MV raises an error); the
-  `mv_sdf` matrix evaluation, the viewer-level `distance`/`opacity` transfer
-  settings, and the `calibrate`/`normalize`/`bound`/`falloff`/`max_distance` MV
-  properties are removed. The raymarcher now steps the plain signed distance
-  (`t += d`) with no gradient-norm guard, `mapDensity`, `u_M`, or
-  `u_ObjectParams`.
 
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed

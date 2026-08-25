@@ -229,7 +229,10 @@ export function rotationFromNormal(nx, ny, nz) {
  * Tag a mesh with entity metadata for click detection and debugging.
  */
 export function tagEntity(mesh, ent) {
-    mesh.userData = { entityId: ent.id, kind: ent.kind, data: ent };
+    // Preserve any renderer-specific userData (e.g. an SDF proxy's `sdfKind`)
+    // while tagging the standard entity id/kind/data.
+    const prev = mesh.userData || {};
+    mesh.userData = { ...prev, entityId: ent.id, kind: ent.kind, data: ent };
 }
 
 /**
@@ -302,6 +305,15 @@ export function applyStyleUpdate(mesh, ent) {
  */
 export function entityRequiresRebuild(ent, prev) {
     if (ent.kind === 'PointPath') return true;
+    // SDF proxies: only structural changes (tree/sdfKind) rebuild the shader;
+    // member-transform changes (an SdfGroup) and style-only changes are applied
+    // in place by updateSdfProxy (which also resizes the proxy box).
+    if (ent.kind === 'sdf') {
+        if (!prev) return false;
+        if (ent.sdfKind !== prev.sdfKind) return true;
+        if (JSON.stringify(ent.tree) !== JSON.stringify(prev.tree)) return true;
+        return false;
+    }
     // Axes/grids are drawn fresh (axis line + CSS2D value labels; many grid
     // segments) and their geometry derives from many fields, so rebuild whenever
     // their content changes — e.g. a live time axis whose ticks move each frame.

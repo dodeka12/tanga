@@ -45,7 +45,7 @@ vec3 calcNormal(vec3 p) {
 // distance to the nearest *boundary* — it cannot tell a solid occluder from the
 // wall/rim of a subtracted (CSG) hole. A `subtract` volume can therefore cast a
 // faint penumbra even though a hole has no material to block light (e.g. the
-// cylinder bored through the `demo_sdf_composed.py` bead). A correct fix would
+// cylinder bored through the `composed.py` bead). A correct fix would
 // trace the shadow ray against a solid-only distance field (excluding
 // subtractive volumes); deferred as a known limitation.
 

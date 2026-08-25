@@ -16,6 +16,54 @@ import { createCamera, configureControls, fitCamera, handleResize, switchToCamer
 import { updateLineResolutions, applyStyleUpdate } from '../renderers/utils.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setSpaceDim } from '../interaction.js';
 
+// ── WebGL1 SDF fallback warning banner ──────────────────────
+// SDF proxies need GLSL3 + `gl_FragDepth` (WebGL2). On WebGL1 those objects
+// are skipped and a single yellow warning banner is shown (mirrors the
+// version-mismatch banner pattern in viewer.js).
+
+let _sdfWebGL2WarningShown = false;
+
+function _showSdfWebGL2Warning() {
+    if (_sdfWebGL2WarningShown) return;
+    _sdfWebGL2WarningShown = true;
+
+    const banner = document.createElement('div');
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.zIndex = '100001';
+    banner.style.background = '#ffc107';
+    banner.style.color = '#1a1a2e';
+    banner.style.fontFamily = 'sans-serif';
+    banner.style.fontSize = '13px';
+    banner.style.padding = '10px 16px';
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.justifyContent = 'center';
+    banner.style.gap = '12px';
+    banner.style.lineHeight = '1.5';
+    banner.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+
+    const text = document.createElement('span');
+    text.textContent = 'SDF objects require WebGL2 — they are hidden in this viewer.';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Dismiss';
+    btn.style.padding = '4px 12px';
+    btn.style.background = '#1a1a2e';
+    btn.style.color = '#ffffff';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '3px';
+    btn.style.cursor = 'pointer';
+    btn.style.fontWeight = 'bold';
+    btn.onclick = () => banner.remove();
+
+    banner.appendChild(text);
+    banner.appendChild(btn);
+    document.body.insertBefore(banner, document.body.firstChild);
+}
+
 function _applyOverlayAnchor(el, anchor) {
     el.style.top = 'auto';
     el.style.right = 'auto';
@@ -64,6 +112,7 @@ export class ThreeJsView extends View {
         this._titleElement = null;
         this._annotationPanel = null;
         this._overlays = [];
+        this._isWebGL2 = false;
 
         this.el.classList.add('tanga-three-view');
         this.el.style.position = 'relative';
@@ -113,6 +162,7 @@ export class ThreeJsView extends View {
             this.renderer.setSize(this.width || window.innerWidth, this.height || window.innerHeight);
             this.renderer.shadowMap.enabled = false;
             this.el.appendChild(this.renderer.domElement);
+            this._isWebGL2 = !!this.renderer.capabilities.isWebGL2;
         } catch (e) {
             console.warn('WebGL renderer failed — falling back to headless mode:', e.message);
             webglOk = false;
@@ -245,12 +295,11 @@ export class ThreeJsView extends View {
      * `_applySceneConfig` and `setCamera`.
      */
     _applyCamera(cameraConfig) {
-        if (!cameraConfig) return;
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
 
-        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig);
+        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null);
 
-        const cc = cameraConfig;
+        const cc = cameraConfig || {};
         if (cc.position) this.camera.position.set(cc.position[0], cc.position[1], cc.position[2]);
         if (cc.target) this.controls.target.set(cc.target[0], cc.target[1], cc.target[2]);
         if (cc.fov) { this.camera.fov = cc.fov; this.camera.updateProjectionMatrix(); }
@@ -266,10 +315,8 @@ export class ThreeJsView extends View {
     setCamera(cameraConfig) {
         this._cameraOverride = cameraConfig || null;
         const effective = this._cameraOverride || (this.sceneConfig && this.sceneConfig.camera);
-        if (effective) {
-            this._applyCamera(effective);
-            this.resize();
-        }
+        this._applyCamera(effective);
+        this.resize();
     }
 
     _renderTitle(titleText) {
@@ -444,6 +491,12 @@ export class ThreeJsView extends View {
             this.sceneObjects.delete(msg.id);
         }
         if (msg.layer === 'scene') {
+            // SDF proxies require WebGL2 (GLSL3 + gl_FragDepth); on WebGL1 they
+            // are skipped and a single yellow warning banner is shown.
+            if (msg.kind === 'sdf' && !this._isWebGL2) {
+                _showSdfWebGL2Warning();
+                return;
+            }
             const entry = await buildSceneObject(msg, this.scene, this.sceneObjects);
             if (entry && msg.interaction) {
                 registerInteractive(msg.id, entry.obj, msg.interaction);

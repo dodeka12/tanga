@@ -3,7 +3,7 @@
 Labels are text annotations rendered via Three.js CSS2DRenderer — crisp HTML
 text that follows the entity in 3D space but always faces the camera.
 
-See the example script [`demo_labels.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_labels.py)
+See the example script [`basic.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/basic.py)
 for a runnable demonstration.
 
 ## Convenience Shortcut

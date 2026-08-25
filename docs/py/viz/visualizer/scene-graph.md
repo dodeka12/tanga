@@ -118,5 +118,5 @@ for angle in range(360):
 ## Run the example
 
 ```bash
-uv run python py/examples/viz/demo_scene_graph.py
+uv run python py/examples/viz/scenes/scene_graph.py
 ```

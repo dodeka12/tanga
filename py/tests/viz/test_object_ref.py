@@ -94,6 +94,26 @@ class TestTransforms:
         assert node.transform.position == (1.0, 2.0, 3.0)
         assert node.dirty_for("transform")
 
+    def test_set_transform_accepts_rotor(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = _point_ref(h)
+        node = h.scene.get_node(ref.id)
+        node.consume_dirty()
+        ref.set_transform(rotation=Rotor(math.pi / 2, Direction(0, 0, 1)))
+        assert node.transform.rotation == pytest.approx((0.0, 0.0, math.pi / 2), abs=1e-9)
+        assert node.dirty_for("transform")
+
+    def test_set_transform_scale_is_triple(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = _point_ref(h)
+        node = h.scene.get_node(ref.id)
+        node.consume_dirty()
+        ref.set_transform(scale=(2.0, 3.0, 4.0))
+        assert node.transform.scale == (2.0, 3.0, 4.0)
+
+
     def test_transform_operator(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")

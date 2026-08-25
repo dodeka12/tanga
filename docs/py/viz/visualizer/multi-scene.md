@@ -107,7 +107,7 @@ Outside Jupyter, `show()` opens a browser tab. With the default
 pass `Visualizer(reuse_existing=False)` to open a fresh tab per scene
 immediately.
 
-Runnable example: [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_multi_scene.py).
+Runnable example: [`multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/scenes/multi_scene.py).
 
 ## Jupyter: Side-by-Side Scenes
 
@@ -219,7 +219,7 @@ detail.display_snapshot()  # serverless inline view
 
 ## Complete Example
 
-[`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_multi_scene.py)
+[`multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/scenes/multi_scene.py)
 shows two named scenes, each opened in its own browser tab via context
 managers:
 

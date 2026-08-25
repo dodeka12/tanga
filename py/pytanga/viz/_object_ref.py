@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from pytanga.geometry.operators import Translator
 
 from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject, _style_to_dict
+from ._types import TransformRotation, Triple, Vec3
 
 if TYPE_CHECKING:
     from ._scene_handle import VizSceneHandle
@@ -202,14 +203,32 @@ class VizObjectRef:
 
     def set_transform(
         self,
-        position: Any = None,
-        rotation: Any = None,
-        scale: Any = None,
+        position: Vec3 = None,
+        rotation: TransformRotation = None,
+        scale: Triple = None,
     ) -> None:
         self._scene_node().set_transform(position=position, rotation=rotation, scale=scale)
 
     def apply_transform(self, op: Any) -> None:
         self._scene_node().apply_transform(op)
+
+    def set_member_transform(
+        self,
+        member: int | str,
+        *,
+        position: Vec3 = None,
+        rotation: TransformRotation = None,
+        scale: Triple = None,
+    ) -> None:
+        """Update an ``SdfGroup`` member's runtime transform (by index or id).
+
+        Convenience wrapper over :meth:`Visualizer.update_sdf_group_member` so
+        ``sdf_grp.set_member_transform("hole", position=...)`` + ``flush()``
+        marks the node's content dirty and pushes the update.
+        """
+        self._handle.scene.update_sdf_group_member(
+            self.id, member, position=position, rotation=rotation, scale=scale
+        )
 
     # ── Graph (group refs) ────────────────────────────────────
 

@@ -171,9 +171,113 @@ x, y, z = cs.to_world(10.0, 100.0)
 # Map data series to group-local 3D points (inherits the group transform).
 pts = cs.transform(xs, ys)
 
-# Plot a series as a PointPath child of the group.
+# Plot a series as a PointPath child of the data group (data coordinates).
 ref = cs.plot(xs, ys, color="#ffcc00", style=PointPathStyle(line_thickness=3))
 ```
+
+## Annotations & the data group
+
+Every data-space object (`plot`, `add_plot`, and the annotation helpers below)
+is a child of an inner **data group** whose transform maps data coordinates onto
+the plot plane. For linear axes the group is a pure translate+scale, so you can
+draw directly in data coordinates; for log axes the group handles only the
+affine part, so the `log` is still applied in Python (`to_data()`).
+
+The inner group is exposed as `cs.data_group` (a `VizObjectRef`) for custom
+drawings:
+
+```python
+# Map a data point to data-group coordinates (log-mapped for log axes).
+wx, wy = cs.to_data(10.0, 100.0)
+
+# Draw a custom annotation in data coordinates.
+path = PointPath()
+path.add((1.0, 0.0))
+path.add((3.0, 2.0))
+cs.data_group.new(path, color="#ffffff")
+```
+
+### vline / hline
+
+Draw (and animate) vertical/horizontal marker lines at fixed data values:
+
+```python
+# Create (or update, by name) a vertical line at x=3 spanning the current ylim,
+# with a label anchored at the line midpoint.
+v = cs.vline(x=3.0, name="cursor", color="#ff5555", label="x = 3")
+
+# Create (or update) a horizontal line at y=0 spanning the current xlim.
+h = cs.hline(y=0.0, name="zero", color="#8888ff", label="zero")
+
+# Move the vertical line each frame (animation):
+cs.vline(x=t, name="cursor")
+
+# Remove a named line:
+cs.remove_vline("cursor")
+cs.remove_hline("zero")
+```
+
+- `vline(x, *, name=None, y0=None, y1=None, color=None, style=None, label=None,
+  label_style=None)` and `hline(y, *, name=None, x0=None, x1=None, color=None,
+  style=None, label=None, label_style=None)` create a line (or update it in
+  place when `name` is given) and return its `VizObjectRef`. `y0/y1` (resp.
+  `x0/x1`) default to the current `ylim` (resp. `xlim`).
+- These draw a `Line` entity, so style them with `LineStyle` (screen-space
+  `thickness` in px). `label`/`label_style` attach a label anchored at the line
+  midpoint; use `LabelStyle(along=…)` to move it along the segment.
+- Without `name`, each call creates a new line.
+- `remove_vline(name)` / `remove_hline(name)` remove a named line.
+
+### line
+
+Draw a line between two arbitrary data points, each given as an `(x, y)`
+2-tuple or a `Point()` instance:
+
+```python
+from pytanga.geometry.entities import Point
+
+cs.line((1.0, 0.0), (3.0, 2.0), color="#ffffff")
+cs.line(Point(1.0, 0.0), Point(3.0, 2.0), name="seg", color="#ff88ff")
+cs.line(Point(4.0, -1.0), Point(6.0, 1.0), name="seg")  # update in place
+cs.remove_line("seg")
+```
+
+- `line(start, end, *, name=None, color=None, style=None, label=None,
+  label_style=None)` creates a `Line` segment (or updates it in place when
+  `name` is given) between `start` and `end`, and returns its `VizObjectRef`.
+  Style it with `LineStyle`; `label`/`label_style` attach a label anchored at
+  the midpoint.
+- `remove_line(name)` removes a named line.
+
+### point
+
+Draw a point marker at a data location, given as an `(x, y)` 2-tuple or a
+`Point()` instance:
+
+```python
+from pytanga.geometry.entities import Point
+from pytanga.viz import PointStyle
+
+cs.point((2.0, 0.5), color="#ffffff")
+cs.point(Point(3.0, 1.0), name="marker", color="#ff8888", style=PointStyle(size=0.1))
+cs.point(Point(4.0, -0.5), name="marker")  # update in place
+cs.remove_point("marker")
+```
+
+- `point(p, *, name=None, color=None, style=None, label=None, label_style=None)`
+  creates a point marker (or updates it in place when `name` is given) and
+  returns its `VizObjectRef`. `label`/`label_style` attach a label anchored at
+  the point.
+- `remove_point(name)` removes a named point marker.
+- The marker is added to the outer group at its local position (not the data
+  group), so its `size` is not stretched by the data group's non-uniform scale.
+
+> **Note:** `data_group` applies a non-uniform scale (it stretches data onto the
+> plot's `size`), so it is ideal for paths/lines. The `point()` helper places
+> shaded markers in the outer group (undistorted); for other shaded entities
+> place them with `to_world()` instead.
+
+See `py/examples/viz/plotting/cs_annotations.py` for a full example.
 
 ## Live plots (trails)
 
@@ -201,7 +305,7 @@ viz.flush()
 - `position`, `normal`, and `up` accept tuples or `Point()`/`Direction()`
   objects.
 
-See `py/examples/viz/demo_pendulum_plot.py` for a full pendulum example.
+See `py/examples/viz/plotting/pendulum_plot.py` for a full pendulum example.
 
 ## Updating in place
 

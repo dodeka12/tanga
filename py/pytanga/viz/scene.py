@@ -19,6 +19,7 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraConfig
 from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
+from ._types import TransformRotation, Triple, Vec3
 from ._viz_styles import VizStyles, make_styles
 
 # ── Configuration ──────────────────────────────────────────
@@ -149,7 +150,7 @@ class Scene:
             merged["color"] = props["color"]
         if props.get("opacity") is not None:
             merged["opacity"] = props["opacity"]
-        return VizSceneObject(
+        node = VizSceneObject(
             obj.id,
             obj.data,
             merged,
@@ -158,6 +159,13 @@ class Scene:
             props=props,
             styles_map=self.styles.kind,
         )
+        # An SdfGroup mutated directly through `ref.entity.set_member_transform()`
+        # must mark its node's content dirty; wire a change hook for that.
+        from .sdf.group import SdfGroup
+
+        if isinstance(node.entity, SdfGroup):
+            node.entity.on_change = lambda: node.mark("content")
+        return node
 
     def _make_overlay_node(self, obj: SceneObject) -> VizOverlayObject:
         """Build an overlay-layer node from a label/annotation/title object."""
@@ -359,6 +367,37 @@ class Scene:
         node = self._nodes.get(entity_id)
         if isinstance(node, VizSceneObject):
             node.set_entity(entity)
+
+    def update_sdf_group_member(
+        self,
+        object_id: str,
+        member: int | str,
+        *,
+        position: Vec3 = None,
+        rotation: TransformRotation = None,
+        scale: Triple = None,
+    ) -> None:
+        """Update an ``SdfGroup`` member's runtime transform.
+
+        *member* is either the member's 0-based index or its ``id``. Marks the
+        node's ``content`` aspect dirty so the next flush pushes the updated
+        member transform (the frontend updates the member uniform and resizes
+        the proxy box in place).
+        """
+        from .sdf.group import SdfGroup
+
+        node = self._nodes.get(object_id)
+        if node is None:
+            raise KeyError(f"Object {object_id!r} not found")
+        if not isinstance(node, VizSceneObject):
+            raise TypeError(f"Object {object_id!r} is not a scene object")
+        group = node.entity
+        if not isinstance(group, SdfGroup):
+            raise TypeError(f"Object {object_id!r} is not an SdfGroup")
+        group.set_member_transform(
+            member, position=position, rotation=rotation, scale=scale
+        )
+        node.mark("content")
 
     def remove(self, object_id: str) -> None:
         """Mark an object (or group node) for removal in the next flush.

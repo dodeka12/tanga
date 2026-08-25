@@ -36,6 +36,12 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
+from pytanga.viz._types import Rotation, Vec3, _as_vec3
+
+#: A position argument for the constructors: a Point/Direction entity or a
+#: ``(x, y, z)`` 3-sequence.
+Position = Vec3
+
 
 @dataclass
 class SdfNode:
@@ -50,6 +56,8 @@ class SdfNode:
         combine: Optional fold mode (``union``/``intersection``/``subtract``)
             used when this node is a child of a ``group`` node. ``None`` means
             the default (``union``).
+        id: Optional name, so a node (e.g. an :class:`SdfGroup` member) can be
+            referenced by string instead of by index.
     """
 
     kind: str
@@ -57,6 +65,7 @@ class SdfNode:
     transform: dict[str, Any] | None = None
     children: list["SdfNode"] | None = None
     combine: str | None = None
+    id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-ready dict, omitting empty sections."""
@@ -69,6 +78,8 @@ class SdfNode:
             result["children"] = [c.to_dict() for c in self.children]
         if self.combine:
             result["combine"] = self.combine
+        if self.id:
+            result["id"] = self.id
         return result
 
 
@@ -76,8 +87,9 @@ def primitive(
     kind: str,
     params: dict[str, Any] | None = None,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
     **extra_params: Any,
 ) -> SdfNode:
     """Build a primitive node with an optional world transform.
@@ -85,37 +97,46 @@ def primitive(
     Args:
         kind: The primitive kind (see module docstring).
         params: Typed primitive parameters.
-        position: World-space translation to apply to the primitive.
-        rotation: ``(axis, angle_radians)`` world-space rotation (align the
-            primitive's canonical axis onto the target direction).
+        id: Optional name for the node (e.g. to reference an ``SdfGroup``
+            member by string instead of by index).
+        position: World-space translation — a Point/Direction entity or a
+            ``(x, y, z)`` 3-sequence.
+        rotation: World-space rotation — a ``Rotor`` entity or an
+            ``(axis, angle_radians)`` pair (aligns the primitive's canonical
+            axis onto the target direction).
         **extra_params: Additional typed parameters folded into ``params``.
     """
     merged: dict[str, Any] = dict(params or {})
     merged.update(extra_params)
     transform = _make_transform(position=position, rotation=rotation)
-    return SdfNode(kind=kind, params=merged, transform=transform)
+    return SdfNode(kind=kind, params=merged, transform=transform, id=id)
 
 
-def combine(op: str, *children: SdfNode) -> SdfNode:
+def combine(op: str, *children: SdfNode, id: str | None = None) -> SdfNode:
     """Build a combinator node folding the child trees."""
-    return SdfNode(kind=op, children=list(children))
+    return SdfNode(kind=op, children=list(children), id=id)
 
 
-def group(children: list[SdfNode] | tuple[SdfNode, ...]) -> SdfNode:
+def group(
+    children: list[SdfNode] | tuple[SdfNode, ...],
+    *,
+    id: str | None = None,
+) -> SdfNode:
     """Build a ``group`` node folding its children in order.
 
     Unlike :func:`combine` (one op for every child), a ``group`` folds each
     child using that child's own ``combine`` mode (``union`` / ``intersection``
     / ``subtract``). Children are tagged by setting ``SdfNode.combine``.
     """
-    return SdfNode(kind="group", children=list(children))
+    return SdfNode(kind="group", children=list(children), id=id)
 
 
 def bound_box(
     half_extents: tuple[float, float, float],
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Build a finite clip box (``bound``) for an infinite entity."""
     transform = _make_transform(position=position, rotation=rotation)
@@ -123,13 +144,14 @@ def bound_box(
         kind="bound",
         params={"halfExtents": list(half_extents)},
         transform=transform,
+        id=id,
     )
 
 
 def _make_transform(
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> dict[str, Any] | None:
     """Build a transform dict, omitting identity components (returns ``None``
     when both position and rotation are absent/identity)."""
@@ -137,9 +159,9 @@ def _make_transform(
         return None
     transform: dict[str, Any] = {}
     if position is not None:
-        transform["position"] = list(position)
+        transform["position"] = list(_as_vec3(position))
     if rotation is not None:
-        axis, angle = rotation
+        axis, angle = _as_rotation(rotation)
         transform["rotation"] = {"axis": list(axis), "angle": float(angle)}
     return transform or None
 
@@ -156,22 +178,25 @@ def _make_transform(
 def sphere(
     radius: float,
     *,
-    position: tuple[float, float, float] | None = None,
+    id: str | None = None,
+    position: Position = None,
 ) -> SdfNode:
     """Filled sphere of ``radius`` centred at ``position``."""
-    return primitive("sphere", {"radius": float(radius)}, position=position)
+    return primitive("sphere", {"radius": float(radius)}, id=id, position=position)
 
 
 def ellipsoid(
     radii: tuple[float, float, float],
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Ellipsoid with per-axis half radii ``radii`` = (x, y, z)."""
     return primitive(
         "ellipsoid",
         {"radii": [float(v) for v in radii]},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -180,13 +205,15 @@ def ellipsoid(
 def box(
     half_extents: tuple[float, float, float],
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Axis-aligned box with half extents ``half_extents`` = (x, y, z)."""
     return primitive(
         "box",
         {"halfExtents": [float(v) for v in half_extents]},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -196,13 +223,15 @@ def round_box(
     half_extents: tuple[float, float, float],
     radius: float,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Rounded box with half extents ``half_extents`` and corner rounding ``radius``."""
     return primitive(
         "roundBox",
         {"halfExtents": [float(v) for v in half_extents], "radius": float(radius)},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -211,13 +240,15 @@ def round_box(
 def cylinder(
     radius: float,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Infinite cylinder along +Y of ``radius`` (clip with an explicit ``bound``)."""
     return primitive(
         "cylinder",
         {"radius": float(radius)},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -227,13 +258,15 @@ def capped_cylinder(
     half_height: float,
     radius: float,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Capped cylinder along +Y with half height ``half_height`` and ``radius``."""
     return primitive(
         "cappedCylinder",
         {"halfHeight": float(half_height), "radius": float(radius)},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -242,13 +275,15 @@ def capped_cylinder(
 def cone(
     angle: float,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Infinite cone around +Y with opening half-angle ``angle`` (radians)."""
     return primitive(
         "cone",
         {"angle": float(angle)},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -259,8 +294,9 @@ def capped_cone(
     radius1: float,
     radius2: float,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Capped cone along +Y: apex radius ``radius1``, base radius ``radius2``."""
     return primitive(
@@ -270,6 +306,7 @@ def capped_cone(
             "radius1": float(radius1),
             "radius2": float(radius2),
         },
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -279,13 +316,15 @@ def torus(
     main_radius: float,
     tube_radius: float,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Torus in the XZ plane with major radius ``main_radius`` and tube ``tube_radius``."""
     return primitive(
         "torus",
         {"mainRadius": float(main_radius), "tubeRadius": float(tube_radius)},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -295,8 +334,9 @@ def plane(
     normal: tuple[float, float, float],
     offset: float = 0.0,
     *,
-    position: tuple[float, float, float] | None = None,
-    rotation: tuple[tuple[float, float, float], float] | None = None,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
 ) -> SdfNode:
     """Infinite plane with unit ``normal`` and signed ``offset`` (needs a bound).
 
@@ -306,6 +346,7 @@ def plane(
     return primitive(
         "plane",
         {"normal": [float(v) for v in normal], "offset": float(offset)},
+        id=id,
         position=position,
         rotation=rotation,
     )
@@ -316,6 +357,8 @@ def capsule(
     point_b: Any,
     radius_a: float = 0.0,
     radius_b: float = 0.0,
+    *,
+    id: str | None = None,
 ) -> SdfNode:
     """Two-point capsule between ``point_a``/``point_b`` with per-end radii."""
     midpoint, rotation, half = _two_point_frame(point_a, point_b)
@@ -327,17 +370,19 @@ def capsule(
             "radiusA": float(radius_a),
             "radiusB": float(radius_b),
         },
+        id=id,
         position=midpoint,
         rotation=rotation,
     )
 
 
-def segment(point_a: Any, point_b: Any) -> SdfNode:
+def segment(point_a: Any, point_b: Any, *, id: str | None = None) -> SdfNode:
     """Round-edged line segment between ``point_a`` and ``point_b``."""
     midpoint, rotation, half = _two_point_frame(point_a, point_b)
     return primitive(
         "segment",
         {"a": [0.0, -half, 0.0], "b": [0.0, half, 0.0]},
+        id=id,
         position=midpoint,
         rotation=rotation,
     )
@@ -374,11 +419,29 @@ def _two_point_frame(
     return midpoint, rotation, half
 
 
-def _as_vec3(v: Any) -> tuple[float, float, float]:
-    """Coerce a Point/Direction-like or 3-sequence to a (x, y, z) tuple."""
-    if hasattr(v, "x"):
-        return (float(v.x), float(v.y), float(v.z))
-    return (float(v[0]), float(v[1]), float(v[2]))
+def _as_rotation(value: Any) -> tuple[tuple[float, float, float], float]:
+    """Coerce a rotation to an ``(axis, angle_radians)`` tuple.
+
+    Accepts a :class:`~pytanga.geometry.Rotor` (``angle`` + ``axis``) or an
+    ``(axis, angle)`` pair (the axis may be a 3-sequence or a Direction/Point).
+    A :class:`~pytanga.geometry.GeneralRotor` with a displaced rotation centre
+    cannot be represented by a single axis-angle transform and raises.
+    """
+    angle = getattr(value, "angle", None)
+    axis = getattr(value, "axis", None)
+    if angle is not None and axis is not None:
+        # Rotor-like (Rotor / GeneralRotor).
+        origin = getattr(value, "origin", None)
+        if origin is not None:
+            ox, oy, oz = _as_vec3(origin)
+            if abs(ox) > 1e-12 or abs(oy) > 1e-12 or abs(oz) > 1e-12:
+                raise TypeError(
+                    "A rotation with a displaced origin (GeneralRotor) cannot be "
+                    "used as an SDF transform; pass a Rotor or an (axis, angle) pair"
+                )
+        return (_as_vec3(axis), float(angle))
+    axis, angle = value
+    return (_as_vec3(axis), float(angle))
 
 
 def _normalize(v: tuple[float, float, float]) -> tuple[float, float, float]:

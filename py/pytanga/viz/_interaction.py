@@ -160,6 +160,8 @@ class InteractionConfig:
             (e.g. ``"#ffff44"``).  ``None`` = no hover highlight.
         hover_scale: Uniform scale multiplier on hover
             (e.g. ``1.5``).  ``None`` = no hover scaling.
+        hover_opacity: Opacity override on hover (0..1).  ``None`` = no
+            opacity change on hover.
     """
 
     enabled: bool = False
@@ -167,6 +169,7 @@ class InteractionConfig:
     throttle_ms: int = 50
     hover_emissive: str | None = None
     hover_scale: float | None = None
+    hover_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to JSON-ready dict."""
@@ -179,6 +182,8 @@ class InteractionConfig:
             result["hover_emissive"] = self.hover_emissive
         if self.hover_scale is not None:
             result["hover_scale"] = self.hover_scale
+        if self.hover_opacity is not None:
+            result["hover_opacity"] = self.hover_opacity
         return result
 
 

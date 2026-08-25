@@ -1,8 +1,8 @@
 # Animation
 
 Two complementary animation strategies are available. See the example scripts
-[`demo_animation_orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_orbit.py) and
-[`demo_animation_timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_timeline.py)
+[`orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/orbit.py) and
+[`timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/timeline.py)
 for runnable demonstrations.
 
 ## Frame Streaming (Python-Driven)

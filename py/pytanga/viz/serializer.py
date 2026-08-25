@@ -93,6 +93,17 @@ def _dispatch_entity(
     :func:`serialize_entity` (backward-compat trampoline) and the scene-graph
     node serializers in ``_nodes.py``.
     """
+    # ── SDF-styled entities → per-object ray-marched proxy objects ──
+    if _is_sdf_styled(props, kind, styles_map):
+        from .sdf.serializer import serialize_entity_local
+
+        body = serialize_entity_local(entity, kind, props, styles_map=styles_map)
+        # ``serialize_entity_local`` returns a full object shape; the caller
+        # (serialize_entity / _nodes.serialize) owns the id/layer envelope.
+        body.pop("id", None)
+        body.pop("layer", None)
+        return body
+
     # ── Entities ──
     if isinstance(entity, PointPath):
         return _serialize_point_path(entity, props, kind=kind, styles_map=styles_map)
@@ -154,6 +165,27 @@ def _dispatch_entity(
         return _serialize_general_rotor(entity, props, kind=kind, styles_map=styles_map)
 
     raise TypeError(f"Unknown entity type: {kind}")
+
+
+def _is_sdf_styled(
+    props: Dict[str, Any],
+    kind: str,
+    styles_map: Dict[str, Any] | None,
+) -> bool:
+    """Return ``True`` when *entity* should render as a per-object SDF proxy.
+
+    Detects the opt-in either from a per-entity :class:`~pytanga.viz.SdfStyle`
+    in ``props`` or from a per-kind :class:`~pytanga.viz.SdfStyle` default in
+    ``styles_map``.
+    """
+    from ._styles import SdfStyle
+
+    if isinstance(props.get("style"), SdfStyle):
+        return True
+    if styles_map is not None:
+        entry = styles_map.get(kind) if hasattr(styles_map, "get") else None
+        return isinstance(entry, SdfStyle)
+    return False
 
 
 def serialize_scene_update(

@@ -126,7 +126,7 @@ the smallest-singular-vector solution is returned (the right singular vector of
 the least singular value) — the standard approach for fitting entities from an
 incidence constraint such as `P ^ L = 0`.  With an explicit `rhs` (an `MV`
 over the output mask), `numpy.linalg.lstsq` is used, requiring a non-stacked
-expression.  See `py/examples/expression/line_fitting_p3.py`.
+expression.  See `py/examples/ga/expression/line_fitting_p3.py`.
 
 ## Singular-value decomposition (`svd`)
 

@@ -52,8 +52,14 @@ config = InteractionConfig(
     enabled=True,
     triggers=[...],
     throttle_ms=40,   # max rate for drag_move / scroll events
+    hover_emissive="#ffff44",  # optional glow color on hover
+    hover_opacity=0.5,         # optional opacity override on hover
 )
 ```
+
+Optional hover feedback fields (`hover_emissive` glow color, `hover_scale`
+uniform scale multiplier, `hover_opacity` opacity override) default to no
+change when unset.
 
 ### Registering on a Specific Entity
 
@@ -234,4 +240,4 @@ viz.run()
 ## See Also
 
 - [Active Elements](../scene-objects/active-elements/index.md) — simplified high-level API for common interactive objects
-- [`demo_drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_drag_point.py) — full working example with four drag modes and projection lines
+- [`drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/drag_point.py) — full working example with four drag modes and projection lines

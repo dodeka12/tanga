@@ -66,7 +66,7 @@ opens it in a browser, and flushes on exit — the same ergonomics as the main
     In Jupyter, `show()` renders inline instead of opening a browser tab — use
     `viz.display_row((overview, None), (detail, None))` for side-by-side views.
 
-Runnable example: [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_multi_scene.py).
+Runnable example: [`multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/scenes/multi_scene.py).
 
 ## Use Cases
 
@@ -120,41 +120,79 @@ Runnable example: [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob
 
 ## Example Scripts
 
-All viz examples live under `py/examples/viz/` and can be run with:
+All viz examples live under `py/examples/viz/`, grouped by topic, and can be
+run with:
 
 ```
-uv run python py/examples/viz/<script>.py
+uv run python py/examples/viz/<folder>/<script>.py
 ```
 
-| Script | Topic |
-|--------|-------|
-| [`demo_all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_all_entities.py) | All entity types in one scene |
-| [`demo_labels.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_labels.py) | Labels with custom styling, dynamic update, removal |
-| [`demo_mv_visualization.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_mv_visualization.py) | MV input from PGA3 and N3, OPNS vs IPNS |
-| [`demo_camera_config.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_config.py) | Auto-fit, explicit 3D, 2D, and plane-based camera modes |
-| [`demo_camera_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_2d.py) | `View2DConfig` with min/max world bounds |
-| [`demo_camera_3d_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_3d_plane.py) | `View3dConfig` with a tilted plane and a custom `up` |
-| [`demo_camera_axes_grid_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_camera_axes_grid_2d.py) | `View2DConfig` + `Axes2D` + `Grid` basics in 2D |
-| [`demo_axes_custom.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_axes_custom.py) | Custom `Axis` intervals, value labels, and `Grid` |
-| [`demo_custom_defaults.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_custom_defaults.py) | Global default styles, per-call overrides |
-| [`demo_operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_operators.py) | Rotor, Translator, Motor, Dilator visualization |
-| [`demo_animation_orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_orbit.py) | Frame-by-frame animation at ~60 FPS |
-| [`demo_animation_timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_timeline.py) | Keyframe timeline with fade-in and move |
-| [`demo_scene_graph.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_scene_graph.py) | `VizGroup` + `VizObjectRef` transforms and compound animation |
-| [`demo_title_annotation.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_title_annotation.py) | Title overlay and Markdown + LaTeX annotation |
-| [`demo_screenshot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_screenshot.py) | Programmatic PNG screenshot |
-| [`demo_multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_multi_scene.py) | Two named scenes, each opened in its own browser tab via context managers |
-| [`demo_export_html.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_html.py) | Self-contained HTML and glTF export |
-| [`demo_export_figure.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_figure.py) | Presentation figure export with `FigureStyle` |
-| [`demo_animated_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animated_export.py) | Animated HTML export with JS playback engine |
-| [`demo_texture_label_sphere.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_sphere.py) | Plain text, KaTeX, and mixed content on spheres |
-| [`demo_texture_label_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_plane.py) | Align modes (stretch/fit/repeat) and mixed content on planes |
-| [`two_spheres_interact.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_spheres_interact.py) | `VisualizerApp` with IPNS spheres, slider, dropdown, reset button |
-| [`demo_drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_drag_point.py) | Interactive point dragging with four constraint planes (low-level API) |
-| [`demo_act_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_act_point.py) | Interactive point dragging with `ActPoint` convenience class |
-| [`two_body_gravity.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/two_body_gravity.py) | Gravitational two-body simulation using `Point`/`Direction` arithmetic |
+### Camera
 
-Jupyter notebook examples live under `py/examples/jupyter/` — see
+- [`camera/2d_view.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/camera/2d_view.py) — `View2DConfig` with min/max world bounds
+- [`camera/3d_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/camera/3d_plane.py) — `View3dConfig` with a tilted plane and a custom `up`
+- [`camera/modes.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/camera/modes.py) — auto-fit, explicit 3D, 2D, and plane-based camera modes
+- [`camera/fit_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/camera/fit_2d.py) — 2D fit-camera keeps the axes/grid undistorted
+- [`camera/axes_grid_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/camera/axes_grid_2d.py) — `View2DConfig` + `Axes2D` + `Grid` basics in 2D
+
+### Plotting
+
+- [`plotting/axes_custom.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/plotting/axes_custom.py) — custom `Axis` intervals, value labels, and `Grid`
+- [`plotting/cs_annotations.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/plotting/cs_annotations.py) — annotations in a `CoordinateSystem` data frame
+- [`plotting/log_plot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/plotting/log_plot.py) — logarithmic plotting with `CoordinateSystem`
+- [`plotting/plot_3d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/plotting/plot_3d.py) — a plot on a tilted background plane in 3D
+- [`plotting/pendulum_plot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/plotting/pendulum_plot.py) — a swinging pendulum with a live angle-vs-time plot
+
+### Entities
+
+- [`entities/all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/all_entities.py) — all entity types in one scene
+- [`entities/viz_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/viz_entities.py) — the visualization-only `Cylinder` and `Arc` entities
+- [`entities/operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/operators.py) — Rotor, Translator, Motor, Dilator visualization
+- [`entities/multivector.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/multivector.py) — MV input from PGA3 and N3, OPNS vs IPNS
+
+### Labels
+
+- [`labels/basic.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/basic.py) — labels with custom styling, dynamic update, removal
+- [`labels/texture_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/texture_plane.py) — align modes (stretch/fit/repeat) and mixed content on planes
+- [`labels/texture_sphere.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/texture_sphere.py) — plain text, KaTeX, and mixed content on spheres
+- [`labels/title_annotation.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/title_annotation.py) — title overlay and Markdown + LaTeX annotation
+
+### Animation
+
+- [`animation/orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/orbit.py) — frame-by-frame animation at ~60 FPS
+- [`animation/timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/timeline.py) — keyframe timeline with fade-in and move
+- [`animation/nested_sweep.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/nested_sweep.py) — nested animation loops honoring Ctrl+C
+- [`animation/point_path_trail.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/point_path_trail.py) — moving point with a color-gradient trail
+- [`animation/double_pendulum.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/double_pendulum.py) — a chaotic double pendulum from nested `VizGroup`s
+- [`animation/two_body_gravity.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/two_body_gravity.py) — gravitational two-body simulation using `Point`/`Direction` arithmetic
+
+### Interaction
+
+- [`interaction/drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/drag_point.py) — interactive point dragging with four constraint planes (low-level API)
+- [`interaction/act_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/act_point.py) — interactive point dragging with `ActPoint` convenience class
+- [`interaction/two_spheres_interact.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/two_spheres_interact.py) — `VisualizerApp` with IPNS spheres, slider, dropdown, reset button
+
+### Scenes
+
+- [`scenes/scene_graph.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/scenes/scene_graph.py) — `VizGroup` + `VizObjectRef` transforms and compound animation
+- [`scenes/nested_groups.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/scenes/nested_groups.py) — nested `VizGroup` hierarchies
+- [`scenes/multi_scene.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/scenes/multi_scene.py) — two named scenes, each opened in its own browser tab via context managers
+- [`scenes/split_view.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/scenes/split_view.py) — a single page showing multiple scenes in split panes
+
+### Export
+
+- [`export/html_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/html_export.py) — self-contained HTML and glTF export
+- [`export/figure.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/figure.py) — presentation figure export with `FigureStyle`
+- [`export/animated.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/animated.py) — animated HTML export with JS playback engine
+- [`export/animated_camera_2d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/animated_camera_2d.py) — 2D animated export with a moving camera
+- [`export/animated_camera_3d.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/animated_camera_3d.py) — 3D animated export with a moving camera
+- [`export/screenshot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/screenshot.py) — programmatic PNG screenshot
+
+### Styling
+
+- [`styling/custom_defaults.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/styling/custom_defaults.py) — global default styles, per-call overrides
+
+Jupyter notebook examples live under `py/examples/ga/jupyter/` — see
 [Use Cases — Notebooks](use-cases-notebooks.md).
 
 ## Dependencies

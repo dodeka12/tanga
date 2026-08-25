@@ -278,14 +278,14 @@ cage doesn't obscure the texture. Explicit user styles always override this.
 
 | Script | Topic |
 |--------|-------|
-| [`demo_texture_label_sphere.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_sphere.py) | Plain text, KaTeX, and mixed content on spheres |
-| [`demo_texture_label_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_texture_label_plane.py) | Align modes (stretch/fit/repeat) and mixed content on planes |
+| [`texture_sphere.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/texture_sphere.py) | Plain text, KaTeX, and mixed content on spheres |
+| [`texture_plane.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/texture_plane.py) | Align modes (stretch/fit/repeat) and mixed content on planes |
 
 Run with:
 
 ```
-uv run python py/examples/viz/demo_texture_label_sphere.py
-uv run python py/examples/viz/demo_texture_label_plane.py
+uv run python py/examples/viz/labels/texture_sphere.py
+uv run python py/examples/viz/labels/texture_plane.py
 ```
 
 ## Graceful Fallback

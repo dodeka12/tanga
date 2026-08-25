@@ -37,7 +37,7 @@ from ._style_dict import (
     _resolve_tex_label_style,
 )
 from ._timeline import Timeline
-from ._types import SceneEntity, VizInputType
+from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._utils import _is_jupyter
 from .camera import (
     CameraConfig,
@@ -671,6 +671,26 @@ class Visualizer(_JupyterDisplayMixin):
         entity: SceneEntity = self._resolve(obj)
         self._scenes[""].update_entity(entity_id, entity)
 
+    def update_sdf_group_member(
+        self,
+        group_id: str,
+        member: int | str,
+        *,
+        position: Vec3 = None,
+        rotation: TransformRotation = None,
+        scale: Triple = None,
+    ) -> None:
+        """Update an :class:`~pytanga.viz.sdf.SdfGroup` member's runtime transform.
+
+        The member is addressed by *member* — either its 0-based index or its
+        ``id``. Only the provided components are changed. Call :meth:`flush` to
+        push the update (the member can then be animated frame-by-frame in an
+        ``animate`` loop).
+        """
+        self._scenes[""].update_sdf_group_member(
+            group_id, member, position=position, rotation=rotation, scale=scale
+        )
+
     def update_label(
         self,
         object_id: str,
@@ -948,9 +968,7 @@ class Visualizer(_JupyterDisplayMixin):
             modifiers: Modifiers that must be held, default ``[KeyModifier.CTRL]``
                 (i.e. Ctrl+Q).
         """
-        self._set_server_stop_key(
-            "", enabled=enabled, key=key, modifiers=modifiers
-        )
+        self._set_server_stop_key("", enabled=enabled, key=key, modifiers=modifiers)
 
     def _set_server_stop_key(
         self,
@@ -1009,9 +1027,7 @@ class Visualizer(_JupyterDisplayMixin):
         job of :meth:`wait` / the ``atexit`` hook.
         """
         if scope == "server":
-            logger.info(
-                "Browser requested full server stop (scene %r)", scene_name
-            )
+            logger.info("Browser requested full server stop (scene %r)", scene_name)
             shutdown = getattr(self, "_shutdown_requested", None)
             if shutdown is not None:
                 shutdown.set()
@@ -1191,6 +1207,16 @@ class Visualizer(_JupyterDisplayMixin):
 
         # Viz-level drawables — pass through
         if isinstance(obj, SceneEntity):
+            return obj  # type: ignore[return-value]
+
+        # SDF drawables (Composed / SdfNode / SdfGroup) — pass through
+        # unchanged; they are serialized by the SDF path when combined with an
+        # `SdfStyle`.
+        from .sdf.composed import Composed as _Composed
+        from .sdf.group import SdfGroup as _SdfGroup
+        from .sdf.primitives import SdfNode as _SdfNode
+
+        if isinstance(obj, (_Composed, _SdfNode, _SdfGroup)):
             return obj  # type: ignore[return-value]
 
         # Geo entities and operators — pass through
@@ -2453,6 +2479,7 @@ class Visualizer(_JupyterDisplayMixin):
                 animation.to_dict(),
                 figure_style=resolved.to_dict(),
                 figure_config=fig_config.to_dict(),
+                scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
             )
         from pytanga.viz.export._figure_html import render_figure

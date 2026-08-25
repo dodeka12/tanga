@@ -29,6 +29,7 @@ from pytanga.viz.export._bootstrap import (
     js_animation_data_init,
     js_animation_state,
     js_annotation_panel,
+    js_apply_camera,
     js_autofit_camera,
     js_controls_html,
     js_controls_ui,
@@ -49,6 +50,7 @@ def render_export_animated_figure(
     *,
     figure_style: dict[str, Any] | None = None,
     figure_config: dict[str, Any] | None = None,
+    scene_config: dict[str, Any] | None = None,
     anim_style: dict[str, Any] | None = None,
 ) -> str:
     """Render an animated figure HTML snippet for embedding.
@@ -58,6 +60,8 @@ def render_export_animated_figure(
             from ``AnimationRecording.to_dict()``.
         figure_style: ``FigureStyle.to_dict()`` result.
         figure_config: ``FigureConfig.to_dict()`` result.
+        scene_config: ``SceneConfig.to_dict()`` result (background, space_dim,
+            camera).
         anim_style: ``AnimStyle.to_dict()`` result with ``fps``, ``loop``,
             ``show_controls``, ``compress`` keys.
     """
@@ -87,7 +91,14 @@ def render_export_animated_figure(
 
     bootstrap = generate_bootstrap_js(
         _build_animated_figure_adapter(
-            fig_id, recording_data, fps, loop, fig_style, fig_cfg, show_controls
+            fig_id,
+            recording_data,
+            fps,
+            loop,
+            fig_style,
+            fig_cfg,
+            show_controls,
+            scene_config or {},
         )
     )
 
@@ -199,14 +210,16 @@ def render_export_animated_html(
     )
 
 
-def _js_frame0_bootstrap(autofit_js: str) -> str:
-    """Reify frame 0 (await ``_playFrame(0)``), then auto-fit the camera.
+def _js_frame0_bootstrap(autofit_js: str, camera_apply_js: str = "") -> str:
+    """Apply the initial camera, reify frame 0, then auto-fit.
 
-    The auto-fit JS must run after frame-0 meshes exist; ``js_autofit_camera``
-    is synchronous, so it is embedded inside this async IIFE.
+    The initial camera is applied before ``_playFrame(0)`` so a per-frame
+    camera (when present) can override it.  The auto-fit JS must run after
+    frame-0 meshes exist; ``js_autofit_camera`` is synchronous, so it is
+    embedded inside this async IIFE.
     """
     return f"""(async () => {{
-    await _playFrame(0);
+{camera_apply_js}    await _playFrame(0);
 {autofit_js}}})();"""
 
 
@@ -221,6 +234,7 @@ def _build_animated_figure_adapter(
     figure_style: dict[str, Any],
     figure_config: dict[str, Any],
     show_controls: bool,
+    scene_config: dict[str, Any],
 ) -> str:
     """Generate the JS bootstrap adapter for an animated figure snippet."""
     w = figure_style.get("width", 800)
@@ -228,9 +242,12 @@ def _build_animated_figure_adapter(
     responsive = figure_style.get("responsive", False)
     bg = figure_style.get("background", "#1a1a2e")
     auto_rotate = figure_style.get("auto_rotate", False)
-    space_dim = figure_style.get("space_dim", 3)
+    space_dim = scene_config.get("space_dim", 3)
     show_title = figure_style.get("show_title", True)
     show_annotation = figure_style.get("show_annotation", True)
+
+    cam_cfg = scene_config.get("camera") or {}
+    cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
     title_raw = figure_config.get("title", "")
     annotation_raw = figure_config.get("annotation", "")
@@ -242,7 +259,7 @@ def _build_animated_figure_adapter(
         mesh_map_var="figMeshMap",
         camera_var="figCamera",
         controls_var="figControls",
-        cam_explicit=False,
+        cam_explicit=cam_explicit,
         space_dim=space_dim,
     )
 
@@ -259,9 +276,15 @@ def _build_animated_figure_adapter(
         "",
         js_imports(),
         "",
+        js_apply_camera(),
+        "",
         f"const figContainer = document.getElementById('{fig_id}');",
+        f"const sceneConfig = {json.dumps(scene_config)};",
         get_anim_data_js(),
-        js_animation_data_init(fps, extra_map_vars="\nconst labelObjects = new Map();\nconst figRegistry = new Map();"),
+        js_animation_data_init(
+            fps,
+            extra_map_vars="\nconst labelObjects = new Map();\nconst figRegistry = new Map();",
+        ),
         "",
         js_animation_state(),
         "",
@@ -276,9 +299,6 @@ def _build_animated_figure_adapter(
             scene_var="figScene",
             width_expr=dim_w,
             height_expr=dim_h,
-            cam_fov=50,
-            cam_pos=(8, 6, 10),
-            cam_target=(0, 0, 0),
             auto_rotate=auto_rotate,
             space_dim=space_dim,
             explicit_mouse_buttons=True,
@@ -303,9 +323,22 @@ def _build_animated_figure_adapter(
         js_reconcile_frame(
             scene_var="figScene",
             label_objects_map_var="labelObjects",
+            camera_var="figCamera",
+            controls_var="figControls",
+            camera_size_w_expr=dim_w,
+            camera_size_h_expr=dim_h,
         ),
         "",
-        _js_frame0_bootstrap(autofit_js),
+        _js_frame0_bootstrap(
+            autofit_js,
+            camera_apply_js=(
+                "    applyCameraConfig(figCamera, figControls, sceneConfig.camera, "
+                + dim_w
+                + ", "
+                + dim_h
+                + ");\n"
+            ),
+        ),
         "",
         js_annotation_panel(
             annotation_md=annotation_raw,
@@ -348,11 +381,6 @@ def _build_animated_fullpage_adapter(
     annotation_raw = scene_config.get("annotation", "")
 
     cam_cfg = scene_config.get("camera") or {}
-    cam_pos = cam_cfg.get("position", [8, 6, 10])
-    cam_target = cam_cfg.get("target", [0, 0, 0])
-    cam_fov = cam_cfg.get("fov", 50)
-    cam_near = cam_cfg.get("near", 0.1)
-    cam_far = cam_cfg.get("far", 1000)
     cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
     loop_js = "true" if loop else "false"
@@ -371,9 +399,15 @@ def _build_animated_fullpage_adapter(
         "",
         js_imports(),
         "",
+        js_apply_camera(),
+        "",
         f"const figContainer = document.getElementById('{fig_id}');",
+        f"const sceneConfig = {json.dumps(scene_config)};",
         get_anim_data_js(),
-        js_animation_data_init(fps, extra_map_vars="\nconst labelObjects = new Map();\nconst figRegistry = new Map();"),
+        js_animation_data_init(
+            fps,
+            extra_map_vars="\nconst labelObjects = new Map();\nconst figRegistry = new Map();",
+        ),
         "",
         js_animation_state(),
         "",
@@ -388,11 +422,6 @@ def _build_animated_fullpage_adapter(
             scene_var="figScene",
             width_expr="window.innerWidth",
             height_expr="window.innerHeight",
-            cam_fov=cam_fov,
-            cam_pos=(cam_pos[0], cam_pos[1], cam_pos[2]),
-            cam_target=(cam_target[0], cam_target[1], cam_target[2]),
-            cam_near=cam_near,
-            cam_far=cam_far,
             auto_rotate=False,
             space_dim=space_dim,
             explicit_mouse_buttons=True,
@@ -415,9 +444,18 @@ def _build_animated_fullpage_adapter(
         js_reconcile_frame(
             scene_var="figScene",
             label_objects_map_var="labelObjects",
+            camera_var="figCamera",
+            controls_var="figControls",
+            camera_size_w_expr="window.innerWidth",
+            camera_size_h_expr="window.innerHeight",
         ),
         "",
-        _js_frame0_bootstrap(autofit_js),
+        _js_frame0_bootstrap(
+            autofit_js,
+            camera_apply_js=(
+                "    applyCameraConfig(figCamera, figControls, sceneConfig.camera, window.innerWidth, window.innerHeight);\n"
+            ),
+        ),
         "",
         js_annotation_panel(
             annotation_md=annotation_raw,
