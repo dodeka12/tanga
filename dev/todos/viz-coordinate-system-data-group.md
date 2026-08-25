@@ -276,10 +276,10 @@ code-symmetry benefit is worth the refactor.
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz -q` green (updated + new coordinate-system tests).
-- [ ] `uv run pytest -q` full suite green.
-- [ ] `uv run ruff check` and `uv run ruff format --check` on the touched files.
-- [ ] `node --check` on the viz templates is **not** needed (no JS changes), but a
+- [x] `uv run pytest py/tests/viz -q` green (updated + new coordinate-system tests).
+- [x] `uv run pytest -q` full suite green.
+- [x] `uv run ruff check` and `uv run ruff format --check` on the touched files.
+- [x] `node --check` on the viz templates is **not** needed (no JS changes), but a
       headless smoke test should confirm `full_state()` emits the CS group → inner
       group → point-path hierarchy in DFS pre-order with correct `parent_id`s.
 - [ ] Manual browser check (pending): `demo_log_plot.py` and `demo_plot_3d.py`

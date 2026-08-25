@@ -315,7 +315,6 @@ class TestCoordinateSystemScales:
         assert isinstance(cs.xscale, LinearScale)
 
 
-
 class TestCoordinateSystemDataGroup:
     def test_data_group_is_child_of_group(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
@@ -451,4 +450,3 @@ class TestCoordinateSystemLines:
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         cs.remove_vline("does-not-exist")  # should not raise
         cs.remove_hline("does-not-exist")
-
