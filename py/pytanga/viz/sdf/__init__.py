@@ -12,20 +12,8 @@ frontend assets live alongside under ``templates/sdf/``.
 
 from __future__ import annotations
 
-from .algebra_embedding import algebra_name, embed_entity_mv, embed_src
-from .calibration import (
-    calibrate_scale,
-    distance_value,
-    evaluate_sdf,
-    find_surface_point,
-    gradient,
-    gradient_norm,
-    scale_at,
-)
 from .composed import Composed
-from .distance import DistanceFunction, DistanceFunctionMeta
 from .lights import DirectionalLight, Light
-from .opacity import OpacityTransfer
 from .overlay import Axes, Grid, SdfOverlay
 from .primitives import (
     SdfNode,
@@ -46,47 +34,33 @@ from .primitives import (
     sphere,
     torus,
 )
-from .serializer import serialize_entity, serialize_mv
+from .serializer import serialize_entity
 from .visualizer import SdfVisualizer
 
 __all__ = [
     "Axes",
     "Composed",
     "DirectionalLight",
-    "DistanceFunction",
-    "DistanceFunctionMeta",
     "Grid",
     "Light",
-    "OpacityTransfer",
     "SdfNode",
     "SdfOverlay",
     "SdfVisualizer",
-    "algebra_name",
     "bound_box",
     "box",
-    "calibrate_scale",
     "capsule",
     "capped_cone",
     "capped_cylinder",
     "combine",
     "cone",
     "cylinder",
-    "distance_value",
     "ellipsoid",
-    "embed_entity_mv",
-    "embed_src",
-    "evaluate_sdf",
-    "find_surface_point",
-    "gradient",
-    "gradient_norm",
     "group",
     "plane",
     "primitive",
     "round_box",
-    "scale_at",
     "segment",
     "serialize_entity",
-    "serialize_mv",
     "sphere",
     "torus",
 ]

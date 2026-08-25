@@ -24,12 +24,9 @@ import time
 from typing import Any
 
 from pytanga.geometry.entities import Entity as GeoEntity
-from pytanga.algebra import MV
 
 from .composed import Composed
-from .distance import DistanceFunction
 from .lights import DirectionalLight, Light, serialize_light
-from .opacity import OpacityTransfer
 from .overlay import Axes, Grid, SdfOverlay, serialize_overlay
 from .primitives import SdfNode
 from .serializer import serialize_entity
@@ -90,11 +87,6 @@ class SdfVisualizer:
         self._objects: dict[str, Any] = {}
         self._props: dict[str, dict[str, Any]] = {}
 
-        # Viewer-level distance / opacity transfer setting (wired into the shader
-        # at Phase 8 / populated at Phase 12).
-        self._distance = DistanceFunction.default()
-        self._opacity = OpacityTransfer.default()
-
         # Lighting: one default directional light + ambient term, unless the
         # caller disabled the default light (mirrors add_default_axes/grid).
         self._lights: dict[str, Light] = {}
@@ -131,24 +123,16 @@ class SdfVisualizer:
         style: Any | None = None,
         combine: str | None = None,
         polarity: str | None = None,
-        bound: Any | None = None,
-        normalize: bool | None = None,
-        calibrate: bool | None = None,
         smoothness: float | None = None,
-        falloff: float | None = None,
-        max_distance: float | None = None,
     ) -> str:
         """Add an object to the SDF scene and return its ID.
 
         Accepts a geometry entity, an operator, a bare :class:`SdfNode`
         primitive/combinator tree, a :class:`Composed` object, a raw
-        :class:`~pytanga.algebra.MV` (the algebra path), or a
+        :class:`~pytanga.algebra.MV` (resolved via ``geometry.analyze()``), or a
         :class:`~pytanga.viz.sdf.lights.Light` (a ``DirectionalLight``).
         ``style`` selects an alternative draw style (e.g.
-        ``CrossHairPointStyle``). For a raw MV, ``bound`` (half-extents or a
-        ``{"halfExtents": [..]}`` dict) clips infinite entities, ``normalize``
-        (default ``True``) normalizes the MV before embedding, and ``calibrate``
-        (default ``False``) computes the per-object gradient scale (Phase 9).
+        ``CrossHairPointStyle``).
         """
         from uuid import uuid4
 
@@ -166,18 +150,12 @@ class SdfVisualizer:
             style=style,
             combine=combine,
             polarity=polarity,
-            bound=bound,
-            normalize=normalize,
-            calibrate=calibrate,
             smoothness=smoothness,
-            falloff=falloff,
-            max_distance=max_distance,
         )
 
         oid = entity_id or uuid4().hex[:8]
         self._objects[oid] = entity
         self._props[oid] = props
-        self._warn_signedness()
         self._flush()
         return oid
 
@@ -193,12 +171,7 @@ class SdfVisualizer:
         style: Any | None = None,
         combine: str | None = None,
         polarity: str | None = None,
-        bound: Any | None = None,
-        normalize: bool | None = None,
-        calibrate: bool | None = None,
         smoothness: float | None = None,
-        falloff: float | None = None,
-        max_distance: float | None = None,
     ) -> None:
         """Replace the object at ``entity_id`` and re-push it.
 
@@ -218,14 +191,8 @@ class SdfVisualizer:
             style=style,
             combine=combine,
             polarity=polarity,
-            bound=bound,
-            normalize=normalize,
-            calibrate=calibrate,
             smoothness=smoothness,
-            falloff=falloff,
-            max_distance=max_distance,
         )
-        self._warn_signedness()
         self._push_update([entity_id])
 
     def _build_props(
@@ -238,12 +205,7 @@ class SdfVisualizer:
         style: Any | None = None,
         combine: str | None = None,
         polarity: str | None = None,
-        bound: Any | None = None,
-        normalize: bool | None = None,
-        calibrate: bool | None = None,
         smoothness: float | None = None,
-        falloff: float | None = None,
-        max_distance: float | None = None,
     ) -> dict[str, Any]:
         """Assemble the per-object property dict (``None`` = inherit default)."""
         props: dict[str, Any] = {}
@@ -261,39 +223,9 @@ class SdfVisualizer:
             props["combine"] = combine
         if polarity is not None:
             props["polarity"] = polarity
-        if bound is not None:
-            props["bound"] = bound
-        if normalize is not None:
-            props["normalize"] = normalize
-        if calibrate is not None:
-            props["calibrate"] = calibrate
         if smoothness is not None:
             props["smoothness"] = smoothness
-        if falloff is not None:
-            props["falloff"] = falloff
-        if max_distance is not None:
-            props["max_distance"] = max_distance
         return props
-
-    def _warn_signedness(self) -> None:
-        """Warn when boolean ``intersection``/``subtract`` is used with an
-        unsigned distance function (Phase 11 signedness gate)."""
-        if self._distance.signed:
-            return
-        needs_signed = {
-            "intersection",
-            "subtract",
-            "smooth_intersection",
-            "smooth_subtract",
-        }
-        for props in self._props.values():
-            if props.get("combine") in needs_signed:
-                logger.warning(
-                    "SDF viewer: 'intersection'/'subtract' require a signed "
-                    "distance function, but '%s' is unsigned",
-                    self.distance,
-                )
-                return
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity, light, or overlay from the SDF scene."""
@@ -322,7 +254,7 @@ class SdfVisualizer:
     def _resolve(self, obj: Any) -> Any:
         from pytanga.geometry.operators import Operator as GeoOperator
 
-        if isinstance(obj, (SdfNode, Composed, GeoEntity, GeoOperator, MV)):
+        if isinstance(obj, (SdfNode, Composed, GeoEntity, GeoOperator)):
             return obj
         try:
             from pytanga.geometry import analyze
@@ -395,43 +327,12 @@ class SdfVisualizer:
         """Wire form of the current overlay list."""
         return [serialize_overlay(overlay) for overlay in self._overlays.values()]
 
-    # ── Viewer-level settings (stubs until later phases) ────
-
-    @property
-    def distance(self) -> str:
-        """The active distance function key (default ``"scalar_pseudo"``)."""
-        return self._distance.value
-
-    @distance.setter
-    def distance(self, value: str | DistanceFunction) -> None:
-        if isinstance(value, DistanceFunction):
-            self._distance = value
-        else:
-            self._distance = DistanceFunction(value)
-        self._warn_signedness()
-        self._push_config()
-
-    @property
-    def opacity(self) -> str:
-        """The active opacity transfer key (default ``"step"``)."""
-        return self._opacity.value
-
-    @opacity.setter
-    def opacity(self, value: str | OpacityTransfer) -> None:
-        if isinstance(value, OpacityTransfer):
-            self._opacity = value
-        else:
-            self._opacity = OpacityTransfer(value)
-        self._push_config()
-
     def _push_config(self) -> None:
         if self._loop is None or self._server is None:
             return
         message = json.dumps(
             {
                 "type": "sdf_viewer_config",
-                "distance": self.distance,
-                "opacity": self.opacity,
                 **self._lighting_dict(),
                 "overlays": self._overlay_dict(),
             }
