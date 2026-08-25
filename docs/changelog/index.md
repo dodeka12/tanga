@@ -2,7 +2,7 @@
 
 ## [Since 1.1.0] — 2026-08-25
 - CoordinateSystem inner data group (`cs.data_group` + `to_data`) · `vline`/`hline`/`line`/`point` annotation helpers (create-or-update by name + `remove_*`)
-→ [Details](2026-08-25_201edd71.md)
+→ [Details](2026-08-25_c6f85e08.md)
 
 ## [Since 1.0.1] — 2026-08-24
 - Split views (`SplitView` panes) · `StackView` + control views (`SliderView`/`ButtonView`/`DropdownView`) · multi-scene WebSocket subscription · per-pane scene cameras · viz-only `Cylinder`/`Arc` entities · `CoordinateSystem` plotting helper

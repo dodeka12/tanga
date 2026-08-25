@@ -19,7 +19,13 @@ Run with:  uv run python py/examples/viz/demo_cs_annotations.py
 import math
 
 from pytanga.geometry.entities import Point
-from pytanga.viz import CoordinateSystem, PointPath, PointPathStyle, Visualizer
+from pytanga.viz import (
+    CoordinateSystem,
+    LabelStyle,
+    PointPath,
+    PointPathStyle,
+    Visualizer,
+)
 
 viz = Visualizer(
     title="Tanga — CoordinateSystem Annotations",
@@ -44,9 +50,15 @@ cs.plot(
     style=PointPathStyle(line_thickness=3),
 )
 
-# Fixed annotations at data values.
-cs.vline(x=math.pi, name="pi", color="#ff5555")
-cs.hline(y=0.0, name="zero", color="#8888ff")
+# Fixed annotations at data values (with labels anchored on the line).
+cs.vline(x=math.pi, name="pi", color="#ff5555", label="π")
+cs.hline(
+    y=0.0,
+    name="zero",
+    color="#8888ff",
+    label="zero",
+    label_style=LabelStyle(along=0.2),
+)
 
 # Line helpers between two data points (accept (x, y) tuples or Point()).
 cs.line((1.0, -1.0), (3.0, 1.0), color="#ff88ff")
@@ -54,7 +66,7 @@ cs.line(Point(5.0, -1.0), Point(7.0, 1.0), color="#00ffff")
 
 # Point markers at data locations (accept (x, y) tuples or Point()).
 cs.point((math.pi, math.sin(math.pi)), color="#ffffff")
-cs.point(Point(2.0 * math.pi, 0.0), name="peak", color="#ffaa00")
+cs.point(Point(2.0 * math.pi, 0.0), name="peak", color="#ffaa00", label="2π")
 
 # A custom annotation drawn directly in the data group.
 spike = PointPath()

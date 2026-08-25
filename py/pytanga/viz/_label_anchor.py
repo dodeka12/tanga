@@ -92,7 +92,11 @@ def _anchor_line(line: Line, uvw, line_length) -> tuple[float, float, float]:
         else:
             line_length = 20.0
     d = _normalize((line.direction.x, line.direction.y, line.direction.z))
-    return (d[0] * u * line_length, d[1] * u * line_length, d[2] * u * line_length)
+    return (
+        line.origin.x + d[0] * u * line_length,
+        line.origin.y + d[1] * u * line_length,
+        line.origin.z + d[2] * u * line_length,
+    )
 
 
 def _anchor_reflection_line(rl, uvw, line_length) -> tuple[float, float, float]:
@@ -112,7 +116,9 @@ def _anchor_point_pair(pp, uvw, line_length) -> tuple[float, float, float]:
     return ((u - 0.5) * dx, (u - 0.5) * dy, (u - 0.5) * dz)
 
 
-def _plane_axes(plane: Plane) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+def _plane_axes(
+    plane: Plane,
+) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
     n = _normalize((plane.normal.x, plane.normal.y, plane.normal.z))
     u_axis = _perpendicular(n)
     v_axis = _normalize(_cross(n, u_axis))
@@ -212,4 +218,3 @@ def compute_label_anchor(
         if isinstance(entity, cls):
             return fn(entity, uvw, line_length)
     return (0.0, 0.0, 0.0)
-
