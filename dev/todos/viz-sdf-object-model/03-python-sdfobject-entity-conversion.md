@@ -17,13 +17,13 @@ operator expressions.
 
 ## Steps
 
-- [ ] **3.1 — `SdfObject`** (`object.py`)
+- [x] **3.1 — `SdfObject`** (`object.py`)
   - `@dataclass(frozen=True) class SdfObject(SdfElement)`:
     `entity: Any`, `id: str | None = None`, `style: SdfStyle | None = None`.
   - `to_sdf_node()` → `_entity_to_sdf(entity, style)`, attaching `id` to the
     root `SdfNode`.
 
-- [ ] **3.2 — `_entity_to_sdf(entity, style)`** (`object.py`)
+- [x] **3.2 — `_entity_to_sdf(entity, style)`** (`object.py`)
   - Maps geometry entities to `SdfNode` via the primitive constructors, applying
     the style's shape params:
     - `Sphere` → `sphere(radius, position=center)`.
@@ -42,11 +42,11 @@ operator expressions.
   - Default style by entity kind via the Phase 1 `SDF_STYLE_BY_KIND` registry
     when `style is None`.
 
-- [ ] **3.3 — `_coerce()` entity wrapping** (`_compose.py`)
+- [x] **3.3 — `_coerce()` entity wrapping** (`_compose.py`)
   - Non-`SdfElement` operands wrap via `SdfObject(entity)` (default style), so
     `SdfObject(Sphere(...)) + Sphere(...)` and `SdfObject(...) + Box(...)` work.
 
-- [ ] **3.4 — Tests** (`test_sdf_object.py`)
+- [x] **3.4 — Tests** (`test_sdf_object.py`)
   - `SdfObject(Sphere(...)).to_sdf_node()` → a `sphere` `SdfNode` at the right
     position with the right `id`.
   - `_entity_to_sdf(Cylinder(...))` → `cappedCylinder` with correct half-height,
@@ -55,7 +55,7 @@ operator expressions.
   - `SdfObject(Sphere()) + SdfObject(Cylinder())` → `Combine(UNION, …)`.
   - `SdfObject(Sphere()) + Sphere()` → `Combine` with the raw sphere coerced.
 
-- [ ] **3.5 — Validate**
+- [x] **3.5 — Validate**
   - `uv run pytest py/tests/viz/sdf/test_sdf_object.py -q` +
     `uv run pytest py/tests/viz/ -q`.
 

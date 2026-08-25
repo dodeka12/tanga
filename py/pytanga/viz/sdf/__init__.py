@@ -16,6 +16,7 @@ from ._compose import Combine, ECompose, SdfElement
 from .composed import Composed
 from .group import SdfGroup
 from .lights import DirectionalLight, Light
+from .object import SdfObject
 from .overlay import Axes, Grid, SdfOverlay
 from .primitives import (
     SdfNode,
@@ -49,6 +50,7 @@ __all__ = [
     "Light",
     "SdfElement",
     "SdfNode",
+    "SdfObject",
     "SdfOverlay",
     "SdfGroup",
     "SdfVisualizer",

@@ -158,9 +158,20 @@ class Combine(SdfElement):
 
 
 def _coerce(obj: Any) -> SdfElement:
-    """Coerce an operand to an ``SdfElement`` (raw entities are wrapped in Phase 3)."""
+    """Coerce an operand to an ``SdfElement``.
+
+    ``SdfElement`` operands pass through; geometry entities are wrapped in an
+    ``SdfObject`` (default style). ``None`` and other types raise.
+    """
     if isinstance(obj, SdfElement):
         return obj
+
+    from pytanga.geometry.entities import Cylinder, Entity as GeoEntity
+
+    from .object import SdfObject
+
+    if isinstance(obj, GeoEntity) or isinstance(obj, Cylinder):
+        return SdfObject(obj)
     raise TypeError(
         f"Cannot combine {type(obj).__name__} with an SdfElement; "
         "wrap it in SdfObject first"
