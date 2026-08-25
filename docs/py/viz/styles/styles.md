@@ -5,7 +5,7 @@ that controls its visual appearance. All style fields default to `None` —
 the `Visualizer` stores fully-initialized canonical defaults that fill any
 unset fields.
 
-See the example script [`demo_custom_defaults.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_custom_defaults.py)
+See the example script [`custom_defaults.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/styling/custom_defaults.py)
 for a runnable demonstration.
 
 ## Setting Defaults

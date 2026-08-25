@@ -17,6 +17,7 @@ from typing import Any
 from pytanga.viz.export._bootstrap import (
     generate_bootstrap_js,
     js_annotation_panel,
+    js_apply_camera,
     js_autofit_camera,
     js_imports,
     js_render_loop,
@@ -82,18 +83,13 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")
 
-    cam_cfg = scene_config.get("camera") or {}
-    cam_pos = cam_cfg.get("position", [8, 6, 10])
-    cam_target = cam_cfg.get("target", [0, 0, 0])
-    cam_fov = cam_cfg.get("fov", 50)
-    cam_near = cam_cfg.get("near", 0.1)
-    cam_far = cam_cfg.get("far", 1000)
-
     parts = [
         "window.__tanga_ready = true;",
         "// ── Bootstrap adapter for Tanga self-contained HTML exports ──",
         "",
         js_imports(),
+        "",
+        js_apply_camera(),
         "",
         "const sceneData = JSON.parse(document.getElementById('tanga-scene-data').textContent);",
         "const sceneConfig = JSON.parse(document.getElementById('tanga-scene-config').textContent);",
@@ -110,11 +106,6 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             scene_var="adapterScene",
             width_expr="window.innerWidth",
             height_expr="window.innerHeight",
-            cam_fov=cam_fov,
-            cam_pos=(cam_pos[0], cam_pos[1], cam_pos[2]),
-            cam_target=(cam_target[0], cam_target[1], cam_target[2]),
-            cam_near=cam_near,
-            cam_far=cam_far,
             auto_rotate=False,
             space_dim=space_dim,
             explicit_mouse_buttons=True,
@@ -155,15 +146,8 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     parts.append(
         "(async () => {\n"
         "    await sceneBuildDone;\n"
+        "    applyCameraConfig(adapterCamera, adapterControls, sceneConfig.camera, window.innerWidth, window.innerHeight);\n"
         "    const adapterCamConfig = sceneConfig.camera;\n"
-        "    if (adapterCamConfig) {\n"
-        "        if (adapterCamConfig.position) adapterCamera.position.set(...adapterCamConfig.position);\n"
-        "        if (adapterCamConfig.target) adapterControls.target.set(...adapterCamConfig.target);\n"
-        "        if (adapterCamConfig.fov) { adapterCamera.fov = adapterCamConfig.fov; adapterCamera.updateProjectionMatrix(); }\n"
-        "        if (adapterCamConfig.near) { adapterCamera.near = adapterCamConfig.near; adapterCamera.updateProjectionMatrix(); }\n"
-        "        if (adapterCamConfig.far) { adapterCamera.far = adapterCamConfig.far; adapterCamera.updateProjectionMatrix(); }\n"
-        "        adapterControls.update();\n"
-        "    }\n"
         "    if (!adapterCamConfig || (!adapterCamConfig.position && !adapterCamConfig.target)) {\n"
         + js_autofit_camera(
             mesh_map_var="meshMap",

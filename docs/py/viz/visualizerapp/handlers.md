@@ -125,6 +125,6 @@ The same happens when the user presses **Ctrl+C** in the terminal, or
 
 ## Complete example
 
-See `py/examples/viz/two_spheres_interact.py` for a full working example:
+See `py/examples/viz/interaction/two_spheres_interact.py` for a full working example:
 two IPNS spheres with a moving slider, visibility dropdown, and reset
 button, all using `VisualizerApp`.

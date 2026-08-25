@@ -100,10 +100,10 @@ viz.display_snapshot()  # renders standalone HTML inline (no server)
 
 ## Notebook examples
 
-Runnable notebooks live under `py/examples/jupyter/`:
+Runnable notebooks live under `py/examples/ga/jupyter/`:
 
 | Notebook | Topic |
 |----------|-------|
-| [`interactive.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/jupyter/interactive.ipynb) | Context manager + idempotent `show()`/`display()` |
-| [`animation.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/jupyter/animation.ipynb) | Pre-create + update, and `auto_clear` |
-| [`export.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/jupyter/export.ipynb) | HTML / glTF / figure export |
+| [`interactive.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/jupyter/interactive.ipynb) | Context manager + idempotent `show()`/`display()` |
+| [`animation.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/jupyter/animation.ipynb) | Pre-create + update, and `auto_clear` |
+| [`export.ipynb`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/jupyter/export.ipynb) | HTML / glTF / figure export |

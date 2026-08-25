@@ -948,9 +948,7 @@ class Visualizer(_JupyterDisplayMixin):
             modifiers: Modifiers that must be held, default ``[KeyModifier.CTRL]``
                 (i.e. Ctrl+Q).
         """
-        self._set_server_stop_key(
-            "", enabled=enabled, key=key, modifiers=modifiers
-        )
+        self._set_server_stop_key("", enabled=enabled, key=key, modifiers=modifiers)
 
     def _set_server_stop_key(
         self,
@@ -1009,9 +1007,7 @@ class Visualizer(_JupyterDisplayMixin):
         job of :meth:`wait` / the ``atexit`` hook.
         """
         if scope == "server":
-            logger.info(
-                "Browser requested full server stop (scene %r)", scene_name
-            )
+            logger.info("Browser requested full server stop (scene %r)", scene_name)
             shutdown = getattr(self, "_shutdown_requested", None)
             if shutdown is not None:
                 shutdown.set()
@@ -2453,6 +2449,7 @@ class Visualizer(_JupyterDisplayMixin):
                 animation.to_dict(),
                 figure_style=resolved.to_dict(),
                 figure_config=fig_config.to_dict(),
+                scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
             )
         from pytanga.viz.export._figure_html import render_figure

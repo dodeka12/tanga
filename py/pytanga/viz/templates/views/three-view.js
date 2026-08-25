@@ -245,12 +245,11 @@ export class ThreeJsView extends View {
      * `_applySceneConfig` and `setCamera`.
      */
     _applyCamera(cameraConfig) {
-        if (!cameraConfig) return;
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
 
-        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig);
+        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null);
 
-        const cc = cameraConfig;
+        const cc = cameraConfig || {};
         if (cc.position) this.camera.position.set(cc.position[0], cc.position[1], cc.position[2]);
         if (cc.target) this.controls.target.set(cc.target[0], cc.target[1], cc.target[2]);
         if (cc.fov) { this.camera.fov = cc.fov; this.camera.updateProjectionMatrix(); }
@@ -266,10 +265,8 @@ export class ThreeJsView extends View {
     setCamera(cameraConfig) {
         this._cameraOverride = cameraConfig || null;
         const effective = this._cameraOverride || (this.sceneConfig && this.sceneConfig.camera);
-        if (effective) {
-            this._applyCamera(effective);
-            this.resize();
-        }
+        this._applyCamera(effective);
+        this.resize();
     }
 
     _renderTitle(titleText) {

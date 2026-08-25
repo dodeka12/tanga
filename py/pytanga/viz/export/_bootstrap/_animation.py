@@ -176,6 +176,7 @@ def js_animation_data_init(fps: int, extra_map_vars: str = "") -> str:
     return f"""const animData = _getAnimData();
 const fps = animData.fps || {fps};
 const frames = animData.frames || [];
+const cameras = animData.cameras || [];
 const figMeshMap = new Map();{extra_map_vars}"""
 
 
@@ -185,6 +186,10 @@ def js_reconcile_frame(
     label_objects_map_var: str = "labelObjects",
     mesh_map_var: str = "figMeshMap",
     registry_var: str = "figRegistry",
+    camera_var: str = "figCamera",
+    controls_var: str = "figControls",
+    camera_size_w_expr: str = "window.innerWidth",
+    camera_size_h_expr: str = "window.innerHeight",
 ) -> str:
     """Generate the id-based frame reconciliation engine.
 
@@ -193,13 +198,18 @@ def js_reconcile_frame(
     are built through the shared ``buildSceneObject``/``buildOverlay`` so the
     animated export applies node transforms + parenting exactly like the live
     viewer, then updated in place via the bundled ``updateEntityMesh``
-    dispatcher.
+    dispatcher.  When a per-frame camera entry exists, ``_playFrame`` also
+    applies it via ``applyCameraConfig``.
 
     Args:
         scene_var: JS variable name for the three.js Scene.
         label_objects_map_var: JS variable name for the label objects Map.
         mesh_map_var: JS variable name for the id -> inner-mesh Map.
         registry_var: JS variable name for the id -> entry registry Map.
+        camera_var: JS variable name for the camera.
+        controls_var: JS variable name for the OrbitControls.
+        camera_size_w_expr: JS expression for the camera viewport width.
+        camera_size_h_expr: JS expression for the camera viewport height.
 
     Returns:
         JS code string defining ``_reconcileFrame`` and ``_playFrame``.
@@ -278,6 +288,9 @@ async function _reconcileFrame(frame) {{
 async function _playFrame(n) {{
     if (n >= 0 && n < frames.length) {{
         await _reconcileFrame(frames[n]);
+        if (cameras && cameras[n]) {{
+            applyCameraConfig({camera_var}, {controls_var}, cameras[n], {camera_size_w_expr}, {camera_size_h_expr});
+        }}
         currentFrame = n;
     }}
 }}"""

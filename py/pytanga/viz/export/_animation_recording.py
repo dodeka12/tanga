@@ -46,6 +46,7 @@ class AnimationRecording:
         self._scene = scene
         self._styles_map = styles_map or {}
         self._frames: list[list[dict[str, Any]]] = []
+        self._cameras: list[dict[str, Any] | None] = []
 
     def capture_frame(self) -> None:
         """Snapshot the current entity state.
@@ -59,6 +60,8 @@ class AnimationRecording:
         """
         entities = self._scene.full_state(styles_map=self._styles_map)
         self._frames.append(list(entities))
+        camera = self._scene.config.camera
+        self._cameras.append(camera.to_dict() if camera is not None else None)
 
     @property
     def frames(self) -> list[list[dict[str, Any]]]:
@@ -80,6 +83,7 @@ class AnimationRecording:
         return {
             "frames": self._frames,
             "frame_count": len(self._frames),
+            "cameras": self._cameras,
         }
 
     def to_json(self, *, compress: bool = False) -> str:

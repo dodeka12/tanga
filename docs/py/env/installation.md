@@ -172,7 +172,7 @@ After syncing you can run tests, lint, and execute example scripts:
 ```bash
 uv run pytest
 uv run ruff check py/
-uv run python py/examples/solver_rotor_estimation.py
+uv run python py/examples/ga/numerics/solver_rotor_estimation.py
 ```
 
 ## Using pytanga as a Dependency

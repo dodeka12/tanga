@@ -277,7 +277,7 @@ cs.remove_point("marker")
 > shaded markers in the outer group (undistorted); for other shaded entities
 > place them with `to_world()` instead.
 
-See `py/examples/viz/demo_cs_annotations.py` for a full example.
+See `py/examples/viz/plotting/cs_annotations.py` for a full example.
 
 ## Live plots (trails)
 
@@ -305,7 +305,7 @@ viz.flush()
 - `position`, `normal`, and `up` accept tuples or `Point()`/`Direction()`
   objects.
 
-See `py/examples/viz/demo_pendulum_plot.py` for a full pendulum example.
+See `py/examples/viz/plotting/pendulum_plot.py` for a full pendulum example.
 
 ## Updating in place
 

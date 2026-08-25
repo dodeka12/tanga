@@ -205,7 +205,7 @@ viz.update_style(trail_id, PointPathStyle(color="#ff8844"))
 See the ready-to-run example:
 
 ```
-uv run python py/examples/viz/demo_point_path_trail.py
+uv run python py/examples/viz/animation/point_path_trail.py
 ```
 
 A point orbits in a circle with a 150-point gradient trail using
