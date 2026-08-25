@@ -171,9 +171,64 @@ x, y, z = cs.to_world(10.0, 100.0)
 # Map data series to group-local 3D points (inherits the group transform).
 pts = cs.transform(xs, ys)
 
-# Plot a series as a PointPath child of the group.
+# Plot a series as a PointPath child of the data group (data coordinates).
 ref = cs.plot(xs, ys, color="#ffcc00", style=PointPathStyle(line_thickness=3))
 ```
+
+## Annotations & the data group
+
+Every data-space object (`plot`, `add_plot`, and the annotation helpers below)
+is a child of an inner **data group** whose transform maps data coordinates onto
+the plot plane. For linear axes the group is a pure translate+scale, so you can
+draw directly in data coordinates; for log axes the group handles only the
+affine part, so the `log` is still applied in Python (`to_data()`).
+
+The inner group is exposed as `cs.data_group` (a `VizObjectRef`) for custom
+drawings:
+
+```python
+# Map a data point to data-group coordinates (log-mapped for log axes).
+wx, wy = cs.to_data(10.0, 100.0)
+
+# Draw a custom annotation in data coordinates.
+path = PointPath()
+path.add((1.0, 0.0))
+path.add((3.0, 2.0))
+cs.data_group.new(path, color="#ffffff")
+```
+
+### vline / hline
+
+Draw (and animate) vertical/horizontal marker lines at fixed data values:
+
+```python
+# Create (or update, by name) a vertical line at x=3 spanning the current ylim.
+v = cs.vline(x=3.0, name="cursor", color="#ff5555")
+
+# Create (or update) a horizontal line at y=0 spanning the current xlim.
+h = cs.hline(y=0.0, name="zero", color="#8888ff")
+
+# Move the vertical line each frame (animation):
+cs.vline(x=t, name="cursor")
+
+# Remove a named line:
+cs.remove_vline("cursor")
+cs.remove_hline("zero")
+```
+
+- `vline(x, *, name=None, y0=None, y1=None, color=None, style=None)` and
+  `hline(y, *, name=None, x0=None, x1=None, color=None, style=None)` create a
+  line (or update it in place when `name` is given) and return its
+  `VizObjectRef`. `y0/y1` (resp. `x0/x1`) default to the current `ylim` (resp.
+  `xlim`).
+- Without `name`, each call creates a new line.
+- `remove_vline(name)` / `remove_hline(name)` remove a named line.
+
+> **Note:** `data_group` applies a non-uniform scale (it stretches data onto the
+> plot's `size`), so it is ideal for paths/lines. For shaded markers (points,
+> spheres, …) place them with `to_world()` instead.
+
+See `py/examples/viz/demo_cs_annotations.py` for a full example.
 
 ## Live plots (trails)
 

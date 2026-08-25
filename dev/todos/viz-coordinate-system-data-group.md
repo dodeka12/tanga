@@ -243,14 +243,14 @@ code-symmetry benefit is worth the refactor.
 **Files:** `docs/py/viz/scene-objects/coordinate-system.md`,
 `docs/py/viz/scene-objects/coordinate-system.ipynb` (as applicable)
 
-- [ ] Document `data_group` and the "draw your own annotations" pattern
+- [x] Document `data_group` and the "draw your own annotations" pattern
       (e.g. `cs.data_group.new(...)` for a line at a fixed `x` or `y`).
-- [ ] Document `vline`/`hline` (create + update by name, for animating marker
+- [x] Document `vline`/`hline` (create + update by name, for animating marker
       lines) alongside the `data_group` annotation pattern.
-- [ ] Clarify the linear vs. log distinction: linear axes can draw directly in data
+- [x] Clarify the linear vs. log distinction: linear axes can draw directly in data
       coordinates; log axes are `log`-mapped by `plot()` / `add_plot()` and by the
       user via `to_data()` when drawing directly into `data_group`.
-- [ ] Note the caveat that `data_group` applies a non-uniform scale, so it is
+- [x] Note the caveat that `data_group` applies a non-uniform scale, so it is
       intended for paths/lines; shaded markers should be placed via `to_world()`.
 
 ### Step 7 — Examples
