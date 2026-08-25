@@ -51,6 +51,7 @@ assert(fragCode.includes('out vec4'), 'fragment declares out vec4');
 assert(!fragCode.includes('gl_FragColor'), 'no legacy gl_FragColor');
 assert(frag.includes('gl_FragDepth'), 'writes gl_FragDepth');
 assert(frag.includes('uniform vec4 uMaterial[MAX_GROUP_MEMBERS]'), 'declares uMaterial');
+assert((frag.match(/uniform vec4 uMaterial\[MAX_GROUP_MEMBERS\]/g) || []).length === 1, 'uMaterial declared exactly once (no redefinition)');
 assert(frag.includes('uniform float uOpacity'), 'declares uOpacity');
 assert(frag.includes('uniform int uMaxSteps'), 'declares uMaxSteps');
 assert(frag.includes('uniform float uSoftShadows'), 'declares uSoftShadows');

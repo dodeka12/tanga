@@ -84,9 +84,9 @@ export function buildProxyFragment(ent, shaderParts) {
     return vec2(${emitTree(ent.tree)}, 0.0);
 }`;
 
-    // One material table for both single-object (index 0) and grouped objects.
-    const materialPreamble = `const int MAX_GROUP_MEMBERS = ${MAX_GROUP_MEMBERS};
-uniform vec4 uMaterial[MAX_GROUP_MEMBERS];`;
+    // `MAX_GROUP_MEMBERS` is sized once here; the `uMaterial` uniform itself is
+    // declared in `proxy.glsl` (single source, no redefinition).
+    const materialPreamble = `const int MAX_GROUP_MEMBERS = ${MAX_GROUP_MEMBERS};`;
 
     const transformPreamble = isGroup
         ? `uniform mat4 uMemberInvTransform[MAX_GROUP_MEMBERS];`
