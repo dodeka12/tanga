@@ -32,6 +32,77 @@ SDF-specific knobs:
 | `max_steps`    | `int`  | `256`   | Ray-march step budget.                         |
 | `bound_padding`| `float`| `0.05`  | Inflate the proxy AABB (any over-estimate is safe). |
 
+
+## SDF object model (unified)
+
+Beyond the `SdfStyle` marker, the standard viewer also ships a unified,
+composable object model: per-entity SDF styles, an `SdfObject` wrapper, Python
+operator CSG, and per-object materials.
+
+### Per-entity styles
+
+| Entity     | Style class        | Extra knob(s)                       |
+|------------|--------------------|-------------------------------------|
+| `Sphere`   | `SdfSphereStyle`   | —                                   |
+| `Line`     | `SdfLineStyle`     | `thickness` (default `1.0`)         |
+| `Circle`   | `SdfCircleStyle`   | `tube_radius` (default `0.03`)      |
+| `Point`    | `SdfPointStyle`    | `size` (default `0.08`)             |
+| `Cylinder` | `SdfCylinderStyle` | —                                   |
+| `Plane`    | `SdfPlaneStyle`    | —                                   |
+
+Each inherits the `SdfStyle` knobs (`color`, `opacity`, `soft_shadows`,
+`max_steps`, `bound_padding`).
+
+### `SdfObject` + operators
+
+```python
+from pytanga.geometry import Cylinder, Direction, Point, Sphere
+from pytanga.viz import SdfCylinderStyle, SdfSphereStyle, Visualizer
+from pytanga.viz.sdf import SdfObject
+
+body = SdfObject(Sphere(Point(0, 0, 0), 1.2), id="body",
+                 style=SdfSphereStyle(color="#ffaa00"))
+drill = SdfObject(Cylinder(origin=Point(0, 0, 0), axis=Direction(0, 1, 0),
+                           length=3.0, radius=0.35, align_center=0.5),
+                  style=SdfCylinderStyle())
+
+viz.add(body - drill)   # a drilled sphere (binary `Combine`)
+```
+
+`SdfObject` wraps a geometry entity plus an optional `id` and a per-entity
+style; it is converted to the low-level SDF tree at construction (never deep in
+the serializer). `viz.add` / `viz.new` accept `SdfObject`, `Combine`,
+`Composed`, and `SdfGroup` directly — no `SdfStyle` marker required.
+
+### Operators
+
+Every SDF drawable (`SdfObject` / `Combine` / `Composed` / `SdfGroup`) supports
+Python CSG operators:
+
+| Operator        | Combine mode                              |
+|-----------------|-------------------------------------------|
+| `a + b`, `a | b`| union (`ECompose.UNION`)                  |
+| `a - b`         | subtract (`ECompose.SUBTRACT`)            |
+| `a & b`         | intersection (`ECompose.INTERSECTION`)    |
+| `a ^ b`         | xor (`ECompose.XOR`, binary-only)         |
+| `-a`            | tags `a` with `SUBTRACT` polarity (fold)  |
+| `~a`            | tags `a` with `INTERSECTION` polarity (fold) |
+
+`Composed` / `SdfGroup` also accept the legacy `(obj, "subtract")` tuple form and
+`ECompose` enum values.
+
+### Per-object materials
+
+`Composed` / `SdfGroup` members keep their own color/opacity (a per-member
+`materials` array on the wire). Each member's style supplies its material; the
+proxy shader resolves the hit member's material at the surface.
+
+### Backward compatibility
+
+`viz.add(Sphere(...), style=SdfStyle(color=...))` (the marker path) keeps
+working and is now deprecated in favour of
+`SdfObject(Sphere(...), style=SdfSphereStyle(...))`.
+
 ## Per-object CSG with `Composed`
 
 A single SDF object can be internally `Composed` — its own combinator tree

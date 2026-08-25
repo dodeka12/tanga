@@ -171,6 +171,28 @@
 
 
 
+- **Per-entity SDF styles** — added `SdfSphereStyle`/`SdfLineStyle`/
+  `SdfCircleStyle`/`SdfPointStyle`/`SdfCylinderStyle`/`SdfPlaneStyle` (each
+  carrying its entity-specific SDF knob such as `thickness`/`tube_radius`/
+  `size`) plus a `SDF_STYLE_BY_KIND` registry. Tests in
+  `py/tests/viz/sdf/test_sdf_styles.py`.
+- **`SdfObject` + `ECompose` operator model** — added a unified, composable SDF
+  object layer: an `SdfElement` base with Python CSG operators (`+`/`|` = union,
+  `-` = subtract, `&` = intersection, `^` = xor, unary `-x`/`~x` polarity), the
+  `ECompose` StrEnum, a binary `Combine` node, and `SdfObject` wrapping a
+  geometry entity (incl. `Cylinder`) with an id + per-entity style, converted at
+  construction via `_entity_to_sdf`. `viz.add`/`viz.new` accept these elements
+  directly (no `SdfStyle` marker required). Tests in
+  `py/tests/viz/sdf/test_ecompose_operators.py` + `test_sdf_object.py`.
+- **Per-object materials** — `Composed`/`SdfGroup` now emit a per-member
+  `materials` array (one color/opacity per member), and the proxy shader
+  switches to `vec2 map()` returning `(distance, materialIndex)` backed by a
+  `uMaterial` uniform table, so each member shades with its own color/opacity;
+  added `opXor` to the combinators. Tests in
+  `py/tests/viz/sdf/test_sdf_object_serialization.py` +
+  `dev/src/sdf_proxy_smoke.mjs`; example
+  `py/examples/viz/sdf/object_model.py`.
+
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed
   `-angle` to IQ's `rotationAxisAngle`, which already negates the angle

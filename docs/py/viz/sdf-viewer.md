@@ -8,6 +8,12 @@ is rendered by ray-marching a fragment shader built for a three.js
 It requires **WebGL2** — if unavailable, the viewer shows an in-page error
 banner; there is no WebGL1 fallback. It is **3D only** (2D is deferred).
 
+> **Note:** this fullscreen SDF viewer is unchanged. The *standard* viewer's
+> per-object SDF path gained per-entity styles, `SdfObject`/operators, and
+> per-object materials — see
+> [SDF Objects in the Standard Viewer](sdf-objects.md).
+
+
 ## Rendering path
 
 Geometry entities and operators are mapped to compositions of an SDF primitive
