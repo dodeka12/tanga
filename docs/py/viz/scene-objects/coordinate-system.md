@@ -202,11 +202,12 @@ cs.data_group.new(path, color="#ffffff")
 Draw (and animate) vertical/horizontal marker lines at fixed data values:
 
 ```python
-# Create (or update, by name) a vertical line at x=3 spanning the current ylim.
-v = cs.vline(x=3.0, name="cursor", color="#ff5555")
+# Create (or update, by name) a vertical line at x=3 spanning the current ylim,
+# with a label anchored at the line midpoint.
+v = cs.vline(x=3.0, name="cursor", color="#ff5555", label="x = 3")
 
 # Create (or update) a horizontal line at y=0 spanning the current xlim.
-h = cs.hline(y=0.0, name="zero", color="#8888ff")
+h = cs.hline(y=0.0, name="zero", color="#8888ff", label="zero")
 
 # Move the vertical line each frame (animation):
 cs.vline(x=t, name="cursor")
@@ -216,11 +217,14 @@ cs.remove_vline("cursor")
 cs.remove_hline("zero")
 ```
 
-- `vline(x, *, name=None, y0=None, y1=None, color=None, style=None)` and
-  `hline(y, *, name=None, x0=None, x1=None, color=None, style=None)` create a
-  line (or update it in place when `name` is given) and return its
-  `VizObjectRef`. `y0/y1` (resp. `x0/x1`) default to the current `ylim` (resp.
-  `xlim`).
+- `vline(x, *, name=None, y0=None, y1=None, color=None, style=None, label=None,
+  label_style=None)` and `hline(y, *, name=None, x0=None, x1=None, color=None,
+  style=None, label=None, label_style=None)` create a line (or update it in
+  place when `name` is given) and return its `VizObjectRef`. `y0/y1` (resp.
+  `x0/x1`) default to the current `ylim` (resp. `xlim`).
+- These draw a `Line` entity, so style them with `LineStyle` (screen-space
+  `thickness` in px). `label`/`label_style` attach a label anchored at the line
+  midpoint; use `LabelStyle(along=…)` to move it along the segment.
 - Without `name`, each call creates a new line.
 - `remove_vline(name)` / `remove_hline(name)` remove a named line.
 
@@ -238,9 +242,11 @@ cs.line(Point(4.0, -1.0), Point(6.0, 1.0), name="seg")  # update in place
 cs.remove_line("seg")
 ```
 
-- `line(start, end, *, name=None, color=None, style=None)` creates a line (or
-  updates it in place when `name` is given) between `start` and `end`, and
-  returns its `VizObjectRef`.
+- `line(start, end, *, name=None, color=None, style=None, label=None,
+  label_style=None)` creates a `Line` segment (or updates it in place when
+  `name` is given) between `start` and `end`, and returns its `VizObjectRef`.
+  Style it with `LineStyle`; `label`/`label_style` attach a label anchored at
+  the midpoint.
 - `remove_line(name)` removes a named line.
 
 ### point
@@ -258,8 +264,10 @@ cs.point(Point(4.0, -0.5), name="marker")  # update in place
 cs.remove_point("marker")
 ```
 
-- `point(p, *, name=None, color=None, style=None)` creates a point marker (or
-  updates it in place when `name` is given) and returns its `VizObjectRef`.
+- `point(p, *, name=None, color=None, style=None, label=None, label_style=None)`
+  creates a point marker (or updates it in place when `name` is given) and
+  returns its `VizObjectRef`. `label`/`label_style` attach a label anchored at
+  the point.
 - `remove_point(name)` removes a named point marker.
 - The marker is added to the outer group at its local position (not the data
   group), so its `size` is not stretched by the data group's non-uniform scale.

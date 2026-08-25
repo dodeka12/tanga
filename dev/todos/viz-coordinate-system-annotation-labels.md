@@ -108,9 +108,9 @@ So piping labels is purely additive: add the kwargs and forward them to
 
 **File:** `docs/py/viz/scene-objects/coordinate-system.md`
 
-- [ ] Document `label`/`label_style` for the annotation helpers, and the
+- [x] Document `label`/`label_style` for the annotation helpers, and the
       `along`-based alignment for the line helpers (with `LineStyle`).
-- [ ] Update any snippets that pass `PointPathStyle` to the line helpers to use
+- [x] Update any snippets that pass `PointPathStyle` to the line helpers to use
       `LineStyle`.
 
 ### Step 5 — Examples
@@ -118,7 +118,7 @@ So piping labels is purely additive: add the kwargs and forward them to
 **Files:** `py/examples/viz/demo_cs_annotations.py` (and possibly
 `demo_log_plot.py` / `demo_plot_3d.py`)
 
-- [ ] Add labels to a couple of annotations in the example(s) to demonstrate the
+- [x] Add labels to a couple of annotations in the example(s) to demonstrate the
       feature (e.g. a labelled `vline`/`point`).
 
 ### Step 6 — Changelog
