@@ -27,7 +27,7 @@ import numpy as np
 
 from . import _transforms as _T
 from ._style_dict import _merge_style
-from ._types import TransformRotation, Triple, Vec3, _as_euler, _as_vec3
+from ._types import TransformOperator, TransformRotation, Triple, Vec3, _as_euler, _as_vec3
 
 
 def _is_vector_like(value: Any) -> bool:
@@ -502,7 +502,7 @@ class VizSceneObject(VizNode):
         self.transform.scale_by(x, y, z)
         self.mark("transform")
 
-    def apply_transform(self, op: Any) -> None:
+    def apply_transform(self, op: TransformOperator) -> None:
         """Apply an operator (Rotor/Motor/Translator/Dilator/…) in local space.
 
         Marks ``transform``.  Supports the same operator dataclasses as

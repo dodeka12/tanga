@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from pytanga.geometry.operators import Translator
 
 from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject, _style_to_dict
-from ._types import TransformRotation, Triple, Vec3
+from ._types import TransformOperator, TransformRotation, Triple, Vec3
 
 if TYPE_CHECKING:
     from ._scene_handle import VizSceneHandle
@@ -209,7 +209,7 @@ class VizObjectRef:
     ) -> None:
         self._scene_node().set_transform(position=position, rotation=rotation, scale=scale)
 
-    def apply_transform(self, op: Any) -> None:
+    def apply_transform(self, op: TransformOperator) -> None:
         self._scene_node().apply_transform(op)
 
     def set_member_transform(

@@ -51,6 +51,10 @@ Rotation: TypeAlias = Rotor | GeneralRotor | tuple[tuple[float, float, float], f
 #: Rotor (converted to Euler internally).
 TransformRotation: TypeAlias = Rotor | Triple
 
+#: An operator dataclass that :func:`pytanga.viz._transforms.operator_to_matrix`
+#: can convert to a 4×4 matrix (Rotor/GeneralRotor/Translator/Motor/Dilator).
+TransformOperator: TypeAlias = _T.TransformOperator
+
 
 def _as_vec3(value: Any) -> tuple[float, float, float]:
     """Best-effort convert *value* to a 3-vector of floats.
