@@ -10,7 +10,7 @@ color/opacity and can be re-positioned at runtime by id.
 Run with:  uv run python py/examples/viz/sdf/object_model.py
 """
 
-from pytanga.geometry import Circle, Cylinder, Direction, Point, Sphere
+from pytanga.geometry import Circle, Cylinder, Direction, Point, Sphere, Translator
 from pytanga.viz import SdfCircleStyle, SdfCylinderStyle, SdfSphereStyle, Visualizer
 from pytanga.viz.sdf import ECompose, SdfGroup, SdfObject
 
@@ -23,6 +23,13 @@ body = SdfObject(
     id="body",
     style=SdfSphereStyle(color="#ffaa00"),
 )
+body2 = SdfObject(
+    Sphere(Point(-1.5, 0.0, 0.0), 1.2),
+    id="body",
+    style=SdfSphereStyle(color="#ffaa00"),
+)
+
+
 drill = SdfObject(
     Cylinder(
         origin=Point(-2.5, 0.0, 0.0),
@@ -35,25 +42,33 @@ drill = SdfObject(
     style=SdfCylinderStyle(color="#44ff44"),
 )
 ring = SdfObject(
-    Circle(Point(2.5, 0.0, 0.0), 1.3, Direction(0.0, 0.0, 1.0)),
+    Circle(Point(-2.5, 0.0, 0.0), 1.2, Direction(0.0, 0.0, 1.0)),
     id="ring",
-    style=SdfCircleStyle(color="#ff44ff", tube_radius=0.06),
+    style=SdfCircleStyle(color="#ff44ff", tube_radius=0.12),
 )
 
 # ── Operators: + (union), - (subtract), & (intersection), ^ (xor) ──
 viz.add(body - drill, label="drilled sphere  (body - drill)")
-viz.add(body & ring, label="sphere ∩ ring    (body & ring)")
-viz.add(body ^ ring, label="sphere xor ring  (body ^ ring)")
+
+union_grp = viz.add_group("union")
+union_grp.add(body - ring, label="sphere ∩ ring    (body & ring)")
+union_grp.apply_transform(Translator(Direction(3, 0, 0)))
+
+xor_grp = viz.add_group("xor")
+xor_grp.add((body ^ ring) - body2, label="xor")
+xor_grp.apply_transform(Translator(Direction(6, 0, 0)))
 
 # ── SdfGroup: multi-member object with per-member materials ────
 # The unary `-drill` tags that member with SUBTRACT polarity; `~` would tag it
 # INTERSECTION. Each member keeps its own color/opacity (the material table).
 group = SdfGroup(body, -drill, ring)
-viz.add(group, label="SdfGroup  (per-member materials)")
+sdf_grp = viz.add_group("sdf")
+sdf_grp.add(group, label="SdfGroup  (per-member materials)")
+sdf_grp.apply_transform(Translator(Direction(0, 4, 0)))
 
 # Re-position the ring member at runtime, addressing it by id. The proxy box
 # recomputes its union AABB so the moved member stays inside the march volume.
-group.set_member_transform("ring", position=Point(2.5, 0.8, 0.0))
+# group.set_member_transform("ring", position=Point(2.5, 0.8, 0.0))
 
 viz.flush()
 

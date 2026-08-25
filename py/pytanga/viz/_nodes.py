@@ -128,11 +128,7 @@ class Transform:
         ry = _T.rotation_matrix((0.0, 1.0, 0.0), self.rotation[1])
         rz = _T.rotation_matrix((0.0, 0.0, 1.0), self.rotation[2])
         r = rx @ ry @ rz
-        return (
-            _T.translation_matrix(*self.position)
-            @ r
-            @ _T.scale_matrix(*self.scale)
-        )
+        return _T.translation_matrix(*self.position) @ r @ _T.scale_matrix(*self.scale)
 
     def set_matrix(self, m: Any) -> "Transform":
         """Set position/rotation/scale from a 4×4 matrix (decompose)."""
@@ -296,7 +292,9 @@ class VizSceneObject(VizNode):
             id,
             name=name,
             layer="scene",
-            kind=kind if kind is not None else (type(entity).__name__ if entity is not None else ""),
+            kind=kind
+            if kind is not None
+            else (type(entity).__name__ if entity is not None else ""),
             visible=visible,
         )
         self.entity: Any = entity
