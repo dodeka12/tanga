@@ -16,7 +16,7 @@ shape knobs (`thickness`, `tube_radius`, `size`) live on the derived classes.
 
 ## Steps
 
-- [ ] **1.1 — Derived classes** (`_styles/_sdf_style.py`)
+- [x] **1.1 — Derived classes** (`_styles/_sdf_style.py`)
   - Keep `SdfStyle` (base: `color`, `opacity`, `soft_shadows`, `max_steps`,
     `bound_padding`).
   - Add, each `to_dict()` → `{"style_type": "<Name>", ...}`:
@@ -27,24 +27,24 @@ shape knobs (`thickness`, `tube_radius`, `size`) live on the derived classes.
     - `SdfCylinderStyle(SdfStyle)` — no extras.
     - `SdfPlaneStyle(SdfStyle)` — no extras (extent is geometric on `Plane`).
 
-- [ ] **1.2 — kind→style registry**
+- [x] **1.2 — kind→style registry**
   - A module-level map `SDF_STYLE_BY_KIND = {"Sphere": SdfSphereStyle,
     "Line": SdfLineStyle, "Circle": SdfCircleStyle, "Point": SdfPointStyle,
     "Cylinder": SdfCylinderStyle, "Plane": SdfPlaneStyle, ...}` so
     `_entity_to_sdf` (Phase 3) can default the right style when a raw entity is
     wrapped without an explicit style.
 
-- [ ] **1.3 — Exports**
+- [x] **1.3 — Exports**
   - Re-export from `_styles/__init__.py` and `py/pytanga/viz/__init__.py`
     (`from pytanga.viz import SdfLineStyle, ...`).
 
-- [ ] **1.4 — Tests** (`py/tests/viz/sdf/test_sdf_styles.py`)
+- [x] **1.4 — Tests** (`py/tests/viz/sdf/test_sdf_styles.py`)
   - Each class `to_dict()` has the right `style_type` + SDF-only keys.
   - `isinstance(SdfLineStyle(), SdfStyle)` is true.
   - Derived classes expose **no** `wireframe`/`texture_label`/`double_sided`
     attributes.
 
-- [ ] **1.5 — Validate**
+- [x] **1.5 — Validate**
   - `uv run pytest py/tests/viz/sdf/test_sdf_styles.py -q` and
     `uv run pytest py/tests/viz/ -q`.
 

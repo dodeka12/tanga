@@ -45,7 +45,7 @@ class SdfStyle(VizStyle):
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
-            "style_type": "SdfStyle",
+            "style_type": type(self).__name__,
             "soft_shadows": self.soft_shadows,
             "max_steps": self.max_steps,
             "bound_padding": self.bound_padding,
@@ -55,3 +55,84 @@ class SdfStyle(VizStyle):
         if self.opacity is not None:
             result["opacity"] = self.opacity
         return result
+
+
+@dataclass
+class SdfSphereStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Sphere`.
+
+    A sphere has no entity-specific SDF knobs beyond the common base.
+    """
+
+
+@dataclass
+class SdfLineStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Line`.
+
+    Attributes:
+        thickness: Radius of the SDF line's capped-cylinder body (the SDF
+            equivalent of the mesh ``LineStyle.thickness``).
+    """
+
+    thickness: float = 1.0
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SdfCircleStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Circle`.
+
+    Attributes:
+        tube_radius: Radius of the torus tube used for the circle's SDF.
+    """
+
+    tube_radius: float = 0.03
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["tube_radius"] = self.tube_radius
+        return result
+
+
+@dataclass
+class SdfPointStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Point`.
+
+    Attributes:
+        size: Radius of the SDF point's sphere.
+    """
+
+    size: float = 0.08
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["size"] = self.size
+        return result
+
+
+@dataclass
+class SdfCylinderStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Cylinder` (no extra knobs)."""
+
+
+@dataclass
+class SdfPlaneStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Plane` (no extra knobs)."""
+
+
+#: Default per-entity SDF style class for a geometry entity kind. Used by
+#: ``_entity_to_sdf`` (Phase 3) to pick a sensible style when a raw entity is
+#: wrapped without an explicit style.
+SDF_STYLE_BY_KIND: dict[str, type[SdfStyle]] = {
+    "Sphere": SdfSphereStyle,
+    "Line": SdfLineStyle,
+    "Circle": SdfCircleStyle,
+    "Point": SdfPointStyle,
+    "Cylinder": SdfCylinderStyle,
+    "Plane": SdfPlaneStyle,
+}
+

@@ -84,7 +84,15 @@ from ._operator_styles import (
     RotorStyle,
     TranslatorStyle,
 )
-from ._sdf_style import SdfStyle
+from ._sdf_style import (
+    SdfCircleStyle,
+    SdfCylinderStyle,
+    SdfLineStyle,
+    SdfPlaneStyle,
+    SdfPointStyle,
+    SdfSphereStyle,
+    SdfStyle,
+)
 from ._overlay_styles import (
     AnimStyle,
     AnnotationStyle,
@@ -124,6 +132,12 @@ ObjVizStyle: TypeAlias = Union[
     AxisStyle,
     Axes2DStyle,
     Axes3DStyle,
+    SdfCircleStyle,
+    SdfCylinderStyle,
+    SdfLineStyle,
+    SdfPlaneStyle,
+    SdfPointStyle,
+    SdfSphereStyle,
     SdfStyle,
 ]
 
