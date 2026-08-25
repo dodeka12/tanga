@@ -1,6 +1,6 @@
 # Viz SDF Object Model — Overview
 
-**Created:** 2026-08-25 | **Status:** Planned | **Branch:** `feat/sdf-viewer`
+**Created:** 2026-08-25 | **Status:** Implemented (Phase 6.4 manual browser smoke pending) | **Branch:** `feat/sdf-viewer`
 
 ## Goal
 
@@ -53,8 +53,8 @@ sdf/serializer.py  ──▶  scene object { kind:"sdf", tree, members?, materia
    │
    ▼
 renderers/factory.js ── case "sdf" ──▶ createSdfProxy()
-   single member:  float map()  + single uColor/uOpacity        (unchanged)
-   multi member:   vec2  map()  + uMaterial[MAX_GROUP_MEMBERS]   (new)
+   single member:  vec2 map()  + uMaterial[0] (index always 0)   (unchanged cost)
+   multi member:   vec2 map()  + uMaterial[MAX_GROUP_MEMBERS]      (new)
 ```
 
 Reuse (no reimplementation): `sdf/objects/*.js` tree emitters, `primitives.glsl` +
@@ -139,9 +139,10 @@ viewer's `material-table.js` packing + `vec2 map` fold pattern.
   `SdfObject`/`Composed`/`SdfGroup`), never deep in the serializer. The
   serializer's `_dispatch_tree`/`_*_tree` stays for the fullscreen viewer's
   top-level entities only.
-- **Single-material objects keep `float map()`**; only multi-member objects
-  switch to `vec2 map()` + material table. No regression to the shipped
-  single-object path.
+- **The proxy `map()` returns `vec2(distance, materialIndex)`** — single objects
+  return `vec2(d, 0.0)` and groups propagate the winner's index, so `proxy.glsl`
+  needs only one body (no float/vec2 split, and the extra component is
+  negligible for single objects).
 - **Operators live on `SdfElement` only** — geometry entities (`Sphere`, …) are
   not patched; `_coerce()` wraps a raw entity into an `SdfObject` on demand.
 - **XOR is binary-only** — it cannot be a `SdfGroup`/`Composed` fold mode (the
