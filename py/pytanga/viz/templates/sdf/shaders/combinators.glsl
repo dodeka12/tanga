@@ -25,6 +25,11 @@ float opIntersect(float d1, float d2) {
     return max(d1, d2);
 }
 
+float opXor(float d1, float d2) {
+    // Symmetric difference: inside exactly one of the two, outside both.
+    return max(min(d1, d2), -max(d1, d2));
+}
+
 // ── Smooth combinators (vec2: x = distance, y = blend factor) ──
 
 vec2 opSmoothUnion(float d1, float d2, float k) {

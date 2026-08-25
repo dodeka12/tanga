@@ -71,7 +71,7 @@ def test_proxy_writes_depth() -> None:
 
 def test_proxy_has_single_object_uniforms() -> None:
     body = _read(PROXY_FILE)
-    for symbol in ("uColor", "uOpacity", "uMaxSteps", "uSoftShadows", "uBoundHalf"):
+    for symbol in ("uMaterial", "uOpacity", "uMaxSteps", "uSoftShadows", "uBoundHalf"):
         assert symbol in body
 
 

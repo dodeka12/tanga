@@ -12,6 +12,7 @@ import { transformExpr } from './transform.js';
 function foldOp(op, a, b) {
     if (op === 'intersection' || op === 'intersect') return `opIntersect(${a}, ${b})`;
     if (op === 'subtract') return `opSubtract(${a}, ${b})`;
+    if (op === 'xor') return `opXor(${a}, ${b})`;
     return `opUnion(${a}, ${b})`;
 }
 
@@ -28,7 +29,8 @@ function emitNode(node) {
     switch (node.kind) {
         case 'union':
         case 'intersect':
-        case 'subtract': {
+        case 'subtract':
+        case 'xor': {
             // Uniform fold: every child combines with the node's single op.
             const [first, ...rest] = node.children;
             let acc = childExpr(node, first);

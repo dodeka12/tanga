@@ -1,8 +1,9 @@
 // Pure GLSL assembly for the per-object SDF proxy shader (no three.js / DOM).
 //
 // The proxy marches a *single* object's local-space SDF inside a bounding-box
-// proxy mesh, replacing the fullscreen viewer's global `vec2 map()` fold and
-// material table with a `float map(vec3 p)` and a single `uColor`/`uOpacity`.
+// proxy mesh. `map()` returns `vec2(distance, materialIndex)` so grouped
+// objects can shade each member with its own material; single objects use
+// material slot 0 (index is always 0.0).
 
 import { emitTree } from '../../sdf/objects/combinators.js';
 import { lightPreamble } from './lighting.js';
@@ -36,27 +37,37 @@ void main() {
 // `uMemberInvTransform[i]` uniform (inverse transform: point → member local).
 function buildGroupMap(ent) {
     const children = (ent.tree && ent.tree.children) || [];
+    const hasTransforms = !!ent.members;
     const lines = [];
     children.forEach((child, i) => {
         lines.push(`float member${i}(vec3 p) {`);
         lines.push(`    return ${emitTree(child)};`);
         lines.push('}');
     });
-    lines.push('float map(vec3 p) {');
+    lines.push('vec2 map(vec3 p) {');
     lines.push('    float d = MAX_DIST;');
+    lines.push('    float m = 0.0;');
     children.forEach((child, i) => {
         const combine = (child.combine || 'union').toLowerCase();
-        lines.push(`    vec3 pm${i} = (uMemberInvTransform[${i}] * vec4(p, 1.0)).xyz;`);
-        lines.push(`    float d${i} = member${i}(pm${i});`);
+        const local = hasTransforms
+            ? `(uMemberInvTransform[${i}] * vec4(p, 1.0)).xyz`
+            : 'p';
+        lines.push(`    float d${i} = member${i}(${local});`);
         if (combine === 'subtract') {
+            // The cut contributes no material; the material stays with `d`.
             lines.push(`    d = opSubtract(d, d${i});`);
         } else if (combine === 'intersection') {
+            lines.push(`    if (d${i} > d) m = ${i}.0;`);
             lines.push(`    d = opIntersect(d, d${i});`);
+        } else if (combine === 'xor') {
+            lines.push(`    if (d${i} < d) m = ${i}.0;`);
+            lines.push(`    d = opXor(d, d${i});`);
         } else {
+            lines.push(`    if (d${i} < d) m = ${i}.0;`);
             lines.push(`    d = opUnion(d, d${i});`);
         }
     });
-    lines.push('    return d;');
+    lines.push('    return vec2(d, m);');
     lines.push('}');
     return lines.join('\n');
 }
@@ -65,17 +76,20 @@ function buildGroupMap(ent) {
 // single-object tree. `shaderParts` = { common, primitives, combinators, proxy }.
 export function buildProxyFragment(ent, shaderParts) {
     const { common, primitives, combinators, proxy } = shaderParts;
-    const isGroup = !!ent.members;
+    const isGroup = !!(ent.tree && ent.tree.kind === 'group');
 
     const mapSrc = isGroup
         ? buildGroupMap(ent)
-        : `float map(vec3 p) {
-    return ${emitTree(ent.tree)};
+        : `vec2 map(vec3 p) {
+    return vec2(${emitTree(ent.tree)}, 0.0);
 }`;
 
-    const groupPreamble = isGroup
-        ? `const int MAX_GROUP_MEMBERS = ${MAX_GROUP_MEMBERS};
-uniform mat4 uMemberInvTransform[MAX_GROUP_MEMBERS];`
+    // One material table for both single-object (index 0) and grouped objects.
+    const materialPreamble = `const int MAX_GROUP_MEMBERS = ${MAX_GROUP_MEMBERS};
+uniform vec4 uMaterial[MAX_GROUP_MEMBERS];`;
+
+    const transformPreamble = isGroup
+        ? `uniform mat4 uMemberInvTransform[MAX_GROUP_MEMBERS];`
         : '';
 
     const parts = [
@@ -84,7 +98,8 @@ uniform mat4 uMemberInvTransform[MAX_GROUP_MEMBERS];`
         combinators,
         lightPreamble,
         `const int MAX_STEPS = ${MAX_STEPS};`,
-        groupPreamble,
+        materialPreamble,
+        transformPreamble,
         mapSrc,
         proxy,
     ];

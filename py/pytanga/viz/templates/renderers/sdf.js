@@ -68,11 +68,37 @@ function _memberInvTransform(member) {
     return m.invert();
 }
 
+// Build the per-member material table (uniform `uMaterial`, one `vec4(color,
+// opacity)` per member). Single-material objects use slot 0; grouped objects
+// fill one slot per member, resolving `null` color/opacity to the object's own.
+function _buildMaterials(ent) {
+    const [br, bg, bb] = parseHexColor(ent.color);
+    const baseOpacity = typeof ent.opacity === 'number' ? ent.opacity : 1.0;
+    const arr = Array.from({ length: MAX_GROUP_MEMBERS }, () => new THREE.Vector4(0, 0, 0, 1));
+    const set = (i, hex, opacity) => {
+        const [r, g, b] = parseHexColor(hex, [br, bg, bb]);
+        arr[i].set(r, g, b, typeof opacity === 'number' ? opacity : baseOpacity);
+    };
+    if (ent.materials && ent.materials.length) {
+        ent.materials.forEach((mat, i) => {
+            if (i < MAX_GROUP_MEMBERS) set(i, mat.color, mat.opacity);
+        });
+    } else {
+        set(0, ent.color, ent.opacity);
+    }
+    return arr;
+}
+
+function _anyTransparent(materials) {
+    return materials.some((m) => m.w < 0.99);
+}
+
 function _buildUniforms(ent) {
-    const [r, g, b] = parseHexColor(ent.color);
     const uniforms = {
-        uColor: { value: new THREE.Color(r, g, b) },
-        uOpacity: { value: typeof ent.opacity === 'number' ? ent.opacity : 1.0 },
+        uMaterial: { value: _buildMaterials(ent) },
+        // Global opacity multiplier (1.0 normally; the interaction layer sets
+        // it to `hover_opacity` on hover).
+        uOpacity: { value: 1.0 },
         uMaxSteps: { value: _maxSteps(ent) },
         uSoftShadows: { value: _softShadows(ent) ? 1.0 : 0.0 },
         uBoundHalf: { value: new THREE.Vector3() },
@@ -118,7 +144,7 @@ export async function createSdfProxy(ent) {
         vertexShader: buildProxyVertex(),
         fragmentShader: buildProxyFragment(ent, parts),
         uniforms,
-        transparent: uniforms.uOpacity.value < 0.99,
+        transparent: _anyTransparent(uniforms.uMaterial.value),
         depthWrite: true,
         depthTest: true,
         glslVersion: THREE.GLSL3,
@@ -168,12 +194,10 @@ function _resizeProxyBox(mesh, ent) {
 export function updateSdfProxy(mesh, ent) {
     const mat = mesh.material;
     if (!mat || !mat.uniforms) return true;
-    const [r, g, b] = parseHexColor(ent.color);
-    mat.uniforms.uColor.value.setRGB(r, g, b);
-    mat.uniforms.uOpacity.value = typeof ent.opacity === 'number' ? ent.opacity : 1.0;
+    mat.uniforms.uMaterial.value = _buildMaterials(ent);
     mat.uniforms.uMaxSteps.value = _maxSteps(ent);
     mat.uniforms.uSoftShadows.value = _softShadows(ent) ? 1.0 : 0.0;
-    mat.transparent = mat.uniforms.uOpacity.value < 0.99;
+    mat.transparent = _anyTransparent(mat.uniforms.uMaterial.value);
 
     if (ent.members && mat.uniforms.uMemberInvTransform) {
         // Update each member's inverse transform uniform in place, then resize

@@ -43,14 +43,14 @@ const ent = {
 
 const frag = buildProxyFragment(ent, parts);
 assert((frag.match(/void main/g) || []).length === 1, 'fragment has exactly one main');
-assert(frag.includes('float map(vec3 p)'), 'fragment declares float map');
+assert(frag.includes('vec2 map(vec3 p)'), 'fragment declares vec2 map');
 assert(frag.includes('sdSphere('), 'map emits the sphere tree');
 // Examine code lines only (the header comment mentions `gl_FragColor`).
 const fragCode = frag.split('\n').filter((ln) => !ln.trim().startsWith('//')).join('\n');
 assert(fragCode.includes('out vec4'), 'fragment declares out vec4');
 assert(!fragCode.includes('gl_FragColor'), 'no legacy gl_FragColor');
 assert(frag.includes('gl_FragDepth'), 'writes gl_FragDepth');
-assert(frag.includes('uniform vec3 uColor'), 'declares uColor');
+assert(frag.includes('uniform vec4 uMaterial[MAX_GROUP_MEMBERS]'), 'declares uMaterial');
 assert(frag.includes('uniform float uOpacity'), 'declares uOpacity');
 assert(frag.includes('uniform int uMaxSteps'), 'declares uMaxSteps');
 assert(frag.includes('uniform float uSoftShadows'), 'declares uSoftShadows');
@@ -100,5 +100,11 @@ assert(groupFrag.includes('opIntersect(d, d2)'), 'group folds member2 as interse
 assert(groupFrag.includes('uMemberInvTransform[0]'), 'group applies member0 transform');
 assert((groupFrag.match(/void main/g) || []).length === 1, 'group fragment has exactly one main');
 assert(!groupFrag.includes('emitTree('), 'group fragment has no stray emitter');
+assert(groupFrag.includes('vec2 map(vec3 p)'), 'group declares vec2 map');
+assert(groupFrag.includes('uniform vec4 uMaterial[MAX_GROUP_MEMBERS]'), 'group declares uMaterial table');
+assert(groupFrag.includes('return vec2(d, m)'), 'group returns vec2(distance, material)');
+assert(groupFrag.includes('m = 0.0'), 'group propagates material index 0 (union)');
+assert(groupFrag.includes('m = 2.0'), 'group propagates material index 2 (intersection)');
+assert(!groupFrag.includes('m = 1.0'), 'subtract member contributes no material index');
 
 console.log('OK: SDF proxy shader / lighting smoke');
