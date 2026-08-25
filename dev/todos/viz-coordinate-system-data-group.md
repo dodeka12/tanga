@@ -181,12 +181,12 @@ code-symmetry benefit is worth the refactor.
 
 **File:** `py/pytanga/viz/_coordinate_system.py`
 
-- [ ] Add a read-only `data_group` property returning `self._data_group`, with a
+- [x] Add a read-only `data_group` property returning `self._data_group`, with a
       docstring explaining children live in data coordinates (linear) /
       log-mapped coordinates (log) and inherit the auto placement.
-- [ ] (Optional) Add a `to_data(x, y)` helper returning `self._data_xy(x, y)` so
+- [x] (Optional) Add a `to_data(x, y)` helper returning `self._data_xy(x, y)` so
       users can pre-map a log-axis value without drawing through the group.
-- [ ] Keep `to_local()` / `to_world()` / `transform()` unchanged.
+- [x] Keep `to_local()` / `to_world()` / `transform()` unchanged.
 
 ### Step 4 — vline / hline annotation helpers
 

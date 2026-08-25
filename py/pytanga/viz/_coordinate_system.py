@@ -319,6 +319,16 @@ class CoordinateSystem:
         return self._group
 
     @property
+    def data_group(self):
+        """The inner data group (child of :attr:`group`) for data-space drawing.
+
+        Children added here live in data coordinates (linear axes) or log-mapped
+        coordinates (log axes); the group's transform maps them onto the plot
+        plane.  See :meth:`vline` and :meth:`hline` for annotation helpers.
+        """
+        return self._data_group
+
+    @property
     def handle(self):
         """The scene handle this coordinate system targets."""
         return self._handle
@@ -568,6 +578,15 @@ class CoordinateSystem:
         lx, ly = self._local_xy(x, y)
         w = self._group.world_matrix @ np.array([lx, ly, 0.0, 1.0])
         return (float(w[0]), float(w[1]), float(w[2]))
+
+    def to_data(self, x: float, y: float) -> tuple[float, float]:
+        """Map a data point to data-group coordinates (scale-world ``(wx, wy)``).
+
+        For linear axes this equals the data value; for log axes it is
+        ``log(value, base)``.  Useful for pre-mapping a point before drawing it
+        directly into :attr:`data_group`.
+        """
+        return self._data_xy(x, y)
 
     def transform(self, xs, ys) -> list[tuple[float, float, float]]:
         """Map ``(x, y)`` data series to group-local 3D points."""
