@@ -224,6 +224,25 @@ cs.remove_hline("zero")
 - Without `name`, each call creates a new line.
 - `remove_vline(name)` / `remove_hline(name)` remove a named line.
 
+### line
+
+Draw a line between two arbitrary data points, each given as an `(x, y)`
+2-tuple or a `Point()` instance:
+
+```python
+from pytanga.geometry.entities import Point
+
+cs.line((1.0, 0.0), (3.0, 2.0), color="#ffffff")
+cs.line(Point(1.0, 0.0), Point(3.0, 2.0), name="seg", color="#ff88ff")
+cs.line(Point(4.0, -1.0), Point(6.0, 1.0), name="seg")  # update in place
+cs.remove_line("seg")
+```
+
+- `line(start, end, *, name=None, color=None, style=None)` creates a line (or
+  updates it in place when `name` is given) between `start` and `end`, and
+  returns its `VizObjectRef`.
+- `remove_line(name)` removes a named line.
+
 > **Note:** `data_group` applies a non-uniform scale (it stretches data onto the
 > plot's `size`), so it is ideal for paths/lines. For shaded markers (points,
 > spheres, …) place them with `to_world()` instead.

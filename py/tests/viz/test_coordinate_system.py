@@ -450,3 +450,34 @@ class TestCoordinateSystemLines:
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         cs.remove_vline("does-not-exist")  # should not raise
         cs.remove_hline("does-not-exist")
+        cs.remove_line("does-not-exist")
+
+    def test_line_tuple(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.line((1.0, 2.0), (3.0, 4.0), name="seg", color="#ffffff")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((1.0, 2.0, 0.0))
+        assert pts[1] == pytest.approx((3.0, 4.0, 0.0))
+        assert ref.parent.id == cs.data_group.id
+
+    def test_line_accepts_point_instances(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.line(Point(5.0, 1.0), Point(7.0, 9.0), name="seg")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((5.0, 1.0, 0.0))
+        assert pts[1] == pytest.approx((7.0, 9.0, 0.0))
+
+    def test_line_update_by_name_and_remove(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.line((0.0, 0.0), (1.0, 1.0), name="seg")
+        cs.line((2.0, 2.0), (3.0, 3.0), name="seg")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((2.0, 2.0, 0.0))
+        assert pts[1] == pytest.approx((3.0, 3.0, 0.0))
+        assert cs.line((2.0, 2.0), (3.0, 3.0), name="seg").id == ref.id
+        cs.remove_line("seg")
+        viz._scenes[""].flush()
+        assert ref.id not in viz._scenes[""]._nodes

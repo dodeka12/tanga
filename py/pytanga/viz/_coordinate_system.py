@@ -308,6 +308,7 @@ class CoordinateSystem:
         self._plots: list[dict[str, Any]] = []
         self._vlines: dict[str, dict[str, Any]] = {}
         self._hlines: dict[str, dict[str, Any]] = {}
+        self._lines: dict[str, dict[str, Any]] = {}
 
         self._build()
         self._apply_transform()
@@ -699,6 +700,18 @@ class CoordinateSystem:
         """
         return self._upsert_line("h", float(y), name, x0, x1, color, style)
 
+    def line(self, start, end, *, name=None, color=None, style=None):
+        """Draw a line between two data points.
+
+        ``start`` and ``end`` are data coordinates, each given as an ``(x, y)``
+        2-tuple or a :class:`~pytanga.geometry.entities.Point`.  Pass ``name`` to
+        update the same line in place; without a name a new line is created each
+        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        """
+        p0 = self._normalize_point(start)
+        p1 = self._normalize_point(end)
+        return self._upsert_segment(p0, p1, name, color, style)
+
     def remove_vline(self, name: str) -> None:
         """Remove a named vertical line (a no-op if the name is unknown)."""
         entry = self._vlines.pop(name, None)
@@ -708,6 +721,12 @@ class CoordinateSystem:
     def remove_hline(self, name: str) -> None:
         """Remove a named horizontal line (a no-op if the name is unknown)."""
         entry = self._hlines.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def remove_line(self, name: str) -> None:
+        """Remove a named line (a no-op if the name is unknown)."""
+        entry = self._lines.pop(name, None)
         if entry is not None:
             entry["ref"].remove()
 
@@ -744,27 +763,73 @@ class CoordinateSystem:
         self._sync_line(entry, kind)
         return entry["ref"]
 
+    @staticmethod
+    def _normalize_point(value) -> tuple[float, float]:
+        """Normalize a data point given as an ``(x, y)`` pair or a ``Point``."""
+        if hasattr(value, "x") and hasattr(value, "y"):
+            return (float(value.x), float(value.y))
+        seq = tuple(value)
+        if len(seq) != 2:
+            raise ValueError(f"expected an (x, y) pair or a Point, got {value!r}")
+        return (float(seq[0]), float(seq[1]))
+
+    def _upsert_segment(self, p0, p1, name, color, style):
+        if name is None:
+            prefix = "line"
+            index = len(self._lines)
+            name = f"{prefix}_{index}"
+            while name in self._lines:
+                index += 1
+                name = f"{prefix}_{index}"
+        entry = self._lines.get(name)
+        if entry is None:
+            render = PointPath()
+            kwargs = {} if style is None else {"style": style}
+            ref = self._data_group.new(render, color=color, **kwargs)
+            entry = {
+                "name": name,
+                "p0": p0,
+                "p1": p1,
+                "color": color,
+                "ref": ref,
+                "render": render,
+            }
+            self._lines[name] = entry
+        else:
+            entry["p0"] = p0
+            entry["p1"] = p1
+        self._sync_line(entry, "l")
+        return entry["ref"]
+
     def _sync_lines(self) -> None:
         for entry in self._vlines.values():
             self._sync_line(entry, "v")
         for entry in self._hlines.values():
             self._sync_line(entry, "h")
+        for entry in self._lines.values():
+            self._sync_line(entry, "l")
 
     def _sync_line(self, entry: dict[str, Any], kind: str) -> None:
-        value = entry["value"]
-        c0 = entry["c0"]
-        c1 = entry["c1"]
         color = entry["color"]
         if kind == "v":
+            value = entry["value"]
+            c0 = entry["c0"]
+            c1 = entry["c1"]
             lo = self._ylim[0] if c0 is None else c0
             hi = self._ylim[1] if c1 is None else c1
             p0 = (*self._data_xy(value, lo), 0.0)
             p1 = (*self._data_xy(value, hi), 0.0)
-        else:
+        elif kind == "h":
+            value = entry["value"]
+            c0 = entry["c0"]
+            c1 = entry["c1"]
             lo = self._xlim[0] if c0 is None else c0
             hi = self._xlim[1] if c1 is None else c1
             p0 = (*self._data_xy(lo, value), 0.0)
             p1 = (*self._data_xy(hi, value), 0.0)
+        else:  # kind == "l"
+            p0 = (*self._data_xy(*entry["p0"]), 0.0)
+            p1 = (*self._data_xy(*entry["p1"]), 0.0)
         render = entry["render"]
         render.clear()
         render.add(p0, color=color)

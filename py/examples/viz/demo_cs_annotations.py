@@ -8,6 +8,7 @@ Demonstrates the data-space drawing features of
 
 - ``plot()`` in a 2D coordinate system,
 - fixed ``vline``/``hline`` annotations at data values,
+- a ``line`` between two data points (tuples or ``Point``s),
 - a named, animated ``vline`` (create once, move each frame), and
 - drawing a custom ``PointPath`` directly into ``cs.data_group``.
 
@@ -16,6 +17,7 @@ Run with:  uv run python py/examples/viz/demo_cs_annotations.py
 
 import math
 
+from pytanga.geometry.entities import Point
 from pytanga.viz import CoordinateSystem, PointPath, PointPathStyle, Visualizer
 
 viz = Visualizer(
@@ -44,6 +46,10 @@ cs.plot(
 # Fixed annotations at data values.
 cs.vline(x=math.pi, name="pi", color="#ff5555")
 cs.hline(y=0.0, name="zero", color="#8888ff")
+
+# Line helpers between two data points (accept (x, y) tuples or Point()).
+cs.line((1.0, -1.0), (3.0, 1.0), color="#ff88ff")
+cs.line(Point(5.0, -1.0), Point(7.0, 1.0), color="#00ffff")
 
 # A custom annotation drawn directly in the data group.
 spike = PointPath()

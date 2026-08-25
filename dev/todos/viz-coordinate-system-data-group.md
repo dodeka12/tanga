@@ -207,6 +207,9 @@ code-symmetry benefit is worth the refactor.
       end of `_build()` so lines track `xlim`/`ylim`/scale/size changes.
 - [x] Add `remove_vline(name)` and `remove_hline(name)` that unregister a named
       line and remove its node from the scene.
+- [x] Add a general `line(start, end, *, name=None, color=None, style=None)`
+      helper (start/end as `(x, y)` tuples or `Point` instances), plus
+      `remove_line(name)`.
 
 ### Step 5 — Tests
 
@@ -233,6 +236,8 @@ code-symmetry benefit is worth the refactor.
         `ylim`/`xlim`; endpoints are log-mapped for log axes.
       - `remove_vline`/`remove_hline`: removes the line node after a flush; unknown
         names are a no-op.
+      - `line`: accepts `(x, y)` tuples and `Point` instances, updates by name,
+        and `remove_line` removes it.
 - [x] Ensure existing tests `test_transform_and_plot`, `test_2d_size_up_rotates_plane`,
       `test_to_world_applies_group_transform`, `test_align_*`,
       `test_position_accepts_point_and_direction`, and the scale tests stay green
