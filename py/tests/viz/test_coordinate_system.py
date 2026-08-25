@@ -288,8 +288,9 @@ class TestCoordinateSystemPlots:
         assert cs.xlim == pytest.approx((0.0, 9.0))
         render = ref.entity
         assert len(render.points) == 3
-        # x = 9 maps to the right edge of the 2-wide plane.
-        assert render.points[-1][0] == pytest.approx(1.0)
+        # The render path now holds scale-world (data) coordinates; x = 9 stays 9.
+        assert render.points[-1][0] == pytest.approx(9.0)
+        assert render.points[-1][2] == pytest.approx(0.0)
 
     def test_add_plot_without_auto_x_keeps_xlim(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)

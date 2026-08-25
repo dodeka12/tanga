@@ -445,6 +445,10 @@ class CoordinateSystem:
         )
         return ((nx - 0.5) * self._size_x, (ny - 0.5) * self._size_y)
 
+    def _data_xy(self, x: float, y: float) -> tuple[float, float]:
+        """Map a data point to scale-world (data-group) ``(wx, wy)`` coordinates."""
+        return (self._xscale.to_world(float(x)), self._yscale.to_world(float(y)))
+
     def _align_offset(self) -> tuple[float, float]:
         """In-plane offset of the ``align`` point from the plane centre."""
         return (
@@ -576,20 +580,21 @@ class CoordinateSystem:
     def plot(self, xs, ys, *, color=None, style=None):
         """Plot an ``(x, y)`` data series as a :class:`~pytanga.viz.PointPath`.
 
-        Data is mapped through the scales and added as a child of the group,
-        so it inherits the group's 3D placement.
+        Data is mapped through the scales and added as a child of the data
+        group, whose transform places it on the plot plane (so it inherits the
+        outer group's 3D placement).
         """
         path = PointPath()
         for x, y in zip(xs, ys):
-            lx, ly = self._local_xy(x, y)
-            path.add((lx, ly, self._plot_z), color=color)
+            wx, wy = self._data_xy(x, y)
+            path.add((wx, wy, 0.0), color=color)
         kwargs = {} if style is None else {"style": style}
-        return self._group.new(path, color=color, **kwargs)
+        return self._data_group.new(path, color=color, **kwargs)
 
     # ── Registered (live) plots ───────────────────────────────
 
     def add_plot(self, path, *, color=None, style=None, auto_x: bool = False):
-        """Register a live :class:`~pytanga.viz.PointPath` and add it to the group.
+        """Register a live :class:`~pytanga.viz.PointPath` and add it to the data group.
 
         The path's points are in **data** coordinates; the coordinate system
         maps them onto the plot plane.  After mutating the path, call
@@ -601,7 +606,7 @@ class CoordinateSystem:
         """
         render = PointPath()
         kwargs = {} if style is None else {"style": style}
-        ref = self._group.new(render, color=color, **kwargs)
+        ref = self._data_group.new(render, color=color, **kwargs)
         entry: dict[str, Any] = {
             "path": path,
             "ref": ref,
@@ -627,9 +632,9 @@ class CoordinateSystem:
         src_points = src.points
         src_colors = src.colors
         for i, (x, y, _z) in enumerate(src_points):
-            lx, ly = self._local_xy(x, y)
+            wx, wy = self._data_xy(x, y)
             color = src_colors[i] if i < len(src_colors) else None
-            render.add((lx, ly, self._plot_z), color=color)
+            render.add((wx, wy, 0.0), color=color)
         entry["ref"].entity = render
 
     def _fit_x(self) -> None:

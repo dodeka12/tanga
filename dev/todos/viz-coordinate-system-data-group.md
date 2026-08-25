@@ -162,18 +162,20 @@ code-symmetry benefit is worth the refactor.
 
 **File:** `py/pytanga/viz/_coordinate_system.py`
 
-- [ ] Add a `_data_xy(x, y)` helper returning
+- [x] Add a `_data_xy(x, y)` helper returning
       `(self._xscale.to_world(float(x)), self._yscale.to_world(float(y)))`.
-- [ ] Update `plot()`:
+- [x] Update `plot()`:
       - build the `PointPath` with `(*self._data_xy(x, y), 0.0)` per point,
       - return `self._data_group.new(path, color=color, **kwargs)`.
-- [ ] Update `_sync_plot()` (used by `add_plot`/`update_plots`):
+- [x] Update `_sync_plot()` (used by `add_plot`/`update_plots`):
       - write `(*self._data_xy(x, y), 0.0)` into the render path,
       - keep `entry["ref"].entity = render` (the ref already points at the
         `_data_group` child created in `add_plot`).
-- [ ] Update `add_plot()` to create its render path via
+- [x] Update `add_plot()` to create its render path via
       `self._data_group.new(render, color=color, **kwargs)` instead of
       `self._group.new(...)`.
+- [x] Update `TestCoordinateSystemPlots::test_add_plot_and_update` to the new
+      scale-world render coordinates (done here so the suite stays green).
 
 ### Step 3 — Public API
 
@@ -210,7 +212,7 @@ code-symmetry benefit is worth the refactor.
 
 **Files:** `py/tests/viz/test_coordinate_system.py`
 
-- [ ] Update `TestCoordinateSystemPlots::test_add_plot_and_update`: the render
+- [x] Update `TestCoordinateSystemPlots::test_add_plot_and_update`: the render
       path now holds **scale-world** coordinates, so the final assertion becomes
       `render.points[-1][0] == pytest.approx(9.0)` (the auto-x data value) instead
       of the current local `1.0`.
