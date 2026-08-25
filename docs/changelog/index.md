@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.2.0] — 2026-08-25
+- Per-frame camera playback in animated HTML export · default 2D view now uses an orthographic camera · HTML export honors the live scene camera · viz examples reorganized into topic subfolders
+- Bug fixes: default 2D orthographic camera · HTML export applies the full camera config
+→ [Details](2026-08-25_88f3e3d9.md)
+
 ## [Since 1.1.0] — 2026-08-25
 - CoordinateSystem inner data group (`cs.data_group` + `to_data`) · `vline`/`hline`/`line`/`point` annotation helpers (create-or-update by name + `remove_*`)
 → [Details](2026-08-25_c6f85e08.md)
