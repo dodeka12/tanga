@@ -257,13 +257,13 @@ code-symmetry benefit is worth the refactor.
 
 **Files:** `py/examples/viz/demo_cs_annotations.py` (new)
 
-- [ ] Add a runnable example demonstrating the new features:
+- [x] Add a runnable example demonstrating the new features:
       - a `plot()` in a 2D coordinate system,
       - fixed `vline`/`hline` annotations in data coordinates,
       - a named, animated `vline` (create once, update each frame via
         `cs.vline(x=..., name="cursor")`), and
       - drawing directly into `cs.data_group`.
-- [ ] Match the existing example style (header docstring with a
+- [x] Match the existing example style (header docstring with a
       `uv run python ...` run line, `viz.show()` / `viz.animate(...)` loop).
 
 ### Step 8 — Changelog
