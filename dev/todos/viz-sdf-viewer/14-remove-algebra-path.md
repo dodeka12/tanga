@@ -146,36 +146,36 @@ until Step C).
 
 ### B. Frontend removal
 
-- [ ] Delete `py/pytanga/viz/templates/sdf/algebra/`.
-- [ ] `templates/sdf/scene-builder.js`: remove the `obj.sdfKind === 'mv_sdf'`
+- [x] Delete `py/pytanga/viz/templates/sdf/algebra/`.
+- [x] `templates/sdf/scene-builder.js`: remove the `obj.sdfKind === 'mv_sdf'`
       branch and the `dist_mv_<i>` delegation; always `return
       vec2(${emitTree(obj.tree)}, 1.0);`.
-- [ ] `templates/sdf/composer.js`: change `map()` to return `vec2(d, m)`; delete
+- [x] `templates/sdf/composer.js`: change `map()` to return `vec2(d, m)`; delete
       the `g` gradient-norm accumulator and every `g`/`d${i}.y` threading line
       (material `m` selection stays).
-- [ ] `templates/sdf/sdf_viewer.js`:
-  - [ ] Remove the algebra imports (`distinctEmbedSrcs`, `matrixUniformDecls`,
+- [x] `templates/sdf/sdf_viewer.js`:
+  - [x] Remove the algebra imports (`distinctEmbedSrcs`, `matrixUniformDecls`,
         `mvLayout`, `emitDistanceFunctions`, `emitAlgebraLeaves`,
         `buildAlgebraUniforms`) and the `opacityFuncs` import.
-  - [ ] Remove `activeDistance` / `activeOpacity` module state.
-  - [ ] In the fragment assembly, drop the algebra preamble lines
+  - [x] Remove `activeDistance` / `activeOpacity` module state.
+  - [x] In the fragment assembly, drop the algebra preamble lines
         (`distinctEmbedSrcs`, `matrixUniformDecls`, `emitDistanceFunctions`,
         `emitAlgebraLeaves`) and the opacity-function emission.
-  - [ ] In the uniform build/apply, drop `u_M` and `u_ObjectParams`.
-  - [ ] Drop `warnUnsignedBooleans` and its call site.
-  - [ ] In `structureKey`, drop the `distance`/`opacity`/`alg` components
+  - [x] In the uniform build/apply, drop `u_M` and `u_ObjectParams`.
+  - [x] Drop `warnUnsignedBooleans` and its call site.
+  - [x] In `structureKey`, drop the `distance`/`opacity`/`alg` components
         (`mv_sdf`/`algebra`/`smoothness` that only applied to algebra).
-  - [ ] In the `sdf_viewer_config` message handler, drop the `distance` and
+  - [x] In the `sdf_viewer_config` message handler, drop the `distance` and
         `opacity` handling.
-- [ ] `templates/sdf/shaders/raymarch.glsl`:
-  - [ ] March loop: `vec2 m = map(p); float d = m.x;` and step `t += d;`
+- [x] `templates/sdf/shaders/raymarch.glsl`:
+  - [x] March loop: `vec2 m = map(p); float d = m.x;` and step `t += d;`
         (delete `m.z`, `stepSize = d / max(m.z, 1.0)`).
-  - [ ] Delete `mapDensity`, the `u_ObjectParams` reads, and the
+  - [x] Delete `mapDensity`, the `u_ObjectParams` reads, and the
         `transmittance`/`haloMatId`/`maxSigma` volumetric accumulation; simplify
         the miss path to plain background colour.
-  - [ ] `shade`: replace `col *= opacityOf(map(p).x, surfaceOpacity);` with
+  - [x] `shade`: replace `col *= opacityOf(map(p).x, surfaceOpacity);` with
         `col *= surfaceOpacity;` (alpha comes from `materialColor().a`).
-  - [ ] Keep `calcNormal` (reads only `.x`), `softShadow`, `shade`, `main`,
+  - [x] Keep `calcNormal` (reads only `.x`), `softShadow`, `shade`, `main`,
         `SDF_EPSILON`/`MAX_DIST`.
 
 **Verify:** after Step C, `uv run pytest py/tests/viz/sdf/test_raymarch_shader.py -q`;

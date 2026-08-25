@@ -12,18 +12,11 @@
 
 import { emitTree } from './objects/combinators.js';
 
-export function buildObjectExpr(obj, index) {
-    // Algebra path: a `mv_sdf` object is emitted as a call to its pre-declared
-    // `dist_mv_<i>` leaf function (defined by `algebra/eval.js` in the preamble).
-    if (obj.sdfKind === 'mv_sdf') {
-        if (typeof index !== 'number') {
-            throw new Error(`mv_sdf object ${obj.id} needs an object index`);
-        }
-        return `dist_mv_${index}(p)`;
-    }
+export function buildObjectExpr(obj) {
     if (!obj.tree) {
         throw new Error(`SDF object ${obj.id} has no tree`);
     }
-    // Analytic path: a proper SDF has |∇d| = 1, so its gradient norm is 1.0.
-    return `vec2(${emitTree(obj.tree)}, 1.0)`;
+    // A proper analytic SDF has |∇d| = 1, so its distance is directly usable as
+    // a sphere-tracing step size.
+    return emitTree(obj.tree);
 }

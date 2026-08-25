@@ -32,15 +32,6 @@ import {
     buildOverlayUniforms,
     applyOverlayUniforms,
 } from './overlays/factory.js';
-import {
-    distinctEmbedSrcs,
-    matrixUniformDecls,
-    mvLayout,
-    emitDistanceFunctions,
-    emitAlgebraLeaves,
-    buildAlgebraUniforms,
-} from './algebra/eval.js';
-import { opacityFuncs } from './algebra/opacities.js';
 
 const VERTEX_SHADER = /* glsl */ `
 void main() {
@@ -50,8 +41,6 @@ void main() {
 
 // ── Live object state (from the WebSocket scene) ──────────
 let objects = [];
-let activeDistance = 'scalar_pseudo';
-let activeOpacity = 'step';
 let sceneConfig = null;
 
 // Friendly viewer label passed via `?viewer=name` (sent back in the ready
@@ -159,7 +148,6 @@ async function _loadShaderSources() {
 function buildFragment() {
     const { common, primitives, combinators, raymarch } = _shaderParts;
     const list = objects.length ? objects : DEFAULT_OBJECTS;
-    const { totalFloats } = mvLayout(list);
     return [
         common,
         primitives,
@@ -168,20 +156,9 @@ function buildFragment() {
         materialColorSrc,
         lightPreamble,
         overlaySrc(),
-        distinctEmbedSrcs(list).join('\n'),
-        matrixUniformDecls(totalFloats),
-        emitDistanceFunctions(list, activeDistance),
-        emitAlgebraLeaves(list, activeDistance),
-        emitOpacityFunction(),
         composeObjects(list),
         raymarch,
     ].join('\n');
-}
-
-function emitOpacityFunction() {
-    const entry = opacityFuncs.get(activeOpacity);
-    if (!entry) throw new Error(`Unknown opacity transfer '${activeOpacity}'`);
-    return entry.snippet;
 }
 
 function buildUniforms() {
@@ -191,7 +168,6 @@ function buildUniforms() {
     // must be a full-length array (three.js flattens the whole declared array);
     // pad unused slots with a transparent black material.
     const rows = padMaterialRows(actualRows);
-    const { uM, uObjectParams } = buildAlgebraUniforms(list);
     const uniforms = {
         uResolution: { value: new THREE.Vector2() },
         uCameraPosition: { value: new THREE.Vector3() },
@@ -201,8 +177,6 @@ function buildUniforms() {
         uCameraFar: { value: 1000.0 },
         uMaterial: { value: rows.map((r) => new THREE.Vector4(r[0], r[1], r[2], r[3])) },
         uMaterialCount: { value: actualRows.length },
-        u_M: { value: uM },
-        u_ObjectParams: { value: uObjectParams },
         uLightCount: { value: lighting.lights.length },
         uLightDir: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
         uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
@@ -599,14 +573,6 @@ async function handleMessage(msg) {
         return;
     }
     if (msg.type === 'sdf_viewer_config') {
-        if (msg.distance && msg.distance !== activeDistance) {
-            activeDistance = msg.distance;
-            rebuildProgram();
-        }
-        if (msg.opacity && msg.opacity !== activeOpacity) {
-            activeOpacity = msg.opacity;
-            rebuildProgram();
-        }
         if (msg.lights || msg.ambient) {
             applyLighting({ ambient: msg.ambient, lights: msg.lights });
         }
@@ -660,28 +626,14 @@ let _renderLoopStopped = false;
 let _structureKey = null;
 
 function structureKey(list) {
-    const parts = ['d:' + activeDistance, 'o:' + activeOpacity];
+    const parts = [];
     for (const obj of list) {
         const kind = obj.sdfKind || 'analytic';
         const combine = obj.combine || 'union';
-        const alg = obj.sdfKind === 'mv_sdf' ? (obj.algebra || '?') : '';
         const smooth = obj.smoothness != null ? obj.smoothness : '';
-        parts.push(`${kind}/${combine}/${alg}/${smooth}`);
+        parts.push(`${kind}/${combine}/${smooth}`);
     }
     return parts.join('|');
-}
-
-function warnUnsignedBooleans(list) {
-    if (activeDistance !== 'magnitude' && activeDistance !== 'grade') return;
-    const bad = list.some(
-        (o) => o.combine === 'intersection' || o.combine === 'subtract'
-    );
-    if (bad) {
-        console.warn(
-            "[sdf_viewer] 'intersection'/'subtract' require a signed distance " +
-            "function, but '" + activeDistance + "' is unsigned"
-        );
-    }
 }
 
 function applyDataUniforms(u, list) {
@@ -689,19 +641,15 @@ function applyDataUniforms(u, list) {
     const rows = padMaterialRows(actualRows);
     u.uMaterial.value.forEach((v, i) => v.set(rows[i][0], rows[i][1], rows[i][2], rows[i][3]));
     u.uMaterialCount.value = actualRows.length;
-    const { uM, uObjectParams } = buildAlgebraUniforms(list);
-    u.u_M.value = uM;
-    u.u_ObjectParams.value = uObjectParams;
 }
 
 function rebuildProgram() {
     if (!_shaderParts || !viewerState.renderer) return;
     const list = objects.length ? objects : DEFAULT_OBJECTS;
     const key = structureKey(list);
-    warnUnsignedBooleans(list);
 
-    // Data-only change (same object kinds/combines/embeds + same distance/
-    // opacity): update uniforms in place without recompiling the shader.
+    // Data-only change (same object kinds/combines): update uniforms in place
+    // without recompiling the shader.
     if (_structureKey === key && viewerState.material) {
         applyDataUniforms(viewerState.material.uniforms, list);
         return;

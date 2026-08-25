@@ -1,14 +1,11 @@
 // Raymarch fragment body — the final stage concatenated after `sdf_common`,
 // `primitives`, `combinators`, and the host-injected `map` + material table
-// preamble. Contains the `opacityOf()` step stub (replaced by Phase 12), the
-// gradient normal, IQ-style shading with per-object material lookup, and
-// `main()`.
+// preamble. Contains the gradient normal, IQ-style shading with per-object
+// material lookup, and `main()`.
 //
 // Contracts injected by the host assembler (sdf_viewer.js) BEFORE this body:
-//   · `vec3 map(vec3 p)`            — returns (distance, materialId, gradient
-//                                     norm) for the composed global SDF
-//                                     (Phase 5) or the `M·a → distOf` evaluator
-//                                     (Phase 8; gradient norm added in Phase 13).
+//   · `vec2 map(vec3 p)`            — returns (distance, materialId) for the
+//                                     composed global SDF.
 //   · `vec4 materialColor(float m)` — resolves the per-object color/opacity.
 //
 // Uses three.js ShaderMaterial GLSL3 conventions: a declared `out vec4`
@@ -24,12 +21,6 @@ uniform float uCameraFar;
 
 // GLSL ES 3.0 fragment output (there is no `gl_FragColor` in WebGL2).
 out vec4 fragColor;
-
-// ── Opacity transfer (call site; the function is injected by the host) ──
-// The `opacityOf(float d, float epsilon)` function is emitted by the host
-// assembler (`sdf_viewer.js`) from `algebra/opacities.js` — the active transfer
-// (`step`/`linear`/`sigmoid`) is a registry lookup, never a shader branch. The
-// Phase 2 call site is fixed here; only the injected snippet changes.
 
 // ── Gradient normal (tetrahedral) ──────────────────────────
 
@@ -92,29 +83,9 @@ vec3 shade(vec3 ro, vec3 rd, vec3 p, vec3 n, float matId) {
     vec3 bg = vec3(0.10, 0.10, 0.18);
     col = mix(col, bg, fog);
 
-    // Per-object surface opacity (the per-object `opacity` is ε: the surface
-    // alpha for `step`, the soft-edge breadth for `linear`/`sigmoid`).
-    col *= opacityOf(map(p).x, surfaceOpacity);
+    // Per-object surface opacity (the material table's `opacity` alpha).
+    col *= surfaceOpacity;
     return col;
-}
-
-// ── Volumetric density (per-object exponential falloff + hard cutoff) ──
-//
-// For a soft `mv_sdf` object (`falloff > 0`), the density outside the core is
-// σ(d) = exp(−d/falloff)/falloff  (Beer–Lambert), hard-clipped to zero beyond
-// `max_distance` (default `5·falloff`). `d` is the thickness-shifted distance
-// already returned by the algebra leaf. Analytic/hard objects have `falloff ==
-// 0` → no density (they stay hard surfaces).
-
-float mapDensity(float d, float matIdF) {
-    int matId = int(matIdF + 0.5);
-    if (matId < 0 || matId >= uMaterialCount) return 0.0;
-    float falloff = u_ObjectParams[matId].z;
-    if (falloff <= 0.0) return 0.0;
-    float cutoff = u_ObjectParams[matId].w;
-    if (cutoff <= 0.0) cutoff = 5.0 * falloff;
-    if (d <= 0.0 || d >= cutoff) return 0.0;
-    return exp(-d / falloff) / falloff;
 }
 
 void main() {
@@ -131,30 +102,16 @@ void main() {
     float maxDist = min(uCameraFar, MAX_DIST);
     float t = uCameraNear;
     bool hit = false;
-    float transmittance = 1.0;
-    float haloMatId = -1.0;
-    float maxSigma = 0.0;
     for (int i = 0; i < 256; i++) {
         vec3 p = ro + rd * t;
-        vec3 m = map(p);
+        vec2 m = map(p);
         float d = m.x;
-        float sigma = mapDensity(d, m.y);
-        if (sigma > maxSigma) {
-            maxSigma = sigma;
-            haloMatId = m.y;
-        }
-        transmittance *= exp(-sigma * d);
         if (d < SDF_EPSILON) {
             hit = true;
             break;
         }
-        // `m.z` is the carried gradient norm: 1.0 for analytic (proper SDF)
-        // objects, scale·|∇d| for algebraic (`mv_sdf`) objects (Phase 13). Step
-        // the local first-order distance d / max(|∇d|, 1) so a non-1-Lipschitz
-        // algebraic field can't overshoot its thin surface.
-        float stepSize = d / max(m.z, 1.0);
-        t += stepSize;
-        if (t > maxDist || transmittance < 0.01) break;
+        t += d;
+        if (t > maxDist) break;
     }
 
     vec3 bg = vec3(0.10, 0.10, 0.18);
@@ -165,15 +122,7 @@ void main() {
         float matId = map(p).y;
         col = shade(ro, rd, p, n, matId);
     } else {
-        // Soft halo for a grazing ray (passed through a soft object's density
-        // but missed its core): blend the object's color by the absorbed amount.
-        float opacity = 1.0 - transmittance;
-        if (opacity > 0.0 && haloMatId >= 0.0) {
-            vec3 haloColor = materialColor(haloMatId).rgb;
-            col = mix(bg, haloColor, opacity);
-        } else {
-            col = bg;
-        }
+        col = bg;
     }
 
     // Depth-composited shader overlays (grid, …): each overlay is drawn over
