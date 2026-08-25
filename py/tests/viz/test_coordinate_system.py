@@ -15,6 +15,15 @@ from pytanga.viz._scale import LinearScale, LogScale
 from pytanga.viz.camera import CameraConfig2d, View2DConfig
 
 
+def _line_endpoints(ref):
+    """Return the ``(start, end)`` of a ``Line`` entity as 3-tuples."""
+    line = ref.entity
+    return (
+        (line.start.x, line.start.y, line.start.z),
+        (line.end.x, line.end.y, line.end.z),
+    )
+
+
 class TestCoordinateSystem2D:
     def test_auto_span_from_camera(self):
         viz = Visualizer(
@@ -382,34 +391,34 @@ class TestCoordinateSystemLines:
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.vline(x=3.0, name="v", color="#ff0000")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((3.0, 0.0, 0.0))
-        assert pts[1] == pytest.approx((3.0, 10.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((3.0, 0.0, 0.0))
+        assert end == pytest.approx((3.0, 10.0, 0.0))
         cs.vline(x=7.0, name="v")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((7.0, 0.0, 0.0))
-        assert pts[1] == pytest.approx((7.0, 10.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((7.0, 0.0, 0.0))
+        assert end == pytest.approx((7.0, 10.0, 0.0))
         assert cs.vline(x=7.0, name="v").id == ref.id
 
     def test_vline_explicit_span(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.vline(x=2.0, name="v", y0=1.0, y1=9.0)
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((2.0, 1.0, 0.0))
-        assert pts[1] == pytest.approx((2.0, 9.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((2.0, 1.0, 0.0))
+        assert end == pytest.approx((2.0, 9.0, 0.0))
 
     def test_hline_default_span_and_update(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.hline(y=4.0, name="h")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((0.0, 4.0, 0.0))
-        assert pts[1] == pytest.approx((10.0, 4.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((0.0, 4.0, 0.0))
+        assert end == pytest.approx((10.0, 4.0, 0.0))
         cs.hline(y=6.0, name="h")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((0.0, 6.0, 0.0))
-        assert pts[1] == pytest.approx((10.0, 6.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((0.0, 6.0, 0.0))
+        assert end == pytest.approx((10.0, 6.0, 0.0))
 
     def test_vline_hline_are_data_group_children(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
@@ -430,9 +439,9 @@ class TestCoordinateSystemLines:
             camera=False,
         )
         ref = cs.vline(x=10.0, name="v")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((1.0, 0.0, 0.0))
-        assert pts[1] == pytest.approx((1.0, 3.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((1.0, 0.0, 0.0))
+        assert end == pytest.approx((1.0, 3.0, 0.0))
 
     def test_remove_vline_hline(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
@@ -457,27 +466,27 @@ class TestCoordinateSystemLines:
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.line((1.0, 2.0), (3.0, 4.0), name="seg", color="#ffffff")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((1.0, 2.0, 0.0))
-        assert pts[1] == pytest.approx((3.0, 4.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((1.0, 2.0, 0.0))
+        assert end == pytest.approx((3.0, 4.0, 0.0))
         assert ref.parent.id == cs.data_group.id
 
     def test_line_accepts_point_instances(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.line(Point(5.0, 1.0), Point(7.0, 9.0), name="seg")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((5.0, 1.0, 0.0))
-        assert pts[1] == pytest.approx((7.0, 9.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((5.0, 1.0, 0.0))
+        assert end == pytest.approx((7.0, 9.0, 0.0))
 
     def test_line_update_by_name_and_remove(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.line((0.0, 0.0), (1.0, 1.0), name="seg")
         cs.line((2.0, 2.0), (3.0, 3.0), name="seg")
-        pts = list(ref.entity.points)
-        assert pts[0] == pytest.approx((2.0, 2.0, 0.0))
-        assert pts[1] == pytest.approx((3.0, 3.0, 0.0))
+        start, end = _line_endpoints(ref)
+        assert start == pytest.approx((2.0, 2.0, 0.0))
+        assert end == pytest.approx((3.0, 3.0, 0.0))
         assert cs.line((2.0, 2.0), (3.0, 3.0), name="seg").id == ref.id
         cs.remove_line("seg")
         viz._scenes[""].flush()

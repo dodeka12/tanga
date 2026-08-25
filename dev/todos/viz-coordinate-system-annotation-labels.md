@@ -74,29 +74,29 @@ So piping labels is purely additive: add the kwargs and forward them to
 
 **File:** `py/pytanga/viz/_coordinate_system.py`
 
-- [ ] Import `Line` from `pytanga.geometry.entities`.
-- [ ] Change `_sync_line` to build
+- [x] Import `Line` from `pytanga.geometry.entities`.
+- [x] Change `_sync_line` to build
       `Line.from_points(Point(wx0, wy0, 0.0), Point(wx1, wy1, 0.0))` (instead of
       a two-point `PointPath`).
-- [ ] Change `_upsert_line` / `_upsert_segment` to create the entity via
+- [x] Change `_upsert_line` / `_upsert_segment` to create the entity via
       `new(Line(...), ...)` and store it in the entry.
-- [ ] Keep the `name` create/update flow unchanged (update value/coords, then
+- [x] Keep the `name` create/update flow unchanged (update value/coords, then
       `ref.entity = line`).
 
 ### Step 2 — Pipe `label` / `label_style`
 
 **File:** `py/pytanga/viz/_coordinate_system.py`
 
-- [ ] Add `label: str | None = None` and `label_style: LabelStyle | None = None`
+- [x] Add `label: str | None = None` and `label_style: LabelStyle | None = None`
       to `vline`, `hline`, `line`, `point`.
-- [ ] Thread them through `_upsert_line` / `_upsert_segment` / `_upsert_point`;
+- [x] Thread them through `_upsert_line` / `_upsert_segment` / `_upsert_point`;
       store in the entry and forward to `new(...)` at creation only.
 
 ### Step 3 — Tests
 
 **Files:** `py/tests/viz/test_coordinate_system.py`
 
-- [ ] Update vline/hline/line tests: `ref.entity` is now a `Line`; assert
+- [x] Update vline/hline/line tests: `ref.entity` is now a `Line`; assert
       `origin`/`direction`/`length` (or `.start`/`.end`) instead of `.points`.
 - [ ] Add label tests: each helper accepts `label`/`label_style`; the label is
       attached to the entity; `label_style` (e.g. `along`/`offset_2d`) is
@@ -146,6 +146,11 @@ So piping labels is purely additive: add the kwargs and forward them to
   fat-line look.
 - **Label persistence**: the label is a separate overlay node keyed to the entity
   id, so it survives the `name` update path without re-adding.
+- **Line label anchor fix.** `_label_anchor.py::_anchor_line` previously omitted
+  the line's origin, so labels on lines with a non-zero origin were mis-placed.
+  It now adds `line.origin`, which is required for the CS line helpers (which
+  create lines at non-zero data origins). The existing
+  `test_finite_line_label_at_midpoint` was updated to the corrected midpoint.
 
 ## Non-goals / follow-ups
 

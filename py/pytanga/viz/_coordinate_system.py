@@ -23,7 +23,7 @@ from typing import Any
 
 import numpy as np
 
-from pytanga.geometry.entities import Direction, Plane, Point
+from pytanga.geometry.entities import Direction, Line, Plane, Point
 
 from . import _transforms as _T
 from ._point_path import PointPath
@@ -682,52 +682,104 @@ class CoordinateSystem:
 
     # ── Annotation lines (data-frame markers) ─────────────────
 
-    def vline(self, x, *, name=None, y0=None, y1=None, color=None, style=None):
+    def vline(
+        self,
+        x,
+        *,
+        name=None,
+        y0=None,
+        y1=None,
+        color=None,
+        style=None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+    ):
         """Create or update a vertical line at data ``x``.
 
         The line spans ``y0..y1`` in data coordinates; ``None`` (the default)
         tracks the current ``ylim``.  Pass ``name`` to update the same line in
         place (e.g. to animate it); without a name a new line is created each
-        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        call.  ``label``/``label_style`` attach a label (default anchor: the
+        line midpoint; use ``LabelStyle(along=…)`` to move it).  Returns the
+        :class:`~pytanga.viz.VizObjectRef` of the line.
         """
-        return self._upsert_line("v", float(x), name, y0, y1, color, style)
+        return self._upsert_line(
+            "v", float(x), name, y0, y1, color, style, label, label_style
+        )
 
-    def hline(self, y, *, name=None, x0=None, x1=None, color=None, style=None):
+    def hline(
+        self,
+        y,
+        *,
+        name=None,
+        x0=None,
+        x1=None,
+        color=None,
+        style=None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+    ):
         """Create or update a horizontal line at data ``y``.
 
         The line spans ``x0..x1`` in data coordinates; ``None`` (the default)
         tracks the current ``xlim``.  Pass ``name`` to update the same line in
         place (e.g. to animate it); without a name a new line is created each
-        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        call.  ``label``/``label_style`` attach a label (default anchor: the
+        line midpoint; use ``LabelStyle(along=…)`` to move it).  Returns the
+        :class:`~pytanga.viz.VizObjectRef` of the line.
         """
-        return self._upsert_line("h", float(y), name, x0, x1, color, style)
+        return self._upsert_line(
+            "h", float(y), name, x0, x1, color, style, label, label_style
+        )
 
-    def line(self, start, end, *, name=None, color=None, style=None):
+    def line(
+        self,
+        start,
+        end,
+        *,
+        name=None,
+        color=None,
+        style=None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+    ):
         """Draw a line between two data points.
 
         ``start`` and ``end`` are data coordinates, each given as an ``(x, y)``
         2-tuple or a :class:`~pytanga.geometry.entities.Point`.  Pass ``name`` to
         update the same line in place; without a name a new line is created each
-        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        call.  ``label``/``label_style`` attach a label (default anchor: the
+        line midpoint).  Returns the :class:`~pytanga.viz.VizObjectRef` of the
+        line.
         """
         p0 = self._normalize_point(start)
         p1 = self._normalize_point(end)
-        return self._upsert_segment(p0, p1, name, color, style)
+        return self._upsert_segment(p0, p1, name, color, style, label, label_style)
 
-    def point(self, p, *, name=None, color=None, style=None):
+    def point(
+        self,
+        p,
+        *,
+        name=None,
+        color=None,
+        style=None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+    ):
         """Create or update a point marker at a data location.
 
         ``p`` is a data coordinate, given as an ``(x, y)`` 2-tuple or a
         :class:`~pytanga.geometry.entities.Point`.  Pass ``name`` to update the
         same marker in place; without a name a new marker is created each call.
-        Returns the :class:`~pytanga.viz.VizObjectRef` of the marker.
+        ``label``/``label_style`` attach a label anchored at the point.  Returns
+        the :class:`~pytanga.viz.VizObjectRef` of the marker.
 
         The marker is added to the outer group at its local position (not the
         data group), so it is not stretched by the data group's non-uniform
         scale.
         """
         px, py = self._normalize_point(p)
-        return self._upsert_point((px, py), name, color, style)
+        return self._upsert_point((px, py), name, color, style, label, label_style)
 
     def remove_vline(self, name: str) -> None:
         """Remove a named vertical line (a no-op if the name is unknown)."""
@@ -753,7 +805,7 @@ class CoordinateSystem:
         if entry is not None:
             entry["ref"].remove()
 
-    def _upsert_line(self, kind, value, name, c0, c1, color, style):
+    def _upsert_line(self, kind, value, name, c0, c1, color, style, label, label_style):
         store = self._vlines if kind == "v" else self._hlines
         if name is None:
             prefix = "vline" if kind == "v" else "hline"
@@ -764,18 +816,19 @@ class CoordinateSystem:
                 name = f"{prefix}_{index}"
         entry = store.get(name)
         if entry is None:
-            render = PointPath()
-            kwargs = {} if style is None else {"style": style}
-            ref = self._data_group.new(render, color=color, **kwargs)
             entry = {
                 "name": name,
                 "value": value,
                 "c0": None if c0 is None else float(c0),
                 "c1": None if c1 is None else float(c1),
-                "color": color,
-                "ref": ref,
-                "render": render,
+                "label": label,
+                "label_style": label_style,
             }
+            entry["ref"] = self._data_group.new(
+                self._make_line(entry, kind),
+                color=color,
+                **self._annotation_kwargs(style, label, label_style),
+            )
             store[name] = entry
         else:
             entry["value"] = value
@@ -783,7 +836,7 @@ class CoordinateSystem:
                 entry["c0"] = float(c0)
             if c1 is not None:
                 entry["c1"] = float(c1)
-        self._sync_line(entry, kind)
+            self._sync_line(entry, kind)
         return entry["ref"]
 
     @staticmethod
@@ -796,7 +849,19 @@ class CoordinateSystem:
             raise ValueError(f"expected an (x, y) pair or a Point, got {value!r}")
         return (float(seq[0]), float(seq[1]))
 
-    def _upsert_segment(self, p0, p1, name, color, style):
+    @staticmethod
+    def _annotation_kwargs(style, label, label_style) -> dict[str, Any]:
+        """Collect the non-``None`` creation kwargs for an annotation."""
+        kwargs: dict[str, Any] = {}
+        if style is not None:
+            kwargs["style"] = style
+        if label is not None:
+            kwargs["label"] = label
+        if label_style is not None:
+            kwargs["label_style"] = label_style
+        return kwargs
+
+    def _upsert_segment(self, p0, p1, name, color, style, label, label_style):
         if name is None:
             prefix = "line"
             index = len(self._lines)
@@ -806,25 +871,26 @@ class CoordinateSystem:
                 name = f"{prefix}_{index}"
         entry = self._lines.get(name)
         if entry is None:
-            render = PointPath()
-            kwargs = {} if style is None else {"style": style}
-            ref = self._data_group.new(render, color=color, **kwargs)
             entry = {
                 "name": name,
                 "p0": p0,
                 "p1": p1,
-                "color": color,
-                "ref": ref,
-                "render": render,
+                "label": label,
+                "label_style": label_style,
             }
+            entry["ref"] = self._data_group.new(
+                self._make_line(entry, "l"),
+                color=color,
+                **self._annotation_kwargs(style, label, label_style),
+            )
             self._lines[name] = entry
         else:
             entry["p0"] = p0
             entry["p1"] = p1
-        self._sync_line(entry, "l")
+            self._sync_line(entry, "l")
         return entry["ref"]
 
-    def _upsert_point(self, p, name, color, style):
+    def _upsert_point(self, p, name, color, style, label, label_style):
         if name is None:
             prefix = "point"
             index = len(self._points)
@@ -834,14 +900,21 @@ class CoordinateSystem:
                 name = f"{prefix}_{index}"
         entry = self._points.get(name)
         if entry is None:
-            obj = Point(0.0, 0.0, self._plot_z)
-            kwargs = {} if style is None else {"style": style}
-            ref = self._group.new(obj, color=color, **kwargs)
-            entry = {"name": name, "p": p, "color": color, "ref": ref}
+            entry = {
+                "name": name,
+                "p": p,
+                "label": label,
+                "label_style": label_style,
+            }
+            entry["ref"] = self._group.new(
+                self._make_point(entry),
+                color=color,
+                **self._annotation_kwargs(style, label, label_style),
+            )
             self._points[name] = entry
         else:
             entry["p"] = p
-        self._sync_point(entry)
+            self._sync_point(entry)
         return entry["ref"]
 
     def _sync_points(self) -> None:
@@ -849,8 +922,11 @@ class CoordinateSystem:
             self._sync_point(entry)
 
     def _sync_point(self, entry: dict[str, Any]) -> None:
+        entry["ref"].entity = self._make_point(entry)
+
+    def _make_point(self, entry: dict[str, Any]) -> Point:
         lx, ly = self._local_xy(*entry["p"])
-        entry["ref"].entity = Point(lx, ly, self._plot_z)
+        return Point(lx, ly, self._plot_z)
 
     def _sync_lines(self) -> None:
         for entry in self._vlines.values():
@@ -861,7 +937,9 @@ class CoordinateSystem:
             self._sync_line(entry, "l")
 
     def _sync_line(self, entry: dict[str, Any], kind: str) -> None:
-        color = entry["color"]
+        entry["ref"].entity = self._make_line(entry, kind)
+
+    def _make_line(self, entry: dict[str, Any], kind: str) -> Line:
         if kind == "v":
             value = entry["value"]
             c0 = entry["c0"]
@@ -881,11 +959,7 @@ class CoordinateSystem:
         else:  # kind == "l"
             p0 = (*self._data_xy(*entry["p0"]), 0.0)
             p1 = (*self._data_xy(*entry["p1"]), 0.0)
-        render = entry["render"]
-        render.clear()
-        render.add(p0, color=color)
-        render.add(p1, color=color)
-        entry["ref"].entity = render
+        return Line.from_points(Point(*p0), Point(*p1))
 
     # ── Mutators (rebuild / re-frame in place) ────────────────
 
