@@ -288,8 +288,9 @@ class TestCoordinateSystemPlots:
         assert cs.xlim == pytest.approx((0.0, 9.0))
         render = ref.entity
         assert len(render.points) == 3
-        # x = 9 maps to the right edge of the 2-wide plane.
-        assert render.points[-1][0] == pytest.approx(1.0)
+        # The render path now holds scale-world (data) coordinates; x = 9 stays 9.
+        assert render.points[-1][0] == pytest.approx(9.0)
+        assert render.points[-1][2] == pytest.approx(0.0)
 
     def test_add_plot_without_auto_x_keeps_xlim(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
@@ -312,3 +313,201 @@ class TestCoordinateSystemScales:
         assert isinstance(cs.yscale, LinearScale)
         cs.xscale = "linear"
         assert isinstance(cs.xscale, LinearScale)
+
+
+class TestCoordinateSystemDataGroup:
+    def test_data_group_is_child_of_group(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        assert cs.data_group.parent.id == cs.group.id
+
+    def test_data_group_transform_affine(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        # size defaults to the data span (10) → unit scale, centered at (-5, -5).
+        assert cs.data_group.transform.scale == (1.0, 1.0, 1.0)
+        assert cs.data_group.transform.position == (-5.0, -5.0, 0.0)
+
+    def test_data_group_transform_scales_to_size(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
+        cs = CoordinateSystem(
+            viz, xlim=(0, 10), ylim=(0, 10), size=(2, 1), camera=False
+        )
+        # sx = 2/10 = 0.2, tx = -1 - 0.2*0 = -1; sy = 1/10 = 0.1, ty = -0.5.
+        assert cs.data_group.transform.scale == pytest.approx((0.2, 0.1, 1.0))
+        assert cs.data_group.transform.position == pytest.approx((-1.0, -0.5, 0.03))
+
+    def test_plot_uses_data_coordinates(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.plot([1, 2], [3, 4])
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((1.0, 3.0, 0.0))
+        assert pts[1] == pytest.approx((2.0, 4.0, 0.0))
+        assert ref.parent.id == cs.data_group.id
+
+    def test_add_plot_is_data_group_child(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        path = PointPath()
+        path.add((0.0, 0.0))
+        path.add((1.0, 1.0))
+        ref = cs.add_plot(path, color="#ff0000", auto_x=False)
+        assert ref.parent.id == cs.data_group.id
+
+    def test_to_data_linear_and_log(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        assert cs.to_data(3, 4) == (3.0, 4.0)
+        log_cs = CoordinateSystem(
+            viz,
+            xlim=(0.1, 100),
+            ylim=(1, 1000),
+            xscale="log",
+            yscale="log",
+            camera=False,
+        )
+        assert log_cs.to_data(100, 1000) == pytest.approx((2.0, 3.0))
+
+    def test_degenerate_span_transform(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(5, 5), ylim=(0, 10), camera=False)
+        assert cs.data_group.transform.scale[0] == 1.0
+        assert cs.data_group.transform.position[0] == pytest.approx(-5.0)
+        assert cs.to_local(5, 5) == pytest.approx((0.0, 0.0))
+
+
+class TestCoordinateSystemLines:
+    def test_vline_default_span_and_update(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.vline(x=3.0, name="v", color="#ff0000")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((3.0, 0.0, 0.0))
+        assert pts[1] == pytest.approx((3.0, 10.0, 0.0))
+        cs.vline(x=7.0, name="v")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((7.0, 0.0, 0.0))
+        assert pts[1] == pytest.approx((7.0, 10.0, 0.0))
+        assert cs.vline(x=7.0, name="v").id == ref.id
+
+    def test_vline_explicit_span(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.vline(x=2.0, name="v", y0=1.0, y1=9.0)
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((2.0, 1.0, 0.0))
+        assert pts[1] == pytest.approx((2.0, 9.0, 0.0))
+
+    def test_hline_default_span_and_update(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.hline(y=4.0, name="h")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((0.0, 4.0, 0.0))
+        assert pts[1] == pytest.approx((10.0, 4.0, 0.0))
+        cs.hline(y=6.0, name="h")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((0.0, 6.0, 0.0))
+        assert pts[1] == pytest.approx((10.0, 6.0, 0.0))
+
+    def test_vline_hline_are_data_group_children(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        v = cs.vline(x=3.0, name="v")
+        h = cs.hline(y=4.0, name="h")
+        assert v.parent.id == cs.data_group.id
+        assert h.parent.id == cs.data_group.id
+
+    def test_vline_log_mapped(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(
+            viz,
+            xlim=(0.1, 100),
+            ylim=(1, 1000),
+            xscale="log",
+            yscale="log",
+            camera=False,
+        )
+        ref = cs.vline(x=10.0, name="v")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((1.0, 0.0, 0.0))
+        assert pts[1] == pytest.approx((1.0, 3.0, 0.0))
+
+    def test_remove_vline_hline(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        v = cs.vline(x=3.0, name="v")
+        h = cs.hline(y=4.0, name="h")
+        cs.remove_vline("v")
+        cs.remove_hline("h")
+        viz._scenes[""].flush()
+        assert v.id not in viz._scenes[""]._nodes
+        assert h.id not in viz._scenes[""]._nodes
+
+    def test_remove_unknown_is_noop(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        cs.remove_vline("does-not-exist")  # should not raise
+        cs.remove_hline("does-not-exist")
+        cs.remove_line("does-not-exist")
+        cs.remove_point("does-not-exist")
+
+    def test_line_tuple(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.line((1.0, 2.0), (3.0, 4.0), name="seg", color="#ffffff")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((1.0, 2.0, 0.0))
+        assert pts[1] == pytest.approx((3.0, 4.0, 0.0))
+        assert ref.parent.id == cs.data_group.id
+
+    def test_line_accepts_point_instances(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.line(Point(5.0, 1.0), Point(7.0, 9.0), name="seg")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((5.0, 1.0, 0.0))
+        assert pts[1] == pytest.approx((7.0, 9.0, 0.0))
+
+    def test_line_update_by_name_and_remove(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.line((0.0, 0.0), (1.0, 1.0), name="seg")
+        cs.line((2.0, 2.0), (3.0, 3.0), name="seg")
+        pts = list(ref.entity.points)
+        assert pts[0] == pytest.approx((2.0, 2.0, 0.0))
+        assert pts[1] == pytest.approx((3.0, 3.0, 0.0))
+        assert cs.line((2.0, 2.0), (3.0, 3.0), name="seg").id == ref.id
+        cs.remove_line("seg")
+        viz._scenes[""].flush()
+        assert ref.id not in viz._scenes[""]._nodes
+
+    def test_point_tuple(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.point((2.0, 3.0), name="pt", color="#ffffff")
+        # Placed in the outer group (not the data group) at its local position.
+        assert ref.parent.id == cs.group.id
+        assert ref.entity.x == pytest.approx(-3.0)
+        assert ref.entity.y == pytest.approx(-2.0)
+        assert ref.entity.z == pytest.approx(0.0)
+
+    def test_point_accepts_point_instance(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.point(Point(7.0, 8.0), name="pt")
+        assert ref.entity.x == pytest.approx(2.0)
+        assert ref.entity.y == pytest.approx(3.0)
+
+    def test_point_update_by_name_and_remove(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
+        ref = cs.point((0.0, 0.0), name="pt")
+        cs.point((9.0, 9.0), name="pt")
+        assert ref.entity.x == pytest.approx(4.0)
+        assert ref.entity.y == pytest.approx(4.0)
+        assert cs.point((9.0, 9.0), name="pt").id == ref.id
+        cs.remove_point("pt")
+        viz._scenes[""].flush()
+        assert ref.id not in viz._scenes[""]._nodes

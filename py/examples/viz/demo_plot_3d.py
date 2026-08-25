@@ -5,7 +5,8 @@
 
 The whole coordinate system (background plane, grid, axes, and the plotted
 point path) lives in one group, placed/oriented by ``position``/``normal``/
-``up`` so it can sit anywhere in 3D space.
+``up`` so it can sit anywhere in 3D space.  ``vline``/``hline`` draw annotation
+lines at fixed data values on the same plane.
 
 Run with:  uv run python py/examples/viz/demo_plot_3d.py
 """
@@ -36,6 +37,10 @@ cs = CoordinateSystem(
 xs = [0.1 * i for i in range(0, 126)]  # 0 .. 12.5
 ys = [math.sin(x) for x in xs]
 cs.plot(xs, ys, color="#44ff44", style=PointPathStyle(line_thickness=3))
+
+# Annotation lines at fixed data values (rendered on the tilted plane).
+cs.vline(x=math.pi, name="pi", color="#ff5555")
+cs.hline(y=0.0, name="zero", color="#8888ff")
 
 viz.show()
 viz.wait()

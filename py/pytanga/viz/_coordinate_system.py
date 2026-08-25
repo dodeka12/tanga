@@ -303,8 +303,13 @@ class CoordinateSystem:
         self._plot_z = 0.0
 
         self._group = self._handle.add_group(group_name)
+        self._data_group = self._group.add_group(f"{group_name}_data")
         self._refs: dict[str, object] = {}
         self._plots: list[dict[str, Any]] = []
+        self._vlines: dict[str, dict[str, Any]] = {}
+        self._hlines: dict[str, dict[str, Any]] = {}
+        self._lines: dict[str, dict[str, Any]] = {}
+        self._points: dict[str, dict[str, Any]] = {}
 
         self._build()
         self._apply_transform()
@@ -316,6 +321,16 @@ class CoordinateSystem:
     def group(self):
         """The :class:`~pytanga.viz.VizObjectRef` of the underlying group."""
         return self._group
+
+    @property
+    def data_group(self):
+        """The inner data group (child of :attr:`group`) for data-space drawing.
+
+        Children added here live in data coordinates (linear axes) or log-mapped
+        coordinates (log axes); the group's transform maps them onto the plot
+        plane.  See :meth:`vline` and :meth:`hline` for annotation helpers.
+        """
+        return self._data_group
 
     @property
     def handle(self):
@@ -408,6 +423,10 @@ class CoordinateSystem:
             )
             self._upsert("plane", plane, self.plane_style)
 
+        self._apply_data_transform()
+        self._sync_lines()
+        self._sync_points()
+
     def _upsert(self, key: str, obj, style) -> None:
         ref = self._refs.get(key)
         if ref is None:
@@ -442,6 +461,10 @@ class CoordinateSystem:
         )
         return ((nx - 0.5) * self._size_x, (ny - 0.5) * self._size_y)
 
+    def _data_xy(self, x: float, y: float) -> tuple[float, float]:
+        """Map a data point to scale-world (data-group) ``(wx, wy)`` coordinates."""
+        return (self._xscale.to_world(float(x)), self._yscale.to_world(float(y)))
+
     def _align_offset(self) -> tuple[float, float]:
         """In-plane offset of the ``align`` point from the plane centre."""
         return (
@@ -467,6 +490,31 @@ class CoordinateSystem:
         m[:3, 1] = v
         m[:3, 2] = n
         return m
+
+    def _apply_data_transform(self) -> None:
+        """Set the inner data group's translate+scale (data → local frame).
+
+        The group maps scale-world coordinates ``(to_world(x), to_world(y))``
+        onto the centred local frame used by the grid/axes.  Degenerate data
+        spans map the single value to the local origin.
+        """
+        if self._raw_span_x == 0.0:
+            sx = 1.0
+            tx = -self._raw_xlo
+        else:
+            sx = self._size_x / self._raw_span_x
+            tx = -self._size_x / 2.0 - sx * self._raw_xlo
+        if self._raw_span_y == 0.0:
+            sy = 1.0
+            ty = -self._raw_ylo
+        else:
+            sy = self._size_y / self._raw_span_y
+            ty = -self._size_y / 2.0 - sy * self._raw_ylo
+        self._data_group.set_transform(
+            position=(tx, ty, self._plot_z),
+            rotation=(0.0, 0.0, 0.0),
+            scale=(sx, sy, 1.0),
+        )
 
     def _apply_transform(self) -> None:
         if self._space_dim == 2 and not self._size_given:
@@ -537,6 +585,15 @@ class CoordinateSystem:
         w = self._group.world_matrix @ np.array([lx, ly, 0.0, 1.0])
         return (float(w[0]), float(w[1]), float(w[2]))
 
+    def to_data(self, x: float, y: float) -> tuple[float, float]:
+        """Map a data point to data-group coordinates (scale-world ``(wx, wy)``).
+
+        For linear axes this equals the data value; for log axes it is
+        ``log(value, base)``.  Useful for pre-mapping a point before drawing it
+        directly into :attr:`data_group`.
+        """
+        return self._data_xy(x, y)
+
     def transform(self, xs, ys) -> list[tuple[float, float, float]]:
         """Map ``(x, y)`` data series to group-local 3D points."""
         out: list[tuple[float, float, float]] = []
@@ -548,20 +605,21 @@ class CoordinateSystem:
     def plot(self, xs, ys, *, color=None, style=None):
         """Plot an ``(x, y)`` data series as a :class:`~pytanga.viz.PointPath`.
 
-        Data is mapped through the scales and added as a child of the group,
-        so it inherits the group's 3D placement.
+        Data is mapped through the scales and added as a child of the data
+        group, whose transform places it on the plot plane (so it inherits the
+        outer group's 3D placement).
         """
         path = PointPath()
         for x, y in zip(xs, ys):
-            lx, ly = self._local_xy(x, y)
-            path.add((lx, ly, self._plot_z), color=color)
+            wx, wy = self._data_xy(x, y)
+            path.add((wx, wy, 0.0), color=color)
         kwargs = {} if style is None else {"style": style}
-        return self._group.new(path, color=color, **kwargs)
+        return self._data_group.new(path, color=color, **kwargs)
 
     # ── Registered (live) plots ───────────────────────────────
 
     def add_plot(self, path, *, color=None, style=None, auto_x: bool = False):
-        """Register a live :class:`~pytanga.viz.PointPath` and add it to the group.
+        """Register a live :class:`~pytanga.viz.PointPath` and add it to the data group.
 
         The path's points are in **data** coordinates; the coordinate system
         maps them onto the plot plane.  After mutating the path, call
@@ -573,7 +631,7 @@ class CoordinateSystem:
         """
         render = PointPath()
         kwargs = {} if style is None else {"style": style}
-        ref = self._group.new(render, color=color, **kwargs)
+        ref = self._data_group.new(render, color=color, **kwargs)
         entry: dict[str, Any] = {
             "path": path,
             "ref": ref,
@@ -599,9 +657,9 @@ class CoordinateSystem:
         src_points = src.points
         src_colors = src.colors
         for i, (x, y, _z) in enumerate(src_points):
-            lx, ly = self._local_xy(x, y)
+            wx, wy = self._data_xy(x, y)
             color = src_colors[i] if i < len(src_colors) else None
-            render.add((lx, ly, self._plot_z), color=color)
+            render.add((wx, wy, 0.0), color=color)
         entry["ref"].entity = render
 
     def _fit_x(self) -> None:
@@ -621,6 +679,213 @@ class CoordinateSystem:
         new_lim = (lo, hi)
         if new_lim != self._xlim:
             self.xlim = new_lim
+
+    # ── Annotation lines (data-frame markers) ─────────────────
+
+    def vline(self, x, *, name=None, y0=None, y1=None, color=None, style=None):
+        """Create or update a vertical line at data ``x``.
+
+        The line spans ``y0..y1`` in data coordinates; ``None`` (the default)
+        tracks the current ``ylim``.  Pass ``name`` to update the same line in
+        place (e.g. to animate it); without a name a new line is created each
+        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        """
+        return self._upsert_line("v", float(x), name, y0, y1, color, style)
+
+    def hline(self, y, *, name=None, x0=None, x1=None, color=None, style=None):
+        """Create or update a horizontal line at data ``y``.
+
+        The line spans ``x0..x1`` in data coordinates; ``None`` (the default)
+        tracks the current ``xlim``.  Pass ``name`` to update the same line in
+        place (e.g. to animate it); without a name a new line is created each
+        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        """
+        return self._upsert_line("h", float(y), name, x0, x1, color, style)
+
+    def line(self, start, end, *, name=None, color=None, style=None):
+        """Draw a line between two data points.
+
+        ``start`` and ``end`` are data coordinates, each given as an ``(x, y)``
+        2-tuple or a :class:`~pytanga.geometry.entities.Point`.  Pass ``name`` to
+        update the same line in place; without a name a new line is created each
+        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        """
+        p0 = self._normalize_point(start)
+        p1 = self._normalize_point(end)
+        return self._upsert_segment(p0, p1, name, color, style)
+
+    def point(self, p, *, name=None, color=None, style=None):
+        """Create or update a point marker at a data location.
+
+        ``p`` is a data coordinate, given as an ``(x, y)`` 2-tuple or a
+        :class:`~pytanga.geometry.entities.Point`.  Pass ``name`` to update the
+        same marker in place; without a name a new marker is created each call.
+        Returns the :class:`~pytanga.viz.VizObjectRef` of the marker.
+
+        The marker is added to the outer group at its local position (not the
+        data group), so it is not stretched by the data group's non-uniform
+        scale.
+        """
+        px, py = self._normalize_point(p)
+        return self._upsert_point((px, py), name, color, style)
+
+    def remove_vline(self, name: str) -> None:
+        """Remove a named vertical line (a no-op if the name is unknown)."""
+        entry = self._vlines.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def remove_hline(self, name: str) -> None:
+        """Remove a named horizontal line (a no-op if the name is unknown)."""
+        entry = self._hlines.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def remove_line(self, name: str) -> None:
+        """Remove a named line (a no-op if the name is unknown)."""
+        entry = self._lines.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def remove_point(self, name: str) -> None:
+        """Remove a named point marker (a no-op if the name is unknown)."""
+        entry = self._points.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def _upsert_line(self, kind, value, name, c0, c1, color, style):
+        store = self._vlines if kind == "v" else self._hlines
+        if name is None:
+            prefix = "vline" if kind == "v" else "hline"
+            index = len(store)
+            name = f"{prefix}_{index}"
+            while name in store:
+                index += 1
+                name = f"{prefix}_{index}"
+        entry = store.get(name)
+        if entry is None:
+            render = PointPath()
+            kwargs = {} if style is None else {"style": style}
+            ref = self._data_group.new(render, color=color, **kwargs)
+            entry = {
+                "name": name,
+                "value": value,
+                "c0": None if c0 is None else float(c0),
+                "c1": None if c1 is None else float(c1),
+                "color": color,
+                "ref": ref,
+                "render": render,
+            }
+            store[name] = entry
+        else:
+            entry["value"] = value
+            if c0 is not None:
+                entry["c0"] = float(c0)
+            if c1 is not None:
+                entry["c1"] = float(c1)
+        self._sync_line(entry, kind)
+        return entry["ref"]
+
+    @staticmethod
+    def _normalize_point(value) -> tuple[float, float]:
+        """Normalize a data point given as an ``(x, y)`` pair or a ``Point``."""
+        if hasattr(value, "x") and hasattr(value, "y"):
+            return (float(value.x), float(value.y))
+        seq = tuple(value)
+        if len(seq) != 2:
+            raise ValueError(f"expected an (x, y) pair or a Point, got {value!r}")
+        return (float(seq[0]), float(seq[1]))
+
+    def _upsert_segment(self, p0, p1, name, color, style):
+        if name is None:
+            prefix = "line"
+            index = len(self._lines)
+            name = f"{prefix}_{index}"
+            while name in self._lines:
+                index += 1
+                name = f"{prefix}_{index}"
+        entry = self._lines.get(name)
+        if entry is None:
+            render = PointPath()
+            kwargs = {} if style is None else {"style": style}
+            ref = self._data_group.new(render, color=color, **kwargs)
+            entry = {
+                "name": name,
+                "p0": p0,
+                "p1": p1,
+                "color": color,
+                "ref": ref,
+                "render": render,
+            }
+            self._lines[name] = entry
+        else:
+            entry["p0"] = p0
+            entry["p1"] = p1
+        self._sync_line(entry, "l")
+        return entry["ref"]
+
+    def _upsert_point(self, p, name, color, style):
+        if name is None:
+            prefix = "point"
+            index = len(self._points)
+            name = f"{prefix}_{index}"
+            while name in self._points:
+                index += 1
+                name = f"{prefix}_{index}"
+        entry = self._points.get(name)
+        if entry is None:
+            obj = Point(0.0, 0.0, self._plot_z)
+            kwargs = {} if style is None else {"style": style}
+            ref = self._group.new(obj, color=color, **kwargs)
+            entry = {"name": name, "p": p, "color": color, "ref": ref}
+            self._points[name] = entry
+        else:
+            entry["p"] = p
+        self._sync_point(entry)
+        return entry["ref"]
+
+    def _sync_points(self) -> None:
+        for entry in self._points.values():
+            self._sync_point(entry)
+
+    def _sync_point(self, entry: dict[str, Any]) -> None:
+        lx, ly = self._local_xy(*entry["p"])
+        entry["ref"].entity = Point(lx, ly, self._plot_z)
+
+    def _sync_lines(self) -> None:
+        for entry in self._vlines.values():
+            self._sync_line(entry, "v")
+        for entry in self._hlines.values():
+            self._sync_line(entry, "h")
+        for entry in self._lines.values():
+            self._sync_line(entry, "l")
+
+    def _sync_line(self, entry: dict[str, Any], kind: str) -> None:
+        color = entry["color"]
+        if kind == "v":
+            value = entry["value"]
+            c0 = entry["c0"]
+            c1 = entry["c1"]
+            lo = self._ylim[0] if c0 is None else c0
+            hi = self._ylim[1] if c1 is None else c1
+            p0 = (*self._data_xy(value, lo), 0.0)
+            p1 = (*self._data_xy(value, hi), 0.0)
+        elif kind == "h":
+            value = entry["value"]
+            c0 = entry["c0"]
+            c1 = entry["c1"]
+            lo = self._xlim[0] if c0 is None else c0
+            hi = self._xlim[1] if c1 is None else c1
+            p0 = (*self._data_xy(lo, value), 0.0)
+            p1 = (*self._data_xy(hi, value), 0.0)
+        else:  # kind == "l"
+            p0 = (*self._data_xy(*entry["p0"]), 0.0)
+            p1 = (*self._data_xy(*entry["p1"]), 0.0)
+        render = entry["render"]
+        render.clear()
+        render.add(p0, color=color)
+        render.add(p1, color=color)
+        entry["ref"].entity = render
 
     # ── Mutators (rebuild / re-frame in place) ────────────────
 
