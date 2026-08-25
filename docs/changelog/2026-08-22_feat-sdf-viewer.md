@@ -184,6 +184,17 @@
   instantiated per distinct result mask instead of per algebra. Tests in
   `py/tests/viz/sdf/` (601) + `dev/src/sdf_{algebra,composer}_smoke.mjs`.
 
+## Breaking Changes
+- **Removed the algebra (`mv_sdf`) SDF rendering path** — the SDF viewer now
+  renders only the analytic (geometric-entity) path. Raw multivectors passed to
+  `SdfVisualizer.add()` are resolved through `geometry.analyze()` to their
+  recognized geometric entity (an unrecognizable MV raises an error); the
+  `mv_sdf` matrix evaluation, the viewer-level `distance`/`opacity` transfer
+  settings, and the `calibrate`/`normalize`/`bound`/`falloff`/`max_distance` MV
+  properties are removed. The raymarcher now steps the plain signed distance
+  (`t += d`) with no gradient-norm guard, `mapDensity`, `u_M`, or
+  `u_ObjectParams`.
+
 ## Bug Fixes
 - **Fixed inverted rotations in the SDF viewer** — `transform.js` passed
   `-angle` to IQ's `rotationAxisAngle`, which already negates the angle

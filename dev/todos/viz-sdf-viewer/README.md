@@ -6,6 +6,12 @@ eval + calibration, CSG booleans, opacity transfers, active result mask +
 analytical step gradient, examples, docs, changelog). Only the final pull
 request remains (see `dev/workflows/pull-request.md`).
 
+> **Superseded by [Phase 14](14-remove-algebra-path.md):** the algebra (`mv_sdf`)
+> path, the distance-function registry (Phase 3), and the opacity-transfer axis
+> (Phase 12) were removed, and the analytic path was restored as the only
+> rendering path. Phases 03 and 07–13 are therefore historical.
+
+
 ## Target
 
 Add a signed-distance-function (SDF) based viewer to Tanga. The SDF viewer

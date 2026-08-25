@@ -1,6 +1,6 @@
 # Phase 14 — Remove the algebra (`mv_sdf`) rendering path; restore & optimize the analytic path
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
@@ -217,15 +217,15 @@ brace balance holds; no reference to `mapDensity`/`u_ObjectParams`/`u_M`/
 
 ### D. Docs / changelog
 
-- [ ] `docs/py/viz/sdf-viewer.md`: remove the algebra half of "Two rendering
+- [x] `docs/py/viz/sdf-viewer.md`: remove the algebra half of "Two rendering
       paths", "Distance functions", "Rendering the algebra field", and "Soft
       opacity"; update the examples table (drop `demo_sdf_algebra.py` /
       `demo_sdf_opacity.py`).
-- [ ] `docs/changelog/2026-08-22_feat-sdf-viewer.md`: add a
+- [x] `docs/changelog/2026-08-22_feat-sdf-viewer.md`: add a
       `## Breaking Changes` bullet describing the algebra-path and opacity-axis
       removal (raw MVs now route through `analyze`; `distance`/`opacity`/
       `calibrate`/`falloff`/`max_distance`/`normalize`/`bound` MV props removed).
-- [ ] `dev/todos/viz-sdf-viewer/README.md`: mark phases 03 and 07–13 as
+- [x] `dev/todos/viz-sdf-viewer/README.md`: mark phases 03 and 07–13 as
       superseded by this phase (optional, historical).
 
 **Verify:** build the docs (`uv run mkdocs build` if available) or eyeball the
@@ -233,10 +233,11 @@ rendered markdown.
 
 ## Verification (full)
 
-- [ ] `uv run pytest py/tests/viz/sdf -q` — all green.
-- [ ] `uv run pytest py/tests/viz -q` — no regressions in the broader viz suite.
-- [ ] `uv run python dev/src/test_viz_sdf.py` — analytic smoke passes.
-- [ ] Grep for leftovers: `mv_sdf`, `serialize_mv`, `embed_entity_mv`,
+- [x] `uv run pytest py/tests/viz/sdf -q` — all green (82 passed).
+- [x] `uv run pytest py/tests/viz -q` — no regressions in the broader viz suite
+      (725 passed).
+- [x] `uv run python dev/src/test_viz_sdf.py` — analytic smoke passes.
+- [x] Grep for leftovers: `mv_sdf`, `serialize_mv`, `embed_entity_mv`,
       `calibrate_scale`, `DistanceFunction`, `OpacityTransfer`, `u_ObjectParams`,
       `u_M`, `mapDensity`, `dist_mv_` return nothing under `py/pytanga/viz/sdf/`
       and `py/pytanga/viz/templates/sdf/` (docs/changelog/todos may retain
