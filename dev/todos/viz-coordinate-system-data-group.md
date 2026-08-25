@@ -216,7 +216,7 @@ code-symmetry benefit is worth the refactor.
       path now holds **scale-world** coordinates, so the final assertion becomes
       `render.points[-1][0] == pytest.approx(9.0)` (the auto-x data value) instead
       of the current local `1.0`.
-- [ ] Add tests:
+- [x] Add tests:
       - `cs.data_group` is a `VizObjectRef` and a child of `cs.group`
         (`cs.data_group.parent.id == cs.group.id`).
       - For linear axes, `cs.plot([1, 2], [3, 4])` produces render points equal to
@@ -231,7 +231,9 @@ code-symmetry benefit is worth the refactor.
       - `vline`/`hline`: create-and-update by name reuses the same `VizObjectRef`
         and moves the line; unnamed calls create new refs; the default span tracks
         `ylim`/`xlim`; endpoints are log-mapped for log axes.
-- [ ] Ensure existing tests `test_transform_and_plot`, `test_2d_size_up_rotates_plane`,
+      - `remove_vline`/`remove_hline`: removes the line node after a flush; unknown
+        names are a no-op.
+- [x] Ensure existing tests `test_transform_and_plot`, `test_2d_size_up_rotates_plane`,
       `test_to_world_applies_group_transform`, `test_align_*`,
       `test_position_accepts_point_and_direction`, and the scale tests stay green
       (they exercise `transform`/`to_world`/group transform, which are unchanged).
