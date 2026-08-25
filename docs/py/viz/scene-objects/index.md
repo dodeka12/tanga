@@ -42,6 +42,6 @@ paths, and the active (interactive) elements.
 For the underlying geometry data classes, see
 [Entity Data Classes](../../geometry/entities.md) and
 [Operator Data Classes](../../geometry/operators.md). Runnable examples:
-[`demo_all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_all_entities.py)
+[`all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/all_entities.py)
 and
-[`demo_operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_operators.py).
+[`operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/operators.py).

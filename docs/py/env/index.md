@@ -50,7 +50,7 @@ uv run pytest py/tests/
 ## Running Examples
 
 ```bash
-uv run python py/examples/algebra_demo.py
+uv run python py/examples/ga/algebra/algebra_demo.py
 ```
 
 ## Building Documentation

@@ -8,7 +8,7 @@ arithmetic operators delegate to the parent `Algebra`.
 from pytanga.algebra import MV
 ```
 
-See [`mv_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/mv_demo.py) for a runnable walkthrough.
+See [`ga/algebra/mv_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/mv_demo.py) for a runnable walkthrough.
 
 ## Initialization
 
@@ -172,7 +172,7 @@ These delegate to the equivalent `Algebra` methods (`gp_rev`, `gp_conj`,
 
 For integer-dtype algebras, explicit per-call modulus variants exist.
 These are required when two different moduli must be used on the same algebra
-(see [`modulus_algebra_multi.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/modulus_algebra_multi.py)):
+(see [`ga/algebra/modulus_algebra_multi.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/modulus_algebra_multi.py)):
 
 | Method | Description |
 |--------|-------------|

@@ -9,7 +9,7 @@ When a `modulus` is set at construction time, every arithmetic operator
 (`+`, `-`, `*`, scalar multiply) automatically applies half-space modular
 reduction (`hmod`) after each operation.
 
-See [`modulus_algebra_single.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/modulus_algebra_single.py).
+See [`ga/algebra/modulus_algebra_single.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/modulus_algebra_single.py).
 
 ```python
 alg = Algebra(3, 0, dtype="int64", modulus=101)
@@ -36,7 +36,7 @@ When the same algebra must operate under two different moduli (as in
 NTRU-style geometric-algebra cryptosystems), create **one** algebra without
 a fixed modulus and use the `_mod` method variants:
 
-See [`modulus_algebra_multi.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/modulus_algebra_multi.py).
+See [`ga/algebra/modulus_algebra_multi.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/modulus_algebra_multi.py).
 
 ```python
 alg = Algebra(3, 0, dtype="int64")   # no fixed modulus

@@ -28,7 +28,7 @@ your `PATH`). Those live in the [Video & Image Export](video-image.md) page.
 
 | Script | Topic |
 |--------|-------|
-| [`demo_export_html.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_html.py) | Self-contained HTML and glTF export |
-| [`demo_export_figure.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_figure.py) | Presentation figure export with `FigureStyle` |
-| [`demo_animated_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animated_export.py) | Animated HTML export with JS playback engine |
-| [`demo_screenshot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_screenshot.py) | Programmatic PNG screenshot |
+| [`html_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/html_export.py) | Self-contained HTML and glTF export |
+| [`figure.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/figure.py) | Presentation figure export with `FigureStyle` |
+| [`animated.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/animated.py) | Animated HTML export with JS playback engine |
+| [`screenshot.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/screenshot.py) | Programmatic PNG screenshot |

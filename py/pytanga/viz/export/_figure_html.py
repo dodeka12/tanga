@@ -18,6 +18,7 @@ from pytanga.viz.export._bootstrap import (
     generate_bootstrap_js,
     html_snippet_template,
     js_annotation_panel,
+    js_apply_camera,
     js_autofit_camera,
     js_footer,
     js_imports,
@@ -154,11 +155,6 @@ def _build_static_figure_adapter(
 
     # Camera config from scene_config (if present)
     cam_cfg = scene_config.get("camera") or {}
-    cam_pos = cam_cfg.get("position", [8, 6, 10])
-    cam_target = cam_cfg.get("target", [0, 0, 0])
-    cam_fov = cam_cfg.get("fov", 50)
-    cam_near = cam_cfg.get("near", 0.1)
-    cam_far = cam_cfg.get("far", 1000)
     cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
     # ── Dimension helpers ─────────────────────────────────────
@@ -176,9 +172,12 @@ def _build_static_figure_adapter(
         "",
         js_imports(),
         "",
+        js_apply_camera(),
+        "",
         f"const figContainer = document.getElementById('{fig_id}');",
         f"const figData = {scene_json};",
         "const figObjects = figData.objects || [];",
+        f"const sceneConfig = {json.dumps(scene_config)};",
         "",
         js_scene_setup(
             bg_color=bg,
@@ -191,11 +190,6 @@ def _build_static_figure_adapter(
             scene_var="figScene",
             width_expr=dim_w,
             height_expr=dim_h,
-            cam_fov=cam_fov,
-            cam_pos=(cam_pos[0], cam_pos[1], cam_pos[2]),
-            cam_target=(cam_target[0], cam_target[1], cam_target[2]),
-            cam_near=cam_near,
-            cam_far=cam_far,
             auto_rotate=auto_rotate,
             space_dim=space_dim,
             explicit_mouse_buttons=True,
@@ -227,6 +221,11 @@ def _build_static_figure_adapter(
         "",
         "(async () => {\n"
         "    await figBuildDone;\n"
+        "    applyCameraConfig(figCamera, figControls, sceneConfig.camera, "
+        + dim_w
+        + ", "
+        + dim_h
+        + ");\n"
         + js_autofit_camera(
             mesh_map_var="figMeshMap",
             camera_var="figCamera",

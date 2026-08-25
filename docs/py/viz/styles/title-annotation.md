@@ -4,7 +4,7 @@ The viewer supports a title overlay and a Markdown annotation panel with
 LaTeX math rendering. Both are fixed-position DOM elements — always readable,
 independent of camera orientation.
 
-See the example script [`demo_title_annotation.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_title_annotation.py)
+See the example script [`title_annotation.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/labels/title_annotation.py)
 for a runnable demonstration.
 
 ## Title

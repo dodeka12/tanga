@@ -69,7 +69,7 @@ This is equivalent to `create_var`.
 
 ## Example
 
-See `py/examples/expression/variable_rotor_entity.py` for a complete example
+See `py/examples/ga/expression/variable_rotor_entity.py` for a complete example
 where both the rotor and the rotated point are variables, and the expression is
 applied to a list of point entities in a single batched call.
 

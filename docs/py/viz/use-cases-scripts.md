@@ -137,8 +137,8 @@ Runnable demos live under `py/examples/viz/`:
 
 | Script | Topic |
 |--------|-------|
-| [`demo_all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_all_entities.py) | All entity types in one scene |
-| [`demo_animation_orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_orbit.py) | Frame-by-frame animation |
-| [`demo_animation_timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animation_timeline.py) | Keyframe timeline |
-| [`demo_export_html.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_export_html.py) | HTML + glTF export |
-| [`demo_animated_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/demo_animated_export.py) | Animated HTML export |
+| [`all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/all_entities.py) | All entity types in one scene |
+| [`orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/orbit.py) | Frame-by-frame animation |
+| [`timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/timeline.py) | Keyframe timeline |
+| [`html_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/html_export.py) | HTML + glTF export |
+| [`animated.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/animated.py) | Animated HTML export |

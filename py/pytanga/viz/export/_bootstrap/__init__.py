@@ -35,6 +35,7 @@ from pytanga.viz.export._bootstrap._overlays import (  # noqa: F401
     js_title_overlay,
 )
 from pytanga.viz.export._bootstrap._scene import (  # noqa: F401
+    js_apply_camera,
     js_autofit_camera,
     js_imports,
     js_render_loop,

@@ -5,7 +5,7 @@ named basis blades as attributes: four for 3D geometry and four for 2D
 geometry.  They are the recommended starting point for interactive work,
 scripts, and notebooks.
 
-See [`basis_usage.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/basis_usage.py) for three patterns
+See [`ga/basis/basis_usage.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/basis_usage.py) for three patterns
 for working with named blades, and the per-algebra demo scripts listed below.
 
 ---
@@ -14,7 +14,7 @@ for working with named blades, and the per-algebra demo scripts listed below.
 
 ### `BasisE3` — Euclidean 3D, $G(3, 0)$
 
-Demo: [`base_e3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_e3_demo.py)
+Demo: [`ga/basis/base_e3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_e3_demo.py)
 
 ```python
 from pytanga.basis import BasisE3
@@ -55,7 +55,7 @@ E3.show(mv, "label", fmt=".6f")
 
 ### `BasisP3` — Projective 3D, $G(4, 0)$
 
-Demo: [`base_p3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_p3_demo.py)
+Demo: [`ga/basis/base_p3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_p3_demo.py)
 
 ```python
 from pytanga.basis import BasisP3
@@ -78,7 +78,7 @@ Geometric entities (points, lines, …) are created through the
 
 ### `BasisN3` — Null/conformal 3D, $G(5, 0\text{b}10000)$
 
-Demo: [`base_n3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_n3_demo.py)
+Demo: [`ga/basis/base_n3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_n3_demo.py)
 
 `BasisN3` uses the null-vector embedding: `ep` ($e_4$, squares to $+1$) and
 `em` ($e_5$, squares to $-1$) are combined into the conventional null vectors:
@@ -113,7 +113,7 @@ the raw `{e1, e2, e3, ep, em}` storage basis.
 
 ### `BasisPGA3` — PGA 3D
 
-Demo: [`base_pga3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/base_pga3_demo.py)
+Demo: [`ga/basis/base_pga3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_pga3_demo.py)
 
 `BasisPGA3` extends `Algebra` directly and implements the **Gunn/Dorst
 plane‑based projective geometric algebra** (Gunn 2016, Dorst 2020).
@@ -166,7 +166,7 @@ Geometric entities (points, lines, …) are created through the
 | Direction | 3 | 1 ($e₀ = 0$) |
 | Space | 4 | 0 (scalar) |
 
-See also: [`geometry/pga3_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/geometry/pga3_entities.py)
+See also: [`ga/geometry/pga3_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/geometry/pga3_entities.py)
 for a didactic introduction.
 
 
@@ -315,7 +315,7 @@ Geometric entities (points, lines, …) are created through the
 
 ### Three patterns for accessing named blades
 
-[`basis_usage.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/basis_usage.py) describes three patterns
+[`ga/basis/basis_usage.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/basis_usage.py) describes three patterns
 in detail:
 
 **Pattern 1 — Explicit assignment block (recommended)**
