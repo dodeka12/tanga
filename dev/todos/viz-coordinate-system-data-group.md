@@ -270,7 +270,7 @@ code-symmetry benefit is worth the refactor.
 
 **File:** branch changelog per `dev/workflows/changelog.md`
 
-- [ ] Add New Features bullets for the inner data group, the `data_group`
+- [x] Add New Features bullets for the inner data group, the `data_group`
       exposure, and the `vline`/`hline` helpers (append to the current branch
       changelog; the index update happens at PR time per the workflow).
 

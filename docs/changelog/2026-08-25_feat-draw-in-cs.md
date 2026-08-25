@@ -1,0 +1,15 @@
+# Changes since version 1.1.0
+
+## New Features
+
+- **CoordinateSystem inner data group** — `CoordinateSystem` now nests an inner
+  **data group** (exposed as `cs.data_group`, with `to_data(x, y)` for
+  pre-mapping) whose translate+scale transform maps data coordinates onto the
+  plot plane. Plots (`plot()`/`add_plot()`) and user drawings are now expressed
+  in scale-world (data) coordinates and placed by the group, so Python-side
+  scaling is only needed for log axes.
+
+- **CoordinateSystem vline/hline annotation helpers** — draw vertical/horizontal
+  marker lines at fixed data values with `vline(x, ...)`/`hline(y, ...)`, update
+  them in place by an optional `name` (for animating a moving cursor), and
+  remove them with `remove_vline(name)`/`remove_hline(name)`.
