@@ -131,8 +131,8 @@ So piping labels is purely additive: add the kwargs and forward them to
 
 ## Verification
 
-- [ ] `uv run pytest py/tests/viz -q` and `uv run pytest -q` green.
-- [ ] `uv run ruff check` / `uv run ruff format --check` on touched files.
+- [x] `uv run pytest py/tests/viz -q` and `uv run pytest -q` green.
+- [x] `uv run ruff check` / `uv run ruff format --check` on touched files.
 - [ ] Manual browser check: labelled vline/hline/line/point render the label at
       the expected position (midpoint / `along` for lines, at the point for
       `point`); moving a named line keeps its label.
