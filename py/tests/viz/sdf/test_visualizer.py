@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from pytanga.geometry.entities import Point, Sphere
-from pytanga.viz.sdf.distance import DistanceFunction
 from pytanga.viz.sdf.visualizer import SdfVisualizer
 
 
@@ -23,13 +22,37 @@ def test_add_serializes_sdf_object() -> None:
     assert obj["color"] == "#ff0000"
 
 
-def test_distance_setter_emits_config_value() -> None:
+def test_add_raw_mv_resolves_through_analyze() -> None:
+    from pytanga.basis.pga3 import BasisPGA3
+    from pytanga.geometry import create_entity
+    from pytanga.geometry.entities import Direction, Plane
+
+    viz = SdfVisualizer(
+        open_browser=False,
+        add_default_light=False,
+        add_default_grid=False,
+        add_default_axes=False,
+    )
+    pga3 = BasisPGA3(opns=True)
+    plane = create_entity(
+        pga3, Plane(point=Point(0.0, 0.0, 0.0), normal=Direction(0.0, 0.0, 1.0))
+    )
+    oid = viz.add(plane, color="#44ff44")
+    obj = viz._full_state_for("")[0][0]
+    assert obj["id"] == oid
+    # The raw MV is reduced through geometry.analyze() to an analytic Plane
+    # (a bounded slab), never a `mv_sdf` matrix object.
+    assert obj["sdfKind"] == "Plane"
+    assert obj["tree"]["kind"] == "box"
+    assert "M" not in obj
+
+
+def test_add_unanalysable_raises() -> None:
+    import pytest
+
     viz = SdfVisualizer(open_browser=False)
-    assert viz.distance == "scalar_pseudo"
-    viz.distance = DistanceFunction.MAGNITUDE
-    assert viz.distance == "magnitude"
-    viz.opacity = "sigmoid"
-    assert viz.opacity == "sigmoid"
+    with pytest.raises((AttributeError, TypeError, ValueError)):
+        viz.add(object())
 
 
 def test_camera_config_parity() -> None:

@@ -76,16 +76,6 @@ def test_raymarch_ndc_uses_full_resolution() -> None:
     assert "/ uResolution.y" not in body
 
 
-def test_raymarch_opacity_step_treats_hit_band_as_opaque() -> None:
-    # The loop breaks on `d < SDF_EPSILON`, so at a hit the distance is a small
-    # value within that band (usually slightly positive). The solid `step`
-    # transfer must therefore use SDF_EPSILON, not `d < 0.0`, or every surface
-    # shades to black. The `opacityOf` function is now emitted from
-    # `algebra/opacities.js` (Phase 12), so the step stub lives there.
-    opacities = (SDC_DIR / "algebra" / "opacities.js").read_text(encoding="utf-8")
-    assert "return d < SDF_EPSILON ? epsilon : 0.0;" in opacities
-
-
 def test_no_version_or_precision_directives() -> None:
     # three.js prepends `#version 300 es` + `precision highp float;` for a
     # GLSL3 ShaderMaterial; the concatenated sources must not duplicate them.
@@ -132,20 +122,23 @@ def test_primitive_functions_present_in_assembly() -> None:
 
 def test_raymarch_map_and_material_contract() -> None:
     body = _read(RAYMARCH_FILE)
-    # `map(p)` is injected by the host (composer / algebra evaluator), never
-    # defined in the body; the body must NOT define it, only call it. Examine
-    # only code lines (ignore the contract comment).
+    # `map(p)` is injected by the host (composer), never defined in the body;
+    # the body must NOT define it, only call it. Examine only code lines
+    # (ignore the contract comment).
     code_lines = [ln for ln in body.splitlines() if not ln.strip().startswith("//")]
     code = "\n".join(code_lines)
     assert ".x" in code and "map(p" in code, "raymarch body must call map(p)"
     assert "vec2 map(" not in code, "raymarch body must not define map"
     # `materialColor` is injected by the material table.
     assert "materialColor(" in code
-    # `opacityOf` is a call site (the function is injected by the host from
-    # `algebra/opacities.js`); the other helpers are defined in the body.
-    assert "opacityOf(" in code
     for symbol in ("calcNormal", "softShadow", "shade"):
         assert f"{symbol}(" in code, f"raymarch body must define {symbol}"
+    # Plain sphere-tracing: the loop steps the raw signed distance, with no
+    # gradient-norm guard and no volumetric density.
+    assert "t += d;" in code
+    assert "mapDensity" not in code
+    assert "u_ObjectParams" not in code
+    assert "m.z" not in code
 
 
 def test_material_table_and_composer_exist() -> None:
@@ -155,23 +148,15 @@ def test_material_table_and_composer_exist() -> None:
     assert "materialColor" in material and "materialPreamble" in material
 
 
-def test_volumetric_density_present() -> None:
-    # The raymarch body defines the per-object volumetric density (exponential
-    # Beer–Lambert falloff + hard cutoff) driven by the algebra uniforms.
+def test_raymarch_uses_plain_sphere_tracing_step() -> None:
+    # The march loop steps the raw signed distance (`t += d`), with no
+    # gradient-norm guard, no per-object algebra uniforms, and no volumetric
+    # density path.
     body = _read(RAYMARCH_FILE)
-    assert "float mapDensity(" in body
-    assert "u_ObjectParams[matId].z" in body
-    assert "u_ObjectParams[matId].w" in body
-    assert "exp(-d / falloff)" in body
-
-
-def test_algebra_local_gradient_step() -> None:
-    # The step rule is unconditional: `map(p)` carries the analytical gradient
-    # norm (m.z), so the finite-difference `calcGradientNorm` and its per-object
-    # analytic sentinel gate are gone.
-    body = _read(RAYMARCH_FILE)
-    assert "vec3 m = map(p);" in body
-    assert "stepSize = d / max(m.z, 1.0);" in body
-    assert "t += stepSize;" in body
-    assert "calcGradientNorm" not in body
-    assert "u_ObjectParams[matId].w > -0.5" not in body
+    code_lines = [ln for ln in body.splitlines() if not ln.strip().startswith("//")]
+    code = "\n".join(code_lines)
+    assert "t += d;" in code
+    assert "stepSize" not in code
+    assert "mapDensity" not in code
+    assert "u_ObjectParams" not in code
+    assert "opacityOf" not in code

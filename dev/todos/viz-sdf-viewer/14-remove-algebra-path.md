@@ -184,31 +184,34 @@ brace balance holds; no reference to `mapDensity`/`u_ObjectParams`/`u_M`/
 
 ### C. Tests / dev / examples
 
-- [ ] Delete the four algebra test files and `dev/src/sdf_algebra_smoke.mjs`.
-- [ ] `py/tests/viz/sdf/test_combine.py`:
-  - [ ] Remove `test_combine_serialized_mv_sdf`, `test_distance_signed_property`,
+- [x] Delete the four algebra test files and `dev/src/sdf_algebra_smoke.mjs`.
+- [x] `py/tests/viz/sdf/test_combine.py`:
+  - [x] Remove `test_combine_serialized_mv_sdf`, `test_distance_signed_property`,
         `test_signedness_gate`, `test_signedness_gate_silent_when_signed`,
         `test_frontend_signedness_gate_present`, `test_smooth_subtract_signedness_gate`.
-  - [ ] Remove now-unused imports (`DistanceFunction`, `BasisPGA3`,
+  - [x] Remove now-unused imports (`DistanceFunction`, `BasisPGA3`,
         `create_entity`, `Direction`/`Plane`, `serialize_mv`).
-- [ ] `py/tests/viz/sdf/test_visualizer.py`:
-  - [ ] Remove `test_distance_setter_emits_config_value` (distance/opacity gone).
-  - [ ] Add a test that `SdfVisualizer.add(plane_mv)` now serializes an analytic
+- [x] `py/tests/viz/sdf/test_visualizer.py`:
+  - [x] Remove `test_distance_setter_emits_config_value` (distance/opacity gone).
+  - [x] Add a test that `SdfVisualizer.add(plane_mv)` now serializes an analytic
         `box`/`Plane` tree (MV resolved through `analyze`).
-  - [ ] Add a test that an un-analysable object raises a clear error.
-- [ ] `py/tests/viz/sdf/test_raymarch_shader.py`:
-  - [ ] Remove `test_volumetric_density_present`, `test_algebra_local_gradient_step`,
+  - [x] Add a test that an un-analysable object raises a clear error.
+- [x] `py/tests/viz/sdf/test_raymarch_shader.py`:
+  - [x] Remove `test_volumetric_density_present`, `test_algebra_local_gradient_step`,
         `test_raymarch_opacity_step_treats_hit_band_as_opaque`.
-  - [ ] Update `test_raymarch_map_and_material_contract` to assert the body calls
+  - [x] Update `test_raymarch_map_and_material_contract` to assert the body calls
         `map(p)` (`.x`), never defines `vec2 map(`, and steps `t += d`.
-  - [ ] Update `test_combined_fragment_is_brace_balanced` (unchanged inputs).
-  - [ ] Add assertions: no `u_ObjectParams`, no `mapDensity`, no `m.z` in the
+  - [x] Update `test_combined_fragment_is_brace_balanced` (unchanged inputs).
+  - [x] Add assertions: no `u_ObjectParams`, no `mapDensity`, no `m.z` in the
         assembled fragment.
-- [ ] `dev/src/test_viz_sdf.py`:
-  - [ ] Remove `test_algebra_path_and_calibration`, `test_distance_and_opacity_setters`,
+- [x] `dev/src/test_viz_sdf.py`:
+  - [x] Remove `test_algebra_path_and_calibration`, `test_distance_and_opacity_setters`,
         and the raw-plane `add` in `test_server_boot_and_flush`.
-  - [ ] Keep the analytic sphere, combine/smooth round-trip, and server boot
+  - [x] Keep the analytic sphere, combine/smooth round-trip, and server boot
         smoke steps.
+- [x] `dev/src/sdf_composer_smoke.mjs`: update the now-stale assertions to the
+      `vec2 map` / plain-float analytic expression (`max(d, -d1)`, `opSmoothUnion(d,
+      d1, …)`, no gradient-norm blend).
 
 **Verify:** `uv run pytest py/tests/viz/sdf -q` fully green.
 

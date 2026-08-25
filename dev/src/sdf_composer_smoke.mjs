@@ -38,7 +38,7 @@ const lineExpr = buildObjectExpr(line);
 const sphereExpr = buildObjectExpr(sphere);
 assert(lineExpr.includes('sdCappedCylinder'), 'line emits capped cylinder');
 assert(sphereExpr.includes('sdSphere'), 'sphere emits sphere');
-assert(lineExpr.startsWith('vec2(') && lineExpr.endsWith(', 1.0)'), 'analytic expr wraps vec2(..., 1.0)');
+assert(!lineExpr.startsWith('vec2('), 'analytic expr is a plain float SDF');
 
 // GLSL ES 3.0 has no implicit int → float conversion, so float params must be
 // emitted with a `.0` suffix (an integral `3` is an int literal).
@@ -50,7 +50,7 @@ assert(sphereExpr.includes('), 1.0)'), 'sphere radius is a float literal');
 assert(!sphereExpr.includes('), 1)'), 'no int literal passed to sdSphere');
 
 const composed = composeObjects([line, sphere]);
-assert(composed.includes('vec3 map(vec3 p)'), 'composes a vec3 map');
+assert(composed.includes('vec2 map(vec3 p)'), 'composes a vec2 map');
 assert(composed.includes('d0'), 'includes object 0 distance');
 assert(composed.includes('d1'), 'includes object 1 distance');
 
@@ -60,14 +60,14 @@ const carved = composeObjects([
     sphere,
     { id: 'carve', combine: 'subtract', tree: { kind: 'sphere', params: { radius: 0.8 } } },
 ]);
-assert(carved.includes('max(d, -d1.x)'), 'subtract folds as max(acc, -d)');
-assert(!/if \(d1\.x < d\)/.test(carved), 'subtract object does not use the union fold');
+assert(carved.includes('max(d, -d1)'), 'subtract folds as max(acc, -d)');
+assert(!/if \(d1 < d\)/.test(carved), 'subtract object does not use the union fold');
 
 const intersected = composeObjects([
     sphere,
     { id: 'cap', combine: 'intersection', tree: { kind: 'sphere', params: { radius: 0.5 } } },
 ]);
-assert(intersected.includes('if (d1.x > d)'), 'intersection folds as max(acc, d)');
+assert(intersected.includes('if (d1 > d)'), 'intersection folds as max(acc, d)');
 
 // A nested combinator (infinite line = intersect(cappedCylinder, box)).
 const infiniteLine = {
@@ -123,21 +123,20 @@ const smoothUnion = composeObjects([
     sphere,
     { id: 's2', combine: 'smooth_union', smoothness: 0.2, tree: { kind: 'sphere', params: { radius: 0.8 } } },
 ]);
-assert(smoothUnion.includes('opSmoothUnion(d, d1.x, 0.2)'), 'smooth_union uses opSmoothUnion');
+assert(smoothUnion.includes('opSmoothUnion(d, d1, 0.2)'), 'smooth_union uses opSmoothUnion');
 assert(smoothUnion.includes('m = mix(1.0, m, sm1.y)'), 'smooth_union blends material by blend factor');
-assert(smoothUnion.includes('g = mix(d1.y, g, sm1.y)'), 'smooth_union blends the gradient norm');
 
 const smoothSub = composeObjects([
     sphere,
     { id: 's3', combine: 'smooth_subtract', tree: { kind: 'sphere', params: { radius: 0.8 } } },
 ]);
-assert(smoothSub.includes('opSmoothSubtract(d, d1.x, 0.1)'), 'smooth_subtract uses default smoothness');
+assert(smoothSub.includes('opSmoothSubtract(d, d1, 0.1)'), 'smooth_subtract uses default smoothness');
 assert(!smoothSub.includes('mix(1.0, m'), 'smooth_subtract keeps the positive material (no blend)');
 
 const smoothInter = composeObjects([
     sphere,
     { id: 's4', combine: 'smooth_intersection', tree: { kind: 'sphere', params: { radius: 0.5 } } },
 ]);
-assert(smoothInter.includes('opSmoothIntersect(d, d1.x, 0.1)'), 'smooth_intersection uses opSmoothIntersect');
+assert(smoothInter.includes('opSmoothIntersect(d, d1, 0.1)'), 'smooth_intersection uses opSmoothIntersect');
 
 console.log('OK: SDF composer / scene-builder / material-table smoke');
