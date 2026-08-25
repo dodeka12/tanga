@@ -306,6 +306,8 @@ class CoordinateSystem:
         self._data_group = self._group.add_group(f"{group_name}_data")
         self._refs: dict[str, object] = {}
         self._plots: list[dict[str, Any]] = []
+        self._vlines: dict[str, dict[str, Any]] = {}
+        self._hlines: dict[str, dict[str, Any]] = {}
 
         self._build()
         self._apply_transform()
@@ -420,6 +422,7 @@ class CoordinateSystem:
             self._upsert("plane", plane, self.plane_style)
 
         self._apply_data_transform()
+        self._sync_lines()
 
     def _upsert(self, key: str, obj, style) -> None:
         ref = self._refs.get(key)
@@ -673,6 +676,100 @@ class CoordinateSystem:
         new_lim = (lo, hi)
         if new_lim != self._xlim:
             self.xlim = new_lim
+
+    # ── Annotation lines (data-frame markers) ─────────────────
+
+    def vline(self, x, *, name=None, y0=None, y1=None, color=None, style=None):
+        """Create or update a vertical line at data ``x``.
+
+        The line spans ``y0..y1`` in data coordinates; ``None`` (the default)
+        tracks the current ``ylim``.  Pass ``name`` to update the same line in
+        place (e.g. to animate it); without a name a new line is created each
+        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        """
+        return self._upsert_line("v", float(x), name, y0, y1, color, style)
+
+    def hline(self, y, *, name=None, x0=None, x1=None, color=None, style=None):
+        """Create or update a horizontal line at data ``y``.
+
+        The line spans ``x0..x1`` in data coordinates; ``None`` (the default)
+        tracks the current ``xlim``.  Pass ``name`` to update the same line in
+        place (e.g. to animate it); without a name a new line is created each
+        call.  Returns the :class:`~pytanga.viz.VizObjectRef` of the line.
+        """
+        return self._upsert_line("h", float(y), name, x0, x1, color, style)
+
+    def remove_vline(self, name: str) -> None:
+        """Remove a named vertical line (a no-op if the name is unknown)."""
+        entry = self._vlines.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def remove_hline(self, name: str) -> None:
+        """Remove a named horizontal line (a no-op if the name is unknown)."""
+        entry = self._hlines.pop(name, None)
+        if entry is not None:
+            entry["ref"].remove()
+
+    def _upsert_line(self, kind, value, name, c0, c1, color, style):
+        store = self._vlines if kind == "v" else self._hlines
+        if name is None:
+            prefix = "vline" if kind == "v" else "hline"
+            index = len(store)
+            name = f"{prefix}_{index}"
+            while name in store:
+                index += 1
+                name = f"{prefix}_{index}"
+        entry = store.get(name)
+        if entry is None:
+            render = PointPath()
+            kwargs = {} if style is None else {"style": style}
+            ref = self._data_group.new(render, color=color, **kwargs)
+            entry = {
+                "name": name,
+                "value": value,
+                "c0": None if c0 is None else float(c0),
+                "c1": None if c1 is None else float(c1),
+                "color": color,
+                "ref": ref,
+                "render": render,
+            }
+            store[name] = entry
+        else:
+            entry["value"] = value
+            if c0 is not None:
+                entry["c0"] = float(c0)
+            if c1 is not None:
+                entry["c1"] = float(c1)
+        self._sync_line(entry, kind)
+        return entry["ref"]
+
+    def _sync_lines(self) -> None:
+        for entry in self._vlines.values():
+            self._sync_line(entry, "v")
+        for entry in self._hlines.values():
+            self._sync_line(entry, "h")
+
+    def _sync_line(self, entry: dict[str, Any], kind: str) -> None:
+        value = entry["value"]
+        c0 = entry["c0"]
+        c1 = entry["c1"]
+        color = entry["color"]
+        if kind == "v":
+            lo = self._ylim[0] if c0 is None else c0
+            hi = self._ylim[1] if c1 is None else c1
+            p0 = (*self._data_xy(value, lo), 0.0)
+            p1 = (*self._data_xy(value, hi), 0.0)
+        else:
+            lo = self._xlim[0] if c0 is None else c0
+            hi = self._xlim[1] if c1 is None else c1
+            p0 = (*self._data_xy(lo, value), 0.0)
+            p1 = (*self._data_xy(hi, value), 0.0)
+        render = entry["render"]
+        render.clear()
+        render.add(p0, color=color)
+        render.add(p1, color=color)
+        entry["ref"].entity = render
 
     # ── Mutators (rebuild / re-frame in place) ────────────────
 

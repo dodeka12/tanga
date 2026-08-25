@@ -192,20 +192,20 @@ code-symmetry benefit is worth the refactor.
 
 **File:** `py/pytanga/viz/_coordinate_system.py`
 
-- [ ] Store named line specs: `self._vlines: dict[str, dict]` and
+- [x] Store named line specs: `self._vlines: dict[str, dict]` and
       `self._hlines: dict[str, dict]` (each entry: name, fixed value, optional
       span, color, style, and the `VizObjectRef` of its `PointPath`).
-- [ ] Add `vline(x, *, name=None, y0=None, y1=None, color=None, style=None)` and
+- [x] Add `vline(x, *, name=None, y0=None, y1=None, color=None, style=None)` and
       `hline(y, *, name=None, x0=None, x1=None, color=None, style=None)`:
       - `name=None` → always create a new line (return its `VizObjectRef`).
       - `name` given → create if missing, otherwise update the existing line in
         place (`ref.entity = ...`) so animations can move it without re-adding.
       - `y0/y1` (resp. `x0/x1`) default to the current `ylim` (resp. `xlim`).
       - Endpoints are computed via `_data_xy` so log axes map correctly.
-- [ ] Add `_sync_lines()` that rebuilds every stored line from its spec (using
+- [x] Add `_sync_lines()` that rebuilds every stored line from its spec (using
       `_data_xy` and the current limits) and assigns `ref.entity`; call it at the
       end of `_build()` so lines track `xlim`/`ylim`/scale/size changes.
-- [ ] Add `remove_vline(name)` and `remove_hline(name)` that unregister a named
+- [x] Add `remove_vline(name)` and `remove_hline(name)` that unregister a named
       line and remove its node from the scene.
 
 ### Step 5 — Tests
@@ -299,8 +299,9 @@ code-symmetry benefit is worth the refactor.
 - **`_plot_z` moves into the inner group.** Point children are stored at `z = 0`;
   the inner group's `position[2] = plot_z` preserves the existing grid/axes/plot
   layering.
-- **vline/hline re-sync.** Named lines are rebuilt in `_build`, so they track
-  `xlim`/`ylim`/scale/size changes; unnamed lines are one-shot and not re-synced.
+- **vline/hline re-sync.** Lines are rebuilt in `_build`, so they track
+  `xlim`/`ylim`/scale/size changes; unnamed lines get an auto-generated name and
+  are still re-synced (they just can't be referenced later by the caller).
 
 ## Non-goals / follow-ups
 
