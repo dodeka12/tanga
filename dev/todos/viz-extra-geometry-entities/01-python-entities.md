@@ -57,7 +57,7 @@ manual `__init__` using `object.__setattr__`). All are exported from
     `regular_polygon(6)` for a hexagon).
   - Coerce via `to_point` / `to_float` / `to_direction`; `sides` via `int`.
 
-- [ ] **1.5 — Export from `entities/__init__.py`**
+- [x] **1.5 — Export from `entities/__init__.py`**
   - Import `Disk`, `PartialDisk`, `Box`, `Ellipsoid`, `Ellipse`,
     `RegularPolygon`; add to `__all__`. **Do not** extend the `Entity` union.
 
