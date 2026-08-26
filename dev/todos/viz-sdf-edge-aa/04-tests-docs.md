@@ -14,12 +14,11 @@ do a manual browser smoke test, and record the change in the changelog.
 
 ## Steps
 
-- [ ] **4.1 — Structural AA assertions**
-  - `test_proxy_shader.py`: assert `dFdx(` and `dFdy(` (or `smoothstep(`) appear
-    in `proxy.glsl`, that `gl_FragDepth` is still written, and brace balance is
-    still `0`.
-  - `test_raymarch_shader.py`: assert the `res`/`aa` symbols and the
-    `mix(bg, ...)` fade are present, and the `applyOverlays` call is still there.
+- [x] **4.1 — Structural AA assertions**
+  - `test_proxy_shader.py`: assert the `res` tracking, `dFdx`/`dFdy`, and
+    `smoothstep` fade appear in `proxy.glsl`, that `gl_FragDepth` is still
+    written on both the hit and near-miss paths, and brace balance is still `0`.
+  - ~~`test_raymarch_shader.py`~~ — skipped: Phase 3 (fullscreen AA) is deferred.
 
 - [ ] **4.2 — Full regression**
   - `uv run pytest py/tests/viz -q` (all viz + sdf tests).
