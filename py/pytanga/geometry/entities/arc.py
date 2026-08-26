@@ -9,33 +9,11 @@ import math
 from dataclasses import dataclass
 
 from ._coerce import to_direction, to_float, to_point
+from ._util import _compute_start_direction
 from .direction import Direction
 from .point import Point
 
 _FULL_TURN = 2.0 * math.pi
-
-
-def _compute_start_direction(axis: Direction) -> Direction:
-    """Return a deterministic unit vector perpendicular to *axis*.
-
-    Picks the coordinate axis least aligned with *axis* so the cross product is
-    well-conditioned, then returns ``axis × ref`` normalized.  This guarantees
-    the frontend always receives a valid arc start direction.
-    """
-    a = axis.normalized()
-    refs = (
-        Direction(1.0, 0.0, 0.0),
-        Direction(0.0, 1.0, 0.0),
-        Direction(0.0, 0.0, 1.0),
-    )
-    ref = min(refs, key=lambda r: abs(a.dot(r)))
-    start = a.cross(ref)
-    if start.mag() == 0.0:  # defensive: never expected to trigger
-        for r in refs:
-            candidate = a.cross(r)
-            if candidate.mag() != 0.0:
-                return candidate.normalized()
-    return start.normalized()
 
 
 @dataclass(frozen=True)
