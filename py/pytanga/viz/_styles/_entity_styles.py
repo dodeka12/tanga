@@ -558,3 +558,248 @@ class Axes3DStyle(VizStyle):
         if self.w is not None:
             result["w"] = self.w.to_dict()
         return result
+
+
+@dataclass
+class DiskStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Disk`.
+
+    Attributes:
+        thickness: Slab thickness of the disk (default ``0.02``).
+        wireframe: When ``True``, a wireframe cage is drawn over the disk.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "DiskStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class PartialDiskStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.PartialDisk`.
+
+    Attributes:
+        thickness: Slab thickness of the partial disk (default ``0.02``).
+        wireframe: When ``True``, a wireframe cage is drawn over the sector.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "PartialDiskStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class BoxStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Box`.
+
+    Attributes:
+        wireframe: When ``True``, a wireframe cage is drawn over the box.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "BoxStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class EllipsoidStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Ellipsoid`.
+
+    Attributes:
+        wireframe: When ``True``, a wireframe cage is drawn over the ellipsoid.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "EllipsoidStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class EllipseStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Ellipse`.
+
+    Attributes:
+        thickness: Slab thickness of the ellipse (default ``0.02``).
+        wireframe: When ``True``, a wireframe cage is drawn over the ellipse.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "EllipseStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class RegularPolygonStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.RegularPolygon`.
+
+    Attributes:
+        thickness: Slab thickness of the polygon (default ``0.02``).
+        wireframe: When ``True``, a wireframe cage is drawn over the polygon.
+        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
+            wireframe lines.  ``None`` defaults to solid lines.
+        wireframe_color: Optional override color for wireframe lines.
+            ``None`` uses the entity's main color.
+        wireframe_opacity: Optional opacity for wireframe lines (0..1).
+            ``None`` defaults to fully opaque.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "RegularPolygonStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+

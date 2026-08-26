@@ -20,17 +20,23 @@ from typing import Any, TypeAlias, Union
 
 from pytanga.geometry.entities import (
     Arc,
+    Box,
     Circle,
     Cylinder,
     Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
     HPoint,
     ImagCircle,
     ImagPointPair,
     ImagSphere,
     Line,
+    PartialDisk,
     Plane,
     Point,
     PointPair,
+    RegularPolygon,
     Space,
     Sphere,
 )
@@ -58,17 +64,23 @@ from ._entity_styles import (
     Axes2DStyle,
     Axes3DStyle,
     AxisStyle,
+    BoxStyle,
     CircleStyle,
     CylinderLineStyle,
     CylinderStyle,
     DirectionStyle,
+    DiskStyle,
+    EllipseStyle,
+    EllipsoidStyle,
     GridStyle,
     HPointStyle,
     LineStyle,
+    PartialDiskStyle,
     PlaneStyle,
     PointPairStyle,
     PointPathStyle,
     PointStyle,
+    RegularPolygonStyle,
     SpaceStyle,
     SphereStyle,
 )
@@ -85,11 +97,17 @@ from ._operator_styles import (
     TranslatorStyle,
 )
 from ._sdf_style import (
+    SdfBoxStyle,
     SdfCircleStyle,
     SdfCylinderStyle,
+    SdfDiskStyle,
+    SdfEllipseStyle,
+    SdfEllipsoidStyle,
     SdfLineStyle,
+    SdfPartialDiskStyle,
     SdfPlaneStyle,
     SdfPointStyle,
+    SdfRegularPolygonStyle,
     SdfSphereStyle,
     SdfStyle,
 )
@@ -115,6 +133,12 @@ ObjVizStyle: TypeAlias = Union[
     CylinderLineStyle,
     CylinderStyle,
     ArcStyle,
+    BoxStyle,
+    DiskStyle,
+    EllipseStyle,
+    EllipsoidStyle,
+    PartialDiskStyle,
+    RegularPolygonStyle,
     SphereStyle,
     SpaceStyle,
     ReflectionLineStyle,
@@ -138,6 +162,12 @@ ObjVizStyle: TypeAlias = Union[
     SdfPlaneStyle,
     SdfPointStyle,
     SdfSphereStyle,
+    SdfBoxStyle,
+    SdfDiskStyle,
+    SdfEllipseStyle,
+    SdfEllipsoidStyle,
+    SdfPartialDiskStyle,
+    SdfRegularPolygonStyle,
     SdfStyle,
 ]
 
@@ -157,6 +187,12 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
     "Cylinder": CylinderStyle(color="#44aaff", opacity=0.9),
     "Arc": ArcStyle(color="#ffcc44", opacity=0.9),
+    "Disk": DiskStyle(color="#ff8844", opacity=0.9, thickness=0.02),
+    "PartialDisk": PartialDiskStyle(color="#ffcc44", opacity=0.9, thickness=0.02),
+    "Box": BoxStyle(color="#88ccff", opacity=0.9),
+    "Ellipsoid": EllipsoidStyle(color="#ffaa00", opacity=0.9),
+    "Ellipse": EllipseStyle(color="#ff44ff", opacity=0.9, thickness=0.02),
+    "RegularPolygon": RegularPolygonStyle(color="#44ffaa", opacity=0.9, thickness=0.02),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),
     "PointPath": PointPathStyle(color="#ffffff", opacity=1.0, line_thickness=2.0),
     "Grid": GridStyle(color="#555555", opacity=0.8, line_thickness=1.0),
@@ -228,6 +264,12 @@ def _default_style_for(
         | Space
         | Cylinder
         | Arc
+        | Box
+        | Disk
+        | Ellipse
+        | Ellipsoid
+        | PartialDisk
+        | RegularPolygon
         | ReflectionLine
         | ReflectionPlane
         | ReflectionPoint

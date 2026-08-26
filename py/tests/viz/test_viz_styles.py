@@ -3,14 +3,32 @@
 
 """Tests for the unified style holder (`_viz_styles.py`)."""
 
-from pytanga.geometry import Arc, Cylinder, Direction, Line, Point
+from pytanga.geometry import (
+    Arc,
+    Box,
+    Cylinder,
+    Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
+    Line,
+    PartialDisk,
+    Point,
+    RegularPolygon,
+)
 from pytanga.viz import (
     ArcStyle,
+    BoxStyle,
     CylinderLineStyle,
     CylinderStyle,
+    DiskStyle,
+    EllipseStyle,
+    EllipsoidStyle,
     LabelStyle,
     LineStyle,
+    PartialDiskStyle,
     PointStyle,
+    RegularPolygonStyle,
     Visualizer,
 )
 from pytanga.viz._style_dict import _StyleDict
@@ -137,3 +155,33 @@ def test_viz_entity_style_class_key_access():
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     assert viz.styles[Cylinder] is viz.styles["Cylinder"]
     assert viz.styles[Arc] is viz.styles["Arc"]
+
+
+def test_new_entity_style_defaults_registered() -> None:
+    s = make_styles()
+    for kind in ("Disk", "PartialDisk", "Box", "Ellipsoid", "Ellipse", "RegularPolygon"):
+        assert kind in s.kind
+        assert s.kind[kind].color is not None
+
+
+def test_new_entity_style_to_dict_omits_unset_fields() -> None:
+    assert DiskStyle(color="#123456").to_dict() == {
+        "style_type": "DiskStyle",
+        "color": "#123456",
+    }
+    assert BoxStyle(color="#123456").to_dict() == {
+        "style_type": "BoxStyle",
+        "color": "#123456",
+    }
+
+
+def test_new_entity_style_thickness_serialized() -> None:
+    assert PartialDiskStyle(thickness=0.05).to_dict()["thickness"] == 0.05
+    assert EllipseStyle(thickness=0.05).to_dict()["thickness"] == 0.05
+    assert RegularPolygonStyle(thickness=0.05).to_dict()["thickness"] == 0.05
+
+
+def test_new_entity_style_class_key_access() -> None:
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    for entity in (Disk, PartialDisk, Box, Ellipsoid, Ellipse, RegularPolygon):
+        assert viz.styles[entity] is viz.styles[entity.__name__]

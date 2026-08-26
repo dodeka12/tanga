@@ -124,6 +124,80 @@ class SdfPlaneStyle(SdfStyle):
     """SDF style for :class:`~pytanga.geometry.Plane` (no extra knobs)."""
 
 
+@dataclass
+class SdfDiskStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Disk`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF disk (a thin capped cylinder).
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SdfPartialDiskStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.PartialDisk`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF partial disk.
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SdfBoxStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Box` (no extra knobs)."""
+
+
+@dataclass
+class SdfEllipsoidStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Ellipsoid` (no extra knobs)."""
+
+
+@dataclass
+class SdfEllipseStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Ellipse`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF ellipse (a thin ellipsoid).
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SdfRegularPolygonStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.RegularPolygon`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF regular polygon.
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
 #: Default per-entity SDF style class for a geometry entity kind. Used by
 #: ``_entity_to_sdf`` (Phase 3) to pick a sensible style when a raw entity is
 #: wrapped without an explicit style.
@@ -134,5 +208,11 @@ SDF_STYLE_BY_KIND: dict[str, type[SdfStyle]] = {
     "Point": SdfPointStyle,
     "Cylinder": SdfCylinderStyle,
     "Plane": SdfPlaneStyle,
+    "Disk": SdfDiskStyle,
+    "PartialDisk": SdfPartialDiskStyle,
+    "Box": SdfBoxStyle,
+    "Ellipsoid": SdfEllipsoidStyle,
+    "Ellipse": SdfEllipseStyle,
+    "RegularPolygon": SdfRegularPolygonStyle,
 }
 
