@@ -95,12 +95,14 @@ void main() {
     if (tFar <= tNear) discard;
 
     float t = tNear;
+    float res = tFar; // closest signed distance the ray passes the surface by
     bool hit = false;
     float m = 0.0;
     for (int i = 0; i < MAX_STEPS; i++) {
         if (i >= uMaxSteps) break;
         vec3 p = ro + rd * t;
         vec2 dm = map(p);
+        res = min(res, dm.x);
         if (dm.x < SDF_EPSILON) {
             hit = true;
             m = dm.y;
