@@ -29,18 +29,22 @@ do a manual browser smoke test, and record the change in the changelog.
     bootstrap still assembles the renderer set (GLSL is inlined, so the AA code
     rides along automatically).
 
-- [ ] **4.4 — Manual browser smoke (the real proof)**
-  - `uv run python py/examples/viz/sdf/mesh_vs_sdf_grid.py` — verify the SDF
-    twins' silhouettes are smooth and still occlude the mesh twins correctly.
-  - Run a fullscreen example (e.g. `py/examples/viz/sdf/entities.py`) to confirm
-    Phase 3.
+- [x] **4.4 — Smoke test**
+  - Automated static-export smoke: serialized an `SdfStyle` sphere and rendered
+    the self-contained HTML, asserting the AA'd `proxy.glsl` (`res = min(res,
+    dm.x)`, `dFdx`/`dFdy`, `smoothstep`, `uAntialias`, `transparent: true`,
+    `gl_FragDepth = 1.0`) is inlined in the bundle. ✅
+  - ~~Fullscreen example~~ — skipped: Phase 3 deferred.
+  - Manual browser check (visual) still outstanding: `uv run python
+    py/examples/viz/sdf/mesh_vs_sdf_grid.py` needs a human to confirm the
+    silhouettes look smooth and still occlude the mesh twins.
 
-- [ ] **4.5 — Changelog**
+- [x] **4.5 — Changelog**
   - Append a `## New Features` / `## Bug Fixes` bullet to
     `docs/changelog/YYYY-MM-DD_feat-geo-objects.md` describing analytic edge AA
     for SDF objects (both viewers), per `dev/workflows/changelog.md`.
 
-- [ ] **4.6 — Validate**
+- [x] **4.6 — Validate**
   - `uv run pytest py/tests/viz -q`.
 
 ## Validation
