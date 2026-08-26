@@ -86,8 +86,10 @@ def test_derived_style_carries_color_and_opacity() -> None:
     assert d["opacity"] == 0.5
 
 
-def test_antialias_knob_defaults_on_and_serializes() -> None:
-    assert SdfStyle().to_dict()["antialias"] is True
-    assert SdfStyle(antialias=False).to_dict()["antialias"] is False
+def test_antialias_knob_disabled_by_default() -> None:
+    # Edge AA is off by default (pending investigation of silhouette artifacts);
+    # it is opt-in via `SdfStyle(antialias=True)`.
+    assert SdfStyle().to_dict()["antialias"] is False
+    assert SdfStyle(antialias=True).to_dict()["antialias"] is True
     # Derived styles inherit the knob through the shared to_dict().
-    assert SdfSphereStyle(antialias=False).to_dict()["antialias"] is False
+    assert SdfSphereStyle(antialias=True).to_dict()["antialias"] is True

@@ -36,7 +36,8 @@ class SdfStyle(VizStyle):
             marching volume always covers the surface (any over-estimate is
             safe; under-estimates clip the surface).
         antialias: Enable the analytic ~1px silhouette edge fade in the
-            ray-marcher (default on; disable for a hard, exact silhouette).
+            ray-marcher.  Disabled by default (the fade still has silhouette
+            artifacts under investigation); set ``True`` to opt in.
     """
 
     color: str | None = None
@@ -44,7 +45,7 @@ class SdfStyle(VizStyle):
     soft_shadows: bool = True
     max_steps: int = 256
     bound_padding: float = 0.05
-    antialias: bool = True
+    antialias: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {

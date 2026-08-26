@@ -31,6 +31,7 @@ SDF-specific knobs:
 | `soft_shadows` | `bool` | `True`  | Enable soft self-shadowing in the ray-marcher. |
 | `max_steps`    | `int`  | `256`   | Ray-march step budget.                         |
 | `bound_padding`| `float`| `0.05`  | Inflate the proxy AABB (any over-estimate is safe). |
+| `antialias`    | `bool` | `False` | Analytic ~1px silhouette edge fade (off by default; under investigation). |
 
 
 ## SDF object model (unified)
@@ -57,7 +58,7 @@ operator CSG, and per-object materials.
 | `RegularPolygon` | `SdfRegularPolygonStyle` | `thickness` (default `0.02`) |
 
 Each inherits the `SdfStyle` knobs (`color`, `opacity`, `soft_shadows`,
-`max_steps`, `bound_padding`).
+`max_steps`, `bound_padding`, `antialias`).
 
 ### `SdfObject` + operators
 

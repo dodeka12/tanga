@@ -52,8 +52,14 @@ function _softShadows(ent) {
     return !ent.style || ent.style.soft_shadows !== false;
 }
 
+// Analytic edge AA is disabled by default (the silhouette fade still shows
+// artifacts; revisit later). Opt back in with `SdfStyle(antialias=True)`.
 function _antialias(ent) {
-    return !ent.style || ent.style.antialias !== false;
+    return !!ent.style && ent.style.antialias === true;
+}
+
+function _anyTransparent(materials) {
+    return materials.some((m) => m.w < 0.99);
 }
 
 // Compose a member's position/rotation (Euler XYZ)/scale into a world matrix,
@@ -145,9 +151,10 @@ export async function createSdfProxy(ent) {
         vertexShader: buildProxyVertex(),
         fragmentShader: buildProxyFragment(ent, parts),
         uniforms,
-        // Always transparent so the analytic edge AA (proxy.glsl) can blend its
-        // ~1px silhouette fade over the background; hits still write real depth.
-        transparent: true,
+        // Transparent when edge AA is enabled (to blend the silhouette fade) or
+        // when any material is semi-transparent; opaque otherwise (the original
+        // behaviour). Edge AA is disabled by default.
+        transparent: _antialias(ent) || _anyTransparent(uniforms.uMaterial.value),
         depthWrite: true,
         depthTest: true,
         glslVersion: THREE.GLSL3,
@@ -201,7 +208,7 @@ export function updateSdfProxy(mesh, ent) {
     mat.uniforms.uMaxSteps.value = _maxSteps(ent);
     mat.uniforms.uSoftShadows.value = _softShadows(ent) ? 1.0 : 0.0;
     mat.uniforms.uAntialias.value = _antialias(ent) ? 1.0 : 0.0;
-    mat.transparent = true;
+    mat.transparent = _antialias(ent) || _anyTransparent(mat.uniforms.uMaterial.value);
 
     if (ent.members && mat.uniforms.uMemberInvTransform) {
         // Update each member's inverse transform uniform in place, then resize

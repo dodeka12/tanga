@@ -20,6 +20,6 @@
 - **Analytic edge anti-aliasing for ray-marched SDF objects** — the standard
   viewer's per-object SDF proxy now tracks the closest-approach distance during
   the march and fades the ~1px silhouette edge (screen-space derivative +
-  `smoothstep`) instead of a hard `discard`, blending the edge over the
-  background.  Added an `antialias` knob to `SdfStyle` (default on) to opt back
-  into a hard silhouette.
+  `smoothstep`) instead of a hard `discard`.  Added an `antialias` knob to
+  `SdfStyle` (disabled by default pending further investigation of silhouette
+  artifacts) to opt back in.

@@ -1,6 +1,6 @@
 # Viz SDF Edge Anti-Aliasing — Overview
 
-**Created:** 2026-08-26 | **Status:** Implemented (Phases 1–2, 4; Phase 3 deferred) | **Branch:** `feat/geo-objects`
+**Created:** 2026-08-26 | **Status:** Implemented but edge-AA **disabled by default** (Phase 3 deferred; silhouette artifacts under investigation) | **Branch:** `feat/geo-objects`
 
 ## Goal
 
