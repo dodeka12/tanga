@@ -15,7 +15,7 @@ turns Phase 1's shader change into a visible result.
 
 ## Steps
 
-- [ ] **2.1 — Make the proxy material blend**
+- [x] **2.1 — Make the proxy material blend**
   - In `sdf.js` `createSdfProxy` (the `new THREE.ShaderMaterial({...})`), set
     `transparent: true` so the edge fragments composite over the clear
     background. Keep `depthWrite: true` and `depthTest: true` — hits still write
@@ -26,7 +26,7 @@ turns Phase 1's shader change into a visible result.
     rendered at full opacity (`fragColor.a = mat.a * uOpacity`), so it looks
     opaque.
 
-- [ ] **2.2 — (Optional) `antialias` knob on `SdfStyle`**
+- [x] **2.2 — (Optional) `antialias` knob on `SdfStyle`**
   - Add `antialias: bool = True` to `SdfStyle` in
     `py/pytanga/viz/_styles/_sdf_style.py`; serialize it in `to_dict()`.
   - In `sdf.js`, read `ent.style.antialias !== false` and pass it as a
@@ -34,11 +34,11 @@ turns Phase 1's shader change into a visible result.
     (`aa = mix(1.0, aa, uAntialias)` or `if (uAntialias < 0.5) discard;`).
   - This keeps a cheap escape hatch if edge blending ever causes artifacts.
 
-- [ ] **2.3 — Update the material update path**
+- [x] **2.3 — Update the material update path**
   - In `updateSdfProxy`, propagate the new `uAntialias` uniform (and keep
     `transparent` consistent) so runtime style changes work without a rebuild.
 
-- [ ] **2.4 — Validate**
+- [x] **2.4 — Validate**
   - `uv run pytest py/tests/viz/sdf/test_sdf_styles.py -q` (if 2.2 done).
   - `node --check` on `renderers/sdf.js` (copy to `.mjs` first) and `glsl.js`.
 

@@ -13,6 +13,7 @@ uniform vec4 uMaterial[MAX_GROUP_MEMBERS];
 uniform float uOpacity;
 uniform int uMaxSteps;
 uniform float uSoftShadows;
+uniform float uAntialias;
 uniform vec3 uBoundHalf;
 uniform mat4 uModelMatrix;
 uniform mat4 uProjectionMatrix;
@@ -116,7 +117,7 @@ void main() {
     float edgePx = length(vec2(dFdx(t), dFdy(t)));
     float aa = 1.0 - smoothstep(0.0, max(edgePx, 1e-6), res);
     if (!hit) {
-        if (aa < 0.001) discard;
+        if (uAntialias < 0.5 || aa < 0.001) discard;
         // Near-miss: emit a faint flat edge so the silhouette blends out over
         // the background. No valid surface point/normal exists here, so skip
         // shading and use the object's (slot-0) material colour directly.

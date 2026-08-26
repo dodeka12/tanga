@@ -52,6 +52,10 @@ function _softShadows(ent) {
     return !ent.style || ent.style.soft_shadows !== false;
 }
 
+function _antialias(ent) {
+    return !ent.style || ent.style.antialias !== false;
+}
+
 // Compose a member's position/rotation (Euler XYZ)/scale into a world matrix,
 // and return its INVERSE (the shader transforms points into the member's local
 // space before evaluating its SDF).
@@ -89,10 +93,6 @@ function _buildMaterials(ent) {
     return arr;
 }
 
-function _anyTransparent(materials) {
-    return materials.some((m) => m.w < 0.99);
-}
-
 function _buildUniforms(ent) {
     const uniforms = {
         uMaterial: { value: _buildMaterials(ent) },
@@ -101,6 +101,7 @@ function _buildUniforms(ent) {
         uOpacity: { value: 1.0 },
         uMaxSteps: { value: _maxSteps(ent) },
         uSoftShadows: { value: _softShadows(ent) ? 1.0 : 0.0 },
+        uAntialias: { value: _antialias(ent) ? 1.0 : 0.0 },
         uBoundHalf: { value: new THREE.Vector3() },
         uModelMatrix: { value: new THREE.Matrix4() },
         uProjectionMatrix: { value: new THREE.Matrix4() },
@@ -144,7 +145,9 @@ export async function createSdfProxy(ent) {
         vertexShader: buildProxyVertex(),
         fragmentShader: buildProxyFragment(ent, parts),
         uniforms,
-        transparent: _anyTransparent(uniforms.uMaterial.value),
+        // Always transparent so the analytic edge AA (proxy.glsl) can blend its
+        // ~1px silhouette fade over the background; hits still write real depth.
+        transparent: true,
         depthWrite: true,
         depthTest: true,
         glslVersion: THREE.GLSL3,
@@ -197,7 +200,8 @@ export function updateSdfProxy(mesh, ent) {
     mat.uniforms.uMaterial.value = _buildMaterials(ent);
     mat.uniforms.uMaxSteps.value = _maxSteps(ent);
     mat.uniforms.uSoftShadows.value = _softShadows(ent) ? 1.0 : 0.0;
-    mat.transparent = _anyTransparent(mat.uniforms.uMaterial.value);
+    mat.uniforms.uAntialias.value = _antialias(ent) ? 1.0 : 0.0;
+    mat.transparent = true;
 
     if (ent.members && mat.uniforms.uMemberInvTransform) {
         // Update each member's inverse transform uniform in place, then resize

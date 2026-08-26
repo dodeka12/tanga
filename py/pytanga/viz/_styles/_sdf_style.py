@@ -35,6 +35,8 @@ class SdfStyle(VizStyle):
         bound_padding: Inflate the proxy AABB by this absolute amount so the
             marching volume always covers the surface (any over-estimate is
             safe; under-estimates clip the surface).
+        antialias: Enable the analytic ~1px silhouette edge fade in the
+            ray-marcher (default on; disable for a hard, exact silhouette).
     """
 
     color: str | None = None
@@ -42,6 +44,7 @@ class SdfStyle(VizStyle):
     soft_shadows: bool = True
     max_steps: int = 256
     bound_padding: float = 0.05
+    antialias: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
@@ -49,6 +52,7 @@ class SdfStyle(VizStyle):
             "soft_shadows": self.soft_shadows,
             "max_steps": self.max_steps,
             "bound_padding": self.bound_padding,
+            "antialias": self.antialias,
         }
         if self.color is not None:
             result["color"] = self.color

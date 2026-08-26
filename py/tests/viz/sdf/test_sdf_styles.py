@@ -84,3 +84,10 @@ def test_derived_style_carries_color_and_opacity() -> None:
     d = SdfLineStyle(color="#ff0000", opacity=0.5).to_dict()
     assert d["color"] == "#ff0000"
     assert d["opacity"] == 0.5
+
+
+def test_antialias_knob_defaults_on_and_serializes() -> None:
+    assert SdfStyle().to_dict()["antialias"] is True
+    assert SdfStyle(antialias=False).to_dict()["antialias"] is False
+    # Derived styles inherit the knob through the shared to_dict().
+    assert SdfSphereStyle(antialias=False).to_dict()["antialias"] is False
