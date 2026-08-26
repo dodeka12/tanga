@@ -12,11 +12,11 @@ import {
 
 /**
  * Build a quaternion that maps local +Y to `normal` and local +Z to
- * `startDirection`. `startDirection` is assumed perpendicular to `normal`.
+ * `inPlane`. `inPlane` is assumed perpendicular to `normal`.
  */
-function rotationFromAxes(normal, startDirection) {
+function rotationFromAxes(normal, inPlane) {
     const y = new THREE.Vector3(...normal).normalize();
-    const z = new THREE.Vector3(...startDirection).normalize();
+    const z = new THREE.Vector3(...inPlane).normalize();
     const x = new THREE.Vector3().crossVectors(y, z).normalize();
     const zOrtho = new THREE.Vector3().crossVectors(x, y).normalize();
     const m = new THREE.Matrix4().makeBasis(x, y, zOrtho);
@@ -33,13 +33,21 @@ export function createPartialDisk(ent) {
     const startDirection = ent.startDirection || [1, 0, 0];
     const angle = Math.min(Math.max(ent.angle ?? 2 * Math.PI, 0.0), 2 * Math.PI);
 
-    // CylinderGeometry sweeps theta starting at local +Z; `angle` is the sweep.
+    // The sector is symmetric about its bisector (matching the SDF primitive,
+    // which is symmetric about local +Z). The bisector is `startDirection`
+    // rotated by half the sweep about `normal`.
+    const n = new THREE.Vector3(...normal).normalize();
+    const s = new THREE.Vector3(...startDirection).normalize();
+    const bisector = s.clone().multiplyScalar(Math.cos(angle / 2)).add(
+        new THREE.Vector3().crossVectors(n, s).multiplyScalar(Math.sin(angle / 2))
+    );
+
     const geometry = new THREE.CylinderGeometry(
-        radius, radius, thickness, 48, 1, false, 0.0, angle
+        radius, radius, thickness, 48, 1, false, -angle / 2, angle
     );
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
     mesh.position.set(center[0], center[1], center[2]);
-    mesh.setRotationFromQuaternion(rotationFromAxes(normal, startDirection));
+    mesh.setRotationFromQuaternion(rotationFromAxes(normal, bisector));
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {
@@ -49,7 +57,8 @@ export function createPartialDisk(ent) {
         addWireframeOverlay(
             mesh,
             new THREE.CylinderGeometry(
-                radius * 1.005, radius * 1.005, thickness, 48, 1, false, 0.0, angle
+                radius * 1.005, radius * 1.005, thickness, 48, 1, false,
+                -angle / 2, angle
             ),
             wfColor,
             dash,

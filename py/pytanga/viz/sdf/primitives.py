@@ -330,6 +330,61 @@ def torus(
     )
 
 
+def partial_disk(
+    radius: float,
+    angle: float = 2.0 * math.pi,
+    *,
+    half_height: float = 0.01,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
+) -> SdfNode:
+    """Capped sector (partial disk) in the XZ plane, symmetric about +Z.
+
+    ``radius`` is the disk radius, ``angle`` the total sweep in radians
+    (``0 < angle < 2π``; use :func:`capped_cylinder` for a full disk), and
+    ``half_height`` the slab half-thickness along +Y.
+    """
+    return primitive(
+        "partialDisk",
+        {
+            "radius": float(radius),
+            "halfHeight": float(half_height),
+            "angle": float(angle),
+        },
+        id=id,
+        position=position,
+        rotation=rotation,
+    )
+
+
+def regular_polygon(
+    radius: float,
+    sides: int,
+    *,
+    half_height: float = 0.01,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
+) -> SdfNode:
+    """Regular polygon slab in the XZ plane with a vertex on +Z.
+
+    ``radius`` is the circumradius, ``sides`` the number of sides (``>= 3``),
+    and ``half_height`` the slab half-thickness along +Y.
+    """
+    return primitive(
+        "regularPolygon",
+        {
+            "radius": float(radius),
+            "halfHeight": float(half_height),
+            "sides": int(sides),
+        },
+        id=id,
+        position=position,
+        rotation=rotation,
+    )
+
+
 def plane(
     normal: tuple[float, float, float],
     offset: float = 0.0,
