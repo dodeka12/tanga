@@ -64,7 +64,7 @@ float aa = 1.0 - smoothstep(0.0, max(edgePx, 1e-6), res);
 |-------|------|---------|
 | 1 | [01-proxy-shader-aa.md](./01-proxy-shader-aa.md) | `proxy.glsl`: track `res`, fade silhouette, far-depth near-miss |
 | 2 | [02-proxy-material-blending.md](./02-proxy-material-blending.md) | `sdf.js`: transparent proxy + optional `antialias` knob |
-| 3 | [03-fullscreen-raymarch-aa.md](./03-fullscreen-raymarch-aa.md) | `raymarch.glsl`: same technique, in-shader background |
+| 3 | [03-fullscreen-raymarch-aa.md](./03-fullscreen-raymarch-aa.md) | `raymarch.glsl`: same technique, in-shader background — **deferred** |
 | 4 | [04-tests-docs.md](./04-tests-docs.md) | Structural shader tests + JS checks + browser smoke + changelog |
 
 ## Testing

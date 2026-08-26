@@ -1,5 +1,13 @@
 # Phase 3 — `raymarch.glsl`: fullscreen SDF viewer AA
 
+> **Status: Deferred** (user decision, 2026-08-26). The plan's `mix(bg, col, aa)`
+> fade is a no-op in the fullscreen viewer (on a miss `col` is already `bg`, and
+> on a hit `res`≈ε so `aa`≈1), so it does not soften the silhouette. Correctly
+> fading it requires shading the *closest-approach* point on a near-miss. The
+> standard-viewer proxy (Phases 1–2) is unaffected and already anti-aliased.
+> Revisit this phase with the closest-approach shading when fullscreen AA is
+> wanted.
+
 ## Goal
 
 Apply the same silhouette fade to the fullscreen `SdfVisualizer` raymarcher
