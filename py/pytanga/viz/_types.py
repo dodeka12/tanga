@@ -9,10 +9,16 @@ from typing import Any, TypeAlias, Union
 
 from pytanga.geometry.entities import (
     Arc,
+    Box,
     Cylinder,
     Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
     Entity as GeoEntity,
+    PartialDisk,
     Point,
+    RegularPolygon,
 )
 from pytanga.geometry.operators import GeneralRotor, Operator as GeoOperator, Rotor
 
@@ -31,7 +37,21 @@ VizInputType: TypeAlias = Union[
 # like PointPath / Axis / Grid / Cylinder / Arc that the serializer and
 # frontend know how to render.
 SceneEntity: TypeAlias = Union[
-    GeoEntity, GeoOperator, PointPath, Axis, Grid, Axes2D, Axes3D, Cylinder, Arc
+    GeoEntity,
+    GeoOperator,
+    PointPath,
+    Axis,
+    Grid,
+    Axes2D,
+    Axes3D,
+    Cylinder,
+    Arc,
+    Box,
+    Disk,
+    Ellipse,
+    Ellipsoid,
+    PartialDisk,
+    RegularPolygon,
 ]
 
 
