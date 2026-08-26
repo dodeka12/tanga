@@ -103,8 +103,9 @@ _COLORS = [
 ]
 
 viz = Visualizer(title="Tanga — Mesh vs SDF (grid)", add_default_grid=False)
-viz.show()
 
+# Add everything *before* ``show()`` so the initial scene push already contains
+# the full grid (no post-show flush/refresh required).
 for col, ((name, make_entity, sdf_style), color) in enumerate(zip(_SHAPES, _COLORS)):
     x = _ORIGIN_X + col * _X_STEP
     mesh_center = Point(x, _MESH_Y, 0)
@@ -122,4 +123,5 @@ for col, ((name, make_entity, sdf_style), color) in enumerate(zip(_SHAPES, _COLO
 print("Each column shows one shape: its mesh twin above, its SDF twin below.")
 print("Close the browser window or press Ctrl+C to exit.")
 
+viz.show()
 viz.wait()
