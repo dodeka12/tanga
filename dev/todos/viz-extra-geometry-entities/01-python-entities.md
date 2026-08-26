@@ -61,7 +61,7 @@ manual `__init__` using `object.__setattr__`). All are exported from
   - Import `Disk`, `PartialDisk`, `Box`, `Ellipsoid`, `Ellipse`,
     `RegularPolygon`; add to `__all__`. **Do not** extend the `Entity` union.
 
-- [ ] **1.6 — Export from `geometry/__init__.py`**
+- [x] **1.6 — Export from `geometry/__init__.py`**
   - Import the new classes + `regular_polygon`; add to `__all__`.
 
 - [ ] **1.7 — Unit tests** (`py/tests/geometry/test_viz_entities.py` or new file)

@@ -36,9 +36,13 @@ from .random import (
 )
 from .entities import (
     Arc,
+    Box,
     Circle,
     Cylinder,
     Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
     Entity,
     HDirection,
     HPoint,
@@ -46,11 +50,14 @@ from .entities import (
     ImagPointPair,
     ImagSphere,
     Line,
+    PartialDisk,
     Plane,
     Point,
     PointPair,
+    RegularPolygon,
     Space,
     Sphere,
+    regular_polygon,
 )
 from .operators import (
     Dilator,
@@ -70,9 +77,13 @@ from .operators import (
 __all__ = [
     # Entities
     "Arc",
+    "Box",
     "Circle",
     "Cylinder",
     "Direction",
+    "Disk",
+    "Ellipse",
+    "Ellipsoid",
     "Entity",
     "HDirection",
     "HPoint",
@@ -80,11 +91,14 @@ __all__ = [
     "ImagPointPair",
     "ImagSphere",
     "Line",
+    "PartialDisk",
     "Plane",
     "Point",
     "PointPair",
+    "RegularPolygon",
     "Space",
     "Sphere",
+    "regular_polygon",
     # Operators
     "Dilator",
     "GeneralRotor",
