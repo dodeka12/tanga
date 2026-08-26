@@ -31,7 +31,7 @@ manual `__init__` using `object.__setattr__`). All are exported from
     import it or extract a shared helper).
   - `__repr__` like the other entities.
 
-- [ ] **1.2 — `box.py`**
+- [x] **1.2 — `box.py`**
   - `Box(center=None, size=None, rotation=None)` → `center: Point` (origin),
     `size: tuple[float, float, float]` (full side lengths, default `(1, 1, 1)`),
     `rotation: Rotor | None` (optional; stored as-is or `None`).
