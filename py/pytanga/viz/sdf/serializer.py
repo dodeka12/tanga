@@ -11,7 +11,8 @@ emit the GLSL expression (mirroring ``renderers/factory.js``).
 Supported kinds (others raise :class:`TypeError`):
 
     Entities: Point, HPoint, Direction, HDirection, Line, Plane, Circle,
-    Sphere, PointPair, Space (imaginary variants use their base mapping).
+    Sphere, PointPair, Space, Disk, PartialDisk, Box, Ellipsoid, Ellipse,
+    RegularPolygon (imaginary variants use their base mapping).
 
     Operators: ReflectionLine, ReflectionPlane, ReflectionPoint, Inversion,
     Rotor, Translator, Dilator, Motor, GeneralRotor. ``TripleReflection`` and
@@ -36,15 +37,21 @@ import math
 from typing import Any
 
 from pytanga.geometry.entities import (
+    Box,
     Circle,
     Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
     Entity,
     HDirection,
     HPoint,
     Line,
+    PartialDisk,
     Plane,
     Point,
     PointPair,
+    RegularPolygon,
     Space,
     Sphere,
 )
@@ -64,7 +71,15 @@ from .composed import Composed
 from .group import SdfGroup
 from .object import SdfObject
 from .bounds import compute_bounds
-from .primitives import SdfNode, combine, group, primitive
+from .primitives import (
+    SdfNode,
+    _as_rotation,
+    _basis_rotation,
+    _rotate_about,
+    combine,
+    group,
+    primitive,
+)
 
 # ── Public API ─────────────────────────────────────────────
 
@@ -515,6 +530,18 @@ def _dispatch_tree(
         return _point_pair_tree(entity, props, styles_map)
     if isinstance(entity, Space):
         return _space_tree(entity, props, styles_map)
+    if isinstance(entity, Disk):
+        return _disk_tree(entity, props, styles_map)
+    if isinstance(entity, PartialDisk):
+        return _partial_disk_tree(entity, props, styles_map)
+    if isinstance(entity, Box):
+        return _box_tree(entity, props, styles_map)
+    if isinstance(entity, Ellipsoid):
+        return _ellipsoid_tree(entity, props, styles_map)
+    if isinstance(entity, Ellipse):
+        return _ellipse_tree(entity, props, styles_map)
+    if isinstance(entity, RegularPolygon):
+        return _regular_polygon_tree(entity, props, styles_map)
     # Operators
     if isinstance(entity, ReflectionLine):
         return _reflection_line_tree(entity, props, styles_map)
@@ -1042,6 +1069,132 @@ def _space_tree(
     resolved = _resolve(props, "Space", {"extent": 10.0}, styles_map)
     extent = float(_param(resolved, "extent", 10.0))
     tree = primitive("box", {"halfExtents": [extent, extent, extent]})
+    return tree, resolved
+
+
+def _disk_tree(
+    ent: Disk,
+    props: dict[str, Any],
+    styles_map: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any]]:
+    resolved = _resolve(props, "Disk", {"thickness": 0.02}, styles_map)
+    thickness = float(_param(resolved, "thickness", 0.02))
+    normal = _normalize((ent.normal.x, ent.normal.y, ent.normal.z))
+    if normal == (0.0, 0.0, 0.0):
+        normal = _Z
+    tree = primitive(
+        "cappedCylinder",
+        {"halfHeight": thickness / 2.0, "radius": ent.radius},
+        position=(ent.center.x, ent.center.y, ent.center.z),
+        rotation=_rotation_align(_Y, normal),
+    )
+    return tree, resolved
+
+
+def _partial_disk_tree(
+    ent: PartialDisk,
+    props: dict[str, Any],
+    styles_map: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any]]:
+    resolved = _resolve(props, "PartialDisk", {"thickness": 0.02}, styles_map)
+    thickness = float(_param(resolved, "thickness", 0.02))
+    radius = float(ent.radius)
+    angle = float(ent.angle)
+    normal = _normalize((ent.normal.x, ent.normal.y, ent.normal.z))
+    if normal == (0.0, 0.0, 0.0):
+        normal = _Z
+    center = (ent.center.x, ent.center.y, ent.center.z)
+
+    # A full disk (angle >= 2π) is a plain capped cylinder.
+    if angle >= 2.0 * math.pi - 1e-9:
+        tree = primitive(
+            "cappedCylinder",
+            {"halfHeight": thickness / 2.0, "radius": radius},
+            position=center,
+            rotation=_rotation_align(_Y, normal),
+        )
+    else:
+        start = (ent.start_direction.x, ent.start_direction.y, ent.start_direction.z)
+        bisector = _rotate_about(start, normal, angle / 2.0)
+        rotation = _basis_rotation(normal, bisector)
+        tree = primitive(
+            "partialDisk",
+            {"halfHeight": thickness / 2.0, "radius": radius, "angle": angle},
+            position=center,
+            rotation=rotation,
+        )
+    return tree, resolved
+
+
+def _box_tree(
+    ent: Box,
+    props: dict[str, Any],
+    styles_map: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any]]:
+    resolved = _resolve(props, "Box", {}, styles_map)
+    rotation = _as_rotation(ent.rotation) if ent.rotation is not None else None
+    tree = primitive(
+        "box",
+        {"halfExtents": [ent.size[0] / 2.0, ent.size[1] / 2.0, ent.size[2] / 2.0]},
+        position=(ent.center.x, ent.center.y, ent.center.z),
+        rotation=rotation,
+    )
+    return tree, resolved
+
+
+def _ellipsoid_tree(
+    ent: Ellipsoid,
+    props: dict[str, Any],
+    styles_map: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any]]:
+    resolved = _resolve(props, "Ellipsoid", {}, styles_map)
+    rotation = _as_rotation(ent.rotation) if ent.rotation is not None else None
+    tree = primitive(
+        "ellipsoid",
+        {"radii": [ent.radii[0], ent.radii[1], ent.radii[2]]},
+        position=(ent.center.x, ent.center.y, ent.center.z),
+        rotation=rotation,
+    )
+    return tree, resolved
+
+
+def _ellipse_tree(
+    ent: Ellipse,
+    props: dict[str, Any],
+    styles_map: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any]]:
+    resolved = _resolve(props, "Ellipse", {"thickness": 0.02}, styles_map)
+    thickness = float(_param(resolved, "thickness", 0.02))
+    normal = _normalize((ent.normal.x, ent.normal.y, ent.normal.z))
+    if normal == (0.0, 0.0, 0.0):
+        normal = _Z
+    tree = primitive(
+        "ellipsoid",
+        {"radii": [ent.radius_u, ent.radius_v, thickness / 2.0]},
+        position=(ent.center.x, ent.center.y, ent.center.z),
+        rotation=_rotation_align(_Z, normal),
+    )
+    return tree, resolved
+
+
+def _regular_polygon_tree(
+    ent: RegularPolygon,
+    props: dict[str, Any],
+    styles_map: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any]]:
+    resolved = _resolve(props, "RegularPolygon", {"thickness": 0.02}, styles_map)
+    thickness = float(_param(resolved, "thickness", 0.02))
+    normal = _normalize((ent.normal.x, ent.normal.y, ent.normal.z))
+    if normal == (0.0, 0.0, 0.0):
+        normal = _Z
+    vertex_dir = _rotate_about(_Z, normal, ent.angle)
+    rotation = _basis_rotation(normal, vertex_dir)
+    tree = primitive(
+        "regularPolygon",
+        {"halfHeight": thickness / 2.0, "radius": float(ent.radius), "sides": int(ent.sides)},
+        position=(ent.center.x, ent.center.y, ent.center.z),
+        rotation=rotation,
+    )
     return tree, resolved
 
 

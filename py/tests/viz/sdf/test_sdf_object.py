@@ -5,7 +5,20 @@
 
 from __future__ import annotations
 
-from pytanga.geometry import Circle, Cylinder, Direction, Line, Point, Sphere
+from pytanga.geometry import (
+    Box,
+    Circle,
+    Cylinder,
+    Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
+    Line,
+    PartialDisk,
+    Point,
+    RegularPolygon,
+    Sphere,
+)
 from pytanga.viz import SdfCircleStyle, SdfLineStyle
 from pytanga.viz.sdf import Combine, ECompose, SdfObject
 from pytanga.viz.sdf.object import _entity_to_sdf
@@ -85,3 +98,54 @@ def test_operator_coerces_raw_entity() -> None:
     node = a + Sphere(Point(1.0, 0.0, 0.0), 0.5)
     assert isinstance(node, Combine)
     assert isinstance(node.b, SdfObject)
+
+
+def test_entity_to_sdf_disk() -> None:
+    node = _entity_to_sdf(Disk(Point(1.0, 2.0, 3.0), 2.0))
+    assert node.kind == "cappedCylinder"
+    assert node.params == {"halfHeight": 0.01, "radius": 2.0}
+    assert node.transform["position"] == [1.0, 2.0, 3.0]
+
+
+def test_entity_to_sdf_partial_disk() -> None:
+    import math
+
+    node = _entity_to_sdf(
+        PartialDisk(Point(0.0, 0.0, 0.0), 1.0, angle=math.pi, start_direction=Direction(1, 0, 0))
+    )
+    assert node.kind == "partialDisk"
+    assert node.params["radius"] == 1.0
+    assert node.params["halfHeight"] == 0.01
+    assert node.params["angle"] == math.pi
+
+
+def test_entity_to_sdf_partial_disk_full_reduces_to_cylinder() -> None:
+    node = _entity_to_sdf(PartialDisk())
+    assert node.kind == "cappedCylinder"
+
+
+def test_entity_to_sdf_box() -> None:
+    node = _entity_to_sdf(Box(Point(1.0, 0.0, 0.0), (2.0, 3.0, 4.0)))
+    assert node.kind == "box"
+    assert node.params == {"halfExtents": [1.0, 1.5, 2.0]}
+    assert node.transform["position"] == [1.0, 0.0, 0.0]
+
+
+def test_entity_to_sdf_ellipsoid() -> None:
+    node = _entity_to_sdf(Ellipsoid(radii=(1.0, 0.5, 0.75)))
+    assert node.kind == "ellipsoid"
+    assert node.params == {"radii": [1.0, 0.5, 0.75]}
+
+
+def test_entity_to_sdf_ellipse() -> None:
+    node = _entity_to_sdf(Ellipse(radius_u=2.0, radius_v=1.0))
+    assert node.kind == "ellipsoid"
+    assert node.params == {"radii": [2.0, 1.0, 0.01]}
+
+
+def test_entity_to_sdf_regular_polygon() -> None:
+    node = _entity_to_sdf(RegularPolygon(radius=1.5, sides=6))
+    assert node.kind == "regularPolygon"
+    assert node.params["radius"] == 1.5
+    assert node.params["sides"] == 6
+    assert node.params["halfHeight"] == 0.01
