@@ -374,6 +374,92 @@ torus = Arc(radius=2.0, tube_radius=0.04)  # full torus (angle defaults to 2π)
 | `arrow_length` | `float \| None` | Arrow cone length (default `3 × tube_radius`). |
 | `arrow_radius` | `float \| None` | Arrow cone base radius (default `2 × tube_radius`). |
 
+### Disk and PartialDisk
+
+`Disk` is a filled circular slab (a flat disk); `PartialDisk` is a filled
+circular sector (a pie-slice slab).  Both lie in the plane perpendicular to
+`normal` and default to the xy-plane (`normal = +z`), which makes them natural
+for 2D scenes (`Visualizer(space_dim=2)`).  The slab thickness is a style knob
+(`DiskStyle.thickness` / `PartialDiskStyle.thickness`, default `0.02`).
+
+```python
+import math
+
+from pytanga.geometry import Direction, Disk, PartialDisk, Point
+
+disk = Disk(center=Point(0, 0, 0), radius=1.0)
+sector = PartialDisk(
+    center=Point(3, 0, 0),
+    radius=1.2,
+    angle=math.pi * 1.5,               # radians; 2π = full disk
+    start_direction=Direction(1, 0, 0),  # auto-computed ⊥ normal when omitted
+)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `center` | `Point` | Center of the disk/sector (default `(0, 0, 0)`). |
+| `radius` | `float` | Disk/sector radius (default `1.0`). |
+| `normal` | `Direction` | Plane normal (default `+z`). |
+| `angle` | `float` | `PartialDisk` only — sweep angle in radians (default `2π`). |
+| `start_direction` | `Direction \| None` | `PartialDisk` only — unit direction to the sector start. |
+
+### Box
+
+A solid box, optionally rotated.
+
+```python
+from pytanga.geometry import Box, Point
+
+box = Box(center=Point(0, 0, 0), size=(1.5, 1.0, 1.0))
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `center` | `Point` | Box center (default `(0, 0, 0)`). |
+| `size` | `(float, float, float)` | Full side lengths (default `(1, 1, 1)`). |
+| `rotation` | `Rotor \| None` | Optional orientation; `None` = axis-aligned. |
+
+### Ellipsoid and Ellipse
+
+`Ellipsoid` is a 3D ellipsoid; `Ellipse` is a filled elliptical slab (a flat
+ellipse) in a plane, defaulting to the xy-plane.
+
+```python
+from pytanga.geometry import Ellipse, Ellipsoid, Point
+
+ellipsoid = Ellipsoid(center=Point(0, 0, 0), radii=(1.0, 0.5, 0.75))
+ellipse = Ellipse(center=Point(0, 3, 0), radius_u=1.2, radius_v=0.6)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `center` | `Point` | Center (default `(0, 0, 0)`). |
+| `radii` | `(float, float, float)` | `Ellipsoid` — per-axis radii (default `(1, 1, 1)`). |
+| `radius_u` / `radius_v` | `float` | `Ellipse` — semi-axis radii (default `1.0` / `0.5`). |
+| `normal` | `Direction` | `Ellipse` — plane normal (default `+z`). |
+| `rotation` | `Rotor \| None` | `Ellipsoid` — optional orientation. |
+
+### RegularPolygon
+
+A filled regular polygon, created directly or via the `regular_polygon()`
+factory:
+
+```python
+from pytanga.geometry import Point, RegularPolygon, regular_polygon
+
+hexagon = regular_polygon(6, radius=1.0, center=Point(0, 0, 0))
+square = RegularPolygon(sides=4, radius=0.8)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `center` | `Point` | Polygon center (default `(0, 0, 0)`). |
+| `radius` | `float` | Circumradius (default `1.0`). |
+| `sides` | `int` | Number of sides, `>= 3` (default `6`). |
+| `normal` | `Direction` | Plane normal (default `+z`). |
+| `angle` | `float` | In-plane rotation in radians (default `0.0`). |
+
 ## Entity Coverage Matrix
 
 | Entity | E3 | P3 | PGA3 | N3 | E2 | P2 | PGA2 | N2 |

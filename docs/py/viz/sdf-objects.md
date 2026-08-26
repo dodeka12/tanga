@@ -49,6 +49,12 @@ operator CSG, and per-object materials.
 | `Point`    | `SdfPointStyle`    | `size` (default `0.08`)             |
 | `Cylinder` | `SdfCylinderStyle` | —                                   |
 | `Plane`    | `SdfPlaneStyle`    | —                                   |
+| `Disk`     | `SdfDiskStyle`     | `thickness` (default `0.02`)        |
+| `PartialDisk` | `SdfPartialDiskStyle` | `thickness` (default `0.02`)     |
+| `Box`      | `SdfBoxStyle`      | —                                   |
+| `Ellipsoid` | `SdfEllipsoidStyle` | —                                  |
+| `Ellipse`  | `SdfEllipseStyle`  | `thickness` (default `0.02`)        |
+| `RegularPolygon` | `SdfRegularPolygonStyle` | `thickness` (default `0.02`) |
 
 Each inherits the `SdfStyle` knobs (`color`, `opacity`, `soft_shadows`,
 `max_steps`, `bound_padding`).
