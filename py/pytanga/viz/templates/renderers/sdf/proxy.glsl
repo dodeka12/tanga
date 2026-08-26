@@ -116,12 +116,12 @@ void main() {
         t += dm.x;
         if (t > tFar) break;
     }
-    // One-pixel silhouette edge scale: the world-space pixel footprint at the
-    // closest-approach/hit depth (`tRes`), via the screen derivative. Using the
-    // final march `t` would read the proxy-box far face on a miss, skewing the
-    // falloff; `tRes` tracks the surface instead.
-    float edgePx = length(vec2(dFdx(tRes), dFdy(tRes)));
-    float aa = 1.0 - smoothstep(0.0, max(edgePx, 1e-6), res);
+    // One-pixel silhouette edge scale: the local-space pixel footprint, taken
+    // from the smooth interpolated proxy-face position `vLocalPos`. Do NOT use
+    // `fwidth`/`dFdx` of the min-distance (`t`/`tRes`): the argmin's position
+    // jumps across feature boundaries, producing spurious diagonal/radial lines.
+    float pixelSize = max(length(dFdx(vLocalPos)), length(dFdy(vLocalPos)));
+    float aa = 1.0 - smoothstep(0.0, max(pixelSize, 1e-6), res);
     if (!hit) {
         if (uAntialias < 0.5 || aa < 0.001) discard;
         // Near-miss: shade the closest-approach point so the faded edge matches

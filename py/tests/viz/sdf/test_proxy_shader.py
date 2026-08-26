@@ -111,7 +111,7 @@ def test_proxy_has_edge_aa_fade() -> None:
     body = _read(PROXY_FILE)
     assert "dm.x < res" in body
     assert "tRes = t;" in body
-    assert "dFdx(tRes)" in body and "dFdy(tRes)" in body
+    assert "dFdx(vLocalPos)" in body and "dFdy(vLocalPos)" in body
     assert "smoothstep(" in body
     assert "uAntialias" in body
     # The near-miss path shades the closest-approach point (no bright flat halo)
