@@ -1187,7 +1187,14 @@ def _regular_polygon_tree(
     normal = _normalize((ent.normal.x, ent.normal.y, ent.normal.z))
     if normal == (0.0, 0.0, 0.0):
         normal = _Z
-    vertex_dir = _rotate_about(_Z, normal, ent.angle)
+    # Match the mesh renderer: Q1 aligns +Y → normal (shortest arc), then the
+    # polygon rotates by `angle` about the normal, sending the local +Z vertex to
+    # Q1(sin(angle), 0, cos(angle)).
+    q1 = _rotation_align(_Y, normal)
+    local_vertex = (math.sin(ent.angle), 0.0, math.cos(ent.angle))
+    vertex_dir = (
+        _rotate_about(local_vertex, q1[0], q1[1]) if q1 is not None else local_vertex
+    )
     rotation = _basis_rotation(normal, vertex_dir)
     tree = primitive(
         "regularPolygon",

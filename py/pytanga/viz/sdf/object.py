@@ -267,9 +267,16 @@ def _regular_polygon_node(entity: RegularPolygon, style: SdfStyle | None) -> Sdf
     normal = _normalize(_xyz(entity.normal))
     if normal == (0.0, 0.0, 0.0):
         normal = (0.0, 0.0, 1.0)
-    # The primitive's first vertex sits on local +Z; rotate it by `angle` about
-    # the normal to honour the entity's in-plane rotation.
-    vertex_dir = _rotate_about((0.0, 0.0, 1.0), normal, entity.angle)
+    # The primitive's first vertex sits on local +Z.  The mesh renderer first
+    # aligns +Y → normal (shortest arc, Q1) and then rotates by `angle` about
+    # the normal, so the vertex lands at Q1(sin(angle), 0, cos(angle)).  Reproduce
+    # that world direction (never `rotate(+Z, normal, angle)`, which collapses
+    # onto `normal` when `normal` is ±Z).
+    q1 = _rotation_align((0.0, 1.0, 0.0), normal)
+    local_vertex = (math.sin(entity.angle), 0.0, math.cos(entity.angle))
+    vertex_dir = (
+        _rotate_about(local_vertex, q1[0], q1[1]) if q1 is not None else local_vertex
+    )
     rotation = _basis_rotation(normal, vertex_dir)
     return regular_polygon(
         float(entity.radius),

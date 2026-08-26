@@ -149,3 +149,20 @@ def test_entity_to_sdf_regular_polygon() -> None:
     assert node.params["radius"] == 1.5
     assert node.params["sides"] == 6
     assert node.params["halfHeight"] == 0.01
+
+
+def test_entity_to_sdf_regular_polygon_orientation() -> None:
+    from pytanga.viz.sdf.primitives import _normalize, _rotate_about
+
+    node = _entity_to_sdf(RegularPolygon(radius=1.0, sides=6))
+    axis = tuple(node.transform["rotation"]["axis"])
+    angle = node.transform["rotation"]["angle"]
+
+    # The primitive's plane normal (+Y) must map to the entity normal (+Z), and
+    # its first vertex (+Z) must stay in the xy-plane (perpendicular to +Z).
+    y_img = _normalize(_rotate_about((0.0, 1.0, 0.0), axis, angle))
+    z_img = _normalize(_rotate_about((0.0, 0.0, 1.0), axis, angle))
+    assert abs(y_img[0]) < 1e-9
+    assert abs(y_img[1]) < 1e-9
+    assert abs(y_img[2] - 1.0) < 1e-9
+    assert abs(z_img[2]) < 1e-9
