@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.5.0] — 2026-08-26
+- Awaitable flush (`flush_async`) + blocking `flush(wait=True)` · banners/dialogs (`show_banner`/`alert`/`confirm`, modal + per-scene) · compute offload to the user loop (`submit_user`/`run_user`) · slider `on_press`/`on_release` · file chooser with a backend-driven file browser
+→ [Details](2026-08-26_d870e5be.md)
+
 ## [Since 1.4.0] — 2026-08-26
 - `ActPoint` drag lifecycle handlers (`on_drag_start` / `on_drag_end`) · `ActPoint` label support · `clear(add_axes=, add_grid=)` re-add options
 - Bug fixes: 2D pointer interaction (stale camera + orthographic drag scale) · removing an entity now removes its attached labels
