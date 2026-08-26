@@ -96,14 +96,18 @@ void main() {
     if (tFar <= tNear) discard;
 
     float t = tNear;
-    float res = tFar; // closest signed distance the ray passes the surface by
+    float res = tFar;   // closest signed distance the ray passes the surface by
+    float tRes = tNear; // march distance at that closest approach (edge shading)
     bool hit = false;
     float m = 0.0;
     for (int i = 0; i < MAX_STEPS; i++) {
         if (i >= uMaxSteps) break;
         vec3 p = ro + rd * t;
         vec2 dm = map(p);
-        res = min(res, dm.x);
+        if (dm.x < res) {
+            res = dm.x;
+            tRes = t;
+        }
         if (dm.x < SDF_EPSILON) {
             hit = true;
             m = dm.y;
@@ -112,16 +116,22 @@ void main() {
         t += dm.x;
         if (t > tFar) break;
     }
-    // One-pixel silhouette edge scale: how far `t` moves across a screen pixel.
-    // Euclidean derivative matches the AA'd overlays in sdf/overlays/factory.js.
-    float edgePx = length(vec2(dFdx(t), dFdy(t)));
+    // One-pixel silhouette edge scale: the world-space pixel footprint at the
+    // closest-approach/hit depth (`tRes`), via the screen derivative. Using the
+    // final march `t` would read the proxy-box far face on a miss, skewing the
+    // falloff; `tRes` tracks the surface instead.
+    float edgePx = length(vec2(dFdx(tRes), dFdy(tRes)));
     float aa = 1.0 - smoothstep(0.0, max(edgePx, 1e-6), res);
     if (!hit) {
         if (uAntialias < 0.5 || aa < 0.001) discard;
-        // Near-miss: emit a faint flat edge so the silhouette blends out over
-        // the background. No valid surface point/normal exists here, so skip
-        // shading and use the object's (slot-0) material colour directly.
-        fragColor = vec4(uMaterial[0].rgb, uMaterial[0].a * uOpacity * aa);
+        // Near-miss: shade the closest-approach point so the faded edge matches
+        // the lit surface (no bright halo), then fade it out over ~1px.
+        vec3 p0 = ro + rd * tRes;
+        vec3 n0 = calcNormal(p0);
+        float m0 = map(p0).y;
+        vec4 mat0 = uMaterial[int(clamp(m0, 0.0, float(MAX_GROUP_MEMBERS - 1)))];
+        vec3 col0 = shade(p0, n0, ro, mat0);
+        fragColor = vec4(col0, mat0.a * uOpacity * aa);
         gl_FragDepth = 1.0; // far depth: the edge never occludes anything
         return;
     }

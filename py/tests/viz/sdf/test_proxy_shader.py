@@ -109,11 +109,14 @@ def test_proxy_has_edge_aa_fade() -> None:
     # Analytic silhouette AA: the march tracks the closest-approach distance and
     # fades the near-miss edge with a screen-space derivative + smoothstep.
     body = _read(PROXY_FILE)
-    assert "res = min(res, dm.x);" in body
-    assert "dFdx(t)" in body and "dFdy(t)" in body
+    assert "dm.x < res" in body
+    assert "tRes = t;" in body
+    assert "dFdx(tRes)" in body and "dFdy(tRes)" in body
     assert "smoothstep(" in body
     assert "uAntialias" in body
-    # The near-miss path still writes a (far) depth so the faint edge never
-    # occludes anything; the hit path writes the real hit depth.
+    # The near-miss path shades the closest-approach point (no bright flat halo)
+    # and still writes a (far) depth so the faint edge never occludes anything;
+    # the hit path writes the real hit depth.
+    assert "calcNormal(p0)" in body
     assert "gl_FragDepth = 1.0;" in body
     assert "gl_FragDepth = ndc * 0.5 + 0.5;" in body
