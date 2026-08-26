@@ -10,7 +10,19 @@ import math
 import pytest
 
 from pytanga.basis import BasisN3
-from pytanga.geometry import Arc, Cylinder, Direction, Point
+from pytanga.geometry import (
+    Arc,
+    Box,
+    Cylinder,
+    Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
+    PartialDisk,
+    Point,
+    RegularPolygon,
+    regular_polygon,
+)
 from pytanga.geometry.create import create
 
 
@@ -95,6 +107,116 @@ def test_cylinder_not_convertible_to_mv():
     with pytest.raises(TypeError, match="Expected Entity or Operator"):
         create(alg, Cylinder())
 
+
+
+def test_disk_defaults():
+    d = Disk()
+    assert d.center == Point(0, 0, 0)
+    assert d.radius == pytest.approx(1.0)
+    assert d.normal == Direction(0, 0, 1)
+
+
+def test_disk_field_population_and_coercion():
+    d = Disk(center=Point(1, 2, 3), radius=2, normal=Direction(0, 1, 0))
+    assert d.center == Point(1, 2, 3)
+    assert d.radius == pytest.approx(2.0)
+    assert d.normal == Direction(0, 1, 0)
+
+
+def test_partial_disk_defaults():
+    p = PartialDisk()
+    assert p.center == Point(0, 0, 0)
+    assert p.radius == pytest.approx(1.0)
+    assert p.angle == pytest.approx(2 * math.pi)
+    assert p.normal == Direction(0, 0, 1)
+
+
+def test_partial_disk_start_direction_auto_computed_orthogonal_and_unit():
+    p = PartialDisk(normal=Direction(0, 0, 1))
+    assert p.start_direction.mag() == pytest.approx(1.0)
+    assert p.start_direction.dot(p.normal.normalized()) == pytest.approx(0.0, abs=1e-12)
+
+
+def test_partial_disk_start_direction_deterministic():
+    p1 = PartialDisk(normal=Direction(1, 2, 3))
+    p2 = PartialDisk(normal=Direction(1, 2, 3))
+    assert p1.start_direction == p2.start_direction
+
+
+def test_partial_disk_respects_user_start_direction():
+    p = PartialDisk(normal=Direction(0, 0, 1), start_direction=Direction(1, 0, 0))
+    assert p.start_direction == Direction(1, 0, 0)
+
+
+def test_box_defaults():
+    b = Box()
+    assert b.center == Point(0, 0, 0)
+    assert b.size == (1.0, 1.0, 1.0)
+    assert b.rotation is None
+
+
+def test_box_field_population_and_coercion():
+    b = Box(center=Point(1, 2, 3), size=(2, 3, 4))
+    assert b.center == Point(1, 2, 3)
+    assert b.size == (2.0, 3.0, 4.0)
+
+
+def test_ellipsoid_defaults():
+    e = Ellipsoid()
+    assert e.center == Point(0, 0, 0)
+    assert e.radii == (1.0, 1.0, 1.0)
+    assert e.rotation is None
+
+
+def test_ellipsoid_field_population_and_coercion():
+    e = Ellipsoid(center=Point(1, 2, 3), radii=(1, 0.5, 0.75))
+    assert e.center == Point(1, 2, 3)
+    assert e.radii == (1.0, 0.5, 0.75)
+
+
+def test_ellipse_defaults():
+    e = Ellipse()
+    assert e.center == Point(0, 0, 0)
+    assert e.radius_u == pytest.approx(1.0)
+    assert e.radius_v == pytest.approx(0.5)
+    assert e.normal == Direction(0, 0, 1)
+
+
+def test_regular_polygon_defaults():
+    p = RegularPolygon()
+    assert p.center == Point(0, 0, 0)
+    assert p.radius == pytest.approx(1.0)
+    assert p.sides == 6
+    assert p.normal == Direction(0, 0, 1)
+    assert p.angle == pytest.approx(0.0)
+
+
+def test_regular_polygon_sides_validated():
+    with pytest.raises(ValueError):
+        RegularPolygon(sides=2)
+
+
+def test_regular_polygon_sides_coerced_to_int():
+    p = RegularPolygon(sides=6.0)
+    assert p.sides == 6
+    assert isinstance(p.sides, int)
+
+
+def test_regular_polygon_factory():
+    h = regular_polygon(6)
+    assert isinstance(h, RegularPolygon)
+    assert h.sides == 6
+    assert h.radius == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize(
+    "entity",
+    [Disk(), PartialDisk(), Box(), Ellipsoid(), Ellipse(), RegularPolygon()],
+)
+def test_new_viz_entities_not_convertible_to_mv(entity):
+    alg = BasisN3()
+    with pytest.raises(TypeError, match="Expected Entity or Operator"):
+        create(alg, entity)
 
 def test_arc_not_convertible_to_mv():
     alg = BasisN3()

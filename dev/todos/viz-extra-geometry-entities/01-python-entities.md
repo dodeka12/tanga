@@ -64,7 +64,7 @@ manual `__init__` using `object.__setattr__`). All are exported from
 - [x] **1.6 — Export from `geometry/__init__.py`**
   - Import the new classes + `regular_polygon`; add to `__all__`.
 
-- [ ] **1.7 — Unit tests** (`py/tests/geometry/test_viz_entities.py` or new file)
+- [x] **1.7 — Unit tests** (`py/tests/geometry/test_viz_entities.py` or new file)
   - Constructor defaults and `to_float`/`to_point`/`to_direction` coercion for
     each class.
   - `PartialDisk.start_direction` auto-computed: unit length and
