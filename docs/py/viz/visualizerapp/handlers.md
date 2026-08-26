@@ -108,6 +108,27 @@ can be used with :meth:`~pytanga.viz.Visualizer.navigate_to` to redirect a
 specific browser tab.  Additional metadata fields may be added in the future
 without breaking existing handler signatures.
 
+## Forcing a redraw before blocking work
+
+Control handlers run on the server's own event loop.  If a handler starts a
+long synchronous computation right after updating the scene, that computation
+blocks the loop, so the update may never reach the browser first.  To show a
+change (e.g. a "Calculating…" annotation) *before* blocking, await
+:meth:`~pytanga.viz.Visualizer.flush_async`:
+
+```python
+async def on_calculate(self, _value, _event):
+    self.viz.set_annotation("Calculating...")
+    await self.viz.flush_async()      # annotation is rendered before we block
+    result = self._heavy_sync_work()
+    self.viz.set_annotation(None)
+    await self.viz.flush_async()
+```
+
+`flush()` is synchronous and fire-and-forget; its `wait=True` mode blocks the
+calling thread and would deadlock on the server loop (it is only for plain
+synchronous scripts).  Use the awaitable `flush_async()` inside handlers.
+
 ## Ending the app
 
 Any handler (button, slider, dropdown, or interaction) can end the app by

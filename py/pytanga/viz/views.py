@@ -387,6 +387,39 @@ class DropdownView(ControlView):
         return result
 
 
+class FileChooserView(ControlView):
+    """A file-path control (text field + backend file browser) as a view."""
+
+    _node_type = "file_chooser_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        root: str | None = None,
+        accept: str = "",
+        on_change: Handler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, label=label, **kwargs)
+        self.value = value
+        self.placeholder = placeholder
+        self.root = root
+        self.accept = accept
+        self.on_change = on_change
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["value"] = self.value
+        result["placeholder"] = self.placeholder
+        result["root"] = self.root
+        result["accept"] = self.accept
+        return result
+
+
 def serialize_layout(root: View, name: str = "") -> dict[str, Any]:
     """Serialize a view tree to the ``view_layout`` message."""
     return {
@@ -434,6 +467,7 @@ __all__ = [
     "ButtonView",
     "ControlView",
     "DropdownView",
+    "FileChooserView",
     "GroupView",
     "SceneView",
     "SizeSpec",

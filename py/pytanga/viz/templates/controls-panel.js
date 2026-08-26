@@ -3,6 +3,8 @@
 // Three.js viewer.  Driven by the controls_define / controls_clear WebSocket
 // messages defined in Phase 1.
 
+import { openFileBrowser } from './file-browser.js';
+
 // ── Module state ─────────────────────────────────────────────
 let _ws = null;
 let _rootEl = null;            // #tanga-control-root (fixed container for all panels)
@@ -326,10 +328,65 @@ function _createControlElement(ctrl) {
             return createDropdown(ctrl);
         case 'button':
             return createButton(ctrl);
+        case 'file_chooser':
+            return createFileChooser(ctrl);
         default:
             console.warn('Unknown control kind:', ctrl.kind);
             return null;
     }
+}
+
+// ── File chooser ─────────────────────────────────────────────
+
+export function createFileChooser(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-file-chooser';
+
+    const label = document.createElement('label');
+    label.textContent = ctrl.label || ctrl.id;
+    wrapper.appendChild(label);
+
+    const row = document.createElement('div');
+    Object.assign(row.style, { display: 'flex', gap: '6px', alignItems: 'center' });
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = ctrl.value || '';
+    input.placeholder = ctrl.placeholder || 'Path…';
+    Object.assign(input.style, {
+        flex: '1', minWidth: '0', padding: '4px 6px',
+        background: 'rgba(255,255,255,0.08)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: '4px', color: '#ccc', fontSize: '13px',
+        outline: 'none',
+    });
+
+    let debounceTimer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            sendControlEvent('control:change', ctrl.id, input.value);
+        }, 400);
+    });
+    input.addEventListener('change', () => {
+        clearTimeout(debounceTimer);
+        sendControlEvent('control:change', ctrl.id, input.value);
+    });
+
+    const browse = document.createElement('button');
+    browse.textContent = 'Browse…';
+    browse.className = 'tanga-action-button';
+    Object.assign(browse.style, {
+        width: 'auto', padding: '4px 12px', whiteSpace: 'nowrap', cursor: 'pointer',
+    });
+    browse.addEventListener('click', () => {
+        openFileBrowser(ctrl.id, input.value || ctrl.root || '');
+    });
+
+    row.appendChild(input);
+    row.appendChild(browse);
+    wrapper.appendChild(row);
+    return wrapper;
 }
 
 // ── Exported control factories (reused by controls-attached.js) ─
@@ -372,9 +429,16 @@ export function createSlider(ctrl) {
         throttledSend('control:change', ctrl.id, parseFloat(input.value));
     });
 
-    // Flush final value when the user releases the slider (change event)
+    // Flush final value when the user releases the slider (change event), and
+    // send a distinct release notification for drag-end handling.
     input.addEventListener('change', () => {
         throttledFlush('control:change', ctrl.id);
+        sendControlEvent('control:release', ctrl.id, parseFloat(input.value));
+    });
+
+    // Notify the backend when the user presses the slider (start of drag).
+    input.addEventListener('pointerdown', () => {
+        sendControlEvent('control:press', ctrl.id, parseFloat(input.value));
     });
 
     // Stop propagation to prevent orbit control interference

@@ -68,6 +68,8 @@ class Slider(Control):
     step: float = 0.01
     default: float = 0.5
     on_change: Handler | None = None
+    on_press: Handler | None = None
+    on_release: Handler | None = None
 
 
 @dataclass
@@ -86,6 +88,18 @@ class Button(Control):
 
     kind: str = "button"
     on_click: Handler | None = None
+
+
+@dataclass
+class FileChooser(Control):
+    """A file-path control: a text field plus a backend-driven file browser."""
+
+    kind: str = "file_chooser"
+    value: str = ""
+    placeholder: str = ""
+    root: str | None = None
+    accept: str = ""
+    on_change: Handler | None = None
 
 
 # ── Control group ────────────────────────────────────────────
@@ -197,10 +211,28 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
         )
     elif isinstance(ctrl, Button):
         pass  # No extra fields for buttons
+    elif isinstance(ctrl, FileChooser):
+        base.update(
+            {
+                "value": ctrl.value,
+                "placeholder": ctrl.placeholder,
+                "root": ctrl.root,
+                "accept": ctrl.accept,
+            }
+        )
     else:
         raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
 
     return base
+
+
+def serialize_control_defs(controls: list[Control]) -> list[dict[str, Any]]:
+    """Serialize a flat list of :class:`Control` objects to their dict forms.
+
+    Reuses :func:`_serialize_one_control`; banners and other consumers use this
+    to embed the same control shapes as ``controls_define``.
+    """
+    return [_serialize_one_control(ctrl) for ctrl in controls]
 
 
 def serialize_controls(
