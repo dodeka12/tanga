@@ -12,15 +12,21 @@ from typing import Any, Dict, List
 
 from pytanga.geometry.entities import (
     Arc,
+    Box,
     Circle,
     Cylinder,
     Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
     Entity,
     HPoint,
     Line,
+    PartialDisk,
     Plane,
     Point,
     PointPair,
+    RegularPolygon,
     Space,
     Sphere,
 )
@@ -35,6 +41,7 @@ from ._scene_objects import (
     _pad_origin,
     _scale_dir,
 )
+from ._types import _as_euler
 from pytanga.geometry.operators import (
     Dilator,
     GeneralRotor,
@@ -139,6 +146,18 @@ def _dispatch_entity(
         return _serialize_cylinder(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Arc):
         return _serialize_arc(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Disk):
+        return _serialize_disk(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PartialDisk):
+        return _serialize_partial_disk(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Box):
+        return _serialize_box(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Ellipsoid):
+        return _serialize_ellipsoid(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Ellipse):
+        return _serialize_ellipse(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, RegularPolygon):
+        return _serialize_regular_polygon(entity, props, kind=kind, styles_map=styles_map)
 
     # ── Operators ──
     if isinstance(entity, ReflectionLine):
@@ -913,6 +932,131 @@ def _serialize_arc(
             ent.start_direction.z,
         ],
         "arrow": arrow,
+    }
+
+
+def _serialize_disk(
+    ent: Disk,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {"thickness": 0.02},
+        styles_map=styles_map,
+    ) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "radius": _clamp_positive(ent.radius),
+        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
+    }
+
+
+def _serialize_partial_disk(
+    ent: PartialDisk,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {"thickness": 0.02},
+        styles_map=styles_map,
+    ) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "radius": _clamp_positive(ent.radius),
+        "angle": ent.angle,
+        "startDirection": [
+            ent.start_direction.x,
+            ent.start_direction.y,
+            ent.start_direction.z,
+        ],
+        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
+    }
+
+
+def _serialize_box(
+    ent: Box,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    rotation = _as_euler(ent.rotation) if ent.rotation is not None else None
+    return _apply_defaults(
+        props,
+        kind,
+        {},
+        styles_map=styles_map,
+    ) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "size": [ent.size[0], ent.size[1], ent.size[2]],
+        "rotation": list(rotation) if rotation is not None else None,
+    }
+
+
+def _serialize_ellipsoid(
+    ent: Ellipsoid,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    rotation = _as_euler(ent.rotation) if ent.rotation is not None else None
+    return _apply_defaults(
+        props,
+        kind,
+        {},
+        styles_map=styles_map,
+    ) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "radii": [ent.radii[0], ent.radii[1], ent.radii[2]],
+        "rotation": list(rotation) if rotation is not None else None,
+    }
+
+
+def _serialize_ellipse(
+    ent: Ellipse,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {"thickness": 0.02},
+        styles_map=styles_map,
+    ) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "radiusU": ent.radius_u,
+        "radiusV": ent.radius_v,
+        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
+    }
+
+
+def _serialize_regular_polygon(
+    ent: RegularPolygon,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(
+        props,
+        kind,
+        {"thickness": 0.02},
+        styles_map=styles_map,
+    ) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "radius": _clamp_positive(ent.radius),
+        "sides": ent.sides,
+        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
+        "angle": ent.angle,
     }
 
 

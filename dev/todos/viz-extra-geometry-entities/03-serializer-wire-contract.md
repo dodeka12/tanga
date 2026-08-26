@@ -18,31 +18,31 @@ Python-side so the frontend always receives concrete values.
   - Add `Disk`, `PartialDisk`, `Box`, `Ellipsoid`, `Ellipse`, `RegularPolygon`
     to the `SceneEntity` union (and import them).
 
-- [ ] **3.2 — `serializer.py` dispatch**
+- [x] **3.2 — `serializer.py` dispatch**
   - Import the new entities; add `isinstance` branches in `_dispatch_entity`
     (entities section) routing to the new `_serialize_*` functions.
 
-- [ ] **3.3 — `_serialize_disk`**
+- [x] **3.3 — `_serialize_disk`**
   - Emit `kind`, `center`, `radius`, `normal` + `_apply_defaults` with
     `{"thickness": 0.02}` (so the style resolves the slab thickness).
 
-- [ ] **3.4 — `_serialize_partial_disk`**
+- [x] **3.4 — `_serialize_partial_disk`**
   - Emit `kind`, `center`, `radius`, `normal`, `angle` (radians),
     `startDirection` (normalized ⊥ normal, computed if the entity left it
     `None`) + thickness defaults.
 
-- [ ] **3.5 — `_serialize_box`**
+- [x] **3.5 — `_serialize_box`**
   - Emit `kind`, `center`, `size`, `rotation` (a `Rotor` → Euler `[rx,ry,rz]`
     via `_as_euler`, else `null`) + `{}` defaults (wireframe-only style).
 
-- [ ] **3.6 — `_serialize_ellipsoid`**
+- [x] **3.6 — `_serialize_ellipsoid`**
   - Emit `kind`, `center`, `radii`, `rotation` (same Rotor→Euler rule) + `{}`
     defaults.
 
-- [ ] **3.7 — `_serialize_ellipse`**
+- [x] **3.7 — `_serialize_ellipse`**
   - Emit `kind`, `center`, `radiusU`, `radiusV`, `normal` + thickness defaults.
 
-- [ ] **3.8 — `_serialize_regular_polygon`**
+- [x] **3.8 — `_serialize_regular_polygon`**
   - Emit `kind`, `center`, `radius`, `sides`, `normal`, `angle` + thickness
     defaults.
 
