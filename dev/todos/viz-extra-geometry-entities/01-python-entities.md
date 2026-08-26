@@ -38,7 +38,7 @@ manual `__init__` using `object.__setattr__`). All are exported from
   - Coerce `center` via `to_point`; `size` via `to_float` per component.
   - `__repr__` like the other entities.
 
-- [ ] **1.3 — `ellipsoid.py`**
+- [x] **1.3 — `ellipsoid.py`**
   - `Ellipsoid(center=None, radii=None, rotation=None)` → `center: Point`,
     `radii: tuple[float, float, float]` (default `(1, 1, 1)`),
     `rotation: Rotor | None`.
