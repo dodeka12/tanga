@@ -115,7 +115,15 @@ void main() {
     // Euclidean derivative matches the AA'd overlays in sdf/overlays/factory.js.
     float edgePx = length(vec2(dFdx(t), dFdy(t)));
     float aa = 1.0 - smoothstep(0.0, max(edgePx, 1e-6), res);
-    if (!hit) discard;
+    if (!hit) {
+        if (aa < 0.001) discard;
+        // Near-miss: emit a faint flat edge so the silhouette blends out over
+        // the background. No valid surface point/normal exists here, so skip
+        // shading and use the object's (slot-0) material colour directly.
+        fragColor = vec4(uMaterial[0].rgb, uMaterial[0].a * uOpacity * aa);
+        gl_FragDepth = 1.0; // far depth: the edge never occludes anything
+        return;
+    }
 
     vec3 p = ro + rd * t;
     vec3 n = calcNormal(p);

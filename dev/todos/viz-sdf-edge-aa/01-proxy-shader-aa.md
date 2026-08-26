@@ -29,7 +29,7 @@ ray passes the surface by during the march.
   - `t` is the march distance (already in scope). The Euclidean `dFdx/dFdy`
     derivative (rather than `fwidth`) matches `templates/sdf/overlays/factory.js`.
 
-- [ ] **1.3 — Replace the hard discard with a three-way result**
+- [x] **1.3 — Replace the hard discard with a three-way result**
   - Keep the hit path (shade + `gl_FragDepth` write) unchanged.
   - Change the miss path to:
     ```glsl
@@ -45,13 +45,13 @@ ray passes the surface by during the march.
     on a miss there is no valid surface point/normal, so shading is skipped.
     (Shading at the closest-approach point is a possible later enhancement.)
 
-- [ ] **1.4 — Keep the structural contract**
+- [x] **1.4 — Keep the structural contract**
   - Ensure the file still has exactly one `main()`, the `out vec4` output, no
     `#version`/`precision` directives, and writes `gl_FragDepth` on every
     non-`discard` path (GLSL ES 3.0 requires writing it on all paths once it is
     written anywhere).
 
-- [ ] **1.5 — Validate**
+- [x] **1.5 — Validate**
   - `uv run pytest py/tests/viz/sdf/test_proxy_shader.py -q`.
 
 ## Validation
