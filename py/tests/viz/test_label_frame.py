@@ -3,7 +3,7 @@
 
 """Tests for label anchor/position computation (``_label_frame.py``)."""
 
-from pytanga.geometry import Direction, Line, Point
+from pytanga.geometry import Cylinder, Direction, Disk, Line, Point
 from pytanga.geometry.operators import ReflectionLine
 from pytanga.viz._label_frame import compute_label_position
 
@@ -53,3 +53,20 @@ class TestLabelPosition:
         viz.main_scene.update_label(label_id, style=LabelStyle(along=1.0))
         labels = [o for o in viz.main_scene.full_state() if o.get("kind") == "label"]
         assert labels[0]["position"] == [4.0, 0.0, 0.0]
+
+    def test_viz_only_entity_label_created(self):
+        from pytanga.viz import Visualizer
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        eid = viz.add(Disk(Point(1.0, 2.0, 0.0), 0.7), label="D")
+        assert len(viz.main_scene.get_label_ids(eid)) == 1
+        labels = [o for o in viz.main_scene.full_state() if o.get("kind") == "label"]
+        assert len(labels) == 1
+        assert labels[0]["text"] == "D"
+
+    def test_viz_only_cylinder_label_created(self):
+        from pytanga.viz import Visualizer
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        eid = viz.add(Cylinder(), label="C")
+        assert len(viz.main_scene.get_label_ids(eid)) == 1
