@@ -75,7 +75,7 @@ manual `__init__` using `object.__setattr__`). All are exported from
   - Rejection: `pytanga.geometry.create(algebra, <new entity>)` raises for each
     new type.
 
-- [ ] **1.8 — Validate**
+- [x] **1.8 — Validate**
   - `uv run pytest py/tests/geometry/test_viz_entities.py -q`.
 
 ## Validation
