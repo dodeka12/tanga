@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.4.0] — 2026-08-26
+- `ActPoint` drag lifecycle handlers (`on_drag_start` / `on_drag_end`) · `ActPoint` label support · `clear(add_axes=, add_grid=)` re-add options
+- Bug fixes: 2D pointer interaction (stale camera + orthographic drag scale) · removing an entity now removes its attached labels
+→ [Details](2026-08-26_a074adb3.md)
+
 ## [Since 1.3.0] — 2026-08-25
 - WebGL2 SDF viewer (`SdfVisualizer`) · SDF primitive/combinator GLSL library · analytic entity→SDF serializer · SDF objects in the standard viewer (proxy renderer, `Composed`/`SdfGroup`, per-object CSG + materials) · `SdfObject`/`Combine` + `ECompose` operator object model · per-entity `Sdf*Style` classes · configurable lighting + grid/axes overlays
 - Bug fixes: inverted SDF rotations · patchy lighting normals · SDF browser connect/reconnect parity
