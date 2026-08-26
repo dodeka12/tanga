@@ -486,6 +486,16 @@ class Visualizer(_JupyterDisplayMixin):
                 properties["style"] = style
             eid = scene.add(obj.entity, entity_id=entity_id, **properties)
             obj._init(VizSceneHandle(self, scene_name), eid)
+            self._attach_to_parent(scene, eid, parent_id)
+            self._add_label_for_entity(
+                scene,
+                obj.entity,
+                eid,
+                label=label,
+                label_style=label_style,
+                attach_to=attach_to,
+                properties=properties,
+            )
             return eid
 
         if isinstance(obj, Label):
@@ -576,45 +586,15 @@ class Visualizer(_JupyterDisplayMixin):
         eid = scene.add(entity, entity_id=entity_id, **properties)
         self._attach_to_parent(scene, eid, parent_id)
 
-        if label is not None:
-            from ._label_frame import compute_label_position
-            from .serializer import resolve_line_length
-
-            from pytanga.geometry.entities import Line
-            from pytanga.geometry.operators import ReflectionLine
-
-            kind = type(entity).__name__
-            resolved_ls = _resolve_label_style(
-                scene.styles.label_base,
-                scene.styles.label_kind.get(kind),
-                label_style,
-            )
-
-            line_length = None
-            if isinstance(entity, Line):
-                line_length = resolve_line_length(
-                    entity, styles_map=scene.styles.kind, props=properties
-                )
-            elif isinstance(entity, ReflectionLine):
-                line_length = resolve_line_length(
-                    entity.line, styles_map=scene.styles.kind, props=properties
-                )
-
-            position = compute_label_position(
-                entity,
-                resolved_ls.offset_local,
-                along=resolved_ls.along,
-                line_length=line_length,
-            )
-            lbl = Label(
-                text=label,
-                position=position,
-                parent_id=attach_to if attach_to is not None else eid,
-                style=resolved_ls,
-            )
-            scene.add_label(lbl)
-            return eid
-
+        self._add_label_for_entity(
+            scene,
+            entity,
+            eid,
+            label=label,
+            label_style=label_style,
+            attach_to=attach_to,
+            properties=properties,
+        )
         return eid
 
     @staticmethod
@@ -628,6 +608,62 @@ class Visualizer(_JupyterDisplayMixin):
         parent = scene.get_node(parent_id)
         if isinstance(child, VizSceneObject) and isinstance(parent, VizSceneObject):
             parent.add_child(child)
+
+    def _add_label_for_entity(
+        self,
+        scene: Any,
+        entity: Any,
+        eid: str,
+        *,
+        label: str | None,
+        label_style: LabelStyle | None,
+        attach_to: str | None,
+        properties: dict[str, Any],
+    ) -> None:
+        """Create a label for *entity* attached to *eid*.
+
+        No-op when *label* is ``None``.  Shared by the regular entity path and
+        the :class:`ActSceneObject` path so active objects support ``label=``.
+        """
+        if label is None:
+            return
+        from ._label import Label
+        from ._label_frame import compute_label_position
+        from .serializer import resolve_line_length
+
+        from pytanga.geometry.entities import Line
+        from pytanga.geometry.operators import ReflectionLine
+
+        kind = type(entity).__name__
+        resolved_ls = _resolve_label_style(
+            scene.styles.label_base,
+            scene.styles.label_kind.get(kind),
+            label_style,
+        )
+
+        line_length = None
+        if isinstance(entity, Line):
+            line_length = resolve_line_length(
+                entity, styles_map=scene.styles.kind, props=properties
+            )
+        elif isinstance(entity, ReflectionLine):
+            line_length = resolve_line_length(
+                entity.line, styles_map=scene.styles.kind, props=properties
+            )
+
+        position = compute_label_position(
+            entity,
+            resolved_ls.offset_local,
+            along=resolved_ls.along,
+            line_length=line_length,
+        )
+        lbl = Label(
+            text=label,
+            position=position,
+            parent_id=attach_to if attach_to is not None else eid,
+            style=resolved_ls,
+        )
+        scene.add_label(lbl)
 
     def update(self, entity_id: str, **properties: Any) -> None:
         """Update rendering properties of an existing entity in the main scene.
@@ -709,9 +745,18 @@ class Visualizer(_JupyterDisplayMixin):
         """Remove an entity from the main scene."""
         self._scenes[""].remove(entity_id)
 
-    def clear(self) -> None:
-        """Remove all entities from the main scene."""
+    def clear(self, *, add_axes: bool = False, add_grid: bool = False) -> None:
+        """Remove all entities from the main scene.
+
+        By default the scene is left empty.  Set ``add_axes`` / ``add_grid``
+        to ``True`` to re-add the default coordinate axes / grid afterward
+        (subject to the visualizer's ``add_default_axes`` / ``add_default_grid``
+        constructor flags).
+        """
         self._scenes[""].clear()
+        if add_axes or add_grid:
+            self._default_objects_added.discard("")
+            self._add_default_scene_objects("", add_axes=add_axes, add_grid=add_grid)
 
     def _reset_scene(self, scene_name: str) -> None:
         """Clear a scene and re-add its default axes/grid.
@@ -820,31 +865,50 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Default scene objects ───────────────────────────────
 
-    def _add_default_scene_objects(self, scene_name: str) -> None:
+    def _add_default_scene_objects(
+        self,
+        scene_name: str,
+        *,
+        add_axes: bool | None = None,
+        add_grid: bool | None = None,
+    ) -> None:
         """Add default axes and/or grid, controlled by constructor flags.
 
         Each object is added independently based on ``_add_default_axes`` and
-        ``_add_default_grid``.  Idempotent per scene (runs only once).  Runs
-        eagerly at construction and when a named scene is created, so exports
-        that read the scene directly (without starting the server) also see
-        the defaults.
+        ``_add_default_grid``.  ``add_axes`` / ``add_grid`` optionally override
+        those flags for this call (ANDed with the constructor flags); ``None``
+        means "use the constructor flag as-is".  Idempotent per scene (runs
+        only once).  Runs eagerly at construction and when a named scene is
+        created, so exports that read the scene directly (without starting the
+        server) also see the defaults.
         """
         if scene_name in self._default_objects_added:
             return
         scene = self._scenes[scene_name]
 
+        want_axes = (
+            self._add_default_axes
+            if add_axes is None
+            else (add_axes and self._add_default_axes)
+        )
+        want_grid = (
+            self._add_default_grid
+            if add_grid is None
+            else (add_grid and self._add_default_grid)
+        )
+
         from ._scene_objects import Axes2D, Axes3D, Grid
         from ._styles import Axes3DStyle, AxisStyle
 
         if scene.config.space_dim == 2:
-            if self._add_default_axes:
+            if want_axes:
                 axes: Axes2D | Axes3D = Axes2D(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
                 self._add_to_scene(scene_name, obj=axes)
-            if self._add_default_grid:
+            if want_grid:
                 grid = Grid(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
                 self._add_to_scene(scene_name, obj=grid)
         else:
-            if self._add_default_axes:
+            if want_axes:
                 axes = Axes3D(
                     range_u=(0.0, 5.0),
                     range_v=(0.0, 5.0),
@@ -860,7 +924,7 @@ class Visualizer(_JupyterDisplayMixin):
                         w=AxisStyle(color="blue"),
                     ),
                 )
-            if self._add_default_grid:
+            if want_grid:
                 grid = Grid(
                     origin=(0.0, 0.0, 0.0),
                     dir_u=(1.0, 0.0, 0.0),

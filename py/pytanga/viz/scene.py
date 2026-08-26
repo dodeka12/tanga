@@ -143,9 +143,7 @@ class Scene:
 
         props = obj.properties or {}
         kind = obj.kind
-        merged = _style_to_output(
-            props.get("style"), kind, styles_map=self.styles.kind
-        )
+        merged = _style_to_output(props.get("style"), kind, styles_map=self.styles.kind)
         if props.get("color") is not None:
             merged["color"] = props["color"]
         if props.get("opacity") is not None:
@@ -403,16 +401,28 @@ class Scene:
         """Mark an object (or group node) for removal in the next flush.
 
         Removing a group node also removes its whole descendant subtree.
+        Labels attached (via ``parent_id``) to the removed object or any of
+        its descendants are removed too.
         """
+        removed_ids: set[str] = set()
         if object_id in self._objects or object_id in self._nodes:
             self._removed_ids.append(object_id)
+            removed_ids.add(object_id)
         node = self._nodes.get(object_id)
         if isinstance(node, VizSceneObject):
             for descendant in self._descendants(node):
                 if descendant.id not in self._removed_ids:
                     self._removed_ids.append(descendant.id)
+                removed_ids.add(descendant.id)
                 self._interaction_configs.pop(descendant.id, None)
         self._interaction_configs.pop(object_id, None)
+
+        # Remove labels attached to the removed object (or any descendant).
+        for oid, obj in list(self._objects.items()):
+            if obj.layer == "overlay" and obj.kind == "label":
+                if getattr(obj.data, "parent_id", None) in removed_ids:
+                    if oid not in self._removed_ids:
+                        self._removed_ids.append(oid)
 
     @staticmethod
     def _descendants(node: VizSceneObject):

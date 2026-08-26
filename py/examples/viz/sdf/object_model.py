@@ -78,4 +78,6 @@ print("be visible. The ring member is offset upward; each member shows its own")
 print("color/opacity; hover changes the hit member's emissive/opacity.")
 print("Close the browser window or press Ctrl+C to exit.")
 
+viz.export_snapshot("_output/sdf_object_model.html")
+
 viz.wait()

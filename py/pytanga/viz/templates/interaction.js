@@ -187,15 +187,20 @@ function getCameraPayload(worldPos) {
 
 function computeScreenPlaneVectors(intersectPoint) {
     // Compute world-space vectors corresponding to +1 pixel in
-    // screen X and screen Y, using the same scaling as the
-    // raycaster's near-plane projection.
-    //
-    // The intersection point's distance from the camera determines
-    // the scale: farther points → larger per-pixel world vectors.
+    // screen X and screen Y.  Perspective cameras scale by the vertical
+    // FOV at the intersection depth; orthographic cameras (2D) use the
+    // constant frustum height instead (camera.fov is undefined there).
     const dist = intersectPoint.distanceTo(camera.position);
-    const vFov = THREE.MathUtils.degToRad(camera.fov);
     const viewportHeight = rendererDomElement.clientHeight;
-    const scale = 2 * dist * Math.tan(vFov / 2) / viewportHeight;
+
+    let scale;
+    if (camera.isOrthographicCamera) {
+        const frustumHeight = camera.top - camera.bottom;
+        scale = frustumHeight / viewportHeight;
+    } else {
+        const vFov = THREE.MathUtils.degToRad(camera.fov || 50);
+        scale = 2 * dist * Math.tan(vFov / 2) / viewportHeight;
+    }
 
     const right = new THREE.Vector3();
     const up = new THREE.Vector3();
@@ -266,6 +271,10 @@ export function initInteraction(_camera, _rendererDomElement, _controls, websock
 
 export function setSpaceDim(dim) {
     _spaceDim = dim;
+}
+
+export function setCamera(_camera) {
+    camera = _camera;
 }
 
 // ── Object Registration ──────────────────────────────────────
