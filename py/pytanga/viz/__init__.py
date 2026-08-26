@@ -25,8 +25,16 @@ Usage::
 from ._act_style import ActObjectStyle, ActPointStyle
 from ._active import ActEventHandler, ActHandler, ActPoint, ActSceneObject
 from ._app import VisualizerApp
+from ._banner import Banner
 from ._colors import Color
-from ._controls import Button, ControlEvent, ControlGroup, Dropdown, Slider
+from ._controls import (
+    Button,
+    ControlEvent,
+    ControlGroup,
+    Dropdown,
+    FileChooser,
+    Slider,
+)
 from ._coordinate_system import CoordinateSystem
 from ._figure import FigureConfig
 from ._interaction import (
@@ -113,6 +121,7 @@ from .views import (
     ButtonView,
     ControlView,
     DropdownView,
+    FileChooserView,
     GroupView,
     SceneView,
     SliderView,
@@ -139,6 +148,7 @@ __all__ = [
     "Axes3DStyle",
     "Axis",
     "AxisStyle",
+    "Banner",
     "Button",
     "ButtonView",
     "Camera",
@@ -164,6 +174,8 @@ __all__ = [
     "DropdownView",
     "FigureConfig",
     "FigureStyle",
+    "FileChooser",
+    "FileChooserView",
     "GeneralRotorStyle",
     "Grid",
     "GridStyle",

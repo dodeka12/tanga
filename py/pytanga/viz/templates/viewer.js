@@ -9,6 +9,18 @@ import { ThreeJsView } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
 import { setWebSocket } from './controls-panel.js';
 import { setWebSocket as setInteractionWebSocket } from './interaction.js';
+import {
+    setWebSocket as setBannerWebSocket,
+    handleBannerDefine,
+    handleBannerRemove,
+    handleBannerClear,
+} from './banner.js';
+import {
+    setWebSocket as setFileBrowserWebSocket,
+    handleFileBrowserShow,
+    handleFileBrowserListing,
+    handleFileBrowserClose,
+} from './file-browser.js';
 import { updateLineResolutions } from './renderers/utils.js';
 import { handleResize } from './view_mode.js';
 
@@ -181,6 +193,8 @@ function connectWebSocket() {
         setStatus('connected');
         setWebSocket(ws);
         setInteractionWebSocket(ws);
+        setBannerWebSocket(ws);
+        setFileBrowserWebSocket(ws);
         _setWsOnAllViews(ws);
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
@@ -557,6 +571,23 @@ async function handleMessage(msg) {
         return;
     }
 
+    if (msg.type === 'banner_define' || msg.type === 'banner_remove' || msg.type === 'banner_clear') {
+        if (msg.scene === null || msg.scene === undefined) {
+            if (msg.type === 'banner_define') handleBannerDefine(msg);
+            else if (msg.type === 'banner_remove') handleBannerRemove(msg);
+            else handleBannerClear();
+            return;
+        }
+        // scene-scoped banner: fall through to scene routing below.
+    }
+
+    if (msg.type === 'file_browser_show' || msg.type === 'file_browser_listing' || msg.type === 'file_browser_close') {
+        if (msg.type === 'file_browser_show') handleFileBrowserShow(msg);
+        else if (msg.type === 'file_browser_listing') handleFileBrowserListing(msg);
+        else handleFileBrowserClose(msg);
+        return;
+    }
+
     if (_layoutName !== null) {
         await _routeToScene(msg, msg.scene || '');
         return;
@@ -566,6 +597,9 @@ async function handleMessage(msg) {
         if (!_forMyScene(msg)) return;
     }
     if (msg.type === 'controls_define' || msg.type === 'controls_clear') {
+        if (!_forMyScene(msg)) return;
+    }
+    if (msg.type === 'banner_define' || msg.type === 'banner_remove' || msg.type === 'banner_clear') {
         if (!_forMyScene(msg)) return;
     }
 

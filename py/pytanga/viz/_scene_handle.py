@@ -217,13 +217,21 @@ class VizSceneHandle(_JupyterDisplayMixin):
         self.flush()
         return None
 
-    def flush(self, *, fit_camera: bool = False) -> None:
+    def flush(self, *, fit_camera: bool = False, wait: bool = False) -> None:
         """Schedule a scene update on the server's event loop (thread-safe).
 
         If *fit_camera* is ``True``, the frontend will auto‑adjust the
         camera to encompass all entities after the flush.
+
+        If *wait* is ``True``, block until the flush has been processed.  This
+        is intended for plain synchronous scripts; see
+        :meth:`~pytanga.viz.Visualizer.flush` for the caveats.
         """
-        self._viz._flush_scene(self._name, fit_camera=fit_camera)
+        self._viz._flush_scene(self._name, fit_camera=fit_camera, wait=wait)
+
+    async def flush_async(self, *, fit_camera: bool = False) -> None:
+        """Awaitable flush for this scene (see :meth:`~pytanga.viz.Visualizer.flush_async`)."""
+        await self._viz.flush_async(fit_camera=fit_camera, scene=self._name)
 
     # ── Title & annotation ──────────────────────────────────
 
@@ -328,6 +336,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         step: float = 0.01,
         default: float | None = None,
         on_change: Any = None,
+        on_press: Any = None,
+        on_release: Any = None,
         parent_id: str | None = None,
     ) -> str:
         """Add a slider control to this scene."""
@@ -340,6 +350,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             step=step,
             default=default,
             on_change=on_change,
+            on_press=on_press,
+            on_release=on_release,
             parent_id=parent_id,
         )
 
@@ -381,6 +393,39 @@ class VizSceneHandle(_JupyterDisplayMixin):
             parent_id=parent_id,
         )
 
+    def add_file_chooser(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        root: str | None = None,
+        accept: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a file chooser control to this scene."""
+        return self._viz._add_scene_file_chooser(
+            self._name,
+            cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            root=root,
+            accept=accept,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def open_file_chooser(self, cid: str, *, path: str | None = None) -> None:
+        """Open the file browser dialog for control *cid*."""
+        self._viz.open_file_chooser(cid, scene_name=self._name, path=path)
+
+    def close_file_chooser(self, cid: str) -> None:
+        """Close the file browser dialog for control *cid*."""
+        self._viz.close_file_chooser(cid, scene_name=self._name)
+
     def add_control_group(
         self,
         gid: str,
@@ -415,6 +460,78 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def clear_controls(self) -> None:
         """Remove all controls and groups from this scene."""
         self._viz._clear_scene_controls(self._name)
+
+    # ── Banners ──────────────────────────────────────────────
+
+    def show_banner(
+        self,
+        text: str,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        auto_hide: bool = True,
+        dismissable: bool = True,
+        controls: Any = None,
+        on_close: Any = None,
+    ) -> str:
+        """Show a banner scoped to this scene (see :meth:`Visualizer.show_banner`)."""
+        return self._viz.show_banner(
+            text,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            auto_hide=auto_hide,
+            dismissable=dismissable,
+            controls=controls,
+            on_close=on_close,
+            scene_name=self._name,
+        )
+
+    async def show_banner_async(
+        self,
+        text: str,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        auto_hide: bool = True,
+        dismissable: bool = True,
+        controls: Any = None,
+        on_close: Any = None,
+    ) -> str:
+        """Awaitable :meth:`show_banner` scoped to this scene."""
+        return await self._viz.show_banner_async(
+            text,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            auto_hide=auto_hide,
+            dismissable=dismissable,
+            controls=controls,
+            on_close=on_close,
+            scene_name=self._name,
+        )
+
+    def remove_banner(self, banner_id: str) -> None:
+        """Remove a banner from this scene."""
+        self._viz.remove_banner(banner_id, scene_name=self._name)
+
+    async def remove_banner_async(self, banner_id: str) -> None:
+        """Awaitable :meth:`remove_banner`."""
+        await self._viz.remove_banner_async(banner_id, scene_name=self._name)
+
+    def clear_banners(self) -> None:
+        """Remove all banners from this scene."""
+        self._viz.clear_banners(scene_name=self._name)
+
+    async def clear_banners_async(self) -> None:
+        """Awaitable :meth:`clear_banners`."""
+        await self._viz.clear_banners_async(scene_name=self._name)
 
     # ── Object Interaction ───────────────────────────────────
 

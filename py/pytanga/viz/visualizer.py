@@ -179,6 +179,12 @@ class Visualizer(_JupyterDisplayMixin):
 
         self._handler_registry = ControlHandlerRegistry()
 
+        # Banner storage: global banners under ``None``, per-scene under the
+        # scene name.  Banner ids are unique across scopes (auto-generated).
+        self._banners: dict[str | None, dict[str, Any]] = {}
+        self._banner_counter = 0
+        self._banner_close_handlers: dict[str, Any] = {}
+
         # Interaction handler registry (shared across all scenes)
         from ._interaction import InteractionHandlerRegistry
 
@@ -1818,6 +1824,13 @@ class Visualizer(_JupyterDisplayMixin):
                 message["fit_camera"] = True
             await self._server.push_raw(json.dumps(message))
 
+    async def _flush_all_async(self, *, fit_camera: bool = False) -> None:
+        """Push dirty state for every scene (must be called from the server's event loop)."""
+        if self._server is None:
+            return
+        for name in self._scenes:
+            await self._flush_scene_async(name, fit_camera=fit_camera)
+
     def _flush_scene(
         self, scene_name: str, *, fit_camera: bool = False, wait: bool = False
     ) -> None:
@@ -1825,25 +1838,104 @@ class Visualizer(_JupyterDisplayMixin):
 
         When *wait* is ``True``, block until the flush has been processed so the
         caller can rely on the pushed state before making further changes (e.g.
-        ``auto_clear`` flushes before removing objects).
+        ``auto_clear`` flushes before removing objects).  This blocking wait is
+        only safe from a thread other than the server's event-loop thread; if it
+        is called from within that loop (e.g. an async control handler) it would
+        deadlock, so a :class:`RuntimeError` is raised and the caller should
+        ``await flush_async()`` instead.
         """
         if self._loop is None or self._server is None:
             return
+        if wait:
+            try:
+                on_server_loop = asyncio.get_running_loop() is self._loop
+            except RuntimeError:
+                on_server_loop = False
+            if on_server_loop:
+                raise RuntimeError(
+                    "flush(wait=True) cannot block on the server's own event "
+                    "loop; await flush_async() instead (e.g. from a control "
+                    "handler)."
+                )
         fut = asyncio.run_coroutine_threadsafe(
             self._flush_scene_async(scene_name, fit_camera=fit_camera), self._loop
         )
         if wait:
             fut.result(timeout=10.0)
 
-    def flush(self, *, fit_camera: bool = False) -> None:
+    def flush(self, *, fit_camera: bool = False, wait: bool = False) -> None:
         """Schedule all dirty scenes to be pushed to the server (thread-safe).
 
         If *fit_camera* is ``True``, the frontend will auto‑adjust the
         camera to encompass all entities after the flush.
+
+        If *wait* is ``True``, block until the flush has been processed.  This
+        is intended for plain synchronous scripts (their main thread is not the
+        server's event-loop thread).  It must **not** be called from an async
+        control/interaction handler — those run on the server loop itself and
+        would deadlock; use :meth:`flush_async` there instead.
         """
         if self._loop is not None and self._server is not None:
             for name in self._scenes:
-                self._flush_scene(name, fit_camera=fit_camera)
+                self._flush_scene(name, fit_camera=fit_camera, wait=wait)
+
+    async def _on_server_loop(self, coro_factory: Any) -> Any:
+        """Await ``coro_factory()`` on the server's event loop, from any loop.
+
+        When already running on ``self._loop`` the coroutine executes inline;
+        otherwise it is scheduled onto the loop via
+        ``run_coroutine_threadsafe`` and awaited with ``wrap_future``
+        (non-blocking — the caller's loop keeps running).
+        """
+        if self._loop is None or self._server is None:
+            return None
+        if asyncio.get_running_loop() is self._loop:
+            return await coro_factory()
+        fut = asyncio.run_coroutine_threadsafe(coro_factory(), self._loop)
+        return await asyncio.wrap_future(fut)
+
+    async def flush_async(
+        self, *, fit_camera: bool = False, scene: str | None = None
+    ) -> None:
+        """Awaitable flush that completes once pending updates have been sent.
+
+        Unlike :meth:`flush`, which schedules the push and returns immediately,
+        this coroutine waits for the WebSocket write to finish.  Use it from an
+        async control handler to guarantee a change is rendered *before* the
+        handler blocks the event loop with a long synchronous computation::
+
+            async def on_change(self, value, event):
+                self.viz.set_annotation("Calculating...")
+                await self.viz.flush_async()   # annotation is now on screen
+                result = expensive_sync_work(value)
+
+        Safe from any running event loop: when awaited on the server's own loop
+        (control/interaction handlers) the flush runs inline; otherwise it is
+        scheduled onto the server loop and awaited without blocking the caller.
+
+        Args:
+            fit_camera: Forward the camera auto‑fit flag to the frontend.
+            scene: Name of a single scene to flush, or ``None`` (default) to
+                flush all scenes.
+        """
+        async def _run() -> None:
+            if scene is None:
+                await self._flush_all_async(fit_camera=fit_camera)
+            else:
+                await self._flush_scene_async(scene, fit_camera=fit_camera)
+
+        await self._on_server_loop(_run)
+
+    async def run_blocking(self, fn: Any, *args: Any, **kwargs: Any) -> Any:
+        """Run a blocking callable in an executor from the current loop.
+
+        A control handler can ``await`` this to run CPU-bound work in a worker
+        thread without blocking the server loop.  Works for plain synchronous
+        ``Visualizer`` scripts (which have no user loop).
+        """
+        return await asyncio.get_running_loop().run_in_executor(
+            None, fn, *args, **kwargs
+        )
 
     def show(
         self,
@@ -1999,6 +2091,8 @@ class Visualizer(_JupyterDisplayMixin):
         step: float = 0.01,
         default: float | None = None,
         on_change: Any = None,
+        on_press: Any = None,
+        on_release: Any = None,
         parent_id: str | None = None,
     ) -> str:
         return self._add_scene_slider(
@@ -2010,6 +2104,8 @@ class Visualizer(_JupyterDisplayMixin):
             step=step,
             default=default,
             on_change=on_change,
+            on_press=on_press,
+            on_release=on_release,
             parent_id=parent_id,
         )
 
@@ -2024,6 +2120,8 @@ class Visualizer(_JupyterDisplayMixin):
         step: float = 0.01,
         default: float | None = None,
         on_change: Any = None,
+        on_press: Any = None,
+        on_release: Any = None,
         parent_id: str | None = None,
     ) -> str:
         from ._controls import Slider
@@ -2036,11 +2134,17 @@ class Visualizer(_JupyterDisplayMixin):
             step=step,
             default=default if default is not None else min,
             on_change=on_change,
+            on_press=on_press,
+            on_release=on_release,
             parent_id=parent_id,
         )
         self._scenes[scene_name].add_control(ctrl)
         if on_change is not None:
             self._handler_registry.register(cid, on_change)
+        if on_press is not None:
+            self._handler_registry.register(f"__press__{cid}", on_press)
+        if on_release is not None:
+            self._handler_registry.register(f"__release__{cid}", on_release)
         self._push_controls(scene_name)
         return cid
 
@@ -2137,6 +2241,140 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
         return cid
 
+    def add_file_chooser(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        root: str | None = None,
+        accept: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a file chooser control (text field + backend file browser)."""
+        return self._add_scene_file_chooser(
+            "",
+            cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            root=root,
+            accept=accept,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_file_chooser(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        root: str | None = None,
+        accept: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import FileChooser
+
+        ctrl = FileChooser(
+            id=cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            root=root,
+            accept=accept,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_change is not None:
+            self._handler_registry.register(cid, on_change)
+        self._push_controls(scene_name)
+        return cid
+
+    def open_file_chooser(
+        self, cid: str, *, scene_name: str = "", path: str | None = None
+    ) -> None:
+        """Open the file browser dialog for control *cid* (from the backend)."""
+        if self._server is None or self._loop is None:
+            return
+        ctrl = self._scenes[scene_name]._controls.get(cid)
+        if ctrl is None:
+            return
+        start = path if path is not None else (ctrl.value or ctrl.root or "")
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(
+                json.dumps(
+                    {
+                        "type": "file_browser_show",
+                        "scene": scene_name,
+                        "control_id": cid,
+                        "path": start,
+                    }
+                )
+            ),
+            self._loop,
+        )
+
+    def close_file_chooser(self, cid: str, *, scene_name: str = "") -> None:
+        """Close the file browser dialog for control *cid*."""
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(
+                json.dumps({"type": "file_browser_close", "control_id": cid})
+            ),
+            self._loop,
+        )
+
+    def _find_control(self, cid: str) -> Any | None:
+        """Return the control with id *cid* from any scene, or ``None``."""
+        for scene in self._scenes.values():
+            ctrl = scene._controls.get(cid)
+            if ctrl is not None:
+                return ctrl
+        return None
+
+    async def _handle_file_browser_navigate(
+        self, payload: dict[str, Any]
+    ) -> None:
+        from ._file_browser import list_directory
+
+        if self._server is None:
+            return
+        cid = payload.get("control_id")
+        path = payload.get("path") or ""
+        ctrl = self._find_control(cid) if cid else None
+        root = getattr(ctrl, "root", None)
+        message = list_directory(path, root=root)
+        message.update({"type": "file_browser_listing", "control_id": cid})
+        await self._server.push_raw(json.dumps(message))
+
+    async def _handle_file_browser_select(
+        self, payload: dict[str, Any], event: Any
+    ) -> None:
+        cid = payload.get("control_id")
+        path = payload.get("path") or ""
+        if cid:
+            ctrl = self._find_control(cid)
+            if ctrl is not None:
+                ctrl.value = path
+        handler = self._handler_registry.get(cid) if cid else None
+        if handler is not None:
+            try:
+                await handler(path, event)
+            except Exception:
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "Error in file chooser handler for %r", cid
+                )
+
     def add_control_group(
         self,
         gid: str,
@@ -2194,6 +2432,8 @@ class Visualizer(_JupyterDisplayMixin):
 
     def _remove_scene_control(self, scene_name: str, cid: str) -> None:
         self._handler_registry.unregister(cid)
+        self._handler_registry.unregister(f"__press__{cid}")
+        self._handler_registry.unregister(f"__release__{cid}")
         self._scenes[scene_name].remove_control(cid)
         self._push_controls(scene_name)
 
@@ -2213,6 +2453,318 @@ class Visualizer(_JupyterDisplayMixin):
         self._handler_registry.clear()
         self._scenes[scene_name].clear_controls()
         self._push_controls_clear(scene_name)
+
+    # ── Banners ─────────────────────────────────────────────
+
+    def _next_banner_id(self) -> str:
+        """Return a fresh, unique banner id."""
+        self._banner_counter += 1
+        return f"banner_{self._banner_counter}"
+
+    def _register_banner(
+        self,
+        text: str,
+        *,
+        id: str | None,
+        title: str,
+        align_x: float,
+        align_y: float,
+        auto_hide: bool,
+        dismissable: bool,
+        controls: list[Any] | None,
+        on_close: Any,
+        scene_name: str | None,
+    ) -> Any:
+        """Create, store, and register a banner; return it (un-pushed)."""
+        from ._banner import Banner
+
+        if id is None:
+            id = self._next_banner_id()
+        else:
+            for scoped in self._banners.values():
+                if id in scoped:
+                    raise ValueError(f"Banner id {id!r} is already in use")
+
+        ctrl_list = list(controls or [])
+        banner = Banner(
+            id=id,
+            text=text,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            auto_hide=auto_hide,
+            dismissable=dismissable,
+            controls=ctrl_list,
+            on_close=on_close,
+        )
+        for ctrl in ctrl_list:
+            handler = getattr(ctrl, "on_click", None) or getattr(
+                ctrl, "on_change", None
+            )
+            if handler is not None:
+                self._handler_registry.register(ctrl.id, handler)
+        if on_close is not None:
+            self._banner_close_handlers[id] = on_close
+        self._banners.setdefault(scene_name, {})[id] = banner
+        return banner
+
+    def show_banner(
+        self,
+        text: str,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        auto_hide: bool = True,
+        dismissable: bool = True,
+        controls: list[Any] | None = None,
+        on_close: Any = None,
+        scene_name: str | None = None,
+    ) -> str:
+        """Show a banner/dialog and return its id.
+
+        A global banner (``scene_name=None``) spans the whole viewport; a
+        per-scene banner (``scene_name="<name>"``) is shown inside every pane
+        displaying that scene.  ``controls`` is a list of :class:`Button` /
+        :class:`Slider` / :class:`Dropdown` objects (the same controls usable
+        in a control group) rendered as the banner's options; their
+        ``on_click`` / ``on_change`` handlers are registered automatically.
+        """
+        banner = self._register_banner(
+            text,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            auto_hide=auto_hide,
+            dismissable=dismissable,
+            controls=controls,
+            on_close=on_close,
+            scene_name=scene_name,
+        )
+        self._push_banner(banner, scene_name)
+        return banner.id
+
+    def alert(
+        self,
+        text: str,
+        *,
+        title: str = "",
+        ok_label: str = "OK",
+        on_ok: Any = None,
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        scene_name: str | None = None,
+    ) -> str:
+        """Show an acknowledge banner with a single OK button."""
+        from ._controls import Button
+
+        bid = self._next_banner_id()
+        buttons = [Button(id=f"{bid}_ok", label=ok_label, on_click=on_ok)]
+        return self.show_banner(
+            text,
+            id=bid,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            auto_hide=True,
+            dismissable=dismissable,
+            controls=buttons,
+            scene_name=scene_name,
+        )
+
+    def confirm(
+        self,
+        text: str,
+        *,
+        title: str = "",
+        yes_label: str = "Yes",
+        no_label: str = "No",
+        cancel_label: str = "Cancel",
+        on_yes: Any = None,
+        on_no: Any = None,
+        on_cancel: Any = None,
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        scene_name: str | None = None,
+    ) -> str:
+        """Show a yes/no/cancel banner."""
+        from ._controls import Button
+
+        bid = self._next_banner_id()
+        buttons = [
+            Button(id=f"{bid}_yes", label=yes_label, on_click=on_yes),
+            Button(id=f"{bid}_no", label=no_label, on_click=on_no),
+            Button(id=f"{bid}_cancel", label=cancel_label, on_click=on_cancel),
+        ]
+        return self.show_banner(
+            text,
+            id=bid,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            auto_hide=True,
+            dismissable=dismissable,
+            controls=buttons,
+            scene_name=scene_name,
+        )
+
+    def _unregister_banner(self, banner: Any) -> None:
+        """Unregister a banner's control handlers and ``on_close`` handler."""
+        for ctrl in banner.controls:
+            self._handler_registry.unregister(ctrl.id)
+        self._banner_close_handlers.pop(banner.id, None)
+
+    def remove_banner(
+        self, banner_id: str, *, scene_name: str | None = None
+    ) -> None:
+        """Remove a banner by id (and unregister its handlers)."""
+        scoped = self._banners.get(scene_name, {})
+        banner = scoped.get(banner_id)
+        if banner is None:
+            return
+        self._unregister_banner(banner)
+        del scoped[banner_id]
+        self._push_banner_remove(banner_id, scene_name)
+
+    def clear_banners(self, *, scene_name: str | None = None) -> None:
+        """Remove all banners in a scope (or globally when ``scene_name=None``)."""
+        scoped = self._banners.pop(scene_name, {})
+        for banner in scoped.values():
+            self._unregister_banner(banner)
+        self._push_banner_clear(scene_name)
+
+    def _push_banner(self, banner: Any, scene_name: str | None) -> None:
+        from ._banner import serialize_banner
+
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(
+                json.dumps(serialize_banner(banner, scene=scene_name))
+            ),
+            self._loop,
+        )
+
+    def _push_banner_remove(self, banner_id: str, scene_name: str | None) -> None:
+        from ._banner import serialize_banner_remove
+
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(
+                json.dumps(serialize_banner_remove(banner_id, scene=scene_name))
+            ),
+            self._loop,
+        )
+
+    def _push_banner_clear(self, scene_name: str | None) -> None:
+        from ._banner import serialize_banner_clear
+
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(
+                json.dumps(serialize_banner_clear(scene=scene_name))
+            ),
+            self._loop,
+        )
+
+    async def _push_banner_async(
+        self, banner: Any, scene_name: str | None
+    ) -> None:
+        from ._banner import serialize_banner
+
+        if self._server is None:
+            return
+        await self._server.push_raw(
+            json.dumps(serialize_banner(banner, scene=scene_name))
+        )
+
+    async def _push_banner_remove_async(
+        self, banner_id: str, scene_name: str | None
+    ) -> None:
+        from ._banner import serialize_banner_remove
+
+        if self._server is None:
+            return
+        await self._server.push_raw(
+            json.dumps(serialize_banner_remove(banner_id, scene=scene_name))
+        )
+
+    async def _push_banner_clear_async(self, scene_name: str | None) -> None:
+        from ._banner import serialize_banner_clear
+
+        if self._server is None:
+            return
+        await self._server.push_raw(
+            json.dumps(serialize_banner_clear(scene=scene_name))
+        )
+
+    async def show_banner_async(
+        self,
+        text: str,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        auto_hide: bool = True,
+        dismissable: bool = True,
+        controls: list[Any] | None = None,
+        on_close: Any = None,
+        scene_name: str | None = None,
+    ) -> str:
+        """Awaitable :meth:`show_banner` (see its docs).
+
+        Awaits the ``banner_define`` push so the banner is visible before the
+        caller proceeds; safe from a handler (on ``self._loop``) or from
+        ``init()`` / ``cleanup()`` (user loop).
+        """
+        banner = self._register_banner(
+            text,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            auto_hide=auto_hide,
+            dismissable=dismissable,
+            controls=controls,
+            on_close=on_close,
+            scene_name=scene_name,
+        )
+        await self._on_server_loop(
+            lambda: self._push_banner_async(banner, scene_name)
+        )
+        return banner.id
+
+    async def remove_banner_async(
+        self, banner_id: str, *, scene_name: str | None = None
+    ) -> None:
+        """Awaitable :meth:`remove_banner`."""
+        scoped = self._banners.get(scene_name, {})
+        banner = scoped.get(banner_id)
+        if banner is None:
+            return
+        self._unregister_banner(banner)
+        del scoped[banner_id]
+        await self._on_server_loop(
+            lambda: self._push_banner_remove_async(banner_id, scene_name)
+        )
+
+    async def clear_banners_async(
+        self, *, scene_name: str | None = None
+    ) -> None:
+        """Awaitable :meth:`clear_banners`."""
+        scoped = self._banners.pop(scene_name, {})
+        for banner in scoped.values():
+            self._unregister_banner(banner)
+        await self._on_server_loop(
+            lambda: self._push_banner_clear_async(scene_name)
+        )
 
     def _push_controls(self, scene_name: str = "") -> None:
         """Serialise current controls/groups for a scene and push to the frontend."""
@@ -2257,23 +2809,55 @@ class Visualizer(_JupyterDisplayMixin):
         """Handle an incoming control event from the frontend."""
         from ._controls import ControlEvent
 
-        cid = payload.get("control_id")
         browser_id = payload.get("browser_id")
         event = ControlEvent(browser_id=browser_id)
-        if cid and (handler := self._handler_registry.get(cid)):
-            try:
-                if msg_type == "control:change":
-                    await handler(payload.get("value"), event)
-                elif msg_type == "control:click":
-                    await handler(None, event)
-                elif msg_type == "control:group_toggle":
-                    await handler(payload.get("value"), event)
-            except Exception:
-                import logging
+        if msg_type == "banner_closed":
+            bid = payload.get("id")
+            handler = self._banner_close_handlers.get(bid) if bid else None
+            if handler is not None:
+                try:
+                    await handler(bid, event)
+                except Exception:
+                    import logging
 
-                logging.getLogger(__name__).exception(
-                    "Error in control handler for %r", cid
-                )
+                    logging.getLogger(__name__).exception(
+                        "Error in banner on_close handler for %r", bid
+                    )
+            return
+
+        if msg_type == "file_browser_navigate":
+            await self._handle_file_browser_navigate(payload)
+            return
+        if msg_type == "file_browser_select":
+            await self._handle_file_browser_select(payload, event)
+            return
+
+        cid = payload.get("control_id")
+        if msg_type == "control:press":
+            handler = (
+                self._handler_registry.get(f"__press__{cid}") if cid else None
+            )
+        elif msg_type == "control:release":
+            handler = (
+                self._handler_registry.get(f"__release__{cid}") if cid else None
+            )
+        else:
+            handler = self._handler_registry.get(cid) if cid else None
+
+        if handler is None:
+            return
+
+        try:
+            if msg_type == "control:click":
+                await handler(None, event)
+            else:
+                await handler(payload.get("value"), event)
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Error in control handler for %r", cid
+            )
 
     async def _on_client_connect(self, remote_addr: str) -> None:
         """Push controls state when a new client connects.

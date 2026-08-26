@@ -6,7 +6,9 @@
 import asyncio
 import threading
 
-from pytanga.viz import VisualizerApp
+import pytest
+
+from pytanga.viz import Visualizer, VisualizerApp
 
 
 class _RecordingApp(VisualizerApp):
@@ -78,3 +80,111 @@ class TestVisualizerAppShutdown:
         asyncio.run(app._app_main())
         assert app.init_called is True
         assert app.cleanup_called is True
+
+    def test_app_main_captures_and_clears_user_loop(self):
+        captured = []
+
+        class _App(VisualizerApp):
+            async def init(self) -> None:
+                captured.append(self._user_loop)
+
+        app = _App()
+        app._stop_requested.set()
+        asyncio.run(app._app_main())
+        assert len(captured) == 1
+        assert captured[0] is not None
+        assert app._user_loop is None
+
+
+def _running_loop():
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    return loop, thread
+
+
+class TestUserLoopOffload:
+    def test_submit_user_schedules_and_returns_future(self):
+        app = VisualizerApp()
+        loop, thread = _running_loop()
+        app._user_loop = loop
+        try:
+
+            async def _work():
+                return 42
+
+            fut = app.submit_user(_work)
+            assert fut.result(timeout=5) == 42
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            thread.join(timeout=2)
+
+    def test_submit_user_done_runs_once(self):
+        app = VisualizerApp()
+        loop, thread = _running_loop()
+        app._user_loop = loop
+        try:
+            results = []
+
+            async def _work():
+                return 7
+
+            app.submit_user(_work, done=results.append).result(timeout=5)
+            assert results == [7]
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            thread.join(timeout=2)
+
+    def test_submit_user_done_runs_on_failure(self):
+        app = VisualizerApp()
+        loop, thread = _running_loop()
+        app._user_loop = loop
+        try:
+            results = []
+
+            async def _work():
+                raise RuntimeError("boom")
+
+            fut = app.submit_user(_work, done=results.append)
+            with pytest.raises(RuntimeError):
+                fut.result(timeout=5)
+            assert results == [None]
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            thread.join(timeout=2)
+
+    def test_run_user_returns_result(self):
+        app = VisualizerApp()
+        loop, thread = _running_loop()
+        app._user_loop = loop
+        try:
+
+            async def _work():
+                return 99
+
+            assert asyncio.run(app.run_user(_work)) == 99
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            thread.join(timeout=2)
+
+    def test_run_user_sync_runs_blocking_fn(self):
+        app = VisualizerApp()
+        loop, thread = _running_loop()
+        app._user_loop = loop
+        try:
+
+            def _blocking(x):
+                return x * 2
+
+            assert asyncio.run(app.run_user_sync(_blocking, 21)) == 42
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            thread.join(timeout=2)
+
+    def test_run_blocking_returns_result(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+
+        def _blocking(x):
+            return x + 1
+
+        assert asyncio.run(viz.run_blocking(_blocking, 41)) == 42

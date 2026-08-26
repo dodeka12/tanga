@@ -262,8 +262,8 @@ class VizObjectRef:
     def remove(self) -> None:
         self._handle.remove(self.id)
 
-    def flush(self, *, fit_camera: bool = False) -> None:
-        self._handle.flush(fit_camera=fit_camera)
+    def flush(self, *, fit_camera: bool = False, wait: bool = False) -> None:
+        self._handle.flush(fit_camera=fit_camera, wait=wait)
 
     def animate_to(self, **kwargs: Any) -> None:
         self._handle.animate_to(self.id, **kwargs)

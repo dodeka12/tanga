@@ -293,7 +293,11 @@ viz.clear(add_axes=True, add_grid=True)
 |--------|-------------|
 | `start(*, wait_for_browser=None, timeout=30.0)` | Start the server in a background daemon thread. In Jupyter, ``wait_for_browser`` defaults to ``False``; outside Jupyter it defaults to ``True``. |
 | `wait_for_browser(timeout=30.0)` | Block until a WebSocket client connects. Returns `True` on success, `False` on timeout. |
-| `flush(*, fit_camera=False)` | Push all dirty scenes to connected browsers.  Pass ``fit_camera=True`` after all entities are added to have the frontend auto‑adjust the camera to encompass them. |
+| `flush(*, fit_camera=False, wait=False)` | Push all dirty scenes to connected browsers.  Pass ``fit_camera=True`` after all entities are added to have the frontend auto‑adjust the camera to encompass them.  With ``wait=True`` (synchronous scripts only), block until the push has been processed. |
+| `flush_async(*, fit_camera=False, scene=None)` | Awaitable variant of `flush`.  ``await`` it from an async control handler to guarantee pending updates are rendered before the handler blocks the loop with a long synchronous computation. |
+| `show_banner(text, *, id=None, title="", align_x=0.5, align_y=0.5, auto_hide=True, dismissable=True, controls=None, on_close=None, scene_name=None)` | Show a banner/dialog and return its id.  `controls` are `Button`/`Slider`/`Dropdown` objects; `dismissable=False` makes it modal.  `show_banner_async` is the awaitable form. |
+| `alert(text, *, ...)` / `confirm(text, *, ...)` | Convenience acknowledge / yes-no-cancel banners. |
+| `remove_banner(id, *, scene_name=None)` / `clear_banners(scene_name=None)` | Remove a single banner / all banners in a scope. |
 | `stop()` | Stop the server and clean up. Waits for graceful WebSocket shutdown before stopping the event loop. |
 | `run(*, wait_for_browser=None)` | Start server, open browser, block until Ctrl+C. In Jupyter, ``wait_for_browser`` defaults to ``False``. |
 | `sleep_ms(ms)` | Sleep for ``ms`` milliseconds, returning early on the scene's stop key or Ctrl+C. Returns ``True`` if it slept the full interval, ``False`` if interrupted. |

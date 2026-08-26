@@ -737,6 +737,11 @@ class VizServer:
                             "control:change",
                             "control:click",
                             "control:group_toggle",
+                            "control:press",
+                            "control:release",
+                            "banner_closed",
+                            "file_browser_navigate",
+                            "file_browser_select",
                         ):
                             # Inject browser_id into the payload for the callback
                             if msg_browser_id:

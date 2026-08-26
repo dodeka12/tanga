@@ -10,8 +10,10 @@ Derive from :class:`VisualizerApp`, override :meth:`init` and
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import threading
-from typing import TYPE_CHECKING
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .camera import CameraConfig, View2DConfig, View3dConfig
@@ -81,6 +83,9 @@ class VisualizerApp:
             enable_server_stop_key=enable_server_stop_key,
         )
         self._stop_requested = threading.Event()
+        # The user loop (the loop running ``_app_main``), captured so control
+        # handlers can offload work onto it without blocking the server loop.
+        self._user_loop: asyncio.AbstractEventLoop | None = None
 
     # ── lifecycle hooks (override in subclass) ──────────────
 
@@ -167,23 +172,86 @@ class VisualizerApp:
         """Core asyncio body: init → block until shutdown → cleanup."""
         import logging
 
-        # 1. User setup
+        self._user_loop = asyncio.get_running_loop()
         try:
-            await self.init()
-        except Exception:
-            logging.getLogger(__name__).exception("Error in app.init()")
-            raise
+            # 1. User setup
+            try:
+                await self.init()
+            except Exception:
+                logging.getLogger(__name__).exception("Error in app.init()")
+                raise
 
-        # 2. Block until shutdown is requested (Ctrl+C, Ctrl+Q, or
-        #    request_shutdown()), or the task is cancelled.
-        try:
-            while not self._is_stop_requested():
-                await asyncio.sleep(0.05)
-        except asyncio.CancelledError:
-            pass
+            # 2. Block until shutdown is requested (Ctrl+C, Ctrl+Q, or
+            #    request_shutdown()), or the task is cancelled.
+            try:
+                while not self._is_stop_requested():
+                    await asyncio.sleep(0.05)
+            except asyncio.CancelledError:
+                pass
 
-        # 3. Teardown
-        try:
-            await self.cleanup()
-        except Exception:
-            logging.getLogger(__name__).exception("Error in app.cleanup()")
+            # 3. Teardown
+            try:
+                await self.cleanup()
+            except Exception:
+                logging.getLogger(__name__).exception("Error in app.cleanup()")
+        finally:
+            self._user_loop = None
+
+    # ── Offloading work to the user loop ─────────────────────
+
+    def submit_user(
+        self,
+        coro_factory: Callable[..., Awaitable[Any]],
+        *args: Any,
+        done: Callable[[Any], None] | None = None,
+        **kwargs: Any,
+    ) -> concurrent.futures.Future:
+        """Schedule ``coro_factory(*args, **kwargs)`` on the user loop.
+
+        Thread-safe; returns a :class:`concurrent.futures.Future` so a control
+        handler can hand work to the user's own loop without blocking the
+        server loop.  If *done* is given, it runs exactly once (on the
+        user-loop thread) with the coroutine's result after completion — or
+        ``None`` if the coroutine raised (the exception stays on the future).
+        """
+        if self._user_loop is None or not self._user_loop.is_running():
+            raise RuntimeError("The user loop is not running")
+        fut = asyncio.run_coroutine_threadsafe(
+            coro_factory(*args, **kwargs), self._user_loop
+        )
+        if done is not None:
+
+            def _on_done(f: concurrent.futures.Future) -> None:
+                try:
+                    result = f.result()
+                except Exception:
+                    result = None
+                done(result)
+
+            fut.add_done_callback(_on_done)
+        return fut
+
+    async def run_user(
+        self,
+        coro_factory: Callable[..., Awaitable[Any]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Await ``coro_factory(*args, **kwargs)`` on the user loop.
+
+        Awaiting from a control handler yields to the server loop while the
+        coroutine runs on the user loop.  Prefer :meth:`submit_user` with a
+        ``done`` callback for fire-and-forget background work.
+        """
+        return await asyncio.wrap_future(
+            self.submit_user(coro_factory, *args, **kwargs)
+        )
+
+    async def run_user_sync(
+        self, fn: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Any:
+        """Run blocking *fn* in an executor, scheduled from the user loop.
+
+        Neither the server loop nor the user loop is blocked.
+        """
+        return await self.run_user(asyncio.to_thread, fn, *args, **kwargs)

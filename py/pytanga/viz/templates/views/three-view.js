@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { View } from './view.js';
+import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
@@ -112,6 +113,7 @@ export class ThreeJsView extends View {
         this._titleElement = null;
         this._annotationPanel = null;
         this._overlays = [];
+        this._banners = new Map();
         this._isWebGL2 = false;
 
         this.el.classList.add('tanga-three-view');
@@ -255,6 +257,7 @@ export class ThreeJsView extends View {
         }
         handleControlsClear();
         detachAll();
+        this._clearBanners();
         this.cameraPositioned = false;
         this._addDefaultLights();
     }
@@ -477,6 +480,49 @@ export class ThreeJsView extends View {
         } else if (msg.type === 'controls_clear') {
             handleControlsClear();
             detachAll();
+        } else if (msg.type === 'banner_define') {
+            this._showBanner(msg);
+        } else if (msg.type === 'banner_remove') {
+            this._removeBanner(msg.id);
+        } else if (msg.type === 'banner_clear') {
+            this._clearBanners();
+        }
+    }
+
+    _showBanner(msg) {
+        this._removeBanner(msg.id);
+        const view = new BannerView({
+            id: msg.id,
+            title: msg.title,
+            text: msg.text,
+            align_x: msg.align_x,
+            align_y: msg.align_y,
+            auto_hide: msg.auto_hide,
+            dismissable: msg.dismissable,
+            controls: msg.controls || [],
+            backdropMode: 'absolute',
+            onClose: (id) => this._sendBannerClosed(id),
+        });
+        this._banners.set(msg.id, view);
+        view.mount(this.el);
+    }
+
+    _removeBanner(id) {
+        const view = this._banners.get(id);
+        if (!view) return;
+        this._banners.delete(id);
+        view.destroy();
+    }
+
+    _clearBanners() {
+        for (const id of [...this._banners.keys()]) this._removeBanner(id);
+    }
+
+    _sendBannerClosed(id) {
+        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+            this._ws.send(
+                JSON.stringify({ type: 'banner_closed', id, browser_id: this._browserId })
+            );
         }
     }
 

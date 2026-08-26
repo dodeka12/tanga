@@ -101,6 +101,8 @@ nav:
       - Controls: py/viz/visualizerapp/controls.md
       - Layouts (Split Views & Controls): py/viz/visualizerapp/layouts.md
       - Handlers & Lifecycle: py/viz/visualizerapp/handlers.md
+      - Banners & Dialogs: py/viz/visualizerapp/banners.md
+      - File Chooser: py/viz/visualizerapp/file-chooser.md
     - Jupyter Notebooks:
       - Overview: py/viz/jupyter/index.md
       - Live inline display: py/viz/jupyter/live.md

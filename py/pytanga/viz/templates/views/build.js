@@ -10,6 +10,7 @@ import { ThreeJsView } from './three-view.js';
 import { SliderView } from './slider-view.js';
 import { ButtonView } from './button-view.js';
 import { DropdownView } from './dropdown-view.js';
+import { FileChooserView } from './file-chooser-view.js';
 import { SpacerView } from './spacer-view.js';
 
 function applySizeSpecs(view, node) {
@@ -87,6 +88,11 @@ export function buildViewTree(node, ws) {
     } else if (node.type === 'dropdown_view') {
         view = new DropdownView({
             id: node.id, label: node.label, options: node.options, default: node.default,
+        });
+    } else if (node.type === 'file_chooser_view') {
+        view = new FileChooserView({
+            id: node.id, label: node.label, value: node.value,
+            placeholder: node.placeholder, root: node.root, accept: node.accept,
         });
     } else if (node.type === 'spacer') {
         view = new SpacerView();
