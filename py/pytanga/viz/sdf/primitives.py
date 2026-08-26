@@ -330,6 +330,61 @@ def torus(
     )
 
 
+def partial_disk(
+    radius: float,
+    angle: float = 2.0 * math.pi,
+    *,
+    half_height: float = 0.01,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
+) -> SdfNode:
+    """Capped sector (partial disk) in the XZ plane, symmetric about +Z.
+
+    ``radius`` is the disk radius, ``angle`` the total sweep in radians
+    (``0 < angle < 2π``; use :func:`capped_cylinder` for a full disk), and
+    ``half_height`` the slab half-thickness along +Y.
+    """
+    return primitive(
+        "partialDisk",
+        {
+            "radius": float(radius),
+            "halfHeight": float(half_height),
+            "angle": float(angle),
+        },
+        id=id,
+        position=position,
+        rotation=rotation,
+    )
+
+
+def regular_polygon(
+    radius: float,
+    sides: int,
+    *,
+    half_height: float = 0.01,
+    id: str | None = None,
+    position: Position = None,
+    rotation: Rotation = None,
+) -> SdfNode:
+    """Regular polygon slab in the XZ plane with a vertex on +Z.
+
+    ``radius`` is the circumradius, ``sides`` the number of sides (``>= 3``),
+    and ``half_height`` the slab half-thickness along +Y.
+    """
+    return primitive(
+        "regularPolygon",
+        {
+            "radius": float(radius),
+            "halfHeight": float(half_height),
+            "sides": int(sides),
+        },
+        id=id,
+        position=position,
+        rotation=rotation,
+    )
+
+
 def plane(
     normal: tuple[float, float, float],
     offset: float = 0.0,
@@ -472,3 +527,80 @@ def _rotation_align(
     axis = (ay * dz - az * dy, az * dx - ax * dz, ax * dy - ay * dx)
     axis = _normalize(axis)
     return (axis, math.acos(dot))
+
+
+def _basis_rotation(
+    y_dir: tuple[float, float, float],
+    z_dir: tuple[float, float, float],
+) -> tuple[tuple[float, float, float], float] | None:
+    """Axis-angle rotation mapping local ``+Y`` → ``y_dir`` and ``+Z`` → ``z_dir``.
+
+    ``y_dir`` and ``z_dir`` are assumed (near-)perpendicular.  Returns ``None``
+    for the identity rotation.
+    """
+    y = _normalize(y_dir)
+    z = _normalize(z_dir)
+    x = _normalize(
+        (y[1] * z[2] - y[2] * z[1], y[2] * z[0] - y[0] * z[2], y[0] * z[1] - y[1] * z[0])
+    )
+    # Re-orthonormalize z against x, y (right-handed).
+    z = (
+        x[1] * y[2] - x[2] * y[1],
+        x[2] * y[0] - x[0] * y[2],
+        x[0] * y[1] - x[1] * y[0],
+    )
+
+    # Rotation matrix R has columns x, y, z.
+    trace = x[0] + y[1] + z[2]
+    cos_angle = max(-1.0, min(1.0, (trace - 1.0) / 2.0))
+    angle = math.acos(cos_angle)
+    if angle < 1e-9:
+        return None
+
+    sin_angle = math.sin(angle)
+    if sin_angle < 1e-9:
+        # 180° rotation: recover the axis from the largest diagonal entry.
+        diag = (x[0], y[1], z[2])
+        i = max(range(3), key=lambda k: diag[k])
+        axis = [0.0, 0.0, 0.0]
+        axis[i] = math.sqrt(max((diag[i] + 1.0) / 2.0, 0.0))
+        if i == 0:
+            axis[1] = (y[0] + x[1]) / (4.0 * axis[0]) if axis[0] > 1e-12 else 0.0
+            axis[2] = (z[0] + x[2]) / (4.0 * axis[0]) if axis[0] > 1e-12 else 0.0
+        elif i == 1:
+            axis[0] = (y[0] + x[1]) / (4.0 * axis[1]) if axis[1] > 1e-12 else 0.0
+            axis[2] = (z[1] + y[2]) / (4.0 * axis[1]) if axis[1] > 1e-12 else 0.0
+        else:
+            axis[0] = (z[0] + x[2]) / (4.0 * axis[2]) if axis[2] > 1e-12 else 0.0
+            axis[1] = (z[1] + y[2]) / (4.0 * axis[2]) if axis[2] > 1e-12 else 0.0
+        return (_normalize(tuple(axis)), math.pi)
+
+    axis = _normalize(
+        (
+            (y[2] - z[1]) / (2.0 * sin_angle),
+            (z[0] - x[2]) / (2.0 * sin_angle),
+            (x[1] - y[0]) / (2.0 * sin_angle),
+        )
+    )
+    return (axis, angle)
+
+
+def _rotate_about(
+    v: tuple[float, float, float],
+    axis: tuple[float, float, float],
+    angle: float,
+) -> tuple[float, float, float]:
+    """Rotate vector *v* by *angle* radians about *axis* (right-hand rule)."""
+    ax, ay, az = _normalize(axis)
+    vx, vy, vz = v
+    c = math.cos(angle)
+    s = math.sin(angle)
+    cx = ay * vz - az * vy
+    cy = az * vx - ax * vz
+    cz = ax * vy - ay * vx
+    dot = ax * vx + ay * vy + az * vz
+    return (
+        vx * c + cx * s + ax * dot * (1.0 - c),
+        vy * c + cy * s + ay * dot * (1.0 - c),
+        vz * c + cz * s + az * dot * (1.0 - c),
+    )

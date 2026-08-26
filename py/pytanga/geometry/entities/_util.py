@@ -56,3 +56,28 @@ def _scalar(value):
             raise ValueError("Expected a scalar multivector")
         return value.scalar
     return value
+
+def _compute_start_direction(axis) -> "Direction":
+    """Return a deterministic unit vector perpendicular to *axis*.
+
+    Picks the coordinate axis least aligned with *axis* so the cross product is
+    well-conditioned, then returns ``axis × ref`` normalized.  This guarantees
+    the frontend always receives a valid in-plane start direction.
+    """
+    from .direction import Direction
+
+    a = axis.normalized()
+    refs = (
+        Direction(1.0, 0.0, 0.0),
+        Direction(0.0, 1.0, 0.0),
+        Direction(0.0, 0.0, 1.0),
+    )
+    ref = min(refs, key=lambda r: abs(a.dot(r)))
+    start = a.cross(ref)
+    if start.mag() == 0.0:  # defensive: never expected to trigger
+        for r in refs:
+            candidate = a.cross(r)
+            if candidate.mag() != 0.0:
+                return candidate.normalized()
+    return start.normalized()
+

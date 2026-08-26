@@ -34,3 +34,10 @@ def to_float(value) -> float:
     if isinstance(value, (int, float)):
         return float(value)
     raise TypeError(f"Expected float or scalar MV, got {type(value).__name__}")
+
+
+def to_triple(value) -> tuple[float, float, float]:
+    """Ensure *value* is a 3-tuple of floats (coercing scalar MVs per component)."""
+    if isinstance(value, (tuple, list)) and len(value) == 3:
+        return (to_float(value[0]), to_float(value[1]), to_float(value[2]))
+    raise TypeError(f"Expected a 3-sequence of floats, got {type(value).__name__}")

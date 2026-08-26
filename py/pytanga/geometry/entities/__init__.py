@@ -27,15 +27,19 @@ from ._util import (
     register_analyzer,
 )
 from .arc import Arc
+from .box import Box
 from .circle import Circle, ImagCircle
 from .cylinder import Cylinder
 from .direction import Direction
+from .disk import Disk, PartialDisk
+from .ellipsoid import Ellipse, Ellipsoid
 from .hdirection import HDirection
 from .hpoint import HPoint
 from .line import Line
 from .plane import Plane
 from .point import Point
 from .point_pair import ImagPointPair, PointPair
+from .polygon import RegularPolygon, regular_polygon
 from .space import Space
 from .sphere import ImagSphere, Sphere
 
@@ -58,9 +62,13 @@ Entity = (
 
 __all__ = [
     "Arc",
+    "Box",
     "Circle",
     "Cylinder",
     "Direction",
+    "Disk",
+    "Ellipse",
+    "Ellipsoid",
     "Entity",
     "HDirection",
     "HPoint",
@@ -68,13 +76,16 @@ __all__ = [
     "ImagPointPair",
     "ImagSphere",
     "Line",
+    "PartialDisk",
     "Plane",
     "Point",
     "PointPair",
+    "RegularPolygon",
     "Space",
     "Sphere",
     "_is_mv",
     "register_analyzer",
+    "regular_polygon",
     "to_direction",
     "to_float",
     "to_point",

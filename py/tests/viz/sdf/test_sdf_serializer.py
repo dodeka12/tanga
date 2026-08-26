@@ -7,12 +7,18 @@ from __future__ import annotations
 
 import pytest
 from pytanga.geometry.entities import (
+    Box,
     Circle,
     Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
     Line,
+    PartialDisk,
     Plane,
     Point,
     PointPair,
+    RegularPolygon,
     Space,
     Sphere,
 )
@@ -78,6 +84,60 @@ def test_serialize_sphere_filled() -> None:
     assert tree["kind"] == "sphere"
     assert tree["params"]["radius"] == 2.5
     assert tree["transform"]["position"] == [1.0, 1.0, 1.0]
+
+
+def test_serialize_disk_capped_cylinder() -> None:
+    result = serialize_entity(Disk(Point(0, 0, 0), 2.0), "d")
+    assert result["sdfKind"] == "Disk"
+    tree = _tree_of(result)
+    assert tree["kind"] == "cappedCylinder"
+    assert tree["params"]["radius"] == 2.0
+
+
+def test_serialize_partial_disk() -> None:
+    import math
+
+    result = serialize_entity(
+        PartialDisk(Point(0, 0, 0), 1.0, angle=math.pi, start_direction=Direction(1, 0, 0)),
+        "pd",
+    )
+    assert result["sdfKind"] == "PartialDisk"
+    tree = _tree_of(result)
+    assert tree["kind"] == "partialDisk"
+    assert tree["params"]["angle"] == math.pi
+
+
+def test_serialize_box() -> None:
+    result = serialize_entity(Box(Point(0, 0, 0), (2.0, 3.0, 4.0)), "b")
+    assert result["sdfKind"] == "Box"
+    tree = _tree_of(result)
+    assert tree["kind"] == "box"
+    assert tree["params"]["halfExtents"] == [1.0, 1.5, 2.0]
+
+
+def test_serialize_ellipsoid() -> None:
+    result = serialize_entity(Ellipsoid(radii=(1.0, 0.5, 0.75)), "e")
+    assert result["sdfKind"] == "Ellipsoid"
+    tree = _tree_of(result)
+    assert tree["kind"] == "ellipsoid"
+    assert tree["params"]["radii"] == [1.0, 0.5, 0.75]
+
+
+def test_serialize_ellipse() -> None:
+    result = serialize_entity(Ellipse(radius_u=2.0, radius_v=1.0), "el")
+    assert result["sdfKind"] == "Ellipse"
+    tree = _tree_of(result)
+    assert tree["kind"] == "ellipsoid"
+    assert tree["params"]["radii"] == [2.0, 1.0, 0.01]
+
+
+def test_serialize_regular_polygon() -> None:
+    result = serialize_entity(RegularPolygon(radius=1.5, sides=6), "rp")
+    assert result["sdfKind"] == "RegularPolygon"
+    tree = _tree_of(result)
+    assert tree["kind"] == "regularPolygon"
+    assert tree["params"]["radius"] == 1.5
+    assert tree["params"]["sides"] == 6
 
 
 def test_serialize_point_pair_two_spheres_and_segment() -> None:

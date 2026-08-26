@@ -98,3 +98,40 @@ float sdTorus(vec3 p, vec2 t) {
     vec2 q = vec2(length(p.xz) - t.x, p.y);
     return length(q) - t.y;
 }
+
+// ── Partial disk / regular polygon ──────────────────────────
+
+const float SDF_PI = 3.141592653589793;
+
+// Capped sector (partial disk): a slab of half-height h and radius r, swept
+// over `angle` radians, symmetric about the local +Z axis in the XZ plane
+// (Y up).  This matches THREE.CylinderGeometry(thetaStart=-angle/2,
+// thetaLength=angle), whose theta=0 vertex sits on +Z.  Use for 0 < angle < 2π;
+// the full disk (2π) is a plain capped cylinder.
+float sdPartialDisk(vec3 p, float h, float r, float angle) {
+    float a = 0.5 * angle;
+    vec2 c = vec2(sin(a), cos(a));
+    vec2 q = p.xz;                       // q.x = p.x, q.y = p.z (IQ pie on +Y)
+    q.x = abs(q.x);
+    float l = length(q) - r;
+    float m = length(q - c * clamp(dot(q, c), 0.0, r));
+    float pie = max(l, sign(c.y * q.x - c.x * q.y) * m);
+    return max(abs(p.y) - h, pie);
+}
+
+// Regular n-gon slab: a slab of half-height h, circumradius r, n sides, with a
+// vertex on +Z (matching THREE.CylinderGeometry(radialSegments=n)).
+float sdRegularPolygon(vec3 p, float h, float r, float n) {
+    float an = SDF_PI / n;
+    vec2 acs = vec2(cos(an), sin(an));
+    // IQ's folding places the vertex on +X; rotate the XZ frame by -90° so the
+    // vertex lands on +Z.  Only the vertex axis is reflected (valid for all n).
+    vec2 q = vec2(p.z, -p.x);
+    q.y = abs(q.y);
+    float bn = mod(atan(q.y, q.x), 2.0 * an) - an;
+    q = length(q) * vec2(cos(bn), abs(sin(bn)));
+    q -= r * acs;
+    q.y += clamp(-q.y, 0.0, r * acs.y);
+    float d = length(q) * sign(q.x);
+    return max(abs(p.y) - h, d);
+}

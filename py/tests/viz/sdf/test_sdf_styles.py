@@ -7,11 +7,17 @@ from __future__ import annotations
 
 import pytest
 from pytanga.viz import (
+    SdfBoxStyle,
     SdfCircleStyle,
     SdfCylinderStyle,
+    SdfDiskStyle,
+    SdfEllipseStyle,
+    SdfEllipsoidStyle,
     SdfLineStyle,
+    SdfPartialDiskStyle,
     SdfPlaneStyle,
     SdfPointStyle,
+    SdfRegularPolygonStyle,
     SdfSphereStyle,
     SdfStyle,
 )
@@ -24,6 +30,12 @@ _STYLES = [
     (SdfPointStyle, "SdfPointStyle", {"size": 0.08}),
     (SdfCylinderStyle, "SdfCylinderStyle", {}),
     (SdfPlaneStyle, "SdfPlaneStyle", {}),
+    (SdfDiskStyle, "SdfDiskStyle", {"thickness": 0.02}),
+    (SdfPartialDiskStyle, "SdfPartialDiskStyle", {"thickness": 0.02}),
+    (SdfBoxStyle, "SdfBoxStyle", {}),
+    (SdfEllipsoidStyle, "SdfEllipsoidStyle", {}),
+    (SdfEllipseStyle, "SdfEllipseStyle", {"thickness": 0.02}),
+    (SdfRegularPolygonStyle, "SdfRegularPolygonStyle", {"thickness": 0.02}),
 ]
 
 
@@ -55,6 +67,12 @@ def test_registry_maps_entity_kinds() -> None:
         "Point": SdfPointStyle,
         "Cylinder": SdfCylinderStyle,
         "Plane": SdfPlaneStyle,
+        "Disk": SdfDiskStyle,
+        "PartialDisk": SdfPartialDiskStyle,
+        "Box": SdfBoxStyle,
+        "Ellipsoid": SdfEllipsoidStyle,
+        "Ellipse": SdfEllipseStyle,
+        "RegularPolygon": SdfRegularPolygonStyle,
     }
 
 
@@ -66,3 +84,12 @@ def test_derived_style_carries_color_and_opacity() -> None:
     d = SdfLineStyle(color="#ff0000", opacity=0.5).to_dict()
     assert d["color"] == "#ff0000"
     assert d["opacity"] == 0.5
+
+
+def test_antialias_knob_disabled_by_default() -> None:
+    # Edge AA is off by default (pending investigation of silhouette artifacts);
+    # it is opt-in via `SdfStyle(antialias=True)`.
+    assert SdfStyle().to_dict()["antialias"] is False
+    assert SdfStyle(antialias=True).to_dict()["antialias"] is True
+    # Derived styles inherit the knob through the shared to_dict().
+    assert SdfSphereStyle(antialias=True).to_dict()["antialias"] is True

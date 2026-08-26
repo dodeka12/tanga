@@ -35,6 +35,9 @@ class SdfStyle(VizStyle):
         bound_padding: Inflate the proxy AABB by this absolute amount so the
             marching volume always covers the surface (any over-estimate is
             safe; under-estimates clip the surface).
+        antialias: Enable the analytic ~1px silhouette edge fade in the
+            ray-marcher.  Disabled by default (the fade still has silhouette
+            artifacts under investigation); set ``True`` to opt in.
     """
 
     color: str | None = None
@@ -42,6 +45,7 @@ class SdfStyle(VizStyle):
     soft_shadows: bool = True
     max_steps: int = 256
     bound_padding: float = 0.05
+    antialias: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
@@ -49,6 +53,7 @@ class SdfStyle(VizStyle):
             "soft_shadows": self.soft_shadows,
             "max_steps": self.max_steps,
             "bound_padding": self.bound_padding,
+            "antialias": self.antialias,
         }
         if self.color is not None:
             result["color"] = self.color
@@ -124,6 +129,80 @@ class SdfPlaneStyle(SdfStyle):
     """SDF style for :class:`~pytanga.geometry.Plane` (no extra knobs)."""
 
 
+@dataclass
+class SdfDiskStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Disk`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF disk (a thin capped cylinder).
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SdfPartialDiskStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.PartialDisk`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF partial disk.
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SdfBoxStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Box` (no extra knobs)."""
+
+
+@dataclass
+class SdfEllipsoidStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Ellipsoid` (no extra knobs)."""
+
+
+@dataclass
+class SdfEllipseStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.Ellipse`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF ellipse (a thin ellipsoid).
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SdfRegularPolygonStyle(SdfStyle):
+    """SDF style for :class:`~pytanga.geometry.RegularPolygon`.
+
+    Attributes:
+        thickness: Slab thickness of the SDF regular polygon.
+    """
+
+    thickness: float = 0.02
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["thickness"] = self.thickness
+        return result
+
+
 #: Default per-entity SDF style class for a geometry entity kind. Used by
 #: ``_entity_to_sdf`` (Phase 3) to pick a sensible style when a raw entity is
 #: wrapped without an explicit style.
@@ -134,5 +213,11 @@ SDF_STYLE_BY_KIND: dict[str, type[SdfStyle]] = {
     "Point": SdfPointStyle,
     "Cylinder": SdfCylinderStyle,
     "Plane": SdfPlaneStyle,
+    "Disk": SdfDiskStyle,
+    "PartialDisk": SdfPartialDiskStyle,
+    "Box": SdfBoxStyle,
+    "Ellipsoid": SdfEllipsoidStyle,
+    "Ellipse": SdfEllipseStyle,
+    "RegularPolygon": SdfRegularPolygonStyle,
 }
 

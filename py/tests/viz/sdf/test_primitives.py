@@ -15,7 +15,9 @@ from pytanga.viz.sdf.primitives import (
     combine,
     ellipsoid,
     group,
+    partial_disk,
     primitive,
+    regular_polygon,
     sphere,
     torus,
 )
@@ -114,6 +116,36 @@ def test_position_accepts_direction() -> None:
 def test_rotation_accepts_rotor() -> None:
     node = capped_cylinder(
         1.5, 0.35, rotation=Rotor(math.pi / 2.0, Direction(0.0, 0.0, 1.0))
+    )
+    assert node.transform == {
+        "rotation": {"axis": [0.0, 0.0, 1.0], "angle": math.pi / 2.0}
+    }
+
+
+def test_partial_disk_serializes_params() -> None:
+    node = partial_disk(1.0, math.pi / 2.0, half_height=0.05)
+    assert node.to_dict() == {
+        "kind": "partialDisk",
+        "params": {"radius": 1.0, "halfHeight": 0.05, "angle": math.pi / 2.0},
+    }
+
+
+def test_partial_disk_position_plumbing() -> None:
+    node = partial_disk(1.0, math.pi, position=Point(1.0, 2.0, 3.0))
+    assert node.transform == {"position": [1.0, 2.0, 3.0]}
+
+
+def test_regular_polygon_serializes_params() -> None:
+    node = regular_polygon(1.0, 6, half_height=0.02)
+    assert node.to_dict() == {
+        "kind": "regularPolygon",
+        "params": {"radius": 1.0, "halfHeight": 0.02, "sides": 6},
+    }
+
+
+def test_regular_polygon_rotation_plumbing() -> None:
+    node = regular_polygon(
+        1.0, 6, rotation=Rotor(math.pi / 2.0, Direction(0.0, 0.0, 1.0))
     )
     assert node.transform == {
         "rotation": {"axis": [0.0, 0.0, 1.0], "angle": math.pi / 2.0}

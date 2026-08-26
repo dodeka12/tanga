@@ -103,3 +103,20 @@ def test_proxy_shading_helpers_present() -> None:
     body = _read(PROXY_FILE)
     for symbol in ("calcNormal", "softShadow", "shade"):
         assert f"{symbol}(" in body
+
+
+def test_proxy_has_edge_aa_fade() -> None:
+    # Analytic silhouette AA: the march tracks the closest-approach distance and
+    # fades the near-miss edge with a screen-space derivative + smoothstep.
+    body = _read(PROXY_FILE)
+    assert "dm.x < res" in body
+    assert "tRes = t;" in body
+    assert "dFdx(vLocalPos)" in body and "dFdy(vLocalPos)" in body
+    assert "smoothstep(" in body
+    assert "uAntialias" in body
+    # The near-miss path shades the closest-approach point (no bright flat halo)
+    # and still writes a (far) depth so the faint edge never occludes anything;
+    # the hit path writes the real hit depth.
+    assert "calcNormal(p0)" in body
+    assert "gl_FragDepth = 1.0;" in body
+    assert "gl_FragDepth = ndc * 0.5 + 0.5;" in body

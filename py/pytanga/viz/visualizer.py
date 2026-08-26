@@ -587,6 +587,15 @@ class Visualizer(_JupyterDisplayMixin):
                 object_id=entity_id,
             )
             self._attach_to_parent(scene, oid, parent_id)
+            self._add_label_for_entity(
+                scene,
+                entity,
+                oid,
+                label=label,
+                label_style=label_style,
+                attach_to=attach_to,
+                properties=properties,
+            )
             return oid
 
         eid = scene.add(entity, entity_id=entity_id, **properties)

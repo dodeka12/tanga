@@ -4,28 +4,50 @@
 """SdfObject element + geometry-entity → SdfNode conversion.
 
 An :class:`SdfObject` wraps a geometry entity (``Sphere``, ``Cylinder``, ``Line``,
-``Circle``, ``Plane``, ``Point``) plus an optional id and a per-entity SDF style,
-and lowers to a low-level :class:`~pytanga.viz.sdf.primitives.SdfNode` tree at
-construction time (never deep in the serializer).
+``Circle``, ``Plane``, ``Point``, ``Disk``, ``PartialDisk``, ``Box``,
+``Ellipsoid``, ``Ellipse``, ``RegularPolygon``) plus an optional id and a
+per-entity SDF style, and lowers to a low-level
+:class:`~pytanga.viz.sdf.primitives.SdfNode` tree at construction time (never
+deep in the serializer).
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any
 
-from pytanga.geometry.entities import Circle, Cylinder, Line, Plane, Point, Sphere
+from pytanga.geometry.entities import (
+    Box,
+    Circle,
+    Cylinder,
+    Disk,
+    Ellipse,
+    Ellipsoid,
+    Line,
+    PartialDisk,
+    Plane,
+    Point,
+    RegularPolygon,
+    Sphere,
+)
 
 from ._compose import ECompose, SdfElement
 from .primitives import (
     SdfNode,
+    _as_rotation,
+    _basis_rotation,
+    _normalize,
+    _rotate_about,
+    _rotation_align,
     box,
     capped_cylinder,
     combine,
+    ellipsoid,
+    partial_disk,
+    regular_polygon,
     sphere,
     torus,
-    _normalize,
-    _rotation_align,
 )
 from .._styles._sdf_style import SDF_STYLE_BY_KIND, SdfStyle
 
@@ -89,6 +111,18 @@ def _entity_to_sdf(entity: Any, style: SdfStyle | None = None) -> SdfNode:
         return _circle_node(entity, style)
     if isinstance(entity, Plane):
         return _plane_node(entity)
+    if isinstance(entity, Disk):
+        return _disk_node(entity, style)
+    if isinstance(entity, PartialDisk):
+        return _partial_disk_node(entity, style)
+    if isinstance(entity, Box):
+        return _box_node(entity)
+    if isinstance(entity, Ellipsoid):
+        return _ellipsoid_node(entity)
+    if isinstance(entity, Ellipse):
+        return _ellipse_node(entity, style)
+    if isinstance(entity, RegularPolygon):
+        return _regular_polygon_node(entity, style)
     if isinstance(entity, Point):
         size = _style_attr(style, "Point", "size", 0.08)
         return sphere(size, position=(entity.x, entity.y, entity.z))
@@ -168,3 +202,86 @@ def _plane_node(entity: Plane) -> SdfNode:
         normal = (0.0, 0.0, 1.0)
     rotation = _rotation_align((0.0, 0.0, 1.0), normal)
     return box((hu, hv, eps), position=_xyz(entity.point), rotation=rotation)
+
+
+def _disk_node(entity: Disk, style: SdfStyle | None) -> SdfNode:
+    thickness = _style_attr(style, "Disk", "thickness", 0.02)
+    normal = _normalize(_xyz(entity.normal))
+    if normal == (0.0, 0.0, 0.0):
+        normal = (0.0, 0.0, 1.0)
+    rotation = _rotation_align((0.0, 1.0, 0.0), normal)
+    return capped_cylinder(
+        thickness / 2.0,
+        float(entity.radius),
+        position=_xyz(entity.center),
+        rotation=rotation,
+    )
+
+
+def _partial_disk_node(entity: PartialDisk, style: SdfStyle | None) -> SdfNode:
+    thickness = _style_attr(style, "PartialDisk", "thickness", 0.02)
+    half = thickness / 2.0
+    radius = float(entity.radius)
+    angle = float(entity.angle)
+    normal = _normalize(_xyz(entity.normal))
+    if normal == (0.0, 0.0, 0.0):
+        normal = (0.0, 0.0, 1.0)
+    center = _xyz(entity.center)
+
+    # A full disk (angle >= 2π) is a plain capped cylinder.
+    if angle >= 2.0 * math.pi - 1e-9:
+        return capped_cylinder(half, radius, position=center, rotation=_rotation_align((0.0, 1.0, 0.0), normal))
+
+    start = _xyz(entity.start_direction)
+    bisector = _rotate_about(start, normal, angle / 2.0)
+    rotation = _basis_rotation(normal, bisector)
+    return partial_disk(radius, angle, half_height=half, position=center, rotation=rotation)
+
+
+def _box_node(entity: Box) -> SdfNode:
+    rotation = _as_rotation(entity.rotation) if entity.rotation is not None else None
+    half_extents = (entity.size[0] / 2.0, entity.size[1] / 2.0, entity.size[2] / 2.0)
+    return box(half_extents, position=_xyz(entity.center), rotation=rotation)
+
+
+def _ellipsoid_node(entity: Ellipsoid) -> SdfNode:
+    rotation = _as_rotation(entity.rotation) if entity.rotation is not None else None
+    return ellipsoid(entity.radii, position=_xyz(entity.center), rotation=rotation)
+
+
+def _ellipse_node(entity: Ellipse, style: SdfStyle | None) -> SdfNode:
+    thickness = _style_attr(style, "Ellipse", "thickness", 0.02)
+    normal = _normalize(_xyz(entity.normal))
+    if normal == (0.0, 0.0, 0.0):
+        normal = (0.0, 0.0, 1.0)
+    rotation = _rotation_align((0.0, 0.0, 1.0), normal)
+    return ellipsoid(
+        (entity.radius_u, entity.radius_v, thickness / 2.0),
+        position=_xyz(entity.center),
+        rotation=rotation,
+    )
+
+
+def _regular_polygon_node(entity: RegularPolygon, style: SdfStyle | None) -> SdfNode:
+    thickness = _style_attr(style, "RegularPolygon", "thickness", 0.02)
+    normal = _normalize(_xyz(entity.normal))
+    if normal == (0.0, 0.0, 0.0):
+        normal = (0.0, 0.0, 1.0)
+    # The primitive's first vertex sits on local +Z.  The mesh renderer first
+    # aligns +Y → normal (shortest arc, Q1) and then rotates by `angle` about
+    # the normal, so the vertex lands at Q1(sin(angle), 0, cos(angle)).  Reproduce
+    # that world direction (never `rotate(+Z, normal, angle)`, which collapses
+    # onto `normal` when `normal` is ±Z).
+    q1 = _rotation_align((0.0, 1.0, 0.0), normal)
+    local_vertex = (math.sin(entity.angle), 0.0, math.cos(entity.angle))
+    vertex_dir = (
+        _rotate_about(local_vertex, q1[0], q1[1]) if q1 is not None else local_vertex
+    )
+    rotation = _basis_rotation(normal, vertex_dir)
+    return regular_polygon(
+        float(entity.radius),
+        int(entity.sides),
+        half_height=thickness / 2.0,
+        position=_xyz(entity.center),
+        rotation=rotation,
+    )

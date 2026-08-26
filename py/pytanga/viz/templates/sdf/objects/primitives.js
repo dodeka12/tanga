@@ -36,6 +36,10 @@ export function emitPrimitive(node, p) {
             return `sdSegment(${p}, ${vec3(params.a)}, ${vec3(params.b)})`;
         case 'plane':
             return `sdPlane(${p}, ${vec3(params.normal)}, ${floatParam(params.offset)})`;
+        case 'partialDisk':
+            return `sdPartialDisk(${p}, ${floatParam(params.halfHeight)}, ${floatParam(params.radius)}, ${floatParam(params.angle)})`;
+        case 'regularPolygon':
+            return `sdRegularPolygon(${p}, ${floatParam(params.halfHeight)}, ${floatParam(params.radius)}, ${floatParam(params.sides)})`;
         default:
             throw new Error(`Unknown SDF primitive kind: ${node.kind}`);
     }

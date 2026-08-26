@@ -10,6 +10,12 @@ import { createArc, updateArc } from './arc.js';
 import { createCircle } from './circle.js';
 import { createCylinder, updateCylinder } from './cylinder.js';
 import { createSphere } from './sphere.js';
+import { createDisk } from './disk.js';
+import { createPartialDisk } from './partial_disk.js';
+import { createBox } from './box.js';
+import { createEllipsoid } from './ellipsoid.js';
+import { createEllipse } from './ellipse.js';
+import { createRegularPolygon } from './regular_polygon.js';
 import { createSpace } from './space.js';
 import { createPointPair } from './operators/point_pair.js';
 import { createInversion } from './operators/inversion.js';
@@ -67,6 +73,24 @@ export async function createEntityMesh(ent) {
             break;
         case 'Cylinder':
             mesh = createCylinder(ent);
+            break;
+        case 'Disk':
+            mesh = createDisk(ent);
+            break;
+        case 'PartialDisk':
+            mesh = createPartialDisk(ent);
+            break;
+        case 'Box':
+            mesh = createBox(ent);
+            break;
+        case 'Ellipsoid':
+            mesh = createEllipsoid(ent);
+            break;
+        case 'Ellipse':
+            mesh = createEllipse(ent);
+            break;
+        case 'RegularPolygon':
+            mesh = createRegularPolygon(ent);
             break;
         case 'Space':
             mesh = createSpace(ent);

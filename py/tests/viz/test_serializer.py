@@ -9,14 +9,20 @@ import math
 import pytest
 from pytanga.geometry.entities import (
     Arc,
+    Box,
     Circle,
     Cylinder,
     Direction,
+    Disk,
+    Ellipse,
+    Ellipsoid,
     HPoint,
     Line,
+    PartialDisk,
     Plane,
     Point,
     PointPair,
+    RegularPolygon,
     Space,
     Sphere,
 )
@@ -452,6 +458,76 @@ class TestStyleOverrides:
 
         d = _serialize(Arc(), {"style": ArcStyle(color="#00ff00")})
         assert d["style"]["color"] == "#00ff00"
+
+    def test_disk(self):
+        d = _serialize(Disk(Point(1, 2, 3), 2.0, Direction(0, 1, 0)))
+        assert d["kind"] == "Disk"
+        assert d["center"] == [1, 2, 3]
+        assert d["radius"] == 2.0
+        assert d["normal"] == [0, 1, 0]
+        assert d["style"]["style_type"] == "DiskStyle"
+        assert d["style"]["thickness"] == 0.02
+
+    def test_partial_disk(self):
+        d = _serialize(PartialDisk(angle=math.pi, start_direction=Direction(1, 0, 0)))
+        assert d["kind"] == "PartialDisk"
+        assert d["center"] == [0, 0, 0]
+        assert d["radius"] == 1.0
+        assert d["angle"] == pytest.approx(math.pi)
+        assert d["startDirection"] == [1.0, 0.0, 0.0]
+        assert d["normal"] == [0, 0, 1]
+        assert d["style"]["style_type"] == "PartialDiskStyle"
+        assert d["style"]["thickness"] == 0.02
+
+    def test_partial_disk_auto_start_direction(self):
+        d = _serialize(PartialDisk())
+        start = d["startDirection"]
+        assert len(start) == 3
+        assert sum(c * c for c in start) == pytest.approx(1.0)
+        assert start[2] == pytest.approx(0.0)  # perpendicular to +z
+
+    def test_box(self):
+        d = _serialize(Box(Point(1, 2, 3), (2, 3, 4)))
+        assert d["kind"] == "Box"
+        assert d["center"] == [1, 2, 3]
+        assert d["size"] == [2, 3, 4]
+        assert d["rotation"] is None
+        assert d["style"]["style_type"] == "BoxStyle"
+
+    def test_box_rotation_to_euler(self):
+        d = _serialize(Box(rotation=Rotor(math.pi / 2, Direction(0, 0, 1))))
+        assert d["rotation"] is not None
+        assert len(d["rotation"]) == 3
+        assert d["rotation"][2] == pytest.approx(math.pi / 2)
+
+    def test_ellipsoid(self):
+        d = _serialize(Ellipsoid(radii=(1, 0.5, 0.75)))
+        assert d["kind"] == "Ellipsoid"
+        assert d["center"] == [0, 0, 0]
+        assert d["radii"] == [1, 0.5, 0.75]
+        assert d["rotation"] is None
+        assert d["style"]["style_type"] == "EllipsoidStyle"
+
+    def test_ellipse(self):
+        d = _serialize(Ellipse(radius_u=2.0, radius_v=1.0, normal=Direction(0, 1, 0)))
+        assert d["kind"] == "Ellipse"
+        assert d["center"] == [0, 0, 0]
+        assert d["radiusU"] == 2.0
+        assert d["radiusV"] == 1.0
+        assert d["normal"] == [0, 1, 0]
+        assert d["style"]["style_type"] == "EllipseStyle"
+        assert d["style"]["thickness"] == 0.02
+
+    def test_regular_polygon(self):
+        d = _serialize(RegularPolygon(radius=1.5, sides=6))
+        assert d["kind"] == "RegularPolygon"
+        assert d["center"] == [0, 0, 0]
+        assert d["radius"] == 1.5
+        assert d["sides"] == 6
+        assert d["normal"] == [0, 0, 1]
+        assert d["angle"] == 0.0
+        assert d["style"]["style_type"] == "RegularPolygonStyle"
+        assert d["style"]["thickness"] == 0.02
 
     def test_unknown_type_raises(self):
         with pytest.raises(TypeError, match="Unknown entity type"):
