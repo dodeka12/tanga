@@ -20,6 +20,7 @@ All active elements inherit from `ActSceneObject` and share:
 | Custom handler | Optional callback invoked before default movement; returns `bool` to signal full handling |
 | Standard drag triggers | View-plane, XY, XZ, YZ with Shift/Ctrl modifiers (left mouse button) |
 | Self-contained flush | Default handler calls `update()` + `flush()` after moving |
+| Labels | `viz.add(ap, label=...)` creates an attached label, removed together with the entity |
 
 ## Usage Pattern
 
@@ -31,8 +32,8 @@ from pytanga.geometry import Point
 viz = Visualizer()
 
 # Without custom handler — just drag the point:
-ap = ActPoint(Point(1, 2, 3), color="#ff4444")
-viz.add(ap)
+ap = ActPoint(Point(1, 2, 3))
+viz.add(ap, color="#ff4444")
 
 # With custom handler — update other entities on every drag:
 async def on_move(event, ap):
@@ -41,7 +42,7 @@ async def on_move(event, ap):
     # ap.viz_handle gives access to the scene for updates
     return False  # let ActPoint move the point and flush
 
-ap = ActPoint(Point(0, 0, 2), custom_handler=on_move)
+ap = ActPoint(Point(0, 0, 2), handler=on_move)
 viz.add(ap)
 
 viz.run()
@@ -58,6 +59,26 @@ ActHandler = Callable[[DragEvent, ActSceneObject], Awaitable[bool]]
 | `True` | Fully handled — no default movement, no automatic flush (handler is responsible) |
 | `False` | Default behaviour runs: entity is moved to `event.world_position`, `update()` + `flush()` are called |
 
+## Drag Lifecycle Handlers
+
+In addition to the move-phase `handler`, an active element accepts two
+notification callbacks for the start and end of a drag:
+
+```python
+ActEventHandler = Callable[[DragEvent, ActSceneObject], Awaitable[None]]
+
+ap = ActPoint(
+    Point(0, 0, 2),
+    handler=on_move,
+    on_drag_start=on_start,   # called on DRAG_START
+    on_drag_end=on_end,       # called on DRAG_END
+)
+```
+
+`on_drag_start` / `on_drag_end` receive the same `(event, ap)` arguments as the
+move handler, but their return value is ignored — they observe the drag
+lifecycle and never override the default movement.
+
 ## Writing Custom Active Elements
 
 Subclass `ActSceneObject` and implement three properties:
@@ -68,8 +89,12 @@ from pytanga.viz._interaction import InteractionConfig, MouseButton
 from pytanga.geometry import Sphere, Point
 
 class ActSphere(ActSceneObject):
-    def __init__(self, sphere, *, custom_handler=None):
-        super().__init__(custom_handler=custom_handler)
+    def __init__(self, sphere, *, handler=None, on_drag_start=None, on_drag_end=None):
+        super().__init__(
+            handler=handler,
+            on_drag_start=on_drag_start,
+            on_drag_end=on_drag_end,
+        )
         self._sphere = sphere
 
     @property

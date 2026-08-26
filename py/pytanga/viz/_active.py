@@ -50,8 +50,18 @@ return ``True`` if it fully handled the event (including flush), or
 ``False`` to let the default behaviour run (move & flush).
 """
 
+ActEventHandler = Callable[[DragEvent, "ActSceneObject"], Awaitable[None]]
+"""Notification handler signature for active scene objects.
+
+Receives the drag event and the :class:`ActSceneObject` instance for the
+``DRAG_START`` and ``DRAG_END`` phases.  The return value is ignored —
+these handlers observe the drag lifecycle and never override the default
+movement behaviour.
+"""
+
 
 # ── Default trigger helpers ─────────────────────────────────────
+
 
 def _default_drag_triggers(button: MouseButton) -> list[InteractionTrigger]:
     """Standard four drag-mode triggers for a single mouse button.
@@ -117,8 +127,16 @@ class ActSceneObject:
 
     # ── Managed state ──────────────────────────────────────
 
-    def __init__(self, *, handler: ActHandler | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        handler: ActHandler | None = None,
+        on_drag_start: ActEventHandler | None = None,
+        on_drag_end: ActEventHandler | None = None,
+    ) -> None:
         self._handler: ActHandler | None = handler
+        self._on_drag_start: ActEventHandler | None = on_drag_start
+        self._on_drag_end: ActEventHandler | None = on_drag_end
         self._viz_handle: VizSceneHandle | None = None
         self._entity_id: str = ""
 
@@ -139,9 +157,10 @@ class ActSceneObject:
     def _register_interaction(self) -> None:
         """Register interaction config and handlers with the scene.
 
-        Iterates over :attr:`interaction_config.triggers` and registers
-        a handler for ``DRAG_MOVE`` (the per-frame event).  Calls
-        :meth:`_on_drag` for each drag-move event.
+        Registers a handler for ``DRAG_MOVE`` (the per-frame event), which
+        calls :meth:`_on_drag`.  When ``on_drag_start`` / ``on_drag_end``
+        handlers were supplied, they are additionally registered for
+        ``DRAG_START`` / ``DRAG_END``.
         """
         if self._viz_handle is None:
             return
@@ -150,6 +169,18 @@ class ActSceneObject:
         self._viz_handle.on_interaction(
             self._entity_id, InteractionEventType.DRAG_MOVE, self._on_drag
         )
+        if self._on_drag_start is not None:
+            self._viz_handle.on_interaction(
+                self._entity_id,
+                InteractionEventType.DRAG_START,
+                self._on_drag_start_event,
+            )
+        if self._on_drag_end is not None:
+            self._viz_handle.on_interaction(
+                self._entity_id,
+                InteractionEventType.DRAG_END,
+                self._on_drag_end_event,
+            )
 
     # ── Default drag handler ───────────────────────────────
 
@@ -172,6 +203,16 @@ class ActSceneObject:
         self._move_to(event.world_position)
         self.update()
         self.flush()
+
+    async def _on_drag_start_event(self, event: DragEvent) -> None:
+        """Dispatch a ``DRAG_START`` event to the user handler, if any."""
+        if self._on_drag_start is not None:
+            await self._on_drag_start(event, self)
+
+    async def _on_drag_end_event(self, event: DragEvent) -> None:
+        """Dispatch a ``DRAG_END`` event to the user handler, if any."""
+        if self._on_drag_end is not None:
+            await self._on_drag_end(event, self)
 
     def _move_to(self, pos: Point) -> None:
         """Update the internal position.  Override in subclasses."""
@@ -228,6 +269,16 @@ class ActPoint(ActSceneObject):
             Return ``True`` to fully handle the event (no default
             movement or flush), or ``False`` to let ``ActPoint`` move
             the point and flush.
+        on_drag_start: Optional async callback invoked when a drag
+            begins.  Signature:
+            ``async def on_drag_start(event: DragEvent, ap: ActPoint) -> None``.
+            The return value is ignored; this observes the start of the
+            drag and does not override default movement.
+        on_drag_end: Optional async callback invoked when a drag ends.
+            Signature:
+            ``async def on_drag_end(event: DragEvent, ap: ActPoint) -> None``.
+            The return value is ignored; this observes the end of the
+            drag and does not override default movement.
     """
 
     def __init__(
@@ -238,8 +289,14 @@ class ActPoint(ActSceneObject):
         *,
         act_style: ActPointStyle | None = None,
         handler: ActHandler | None = None,
+        on_drag_start: ActEventHandler | None = None,
+        on_drag_end: ActEventHandler | None = None,
     ) -> None:
-        super().__init__(handler=handler)
+        super().__init__(
+            handler=handler,
+            on_drag_start=on_drag_start,
+            on_drag_end=on_drag_end,
+        )
         if isinstance(x, Point):
             self._point = x
         else:

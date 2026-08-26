@@ -14,7 +14,7 @@ import { handleControlsDefine, handleControlsClear } from '../controls-panel.js'
 import { attachGroup, detachGroup, detachAll } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate } from '../renderers/utils.js';
-import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setSpaceDim } from '../interaction.js';
+import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setSpaceDim, setCamera } from '../interaction.js';
 
 // ── WebGL1 SDF fallback warning banner ──────────────────────
 // SDF proxies need GLSL3 + `gl_FragDepth` (WebGL2). On WebGL1 those objects
@@ -298,6 +298,7 @@ export class ThreeJsView extends View {
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
 
         this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null);
+        setCamera(this.camera);
 
         const cc = cameraConfig || {};
         if (cc.position) this.camera.position.set(cc.position[0], cc.position[1], cc.position[2]);

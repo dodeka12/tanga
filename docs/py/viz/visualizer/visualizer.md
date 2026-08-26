@@ -278,9 +278,13 @@ viz.update_entity(entity_id, Point(new_x, new_y, new_z))
 # Label text / style without repositioning
 viz.update_label(label_id, text="new text", style=LabelStyle(font_size=18))
 
-# Remove entities
+# Remove entities — attached labels are removed together with their entity
 viz.remove(entity_id)
-viz.clear()  # remove all (main scene)
+
+# Remove all entities (main scene).  By default the scene is left empty;
+# pass add_axes / add_grid to re-add the default axes / grid afterward.
+viz.clear()
+viz.clear(add_axes=True, add_grid=True)
 ```
 
 ## Server Lifecycle

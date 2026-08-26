@@ -79,8 +79,22 @@ async def main() -> None:
         _update_lines(p)
         return False  # let ActPoint do the default move + flush
 
+    # Lifecycle handlers: observe the start and end of a drag.
+    async def on_point_drag_start(event, ap):
+        print(f"Drag started at {ap.point}")
+
+    async def on_point_drag_end(event, ap):
+        print(f"Drag ended at {ap.point}")
+
     # Create the interactive point — style is set via viz.new().
-    ap = ActPoint(1, 1, 1, handler=on_point_drag)
+    ap = ActPoint(
+        1,
+        1,
+        1,
+        handler=on_point_drag,
+        on_drag_start=on_point_drag_start,
+        on_drag_end=on_point_drag_end,
+    )
     viz.new(ap, color="#ff4444")
 
     # Initial projection lines

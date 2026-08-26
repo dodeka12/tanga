@@ -191,9 +191,20 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Remove an entity from this scene."""
         self._scene().remove(entity_id)
 
-    def clear(self) -> None:
-        """Remove all entities from this scene."""
+    def clear(self, *, add_axes: bool = False, add_grid: bool = False) -> None:
+        """Remove all entities from this scene.
+
+        By default the scene is left empty.  Set ``add_axes`` / ``add_grid``
+        to ``True`` to re-add the default coordinate axes / grid afterward
+        (subject to the visualizer's ``add_default_axes`` / ``add_default_grid``
+        constructor flags).
+        """
         self._scene().clear()
+        if add_axes or add_grid:
+            self._viz._default_objects_added.discard(self._name)
+            self._viz._add_default_scene_objects(
+                self._name, add_axes=add_axes, add_grid=add_grid
+            )
 
     def __enter__(self) -> "VizSceneHandle":
         """Reset this scene and show it immediately on entry."""

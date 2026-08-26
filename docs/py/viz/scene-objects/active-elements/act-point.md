@@ -12,8 +12,8 @@ from pytanga.viz._active import ActPoint
 from pytanga.geometry import Point
 
 viz = Visualizer()
-ap = ActPoint(Point(0, 0, 2), color="#ff4444")
-viz.add(ap)
+ap = ActPoint(Point(0, 0, 2))
+viz.add(ap, color="#ff4444")
 viz.run()
 ```
 
@@ -31,22 +31,42 @@ the drag constraint plane:
 
 ```python
 ActPoint(
-    point: Point,
+    x: float | Point,
+    y: float = 0.0,
+    z: float = 0.0,
     *,
-    color: str | None = None,
-    size: float | None = None,
-    opacity: float | None = None,
-    custom_handler: ActHandler | None = None,
+    act_style: ActPointStyle | None = None,
+    handler: ActHandler | None = None,
+    on_drag_start: ActEventHandler | None = None,
+    on_drag_end: ActEventHandler | None = None,
 )
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `point` | `Point` | *(required)* | Initial position |
-| `color` | `str \| None` | `None` | CSS colour string (e.g. `"#ff4444"`). Override with `viz.default_styles["Point"].color` |
-| `size` | `float \| None` | `None` | Point size in world units. Override with `viz.default_styles["Point"].size` |
-| `opacity` | `float \| None` | `None` | Opacity (0–1). Override with `viz.default_styles["Point"].opacity` |
-| `custom_handler` | `ActHandler \| None` | `None` | Optional async callback invoked before the default point movement |
+| `x` | `float \| Point` | *(required)* | X coordinate, or a `Point` instance (then `y`/`z` are ignored) |
+| `y` | `float` | `0.0` | Y coordinate |
+| `z` | `float` | `0.0` | Z coordinate |
+| `act_style` | `ActPointStyle \| None` | `None` | Hover highlighting / interactive feedback |
+| `handler` | `ActHandler \| None` | `None` | Move-phase callback invoked before the default movement |
+| `on_drag_start` | `ActEventHandler \| None` | `None` | Callback invoked when a drag starts |
+| `on_drag_end` | `ActEventHandler \| None` | `None` | Callback invoked when a drag ends |
+
+The point's visual style (colour, size, opacity) and an optional text `label`
+are set via `viz.add(ap, color=..., style=..., label=...)`, not on the
+constructor.
+
+## Labels
+
+Pass `label=` to `viz.add()` to attach a text label to the point, just like
+any other entity (supporting `label_style`, `attach_to`, and `parent_id`):
+
+```python
+ap = ActPoint(Point(0, 0, 2))
+eid = viz.add(ap, color="#ff4444", label="P")
+```
+
+Removing the point also removes its attached label.
 
 ## Custom Handler
 
@@ -65,8 +85,33 @@ async def my_handler(event, ap):
     return False   # let ActPoint move the point and flush
     # return True  # fully handled; no default move, no automatic flush
 
-ap = ActPoint(Point(0, 0, 2), custom_handler=my_handler)
+ap = ActPoint(Point(0, 0, 2), handler=my_handler)
 ```
+
+## Drag Lifecycle Handlers
+
+The `handler` callback runs on every drag **move**. To observe the start and
+end of a drag, pass `on_drag_start` and/or `on_drag_end`:
+
+```python
+async def on_start(event, ap):
+    # Drag began — e.g. remember the initial position or highlight the point.
+
+async def on_end(event, ap):
+    # Drag finished — e.g. commit the final position or clear the highlight.
+
+ap = ActPoint(
+    Point(0, 0, 2),
+    handler=my_handler,
+    on_drag_start=on_start,
+    on_drag_end=on_end,
+)
+```
+
+These lifecycle handlers receive the same `(event, ap)` arguments as the move
+handler, but their return value is ignored — they are pure notifications and
+never override the default movement. `event.event_type` is
+`InteractionEventType.DRAG_START` / `DRAG_END` respectively.
 
 ## Properties
 

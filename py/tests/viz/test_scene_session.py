@@ -270,6 +270,17 @@ class TestScene:
         dirty, removed = s.flush()
         assert eid in removed
 
+    def test_remove_also_removes_attached_labels(self):
+        from pytanga.viz._label import Label
+
+        s = Scene()
+        eid = s.add(Point(0, 0, 0))
+        lid = s.add_label(Label(text="p", position=(0, 0, 0), parent_id=eid))
+        s.remove(eid)
+        _, removed = s.flush()
+        assert eid in removed
+        assert lid in removed
+
     def test_clear_then_flush(self):
         s = Scene()
         s.add(Point(0, 0, 0))
@@ -859,6 +870,27 @@ class TestVisualizer:
         assert viz._scene.entity_count == 2  # until flush
         viz._scene.flush()
         assert viz._scene.entity_count == 0
+
+    def test_clear_readds_grid(self):
+        viz = Visualizer()
+        viz.clear()
+        viz._scene.flush()
+        assert viz._scene.entity_count == 0
+        viz.clear(add_grid=True)
+        viz._scene.flush()
+        kinds = {o["kind"] for o in viz._scene.full_state()}
+        assert "Grid" in kinds
+        assert "Axes3D" not in kinds
+
+    def test_clear_readds_axes_and_grid(self):
+        viz = Visualizer()
+        viz.clear()
+        viz._scene.flush()
+        viz.clear(add_axes=True, add_grid=True)
+        viz._scene.flush()
+        kinds = {o["kind"] for o in viz._scene.full_state()}
+        assert "Grid" in kinds
+        assert "Axes3D" in kinds
 
     def test_server_methods_exist(self):
         """start/stop/flush/run are callable (server lifecycle)."""
