@@ -47,7 +47,7 @@ manual `__init__` using `object.__setattr__`). All are exported from
     `0.5`), `normal: Direction` (default `+z`). Filled 2D ellipse.
   - Coerce via `to_point` / `to_float` / `to_direction`.
 
-- [ ] **1.4 — `polygon.py`**
+- [x] **1.4 — `polygon.py`**
   - `RegularPolygon(center=None, radius=None, sides=None, normal=None,
     angle=None)` → `center: Point`, `radius: float` (circumradius, default
     `1.0`), `sides: int` (default `6`, validated `>= 3`), `normal: Direction`
