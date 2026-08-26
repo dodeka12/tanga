@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.6.0] — 2026-08-26
+- Extra visualization-only geometry entities (`Disk`/`PartialDisk`/`Box`/`Ellipsoid`/`Ellipse`/`RegularPolygon`) · mesh + SDF style classes and Three.js renderers · new `partialDisk`/`regularPolygon` SDF primitives · analytic SDF silhouette edge anti-aliasing (`SdfStyle.antialias`, off by default)
+→ [Details](2026-08-26_c798944f.md)
+
 ## [Since 1.5.0] — 2026-08-26
 - Awaitable flush (`flush_async`) + blocking `flush(wait=True)` · banners/dialogs (`show_banner`/`alert`/`confirm`, modal + per-scene) · compute offload to the user loop (`submit_user`/`run_user`) · slider `on_press`/`on_release` · file chooser with a backend-driven file browser
 → [Details](2026-08-26_d870e5be.md)
