@@ -118,6 +118,13 @@ def _primitive_box(node: SdfNode) -> tuple[list[float], list[float]] | None:
         hh = float(p["halfHeight"])
         r = float(p["radius"])
         return ([-r, -hh, -r], [r, hh, r])
+    if kind in ("partialDisk", "regularPolygon"):
+        # Both are slabs of circumradius `radius` and half-height `halfHeight`
+        # lying in the XZ plane; the full circumscribed disk is a conservative
+        # (and angle-independent) bound.
+        hh = float(p["halfHeight"])
+        r = float(p["radius"])
+        return ([-r, -hh, -r], [r, hh, r])
     if kind == "cappedCone":
         hh = float(p["halfHeight"])
         r = max(float(p["radius1"]), float(p["radius2"]))

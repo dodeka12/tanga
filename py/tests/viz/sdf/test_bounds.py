@@ -12,6 +12,8 @@ from pytanga.viz.sdf.primitives import (
     bound_box,
     box,
     combine,
+    partial_disk,
+    regular_polygon,
     sphere,
     torus,
 )
@@ -75,3 +77,15 @@ def test_transformed_sphere_bounds() -> None:
     b = compute_bounds(sphere(1.0, position=(3.0, 0.0, 0.0)))
     assert b["min"] == pytest.approx([2.0, -1.0, -1.0])
     assert b["max"] == pytest.approx([4.0, 1.0, 1.0])
+
+
+def test_partial_disk_bounds() -> None:
+    b = compute_bounds(partial_disk(2.0, half_height=0.5))
+    assert b["min"] == pytest.approx([-2.0, -0.5, -2.0])
+    assert b["max"] == pytest.approx([2.0, 0.5, 2.0])
+
+
+def test_regular_polygon_bounds() -> None:
+    b = compute_bounds(regular_polygon(1.5, 6, half_height=0.25))
+    assert b["min"] == pytest.approx([-1.5, -0.25, -1.5])
+    assert b["max"] == pytest.approx([1.5, 0.25, 1.5])
