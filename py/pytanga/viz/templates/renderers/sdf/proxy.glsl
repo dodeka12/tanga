@@ -111,6 +111,10 @@ void main() {
         t += dm.x;
         if (t > tFar) break;
     }
+    // One-pixel silhouette edge scale: how far `t` moves across a screen pixel.
+    // Euclidean derivative matches the AA'd overlays in sdf/overlays/factory.js.
+    float edgePx = length(vec2(dFdx(t), dFdy(t)));
+    float aa = 1.0 - smoothstep(0.0, max(edgePx, 1e-6), res);
     if (!hit) discard;
 
     vec3 p = ro + rd * t;

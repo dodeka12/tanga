@@ -20,7 +20,7 @@ ray passes the surface by during the march.
     came to the surface — `0` for a grazing (silhouette) ray, larger for a
     clear miss.
 
-- [ ] **1.2 — Compute the one-pixel edge scale**
+- [x] **1.2 — Compute the one-pixel edge scale**
   - After the loop (before the `if (!hit) discard;`), compute:
     ```glsl
     float edgePx = length(vec2(dFdx(t), dFdy(t)));
