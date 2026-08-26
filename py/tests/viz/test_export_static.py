@@ -6,7 +6,17 @@
 from pathlib import Path
 
 import pytanga.viz
-from pytanga.geometry.entities import Arc, Cylinder, Point
+from pytanga.geometry.entities import (
+    Arc,
+    Box,
+    Cylinder,
+    Disk,
+    Ellipse,
+    Ellipsoid,
+    PartialDisk,
+    Point,
+    RegularPolygon,
+)
 from pytanga.viz.export._figure_html import render_figure
 from pytanga.viz.export._html import render_snapshot
 from pytanga.viz.scene import Scene
@@ -47,9 +57,21 @@ class TestExportStatic:
         s = Scene()
         s.add(Cylinder())
         s.add(Arc())
+        s.add(Disk())
+        s.add(PartialDisk())
+        s.add(Box())
+        s.add(Ellipsoid())
+        s.add(Ellipse())
+        s.add(RegularPolygon())
         html = render_snapshot(s.full_state(), s.config.to_dict())
         assert "function createCylinder(" in html
         assert "function createArc(" in html
+        assert "function createDisk(" in html
+        assert "function createPartialDisk(" in html
+        assert "function createBox(" in html
+        assert "function createEllipsoid(" in html
+        assert "function createEllipse(" in html
+        assert "function createRegularPolygon(" in html
 
     def test_figure_html_generation(self):
         s = _group_scene()
