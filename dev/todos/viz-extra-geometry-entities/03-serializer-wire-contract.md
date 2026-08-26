@@ -46,7 +46,7 @@ Python-side so the frontend always receives concrete values.
   - Emit `kind`, `center`, `radius`, `sides`, `normal`, `angle` + thickness
     defaults.
 
-- [ ] **3.9 — Unit tests**
+- [x] **3.9 — Unit tests**
   - Serialize each entity and assert the exact flat JSON shape (content fields +
     merged `style.style_type` / `thickness` where applicable).
   - `Box`/`Ellipsoid` with a `Rotor` serialize to an Euler `rotation` triple;
@@ -54,7 +54,7 @@ Python-side so the frontend always receives concrete values.
   - `PartialDisk` without `start_direction` serializes a normalized vector ⊥
     `normal`.
 
-- [ ] **3.10 — Validate**
+- [x] **3.10 — Validate**
   - `uv run pytest py/tests/viz/test_serializer.py -q`.
 
 ## Validation
