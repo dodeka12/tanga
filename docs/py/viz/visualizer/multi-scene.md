@@ -182,7 +182,7 @@ async def on_scene_change(selected_scene, event):
 viz.add_dropdown(
     "scene_selector",
     options=["overview", "detail"],
-    default="overview",
+    value="overview",
     on_change=on_scene_change,
 )
 viz.flush()

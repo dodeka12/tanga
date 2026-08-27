@@ -19,6 +19,7 @@ from pytanga.viz.views import (
     StackView,
     TextAreaView,
     TextFieldView,
+    ValueEditView,
     View,
     iter_scene_names,
     serialize_layout,
@@ -96,7 +97,9 @@ class TestSceneView:
         from pytanga.viz.camera import CameraConfig3d
 
         node = serialize_layout(
-            SceneView("main", camera=CameraConfig3d(position=(1, 2, 3), target=(0, 0, 0)))
+            SceneView(
+                "main", camera=CameraConfig3d(position=(1, 2, 3), target=(0, 0, 0))
+            )
         )["root"]
         assert node["camera"]["type"] == "3d"
         assert node["camera"]["position"] == [1.0, 2.0, 3.0]
@@ -107,7 +110,9 @@ class TestSceneView:
 
         v = SceneView(
             "main",
-            camera=View3dConfig(point=(0, 0, 0), normal=(0, 0, 1), extent_u=2, extent_v=2),
+            camera=View3dConfig(
+                point=(0, 0, 0), normal=(0, 0, 1), extent_u=2, extent_v=2
+            ),
         )
         assert v.camera.type == "3d"
         assert v.camera.position is not None
@@ -165,7 +170,7 @@ class TestGroupView:
 
 class TestControlViews:
     def test_slider_serialize(self):
-        s = SliderView("s1", label="Radius", min=0.0, max=5.0, step=0.1, default=2.0)
+        s = SliderView("s1", label="Radius", min=0.0, max=5.0, step=0.1, value=2.0)
         node = serialize_layout(s)["root"]
         assert node["type"] == "slider_view"
         assert node["id"] == "s1"
@@ -173,10 +178,10 @@ class TestControlViews:
         assert node["min"] == 0.0
         assert node["max"] == 5.0
         assert node["step"] == 0.1
-        assert node["default"] == 2.0
+        assert node["value"] == 2.0
 
-    def test_slider_default_defaults_to_min(self):
-        assert SliderView("s1", min=1.0, max=3.0).default == 1.0
+    def test_slider_value_defaults_to_min(self):
+        assert SliderView("s1", min=1.0, max=3.0).value == 1.0
 
     def test_button_serialize(self):
         node = serialize_layout(ButtonView("b1", label="Go"))["root"]
@@ -186,11 +191,11 @@ class TestControlViews:
 
     def test_dropdown_serialize(self):
         node = serialize_layout(
-            DropdownView("d1", label="Mode", options=["a", "b"], default="a")
+            DropdownView("d1", label="Mode", options=["a", "b"], value="a")
         )["root"]
         assert node["type"] == "dropdown_view"
         assert node["options"] == ["a", "b"]
-        assert node["default"] == "a"
+        assert node["value"] == "a"
 
     def test_button_serialize_with_icon(self):
         node = serialize_layout(
@@ -216,18 +221,33 @@ class TestControlViews:
         assert node["rows"] == 6
 
     def test_color_picker_serialize(self):
-        node = serialize_layout(
-            ColorPickerView("c1", label="Color", default="#ff0000")
-        )["root"]
+        node = serialize_layout(ColorPickerView("c1", label="Color", value="#ff0000"))[
+            "root"
+        ]
         assert node["type"] == "color_picker_view"
-        assert node["default"] == "#ff0000"
+        assert node["value"] == "#ff0000"
 
     def test_checkbox_serialize(self):
-        node = serialize_layout(
-            CheckboxView("cb1", label="Wireframe", default=True)
-        )["root"]
+        node = serialize_layout(CheckboxView("cb1", label="Wireframe", value=True))[
+            "root"
+        ]
         assert node["type"] == "checkbox_view"
-        assert node["default"] is True
+        assert node["value"] is True
+
+    def test_value_edit_serialize(self):
+        node = serialize_layout(
+            ValueEditView(
+                "v1", label="Zoom", min=0.5, max=4.0, step=0.25, digits=2, value=1.5
+            )
+        )["root"]
+        assert node["type"] == "value_edit_view"
+        assert node["id"] == "v1"
+        assert node["min"] == 0.5
+        assert node["max"] == 4.0
+        assert node["step"] == 0.25
+        assert node["digits"] == 2
+        assert node["value"] == 1.5
+        assert node["editable"] is True
 
     def test_control_tooltip_serialize(self):
         node = serialize_layout(SliderView("s1", tooltip="hover"))["root"]
@@ -243,9 +263,9 @@ class TestStackView:
         assert StackView("vertical").children == []
 
     def test_serialize(self):
-        node = serialize_layout(
-            StackView("horizontal", [SpacerView(), SpacerView()])
-        )["root"]
+        node = serialize_layout(StackView("horizontal", [SpacerView(), SpacerView()]))[
+            "root"
+        ]
         assert node["type"] == "stack"
         assert node["direction"] == "horizontal"
         assert len(node["children"]) == 2

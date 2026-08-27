@@ -333,7 +333,7 @@ class SliderView(ControlView):
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
-        default: float | None = None,
+        value: float | None = None,
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
@@ -341,7 +341,7 @@ class SliderView(ControlView):
         self.min = float(min)
         self.max = float(max)
         self.step = float(step)
-        self.default = self.min if default is None else float(default)
+        self.value = self.min if value is None else float(value)
         self.on_change = on_change
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
@@ -349,7 +349,7 @@ class SliderView(ControlView):
         result["min"] = self.min
         result["max"] = self.max
         result["step"] = self.step
-        result["default"] = self.default
+        result["value"] = self.value
         return result
 
 
@@ -392,19 +392,19 @@ class DropdownView(ControlView):
         *,
         label: str = "",
         options: list[str] | tuple[str, ...] = (),
-        default: str = "",
+        value: str = "",
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
         self.options = list(options)
-        self.default = default
+        self.value = value
         self.on_change = on_change
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
         result["options"] = self.options
-        result["default"] = self.default
+        result["value"] = self.value
         return result
 
 
@@ -510,18 +510,18 @@ class ColorPickerView(ControlView):
         cid: str,
         *,
         label: str = "",
-        default: str = "#ffffff",
+        value: str = "#ffffff",
         tooltip: str = "",
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.default = default
+        self.value = value
         self.on_change = on_change
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
-        result["default"] = self.default
+        result["value"] = self.value
         return result
 
 
@@ -535,18 +535,58 @@ class CheckboxView(ControlView):
         cid: str,
         *,
         label: str = "",
-        default: bool = False,
+        value: bool = False,
         tooltip: str = "",
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.default = default
+        self.value = value
         self.on_change = on_change
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
-        result["default"] = self.default
+        result["value"] = self.value
+        return result
+
+
+class ValueEditView(ControlView):
+    """A numeric stepper control as a view."""
+
+    _node_type = "value_edit_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        min: float = 0.0,
+        max: float = 1.0,
+        step: float = 0.1,
+        digits: int = 2,
+        value: float = 0.0,
+        editable: bool = True,
+        tooltip: str = "",
+        on_change: Handler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
+        self.min = float(min)
+        self.max = float(max)
+        self.step = float(step)
+        self.digits = int(digits)
+        self.value = float(value)
+        self.editable = editable
+        self.on_change = on_change
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["min"] = self.min
+        result["max"] = self.max
+        result["step"] = self.step
+        result["digits"] = self.digits
+        result["value"] = self.value
+        result["editable"] = self.editable
         return result
 
 
@@ -593,6 +633,29 @@ def iter_control_views(root: View) -> Iterator[ControlView]:
     yield from _visit(root)
 
 
+def set_control_view_value(view: ControlView, value: Any) -> None:
+    """Coerce and set *value* on a control view.
+
+    Mirrors :func:`pytanga.viz._controls.set_control_value`.  ``ButtonView`` has
+    no value and raises :class:`TypeError`.
+    """
+    if not isinstance(view, ControlView):
+        raise TypeError(f"view must be a ControlView, got {type(view).__name__}")
+    if isinstance(view, (SliderView, ValueEditView)):
+        view.value = float(value)
+    elif isinstance(view, CheckboxView):
+        view.value = bool(value)
+    elif isinstance(
+        view,
+        (DropdownView, ColorPickerView, TextFieldView, TextAreaView, FileChooserView),
+    ):
+        view.value = str(value)
+    elif isinstance(view, ButtonView):
+        raise TypeError("ButtonView does not carry a value")
+    else:
+        raise TypeError(f"Unknown control view kind: {type(view).__name__}")
+
+
 __all__ = [
     "ButtonView",
     "ControlView",
@@ -605,9 +668,11 @@ __all__ = [
     "SpacerView",
     "SplitView",
     "StackView",
+    "ValueEditView",
     "View",
     "iter_control_views",
     "iter_scene_names",
     "serialize_layout",
+    "set_control_view_value",
     "size_from_dict",
 ]

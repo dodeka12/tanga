@@ -15,6 +15,7 @@ import { TextFieldView } from './text-field-view.js';
 import { TextAreaView } from './text-area-view.js';
 import { ColorPickerView } from './color-picker-view.js';
 import { CheckboxView } from './checkbox-view.js';
+import { ValueEditView } from './value-edit-view.js';
 import { SpacerView } from './spacer-view.js';
 
 function applySizeSpecs(view, node) {
@@ -85,7 +86,7 @@ export function buildViewTree(node, ws) {
     if (node.type === 'slider_view') {
         view = new SliderView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            min: node.min, max: node.max, step: node.step, default: node.default,
+            min: node.min, max: node.max, step: node.step, value: node.value,
         });
     } else if (node.type === 'button_view') {
         view = new ButtonView({
@@ -95,7 +96,7 @@ export function buildViewTree(node, ws) {
     } else if (node.type === 'dropdown_view') {
         view = new DropdownView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            options: node.options, default: node.default,
+            options: node.options, value: node.value,
         });
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
@@ -116,12 +117,18 @@ export function buildViewTree(node, ws) {
     } else if (node.type === 'color_picker_view') {
         view = new ColorPickerView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            default: node.default,
+            value: node.value,
         });
     } else if (node.type === 'checkbox_view') {
         view = new CheckboxView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            default: node.default,
+            value: node.value,
+        });
+    } else if (node.type === 'value_edit_view') {
+        view = new ValueEditView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            min: node.min, max: node.max, step: node.step,
+            digits: node.digits, value: node.value, editable: node.editable,
         });
     } else if (node.type === 'spacer') {
         view = new SpacerView();

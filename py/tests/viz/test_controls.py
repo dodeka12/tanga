@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import pytest
 from pytanga.viz._controls import (
     Button,
     Checkbox,
@@ -16,6 +15,7 @@ from pytanga.viz._controls import (
     Slider,
     TextArea,
     TextField,
+    ValueEdit,
     _serialize_one_control,
     serialize_controls,
 )
@@ -30,7 +30,7 @@ def test_serialize_slider() -> None:
         min=0.0,
         max=5.0,
         step=0.1,
-        default=2.0,
+        value=2.0,
     )
     result = _serialize_one_control(ctrl)
     assert result == {
@@ -40,7 +40,7 @@ def test_serialize_slider() -> None:
         "min": 0.0,
         "max": 5.0,
         "step": 0.1,
-        "default": 2.0,
+        "value": 2.0,
     }
 
 
@@ -52,7 +52,7 @@ def test_serialize_dropdown() -> None:
         id="mode",
         label="Mode",
         options=["Wireframe", "Solid", "Translucent"],
-        default="Solid",
+        value="Solid",
     )
     result = _serialize_one_control(ctrl)
     assert result == {
@@ -60,7 +60,7 @@ def test_serialize_dropdown() -> None:
         "kind": "dropdown",
         "label": "Mode",
         "options": ["Wireframe", "Solid", "Translucent"],
-        "default": "Solid",
+        "value": "Solid",
     }
 
 
@@ -92,8 +92,8 @@ def test_serialize_controls_empty() -> None:
 
 
 def test_serialize_controls_single_group() -> None:
-    slider = Slider(id="pos_x", label="X", min=0.0, max=10.0, step=0.5, default=5.0)
-    dropdown = Dropdown(id="mode", label="Mode", options=["A", "B"], default="A")
+    slider = Slider(id="pos_x", label="X", min=0.0, max=10.0, step=0.5, value=5.0)
+    dropdown = Dropdown(id="mode", label="Mode", options=["A", "B"], value="A")
     button = Button(id="btn", label="Go")
     group = ControlGroup(
         id="main_group",
@@ -120,8 +120,8 @@ def test_serialize_controls_single_group() -> None:
 
 
 def test_serialize_controls_multiple_groups() -> None:
-    s1 = Slider(id="s1", label="S1", min=0.0, max=1.0, step=0.1, default=0.5)
-    s2 = Slider(id="s2", label="S2", min=0.0, max=1.0, step=0.1, default=0.5)
+    s1 = Slider(id="s1", label="S1", min=0.0, max=1.0, step=0.1, value=0.5)
+    s2 = Slider(id="s2", label="S2", min=0.0, max=1.0, step=0.1, value=0.5)
     g1 = ControlGroup(id="g1", title="Group 1", controls=[s1], position="top-left")
     g2 = ControlGroup(id="g2", title="Group 2", controls=[s2], position="bottom-right")
     result = serialize_controls([g1, g2])
@@ -133,7 +133,7 @@ def test_serialize_controls_multiple_groups() -> None:
 
 def test_serialize_controls_group_with_parent_id() -> None:
     """Groups with parentId should serialize that field correctly."""
-    slider = Slider(id="s", label="S", min=0.0, max=1.0, step=0.1, default=0.5)
+    slider = Slider(id="s", label="S", min=0.0, max=1.0, step=0.1, value=0.5)
     group = ControlGroup(
         id="attached_group",
         title="Attached",
@@ -218,25 +218,54 @@ def test_serialize_text_area() -> None:
 
 
 def test_serialize_color_picker() -> None:
-    ctrl = ColorPicker(id="col", label="Color", default="#ff0000")
+    ctrl = ColorPicker(id="col", label="Color", value="#ff0000")
     result = _serialize_one_control(ctrl)
     assert result == {
         "id": "col",
         "kind": "color",
         "label": "Color",
-        "default": "#ff0000",
+        "value": "#ff0000",
     }
 
 
 def test_serialize_checkbox() -> None:
-    ctrl = Checkbox(id="wire", label="Wireframe", default=True)
+    ctrl = Checkbox(id="wire", label="Wireframe", value=True)
     result = _serialize_one_control(ctrl)
     assert result == {
         "id": "wire",
         "kind": "checkbox",
         "label": "Wireframe",
-        "default": True,
+        "value": True,
     }
+
+
+def test_serialize_value_edit() -> None:
+    ctrl = ValueEdit(
+        id="zoom",
+        label="Zoom",
+        min=0.5,
+        max=4.0,
+        step=0.25,
+        digits=2,
+        value=1.5,
+    )
+    result = _serialize_one_control(ctrl)
+    assert result == {
+        "id": "zoom",
+        "kind": "value_edit",
+        "label": "Zoom",
+        "min": 0.5,
+        "max": 4.0,
+        "step": 0.25,
+        "digits": 2,
+        "value": 1.5,
+        "editable": True,
+    }
+
+
+def test_serialize_value_edit_not_editable() -> None:
+    ctrl = ValueEdit(id="zoom", editable=False)
+    assert _serialize_one_control(ctrl)["editable"] is False
 
 
 def test_serialize_button_with_icon() -> None:

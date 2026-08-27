@@ -4,9 +4,9 @@ import { ControlView } from './control-view.js';
 import { createCheckbox } from '../controls-panel.js';
 
 export class CheckboxView extends ControlView {
-    constructor({ id, label = '', default: defaultValue = false, tooltip = '' } = {}) {
+    constructor({ id, label = '', value = false, tooltip = '' } = {}) {
         super({ id, label, tooltip });
-        this.default = defaultValue;
+        this.value = value;
     }
 
     render() {
@@ -14,7 +14,7 @@ export class CheckboxView extends ControlView {
             id: this.controlId,
             label: this.label,
             tooltip: this.tooltip,
-            default: this.default,
+            value: this.value,
         });
     }
 }

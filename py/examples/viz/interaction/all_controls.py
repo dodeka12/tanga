@@ -8,6 +8,8 @@ icon-only variants), text field, text area, color picker, checkbox, and file
 chooser — grouped into titled panels with icons and tooltips, plus a
 full-screen text editor (`open_editor`).  Each handler updates either the
 sphere or the viewport annotation, so the effect of every control is visible.
+Two synced radius sliders, a stepper value-edit, and a live readout text field
+demonstrate programmatic value updates (`set_control_value`).
 
 Run with:  uv run python py/examples/viz/interaction/all_controls.py
 """
@@ -47,9 +49,22 @@ class AllControlsApp(VisualizerApp):
     # ── handlers ────────────────────────────────────────────
 
     async def on_radius(self, value: float, _event: ControlEvent) -> None:
-        self._radius = value
-        self.viz.update_entity("ball", Sphere(Point(0.0, 0.0, 0.0), value))
-        self.viz.flush()
+        self._apply_radius(value)
+        self.viz.set_control_value("radius2", value)
+        self.viz.set_control_value("radius_value", value)
+        self.viz.set_control_value("radius_display", f"{value:.2f}")
+
+    async def on_radius2(self, value: float, _event: ControlEvent) -> None:
+        self._apply_radius(value)
+        self.viz.set_control_value("radius", value)
+        self.viz.set_control_value("radius_value", value)
+        self.viz.set_control_value("radius_display", f"{value:.2f}")
+
+    async def on_radius_value(self, value: float, _event: ControlEvent) -> None:
+        self._apply_radius(value)
+        self.viz.set_control_value("radius", value)
+        self.viz.set_control_value("radius2", value)
+        self.viz.set_control_value("radius_display", f"{value:.2f}")
 
     async def on_color(self, value: str, _event: ControlEvent) -> None:
         self._color = value
@@ -85,9 +100,7 @@ class AllControlsApp(VisualizerApp):
             on_close=self.on_editor_close,
         )
 
-    async def on_editor_close(
-        self, text: str | None, _event: ControlEvent
-    ) -> None:
+    async def on_editor_close(self, text: str | None, _event: ControlEvent) -> None:
         if text is not None:
             self._set_annotation(text)
 
@@ -98,6 +111,14 @@ class AllControlsApp(VisualizerApp):
         self.viz.update("ball", color=self._color, opacity=0.9, wireframe=False)
         self._set_annotation("Reset to defaults.")
         self.viz.flush()
+        # Push each control's value back in place (no panel rebuild).
+        self.viz.set_control_value("radius", self._radius)
+        self.viz.set_control_value("radius2", self._radius)
+        self.viz.set_control_value("radius_value", self._radius)
+        self.viz.set_control_value("radius_display", f"{self._radius:.2f}")
+        self.viz.set_control_value("mode", "Solid")
+        self.viz.set_control_value("color", self._color)
+        self.viz.set_control_value("wireframe", False)
 
     async def on_quit(self, _value: None, _event: ControlEvent) -> None:
         self.request_shutdown()
@@ -109,6 +130,12 @@ class AllControlsApp(VisualizerApp):
         self._annotation = text
         self.viz.set_annotation(text)
 
+    def _apply_radius(self, value: float) -> None:
+        """Resize the sphere and remember the shared radius."""
+        self._radius = value
+        self.viz.update_entity("ball", Sphere(Point(0.0, 0.0, 0.0), value))
+        self.viz.flush()
+
     # ── controls ────────────────────────────────────────────
 
     def _setup_controls(self) -> None:
@@ -118,29 +145,57 @@ class AllControlsApp(VisualizerApp):
             min=0.3,
             max=3.0,
             step=0.05,
-            default=self._radius,
+            value=self._radius,
             tooltip="Scale the sphere",
             on_change=self.on_radius,
+        )
+        self.viz.add_slider(
+            "radius2",
+            label="Radius 2",
+            min=0.3,
+            max=3.0,
+            step=0.05,
+            value=self._radius,
+            tooltip="Also scales the sphere (synced with Radius)",
+            on_change=self.on_radius2,
+        )
+        self.viz.add_value_edit(
+            "radius_value",
+            label="Radius (stepper)",
+            min=0.3,
+            max=3.0,
+            step=0.05,
+            digits=2,
+            value=self._radius,
+            editable=True,
+            tooltip="Increment with buttons, arrow keys, or the scroll wheel; type to edit",
+            on_change=self.on_radius_value,
+        )
+        self.viz.add_text_field(
+            "radius_display",
+            label="Radius value",
+            value=f"{self._radius:.2f}",
+            tooltip="Live value of the radius sliders",
         )
         self.viz.add_dropdown(
             "mode",
             label="Appearance",
             options=["Solid", "Translucent", "Hidden"],
-            default="Solid",
+            value="Solid",
             tooltip="Switch the material",
             on_change=self.on_mode,
         )
         self.viz.add_color_picker(
             "color",
             label="Color",
-            default=self._color,
+            value=self._color,
             tooltip="Sphere color",
             on_change=self.on_color,
         )
         self.viz.add_checkbox(
             "wireframe",
             label="Wireframe",
-            default=True,
+            value=True,
             tooltip="Toggle wireframe",
             on_change=self.on_wireframe,
         )
@@ -201,7 +256,16 @@ class AllControlsApp(VisualizerApp):
             title="Appearance",
             icon=EIconUC.GEAR,
             tooltip="Shape and material",
-            controls=["radius", "mode", "color", "wireframe", "name"],
+            controls=[
+                "radius",
+                "radius2",
+                "radius_value",
+                "radius_display",
+                "mode",
+                "color",
+                "wireframe",
+                "name",
+            ],
             position="bottom-right",
         )
         self.viz.add_control_group(
@@ -222,4 +286,3 @@ class AllControlsApp(VisualizerApp):
 
 if __name__ == "__main__":
     AllControlsApp().run()
-

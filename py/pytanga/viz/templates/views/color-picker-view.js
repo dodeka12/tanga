@@ -4,9 +4,9 @@ import { ControlView } from './control-view.js';
 import { createColorPicker } from '../controls-panel.js';
 
 export class ColorPickerView extends ControlView {
-    constructor({ id, label = '', default: defaultValue = '#ffffff', tooltip = '' } = {}) {
+    constructor({ id, label = '', value = '#ffffff', tooltip = '' } = {}) {
         super({ id, label, tooltip });
-        this.default = defaultValue;
+        this.value = value;
     }
 
     render() {
@@ -14,7 +14,7 @@ export class ColorPickerView extends ControlView {
             id: this.controlId,
             label: this.label,
             tooltip: this.tooltip,
-            default: this.default,
+            value: this.value,
         });
     }
 }

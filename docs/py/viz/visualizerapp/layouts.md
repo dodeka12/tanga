@@ -61,7 +61,7 @@ class MyApp(VisualizerApp):
                             label="Radius",
                             min=0.2,
                             max=5.0,
-                            default=1.0,
+                            value=1.0,
                             on_change=self.on_radius,
                         ),
                         ButtonView("btn_topdown", label="Top-down", on_click=self.on_topdown),

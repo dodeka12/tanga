@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { createSlider, createDropdown, createButton, createFileChooser, createTextField, createTextArea, createColorPicker, createCheckbox, createIconElement, sendControlEvent, throttledSend, throttledFlush } from './controls-panel.js';
+import { createSlider, createDropdown, createButton, createFileChooser, createTextField, createTextArea, createColorPicker, createCheckbox, createValueEdit, createIconElement, sendControlEvent, throttledSend, throttledFlush } from './controls-panel.js';
 
 // ── Module state ─────────────────────────────────────────────
 const _attachedGroups = new Map();  // groupId → { css2d, parentMesh }
@@ -75,6 +75,7 @@ export function attachGroup(group, controls, sceneObjects) {
         else if (ctrl.kind === 'textarea') el = createTextArea(ctrl);
         else if (ctrl.kind === 'color') el = createColorPicker(ctrl);
         else if (ctrl.kind === 'checkbox') el = createCheckbox(ctrl);
+        else if (ctrl.kind === 'value_edit') el = createValueEdit(ctrl);
         if (el) controlsDiv.appendChild(el);
     }
     container.appendChild(controlsDiv);

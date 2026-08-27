@@ -16,7 +16,7 @@ self.viz.add_slider(
     min=-3.5,
     max=3.5,
     step=0.02,
-    default=2.5,
+    value=2.5,
     on_change=self.on_slider,
 )
 ```
@@ -28,7 +28,7 @@ self.viz.add_slider(
 | `min` | `float` | `0.0` | Minimum value |
 | `max` | `float` | `1.0` | Maximum value |
 | `step` | `float` | `0.01` | Step increment |
-| `default` | `float` | `min` | Initial value |
+| `value` | `float` | `min` | Initial value |
 | `on_change` | `Callable` | `None` | Async callback: `(value: float, event: ControlEvent) -> None` |
 
 ## `add_dropdown`
@@ -38,7 +38,7 @@ self.viz.add_dropdown(
     "mode",
     label="Display",
     options=["Both", "Sphere A only", "Sphere B only"],
-    default="Both",
+    value="Both",
     on_change=self.on_mode,
 )
 ```
@@ -48,7 +48,7 @@ self.viz.add_dropdown(
 | `cid` | `str` | *(required)* | Control ID |
 | `label` | `str` | `""` | Label text |
 | `options` | `list[str]` | `[]` | Dropdown choices |
-| `default` | `str` | `""` | Initial selection |
+| `value` | `str` | `""` | Initial selection |
 | `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
 
 ## `add_button`
@@ -124,7 +124,7 @@ Native color input (hex value):
 self.viz.add_color_picker(
     "color",
     label="Color",
-    default="#ff0000",
+    value="#ff0000",
     on_change=self.on_color,
 )
 ```
@@ -133,7 +133,7 @@ self.viz.add_color_picker(
 |-----------|------|---------|-------------|
 | `cid` | `str` | *(required)* | Control ID |
 | `label` | `str` | `""` | Label text |
-| `default` | `str` | `"#ffffff"` | Initial hex color |
+| `value` | `str` | `"#ffffff"` | Initial hex color |
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
 
@@ -145,7 +145,7 @@ Boolean checkbox:
 self.viz.add_checkbox(
     "wireframe",
     label="Wireframe",
-    default=False,
+    value=False,
     on_change=self.on_wireframe,
 )
 ```
@@ -154,9 +154,42 @@ self.viz.add_checkbox(
 |-----------|------|---------|-------------|
 | `cid` | `str` | *(required)* | Control ID |
 | `label` | `str` | `""` | Label text |
-| `default` | `bool` | `False` | Initial checked state |
+| `value` | `bool` | `False` | Initial checked state |
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: bool, event: ControlEvent) -> None` |
+
+## `add_value_edit`
+
+A numeric stepper with up/down buttons; arrow keys (while the pointer hovers
+over the control) and the scroll wheel also step the value.  By default the
+value can also be typed directly (`editable=True`); set `editable=False` to
+restrict input to the buttons, keys, and wheel:
+
+```python
+self.viz.add_value_edit(
+    "zoom",
+    label="Zoom",
+    min=0.5,
+    max=4.0,
+    step=0.25,
+    digits=2,
+    value=1.0,
+    on_change=self.on_zoom,
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cid` | `str` | *(required)* | Control ID |
+| `label` | `str` | `""` | Label text |
+| `min` | `float` | `0.0` | Minimum value |
+| `max` | `float` | `1.0` | Maximum value |
+| `step` | `float` | `0.1` | Increment/decrement step |
+| `digits` | `int` | `2` | Decimal places shown |
+| `value` | `float` | `min` | Initial value |
+| `editable` | `bool` | `True` | Allow direct text editing of the value |
+| `tooltip` | `str` | `""` | Hover tooltip |
+| `on_change` | `Callable` | `None` | Async callback: `(value: float, event: ControlEvent) -> None` |
 
 ## `add_control_group`
 
@@ -219,6 +252,30 @@ tooltip (or label) as the button's accessible name.
 self.viz.remove_control("sphere_b_x")
 self.viz.remove_control_group("viewport_controls")
 self.viz.clear_controls()  # remove all
+```
+
+## Updating control values
+
+After a control has been created, its value can be updated from the backend
+**in place** — the panel is not rebuilt, so collapse, drag, and focus state are
+preserved:
+
+```python
+# Panel / add_* controls
+self.viz.set_control_value("radius", 3.0)
+
+# Scene-scoped controls
+detail.set_control_value("radius", 3.0)
+
+# Layout control views
+self.viz.set_control_view_value(radius_view, 3.0)
+```
+
+`update_control` also accepts a `value=` keyword and routes it through
+`set_control_value`:
+
+```python
+self.viz.update_control("radius", value=3.0)
 ```
 
 ## Scene-scoped controls

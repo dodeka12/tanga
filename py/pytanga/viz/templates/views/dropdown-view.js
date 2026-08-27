@@ -4,10 +4,10 @@ import { ControlView } from './control-view.js';
 import { createDropdown } from '../controls-panel.js';
 
 export class DropdownView extends ControlView {
-    constructor({ id, label = '', tooltip = '', options = [], default: defaultValue = '' } = {}) {
+    constructor({ id, label = '', tooltip = '', options = [], value = '' } = {}) {
         super({ id, label, tooltip });
         this.options = options;
-        this.default = defaultValue;
+        this.value = value;
     }
 
     render() {
@@ -16,7 +16,7 @@ export class DropdownView extends ControlView {
             label: this.label,
             tooltip: this.tooltip,
             options: this.options,
-            default: this.default,
+            value: this.value,
         });
     }
 }

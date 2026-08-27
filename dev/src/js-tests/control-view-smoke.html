@@ -24,8 +24,8 @@
         const stack = new StackView({
             direction: 'vertical',
             children: [
-                new SliderView({ id: 's1', label: 'Radius', min: 0, max: 5, step: 0.1, default: 2 }),
-                new DropdownView({ id: 'd1', label: 'Mode', options: ['a', 'b'], default: 'a' }),
+                new SliderView({ id: 's1', label: 'Radius', min: 0, max: 5, step: 0.1, value: 2 }),
+                new DropdownView({ id: 'd1', label: 'Mode', options: ['a', 'b'], value: 'a' }),
                 new ButtonView({ id: 'b1', label: 'Go' }),
             ],
         });

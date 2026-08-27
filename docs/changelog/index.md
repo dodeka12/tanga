@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.8.0] — 2026-08-27
+- In-place control value updates (`set_control_value` · `set_control_view_value` · `control_update`) · value-edit stepper control (`add_value_edit` / `ValueEditView`)
+- Breaking: control `default` field renamed to `value` (no alias kept)
+→ [Details](2026-08-27_0041385d.md)
+
 ## [Since 1.7.0] — 2026-08-27
 - New interactive controls (`add_text_field` · `add_text_area` · `add_color_picker` · `add_checkbox`) · button icons + icon model · control tooltips · reusable text editor (`open_editor`) · `ActPoint` drag-mode constraint
 → [Details](2026-08-27_265517f8.md)

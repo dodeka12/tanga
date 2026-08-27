@@ -110,14 +110,14 @@ class TwoSpheresApp(VisualizerApp):
             min=-3.5,
             max=3.5,
             step=0.02,
-            default=self.x_default,
+            value=self.x_default,
             on_change=self.on_slider,
         )
         self.viz.add_dropdown(
             "mode",
             label="Display",
             options=["Both", "Sphere A only", "Sphere B only", "Intersection only"],
-            default="Both",
+            value="Both",
             on_change=self.on_mode,
         )
         self.viz.add_button("reset", label="Reset", on_click=self.on_reset)
