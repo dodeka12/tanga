@@ -48,7 +48,13 @@ from .camera import (
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
-from .views import SceneView, View, serialize_layout
+from .views import (
+    ControlView,
+    SceneView,
+    View,
+    serialize_layout,
+    set_control_view_value,
+)
 
 logger = logging.getLogger("tanga.viz")
 
@@ -881,6 +887,15 @@ class Visualizer(_JupyterDisplayMixin):
         if self._server is None or self._loop is None:
             return
         asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
+
+    def set_control_view_value(self, view: ControlView, value: Any) -> None:
+        """Update a layout control view's value in place and push ``control_update``.
+
+        Mirrors :meth:`set_view_camera`: the view must be a :class:`ControlView`
+        and the update is keyed by ``view.id``.
+        """
+        set_control_view_value(view, value)
+        self._push_control_update("", view.id, view.value)
 
     # ── Default scene objects ───────────────────────────────
 
@@ -1931,6 +1946,7 @@ class Visualizer(_JupyterDisplayMixin):
             scene: Name of a single scene to flush, or ``None`` (default) to
                 flush all scenes.
         """
+
         async def _run() -> None:
             if scene is None:
                 await self._flush_all_async(fit_camera=fit_camera)
@@ -2103,7 +2119,7 @@ class Visualizer(_JupyterDisplayMixin):
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
-        default: float | None = None,
+        value: float | None = None,
         on_change: Any = None,
         on_press: Any = None,
         on_release: Any = None,
@@ -2117,7 +2133,7 @@ class Visualizer(_JupyterDisplayMixin):
             min=min,
             max=max,
             step=step,
-            default=default,
+            value=value,
             on_change=on_change,
             on_press=on_press,
             on_release=on_release,
@@ -2134,7 +2150,7 @@ class Visualizer(_JupyterDisplayMixin):
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
-        default: float | None = None,
+        value: float | None = None,
         on_change: Any = None,
         on_press: Any = None,
         on_release: Any = None,
@@ -2149,7 +2165,7 @@ class Visualizer(_JupyterDisplayMixin):
             min=min,
             max=max,
             step=step,
-            default=default if default is not None else min,
+            value=value if value is not None else min,
             on_change=on_change,
             on_press=on_press,
             on_release=on_release,
@@ -2168,14 +2184,38 @@ class Visualizer(_JupyterDisplayMixin):
     def update_control(
         self, ctrl_id: str, *, scene_name: str = "", **fields: Any
     ) -> None:
-        """Mutate fields of a stored control and re-push ``controls_define``."""
+        """Mutate fields of a stored control and re-push ``controls_define``.
+
+        A ``value=`` field is routed through :meth:`set_control_value` so the
+        frontend updates the control in place instead of rebuilding the panel.
+        """
         scene = self._scenes[scene_name]
         ctrl = scene._controls.get(ctrl_id)
         if ctrl is None:
             raise KeyError(f"Control {ctrl_id!r} not found")
+        if "value" in fields:
+            self.set_control_value(ctrl_id, fields.pop("value"), scene_name=scene_name)
         for key, value in fields.items():
             setattr(ctrl, key, value)
-        self._push_controls(scene_name)
+        if fields:
+            self._push_controls(scene_name)
+
+    def set_control_value(self, cid: str, value: Any, *, scene_name: str = "") -> None:
+        """Update a control's value in place and push ``control_update``.
+
+        Args:
+            cid: The control id.
+            value: The new value (coerced to the control kind's type).
+            scene_name: Target scene (default ``""`` = main scene).
+        """
+        from ._controls import set_control_value as _set_control_value
+
+        scene = self._scenes[scene_name]
+        ctrl = scene._controls.get(cid)
+        if ctrl is None:
+            raise KeyError(f"Control {cid!r} not found")
+        _set_control_value(ctrl, value)
+        self._push_control_update(scene_name, cid, ctrl.value)
 
     def add_dropdown(
         self,
@@ -2184,7 +2224,7 @@ class Visualizer(_JupyterDisplayMixin):
         label: str = "",
         tooltip: str = "",
         options: list[str] | None = None,
-        default: str = "",
+        value: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
     ) -> str:
@@ -2194,7 +2234,7 @@ class Visualizer(_JupyterDisplayMixin):
             label=label,
             tooltip=tooltip,
             options=options,
-            default=default,
+            value=value,
             on_change=on_change,
             parent_id=parent_id,
         )
@@ -2207,7 +2247,7 @@ class Visualizer(_JupyterDisplayMixin):
         label: str = "",
         tooltip: str = "",
         options: list[str] | None = None,
-        default: str = "",
+        value: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
     ) -> str:
@@ -2218,7 +2258,7 @@ class Visualizer(_JupyterDisplayMixin):
             label=label,
             tooltip=tooltip,
             options=options or [],
-            default=default,
+            value=value,
             on_change=on_change,
             parent_id=parent_id,
         )
@@ -2452,7 +2492,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
-        default: str = "#ffffff",
+        value: str = "#ffffff",
         tooltip: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
@@ -2462,7 +2502,7 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             cid,
             label=label,
-            default=default,
+            value=value,
             tooltip=tooltip,
             on_change=on_change,
             parent_id=parent_id,
@@ -2474,7 +2514,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
-        default: str = "#ffffff",
+        value: str = "#ffffff",
         tooltip: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
@@ -2484,7 +2524,7 @@ class Visualizer(_JupyterDisplayMixin):
         ctrl = ColorPicker(
             id=cid,
             label=label,
-            default=default,
+            value=value,
             tooltip=tooltip,
             on_change=on_change,
             parent_id=parent_id,
@@ -2500,7 +2540,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
-        default: bool = False,
+        value: bool = False,
         tooltip: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
@@ -2510,7 +2550,7 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             cid,
             label=label,
-            default=default,
+            value=value,
             tooltip=tooltip,
             on_change=on_change,
             parent_id=parent_id,
@@ -2522,7 +2562,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
-        default: bool = False,
+        value: bool = False,
         tooltip: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
@@ -2532,8 +2572,76 @@ class Visualizer(_JupyterDisplayMixin):
         ctrl = Checkbox(
             id=cid,
             label=label,
-            default=default,
+            value=value,
             tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_change is not None:
+            self._handler_registry.register(cid, on_change)
+        self._push_controls(scene_name)
+        return cid
+
+    def add_value_edit(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        tooltip: str = "",
+        min: float = 0.0,
+        max: float = 1.0,
+        step: float = 0.1,
+        digits: int = 2,
+        editable: bool = True,
+        value: float | None = None,
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a numeric value-edit (stepper) control."""
+        return self._add_scene_value_edit(
+            "",
+            cid,
+            label=label,
+            tooltip=tooltip,
+            min=min,
+            max=max,
+            step=step,
+            digits=digits,
+            editable=editable,
+            value=value,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_value_edit(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        tooltip: str = "",
+        min: float = 0.0,
+        max: float = 1.0,
+        step: float = 0.1,
+        digits: int = 2,
+        editable: bool = True,
+        value: float | None = None,
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import ValueEdit
+
+        ctrl = ValueEdit(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            min=min,
+            max=max,
+            step=step,
+            digits=digits,
+            editable=editable,
+            value=value if value is not None else min,
             on_change=on_change,
             parent_id=parent_id,
         )
@@ -2586,9 +2694,7 @@ class Visualizer(_JupyterDisplayMixin):
                 return ctrl
         return None
 
-    async def _handle_file_browser_navigate(
-        self, payload: dict[str, Any]
-    ) -> None:
+    async def _handle_file_browser_navigate(self, payload: dict[str, Any]) -> None:
         from ._file_browser import list_directory
 
         if self._server is None:
@@ -2872,9 +2978,7 @@ class Visualizer(_JupyterDisplayMixin):
             self._handler_registry.unregister(ctrl.id)
         self._banner_close_handlers.pop(banner.id, None)
 
-    def remove_banner(
-        self, banner_id: str, *, scene_name: str | None = None
-    ) -> None:
+    def remove_banner(self, banner_id: str, *, scene_name: str | None = None) -> None:
         """Remove a banner by id (and unregister its handlers)."""
         scoped = self._banners.get(scene_name, {})
         banner = scoped.get(banner_id)
@@ -2921,15 +3025,11 @@ class Visualizer(_JupyterDisplayMixin):
         if self._server is None or self._loop is None:
             return
         asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(
-                json.dumps(serialize_banner_clear(scene=scene_name))
-            ),
+            self._server.push_raw(json.dumps(serialize_banner_clear(scene=scene_name))),
             self._loop,
         )
 
-    async def _push_banner_async(
-        self, banner: Any, scene_name: str | None
-    ) -> None:
+    async def _push_banner_async(self, banner: Any, scene_name: str | None) -> None:
         from ._banner import serialize_banner
 
         if self._server is None:
@@ -2990,9 +3090,7 @@ class Visualizer(_JupyterDisplayMixin):
             on_close=on_close,
             scene_name=scene_name,
         )
-        await self._on_server_loop(
-            lambda: self._push_banner_async(banner, scene_name)
-        )
+        await self._on_server_loop(lambda: self._push_banner_async(banner, scene_name))
         return banner.id
 
     async def remove_banner_async(
@@ -3009,16 +3107,12 @@ class Visualizer(_JupyterDisplayMixin):
             lambda: self._push_banner_remove_async(banner_id, scene_name)
         )
 
-    async def clear_banners_async(
-        self, *, scene_name: str | None = None
-    ) -> None:
+    async def clear_banners_async(self, *, scene_name: str | None = None) -> None:
         """Awaitable :meth:`clear_banners`."""
         scoped = self._banners.pop(scene_name, {})
         for banner in scoped.values():
             self._unregister_banner(banner)
-        await self._on_server_loop(
-            lambda: self._push_banner_clear_async(scene_name)
-        )
+        await self._on_server_loop(lambda: self._push_banner_clear_async(scene_name))
 
     # ── Editor ─────────────────────────────────────────────
 
@@ -3065,6 +3159,20 @@ class Visualizer(_JupyterDisplayMixin):
         groups = list(scene._groups.values())
         message = serialize_controls(groups, scene._controls)
         message["scene"] = scene_name
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(json.dumps(message)), self._loop
+        )
+
+    def _push_control_update(self, scene_name: str, cid: str, value: Any) -> None:
+        """Push a lightweight ``control_update`` message for one control."""
+        if self._server is None or self._loop is None:
+            return
+        message = {
+            "type": "control_update",
+            "scene": scene_name,
+            "id": cid,
+            "value": value,
+        }
         asyncio.run_coroutine_threadsafe(
             self._server.push_raw(json.dumps(message)), self._loop
         )
@@ -3137,13 +3245,9 @@ class Visualizer(_JupyterDisplayMixin):
 
         cid = payload.get("control_id")
         if msg_type == "control:press":
-            handler = (
-                self._handler_registry.get(f"__press__{cid}") if cid else None
-            )
+            handler = self._handler_registry.get(f"__press__{cid}") if cid else None
         elif msg_type == "control:release":
-            handler = (
-                self._handler_registry.get(f"__release__{cid}") if cid else None
-            )
+            handler = self._handler_registry.get(f"__release__{cid}") if cid else None
         else:
             handler = self._handler_registry.get(cid) if cid else None
 

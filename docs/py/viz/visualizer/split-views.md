@@ -77,7 +77,7 @@ async def on_reset(_value, _event):
 GroupView(
     "Actions",
     [
-        SliderView("radius", label="Radius", min=0.1, max=5.0, default=2.0),
+        SliderView("radius", label="Radius", min=0.1, max=5.0, value=2.0),
         ButtonView("btn_reset", label="Reset view", on_click=on_reset),
     ],
 )
@@ -167,7 +167,7 @@ layout = SplitView(
         GroupView(
             "Actions",
             [
-                SliderView("radius", label="Radius", min=0.1, max=5.0, default=2.0),
+                SliderView("radius", label="Radius", min=0.1, max=5.0, value=2.0),
                 ButtonView("btn_fit", label="Fit camera"),
             ],
         ),

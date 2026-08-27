@@ -92,7 +92,7 @@ layout = SplitView(
                     label="Radius",
                     min=0.1,
                     max=5.0,
-                    default=2.0,
+                    value=2.0,
                     on_change=_on_radius,
                 ),
                 ButtonView("btn_fit", label="Fit camera", on_click=_on_fit),

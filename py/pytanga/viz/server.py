@@ -101,6 +101,11 @@ def _ws_msg_brief(payload: Any) -> str:
         return f"clear_all ({size}B)"
     if t == "navigate":
         return f"navigate scene={obj.get('scene', '')!r} ({size}B)"
+    if t == "control_update":
+        return (
+            f"control_update id={obj.get('id', '')!r} "
+            f"scene={obj.get('scene', '')!r} ({size}B)"
+        )
     return f"type={t} ({size}B)"
 
 
@@ -116,6 +121,7 @@ async def _heartbeat(ws: web.WebSocketResponse, interval: float = 15.0) -> None:
             await ws.ping()
     except (ConnectionError, Exception):
         pass
+
 
 # Callback types
 FlushCallback = Callable[[str], tuple[list[dict[str, Any]], list[str]]]
@@ -171,7 +177,9 @@ class VizServer:
         self._scene_list_callback: SceneListCallback | None = None
         self._layout_callback: LayoutCallback | None = None
         self._control_callback: ControlCallback | None = None
-        self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = None
+        self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = (
+            None
+        )
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -303,7 +311,9 @@ class VizServer:
         data = json.dumps(message)
         logger.info(
             "WS SEND t=%.3f %s clients=%d",
-            time.monotonic(), _ws_msg_brief(data), len(self._ws_clients),
+            time.monotonic(),
+            _ws_msg_brief(data),
+            len(self._ws_clients),
         )
 
         dead: list[web.WebSocketResponse] = []
@@ -322,7 +332,9 @@ class VizServer:
             return
         logger.info(
             "WS SEND t=%.3f %s clients=%d",
-            time.monotonic(), _ws_msg_brief(data), len(self._ws_clients),
+            time.monotonic(),
+            _ws_msg_brief(data),
+            len(self._ws_clients),
         )
         dead: list[web.WebSocketResponse] = []
         for ws in self._ws_clients:
@@ -382,12 +394,19 @@ class VizServer:
 
         logger.info(
             "WS FULL-STATE-BEGIN t=%.3f id=%s scenes=%r",
-            time.monotonic(), browser_id, scene_names,
+            time.monotonic(),
+            browser_id,
+            scene_names,
         )
 
         # 0. Clear the browser first (handles reconnect with new server)
         clear_payload = json.dumps({"type": "clear_all"})
-        logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(clear_payload))
+        logger.info(
+            "WS SEND t=%.3f id=%s %s",
+            time.monotonic(),
+            browser_id,
+            _ws_msg_brief(clear_payload),
+        )
         await ws.send_str(clear_payload)
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
@@ -395,7 +414,12 @@ class VizServer:
         # 1. Layout (if any) — sent before any scene data
         if layout_payload is not None:
             layout_json = json.dumps(layout_payload)
-            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(layout_json))
+            logger.info(
+                "WS SEND t=%.3f id=%s %s",
+                time.monotonic(),
+                browser_id,
+                _ws_msg_brief(layout_json),
+            )
             await ws.send_str(layout_json)
 
         # 2. Per scene: configuration + full state
@@ -409,7 +433,12 @@ class VizServer:
             if cfg is not None:
                 cfg.setdefault("name", scene_name)
                 cfg_payload = json.dumps(cfg)
-                logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(cfg_payload))
+                logger.info(
+                    "WS SEND t=%.3f id=%s %s",
+                    time.monotonic(),
+                    browser_id,
+                    _ws_msg_brief(cfg_payload),
+                )
                 await ws.send_str(cfg_payload)
 
             if self._flush_callback is not None:
@@ -418,7 +447,12 @@ class VizServer:
                     msg = serialize_scene_update(entities, [])
                     msg["scene"] = scene_name
                     state_payload = json.dumps(msg)
-                    logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(state_payload))
+                    logger.info(
+                        "WS SEND t=%.3f id=%s %s",
+                        time.monotonic(),
+                        browser_id,
+                        _ws_msg_brief(state_payload),
+                    )
                     await ws.send_str(state_payload)
 
         # 3. Scene list (so the frontend knows available scenes)
@@ -427,12 +461,19 @@ class VizServer:
             list_payload = json.dumps(
                 {"type": "scene_list", "scenes": scene_names_all, "default": ""}
             )
-            logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(list_payload))
+            logger.info(
+                "WS SEND t=%.3f id=%s %s",
+                time.monotonic(),
+                browser_id,
+                _ws_msg_brief(list_payload),
+            )
             await ws.send_str(list_payload)
 
         logger.info(
             "WS FULL-STATE-END t=%.3f id=%s scenes=%r",
-            time.monotonic(), browser_id, scene_names,
+            time.monotonic(),
+            browser_id,
+            scene_names,
         )
 
     # ── Browser sessions (read-only access for Visualizer) ─
@@ -504,14 +545,20 @@ class VizServer:
             # extension, e.g. /favicon.ico), return 404 instead of
             # serving viewer.html — avoids bogus page-load prints.
             if "." in rel_path.rsplit("/", 1)[-1]:
-                logger.debug("HTTP GET /%s -> 404 (unknown static) -> %s", rel_path, remote_addr)
+                logger.debug(
+                    "HTTP GET /%s -> 404 (unknown static) -> %s", rel_path, remote_addr
+                )
                 raise web.HTTPNotFound()
 
         # Inject a page token for WS connectivity correlation
         # Use token from URL query param if present, otherwise generate random
         viewer_path = self._static_dir / self._entry_page
         page_token = request.query.get("token") or uuid4().hex[:8]
-        logger.info("HTTP GET / -> serving viewer.html (token=%s) -> %s", page_token, remote_addr)
+        logger.info(
+            "HTTP GET / -> serving viewer.html (token=%s) -> %s",
+            page_token,
+            remote_addr,
+        )
         self._pending_page_tokens[page_token] = {
             "remote_addr": remote_addr,
             "token": page_token,
@@ -524,7 +571,7 @@ class VizServer:
         html = viewer_path.read_text(encoding="utf-8")
         inject = (
             f'<script>window.__tanga_page_token = "{page_token}";</script>\n'
-            f'<script>window.__tanga_frontend_version = '
+            f"<script>window.__tanga_frontend_version = "
             f'"{self._frontend_version}";</script>'
         )
         # Inject after <head> or at start of file
@@ -555,7 +602,9 @@ class VizServer:
         remote_addr = request.remote or "unknown"
         logger.info(
             "WS connect from %s (total_clients=%d, sessions=%d)",
-            remote_addr, len(self._ws_clients), len(self._browser_sessions),
+            remote_addr,
+            len(self._ws_clients),
+            len(self._browser_sessions),
         )
 
         # Assign a unique browser ID and send it immediately
@@ -576,7 +625,12 @@ class VizServer:
                 "frontend_version": self._frontend_version,
             }
         )
-        logger.info("WS SEND t=%.3f id=%s %s", time.monotonic(), browser_id, _ws_msg_brief(bid_payload))
+        logger.info(
+            "WS SEND t=%.3f id=%s %s",
+            time.monotonic(),
+            browser_id,
+            _ws_msg_brief(bid_payload),
+        )
         await ws.send_str(bid_payload)
 
         # The frontend will send a "ready" message with the scene name.
@@ -603,7 +657,10 @@ class VizServer:
 
                         logger.info(
                             "WS RECV t=%.3f %s from %s (id=%s)",
-                            time.monotonic(), _ws_msg_brief(data), remote_addr, msg_browser_id,
+                            time.monotonic(),
+                            _ws_msg_brief(data),
+                            remote_addr,
+                            msg_browser_id,
                         )
 
                         if msg_type == "ready":
@@ -668,7 +725,9 @@ class VizServer:
                                     if scene_name and scene_name not in available:
                                         # Scene doesn't exist — navigate to main
                                         await ws.send_str(
-                                            json.dumps({"type": "navigate", "scene": ""})
+                                            json.dumps(
+                                                {"type": "navigate", "scene": ""}
+                                            )
                                         )
                                         scene_name = ""
                                 scene_names = [scene_name]
@@ -714,7 +773,8 @@ class VizServer:
                         elif msg_type == "scene_synced":
                             logger.info(
                                 "WS scene_synced from %s (id=%s) - signalling ready",
-                                remote_addr, msg_browser_id,
+                                remote_addr,
+                                msg_browser_id,
                             )
                             self._signal_ws_ready()
 
@@ -769,8 +829,11 @@ class VizServer:
             logger.info(
                 "WS disconnect from %s (id=%s, close_code=%s, "
                 "clients_remaining=%d, sessions_remaining=%d)",
-                remote_addr, browser_id, close_code,
-                len(self._ws_clients) - 1, len(self._browser_sessions) - 1,
+                remote_addr,
+                browser_id,
+                close_code,
+                len(self._ws_clients) - 1,
+                len(self._browser_sessions) - 1,
             )
             # Clean up pending futures for this client
             for rid, future in list(self._pending_screenshots.items()):
@@ -955,7 +1018,9 @@ class VizServer:
             logger.warning(
                 "Browser at %s loaded page (token=%s) but WebSocket never connected. "
                 "Check that %s is reachable.",
-                info["remote_addr"], info["token"], ws_url,
+                info["remote_addr"],
+                info["token"],
+                ws_url,
             )
 
     def open_browser(self, path: str = "") -> None:
@@ -1005,7 +1070,10 @@ class VizServer:
         deadline = _time.monotonic() + timeout
         while _time.monotonic() < deadline:
             if self._ws_clients:
-                logger.debug("WS client connected after %.1fs", timeout - (deadline - _time.monotonic()))
+                logger.debug(
+                    "WS client connected after %.1fs",
+                    timeout - (deadline - _time.monotonic()),
+                )
                 return True
             await asyncio.sleep(0.5)
         logger.info("wait_for_client timed out after %.0fs", timeout)

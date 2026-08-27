@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ._icons import Icon
 
@@ -71,7 +71,7 @@ class Slider(Control):
     min: float = 0.0
     max: float = 1.0
     step: float = 0.01
-    default: float = 0.5
+    value: float = 0.5
     on_change: Handler | None = None
     on_press: Handler | None = None
     on_release: Handler | None = None
@@ -83,7 +83,7 @@ class Dropdown(Control):
 
     kind: str = "dropdown"
     options: list[str] = field(default_factory=list)
-    default: str = ""
+    value: str = ""
     on_change: Handler | None = None
 
 
@@ -139,7 +139,7 @@ class ColorPicker(Control):
     """A color chooser control (native color input, hex value)."""
 
     kind: str = "color"
-    default: str = "#ffffff"
+    value: str = "#ffffff"
     on_change: Handler | None = None
 
 
@@ -148,7 +148,21 @@ class Checkbox(Control):
     """A boolean checkbox control."""
 
     kind: str = "checkbox"
-    default: bool = False
+    value: bool = False
+    on_change: Handler | None = None
+
+
+@dataclass
+class ValueEdit(Control):
+    """A numeric stepper control with up/down buttons and keyboard/wheel steps."""
+
+    kind: str = "value_edit"
+    min: float = 0.0
+    max: float = 1.0
+    step: float = 0.1
+    digits: int = 2
+    value: float = 0.0
+    editable: bool = True
     on_change: Handler | None = None
 
 
@@ -257,14 +271,14 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
                 "min": ctrl.min,
                 "max": ctrl.max,
                 "step": ctrl.step,
-                "default": ctrl.default,
+                "value": ctrl.value,
             }
         )
     elif isinstance(ctrl, Dropdown):
         base.update(
             {
                 "options": list(ctrl.options),
-                "default": ctrl.default,
+                "value": ctrl.value,
             }
         )
     elif isinstance(ctrl, Button):
@@ -287,9 +301,9 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
             }
         )
     elif isinstance(ctrl, ColorPicker):
-        base.update({"default": ctrl.default})
+        base.update({"value": ctrl.value})
     elif isinstance(ctrl, Checkbox):
-        base.update({"default": ctrl.default})
+        base.update({"value": ctrl.value})
     elif isinstance(ctrl, FileChooser):
         base.update(
             {
@@ -297,6 +311,17 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
                 "placeholder": ctrl.placeholder,
                 "root": ctrl.root,
                 "accept": ctrl.accept,
+            }
+        )
+    elif isinstance(ctrl, ValueEdit):
+        base.update(
+            {
+                "min": ctrl.min,
+                "max": ctrl.max,
+                "step": ctrl.step,
+                "digits": ctrl.digits,
+                "value": ctrl.value,
+                "editable": ctrl.editable,
             }
         )
     else:
@@ -377,3 +402,46 @@ def serialize_controls(
         "groups": group_list,
         "orphanControls": orphan_ids,
     }
+
+
+def get_control_value(ctrl: Control) -> Any:
+    """Return the current value of a value-bearing control.
+
+    ``Button`` controls have no value and raise :class:`TypeError`.
+    """
+    if isinstance(ctrl, Button):
+        raise TypeError("Button controls do not carry a value")
+    if isinstance(
+        ctrl,
+        (
+            Slider,
+            Dropdown,
+            ColorPicker,
+            Checkbox,
+            TextField,
+            TextArea,
+            FileChooser,
+            ValueEdit,
+        ),
+    ):
+        return ctrl.value
+    raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
+
+
+def set_control_value(ctrl: Control, value: Any) -> None:
+    """Coerce and set *value* on a value-bearing control.
+
+    Sliders and value edits coerce to ``float``, checkboxes to ``bool``, and the
+    string-valued controls (dropdown, color, text, textarea, file chooser) to
+    ``str``.  ``Button`` controls have no value and raise :class:`TypeError`.
+    """
+    if isinstance(ctrl, (Slider, ValueEdit)):
+        ctrl.value = float(value)
+    elif isinstance(ctrl, Checkbox):
+        ctrl.value = bool(value)
+    elif isinstance(ctrl, (Dropdown, ColorPicker, TextField, TextArea, FileChooser)):
+        ctrl.value = str(value)
+    elif isinstance(ctrl, Button):
+        raise TypeError("Button controls do not carry a value")
+    else:
+        raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")

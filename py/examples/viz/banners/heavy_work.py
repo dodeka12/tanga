@@ -39,7 +39,7 @@ class HeavyWorkApp(VisualizerApp):
             min=0.2,
             max=3.0,
             step=0.05,
-            default=1.0,
+            value=1.0,
             on_release=self.on_release,
         )
         self.viz.add_control_group(

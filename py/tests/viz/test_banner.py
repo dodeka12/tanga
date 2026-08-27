@@ -44,8 +44,8 @@ def test_serialize_banner_controls_kind_specific():
         id="b1",
         text="x",
         controls=[
-            Slider(id="s", label="S", min=0, max=10, step=1, default=5),
-            Dropdown(id="d", label="D", options=["a", "b"], default="a"),
+            Slider(id="s", label="S", min=0, max=10, step=1, value=5),
+            Dropdown(id="d", label="D", options=["a", "b"], value="a"),
             Button(id="b", label="B"),
         ],
     )
@@ -56,11 +56,11 @@ def test_serialize_banner_controls_kind_specific():
     assert controls[0]["min"] == 0
     assert controls[0]["max"] == 10
     assert controls[0]["step"] == 1
-    assert controls[0]["default"] == 5
+    assert controls[0]["value"] == 5
 
     assert controls[1]["kind"] == "dropdown"
     assert controls[1]["options"] == ["a", "b"]
-    assert controls[1]["default"] == "a"
+    assert controls[1]["value"] == "a"
 
     assert controls[2]["kind"] == "button"
 
@@ -255,9 +255,7 @@ def test_scene_handle_show_banner_scopes(monkeypatch):
     viz = _viz()
     handle = viz.scene("detail")
     calls: list = []
-    monkeypatch.setattr(
-        viz, "show_banner", lambda *a, **kw: calls.append(kw) or "x"
-    )
+    monkeypatch.setattr(viz, "show_banner", lambda *a, **kw: calls.append(kw) or "x")
     handle.show_banner("hi")
     assert calls[0]["scene_name"] == "detail"
 

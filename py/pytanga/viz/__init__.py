@@ -38,6 +38,7 @@ from ._controls import (
     Slider,
     TextArea,
     TextField,
+    ValueEdit,
 )
 from ._coordinate_system import CoordinateSystem
 from ._figure import FigureConfig
@@ -145,6 +146,7 @@ from .views import (
     SpacerView,
     SplitView,
     StackView,
+    ValueEditView,
     View,
 )
 from .visualizer import Timeline, Visualizer
@@ -270,6 +272,8 @@ __all__ = [
     "multi_gradient_colors",
     "TitleStyle",
     "TranslatorStyle",
+    "ValueEdit",
+    "ValueEditView",
     "View",
     "View2DConfig",
     "View3dConfig",

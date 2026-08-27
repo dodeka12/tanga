@@ -12,6 +12,7 @@ let _panelEls = [];            // all active panel wrapper elements
 let _toggleBtn = null;         // hide/restore toggle button
 let _panelsHidden = false;
 let _groupToggleCallbacks = {};// group_id → boolean (has on_toggle server handler)
+let _controlRegistry = {};      // control id → { kind, apply(value) }
 
 // Throttle helpers (sliders send at ≤25 Hz while dragging; final state always flushed via change event)
 const _throttleTimers = {};
@@ -27,6 +28,16 @@ const THROTTLE_MS = 40;
  */
 export function setWebSocket(ws) {
     _ws = ws;
+}
+
+/**
+ * Apply a server-driven `control_update` to a rendered control's DOM value
+ * without firing a `control:change` event.  No-ops for unknown/unrendered ids.
+ */
+export function applyControlValue(id, value) {
+    const entry = _controlRegistry[id];
+    if (!entry) return;
+    entry.apply(value);
 }
 
 /**
@@ -105,6 +116,7 @@ function _destroyAll() {
     }
     _panelEls = [];
     _groupToggleCallbacks = {};
+    _controlRegistry = {};
     // Clear throttle timers
     for (const k of Object.keys(_throttleTimers)) {
         clearTimeout(_throttleTimers[k]);
@@ -413,6 +425,8 @@ function _createControlElement(ctrl) {
             return createColorPicker(ctrl);
         case 'checkbox':
             return createCheckbox(ctrl);
+        case 'value_edit':
+            return createValueEdit(ctrl);
         default:
             console.warn('Unknown control kind:', ctrl.kind);
             return null;
@@ -469,6 +483,10 @@ export function createFileChooser(ctrl) {
     row.appendChild(input);
     row.appendChild(browse);
     wrapper.appendChild(row);
+    _controlRegistry[ctrl.id] = {
+        kind: 'file_chooser',
+        apply: (value) => { input.value = value == null ? '' : String(value); },
+    };
     _applyTooltip(wrapper, ctrl);
     return wrapper;
 }
@@ -487,8 +505,8 @@ export function createSlider(ctrl) {
 
     const valueSpan = document.createElement('span');
     valueSpan.className = 'tanga-value';
-    const defaultVal = ctrl.default !== undefined ? ctrl.default : ctrl.min;
-    valueSpan.textContent = String(defaultVal);
+    const ctrlValue = ctrl.value !== undefined ? ctrl.value : ctrl.min;
+    valueSpan.textContent = String(ctrlValue);
 
     labelRow.appendChild(label);
     labelRow.appendChild(valueSpan);
@@ -499,7 +517,7 @@ export function createSlider(ctrl) {
     input.min = ctrl.min !== undefined ? ctrl.min : 0;
     input.max = ctrl.max !== undefined ? ctrl.max : 1;
     input.step = ctrl.step !== undefined ? ctrl.step : 0.01;
-    input.value = defaultVal;
+    input.value = ctrlValue;
     input.className = 'tanga-range-input';
     wrapper.appendChild(input);
 
@@ -527,6 +545,14 @@ export function createSlider(ctrl) {
 
     // Stop propagation to prevent orbit control interference
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _controlRegistry[ctrl.id] = {
+        kind: 'slider',
+        apply: (value) => {
+            const coerced = Number(value);
+            input.value = coerced;
+            valueSpan.textContent = String(coerced);
+        },
+    };
     _applyTooltip(wrapper, ctrl);
 
     return wrapper;
@@ -547,7 +573,7 @@ export function createDropdown(ctrl) {
         const option = document.createElement('option');
         option.value = opt;
         option.textContent = opt;
-        if (opt === ctrl.default) option.selected = true;
+        if (opt === ctrl.value) option.selected = true;
         select.appendChild(option);
     }
     wrapper.appendChild(select);
@@ -557,6 +583,10 @@ export function createDropdown(ctrl) {
     });
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _controlRegistry[ctrl.id] = {
+        kind: 'dropdown',
+        apply: (value) => { select.value = value == null ? '' : String(value); },
+    };
     _applyTooltip(wrapper, ctrl);
 
     return wrapper;
@@ -612,6 +642,10 @@ export function createTextField(ctrl) {
 
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _controlRegistry[ctrl.id] = {
+        kind: 'text',
+        apply: (value) => { input.value = value == null ? '' : String(value); },
+    };
     _applyTooltip(wrapper, ctrl);
 
     return wrapper;
@@ -634,6 +668,10 @@ export function createTextArea(ctrl) {
 
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _controlRegistry[ctrl.id] = {
+        kind: 'textarea',
+        apply: (value) => { input.value = value == null ? '' : String(value); },
+    };
     _applyTooltip(wrapper, ctrl);
 
     return wrapper;
@@ -649,12 +687,16 @@ export function createColorPicker(ctrl) {
 
     const input = document.createElement('input');
     input.type = 'color';
-    input.value = ctrl.default || '#ffffff';
+    input.value = ctrl.value || '#ffffff';
     input.className = 'tanga-color-input';
     wrapper.appendChild(input);
 
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _controlRegistry[ctrl.id] = {
+        kind: 'color',
+        apply: (value) => { input.value = value == null ? '#ffffff' : String(value); },
+    };
     _applyTooltip(wrapper, ctrl);
 
     return wrapper;
@@ -669,7 +711,7 @@ export function createCheckbox(ctrl) {
 
     const input = document.createElement('input');
     input.type = 'checkbox';
-    input.checked = !!ctrl.default;
+    input.checked = !!ctrl.value;
     input.className = 'tanga-checkbox-input';
 
     const text = document.createElement('span');
@@ -685,6 +727,137 @@ export function createCheckbox(ctrl) {
     });
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _controlRegistry[ctrl.id] = {
+        kind: 'checkbox',
+        apply: (value) => { input.checked = !!value; },
+    };
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
+export function createValueEdit(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-value-edit';
+
+    const label = document.createElement('label');
+    label.textContent = ctrl.label || ctrl.id;
+    wrapper.appendChild(label);
+
+    const min = ctrl.min !== undefined ? ctrl.min : 0;
+    const max = ctrl.max !== undefined ? ctrl.max : 1;
+    const step = ctrl.step !== undefined ? ctrl.step : 0.1;
+    const digits = ctrl.digits !== undefined ? ctrl.digits : 2;
+    const editable = ctrl.editable !== false;
+
+    const clamp = (v) => Math.min(max, Math.max(min, v));
+    const round = (v) => Number(v.toFixed(digits));
+
+    let value = round(clamp(ctrl.value !== undefined ? ctrl.value : min));
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.inputMode = 'decimal';
+    input.readOnly = !editable;
+    input.className = 'tanga-value-input';
+    input.value = value.toFixed(digits);
+
+    const row = document.createElement('div');
+    row.className = 'tanga-value-edit-row';
+
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'tanga-step-button';
+    upBtn.title = 'Increase';
+    upBtn.appendChild(createIconElement('uc:▲'));
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'tanga-step-button';
+    downBtn.title = 'Decrease';
+    downBtn.appendChild(createIconElement('uc:▼'));
+
+    row.appendChild(input);
+    row.appendChild(upBtn);
+    row.appendChild(downBtn);
+    wrapper.appendChild(row);
+
+    const commit = () => {
+        input.value = value.toFixed(digits);
+        sendControlEvent('control:change', ctrl.id, value);
+    };
+
+    const stepValue = (direction) => {
+        value = round(clamp(value + direction * step));
+        commit();
+    };
+
+    const commitText = () => {
+        const parsed = parseFloat(input.value);
+        if (Number.isFinite(parsed)) {
+            value = round(clamp(parsed));
+            input.value = value.toFixed(digits);
+            sendControlEvent('control:change', ctrl.id, value);
+        } else {
+            input.value = value.toFixed(digits);
+        }
+    };
+
+    upBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        stepValue(1);
+    });
+    downBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        stepValue(-1);
+    });
+
+    // Arrow keys step the value while the control is hovered/focused.
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            stepValue(1);
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            stepValue(-1);
+        } else if (e.key === 'Enter' && editable) {
+            e.preventDefault();
+            commitText();
+        }
+    });
+
+    // When editable, parse a typed value on blur/Enter (clamped + rounded).
+    if (editable) {
+        input.addEventListener('change', commitText);
+    }
+
+    // Focus the input on hover so arrow keys work without an explicit click.
+    wrapper.addEventListener('mouseenter', () => {
+        input.focus({ preventScroll: true });
+    });
+
+    // Scroll wheel steps the value (up = increase).
+    wrapper.addEventListener(
+        'wheel',
+        (e) => {
+            e.preventDefault();
+            stepValue(e.deltaY < 0 ? 1 : -1);
+        },
+        { passive: false }
+    );
+
+    // Stop propagation to prevent orbit control interference.
+    wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+    _controlRegistry[ctrl.id] = {
+        kind: 'value_edit',
+        apply: (v) => {
+            value = round(clamp(Number(v)));
+            input.value = value.toFixed(digits);
+        },
+    };
     _applyTooltip(wrapper, ctrl);
 
     return wrapper;
@@ -985,6 +1158,46 @@ function _injectStyles() {
         .tanga-checkbox-label {
             font-size: 12px;
             color: #ccc;
+        }
+        .tanga-value-edit-row {
+            display: flex;
+            gap: 4px;
+            align-items: stretch;
+        }
+        .tanga-value-input {
+            flex: 1;
+            min-width: 0;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            color: #ccc;
+            padding: 4px 6px;
+            font-size: 13px;
+            outline: none;
+            text-align: right;
+        }
+        .tanga-value-input:focus {
+            border-color: #4488ff;
+        }
+        .tanga-step-button {
+            width: 24px;
+            padding: 0;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            color: #ddd;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tanga-step-button:hover {
+            background: rgba(255,255,255,0.18);
+        }
+        .tanga-step-button .tanga-icon-uc {
+            font-size: 10px;
+            line-height: 1;
         }
     `;
     document.head.appendChild(style);

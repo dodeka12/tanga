@@ -336,7 +336,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
-        default: float | None = None,
+        value: float | None = None,
         on_change: Any = None,
         on_press: Any = None,
         on_release: Any = None,
@@ -351,7 +351,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             min=min,
             max=max,
             step=step,
-            default=default,
+            value=value,
             on_change=on_change,
             on_press=on_press,
             on_release=on_release,
@@ -365,7 +365,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         label: str = "",
         tooltip: str = "",
         options: list[str] | None = None,
-        default: str = "",
+        value: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
     ) -> str:
@@ -376,7 +376,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             label=label,
             tooltip=tooltip,
             options=options,
-            default=default,
+            value=value,
             on_change=on_change,
             parent_id=parent_id,
         )
@@ -484,7 +484,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
-        default: str = "#ffffff",
+        value: str = "#ffffff",
         tooltip: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
@@ -494,7 +494,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             cid,
             label=label,
-            default=default,
+            value=value,
             tooltip=tooltip,
             on_change=on_change,
             parent_id=parent_id,
@@ -505,7 +505,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
-        default: bool = False,
+        value: bool = False,
         tooltip: str = "",
         on_change: Any = None,
         parent_id: str | None = None,
@@ -515,8 +515,39 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             cid,
             label=label,
-            default=default,
+            value=value,
             tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def add_value_edit(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        tooltip: str = "",
+        min: float = 0.0,
+        max: float = 1.0,
+        step: float = 0.1,
+        digits: int = 2,
+        editable: bool = True,
+        value: float | None = None,
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a numeric value-edit (stepper) control to this scene."""
+        return self._viz._add_scene_value_edit(
+            self._name,
+            cid,
+            label=label,
+            tooltip=tooltip,
+            min=min,
+            max=max,
+            step=step,
+            digits=digits,
+            editable=editable,
+            value=value,
             on_change=on_change,
             parent_id=parent_id,
         )
@@ -559,6 +590,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def remove_control(self, cid: str) -> None:
         """Remove a control from this scene."""
         self._viz._remove_scene_control(self._name, cid)
+
+    def set_control_value(self, cid: str, value: Any) -> None:
+        """Update a control's value in place (see :meth:`Visualizer.set_control_value`)."""
+        self._viz.set_control_value(cid, value, scene_name=self._name)
 
     def remove_control_group(self, gid: str) -> None:
         """Remove a UI control group from this scene."""

@@ -7,7 +7,7 @@ window.__tanga_ready = true;
 
 import { ThreeJsView } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
-import { setWebSocket } from './controls-panel.js';
+import { setWebSocket, applyControlValue } from './controls-panel.js';
 import { setWebSocket as setInteractionWebSocket } from './interaction.js';
 import {
     setWebSocket as setBannerWebSocket,
@@ -573,6 +573,11 @@ async function handleMessage(msg) {
     if (msg.type === 'view_camera') {
         const target = _viewById.get(msg.view_id);
         if (target) target.setCamera(msg.camera);
+        return;
+    }
+
+    if (msg.type === 'control_update') {
+        applyControlValue(msg.id, msg.value);
         return;
     }
 

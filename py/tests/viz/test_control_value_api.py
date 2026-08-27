@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""Tests for the control value-update API (``control_update``)."""
+
+import asyncio
+import json
+
+import pytest
+
+from pytanga.viz import ButtonView, SliderView, Visualizer
+from pytanga.viz._controls import (
+    Button,
+    Slider,
+    ValueEdit,
+    set_control_value as _set_ctrl,
+)
+
+
+class _FakeServer:
+    def __init__(self):
+        self.pushed: list[str] = []
+
+    async def push_raw(self, data: str) -> None:
+        self.pushed.append(data)
+
+
+def _viz() -> Visualizer:
+    return Visualizer(add_default_axes=False, add_default_grid=False)
+
+
+def _patch_push(viz: Visualizer, server: _FakeServer, monkeypatch) -> None:
+    monkeypatch.setattr(viz, "_server", server)
+    monkeypatch.setattr(viz, "_loop", object())
+    monkeypatch.setattr(
+        asyncio, "run_coroutine_threadsafe", lambda coro, loop: asyncio.run(coro)
+    )
+
+
+def _messages(server: _FakeServer) -> list[dict]:
+    return [json.loads(d) for d in server.pushed]
+
+
+# ── Helper coercion ─────────────────────────────────────────
+
+
+def test_helper_slider_coerces_float() -> None:
+    ctrl = Slider(id="s", value=1)
+    _set_ctrl(ctrl, "2.5")
+    assert ctrl.value == 2.5
+
+
+def test_helper_value_edit_coerces_float() -> None:
+    ctrl = ValueEdit(id="v", value=1.0)
+    _set_ctrl(ctrl, "2.25")
+    assert ctrl.value == 2.25
+
+
+def test_helper_button_raises() -> None:
+    with pytest.raises(TypeError):
+        _set_ctrl(Button(id="go"), None)
+
+
+# ── Visualizer.set_control_value ────────────────────────────
+
+
+def test_set_control_value_slider_mutates_and_pushes(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_slider("radius", min=0, max=5, value=2.0)
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.set_control_value("radius", 3.5)
+
+    assert viz._scenes[""]._controls["radius"].value == 3.5
+    assert _messages(server) == [
+        {"type": "control_update", "scene": "", "id": "radius", "value": 3.5},
+    ]
+
+
+def test_set_control_value_dropdown_coerces_to_str(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_dropdown("mode", options=["a", "b"], value="a")
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.set_control_value("mode", "b")
+
+    assert viz._scenes[""]._controls["mode"].value == "b"
+    assert _messages(server)[-1]["value"] == "b"
+
+
+def test_set_control_value_checkbox_coerces_to_bool(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_checkbox("wire", value=False)
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.set_control_value("wire", True)
+
+    assert viz._scenes[""]._controls["wire"].value is True
+    assert _messages(server)[-1]["value"] is True
+
+
+def test_set_control_value_missing_raises() -> None:
+    viz = _viz()
+    with pytest.raises(KeyError):
+        viz.set_control_value("nope", 1.0)
+
+
+def test_set_control_value_button_raises() -> None:
+    viz = _viz()
+    viz.add_button("go")
+    with pytest.raises(TypeError):
+        viz.set_control_value("go", None)
+
+
+# ── Visualizer.set_control_view_value ───────────────────────
+
+
+def test_set_control_view_value_mutates_and_pushes(monkeypatch) -> None:
+    viz = _viz()
+    view = SliderView("s1", min=0, max=5, value=2.0)
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.set_control_view_value(view, 4.0)
+
+    assert view.value == 4.0
+    assert _messages(server) == [
+        {"type": "control_update", "scene": "", "id": "s1", "value": 4.0},
+    ]
+
+
+def test_set_control_view_value_button_view_raises() -> None:
+    viz = _viz()
+    with pytest.raises(TypeError):
+        viz.set_control_view_value(ButtonView("b1"), None)
+
+
+# ── Visualizer.update_control routes value= ─────────────────
+
+
+def test_update_control_value_routes_in_place(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_slider("s", min=0, max=10, value=1.0)
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.update_control("s", value=5.5)
+
+    assert viz._scenes[""]._controls["s"].value == 5.5
+    msgs = _messages(server)
+    assert len(msgs) == 1
+    assert msgs[0]["type"] == "control_update"
+    assert msgs[0]["id"] == "s"
+    assert msgs[0]["value"] == 5.5
+
+
+def test_update_control_other_fields_redefines(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_slider("s", min=0, max=10, value=1.0)
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.update_control("s", max=20.0)
+
+    assert viz._scenes[""]._controls["s"].max == 20.0
+    assert _messages(server)[-1]["type"] == "controls_define"
