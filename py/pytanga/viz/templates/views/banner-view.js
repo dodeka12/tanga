@@ -3,7 +3,7 @@
 // as `controls-panel.js` (sliders/dropdowns stacked, buttons in a row).
 
 import { View } from './view.js';
-import { createSlider, createButton, createDropdown } from '../controls-panel.js';
+import { createSlider, createButton, createDropdown, createTextField, createTextArea, createColorPicker, createCheckbox } from '../controls-panel.js';
 
 export class BannerView extends View {
     constructor({
@@ -91,7 +91,7 @@ export class BannerView extends View {
         body.className = 'tanga-banner-text';
         body.style.lineHeight = '1.5';
         if (typeof marked !== 'undefined') {
-            body.innerHTML = marked.parse(this.text);
+            body.innerHTML = marked.parse(this.text, { breaks: true });
         } else {
             body.textContent = this.text;
         }
@@ -166,6 +166,10 @@ export class BannerView extends View {
         if (ctrl.kind === 'slider') return createSlider(ctrl);
         if (ctrl.kind === 'dropdown') return createDropdown(ctrl);
         if (ctrl.kind === 'button') return createButton(ctrl);
+        if (ctrl.kind === 'text') return createTextField(ctrl);
+        if (ctrl.kind === 'textarea') return createTextArea(ctrl);
+        if (ctrl.kind === 'color') return createColorPicker(ctrl);
+        if (ctrl.kind === 'checkbox') return createCheckbox(ctrl);
         return null;
     }
 

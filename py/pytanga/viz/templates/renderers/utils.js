@@ -7,6 +7,7 @@ import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { styleNeedsRebuild } from './style-diff.js';
 
 /**
  * Create a MeshPhongMaterial with sensible defaults for Tanga entities.
@@ -271,19 +272,21 @@ export function approxEqual(a, b, eps = 1e-9) {
  * per-entity updaters so the mutations are defined in one place.
  */
 export function applyStyleUpdate(mesh, ent) {
-    if (ent.opacity !== undefined) {
+    const opacity = styleParam(ent, 'opacity', undefined);
+    if (opacity !== undefined) {
         mesh.traverse((child) => {
             if (child.material && child.material.opacity !== undefined) {
-                child.material.opacity = ent.opacity;
-                child.material.transparent = ent.opacity < 1.0;
-                child.material.depthWrite = ent.opacity >= 0.99;
+                child.material.opacity = opacity;
+                child.material.transparent = opacity < 1.0;
+                child.material.depthWrite = opacity >= 0.99;
                 child.material.needsUpdate = true;
             }
         });
     }
 
-    if (ent.color) {
-        const c = new THREE.Color(ent.color);
+    const color = styleParam(ent, 'color', null);
+    if (color) {
+        const c = new THREE.Color(color);
         mesh.traverse((child) => {
             if (child.material && child.material.color) {
                 child.material.color.copy(c);
@@ -336,6 +339,10 @@ export function entityRequiresRebuild(ent, prev) {
         if (!prev || a !== b) return true;
     }
     if (ent.kind !== undefined && ent.kind !== prev?.kind) return true;
+    // Any style field other than color/opacity must rebuild, so the per-kind
+    // renderer re-reads every style parameter (size, thickness, wireframe,
+    // dash patterns, texture labels, double-sided, …).
+    if (styleNeedsRebuild(ent, prev)) return true;
     return false;
 }
 

@@ -85,7 +85,7 @@ browser. Each takes a unique id and an **async** handler callback.
 Group them into a collapsible panel:
 
 ```python
-self.viz.add_group(
+self.viz.add_control_group(
     "controls",
     title="Controls",
     controls=["radius", "reset"],
@@ -93,7 +93,7 @@ self.viz.add_group(
 )
 ```
 
-Remove them with `remove_control(id)`, `remove_group(id)`, or `clear_controls()`.
+Remove them with `remove_control(id)`, `remove_control_group(id)`, or `clear_controls()`.
 Handlers receive the new value plus a `ControlEvent`; use
 `self.viz.update_entity(...)` / `self.viz.update(...)` then `flush()` to apply
 changes.

@@ -8,6 +8,8 @@ import pytest
 from pytanga.viz._size import Size
 from pytanga.viz.views import (
     ButtonView,
+    CheckboxView,
+    ColorPickerView,
     DropdownView,
     GroupView,
     SceneView,
@@ -15,6 +17,8 @@ from pytanga.viz.views import (
     SpacerView,
     SplitView,
     StackView,
+    TextAreaView,
+    TextFieldView,
     View,
     iter_scene_names,
     serialize_layout,
@@ -187,6 +191,47 @@ class TestControlViews:
         assert node["type"] == "dropdown_view"
         assert node["options"] == ["a", "b"]
         assert node["default"] == "a"
+
+    def test_button_serialize_with_icon(self):
+        node = serialize_layout(
+            ButtonView("b1", label="Go", icon="material:refresh", icon_only=True)
+        )["root"]
+        assert node["type"] == "button_view"
+        assert node["icon"] == "material:refresh"
+        assert node["icon_only"] is True
+
+    def test_text_field_serialize(self):
+        node = serialize_layout(
+            TextFieldView("t1", label="Name", value="a", placeholder="…")
+        )["root"]
+        assert node["type"] == "text_field_view"
+        assert node["id"] == "t1"
+        assert node["label"] == "Name"
+        assert node["value"] == "a"
+        assert node["placeholder"] == "…"
+
+    def test_text_area_serialize(self):
+        node = serialize_layout(TextAreaView("ta1", label="Notes", rows=6))["root"]
+        assert node["type"] == "text_area_view"
+        assert node["rows"] == 6
+
+    def test_color_picker_serialize(self):
+        node = serialize_layout(
+            ColorPickerView("c1", label="Color", default="#ff0000")
+        )["root"]
+        assert node["type"] == "color_picker_view"
+        assert node["default"] == "#ff0000"
+
+    def test_checkbox_serialize(self):
+        node = serialize_layout(
+            CheckboxView("cb1", label="Wireframe", default=True)
+        )["root"]
+        assert node["type"] == "checkbox_view"
+        assert node["default"] is True
+
+    def test_control_tooltip_serialize(self):
+        node = serialize_layout(SliderView("s1", tooltip="hover"))["root"]
+        assert node["tooltip"] == "hover"
 
 
 class TestStackView:

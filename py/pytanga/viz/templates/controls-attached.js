@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { createSlider, createDropdown, createButton, sendControlEvent, throttledSend, throttledFlush } from './controls-panel.js';
+import { createSlider, createDropdown, createButton, createFileChooser, createTextField, createTextArea, createColorPicker, createCheckbox, createIconElement, sendControlEvent, throttledSend, throttledFlush } from './controls-panel.js';
 
 // ── Module state ─────────────────────────────────────────────
 const _attachedGroups = new Map();  // groupId → { css2d, parentMesh }
@@ -37,6 +37,13 @@ export function attachGroup(group, controls, sceneObjects) {
     // ── Title bar (always visible, acts as persistent label) ──
     const titleBar = document.createElement('div');
     titleBar.className = 'tanga-attached-title';
+    if (group.tooltip) titleBar.title = group.tooltip;
+
+    if (group.icon) {
+        const icon = createIconElement(group.icon);
+        icon.classList.add('tanga-attached-title-icon');
+        titleBar.appendChild(icon);
+    }
 
     const titleText = document.createElement('span');
     titleText.className = 'tanga-attached-title-text';
@@ -63,6 +70,11 @@ export function attachGroup(group, controls, sceneObjects) {
         if (ctrl.kind === 'slider') el = createSlider(ctrl);
         else if (ctrl.kind === 'dropdown') el = createDropdown(ctrl);
         else if (ctrl.kind === 'button') el = createButton(ctrl);
+        else if (ctrl.kind === 'file_chooser') el = createFileChooser(ctrl);
+        else if (ctrl.kind === 'text') el = createTextField(ctrl);
+        else if (ctrl.kind === 'textarea') el = createTextArea(ctrl);
+        else if (ctrl.kind === 'color') el = createColorPicker(ctrl);
+        else if (ctrl.kind === 'checkbox') el = createCheckbox(ctrl);
         if (el) controlsDiv.appendChild(el);
     }
     container.appendChild(controlsDiv);
@@ -198,6 +210,9 @@ function _injectStyles() {
         .tanga-attached-controls .tanga-action-button {
             font-size: 11px;
             padding: 3px 10px;
+        }
+        .tanga-attached-title .material-icons {
+            font-size: 13px;
         }
     `;
     document.head.appendChild(style);

@@ -59,6 +59,7 @@ _RENDERERS_DIR = (
 )
 
 _RENDERER_FILES: list[Path] = [
+    _RENDERERS_DIR / "style-diff.js",
     _RENDERERS_DIR / "utils.js",
     _RENDERERS_DIR / "point.js",
     _RENDERERS_DIR / "crosshair_point.js",

@@ -57,6 +57,7 @@ self.viz.add_dropdown(
 self.viz.add_button(
     "reset",
     label="Reset",
+    icon=EIconMaterial.REFRESH,
     on_click=self.on_reset,
 )
 ```
@@ -65,14 +66,104 @@ self.viz.add_button(
 |-----------|------|---------|-------------|
 | `cid` | `str` | *(required)* | Control ID |
 | `label` | `str` | `""` | Button text |
+| `icon` | `Icon` | `None` | Optional icon (see [Icons](#icons)) |
+| `icon_only` | `bool` | `False` | Render only the icon as a small square button |
+| `tooltip` | `str` | `""` | Hover tooltip |
 | `on_click` | `Callable` | `None` | Async callback: `(value: None, event: ControlEvent) -> None` |
 
-## `add_group`
+## `add_text_field`
+
+Single-line text input:
+
+```python
+self.viz.add_text_field(
+    "name",
+    label="Name",
+    placeholder="Enter a name…",
+    on_change=self.on_name,
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cid` | `str` | *(required)* | Control ID |
+| `label` | `str` | `""` | Label text |
+| `value` | `str` | `""` | Initial value |
+| `placeholder` | `str` | `""` | Placeholder text |
+| `tooltip` | `str` | `""` | Hover tooltip |
+| `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
+
+## `add_text_area`
+
+Multi-line text input:
+
+```python
+self.viz.add_text_area(
+    "notes",
+    label="Notes",
+    rows=6,
+    on_change=self.on_notes,
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cid` | `str` | *(required)* | Control ID |
+| `label` | `str` | `""` | Label text |
+| `value` | `str` | `""` | Initial value |
+| `placeholder` | `str` | `""` | Placeholder text |
+| `rows` | `int` | `4` | Visible rows |
+| `tooltip` | `str` | `""` | Hover tooltip |
+| `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
+
+## `add_color_picker`
+
+Native color input (hex value):
+
+```python
+self.viz.add_color_picker(
+    "color",
+    label="Color",
+    default="#ff0000",
+    on_change=self.on_color,
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cid` | `str` | *(required)* | Control ID |
+| `label` | `str` | `""` | Label text |
+| `default` | `str` | `"#ffffff"` | Initial hex color |
+| `tooltip` | `str` | `""` | Hover tooltip |
+| `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
+
+## `add_checkbox`
+
+Boolean checkbox:
+
+```python
+self.viz.add_checkbox(
+    "wireframe",
+    label="Wireframe",
+    default=False,
+    on_change=self.on_wireframe,
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cid` | `str` | *(required)* | Control ID |
+| `label` | `str` | `""` | Label text |
+| `default` | `bool` | `False` | Initial checked state |
+| `tooltip` | `str` | `""` | Hover tooltip |
+| `on_change` | `Callable` | `None` | Async callback: `(value: bool, event: ControlEvent) -> None` |
+
+## `add_control_group`
 
 Groups controls into a collapsible panel at a fixed position:
 
 ```python
-self.viz.add_group(
+self.viz.add_control_group(
     "viewport_controls",
     title="Controls",
     controls=["sphere_b_x", "mode", "reset"],
@@ -84,6 +175,8 @@ self.viz.add_group(
 |-----------|------|---------|-------------|
 | `gid` | `str` | *(required)* | Group ID |
 | `title` | `str` | `""` | Group header (empty = no header) |
+| `icon` | `Icon` | `None` | Optional title-bar icon (see [Icons](#icons)) |
+| `tooltip` | `str` | `""` | Hover tooltip for the title bar |
 | `controls` | `list[str]` | `[]` | Ordered list of control IDs |
 | `position` | `str` | `"bottom-right"` | `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"` |
 | `collapsed` | `bool` | `False` | Start collapsed |
@@ -91,11 +184,40 @@ self.viz.add_group(
 
 Controls must be created **before** the group that references them.
 
+## Icons
+
+Buttons and group title bars accept an optional icon. Icons are addressed as
+`family:name` strings:
+
+- `material:<name>` — a Google Material Icons ligature name (e.g.
+  `material:settings`, `material:play_arrow`). Loaded on demand from the Google
+  Fonts stylesheet, so no icon files are shipped — but an internet connection
+  is required to render them.
+- `uc:<glyph>` — a Unicode symbol rendered as literal text (e.g. `uc:▶`,
+  `uc:⚙`). Always available, no font needed.
+- A bare name (no `:`) defaults to `material`.
+
+Use the `EIconMaterial` / `EIconUC` enums for autocompletion, or pass a raw
+string such as `"material:home"`:
+
+```python
+from pytanga.viz import EIconMaterial, EIconUC
+
+self.viz.add_button("delete", icon=EIconMaterial.DELETE, icon_only=True)
+self.viz.add_control_group("g", title="Settings", icon=EIconUC.GEAR)
+```
+
+## Tooltips
+
+Every control — and the control-group title bar — accepts a `tooltip` string,
+rendered as a native `title` hover tooltip. Icon-only buttons show their
+tooltip (or label) as the button's accessible name.
+
 ## Removing controls
 
 ```python
 self.viz.remove_control("sphere_b_x")
-self.viz.remove_group("viewport_controls")
+self.viz.remove_control_group("viewport_controls")
 self.viz.clear_controls()  # remove all
 ```
 
@@ -109,8 +231,13 @@ scene:
 detail = viz.scene("detail")
 detail.add_slider("radius", label="Radius", min=0.1, max=5.0, on_change=on_radius)
 detail.add_button("reset", label="Reset", on_click=on_reset)
-detail.add_group("detail_controls", controls=["radius", "reset"], title="Detail")
+detail.add_control_group("detail_controls", controls=["radius", "reset"], title="Detail")
 ```
 
 Controls and groups are pushed only to browsers viewing the ``"detail"`` scene.
 This allows different scenes to have completely independent control panels.
+
+## Example
+
+- `py/examples/viz/interaction/all_controls.py` — one of every control kind in
+  a single app.

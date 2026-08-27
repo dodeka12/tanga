@@ -29,14 +29,19 @@ from ._banner import Banner
 from ._colors import Color
 from ._controls import (
     Button,
+    Checkbox,
+    ColorPicker,
     ControlEvent,
     ControlGroup,
     Dropdown,
     FileChooser,
     Slider,
+    TextArea,
+    TextField,
 )
 from ._coordinate_system import CoordinateSystem
 from ._figure import FigureConfig
+from ._icons import EIconMaterial, EIconUC
 from ._interaction import (
     Camera,
     ClickEvent,
@@ -168,7 +173,9 @@ __all__ = [
     "CameraConfig",
     "CameraConfig2d",
     "CameraConfig3d",
+    "Checkbox",
     "Color",
+    "ColorPicker",
     "CoordinateSystem",
     "ClickEvent",
     "ControlEvent",
@@ -186,6 +193,8 @@ __all__ = [
     "DragMode",
     "Dropdown",
     "DropdownView",
+    "EIconMaterial",
+    "EIconUC",
     "EllipseStyle",
     "EllipsoidStyle",
     "FigureConfig",
@@ -253,6 +262,8 @@ __all__ = [
     "SphereStyle",
     "SplitView",
     "StackView",
+    "TextArea",
+    "TextField",
     "TextureLabelStyle",
     "Timeline",
     "gradient_colors",

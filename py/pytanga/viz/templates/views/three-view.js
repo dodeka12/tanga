@@ -14,7 +14,7 @@ import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { handleControlsDefine, handleControlsClear } from '../controls-panel.js';
 import { attachGroup, detachGroup, detachAll } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
-import { updateLineResolutions, applyStyleUpdate } from '../renderers/utils.js';
+import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
 import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setSpaceDim, setCamera } from '../interaction.js';
 
 // ── WebGL1 SDF fallback warning banner ──────────────────────
@@ -363,7 +363,7 @@ export class ThreeJsView extends View {
         const container = document.createElement('div');
 
         if (typeof marked !== 'undefined') {
-            container.innerHTML = marked.parse(mdText);
+            container.innerHTML = marked.parse(mdText, { breaks: true });
         } else {
             container.textContent = mdText;
         }
@@ -596,8 +596,13 @@ export class ThreeJsView extends View {
         if (aspect === 'style') {
             if (value.style && entry.obj) {
                 const prev = entry.data || {};
-                entry.data = { ...prev, style: { ...(prev.style || {}), ...value.style } };
-                if (entry.obj.isObject3D) applyStyleUpdate(entry.obj, entry.data);
+                const merged = { ...prev, style: { ...(prev.style || {}), ...value.style } };
+                if (entityRequiresRebuild(merged, prev)) {
+                    await this._updateEntityContent(id, merged);
+                } else {
+                    entry.data = merged;
+                    if (entry.obj.isObject3D) applyStyleUpdate(entry.obj, merged);
+                }
             }
         }
     }

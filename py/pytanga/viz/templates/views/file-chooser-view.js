@@ -4,8 +4,8 @@ import { ControlView } from './control-view.js';
 import { createFileChooser } from '../controls-panel.js';
 
 export class FileChooserView extends ControlView {
-    constructor({ id, label = '', value = '', placeholder = '', root = null, accept = '' } = {}) {
-        super({ id, label });
+    constructor({ id, label = '', tooltip = '', value = '', placeholder = '', root = null, accept = '' } = {}) {
+        super({ id, label, tooltip });
         this.value = value;
         this.placeholder = placeholder;
         this.root = root;
@@ -16,6 +16,7 @@ export class FileChooserView extends ControlView {
         return createFileChooser({
             id: this.controlId,
             label: this.label,
+            tooltip: this.tooltip,
             value: this.value,
             placeholder: this.placeholder,
             root: this.root,

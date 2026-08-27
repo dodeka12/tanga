@@ -8,10 +8,14 @@ from __future__ import annotations
 import pytest
 from pytanga.viz._controls import (
     Button,
+    Checkbox,
+    ColorPicker,
     ControlGroup,
     ControlHandlerRegistry,
     Dropdown,
     Slider,
+    TextArea,
+    TextField,
     _serialize_one_control,
     serialize_controls,
 )
@@ -70,6 +74,7 @@ def test_serialize_button() -> None:
         "id": "reset_btn",
         "kind": "button",
         "label": "Reset",
+        "icon_only": False,
     }
 
 
@@ -182,3 +187,97 @@ def test_handler_registry_clear() -> None:
     registry.clear()
     assert registry.get("a") is None
     assert registry.get("b") is None
+
+
+# ── Test: new control serialization ──────────────────────────
+
+
+def test_serialize_text_field() -> None:
+    ctrl = TextField(id="name", label="Name", value="a", placeholder="…")
+    result = _serialize_one_control(ctrl)
+    assert result == {
+        "id": "name",
+        "kind": "text",
+        "label": "Name",
+        "value": "a",
+        "placeholder": "…",
+    }
+
+
+def test_serialize_text_area() -> None:
+    ctrl = TextArea(id="notes", label="Notes", value="", rows=6)
+    result = _serialize_one_control(ctrl)
+    assert result == {
+        "id": "notes",
+        "kind": "textarea",
+        "label": "Notes",
+        "value": "",
+        "placeholder": "",
+        "rows": 6,
+    }
+
+
+def test_serialize_color_picker() -> None:
+    ctrl = ColorPicker(id="col", label="Color", default="#ff0000")
+    result = _serialize_one_control(ctrl)
+    assert result == {
+        "id": "col",
+        "kind": "color",
+        "label": "Color",
+        "default": "#ff0000",
+    }
+
+
+def test_serialize_checkbox() -> None:
+    ctrl = Checkbox(id="wire", label="Wireframe", default=True)
+    result = _serialize_one_control(ctrl)
+    assert result == {
+        "id": "wire",
+        "kind": "checkbox",
+        "label": "Wireframe",
+        "default": True,
+    }
+
+
+def test_serialize_button_with_icon() -> None:
+    ctrl = Button(id="reset", label="Reset", icon="material:refresh", icon_only=True)
+    result = _serialize_one_control(ctrl)
+    assert result == {
+        "id": "reset",
+        "kind": "button",
+        "label": "Reset",
+        "icon": "material:refresh",
+        "icon_only": True,
+    }
+
+
+def test_serialize_button_without_icon_has_no_icon_key() -> None:
+    ctrl = Button(id="reset", label="Reset")
+    result = _serialize_one_control(ctrl)
+    assert "icon" not in result
+    assert result["icon_only"] is False
+
+
+def test_serialize_control_tooltip_present_when_set() -> None:
+    ctrl = Slider(id="s", label="S", tooltip="hover text")
+    assert _serialize_one_control(ctrl)["tooltip"] == "hover text"
+
+
+def test_serialize_control_tooltip_absent_when_empty() -> None:
+    ctrl = Slider(id="s", label="S")
+    assert "tooltip" not in _serialize_one_control(ctrl)
+
+
+def test_serialize_group_with_icon_and_tooltip() -> None:
+    slider = Slider(id="s", label="S")
+    group = ControlGroup(
+        id="g",
+        title="Group",
+        controls=[slider],
+        icon="material:settings",
+        tooltip="group tooltip",
+    )
+    result = serialize_controls([group])
+    entry = result["groups"][0]
+    assert entry["icon"] == "material:settings"
+    assert entry["tooltip"] == "group tooltip"

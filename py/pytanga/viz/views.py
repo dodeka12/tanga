@@ -21,6 +21,7 @@ from itertools import count
 from typing import Any, Iterator, Literal
 
 from ._controls import Handler
+from ._icons import Icon
 from ._size import Size, SizeSpec, size_from_dict
 from .camera import CameraConfig, View2DConfig, View3dConfig, _normalize_camera_config
 
@@ -298,15 +299,24 @@ class ControlView(View):
 
     _node_type = "control"
 
-    def __init__(self, cid: str, *, label: str = "", **kwargs: Any) -> None:
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        tooltip: str = "",
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.id = cid
         self.label = label
+        self.tooltip = tooltip
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
         result["id"] = self.id  # control id doubles as the event key
         result["label"] = self.label
+        result["tooltip"] = self.tooltip
         return result
 
 
@@ -344,7 +354,7 @@ class SliderView(ControlView):
 
 
 class ButtonView(ControlView):
-    """A clickable button control as a view."""
+    """A clickable button control (with optional icon) as a view."""
 
     _node_type = "button_view"
 
@@ -353,11 +363,22 @@ class ButtonView(ControlView):
         cid: str,
         *,
         label: str = "",
+        icon: Icon | None = None,
+        icon_only: bool = False,
         on_click: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
+        self.icon = icon
+        self.icon_only = icon_only
         self.on_click = on_click
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        if self.icon is not None:
+            result["icon"] = str(self.icon)
+        result["icon_only"] = self.icon_only
+        return result
 
 
 class DropdownView(ControlView):
@@ -417,6 +438,115 @@ class FileChooserView(ControlView):
         result["placeholder"] = self.placeholder
         result["root"] = self.root
         result["accept"] = self.accept
+        return result
+
+
+class TextFieldView(ControlView):
+    """A single-line text input control as a view."""
+
+    _node_type = "text_field_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        tooltip: str = "",
+        on_change: Handler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
+        self.value = value
+        self.placeholder = placeholder
+        self.on_change = on_change
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["value"] = self.value
+        result["placeholder"] = self.placeholder
+        return result
+
+
+class TextAreaView(ControlView):
+    """A multi-line text input control as a view."""
+
+    _node_type = "text_area_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        rows: int = 4,
+        tooltip: str = "",
+        on_change: Handler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
+        self.value = value
+        self.placeholder = placeholder
+        self.rows = rows
+        self.on_change = on_change
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["value"] = self.value
+        result["placeholder"] = self.placeholder
+        result["rows"] = self.rows
+        return result
+
+
+class ColorPickerView(ControlView):
+    """A color picker control as a view."""
+
+    _node_type = "color_picker_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        default: str = "#ffffff",
+        tooltip: str = "",
+        on_change: Handler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
+        self.default = default
+        self.on_change = on_change
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["default"] = self.default
+        return result
+
+
+class CheckboxView(ControlView):
+    """A boolean checkbox control as a view."""
+
+    _node_type = "checkbox_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        default: bool = False,
+        tooltip: str = "",
+        on_change: Handler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
+        self.default = default
+        self.on_change = on_change
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["default"] = self.default
         return result
 
 

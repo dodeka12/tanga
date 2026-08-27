@@ -21,6 +21,10 @@ import {
     handleFileBrowserListing,
     handleFileBrowserClose,
 } from './file-browser.js';
+import {
+    setWebSocket as setEditorWebSocket,
+    handleEditorDefine,
+} from './editor.js';
 import { updateLineResolutions } from './renderers/utils.js';
 import { handleResize } from './view_mode.js';
 
@@ -195,6 +199,7 @@ function connectWebSocket() {
         setInteractionWebSocket(ws);
         setBannerWebSocket(ws);
         setFileBrowserWebSocket(ws);
+        setEditorWebSocket(ws);
         _setWsOnAllViews(ws);
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
@@ -585,6 +590,11 @@ async function handleMessage(msg) {
         if (msg.type === 'file_browser_show') handleFileBrowserShow(msg);
         else if (msg.type === 'file_browser_listing') handleFileBrowserListing(msg);
         else handleFileBrowserClose(msg);
+        return;
+    }
+
+    if (msg.type === 'editor_define') {
+        handleEditorDefine(msg);
         return;
     }
 

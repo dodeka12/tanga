@@ -247,8 +247,13 @@ class ActSceneObject:
 class ActPoint(ActSceneObject):
     """An interactive draggable point.
 
-    Creates a :class:`Point` entity with four standard drag-mode triggers
-    (view-plane, XY, XZ, YZ) on the left mouse button.
+    Creates a :class:`Point` entity whose left-button drag can be constrained
+    to a single plane.  Passing ``drag_mode`` replaces the default triggers
+    with a single unmodified left-button trigger on that plane.  When
+    ``drag_mode`` is omitted, the point uses four standard modifier-switched
+    triggers in 3D, but in a 2D visualizer (``space_dim == 2``) it defaults to
+    a single XY-plane trigger so dragging never changes the point's Z
+    coordinate.
 
     The point's visual style (colour, size, opacity) is set via the
     :meth:`Visualizer.add` call, just like any other geometry entity::
@@ -261,6 +266,13 @@ class ActPoint(ActSceneObject):
             is given, *y* and *z* are ignored.
         y: Y coordinate (default ``0.0``).  Ignored when *x* is a ``Point``.
         z: Z coordinate (default ``0.0``).  Ignored when *x* is a ``Point``.
+        drag_mode: Optional :class:`DragMode` constraining the unmodified
+            left-button drag.  When provided, the primary drag trigger uses
+            this plane and the modifier-based alternate triggers are omitted.
+            When ``None`` (default), the four standard triggers are registered
+            (no modifier → view plane, Shift → XY, Ctrl → XZ, Ctrl+Shift → YZ)
+            in 3D scenes; in a 2D scene (``space_dim == 2``) the unmodified
+            drag instead defaults to :attr:`DragMode.XY_PLANE`.
         act_style: Optional :class:`~pytanga.viz._act_style.ActPointStyle`
             controlling hover highlighting and other interactive feedback.
         handler: Optional async callback invoked before the default
@@ -287,6 +299,7 @@ class ActPoint(ActSceneObject):
         y: float = 0.0,
         z: float = 0.0,
         *,
+        drag_mode: DragMode | None = None,
         act_style: ActPointStyle | None = None,
         handler: ActHandler | None = None,
         on_drag_start: ActEventHandler | None = None,
@@ -301,6 +314,7 @@ class ActPoint(ActSceneObject):
             self._point = x
         else:
             self._point = Point(float(x), float(y), float(z))
+        self._drag_mode = drag_mode
         self._act_style = act_style
         self._resolved_style: ActPointStyle | None = None
 
@@ -336,15 +350,61 @@ class ActPoint(ActSceneObject):
 
     @property
     def interaction_config(self) -> InteractionConfig:
-        """Standard drag triggers with hover highlighting."""
+        """Drag triggers with hover highlighting.
+
+        When ``drag_mode`` was provided at construction, or when the point
+        is attached to a 2D scene (``space_dim == 2``), a single unmodified
+        left-button trigger is registered for that mode (``XY_PLANE`` for the
+        automatic 2D default).  Otherwise the four standard triggers (view
+        plane, XY, XZ, YZ) are registered.
+        """
         s = self._resolved_style or ActPointStyle()
+        mode = self._effective_drag_mode
+        if mode is None:
+            triggers = _default_drag_triggers(MouseButton.LEFT)
+        else:
+            triggers = [
+                InteractionTrigger(
+                    event_type=InteractionEventType.DRAG,
+                    mouse_button=MouseButton.LEFT,
+                    drag_mode=mode,
+                )
+            ]
         return InteractionConfig(
             enabled=True,
-            triggers=_default_drag_triggers(MouseButton.LEFT),
+            triggers=triggers,
             throttle_ms=40,
             hover_emissive=s.hover_emissive,
             hover_scale=s.hover_scale,
         )
+
+    # ── Drag-mode resolution ────────────────────────────────
+
+    @property
+    def _effective_drag_mode(self) -> DragMode | None:
+        """Resolve the unmodified drag mode, applying the 2D default.
+
+        Returns the explicit ``drag_mode`` if set.  Otherwise, when the point
+        is attached to a scene with ``space_dim == 2``, returns
+        :attr:`DragMode.XY_PLANE`.  Returns ``None`` only when no explicit
+        mode is set and the scene dimension is unknown or 3D — in that case
+        the four standard modifier-switched triggers are used.
+        """
+        if self._drag_mode is not None:
+            return self._drag_mode
+        if self._scene_space_dim() == 2:
+            return DragMode.XY_PLANE
+        return None
+
+    def _scene_space_dim(self) -> int | None:
+        """Return the owning scene's space dimension, if discoverable."""
+        handle = self._viz_handle
+        if handle is None:
+            return None
+        scene = getattr(handle, "scene", None)
+        config = getattr(scene, "config", None)
+        space_dim = getattr(config, "space_dim", None)
+        return space_dim if isinstance(space_dim, int) else None
 
     # ── Default movement ───────────────────────────────────
 

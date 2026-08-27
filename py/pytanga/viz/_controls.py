@@ -14,6 +14,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from ._icons import Icon
+
 
 # ── Control event dataclass ──────────────────────────────────
 
@@ -34,9 +36,9 @@ class ControlEvent:
 Handler = Callable[[Any, ControlEvent], Awaitable[None]]
 """Async callback type for control interaction handlers.
 
-Takes a ``value`` argument (float for sliders, str for dropdowns,
-``None`` for buttons / group toggles) and a :class:`ControlEvent`,
-and returns an awaitable.
+Takes a ``value`` argument (float for sliders, str for dropdowns / text /
+textarea / color pickers, bool for checkboxes, ``None`` for buttons / group
+toggles) and a :class:`ControlEvent`, and returns an awaitable.
 """
 
 
@@ -52,6 +54,9 @@ class Control:
 
     label: str = ""
     """Human-readable label displayed next to the control."""
+
+    tooltip: str = ""
+    """Optional hover tooltip text (rendered via the native ``title`` attr)."""
 
     parent_id: str | None = None
     """If set, attach this control (via CSS2DRenderer) to the 3D entity
@@ -84,9 +89,15 @@ class Dropdown(Control):
 
 @dataclass
 class Button(Control):
-    """A clickable button with an async callback."""
+    """A clickable button with an optional icon and an async callback."""
 
     kind: str = "button"
+    icon: Icon | None = None
+    """Optional icon id (``family:name``); rendered before the label."""
+
+    icon_only: bool = False
+    """If ``True``, render only the icon as a small square button."""
+
     on_click: Handler | None = None
 
 
@@ -99,6 +110,45 @@ class FileChooser(Control):
     placeholder: str = ""
     root: str | None = None
     accept: str = ""
+    on_change: Handler | None = None
+
+
+@dataclass
+class TextField(Control):
+    """A single-line text input control."""
+
+    kind: str = "text"
+    value: str = ""
+    placeholder: str = ""
+    on_change: Handler | None = None
+
+
+@dataclass
+class TextArea(Control):
+    """A multi-line text input control."""
+
+    kind: str = "textarea"
+    value: str = ""
+    placeholder: str = ""
+    rows: int = 4
+    on_change: Handler | None = None
+
+
+@dataclass
+class ColorPicker(Control):
+    """A color chooser control (native color input, hex value)."""
+
+    kind: str = "color"
+    default: str = "#ffffff"
+    on_change: Handler | None = None
+
+
+@dataclass
+class Checkbox(Control):
+    """A boolean checkbox control."""
+
+    kind: str = "checkbox"
+    default: bool = False
     on_change: Handler | None = None
 
 
@@ -122,6 +172,12 @@ class ControlGroup:
     When the group is attached to a 3D object (``parent_id`` is set),
     this title doubles as a persistent label rendered alongside the object.
     """
+
+    icon: Icon | None = None
+    """Optional icon id (``family:name``) rendered in the title bar."""
+
+    tooltip: str = ""
+    """Optional hover tooltip text for the title bar."""
 
     controls: list[Control] = field(default_factory=list)
     """The list of :class:`Control` instances belonging to this group."""
@@ -192,6 +248,8 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
         "kind": ctrl.kind,
         "label": ctrl.label,
     }
+    if ctrl.tooltip:
+        base["tooltip"] = ctrl.tooltip
 
     if isinstance(ctrl, Slider):
         base.update(
@@ -210,7 +268,28 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
             }
         )
     elif isinstance(ctrl, Button):
-        pass  # No extra fields for buttons
+        if ctrl.icon is not None:
+            base["icon"] = str(ctrl.icon)
+        base["icon_only"] = ctrl.icon_only
+    elif isinstance(ctrl, TextField):
+        base.update(
+            {
+                "value": ctrl.value,
+                "placeholder": ctrl.placeholder,
+            }
+        )
+    elif isinstance(ctrl, TextArea):
+        base.update(
+            {
+                "value": ctrl.value,
+                "placeholder": ctrl.placeholder,
+                "rows": ctrl.rows,
+            }
+        )
+    elif isinstance(ctrl, ColorPicker):
+        base.update({"default": ctrl.default})
+    elif isinstance(ctrl, Checkbox):
+        base.update({"default": ctrl.default})
     elif isinstance(ctrl, FileChooser):
         base.update(
             {
@@ -271,16 +350,19 @@ def serialize_controls(
             group_control_ids.append(ctrl_obj.id)
             seen_ids.add(ctrl_obj.id)
             all_controls[ctrl_obj.id] = _serialize_one_control(ctrl_obj)
-        group_list.append(
-            {
-                "id": group.id,
-                "title": group.title,
-                "controls": group_control_ids,
-                "position": group.position,
-                "collapsed": group.collapsed,
-                "parentId": group.parent_id,
-            }
-        )
+        group_entry: dict[str, Any] = {
+            "id": group.id,
+            "title": group.title,
+            "controls": group_control_ids,
+            "position": group.position,
+            "collapsed": group.collapsed,
+            "parentId": group.parent_id,
+        }
+        if group.icon is not None:
+            group_entry["icon"] = str(group.icon)
+        if group.tooltip:
+            group_entry["tooltip"] = group.tooltip
+        group_list.append(group_entry)
 
     # Collect orphan controls: all registered controls not in any group
     orphan_ids: list[str] = []
