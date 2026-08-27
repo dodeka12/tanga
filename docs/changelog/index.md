@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.7.0] — 2026-08-27
+- New interactive controls (`add_text_field` · `add_text_area` · `add_color_picker` · `add_checkbox`) · button icons + icon model · control tooltips · reusable text editor (`open_editor`) · `ActPoint` drag-mode constraint
+→ [Details](2026-08-27_265517f8.md)
+
 ## [Since 1.6.0] — 2026-08-26
 - Extra visualization-only geometry entities (`Disk`/`PartialDisk`/`Box`/`Ellipsoid`/`Ellipse`/`RegularPolygon`) · mesh + SDF style classes and Three.js renderers · new `partialDisk`/`regularPolygon` SDF primitives · analytic SDF silhouette edge anti-aliasing (`SdfStyle.antialias`, off by default)
 → [Details](2026-08-26_c798944f.md)
