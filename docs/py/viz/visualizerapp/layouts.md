@@ -13,7 +13,7 @@ For the underlying view model (sizes, splitters, panes), see
 
 | Style | API | Where it appears | Use for |
 |-------|-----|------------------|---------|
-| Panel controls | `self.viz.add_slider` / `add_dropdown` / `add_button` / `add_group` | A floating panel overlaid on the scene | Simple, quick UIs without a custom layout |
+| Panel controls | `self.viz.add_slider` / `add_dropdown` / `add_button` / `add_control_group` | A floating panel overlaid on the scene | Simple, quick UIs without a custom layout |
 | View controls | `SliderView` / `DropdownView` / `ButtonView` (inside a `GroupView`/`StackView`) | A pane in your `SplitView` layout | A sidebar/toolbar next to one or more scene panes |
 
 Both use the same **async** handler contract — `(value, event)` — so a handler
@@ -163,6 +163,6 @@ they're simply placed in whichever pane's `GroupView`/`StackView` you want.
 
 - [Split Views](../visualizer/split-views.md) — the view hierarchy, `Size` units,
   splitters, overlays, and per-pane cameras
-- [Controls](controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_group`
+- [Controls](controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_control_group`
 - [Handlers & Lifecycle](handlers.md) — the handler contract and the app lifecycle
 

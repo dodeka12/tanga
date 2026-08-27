@@ -154,11 +154,23 @@ function _createGroupPanel(group, controls) {
     // ── Header (drag handle + toggle) ──
     const header = document.createElement('div');
     header.className = 'tanga-group-header';
+    if (group.tooltip) header.title = group.tooltip;
+
+    const titleWrap = document.createElement('span');
+    titleWrap.className = 'tanga-group-title-wrap';
+
+    if (group.icon) {
+        const icon = createIconElement(group.icon);
+        icon.classList.add('tanga-group-icon');
+        titleWrap.appendChild(icon);
+    }
 
     const titleSpan = document.createElement('span');
     titleSpan.className = 'tanga-group-title';
     titleSpan.textContent = group.title || 'Controls';
-    header.appendChild(titleSpan);
+    titleWrap.appendChild(titleSpan);
+
+    header.appendChild(titleWrap);
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'tanga-group-toggle';
@@ -318,6 +330,69 @@ function _positionPanel(panel, anchor) {
     }
 }
 
+// ── Icon rendering ──────────────────────────────────────────
+
+const _iconFontLinks = {
+    material: 'https://fonts.googleapis.com/icon?family=Material+Icons',
+};
+
+function _ensureIconFont(family) {
+    const href = _iconFontLinks[family];
+    if (!href) return;
+    const id = 'tanga-icon-font-' + family;
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+}
+
+export function createIconElement(iconId) {
+    const id = String(iconId || '');
+    const idx = id.indexOf(':');
+    const family = idx >= 0 ? id.slice(0, idx) : 'material';
+    const name = idx >= 0 ? id.slice(idx + 1) : id;
+
+    if (family === 'material') {
+        _ensureIconFont('material');
+        const span = document.createElement('span');
+        span.className = 'material-icons';
+        span.textContent = name;
+        return span;
+    }
+    if (family === 'uc') {
+        const span = document.createElement('span');
+        span.className = 'tanga-icon-uc';
+        span.textContent = name;
+        return span;
+    }
+    const span = document.createElement('span');
+    span.className = 'tanga-icon-uc';
+    span.textContent = id;
+    return span;
+}
+
+// ── Shared control helpers ───────────────────────────────────
+
+function _applyTooltip(wrapper, ctrl) {
+    if (ctrl && ctrl.tooltip) wrapper.title = ctrl.tooltip;
+}
+
+function _attachDebouncedChange(input, controlId) {
+    let debounceTimer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            sendControlEvent('control:change', controlId, input.value);
+        }, 400);
+    });
+    input.addEventListener('change', () => {
+        clearTimeout(debounceTimer);
+        sendControlEvent('control:change', controlId, input.value);
+    });
+}
+
 // ── Internal: control element dispatch ──────────────────────
 
 function _createControlElement(ctrl) {
@@ -330,6 +405,14 @@ function _createControlElement(ctrl) {
             return createButton(ctrl);
         case 'file_chooser':
             return createFileChooser(ctrl);
+        case 'text':
+            return createTextField(ctrl);
+        case 'textarea':
+            return createTextArea(ctrl);
+        case 'color':
+            return createColorPicker(ctrl);
+        case 'checkbox':
+            return createCheckbox(ctrl);
         default:
             console.warn('Unknown control kind:', ctrl.kind);
             return null;
@@ -386,6 +469,7 @@ export function createFileChooser(ctrl) {
     row.appendChild(input);
     row.appendChild(browse);
     wrapper.appendChild(row);
+    _applyTooltip(wrapper, ctrl);
     return wrapper;
 }
 
@@ -443,6 +527,7 @@ export function createSlider(ctrl) {
 
     // Stop propagation to prevent orbit control interference
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _applyTooltip(wrapper, ctrl);
 
     return wrapper;
 }
@@ -472,6 +557,7 @@ export function createDropdown(ctrl) {
     });
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _applyTooltip(wrapper, ctrl);
 
     return wrapper;
 }
@@ -481,8 +567,22 @@ export function createButton(ctrl) {
     wrapper.className = 'tanga-control tanga-button';
 
     const btn = document.createElement('button');
-    btn.textContent = ctrl.label || ctrl.id;
     btn.className = 'tanga-action-button';
+
+    if (ctrl.icon) {
+        btn.appendChild(createIconElement(ctrl.icon));
+        if (!ctrl.icon_only && (ctrl.label || ctrl.id)) {
+            btn.appendChild(document.createTextNode(' ' + (ctrl.label || ctrl.id)));
+        }
+    } else {
+        btn.textContent = ctrl.label || ctrl.id;
+    }
+
+    if (ctrl.icon_only) {
+        btn.classList.add('tanga-icon-button');
+        btn.title = ctrl.tooltip || ctrl.label || ctrl.id || '';
+    }
+
     wrapper.appendChild(btn);
 
     btn.addEventListener('click', () => {
@@ -490,6 +590,102 @@ export function createButton(ctrl) {
     });
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
+export function createTextField(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-text-field';
+
+    const label = document.createElement('label');
+    label.textContent = ctrl.label || ctrl.id;
+    wrapper.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = ctrl.value || '';
+    input.placeholder = ctrl.placeholder || '';
+    input.className = 'tanga-text-input';
+    wrapper.appendChild(input);
+
+    _attachDebouncedChange(input, ctrl.id);
+    wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
+export function createTextArea(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-text-area';
+
+    const label = document.createElement('label');
+    label.textContent = ctrl.label || ctrl.id;
+    wrapper.appendChild(label);
+
+    const input = document.createElement('textarea');
+    input.value = ctrl.value || '';
+    input.placeholder = ctrl.placeholder || '';
+    input.rows = ctrl.rows !== undefined ? ctrl.rows : 4;
+    input.className = 'tanga-text-input tanga-textarea';
+    wrapper.appendChild(input);
+
+    _attachDebouncedChange(input, ctrl.id);
+    wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
+export function createColorPicker(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-color-picker';
+
+    const label = document.createElement('label');
+    label.textContent = ctrl.label || ctrl.id;
+    wrapper.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = ctrl.default || '#ffffff';
+    input.className = 'tanga-color-input';
+    wrapper.appendChild(input);
+
+    _attachDebouncedChange(input, ctrl.id);
+    wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
+export function createCheckbox(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-checkbox';
+
+    const row = document.createElement('label');
+    row.className = 'tanga-checkbox-row';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = !!ctrl.default;
+    input.className = 'tanga-checkbox-input';
+
+    const text = document.createElement('span');
+    text.className = 'tanga-checkbox-label';
+    text.textContent = ctrl.label || ctrl.id;
+
+    row.appendChild(input);
+    row.appendChild(text);
+    wrapper.appendChild(row);
+
+    input.addEventListener('change', () => {
+        sendControlEvent('control:change', ctrl.id, input.checked);
+    });
+
+    wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+    _applyTooltip(wrapper, ctrl);
 
     return wrapper;
 }
@@ -609,6 +805,11 @@ function _injectStyles() {
             font-size: 14px;
             color: #ddd;
         }
+        .tanga-group-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .tanga-group-toggle {
             background: none;
             border: 1px solid rgba(255,255,255,0.12);
@@ -725,6 +926,65 @@ function _injectStyles() {
         }
         .tanga-action-button:active {
             background: rgba(255,255,255,0.08);
+        }
+
+        .material-icons {
+            font-size: 16px;
+            line-height: 1;
+            vertical-align: middle;
+        }
+        .tanga-icon-uc {
+            vertical-align: middle;
+        }
+        .tanga-icon-button {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tanga-icon-button .material-icons {
+            font-size: 18px;
+        }
+        .tanga-text-input {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            color: #ccc;
+            padding: 4px 6px;
+            font-size: 13px;
+            outline: none;
+        }
+        .tanga-text-input:focus {
+            border-color: #4488ff;
+        }
+        .tanga-textarea {
+            resize: vertical;
+            font-family: sans-serif;
+        }
+        .tanga-color-input {
+            width: 100%;
+            height: 28px;
+            padding: 2px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .tanga-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .tanga-checkbox-input {
+            cursor: pointer;
+        }
+        .tanga-checkbox-label {
+            font-size: 12px;
+            color: #ccc;
         }
     `;
     document.head.appendChild(style);

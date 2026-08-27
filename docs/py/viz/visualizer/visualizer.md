@@ -202,7 +202,7 @@ API as ``Visualizer``, but all operations affect only the target scene.
 | `animate_to(entity_id, *, ...)` | Animate an entity |
 | `timeline()` | Create a :class:`Timeline` targeting this scene |
 | `add_slider`, `add_dropdown`, `add_button` | Add interactive controls |
-| `add_group`, `remove_control`, `remove_group`, `clear_controls` | Control management |
+| `add_control_group`, `remove_control`, `remove_control_group`, `clear_controls` | Control management |
 | `navigate_to(scene_name)` | Navigate all browsers viewing *this* scene to another |
 | `display(*, viewer_name, width, height)` | Jupyter inline display with optional viewer identity |
 | `display_static(width, height)` | Serverless static HTML display |

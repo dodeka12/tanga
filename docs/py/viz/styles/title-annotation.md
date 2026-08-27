@@ -80,3 +80,28 @@ viz.set_annotation(None)  # hide
 
 `set_annotation()` pushes immediately via `flush()` — no manual flush
 needed.
+
+## Text Editor
+
+`open_editor()` opens a transient, general-purpose multi-line text editor in
+the viewer overlay.  It is **not** tied to annotations: when the editor is
+closed, the `on_close` handler receives the edited text (or `None` when the
+user discards it) and decides what to do:
+
+```python
+async def on_edited(self, text, event):
+    if text is not None:
+        self.viz.set_annotation(text)  # e.g. write it back as the annotation
+
+self.viz.open_editor(
+    "editor",
+    label="Edit annotation",
+    value="$a_e$",
+    on_close=on_edited,
+)
+```
+
+- `on_close(text, event)` — async; `text` is the edited text on ✓ (keep), or
+  `None` on ✕ (discard).
+- The editor is one-shot: the handler runs once per `open_editor`.
+- Reusable for editing any text, not just annotations.

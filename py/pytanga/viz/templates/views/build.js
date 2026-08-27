@@ -11,6 +11,10 @@ import { SliderView } from './slider-view.js';
 import { ButtonView } from './button-view.js';
 import { DropdownView } from './dropdown-view.js';
 import { FileChooserView } from './file-chooser-view.js';
+import { TextFieldView } from './text-field-view.js';
+import { TextAreaView } from './text-area-view.js';
+import { ColorPickerView } from './color-picker-view.js';
+import { CheckboxView } from './checkbox-view.js';
 import { SpacerView } from './spacer-view.js';
 
 function applySizeSpecs(view, node) {
@@ -80,19 +84,44 @@ export function buildViewTree(node, ws) {
     let view;
     if (node.type === 'slider_view') {
         view = new SliderView({
-            id: node.id, label: node.label,
+            id: node.id, label: node.label, tooltip: node.tooltip,
             min: node.min, max: node.max, step: node.step, default: node.default,
         });
     } else if (node.type === 'button_view') {
-        view = new ButtonView({ id: node.id, label: node.label });
+        view = new ButtonView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            icon: node.icon, icon_only: node.icon_only,
+        });
     } else if (node.type === 'dropdown_view') {
         view = new DropdownView({
-            id: node.id, label: node.label, options: node.options, default: node.default,
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            options: node.options, default: node.default,
         });
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
-            id: node.id, label: node.label, value: node.value,
-            placeholder: node.placeholder, root: node.root, accept: node.accept,
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            value: node.value, placeholder: node.placeholder,
+            root: node.root, accept: node.accept,
+        });
+    } else if (node.type === 'text_field_view') {
+        view = new TextFieldView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            value: node.value, placeholder: node.placeholder,
+        });
+    } else if (node.type === 'text_area_view') {
+        view = new TextAreaView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            value: node.value, placeholder: node.placeholder, rows: node.rows,
+        });
+    } else if (node.type === 'color_picker_view') {
+        view = new ColorPickerView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            default: node.default,
+        });
+    } else if (node.type === 'checkbox_view') {
+        view = new CheckboxView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            default: node.default,
         });
     } else if (node.type === 'spacer') {
         view = new SpacerView();

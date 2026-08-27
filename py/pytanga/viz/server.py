@@ -740,6 +740,7 @@ class VizServer:
                             "control:press",
                             "control:release",
                             "banner_closed",
+                            "editor_closed",
                             "file_browser_navigate",
                             "file_browser_select",
                         ):

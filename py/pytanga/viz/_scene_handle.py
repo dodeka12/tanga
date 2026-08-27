@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from ._viz_styles import VizStyles
     from .visualizer import Visualizer
 
+from ._icons import Icon
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
 from ._timeline import Timeline
@@ -331,6 +332,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
@@ -345,6 +347,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             cid,
             label=label,
+            tooltip=tooltip,
             min=min,
             max=max,
             step=step,
@@ -360,6 +363,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         options: list[str] | None = None,
         default: str = "",
         on_change: Any = None,
@@ -370,6 +374,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             cid,
             label=label,
+            tooltip=tooltip,
             options=options,
             default=default,
             on_change=on_change,
@@ -381,6 +386,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        icon: Icon | None = None,
+        icon_only: bool = False,
+        tooltip: str = "",
         on_click: Any = None,
         parent_id: str | None = None,
     ) -> str:
@@ -389,6 +397,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             cid,
             label=label,
+            icon=icon,
+            icon_only=icon_only,
+            tooltip=tooltip,
             on_click=on_click,
             parent_id=parent_id,
         )
@@ -398,6 +409,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         value: str = "",
         placeholder: str = "",
         root: str | None = None,
@@ -410,10 +422,101 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             cid,
             label=label,
+            tooltip=tooltip,
             value=value,
             placeholder=placeholder,
             root=root,
             accept=accept,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def add_text_field(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a single-line text input control to this scene."""
+        return self._viz._add_scene_text_field(
+            self._name,
+            cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def add_text_area(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        rows: int = 4,
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a multi-line text input control to this scene."""
+        return self._viz._add_scene_text_area(
+            self._name,
+            cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            rows=rows,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def add_color_picker(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        default: str = "#ffffff",
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a color picker control to this scene."""
+        return self._viz._add_scene_color_picker(
+            self._name,
+            cid,
+            label=label,
+            default=default,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def add_checkbox(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        default: bool = False,
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a checkbox control to this scene."""
+        return self._viz._add_scene_checkbox(
+            self._name,
+            cid,
+            label=label,
+            default=default,
+            tooltip=tooltip,
             on_change=on_change,
             parent_id=parent_id,
         )
@@ -431,6 +534,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         gid: str,
         *,
         title: str = "",
+        icon: Icon | None = None,
+        tooltip: str = "",
         controls: list[str] | None = None,
         position: str = "bottom-right",
         collapsed: bool = False,
@@ -442,6 +547,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             self._name,
             gid,
             title=title,
+            icon=icon,
+            tooltip=tooltip,
             controls=controls,
             position=position,
             collapsed=collapsed,

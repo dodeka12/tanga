@@ -4,10 +4,11 @@
 import { View } from './view.js';
 
 export class ControlView extends View {
-    constructor({ id, label = '' } = {}) {
+    constructor({ id, label = '', tooltip = '' } = {}) {
         super();
         this.controlId = id;
         this.label = label;
+        this.tooltip = tooltip;
         this.el.classList.add('tanga-control-view');
         // Don't let a flex parent shrink the control below its content.
         this.el.style.flexShrink = '0';

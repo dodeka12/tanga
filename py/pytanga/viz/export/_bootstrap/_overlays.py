@@ -116,7 +116,7 @@ _reposition();
     return f"""// Annotation
 const annContainer = document.createElement('div');
 if (typeof marked !== 'undefined') {{
-    annContainer.innerHTML = marked.parse({safe_md});
+    annContainer.innerHTML = marked.parse({safe_md}, {{ breaks: true }});
 }} else {{
     annContainer.textContent = {safe_md};
 }}
@@ -169,7 +169,7 @@ def js_footer(
     return f"""// Footer
 const footerDiv = document.createElement('div');
 if (typeof marked !== 'undefined') {{
-    footerDiv.innerHTML = marked.parse({safe_md});
+    footerDiv.innerHTML = marked.parse({safe_md}, {{ breaks: true }});
 }} else {{
     footerDiv.textContent = {safe_md};
 }}

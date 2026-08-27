@@ -1,8 +1,9 @@
 # ActPoint
 
 `ActPoint` is a self-registering interactive point that can be dragged
-with the mouse. It creates a `Point` geometry entity with four standard
-drag-mode triggers and registers its own interaction handler automatically.
+with the mouse. It creates a `Point` geometry entity and registers its own
+interaction handler automatically. In 3D it exposes four standard drag-mode
+triggers; in 2D (`space_dim=2`) the unmodified drag defaults to the XY plane.
 
 ## Quick Start
 
@@ -35,6 +36,7 @@ ActPoint(
     y: float = 0.0,
     z: float = 0.0,
     *,
+    drag_mode: DragMode | None = None,
     act_style: ActPointStyle | None = None,
     handler: ActHandler | None = None,
     on_drag_start: ActEventHandler | None = None,
@@ -47,6 +49,7 @@ ActPoint(
 | `x` | `float \| Point` | *(required)* | X coordinate, or a `Point` instance (then `y`/`z` are ignored) |
 | `y` | `float` | `0.0` | Y coordinate |
 | `z` | `float` | `0.0` | Z coordinate |
+| `drag_mode` | `DragMode \| None` | `None` | Constrains the unmodified left-button drag to a single plane |
 | `act_style` | `ActPointStyle \| None` | `None` | Hover highlighting / interactive feedback |
 | `handler` | `ActHandler \| None` | `None` | Move-phase callback invoked before the default movement |
 | `on_drag_start` | `ActEventHandler \| None` | `None` | Callback invoked when a drag starts |
@@ -55,6 +58,31 @@ ActPoint(
 The point's visual style (colour, size, opacity) and an optional text `label`
 are set via `viz.add(ap, color=..., style=..., label=...)`, not on the
 constructor.
+
+## Drag Mode
+
+Pass `drag_mode=` to constrain the unmodified left-button drag to a single
+plane instead of the four standard modifier-switched planes. This keeps the
+point on that plane throughout the gesture:
+
+```python
+from pytanga.viz import DragMode
+
+ap = ActPoint(Point(1.0, 2.0, 0.0), drag_mode=DragMode.XY_PLANE)
+```
+
+When `drag_mode` is set, the primary unmodified left-button trigger uses that
+plane and no modifier-based alternate triggers are registered.
+
+When `drag_mode` is omitted (the default `None`), the behaviour depends on the
+scene dimension:
+
+- In a 3D visualizer, the four standard triggers remain available, as shown
+  in the table above.
+- In a 2D visualizer (`VisualizerApp(space_dim=2)` or
+  `Visualizer(space_dim=2)`), the unmodified left-button drag automatically
+  uses `XY_PLANE` instead of the view plane. This prevents an unmodified drag
+  on the view plane of a tilted camera from changing the point's Z coordinate.
 
 ## Labels
 
@@ -121,11 +149,12 @@ never override the default movement. `event.event_type` is
 | `entity` | `Point` | Same as `point` — the geometry entity rendered in the scene |
 | `entity_id` | `str` | The scene entity ID assigned by the visualizer |
 | `viz_handle` | `VizSceneHandle \| None` | Handle for scene operations (update, flush, etc.) |
-| `interaction_config` | `InteractionConfig` | Standard drag triggers with `throttle_ms=40` |
+| `interaction_config` | `InteractionConfig` | Drag triggers (standard four, or a single `drag_mode`-constrained trigger) with `throttle_ms=40` |
 
 ## Interaction Configuration
 
-The default config uses four drag triggers on the left mouse button:
+In a 3D visualizer with `drag_mode=None`, the config uses four drag triggers
+on the left mouse button:
 
 ```python
 InteractionConfig(
@@ -144,8 +173,23 @@ InteractionConfig(
 )
 ```
 
-To customise the triggers (e.g., use right button instead, or different
-modifier keys), subclass `ActPoint` and override `interaction_config`.
+When `drag_mode` is set, the config instead registers a single unmodified
+left-button trigger with that mode:
+
+```python
+InteractionConfig(
+    enabled=True,
+    triggers=[
+        InteractionTrigger(event_type=DRAG, mouse_button=LEFT,
+                          drag_mode=XY_PLANE),
+    ],
+    throttle_ms=40,
+)
+```
+
+To customise the triggers further (e.g., use right button instead, or
+different modifier keys), subclass `ActPoint` and override
+`interaction_config`.
 
 ## See Also
 

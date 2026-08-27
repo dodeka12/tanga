@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
+from ._icons import Icon
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
 from ._notebook_cell import current_cell_id, execution_token
@@ -184,6 +185,9 @@ class Visualizer(_JupyterDisplayMixin):
         self._banners: dict[str | None, dict[str, Any]] = {}
         self._banner_counter = 0
         self._banner_close_handlers: dict[str, Any] = {}
+
+        # Editor close handlers, keyed by editor id (set via ``open_editor``).
+        self._editor_close_handlers: dict[str, Any] = {}
 
         # Interaction handler registry (shared across all scenes)
         from ._interaction import InteractionHandlerRegistry
@@ -2095,6 +2099,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
@@ -2108,6 +2113,7 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             cid,
             label=label,
+            tooltip=tooltip,
             min=min,
             max=max,
             step=step,
@@ -2124,6 +2130,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
@@ -2138,6 +2145,7 @@ class Visualizer(_JupyterDisplayMixin):
         ctrl = Slider(
             id=cid,
             label=label,
+            tooltip=tooltip,
             min=min,
             max=max,
             step=step,
@@ -2174,6 +2182,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         options: list[str] | None = None,
         default: str = "",
         on_change: Any = None,
@@ -2183,6 +2192,7 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             cid,
             label=label,
+            tooltip=tooltip,
             options=options,
             default=default,
             on_change=on_change,
@@ -2195,6 +2205,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         options: list[str] | None = None,
         default: str = "",
         on_change: Any = None,
@@ -2205,6 +2216,7 @@ class Visualizer(_JupyterDisplayMixin):
         ctrl = Dropdown(
             id=cid,
             label=label,
+            tooltip=tooltip,
             options=options or [],
             default=default,
             on_change=on_change,
@@ -2221,6 +2233,9 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        icon: Icon | None = None,
+        icon_only: bool = False,
+        tooltip: str = "",
         on_click: Any = None,
         parent_id: str | None = None,
     ) -> str:
@@ -2228,6 +2243,9 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             cid,
             label=label,
+            icon=icon,
+            icon_only=icon_only,
+            tooltip=tooltip,
             on_click=on_click,
             parent_id=parent_id,
         )
@@ -2238,12 +2256,23 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        icon: Icon | None = None,
+        icon_only: bool = False,
+        tooltip: str = "",
         on_click: Any = None,
         parent_id: str | None = None,
     ) -> str:
         from ._controls import Button
 
-        ctrl = Button(id=cid, label=label, on_click=on_click, parent_id=parent_id)
+        ctrl = Button(
+            id=cid,
+            label=label,
+            icon=icon,
+            icon_only=icon_only,
+            tooltip=tooltip,
+            on_click=on_click,
+            parent_id=parent_id,
+        )
         self._scenes[scene_name].add_control(ctrl)
         if on_click is not None:
             self._handler_registry.register(cid, on_click)
@@ -2255,6 +2284,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         value: str = "",
         placeholder: str = "",
         root: str | None = None,
@@ -2267,6 +2297,7 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             cid,
             label=label,
+            tooltip=tooltip,
             value=value,
             placeholder=placeholder,
             root=root,
@@ -2281,6 +2312,7 @@ class Visualizer(_JupyterDisplayMixin):
         cid: str,
         *,
         label: str = "",
+        tooltip: str = "",
         value: str = "",
         placeholder: str = "",
         root: str | None = None,
@@ -2293,10 +2325,215 @@ class Visualizer(_JupyterDisplayMixin):
         ctrl = FileChooser(
             id=cid,
             label=label,
+            tooltip=tooltip,
             value=value,
             placeholder=placeholder,
             root=root,
             accept=accept,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_change is not None:
+            self._handler_registry.register(cid, on_change)
+        self._push_controls(scene_name)
+        return cid
+
+    def add_text_field(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a single-line text input control."""
+        return self._add_scene_text_field(
+            "",
+            cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_text_field(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import TextField
+
+        ctrl = TextField(
+            id=cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_change is not None:
+            self._handler_registry.register(cid, on_change)
+        self._push_controls(scene_name)
+        return cid
+
+    def add_text_area(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        rows: int = 4,
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a multi-line text input control."""
+        return self._add_scene_text_area(
+            "",
+            cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            rows=rows,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_text_area(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        placeholder: str = "",
+        rows: int = 4,
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import TextArea
+
+        ctrl = TextArea(
+            id=cid,
+            label=label,
+            value=value,
+            placeholder=placeholder,
+            rows=rows,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_change is not None:
+            self._handler_registry.register(cid, on_change)
+        self._push_controls(scene_name)
+        return cid
+
+    def add_color_picker(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        default: str = "#ffffff",
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a color picker control (native color input)."""
+        return self._add_scene_color_picker(
+            "",
+            cid,
+            label=label,
+            default=default,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_color_picker(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        default: str = "#ffffff",
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import ColorPicker
+
+        ctrl = ColorPicker(
+            id=cid,
+            label=label,
+            default=default,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_change is not None:
+            self._handler_registry.register(cid, on_change)
+        self._push_controls(scene_name)
+        return cid
+
+    def add_checkbox(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        default: bool = False,
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add a checkbox control."""
+        return self._add_scene_checkbox(
+            "",
+            cid,
+            label=label,
+            default=default,
+            tooltip=tooltip,
+            on_change=on_change,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_checkbox(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        default: bool = False,
+        tooltip: str = "",
+        on_change: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import Checkbox
+
+        ctrl = Checkbox(
+            id=cid,
+            label=label,
+            default=default,
+            tooltip=tooltip,
             on_change=on_change,
             parent_id=parent_id,
         )
@@ -2389,6 +2626,8 @@ class Visualizer(_JupyterDisplayMixin):
         gid: str,
         *,
         title: str = "",
+        icon: Icon | None = None,
+        tooltip: str = "",
         controls: list[str] | None = None,
         position: str = "bottom-right",
         collapsed: bool = False,
@@ -2400,6 +2639,8 @@ class Visualizer(_JupyterDisplayMixin):
             "",
             gid,
             title=title,
+            icon=icon,
+            tooltip=tooltip,
             controls=controls,
             position=position,
             collapsed=collapsed,
@@ -2413,6 +2654,8 @@ class Visualizer(_JupyterDisplayMixin):
         gid: str,
         *,
         title: str = "",
+        icon: Icon | None = None,
+        tooltip: str = "",
         controls: list[str] | None = None,
         position: str = "bottom-right",
         collapsed: bool = False,
@@ -2424,6 +2667,8 @@ class Visualizer(_JupyterDisplayMixin):
         group = ControlGroup(
             id=gid,
             title=title,
+            icon=icon,
+            tooltip=tooltip,
             controls=controls or [],
             position=position,
             collapsed=collapsed,
@@ -2775,6 +3020,41 @@ class Visualizer(_JupyterDisplayMixin):
             lambda: self._push_banner_clear_async(scene_name)
         )
 
+    # ── Editor ─────────────────────────────────────────────
+
+    def open_editor(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        value: str = "",
+        on_close: Any = None,
+    ) -> str:
+        """Open a transient multi-line text editor in the viewer overlay.
+
+        When the editor is closed, *on_close* (an async ``(text, event)``
+        callable) is invoked on the server loop with the edited text, or
+        ``None`` when the edit is discarded (✕).  The editor is one-shot: the
+        handler is consumed after it runs.
+        """
+        self._editor_close_handlers[cid] = on_close
+        self._push_editor_define(cid, label=label, value=value)
+        return cid
+
+    def _push_editor_define(self, cid: str, *, label: str, value: str) -> None:
+        """Push the ``editor_define`` message that opens the editor."""
+        if self._server is None or self._loop is None:
+            return
+        message = {
+            "type": "editor_define",
+            "id": cid,
+            "label": label,
+            "value": value,
+        }
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(json.dumps(message)), self._loop
+        )
+
     def _push_controls(self, scene_name: str = "") -> None:
         """Serialise current controls/groups for a scene and push to the frontend."""
         if self._server is None or self._loop is None:
@@ -2831,6 +3111,20 @@ class Visualizer(_JupyterDisplayMixin):
 
                     logging.getLogger(__name__).exception(
                         "Error in banner on_close handler for %r", bid
+                    )
+            return
+
+        if msg_type == "editor_closed":
+            eid = payload.get("id")
+            handler = self._editor_close_handlers.pop(eid, None) if eid else None
+            if handler is not None:
+                try:
+                    await handler(payload.get("text"), event)
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in editor on_close handler for %r", eid
                     )
             return
 

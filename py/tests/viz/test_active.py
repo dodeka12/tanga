@@ -8,7 +8,12 @@ import pytest
 from pytanga.geometry import Point
 from pytanga.viz._act_style import ActPointStyle
 from pytanga.viz._active import ActPoint
-from pytanga.viz._interaction import DragEvent, InteractionEventType
+from pytanga.viz._interaction import (
+    DragEvent,
+    DragMode,
+    InteractionEventType,
+    MouseButton,
+)
 from pytanga.viz.visualizer import Visualizer
 
 
@@ -19,11 +24,26 @@ class _FakeStyles:
         self.act_point = ActPointStyle()
 
 
+class _FakeSceneConfig:
+    """Minimal stand-in for ``SceneConfig.space_dim``."""
+
+    def __init__(self, space_dim: int | None) -> None:
+        self.space_dim = space_dim
+
+
+class _FakeScene:
+    """Minimal stand-in for ``VizSceneHandle.scene``."""
+
+    def __init__(self, space_dim: int | None) -> None:
+        self.config = _FakeSceneConfig(space_dim)
+
+
 class _FakeSceneHandle:
     """Records the interaction calls :class:`ActPoint` makes via its handle."""
 
-    def __init__(self) -> None:
+    def __init__(self, space_dim: int | None = None) -> None:
         self.styles = _FakeStyles()
+        self.scene = _FakeScene(space_dim)
         self.configs: list[tuple[str, object]] = []
         self.handlers: dict[InteractionEventType, object] = {}
         self.updates: list[tuple[str, Point]] = []
@@ -47,6 +67,14 @@ class _FakeSceneHandle:
 def _init_point(**kwargs) -> tuple[ActPoint, _FakeSceneHandle]:
     """Create and initialise an :class:`ActPoint` with a fake handle."""
     handle = _FakeSceneHandle()
+    ap = ActPoint(1, 2, 3, **kwargs)
+    ap._init(handle, "pt1")
+    return ap, handle
+
+
+def _init_point_2d(**kwargs) -> tuple[ActPoint, _FakeSceneHandle]:
+    """Create and initialise an :class:`ActPoint` in a 2D scene."""
+    handle = _FakeSceneHandle(space_dim=2)
     ap = ActPoint(1, 2, 3, **kwargs)
     ap._init(handle, "pt1")
     return ap, handle
@@ -165,6 +193,101 @@ class TestDragPhases:
         assert _coords(ap.point) == (1, 2, 3)
         assert handle.updates == []
         assert handle.flushes == 0
+
+
+class TestDragModeConstraint:
+    def test_drag_mode_sets_primary_trigger(self):
+        ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
+        config = handle.configs[0][1]
+        assert len(config.triggers) == 1
+        trigger = config.triggers[0]
+        assert trigger.event_type == InteractionEventType.DRAG
+        assert trigger.mouse_button == MouseButton.LEFT
+        assert trigger.drag_mode == DragMode.XY_PLANE
+        assert trigger.modifiers == frozenset()
+
+    def test_drag_mode_omits_modifier_triggers(self):
+        ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
+        config = handle.configs[0][1]
+        modes = {t.drag_mode for t in config.triggers}
+        assert modes == {DragMode.XY_PLANE}
+        assert all(t.modifiers == frozenset() for t in config.triggers)
+
+    def test_drag_mode_none_keeps_four_default_triggers(self):
+        ap, handle = _init_point()
+        config = handle.configs[0][1]
+        assert len(config.triggers) == 4
+        modes = {t.drag_mode for t in config.triggers}
+        assert modes == {
+            DragMode.VIEW_PLANE,
+            DragMode.XY_PLANE,
+            DragMode.XZ_PLANE,
+            DragMode.YZ_PLANE,
+        }
+        # Unmodified trigger remains view-plane.
+        unmodified = [
+            t for t in config.triggers if t.modifiers == frozenset()
+        ]
+        assert len(unmodified) == 1
+        assert unmodified[0].drag_mode == DragMode.VIEW_PLANE
+
+    def test_drag_mode_serializes_for_frontend(self):
+        ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
+        config = handle.configs[0][1]
+        d = config.to_dict()
+        assert len(d["triggers"]) == 1
+        assert d["triggers"][0]["drag_mode"] == "xy_plane"
+        assert d["triggers"][0]["modifiers"] == []
+
+    def test_drag_mode_keeps_lifecycle_handlers(self):
+        async def on_start(event, ap):
+            pass
+
+        async def on_end(event, ap):
+            pass
+
+        async def handler(event, ap):
+            return False
+
+        ap, handle = _init_point(
+            drag_mode=DragMode.XY_PLANE,
+            handler=handler,
+            on_drag_start=on_start,
+            on_drag_end=on_end,
+        )
+        assert InteractionEventType.DRAG_MOVE in handle.handlers
+        assert InteractionEventType.DRAG_START in handle.handlers
+        assert InteractionEventType.DRAG_END in handle.handlers
+
+    def test_2d_defaults_to_xy_plane(self):
+        ap, handle = _init_point_2d()
+        config = handle.configs[0][1]
+        assert len(config.triggers) == 1
+        trigger = config.triggers[0]
+        assert trigger.event_type == InteractionEventType.DRAG
+        assert trigger.mouse_button == MouseButton.LEFT
+        assert trigger.drag_mode == DragMode.XY_PLANE
+        assert trigger.modifiers == frozenset()
+
+    def test_explicit_drag_mode_overrides_2d_default(self):
+        ap, handle = _init_point_2d(drag_mode=DragMode.VIEW_PLANE)
+        config = handle.configs[0][1]
+        assert len(config.triggers) == 1
+        assert config.triggers[0].drag_mode == DragMode.VIEW_PLANE
+
+    def test_3d_keeps_four_default_triggers(self):
+        handle = _FakeSceneHandle(space_dim=3)
+        ap = ActPoint(1, 2, 3)
+        ap._init(handle, "pt1")
+        config = handle.configs[0][1]
+        assert len(config.triggers) == 4
+        modes = {t.drag_mode for t in config.triggers}
+        assert modes == {
+            DragMode.VIEW_PLANE,
+            DragMode.XY_PLANE,
+            DragMode.XZ_PLANE,
+            DragMode.YZ_PLANE,
+        }
 
 
 class TestActPointLabel:
