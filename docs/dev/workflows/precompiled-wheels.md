@@ -152,7 +152,9 @@ compilation produces a correct binding.
 precompiled/                          # ← at repo root, git-ignored except .gitkeep
 ├── .gitkeep                          # keep directory tracked when empty
 ├── manifest.json                     # metadata: platform, ABI, keys, algebra list
+├── binding_dim2_sig0_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim3_sig0_float64.cpython-312-x86_64-linux-gnu.so
+├── binding_dim4_sig0_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim4_sig8_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim5_sig16_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim3_sig0_int64.cpython-312-x86_64-linux-gnu.so

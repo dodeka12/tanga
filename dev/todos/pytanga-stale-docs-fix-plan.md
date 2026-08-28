@@ -74,7 +74,7 @@ docs).
 - [x] 2.1 `docs/dev/workflows/precompiled-wheels.md`: replace "five" with the
       correct count (seven) and list all seven bindings from
       `tools/build-precompiled.py` (noting the E3/P2 and N2/PGA2 sharing).
-- [ ] 2.2 Update the Directory Layout block to include
+- [x] 2.2 Update the Directory Layout block to include
       `binding_dim2_sig0_float64` and `binding_dim4_sig0_float64`.
 
 ### Phase 3 — `GeneralRotor` rendering (code fix first, then docs)
