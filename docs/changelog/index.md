@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.9.1] — 2026-08-28
+- Wireframe dash-pattern and control `View` classes re-exported from `pytanga.viz` · viz docs/examples corrected to match the public API
+→ [Details](2026-08-28_c050a11d.md)
+
 ## [Since 1.9.0] — 2026-08-28
 - Documentation fixes: `Inversion(center=…, radius=…)` example · precompiled-wheel binding list (seven bindings) · `Geometry` `BasisXX`-only restriction
 - Bug fixes: `GeneralRotor` label frame no longer dereferences a missing `.rotor`
