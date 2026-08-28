@@ -9,7 +9,7 @@ and workflows for building, cleaning, and uploading precompiled wheels.
 
 | Script | Purpose |
 |--------|---------|
-| `tools/build-precompiled.py` | Compile the five common algebras and harvest compiled extension files into `precompiled/` |
+| `tools/build-precompiled.py` | Compile the seven common algebra bindings and harvest compiled extension files into `precompiled/` |
 | `tools/clean-precompiled.py` | Remove precompiled artifacts to restore a pure Python wheel build |
 | `tools/fix-wheel-tag.py` | Rewrite the wheel filename and metadata with the correct platform tag |
 | `tools/upload-pypi.py` | Inspect a wheel and upload it to PyPI via twine |
@@ -26,7 +26,7 @@ Use this when you want to ship a wheel that works without a C++ compiler.
 # 1. Ensure dev dependencies are installed (includes [compile] extras)
 uv sync --group dev
 
-# 2. Compile and bundle the five common algebras
+# 2. Compile and bundle the seven common algebra bindings
 uv run python tools/build-precompiled.py
 
 # 3. Build the wheel with correct platform tag (one-step via helper script)
@@ -41,8 +41,9 @@ uv run python tools/upload-pypi.py --check
 
 **Output:** A platform-specific wheel (e.g. `cp312-cp312-manylinux_2_35_x86_64`
 for Linux, `cp312-cp312-win_amd64` for Windows)
-with precompiled extension modules for: E3, P3/PGA3, N3 (float64), E3 modular
-(int64), and G(10,0) sparse (int64).
+with precompiled extension modules for seven bindings (float64 unless noted):
+`(2,0)` E2, `(3,0)` E3/P2, `(4,0)` P3, `(4,8)` N2/PGA2, `(5,16)` N3/PGA3,
+plus `(3,0)` E3 modular (int64) and `(10,0)` G(10,0) sparse (int64).
 
 The helper scripts `tools/build-precompiled-wheel.sh` (Linux/macOS) and
 `tools/build-precompiled-wheel.ps1` (Windows) build to a temp directory,
@@ -61,7 +62,7 @@ ad-hoc builds.
 
 ### What `build-precompiled.py` Does
 
-1. Calls `pytanga.codegen._cache.get_or_build()` for each of the five algebras.
+1. Calls `pytanga.codegen._cache.get_or_build()` for each of the seven bindings.
    This triggers the same JIT compilation pipeline that users would normally
    pay on first import — but once, at build time.
 2. Walks the cache directory (`~/.cache/pytanga/`) to find the compiled
