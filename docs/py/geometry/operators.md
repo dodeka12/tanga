@@ -63,12 +63,14 @@ refl_origin = ReflectionPoint(Point(0, 0, 0))
 
 ## Inversion (N3 only)
 
-Inversion in a sphere centered at the origin.
+Inversion in a sphere centered at ``center`` with radius ``radius``
+(default ``1.0``).
 
 ```python
 from pytanga.geometry import Inversion, Point
 
-inv = Inversion(origin=Point(0, 0, 0))
+inv = Inversion(center=Point(0, 0, 0))                 # unit sphere (radius 1.0)
+inv2 = Inversion(center=Point(1, 0, 0), radius=2.0)    # sphere of radius 2.0
 ```
 
 | Algebra | Supported |

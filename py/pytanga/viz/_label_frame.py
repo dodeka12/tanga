@@ -257,7 +257,7 @@ def _compute_label_frame(entity: EntityLike) -> LabelFrame:
 
     # ── GeneralRotor ──
     if isinstance(entity, GeneralRotor):
-        ax = entity.rotor.axis
+        ax = entity.axis
         z = _normalize((ax.x, ax.y, ax.z))
         x = _perpendicular(z)
         y = _cross(z, x)
