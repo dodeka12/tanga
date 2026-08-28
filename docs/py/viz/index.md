@@ -14,12 +14,12 @@ load from CDN — zero frontend build step, no npm, no bundler.
 ## Quick Start
 
 ```python
-from pytanga.viz import Visualizer
+from pytanga.viz import SphereStyle, Visualizer
 from pytanga.geometry import Point, Sphere, Plane, Direction
 
 with Visualizer() as viz:  # clear + show on entry, flush on exit
     viz(Point(1, 2, 3), color="#ff4444")
-    viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.4)
+    viz(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.4)
     viz(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.3)
 ```
 

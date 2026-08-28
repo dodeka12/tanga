@@ -13,7 +13,8 @@ viz.add(Point(1, 2, 3), color="#ff4444", label="P₁")
 ```
 
 This auto-creates a `Label` attached to the entity using the global default
-`LabelStyle`. Returns `(entity_id, label_id)` as a 2-tuple.
+`LabelStyle`. It returns the entity id as a `str`; the attached label ids are
+available via `viz.get_label_ids(entity_id)` (a `list[str]`).
 
 ## `Label` Dataclass
 

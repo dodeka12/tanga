@@ -7,7 +7,7 @@ Run with:  uv run python py/examples/viz/animation/timeline.py
 """
 
 from pytanga.geometry import Direction, Plane, Point, Sphere
-from pytanga.viz import Visualizer
+from pytanga.viz import SphereStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Keyframe Timeline")
 viz.show()
@@ -16,7 +16,7 @@ p1 = viz.add(Point(0, 0, 0), color="#ff4444", opacity=0.0, label="$P_1$")
 p2 = viz.add(Point(5, 0, 0), color="#44ff44", opacity=0.0, label="$P_2$")
 sphere_id = viz.add(
     Sphere(Point(0, 0, 0), radius=1.0),
-    wireframe=True,
+    style=SphereStyle(wireframe=True),
     opacity=0.0,
     label="S",
 )

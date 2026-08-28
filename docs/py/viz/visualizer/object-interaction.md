@@ -23,7 +23,7 @@ user-registered async handlers.
 ### InteractionTrigger
 
 ```python
-from pytanga.viz._interaction import (
+from pytanga.viz import (
     InteractionTrigger, InteractionEventType, MouseButton,
     ModifierKey, DragMode,
 )
@@ -46,7 +46,7 @@ trigger = InteractionTrigger(
 ### InteractionConfig
 
 ```python
-from pytanga.viz._interaction import InteractionConfig
+from pytanga.viz import InteractionConfig
 
 config = InteractionConfig(
     enabled=True,
@@ -130,7 +130,7 @@ class ScrollEvent(ControlEvent):
 ## Registering Handlers
 
 ```python
-from pytanga.viz._interaction import InteractionEventType
+from pytanga.viz import InteractionEventType
 
 async def on_drag(event):
     p = event.world_position          # p is a pytanga.geometry.Point
@@ -207,7 +207,7 @@ wd = camera.unproject(Direction(dx, dy), depth=5.0)
 
 ```python
 from pytanga.viz import Visualizer
-from pytanga.viz._interaction import (
+from pytanga.viz import (
     InteractionConfig, InteractionTrigger,
     InteractionEventType, MouseButton, ModifierKey, DragMode,
 )

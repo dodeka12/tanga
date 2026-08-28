@@ -8,8 +8,7 @@ triggers; in 2D (`space_dim=2`) the unmodified drag defaults to the XY plane.
 ## Quick Start
 
 ```python
-from pytanga.viz import Visualizer
-from pytanga.viz._active import ActPoint
+from pytanga.viz import ActPoint, Visualizer
 from pytanga.geometry import Point
 
 viz = Visualizer()
@@ -99,7 +98,7 @@ Removing the point also removes its attached label.
 ## Custom Handler
 
 ```python
-from pytanga.viz._active import ActHandler
+from pytanga.viz import ActHandler
 
 async def my_handler(event, ap):
     # event: DragEvent — carries world_position (Point), world_delta (Direction),

@@ -31,8 +31,7 @@ import asyncio
 
 # import logging
 from pytanga.geometry import Line, Point
-from pytanga.viz import CylinderLineStyle, Visualizer, VizObjectRef
-from pytanga.viz._active import ActPoint
+from pytanga.viz import ActPoint, CylinderLineStyle, Visualizer, VizObjectRef
 
 # logging.basicConfig(level=logging.INFO)  # everything
 # logging.getLogger("tanga.viz.server").setLevel(logging.DEBUG)  # extra HTTP/WS detail

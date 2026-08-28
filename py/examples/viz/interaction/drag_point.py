@@ -30,7 +30,7 @@ import logging
 
 from pytanga.geometry import Line, Point
 from pytanga.viz import Visualizer, VizObjectRef
-from pytanga.viz._interaction import (
+from pytanga.viz import (
     DragMode,
     InteractionConfig,
     InteractionEventType,

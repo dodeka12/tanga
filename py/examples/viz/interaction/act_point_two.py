@@ -25,8 +25,7 @@ Usage::
 import asyncio
 
 from pytanga.geometry import Line, Point
-from pytanga.viz import CylinderLineStyle, Visualizer, VizObjectRef
-from pytanga.viz._active import ActPoint
+from pytanga.viz import ActPoint, CylinderLineStyle, Visualizer, VizObjectRef
 
 
 class _ProjectionLines:
