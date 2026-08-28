@@ -1,6 +1,6 @@
 # Fix stale geometry & viz documentation
 
-**Created:** 2026-08-28 | **Status:** Planned
+**Created:** 2026-08-28 | **Status:** Done
 
 ## Goal
 
@@ -95,10 +95,10 @@ docs).
 
 ## Verification
 
-- [ ] `uv run mkdocs build --strict` — catches broken links and build errors.
-- [ ] Spot-check the `Inversion`, precompiled-wheels, and geometry pages render
+- [x] `uv run mkdocs build --strict` — catches broken links and build errors.
+- [x] Spot-check the `Inversion`, precompiled-wheels, and geometry pages render
       with the corrected content.
-- [ ] If Phase 3.1 lands: `viz.add(GeneralRotor(...))` no longer raises, and the
+- [x] If Phase 3.1 lands: `viz.add(GeneralRotor(...))` no longer raises, and the
       exported snapshot renders the displaced-axis rotor.
 
 ## Notes / verified-accurate (no change needed)
