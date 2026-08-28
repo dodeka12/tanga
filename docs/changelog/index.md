@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.9.0] — 2026-08-28
+- Documentation fixes: `Inversion(center=…, radius=…)` example · precompiled-wheel binding list (seven bindings) · `Geometry` `BasisXX`-only restriction
+- Bug fixes: `GeneralRotor` label frame no longer dereferences a missing `.rotor`
+→ [Details](2026-08-28_020ee37f.md)
+
 ## [Since 1.8.0] — 2026-08-27
 - In-place control value updates (`set_control_value` · `set_control_view_value` · `control_update`) · value-edit stepper control (`add_value_edit` / `ValueEditView`)
 - Breaking: control `default` field renamed to `value` (no alias kept)
