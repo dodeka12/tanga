@@ -20,6 +20,14 @@ pass it on every call.
 from pytanga.geometry import Geometry
 ```
 
+!!! note "`Geometry` binds only the built-in basis classes"
+    `Geometry` accepts the eight built-in `BasisXX` classes — `BasisE2`,
+    `BasisE3`, `BasisP2`, `BasisP3`, `BasisPGA2`, `BasisPGA3`, `BasisN2`,
+    `BasisN3`. A generic `Algebra(dim, sig)` can still be used to *construct* a
+    `Geometry`, but the geometry pipeline has no basis-specific module for a raw
+    `Algebra`: `geo.create(...)` raises `ValueError: Unknown basis type: Algebra`
+    and `geo.analyze(...)` returns `None`. Bind a `BasisXX` class instead.
+
 ## Quick Start
 
 ```python

@@ -88,7 +88,7 @@ docs).
 
 ### Phase 4 — document the `Geometry` basis-class restriction
 
-- [ ] 4.1 `docs/py/geometry/index.md` and/or `create.md`: add a note that
+- [x] 4.1 `docs/py/geometry/index.md` and/or `create.md`: add a note that
       `Geometry` only accepts the built-in `BasisXX` classes, and that a generic
       `Algebra` raises `ValueError: Unknown basis type: Algebra` on `create`
       (and `analyze` returns `None`).

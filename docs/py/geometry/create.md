@@ -9,6 +9,13 @@ The recommended API is a bound [`Geometry`](https://github.com/dodeka12/tanga/bl
 from pytanga.geometry import Geometry
 ```
 
+!!! note "`Geometry` only works with the built-in `BasisXX` classes"
+    `Geometry` binds one of the eight built-in basis classes (`BasisE2`,
+    `BasisE3`, `BasisP2`, `BasisP3`, `BasisPGA2`, `BasisPGA3`, `BasisN2`,
+    `BasisN3`). A generic `Algebra(dim, sig)` constructs a `Geometry`, but
+    `create(...)` then raises `ValueError: Unknown basis type: Algebra` because
+    there is no basis-specific creation module for a raw `Algebra`.
+
 ## `geo.create(obj) → MV`
 
 Convenience method that accepts either an `Entity` or `Operator` and
