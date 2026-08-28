@@ -47,6 +47,13 @@ viz.wait()
 | `base` | `float` | Log base when a scale is given as `"log"` (default `10`). |
 | `value_format` | `str` | Python format specifier for tick labels (default `".4g"`). |
 | `labels` | `(str, str)` | Axis name labels (default `("x", "y")`). |
+| `grid` | `bool` | Whether to draw the grid (default `True`). |
+| `axes` | `bool` | Whether to draw the axes with tick/value labels (default `True`). |
+| `plane` | `bool \| None` | Whether to draw the background plane. `None` auto-enables in 3D and disables in 2D (see *3D: background plane placement*). |
+| `camera` | `"auto" \| bool` | 2D framing-camera control, only when `size` is not given (see *2D: auto span & camera*). |
+| `border_px` | `float` | 2D camera pixel margin so axis labels stay visible (default `60`). |
+| `border_world` | `float` | Additional world-unit margin for the 2D camera (default `0`). |
+| `group_name` | `str` | Group name used when creating the coordinate-system group (default `"coordsys"`). |
 
 ### Logarithmic scales
 

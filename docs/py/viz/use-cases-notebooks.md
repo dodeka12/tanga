@@ -11,13 +11,13 @@ on entry (then flushes on exit):
 
 ```python
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import Visualizer
+from pytanga.viz import SphereStyle, Visualizer
 
 viz = Visualizer()
 
 with viz:  # clear + show on entry, flush on exit
     viz(Point(1, 2, 3), color="#ff4444")
-    viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.3)
+    viz(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
 ```
 
 ### Executed repeatedly

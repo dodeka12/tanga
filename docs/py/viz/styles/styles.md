@@ -200,7 +200,7 @@ fields:
 ```python
 from pytanga.viz import DashedWireframe, DottedWireframe, SolidWireframe
 
-viz.add(Sphere(0, 0, 0, 2), style=SphereStyle(
+viz.add(Sphere(Point(0, 0, 0), 2), style=SphereStyle(
     wireframe=True,
     wireframe_dash=DashedWireframe(),
     wireframe_color="#00ffff",

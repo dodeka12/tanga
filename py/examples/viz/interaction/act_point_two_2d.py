@@ -20,8 +20,7 @@ Usage::
 
 import asyncio
 
-from pytanga.viz import View2DConfig, Visualizer
-from pytanga.viz._active import ActPoint
+from pytanga.viz import ActPoint, View2DConfig, Visualizer
 
 
 async def main() -> None:

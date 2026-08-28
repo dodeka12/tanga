@@ -7,7 +7,7 @@ Run with:  uv run python py/examples/viz/styling/custom_defaults.py
 """
 
 from pytanga.geometry import Direction, Line, Plane, Point, Sphere
-from pytanga.viz import PointStyle, Visualizer
+from pytanga.viz import PointStyle, SphereStyle, Visualizer
 
 viz = Visualizer(title="Tanga — Custom Defaults")
 
@@ -39,7 +39,7 @@ viz.new(
 
 viz.new(
     Sphere(Point(0, 0, 0), radius=2.5),
-    wireframe=True,
+    style=SphereStyle(wireframe=True),
     opacity=0.3,
     label="amber sphere (default)",
 )

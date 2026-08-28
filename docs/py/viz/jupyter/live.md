@@ -8,7 +8,7 @@ kernel to be on the same machine as the browser).
 
 ```python
 # Cell 1: Setup
-from pytanga.viz import Visualizer, CameraConfig3d
+from pytanga.viz import CameraConfig3d, SphereStyle, Visualizer
 from pytanga.geometry import Point, Sphere, Plane, Direction
 
 viz = Visualizer(
@@ -22,7 +22,7 @@ print(f"Viewer available at {viz.url}")
 # Cell 2: Add entities
 viz.add(Point(2, 0, 0), color="#ff4444", size=0.15, label="P₁")
 viz.add(Point(0, 2, 0), color="#44ff44", size=0.15, label="P₂")
-viz.add(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.3)
+viz.add(Sphere(Point(0, 0, 0), radius=2.5), style=SphereStyle(wireframe=True), opacity=0.3)
 viz.flush()
 print("Entities added and flushed.")
 ```

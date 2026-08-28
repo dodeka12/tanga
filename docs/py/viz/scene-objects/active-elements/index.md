@@ -25,8 +25,7 @@ All active elements inherit from `ActSceneObject` and share:
 ## Usage Pattern
 
 ```python
-from pytanga.viz import Visualizer
-from pytanga.viz._active import ActPoint
+from pytanga.viz import ActPoint, Visualizer
 from pytanga.geometry import Point
 
 viz = Visualizer()
@@ -84,8 +83,8 @@ lifecycle and never override the default movement.
 Subclass `ActSceneObject` and implement three properties:
 
 ```python
-from pytanga.viz._active import ActSceneObject, _default_drag_triggers
-from pytanga.viz._interaction import InteractionConfig, MouseButton
+from pytanga.viz import ActSceneObject, InteractionConfig, MouseButton
+from pytanga.viz._active import _default_drag_triggers
 from pytanga.geometry import Sphere, Point
 
 class ActSphere(ActSceneObject):
