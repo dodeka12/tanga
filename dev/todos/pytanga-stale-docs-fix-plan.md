@@ -79,13 +79,12 @@ docs).
 
 ### Phase 3 — `GeneralRotor` rendering (code fix first, then docs)
 
-- [ ] 3.1 Fix the renderer/serializer so `GeneralRotor` renders without
+- [x] 3.1 Fix the renderer/serializer so `GeneralRotor` renders without
       dereferencing `.rotor` (root cause: the `Motor` screw-form change made
       `Motor.rotor` a `GeneralRotor`, and the `GeneralRotor` render path still
       assumes a `Motor` shape).
-- [ ] 3.2 If the code fix is deferred, correct the viz docs and the changelog to
-      note that `GeneralRotor` (and `Motor`-as-`GeneralRotor`) are not renderable
-      yet.
+- [x] 3.2 N/A — the code fix in 3.1 landed, so the viz docs and the changelog
+      claims are accurate again; no "not renderable yet" correction is needed.
 
 ### Phase 4 — document the `Geometry` basis-class restriction
 

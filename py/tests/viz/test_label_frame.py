@@ -4,8 +4,14 @@
 """Tests for label anchor/position computation (``_label_frame.py``)."""
 
 from pytanga.geometry import Cylinder, Direction, Disk, Line, Point
-from pytanga.geometry.operators import ReflectionLine
-from pytanga.viz._label_frame import compute_label_position
+from pytanga.geometry.operators import (
+    GeneralRotor,
+    Motor,
+    ReflectionLine,
+    Rotor,
+    Translator,
+)
+from pytanga.viz._label_frame import compute_label_position, get_label_frame
 
 
 class TestLabelPosition:
@@ -70,3 +76,15 @@ class TestLabelPosition:
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         eid = viz.add(Cylinder(), label="C")
         assert len(viz.main_scene.get_label_ids(eid)) == 1
+
+    def test_general_rotor_label_frame(self):
+        gr = GeneralRotor(angle=0.5, axis=Direction(0, 0, 1), origin=Point(1, 0, 0))
+        frame = get_label_frame(gr)
+        assert frame.z_axis == (0.0, 0.0, 1.0)
+
+    def test_motor_label_frame(self):
+        m = Motor(
+            Rotor(angle=0.5, axis=Direction(0, 0, 1)), Translator(Direction(1, 0, 0))
+        )
+        frame = get_label_frame(m)
+        assert frame.z_axis == (0.0, 0.0, 1.0)
