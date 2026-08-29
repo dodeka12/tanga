@@ -14,14 +14,24 @@ from typing import TYPE_CHECKING
 
 from .entities import (
     Circle,
+    Cone,
+    Conic,
+    Cylinder,
     Direction,
+    Ellipse,
+    Ellipsoid,
     Entity,
     HDirection,
     HPoint,
+    Hyperbola,
     Line,
+    LinePair,
+    ParallelLinePair,
+    Parabola,
     Plane,
     Point,
     PointPair,
+    Quadric3D,
     Space,
     Sphere,
 )
@@ -53,6 +63,13 @@ def _detect(basis) -> str:
     from pytanga.basis.p3 import BasisP3
     from pytanga.basis.pga2 import BasisPGA2
     from pytanga.basis.pga3 import BasisPGA3
+    from pytanga.quadric import BasisQ2, BasisQ3
+
+    # Quadric-space bases (distinct Algebra subclasses)
+    if isinstance(basis, BasisQ3):
+        return "q3"
+    if isinstance(basis, BasisQ2):
+        return "q2"
 
     # 3D algebras
     if isinstance(basis, BasisPGA3):
@@ -106,6 +123,8 @@ def create_entity(basis: Algebra, entity: Entity) -> MV:
         create_p3,
         create_pga2,
         create_pga3,
+        create_q2,
+        create_q3,
     )
 
     modules = {
@@ -117,8 +136,31 @@ def create_entity(basis: Algebra, entity: Entity) -> MV:
         "p3": create_p3,
         "pga2": create_pga2,
         "pga3": create_pga3,
+        "q2": create_q2,
+        "q3": create_q3,
     }
     mod = modules[_detect(basis)]
+
+    if isinstance(
+        entity,
+        (
+            Conic,
+            Quadric3D,
+            Hyperbola,
+            Parabola,
+            LinePair,
+            ParallelLinePair,
+            Ellipse,
+            Ellipsoid,
+            Cylinder,
+            Cone,
+        ),
+    ):
+        if _detect(basis) not in ("q2", "q3"):
+            raise TypeError(
+                f"Entity type {type(entity).__name__} not supported in {_detect(basis)}"
+            )
+        return mod.create_entity(basis, entity)
 
     if isinstance(entity, Point):
         return mod.create_point(basis, entity.x, entity.y, entity.z)
@@ -175,9 +217,7 @@ def create_entity(basis: Algebra, entity: Entity) -> MV:
                 entity.normal,
                 entity.radius,
             )
-        return mod.create_circle(
-            basis, entity.center, entity.normal, entity.radius
-        )
+        return mod.create_circle(basis, entity.center, entity.normal, entity.radius)
     elif isinstance(entity, Plane):
         return mod.create_plane(basis, entity)
     elif isinstance(entity, Sphere):
@@ -318,6 +358,17 @@ def create(basis: Algebra, obj: Entity | Operator) -> MV:
     MV
         The multivector representation.
     """
+    # Quadric-space viz entities (Ellipse/Ellipsoid/Cylinder) become MV-backed
+    # in the quadric space even though they stay out of the generic Entity
+    # union (they remain viz-only for the other algebras).
+    if isinstance(obj, (Ellipse, Ellipsoid, Cylinder)):
+        alg_type = _detect(basis)
+        if alg_type in ("q2", "q3"):
+            from . import create_q2, create_q3
+
+            mod = create_q2 if alg_type == "q2" else create_q3
+            return mod.create_entity(basis, obj)
+
     if isinstance(obj, Entity):
         return create_entity(basis, obj)
     elif isinstance(obj, Operator):

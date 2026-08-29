@@ -15,26 +15,26 @@ round-trip.
 
 ## Steps
 
-- [ ] **5.1 — `create_q2.py`**
+- [x] **5.1 — `create_q2.py`**
   - `create_conic(basis, Conic)` → MV from `to_coeffs(coeffs)`.
   - `create_<entity>` for `Circle`, `Ellipse`, `Hyperbola`, `Parabola`, `Line`,
     `LinePair`, `ParallelLinePair` → their symmetric-matrix coeffs (via the
     inverse of the Phase-3 refinement formulas).
 
-- [ ] **5.2 — `create_q3.py`**
+- [x] **5.2 — `create_q3.py`**
   - `create_quadric(basis, Quadric3D)` → MV.
   - `create_<entity>` for `Sphere`, `Ellipsoid`, `Cylinder`, `Cone`, `Plane`.
 
-- [ ] **5.3 — dispatch** — add q2/q3 to `create._detect`; route
+- [x] **5.3 — dispatch** — add q2/q3 to `create._detect`; route
   `Conic`/`Quadric3D` and the specific entities to the new modules.
 
-- [ ] **5.4 — Tests**
+- [x] **5.4 — Tests**
   - `create(basis, analyze(mv)) == mv` (up to scale) for conic/quadric MVs.
   - `create(basis, Ellipsoid(...))` → MV that `analyze` → `Quadric3D` → `refine`
     → equivalent `Ellipsoid`.
   - `create` rejects unsupported entity kinds with a clear error.
 
-- [ ] **5.5 — Validate** — `uv run pytest py/tests/geometry/test_conic_create.py -q`.
+- [x] **5.5 — Validate** — `uv run pytest py/tests/geometry/test_conic_create.py -q`.
 
 ## Validation
 
