@@ -20,3 +20,10 @@
 - **2D conic curve renderers** — `Hyperbola`, `Parabola`, `LinePair`
   (`ParallelLinePair`), and `PointSet` frontend renderers.
 
+## Bug Fixes
+- **Ray renderer one-sided quadrics** — the analytic ray proxy now rasterizes
+  its back faces (`side: THREE.BackSide`) so it keeps rendering when the camera
+  is inside the proxy box (unbounded quadrics use a large ±10 cube), and flips
+  the surface normal to face the camera so open quadrics (cone, paraboloid,
+  hyperboloid) shade correctly from both sides instead of looking inside-out.
+

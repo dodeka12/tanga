@@ -5,6 +5,13 @@
 // implicit surface and writes `gl_FragDepth`, so ray objects depth-composite
 // with meshes and SDF proxies in one scene.  The per-object analytic
 // `intersectRay` / `normalAt` functions live in `ray/intersect.glsl`.
+//
+// The proxy is rasterized with `side: THREE.BackSide` so its far faces cover
+// the volume whether the camera is inside or outside the box (unbounded
+// quadrics fall back to a large ±10 cube, so the camera is often inside it).
+// The surface normal is also flipped to face the camera in the fragment
+// shader: implicit surfaces have no face culling, so open quadrics would
+// otherwise shade their "back" side dark and look one-sided.
 
 import * as THREE from 'three';
 import {
@@ -96,6 +103,11 @@ void main() {
 
     vec3 p = ro + rd * t;
     vec3 n = normalAt(p);
+    // Implicit surfaces have no face culling: an open quadric (cone, paraboloid,
+    // hyperboloid) shows its "back" side from many viewpoints, where the analytic
+    // normal points away from the camera and the diffuse term would go dark.
+    // Flip it so it always faces the viewer before shading.
+    if (dot(n, rd) > 0.0) n = -n;
     vec3 col = shade(p, n, ro);
 
     // Write the hit's clip-space depth so occlusion against meshes and other
@@ -159,7 +171,7 @@ export async function createRayProxy(ent) {
         depthWrite: true,
         depthTest: true,
         glslVersion: THREE.GLSL3,
-        side: THREE.FrontSide,
+        side: THREE.BackSide,
     });
 
     const geometry = new THREE.BoxGeometry(half[0] * 2, half[1] * 2, half[2] * 2);

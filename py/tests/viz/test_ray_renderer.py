@@ -3,11 +3,15 @@
 
 """Tests for the ray-renderer serializer branch and capability checks."""
 
+from pathlib import Path
+
 import pytest
 
 from pytanga.geometry import Point, Quadric3D, Sphere
 from pytanga.viz import RayStyle
 from pytanga.viz.serializer import serialize_entity
+
+_RENDERS_DIR = Path(__file__).parents[2] / "pytanga" / "viz" / "templates" / "renderers"
 
 
 class TestRaySerializer:
@@ -23,3 +27,14 @@ class TestRaySerializer:
         )
         assert d["kind"] == "ray"
         assert d["rayKind"] == "Quadric3D"
+
+
+class TestRayProxyCulling:
+    def test_proxy_uses_backside(self):
+        code = (_RENDERS_DIR / "ray.js").read_text(encoding="utf-8")
+        assert "side: THREE.BackSide" in code
+        assert "side: THREE.FrontSide" not in code
+
+    def test_normal_faces_camera(self):
+        code = (_RENDERS_DIR / "ray.js").read_text(encoding="utf-8")
+        assert "if (dot(n, rd) > 0.0) n = -n;" in code
