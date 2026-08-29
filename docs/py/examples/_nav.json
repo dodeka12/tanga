@@ -1,0 +1,409 @@
+[
+  {
+    "Overview": "py/examples/index.md"
+  },
+  {
+    "Binding Demo": "py/examples/binding_demo.md"
+  },
+  {
+    "Geometric Algebra": [
+      {
+        "Overview": "py/examples/ga/index.md"
+      },
+      {
+        "Algebra": [
+          {
+            "Overview": "py/examples/ga/algebra/index.md"
+          },
+          {
+            "Algebra Demo": "py/examples/ga/algebra/algebra_demo.md"
+          },
+          {
+            "Modulus Algebra Multi": "py/examples/ga/algebra/modulus_algebra_multi.md"
+          },
+          {
+            "Modulus Algebra Single": "py/examples/ga/algebra/modulus_algebra_single.md"
+          },
+          {
+            "Mv Demo": "py/examples/ga/algebra/mv_demo.md"
+          }
+        ]
+      },
+      {
+        "Basis": [
+          {
+            "Overview": "py/examples/ga/basis/index.md"
+          },
+          {
+            "Base E3 Demo": "py/examples/ga/basis/base_e3_demo.md"
+          },
+          {
+            "Base N3 Demo": "py/examples/ga/basis/base_n3_demo.md"
+          },
+          {
+            "Base P3 Demo": "py/examples/ga/basis/base_p3_demo.md"
+          },
+          {
+            "Base Pga3 Demo": "py/examples/ga/basis/base_pga3_demo.md"
+          },
+          {
+            "Basis Usage": "py/examples/ga/basis/basis_usage.md"
+          }
+        ]
+      },
+      {
+        "Expressions": [
+          {
+            "Overview": "py/examples/ga/expression/index.md"
+          },
+          {
+            "Equation Demo": "py/examples/ga/expression/equation_demo.md"
+          },
+          {
+            "Line Fitting P3": "py/examples/ga/expression/line_fitting_p3.md"
+          },
+          {
+            "Polynomial Demo": "py/examples/ga/expression/polynomial_demo.md"
+          },
+          {
+            "Solve Ax B": "py/examples/ga/expression/solve_ax_b.md"
+          },
+          {
+            "Variable Rotor": "py/examples/ga/expression/variable_rotor.md"
+          },
+          {
+            "Variable Rotor Entity": "py/examples/ga/expression/variable_rotor_entity.md"
+          }
+        ]
+      },
+      {
+        "Geometry": [
+          {
+            "Overview": "py/examples/ga/geometry/index.md"
+          },
+          {
+            "E3 Entities": "py/examples/ga/geometry/e3_entities.md"
+          },
+          {
+            "N3 Entities": "py/examples/ga/geometry/n3_entities.md"
+          },
+          {
+            "N3 Operators": "py/examples/ga/geometry/n3_operators.md"
+          },
+          {
+            "P3 Entities": "py/examples/ga/geometry/p3_entities.md"
+          },
+          {
+            "Pga3 Entities": "py/examples/ga/geometry/pga3_entities.md"
+          }
+        ]
+      },
+      {
+        "Jupyter Notebooks": [
+          {
+            "Overview": "py/examples/ga/jupyter/index.md"
+          },
+          {
+            "Animation": "py/examples/ga/jupyter/animation.md"
+          },
+          {
+            "Export": "py/examples/ga/jupyter/export.md"
+          },
+          {
+            "Interactive": "py/examples/ga/jupyter/interactive.md"
+          }
+        ]
+      },
+      {
+        "Numerics": [
+          {
+            "Overview": "py/examples/ga/numerics/index.md"
+          },
+          {
+            "Solver Basics 01": "py/examples/ga/numerics/solver_basics_01.md"
+          },
+          {
+            "Solver Basics 02": "py/examples/ga/numerics/solver_basics_02.md"
+          },
+          {
+            "Solver Basics 03": "py/examples/ga/numerics/solver_basics_03.md"
+          },
+          {
+            "Solver Line Fitting P2": "py/examples/ga/numerics/solver_line_fitting_p2.md"
+          },
+          {
+            "Solver Point Line P3": "py/examples/ga/numerics/solver_point_line_p3.md"
+          },
+          {
+            "Solver Rotor Estimation": "py/examples/ga/numerics/solver_rotor_estimation.md"
+          }
+        ]
+      },
+      {
+        "Tensor": [
+          {
+            "Overview": "py/examples/ga/tensor/index.md"
+          },
+          {
+            "Basics 01": "py/examples/ga/tensor/basics_01.md"
+          },
+          {
+            "Basics 02": "py/examples/ga/tensor/basics_02.md"
+          },
+          {
+            "Rotor Point On Ray 01": "py/examples/ga/tensor/rotor-point-on-ray_01.md"
+          },
+          {
+            "Rotor 01": "py/examples/ga/tensor/rotor_01.md"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Visualization": [
+      {
+        "Overview": "py/examples/viz/index.md"
+      },
+      {
+        "Animation": [
+          {
+            "Overview": "py/examples/viz/animation/index.md"
+          },
+          {
+            "Double Pendulum": "py/examples/viz/animation/double_pendulum.md"
+          },
+          {
+            "Nested Sweep": "py/examples/viz/animation/nested_sweep.md"
+          },
+          {
+            "Orbit": "py/examples/viz/animation/orbit.md"
+          },
+          {
+            "Point Path Trail": "py/examples/viz/animation/point_path_trail.md"
+          },
+          {
+            "Timeline": "py/examples/viz/animation/timeline.md"
+          },
+          {
+            "Two Body Gravity": "py/examples/viz/animation/two_body_gravity.md"
+          }
+        ]
+      },
+      {
+        "Banners": [
+          {
+            "Overview": "py/examples/viz/banners/index.md"
+          },
+          {
+            "Banner Types": "py/examples/viz/banners/banner_types.md"
+          },
+          {
+            "Heavy Work": "py/examples/viz/banners/heavy_work.md"
+          }
+        ]
+      },
+      {
+        "Camera": [
+          {
+            "Overview": "py/examples/viz/camera/index.md"
+          },
+          {
+            "2D View": "py/examples/viz/camera/2d_view.md"
+          },
+          {
+            "3D Plane": "py/examples/viz/camera/3d_plane.md"
+          },
+          {
+            "Axes Grid 2D": "py/examples/viz/camera/axes_grid_2d.md"
+          },
+          {
+            "Fit 2D": "py/examples/viz/camera/fit_2d.md"
+          },
+          {
+            "Modes": "py/examples/viz/camera/modes.md"
+          }
+        ]
+      },
+      {
+        "Entities": [
+          {
+            "Overview": "py/examples/viz/entities/index.md"
+          },
+          {
+            "All Entities": "py/examples/viz/entities/all_entities.md"
+          },
+          {
+            "Extra Entities": "py/examples/viz/entities/extra_entities.md"
+          },
+          {
+            "Multivector": "py/examples/viz/entities/multivector.md"
+          },
+          {
+            "Operators": "py/examples/viz/entities/operators.md"
+          },
+          {
+            "Viz Entities": "py/examples/viz/entities/viz_entities.md"
+          }
+        ]
+      },
+      {
+        "Export": [
+          {
+            "Overview": "py/examples/viz/export/index.md"
+          },
+          {
+            "Animated": "py/examples/viz/export/animated.md"
+          },
+          {
+            "Animated Camera 2D": "py/examples/viz/export/animated_camera_2d.md"
+          },
+          {
+            "Animated Camera 3D": "py/examples/viz/export/animated_camera_3d.md"
+          },
+          {
+            "Figure": "py/examples/viz/export/figure.md"
+          },
+          {
+            "Html Export": "py/examples/viz/export/html_export.md"
+          },
+          {
+            "Screenshot": "py/examples/viz/export/screenshot.md"
+          }
+        ]
+      },
+      {
+        "Interaction": [
+          {
+            "Overview": "py/examples/viz/interaction/index.md"
+          },
+          {
+            "Act Point": "py/examples/viz/interaction/act_point.md"
+          },
+          {
+            "Act Point Two": "py/examples/viz/interaction/act_point_two.md"
+          },
+          {
+            "Act Point Two 2D": "py/examples/viz/interaction/act_point_two_2d.md"
+          },
+          {
+            "All Controls": "py/examples/viz/interaction/all_controls.md"
+          },
+          {
+            "Drag Point": "py/examples/viz/interaction/drag_point.md"
+          },
+          {
+            "File Chooser": "py/examples/viz/interaction/file_chooser.md"
+          },
+          {
+            "Two Spheres Interact": "py/examples/viz/interaction/two_spheres_interact.md"
+          }
+        ]
+      },
+      {
+        "Labels": [
+          {
+            "Overview": "py/examples/viz/labels/index.md"
+          },
+          {
+            "Basic": "py/examples/viz/labels/basic.md"
+          },
+          {
+            "Texture Plane": "py/examples/viz/labels/texture_plane.md"
+          },
+          {
+            "Texture Sphere": "py/examples/viz/labels/texture_sphere.md"
+          },
+          {
+            "Title Annotation": "py/examples/viz/labels/title_annotation.md"
+          }
+        ]
+      },
+      {
+        "Plotting": [
+          {
+            "Overview": "py/examples/viz/plotting/index.md"
+          },
+          {
+            "Axes Custom": "py/examples/viz/plotting/axes_custom.md"
+          },
+          {
+            "Cs Annotations": "py/examples/viz/plotting/cs_annotations.md"
+          },
+          {
+            "Log Plot": "py/examples/viz/plotting/log_plot.md"
+          },
+          {
+            "Pendulum Plot": "py/examples/viz/plotting/pendulum_plot.md"
+          },
+          {
+            "Plot 3D": "py/examples/viz/plotting/plot_3d.md"
+          }
+        ]
+      },
+      {
+        "Scenes": [
+          {
+            "Overview": "py/examples/viz/scenes/index.md"
+          },
+          {
+            "Multi Scene": "py/examples/viz/scenes/multi_scene.md"
+          },
+          {
+            "Nested Groups": "py/examples/viz/scenes/nested_groups.md"
+          },
+          {
+            "Scene Graph": "py/examples/viz/scenes/scene_graph.md"
+          },
+          {
+            "Split View": "py/examples/viz/scenes/split_view.md"
+          }
+        ]
+      },
+      {
+        "SDF": [
+          {
+            "Overview": "py/examples/viz/sdf/index.md"
+          },
+          {
+            "Arrowhead": "py/examples/viz/sdf/arrowhead.md"
+          },
+          {
+            "Booleans": "py/examples/viz/sdf/booleans.md"
+          },
+          {
+            "Composed": "py/examples/viz/sdf/composed.md"
+          },
+          {
+            "Entities": "py/examples/viz/sdf/entities.md"
+          },
+          {
+            "Group": "py/examples/viz/sdf/group.md"
+          },
+          {
+            "Light Animation": "py/examples/viz/sdf/light_animation.md"
+          },
+          {
+            "Mesh Vs Sdf Grid": "py/examples/viz/sdf/mesh_vs_sdf_grid.md"
+          },
+          {
+            "Object Model": "py/examples/viz/sdf/object_model.md"
+          },
+          {
+            "Objects": "py/examples/viz/sdf/objects.md"
+          }
+        ]
+      },
+      {
+        "Styling": [
+          {
+            "Overview": "py/examples/viz/styling/index.md"
+          },
+          {
+            "Custom Defaults": "py/examples/viz/styling/custom_defaults.md"
+          }
+        ]
+      }
+    ]
+  }
+]
