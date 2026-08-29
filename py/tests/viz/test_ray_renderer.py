@@ -40,3 +40,8 @@ class TestRayProxyCulling:
         assert "float dif = abs(dot(n, L));" in code
         # The old per-fragment normal flip caused a hard one-sided switch.
         assert "if (dot(n, rd) > 0.0) n = -n;" not in code
+
+    def test_intersect_call_is_range_clipped(self):
+        code = (_RENDERS_DIR / "ray.js").read_text(encoding="utf-8")
+        assert "intersectRay(ro, rd, tNear, tFar)" in code
+        assert "if (t < 0.0) discard;" in code

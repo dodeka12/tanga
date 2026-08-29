@@ -55,3 +55,9 @@ class TestQuadricGlsl:
         assert "float intersectRay" in code
         assert "vec3 normalAt" in code
         assert "uniform mat4 uQuadric" in code
+
+    def test_intersection_is_range_clipped(self):
+        code = (_RENDERS_DIR / "ray" / "quadric.glsl").read_text(encoding="utf-8")
+        assert "float intersectRay(vec3 ro, vec3 rd, float tMin, float tMax)" in code
+        assert "t1 >= tMin && t1 <= tMax" in code
+        assert "t2 >= tMin && t2 <= tMax" in code

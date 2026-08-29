@@ -105,8 +105,8 @@ void main() {
     tNear = max(tNear, 0.0);
     if (tFar <= tNear) discard;
 
-    float t = intersectRay(ro, rd);
-    if (t < tNear || t > tFar) discard;
+    float t = intersectRay(ro, rd, tNear, tFar);
+    if (t < 0.0) discard;
 
     vec3 p = ro + rd * t;
     vec3 n = normalAt(p);

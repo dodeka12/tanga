@@ -27,4 +27,8 @@
   two-sided with `|n·L|` diffuse so open quadrics (cone, paraboloid,
   hyperboloid) stay lit from every viewpoint instead of flipping to a dark
   one-sided view.
+- **Ray/quadric intersection clipped to the proxy box** — the analytic
+  intersection now returns the nearest root inside `[tNear, tFar]` rather than
+  the nearest root on the unbounded ray, so unbounded quadrics no longer pop
+  out of view when their closest intersection sits just outside the ±10 cube.
 
