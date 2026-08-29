@@ -9,13 +9,14 @@
   `LinePair`, `ParallelLinePair`, `PointSet`, and `Cone`.
 - **Two-level analysis + creation** — `analyze()` returns the raw
   `Conic`/`Quadric3D`; `refine()` (and `Geometry.refine`) recovers the specific
-  entity (circle, ellipse, ellipsoid, sphere, cylinder, cone, plane, …), and
-  `create()` inverts the round-trip.
-- **2D two-conic intersection** — thesis pencil method intersecting two conic
-  matrices into a `PointSet`.
-- **Analytic quadric ray renderer** — `RayStyle` / `RayQuadricStyle` opt
-  entities into analytic ray rendering (`kind:"ray"`), with a bounding-box
-  proxy shader that writes `gl_FragDepth`; `Quadric3D` renders via this path by
-  default.
-- **2D conic curve renderers** — `Hyperbola`, `Parabola`, `LinePair`, and
-  `PointSet` frontend renderers.
+  entity (circle, ellipse, hyperbola, parabola, line pair, ellipsoid, sphere,
+  cylinder, cone, plane, …); `create()` inverts the round-trip.
+- **Point-set analysis + 2D two-conic intersection** — OPNS point-joins analyze
+  to a `PointSet`, and the thesis pencil method intersects two conic matrices
+  into a `PointSet`.
+- **Analytic ray renderer** — `RayStyle` / `RayQuadricStyle` opt entities into
+  analytic ray rendering (`kind:"ray"`), with a bounding-box proxy shader that
+  writes `gl_FragDepth`; `Quadric3D` renders via this path by default.
+- **2D conic curve renderers** — `Hyperbola`, `Parabola`, `LinePair`
+  (`ParallelLinePair`), and `PointSet` frontend renderers.
+
