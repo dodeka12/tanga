@@ -21,11 +21,15 @@ from pytanga.geometry.entities import (
     Ellipsoid,
     Entity,
     HPoint,
+    Hyperbola,
     Line,
+    LinePair,
+    Parabola,
     PartialDisk,
     Plane,
     Point,
     PointPair,
+    PointSet,
     RegularPolygon,
     Space,
     Sphere,
@@ -169,6 +173,14 @@ def _dispatch_entity(
         return _serialize_regular_polygon(
             entity, props, kind=kind, styles_map=styles_map
         )
+    if isinstance(entity, Hyperbola):
+        return _serialize_hyperbola(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Parabola):
+        return _serialize_parabola(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, LinePair):
+        return _serialize_line_pair(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PointSet):
+        return _serialize_point_set(entity, props, kind=kind, styles_map=styles_map)
 
     # ── Operators ──
     if isinstance(entity, ReflectionLine):
@@ -1156,6 +1168,69 @@ def _serialize_regular_polygon(
         "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
         "angle": ent.angle,
     }
+
+
+def _serialize_hyperbola(
+    ent: Hyperbola,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "dir1": [ent.dir1.x, ent.dir1.y, ent.dir1.z],
+        "dir2": [ent.dir2.x, ent.dir2.y, ent.dir2.z],
+        "a": abs(ent.a),
+        "b": abs(ent.b),
+    }
+
+
+def _serialize_parabola(
+    ent: Parabola,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
+        "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
+        "p": abs(ent.p),
+    }
+
+
+def _line_wire(line: Line) -> Dict[str, list[float]]:
+    return {
+        "origin": [line.origin.x, line.origin.y, line.origin.z],
+        "direction": [line.direction.x, line.direction.y, line.direction.z],
+    }
+
+
+def _serialize_line_pair(
+    ent: LinePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["line1"] = _line_wire(ent.line1)
+    result["line2"] = _line_wire(ent.line2)
+    return result
+
+
+def _serialize_point_set(
+    ent: PointSet,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["points"] = [[p.x, p.y, p.z] for p in ent.points]
+    result["pointKind"] = ent.kind
+    return result
 
 
 # ── Operators ──────────────────────────────────────────────

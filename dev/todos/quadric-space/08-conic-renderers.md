@@ -19,24 +19,24 @@ dispatched by `factory.js` and registered in the export bundle.
 
 ## Steps
 
-- [ ] **8.1 — serializers** — `_serialize_hyperbola` / `_serialize_parabola` /
+- [x] **8.1 — serializers** — `_serialize_hyperbola` / `_serialize_parabola` /
   `_serialize_line_pair` / `_serialize_point_set`: flat JSON with resolved
   center/axes/vertices/lines/points (always concrete values, no frontend fallback).
 
-- [ ] **8.2 — renderers** — `hyperbola.js`/`parabola.js` sample the curve into a
+- [x] **8.2 — renderers** — `hyperbola.js`/`parabola.js` sample the curve into a
   `Line`/`BufferGeometry` (bounded parameter range); `line_pair.js` draws two
   `Line`s; `point_set.js` draws a group of `Point`s.
 
-- [ ] **8.3 — factory + export** — add the four cases to `factory.js` and register
+- [x] **8.3 — factory + export** — add the four cases to `factory.js` and register
   the renderers in `_RENDERER_FILES`.
 
-- [ ] **8.4 — Tests**
+- [x] **8.4 — Tests**
   - Serializer wire contract for each entity (kind + resolved fields).
   - `node --input-type=module --check` on the new renderers + `factory.js`.
   - `uv run pytest py/tests/viz/test_conic_renderers.py
     py/tests/viz/test_export_renderers.py -q`.
 
-- [ ] **8.5 — Validate** — `uv run pytest py/tests/viz/test_conic_renderers.py
+- [x] **8.5 — Validate** — `uv run pytest py/tests/viz/test_conic_renderers.py
   py/tests/viz/test_export_renderers.py -q`.
 
 ## Validation

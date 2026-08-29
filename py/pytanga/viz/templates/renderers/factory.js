@@ -16,6 +16,10 @@ import { createBox } from './box.js';
 import { createEllipsoid } from './ellipsoid.js';
 import { createEllipse } from './ellipse.js';
 import { createRegularPolygon } from './regular_polygon.js';
+import { createHyperbola } from './hyperbola.js';
+import { createParabola } from './parabola.js';
+import { createLinePair } from './line_pair.js';
+import { createPointSet } from './point_set.js';
 import { createSpace } from './space.js';
 import { createPointPair } from './operators/point_pair.js';
 import { createInversion } from './operators/inversion.js';
@@ -156,6 +160,23 @@ export async function createEntityMesh(ent) {
 
         case 'ray':
             mesh = await createRayProxy(ent);
+            break;
+
+        case 'Hyperbola':
+            mesh = createHyperbola(ent);
+            break;
+
+        case 'Parabola':
+            mesh = createParabola(ent);
+            break;
+
+        case 'LinePair':
+        case 'ParallelLinePair':
+            mesh = createLinePair(ent);
+            break;
+
+        case 'PointSet':
+            mesh = createPointSet(ent);
             break;
 
         default:
