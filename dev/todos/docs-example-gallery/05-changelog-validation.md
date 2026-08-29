@@ -6,11 +6,11 @@ Record the change and run the full gate.
 
 ## Steps
 
-- [ ] **5.1 — Changelog**
+- [x] **5.1 — Changelog**
   - Create/append the branch changelog per `dev/workflows/changelog.md` (New
     Features bullet for the searchable, per-example docs gallery).
 
-- [ ] **5.2 — Full validation**
+- [x] **5.2 — Full validation**
   - `uv run mkdocs build --strict` (docs gate).
   - `uv run ruff check` on touched Python (`tools/`, `docs/_hooks/`).
   - `uv run pytest -q` (full suite).
