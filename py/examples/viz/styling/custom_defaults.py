@@ -4,6 +4,8 @@
 """custom_defaults.py — Global default styles and per-call overrides.
 
 Run with:  uv run python py/examples/viz/styling/custom_defaults.py
+
+Keywords: styling, defaults, overrides, set_default_color
 """
 
 from pytanga.geometry import Direction, Line, Plane, Point, Sphere

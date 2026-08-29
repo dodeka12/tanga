@@ -12,6 +12,8 @@ Two synced radius sliders, a stepper value-edit, and a live readout text field
 demonstrate programmatic value updates (`set_control_value`).
 
 Run with:  uv run python py/examples/viz/interaction/all_controls.py
+
+Keywords: controls, slider, dropdown, button, VisualizerApp
 """
 
 from __future__ import annotations

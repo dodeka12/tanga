@@ -17,6 +17,8 @@ Entities are covered separately in n3_entities.py.
 
 Prerequisite: n3_entities.py
 Run with:  uv run python py/examples/ga/geometry/n3_operators.py
+
+Keywords: N3, conformal, Rotor, Motor, Inversion, Dilator
 """
 
 import math

@@ -38,6 +38,8 @@ The three methods
 
 Run with:
     uv run python py/examples/ga/basis/basis_usage.py
+
+Keywords: basis blades, named blades, BasisE3, construction
 """
 
 from pytanga import MV

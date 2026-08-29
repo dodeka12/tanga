@@ -29,6 +29,8 @@ Each rod's label is anchored to the *center* of the line via
 (``0`` = start, ``0.5`` = midpoint, ``1`` = end).
 
 Run with:  uv run python py/examples/viz/animation/double_pendulum.py
+
+Keywords: animation, double pendulum, VizGroup, chaos
 """
 
 import math

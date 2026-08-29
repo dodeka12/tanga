@@ -11,6 +11,8 @@ Topics covered:
   1 — Multivector inverse via solve()
   2 — General solve: A * X = B
   3 — Detecting a singular system (solve vs solve_lsq)
+
+Keywords: solver, inverse, general solve, linear system
 """
 
 from __future__ import annotations

@@ -17,6 +17,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/expression/solve_ax_b.py
+
+Keywords: expressions, solve, A X = B, multivector equation
 """
 
 from __future__ import annotations

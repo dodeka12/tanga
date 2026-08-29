@@ -4,6 +4,8 @@
 """all_entities.py — All geometric entity types in one scene.
 
 Run with:  uv run python py/examples/viz/entities/all_entities.py
+
+Keywords: entities, Point, Line, Plane, Sphere, all types
 """
 
 from pytanga.geometry import (

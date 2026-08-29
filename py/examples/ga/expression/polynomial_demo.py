@@ -13,6 +13,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/expression/polynomial_demo.py
+
+Keywords: polynomial, expressions, repeated variables, affine
 """
 
 import pytanga as pt

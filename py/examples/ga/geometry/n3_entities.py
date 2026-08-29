@@ -17,6 +17,8 @@ Operators are covered separately in n3_operators.py.
 
 Prerequisite: base_n3_demo.py, pga3_entities.py
 Run with:  uv run python py/examples/ga/geometry/n3_entities.py
+
+Keywords: N3, conformal, Sphere, Circle, Point Pair, IPNS
 """
 
 from pytanga.basis import BasisN3

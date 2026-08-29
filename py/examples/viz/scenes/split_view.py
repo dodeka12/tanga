@@ -20,6 +20,8 @@ button moves the top pane's camera at runtime via
 ``Visualizer.set_view_camera``.
 
 Run with:  uv run python py/examples/viz/scenes/split_view.py
+
+Keywords: scenes, split view, panes, layout
 """
 
 from pytanga.geometry import Point, Sphere

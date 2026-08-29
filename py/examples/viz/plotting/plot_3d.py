@@ -9,6 +9,8 @@ point path) lives in one group, placed/oriented by ``position``/``normal``/
 lines at fixed data values on the same plane.
 
 Run with:  uv run python py/examples/viz/plotting/plot_3d.py
+
+Keywords: plotting, 3D, tilted plane
 """
 
 import math

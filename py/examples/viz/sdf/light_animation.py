@@ -9,6 +9,8 @@ and soft shadow), plus a dim static fill light. Demonstrates adding lights via
 ``sleep_ms()`` for the frame loop.
 
 Run with:  uv run python py/examples/viz/sdf/light_animation.py
+
+Keywords: SDF, light, animation, sphere
 """
 
 import math

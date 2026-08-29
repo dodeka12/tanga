@@ -4,6 +4,8 @@
 """timeline.py — Keyframe timeline with fade-in and move.
 
 Run with:  uv run python py/examples/viz/animation/timeline.py
+
+Keywords: animation, keyframe, timeline, animate_to, easing
 """
 
 from pytanga.geometry import Direction, Plane, Point, Sphere

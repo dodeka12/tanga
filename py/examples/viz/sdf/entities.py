@@ -8,6 +8,8 @@ ray-marched signed-distance-function viewer, then carves a partial bite out of
 the sphere with a second, subtracting sphere.
 
 Run with:  uv run python py/examples/viz/sdf/entities.py
+
+Keywords: SDF, entities, first slice
 """
 
 from pytanga.geometry import Line, Point, Sphere

@@ -18,6 +18,8 @@ This is a homogeneous linear system: M · vec(L) = 0, where M is the stacked
 outer-product matrix.  The solution is the right singular vector of M
 corresponding to the SMALLEST singular value — NOT lstsq(b=0), which would
 give the trivial solution vec(L) = 0.
+
+Keywords: solver, line fitting, least-squares, P2, homogeneous
 """
 
 from __future__ import annotations

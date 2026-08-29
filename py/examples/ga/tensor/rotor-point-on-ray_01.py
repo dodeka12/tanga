@@ -1,7 +1,19 @@
-# Demostrate the use of the solver for the point-line matching problem in 3D.
-# We have a set of 3D points that are projected onto a plane (camera image).
-# We then rotate the points by a known rotation and add some noise to them.
-# We then try to recover the original rotation using the solver.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2021 Christian Perwass
+
+"""rotor-point-on-ray_01.py — Recover a rotor from point ↔ projection-ray matches.
+
+3D points are projected onto an image plane to form projection rays, then
+rotated by a known rotor and perturbed with noise. The script estimates the
+rotor that best maps the noisy points back onto their rays by iteratively
+solving for the rotor blade coefficients with product tensors and
+least-squares.
+
+Run with:
+    uv run python py/examples/ga/tensor/rotor-point-on-ray_01.py
+
+Keywords: tensor, rotor estimation, point-line matching, P3, product tensor, least-squares
+"""
 
 import math
 import numpy as np

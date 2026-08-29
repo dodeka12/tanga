@@ -4,6 +4,8 @@
 """screenshot.py — Programmatic PNG screenshot at custom resolution.
 
 Run with:  uv run python py/examples/viz/export/screenshot.py
+
+Keywords: export, PNG, screenshot
 """
 
 from pytanga.geometry import Direction, Plane, Point, Sphere

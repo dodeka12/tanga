@@ -4,6 +4,8 @@
 """figure.py — Presentation figure export with FigureStyle.
 
 Run with:  uv run python py/examples/viz/export/figure.py
+
+Keywords: export, figure, FigureStyle, presentation
 """
 
 from pytanga.geometry import Point, Sphere

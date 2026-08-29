@@ -20,6 +20,8 @@ section).
 
 Prerequisite: base_pga3_demo.py, p3_entities.py
 Run with:  uv run python py/examples/ga/geometry/pga3_entities.py
+
+Keywords: PGA3, Gunn/Dorst, Translator, Motor, plane-based
 """
 
 import math

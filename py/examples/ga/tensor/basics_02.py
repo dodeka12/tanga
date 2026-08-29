@@ -15,6 +15,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/tensor/basics_02.py
+
+Keywords: tensor, product tensor, geometric product, einsum, batched
 """
 
 import numpy as np

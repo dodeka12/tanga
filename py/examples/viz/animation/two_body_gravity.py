@@ -10,6 +10,8 @@ All calculations use ``Point`` and ``Direction`` operators
 floats for vector components except at initialisation.
 
 Run with:  uv run python py/examples/viz/animation/two_body_gravity.py
+
+Keywords: animation, two-body, gravity, Point, Direction, simulation
 """
 
 from pytanga.geometry import Direction, Point

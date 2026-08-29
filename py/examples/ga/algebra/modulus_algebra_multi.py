@@ -26,6 +26,8 @@ This maps directly to the C++ pattern:
 
 Run with:
     uv run python py/examples/ga/algebra/modulus_algebra_multi.py
+
+Keywords: Algebra, modulus, integer, NTRU, dual modulus
 """
 
 import random

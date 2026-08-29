@@ -13,6 +13,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/expression/variable_rotor.py
+
+Keywords: expressions, Variable, rotor, points
 """
 
 import pytanga as pt

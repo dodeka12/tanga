@@ -15,6 +15,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/tensor/rotor_01.py
+
+Keywords: tensor, product tensor, rotor, einsum, E3
 """
 
 import numpy as np

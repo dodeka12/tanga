@@ -13,6 +13,8 @@ Each column holds one shape; the mesh twin sits above its SDF twin.  This makes
 it easy to compare the mesh and SDF renderings of the same geometry.
 
 Run with:  uv run python py/examples/viz/sdf/mesh_vs_sdf_grid.py
+
+Keywords: SDF, mesh, comparison
 """
 
 import math
@@ -85,8 +87,8 @@ _SHAPES = [
     ),
 ]
 
-_MESH_Y = 2.2   # top row (mesh pipeline)
-_SDF_Y = -2.2   # bottom row (ray-marched SDF)
+_MESH_Y = 2.2  # top row (mesh pipeline)
+_SDF_Y = -2.2  # bottom row (ray-marched SDF)
 _X_STEP = 2.2
 _ORIGIN_X = -(_X_STEP * (len(_SHAPES) - 1)) / 2.0
 

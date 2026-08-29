@@ -9,6 +9,8 @@ geometric and outer products, and mixed-grade multivectors.
 
 Run with:
     uv run python py/examples/ga/basis/base_e3_demo.py
+
+Keywords: BasisE3, Euclidean, E3, named blades, G(3,0)
 """
 
 from pytanga import MV

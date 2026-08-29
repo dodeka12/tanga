@@ -27,6 +27,8 @@ algebra, triggering a fresh compile on the next import.
 
 Run with:
     uv run python py/examples/binding_demo.py
+
+Keywords: binding, compilation, cache, code generation, C++ backend, Algebra
 """
 
 import time

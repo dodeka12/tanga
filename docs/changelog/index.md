@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.10.0] — 2026-08-29
+- Searchable example docs gallery: every `py/examples/` example gets a keyworded docs page (with full source) under a new top-level "Examples" nav section · `dev/workflows/example-docs.md` + cline rule
+→ [Details](2026-08-29_f2359f9e.md)
+
 ## [Since 1.9.1] — 2026-08-28
 - Wireframe dash-pattern and control `View` classes re-exported from `pytanga.viz` · viz docs/examples corrected to match the public API
 → [Details](2026-08-28_c050a11d.md)

@@ -26,6 +26,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/expression/line_fitting_p3.py
+
+Keywords: expressions, line fitting, least-squares, P3, visualization
 """
 
 from __future__ import annotations

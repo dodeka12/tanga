@@ -15,6 +15,8 @@ available as an alternative (see the last section).
 
 Prerequisite: base_p3_demo.py, e3_entities.py
 Run with:  uv run python py/examples/ga/geometry/p3_entities.py
+
+Keywords: P3, projective, Point, Direction, Line, Plane, homogeneous
 """
 
 import math

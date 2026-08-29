@@ -9,6 +9,8 @@ lines, and planes — displayed in the e0/e1/e2/e3 basis.
 
 Run with:
     uv run python py/examples/ga/basis/base_pga3_demo.py
+
+Keywords: BasisPGA3, projective geometric algebra, PGA3, null vector
 """
 
 from pytanga import MV
