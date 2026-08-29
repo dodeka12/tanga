@@ -23,7 +23,8 @@
 ## Bug Fixes
 - **Ray renderer one-sided quadrics** — the analytic ray proxy now rasterizes
   its back faces (`side: THREE.BackSide`) so it keeps rendering when the camera
-  is inside the proxy box (unbounded quadrics use a large ±10 cube), and flips
-  the surface normal to face the camera so open quadrics (cone, paraboloid,
-  hyperboloid) shade correctly from both sides instead of looking inside-out.
+  is inside the proxy box (unbounded quadrics use a large ±10 cube), and shades
+  two-sided with `|n·L|` diffuse so open quadrics (cone, paraboloid,
+  hyperboloid) stay lit from every viewpoint instead of flipping to a dark
+  one-sided view.
 

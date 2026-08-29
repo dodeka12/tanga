@@ -9,9 +9,9 @@
 // The proxy is rasterized with `side: THREE.BackSide` so its far faces cover
 // the volume whether the camera is inside or outside the box (unbounded
 // quadrics fall back to a large ±10 cube, so the camera is often inside it).
-// The surface normal is also flipped to face the camera in the fragment
-// shader: implicit surfaces have no face culling, so open quadrics would
-// otherwise shade their "back" side dark and look one-sided.
+// Shading is two-sided (the diffuse term uses |n·L|), so open quadrics
+// (cone, paraboloid, hyperboloid) stay lit from every viewpoint instead of
+// flipping to a dark "back" side when the camera looks at their interior.
 
 import * as THREE from 'three';
 import {
@@ -73,9 +73,16 @@ vec3 shade(vec3 p, vec3 n, vec3 ro) {
     for (int i = 0; i < MAX_LIGHTS; i++) {
         if (i >= uLightCount) break;
         vec3 L = normalize(uLightDir[i]);
-        float dif = max(dot(n, L), 0.0);
+        // Two-sided diffuse: implicit surfaces have no face culling, so an open
+        // quadric (cone, paraboloid, hyperboloid) shows its "back" side from many
+        // viewpoints.  |n·L| lights both sides symmetrically instead of flipping
+        // the normal toward the camera, which avoided a hard one-sided switch.
+        float dif = abs(dot(n, L));
         col += uColor * uLightColor[i] * dif;
     }
+    // Hemisphere ambient ("sky from above") for depth cueing, matching the SDF
+    // renderer's look.
+    col *= 0.5 + 0.5 * n.y;
     float dist = length(p - ro);
     float fog = 1.0 - exp(-0.05 * dist);
     vec3 bg = vec3(0.10, 0.10, 0.18);
@@ -103,11 +110,6 @@ void main() {
 
     vec3 p = ro + rd * t;
     vec3 n = normalAt(p);
-    // Implicit surfaces have no face culling: an open quadric (cone, paraboloid,
-    // hyperboloid) shows its "back" side from many viewpoints, where the analytic
-    // normal points away from the camera and the diffuse term would go dark.
-    // Flip it so it always faces the viewer before shading.
-    if (dot(n, rd) > 0.0) n = -n;
     vec3 col = shade(p, n, ro);
 
     // Write the hit's clip-space depth so occlusion against meshes and other
