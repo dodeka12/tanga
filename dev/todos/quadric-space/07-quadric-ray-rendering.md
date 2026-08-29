@@ -17,26 +17,26 @@ serializer wire contract, and the quadric intersection shader (substitute the ra
 
 ## Steps
 
-- [ ] **7.1 — `RayQuadricStyle`** — derives `RayStyle` (no extra knobs); set as the
+- [x] **7.1 — `RayQuadricStyle`** — derives `RayStyle` (no extra knobs); set as the
   canonical default style for `Quadric3D` so ray is the default renderer.
 
-- [ ] **7.2 — serializer** — `_serialize_quadric`: `kind:"ray"`, the 10 coeffs
+- [x] **7.2 — serializer** — `_serialize_quadric`: `kind:"ray"`, the 10 coeffs
   (or the resolved 4×4 matrix + a conservative AABB `bound`), color/opacity from the
   style chain.
 
-- [ ] **7.3 — `quadric.glsl`** — analytic ray/quadric intersection + normal +
+- [x] **7.3 — `quadric.glsl`** — analytic ray/quadric intersection + normal +
   `gl_FragDepth` write; reuse the SDF proxy lighting/uniform model.
 
-- [ ] **7.4 — AABB bound** — derive a conservative proxy bound from the quadric
+- [x] **7.4 — AABB bound** — derive a conservative proxy bound from the quadric
   matrix (or the scene bounds); document the heuristic.
 
-- [ ] **7.5 — Tests**
+- [x] **7.5 — Tests**
   - Serializer emits `kind:"ray"` with the quadric coeffs + style.
   - `RayQuadricStyle` is the default for `Quadric3D` in `make_styles()`.
   - `node --input-type=module --check` on `ray.js`; `quadric.glsl` has no `main`.
   - `uv run pytest py/tests/viz/test_quadric_ray.py py/tests/viz/test_export_renderers.py -q`.
 
-- [ ] **7.6 — Validate** — `uv run pytest py/tests/viz/test_quadric_ray.py
+- [x] **7.6 — Validate** — `uv run pytest py/tests/viz/test_quadric_ray.py
   py/tests/viz/test_export_renderers.py -q`.
 
 ## Validation

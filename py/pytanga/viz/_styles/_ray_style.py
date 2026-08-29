@@ -48,3 +48,8 @@ class RayStyle(VizStyle):
         if self.opacity is not None:
             result["opacity"] = self.opacity
         return result
+
+
+@dataclass
+class RayQuadricStyle(RayStyle):
+    """Ray style for :class:`~pytanga.geometry.Quadric3D` (no extra knobs)."""

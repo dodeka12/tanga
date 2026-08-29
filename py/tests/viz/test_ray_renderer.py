@@ -16,10 +16,10 @@ class TestRaySerializer:
         with pytest.raises(ValueError, match="does not support analytic ray"):
             serialize_entity(s, "s1", properties={"style": RayStyle()}, kind="Sphere")
 
-    def test_ray_styled_quadric_not_yet_serialized(self):
+    def test_ray_styled_quadric_serializes(self):
         q = Quadric3D(tuple(float(i) for i in range(1, 11)))
-        # Quadric3D is ray-capable, but its wire body lands in Phase 7.
-        with pytest.raises(NotImplementedError):
-            serialize_entity(
-                q, "q1", properties={"style": RayStyle()}, kind="Quadric3D"
-            )
+        d = serialize_entity(
+            q, "q1", properties={"style": RayStyle()}, kind="Quadric3D"
+        )
+        assert d["kind"] == "ray"
+        assert d["rayKind"] == "Quadric3D"

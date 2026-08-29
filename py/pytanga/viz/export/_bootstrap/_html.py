@@ -232,6 +232,9 @@ def _ray_shader_injection() -> str:
         "intersect": (_RENDERERS_DIR / "ray" / "intersect.glsl").read_text(
             encoding="utf-8"
         ),
+        "quadric": (_RENDERERS_DIR / "ray" / "quadric.glsl").read_text(
+            encoding="utf-8"
+        ),
     }
     return "window.__tanga_ray_shaders = " + json.dumps(parts) + ";"
 

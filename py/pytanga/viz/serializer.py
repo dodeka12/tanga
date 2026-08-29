@@ -227,18 +227,20 @@ def _is_ray_styled(
 ) -> bool:
     """Return ``True`` when *entity* should render as an analytic ray proxy.
 
-    Detects the opt-in either from a per-entity :class:`~pytanga.viz.RayStyle`
-    in ``props`` or from a per-kind :class:`~pytanga.viz.RayStyle` default in
-    ``styles_map``.
+    Detects the opt-in from a per-entity :class:`~pytanga.viz.RayStyle` in
+    ``props``, a per-kind :class:`~pytanga.viz.RayStyle` in ``styles_map``, or
+    the canonical default (``RayQuadricStyle`` for ``Quadric3D``).
     """
-    from ._styles import RayStyle
+    from ._styles import RayStyle, _DEFAULT_STYLE_FOR_KIND
 
     if isinstance(props.get("style"), RayStyle):
         return True
-    if styles_map is not None:
-        entry = styles_map.get(kind) if hasattr(styles_map, "get") else None
-        return isinstance(entry, RayStyle)
-    return False
+    entry = None
+    if styles_map is not None and hasattr(styles_map, "get"):
+        entry = styles_map.get(kind)
+    if entry is None:
+        entry = _DEFAULT_STYLE_FOR_KIND.get(kind)
+    return isinstance(entry, RayStyle)
 
 
 def _serialize_ray(
@@ -248,8 +250,61 @@ def _serialize_ray(
     kind: str,
     styles_map: Dict[str, Any] | None,
 ) -> Dict[str, Any]:
-    """Serialize a ray-styled entity (Phase 7 wires the Quadric3D body)."""
-    raise NotImplementedError(f"ray serialization for kind {kind!r} lands in Phase 7")
+    """Serialize a ray-styled entity (currently only ``Quadric3D``)."""
+    if kind == "Quadric3D":
+        return _serialize_quadric(entity, props, kind=kind, styles_map=styles_map)
+    raise TypeError(f"ray rendering not implemented for kind {kind!r}")
+
+
+def _serialize_quadric(
+    ent: Any,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Serialize a :class:`~pytanga.geometry.Quadric3D` as an analytic ray proxy."""
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    style = result.get("style", {})
+    padding = style.get("bound_padding", 0.05)
+    if not isinstance(padding, (int, float)):
+        padding = 0.05
+    result["kind"] = "ray"
+    result["rayKind"] = "Quadric3D"
+    result["coeffs"] = [float(c) for c in ent.coeffs]
+    result["matrix"] = [float(x) for row in ent.matrix for x in row]
+    result["bound"] = _quadric_aabb(ent, float(padding))
+    return result
+
+
+def _quadric_aabb(ent: Any, padding: float) -> Dict[str, list[float]]:
+    """Conservative proxy AABB for a quadric.
+
+    Bounded quadrics (sphere / ellipsoid) get an AABB from the center and the
+    largest semi-axis; unbounded quadrics (hyperboloids, cylinders, cones,
+    paraboloids) fall back to a fixed ±(10 + padding) cube so the analytic
+    surface still renders clipped to a finite proxy volume.
+    """
+    import numpy as np
+
+    kind = getattr(ent, "kind", None)
+    kind_value = getattr(kind, "value", None)
+    center = getattr(ent, "center", None)
+    if kind_value in ("sphere", "ellipsoid") and center is not None:
+        lam = np.asarray(ent.eigenvalues, dtype=float)
+        bvec = np.asarray(ent.matrix[:3, 3], dtype=float)
+        cvec = np.array([center.x, center.y, center.z], dtype=float)
+        fp = float(ent.matrix[3, 3] + bvec @ cvec)
+        nonzero = lam[np.abs(lam) > 1e-12]
+        radii = [float(np.sqrt(abs(fp) / abs(lam_i))) for lam_i in nonzero]
+        half = (max(radii) if radii else 1.0) + padding
+        return {
+            "min": [center.x - half, center.y - half, center.z - half],
+            "max": [center.x + half, center.y + half, center.z + half],
+        }
+
+    half = 10.0 + padding
+    return {"min": [-half, -half, -half], "max": [half, half, half]}
 
 
 def serialize_scene_update(

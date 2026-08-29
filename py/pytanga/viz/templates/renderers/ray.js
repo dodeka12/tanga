@@ -27,7 +27,8 @@ async function _loadRayShaderParts() {
     }
     const base = new URL('./', import.meta.url);
     const intersect = await fetch(new URL('./ray/intersect.glsl', base)).then((r) => r.text());
-    _rayShaderParts = { intersect };
+    const quadric = await fetch(new URL('./ray/quadric.glsl', base)).then((r) => r.text());
+    _rayShaderParts = { intersect, quadric };
     return _rayShaderParts;
 }
 
@@ -128,6 +129,8 @@ export async function createRayProxy(ent) {
     const [r, g, b] = parseHexColor(ent.color);
     const opacity = typeof ent.opacity === 'number' ? ent.opacity : 1.0;
     const lighting = parseLighting(ent.lighting);
+    const isQuadric = ent.rayKind === 'Quadric3D';
+    const intersectSrc = isQuadric ? parts.quadric : parts.intersect;
 
     const uniforms = {
         uBoundHalf: { value: new THREE.Vector3(half[0], half[1], half[2]) },
@@ -140,11 +143,17 @@ export async function createRayProxy(ent) {
         uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
         uAmbientColor: { value: new THREE.Vector3() },
     };
+    if (isQuadric) {
+        const m = ent.matrix && ent.matrix.length === 16
+            ? ent.matrix
+            : [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1];
+        uniforms.uQuadric = { value: new THREE.Matrix4().set(...m) };
+    }
     setLightUniforms(uniforms, lighting);
 
     const material = new THREE.ShaderMaterial({
         vertexShader: _VERTEX,
-        fragmentShader: _FRAGMENT.replace('__INTERSECT__', parts.intersect),
+        fragmentShader: _FRAGMENT.replace('__INTERSECT__', intersectSrc),
         uniforms,
         transparent: opacity < 0.99,
         depthWrite: true,

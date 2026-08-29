@@ -118,7 +118,7 @@ from ._overlay_styles import (
     LabelStyle,
     TitleStyle as TitleStyle,
 )
-from ._ray_style import RayStyle
+from ._ray_style import RayQuadricStyle, RayStyle
 from ._tex_label_style import TextureLabelStyle as TextureLabelStyle
 
 # ── Union type ──────────────────────────────────────────────
@@ -170,6 +170,7 @@ ObjVizStyle: TypeAlias = Union[
     SdfPartialDiskStyle,
     SdfRegularPolygonStyle,
     SdfStyle,
+    RayQuadricStyle,
     RayStyle,
 ]
 
@@ -193,6 +194,7 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "PartialDisk": PartialDiskStyle(color="#ffcc44", opacity=0.9, thickness=0.02),
     "Box": BoxStyle(color="#88ccff", opacity=0.9),
     "Ellipsoid": EllipsoidStyle(color="#ffaa00", opacity=0.9),
+    "Quadric3D": RayQuadricStyle(color="#ffaa00", opacity=0.7),
     "Ellipse": EllipseStyle(color="#ff44ff", opacity=0.9, thickness=0.02),
     "RegularPolygon": RegularPolygonStyle(color="#44ffaa", opacity=0.9, thickness=0.02),
     "Space": SpaceStyle(color="#888888", opacity=0.1, extent=10.0),

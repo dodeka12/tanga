@@ -31,8 +31,12 @@ class TestIsRayStyled:
         assert _is_ray_styled({"style": RayStyle()}, "Quadric3D", None)
 
     def test_not_ray_styled(self):
-        assert not _is_ray_styled({}, "Quadric3D", None)
-        assert not _is_ray_styled({"style": {}}, "Quadric3D", None)
+        assert not _is_ray_styled({}, "Sphere", None)
+        assert not _is_ray_styled({"style": {}}, "Sphere", None)
+
+    def test_quadric3d_ray_styled_by_default(self):
+        # Quadric3D's canonical default style is RayQuadricStyle.
+        assert _is_ray_styled({}, "Quadric3D", None)
 
     def test_per_kind(self):
         styles_map = {"Quadric3D": RayStyle()}
