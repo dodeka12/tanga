@@ -79,29 +79,10 @@ Both functions are idempotent — call them again to refresh the copies.
 
 ## Example Scripts
 
-All examples live under `py/examples/` and can be run with:
-
-```
-uv run python py/examples/<script>.py
-```
-
-| Script | Topic |
-|--------|-------|
-| [`binding_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/binding_demo.py) | Cache, code-generation and compilation pipeline |
-| [`ga/algebra/algebra_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/algebra_demo.py) | `Algebra` construction, dimensions, signatures, dtypes |
-| [`ga/algebra/mv_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/mv_demo.py) | `MV` operators, coefficient access, utility methods |
-| [`ga/basis/basis_usage.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/basis_usage.py) | Three patterns for accessing named basis blades |
-| [`ga/basis/base_e3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_e3_demo.py) | `BasisE3` — Euclidean 3D |
-| [`ga/basis/base_p3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_p3_demo.py) | `BasisP3` — Projective 3D |
-| [`ga/basis/base_n3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_n3_demo.py) | `BasisN3` — Null / conformal 3D |
-| [`ga/basis/base_pga3_demo.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/basis/base_pga3_demo.py) | `BasisPGA3` — PGA 3D |
-| [`ga/algebra/modulus_algebra_single.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/modulus_algebra_single.py) | Integer algebra with a fixed modulus |
-| [`ga/algebra/modulus_algebra_multi.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/algebra/modulus_algebra_multi.py) | Two different moduli on the same algebra (NTRU style) |
-| [`ga/geometry/e3_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/geometry/e3_entities.py) | E3 Point, Plane, Reflection, Rotor — create, analyze, IPNS |
-| [`ga/geometry/p3_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/geometry/p3_entities.py) | P3 Point, Direction, Line, Plane — homogeneous, IPNS |
-| [`ga/geometry/pga3_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/geometry/pga3_entities.py) | PGA3 Translator, Motor — single null vector |
-| [`ga/geometry/n3_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/geometry/n3_entities.py) | N3 entities: Point, Circle, Sphere, Plane — IPNS, grade distinction |
-| [`ga/geometry/n3_operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/ga/geometry/n3_operators.py) | N3 operators: Rotor, Motor, Inversion, Dilator — entity/operator duality |
+All runnable examples — grouped by topic and searchable by keyword, with full
+source code on each page — are listed in the [Examples](examples/index.md)
+section. Geometric algebra examples live under
+[Examples → Geometric Algebra](examples/ga/index.md).
 
 ## Background
 

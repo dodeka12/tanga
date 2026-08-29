@@ -133,12 +133,6 @@ See [Export](export/index.md) for the full set of options.
 
 ## Example scripts
 
-Runnable demos live under `py/examples/viz/`:
-
-| Script | Topic |
-|--------|-------|
-| [`all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/all_entities.py) | All entity types in one scene |
-| [`orbit.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/orbit.py) | Frame-by-frame animation |
-| [`timeline.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/animation/timeline.py) | Keyframe timeline |
-| [`html_export.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/html_export.py) | HTML + glTF export |
-| [`animated.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/export/animated.py) | Animated HTML export |
+Runnable demos — grouped by topic and searchable by keyword, with full source
+on each page — live in the
+[Examples → Visualization](../examples/viz/index.md) section.
