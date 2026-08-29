@@ -148,6 +148,9 @@
             "Conic Demo": "py/examples/ga/quadric/conic_demo.md"
           },
           {
+            "General Quadric": "py/examples/ga/quadric/general_quadric.md"
+          },
+          {
             "Quadric3D Raycast": "py/examples/ga/quadric/quadric3d_raycast.md"
           }
         ]

@@ -55,8 +55,8 @@ matrix = conic_from_points(basis, points)
 coeffs = to_coeffs(matrix)
 mv = basis.multivector({1 << i: coeffs[i] for i in range(6)})
 
-raw = analyze(mv)          # raw Conic (lossless)
-specific = refine(raw)     # Ellipse / Circle / Hyperbola / ...
+raw = analyze(mv)  # raw Conic (lossless)
+specific = refine(raw)  # Ellipse / Circle / Hyperbola / ...
 
 viz = Visualizer(title="Tanga — conic through 5 points", space_dim=2)
 viz.add(specific, label=type(specific).__name__)

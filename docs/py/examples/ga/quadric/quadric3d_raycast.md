@@ -59,7 +59,7 @@ matrix = quadric_from_points(basis, points)
 coeffs = to_coeffs(matrix)
 mv = basis.multivector({1 << i: coeffs[i] for i in range(10)})
 
-raw = analyze(mv)      # raw Quadric3D (rendered via the ray proxy by default)
+raw = analyze(mv)  # raw Quadric3D (rendered via the ray proxy by default)
 specific = refine(raw)  # Ellipsoid (mesh pipeline)
 
 viz = Visualizer(title="Tanga — quadric through 9 points")

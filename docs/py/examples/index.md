@@ -102,6 +102,8 @@ uv run python py/examples/<path>.py
 
 - **Composed** — [Composed SDF objects + the primitive library](viz/sdf/composed.md)
 
+- **cone** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+
 - **confirm** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md)
 
 - **conformal** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
@@ -224,6 +226,8 @@ uv run python py/examples/<path>.py
 
 - **HTML** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
 
+- **hyperboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
 - **integer** — [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
@@ -328,6 +332,8 @@ uv run python py/examples/<path>.py
 
 - **panes** — [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
 
+- **paraboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+
 - **PartialDisk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
 - **pendulum** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
@@ -374,11 +380,13 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **quadric** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **quadric** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+
+- **Quadric3D** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
 
 - **quadric_from_points** — [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
-- **ray** — [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **ray** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **refine** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
