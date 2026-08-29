@@ -18,24 +18,24 @@ no entities or viz yet.
 
 ## Steps
 
-- [ ] **1.1 — `_basis.py`**
+- [x] **1.1 — `_basis.py`**
   - `BasisQ2(Algebra)` → `super().__init__(6, 0, …)`, named blades `b1…b6`
     (`E1…E6` = `1,2,4,8,16,32`), `I = pseudoscalar`.
   - `BasisQ3(Algebra)` → `super().__init__(10, 0, …)`, `b1…b10`, `I`.
   - `_display_basis` via `build_display_basis` with the `b1…b6` / `b1…b10` names.
 
-- [ ] **1.2 — `_mapping.py`**
+- [x] **1.2 — `_mapping.py`**
   - `to_coeffs(A)` (symmetric 3×3 → 6-tuple) and `from_coeffs(t)` (6-tuple → 3×3)
     using the README ordering with `√2/2` on the diagonal terms.
   - `to_coeffs(Q)` (4×4 → 10-tuple) and `from_coeffs(t)` (10-tuple → 4×4).
   - Accept numpy arrays and nested lists; validate symmetry.
 
-- [ ] **1.3 — `_embedding.py`**
+- [x] **1.3 — `_embedding.py`**
   - `embed_point(basis, x, y)` → rank-1 symmetric matrix as a grade-1 MV
     (`x b₁ + y b₂ + (√2/2) b₃ + (√2/2)x² b₄ + (√2/2)y² b₅ + xy b₆`).
   - `embed_point(basis, x, y, z)` → 3D form (README).
 
-- [ ] **1.4 — `_build.py`**
+- [x] **1.4 — `_build.py`**
   - `conic_from_points(basis, points)` = `from_coeffs(dual(∧ embed_point(pᵢ)))`
     (5 points).
   - `quadric_from_points(basis, points)` (9 points).
@@ -44,10 +44,10 @@ no entities or viz yet.
     singular value.
   - `line_from_points(basis, a, b)` = `embed(a) ∧ embed(b) ∧ b₄ ∧ b₅ ∧ b₆`.
 
-- [ ] **1.5 — `__init__.py` exports** — `BasisQ2`, `BasisQ3`,
+- [x] **1.5 — `__init__.py` exports** — `BasisQ2`, `BasisQ3`,
   `embed_point`, `to_coeffs`, `from_coeffs`, the `*_from_points` helpers.
 
-- [ ] **1.6 — Tests** (`test_core.py`)
+- [x] **1.6 — Tests** (`test_core.py`)
   - `to_coeffs ∘ from_coeffs == id` (2D and 3D).
   - Incidence: `embed_point(p) · coeff(A) == ½ pᵀ A p` for sample points/matrices.
   - `conic_from_points` agrees with `conic_from_points_svd` up to scale, and all
@@ -56,7 +56,7 @@ no entities or viz yet.
   - `line_from_points(a, b)` has `embed(a) ∧ result == 0` and
     `embed(b) ∧ result == 0`.
 
-- [ ] **1.7 — Validate** — `uv run pytest py/tests/quadric/test_core.py -q`.
+- [x] **1.7 — Validate** — `uv run pytest py/tests/quadric/test_core.py -q`.
 
 ## Validation
 
