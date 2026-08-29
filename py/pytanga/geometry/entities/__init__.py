@@ -29,6 +29,7 @@ from ._util import (
 from .arc import Arc
 from .box import Box
 from .circle import Circle, ImagCircle
+from .cone import Cone
 from .conic import Conic, EConicKind, EQuadricKind, Quadric2D, Quadric3D
 from .cylinder import Cylinder
 from .direction import Direction
@@ -69,12 +70,14 @@ Entity = (
     | Parabola
     | LinePair
     | ParallelLinePair
+    | Cone
 )
 
 __all__ = [
     "Arc",
     "Box",
     "Circle",
+    "Cone",
     "Conic",
     "Cylinder",
     "Direction",

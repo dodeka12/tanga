@@ -18,31 +18,31 @@ specific entity (level 2) when the matrix is projectively one of those, else rai
 
 ## Steps
 
-- [ ] **3.1 — `analysis_q2.py`**
+- [x] **3.1 — `analysis_q2.py`**
   - `analyze_entity(mv)`: OPNS/IPNS-aware (`mv.algebra.opns`) — grade 1 (or grade 5
     dual) → `Conic(from_coeffs(coeffs))`; reject mixed-grade/zero.
   - Grade 1 OPNS point embedding (rank-1 matrix) → `Point`.
 
-- [ ] **3.2 — `analysis_q3.py`** — grade 1 (or grade 9 dual) → `Quadric3D`;
+- [x] **3.2 — `analysis_q3.py`** — grade 1 (or grade 9 dual) → `Quadric3D`;
   grade 1 OPNS rank-1 → `Point`.
 
-- [ ] **3.3 — `refine.py`**
+- [x] **3.3 — `refine.py`**
   - `refine_quadric(Quadric3D)`: by rank/signature of `Q = [[A,b],[bᵀ,c]]` →
     `Sphere`/`Ellipsoid`/`Cylinder`/`Cone`/`Plane`; else `ValueError`.
   - `refine_conic(Conic)`: rank/signature → `Circle`/`Ellipse`/`Hyperbola`/
     `Parabola`/`Line`/`LinePair`/`ParallelLinePair`; imaginary → raise (no real
     entity) or `None`.
 
-- [ ] **3.4 — dispatch** — register q2/q3 in `analysis._detect`; add
+- [x] **3.4 — dispatch** — register q2/q3 in `analysis._detect`; add
   `refine` to `Geometry` and a `Conic`/`Quadric3D` branch in `Geometry.__call__`
   before the generic `Entity → create` branch.
 
-- [ ] **3.5 — Tests** — known matrices: circle → `Circle`, ellipse → `Ellipse`,
+- [x] **3.5 — Tests** — known matrices: circle → `Circle`, ellipse → `Ellipse`,
   hyperbola/parabola/line pair matrices → their entities, ellipsoid → `Ellipsoid`,
   sphere → `Sphere`, cylinder/cone/plane; a general hyperboloid raises; round-trip
   `analyze(mv) → refine(...)`.
 
-- [ ] **3.6 — Validate** — `uv run pytest py/tests/geometry/test_conic_analysis.py -q`.
+- [x] **3.6 — Validate** — `uv run pytest py/tests/geometry/test_conic_analysis.py -q`.
 
 ## Validation
 

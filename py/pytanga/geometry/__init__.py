@@ -26,6 +26,10 @@ from .mask import (
     create_var,
     mask_for,
 )
+from .refine import (
+    refine,
+    refine_entity,
+)
 from .random import (
     Distribution,
     Normal,
@@ -38,6 +42,7 @@ from .entities import (
     Arc,
     Box,
     Circle,
+    Cone,
     Conic,
     Cylinder,
     Direction,
@@ -89,6 +94,7 @@ __all__ = [
     "Arc",
     "Box",
     "Circle",
+    "Cone",
     "Conic",
     "Cylinder",
     "Direction",
@@ -145,6 +151,9 @@ __all__ = [
     # Variable / blade-mask helpers
     "create_var",
     "mask_for",
+    # Refinement
+    "refine",
+    "refine_entity",
     # Random generation
     "Distribution",
     "Normal",
