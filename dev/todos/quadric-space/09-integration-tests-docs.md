@@ -14,20 +14,20 @@ docs, changelog, and full regression.
 
 ## Steps
 
-- [ ] **9.1 — examples** — one 2D conic example (embed 5 points → conic → refine →
+- [x] **9.1 — examples** — one 2D conic example (embed 5 points → conic → refine →
   draw) and one 3D quadric example (9 points → quadric → `Quadric3D` ray render +
   refine to `Ellipsoid` for mesh/SDF). Add the required docstring header
   (`dev/workflows/example-docs.md`: description + `Run with:` + `Keywords:`).
 
-- [ ] **9.2 — docs** — `uv run python tools/generate-example-docs.py` then
+- [x] **9.2 — docs** — `uv run python tools/generate-example-docs.py` then
   `--check`; `uv run mkdocs build --strict`.
 
-- [ ] **9.3 — changelog** — branch changelog per `dev/workflows/changelog.md`.
+- [x] **9.3 — changelog** — branch changelog per `dev/workflows/changelog.md`.
 
-- [ ] **9.4 — full regression** — `uv run pytest` (all suites) + `uv run ruff check`
+- [x] **9.4 — full regression** — `uv run pytest` (all suites) + `uv run ruff check`
   and `uv run ruff format --check`.
 
-- [ ] **9.5 — Validate** — `uv run pytest` passes; `uv run mkdocs build --strict`
+- [x] **9.5 — Validate** — `uv run pytest` passes; `uv run mkdocs build --strict`
   passes.
 
 ## Validation

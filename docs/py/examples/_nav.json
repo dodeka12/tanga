@@ -140,6 +140,19 @@
         ]
       },
       {
+        "Quadric": [
+          {
+            "Overview": "py/examples/ga/quadric/index.md"
+          },
+          {
+            "Conic Demo": "py/examples/ga/quadric/conic_demo.md"
+          },
+          {
+            "Quadric3D Raycast": "py/examples/ga/quadric/quadric3d_raycast.md"
+          }
+        ]
+      },
+      {
         "Tensor": [
           {
             "Overview": "py/examples/ga/tensor/index.md"

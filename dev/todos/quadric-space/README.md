@@ -1,6 +1,6 @@
 # Projective Quadric Space (Conic + Quadric3D) — Overview
 
-**Created:** 2026-08-29 | **Status:** In progress | **Branch:** `feat/quadric-space`
+**Created:** 2026-08-29 | **Status:** Done | **Branch:** `feat/quadric-space`
 
 ## Goal
 

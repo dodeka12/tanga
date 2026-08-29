@@ -26,6 +26,8 @@ uv run python py/examples/<path>.py
 
 - **all types** — [All geometric entity types in one scene](viz/entities/all_entities.md)
 
+- **analyze** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+
 - **angle vs time** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
 
 - **animate** — [Animation](ga/jupyter/animation.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
@@ -103,6 +105,10 @@ uv run python py/examples/<path>.py
 - **confirm** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md)
 
 - **conformal** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
+
+- **conic** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md)
+
+- **conic_from_points** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md)
 
 - **constraints** — [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
 
@@ -367,6 +373,14 @@ uv run python py/examples/<path>.py
 - **projective** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md)
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
+
+- **quadric** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+
+- **quadric_from_points** — [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+
+- **ray** — [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+
+- **refine** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 

@@ -8,4 +8,5 @@
 - [Geometry](geometry/index.md)
 - [Jupyter Notebooks](jupyter/index.md)
 - [Numerics](numerics/index.md)
+- [Quadric](quadric/index.md)
 - [Tensor](tensor/index.md)
