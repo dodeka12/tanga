@@ -29,16 +29,21 @@ from ._util import (
 from .arc import Arc
 from .box import Box
 from .circle import Circle, ImagCircle
+from .conic import Conic, EConicKind, EQuadricKind, Quadric2D, Quadric3D
 from .cylinder import Cylinder
 from .direction import Direction
 from .disk import Disk, PartialDisk
 from .ellipsoid import Ellipse, Ellipsoid
 from .hdirection import HDirection
 from .hpoint import HPoint
+from .hyperbola import Hyperbola
 from .line import Line
+from .line_pair import LinePair, ParallelLinePair
 from .plane import Plane
+from .parabola import Parabola
 from .point import Point
 from .point_pair import ImagPointPair, PointPair
+from .point_set import PointSet
 from .polygon import RegularPolygon, regular_polygon
 from .space import Space
 from .sphere import ImagSphere, Sphere
@@ -58,28 +63,44 @@ Entity = (
     | Sphere
     | ImagSphere
     | Space
+    | Conic
+    | Quadric3D
+    | Hyperbola
+    | Parabola
+    | LinePair
+    | ParallelLinePair
 )
 
 __all__ = [
     "Arc",
     "Box",
     "Circle",
+    "Conic",
     "Cylinder",
     "Direction",
     "Disk",
+    "EConicKind",
+    "EQuadricKind",
     "Ellipse",
     "Ellipsoid",
     "Entity",
     "HDirection",
     "HPoint",
+    "Hyperbola",
     "ImagCircle",
     "ImagPointPair",
     "ImagSphere",
     "Line",
+    "LinePair",
+    "ParallelLinePair",
+    "Parabola",
     "PartialDisk",
     "Plane",
     "Point",
     "PointPair",
+    "PointSet",
+    "Quadric2D",
+    "Quadric3D",
     "RegularPolygon",
     "Space",
     "Sphere",
