@@ -5,11 +5,8 @@
 
 from __future__ import annotations
 
-import numpy as np
-
-from pytanga.quadric import from_coeffs
-
-from .entities import Conic, Point
+from ._pointset import point_from_embedding, pointset_from_blade
+from .entities import Conic
 
 _DIM = 6
 
@@ -23,8 +20,8 @@ def analyze_entity(mv):
     """Analyze an MV in the 2D quadric (conic) space.
 
     IPNS mode is handled by dualizing to OPNS first (same convention as the
-    other ``analysis_*`` modules).  Grade 1 → ``Point`` (rank-1 embedding) and
-    grade 5 → ``Conic``.
+    other ``analysis_*`` modules).  Grade 1 → ``Point`` (rank-1 embedding),
+    grades 2/3/4 → ``PointSet`` (point joins), grade 5 → ``Conic``.
     """
     if not mv.algebra.opns:
         mv = mv.dual()
@@ -41,20 +38,12 @@ def _analyze_entity_opns(mv):
         raise ValueError(f"Mixed-grade MV in Q2: grades={grades}")
     k = max(grades)
     if k == 1:
-        return _point_from_embedding(mv)
+        return point_from_embedding(mv, _DIM)
+    if k in (2, 3, 4):
+        return pointset_from_blade(mv)
     if k == 5:
         return _conic_from_blade(mv)
-    raise NotImplementedError(f"grade {k} analysis in Q2 is implemented in Phase 4")
-
-
-def _point_from_embedding(mv) -> Point:
-    matrix = from_coeffs(_coeffs(mv, _DIM))
-    if np.linalg.matrix_rank(matrix) != 1:
-        raise ValueError("grade-1 OPNS blade is not a rank-1 point embedding")
-    w = matrix[2, 2]
-    if abs(w) < 1e-12:
-        raise ValueError("point at infinity (zero homogeneous coordinate)")
-    return Point(float(matrix[0, 2] / w), float(matrix[1, 2] / w), 0.0)
+    raise NotImplementedError(f"grade {k} analysis in Q2 is not supported")
 
 
 def _conic_from_blade(mv) -> Conic:

@@ -30,6 +30,9 @@ from .refine import (
     refine,
     refine_entity,
 )
+from ._pointset import (
+    two_conic_intersection,
+)
 from .random import (
     Distribution,
     Normal,
@@ -161,4 +164,6 @@ __all__ = [
     "RndEntity",
     "RndPoint",
     "Uniform",
+    # Point-set intersection
+    "two_conic_intersection",
 ]

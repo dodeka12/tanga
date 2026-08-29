@@ -5,11 +5,8 @@
 
 from __future__ import annotations
 
-import numpy as np
-
-from pytanga.quadric import from_coeffs
-
-from .entities import Point, Quadric3D
+from ._pointset import point_from_embedding, pointset_from_blade
+from .entities import Quadric3D
 
 _DIM = 10
 
@@ -22,12 +19,28 @@ def _coeffs(mv, dim: int) -> tuple[float, ...]:
 def analyze_entity(mv):
     """Analyze an MV in the 3D quadric space.
 
-    IPNS mode is handled by dualizing to OPNS first.  Grade 1 → ``Point``
-    (rank-1 embedding) and grade 9 → ``Quadric3D``.
+    OPNS: grade 1 → ``Point`` (rank-1 embedding), grades 2..8 → ``PointSet``
+    (point joins), grade 9 → ``Quadric3D``.  IPNS: only grade 1 (quadric) and
+    grade 9 (point); other IPNS grades are deferred quadric intersections.
     """
-    if not mv.algebra.opns:
-        mv = mv.dual()
-    return _analyze_entity_opns(mv)
+    if mv.algebra.opns:
+        return _analyze_entity_opns(mv)
+
+    if mv.is_zero:
+        raise ValueError("Zero MV does not represent a geometric entity")
+    if mv.is_scalar:
+        raise ValueError("Scalar MV does not represent a geometric entity")
+    grades = mv.grades
+    if len(grades) > 1:
+        raise ValueError(f"Mixed-grade MV in Q3: grades={grades}")
+    k = grades[0]
+    if k == 1:
+        return _quadric_from_blade(mv.dual())
+    if k == 9:
+        return point_from_embedding(mv.dual(), _DIM)
+    raise NotImplementedError(
+        f"q3 IPNS grade {k} (quadric intersection) analysis is deferred"
+    )
 
 
 def _analyze_entity_opns(mv):
@@ -40,24 +53,12 @@ def _analyze_entity_opns(mv):
         raise ValueError(f"Mixed-grade MV in Q3: grades={grades}")
     k = max(grades)
     if k == 1:
-        return _point_from_embedding(mv)
+        return point_from_embedding(mv, _DIM)
+    if 2 <= k <= 8:
+        return pointset_from_blade(mv)
     if k == 9:
         return _quadric_from_blade(mv)
-    raise NotImplementedError(f"grade {k} analysis in Q3 is implemented in Phase 4")
-
-
-def _point_from_embedding(mv) -> Point:
-    matrix = from_coeffs(_coeffs(mv, _DIM))
-    if np.linalg.matrix_rank(matrix) != 1:
-        raise ValueError("grade-1 OPNS blade is not a rank-1 point embedding")
-    w = matrix[3, 3]
-    if abs(w) < 1e-12:
-        raise ValueError("point at infinity (zero homogeneous coordinate)")
-    return Point(
-        float(matrix[0, 3] / w),
-        float(matrix[1, 3] / w),
-        float(matrix[2, 3] / w),
-    )
+    raise NotImplementedError(f"grade {k} analysis in Q3 is not supported")
 
 
 def _quadric_from_blade(mv) -> Quadric3D:
