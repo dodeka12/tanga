@@ -9,6 +9,8 @@ from ep and em), null conditions, and blades displayed in the einf/eo basis.
 
 Run with:
     uv run python py/examples/ga/basis/base_n3_demo.py
+
+Keywords: BasisN3, conformal, N3, null vector, G(5,0b10000)
 """
 
 from pytanga import MV

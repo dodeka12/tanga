@@ -6,6 +6,8 @@
 Run::
 
     uv run python py/examples/viz/labels/texture_plane.py
+
+Keywords: texture labels, plane, align modes
 """
 
 from pytanga.geometry.entities import Direction, Plane, Point

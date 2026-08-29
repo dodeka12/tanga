@@ -8,11 +8,13 @@ CSG (``+``/``-``/``&``/``^``), and an ``SdfGroup`` whose members keep their own
 color/opacity and can be re-positioned at runtime by id.
 
 Run with:  uv run python py/examples/viz/sdf/object_model.py
+
+Keywords: SDF, object model, standard viewer
 """
 
 from pytanga.geometry import Circle, Cylinder, Direction, Point, Sphere, Translator
 from pytanga.viz import SdfCircleStyle, SdfCylinderStyle, SdfSphereStyle, Visualizer
-from pytanga.viz.sdf import ECompose, SdfGroup, SdfObject
+from pytanga.viz.sdf import SdfGroup, SdfObject
 
 viz = Visualizer(title="Tanga — SDF object model")
 viz.show()

@@ -19,6 +19,8 @@ of ``+90°`` about the **+X** axis (the same axis/angle ``_rotation_align(_Y,
 +Z)`` produces in the serializer).
 
 Run with:  uv run python py/examples/viz/sdf/arrowhead.py
+
+Keywords: SDF, arrowhead, capped cone
 """
 
 import math

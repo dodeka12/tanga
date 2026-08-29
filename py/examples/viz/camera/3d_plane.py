@@ -16,6 +16,8 @@ left-drag rotates, right/middle-drag pans, and the scroll wheel zooms.
 The ``View3dConfig`` can be passed directly to ``Visualizer(camera=...)``.
 
 Run with:  uv run python py/examples/viz/camera/3d_plane.py
+
+Keywords: camera, 3D, View3dConfig, up vector
 """
 
 from pytanga.geometry import Point, Sphere

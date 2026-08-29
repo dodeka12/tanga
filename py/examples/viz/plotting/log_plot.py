@@ -9,6 +9,8 @@ logarithmic.  ``plot()`` maps data through the scales automatically, and
 ``vline``/``hline`` draw annotation lines at fixed data values.
 
 Run with:  uv run python py/examples/viz/plotting/log_plot.py
+
+Keywords: plotting, CoordinateSystem, log plot
 """
 
 from pytanga.viz import CoordinateSystem, PointPathStyle, Visualizer

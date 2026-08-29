@@ -8,6 +8,8 @@ of the single flat loop that ``animate()`` provides.  Uses ``sleep_ms()`` to
 pace each frame and ``interrupted()`` to break out cleanly on Ctrl+C.
 
 Run with:  uv run python py/examples/viz/animation/nested_sweep.py
+
+Keywords: animation, nested loops, Ctrl+C, sweep
 """
 
 import math

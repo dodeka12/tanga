@@ -30,6 +30,8 @@ regardless of the grade of the matched objects.  Only the blade masks change:
   Rotors (P3)   | grades=[0,2]          | grades=[0,2]
 
 Swap in different masks to match lines to lines, planes to planes, etc.
+
+Keywords: solver, rotor estimation, point correspondences, least-squares
 """
 
 from __future__ import annotations

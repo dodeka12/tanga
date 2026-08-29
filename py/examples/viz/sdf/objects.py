@@ -9,6 +9,8 @@ SDF-styled ``Composed`` "bead" (a sphere with a drilled hole), all in the
 path) and the SDF sphere has a label + click interaction.
 
 Run with:  uv run python py/examples/viz/sdf/objects.py
+
+Keywords: SDF, meshes, styled objects
 """
 
 from pytanga.geometry import Direction, Plane, Point, Sphere

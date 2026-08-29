@@ -11,6 +11,8 @@ multivector representation:
 - a full-torus :class:`~pytanga.geometry.Arc` (default ``2π`` radians).
 
 Run with:  uv run python py/examples/viz/entities/viz_entities.py
+
+Keywords: entities, Cylinder, Arc, visualization-only
 """
 
 import math

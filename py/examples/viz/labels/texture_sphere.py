@@ -6,6 +6,8 @@
 Run::
 
     uv run python py/examples/viz/labels/texture_sphere.py
+
+Keywords: texture labels, sphere, KaTeX
 """
 
 from pytanga.geometry.entities import Point, Sphere

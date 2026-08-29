@@ -19,6 +19,8 @@ This script covers:
 
 Run with:
     uv run python py/examples/ga/algebra/algebra_demo.py
+
+Keywords: Algebra, dimension, signature, dtype, modulus, basis
 """
 
 from pytanga.algebra import Algebra

@@ -8,6 +8,8 @@ it.  Each frame records both the entity state and the camera, so the exported
 HTML plays the camera motion back as well as the point motion.
 
 Run with:  uv run python py/examples/viz/export/animated_camera_2d.py
+
+Keywords: export, HTML, animated, camera, 2D
 """
 
 import math

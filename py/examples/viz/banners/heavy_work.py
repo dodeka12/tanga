@@ -4,6 +4,8 @@
 """heavy_work.py — Slider that triggers a blocking computation on release.
 
 Run with:  uv run python py/examples/viz/banners/heavy_work.py
+
+Keywords: banner, modal, slider, on_release, heavy work, VisualizerApp
 """
 
 from __future__ import annotations

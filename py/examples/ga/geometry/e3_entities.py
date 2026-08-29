@@ -19,6 +19,8 @@ still be analyzed as Point entities (set ``e3.opns = False`` for the IPNS view).
 
 Prerequisite: base_e3_demo.py
 Run with:  uv run python py/examples/ga/geometry/e3_entities.py
+
+Keywords: E3, geometry, Point, Plane, Reflection, Rotor, IPNS
 """
 
 import math

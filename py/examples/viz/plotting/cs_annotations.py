@@ -14,6 +14,8 @@ Demonstrates the data-space drawing features of
 - drawing a custom ``PointPath`` directly into ``cs.data_group``.
 
 Run with:  uv run python py/examples/viz/plotting/cs_annotations.py
+
+Keywords: plotting, CoordinateSystem, annotations
 """
 
 import math

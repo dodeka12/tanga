@@ -14,6 +14,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/expression/variable_rotor_entity.py
+
+Keywords: expressions, Variable, rotor, points, entity
 """
 
 from pytanga.basis import BasisN3

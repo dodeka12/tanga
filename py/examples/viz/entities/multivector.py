@@ -4,6 +4,8 @@
 """multivector.py — MV input from PGA3 and N3, OPNS vs IPNS.
 
 Run with:  uv run python py/examples/viz/entities/multivector.py
+
+Keywords: entities, MV, OPNS, IPNS, PGA3, N3
 """
 
 from pytanga.basis import BasisN3, BasisPGA3

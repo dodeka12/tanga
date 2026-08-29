@@ -4,6 +4,8 @@
 """title_annotation.py — Title overlay and Markdown + LaTeX annotation.
 
 Run with:  uv run python py/examples/viz/labels/title_annotation.py
+
+Keywords: title, annotation, Markdown, LaTeX, KaTeX
 """
 
 from pytanga.geometry import Point, Sphere

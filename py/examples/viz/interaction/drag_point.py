@@ -23,6 +23,8 @@ control over triggers and handlers.
 Usage::
 
     uv run python py/examples/viz/interaction/drag_point.py
+
+Keywords: interaction, drag, point, constraints, low-level
 """
 
 import asyncio

@@ -8,6 +8,8 @@ draws its trailing path.  The trail uses a fixed red-to-orange gradient
 so that the head is bright and the tail fades to dark red.
 
 Run with:  uv run python py/examples/viz/animation/point_path_trail.py
+
+Keywords: animation, PointPath, trail, gradient
 """
 
 import math

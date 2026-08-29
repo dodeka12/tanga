@@ -13,6 +13,8 @@ only moves the view centre — the default grid (``z = -1``) and axes
 smaller/misaligned as they would under a perspective projection.
 
 Run with:  uv run python py/examples/viz/camera/fit_2d.py
+
+Keywords: camera, 2D, fit camera, orthographic
 """
 
 from pytanga.geometry import Point

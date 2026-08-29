@@ -9,6 +9,8 @@ combine mode. A torus and a box drawn from the primitive library sit alongside
 for reference.
 
 Run with:  uv run python py/examples/viz/sdf/composed.py
+
+Keywords: SDF, Composed, primitive library
 """
 
 import math

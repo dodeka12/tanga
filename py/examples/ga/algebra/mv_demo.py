@@ -20,6 +20,8 @@ The algebra used throughout is G(3, 0) over float64.
 
 Run with:
     uv run python py/examples/ga/algebra/mv_demo.py
+
+Keywords: MV, multivector, operators, coefficients, initialization
 """
 
 import pytanga

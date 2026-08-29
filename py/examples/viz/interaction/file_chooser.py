@@ -4,6 +4,8 @@
 """file_chooser.py — A file chooser with a backend-driven file browser.
 
 Run with:  uv run python py/examples/viz/interaction/file_chooser.py
+
+Keywords: controls, file chooser, file browser, VisualizerApp
 """
 
 from __future__ import annotations

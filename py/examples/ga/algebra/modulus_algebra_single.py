@@ -16,6 +16,8 @@ cryptography.  Coefficients with absolute value > p//2 are wrapped.
 
 Run with:
     uv run python py/examples/ga/algebra/modulus_algebra_single.py
+
+Keywords: Algebra, modulus, integer, fixed modulus
 """
 
 import pytanga

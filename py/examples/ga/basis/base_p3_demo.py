@@ -10,6 +10,8 @@ outer product (lines and planes).
 
 Run with:
     uv run python py/examples/ga/basis/base_p3_demo.py
+
+Keywords: BasisP3, projective, P3, G(4,0)
 """
 
 from pytanga import MV

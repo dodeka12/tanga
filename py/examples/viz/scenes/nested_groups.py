@@ -25,6 +25,8 @@ Each rod's label is anchored to the *center* of the line via
 (``0`` = start, ``0.5`` = midpoint, ``1`` = end).
 
 Run with:  uv run python py/examples/viz/scenes/nested_groups.py
+
+Keywords: scenes, VizGroup, hierarchy, nested
 """
 
 import math

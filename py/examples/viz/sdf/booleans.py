@@ -10,6 +10,8 @@ whose overlap with the base is kept. Each object keeps its own material; a
 subtracting object emits no colored surface of its own.
 
 Run with:  uv run python py/examples/viz/sdf/booleans.py
+
+Keywords: SDF, CSG, combine, polarity
 """
 
 from pytanga.geometry import Point, Sphere

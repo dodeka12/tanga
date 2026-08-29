@@ -8,6 +8,8 @@ plus a grid in the XY plane.  Axes and grids are ordinary scene objects
 now — no hard-coded helpers.
 
 Run with:  uv run python py/examples/viz/plotting/axes_custom.py
+
+Keywords: plotting, Axis, Grid, custom intervals
 """
 
 from pytanga.geometry import Point

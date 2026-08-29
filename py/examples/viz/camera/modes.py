@@ -4,6 +4,8 @@
 """modes.py — Auto-fit, explicit, and partial camera modes.
 
 Run with:  uv run python py/examples/viz/camera/modes.py
+
+Keywords: camera, modes, auto-fit, explicit, 2D, 3D
 """
 
 from pytanga.geometry import Direction, Plane, Point, Sphere

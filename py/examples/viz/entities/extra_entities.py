@@ -15,6 +15,8 @@ and have no multivector representation:
 - a :func:`~pytanga.geometry.regular_polygon` (hexagon).
 
 Run with:  uv run python py/examples/viz/entities/extra_entities.py
+
+Keywords: entities, Disk, PartialDisk, Box, Ellipsoid, Ellipse
 """
 
 import math

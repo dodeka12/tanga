@@ -4,6 +4,8 @@
 """animated.py — Animated HTML export with JS playback engine.
 
 Run with:  uv run python py/examples/viz/export/animated.py
+
+Keywords: export, HTML, animated, playback
 """
 
 import math

@@ -4,6 +4,8 @@
 """banner_types.py — Demonstrates every banner/dialog kind.
 
 Run with:  uv run python py/examples/viz/banners/banner_types.py
+
+Keywords: banner, alert, confirm, dialog, Visualizer
 """
 
 import time

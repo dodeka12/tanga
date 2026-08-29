@@ -12,6 +12,8 @@ Each frame the trail is appended and :meth:`~pytanga.viz.CoordinateSystem.update
 re-syncs the path and the x axis, then ``flush()`` pushes the update.
 
 Run with:  uv run python py/examples/viz/plotting/pendulum_plot.py
+
+Keywords: plotting, pendulum, live plot, angle vs time
 """
 
 import math

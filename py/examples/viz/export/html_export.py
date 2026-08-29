@@ -4,6 +4,8 @@
 """html_export.py — Self-contained HTML and glTF export.
 
 Run with:  uv run python py/examples/viz/export/html_export.py
+
+Keywords: export, HTML, glTF, snapshot
 """
 
 from pytanga.geometry import Direction, Plane, Point, Sphere

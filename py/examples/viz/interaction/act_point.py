@@ -25,6 +25,8 @@ applied automatically from the default ``ActPointStyle``.
 Usage::
 
     uv run python py/examples/viz/interaction/act_point.py
+
+Keywords: interaction, ActPoint, drag, point
 """
 
 import asyncio

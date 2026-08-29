@@ -9,6 +9,8 @@ resets the scene, calls ``show()`` on entry, and flushes on exit.  With
 for that scene's URL (instead of waiting to reconnect an existing tab).
 
 Run with:  uv run python py/examples/viz/scenes/multi_scene.py
+
+Keywords: scenes, multi-scene, context manager, tabs
 """
 
 from pytanga.geometry import Point, Sphere

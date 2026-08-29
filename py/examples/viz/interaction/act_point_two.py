@@ -20,6 +20,8 @@ Modifier keys switch the drag constraint plane (per point)::
 Usage::
 
     uv run python py/examples/viz/interaction/act_point_two.py
+
+Keywords: interaction, ActPoint, drag, two points
 """
 
 import asyncio

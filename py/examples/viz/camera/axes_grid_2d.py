@@ -12,6 +12,8 @@ A minimal introduction to the three core 2D scene-building blocks:
 * :class:`~pytanga.viz.Grid` — a coordinate grid in the XY plane.
 
 Run with:  uv run python py/examples/viz/camera/axes_grid_2d.py
+
+Keywords: camera, 2D, Axes2D, Grid, View2DConfig
 """
 
 from pytanga.geometry import Point

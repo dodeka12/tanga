@@ -9,6 +9,8 @@ Demonstrates the :class:`~pytanga.viz.VisualizerApp` base class.
 Run with:
 
     uv run python py/examples/viz/interaction/two_spheres_interact.py
+
+Keywords: interaction, IPNS, spheres, slider, dropdown, VisualizerApp
 """
 
 from __future__ import annotations

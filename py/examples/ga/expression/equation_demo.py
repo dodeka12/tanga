@@ -12,6 +12,8 @@ Run
 .. code-block:: bash
 
     uv run python py/examples/ga/expression/equation_demo.py
+
+Keywords: expressions, variables, linear equations, Variable
 """
 
 import pytanga as pt

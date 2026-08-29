@@ -8,6 +8,8 @@ counter-rotating path.  Each frame records both the entity state and the
 camera, so the exported HTML plays the camera motion back as well.
 
 Run with:  uv run python py/examples/viz/export/animated_camera_3d.py
+
+Keywords: export, HTML, animated, camera, 3D
 """
 
 import math

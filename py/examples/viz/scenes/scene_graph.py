@@ -9,6 +9,8 @@ its own.  Transform-only changes re-serialize only the ``transform`` aspect —
 no child geometry is recomputed or re-sent.
 
 Run with:  uv run python py/examples/viz/scenes/scene_graph.py
+
+Keywords: scenes, VizGroup, transforms, scene graph
 """
 
 import math

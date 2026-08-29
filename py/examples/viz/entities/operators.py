@@ -4,6 +4,8 @@
 """operators.py — Rotor, Translator, Motor, Dilator visualization.
 
 Run with:  uv run python py/examples/viz/entities/operators.py
+
+Keywords: entities, Rotor, Translator, Motor, Dilator
 """
 
 import math

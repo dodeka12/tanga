@@ -10,6 +10,8 @@ preserved across the whole group, and the proxy bounding box resizes to wrap the
 members as they move.
 
 Run with:  uv run python py/examples/viz/sdf/group.py
+
+Keywords: SDF, group, CSG, animation
 """
 
 import math
@@ -24,9 +26,9 @@ viz.show()
 # ── A group: two spheres + a drilled cylinder, rendered as one solid ──
 # (per-object CSG: member 2 subtracts the cylinder from both spheres.)
 group = SdfGroup(
-    sphere(1.0, position=(-1.0, 0.0, 0.0), id="left"),   # member 0 (union)
-    sphere(1.0, position=(1.0, 0.0, 0.0), id="orbit"),   # member 1 (union)
-    (capped_cylinder(1.5, 0.35), "subtract"),             # member 2 (cut-out)
+    sphere(1.0, position=(-1.0, 0.0, 0.0), id="left"),  # member 0 (union)
+    sphere(1.0, position=(1.0, 0.0, 0.0), id="orbit"),  # member 1 (union)
+    (capped_cylinder(1.5, 0.35), "subtract"),  # member 2 (cut-out)
 )
 sdf_grp = viz.new(group, style=SdfStyle(color="#ffaa00"), label="SDF group")
 

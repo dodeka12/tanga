@@ -16,6 +16,8 @@ Demonstrates the 2D camera input spec:
 The ``View2DConfig`` can be passed directly to ``Visualizer(camera=...)``.
 
 Run with:  uv run python py/examples/viz/camera/2d_view.py
+
+Keywords: camera, 2D, View2DConfig, orthographic
 """
 
 from pytanga.geometry import Point

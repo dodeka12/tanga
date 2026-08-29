@@ -4,6 +4,8 @@
 """orbit.py — Frame-by-frame animation at ~60 FPS.
 
 Run with:  uv run python py/examples/viz/animation/orbit.py
+
+Keywords: animation, frame streaming, animate, orbit, Point
 """
 
 import math

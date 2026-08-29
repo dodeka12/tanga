@@ -4,6 +4,8 @@
 """basic.py — Labels with custom styling, dynamic update, and removal.
 
 Run with:  uv run python py/examples/viz/labels/basic.py
+
+Keywords: labels, LabelStyle, update, remove
 """
 
 import time
