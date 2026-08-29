@@ -1,6 +1,6 @@
 # Example Docs Gallery — Overview
 
-**Created:** 2026-08-29 | **Status:** In progress | **Branch:** `feat/example-docs`
+**Created:** 2026-08-29 | **Status:** Done | **Branch:** `feat/example-docs`
 
 ## Goal
 

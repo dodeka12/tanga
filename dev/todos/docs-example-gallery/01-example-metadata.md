@@ -22,6 +22,7 @@ can produce one keyworded doc page per example. No behavior changes.
     `animation`, `frame streaming`, `animate`, `orbit`, `Point`) so search
     clusters them. Keep each list concise (3–8 terms).
   - Do not change any code — docstrings only.
+  - The canonical format is defined in `dev/workflows/example-docs.md`.
 
 - [x] **1.3 — `.ipynb` examples: description + `Keywords:`**
   - For `py/examples/ga/jupyter/*.ipynb`, ensure the **first markdown cell**

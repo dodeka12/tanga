@@ -8,7 +8,7 @@ get the right header comments automatically.
 
 ## Steps
 
-- [ ] **6.1 — Workflow doc (`dev/workflows/example-docs.md`)**
+- [x] **6.1 — Workflow doc (`dev/workflows/example-docs.md`)**
   - Document the required header for a new example under `py/examples/`:
     - a module docstring with a one-line description (`<name>.py — …`);
     - a `Run with: uv run python py/examples/<path>` line;
@@ -20,12 +20,12 @@ get the right header comments automatically.
     `uv run python tools/generate-example-docs.py` so its doc page and nav entry
     are regenerated (and run `--check` in CI).
 
-- [ ] **6.2 — Link it from `.clinerules/rules.md`**
+- [x] **6.2 — Link it from `.clinerules/rules.md`**
   - Add a rule pointing to `dev/workflows/example-docs.md` for adding/editing
     examples (mirroring how the changelog and pull-request workflows are
     already referenced there).
 
-- [ ] **6.3 — Cross-reference from Phase 1**
+- [x] **6.3 — Cross-reference from Phase 1**
   - Update `01-example-metadata.md` to cite the workflow doc as the source of
     truth for the `Keywords:` convention.
 
