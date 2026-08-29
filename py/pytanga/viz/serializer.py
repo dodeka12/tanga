@@ -42,6 +42,7 @@ from ._scene_objects import (
     _scale_dir,
 )
 from ._types import _as_euler
+from ._capabilities import _supports_renderer
 from pytanga.geometry.operators import (
     Dilator,
     GeneralRotor,
@@ -100,6 +101,14 @@ def _dispatch_entity(
     :func:`serialize_entity` (backward-compat trampoline) and the scene-graph
     node serializers in ``_nodes.py``.
     """
+    # ── Ray-styled entities → analytic ray proxies ──
+    if _is_ray_styled(props, kind, styles_map):
+        if not _supports_renderer(kind, "ray"):
+            raise ValueError(
+                f"Entity kind {kind!r} does not support analytic ray rendering"
+            )
+        return _serialize_ray(entity, props, kind=kind, styles_map=styles_map)
+
     # ── SDF elements / SDF-styled entities → per-object ray-marched proxies ──
     from .sdf._compose import SdfElement
 
@@ -157,7 +166,9 @@ def _dispatch_entity(
     if isinstance(entity, Ellipse):
         return _serialize_ellipse(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, RegularPolygon):
-        return _serialize_regular_polygon(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_regular_polygon(
+            entity, props, kind=kind, styles_map=styles_map
+        )
 
     # ── Operators ──
     if isinstance(entity, ReflectionLine):
@@ -207,6 +218,38 @@ def _is_sdf_styled(
         entry = styles_map.get(kind) if hasattr(styles_map, "get") else None
         return isinstance(entry, SdfStyle)
     return False
+
+
+def _is_ray_styled(
+    props: Dict[str, Any],
+    kind: str,
+    styles_map: Dict[str, Any] | None,
+) -> bool:
+    """Return ``True`` when *entity* should render as an analytic ray proxy.
+
+    Detects the opt-in either from a per-entity :class:`~pytanga.viz.RayStyle`
+    in ``props`` or from a per-kind :class:`~pytanga.viz.RayStyle` default in
+    ``styles_map``.
+    """
+    from ._styles import RayStyle
+
+    if isinstance(props.get("style"), RayStyle):
+        return True
+    if styles_map is not None:
+        entry = styles_map.get(kind) if hasattr(styles_map, "get") else None
+        return isinstance(entry, RayStyle)
+    return False
+
+
+def _serialize_ray(
+    entity: Any,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Serialize a ray-styled entity (Phase 7 wires the Quadric3D body)."""
+    raise NotImplementedError(f"ray serialization for kind {kind!r} lands in Phase 7")
 
 
 def serialize_scene_update(

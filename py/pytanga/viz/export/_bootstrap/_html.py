@@ -95,6 +95,7 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "group.js",
     _RENDERERS_DIR / "factory.js",
     _RENDERERS_DIR / "sdf.js",
+    _RENDERERS_DIR / "ray.js",
     _RENDERERS_DIR / "sdf" / "lighting.js",
     _RENDERERS_DIR / "sdf" / "glsl.js",
 ]
@@ -189,6 +190,7 @@ def generate_bootstrap_js(adapter_js: str) -> str:
     parts: list[str] = []
     parts.append("import * as THREE from 'three';")
     parts.append(_sdf_shader_injection())
+    parts.append(_ray_shader_injection())
 
     for path in _RENDERER_FILES + _SHARED_JS_FILES:
         src = path.read_text(encoding="utf-8")
@@ -218,6 +220,20 @@ def _sdf_shader_injection() -> str:
         "proxy": (_RENDERERS_DIR / "sdf" / "proxy.glsl").read_text(encoding="utf-8"),
     }
     return "window.__tanga_sdf_shaders = " + json.dumps(parts) + ";"
+
+
+def _ray_shader_injection() -> str:
+    """Inline the ray proxy GLSL as a global for standalone HTML exports.
+
+    The live viewer fetches the ``.glsl`` file from the server; a standalone
+    export has no server, so ``ray.js`` falls back to this inlined global.
+    """
+    parts = {
+        "intersect": (_RENDERERS_DIR / "ray" / "intersect.glsl").read_text(
+            encoding="utf-8"
+        ),
+    }
+    return "window.__tanga_ray_shaders = " + json.dumps(parts) + ";"
 
 
 # ── KaTeX CSS helper ──────────────────────────────────────────────

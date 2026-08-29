@@ -34,6 +34,7 @@ import { createAxes3D } from './axes3d.js';
 import { createGrid } from './grid.js';
 import { createVizGroup } from './group.js';
 import { createSdfProxy, updateSdfProxy } from './sdf.js';
+import { createRayProxy, updateRayProxy } from './ray.js';
 import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
 
 /**
@@ -153,6 +154,10 @@ export async function createEntityMesh(ent) {
             mesh = await createSdfProxy(ent);
             break;
 
+        case 'ray':
+            mesh = await createRayProxy(ent);
+            break;
+
         default:
             console.warn(`Unknown entity kind: ${ent.kind}`);
             return null;
@@ -174,6 +179,9 @@ export function updateEntityMesh(mesh, ent, prev) {
             // transform/style changes are applied in place by updateSdfProxy.
             if (entityRequiresRebuild(ent, prev)) return false;
             return updateSdfProxy(mesh, ent, prev);
+        case 'ray':
+            if (entityRequiresRebuild(ent, prev)) return false;
+            return updateRayProxy(mesh, ent);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':

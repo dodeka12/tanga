@@ -53,11 +53,11 @@ from pytanga.geometry.operators import (
 )
 
 from ._base import (
-    DashedWireframe,
+    DashedWireframe as DashedWireframe,
     DottedWireframe,
-    SolidWireframe,
+    SolidWireframe as SolidWireframe,
     VizStyle,
-    WireframeDashPattern,
+    WireframeDashPattern as WireframeDashPattern,
 )
 from ._entity_styles import (
     ArcStyle,
@@ -112,13 +112,14 @@ from ._sdf_style import (
     SdfStyle,
 )
 from ._overlay_styles import (
-    AnimStyle,
-    AnnotationStyle,
-    FigureStyle,
+    AnimStyle as AnimStyle,
+    AnnotationStyle as AnnotationStyle,
+    FigureStyle as FigureStyle,
     LabelStyle,
-    TitleStyle,
+    TitleStyle as TitleStyle,
 )
-from ._tex_label_style import TextureLabelStyle
+from ._ray_style import RayStyle
+from ._tex_label_style import TextureLabelStyle as TextureLabelStyle
 
 # ── Union type ──────────────────────────────────────────────
 
@@ -169,6 +170,7 @@ ObjVizStyle: TypeAlias = Union[
     SdfPartialDiskStyle,
     SdfRegularPolygonStyle,
     SdfStyle,
+    RayStyle,
 ]
 
 

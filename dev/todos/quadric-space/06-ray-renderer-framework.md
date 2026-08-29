@@ -20,33 +20,33 @@ a bounding-box proxy mesh with an analytic fragment shader writing `gl_FragDepth
 
 ## Steps
 
-- [ ] **6.1 — `RayStyle`** — `RayStyle(VizStyle)` marker with `color`, `opacity`
+- [x] **6.1 — `RayStyle`** — `RayStyle(VizStyle)` marker with `color`, `opacity`
   (both `None`) + `bound_padding`; `to_dict()` → `{"style_type": "RayStyle", …}`.
   Export from `pytanga.viz`.
 
-- [ ] **6.2 — `_is_ray_styled` + dispatch** — mirror `_is_sdf_styled`
+- [x] **6.2 — `_is_ray_styled` + dispatch** — mirror `_is_sdf_styled`
   (per-entity `RayStyle` in `props` OR per-kind `RayStyle` in `styles_map`); add a
   ray branch in `_dispatch_entity` **before** the SDF/mesh branches.
 
-- [ ] **6.3 — `ray.js` proxy** — `createRayProxy(ent)` builds a BoxGeometry +
+- [x] **6.3 — `ray.js` proxy** — `createRayProxy(ent)` builds a BoxGeometry +
   `ShaderMaterial` (like `sdf.js`), a generic `intersect` function dispatcher, and
   writes `gl_FragDepth`; `updateRayProxy` applies transform/style in place.
 
-- [ ] **6.4 — capability map** — a Python-side table mapping entity kind → supported
+- [x] **6.4 — capability map** — a Python-side table mapping entity kind → supported
   renderer kinds (`mesh`/`sdf`/`ray`); the serializer checks it so an unsupported
   combination raises a clear error.
 
-- [ ] **6.5 — factory + export** — `factory.js` `case 'ray': createRayProxy` +
+- [x] **6.5 — factory + export** — `factory.js` `case 'ray': createRayProxy` +
   `updateEntityMesh` branch; register `ray.js` + `ray/intersect.glsl` in
   `_RENDERER_FILES`.
 
-- [ ] **6.6 — Tests**
+- [x] **6.6 — Tests**
   - `RayStyle.to_dict()` and `_is_ray_styled` resolution (per-entity and per-kind).
   - Capability map: `Quadric3D` supports `ray` only; unsupported combo raises.
   - `node --input-type=module --check` on `ray.js`, `factory.js`.
   - `uv run pytest py/tests/viz/test_export_renderers.py -q`.
 
-- [ ] **6.7 — Validate** — `uv run pytest py/tests/viz/test_ray_styles.py
+- [x] **6.7 — Validate** — `uv run pytest py/tests/viz/test_ray_styles.py
   py/tests/viz/test_ray_renderer.py py/tests/viz/test_export_renderers.py -q`.
 
 ## Validation
