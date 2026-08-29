@@ -8,17 +8,17 @@ build time.
 
 ## Steps
 
-- [ ] **3.1 — Hook (`docs/_hooks/examples_nav.py`)**
+- [x] **3.1 — Hook (`docs/_hooks/examples_nav.py`)**
   - Add an `on_config` hook that reads `docs/py/examples/_nav.json` and injects
     a top-level **Examples** section (right after **Home**) into
     `config["nav"]`.
   - If `_nav.json` is missing, warn and leave nav unchanged (build still
     succeeds).
 
-- [ ] **3.2 — Wire `mkdocs.yml`**
+- [x] **3.2 — Wire `mkdocs.yml`**
   - Add a `hooks:` entry pointing at `docs/_hooks/examples_nav.py`.
 
-- [ ] **3.3 — Smoke**
+- [x] **3.3 — Smoke**
   - Build and confirm the Examples section appears in the sidebar and search
     indexes the generated pages.
 

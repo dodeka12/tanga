@@ -62,6 +62,9 @@ extra:
 
 docs_dir: docs
 
+hooks:
+  - docs/_hooks/examples_nav.py
+
 nav:
   - Home: index.md
 
