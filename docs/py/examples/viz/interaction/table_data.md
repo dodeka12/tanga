@@ -64,7 +64,7 @@ class TableDataApp(VisualizerApp):
             color="#4488ff",
             opacity=0.9,
         )
-        self._set_annotation("Edit the table — every change is echoed here.")
+        self.viz.set_annotation("Edit the table — every change is echoed here.")
         self.viz.add_table(
             "data",
             label="Data",
@@ -86,19 +86,19 @@ class TableDataApp(VisualizerApp):
     # ── handlers ────────────────────────────────────────────
 
     async def on_cell_change(self, change: TableCellChange, _event: ControlEvent) -> None:
-        self._set_annotation(f"Cell ({change.row}, {change.col}) = {change.value!r}")
+        self.viz.set_annotation(f"Cell ({change.row}, {change.col}) = {change.value!r}")
 
     async def on_row_add(self, add: TableRowAdd, _event: ControlEvent) -> None:
-        self._set_annotation(f"Added row {add.row}")
+        self.viz.set_annotation(f"Added row {add.row}")
 
     async def on_column_add(self, add: TableColumnAdd, _event: ControlEvent) -> None:
-        self._set_annotation(f"Added column {add.col} ({add.header!r})")
+        self.viz.set_annotation(f"Added column {add.col} ({add.header!r})")
 
     async def on_reset(self, _value: None, _event: ControlEvent) -> None:
         self.viz.set_control_value(
             "data", {"columns": self._columns, "rows": self._rows}
         )
-        self._set_annotation("Table reset.")
+        self.viz.set_annotation("Table reset.")
 
 
 if __name__ == "__main__":
