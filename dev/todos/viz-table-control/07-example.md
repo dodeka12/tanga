@@ -12,7 +12,7 @@ the example-docs conventions, and regenerated docs pages.
 
 ## Steps
 
-- [ ] **7.1 — `table_data.py`**
+- [x] **7.1 — `table_data.py`**
   - License header + module docstring in the
     `<name>.py — …` / `Run with:` / `Keywords:` form (see
     `dev/workflows/example-docs.md`).
@@ -22,7 +22,7 @@ the example-docs conventions, and regenerated docs pages.
     - `on_row_add` / `on_column_add` log the added row/column.
   - `Keywords:` e.g. `controls, table, tabular data, add_table, VisualizerApp`.
 
-- [ ] **7.2 — Regenerate docs**
+- [x] **7.2 — Regenerate docs**
   - `uv run python tools/generate-example-docs.py`
   - `uv run python tools/generate-example-docs.py --check`
 
