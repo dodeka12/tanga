@@ -427,6 +427,8 @@ function _createControlElement(ctrl) {
             return createCheckbox(ctrl);
         case 'value_edit':
             return createValueEdit(ctrl);
+        case 'table':
+            return createTable(ctrl);
         default:
             console.warn('Unknown control kind:', ctrl.kind);
             return null;
@@ -863,6 +865,126 @@ export function createValueEdit(ctrl) {
     return wrapper;
 }
 
+export function createTable(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-table';
+
+    const label = document.createElement('label');
+    label.textContent = ctrl.label || ctrl.id;
+    wrapper.appendChild(label);
+
+    const container = document.createElement('div');
+    container.className = 'tanga-table-container';
+    wrapper.appendChild(container);
+
+    const columns = ctrl.columns || [];
+    const rows = ctrl.rows || [];
+    const fieldOf = (i) => 'c' + i;
+    const colOf = (field) => {
+        const idx = parseInt(String(field).slice(1), 10);
+        return Number.isFinite(idx) ? idx : 0;
+    };
+
+    const buildDefs = (cols) =>
+        cols.map((title, i) => ({
+            title: String(title),
+            field: fieldOf(i),
+            editor: 'input',
+        }));
+    const buildData = (cols, rowsData) =>
+        (rowsData || []).map((r) => {
+            const obj = {};
+            cols.forEach((_, i) => {
+                obj[fieldOf(i)] = r && r[i] !== undefined ? String(r[i]) : '';
+            });
+            return obj;
+        });
+
+    let table = null;
+
+    if (typeof Tabulator === 'undefined') {
+        const notice = document.createElement('div');
+        notice.className = 'tanga-table-unavailable';
+        notice.textContent = 'Tabulator unavailable — editable table disabled.';
+        container.appendChild(notice);
+    } else {
+        table = new Tabulator(container, {
+            height: '220px',
+            layout: 'fitColumns',
+            data: buildData(columns, rows),
+            columns: buildDefs(columns),
+        });
+
+        table.on('cellEdited', (cell) => {
+            sendControlEvent('control:cell_change', ctrl.id, {
+                row: cell.getRow().getPosition(),
+                col: colOf(cell.getColumn().getField()),
+                value: String(cell.getValue()),
+            });
+        });
+    }
+
+    const buttonRow = document.createElement('div');
+    buttonRow.className = 'tanga-table-buttons';
+
+    if (table && ctrl.allow_add_rows !== false) {
+        const addRowBtn = document.createElement('button');
+        addRowBtn.type = 'button';
+        addRowBtn.className = 'tanga-action-button';
+        addRowBtn.textContent = '+ Row';
+        addRowBtn.addEventListener('click', () => {
+            const blank = {};
+            table.getColumns().forEach((c) => { blank[c.getField()] = ''; });
+            const rowIndex = table.getRows().length;
+            table.addRow(blank);
+            sendControlEvent('control:row_add', ctrl.id, {
+                row: rowIndex,
+                values: table.getColumns().map(() => ''),
+            });
+        });
+        buttonRow.appendChild(addRowBtn);
+    }
+
+    if (table && ctrl.allow_add_columns !== false) {
+        const addColBtn = document.createElement('button');
+        addColBtn.type = 'button';
+        addColBtn.className = 'tanga-action-button';
+        addColBtn.textContent = '+ Column';
+        addColBtn.addEventListener('click', () => {
+            const colIndex = table.getColumns().length;
+            const field = fieldOf(colIndex);
+            const header = 'C' + (colIndex + 1);
+            table.addColumn({ title: header, field, editor: 'input' });
+            sendControlEvent('control:column_add', ctrl.id, {
+                col: colIndex,
+                header,
+                values: Array(table.getRows().length).fill(''),
+            });
+        });
+        buttonRow.appendChild(addColBtn);
+    }
+
+    if (buttonRow.children.length > 0) {
+        wrapper.appendChild(buttonRow);
+    }
+
+    wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+    _controlRegistry[ctrl.id] = {
+        kind: 'table',
+        apply: (value) => {
+            if (!table || !value) return;
+            const cols = value.columns || [];
+            const rowsData = value.rows || [];
+            table.setColumns(buildDefs(cols));
+            table.setData(buildData(cols, rowsData));
+        },
+    };
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
 // ── WebSocket event dispatch ────────────────────────────────
 
 export function sendControlEvent(type, controlId, value) {
@@ -1198,6 +1320,24 @@ function _injectStyles() {
         .tanga-step-button .tanga-icon-uc {
             font-size: 10px;
             line-height: 1;
+        }
+        .tanga-table-container {
+            min-height: 220px;
+        }
+        .tanga-table-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .tanga-table-buttons .tanga-action-button {
+            width: auto;
+            padding: 4px 12px;
+            white-space: nowrap;
+        }
+        .tanga-table-unavailable {
+            color: #c88;
+            font-size: 12px;
+            padding: 8px;
         }
     `;
     document.head.appendChild(style);

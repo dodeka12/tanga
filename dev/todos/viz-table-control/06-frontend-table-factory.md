@@ -13,7 +13,7 @@ layout `TableView` + `build.js` wiring.
 
 ## Steps
 
-- [ ] **6.1 — `createTable(ctrl)` (`controls-panel.js`)**
+- [x] **6.1 — `createTable(ctrl)` (`controls-panel.js`)**
   - Build a wrapper `div.tanga-control.tanga-table` with a `label` (as other
     factories) and a container `div` for Tabulator.
   - Guard with `typeof Tabulator !== 'undefined'`; on failure render a
@@ -34,15 +34,15 @@ layout `TableView` + `build.js` wiring.
   - `wrapper.addEventListener('pointerdown', e => e.stopPropagation())` (as the
     other factories).
 
-- [ ] **6.2 — Dispatch (`_createControlElement`)**
+- [x] **6.2 — Dispatch (`_createControlElement`)**
   - Add `case 'table': return createTable(ctrl);`.
 
-- [ ] **6.3 — `views/table-view.js` (new)**
+- [x] **6.3 — `views/table-view.js` (new)**
   - `export class TableView extends ControlView` with `render()` returning
     `createTable({ id: this.controlId, label: this.label, tooltip: this.tooltip,
     columns: this.columns, rows: this.rows, allow_add_rows, allow_add_columns })`.
 
-- [ ] **6.4 — `views/build.js`**
+- [x] **6.4 — `views/build.js`**
   - Import `TableView` and add an `else if (node.type === 'table_view')` branch
     constructing it from `node.id/label/tooltip/columns/rows/allow_add_rows/allow_add_columns`.
 
