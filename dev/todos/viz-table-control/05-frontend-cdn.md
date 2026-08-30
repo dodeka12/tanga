@@ -11,14 +11,14 @@ dependency error detector about it.
 
 ## Steps
 
-- [ ] **5.1 — CDN loader**
+- [x] **5.1 — CDN loader**
   - In the `document.write` CDN block (the `url(pkg, file)` helper), add:
     - `<link rel="stylesheet" href="url('tabulator-tables@6.5.2', 'dist/css/tabulator_midnight.min.css')">`
     - `<script src="url('tabulator-tables@6.5.2', 'dist/js/tabulator.min.js')">`
   - Keep the pinned `@6.5.2` version and the jsdelivr/unpkg dual path, exactly
     like `katex@0.16.11`.
 
-- [ ] **5.2 — Error detector**
+- [x] **5.2 — Error detector**
   - In the loader IIFE's `error` handler, add a
     `else if (/tabulator/.test(src) && !OPTIONAL_SEEN.tabulator)` branch pushing
     `'Tabulator (editable tables)'` to `OPTIONAL_MISSING` (mirror the
