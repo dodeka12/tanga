@@ -8,10 +8,11 @@ import json
 
 import pytest
 
-from pytanga.viz import ButtonView, SliderView, Visualizer
+from pytanga.viz import ButtonView, SliderView, TableView, Visualizer
 from pytanga.viz._controls import (
     Button,
     Slider,
+    Table,
     ValueEdit,
     set_control_value as _set_ctrl,
 )
@@ -115,6 +116,27 @@ def test_set_control_value_button_raises() -> None:
         viz.set_control_value("go", None)
 
 
+def test_set_control_value_table_pushes_grid(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.set_control_value("tbl", {"columns": ["y", "z"], "rows": [[2], [3]]})
+
+    ctrl = viz._scenes[""]._controls["tbl"]
+    assert ctrl.columns == ["y", "z"]
+    assert ctrl.rows == [["2"], ["3"]]
+    assert _messages(server) == [
+        {
+            "type": "control_update",
+            "scene": "",
+            "id": "tbl",
+            "value": {"columns": ["y", "z"], "rows": [["2"], ["3"]]},
+        },
+    ]
+
+
 # ── Visualizer.set_control_view_value ───────────────────────
 
 
@@ -136,6 +158,26 @@ def test_set_control_view_value_button_view_raises() -> None:
     viz = _viz()
     with pytest.raises(TypeError):
         viz.set_control_view_value(ButtonView("b1"), None)
+
+
+def test_set_control_view_value_table_pushes_grid(monkeypatch) -> None:
+    viz = _viz()
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.set_control_view_value(view, {"columns": ["y"], "rows": [[2]]})
+
+    assert view.columns == ["y"]
+    assert view.rows == [["2"]]
+    assert _messages(server) == [
+        {
+            "type": "control_update",
+            "scene": "",
+            "id": "tbl",
+            "value": {"columns": ["y"], "rows": [["2"]]},
+        },
+    ]
 
 
 # ── Visualizer.update_control routes value= ─────────────────

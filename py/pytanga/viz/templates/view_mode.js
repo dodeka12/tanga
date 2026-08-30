@@ -15,7 +15,7 @@ export function createCamera(spaceDim, aspect) {
     // Always start with 3D perspective — switchToCamera() is called
     // from applySceneConfig() once sceneConfig arrives.
     const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    camera.position.set(8, 6, 10);
+    camera.position.set(6, 4.5, 7.5);
     camera.lookAt(0, 0, 0);
     return camera;
 }
@@ -301,69 +301,7 @@ export function configureControls(controls, renderer, spaceDim) {
     };
 }
 
-/**
- * Auto‑fit the camera to encompass all entity meshes.
- *
- * @param {Map<string,{obj:THREE.Object3D|null,layer:string}>} sceneObjects
- * @param {THREE.Camera} camera
- * @param {THREE.OrbitControls} controls
- * @param {number} spaceDim  2 or 3
- */
-export function fitCamera(sceneObjects, camera, controls, spaceDim) {
-    const box = new THREE.Box3();
-    sceneObjects.forEach(entry => {
-        if (entry.layer === 'scene' && entry.obj) box.expandByObject(entry.obj);
-    });
-    if (box.isEmpty()) return;
-
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-
-    if (spaceDim === 2) {
-        const frustumSize = Math.max(size.x, size.y, 1) * 1.2;
-        const aspect = _finiteAspect(window.innerWidth, window.innerHeight);
-        const safeAspect = Number.isFinite(aspect) ? aspect : 1.0;
-        camera.left = frustumSize * safeAspect / -2;
-        camera.right = frustumSize * safeAspect / 2;
-        camera.top = frustumSize / 2;
-        camera.bottom = frustumSize / -2;
-        camera.position.set(center.x, center.y, 20);
-        camera.lookAt(center.x, center.y, 0);
-        camera.updateProjectionMatrix();
-        controls.target.set(center.x, center.y, 0);
-        controls.update();
-        // Persist the fitted rectangle so resize recomputes from the original
-        // fit (letterbox) rather than the current, possibly-corrupt frustum.
-        camera.userData._view2d = {
-            xmin: center.x - frustumSize * safeAspect / 2,
-            xmax: center.x + frustumSize * safeAspect / 2,
-            ymin: center.y - frustumSize / 2,
-            ymax: center.y + frustumSize / 2,
-            uniform: true,
-            border_px: 0,
-        };
-        return;
-    }
-
-    // 3D
-    const maxDim = Math.max(size.x, size.y, size.z, 1);
-    const distance = maxDim * 1.5 + 2;
-    // Keep the orbit target at the world origin so rotation always
-    // orbits around (0,0,0) regardless of entity placement.
-    controls.target.set(0, 0, 0);
-    camera.position.set(
-        center.x + distance * 0.6,
-        center.y + distance * 0.5,
-        center.z + distance * 0.7
-    );
-    camera.lookAt(controls.target);
-    camera.near = Math.max(0.01, distance * 0.001);
-    camera.far = distance * 10;
-    camera.updateProjectionMatrix();
-    controls.update();
-}
+export { fitCamera } from './fit_camera.js';
 
 /**
  * Handle a viewport resize.  Recomputes 2D orthographic frusta from the new

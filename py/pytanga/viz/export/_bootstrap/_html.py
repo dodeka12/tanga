@@ -33,7 +33,14 @@ _CDN_KATEX_AUTORENDER_JS = (
     "</script>\n"
 )
 
-_CDN_SCRIPTS = _CDN_MARKED_JS + _CDN_KATEX_JS + _CDN_KATEX_AUTORENDER_JS
+_CDN_HTML2CANVAS_JS = (
+    '<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">'
+    "</script>\n"
+)
+
+_CDN_SCRIPTS = (
+    _CDN_MARKED_JS + _CDN_KATEX_JS + _CDN_KATEX_AUTORENDER_JS + _CDN_HTML2CANVAS_JS
+)
 
 _THREEJS_IMPORT_MAP = (
     '<script type="importmap">\n'
@@ -106,6 +113,7 @@ _TEMPLATES_DIR = _RENDERERS_DIR.parent
 # live viewer and the export bootstrap.
 _SHARED_JS_FILES: list[Path] = [
     _TEMPLATES_DIR / "scene-builder.js",
+    _TEMPLATES_DIR / "fit_camera.js",
     # SDF tree emitters used by the per-object SDF proxy renderer (`sdf.js`).
     _TEMPLATES_DIR / "sdf" / "objects" / "transform.js",
     _TEMPLATES_DIR / "sdf" / "objects" / "primitives.js",

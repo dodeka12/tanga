@@ -296,6 +296,9 @@
             "File Chooser": "py/examples/viz/interaction/file_chooser.md"
           },
           {
+            "Table Data": "py/examples/viz/interaction/table_data.md"
+          },
+          {
             "Two Spheres Interact": "py/examples/viz/interaction/two_spheres_interact.md"
           }
         ]
@@ -357,6 +360,9 @@
           },
           {
             "Split View": "py/examples/viz/scenes/split_view.md"
+          },
+          {
+            "Table Split": "py/examples/viz/scenes/table_split.md"
           }
         ]
       },

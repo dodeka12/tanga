@@ -479,6 +479,37 @@ class VizSceneHandle(_JupyterDisplayMixin):
             parent_id=parent_id,
         )
 
+    def add_table(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        columns: list[str] | None = None,
+        rows: list[list[str]] | None = None,
+        allow_add_rows: bool = True,
+        allow_add_columns: bool = True,
+        tooltip: str = "",
+        on_cell_change: Any = None,
+        on_row_add: Any = None,
+        on_column_add: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add an editable table (tabular data) control to this scene."""
+        return self._viz._add_scene_table(
+            self._name,
+            cid,
+            label=label,
+            columns=columns,
+            rows=rows,
+            allow_add_rows=allow_add_rows,
+            allow_add_columns=allow_add_columns,
+            tooltip=tooltip,
+            on_cell_change=on_cell_change,
+            on_row_add=on_row_add,
+            on_column_add=on_column_add,
+            parent_id=parent_id,
+        )
+
     def add_color_picker(
         self,
         cid: str,

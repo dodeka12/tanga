@@ -105,6 +105,9 @@
                 } else if (/html2canvas/.test(src) && !OPTIONAL_SEEN.html2canvas) {
                     OPTIONAL_SEEN.html2canvas = true;
                     OPTIONAL_MISSING.push('html2canvas (screenshot overlays)');
+                } else if (/tabulator/.test(src) && !OPTIONAL_SEEN.tabulator) {
+                    OPTIONAL_SEEN.tabulator = true;
+                    OPTIONAL_MISSING.push('Tabulator (editable tables)');
                 } else if (/three/.test(src)) {
                     ESSENTIAL_FAILED = true;
                 }
@@ -404,6 +407,8 @@
             document.write('<script src="' + url('katex@0.16.11', 'dist/katex.min.js') + '"><' + '/script>');
             document.write('<script src="' + url('katex@0.16.11', 'dist/contrib/auto-render.min.js') + '"><' + '/script>');
             document.write('<script src="' + url('html2canvas@1.4.1', 'dist/html2canvas.min.js') + '"><' + '/script>');
+            document.write('<link rel="stylesheet" href="' + url('tabulator-tables@6.5.2', 'dist/css/tabulator_midnight.min.css') + '">');
+            document.write('<script src="' + url('tabulator-tables@6.5.2', 'dist/js/tabulator.min.js') + '"><' + '/script>');
         })();
     </script>
 

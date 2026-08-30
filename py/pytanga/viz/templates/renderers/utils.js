@@ -648,7 +648,15 @@ export async function createTextureLabel(text, style) {
 
     try {
         if (hasMathDelimiters(text)) {
-            await renderToCanvas(ctx, text, contentW, contentH, scaledFontSize, color);
+            if (typeof html2canvas === 'undefined') {
+                // Math delimiters are present but html2canvas (which rasterizes
+                // the KaTeX DOM into the canvas) is unavailable.  Fall back to
+                // drawing the raw source text so the label is not silently
+                // dropped — plain text renders without html2canvas.
+                drawPlainText(ctx, text, contentW, contentH, scaledFontSize, color);
+            } else {
+                await renderToCanvas(ctx, text, contentW, contentH, scaledFontSize, color);
+            }
         } else {
             drawPlainText(ctx, text, contentW, contentH, scaledFontSize, color);
         }

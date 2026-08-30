@@ -8,8 +8,9 @@
 | [All Controls](all_controls.md) | controls, slider, dropdown, button, VisualizerApp | Showcase every interactive control in one app |
 | [Drag Point](drag_point.md) | interaction, drag, point, constraints, low-level | Demo: Drag a 3D point interactively with the mouse |
 | [File Chooser](file_chooser.md) | controls, file chooser, file browser, VisualizerApp | A file chooser with a backend-driven file browser |
+| [Table Data](table_data.md) | controls, table, tabular data, add_table, VisualizerApp | An editable tabular-data control driven by the backend |
 | [Two Spheres Interact](two_spheres_interact.md) | interaction, IPNS, spheres, slider, dropdown, VisualizerApp | Two Spheres Intersection — Interactive Controls Demo (IPNS) |
 
 ## Keywords
 
-2D · ActPoint · IPNS · VisualizerApp · button · constraints · controls · drag · dropdown · file browser · file chooser · interaction · low-level · point · slider · spheres · two points
+2D · ActPoint · IPNS · VisualizerApp · add_table · button · constraints · controls · drag · dropdown · file browser · file chooser · interaction · low-level · point · slider · spheres · table · tabular data · two points

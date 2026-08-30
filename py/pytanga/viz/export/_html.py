@@ -83,6 +83,9 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")
 
+    cam_cfg = scene_config.get("camera") or {}
+    cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
+
     parts = [
         "window.__tanga_ready = true;",
         "// ── Bootstrap adapter for Tanga self-contained HTML exports ──",
@@ -147,17 +150,14 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
         "(async () => {\n"
         "    await sceneBuildDone;\n"
         "    applyCameraConfig(adapterCamera, adapterControls, sceneConfig.camera, window.innerWidth, window.innerHeight);\n"
-        "    const adapterCamConfig = sceneConfig.camera;\n"
-        "    if (!adapterCamConfig || (!adapterCamConfig.position && !adapterCamConfig.target)) {\n"
         + js_autofit_camera(
-            mesh_map_var="meshMap",
+            registry_var="sceneRegistry",
             camera_var="adapterCamera",
             controls_var="adapterControls",
-            cam_explicit=False,
+            cam_explicit=cam_explicit,
             space_dim=space_dim,
         )
-        + "    }\n"
-        "})();"
+        + "})();"
     )
 
     parts.append("")

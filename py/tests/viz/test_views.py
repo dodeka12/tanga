@@ -17,12 +17,14 @@ from pytanga.viz.views import (
     SpacerView,
     SplitView,
     StackView,
+    TableView,
     TextAreaView,
     TextFieldView,
     ValueEditView,
     View,
     iter_scene_names,
     serialize_layout,
+    set_control_view_value,
 )
 
 
@@ -252,6 +254,30 @@ class TestControlViews:
     def test_control_tooltip_serialize(self):
         node = serialize_layout(SliderView("s1", tooltip="hover"))["root"]
         assert node["tooltip"] == "hover"
+
+    def test_table_view_serialize(self):
+        node = serialize_layout(
+            TableView(
+                "tbl",
+                label="Data",
+                columns=["x", "y"],
+                rows=[["1", "2"], ["3", "4"]],
+            )
+        )["root"]
+        assert node["type"] == "table_view"
+        assert node["id"] == "tbl"
+        assert node["label"] == "Data"
+        assert node["columns"] == ["x", "y"]
+        assert node["rows"] == [["1", "2"], ["3", "4"]]
+        assert node["allow_add_rows"] is True
+        assert node["allow_add_columns"] is True
+
+
+def test_table_view_set_control_view_value() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    set_control_view_value(view, {"columns": ["y", "z"], "rows": [[2], [3]]})
+    assert view.columns == ["y", "z"]
+    assert view.rows == [["2"], ["3"]]
 
 
 class TestStackView:

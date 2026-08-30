@@ -191,6 +191,45 @@ self.viz.add_value_edit(
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: float, event: ControlEvent) -> None` |
 
+## `add_table`
+
+An editable tabular-data grid (rendered with Tabulator). The backend defines
+the columns and initial rows; the user can edit any cell and, when enabled,
+append rows and columns. Each change is reported back to a distinct handler:
+
+```python
+self.viz.add_table(
+    "data",
+    label="Data",
+    columns=["x", "y", "z"],
+    rows=[["1", "2", "3"], ["4", "5", "6"]],
+    allow_add_rows=True,
+    allow_add_columns=True,
+    on_cell_change=self.on_cell_change,
+    on_row_add=self.on_row_add,
+    on_column_add=self.on_column_add,
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cid` | `str` | *(required)* | Control ID |
+| `label` | `str` | `""` | Label text |
+| `columns` | `list[str]` | `[]` | Column headers (length = column count) |
+| `rows` | `list[list[str]]` | `[]` | Row-major initial cell data (strings) |
+| `allow_add_rows` | `bool` | `True` | Show the "+ Row" button |
+| `allow_add_columns` | `bool` | `True` | Show the "+ Column" button |
+| `tooltip` | `str` | `""` | Hover tooltip |
+| `on_cell_change` | `Callable` | `None` | Async callback: `(change: TableCellChange, event) -> None` |
+| `on_row_add` | `Callable` | `None` | Async callback: `(add: TableRowAdd, event) -> None` |
+| `on_column_add` | `Callable` | `None` | Async callback: `(add: TableColumnAdd, event) -> None` |
+
+The handler payloads are `TableCellChange(row, col, value)`,
+`TableRowAdd(row, values)`, and `TableColumnAdd(col, header, values)` (all
+zero-based). Cell values are strings on the wire — coerce in the handler as
+needed. Refresh the grid from the backend with
+`self.viz.set_control_value("data", {"columns": [...], "rows": [...]})`.
+
 ## `add_control_group`
 
 Groups controls into a collapsible panel at a fixed position:
@@ -298,3 +337,5 @@ This allows different scenes to have completely independent control panels.
 
 - `py/examples/viz/interaction/all_controls.py` — one of every control kind in
   a single app.
+- `py/examples/viz/interaction/table_data.py` — an editable table control with
+  cell / row / column handlers.

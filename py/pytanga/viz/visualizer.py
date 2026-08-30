@@ -52,6 +52,7 @@ from .views import (
     ControlView,
     SceneView,
     View,
+    get_control_view_value,
     serialize_layout,
     set_control_view_value,
 )
@@ -300,17 +301,24 @@ class Visualizer(_JupyterDisplayMixin):
         """Register control-view handlers into the control handler registry."""
         from .views import iter_control_views
 
-        for cid in self._layout_control_ids:
-            self._handler_registry.unregister(cid)
+        for key in self._layout_control_ids:
+            self._handler_registry.unregister(key)
         self._layout_control_ids.clear()
 
         for view in iter_control_views(root):
-            handler = getattr(view, "on_change", None) or getattr(
-                view, "on_click", None
-            )
+            entries: list[tuple[str, Any]] = []
+            handler = getattr(view, "on_change", None) or getattr(view, "on_click", None)
             if handler is not None:
-                self._handler_registry.register(view.id, handler)
-                self._layout_control_ids.add(view.id)
+                entries.append((view.id, handler))
+            if getattr(view, "on_cell_change", None) is not None:
+                entries.append((view.id, view.on_cell_change))
+            if getattr(view, "on_row_add", None) is not None:
+                entries.append((f"__row_add__{view.id}", view.on_row_add))
+            if getattr(view, "on_column_add", None) is not None:
+                entries.append((f"__column_add__{view.id}", view.on_column_add))
+            for key, h in entries:
+                self._handler_registry.register(key, h)
+                self._layout_control_ids.add(key)
 
     def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
         """Callback: return the serialized layout for *layout_name*, or None."""
@@ -895,7 +903,7 @@ class Visualizer(_JupyterDisplayMixin):
         and the update is keyed by ``view.id``.
         """
         set_control_view_value(view, value)
-        self._push_control_update("", view.id, view.value)
+        self._push_control_update("", view.id, get_control_view_value(view))
 
     # ── Default scene objects ───────────────────────────────
 
@@ -2208,14 +2216,14 @@ class Visualizer(_JupyterDisplayMixin):
             value: The new value (coerced to the control kind's type).
             scene_name: Target scene (default ``""`` = main scene).
         """
-        from ._controls import set_control_value as _set_control_value
+        from ._controls import get_control_value, set_control_value as _set_control_value
 
         scene = self._scenes[scene_name]
         ctrl = scene._controls.get(cid)
         if ctrl is None:
             raise KeyError(f"Control {cid!r} not found")
         _set_control_value(ctrl, value)
-        self._push_control_update(scene_name, cid, ctrl.value)
+        self._push_control_update(scene_name, cid, get_control_value(ctrl))
 
     def add_dropdown(
         self,
@@ -2484,6 +2492,78 @@ class Visualizer(_JupyterDisplayMixin):
         self._scenes[scene_name].add_control(ctrl)
         if on_change is not None:
             self._handler_registry.register(cid, on_change)
+        self._push_controls(scene_name)
+        return cid
+
+    def add_table(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        columns: list[str] | None = None,
+        rows: list[list[str]] | None = None,
+        allow_add_rows: bool = True,
+        allow_add_columns: bool = True,
+        tooltip: str = "",
+        on_cell_change: Any = None,
+        on_row_add: Any = None,
+        on_column_add: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add an editable table (tabular data) control."""
+        return self._add_scene_table(
+            "",
+            cid,
+            label=label,
+            columns=columns,
+            rows=rows,
+            allow_add_rows=allow_add_rows,
+            allow_add_columns=allow_add_columns,
+            tooltip=tooltip,
+            on_cell_change=on_cell_change,
+            on_row_add=on_row_add,
+            on_column_add=on_column_add,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_table(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        columns: list[str] | None = None,
+        rows: list[list[str]] | None = None,
+        allow_add_rows: bool = True,
+        allow_add_columns: bool = True,
+        tooltip: str = "",
+        on_cell_change: Any = None,
+        on_row_add: Any = None,
+        on_column_add: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import Table
+
+        ctrl = Table(
+            id=cid,
+            label=label,
+            columns=columns or [],
+            rows=rows or [],
+            allow_add_rows=allow_add_rows,
+            allow_add_columns=allow_add_columns,
+            tooltip=tooltip,
+            on_cell_change=on_cell_change,
+            on_row_add=on_row_add,
+            on_column_add=on_column_add,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_cell_change is not None:
+            self._handler_registry.register(cid, on_cell_change)
+        if on_row_add is not None:
+            self._handler_registry.register(f"__row_add__{cid}", on_row_add)
+        if on_column_add is not None:
+            self._handler_registry.register(f"__column_add__{cid}", on_column_add)
         self._push_controls(scene_name)
         return cid
 
@@ -3204,7 +3284,7 @@ class Visualizer(_JupyterDisplayMixin):
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
         """Handle an incoming control event from the frontend."""
-        from ._controls import ControlEvent
+        from ._controls import ControlEvent, TableCellChange, TableColumnAdd, TableRowAdd
 
         browser_id = payload.get("browser_id")
         event = ControlEvent(browser_id=browser_id)
@@ -3241,6 +3321,70 @@ class Visualizer(_JupyterDisplayMixin):
             return
         if msg_type == "file_browser_select":
             await self._handle_file_browser_select(payload, event)
+            return
+
+        if msg_type == "control:cell_change":
+            cid = payload.get("control_id")
+            handler = self._handler_registry.get(cid) if cid else None
+            if handler is not None:
+                try:
+                    await handler(
+                        TableCellChange(
+                            row=int(payload.get("row", 0)),
+                            col=int(payload.get("col", 0)),
+                            value=str(payload.get("value", "")),
+                        ),
+                        event,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table cell handler for %r", cid
+                    )
+            return
+
+        if msg_type == "control:row_add":
+            cid = payload.get("control_id")
+            handler = self._handler_registry.get(f"__row_add__{cid}") if cid else None
+            if handler is not None:
+                try:
+                    await handler(
+                        TableRowAdd(
+                            row=int(payload.get("row", 0)),
+                            values=[str(v) for v in (payload.get("values") or [])],
+                        ),
+                        event,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table row handler for %r", cid
+                    )
+            return
+
+        if msg_type == "control:column_add":
+            cid = payload.get("control_id")
+            handler = (
+                self._handler_registry.get(f"__column_add__{cid}") if cid else None
+            )
+            if handler is not None:
+                try:
+                    await handler(
+                        TableColumnAdd(
+                            col=int(payload.get("col", 0)),
+                            header=str(payload.get("header", "")),
+                            values=[str(v) for v in (payload.get("values") or [])],
+                        ),
+                        event,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table column handler for %r", cid
+                    )
             return
 
         cid = payload.get("control_id")

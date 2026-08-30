@@ -16,6 +16,7 @@ import { TextAreaView } from './text-area-view.js';
 import { ColorPickerView } from './color-picker-view.js';
 import { CheckboxView } from './checkbox-view.js';
 import { ValueEditView } from './value-edit-view.js';
+import { TableView } from './table-view.js';
 import { SpacerView } from './spacer-view.js';
 
 function applySizeSpecs(view, node) {
@@ -129,6 +130,12 @@ export function buildViewTree(node, ws) {
             id: node.id, label: node.label, tooltip: node.tooltip,
             min: node.min, max: node.max, step: node.step,
             digits: node.digits, value: node.value, editable: node.editable,
+        });
+    } else if (node.type === 'table_view') {
+        view = new TableView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            columns: node.columns, rows: node.rows,
+            allow_add_rows: node.allow_add_rows, allow_add_columns: node.allow_add_columns,
         });
     } else if (node.type === 'spacer') {
         view = new SpacerView();

@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.10.1] — 2026-08-30
+- Editable table control (`add_table` / `TableView`) with per-change async handlers · unified, tighter camera auto-fit shared by live viewer + HTML export
+- Bug fixes: standalone HTML export now renders KaTeX math labels
+→ [Details](2026-08-30_bd929aad.md)
+
 ## [Since 1.10.0] — 2026-08-29
 - Searchable example docs gallery: every `py/examples/` example gets a keyworded docs page (with full source) under a new top-level "Examples" nav section · `dev/workflows/example-docs.md` + cline rule
 → [Details](2026-08-29_f2359f9e.md)

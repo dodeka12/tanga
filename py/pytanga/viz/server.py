@@ -106,6 +106,21 @@ def _ws_msg_brief(payload: Any) -> str:
             f"control_update id={obj.get('id', '')!r} "
             f"scene={obj.get('scene', '')!r} ({size}B)"
         )
+    if t == "control:cell_change":
+        return (
+            f"control:cell_change id={obj.get('control_id', '')!r} "
+            f"row={obj.get('row', '?')} col={obj.get('col', '?')} ({size}B)"
+        )
+    if t == "control:row_add":
+        return (
+            f"control:row_add id={obj.get('control_id', '')!r} "
+            f"row={obj.get('row', '?')} ({size}B)"
+        )
+    if t == "control:column_add":
+        return (
+            f"control:column_add id={obj.get('control_id', '')!r} "
+            f"col={obj.get('col', '?')} ({size}B)"
+        )
     return f"type={t} ({size}B)"
 
 
@@ -796,6 +811,9 @@ class VizServer:
                         elif msg_type in (
                             "control:change",
                             "control:click",
+                            "control:cell_change",
+                            "control:row_add",
+                            "control:column_add",
                             "control:group_toggle",
                             "control:press",
                             "control:release",

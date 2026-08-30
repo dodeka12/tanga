@@ -84,6 +84,23 @@ class TestExportStatic:
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html
 
+    def test_snapshot_export_includes_html2canvas(self):
+        """Math texture labels require html2canvas, loaded like the live viewer."""
+        s = _group_scene()
+        html = render_snapshot(s.full_state(), s.config.to_dict())
+        assert "html2canvas@1.4.1" in html
+
+    def test_figure_export_includes_html2canvas(self):
+        """Math texture labels require html2canvas, loaded like the live viewer."""
+        s = _group_scene()
+        html = render_figure(
+            s.full_state(),
+            s.config.to_dict(),
+            {"width": 400, "height": 300},
+            {"title": "T"},
+        )
+        assert "html2canvas@1.4.1" in html
+
     def test_parent_before_child(self):
         s = _group_scene()
         nodes = s._dfs_preorder()

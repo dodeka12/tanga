@@ -590,6 +590,44 @@ class ValueEditView(ControlView):
         return result
 
 
+class TableView(ControlView):
+    """An editable tabular-data control rendered as a view."""
+
+    _node_type = "table_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        columns: list[str] | tuple[str, ...] = (),
+        rows: list[list[str]] | tuple[tuple[str, ...], ...] = (),
+        allow_add_rows: bool = True,
+        allow_add_columns: bool = True,
+        tooltip: str = "",
+        on_cell_change: Handler | None = None,
+        on_row_add: Handler | None = None,
+        on_column_add: Handler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
+        self.columns = list(columns)
+        self.rows = [list(row) for row in rows]
+        self.allow_add_rows = allow_add_rows
+        self.allow_add_columns = allow_add_columns
+        self.on_cell_change = on_cell_change
+        self.on_row_add = on_row_add
+        self.on_column_add = on_column_add
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["columns"] = self.columns
+        result["rows"] = self.rows
+        result["allow_add_rows"] = self.allow_add_rows
+        result["allow_add_columns"] = self.allow_add_columns
+        return result
+
+
 def serialize_layout(root: View, name: str = "") -> dict[str, Any]:
     """Serialize a view tree to the ``view_layout`` message."""
     return {
@@ -643,6 +681,9 @@ def set_control_view_value(view: ControlView, value: Any) -> None:
         raise TypeError(f"view must be a ControlView, got {type(view).__name__}")
     if isinstance(view, (SliderView, ValueEditView)):
         view.value = float(value)
+    elif isinstance(view, TableView):
+        view.columns = [str(c) for c in value["columns"]]
+        view.rows = [[str(cell) for cell in row] for row in value["rows"]]
     elif isinstance(view, CheckboxView):
         view.value = bool(value)
     elif isinstance(
@@ -654,6 +695,35 @@ def set_control_view_value(view: ControlView, value: Any) -> None:
         raise TypeError("ButtonView does not carry a value")
     else:
         raise TypeError(f"Unknown control view kind: {type(view).__name__}")
+
+
+def get_control_view_value(view: ControlView) -> Any:
+    """Return the current value of a value-bearing control view.
+
+    Mirrors :func:`pytanga.viz._controls.get_control_value`.  ``ButtonView``
+    has no value and raises :class:`TypeError`.
+    """
+    if not isinstance(view, ControlView):
+        raise TypeError(f"view must be a ControlView, got {type(view).__name__}")
+    if isinstance(view, TableView):
+        return {"columns": list(view.columns), "rows": [list(r) for r in view.rows]}
+    if isinstance(view, ButtonView):
+        raise TypeError("ButtonView does not carry a value")
+    if isinstance(
+        view,
+        (
+            SliderView,
+            DropdownView,
+            ColorPickerView,
+            CheckboxView,
+            TextFieldView,
+            TextAreaView,
+            FileChooserView,
+            ValueEditView,
+        ),
+    ):
+        return view.value
+    raise TypeError(f"Unknown control view kind: {type(view).__name__}")
 
 
 __all__ = [
@@ -668,8 +738,10 @@ __all__ = [
     "SpacerView",
     "SplitView",
     "StackView",
+    "TableView",
     "ValueEditView",
     "View",
+    "get_control_view_value",
     "iter_control_views",
     "iter_scene_names",
     "serialize_layout",

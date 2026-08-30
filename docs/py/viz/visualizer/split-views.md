@@ -19,7 +19,7 @@ the leaves render content:
 | `StackView` | A flex container that stacks children vertically, horizontally, or wraps. |
 | `SceneView` | A pane that renders a named scene (`scene` name or handle), optionally with overlay views. |
 | `GroupView` | A titled `StackView` (panel chrome) for grouping control views; usable as a pane or a scene overlay. |
-| `SliderView` / `ButtonView` / `DropdownView` | A single HTML control rendered as a `View`. |
+| `SliderView` / `ButtonView` / `DropdownView` / `TableView` | A single HTML control rendered as a `View`. |
 | `SpacerView` | An empty, fully-flexible filler pane. |
 
 Containers are themselves `View`s, so layouts nest freely.
