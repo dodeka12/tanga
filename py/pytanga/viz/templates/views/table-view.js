@@ -29,6 +29,7 @@ export class TableView extends ControlView {
             rows: this.rows,
             allow_add_rows: this.allow_add_rows,
             allow_add_columns: this.allow_add_columns,
+            height: '100%',
         });
     }
 }

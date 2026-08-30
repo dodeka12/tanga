@@ -386,7 +386,7 @@ uv run python py/examples/<path>.py
 
 - **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
-- **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
+- **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -418,7 +418,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
+- **split view** — [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **standard viewer** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
 
@@ -428,11 +428,13 @@ uv run python py/examples/<path>.py
 
 - **sweep** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
-- **table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md)
+- **table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
+
+- **TableView** — [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **tabs** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
-- **tabular data** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md)
+- **tabular data** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 

@@ -879,6 +879,7 @@ export function createTable(ctrl) {
 
     const columns = ctrl.columns || [];
     const rows = ctrl.rows || [];
+    const height = ctrl.height || '220px';
     const fieldOf = (i) => 'c' + i;
     const colOf = (field) => {
         const idx = parseInt(String(field).slice(1), 10);
@@ -909,7 +910,7 @@ export function createTable(ctrl) {
         container.appendChild(notice);
     } else {
         table = new Tabulator(container, {
-            height: '220px',
+            height,
             layout: 'fitColumns',
             data: buildData(columns, rows),
             columns: buildDefs(columns),
@@ -922,6 +923,10 @@ export function createTable(ctrl) {
                 value: String(cell.getValue()),
             });
         });
+
+        // Tabulator's virtual DOM needs a concrete height; re-layout when the
+        // surrounding pane is resized (split drag / window resize / first size).
+        new ResizeObserver(() => { table.redraw(true); }).observe(container);
     }
 
     const buttonRow = document.createElement('div');
@@ -1338,6 +1343,17 @@ function _injectStyles() {
             color: #c88;
             font-size: 12px;
             padding: 8px;
+        }
+        .tanga-control-view .tanga-table {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        .tanga-control-view .tanga-table .tanga-table-container {
+            flex: 1;
+            min-height: 0;
         }
     `;
     document.head.appendChild(style);

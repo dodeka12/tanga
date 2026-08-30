@@ -78,3 +78,33 @@ async def test_dispatch_unknown_id_is_noop() -> None:
         "control:column_add",
         {"control_id": "nope", "col": 0, "header": "", "values": []},
     )
+
+
+def test_set_layout_registers_table_handlers() -> None:
+    from pytanga.viz.views import TableView
+
+    viz = _viz()
+
+    async def _on_cell(change, event):
+        pass
+
+    async def _on_row(add, event):
+        pass
+
+    async def _on_col(add, event):
+        pass
+
+    viz.set_layout(
+        TableView(
+            "tbl",
+            columns=["x"],
+            rows=[["1"]],
+            on_cell_change=_on_cell,
+            on_row_add=_on_row,
+            on_column_add=_on_col,
+        )
+    )
+
+    assert viz._handler_registry.get("tbl") is _on_cell
+    assert viz._handler_registry.get("__row_add__tbl") is _on_row
+    assert viz._handler_registry.get("__column_add__tbl") is _on_col

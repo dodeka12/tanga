@@ -301,17 +301,24 @@ class Visualizer(_JupyterDisplayMixin):
         """Register control-view handlers into the control handler registry."""
         from .views import iter_control_views
 
-        for cid in self._layout_control_ids:
-            self._handler_registry.unregister(cid)
+        for key in self._layout_control_ids:
+            self._handler_registry.unregister(key)
         self._layout_control_ids.clear()
 
         for view in iter_control_views(root):
-            handler = getattr(view, "on_change", None) or getattr(
-                view, "on_click", None
-            )
+            entries: list[tuple[str, Any]] = []
+            handler = getattr(view, "on_change", None) or getattr(view, "on_click", None)
             if handler is not None:
-                self._handler_registry.register(view.id, handler)
-                self._layout_control_ids.add(view.id)
+                entries.append((view.id, handler))
+            if getattr(view, "on_cell_change", None) is not None:
+                entries.append((view.id, view.on_cell_change))
+            if getattr(view, "on_row_add", None) is not None:
+                entries.append((f"__row_add__{view.id}", view.on_row_add))
+            if getattr(view, "on_column_add", None) is not None:
+                entries.append((f"__column_add__{view.id}", view.on_column_add))
+            for key, h in entries:
+                self._handler_registry.register(key, h)
+                self._layout_control_ids.add(key)
 
     def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
         """Callback: return the serialized layout for *layout_name*, or None."""
