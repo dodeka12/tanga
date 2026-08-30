@@ -13,13 +13,13 @@ registered handler, building the event dataclasses, with focused tests.
 
 ## Steps
 
-- [ ] **4.1 — Inbound routing (`server.py`)**
+- [x] **4.1 — Inbound routing (`server.py`)**
   - Add `"control:cell_change"`, `"control:row_add"`,
     `"control:column_add"` to the control-message tuple in `_ws_handler`
     (next to `control:change` / `control:click`).
   - Add a `_ws_msg_brief` case for the three types (concise `row/col` summary).
 
-- [ ] **4.2 — Event dispatch (`visualizer.py::_dispatch_control_event`)**
+- [x] **4.2 — Event dispatch (`visualizer.py::_dispatch_control_event`)**
   - Add three branches before the generic `handler(...)` call:
     - `control:cell_change` → `TableCellChange(row, col, value)` to
       `self._handler_registry.get(cid)`.
@@ -30,7 +30,7 @@ registered handler, building the event dataclasses, with focused tests.
   - Coerce `row`/`col` to `int`, `value`/`header` to `str`, and `values` to a
     `list[str]` defensively.
 
-- [ ] **4.3 — Tests (`test_table.py`)**
+- [x] **4.3 — Tests (`test_table.py`)**
   - `@pytest.mark.anyio` dispatch tests using `viz._dispatch_control_event` for
     each message type, asserting the handler received the correct dataclass
     instance (fields populated) and that unknown ids are no-ops.

@@ -3276,7 +3276,7 @@ class Visualizer(_JupyterDisplayMixin):
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
         """Handle an incoming control event from the frontend."""
-        from ._controls import ControlEvent
+        from ._controls import ControlEvent, TableCellChange, TableColumnAdd, TableRowAdd
 
         browser_id = payload.get("browser_id")
         event = ControlEvent(browser_id=browser_id)
@@ -3313,6 +3313,70 @@ class Visualizer(_JupyterDisplayMixin):
             return
         if msg_type == "file_browser_select":
             await self._handle_file_browser_select(payload, event)
+            return
+
+        if msg_type == "control:cell_change":
+            cid = payload.get("control_id")
+            handler = self._handler_registry.get(cid) if cid else None
+            if handler is not None:
+                try:
+                    await handler(
+                        TableCellChange(
+                            row=int(payload.get("row", 0)),
+                            col=int(payload.get("col", 0)),
+                            value=str(payload.get("value", "")),
+                        ),
+                        event,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table cell handler for %r", cid
+                    )
+            return
+
+        if msg_type == "control:row_add":
+            cid = payload.get("control_id")
+            handler = self._handler_registry.get(f"__row_add__{cid}") if cid else None
+            if handler is not None:
+                try:
+                    await handler(
+                        TableRowAdd(
+                            row=int(payload.get("row", 0)),
+                            values=[str(v) for v in (payload.get("values") or [])],
+                        ),
+                        event,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table row handler for %r", cid
+                    )
+            return
+
+        if msg_type == "control:column_add":
+            cid = payload.get("control_id")
+            handler = (
+                self._handler_registry.get(f"__column_add__{cid}") if cid else None
+            )
+            if handler is not None:
+                try:
+                    await handler(
+                        TableColumnAdd(
+                            col=int(payload.get("col", 0)),
+                            header=str(payload.get("header", "")),
+                            values=[str(v) for v in (payload.get("values") or [])],
+                        ),
+                        event,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table column handler for %r", cid
+                    )
             return
 
         cid = payload.get("control_id")
