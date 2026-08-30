@@ -1,5 +1,14 @@
 # Changes since version 1.10.0
 
+## New Features
+- **Editable table control (`add_table` / `TableView`)** — a Tabulator-backed
+  tabular-data control whose columns and initial rows are defined by the
+  backend. Users can edit cells and optionally append rows and columns; each
+  change is reported back via `control:cell_change` / `control:row_add` /
+  `control:column_add` to distinct async handlers (`on_cell_change` /
+  `on_row_add` / `on_column_add`), and the grid can be refreshed in place with
+  `set_control_value`.
+
 ## Bug Fixes
 - **HTML export drops KaTeX math texture labels** — standalone HTML snapshots
   and figures did not load `html2canvas`, so `$...$` / `$$...$$` texture labels
