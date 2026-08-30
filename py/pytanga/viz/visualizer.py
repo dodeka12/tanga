@@ -52,6 +52,7 @@ from .views import (
     ControlView,
     SceneView,
     View,
+    get_control_view_value,
     serialize_layout,
     set_control_view_value,
 )
@@ -895,7 +896,7 @@ class Visualizer(_JupyterDisplayMixin):
         and the update is keyed by ``view.id``.
         """
         set_control_view_value(view, value)
-        self._push_control_update("", view.id, view.value)
+        self._push_control_update("", view.id, get_control_view_value(view))
 
     # ── Default scene objects ───────────────────────────────
 
@@ -2208,14 +2209,14 @@ class Visualizer(_JupyterDisplayMixin):
             value: The new value (coerced to the control kind's type).
             scene_name: Target scene (default ``""`` = main scene).
         """
-        from ._controls import set_control_value as _set_control_value
+        from ._controls import get_control_value, set_control_value as _set_control_value
 
         scene = self._scenes[scene_name]
         ctrl = scene._controls.get(cid)
         if ctrl is None:
             raise KeyError(f"Control {cid!r} not found")
         _set_control_value(ctrl, value)
-        self._push_control_update(scene_name, cid, ctrl.value)
+        self._push_control_update(scene_name, cid, get_control_value(ctrl))
 
     def add_dropdown(
         self,

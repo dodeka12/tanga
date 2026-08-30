@@ -697,6 +697,35 @@ def set_control_view_value(view: ControlView, value: Any) -> None:
         raise TypeError(f"Unknown control view kind: {type(view).__name__}")
 
 
+def get_control_view_value(view: ControlView) -> Any:
+    """Return the current value of a value-bearing control view.
+
+    Mirrors :func:`pytanga.viz._controls.get_control_value`.  ``ButtonView``
+    has no value and raises :class:`TypeError`.
+    """
+    if not isinstance(view, ControlView):
+        raise TypeError(f"view must be a ControlView, got {type(view).__name__}")
+    if isinstance(view, TableView):
+        return {"columns": list(view.columns), "rows": [list(r) for r in view.rows]}
+    if isinstance(view, ButtonView):
+        raise TypeError("ButtonView does not carry a value")
+    if isinstance(
+        view,
+        (
+            SliderView,
+            DropdownView,
+            ColorPickerView,
+            CheckboxView,
+            TextFieldView,
+            TextAreaView,
+            FileChooserView,
+            ValueEditView,
+        ),
+    ):
+        return view.value
+    raise TypeError(f"Unknown control view kind: {type(view).__name__}")
+
+
 __all__ = [
     "ButtonView",
     "ControlView",
@@ -712,6 +741,7 @@ __all__ = [
     "TableView",
     "ValueEditView",
     "View",
+    "get_control_view_value",
     "iter_control_views",
     "iter_scene_names",
     "serialize_layout",
