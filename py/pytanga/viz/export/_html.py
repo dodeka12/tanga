@@ -18,7 +18,6 @@ from pytanga.viz.export._bootstrap import (
     generate_bootstrap_js,
     js_annotation_panel,
     js_apply_camera,
-    js_autofit_camera,
     js_imports,
     js_render_loop,
     js_resize_handler,
@@ -147,16 +146,6 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
         "(async () => {\n"
         "    await sceneBuildDone;\n"
         "    applyCameraConfig(adapterCamera, adapterControls, sceneConfig.camera, window.innerWidth, window.innerHeight);\n"
-        "    const adapterCamConfig = sceneConfig.camera;\n"
-        "    if (!adapterCamConfig || (!adapterCamConfig.position && !adapterCamConfig.target)) {\n"
-        + js_autofit_camera(
-            mesh_map_var="meshMap",
-            camera_var="adapterCamera",
-            controls_var="adapterControls",
-            cam_explicit=False,
-            space_dim=space_dim,
-        )
-        + "    }\n"
         "})();"
     )
 

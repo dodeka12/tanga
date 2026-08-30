@@ -15,7 +15,7 @@ export function createCamera(spaceDim, aspect) {
     // Always start with 3D perspective — switchToCamera() is called
     // from applySceneConfig() once sceneConfig arrives.
     const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-    camera.position.set(8, 6, 10);
+    camera.position.set(6, 4.5, 7.5);
     camera.lookAt(0, 0, 0);
     return camera;
 }

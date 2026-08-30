@@ -33,7 +33,14 @@ _CDN_KATEX_AUTORENDER_JS = (
     "</script>\n"
 )
 
-_CDN_SCRIPTS = _CDN_MARKED_JS + _CDN_KATEX_JS + _CDN_KATEX_AUTORENDER_JS
+_CDN_HTML2CANVAS_JS = (
+    '<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">'
+    "</script>\n"
+)
+
+_CDN_SCRIPTS = (
+    _CDN_MARKED_JS + _CDN_KATEX_JS + _CDN_KATEX_AUTORENDER_JS + _CDN_HTML2CANVAS_JS
+)
 
 _THREEJS_IMPORT_MAP = (
     '<script type="importmap">\n'

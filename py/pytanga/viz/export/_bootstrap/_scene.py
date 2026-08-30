@@ -111,7 +111,7 @@ const {camera_var} = new THREE.OrthographicCamera(
         camera_js = f"""const {camera_var} = new THREE.PerspectiveCamera(
     50, {width_expr} / {height_expr}, 0.1, 1000
 );
-{camera_var}.position.set(8, 6, 10);"""
+{camera_var}.position.set(6, 4.5, 7.5);"""
 
     # ── Controls extras for 2D ─────────────────────────────
     controls_2d_extras = ""
