@@ -13,30 +13,30 @@ The backend data model for the table control: three event dataclasses, the
 
 ## Steps
 
-- [ ] **1.1 — Event dataclasses (`_controls.py`)**
+- [x] **1.1 — Event dataclasses (`_controls.py`)**
   - Add `TableCellChange(row: int, col: int, value: str)`,
     `TableRowAdd(row: int, values: list[str])`, and
     `TableColumnAdd(col: int, header: str, values: list[str])` after
     `ControlEvent`, with docstrings noting zero-based indices.
 
-- [ ] **1.2 — `Table` control dataclass**
+- [x] **1.2 — `Table` control dataclass**
   - `class Table(Control)` with `kind: str = "table"`, `columns: list[str]`,
     `rows: list[list[str]]`, `allow_add_rows: bool = True`,
     `allow_add_columns: bool = True`, `on_cell_change: Handler | None = None`,
     `on_row_add: Handler | None = None`, `on_column_add: Handler | None = None`.
   - Use `field(default_factory=list)` for `columns` and `rows`.
 
-- [ ] **1.3 — Serialization branch (`_serialize_one_control`)**
+- [x] **1.3 — Serialization branch (`_serialize_one_control`)**
   - Add an `elif isinstance(ctrl, Table)` branch emitting `columns`, `rows`,
     `allow_add_rows`, `allow_add_columns`.
 
-- [ ] **1.4 — Value helpers (`get_control_value` / `set_control_value`)**
+- [x] **1.4 — Value helpers (`get_control_value` / `set_control_value`)**
   - Add `Table` to the value-bearing tuple in `get_control_value`.
   - Add a `Table` branch in `set_control_value`: accept a
     `{"columns": [...], "rows": [...]}` dict (or a `Table`) and copy its
     `columns`/`rows` (string-coercing cells).
 
-- [ ] **1.5 — Unit tests (`test_controls.py`)**
+- [x] **1.5 — Unit tests (`test_controls.py`)**
   - Serialization: a `Table` with columns/rows/flags round-trips to the exact
     dict shape (flags present, `tooltip` omitted when empty).
   - `get_control_value` returns the grid dict; `set_control_value` replaces

@@ -31,6 +31,43 @@ class ControlEvent:
     browser_id: str | None = None
 
 
+@dataclass
+class TableCellChange:
+    """A single edited cell in a :class:`Table` control.
+
+    ``row`` and ``col`` are zero-based indices; ``value`` is the new cell text.
+    """
+
+    row: int
+    col: int
+    value: str
+
+
+@dataclass
+class TableRowAdd:
+    """A row added to a :class:`Table` control.
+
+    ``row`` is the zero-based index of the inserted row; ``values`` holds its
+    cell contents (column-major order, matching the table's columns).
+    """
+
+    row: int
+    values: list[str]
+
+
+@dataclass
+class TableColumnAdd:
+    """A column added to a :class:`Table` control.
+
+    ``col`` is the zero-based index of the inserted column, ``header`` its
+    title, and ``values`` the per-row cell contents for the new column.
+    """
+
+    col: int
+    header: str
+    values: list[str]
+
+
 # ── Handler type alias ──────────────────────────────────────
 
 Handler = Callable[[Any, ControlEvent], Awaitable[None]]
@@ -164,6 +201,25 @@ class ValueEdit(Control):
     value: float = 0.0
     editable: bool = True
     on_change: Handler | None = None
+
+
+@dataclass
+class Table(Control):
+    """An editable tabular-data control rendered as a Tabulator grid.
+
+    ``columns`` lists the column headers (its length is the column count) and
+    ``rows`` is the row-major grid of cell strings.  ``allow_add_rows`` /
+    ``allow_add_columns`` gate the frontend's "+ Row" / "+ Column" buttons.
+    """
+
+    kind: str = "table"
+    columns: list[str] = field(default_factory=list)
+    rows: list[list[str]] = field(default_factory=list)
+    allow_add_rows: bool = True
+    allow_add_columns: bool = True
+    on_cell_change: Handler | None = None
+    on_row_add: Handler | None = None
+    on_column_add: Handler | None = None
 
 
 # ── Control group ────────────────────────────────────────────
@@ -324,6 +380,15 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
                 "editable": ctrl.editable,
             }
         )
+    elif isinstance(ctrl, Table):
+        base.update(
+            {
+                "columns": list(ctrl.columns),
+                "rows": [list(row) for row in ctrl.rows],
+                "allow_add_rows": ctrl.allow_add_rows,
+                "allow_add_columns": ctrl.allow_add_columns,
+            }
+        )
     else:
         raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
 
@@ -411,6 +476,8 @@ def get_control_value(ctrl: Control) -> Any:
     """
     if isinstance(ctrl, Button):
         raise TypeError("Button controls do not carry a value")
+    if isinstance(ctrl, Table):
+        return {"columns": list(ctrl.columns), "rows": [list(r) for r in ctrl.rows]}
     if isinstance(
         ctrl,
         (
@@ -437,6 +504,9 @@ def set_control_value(ctrl: Control, value: Any) -> None:
     """
     if isinstance(ctrl, (Slider, ValueEdit)):
         ctrl.value = float(value)
+    elif isinstance(ctrl, Table):
+        ctrl.columns = [str(c) for c in value["columns"]]
+        ctrl.rows = [[str(cell) for cell in row] for row in value["rows"]]
     elif isinstance(ctrl, Checkbox):
         ctrl.value = bool(value)
     elif isinstance(ctrl, (Dropdown, ColorPicker, TextField, TextArea, FileChooser)):

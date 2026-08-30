@@ -1,6 +1,6 @@
 # Viz Table Control — Overview
 
-**Created:** 2026-08-30 | **Status:** Planned | **Branch:** `feat/table-control`
+**Created:** 2026-08-30 | **Status:** In progress | **Branch:** `feat/table-control`
 
 ## Goal
 

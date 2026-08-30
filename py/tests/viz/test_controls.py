@@ -13,11 +13,14 @@ from pytanga.viz._controls import (
     ControlHandlerRegistry,
     Dropdown,
     Slider,
+    Table,
     TextArea,
     TextField,
     ValueEdit,
     _serialize_one_control,
+    get_control_value,
     serialize_controls,
+    set_control_value,
 )
 
 # ── Test: Slider serialization ──────────────────────────────
@@ -310,3 +313,44 @@ def test_serialize_group_with_icon_and_tooltip() -> None:
     entry = result["groups"][0]
     assert entry["icon"] == "material:settings"
     assert entry["tooltip"] == "group tooltip"
+
+
+# ── Test: Table control ──────────────────────────────────────
+
+
+def test_serialize_table() -> None:
+    ctrl = Table(
+        id="tbl",
+        label="Data",
+        columns=["x", "y", "z"],
+        rows=[["1", "2", "3"], ["4", "5", "6"]],
+    )
+    result = _serialize_one_control(ctrl)
+    assert result == {
+        "id": "tbl",
+        "kind": "table",
+        "label": "Data",
+        "columns": ["x", "y", "z"],
+        "rows": [["1", "2", "3"], ["4", "5", "6"]],
+        "allow_add_rows": True,
+        "allow_add_columns": True,
+    }
+
+
+def test_serialize_table_disallows_adds() -> None:
+    ctrl = Table(id="tbl", columns=["a"], allow_add_rows=False, allow_add_columns=False)
+    result = _serialize_one_control(ctrl)
+    assert result["allow_add_rows"] is False
+    assert result["allow_add_columns"] is False
+
+
+def test_table_get_control_value() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    assert get_control_value(ctrl) == {"columns": ["x"], "rows": [["1"]]}
+
+
+def test_table_set_control_value() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    set_control_value(ctrl, {"columns": ["y", "z"], "rows": [[2], [3]]})
+    assert ctrl.columns == ["y", "z"]
+    assert ctrl.rows == [["2"], ["3"]]
