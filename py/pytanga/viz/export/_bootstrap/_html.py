@@ -113,6 +113,7 @@ _TEMPLATES_DIR = _RENDERERS_DIR.parent
 # live viewer and the export bootstrap.
 _SHARED_JS_FILES: list[Path] = [
     _TEMPLATES_DIR / "scene-builder.js",
+    _TEMPLATES_DIR / "fit_camera.js",
     # SDF tree emitters used by the per-object SDF proxy renderer (`sdf.js`).
     _TEMPLATES_DIR / "sdf" / "objects" / "transform.js",
     _TEMPLATES_DIR / "sdf" / "objects" / "primitives.js",

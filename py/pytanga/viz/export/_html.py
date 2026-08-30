@@ -18,6 +18,7 @@ from pytanga.viz.export._bootstrap import (
     generate_bootstrap_js,
     js_annotation_panel,
     js_apply_camera,
+    js_autofit_camera,
     js_imports,
     js_render_loop,
     js_resize_handler,
@@ -81,6 +82,9 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     space_dim = scene_config.get("space_dim", 3)
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")
+
+    cam_cfg = scene_config.get("camera") or {}
+    cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
     parts = [
         "window.__tanga_ready = true;",
@@ -146,7 +150,14 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
         "(async () => {\n"
         "    await sceneBuildDone;\n"
         "    applyCameraConfig(adapterCamera, adapterControls, sceneConfig.camera, window.innerWidth, window.innerHeight);\n"
-        "})();"
+        + js_autofit_camera(
+            registry_var="sceneRegistry",
+            camera_var="adapterCamera",
+            controls_var="adapterControls",
+            cam_explicit=cam_explicit,
+            space_dim=space_dim,
+        )
+        + "})();"
     )
 
     parts.append("")

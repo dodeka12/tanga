@@ -221,66 +221,23 @@ window.addEventListener('resize', () => {{
 
 def js_autofit_camera(
     *,
-    mesh_map_var: str,
+    registry_var: str,
     camera_var: str,
     controls_var: str,
     cam_explicit: bool,
     space_dim: int = 3,
 ) -> str:
-    """Generate JS for auto-fit camera from entity bounding box."""
+    """Generate JS that fits the camera via the shared ``fitCamera()``.
+
+    The shared function lives in ``templates/fit_camera.js``, which is bundled
+    into the export bootstrap and re-exported by the live viewer's
+    ``view_mode.js``, so every viewer runs the exact same auto-fit.
+    """
     if cam_explicit:
         return ""
-
-    if space_dim == 2:
-        return f"""// Auto-fit 2D orthographic camera from entity XY bounds
-if ({mesh_map_var}.size > 0) {{
-    const box = new THREE.Box3();
-    {mesh_map_var}.forEach(m => box.expandByObject(m));
-    if (!box.isEmpty()) {{
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const sz = new THREE.Vector3();
-        box.getSize(sz);
-        const frustumSize = Math.max(sz.x, sz.y, 1) * 1.2;
-        const aspect = {camera_var}.right ? Math.abs({camera_var}.right - {camera_var}.left) / Math.abs({camera_var}.top - {camera_var}.bottom) : 1;
-        {camera_var}.left = frustumSize * aspect / -2;
-        {camera_var}.right = frustumSize * aspect / 2;
-        {camera_var}.top = frustumSize / 2;
-        {camera_var}.bottom = frustumSize / -2;
-        {camera_var}.position.set(center.x, center.y, 20);
-        {camera_var}.lookAt(center.x, center.y, 0);
-        {camera_var}.updateProjectionMatrix();
-        {controls_var}.target.set(center.x, center.y, 0);
-        {controls_var}.update();
-    }}
-}}"""
-
-    return f"""// Auto-fit 3D camera from entity bounds
-if ({mesh_map_var}.size > 0) {{
-    const box = new THREE.Box3();
-    {mesh_map_var}.forEach(m => box.expandByObject(m));
-    if (!box.isEmpty()) {{
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const sz = new THREE.Vector3();
-        box.getSize(sz);
-        const maxDim = Math.max(sz.x, sz.y, sz.z, 1);
-        const distance = maxDim * 1.5 + 2;
-        // Keep the orbit target at the world origin so rotation always
-        // orbits around (0,0,0) regardless of entity placement.
-        {controls_var}.target.set(0, 0, 0);
-        {camera_var}.position.set(
-            center.x + distance * 0.6,
-            center.y + distance * 0.5,
-            center.z + distance * 0.7
-        );
-        {camera_var}.lookAt({controls_var}.target);
-        {camera_var}.near = Math.max(0.01, distance * 0.001);
-        {camera_var}.far = distance * 10;
-        {camera_var}.updateProjectionMatrix();
-        {controls_var}.update();
-    }}
-}}"""
+    return (
+        f"    fitCamera({registry_var}, {camera_var}, {controls_var}, {space_dim});\n"
+    )
 
 
 def js_apply_camera() -> str:

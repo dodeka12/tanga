@@ -12,7 +12,10 @@
 - **Default 3D camera moved closer to the origin** — the default perspective
   camera position changed from `(8, 6, 10)` to `(6, 4.5, 7.5)` (three-quarters
   of the original distance), applied to both the live viewer and HTML exports.
-- **Standalone HTML export no longer auto-fits the camera** — removed the
-  bounding-box auto-fit from `export_snapshot` so the standalone export shows
-  the same initial camera as the live viewer (which only fits on an explicit
-  `flush(fit_camera=True)`), instead of pushing the scene back out.
+- **Unified, tighter camera auto-fit** — extracted a single shared
+  `fit_camera.js` `fitCamera()` used by both the live viewer and all HTML
+  exports (snapshot, figure, animated). In 3D it now excludes the axes/grid
+  reference frame, always includes the origin, fits the content's bounding
+  sphere within the vertical FOV (replacing the old `maxDim * 1.5 + 2`), and
+  keeps the camera looking at the origin. When there is no content it falls
+  back to the grid/axes, and to a `[-5, 5]` cube for an empty scene.

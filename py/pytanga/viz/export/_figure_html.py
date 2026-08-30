@@ -227,7 +227,7 @@ def _build_static_figure_adapter(
         + dim_h
         + ");\n"
         + js_autofit_camera(
-            mesh_map_var="figMeshMap",
+            registry_var="figRegistry",
             camera_var="figCamera",
             controls_var="figControls",
             cam_explicit=cam_explicit,

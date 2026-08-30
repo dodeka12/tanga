@@ -256,7 +256,7 @@ def _build_animated_figure_adapter(
     loop_js = "true" if loop else "false"
 
     autofit_js = js_autofit_camera(
-        mesh_map_var="figMeshMap",
+        registry_var="figRegistry",
         camera_var="figCamera",
         controls_var="figControls",
         cam_explicit=cam_explicit,
@@ -386,7 +386,7 @@ def _build_animated_fullpage_adapter(
     loop_js = "true" if loop else "false"
 
     autofit_js = js_autofit_camera(
-        mesh_map_var="figMeshMap",
+        registry_var="figRegistry",
         camera_var="figCamera",
         controls_var="figControls",
         cam_explicit=cam_explicit,
