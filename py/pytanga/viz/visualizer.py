@@ -2487,6 +2487,78 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
         return cid
 
+    def add_table(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        columns: list[str] | None = None,
+        rows: list[list[str]] | None = None,
+        allow_add_rows: bool = True,
+        allow_add_columns: bool = True,
+        tooltip: str = "",
+        on_cell_change: Any = None,
+        on_row_add: Any = None,
+        on_column_add: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Add an editable table (tabular data) control."""
+        return self._add_scene_table(
+            "",
+            cid,
+            label=label,
+            columns=columns,
+            rows=rows,
+            allow_add_rows=allow_add_rows,
+            allow_add_columns=allow_add_columns,
+            tooltip=tooltip,
+            on_cell_change=on_cell_change,
+            on_row_add=on_row_add,
+            on_column_add=on_column_add,
+            parent_id=parent_id,
+        )
+
+    def _add_scene_table(
+        self,
+        scene_name: str,
+        cid: str,
+        *,
+        label: str = "",
+        columns: list[str] | None = None,
+        rows: list[list[str]] | None = None,
+        allow_add_rows: bool = True,
+        allow_add_columns: bool = True,
+        tooltip: str = "",
+        on_cell_change: Any = None,
+        on_row_add: Any = None,
+        on_column_add: Any = None,
+        parent_id: str | None = None,
+    ) -> str:
+        from ._controls import Table
+
+        ctrl = Table(
+            id=cid,
+            label=label,
+            columns=columns or [],
+            rows=rows or [],
+            allow_add_rows=allow_add_rows,
+            allow_add_columns=allow_add_columns,
+            tooltip=tooltip,
+            on_cell_change=on_cell_change,
+            on_row_add=on_row_add,
+            on_column_add=on_column_add,
+            parent_id=parent_id,
+        )
+        self._scenes[scene_name].add_control(ctrl)
+        if on_cell_change is not None:
+            self._handler_registry.register(cid, on_cell_change)
+        if on_row_add is not None:
+            self._handler_registry.register(f"__row_add__{cid}", on_row_add)
+        if on_column_add is not None:
+            self._handler_registry.register(f"__column_add__{cid}", on_column_add)
+        self._push_controls(scene_name)
+        return cid
+
     def add_color_picker(
         self,
         cid: str,

@@ -15,7 +15,7 @@ registration into the `ControlHandlerRegistry`, and public exports.
 
 ## Steps
 
-- [ ] **3.1 — `add_table` / `_add_scene_table` (`visualizer.py`)**
+- [x] **3.1 — `add_table` / `_add_scene_table` (`visualizer.py`)**
   - `add_table(cid, *, label="", columns=None, rows=None,
     allow_add_rows=True, allow_add_columns=True, tooltip="",
     on_cell_change=None, on_row_add=None, on_column_add=None, parent_id=None)`
@@ -26,15 +26,15 @@ registration into the `ControlHandlerRegistry`, and public exports.
     `on_column_add` → `__column_add__{cid}` (only when not `None`), pushes
     `_push_controls(scene_name)`, returns `cid`.
 
-- [ ] **3.2 — `VizSceneHandle.add_table` (`_scene_handle.py`)**
+- [x] **3.2 — `VizSceneHandle.add_table` (`_scene_handle.py`)**
   - Forward to `self._viz._add_scene_table(self._name, ...)` (mirror
     `add_text_area`).
 
-- [ ] **3.3 — Public exports (`__init__.py`)**
+- [x] **3.3 — Public exports (`__init__.py`)**
   - Import and add to `__all__`: `Table`, `TableCellChange`, `TableRowAdd`,
     `TableColumnAdd`, `TableView`.
 
-- [ ] **3.4 — Tests**
+- [x] **3.4 — Tests**
   - `test_add_table_registers_handlers_and_pushes`: monkeypatch `_push_controls`;
     add a table with the three handlers; assert `_handler_registry` maps
     `cid`/`__row_add__{cid}`/`__column_add__{cid}` and the stored control is a

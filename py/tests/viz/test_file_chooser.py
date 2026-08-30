@@ -11,7 +11,7 @@ import time
 import pytest
 
 from pytanga.viz import Visualizer
-from pytanga.viz._controls import FileChooser, _serialize_one_control
+from pytanga.viz._controls import FileChooser, Table, _serialize_one_control
 from pytanga.viz._file_browser import list_directory
 
 
@@ -102,6 +102,40 @@ def test_add_file_chooser_registers_and_pushes(monkeypatch):
     ctrl = viz._scenes[""]._controls["fc"]
     assert isinstance(ctrl, FileChooser)
     assert ctrl.value == "/tmp"
+    assert pushed == [""]
+
+
+def test_add_table_registers_handlers_and_pushes(monkeypatch):
+    viz = _viz()
+    pushed: list = []
+    monkeypatch.setattr(viz, "_push_controls", lambda scene: pushed.append(scene))
+
+    async def _on_cell(change, event):
+        pass
+
+    async def _on_row(add, event):
+        pass
+
+    async def _on_col(add, event):
+        pass
+
+    cid = viz.add_table(
+        "tbl",
+        columns=["x", "y"],
+        rows=[["1", "2"]],
+        on_cell_change=_on_cell,
+        on_row_add=_on_row,
+        on_column_add=_on_col,
+    )
+
+    assert cid == "tbl"
+    assert viz._handler_registry.get("tbl") is _on_cell
+    assert viz._handler_registry.get("__row_add__tbl") is _on_row
+    assert viz._handler_registry.get("__column_add__tbl") is _on_col
+    ctrl = viz._scenes[""]._controls["tbl"]
+    assert isinstance(ctrl, Table)
+    assert ctrl.columns == ["x", "y"]
+    assert ctrl.rows == [["1", "2"]]
     assert pushed == [""]
 
 
