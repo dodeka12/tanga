@@ -1,5 +1,11 @@
 # Changes since version 1.12.0
 
+## New Features
+- **Scrollable `StackView`/`GroupView` panes** — a new `scrollable=True` flag lets
+  a stack/group pane scroll its overflowing content instead of clipping, with a
+  custom thin dark scrollbar that appears only on overflow, so a control group in
+  a split pane can be shrunk and still reach every control.
+
 ## Breaking Changes
 - **Banner `on_close` now receives the value, not the banner id** — banner and
   editor "close" are unified into one `close` event carrying the control's

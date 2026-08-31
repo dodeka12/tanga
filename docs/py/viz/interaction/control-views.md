@@ -126,13 +126,18 @@ axis.
 
 ```python
 StackView(
-    direction,         # "vertical" | "horizontal" | "wrap"
-    children=None,     # list[View] | None
-    **kwargs,          # forwarded to View (sizes)
+    direction,            # "vertical" | "horizontal" | "wrap"
+    children=None,        # list[View] | None
+    *,
+    scrollable=False,     # bool — scroll instead of clipping when content overflows
+    **kwargs,             # forwarded to View (sizes)
 )
 ```
 
-`_node_type` is `"stack"`.
+`_node_type` is `"stack"`. With `scrollable=True`, the stack stops forcing
+its content size along the stack axis, so an enclosing `SplitView` may shrink
+it and the content scrolls inside the pane (a thin dark scrollbar appears only
+on overflow).
 
 ### GroupView
 
@@ -148,11 +153,14 @@ GroupView(
     direction="vertical",  # StackDirection
     position=None,     # str | None — "top-left" | "top-right" | "bottom-left" | "bottom-right"
     collapsed=False,   # bool
+    scrollable=False,  # bool — scroll the content (title bar stays pinned)
     **kwargs,          # forwarded to View (sizes)
 )
 ```
 
-`_node_type` is `"group"`.
+`_node_type` is `"group"`. With `scrollable=True`, the title bar stays pinned
+and the content region scrolls instead of clipping when the pane is smaller
+than the controls (a thin dark scrollbar appears only on overflow).
 
 ## Control views
 

@@ -1,6 +1,6 @@
 # Scrollable stack & group panes — Overview
 
-**Created:** 2026-08-31 | **Status:** In progress | **Branch:** `fix/file-chooser-bug`
+**Created:** 2026-08-31 | **Status:** Done | **Branch:** `fix/file-chooser-bug`
 
 ## Goal
 
