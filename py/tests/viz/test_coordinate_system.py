@@ -10,7 +10,7 @@ import pytest
 
 from pytanga.geometry.entities import Direction, Plane, Point
 from pytanga.viz import LabelStyle, PointPath, Visualizer
-from pytanga.viz._coordinate_system import CoordinateSystem
+from pytanga.viz._coordinate_system import CoordinateSystem, fit_view2d
 from pytanga.viz._scale import LinearScale, LogScale
 from pytanga.viz.camera import CameraConfig2d, View2DConfig
 
@@ -22,6 +22,32 @@ def _line_endpoints(ref):
         (line.start.x, line.start.y, line.start.z),
         (line.end.x, line.end.y, line.end.z),
     )
+
+
+class TestFitView2D:
+    def test_linear_centered(self):
+        cam = fit_view2d((0, 10), (0, 4))
+        assert cam.xmin == -5.0
+        assert cam.xmax == 5.0
+        assert cam.ymin == -2.0
+        assert cam.ymax == 2.0
+        assert cam.uniform is True
+
+    def test_log_span(self):
+        cam = fit_view2d((0.1, 100), (0.1, 100), xscale="log", yscale="log")
+        # span = log10(100) - log10(0.1) = 2 - (-1) = 3
+        assert cam.xmin == pytest.approx(-1.5)
+        assert cam.xmax == pytest.approx(1.5)
+        assert cam.ymin == pytest.approx(-1.5)
+        assert cam.ymax == pytest.approx(1.5)
+
+    def test_border_and_uniform(self):
+        cam = fit_view2d((0, 2), (0, 2), border_world=0.5, border_px=10.0, uniform=False)
+        assert cam.xmin == -1.0
+        assert cam.xmax == 1.0
+        assert cam.border_world == 0.5
+        assert cam.border_px == 10.0
+        assert cam.uniform is False
 
 
 class TestCoordinateSystem2D:

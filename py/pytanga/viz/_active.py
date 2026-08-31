@@ -24,7 +24,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
-from pytanga.geometry import Point
+from pytanga.geometry import Direction, Point
 
 from ._act_style import ActPointStyle
 from ._interaction import (
@@ -216,6 +216,10 @@ class ActSceneObject:
 
     def _move_to(self, pos: Point) -> None:
         """Update the internal position.  Override in subclasses."""
+        raise NotImplementedError
+
+    def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
+        """Return the nearest point on the ideal geometry to the picking ray."""
         raise NotImplementedError
 
     # ── Helpers ────────────────────────────────────────────
@@ -411,3 +415,7 @@ class ActPoint(ActSceneObject):
     def _move_to(self, pos: Point) -> None:
         """Set the point position to *pos*."""
         self._point = pos
+
+    def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
+        """Return the ideal anchor — the point's centre (the ray is ignored)."""
+        return self._point

@@ -203,6 +203,15 @@ export function updateEntityMesh(mesh, ent, prev) {
         const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
         mesh.setRotationFromQuaternion(quat);
     }
+    if (ent.rotation) {
+        // Top-level Euler triple (Box / Ellipsoid). Applied in place so a
+        // rotation-only content update doesn't require a mesh rebuild.
+        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
+    } else if (ent.rotation === null) {
+        // Explicitly cleared rotation (e.g. `Box(rotation=None)`) → identity,
+        // i.e. back to axis-aligned.
+        mesh.rotation.set(0, 0, 0);
+    }
     applyStyleUpdate(mesh, ent);
 
     return !entityRequiresRebuild(ent, prev);

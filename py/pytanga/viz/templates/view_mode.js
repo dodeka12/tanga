@@ -166,11 +166,13 @@ function _applyOrthoFrustum(camera, aspect) {
  * @param {THREE.OrbitControls} controls
  * @param {number} spaceDim  2 or 3
  * @param {object|null} cameraConfig  normalized ``camera`` config dict
+ * @param {number|null} viewAspect  pane aspect (width/height); falls back to the
+ *   window aspect when null/non-finite.
  * @returns {THREE.Camera} the (possibly replaced) camera
  */
-export function switchToCamera(camera, controls, spaceDim, cameraConfig) {
+export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewAspect = null) {
     const cc = cameraConfig || {};
-    const aspect = window.innerWidth / window.innerHeight;
+    const aspect = (Number.isFinite(viewAspect) && viewAspect > 0) ? viewAspect : window.innerWidth / window.innerHeight;
 
     // ── 2D orthographic ──
     if (cc.type === '2d') {

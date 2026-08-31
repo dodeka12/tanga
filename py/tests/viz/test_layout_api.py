@@ -96,7 +96,7 @@ class TestShowLayout:
         monkeypatch.setattr(
             viz,
             "_open_layout_browser",
-            lambda name, wait_for_browser: opened.setdefault("name", name),
+            lambda name, wait_for_browser, timeout=None: opened.setdefault("name", name),
         )
 
         viz.show(layout=layout, layout_name="demo")
@@ -111,7 +111,7 @@ class TestShowLayout:
         monkeypatch.setattr(
             viz,
             "_open_layout_browser",
-            lambda name, wait_for_browser: opened.setdefault("name", name),
+            lambda name, wait_for_browser, timeout=None: opened.setdefault("name", name),
         )
 
         viz.show(layout=_layout())
@@ -127,7 +127,7 @@ class TestOpenLayoutBrowser:
         monkeypatch.setattr(
             viz,
             "_open_browser_url",
-            lambda url, wait_for_browser: captured.setdefault("url", url),
+            lambda url, wait_for_browser, timeout=None: captured.setdefault("url", url),
         )
 
         viz._open_layout_browser("demo", wait_for_browser=False)

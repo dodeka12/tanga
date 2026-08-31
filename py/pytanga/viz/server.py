@@ -29,6 +29,10 @@ from aiohttp import web
 logger = logging.getLogger("tanga.viz.server")
 
 
+class PortInUseError(RuntimeError):
+    """Raised when the viewer server cannot bind its port because it is in use."""
+
+
 def compute_frontend_version(static_dir: Path) -> str:
     """Return a stable content hash over the frontend assets.
 
@@ -279,9 +283,9 @@ class VizServer:
                 getattr(e, "errno", 0) == 98
                 or "address already in use" in str(e).lower()
             ):
-                raise RuntimeError(
+                raise PortInUseError(
                     f"Port {self._port} is already in use. "
-                    f"Close the other process or use Visualizer(port=...) "
+                    f"Close the other process or use start_server(port=...) "
                     f"to choose a different port."
                 ) from e
             raise
@@ -359,6 +363,22 @@ class VizServer:
                 dead.append(ws)
         for ws in dead:
             self._ws_clients.discard(ws)
+
+    async def push_raw_to_browser(self, browser_id: str, data: str) -> None:
+        """Send an arbitrary JSON string to a single browser session."""
+        session = self._browser_sessions.get(browser_id)
+        if session is None:
+            return
+        logger.info(
+            "WS SEND t=%.3f %s browser=%s",
+            time.monotonic(),
+            _ws_msg_brief(data),
+            browser_id,
+        )
+        try:
+            await session.ws.send_str(data)
+        except (ConnectionError, Exception):
+            pass
 
     async def push_navigate(self, scene_name: str, target: str = "all") -> None:
         """Send a navigate command to matching browser sessions.

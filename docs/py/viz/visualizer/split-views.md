@@ -143,6 +143,18 @@ layout = SplitView("vertical", [
 it is the stable key used to route the runtime camera message to the matching
 pane.
 
+## Per-Pane Interaction
+
+Pointer interaction (draggable `ActPoint`s, hover, click, scroll) is independent
+per pane: each pane keeps its own camera, canvas, and interactive-object
+registry, so an `ActPoint` in one pane can be dragged without affecting the
+others. See `py/examples/viz/app/split_view_app.py` for a multi-pane example
+with draggable points in two panes.
+
+For 2D panes the orthographic frustum is computed from the **pane's** aspect
+ratio (not the whole window's), so `CoordinateSystem` plots keep their correct
+scale inside a split.
+
 ## Building a Layout
 
 ```python

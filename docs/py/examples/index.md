@@ -14,13 +14,13 @@ uv run python py/examples/<path>.py
 
 - **A X = B** — [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md)
 
-- **ActPoint** — [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
+- **ActPoint** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
 - **add_table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md)
 
 - **affine** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
-- **alert** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md)
+- **alert** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
 
 - **Algebra** — [How pytanga builds C++ backends on the fly](binding_demo.md), [Creating and configuring an Algebra](ga/algebra/algebra_demo.md), [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
@@ -42,6 +42,8 @@ uv run python py/examples/<path>.py
 
 - **annotations** — [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md)
 
+- **app** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md)
+
 - **Arc** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
 - **arrowhead** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
@@ -54,7 +56,7 @@ uv run python py/examples/<path>.py
 
 - **Axis** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
-- **banner** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md)
+- **banner** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md), [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
 
 - **basis** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -102,7 +104,7 @@ uv run python py/examples/<path>.py
 
 - **Composed** — [Composed SDF objects + the primitive library](viz/sdf/composed.md)
 
-- **confirm** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md)
+- **confirm** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
 
 - **conformal** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
 
@@ -114,7 +116,7 @@ uv run python py/examples/<path>.py
 
 - **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md)
 
-- **CoordinateSystem** — [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
+- **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
 
 - **CSG** — [per-object CSG combine modes](viz/sdf/booleans.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
 
@@ -140,7 +142,7 @@ uv run python py/examples/<path>.py
 
 - **double pendulum** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **drag** — [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
+- **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
 
 - **dropdown** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
@@ -338,7 +340,7 @@ uv run python py/examples/<path>.py
 
 - **playback** — [Animated HTML export with JS playback engine](viz/export/animated.md)
 
-- **plotting** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
+- **plotting** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
 - **PNG** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -384,6 +386,8 @@ uv run python py/examples/<path>.py
 
 - **rotor estimation** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
+- **scene** — [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
+
 - **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
@@ -418,7 +422,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
+- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **standard viewer** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
 
@@ -481,6 +485,8 @@ uv run python py/examples/<path>.py
 - **VisualizerApp** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md), [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
 - **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
+
+- **VizSceneHandle** — [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
 
 ## Topics
 

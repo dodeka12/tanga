@@ -92,6 +92,57 @@ def _as_size(value) -> tuple[float | None, float | None]:
     return (sx, sy)
 
 
+def fit_view2d(
+    xlim: tuple[float, float],
+    ylim: tuple[float, float],
+    *,
+    xscale: Scale | str = "linear",
+    yscale: Scale | str = "linear",
+    base: float = 10.0,
+    border_world: float = 0.0,
+    border_px: float = 0.0,
+    uniform: bool = True,
+) -> View2DConfig:
+    """Compute a centred :class:`View2DConfig` for the given data ranges.
+
+    Mirrors the camera that :class:`CoordinateSystem` applies when it owns the
+    scene camera (2D, no explicit ``size``): the visible world rectangle is the
+    scale-mapped span of ``xlim``/``ylim`` centred at the origin.  Useful for
+    embedding an exact per-pane camera into a ``SceneView(..., camera=...)`` at
+    layout-construction time (before ``Visualizer.show``), e.g.::
+
+        SceneView("sin", camera=fit_view2d((0, 6.28), (-1.2, 1.2)))
+
+    Args:
+        xlim: Data ``(lo, hi)`` range for the x axis.
+        ylim: Data ``(lo, hi)`` range for the y axis.
+        xscale: Scale for the x axis (``"linear"``/``"log"`` or a :class:`Scale`).
+        yscale: Scale for the y axis (``"linear"``/``"log"`` or a :class:`Scale`).
+        base: Logarithm base when a scale is given as ``"log"``.
+        border_world: World-unit margin added on all sides.
+        border_px: Pixel margin added on all sides (applied by the frontend).
+        uniform: ``True`` preserves aspect ratio via letterboxing.
+
+    Returns:
+        A :class:`View2DConfig` centred at the origin.
+    """
+    xlo, xhi = _as_range(xlim)
+    ylo, yhi = _as_range(ylim)
+    xs = make_scale(xscale, base)
+    ys = make_scale(yscale, base)
+    span_x = xs.to_world(xhi) - xs.to_world(xlo)
+    span_y = ys.to_world(yhi) - ys.to_world(ylo)
+    return View2DConfig(
+        xmin=-span_x / 2.0,
+        xmax=span_x / 2.0,
+        ymin=-span_y / 2.0,
+        ymax=span_y / 2.0,
+        border_world=border_world,
+        border_px=border_px,
+        uniform=uniform,
+    )
+
+
 def _as_align(value) -> tuple[float, float]:
     """Normalize an ``align`` spec to a ``(ax, ay)`` fraction pair."""
     if value is None:
@@ -554,15 +605,12 @@ class CoordinateSystem:
     def _apply_camera(self) -> None:
         if not self._owns_camera:
             return
-        xlo, xhi = self._xlim
-        ylo, yhi = self._ylim
-        span_x = self._xscale.to_world(xhi) - self._xscale.to_world(xlo)
-        span_y = self._yscale.to_world(yhi) - self._yscale.to_world(ylo)
-        cam = View2DConfig(
-            xmin=-span_x / 2.0,
-            xmax=span_x / 2.0,
-            ymin=-span_y / 2.0,
-            ymax=span_y / 2.0,
+        cam = fit_view2d(
+            self._xlim,
+            self._ylim,
+            xscale=self._xscale,
+            yscale=self._yscale,
+            base=self._base,
             border_world=self.border_world,
             border_px=self.border_px,
             uniform=True,

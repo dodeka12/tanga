@@ -315,6 +315,7 @@ self.viz.set_control_view_value(radius_view, 3.0)
 
 ```python
 self.viz.update_control("radius", value=3.0)
+detail.update_control("radius", label="Radius (m)")  # scene-scoped
 ```
 
 ## Scene-scoped controls

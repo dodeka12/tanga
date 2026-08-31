@@ -589,12 +589,6 @@ class TestVisualizer:
         with pytest.raises(TypeError):
             Visualizer(opns=False)
 
-    def test_custom_port_and_host(self):
-        with pytest.warns(DeprecationWarning):
-            viz = Visualizer(port=9999, host="127.0.0.1")
-        assert viz._port == 9999
-        assert viz._host == "127.0.0.1"
-
     def test_start_server_defaults_to_standard_port(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
@@ -1585,3 +1579,22 @@ class TestDefaultSceneObjects:
         assert "Axis" in kinds
         assert "Axes3D" in kinds
         assert "Grid" in kinds
+
+    def test_named_scene_opt_out(self):
+        viz = Visualizer(add_default_axes=True, add_default_grid=True)
+        viz.scene("plot", add_axes=False, add_grid=False)
+        viz.scene("other")
+
+        plot_kinds = sorted(o.kind for o in viz._scenes["plot"]._objects.values())
+        other_kinds = sorted(o.kind for o in viz._scenes["other"]._objects.values())
+
+        assert "Axes3D" not in plot_kinds
+        assert "Grid" not in plot_kinds
+        assert "Axes3D" in other_kinds
+        assert "Grid" in other_kinds
+
+        # Idempotency: a later default-add pass must still add nothing to a
+        # scene that opted out at creation.
+        viz._add_default_scene_objects("plot")
+        assert sorted(o.kind for o in viz._scenes["plot"]._objects.values()) == plot_kinds
+

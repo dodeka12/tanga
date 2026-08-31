@@ -108,9 +108,6 @@ class Visualizer(_JupyterDisplayMixin):
     def __init__(
         self,
         *,
-        port: int | None = None,
-        host: str | None = None,
-        open_browser: bool | None = None,
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
@@ -142,16 +139,8 @@ class Visualizer(_JupyterDisplayMixin):
             name="",
             space_dim=space_dim,
         )
-        if port is not None or host is not None:
-            warnings.warn(
-                "Visualizer(port=..., host=...) is deprecated; use "
-                "start_server(host=..., port=...) instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        self._port = port if port is not None else DEFAULT_PORT
-        self._host = host if host is not None else "localhost"
-        self._open_browser = open_browser
+        self._port = DEFAULT_PORT
+        self._host = "localhost"
         self._reuse_existing = reuse_existing
         self._title = title
         self._annotation = annotation
@@ -160,6 +149,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
+        self._saved_signal_handlers: dict[int, Any] | None = None
         self._atexit_registered = False
         self._display_pending: set[str] = set()
         self._display_execution: int | None = None
@@ -173,9 +163,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
-        if open_browser is None:
-            open_browser = not self._jupyter
-        self._open_browser = open_browser
+        self._open_browser = not self._jupyter
 
         # Bundled default style configuration (master instance; scenes copy it).
         from ._viz_styles import make_styles
@@ -201,6 +189,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         self._interaction_registry = InteractionHandlerRegistry()
         self._interaction_configs: dict[str, dict[str, Any]] = {}
+        self._act_objects: dict[str, Any] = {}
 
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
@@ -232,6 +221,8 @@ class Visualizer(_JupyterDisplayMixin):
         name: str,
         *,
         enable_server_stop_key: bool = False,
+        add_axes: bool = True,
+        add_grid: bool = True,
     ) -> VizSceneHandle:
         """Get or create a named scene, returning a :class:`VizSceneHandle`.
 
@@ -246,6 +237,14 @@ class Visualizer(_JupyterDisplayMixin):
                 browser-triggered full-server stop key (Ctrl+Q) for this
                 scene, equivalent to calling
                 ``viz.scene(name).enable_server_stop_key()`` afterward.
+            add_axes: When ``False``, skip the default axes object for a
+                newly created scene.  Applies only at creation; the main scene
+                (``""``) is created in ``__init__`` and uses the
+                ``add_default_axes`` constructor flag instead.
+            add_grid: When ``False``, skip the default grid object for a
+                newly created scene.  Applies only at creation; the main scene
+                (``""``) is created in ``__init__`` and uses the
+                ``add_default_grid`` constructor flag instead.
         """
         if name not in self._scenes:
             cfg = SceneConfig(
@@ -258,7 +257,7 @@ class Visualizer(_JupyterDisplayMixin):
             self._scenes[name] = Scene(
                 cfg, name=name, styles=self._global_styles.copy()
             )
-            self._add_default_scene_objects(name)
+            self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
         if enable_server_stop_key:
             self._set_server_stop_key(
                 name, enabled=True, key="q", modifiers=[KeyModifier.CTRL]
@@ -510,6 +509,7 @@ class Visualizer(_JupyterDisplayMixin):
                 properties["style"] = style
             eid = scene.add(obj.entity, entity_id=entity_id, **properties)
             obj._init(VizSceneHandle(self, scene_name), eid)
+            self._act_objects[eid] = obj
             self._attach_to_parent(scene, eid, parent_id)
             self._add_label_for_entity(
                 scene,
@@ -1445,7 +1445,12 @@ class Visualizer(_JupyterDisplayMixin):
             raise ValueError(f"port must be 0 or a positive integer, got {port}")
         self._host = host
         self._port = port
-        self._ensure_server_running()
+        from .server import PortInUseError
+
+        try:
+            self._ensure_server_running()
+        except PortInUseError as e:
+            raise SystemExit(str(e))
 
     def _ensure_server_running(self) -> None:
         """Boot the server in a background thread if not already running."""
@@ -1478,14 +1483,25 @@ class Visualizer(_JupyterDisplayMixin):
             _boot_done.set()
 
         self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
 
-        self._loop.create_task(_boot())
+        boot_task = self._loop.create_task(_boot())
 
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
 
-        if not _boot_done.wait(timeout=5.0):
+        deadline = time.monotonic() + 5.0
+        while not _boot_done.is_set():
+            if boot_task.done():
+                error = boot_task.exception()
+                if error is not None:
+                    self._cleanup_failed_boot()
+                    raise error
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.01)
+
+        if not _boot_done.is_set():
+            self._cleanup_failed_boot()
             raise RuntimeError("Server failed to start within 5s")
 
         logger.debug("Server booted in %.1fs", time.monotonic() - _boot_start)
@@ -1516,18 +1532,65 @@ class Visualizer(_JupyterDisplayMixin):
             for event in self._interrupt_events.values():
                 event.set()
 
+        self._saved_signal_handlers = {
+            signal.SIGINT: signal.getsignal(signal.SIGINT),
+            signal.SIGTERM: signal.getsignal(signal.SIGTERM),
+        }
         signal.signal(signal.SIGINT, _on_sigint)
         signal.signal(signal.SIGTERM, _on_sigint)
 
         # Print URLs
         self._print_startup_urls()
 
-    def open_browser(self, *, wait_for_browser: bool | None = None) -> bool:
+    def _cleanup_failed_boot(self) -> None:
+        """Tear down a server whose boot task failed before it fully started."""
+        if self._loop is not None and self._loop.is_running():
+            if self._server is not None:
+
+                async def _cleanup() -> None:
+                    try:
+                        await self._server.stop()
+                    except Exception:
+                        pass
+
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        _cleanup(), self._loop
+                    ).result(timeout=5.0)
+                except Exception:
+                    pass
+            self._loop.call_soon_threadsafe(self._loop.stop)
+        if self._thread is not None:
+            self._thread.join(timeout=3.0)
+        self._server = None
+        self._loop = None
+        self._thread = None
+
+    def _restore_signal_handlers(self) -> None:
+        """Restore the SIGINT/SIGTERM handlers saved before the server started."""
+        if self._saved_signal_handlers is None:
+            return
+        for signum, handler in self._saved_signal_handlers.items():
+            try:
+                signal.signal(signum, handler)
+            except Exception:
+                pass
+        self._saved_signal_handlers = None
+
+    def open_browser(
+        self, *, wait_for_browser: bool | None = None, timeout: float | None = None
+    ) -> bool:
         """Open/reconnect a browser tab for the main scene."""
-        return self._open_scene_browser("", wait_for_browser=wait_for_browser)
+        return self._open_scene_browser(
+            "", wait_for_browser=wait_for_browser, timeout=timeout
+        )
 
     def _open_scene_browser(
-        self, scene_name: str, *, wait_for_browser: bool | None = None
+        self,
+        scene_name: str,
+        *,
+        wait_for_browser: bool | None = None,
+        timeout: float | None = None,
     ) -> bool:
         """Open/reconnect a browser tab for *scene_name* (``""`` for main)."""
         import secrets
@@ -1538,10 +1601,16 @@ class Visualizer(_JupyterDisplayMixin):
         page_token = secrets.token_hex(4)  # 8 hex chars
         url_path = f"/{scene_name}" if scene_name else "/"
         token_url = f"{url_path}?token={page_token}"
-        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+        return self._open_browser_url(
+            token_url, wait_for_browser=wait_for_browser, timeout=timeout
+        )
 
     def _open_layout_browser(
-        self, layout_name: str, *, wait_for_browser: bool | None = None
+        self,
+        layout_name: str,
+        *,
+        wait_for_browser: bool | None = None,
+        timeout: float | None = None,
     ) -> bool:
         """Open/reconnect a browser tab for the split-view layout *layout_name*."""
         import secrets
@@ -1551,10 +1620,16 @@ class Visualizer(_JupyterDisplayMixin):
 
         page_token = secrets.token_hex(4)
         token_url = f"/?view={layout_name}&token={page_token}"
-        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+        return self._open_browser_url(
+            token_url, wait_for_browser=wait_for_browser, timeout=timeout
+        )
 
     def _open_browser_url(
-        self, token_url: str, *, wait_for_browser: bool | None
+        self,
+        token_url: str,
+        *,
+        wait_for_browser: bool | None,
+        timeout: float | None = None,
     ) -> bool:
         """Open *token_url* in a (possibly reused) browser tab."""
         if wait_for_browser is None:
@@ -1563,7 +1638,10 @@ class Visualizer(_JupyterDisplayMixin):
         if self._reuse_existing:
             # Interactive wait: user either clicks Reconnect or presses Enter
             if wait_for_browser:
-                connected = self.wait_for_browser(timeout=120.0)
+                connected = self.wait_for_browser(
+                    timeout=timeout if timeout is not None else 120.0,
+                    path=token_url,
+                )
                 if not connected:
                     return False
             else:
@@ -1591,7 +1669,9 @@ class Visualizer(_JupyterDisplayMixin):
                 self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
             self._server.open_browser(token_url)
             if wait_for_browser:
-                return self.wait_for_browser(timeout=30.0)
+                return self.wait_for_browser(
+                    timeout=timeout if timeout is not None else 30.0
+                )
         return True
 
     def start(
@@ -1624,12 +1704,13 @@ class Visualizer(_JupyterDisplayMixin):
         except Exception:
             print(http_url)
 
-    def _print_connect_prompt(self) -> None:
+    def _print_connect_prompt(self, path: str | None = None) -> None:
         """Print the interactive connect prompt including the server URL.
 
         The URL is printed on its own line so terminals (e.g. VS Code) can
         detect it as a clickable link.
         """
+        url = self.url if path is None else f"{self.url}{path}"
         try:
             from rich.console import Console
             from rich.text import Text
@@ -1637,7 +1718,7 @@ class Visualizer(_JupyterDisplayMixin):
             Console().print(
                 Text.assemble(
                     "Server: ",
-                    Text(self.url, style="bold cyan"),
+                    Text(url, style="bold cyan"),
                     "\n",
                     "Press ",
                     Text("Enter", style="bold"),
@@ -1648,7 +1729,7 @@ class Visualizer(_JupyterDisplayMixin):
             )
         except Exception:
             print(
-                f"Server: {self.url}\n"
+                f"Server: {url}\n"
                 "Press Enter to open a new browser tab, "
                 "or click 'Reconnect' in an existing tab..."
             )
@@ -1671,6 +1752,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     def stop_server(self, *, timeout: float = 5.0) -> None:
         """Stop the server and clean up."""
+        self._restore_signal_handlers()
         if self._server is None:
             logger.debug("stop_server() called but server already None")
             return
@@ -1721,7 +1803,9 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self.stop_server(timeout=timeout)
 
-    def wait_for_browser(self, timeout: float = 120.0) -> bool:
+    def wait_for_browser(
+        self, timeout: float = 120.0, path: str | None = None
+    ) -> bool:
         """Block until a browser connects, or the user opens one interactively.
 
         Prints a prompt and waits for EITHER:
@@ -1744,7 +1828,7 @@ class Visualizer(_JupyterDisplayMixin):
             return True
 
         # ── Print interactive prompt ──
-        self._print_connect_prompt()
+        self._print_connect_prompt(path=path)
 
         # ── Threading.Event for Enter press ──
         enter_pressed = threading.Event()
@@ -1785,7 +1869,7 @@ class Visualizer(_JupyterDisplayMixin):
         if self._loop is not None:
             self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
 
-        self._server.open_browser(f"/?token={page_token}")
+        self._server.open_browser(path or f"/?token={page_token}")
 
         # Now wait for the new tab to connect
         logger.info(
@@ -1980,6 +2064,7 @@ class Visualizer(_JupyterDisplayMixin):
         host: str | None = None,
         port: int | None = None,
         wait_for_browser: bool | None = None,
+        timeout: float | None = None,
         jupyter: bool | None = None,
         viewer_name: str | None = None,
         layout: View | None = None,
@@ -2007,13 +2092,15 @@ class Visualizer(_JupyterDisplayMixin):
         if layout is not None:
             self.set_layout(layout, layout_name or "")
             return self._open_layout_browser(
-                layout_name or "", wait_for_browser=wait_for_browser
+                layout_name or "",
+                wait_for_browser=wait_for_browser,
+                timeout=timeout,
             )
 
         if use_jupyter:
             return self.display(viewer_name=viewer_name)
 
-        return self.open_browser(wait_for_browser=wait_for_browser)
+        return self.open_browser(wait_for_browser=wait_for_browser, timeout=timeout)
 
     def __enter__(self) -> "Visualizer":
         """Reset the main scene and show it immediately on entry.
@@ -2032,10 +2119,13 @@ class Visualizer(_JupyterDisplayMixin):
         return None
 
     def wait(self) -> None:
-        """Block until Ctrl+C is pressed, then stop the server.
+        """Block until Ctrl+C (or SIGTERM) requests shutdown, then return.
 
         Requires :meth:`start_server` (or :meth:`show`) to have been called so
-        the Ctrl+C handler is installed.
+        the Ctrl+C handler is installed.  The server is intentionally left
+        running so the scene can keep being updated afterwards; it stops
+        automatically at interpreter exit (via the ``atexit`` hook) or
+        explicitly with :meth:`stop_server`.
         """
         self._ensure_server_running()
         shutdown = getattr(self, "_shutdown_requested", threading.Event())
@@ -2100,6 +2190,35 @@ class Visualizer(_JupyterDisplayMixin):
         """
         self._interaction_registry.register(object_id, event_type, handler)
 
+    async def _send_drag_anchor(self, event: Any) -> None:
+        """Send the ideal drag anchor to the originating browser on DRAG_START."""
+        from ._interaction import DragEvent, InteractionEventType
+
+        if not isinstance(event, DragEvent):
+            return
+        if event.event_type is not InteractionEventType.DRAG_START:
+            return
+        if not event.browser_id:
+            return
+        act = self._act_objects.get(event.object_id)
+        if act is None:
+            return
+        try:
+            anchor = act.drag_anchor(event.ray_origin, event.ray_direction)
+        except NotImplementedError:
+            return
+        if self._server is not None:
+            await self._server.push_raw_to_browser(
+                event.browser_id,
+                json.dumps(
+                    {
+                        "type": "interaction:drag_anchor",
+                        "object_id": event.object_id,
+                        "world_position": [anchor.x, anchor.y, anchor.z],
+                    }
+                ),
+            )
+
     async def _dispatch_interaction_event(
         self, msg_type: str, data: dict[str, Any]
     ) -> None:
@@ -2114,6 +2233,7 @@ class Visualizer(_JupyterDisplayMixin):
             event = _parse_event(data)
         except (ValueError, KeyError):
             return
+        await self._send_drag_anchor(event)
         await self._interaction_registry.dispatch(event)
 
     # ── Interactive Controls (main scene) ───────────────────

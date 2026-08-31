@@ -338,6 +338,31 @@ export function entityRequiresRebuild(ent, prev) {
         const b = JSON.stringify(prev?.arrow ?? null);
         if (!prev || a !== b) return true;
     }
+    // ── Creation-only geometry fields ──────────────────────────────────────
+    // These are read only by the per-kind create*() renderers and are never
+    // re-applied by the generic in-place update path, so a change must rebuild
+    // the mesh. (`rotation` is intentionally absent: it is applied in place by
+    // updateEntityMesh for meshes that carry a top-level Euler triple, keeping
+    // rotation-only animation updates rebuild-free.)
+    for (const key of ['size', 'radii', 'normal', 'axis', 'startDirection', 'point', 'pointA', 'pointB', 'origin']) {
+        if (ent[key] !== undefined &&
+            (!prev || JSON.stringify(ent[key]) !== JSON.stringify(prev[key]))) {
+            return true;
+        }
+    }
+    for (const key of ['radiusU', 'radiusV', 'sides', 'discRadius', 'ringCount', 'maxRadius', 'pointSize']) {
+        if (ent[key] !== undefined && (!prev || !approxEqual(ent[key], prev[key]))) {
+            return true;
+        }
+    }
+    // Motor nests its rotor/translator parameters; compare them structurally.
+    if (ent.rotor !== undefined || ent.translator !== undefined) {
+        if (!prev ||
+            JSON.stringify(ent.rotor ?? null) !== JSON.stringify(prev.rotor ?? null) ||
+            JSON.stringify(ent.translator ?? null) !== JSON.stringify(prev.translator ?? null)) {
+            return true;
+        }
+    }
     if (ent.kind !== undefined && ent.kind !== prev?.kind) return true;
     // Any style field other than color/opacity must rebuild, so the per-kind
     // renderer re-reads every style parameter (size, thickness, wireframe,

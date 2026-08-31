@@ -15,7 +15,7 @@ import { handleControlsDefine, handleControlsClear } from '../controls-panel.js'
 import { attachGroup, detachGroup, detachAll } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
-import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setSpaceDim, setCamera } from '../interaction.js';
+import { InteractionController } from '../interaction.js';
 
 // ── WebGL1 SDF fallback warning banner ──────────────────────
 // SDF proxies need GLSL3 + `gl_FragDepth` (WebGL2). On WebGL1 those objects
@@ -100,6 +100,7 @@ export class ThreeJsView extends View {
         this._cameraOverride = cameraOverride || null;
         this.viewId = viewId || null;
         this._browserId = null;
+        this._interaction = null;
 
         this.sceneObjects = new Map(); // id → {obj, mesh, data, layer, el?}
         this.scene = new THREE.Scene();
@@ -127,7 +128,10 @@ export class ThreeJsView extends View {
 
     // ── context setters ────────────────────────────────────────
 
-    setWebSocket(ws) { this._ws = ws; }
+    setWebSocket(ws) {
+        this._ws = ws;
+        if (this._interaction) this._interaction.setWebSocket(ws);
+    }
     setBrowserId(id) { this._browserId = id; }
 
     // ── overlay ─────────────────────────────────────────────────
@@ -191,7 +195,7 @@ export class ThreeJsView extends View {
 
         if (webglOk && this.renderer) {
             this.controls = setupControls(this.camera, this.renderer);
-            initInteraction(this.camera, this.renderer.domElement, this.controls, this._ws);
+            this._interaction = new InteractionController(this.camera, this.renderer.domElement, this.controls, this._ws);
         }
     }
 
@@ -248,7 +252,7 @@ export class ThreeJsView extends View {
         if (this.labelRenderer && this.labelRenderer.domElement) {
             this.labelRenderer.domElement.innerHTML = '';
         }
-        clearAllInteractive();
+        this._interaction.clearAllInteractive();
         this.sceneObjects.clear();
         this._removeAnnotation();
         if (this._titleElement) {
@@ -278,7 +282,7 @@ export class ThreeJsView extends View {
         this._applyCamera(cameraConfig);
 
         configureControls(this.controls, this.renderer, spaceDim);
-        setSpaceDim(spaceDim);
+        this._interaction.setSpaceDim(spaceDim);
         this.resize();
 
         if (config.title !== undefined) {
@@ -299,9 +303,10 @@ export class ThreeJsView extends View {
      */
     _applyCamera(cameraConfig) {
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
+        const viewAspect = (this.width > 0 && this.height > 0) ? this.width / this.height : null;
 
-        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null);
-        setCamera(this.camera);
+        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null, viewAspect);
+        this._interaction.setCamera(this.camera);
 
         const cc = cameraConfig || {};
         if (cc.position) this.camera.position.set(cc.position[0], cc.position[1], cc.position[2]);
@@ -486,6 +491,8 @@ export class ThreeJsView extends View {
             this._removeBanner(msg.id);
         } else if (msg.type === 'banner_clear') {
             this._clearBanners();
+        } else if (msg.type === 'interaction:drag_anchor') {
+            this._interaction.setDragAnchor(msg.object_id, msg.world_position);
         }
     }
 
@@ -546,7 +553,7 @@ export class ThreeJsView extends View {
             }
             const entry = await buildSceneObject(msg, this.scene, this.sceneObjects);
             if (entry && msg.interaction) {
-                registerInteractive(msg.id, entry.obj, msg.interaction);
+                this._interaction.registerInteractive(msg.id, entry.obj, msg.interaction);
             }
         } else if (msg.layer === 'overlay') {
             if (msg.kind === 'annotation') {
@@ -562,7 +569,7 @@ export class ThreeJsView extends View {
     }
 
     _removeSceneObject(id) {
-        unregisterInteractive(id);
+        this._interaction.unregisterInteractive(id);
         const entry = this.sceneObjects.get(id);
         if (entry && entry.layer === 'scene' && entry.obj && entry.obj.userData._attachedGroups) {
             for (const groupId of entry.obj.userData._attachedGroups) {
@@ -643,7 +650,7 @@ export class ThreeJsView extends View {
         }
         entry.data = { ...prev, ...content };
         if (prev.interaction) {
-            registerInteractive(id, entry.obj, prev.interaction);
+            this._interaction.registerInteractive(id, entry.obj, prev.interaction);
         }
     }
 

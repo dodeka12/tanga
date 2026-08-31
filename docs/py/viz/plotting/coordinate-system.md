@@ -127,6 +127,35 @@ with a 90°-rotated name label). Override via `x_style`/`y_style`.
 If you already set a `View2DConfig` on the visualizer, `xlim=None`/`ylim=None`
 reuse its visible rectangle.
 
+### Embedding the fitted camera (`fit_view2d`)
+
+The camera `CoordinateSystem` would auto-fit can also be computed standalone via
+`fit_view2d(xlim, ylim, ...)`.  This is useful in a split-view app where you want
+the exact per-pane camera at layout-construction time (before
+`Visualizer.show`), and the matching `CoordinateSystem` is created later with
+`camera=False`:
+
+```python
+from pytanga.viz import CoordinateSystem, SceneView, SplitView, fit_view2d
+
+layout = SplitView(
+    "horizontal",
+    [
+        SceneView("sin", camera=fit_view2d((0, 6.28), (-1.2, 1.2))),
+        # ... more panes ...
+    ],
+)
+
+# later (e.g. in a VisualizerApp.init()):
+cs = CoordinateSystem(
+    viz.scene("sin"), xlim=(0, 6.28), ylim=(-1.2, 1.2), camera=False
+)
+```
+
+`fit_view2d` returns a centred `View2DConfig` whose world rectangle is the
+scale-mapped span of `xlim`/`ylim`, mirroring the auto-fit camera exactly (so
+the embedded pane camera and the `CoordinateSystem` never disagree).
+
 ### Manual 2D placement
 
 If you pass `size`, the 2D plot stops auto-configuring the camera and instead

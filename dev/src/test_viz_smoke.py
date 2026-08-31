@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import time
 
-from pytanga.viz import CameraConfig, Visualizer
+from pytanga.viz import CameraConfig, PointStyle, SphereStyle, Visualizer
 from pytanga.geometry import (
     Circle,
     Direction,
@@ -39,10 +39,10 @@ def test_default_construction():
     """Basic construction and entity add + flush cycle."""
     print("─" * 60)
     print("Test 1: Default construction + entity lifecycle")
-    viz = Visualizer(open_browser=False)
+    viz = Visualizer()
 
     # Add a few entities
-    id_p = viz.add(Point(2, 0, 0), color="#ff4444"style=PointStyle(size=0.12), label="P₁")
+    id_p = viz.add(Point(2, 0, 0), color="#ff4444", style=PointStyle(size=0.12), label="P₁")
     id_l = viz.add(
         Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)),
         color="#44ff44",
@@ -67,7 +67,7 @@ def test_default_construction():
     print(f"  Added 4 entities: {id_p}, {id_l}, {id_pl}, {id_s}")
 
     # Start server in background thread
-    viz.start()
+    viz.start_server()
     print("  Server started (background thread)")
 
     # Wait briefly for server to bind
@@ -83,7 +83,7 @@ def test_default_construction():
     print("  Removed sphere, flushed again")
 
     # Stop server
-    viz.stop()
+    viz.stop_server()
     print("  Server stopped")
     print("  PASSED\n")
 
@@ -92,7 +92,7 @@ def test_all_entity_types():
     """Add one of every supported entity type."""
     print("─" * 60)
     print("Test 2: All entity types")
-    viz = Visualizer(open_browser=False)
+    viz = Visualizer()
 
     viz.add(Point(1, 0, 0), label="Point")
     viz.add(Direction(0, 1, 0), label="Direction")
@@ -117,10 +117,10 @@ def test_all_entity_types():
     viz.add(Sphere(Point(0, 0, 0), radius=2), style=SphereStyle(wireframe=True), label="Sphere")
     viz.add(Space(), label="Space")
 
-    viz.start()
+    viz.start_server()
     time.sleep(0.1)
     viz.flush()
-    viz.stop()
+    viz.stop_server()
     print("  All 9 entity types added and flushed")
     print("  PASSED\n")
 
@@ -141,7 +141,7 @@ def test_all_operator_types():
         Translator,
     )
 
-    viz = Visualizer(open_browser=False)
+    viz = Visualizer()
 
     viz.add(Reflection(normal=Direction(0, 0, 1)), label="Refl")
     viz.add(Inversion(origin=Point(0, 0, 0)), label="Inv")
@@ -167,10 +167,10 @@ def test_all_operator_types():
         label="GenDil",
     )
 
-    viz.start()
+    viz.start_server()
     time.sleep(0.1)
     viz.flush()
-    viz.stop()
+    viz.stop_server()
     print("  All 8 operator types added and flushed")
     print("  PASSED\n")
 
@@ -183,7 +183,7 @@ def test_mv_input():
     from pytanga.algebra import Algebra
 
     pga = Algebra.from_name("PGA3")
-    viz = Visualizer(open_browser=False)
+    viz = Visualizer()
 
     # Plane at z=3 (OPNS)
     viz.add(pga.plane(0, 0, 1, 3), opacity=0.3, label="Plane (MV)")
@@ -192,10 +192,10 @@ def test_mv_input():
     viz.add(pga.point(5, 0, 0), color="#ff4444", label="Pt OPNS", opns=True)
     viz.add(pga.point(5, 0, 0), color="#44ff44", label="Pt IPNS", opns=False)
 
-    viz.start()
+    viz.start_server()
     time.sleep(0.1)
     viz.flush()
-    viz.stop()
+    viz.stop_server()
     print("  MV → Entity pipeline works for Plane and Point (OPNS + IPNS)")
     print("  PASSED\n")
 
@@ -207,7 +207,6 @@ def test_camera_config():
 
     # Full explicit
     viz1 = Visualizer(
-        open_browser=False,
         camera=CameraConfig(
             position=(10, 6, 12),
             target=(0, 0, 0),
@@ -217,21 +216,20 @@ def test_camera_config():
         ),
     )
     viz1.add(Point(0, 0, 0))
-    viz1.start()
+    viz1.start_server()
     time.sleep(0.1)
     viz1.flush()
-    viz1.stop()
+    viz1.stop_server()
 
     # Partial — position only
     viz2 = Visualizer(
-        open_browser=False,
         camera=CameraConfig(position=(5, 10, 5)),
     )
     viz2.add(Point(0, 0, 0))
-    viz2.start()
+    viz2.start_server()
     time.sleep(0.1)
     viz2.flush()
-    viz2.stop()
+    viz2.stop_server()
 
     print("  Full explicit and partial camera config work")
     print("  PASSED\n")
@@ -242,7 +240,7 @@ def test_default_rendering_properties():
     print("─" * 60)
     print("Test 6: Default rendering properties")
 
-    viz = Visualizer(open_browser=False)
+    viz = Visualizer()
 
     # Change default colors
     viz.set_default_color("point", (0.0, 1.0, 0.0))
@@ -264,10 +262,10 @@ def test_default_rendering_properties():
     # Per-entity override
     viz.add(Point(5, 0, 0), color="#ff0000", label="red pt (override)")
 
-    viz.start()
+    viz.start_server()
     time.sleep(0.1)
     viz.flush()
-    viz.stop()
+    viz.stop_server()
 
     # Verify defaults dict
     d = viz.defaults
@@ -284,7 +282,6 @@ def test_scene_config_flags():
     print("Test 7: Scene config flags")
 
     viz = Visualizer(
-        open_browser=False,
         show_grid=False,
         show_axes=False,
         space_extent=25,
@@ -294,10 +291,10 @@ def test_scene_config_flags():
     assert viz._config.space_extent == 25
 
     viz.add(Point(0, 0, 0))
-    viz.start()
+    viz.start_server()
     time.sleep(0.1)
     viz.flush()
-    viz.stop()
+    viz.stop_server()
     print("  show_grid=False, show_axes=False, space_extent=25")
     print("  PASSED\n")
 
@@ -307,14 +304,13 @@ def test_custom_port():
     print("─" * 60)
     print("Test 8: Custom port")
 
-    viz = Visualizer(open_browser=False, port=18766, host="127.0.0.1")
+    viz = Visualizer()
+    viz.start_server(host="127.0.0.1", port=18766)
     assert viz._port == 18766
     assert "18766" in viz.url
     viz.add(Point(0, 0, 0))
-    viz.start()
-    time.sleep(0.1)
     viz.flush()
-    viz.stop()
+    viz.stop_server()
     print(f"  Server started on {viz.url}")
     print("  PASSED\n")
 

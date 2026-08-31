@@ -38,9 +38,6 @@ forwards them directly:
 
 ```python
 VisualizerApp(
-    port=8765,
-    host="localhost",
-    open_browser=None,
     reuse_existing=True,
     title="Tanga 3D Viewer",
     annotation=None,
@@ -54,6 +51,9 @@ VisualizerApp(
 |-----------|------|---------|-------------|
 | `reuse_existing` | `bool` | `True` | Wait for existing browser tab before opening a new one |
 | `enable_server_stop_key` | `bool` | `False` | Opt-in Ctrl+Q browser key that ends the app (mirrors Ctrl+C) |
+
+The server `host`/`port` are configured on :meth:`run` (`run(host=…, port=…)`),
+which forwards them to the underlying `show()`.
 
 See [Visualizer API](../visualizer/visualizer.md) for the full parameter list.
 

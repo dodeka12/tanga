@@ -8,7 +8,6 @@ The `Visualizer` class is the main entry point for the 3D viewer.
 from pytanga.viz import Visualizer, CameraConfig3d
 
 Visualizer(
-    open_browser=None,  # auto: False in Jupyter, True otherwise
     reuse_existing=True,
     title="Tanga 3D Viewer",
     annotation=None,
@@ -22,9 +21,6 @@ Visualizer(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `port` | `int \| None` | `None` | *(deprecated)* HTTP + WebSocket server port. Prefer `start_server(port=...)`. |
-| `host` | `str \| None` | `None` | *(deprecated)* Bind address. Prefer `start_server(host=...)`. |
-| `open_browser` | `bool \| None` | auto | Open viewer URL on start |
 | `reuse_existing` | `bool` | `True` | Wait for existing browser tab to reconnect before opening a new one |
 | `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
@@ -471,7 +467,7 @@ viz.export_glb("scene.glb")
 | Method | Purpose |
 |--------|---------|
 | `show(host=None, port=None, jupyter=None, viewer_name=None)` | Serve + show: opens a browser tab, or renders inline in Jupyter (delegates to `display()`). `viewer_name` dedupes notebook outputs. |
-| `wait()` | Block until Ctrl+C, then stop the server |
+| `wait()` | Block until Ctrl+C, then return — the server is left running and stops at interpreter exit, or via `stop_server()` |
 | `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |
 | `open_browser()` | Open/reconnect a browser tab |
