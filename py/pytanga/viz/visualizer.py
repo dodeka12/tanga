@@ -3478,23 +3478,21 @@ class Visualizer(_JupyterDisplayMixin):
 
         browser_id = payload.get("browser_id")
         event = ControlEvent(browser_id=browser_id)
-        if msg_type == "banner_closed":
-            bid = payload.get("id")
-            await self._dispatch_event(bid, "close", bid, browser_id)
-            return
-
-        if msg_type == "editor_closed":
-            eid = payload.get("id")
-            handler = self._handler_registry.get(eid, "close") if eid else None
+        if msg_type in ("banner_closed", "editor_closed", "close"):
+            target = payload.get("id") or payload.get("control_id")
+            value = payload.get("value")
+            if msg_type == "editor_closed":
+                value = payload.get("text")
+            handler = self._handler_registry.get(target, "close") if target else None
             if handler is not None:
-                self._handler_registry.unregister(eid, "close")
+                self._handler_registry.unregister(target, "close")
                 try:
-                    await handler(payload.get("text"), event)
+                    await handler(value, event)
                 except Exception:
                     import logging
 
                     logging.getLogger(__name__).exception(
-                        "Error in editor on_close handler for %r", eid
+                        "Error in close handler for %r", target
                     )
             return
 

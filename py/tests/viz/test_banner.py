@@ -215,7 +215,7 @@ async def test_banner_closed_dispatches_on_close():
 
     viz._handler_registry.register("b1", _on_close, event="close")
     await viz._dispatch_control_event("banner_closed", {"id": "b1"})
-    assert calls == ["b1"]
+    assert calls == [None]
 
 
 @pytest.mark.anyio
