@@ -26,6 +26,8 @@ from typing import Any
 
 from pytanga.geometry import Direction, Point
 
+from ._controls import ControlHandlerRegistry
+
 _logger = logging.getLogger(__name__)
 
 
@@ -702,8 +704,12 @@ class InteractionHandlerRegistry:
     so handlers always receive a fully populated ``camera`` field.
     """
 
-    def __init__(self) -> None:
-        self._handlers: dict[tuple[str, InteractionEventType], Handler] = {}
+    def __init__(self, handlers: ControlHandlerRegistry | None = None) -> None:
+        # Handler storage: when a shared ``(id, event)`` registry is supplied,
+        # registration delegates to it so interactions and controls share one
+        # namespace; otherwise a private dict is used (unit tests / standalone).
+        self._handlers_registry = handlers
+        self._own_handlers: dict[tuple[str, InteractionEventType], Handler] = {}
         # Per-object state for coalescing
         self._pending: dict[str, list[DragEvent]] = {}
         self._running: dict[str, bool] = {}
@@ -720,7 +726,12 @@ class InteractionHandlerRegistry:
         handler: Handler,
     ) -> None:
         """Register an async handler for a specific object + event type."""
-        self._handlers[(object_id, event_type)] = handler
+        if self._handlers_registry is not None:
+            self._handlers_registry.register(
+                object_id, handler, event=event_type.value
+            )
+        else:
+            self._own_handlers[(object_id, event_type)] = handler
 
     def unregister(
         self,
@@ -731,22 +742,33 @@ class InteractionHandlerRegistry:
 
         If *event_type* is ``None``, remove all handlers for *object_id*.
         """
-        if event_type is None:
-            keys = [k for k in self._handlers if k[0] == object_id]
+        if self._handlers_registry is not None:
+            self._handlers_registry.unregister(
+                object_id, None if event_type is None else event_type.value
+            )
+        elif event_type is None:
+            keys = [k for k in self._own_handlers if k[0] == object_id]
             for k in keys:
-                del self._handlers[k]
+                del self._own_handlers[k]
         else:
-            self._handlers.pop((object_id, event_type), None)
+            self._own_handlers.pop((object_id, event_type), None)
 
     def get(
         self, object_id: str, event_type: InteractionEventType
     ) -> Handler | None:
         """Look up a handler, or ``None``."""
-        return self._handlers.get((object_id, event_type))
+        if self._handlers_registry is not None:
+            return self._handlers_registry.get(object_id, event_type.value)
+        return self._own_handlers.get((object_id, event_type))
 
     def clear(self) -> None:
-        """Remove all handlers and pending queues."""
-        self._handlers.clear()
+        """Remove all handlers and pending queues.
+
+        With a shared registry the handlers are owned by that registry, so only
+        the interaction coalescing state is reset here.
+        """
+        if self._handlers_registry is None:
+            self._own_handlers.clear()
         self._pending.clear()
         self._running.clear()
         self._camera_store.clear()

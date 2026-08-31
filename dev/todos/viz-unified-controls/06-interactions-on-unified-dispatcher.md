@@ -16,25 +16,31 @@ drag-move coalescing.
 
 ## Steps
 
-- [ ] **6.1 — Register interaction handlers on the shared registry**
+- [x] **6.1 — Register interaction handlers on the shared registry**
   - `on_interaction(object_id, event_type, handler)` registers
     `(object_id, event_type.value)` on the unified registry (replacing
     `InteractionHandlerRegistry`).
 
-- [ ] **6.2 — Dispatch interactions through `_dispatch_event`**
+- [x] **6.2 — Dispatch interactions through `_dispatch_event`**
+  > Interaction handlers take a single `event` arg (vs. control handlers'
+  > `(value, event)`), so dispatch stays in `InteractionHandlerRegistry.dispatch`
+  > (which now reads handlers from the shared `(id, event)` registry via
+  > delegation) rather than the two-arg `Visualizer._dispatch_event`.
   - `_dispatch_interaction_event` parses the payload and calls
     `_dispatch_event(object_id, event_type, scene, data)` with a per-event
     **coalescing policy** (`drag_move` coalesces to latest; others run).
 
-- [ ] **6.3 — Keep coalescing**
+- [x] **6.3 — Keep coalescing**
   - Port `InteractionHandlerRegistry.dispatch` drag-move coalescing into the
     policy layer; keep `_send_drag_anchor` as an `event_reply` back-channel.
 
-- [ ] **6.4 — Frontend**
+- [x] **6.4 — Frontend**
+  > No frontend change needed — the wire envelope is unchanged (see deferred 4.3);
+  > `interaction.js` keeps sending `interaction:*` and capture is untouched.
   - `interaction.js` keeps sending `interaction:*` (alias of the envelope); no
     capture changes. `three-view.js` handles `event_reply`.
 
-- [ ] **6.5 — Tests**
+- [x] **6.5 — Tests**
   - `test_interaction_registry.py` / `test_interaction_config.py` migrate to the
     unified registry; add coalescing-policy coverage.
 

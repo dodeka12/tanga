@@ -196,7 +196,7 @@ class Visualizer(_JupyterDisplayMixin):
         # Interaction handler registry (shared across all scenes)
         from ._interaction import InteractionHandlerRegistry
 
-        self._interaction_registry = InteractionHandlerRegistry()
+        self._interaction_registry = InteractionHandlerRegistry(self._handler_registry)
         self._interaction_configs: dict[str, dict[str, Any]] = {}
         self._act_objects: dict[str, Any] = {}
 
@@ -2229,7 +2229,7 @@ class Visualizer(_JupyterDisplayMixin):
                 :class:`DragEvent`, or :class:`ScrollEvent`.
             scene_name: Target scene (default ``""`` = main scene).
         """
-        self._interaction_registry.register(object_id, event_type, handler)
+        self._handler_registry.register(object_id, handler, event=event_type.value)
 
     async def _send_drag_anchor(self, event: Any) -> None:
         """Send the ideal drag anchor to the originating browser on DRAG_START."""
