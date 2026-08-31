@@ -16,7 +16,7 @@ import signal
 import threading
 import time
 import warnings
-from typing import TYPE_CHECKING, Any, Iterator, Sequence
+from typing import TYPE_CHECKING, Any, Iterator, NamedTuple, Sequence
 
 if TYPE_CHECKING:
     from ._object_ref import VizObjectRef
@@ -75,6 +75,19 @@ def _find_free_port(host: str) -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((bind_host, 0))
         return int(sock.getsockname()[1])
+
+
+class ControlRef(NamedTuple):
+    """A control resolved by id, regardless of placement.
+
+    ``placement`` is ``"panel"`` (a :class:`~pytanga.viz._controls.Control`
+    stored in a scene) or ``"view"`` (a layout ``ControlView``).  ``scene`` is
+    the owning scene name (``""`` for layout views, which are global).
+    """
+
+    placement: str
+    control: Any
+    scene: str
 
 
 class Visualizer(_JupyterDisplayMixin):
@@ -2892,6 +2905,25 @@ class Visualizer(_JupyterDisplayMixin):
             ctrl = scene._controls.get(cid)
             if ctrl is not None:
                 return ctrl
+        return None
+
+    def _resolve_control(self, cid: str) -> ControlRef | None:
+        """Return the panel control or layout view with id *cid*, or ``None``.
+
+        Searches panel controls across all scenes first, then layout view
+        controls registered via :meth:`set_layout`.  The result carries the
+        owning scene (``""`` for layout views).
+        """
+        for name, scene in self._scenes.items():
+            ctrl = scene._controls.get(cid)
+            if ctrl is not None:
+                return ControlRef("panel", ctrl, name)
+        from .views import iter_control_views
+
+        for layout in self._layouts.values():
+            for view in iter_control_views(layout):
+                if view.id == cid:
+                    return ControlRef("view", view, "")
         return None
 
     async def _handle_file_browser_navigate(self, payload: dict[str, Any]) -> None:
