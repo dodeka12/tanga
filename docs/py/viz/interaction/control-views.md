@@ -113,7 +113,8 @@ SplitView(
 )
 ```
 
-Requires at least 2 children. `sizes`, when given, must have one entry per
+Requires at least 2 children; any number ≥ 2 is allowed (N children → N − 1
+splitters). `sizes`, when given, must have one entry per
 child. `movable=False` locks every splitter; the default `None` auto-detects
 (an implicit `SpacerView` fills leftover space). `_node_type` is `"split"`.
 

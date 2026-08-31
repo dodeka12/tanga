@@ -329,6 +329,17 @@ class TestSplitView:
                 sizes=[Size.px(1)],
             )
 
+    def test_accepts_arbitrary_child_count(self):
+        # A single split holds any number of children (N − 1 splitters on the
+        # frontend); only a lower bound of 2 is enforced here.
+        layout = SplitView(
+            "horizontal",
+            [SceneView("a"), SpacerView(), SceneView("b"), SceneView("c")],
+        )
+        node = serialize_layout(layout)["root"]
+        assert len(node["children"]) == 4
+        assert node["sizes"] == [None, None, None, None]
+
 
 class TestSerialize:
     def test_scene_view_shape(self):
@@ -377,6 +388,24 @@ class TestSerialize:
         assert inner["children"][0]["scene"] == "side"
         assert inner["children"][1]["type"] == "group"
         assert inner["children"][1]["title"] == "Controls"
+
+    def test_three_children_serialize_in_order(self):
+        layout = SplitView(
+            orientation="horizontal",
+            sizes=[Size.percent(25), Size.percent(50), Size.percent(25)],
+            children=[SceneView("a"), SceneView("b"), SceneView("c")],
+        )
+        root = serialize_layout(layout)["root"]
+
+        assert root["type"] == "split"
+        assert root["orientation"] == "horizontal"
+        assert root["sizes"] == [
+            {"value": 25.0, "unit": "%"},
+            {"value": 50.0, "unit": "%"},
+            {"value": 25.0, "unit": "%"},
+        ]
+        assert [c["scene"] for c in root["children"]] == ["a", "b", "c"]
+        assert all(c["type"] == "scene_view" for c in root["children"])
 
     def test_ids_are_unique_and_deterministic(self):
         layout = SplitView("horizontal", [SceneView("a"), SceneView("b"), SpacerView()])

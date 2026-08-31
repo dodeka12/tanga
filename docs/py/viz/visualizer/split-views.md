@@ -1,9 +1,10 @@
 # Split Views
 
 Split views let a **single browser page** show multiple scenes (or control
-panels) in separate panes, arranged with horizontal or vertical splits. Panes
-can be nested to any depth, and each split's divider is draggable unless a pane
-on either side has a fixed size. The existing per-scene URLs keep working
+panels) in separate panes, arranged with horizontal or vertical splits. Each split can hold **any number
+of panes** in one direction (N panes → N − 1 splitters), splits can be nested to
+any depth, and each divider is draggable unless a pane on either side has a
+fixed size. The existing per-scene URLs keep working
 unchanged — a split view is just an additional layout served at one URL
 (`/?view=<name>`).
 
@@ -55,6 +56,24 @@ leftover is filled by an implicit `SpacerView`.
 be collapsed to nothing (override `min_width`/`min_height`, or pass `None` to
 disable the floor). A **fixed** splitter draws a thin line; a **movable** one
 draws a filled bar.
+
+## Any Number of Splits
+
+A single `SplitView` lays out **any number** of children along one axis — three
+panes make two splitters, four panes make three, and so on (N panes → N − 1
+splitters). No need to nest binary splits to get a 3+ way row or column:
+
+```python
+SplitView(
+    orientation="horizontal",
+    sizes=[Size.percent(35), Size.percent(30), Size.percent(35)],
+    children=[SceneView("left"), SceneView("middle"), SceneView("right")],
+)
+```
+
+Each divider between neighboring panes is independently draggable (unless a
+neighbor is fixed). `sizes`, when given, needs one entry per child. See
+`py/examples/viz/scenes/multi_split.py` for a runnable three-pane example.
 
 ## Stacks and Controls
 

@@ -246,7 +246,7 @@ uv run python py/examples/<path>.py
 
 - **LaTeX** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
-- **layout** — [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
+- **layout** — [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
 
 - **least-norm** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -281,6 +281,8 @@ uv run python py/examples/<path>.py
 - **modulus** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md), [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
 - **Motor** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
+
+- **multi-pane** — [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md)
 
 - **multi-scene** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
@@ -324,7 +326,7 @@ uv run python py/examples/<path>.py
 
 - **P3** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **panes** — [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
+- **panes** — [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
 
 - **PartialDisk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
@@ -390,7 +392,7 @@ uv run python py/examples/<path>.py
 
 - **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
-- **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
+- **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -422,7 +424,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
+- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **standard viewer** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
 
