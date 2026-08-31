@@ -24,7 +24,6 @@ from pytanga.viz.views import (
     View,
     iter_scene_names,
     serialize_layout,
-    set_control_view_value,
 )
 
 
@@ -273,11 +272,26 @@ class TestControlViews:
         assert node["allow_add_columns"] is True
 
 
-def test_table_view_set_control_view_value() -> None:
+def test_table_view_set_control_value() -> None:
+    from pytanga.viz._controls import set_control_value
+
     view = TableView("tbl", columns=["x"], rows=[["1"]])
-    set_control_view_value(view, {"columns": ["y", "z"], "rows": [[2], [3]]})
+    set_control_value(view.control, {"columns": ["y", "z"], "rows": [[2], [3]]})
     assert view.columns == ["y", "z"]
     assert view.rows == [["2"], ["3"]]
+
+
+def test_view_serialize_matches_control_fields() -> None:
+    from pytanga.viz._controls import Slider, _serialize_one_control
+
+    view = SliderView("s1", label="Radius", min=0.0, max=5.0, step=0.1, value=2.0)
+    node = serialize_layout(view)["root"]
+    panel = _serialize_one_control(
+        Slider(id="s1", label="Radius", min=0.0, max=5.0, step=0.1, value=2.0)
+    )
+    for key, val in panel.items():
+        if key != "kind":
+            assert node[key] == val
 
 
 class TestStackView:

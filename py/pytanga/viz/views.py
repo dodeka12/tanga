@@ -20,7 +20,21 @@ from __future__ import annotations
 from itertools import count
 from typing import Any, Iterator, Literal
 
-from ._controls import Handler
+from ._controls import (
+    Button,
+    Checkbox,
+    ColorPicker,
+    Control,
+    Dropdown,
+    FileChooser,
+    Handler,
+    Slider,
+    Table,
+    TextArea,
+    TextField,
+    ValueEdit,
+    _serialize_one_control,
+)
 from ._icons import Icon
 from ._size import Size, SizeSpec, size_from_dict
 from .camera import CameraConfig, View2DConfig, View3dConfig, _normalize_camera_config
@@ -294,7 +308,10 @@ class ControlView(View):
     """Base for a single HTML control rendered as a plain ``View`` (no scene).
 
     The control ``id`` is the WebSocket event key (``control_id``) and must be
-    unique across the app.
+    unique across the app.  Each subclass wraps a
+    :class:`~pytanga.viz._controls.Control` (``self.control``) which is the
+    single source of truth for the control's fields; reads of those fields
+    delegate to it via :meth:`__getattr__`.
     """
 
     _node_type = "control"
@@ -311,12 +328,22 @@ class ControlView(View):
         self.id = cid
         self.label = label
         self.tooltip = tooltip
+        self.control: Control | None = None
+
+    def __getattr__(self, name: str) -> Any:
+        ctrl = self.__dict__.get("control")
+        if ctrl is not None and hasattr(ctrl, name):
+            return getattr(ctrl, name)
+        raise AttributeError(f"{type(self).__name__} object has no attribute {name!r}")
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
         result["id"] = self.id  # control id doubles as the event key
         result["label"] = self.label
         result["tooltip"] = self.tooltip
+        for key, val in _serialize_one_control(self.control).items():
+            if key not in ("id", "kind", "label", "tooltip"):
+                result[key] = val
         return result
 
 
@@ -338,19 +365,16 @@ class SliderView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
-        self.min = float(min)
-        self.max = float(max)
-        self.step = float(step)
-        self.value = self.min if value is None else float(value)
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["min"] = self.min
-        result["max"] = self.max
-        result["step"] = self.step
-        result["value"] = self.value
-        return result
+        self.control = Slider(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            min=float(min),
+            max=float(max),
+            step=float(step),
+            value=float(min) if value is None else float(value),
+            on_change=on_change,
+        )
 
 
 class ButtonView(ControlView):
@@ -369,16 +393,14 @@ class ButtonView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
-        self.icon = icon
-        self.icon_only = icon_only
-        self.on_click = on_click
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        if self.icon is not None:
-            result["icon"] = str(self.icon)
-        result["icon_only"] = self.icon_only
-        return result
+        self.control = Button(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            icon=icon,
+            icon_only=icon_only,
+            on_click=on_click,
+        )
 
 
 class DropdownView(ControlView):
@@ -397,15 +419,14 @@ class DropdownView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
-        self.options = list(options)
-        self.value = value
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["options"] = self.options
-        result["value"] = self.value
-        return result
+        self.control = Dropdown(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            options=list(options),
+            value=value,
+            on_change=on_change,
+        )
 
 
 class FileChooserView(ControlView):
@@ -426,19 +447,16 @@ class FileChooserView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
-        self.value = value
-        self.placeholder = placeholder
-        self.root = root
-        self.accept = accept
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        result["placeholder"] = self.placeholder
-        result["root"] = self.root
-        result["accept"] = self.accept
-        return result
+        self.control = FileChooser(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            value=value,
+            placeholder=placeholder,
+            root=root,
+            accept=accept,
+            on_change=on_change,
+        )
 
 
 class TextFieldView(ControlView):
@@ -458,15 +476,14 @@ class TextFieldView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.placeholder = placeholder
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        result["placeholder"] = self.placeholder
-        return result
+        self.control = TextField(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            value=value,
+            placeholder=placeholder,
+            on_change=on_change,
+        )
 
 
 class TextAreaView(ControlView):
@@ -487,17 +504,15 @@ class TextAreaView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.placeholder = placeholder
-        self.rows = rows
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        result["placeholder"] = self.placeholder
-        result["rows"] = self.rows
-        return result
+        self.control = TextArea(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            value=value,
+            placeholder=placeholder,
+            rows=rows,
+            on_change=on_change,
+        )
 
 
 class ColorPickerView(ControlView):
@@ -516,13 +531,13 @@ class ColorPickerView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        return result
+        self.control = ColorPicker(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            value=value,
+            on_change=on_change,
+        )
 
 
 class CheckboxView(ControlView):
@@ -541,13 +556,13 @@ class CheckboxView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        return result
+        self.control = Checkbox(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            value=value,
+            on_change=on_change,
+        )
 
 
 class ValueEditView(ControlView):
@@ -571,23 +586,18 @@ class ValueEditView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.min = float(min)
-        self.max = float(max)
-        self.step = float(step)
-        self.digits = int(digits)
-        self.value = float(value)
-        self.editable = editable
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["min"] = self.min
-        result["max"] = self.max
-        result["step"] = self.step
-        result["digits"] = self.digits
-        result["value"] = self.value
-        result["editable"] = self.editable
-        return result
+        self.control = ValueEdit(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            min=float(min),
+            max=float(max),
+            step=float(step),
+            digits=int(digits),
+            value=float(value),
+            editable=editable,
+            on_change=on_change,
+        )
 
 
 class TableView(ControlView):
@@ -611,21 +621,18 @@ class TableView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.columns = list(columns)
-        self.rows = [list(row) for row in rows]
-        self.allow_add_rows = allow_add_rows
-        self.allow_add_columns = allow_add_columns
-        self.on_cell_change = on_cell_change
-        self.on_row_add = on_row_add
-        self.on_column_add = on_column_add
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["columns"] = self.columns
-        result["rows"] = self.rows
-        result["allow_add_rows"] = self.allow_add_rows
-        result["allow_add_columns"] = self.allow_add_columns
-        return result
+        self.control = Table(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            columns=list(columns),
+            rows=[list(row) for row in rows],
+            allow_add_rows=allow_add_rows,
+            allow_add_columns=allow_add_columns,
+            on_cell_change=on_cell_change,
+            on_row_add=on_row_add,
+            on_column_add=on_column_add,
+        )
 
 
 def serialize_layout(root: View, name: str = "") -> dict[str, Any]:
@@ -671,61 +678,6 @@ def iter_control_views(root: View) -> Iterator[ControlView]:
     yield from _visit(root)
 
 
-def set_control_view_value(view: ControlView, value: Any) -> None:
-    """Coerce and set *value* on a control view.
-
-    Mirrors :func:`pytanga.viz._controls.set_control_value`.  ``ButtonView`` has
-    no value and raises :class:`TypeError`.
-    """
-    if not isinstance(view, ControlView):
-        raise TypeError(f"view must be a ControlView, got {type(view).__name__}")
-    if isinstance(view, (SliderView, ValueEditView)):
-        view.value = float(value)
-    elif isinstance(view, TableView):
-        view.columns = [str(c) for c in value["columns"]]
-        view.rows = [[str(cell) for cell in row] for row in value["rows"]]
-    elif isinstance(view, CheckboxView):
-        view.value = bool(value)
-    elif isinstance(
-        view,
-        (DropdownView, ColorPickerView, TextFieldView, TextAreaView, FileChooserView),
-    ):
-        view.value = str(value)
-    elif isinstance(view, ButtonView):
-        raise TypeError("ButtonView does not carry a value")
-    else:
-        raise TypeError(f"Unknown control view kind: {type(view).__name__}")
-
-
-def get_control_view_value(view: ControlView) -> Any:
-    """Return the current value of a value-bearing control view.
-
-    Mirrors :func:`pytanga.viz._controls.get_control_value`.  ``ButtonView``
-    has no value and raises :class:`TypeError`.
-    """
-    if not isinstance(view, ControlView):
-        raise TypeError(f"view must be a ControlView, got {type(view).__name__}")
-    if isinstance(view, TableView):
-        return {"columns": list(view.columns), "rows": [list(r) for r in view.rows]}
-    if isinstance(view, ButtonView):
-        raise TypeError("ButtonView does not carry a value")
-    if isinstance(
-        view,
-        (
-            SliderView,
-            DropdownView,
-            ColorPickerView,
-            CheckboxView,
-            TextFieldView,
-            TextAreaView,
-            FileChooserView,
-            ValueEditView,
-        ),
-    ):
-        return view.value
-    raise TypeError(f"Unknown control view kind: {type(view).__name__}")
-
-
 __all__ = [
     "ButtonView",
     "ControlView",
@@ -741,10 +693,8 @@ __all__ = [
     "TableView",
     "ValueEditView",
     "View",
-    "get_control_view_value",
     "iter_control_views",
     "iter_scene_names",
     "serialize_layout",
-    "set_control_view_value",
     "size_from_dict",
 ]

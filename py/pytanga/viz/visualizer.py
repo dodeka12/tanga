@@ -52,9 +52,7 @@ from .views import (
     ControlView,
     SceneView,
     View,
-    get_control_view_value,
     serialize_layout,
-    set_control_view_value,
 )
 
 logger = logging.getLogger("tanga.viz")
@@ -915,8 +913,10 @@ class Visualizer(_JupyterDisplayMixin):
         Mirrors :meth:`set_view_camera`: the view must be a :class:`ControlView`
         and the update is keyed by ``view.id``.
         """
-        set_control_view_value(view, value)
-        self._push_control_update("", view.id, get_control_view_value(view))
+        from ._controls import get_control_value, set_control_value as _set_control_value
+
+        _set_control_value(view.control, value)
+        self._push_control_update("", view.id, get_control_value(view.control))
 
     def set_control(self, cid: str, value: Any) -> None:
         """Set a control's value in place and push ``control_update``.
@@ -934,12 +934,8 @@ class Visualizer(_JupyterDisplayMixin):
         ref = self._resolve_control(cid)
         if ref is None:
             raise KeyError(f"Control {cid!r} not found")
-        if ref.placement == "panel":
-            _set_control_value(ref.control, value)
-            self._push_control_update(ref.scene, cid, get_control_value(ref.control))
-        else:
-            set_control_view_value(ref.control, value)
-            self._push_control_update("", cid, get_control_view_value(ref.control))
+        _set_control_value(ref.control, value)
+        self._push_control_update(ref.scene, cid, get_control_value(ref.control))
 
     def get_control(self, cid: str) -> Any:
         """Return the current value of the control/view with id *cid*."""
@@ -948,9 +944,7 @@ class Visualizer(_JupyterDisplayMixin):
         ref = self._resolve_control(cid)
         if ref is None:
             raise KeyError(f"Control {cid!r} not found")
-        if ref.placement == "panel":
-            return get_control_value(ref.control)
-        return get_control_view_value(ref.control)
+        return get_control_value(ref.control)
 
     # ── Default scene objects ───────────────────────────────
 
@@ -2949,7 +2943,7 @@ class Visualizer(_JupyterDisplayMixin):
         for layout in self._layouts.values():
             for view in iter_control_views(layout):
                 if view.id == cid:
-                    return ControlRef("view", view, "")
+                    return ControlRef("view", view.control, "")
         return None
 
     async def _handle_file_browser_navigate(self, payload: dict[str, Any]) -> None:

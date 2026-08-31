@@ -14,21 +14,21 @@ helpers so there is one control model and one serializer, while keeping the
 
 ## Steps
 
-- [ ] **5.1 — `ControlView` wraps a `Control`**
+- [x] **5.1 — `ControlView` wraps a `Control`**
   - Give `ControlView` a `.control` attribute (an instance of the matching
     `_controls.Control`); `id`/`value`/`label` delegate to it. Keep public
     constructor signatures (`SliderView(cid, …)` etc.) unchanged.
 
-- [ ] **5.2 — Single serializer**
+- [x] **5.2 — Single serializer**
   - `ControlView._serialize` emits the layout node type (unchanged) but fills
     fields from `self.control` via `_serialize_one_control`, so panel and layout
     share one field source.
 
-- [ ] **5.3 — Drop duplicate value helpers**
+- [x] **5.3 — Drop duplicate value helpers**
   - Remove `set_control_view_value`/`get_control_view_value`; `Visualizer` value
     APIs call `set_control_value`/`get_control_value` on `view.control`.
 
-- [ ] **5.4 — Tests**
+- [x] **5.4 — Tests**
   - `test_layout_api.py` and `test_file_chooser.py` serialization tests keep
     passing (wire shape unchanged); add a test that panel and layout instances
     of the same kind serialize identical value fields.
