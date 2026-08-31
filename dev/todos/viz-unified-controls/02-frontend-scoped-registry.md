@@ -14,29 +14,29 @@ owner and scope the teardown.
 
 ## Steps
 
-- [ ] **2.1 — Tag registry entries**
+- [x] **2.1 — Tag registry entries**
   - `_controlRegistry[id] = { owner, scene, kind, apply }` where
     `owner ∈ {"panel", "attached", "layout", "banner"}`.
   - `createX` factories take an optional `{ owner, scene }` (default `"panel"`);
     layout view `render()` and banner rendering pass `"layout"` / `"banner"`.
 
-- [ ] **2.2 — Scope `_destroyAll` / `handleControlsClear`**
+- [x] **2.2 — Scope `_destroyAll` / `handleControlsClear`**
   - `_destroyAll({ owner = "panel", scene = null })` removes only matching
     entries; `handleControlsDefine`/`handleControlsClear` call it with the panel
     scope so layout/banner entries survive.
 
-- [ ] **2.3 — `applyControlValue` resolves by id**
+- [x] **2.3 — `applyControlValue` resolves by id**
   - Keep the single id lookup; add a missing-entry guard + debug log. No owner
     discrimination needed for application.
 
-- [ ] **2.4 — Tests**
+- [x] **2.4 — Tests**
   - Add a `node:test` unit (stub DOM) asserting `_destroyAll` for panel scope
     leaves a layout-scope entry intact, and `applyControlValue` still applies it.
   - Re-check `control-view-smoke.html` / `control-group-view-smoke.html`.
 
 ## Validation
 
-`node --test dev/src/js-tests/`
+`node --test dev/src/js-tests/*.test.mjs`
 
 ## Notes
 

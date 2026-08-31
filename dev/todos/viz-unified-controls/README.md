@@ -69,7 +69,7 @@ Three orthogonal concerns, clearly separated:
 ## Testing as you go
 
 - Python: `uv run pytest py/tests/viz/ -q`
-- Frontend unit: `node --test dev/src/js-tests/`
+- Frontend unit: `node --test dev/src/js-tests/*.test.mjs`
 - Frontend smoke: open `dev/src/js-tests/*-smoke.html` in a browser (manual)
 - Docs: `uv run mkdocs build --strict` (final phase)
 

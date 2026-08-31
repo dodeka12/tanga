@@ -26,9 +26,9 @@ Document the unified model and record the change in the branch changelog.
 
 - [ ] **7.3 — Full validation**
   - `uv run pytest py/tests/viz/ -q`
-  - `node --test dev/src/js-tests/`
+  - `node --test dev/src/js-tests/*.test.mjs`
   - `uv run mkdocs build --strict`
 
 ## Validation
 
-`uv run pytest py/tests/viz/ -q && node --test dev/src/js-tests/ && uv run mkdocs build --strict`
+`uv run pytest py/tests/viz/ -q && node --test dev/src/js-tests/*.test.mjs && uv run mkdocs build --strict`
