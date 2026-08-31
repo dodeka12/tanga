@@ -29,7 +29,7 @@ pushes `control_update`. Re-implement the file-browser handlers on top of it.
   - Keep `set_control_value`/`set_control_view_value` public names as thin
     backward-compat wrappers around the new primitives.
 
-- [ ] **1.3 — File-browser handlers on the new primitive**
+- [x] **1.3 — File-browser handlers on the new primitive**
   - `_handle_file_browser_select`: `set_control(cid, path)` for panel **and**
     view (fixes select write-back + push).
   - `_handle_file_browser_navigate`: resolve `root` from `_resolve_control`

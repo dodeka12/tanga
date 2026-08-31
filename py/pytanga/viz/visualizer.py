@@ -2933,14 +2933,6 @@ class Visualizer(_JupyterDisplayMixin):
             self._loop,
         )
 
-    def _find_control(self, cid: str) -> Any | None:
-        """Return the control with id *cid* from any scene, or ``None``."""
-        for scene in self._scenes.values():
-            ctrl = scene._controls.get(cid)
-            if ctrl is not None:
-                return ctrl
-        return None
-
     def _resolve_control(self, cid: str) -> ControlRef | None:
         """Return the panel control or layout view with id *cid*, or ``None``.
 
@@ -2967,8 +2959,8 @@ class Visualizer(_JupyterDisplayMixin):
             return
         cid = payload.get("control_id")
         path = payload.get("path") or ""
-        ctrl = self._find_control(cid) if cid else None
-        root = getattr(ctrl, "root", None)
+        ref = self._resolve_control(cid) if cid else None
+        root = getattr(ref.control, "root", None) if ref is not None else None
         message = list_directory(path, root=root)
         message.update({"type": "file_browser_listing", "control_id": cid})
         await self._server.push_raw(json.dumps(message))
@@ -2978,10 +2970,8 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> None:
         cid = payload.get("control_id")
         path = payload.get("path") or ""
-        if cid:
-            ctrl = self._find_control(cid)
-            if ctrl is not None:
-                ctrl.value = path
+        if cid and self._resolve_control(cid) is not None:
+            self.set_control(cid, path)
         handler = self._handler_registry.get(cid) if cid else None
         if handler is not None:
             try:
