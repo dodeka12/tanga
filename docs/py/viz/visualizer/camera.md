@@ -225,7 +225,7 @@ Visualizer(
 )
 ```
 
-Grid and axes are explicit scene objects (see [Axes & Grid](../scene-objects/axes-grid.md)).
+Grid and axes are explicit scene objects (see [Axes & Grid](../entities/axes-grid.md)).
 Whether a default axes/grid is inserted automatically is controlled by the
 `add_default_axes` / `add_default_grid` constructor flags (both `True` by
 default).

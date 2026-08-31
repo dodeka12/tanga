@@ -73,106 +73,119 @@ nav:
     - Installation: py/env/installation.md
     - Compile & binding: py/env/compile-and-binding.md
 
+  - Geometric Algebra:
+    - Overview: py/ga/index.md
+    - Algebra:
+      - Overview: py/ga/algebra/index.md
+      - Algebra class: py/ga/algebra/algebra.md
+      - MV class: py/ga/algebra/mv.md
+      - Duals: py/ga/algebra/duals.md
+      - Modulus arithmetic: py/ga/algebra/modulus.md
+      - Galgebra bridge: py/ga/algebra/galgebra_bridge.md
+    - Basis Classes:
+      - Overview: py/ga/basis/index.md
+      - Bases (E3, P3, N3, PGA3): py/ga/basis/bases.md
+      - Null-vector embedding: py/ga/basis/pga_null_embedding.md
+      - BasisE2: py/ga/basis/basis_e2.md
+      - BasisP2: py/ga/basis/basis_p2.md
+      - BasisN2: py/ga/basis/basis_n2.md
+      - BasisPGA2: py/ga/basis/basis_pga2.md
+      - BasisPGA3: py/ga/basis/basis_pga3.md
+    - BladeMask:
+      - Overview: py/ga/blade-mask/index.md
+      - Construction: py/ga/blade-mask/construction.md
+      - Properties & operations: py/ga/blade-mask/properties-and-ops.md
+      - Usage in pipelines: py/ga/blade-mask/usage.md
+      - Inverse blade mask: py/ga/blade-mask/inverse-blade-mask.md
+    - Matrix Operations:
+      - Overview: py/ga/matrix/index.md
+      - MVMatrix: py/ga/matrix/mvmatrix.md
+      - MVProductMatrix: py/ga/matrix/mvproductmatrix.md
+    - Equation Solving:
+      - Overview: py/ga/solver/index.md
+      - Solvers: py/ga/solver/solve.md
+      - Blade mask pipeline: py/ga/solver/blade-mask-pipeline.md
+      - Matrix primitives: py/ga/solver/matrix-primitives.md
+      - Enums & coercion: py/ga/solver/enums.md
+    - Tensor Operations:
+      - Overview: py/ga/tensors/index.md
+      - MVTensor: py/ga/tensors/mvtensor.md
+      - Labeled tensors: py/ga/tensors/labeled-tensor.md
+      - Label iterator: py/ga/tensors/iterator.md
+      - Product tensor: py/ga/tensors/product-tensor.md
+    - Expressions:
+      - Overview: py/ga/expression/index.md
+      - Usage: py/ga/expression/usage.md
+    - Geometry:
+      - Overview: py/ga/geometry/index.md
+      - Entities: py/ga/geometry/entities.md
+      - MV-accepting constructors: py/ga/geometry/mv-constructors.md
+      - Operators: py/ga/geometry/operators.md
+      - Analysis pipeline: py/ga/geometry/analysis.md
+      - Creation pipeline: py/ga/geometry/create.md
+      - Variables & blade masks: py/ga/geometry/variables.md
+      - Random generation: py/ga/geometry/random.md
+      - Round-trip examples: py/ga/geometry/round-trip.md
+
   - Visualization:
     - Overview: py/viz/index.md
     - Use cases - Scripts: py/viz/use-cases-scripts.md
     - Use cases - Jupyter: py/viz/use-cases-notebooks.md
-    - Scene Objects:
-      - Overview: py/viz/scene-objects/index.md
-      - Entities: py/viz/scene-objects/entities.ipynb
-      - Operators: py/viz/scene-objects/operators.ipynb
-      - Motor decomposition: py/viz/scene-objects/motor-decomposition.md
-      - Axes & Grid: py/viz/scene-objects/axes-grid.md
-      - PointPath: py/viz/scene-objects/point-path.md
-      - Coordinate System: py/viz/scene-objects/coordinate-system.md
-      - Coordinate System (examples): py/viz/scene-objects/coordinate-system.ipynb
-      - Active Elements:
-        - Overview: py/viz/scene-objects/active-elements/index.md
-        - ActPoint: py/viz/scene-objects/active-elements/act-point.md
     - Visualizer:
       - Overview: py/viz/visualizer/index.md
       - Visualizer: py/viz/visualizer/visualizer.md
+      - Camera & Controls: py/viz/visualizer/camera.md
+      - Animation: py/viz/visualizer/animation.md
       - Multi-Scene: py/viz/visualizer/multi-scene.md
       - Split Views: py/viz/visualizer/split-views.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
-      - Camera & Controls: py/viz/visualizer/camera.md
-      - Animation: py/viz/visualizer/animation.md
-      - Object Interaction: py/viz/visualizer/object-interaction.md
     - Visualizer App:
-      - Overview: py/viz/visualizerapp/index.md
-      - Quickstart: py/viz/visualizerapp/app.md
-      - Controls: py/viz/visualizerapp/controls.md
-      - Layouts (Split Views & Controls): py/viz/visualizerapp/layouts.md
-      - Handlers & Lifecycle: py/viz/visualizerapp/handlers.md
-      - Banners & Dialogs: py/viz/visualizerapp/banners.md
-      - File Chooser: py/viz/visualizerapp/file-chooser.md
+      - Overview: py/viz/app/index.md
+      - Quickstart: py/viz/app/app.md
+      - Layouts (Split Views & Controls): py/viz/app/layouts.md
+      - Handlers & Lifecycle: py/viz/app/handlers.md
+      - Banners & Dialogs: py/viz/app/banners.md
+      - File Chooser: py/viz/app/file-chooser.md
+    - Entities & Operators:
+      - Overview: py/viz/entities/index.md
+      - Entities: py/viz/entities/entities.ipynb
+      - Operators: py/viz/entities/operators.ipynb
+      - Motor decomposition: py/viz/entities/motor-decomposition.md
+      - Axes & Grid: py/viz/entities/axes-grid.md
+      - PointPath: py/viz/entities/point-path.md
+      - Active Elements:
+        - Overview: py/viz/entities/active-elements/index.md
+        - ActPoint: py/viz/entities/active-elements/act-point.md
+    - Plotting:
+      - Overview: py/viz/plotting/index.md
+      - Coordinate System: py/viz/plotting/coordinate-system.md
+      - Coordinate System (examples): py/viz/plotting/coordinate-system.ipynb
+    - Interaction & Controls:
+      - Overview: py/viz/interaction/index.md
+      - Panel Controls: py/viz/interaction/controls.md
+      - Control Views (xxxView): py/viz/interaction/control-views.md
+      - Object Interaction: py/viz/interaction/object-interaction.md
+    - Labels & Annotation:
+      - Overview: py/viz/labels/index.md
+      - Labels: py/viz/labels/labels.md
+      - Texture Labels: py/viz/labels/texture-labels.md
+      - Title & Annotation: py/viz/labels/title-annotation.md
+    - Styling:
+      - Overview: py/viz/styling/index.md
+      - Style System: py/viz/styling/styles.md
+    - SDF Viewer:
+      - Overview: py/viz/sdf/index.md
+      - SDF Viewer: py/viz/sdf/sdf-viewer.md
+      - SDF Objects in the Standard Viewer: py/viz/sdf/sdf-objects.md
     - Jupyter Notebooks:
       - Overview: py/viz/jupyter/index.md
-      - Live inline display: py/viz/jupyter/live.md
-      - Static inline display: py/viz/jupyter/static.ipynb
-    - Styles:
-      - Overview: py/viz/styles/index.md
-      - Style System: py/viz/styles/styles.md
-      - Labels: py/viz/styles/labels.md
-      - Texture Labels: py/viz/styles/texture-labels.md
-      - Title & Annotation: py/viz/styles/title-annotation.md
+      - Live: py/viz/jupyter/live.md
+      - Static: py/viz/jupyter/static.ipynb
     - Export:
       - Overview: py/viz/export/index.md
       - Standalone HTML: py/viz/export/html.md
       - glTF export: py/viz/export/gltf.md
       - Video & Image: py/viz/export/video-image.md
-    - SDF Viewer:
-      - Overview: py/viz/sdf-viewer.md
-      - SDF Objects in the Standard Viewer: py/viz/sdf-objects.md
-
-  - Geometric Algebra:
-    - Overview: py/index.md
-    - Algebra:
-      - Overview: py/algebra/index.md
-      - Algebra class: py/algebra/algebra.md
-      - MV class: py/algebra/mv.md
-      - Duals: py/algebra/duals.md
-      - Modulus arithmetic: py/algebra/modulus.md
-    - Basis Classes:
-      - Overview: py/basis/index.md
-      - Bases (E3, P3, N3, PGA3): py/basis/bases.md
-      - Null-vector embedding: py/basis/pga_null_embedding.md
-      - BasisPGA3: py/basis/basis_pga3.md
-    - BladeMask:
-      - Overview: py/blade-mask/index.md
-      - Construction: py/blade-mask/construction.md
-      - Properties & operations: py/blade-mask/properties-and-ops.md
-      - Usage in pipelines: py/blade-mask/usage.md
-      - Inverse blade mask: py/blade-mask/inverse-blade-mask.md
-    - Matrix Operations:
-      - Overview: py/matrix/index.md
-      - MVMatrix: py/matrix/mvmatrix.md
-      - MVProductMatrix: py/matrix/mvproductmatrix.md
-    - Equation Solving:
-      - Overview: py/solver/index.md
-      - Solvers: py/solver/solve.md
-      - Blade mask pipeline: py/solver/blade-mask-pipeline.md
-      - Matrix primitives: py/solver/matrix-primitives.md
-      - Enums & coercion: py/solver/enums.md
-    - Tensor Operations:
-      - Overview: py/tensors/index.md
-      - MVTensor: py/tensors/mvtensor.md
-      - Labeled tensors: py/tensors/labeled-tensor.md
-      - Label iterator: py/tensors/iterator.md
-      - Product tensor: py/tensors/product-tensor.md
-    - Expressions:
-      - Overview: py/expression/index.md
-      - Usage: py/expression/usage.md
-    - Geometry:
-      - Overview: py/geometry/index.md
-      - Entities: py/geometry/entities.md
-      - MV-accepting constructors: py/geometry/mv-constructors.md
-      - Operators: py/geometry/operators.md
-      - Analysis pipeline: py/geometry/analysis.md
-      - Creation pipeline: py/geometry/create.md
-      - Variables & blade masks: py/geometry/variables.md
-      - Random generation: py/geometry/random.md
-      - Round-trip examples: py/geometry/round-trip.md
 
   - C++ Documentation:
     - Overview: cpp/index.md

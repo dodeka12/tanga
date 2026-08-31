@@ -14,22 +14,22 @@ note.
 
 ## Steps
 
-- [ ] **4.1 — Full stale-path grep**
+- [x] **4.1 — Full stale-path grep**
   - Search `docs/` and `mkdocs.yml` for every old path segment and confirm zero
     matches: `py/algebra/`, `py/basis/`, `py/blade-mask/`, `py/matrix/`,
     `py/solver/`, `py/tensors/`, `py/expression/`, `py/geometry/`,
     `scene-objects/`, `visualizerapp/`, `styles/`.
 
-- [ ] **4.2 — Build + orphan check**
+- [x] **4.2 — Build + orphan check**
   - `uv run mkdocs build --strict` must pass with no warnings.
   - Confirm every `.md`/`.ipynb` under `docs/py/ga` and `docs/py/viz` is
     reachable from the nav (mkdocs strict mode flags unreferenced pages).
 
-- [ ] **4.3 — Examples drift gate**
+- [x] **4.3 — Examples drift gate**
   - `uv run python tools/generate-example-docs.py --check` (unchanged, but guards
     against accidental drift).
 
-- [ ] **4.4 — Branch changelog**
+- [x] **4.4 — Branch changelog**
   - Follow `dev/workflows/changelog.md`:
     - Create `docs/changelog/2026-08-30_fix-docs.md`.
     - Title: run `uv run python tools/last-release.py` and use
@@ -38,12 +38,12 @@ note.
       **Docs GA/Viz restructure** — and the new `xxxView` control-views reference.
   - Do not update `docs/changelog/index.md` yet (that happens at PR time).
 
-- [ ] **4.5 — Supersede the stale plan**
+- [x] **4.5 — Supersede the stale plan**
   - Move `dev/todos/viz-docs-restructure.md` to `dev/todos/_done/` (or prepend a
     one-line `Superseded by docs-ga-viz-restructure` note) so it is no longer
     read as an active plan.
 
-- [ ] **4.6 — Mark plan done**
+- [x] **4.6 — Mark plan done**
   - Set `Status: Done` in `dev/todos/docs-ga-viz-restructure/README.md`.
 
 ## Validation

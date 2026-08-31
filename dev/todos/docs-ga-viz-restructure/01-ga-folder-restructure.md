@@ -17,13 +17,13 @@ still builds.
 
 ## Steps
 
-- [ ] **1.1 — Create `docs/py/ga/` and move the eight GA topic folders**
+- [x] **1.1 — Create `docs/py/ga/` and move the eight GA topic folders**
   - `git mv docs/py/algebra docs/py/ga/algebra` (repeat for `basis`,
     `blade-mask`, `matrix`, `solver`, `tensors`, `expression`, `geometry`).
   - `docs/py/env/`, `docs/py/examples/`, and `docs/py/viz/` stay put.
   - Confirm `docs/py/ga/` now contains exactly the eight folders.
 
-- [ ] **1.2 — Author `docs/py/ga/index.md` (GA overview)**
+- [x] **1.2 — Author `docs/py/ga/index.md` (GA overview)**
   - Copy the GA overview content from the current `docs/py/index.md`
     (title, "Topics" table, Quick Start, AI-tool docs access, background).
   - Drop the viz-specific "Example Scripts → Visualization" and visualizer
@@ -33,21 +33,21 @@ still builds.
     `viz/index.md` → `../viz/index.md`, `examples/index.md` →
     `../examples/index.md`.
 
-- [ ] **1.3 — Rewrite `docs/py/index.md` as a slim landing**
+- [x] **1.3 — Rewrite `docs/py/index.md` as a slim landing**
   - New H1 "pytanga" with a one-paragraph intro plus a small table linking to
     `ga/index.md` (Geometric Algebra), `viz/index.md` (Visualization),
     `env/index.md` (Environment & Setup), `examples/index.md` (Examples).
   - Keep a short note that GA examples live under `examples/ga/` and viz
     examples under `examples/viz/`.
 
-- [ ] **1.4 — Update `mkdocs.yml` nav**
+- [x] **1.4 — Update `mkdocs.yml` nav**
   - Add a top-level `Python (pytanga)` section with `Overview: py/index.md`
     (place it after `Environment`, before `Geometric Algebra`).
   - Change the `Geometric Algebra` section overview from `py/index.md` to
     `py/ga/index.md` and prefix every GA sub-page path with `ga/` (see the
     target nav in `README.md`).
 
-- [ ] **1.5 — Fix cross-references in the moved GA files**
+- [x] **1.5 — Fix cross-references in the moved GA files**
   - Grep `docs/py/ga/` for `../viz/`, `../env/`, `../examples/`, and
     `../index.md` and re-point anything that now crosses one extra directory
     boundary (add one `../`). Intra-GA sibling links (`../algebra/`, etc.) are

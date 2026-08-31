@@ -5,7 +5,7 @@ overlaid control panel in the browser. Each control takes a unique id and an
 **async** handler callback.
 
 For the handler contract and the `VisualizerApp` lifecycle, see
-[Handlers & Lifecycle](handlers.md).
+[Handlers & Lifecycle](../app/handlers.md).
 
 ## `add_slider`
 

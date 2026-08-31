@@ -1,8 +1,8 @@
-# Scene Objects
+# Entities & Operators
 
 Everything you can place in a scene with `add()` / `new()` (or the `viz(...)`
-shorthand): geometric entities, transformation operators, axes/grid, point
-paths, and the active (interactive) elements.
+shorthand) that is a drawable scene object: geometric entities, transformation
+operators, axes/grid, point paths, and the active (interactive) elements.
 
 ## Topics
 
@@ -10,9 +10,9 @@ paths, and the active (interactive) elements.
 |-------|---------------------|
 | [Entities](entities.ipynb) | Every geometric entity, its style class and parameters, with a live example |
 | [Operators](operators.ipynb) | Versors (rotor, translator, motor, …) and their style classes/parameters |
+| [Motor decomposition](motor-decomposition.md) | How a `Motor` is stored as a general rotor + translator |
 | [Axes & Grid](axes-grid.md) | `Axes2D`/`Axes3D`, custom `Axis`, and `Grid` |
 | [PointPath](point-path.md) | Trail/curve rendering with `PointPath` and `PointPathStyle` |
-| [Coordinate System](coordinate-system.md) | Plotting helper: axes/grid/plane, scales, `size`/`align`/`axis_origin`, live trails |
 | [Active Elements](active-elements/index.md) | High-level interactive entities (`ActPoint`) |
 
 ## Quick reference
@@ -40,8 +40,8 @@ paths, and the active (interactive) elements.
 | PointPath | PointPathStyle | [PointPath](point-path.md) |
 
 For the underlying geometry data classes, see
-[Entity Data Classes](../../geometry/entities.md) and
-[Operator Data Classes](../../geometry/operators.md). Runnable examples:
+[Entity Data Classes](../../ga/geometry/entities.md) and
+[Operator Data Classes](../../ga/geometry/operators.md). Runnable examples:
 [`all_entities.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/all_entities.py)
 and
 [`operators.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/entities/operators.py).

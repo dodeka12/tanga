@@ -17,11 +17,11 @@ the new section index pages, and update `mkdocs.yml` + cross-references.
 
 ## Steps
 
-- [ ] **2.1 — Create the new topic folders**
+- [x] **2.1 — Create the new topic folders**
   - Create `docs/py/viz/{app,entities,plotting,interaction,labels,styling,sdf}`.
   - `visualizer/`, `export/`, `jupyter/` already exist.
 
-- [ ] **2.2 — Move the files (`git mv` each)**
+- [x] **2.2 — Move the files (`git mv` each)**
   - `visualizerapp/` → `app/`: `app.md`, `layouts.md`, `handlers.md`,
     `banners.md`, `file-chooser.md`, `index.md`.
   - `visualizerapp/controls.md` → `interaction/controls.md` (not into `app/`).
@@ -42,12 +42,12 @@ the new section index pages, and update `mkdocs.yml` + cross-references.
   - `sdf-objects.md` → `sdf/sdf-objects.md`.
   - Delete the now-empty `visualizerapp/`, `scene-objects/`, `styles/` folders.
 
-- [ ] **2.3 — Fold superseded index pages**
+- [x] **2.3 — Fold superseded index pages**
   - Delete `scene-objects/index.md` and `styles/index.md`; fold any still-useful
     prose (entity/operator lists, style overview) into the new index pages in
     2.4 rather than discarding it.
 
-- [ ] **2.4 — Author the new section index pages**
+- [x] **2.4 — Author the new section index pages**
   - `entities/index.md` — canonical table of which geometry entities/operators
     can be `add()`ed, linking `entities.ipynb`, `operators.ipynb`,
     `motor-decomposition.md`, `axes-grid.md`, `point-path.md`, `active-elements/`,
@@ -62,7 +62,7 @@ the new section index pages, and update `mkdocs.yml` + cross-references.
   - `styling/index.md` — style system; link `styles.md`.
   - `sdf/index.md` — SDF viewer overview; link `sdf-viewer.md`, `sdf-objects.md`.
 
-- [ ] **2.5 — Update `mkdocs.yml` Visualization nav**
+- [x] **2.5 — Update `mkdocs.yml` Visualization nav**
   - Replace the `Scene Objects`, `Visualizer App`, and old `styles`/SDF entries
     with the target nav in `README.md` (`Visualizer`, `Visualizer App`,
     `Entities & Operators`, `Plotting`, `Interaction & Controls`, `Labels &
@@ -70,7 +70,7 @@ the new section index pages, and update `mkdocs.yml` + cross-references.
   - `Interaction & Controls` lists `controls.md` and `object-interaction.md`
     now; `control-views.md` is added in Phase 3.
 
-- [ ] **2.6 — Fix cross-references**
+- [x] **2.6 — Fix cross-references**
   - Rewrite `docs/py/viz/index.md` "Topics" + "Use Cases" routing tables to the
     new paths.
   - Fix links inside moved pages (e.g. `scene-objects/` → `entities/` or

@@ -14,7 +14,7 @@ that documents every declarative `xxxView` layout/control class in
 
 ## Steps
 
-- [ ] **3.1 — Write the "two control surfaces" mapping table**
+- [x] **3.1 — Write the "two control surfaces" mapping table**
   - Explain the difference between panel controls (`viz.add_*`) and view
     controls (`xxxView` inside a layout), then a table mapping each panel API to
     its view class: `add_slider`↔`SliderView`, `add_dropdown`↔`DropdownView`,
@@ -25,7 +25,7 @@ that documents every declarative `xxxView` layout/control class in
     `add_control_group`↔`GroupView`.
   - Note both share the same async handler contract `(value, event)`.
 
-- [ ] **3.2 — Document the layout containers**
+- [x] **3.2 — Document the layout containers**
   - `View` (base; per-axis `preferred_*`/`min_*`/`max_*` sizes via `SizeSpec`),
     `SceneView` (`scene`, `id`, `camera`, `overlay`), `SpacerView`,
     `SplitView` (`orientation`, `children`, `movable`, `sizes`),
@@ -33,7 +33,7 @@ that documents every declarative `xxxView` layout/control class in
     `collapsed`, `direction`).
   - Cross-link `../visualizer/split-views.md` and `../app/layouts.md`.
 
-- [ ] **3.3 — Document the control views**
+- [x] **3.3 — Document the control views**
   - `ControlView` (base; `cid`, `label`, `tooltip`), then one subsection per
     class with constructor signature + key params + `_node_type`:
     `SliderView`, `ButtonView` (no value; `icon`, `icon_only`, `on_click`),
@@ -41,16 +41,16 @@ that documents every declarative `xxxView` layout/control class in
     `ColorPickerView`, `CheckboxView`, `ValueEditView`, `TableView`.
   - Copy the exact parameter names/defaults from `views.py` (do not invent).
 
-- [ ] **3.4 — Document runtime helpers**
+- [x] **3.4 — Document runtime helpers**
   - `set_control_view_value(view, value)`, `get_control_view_value(view)`,
     `iter_control_views(root)`, `serialize_layout(root, name)`.
   - Note `ButtonView` carries no value (both helpers raise `TypeError`).
 
-- [ ] **3.5 — Add a minimal example**
+- [x] **3.5 — Add a minimal example**
   - A `SplitView` + `GroupView` sidebar with a `SliderView` and `ButtonView`,
     cross-linking `py/examples/viz/interaction/all_controls.py`.
 
-- [ ] **3.6 — Wire it into the nav and index**
+- [x] **3.6 — Wire it into the nav and index**
   - Confirm `mkdocs.yml` lists `Control Views (xxxView)` under
     `Interaction & Controls` (from Phase 2's target nav).
   - Link it from `interaction/index.md` and from `app/layouts.md`'s

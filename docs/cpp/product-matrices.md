@@ -372,6 +372,6 @@ the complete SVD least-squares workflow.
 
 ---
 
-> **Python API:** See [Equation Solving (Python)](../py/solver/index.md) for the pytanga
+> **Python API:** See [Equation Solving (Python)](../py/ga/solver/index.md) for the pytanga
 > bindings that expose this functionality as `BladeMask`, `MVMatrix`,
 > and the solver functions.

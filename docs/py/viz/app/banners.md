@@ -92,5 +92,5 @@ For plain synchronous scripts (no `VisualizerApp`), use
 
 ## See Also
 
-- [Controls](controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_control_group`
+- [Controls](../interaction/controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_control_group`
 - [Handlers & Lifecycle](handlers.md) — the handler contract and the app lifecycle

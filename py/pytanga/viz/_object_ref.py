@@ -174,7 +174,16 @@ class VizObjectRef:
         return [VizObjectRef(self._handle, scene.get_node(lid)) for lid in self.label_ids]
 
     def update_label(self, text: str | None = None, style: Any | None = None) -> None:
-        self._handle.update_label(self.id, text=text, style=style)
+        """Update this node's label text and/or style.
+
+        When the ref wraps a label overlay node, update it directly; otherwise
+        update every label attached to the referenced scene entity.
+        """
+        if self._node.kind == "label":
+            self._handle.update_label(self.id, text=text, style=style)
+            return
+        for lid in self.label_ids:
+            self._handle.update_label(lid, text=text, style=style)
 
     # ── Transforms (scene nodes only) ─────────────────────────
 

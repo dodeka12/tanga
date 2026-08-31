@@ -42,8 +42,8 @@ one roof.
 - **Interactivity** — Interactive controls (sliders, dropdowns, buttons),
   pointer-based object interaction (click, drag, scroll), and a simplified
   `ActPoint` API.  Jupyter notebook support with inline iframes.
-  → [Controls](py/viz/visualizerapp/controls.md)
-  · [Object Interaction](py/viz/visualizer/object-interaction.md)
+  → [Controls](py/viz/interaction/controls.md)
+  · [Object Interaction](py/viz/interaction/object-interaction.md)
   · [Jupyter Notebooks](py/viz/jupyter/index.md)
 
 ### Geometric Algebra / Clifford Algebra
@@ -57,7 +57,7 @@ one roof.
 - **Built-in spaces** — Explicit, ready-to-use algebras for **Euclidean**
   (E2/E3), **projective** (P2/P3), and **conformal** (N2/N3, PGA2/PGA3)
   spaces.
-  → [Basis Classes](py/basis/index.md)
+  → [Basis Classes](py/ga/basis/index.md)
 
 - **C++ template header library** — The core engine is 100 % C++17
   headers with `constexpr`-friendly templates.  Fixing dimension and
@@ -78,28 +78,28 @@ one roof.
   or modular), and reconstruct the unknown multivector.  This operates at
   C++ level with blade‑mask‑restricted matrices.
   → [Matrix mapping & equations (C++)](cpp/matrix-mapping-and-equations.md)
-  · [Equation Solving (Python)](py/solver/index.md)
+  · [Equation Solving (Python)](py/ga/solver/index.md)
 
 - **Matrix and tensor pipelines** — Every blade‑mask‑aware operation is
   available as a **matrix** (`MVMatrix`, `MVProductMatrix`) or a labelled
   **tensor** (`MVTensor`, `MVLabeledTensor`).  Label‑driven Einsum‑style
   contractions, broadcasts, and slicing work directly on multivector data.
-  → [Matrix Operations](py/matrix/index.md)
-  · [Tensor Operations](py/tensors/index.md)
+  → [Matrix Operations](py/ga/matrix/index.md)
+  · [Tensor Operations](py/ga/tensors/index.md)
 
 - **Geometry analysis and creation** — `analyze()` extracts the geometric
   meaning from a multivector (point, line, plane, rotor, motor, …) and
   `create()` constructs a multivector from geometric primitives.  Works
   across E3, P3, N3, and PGA3 algebras with a unified, algebra‑independent
   data model.
-  → [Geometry (Python)](py/geometry/index.md)
+  → [Geometry (Python)](py/ga/geometry/index.md)
 
 - **galgebra interoperability** — `GalgebraBridge` provides bidirectional
   conversion between galgebra (sympy‑based, symbolic) and tanga (numeric)
   multivectors.  Derive symbolically, compute numerically, visualize — or
   work the other way.  Handles both orthogonal and non‑orthogonal bases
   via automatic metric diagonalization.
-  → [Galgebra Bridge](py/algebra/galgebra_bridge.md)
+  → [Galgebra Bridge](py/ga/algebra/galgebra_bridge.md)
 
 ---
 
@@ -128,7 +128,7 @@ pytanga.install_examples() # copies examples to .dep-examples/pytanga/
 
 In a source checkout the functions copy from the local `docs/` and
 `py/examples/` directories respectively. See the
-[Python docs](py/index.md#ai-tool-documentation-access) for details.
+[Python docs](py/ga/index.md#ai-tool-documentation-access) for details.
 
 ---
 

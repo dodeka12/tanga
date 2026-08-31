@@ -1,6 +1,6 @@
 # Docs GA/Viz Restructure — Overview
 
-**Created:** 2026-08-30 | **Status:** Planned | **Branch:** `fix/docs`
+**Created:** 2026-08-30 | **Status:** Done | **Branch:** `fix/docs`
 
 ## Goal
 

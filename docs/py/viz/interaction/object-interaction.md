@@ -11,8 +11,8 @@ user-registered async handlers.
 |---------|-------------|
 | [InteractionTrigger](#interactiontrigger) | Defines *when* an event fires: event type, mouse button, modifier keys, drag mode |
 | [InteractionConfig](#interactionconfig) | Per-entity trigger list with throttling |
-| [InteractionEventType](#interactioneventtype) | `CLICK`, `DBLCLICK`, `DRAG_START`, `DRAG_MOVE`, `DRAG_END`, `SCROLL` |
-| [DragMode](#dragmode) | Constraint plane for drag movement: `VIEW_PLANE`, `XY_PLANE`, `XZ_PLANE`, `YZ_PLANE` |
+| InteractionEventType | `CLICK`, `DBLCLICK`, `DRAG_START`, `DRAG_MOVE`, `DRAG_END`, `SCROLL` |
+| DragMode | Constraint plane for drag movement: `VIEW_PLANE`, `XY_PLANE`, `XZ_PLANE`, `YZ_PLANE` |
 | [ClickEvent](#clickevent) | Fired on click or double-click; carries world position + normal |
 | [DragEvent](#dragevent) | Fired during drags; carries world position, delta, and drag mode |
 | [ScrollEvent](#scrollevent) | Fired on scroll while hovering an interactive object |
@@ -239,5 +239,5 @@ viz.run()
 
 ## See Also
 
-- [Active Elements](../scene-objects/active-elements/index.md) — simplified high-level API for common interactive objects
+- [Active Elements](../entities/active-elements/index.md) — simplified high-level API for common interactive objects
 - [`drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/drag_point.py) — full working example with four drag modes and projection lines
