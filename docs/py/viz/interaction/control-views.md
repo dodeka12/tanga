@@ -357,25 +357,19 @@ handler payloads (`TableCellChange` / `TableRowAdd` / `TableColumnAdd`).
 
 ## Runtime helpers
 
-These free functions mirror the panel-control value API for view controls.
+Each `ControlView` wraps a `pytanga.viz._controls.Control` — the same model the
+panel controls use — exposed as `view.control`.  Values are updated and read
+through that wrapped control:
 
-### `set_control_view_value(view, value)`
-
-Coerce and set *value* on a control view, mirroring
-`pytanga.viz._controls.set_control_value`. Coercion matches the control kind:
-`SliderView`/`ValueEditView` → `float`, `CheckboxView` → `bool`,
-`DropdownView`/`ColorPickerView`/`TextFieldView`/`TextAreaView`/
-`FileChooserView` → `str`, and `TableView` → a
-`{"columns": [...], "rows": [...]}` dict.
-
-### `get_control_view_value(view)`
-
-Return the current value of a value-bearing control view (`TableView` returns
-the `{"columns": ..., "rows": ...}` dict).
+- `pytanga.viz._controls.set_control_value(view.control, value)` /
+  `pytanga.viz._controls.get_control_value(view.control)` coerce and set/read
+  the value (the same helpers the panel controls use).
+- `Visualizer.set_control_view_value(view, value)` is a convenience that calls
+  the above and pushes a `control_update`.
 
 !!! note "`ButtonView` carries no value"
-    `ButtonView` raises `TypeError` from both `set_control_view_value` and
-    `get_control_view_value` — a button has no value to set or read.
+    Both raise `TypeError` for a `ButtonView` — a button has no value to set
+    or read.
 
 ### `iter_control_views(root)`
 

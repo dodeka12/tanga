@@ -26,3 +26,12 @@
   `_dispatch_event` helper; the ad-hoc `_banner_close_handlers` /
   `_editor_close_handlers` dicts are folded into the registry under
   `(id, "close")`.
+- **Single control model** — every `ControlView` now wraps a
+  `pytanga.viz._controls.Control` (exposed as `view.control`) and serializes its
+  fields from it, removing the duplicated `set_control_view_value` /
+  `get_control_view_value` helpers and the parallel `Control`/`ControlView`
+  field definitions.
+- **Interactions share the registry** — `on_interaction` registers handlers in
+  the same `(id, event)` registry as controls; `InteractionHandlerRegistry`
+  delegates handler storage to it while keeping drag-move coalescing and camera
+  caching.
