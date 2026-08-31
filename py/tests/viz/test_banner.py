@@ -219,6 +219,21 @@ async def test_banner_closed_dispatches_on_close():
 
 
 @pytest.mark.anyio
+async def test_dispatch_close_unified_envelope():
+    viz = _viz()
+    calls: list = []
+
+    async def _on_close(value, event):
+        calls.append(value)
+
+    viz._handler_registry.register("b1", _on_close, event="close")
+    await viz._dispatch_control_event("close", {"control_id": "b1", "value": None})
+
+    assert calls == [None]
+    assert viz._handler_registry.get("b1", "close") is None  # one-shot
+
+
+@pytest.mark.anyio
 async def test_show_banner_async_awaits_push(monkeypatch):
     viz = _viz()
     viz._server = _FakeServer()

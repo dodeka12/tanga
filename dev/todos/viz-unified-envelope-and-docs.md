@@ -16,17 +16,17 @@ Finish the frontend side of the unified controls/interactions architecture:
 
 ## Steps
 
-- [ ] **1 — Backend close unification** (`visualizer.py` + `test_banner.py`)
+- [x] **1 — Backend close unification** (`visualizer.py` + `test_banner.py`)
   - One `"close"` branch (aliases `banner_closed`/`editor_closed`) that passes
     `value` (editor text, or `None`) and is one-shot for both.
-- [ ] **2 — Frontend `events.js` + sender migration** (`templates/*`)
+- [x] **2 — Frontend `events.js` + sender migration** (`templates/*`)
   - `events.js` (`setWebSocket`, `sendEvent(target, event, data)`); migrate
     `sendControlEvent`/`throttledSend`/`throttledFlush`, `banner.js`,
     `three-view.js`, `editor.js`, `file-browser.js`.
-- [ ] **3 — Server envelope acceptance** (`server.py`)
+- [x] **3 — Server envelope acceptance** (`server.py`)
   - Route `{type:"event", target, event, data}` by `event` name; keep legacy
     `control:*`/`banner_closed`/… as accepted aliases.
-- [ ] **4 — Tests** — envelope routing (pytest) + `sendEvent` shape (node:test).
+- [x] **4 — Tests** — envelope routing (pytest) + `sendEvent` shape (node:test).
 - [ ] **5 — Docs** — `docs/dev/architecture/viz-controls-and-interactions.md`
   + `mkdocs.yml` nav + `docs/dev/index.md`.
 - [ ] **6 — `.clinerules/rules.md`** — rule pointing new frontend elements at the
