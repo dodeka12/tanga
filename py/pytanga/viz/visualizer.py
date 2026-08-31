@@ -918,6 +918,40 @@ class Visualizer(_JupyterDisplayMixin):
         set_control_view_value(view, value)
         self._push_control_update("", view.id, get_control_view_value(view))
 
+    def set_control(self, cid: str, value: Any) -> None:
+        """Set a control's value in place and push ``control_update``.
+
+        Resolves *cid* across panel controls (any scene) and layout view
+        controls, so this is the single value-update entry point regardless of
+        placement.
+
+        Args:
+            cid: The control id (panel or layout view).
+            value: The new value (coerced to the control kind's type).
+        """
+        from ._controls import get_control_value, set_control_value as _set_control_value
+
+        ref = self._resolve_control(cid)
+        if ref is None:
+            raise KeyError(f"Control {cid!r} not found")
+        if ref.placement == "panel":
+            _set_control_value(ref.control, value)
+            self._push_control_update(ref.scene, cid, get_control_value(ref.control))
+        else:
+            set_control_view_value(ref.control, value)
+            self._push_control_update("", cid, get_control_view_value(ref.control))
+
+    def get_control(self, cid: str) -> Any:
+        """Return the current value of the control/view with id *cid*."""
+        from ._controls import get_control_value
+
+        ref = self._resolve_control(cid)
+        if ref is None:
+            raise KeyError(f"Control {cid!r} not found")
+        if ref.placement == "panel":
+            return get_control_value(ref.control)
+        return get_control_view_value(ref.control)
+
     # ── Default scene objects ───────────────────────────────
 
     def _add_default_scene_objects(

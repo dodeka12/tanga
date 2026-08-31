@@ -21,7 +21,7 @@ pushes `control_update`. Re-implement the file-browser handlers on top of it.
   - Supersedes `_find_control` / `_find_control_view` (update the two
     file-browser callers; keep thin wrappers only if needed).
 
-- [ ] **1.2 — Universal `set_control(id, value)` / `get_control(id)`**
+- [x] **1.2 — Universal `set_control(id, value)` / `get_control(id)`**
   - Resolve via `_resolve_control`.
   - Panel → `_controls.set_control_value` + `_push_control_update(scene, id, …)`;
     view → `views.set_control_view_value` + `_push_control_update("", id, …)`.
