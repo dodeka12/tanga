@@ -12,6 +12,7 @@ import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../rendere
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { handleControlsDefine, handleControlsClear } from '../controls-panel.js';
+import { sendEvent } from '../events.js';
 import { attachGroup, detachGroup, detachAll } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
@@ -526,11 +527,7 @@ export class ThreeJsView extends View {
     }
 
     _sendBannerClosed(id) {
-        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
-            this._ws.send(
-                JSON.stringify({ type: 'banner_closed', id, browser_id: this._browserId })
-            );
-        }
+        sendEvent(id, 'close');
     }
 
     async _upsertObject(msg) {

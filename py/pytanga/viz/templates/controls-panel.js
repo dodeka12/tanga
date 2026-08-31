@@ -4,9 +4,9 @@
 // messages defined in Phase 1.
 
 import { openFileBrowser } from './file-browser.js';
+import { sendEvent } from './events.js';
 
 // ── Module state ─────────────────────────────────────────────
-let _ws = null;
 let _rootEl = null;            // #tanga-control-root (fixed container for all panels)
 let _panelEls = [];            // all active panel wrapper elements
 let _toggleBtn = null;         // hide/restore toggle button
@@ -21,14 +21,6 @@ const _pendingThrottle = {};
 const THROTTLE_MS = 40;
 
 // ── Public API (called from viewer.js) ──────────────────────
-
-/**
- * Store the WebSocket instance so the panel can send events back to Python.
- * Called from viewer.js after the WebSocket connects.
- */
-export function setWebSocket(ws) {
-    _ws = ws;
-}
 
 /**
  * Apply a server-driven `control_update` to a rendered control's DOM value
@@ -1010,13 +1002,25 @@ export function createTable(ctrl) {
 
 // ── WebSocket event dispatch ────────────────────────────────
 
+const _CONTROL_EVENTS = {
+    'control:change': 'change',
+    'control:click': 'click',
+    'control:press': 'press',
+    'control:release': 'release',
+    'control:cell_change': 'cell_change',
+    'control:row_add': 'row_add',
+    'control:column_add': 'column_add',
+    'control:group_toggle': 'group_toggle',
+};
+
 export function sendControlEvent(type, controlId, value) {
-    if (!_ws || _ws.readyState !== WebSocket.OPEN) return;
-    const msg = { type, control_id: controlId };
+    const event = _CONTROL_EVENTS[type];
+    if (!event) return;
+    const data = {};
     if (value !== null && value !== undefined) {
-        msg.value = value;
+        data.value = value;
     }
-    _ws.send(JSON.stringify(msg));
+    sendEvent(controlId, event, data);
 }
 
 /**
