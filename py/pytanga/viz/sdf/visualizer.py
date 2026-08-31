@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import signal
 import threading
 import time
 from typing import Any
@@ -106,6 +107,7 @@ class SdfVisualizer:
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
+        self._saved_signal_handlers: dict[int, Any] | None = None
         self._shutdown_requested = threading.Event()
         self._atexit_registered = False
 
@@ -381,7 +383,7 @@ class SdfVisualizer:
 
     def start_server(self, host: str | None = None, port: int | None = None) -> None:
         """Start serving the SDF viewer without opening a browser."""
-        from pytanga.viz.server import VizServer
+        from pytanga.viz.server import PortInUseError, VizServer
 
         if host is not None:
             self._host = host
@@ -407,14 +409,28 @@ class SdfVisualizer:
             )
             _boot_done.set()
 
-        self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
-        self._loop.create_task(_boot())
-        self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
-        self._thread.start()
+        try:
+            self._loop = asyncio.new_event_loop()
+            boot_task = self._loop.create_task(_boot())
+            self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
+            self._thread.start()
 
-        if not _boot_done.wait(timeout=5.0):
-            raise RuntimeError("SDF server failed to start within 5s")
+            deadline = time.monotonic() + 5.0
+            while not _boot_done.is_set():
+                if boot_task.done():
+                    error = boot_task.exception()
+                    if error is not None:
+                        self._cleanup_failed_boot()
+                        raise error
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+
+            if not _boot_done.is_set():
+                self._cleanup_failed_boot()
+                raise RuntimeError("SDF server failed to start within 5s")
+        except PortInUseError as e:
+            raise SystemExit(str(e))
 
         if not self._atexit_registered:
             import atexit
@@ -428,10 +444,47 @@ class SdfVisualizer:
             atexit.register(_atexit_stop)
             self._atexit_registered = True
 
-        import signal
-
+        self._saved_signal_handlers = {
+            signal.SIGINT: signal.getsignal(signal.SIGINT),
+            signal.SIGTERM: signal.getsignal(signal.SIGTERM),
+        }
         signal.signal(signal.SIGINT, lambda *_: self._shutdown_requested.set())
         signal.signal(signal.SIGTERM, lambda *_: self._shutdown_requested.set())
+
+    def _cleanup_failed_boot(self) -> None:
+        """Tear down a server whose boot task failed before it fully started."""
+        if self._loop is not None and self._loop.is_running():
+            if self._server is not None:
+
+                async def _cleanup() -> None:
+                    try:
+                        await self._server.stop()
+                    except Exception:
+                        pass
+
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        _cleanup(), self._loop
+                    ).result(timeout=5.0)
+                except Exception:
+                    pass
+            self._loop.call_soon_threadsafe(self._loop.stop)
+        if self._thread is not None:
+            self._thread.join(timeout=3.0)
+        self._server = None
+        self._loop = None
+        self._thread = None
+
+    def _restore_signal_handlers(self) -> None:
+        """Restore the SIGINT/SIGTERM handlers saved before the server started."""
+        if self._saved_signal_handlers is None:
+            return
+        for signum, handler in self._saved_signal_handlers.items():
+            try:
+                signal.signal(signum, handler)
+            except Exception:
+                pass
+        self._saved_signal_handlers = None
 
     def open_browser(self, *, wait_for_browser: bool | None = None) -> bool:
         """Open or reconnect a browser tab for the SDF scene (single scene ``""``).
@@ -655,6 +708,7 @@ class SdfVisualizer:
 
     def stop_server(self, *, timeout: float = 5.0) -> None:
         """Stop the SDF server and clean up."""
+        self._restore_signal_handlers()
         if self._server is None:
             return
 

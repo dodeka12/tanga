@@ -83,6 +83,26 @@ scene dimension:
   uses `XY_PLANE` instead of the view plane. This prevents an unmodified drag
   on the view plane of a tilted camera from changing the point's Z coordinate.
 
+## Ideal Drag Anchor
+
+When a drag starts, the point is grabbed at its **ideal anchor** — the point's
+centre — rather than the raw ray/mesh hit point. `ActPoint.drag_anchor` returns
+`self._point`, so the mesh-surface offset no longer appears: because the
+rendered point is a sphere, the raw hit lands on the sphere's surface (up to its
+radius away from the centre), and that offset used to leak into the drag as a
+spurious out-of-plane component — e.g. a growing z-component when dragging on
+`XY_PLANE` while looking down the z-axis.
+
+The pixel→world drag scale is re-anchored onto the same ideal point: the
+frontend buffers raw pixel deltas until the backend replies with the anchor,
+then converts them to world space once at the anchor's depth. For a point this
+is hardly noticeable, but it is the mechanism that keeps positive-dimensional
+actives (a circle drawn as a torus, a sphere) dragging at the correct speed.
+
+The hook is the extension point for future active entities: a circle would
+anchor on the nearest point of the ideal circle (so the torus tube radius never
+leaks into the drag), and a sphere on its centre.
+
 ## Labels
 
 Pass `label=` to `viz.add()` to attach a text label to the point, just like

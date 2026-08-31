@@ -16,15 +16,14 @@ Press Ctrl+C to stop.
 """
 
 import signal
-import time
 
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import Visualizer
 
 
 def main() -> None:
-    viz = Visualizer(port=8765, title="Multi-Scene Smoke Test")
-    viz.start(wait_for_browser=False)
+    viz = Visualizer(title="Multi-Scene Smoke Test")
+    viz.start_server(port=8765)
 
     # Scene "one" — 1 sphere
     one = viz.scene("one")
@@ -67,7 +66,7 @@ def main() -> None:
     stop_event.wait()
 
     print("\n[smoke] Shutting down …")
-    viz.stop()
+    viz.stop_server()
     print("[smoke] Done.")
 
 

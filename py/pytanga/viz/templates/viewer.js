@@ -8,7 +8,6 @@ window.__tanga_ready = true;
 import { ThreeJsView } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
 import { setWebSocket, applyControlValue } from './controls-panel.js';
-import { setWebSocket as setInteractionWebSocket } from './interaction.js';
 import {
     setWebSocket as setBannerWebSocket,
     handleBannerDefine,
@@ -196,7 +195,6 @@ function connectWebSocket() {
         _log('ws-open', 'attempt=' + _reconnectAttempts + ' token=' + (pageToken || 'none'));
         setStatus('connected');
         setWebSocket(ws);
-        setInteractionWebSocket(ws);
         setBannerWebSocket(ws);
         setFileBrowserWebSocket(ws);
         setEditorWebSocket(ws);

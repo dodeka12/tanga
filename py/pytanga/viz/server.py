@@ -11,6 +11,7 @@ Supports multiple named scenes reachable at ``/{name}`` paths.
 from __future__ import annotations
 
 import asyncio
+import errno
 import hashlib
 import json
 import logging
@@ -27,6 +28,35 @@ from uuid import uuid4
 from aiohttp import web
 
 logger = logging.getLogger("tanga.viz.server")
+
+
+class PortInUseError(RuntimeError):
+    """Raised when the viewer server cannot bind its port because it is in use."""
+
+
+# WinSock error code for "address already in use" (WSAEADDRINUSE).  Python's
+# ``errno`` module exposes ``errno.EADDRINUSE`` on POSIX (98 on Linux, 48 on
+# macOS/BSD), but on Windows socket errors carry the raw WinSock code (10048)
+# instead of the CRT value that ``errno.EADDRINUSE`` holds there (100).
+_WSAEADDRINUSE = 10048
+
+
+def _is_port_in_use_error(exc: OSError) -> bool:
+    """Return ``True`` if ``exc`` reports that the port is already in use.
+
+    The errno differs per platform: ``EADDRINUSE`` on POSIX, ``WSAEADDRINUSE``
+    (10048) on Windows.  The WinSock error also has its own message text, so
+    match that wording as a fallback for cases where the error is re-wrapped.
+    """
+    if getattr(exc, "errno", None) in (errno.EADDRINUSE, _WSAEADDRINUSE):
+        return True
+    if getattr(exc, "winerror", None) == _WSAEADDRINUSE:
+        return True
+    message = str(exc).lower()
+    return (
+        "address already in use" in message
+        or "only one usage of each socket address" in message
+    )
 
 
 def compute_frontend_version(static_dir: Path) -> str:
@@ -275,13 +305,10 @@ class VizServer:
                 self._port,
             )
         except OSError as e:
-            if (
-                getattr(e, "errno", 0) == 98
-                or "address already in use" in str(e).lower()
-            ):
-                raise RuntimeError(
+            if _is_port_in_use_error(e):
+                raise PortInUseError(
                     f"Port {self._port} is already in use. "
-                    f"Close the other process or use Visualizer(port=...) "
+                    f"Close the other process or use start_server(port=...) "
                     f"to choose a different port."
                 ) from e
             raise
@@ -359,6 +386,22 @@ class VizServer:
                 dead.append(ws)
         for ws in dead:
             self._ws_clients.discard(ws)
+
+    async def push_raw_to_browser(self, browser_id: str, data: str) -> None:
+        """Send an arbitrary JSON string to a single browser session."""
+        session = self._browser_sessions.get(browser_id)
+        if session is None:
+            return
+        logger.info(
+            "WS SEND t=%.3f %s browser=%s",
+            time.monotonic(),
+            _ws_msg_brief(data),
+            browser_id,
+        )
+        try:
+            await session.ws.send_str(data)
+        except (ConnectionError, Exception):
+            pass
 
     async def push_navigate(self, scene_name: str, target: str = "all") -> None:
         """Send a navigate command to matching browser sessions.

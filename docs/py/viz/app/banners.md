@@ -39,11 +39,16 @@ it is the scene pane.
 - `scene_name=None` (default) → **global**, full-screen.
 - `scene_name="<name>"` → **per-scene**, shown in every pane displaying that
   scene (`""` is the main scene).  `VizSceneHandle` exposes the same API
-  scoped to its scene.
+  scoped to its scene — `show_banner`, `alert`, `confirm`, `remove_banner`,
+  and `clear_banners` (plus their `*_async` forms) — without the `scene_name`
+  argument:
 
 ```python
 viz.show_banner("Global")
-viz.scene("detail").show_banner("Only over the detail scene")
+detail = viz.scene("detail")
+detail.show_banner("Only over the detail scene")
+detail.alert("Detail-specific notice")
+detail.confirm("Rebuild the detail scene?")
 ```
 
 ## Auto-hide and removal

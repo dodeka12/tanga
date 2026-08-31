@@ -114,6 +114,12 @@ class ActSphere(ActSceneObject):
 
 Then `viz.add(ActSphere(...))` will work automatically.
 
+Optionally override `drag_anchor(ray_origin, ray_direction) -> Point` to return
+the nearest point on the entity's ideal geometry to the picking ray; the base
+raises `NotImplementedError` (which keeps the mesh-surface anchor). This is what
+makes `ActPoint` snap to its centre, and what a future torus/circle or sphere
+active element would implement to keep its rendered extent out of the drag.
+
 ## See Also
 
 - [Object Interaction](../../interaction/object-interaction.md) — the low-level interaction API

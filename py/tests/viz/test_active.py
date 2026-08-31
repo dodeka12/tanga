@@ -3,9 +3,12 @@
 
 """Tests for active scene objects (:class:`ActSceneObject` / :class:`ActPoint`)."""
 
+import asyncio
+import json
+
 import pytest
 
-from pytanga.geometry import Point
+from pytanga.geometry import Direction, Point
 from pytanga.viz._act_style import ActPointStyle
 from pytanga.viz._active import ActPoint
 from pytanga.viz._interaction import (
@@ -301,3 +304,52 @@ class TestActPointLabel:
         viz.remove(eid)
         viz._scene.flush()
         assert viz._scene.entity_count == 0
+
+
+class TestDragAnchor:
+    def test_act_point_drag_anchor_returns_centre(self):
+        handle = _FakeSceneHandle()
+        ap = ActPoint(Point(0, 2, 0))
+        ap._init(handle, "pt1")
+        assert ap.drag_anchor(Point(9, 9, 9), Direction(1, 0, 0)) == Point(0, 2, 0)
+
+    def test_dispatch_sends_anchor(self):
+        class _RecordingServer:
+            def __init__(self):
+                self.sent = []
+
+            async def push_raw_to_browser(self, browser_id, data):
+                self.sent.append((browser_id, data))
+
+        async def _run():
+            viz = Visualizer(add_default_axes=False, add_default_grid=False)
+            server = _RecordingServer()
+            viz._server = server
+
+            handle = _FakeSceneHandle()
+            ap = ActPoint(Point(0, 2, 0))
+            ap._init(handle, "pt1")
+            viz._act_objects["pt1"] = ap
+
+            await viz._dispatch_interaction_event(
+                "interaction:drag_start",
+                {
+                    "type": "interaction:drag_start",
+                    "event_type": "drag_start",
+                    "object_id": "pt1",
+                    "browser_id": "b1",
+                    "ray_origin": [9.0, 9.0, 9.0],
+                    "ray_direction": [0.0, 0.0, 1.0],
+                },
+            )
+
+            assert len(server.sent) == 1
+            browser_id, data = server.sent[0]
+            assert browser_id == "b1"
+            assert json.loads(data) == {
+                "type": "interaction:drag_anchor",
+                "object_id": "pt1",
+                "world_position": [0.0, 2.0, 0.0],
+            }
+
+        asyncio.run(_run())

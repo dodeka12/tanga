@@ -191,6 +191,16 @@
         ]
       },
       {
+        "App": [
+          {
+            "Overview": "py/examples/viz/app/index.md"
+          },
+          {
+            "Split View App": "py/examples/viz/app/split_view_app.md"
+          }
+        ]
+      },
+      {
         "Banners": [
           {
             "Overview": "py/examples/viz/banners/index.md"
@@ -200,6 +210,9 @@
           },
           {
             "Heavy Work": "py/examples/viz/banners/heavy_work.md"
+          },
+          {
+            "Scene Banner": "py/examples/viz/banners/scene_banner.md"
           }
         ]
       },

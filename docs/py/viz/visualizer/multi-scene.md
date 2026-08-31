@@ -27,6 +27,17 @@ default styles, `space_dim`, and `background_color`, and each receives its own
 default axes/grid (controlled by the `add_default_axes` / `add_default_grid`
 constructor flags).
 
+For a plot-only scene backed by a `CoordinateSystem` — which draws its own,
+correctly-scaled grid and axes — opt out of the default placeholder grid/axes at
+creation:
+
+```python
+plots = viz.scene("plots", add_axes=False, add_grid=False)
+```
+
+The main scene `""` is created in `__init__`, so suppress its defaults with the
+`add_default_axes` / `add_default_grid` constructor flags instead.
+
 ## Creating and Using Scenes
 
 ```python

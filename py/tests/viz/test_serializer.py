@@ -215,8 +215,14 @@ class TestSerializeOperators:
     def test_reflection_origin(self):
         r = ReflectionPoint(Point(0, 0, 0))
         d = _serialize(r)
-        assert d["origin"] == [0, 0, 0]
+        assert d["center"] == [0, 0, 0]
+        assert d["radius"] == 1.0
         assert d["color"] == "#ffffff"
+
+    def test_reflection_origin_displaced(self):
+        r = ReflectionPoint(Point(1, 2, 3))
+        d = _serialize(r)
+        assert d["center"] == [1, 2, 3]
 
     def test_inversion(self):
         i = Inversion(center=Point(1, 2, 3))

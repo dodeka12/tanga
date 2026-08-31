@@ -410,10 +410,7 @@ class Camera:
         near_world = _mat4_mul_vec4(self.view_inv, near_eye)
         far_world = _mat4_mul_vec4(self.view_inv, far_eye)
 
-        # Ray origin and direction in world space
-        ray_origin = Direction(
-            near_world[0], near_world[1], near_world[2]
-        )
+        # Ray direction in world space
         ray_dir = Direction(
             far_world[0] - near_world[0],
             far_world[1] - near_world[1],
@@ -519,6 +516,8 @@ class DragEvent(ControlEvent):
     world_position: Point = field(default_factory=Point)
     world_delta: Direction = field(default_factory=Direction)
     drag_mode: DragMode = DragMode.VIEW_PLANE
+    ray_origin: Point = field(default_factory=Point)
+    ray_direction: Direction = field(default_factory=Direction)
 
 
 @dataclass
@@ -602,6 +601,8 @@ def _parse_event(data: dict[str, Any]) -> ControlEvent:
         wp = data.get("world_position", [0.0, 0.0, 0.0])
         wd = data.get("world_delta", [0.0, 0.0, 0.0])
         dt = data.get("delta_transform", [])
+        ro = data.get("ray_origin", [0.0, 0.0, 0.0])
+        rd = data.get("ray_direction", [0.0, 0.0, 0.0])
         return DragEvent(
             browser_id=browser_id,
             camera=camera,
@@ -615,6 +616,8 @@ def _parse_event(data: dict[str, Any]) -> ControlEvent:
             world_position=Point(float(wp[0]), float(wp[1]), float(wp[2])),
             world_delta=Direction(float(wd[0]), float(wd[1]), float(wd[2])),
             drag_mode=drag_mode,
+            ray_origin=Point(float(ro[0]), float(ro[1]), float(ro[2])),
+            ray_direction=Direction(float(rd[0]), float(rd[1]), float(rd[2])),
         )
 
     if event_type == InteractionEventType.SCROLL:
@@ -671,6 +674,8 @@ def _coalesce_drag_events(events: list[DragEvent]) -> DragEvent:
         world_position=last.world_position,
         world_delta=total_world_delta,
         drag_mode=last.drag_mode,
+        ray_origin=first.ray_origin,
+        ray_direction=first.ray_direction,
     )
 
 

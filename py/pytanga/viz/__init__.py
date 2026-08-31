@@ -44,7 +44,7 @@ from ._controls import (
     TextField,
     ValueEdit,
 )
-from ._coordinate_system import CoordinateSystem
+from ._coordinate_system import CoordinateSystem, fit_view2d
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
 from ._interaction import (
@@ -198,6 +198,7 @@ __all__ = [
     "ControlEvent",
     "CircleStyle",
     "ControlGroup",
+    "fit_view2d",
     "ControlView",
     "GroupView",
     "CrossHairPointStyle",

@@ -626,6 +626,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update a control's value in place (see :meth:`Visualizer.set_control_value`)."""
         self._viz.set_control_value(cid, value, scene_name=self._name)
 
+    def update_control(self, ctrl_id: str, **fields: Any) -> None:
+        """Mutate fields of a stored control (see :meth:`Visualizer.update_control`)."""
+        self._viz.update_control(ctrl_id, scene_name=self._name, **fields)
+
     def remove_control_group(self, gid: str) -> None:
         """Remove a UI control group from this scene."""
         self._viz._remove_scene_group(self._name, gid)
@@ -660,6 +664,60 @@ class VizSceneHandle(_JupyterDisplayMixin):
             dismissable=dismissable,
             controls=controls,
             on_close=on_close,
+            scene_name=self._name,
+        )
+
+    def alert(
+        self,
+        text: str,
+        *,
+        title: str = "",
+        ok_label: str = "OK",
+        on_ok: Any = None,
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+    ) -> str:
+        """Show an acknowledge banner scoped to this scene (see :meth:`Visualizer.alert`)."""
+        return self._viz.alert(
+            text,
+            title=title,
+            ok_label=ok_label,
+            on_ok=on_ok,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            scene_name=self._name,
+        )
+
+    def confirm(
+        self,
+        text: str,
+        *,
+        title: str = "",
+        yes_label: str = "Yes",
+        no_label: str = "No",
+        cancel_label: str = "Cancel",
+        on_yes: Any = None,
+        on_no: Any = None,
+        on_cancel: Any = None,
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+    ) -> str:
+        """Show a yes/no/cancel banner scoped to this scene (see :meth:`Visualizer.confirm`)."""
+        return self._viz.confirm(
+            text,
+            title=title,
+            yes_label=yes_label,
+            no_label=no_label,
+            cancel_label=cancel_label,
+            on_yes=on_yes,
+            on_no=on_no,
+            on_cancel=on_cancel,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
             scene_name=self._name,
         )
 

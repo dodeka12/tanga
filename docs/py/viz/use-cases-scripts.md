@@ -32,7 +32,7 @@ equivalent `show()` + `wait()` pair:
 viz = Visualizer()
 viz(Point(1, 2, 3), color="#ff4444")
 viz.show()  # serve on port 8765 + open a browser tab
-viz.wait()  # block until Ctrl+C, then stop the server
+viz.wait()  # block until Ctrl+C; the server stops at interpreter exit
 ```
 
 ## Animation

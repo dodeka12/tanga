@@ -1117,10 +1117,10 @@ def _serialize_reflection_origin(
     return _apply_defaults(
         props,
         kind,
-        {"extent": 1.0},
+        {"radius": 1.0},
         styles_map=styles_map,
     ) | {
-        "origin": [0.0, 0.0, 0.0],
+        "center": [ent.point.x, ent.point.y, ent.point.z],
     }
 
 

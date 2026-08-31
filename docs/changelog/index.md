@@ -1,5 +1,11 @@
 # Changelog
 
+## [Since 1.11.1] — 2026-08-31
+- Scene-scoped `alert`/`confirm`/`update_control` on `VizSceneHandle` · `Visualizer.scene(add_axes=…, add_grid=…)` · `fit_view2d()` camera helper · `ActSceneObject.drag_anchor()` ideal-drag hook
+- Breaking: deprecated `Visualizer`/`VisualizerApp` `port`/`host`/`open_browser` constructor params removed
+- Bug fixes: server lifecycle no longer corrupts global state · `update_entity` re-applies rotation & creation-only geometry · per-pane pointer interaction and 2D aspect ratio
+→ [Details](2026-08-31_3ea3a8ab.md)
+
 ## [Since 1.11.0] — 2026-08-30
 - Docs restructured to mirror the example topic layout: GA reference under `docs/py/ga/` · viz docs regrouped into `app/`·`entities/`·`plotting/`·`interaction/`·`labels/`·`styling/`·`sdf/` · new reference page for every declarative `xxxView` control
 - Bug fixes: `update_label` now works on entity refs with attached labels

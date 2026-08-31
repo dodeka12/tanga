@@ -260,6 +260,40 @@ def test_scene_handle_show_banner_scopes(monkeypatch):
     assert calls[0]["scene_name"] == "detail"
 
 
+def test_scene_handle_alert_scopes(monkeypatch):
+    viz = _viz()
+    handle = viz.scene("detail")
+    calls: list = []
+    monkeypatch.setattr(viz, "alert", lambda *a, **kw: calls.append(kw) or "x")
+    handle.alert("ack", title="T", ok_label="Got it")
+    assert calls[0]["scene_name"] == "detail"
+    assert calls[0]["title"] == "T"
+    assert calls[0]["ok_label"] == "Got it"
+
+
+def test_scene_handle_confirm_scopes(monkeypatch):
+    viz = _viz()
+    handle = viz.scene("detail")
+    calls: list = []
+    monkeypatch.setattr(viz, "confirm", lambda *a, **kw: calls.append(kw) or "x")
+    handle.confirm("?", yes_label="Yep", no_label="Nope", cancel_label="Abort")
+    assert calls[0]["scene_name"] == "detail"
+    assert calls[0]["yes_label"] == "Yep"
+    assert calls[0]["no_label"] == "Nope"
+    assert calls[0]["cancel_label"] == "Abort"
+
+
+def test_scene_handle_update_control_scopes(monkeypatch):
+    viz = _viz()
+    handle = viz.scene("detail")
+    calls: list = []
+    monkeypatch.setattr(viz, "update_control", lambda *a, **kw: calls.append(kw))
+    handle.update_control("s", label="Speed", min=1.0)
+    assert calls[0]["scene_name"] == "detail"
+    assert calls[0]["label"] == "Speed"
+    assert calls[0]["min"] == 1.0
+
+
 # ── Phase 6.2 — slider press/release events ─────────────────
 
 
