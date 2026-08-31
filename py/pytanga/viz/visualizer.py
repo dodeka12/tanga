@@ -192,10 +192,8 @@ class Visualizer(_JupyterDisplayMixin):
         # scene name.  Banner ids are unique across scopes (auto-generated).
         self._banners: dict[str | None, dict[str, Any]] = {}
         self._banner_counter = 0
-        self._banner_close_handlers: dict[str, Any] = {}
-
-        # Editor close handlers, keyed by editor id (set via ``open_editor``).
-        self._editor_close_handlers: dict[str, Any] = {}
+        # Banner/editor ``on_close`` handlers live in ``_handler_registry``
+        # under ``(id, "close")``.
 
         # Interaction handler registry (shared across all scenes)
         from ._interaction import InteractionHandlerRegistry
@@ -3114,13 +3112,12 @@ class Visualizer(_JupyterDisplayMixin):
             on_close=on_close,
         )
         for ctrl in ctrl_list:
-            handler = getattr(ctrl, "on_click", None) or getattr(
-                ctrl, "on_change", None
-            )
-            if handler is not None:
-                self._handler_registry.register(ctrl.id, handler)
+            if getattr(ctrl, "on_click", None) is not None:
+                self._handler_registry.register(ctrl.id, ctrl.on_click, event="click")
+            elif getattr(ctrl, "on_change", None) is not None:
+                self._handler_registry.register(ctrl.id, ctrl.on_change, event="change")
         if on_close is not None:
-            self._banner_close_handlers[id] = on_close
+            self._handler_registry.register(id, on_close, event="close")
         self._banners.setdefault(scene_name, {})[id] = banner
         return banner
 
@@ -3232,7 +3229,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Unregister a banner's control handlers and ``on_close`` handler."""
         for ctrl in banner.controls:
             self._handler_registry.unregister(ctrl.id)
-        self._banner_close_handlers.pop(banner.id, None)
+        self._handler_registry.unregister(banner.id, "close")
 
     def remove_banner(self, banner_id: str, *, scene_name: str | None = None) -> None:
         """Remove a banner by id (and unregister its handlers)."""
@@ -3387,7 +3384,7 @@ class Visualizer(_JupyterDisplayMixin):
         ``None`` when the edit is discarded (✕).  The editor is one-shot: the
         handler is consumed after it runs.
         """
-        self._editor_close_handlers[cid] = on_close
+        self._handler_registry.register(cid, on_close, event="close")
         self._push_editor_define(cid, label=label, value=value)
         return cid
 
@@ -3456,6 +3453,29 @@ class Visualizer(_JupyterDisplayMixin):
             self._loop,
         )
 
+    async def _dispatch_event(
+        self, target: str | None, event: str, data: Any, browser_id: Any
+    ) -> None:
+        """Dispatch ``(target, event)`` to its handler with ``data``.
+
+        The single lookup-and-invoke tail shared by control, banner, and editor
+        events: the handler is awaited as ``handler(data, ControlEvent)`` and
+        any exception is logged without propagating.
+        """
+        from ._controls import ControlEvent
+
+        handler = self._handler_registry.get(target, event) if target else None
+        if handler is None:
+            return
+        try:
+            await handler(data, ControlEvent(browser_id=browser_id))
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Error in %r handler for %r", event, target
+            )
+
     async def _dispatch_control_event(
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
@@ -3466,22 +3486,14 @@ class Visualizer(_JupyterDisplayMixin):
         event = ControlEvent(browser_id=browser_id)
         if msg_type == "banner_closed":
             bid = payload.get("id")
-            handler = self._banner_close_handlers.get(bid) if bid else None
-            if handler is not None:
-                try:
-                    await handler(bid, event)
-                except Exception:
-                    import logging
-
-                    logging.getLogger(__name__).exception(
-                        "Error in banner on_close handler for %r", bid
-                    )
+            await self._dispatch_event(bid, "close", bid, browser_id)
             return
 
         if msg_type == "editor_closed":
             eid = payload.get("id")
-            handler = self._editor_close_handlers.pop(eid, None) if eid else None
+            handler = self._handler_registry.get(eid, "close") if eid else None
             if handler is not None:
+                self._handler_registry.unregister(eid, "close")
                 try:
                     await handler(payload.get("text"), event)
                 except Exception:
@@ -3565,30 +3577,16 @@ class Visualizer(_JupyterDisplayMixin):
 
         cid = payload.get("control_id")
         if msg_type == "control:press":
-            handler = self._handler_registry.get(cid, "press") if cid else None
+            event_name, data = "press", payload.get("value")
         elif msg_type == "control:release":
-            handler = self._handler_registry.get(cid, "release") if cid else None
+            event_name, data = "release", payload.get("value")
         elif msg_type == "control:click":
-            handler = self._handler_registry.get(cid, "click") if cid else None
+            event_name, data = "click", None
         elif msg_type == "control:group_toggle":
-            handler = self._handler_registry.get(cid, "toggle") if cid else None
+            event_name, data = "toggle", payload.get("value")
         else:
-            handler = self._handler_registry.get(cid) if cid else None
-
-        if handler is None:
-            return
-
-        try:
-            if msg_type == "control:click":
-                await handler(None, event)
-            else:
-                await handler(payload.get("value"), event)
-        except Exception:
-            import logging
-
-            logging.getLogger(__name__).exception(
-                "Error in control handler for %r", cid
-            )
+            event_name, data = "change", payload.get("value")
+        await self._dispatch_event(cid, event_name, data, browser_id)
 
     async def _on_client_connect(self, remote_addr: str) -> None:
         """Push controls state when a new client connects.

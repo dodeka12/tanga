@@ -121,7 +121,7 @@ def test_show_banner_stores_registers_pushes(monkeypatch):
 
     assert bid == "banner_1"
     assert viz._banners[None][bid].text == "hi"
-    assert viz._handler_registry.get("ok") is _on_ok
+    assert viz._handler_registry.get("ok", "click") is _on_ok
     assert pushed == [("banner_1", None)]
 
 
@@ -157,13 +157,13 @@ def test_remove_banner_unregisters_and_pushes(monkeypatch):
     bid = viz.show_banner(
         "hi", controls=[Button(id="ok", on_click=_on_ok)], on_close=_on_close
     )
-    assert viz._handler_registry.get("ok") is _on_ok
-    assert viz._banner_close_handlers[bid] is _on_close
+    assert viz._handler_registry.get("ok", "click") is _on_ok
+    assert viz._handler_registry.get(bid, "close") is _on_close
 
     viz.remove_banner(bid)
     assert bid not in viz._banners[None]
-    assert viz._handler_registry.get("ok") is None
-    assert bid not in viz._banner_close_handlers
+    assert viz._handler_registry.get("ok", "click") is None
+    assert viz._handler_registry.get(bid, "close") is None
     assert removed == [(bid, None)]
 
 
@@ -197,12 +197,12 @@ def test_alert_confirm_buttons(monkeypatch):
     banner = pushed[bid]
     assert len(banner.controls) == 1
     assert banner.controls[0].label == "OK"
-    assert viz._handler_registry.get(f"{bid}_ok") is _ok
+    assert viz._handler_registry.get(f"{bid}_ok", "click") is _ok
 
     bid2 = viz.confirm("?", on_yes=_yes)
     banner2 = pushed[bid2]
     assert [c.label for c in banner2.controls] == ["Yes", "No", "Cancel"]
-    assert viz._handler_registry.get(f"{bid2}_yes") is _yes
+    assert viz._handler_registry.get(f"{bid2}_yes", "click") is _yes
 
 
 @pytest.mark.anyio
@@ -213,7 +213,7 @@ async def test_banner_closed_dispatches_on_close():
     async def _on_close(value, event):
         calls.append(value)
 
-    viz._banner_close_handlers["b1"] = _on_close
+    viz._handler_registry.register("b1", _on_close, event="close")
     await viz._dispatch_control_event("banner_closed", {"id": "b1"})
     assert calls == ["b1"]
 
