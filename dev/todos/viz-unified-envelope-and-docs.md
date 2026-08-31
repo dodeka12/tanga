@@ -1,6 +1,6 @@
 # Viz: Unified client→server event envelope + close unification + docs
 
-**Date:** 2026-08-31 · **Status:** Planned · **Branch:** `fix/file-chooser-bug`
+**Date:** 2026-08-31 · **Status:** Done · **Branch:** `fix/file-chooser-bug`
 
 **Follow-on to:** [`viz-unified-controls/`](viz-unified-controls/) (phases 1–7, done).
 
@@ -27,13 +27,13 @@ Finish the frontend side of the unified controls/interactions architecture:
   - Route `{type:"event", target, event, data}` by `event` name; keep legacy
     `control:*`/`banner_closed`/… as accepted aliases.
 - [x] **4 — Tests** — envelope routing (pytest) + `sendEvent` shape (node:test).
-- [ ] **5 — Docs** — `docs/dev/architecture/viz-controls-and-interactions.md`
+- [x] **5 — Docs** — `docs/dev/architecture/viz-controls-and-interactions.md`
   + `mkdocs.yml` nav + `docs/dev/index.md`.
-- [ ] **6 — `.clinerules/rules.md`** — rule pointing new frontend elements at the
+- [x] **6 — `.clinerules/rules.md`** — rule pointing new frontend elements at the
   architecture doc.
-- [ ] **7 — Changelog** — Breaking Change (banner `on_close` now receives `None`)
+- [x] **7 — Changelog** — Breaking Change (banner `on_close` now receives `None`)
   + New Features/Refactor bullets.
-- [ ] **8 — Full validation** — pytest + node --test + mkdocs build --strict.
+- [x] **8 — Full validation** — pytest + node --test + mkdocs build --strict.
 
 ## Validation
 

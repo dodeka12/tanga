@@ -1,5 +1,11 @@
 # Changes since version 1.12.0
 
+## Breaking Changes
+- **Banner `on_close` now receives the value, not the banner id** — banner and
+  editor "close" are unified into one `close` event carrying the control's
+  `value` (the editor's text, or `None` for the value-less banner). Capture the
+  id from `show_banner`'s return value instead.
+
 ## Bug Fixes
 - **`FileChooserView` shows the selected path** — selecting a file in the modal
   browser now writes the chosen absolute path back to the control (panel **and**
@@ -35,3 +41,9 @@
   the same `(id, event)` registry as controls; `InteractionHandlerRegistry`
   delegates handler storage to it while keeping drag-move coalescing and camera
   caching.
+- **Unified event envelope** — the frontend sends every user action through one
+  `sendEvent(target, event, data)` helper (`{type:"event", target, event,
+  data}`); the server routes it by `event` name. Banner/editor close are
+  collapsed into a single `close` event.
+- **Architecture documented** — `docs/dev/architecture/viz-controls-and-interactions.md`
+  records the contract, and `.clinerules` points new frontend elements at it.
