@@ -254,6 +254,8 @@ class StackView(View):
         self,
         direction: StackDirection,
         children: list[View] | None = None,
+        *,
+        scrollable: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -263,10 +265,12 @@ class StackView(View):
             )
         self.direction = direction
         self.children = list(children or [])
+        self.scrollable = scrollable
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
         result["direction"] = self.direction
+        result["scrollable"] = self.scrollable
         result["children"] = [child._serialize(id_gen) for child in self.children]
         return result
 
@@ -289,9 +293,10 @@ class GroupView(StackView):
         direction: StackDirection = "vertical",
         position: str | None = None,
         collapsed: bool = False,
+        scrollable: bool = False,
         **kwargs: Any,
     ) -> None:
-        super().__init__(direction, children, **kwargs)
+        super().__init__(direction, children, scrollable=scrollable, **kwargs)
         self.title = title
         self.position = position
         self.collapsed = collapsed

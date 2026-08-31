@@ -168,6 +168,13 @@ class TestGroupView:
         assert node["collapsed"] is False
         assert node["children"][0]["type"] == "spacer"
 
+    def test_scrollable_serialize(self):
+        assert serialize_layout(GroupView("Actions"))["root"]["scrollable"] is False
+        assert (
+            serialize_layout(GroupView("Actions", scrollable=True))["root"]["scrollable"]
+            is True
+        )
+
 
 class TestControlViews:
     def test_slider_serialize(self):
@@ -310,6 +317,13 @@ class TestStackView:
         assert node["direction"] == "horizontal"
         assert len(node["children"]) == 2
         assert node["children"][0]["type"] == "spacer"
+
+    def test_scrollable_serialize(self):
+        assert serialize_layout(StackView("vertical"))["root"]["scrollable"] is False
+        assert (
+            serialize_layout(StackView("vertical", scrollable=True))["root"]["scrollable"]
+            is True
+        )
 
 
 class TestSplitView:
