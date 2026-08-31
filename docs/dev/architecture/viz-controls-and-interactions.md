@@ -75,3 +75,14 @@ Register handlers with `Visualizer.on_interaction(object_id, event_type,
 handler)` (stored under `(object_id, event_type.value)`). The per-pane frontend
 `InteractionController` captures/throttles pointer events and sends them under
 `interaction:*` names; the backend coalesces `drag_move`.
+
+## Follow-ups
+
+- **Fold `interaction.js` onto `sendEvent`** — the interactive-object frontend
+  (`templates/interaction.js`) still sends `interaction:*` messages directly
+  rather than through `sendEvent` (the server already routes
+  `event: "interaction:*"`). A low-risk fold is a thin `_emit(payload)` wrapper
+  calling `sendEvent(payload.object_id, payload.type, omit(payload, ["type",
+  "object_id"]))`, leaving the payload builders and throttle/coalescing logic
+  untouched. Deferred: it touches the timing-sensitive drag path and isn't
+  covered by the browser-less test suite.

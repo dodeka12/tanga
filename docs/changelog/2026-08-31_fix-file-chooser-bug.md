@@ -41,9 +41,10 @@
   the same `(id, event)` registry as controls; `InteractionHandlerRegistry`
   delegates handler storage to it while keeping drag-move coalescing and camera
   caching.
-- **Unified event envelope** — the frontend sends every user action through one
-  `sendEvent(target, event, data)` helper (`{type:"event", target, event,
-  data}`); the server routes it by `event` name. Banner/editor close are
-  collapsed into a single `close` event.
+- **Unified event envelope** — control/banner/editor/file-browser actions go
+  through one `sendEvent(target, event, data)` helper (`{type:"event", target,
+  event, data}`); the server routes it by `event` name. Banner/editor close are
+  collapsed into a single `close` event. (Interactive objects still send
+  `interaction:*` directly — recorded as a follow-up in the architecture doc.)
 - **Architecture documented** — `docs/dev/architecture/viz-controls-and-interactions.md`
   records the contract, and `.clinerules` points new frontend elements at it.
