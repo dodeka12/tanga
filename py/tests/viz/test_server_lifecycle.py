@@ -4,6 +4,7 @@
 """Tests for server lifecycle (loop/handler restore, port-in-use, dead params, layout URL)."""
 
 import asyncio
+import errno
 import signal
 import socket
 import threading
@@ -11,7 +12,7 @@ import threading
 import pytest
 
 from pytanga.viz import Visualizer, VisualizerApp
-from pytanga.viz.server import PortInUseError, VizServer
+from pytanga.viz.server import PortInUseError, VizServer, _is_port_in_use_error
 
 
 def _viz() -> Visualizer:
@@ -64,6 +65,27 @@ def test_start_server_busy_port_reports_clear_message():
     assert viz._server is None
     assert viz._loop is None
     assert viz._thread is None
+
+
+def test_is_port_in_use_error_detects_posix_and_windows():
+    # POSIX: EADDRINUSE (98 on Linux, 48 on macOS) with the standard message.
+    assert _is_port_in_use_error(OSError(errno.EADDRINUSE, "Address already in use"))
+    # Windows: the WinSock error code (10048) with its own message.
+    assert _is_port_in_use_error(
+        OSError(10048, "only one usage of each socket address is normally permitted")
+    )
+    # Windows: the error wrapped by asyncio's create_server keeps errno=10048
+    # and a mixed message containing the WinSock wording.
+    assert _is_port_in_use_error(
+        OSError(
+            10048,
+            "error while attempting to bind on address ('127.0.0.1', 50621): "
+            "[winerror 10048] only one usage of each socket address "
+            "(protocol/network address/port) is normally permitted",
+        )
+    )
+    # An unrelated OSError is not treated as a busy port.
+    assert not _is_port_in_use_error(OSError(errno.ECONNREFUSED, "Connection refused"))
 
 
 # ── 6.4 — _ensure_server_running surfaces the real boot error ──────────────
