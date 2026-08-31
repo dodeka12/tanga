@@ -1,6 +1,6 @@
 # Unified controls, layouts, scenes & interactions — Overview
 
-**Created:** 2026-08-31 | **Status:** Planned | **Branch:** `fix/file-chooser-bug`
+**Created:** 2026-08-31 | **Status:** In progress | **Branch:** `fix/file-chooser-bug`
 
 ## Goal
 

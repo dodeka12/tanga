@@ -35,7 +35,7 @@ pushes `control_update`. Re-implement the file-browser handlers on top of it.
   - `_handle_file_browser_navigate`: resolve `root` from `_resolve_control`
     (panel or view; fixes `root=` clamping).
 
-- [ ] **1.4 — Tests**
+- [x] **1.4 — Tests**
   - Panel select pushes `control_update`; layout `FileChooserView` select sets
     value + pushes; named-scene panel pushes the correct scene; layout
     `FileChooserView(root=…)` navigate clamps.
