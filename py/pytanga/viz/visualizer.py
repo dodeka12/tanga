@@ -313,24 +313,26 @@ class Visualizer(_JupyterDisplayMixin):
         """Register control-view handlers into the control handler registry."""
         from .views import iter_control_views
 
-        for key in self._layout_control_ids:
-            self._handler_registry.unregister(key)
+        for cid in self._layout_control_ids:
+            self._handler_registry.unregister(cid)
         self._layout_control_ids.clear()
 
         for view in iter_control_views(root):
             entries: list[tuple[str, Any]] = []
-            handler = getattr(view, "on_change", None) or getattr(view, "on_click", None)
-            if handler is not None:
-                entries.append((view.id, handler))
+            if getattr(view, "on_change", None) is not None:
+                entries.append(("change", view.on_change))
+            elif getattr(view, "on_click", None) is not None:
+                entries.append(("click", view.on_click))
             if getattr(view, "on_cell_change", None) is not None:
-                entries.append((view.id, view.on_cell_change))
+                entries.append(("cell_change", view.on_cell_change))
             if getattr(view, "on_row_add", None) is not None:
-                entries.append((f"__row_add__{view.id}", view.on_row_add))
+                entries.append(("row_add", view.on_row_add))
             if getattr(view, "on_column_add", None) is not None:
-                entries.append((f"__column_add__{view.id}", view.on_column_add))
-            for key, h in entries:
-                self._handler_registry.register(key, h)
-                self._layout_control_ids.add(key)
+                entries.append(("column_add", view.on_column_add))
+            for event, h in entries:
+                self._handler_registry.register(view.id, h, event=event)
+            if entries:
+                self._layout_control_ids.add(view.id)
 
     def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
         """Callback: return the serialized layout for *layout_name*, or None."""
@@ -2350,9 +2352,9 @@ class Visualizer(_JupyterDisplayMixin):
         if on_change is not None:
             self._handler_registry.register(cid, on_change)
         if on_press is not None:
-            self._handler_registry.register(f"__press__{cid}", on_press)
+            self._handler_registry.register(cid, on_press, event="press")
         if on_release is not None:
-            self._handler_registry.register(f"__release__{cid}", on_release)
+            self._handler_registry.register(cid, on_release, event="release")
         self._push_controls(scene_name)
         return cid
 
@@ -2490,7 +2492,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self._scenes[scene_name].add_control(ctrl)
         if on_click is not None:
-            self._handler_registry.register(cid, on_click)
+            self._handler_registry.register(cid, on_click, event="click")
         self._push_controls(scene_name)
         return cid
 
@@ -2726,11 +2728,11 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self._scenes[scene_name].add_control(ctrl)
         if on_cell_change is not None:
-            self._handler_registry.register(cid, on_cell_change)
+            self._handler_registry.register(cid, on_cell_change, event="cell_change")
         if on_row_add is not None:
-            self._handler_registry.register(f"__row_add__{cid}", on_row_add)
+            self._handler_registry.register(cid, on_row_add, event="row_add")
         if on_column_add is not None:
-            self._handler_registry.register(f"__column_add__{cid}", on_column_add)
+            self._handler_registry.register(cid, on_column_add, event="column_add")
         self._push_controls(scene_name)
         return cid
 
@@ -3039,7 +3041,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self._scenes[scene_name].add_control_group(group)
         if on_toggle is not None:
-            self._handler_registry.register(f"__group__{gid}", on_toggle)
+            self._handler_registry.register(gid, on_toggle, event="toggle")
         self._push_controls(scene_name)
         return gid
 
@@ -3048,8 +3050,6 @@ class Visualizer(_JupyterDisplayMixin):
 
     def _remove_scene_control(self, scene_name: str, cid: str) -> None:
         self._handler_registry.unregister(cid)
-        self._handler_registry.unregister(f"__press__{cid}")
-        self._handler_registry.unregister(f"__release__{cid}")
         self._scenes[scene_name].remove_control(cid)
         self._push_controls(scene_name)
 
@@ -3058,7 +3058,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._remove_scene_group("", gid)
 
     def _remove_scene_group(self, scene_name: str, gid: str) -> None:
-        self._handler_registry.unregister(f"__group__{gid}")
+        self._handler_registry.unregister(gid)
         self._scenes[scene_name].remove_control_group(gid)
         self._push_controls(scene_name)
 
@@ -3501,7 +3501,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:cell_change":
             cid = payload.get("control_id")
-            handler = self._handler_registry.get(cid) if cid else None
+            handler = self._handler_registry.get(cid, "cell_change") if cid else None
             if handler is not None:
                 try:
                     await handler(
@@ -3522,7 +3522,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:row_add":
             cid = payload.get("control_id")
-            handler = self._handler_registry.get(f"__row_add__{cid}") if cid else None
+            handler = self._handler_registry.get(cid, "row_add") if cid else None
             if handler is not None:
                 try:
                     await handler(
@@ -3543,7 +3543,7 @@ class Visualizer(_JupyterDisplayMixin):
         if msg_type == "control:column_add":
             cid = payload.get("control_id")
             handler = (
-                self._handler_registry.get(f"__column_add__{cid}") if cid else None
+                self._handler_registry.get(cid, "column_add") if cid else None
             )
             if handler is not None:
                 try:
@@ -3565,9 +3565,13 @@ class Visualizer(_JupyterDisplayMixin):
 
         cid = payload.get("control_id")
         if msg_type == "control:press":
-            handler = self._handler_registry.get(f"__press__{cid}") if cid else None
+            handler = self._handler_registry.get(cid, "press") if cid else None
         elif msg_type == "control:release":
-            handler = self._handler_registry.get(f"__release__{cid}") if cid else None
+            handler = self._handler_registry.get(cid, "release") if cid else None
+        elif msg_type == "control:click":
+            handler = self._handler_registry.get(cid, "click") if cid else None
+        elif msg_type == "control:group_toggle":
+            handler = self._handler_registry.get(cid, "toggle") if cid else None
         else:
             handler = self._handler_registry.get(cid) if cid else None
 
