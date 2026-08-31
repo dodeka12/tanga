@@ -178,6 +178,13 @@ class TestOverlay:
         lref.update_label(text="New")
         assert lref.text == "New"
 
+    def test_update_label_on_entity_ref(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = h.new(Point(1, 2, 3), label="P")
+        ref.update_label(text="moved")
+        assert ref.labels[0].text == "moved"
+
 
 class TestGroup:
     def test_group_add_new(self):

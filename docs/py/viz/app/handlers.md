@@ -4,7 +4,7 @@ The `VisualizerApp` base class provides a structured lifecycle for building
 interactive 3D visualization apps with sliders, dropdowns, buttons, and
 control groups.
 
-For the control methods themselves, see [Controls](controls.md).
+For the control methods themselves, see [Controls](../interaction/controls.md).
 
 ## VisualizerApp base class
 

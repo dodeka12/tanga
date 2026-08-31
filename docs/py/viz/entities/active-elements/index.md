@@ -116,6 +116,6 @@ Then `viz.add(ActSphere(...))` will work automatically.
 
 ## See Also
 
-- [Object Interaction](../../visualizer/object-interaction.md) — the low-level interaction API
+- [Object Interaction](../../interaction/object-interaction.md) — the low-level interaction API
 - [`act_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/act_point.py) — reusable ActPoint example
 - [`drag_point.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/drag_point.py) — explicit low-level API example

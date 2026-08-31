@@ -242,6 +242,6 @@ available in both Python and C++.
 ## 6. Related
 
 - [Solver documentation](../solver/index.md) — Python API for equation solving
-- [Matrix Mapping and Equations](../../cpp/matrix-mapping-and-equations.md) — C++
+- [Matrix Mapping and Equations](../../../cpp/matrix-mapping-and-equations.md) — C++
   blade-mask machinery (forward product masks)
-- [Product matrices](../../cpp/product-matrices.md) — product matrix construction
+- [Product matrices](../../../cpp/product-matrices.md) — product matrix construction

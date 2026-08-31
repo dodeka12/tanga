@@ -31,8 +31,8 @@ Visualizer(
 | `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
 | `background_color` | `str` | `"#1a1a2e"` | CSS background color |
 | `camera` | `CameraConfig \| View2DConfig \| View3dConfig \| None` | `None` | Explicit camera settings. Also accepts a `View2DConfig` / `View3dConfig` input spec, which is converted via `get_camera()` (see [Camera & Controls](camera.md)). |
-| `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](../scene-objects/axes-grid.md). |
-| `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](../scene-objects/axes-grid.md). |
+| `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](../entities/axes-grid.md). |
+| `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](../entities/axes-grid.md). |
 
 ## 2D Visualization
 
@@ -65,7 +65,7 @@ When `space_dim=2`:
     - **Pan:** left-click drag *or* right-click drag
     - **Zoom:** scroll wheel
     - No orbit rotation (rotation around the view axis is locked).
-- Grids and axes are explicit scene objects (see [Axes & Grid](../scene-objects/axes-grid.md)).
+- Grids and axes are explicit scene objects (see [Axes & Grid](../entities/axes-grid.md)).
 - **Full 3D entities render in 2D mode.** Any 3D entity (e.g. `Sphere`,
   `Plane`, `Circle` with non‑zero `z`) can be added and renders correctly
   from the orthographic top‑down perspective. This works out of the box

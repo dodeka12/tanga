@@ -7,7 +7,7 @@ managed lifecycle (`init` → block → `cleanup`).
 
 For the underlying view model (sizes, splitters, panes), see
 [Split Views](../visualizer/split-views.md); for the panel-control methods, see
-[Controls](controls.md).
+[Controls](../interaction/controls.md).
 
 ## Two kinds of controls
 
@@ -17,7 +17,8 @@ For the underlying view model (sizes, splitters, panes), see
 | View controls | `SliderView` / `DropdownView` / `ButtonView` (inside a `GroupView`/`StackView`) | A pane in your `SplitView` layout | A sidebar/toolbar next to one or more scene panes |
 
 Both use the same **async** handler contract — `(value, event)` — so a handler
-written for one style works with the other.
+written for one style works with the other. The declarative view classes are
+documented in full in [Control Views (xxxView)](../interaction/control-views.md).
 
 ## A split-view app
 
@@ -156,13 +157,13 @@ async def init(self):
     self.viz.flush()
 ```
 
-Controls can also be scoped per scene (see [Controls](controls.md)); in a layout
+Controls can also be scoped per scene (see [Controls](../interaction/controls.md)); in a layout
 they're simply placed in whichever pane's `GroupView`/`StackView` you want.
 
 ## See Also
 
 - [Split Views](../visualizer/split-views.md) — the view hierarchy, `Size` units,
   splitters, overlays, and per-pane cameras
-- [Controls](controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_control_group`
+- [Controls](../interaction/controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_control_group`
 - [Handlers & Lifecycle](handlers.md) — the handler contract and the app lifecycle
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.11.0] — 2026-08-30
+- Docs restructured to mirror the example topic layout: GA reference under `docs/py/ga/` · viz docs regrouped into `app/`·`entities/`·`plotting/`·`interaction/`·`labels/`·`styling/`·`sdf/` · new reference page for every declarative `xxxView` control
+- Bug fixes: `update_label` now works on entity refs with attached labels
+→ [Details](2026-08-30_83af75c1.md)
+
 ## [Since 1.10.1] — 2026-08-30
 - Editable table control (`add_table` / `TableView`) with per-change async handlers · unified, tighter camera auto-fit shared by live viewer + HTML export
 - Bug fixes: standalone HTML export now renders KaTeX math labels

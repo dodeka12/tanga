@@ -262,7 +262,7 @@ and add a new JS renderer module dispatched on the `style_type` string.
 rendered directly onto entity surfaces (Sphere, Plane). It appears as the
 optional `texture_label` field on `SphereStyle` and `PlaneStyle`.
 
-See **[Texture Labels](texture-labels.md)** for full documentation with
+See **[Texture Labels](../labels/texture-labels.md)** for full documentation with
 examples covering all fields, content modes, per-kind defaults, and the
 `tex_label`/`tex_label_style` convenience API.
 

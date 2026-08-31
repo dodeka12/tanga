@@ -61,7 +61,7 @@ This maps to the C++ pattern:
 
 For further context on the modular inverse and the congruence maps that
 underpin it, see the C++ documentation in
-[docs/cpp/congruence.md](../../cpp/congruence.md).
+[docs/cpp/congruence.md](../../../cpp/congruence.md).
 
 ## Modular solver
 
