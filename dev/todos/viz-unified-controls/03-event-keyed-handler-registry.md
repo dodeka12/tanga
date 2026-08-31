@@ -14,22 +14,22 @@ event name.
 
 ## Steps
 
-- [ ] **3.1 — Extend registry to `(id, event)`**
+- [x] **3.1 — Extend registry to `(id, event)`**
   - Add `register(id, event, handler)`, `unregister(id, event=None)`,
     `get(id, event)`, `clear`.
   - Keep a `register(id, handler)` convenience mapping to `(id, "change")` for
     the common single-handler case.
 
-- [ ] **3.2 — Migrate registration sites**
+- [x] **3.2 — Migrate registration sites**
   - `_register_control_handlers` (layout) and each `add_*` (panel): register
     `(id, "change"/"click"/"cell_change"/"row_add"/"column_add"/"press"/"release"/"toggle")`
     instead of building `__row_add__{id}` strings.
 
-- [ ] **3.3 — Dispatch by event**
+- [x] **3.3 — Dispatch by event**
   - Rewrite `_dispatch_control_event` to derive `event_name` from `msg_type` and
     look up `(cid, event_name)`; drop the magic-key string building.
 
-- [ ] **3.4 — Tests**
+- [x] **3.4 — Tests**
   - Update `test_controls.py` registry tests; add coverage that
     `register(id, "row_add", …)` / `get(id, "row_add")` round-trip, and that
     layout + panel handlers coexist under the same id with different events.

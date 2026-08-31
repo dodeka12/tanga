@@ -72,7 +72,7 @@ class TestControlHandlerRegistration:
     def test_button_handler_registered(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(GroupView("g", [ButtonView("b1", on_click=self._noop)]))
-        assert viz._handler_registry.get("b1") is self._noop
+        assert viz._handler_registry.get("b1", "click") is self._noop
 
     def test_no_handler_not_registered(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -82,7 +82,7 @@ class TestControlHandlerRegistration:
     def test_overwrite_removes_stale_handler(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(GroupView("g", [ButtonView("b1", on_click=self._noop)]))
-        assert viz._handler_registry.get("b1") is self._noop
+        assert viz._handler_registry.get("b1", "click") is self._noop
         viz.set_layout(SplitView("horizontal", [SceneView("a"), SceneView("b")]))
         assert viz._handler_registry.get("b1") is None
 

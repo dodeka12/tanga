@@ -192,6 +192,38 @@ def test_handler_registry_clear() -> None:
     assert registry.get("b") is None
 
 
+def test_handler_registry_event_keyed_round_trip() -> None:
+    registry = ControlHandlerRegistry()
+
+    async def on_change(value):
+        pass
+
+    async def on_row(value):
+        pass
+
+    registry.register("t", on_change)
+    registry.register("t", on_row, event="row_add")
+    assert registry.get("t") is on_change
+    assert registry.get("t", "row_add") is on_row
+    assert registry.get("t", "column_add") is None
+
+
+def test_handler_registry_unregister_all_events() -> None:
+    registry = ControlHandlerRegistry()
+
+    async def h1(value):
+        pass
+
+    async def h2(value):
+        pass
+
+    registry.register("t", h1)
+    registry.register("t", h2, event="row_add")
+    registry.unregister("t")
+    assert registry.get("t") is None
+    assert registry.get("t", "row_add") is None
+
+
 # ── Test: new control serialization ──────────────────────────
 
 

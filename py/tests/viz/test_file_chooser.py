@@ -129,9 +129,9 @@ def test_add_table_registers_handlers_and_pushes(monkeypatch):
     )
 
     assert cid == "tbl"
-    assert viz._handler_registry.get("tbl") is _on_cell
-    assert viz._handler_registry.get("__row_add__tbl") is _on_row
-    assert viz._handler_registry.get("__column_add__tbl") is _on_col
+    assert viz._handler_registry.get("tbl", "cell_change") is _on_cell
+    assert viz._handler_registry.get("tbl", "row_add") is _on_row
+    assert viz._handler_registry.get("tbl", "column_add") is _on_col
     ctrl = viz._scenes[""]._controls["tbl"]
     assert isinstance(ctrl, Table)
     assert ctrl.columns == ["x", "y"]

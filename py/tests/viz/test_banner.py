@@ -316,8 +316,8 @@ def test_add_slider_press_release_registration():
         on_release=_on_release,
     )
     assert viz._handler_registry.get("s") is _on_change
-    assert viz._handler_registry.get("__press__s") is _on_press
-    assert viz._handler_registry.get("__release__s") is _on_release
+    assert viz._handler_registry.get("s", "press") is _on_press
+    assert viz._handler_registry.get("s", "release") is _on_release
 
 
 @pytest.mark.anyio
@@ -332,8 +332,8 @@ async def test_dispatch_press_and_release():
     async def _on_release(v, e):
         release_calls.append(v)
 
-    viz._handler_registry.register("__press__s", _on_press)
-    viz._handler_registry.register("__release__s", _on_release)
+    viz._handler_registry.register("s", _on_press, event="press")
+    viz._handler_registry.register("s", _on_release, event="release")
 
     await viz._dispatch_control_event(
         "control:press", {"control_id": "s", "value": 1.0}
