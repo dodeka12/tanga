@@ -8,7 +8,8 @@
 | [Scene Graph](scene_graph.md) | scenes, VizGroup, transforms, scene graph | Demonstrate VizGroup + direct transforms |
 | [Split View](split_view.md) | scenes, split view, panes, layout | A single page showing multiple scenes in split panes |
 | [Table Split](table_split.md) | scenes, split view, table, tabular data, TableView | An editable data table beside a 3D scene |
+| [Toolbar](toolbar.md) | scenes, stack view, toolbar, horizontal, layout, controls | A horizontal control toolbar nested inside a vertical stack |
 
 ## Keywords
 
-TableView · VizGroup · context manager · hierarchy · layout · multi-pane · multi-scene · nested · panes · scene graph · scenes · split view · table · tabs · tabular data · transforms
+TableView · VizGroup · context manager · controls · hierarchy · horizontal · layout · multi-pane · multi-scene · nested · panes · scene graph · scenes · split view · stack view · table · tabs · tabular data · toolbar · transforms

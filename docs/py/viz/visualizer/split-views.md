@@ -105,6 +105,34 @@ GroupView(
 `GroupView` is a `StackView` with a title bar (and collapse toggle); by default it
 stacks its children vertically.
 
+### Horizontal stacks & toolbars
+
+`StackView("horizontal", ...)` lays its children side by side, so it doubles as a
+**toolbar**; a horizontal stack nests inside a vertical stack to any depth:
+
+```python
+toolbar = StackView(
+    "horizontal",
+    [
+        ButtonView("btn_fit", label="Fit camera", on_click=on_fit),
+        ButtonView("btn_reset", label="Reset view", on_click=on_reset),
+        DropdownView("dd_mode", label="Mode", options=["Wire", "Solid"], value="Wire"),
+    ],
+)
+
+controls = StackView(
+    "vertical",
+    [
+        toolbar,                                                       # toolbar row
+        SliderView("radius", label="Radius", min=0.1, max=5.0, value=2.0),
+    ],
+)
+```
+
+Add `scrollable=True` to a toolbar row to scroll horizontally instead of
+clipping when it is too narrow. See `py/examples/viz/scenes/toolbar.py` for a
+runnable toolbar example.
+
 ## Overlays
 
 A `SceneView` can host overlay views that float over its canvas, anchored by each
