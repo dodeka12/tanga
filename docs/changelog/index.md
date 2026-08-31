@@ -1,5 +1,12 @@
 # Changelog
 
+## [Since 1.12.0] — 2026-08-31
+- Scrollable `StackView`/`GroupView` panes (`scrollable=True` + custom scrollbar) · horizontal-toolbar example
+- Breaking: banner `on_close` now receives the control value, not the banner id
+- Bug fixes: `FileChooserView` selected-path write-back & `root=` clamp · `controls_define` no longer wipes layout-view controls · banner button clicks dispatch
+- Refactor: unified `(id, event)` control/interaction registry · single control model · single event envelope & dispatch tail
+→ [Details](2026-08-31_7848e4a2.md)
+
 ## [Since 1.11.1] — 2026-08-31
 - Scene-scoped `alert`/`confirm`/`update_control` on `VizSceneHandle` · `Visualizer.scene(add_axes=…, add_grid=…)` · `fit_view2d()` camera helper · `ActSceneObject.drag_anchor()` ideal-drag hook
 - Breaking: deprecated `Visualizer`/`VisualizerApp` `port`/`host`/`open_browser` constructor params removed
