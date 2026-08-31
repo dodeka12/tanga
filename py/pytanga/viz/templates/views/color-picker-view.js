@@ -12,6 +12,7 @@ export class ColorPickerView extends ControlView {
     render() {
         return createColorPicker({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             value: this.value,

@@ -14,6 +14,7 @@ export class TextAreaView extends ControlView {
     render() {
         return createTextArea({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             value: this.value,

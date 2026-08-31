@@ -13,6 +13,7 @@ export class DropdownView extends ControlView {
     render() {
         return createDropdown({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             options: this.options,

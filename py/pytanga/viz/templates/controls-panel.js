@@ -36,7 +36,10 @@ export function setWebSocket(ws) {
  */
 export function applyControlValue(id, value) {
     const entry = _controlRegistry[id];
-    if (!entry) return;
+    if (!entry) {
+        console.debug('[tanga] control_update for unknown id:', id);
+        return;
+    }
     entry.apply(value);
 }
 
@@ -110,13 +113,19 @@ function _ensureRoot() {
     document.body.appendChild(_rootEl);
 }
 
-function _destroyAll() {
+function _destroyAll({ owner = 'panel', scene = null } = {}) {
     for (const el of _panelEls) {
         el.remove();
     }
     _panelEls = [];
     _groupToggleCallbacks = {};
-    _controlRegistry = {};
+    // Clear only entries owned by the scope being rebuilt (default: panel),
+    // leaving layout/banner view controls intact.
+    for (const [id, entry] of Object.entries(_controlRegistry)) {
+        if (entry.owner === owner && (scene === null || entry.scene === scene)) {
+            delete _controlRegistry[id];
+        }
+    }
     // Clear throttle timers
     for (const k of Object.keys(_throttleTimers)) {
         clearTimeout(_throttleTimers[k]);
@@ -486,6 +495,7 @@ export function createFileChooser(ctrl) {
     row.appendChild(browse);
     wrapper.appendChild(row);
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'file_chooser',
         apply: (value) => { input.value = value == null ? '' : String(value); },
     };
@@ -548,6 +558,7 @@ export function createSlider(ctrl) {
     // Stop propagation to prevent orbit control interference
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'slider',
         apply: (value) => {
             const coerced = Number(value);
@@ -586,6 +597,7 @@ export function createDropdown(ctrl) {
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'dropdown',
         apply: (value) => { select.value = value == null ? '' : String(value); },
     };
@@ -645,6 +657,7 @@ export function createTextField(ctrl) {
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'text',
         apply: (value) => { input.value = value == null ? '' : String(value); },
     };
@@ -671,6 +684,7 @@ export function createTextArea(ctrl) {
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'textarea',
         apply: (value) => { input.value = value == null ? '' : String(value); },
     };
@@ -696,6 +710,7 @@ export function createColorPicker(ctrl) {
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'color',
         apply: (value) => { input.value = value == null ? '#ffffff' : String(value); },
     };
@@ -730,6 +745,7 @@ export function createCheckbox(ctrl) {
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'checkbox',
         apply: (value) => { input.checked = !!value; },
     };
@@ -854,6 +870,7 @@ export function createValueEdit(ctrl) {
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
 
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'value_edit',
         apply: (v) => {
             value = round(clamp(Number(v)));
@@ -976,6 +993,7 @@ export function createTable(ctrl) {
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
 
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'table',
         apply: (value) => {
             if (!table || !value) return;

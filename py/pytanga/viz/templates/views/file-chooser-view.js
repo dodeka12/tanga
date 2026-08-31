@@ -15,6 +15,7 @@ export class FileChooserView extends ControlView {
     render() {
         return createFileChooser({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             value: this.value,

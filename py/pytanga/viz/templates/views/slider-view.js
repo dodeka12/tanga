@@ -15,6 +15,7 @@ export class SliderView extends ControlView {
     render() {
         return createSlider({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             min: this.min,
