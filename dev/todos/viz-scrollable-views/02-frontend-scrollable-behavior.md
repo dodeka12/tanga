@@ -13,7 +13,7 @@ flag through `build.js`, and inject a custom thin dark scrollbar.
 
 ## Steps
 
-- [ ] **2.1 — `StackView` flag + size decoupling**
+- [x] **2.1 — `StackView` flag + size decoupling**
   - Constructor: accept `scrollable = false`, store `this.scrollable`.
   - Import `stackMainAxis` from `./stack-size.js`.
   - `minSizePx(axis, available)`: when
@@ -25,7 +25,7 @@ flag through `build.js`, and inject a custom thin dark scrollbar.
     `this.scrollable && axis === stackMainAxis(this.direction)`, return `null`
     instead of `stackPreferredSize(...)`.
 
-- [ ] **2.2 — `_applyScroll()` + custom scrollbar CSS**
+- [x] **2.2 — `_applyScroll()` + custom scrollbar CSS**
   - Add a module-level `_injectScrollStyles()` guarded by
     `document.getElementById('tanga-scroll-styles')` that injects a `<style>` with
     `.tanga-scroll` WebKit `::-webkit-scrollbar` rules (thin ~8px dark thumb) plus
@@ -35,7 +35,7 @@ flag through `build.js`, and inject a custom thin dark scrollbar.
     set `overflow: 'auto'`, `minWidth: '0'`, `minHeight: '0'`,
     `flex: '1 1 auto'` on `this._content`. Call it at the end of the constructor.
 
-- [ ] **2.3 — `GroupView` chrome pinning**
+- [x] **2.3 — `GroupView` chrome pinning**
   - Constructor: accept `scrollable = false` and forward to `super()`.
   - In `_setupChrome()`, when `scrollable`: set `el.style.overflow = 'hidden'`
     and `header.style.flexShrink = '0'`.
@@ -43,13 +43,13 @@ flag through `build.js`, and inject a custom thin dark scrollbar.
     `this._applyScroll()` so scrolling applies to the content region *below* the
     title bar.
 
-- [ ] **2.4 — `build.js` passthrough**
+- [x] **2.4 — `build.js` passthrough**
   - `node.type === 'stack'`: pass `scrollable: node.scrollable`.
   - `node.type === 'group'`: pass `scrollable: node.scrollable`.
 
 ## Validation
 
-`node --input-type=module --check py/pytanga/viz/templates/views/stack-view.js py/pytanga/viz/templates/views/group-view.js py/pytanga/viz/templates/views/build.js`
+`for f in stack-view.js group-view.js build.js; do node --input-type=module --check < py/pytanga/viz/templates/views/$f; done`
 
 ## Notes
 
