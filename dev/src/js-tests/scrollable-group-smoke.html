@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Scrollable group smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 400px; height: 320px; background: #222; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">Scrollable group smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { SplitView } from '../../py/pytanga/viz/templates/views/split-view.js';
+        import { GroupView } from '../../py/pytanga/viz/templates/views/group-view.js';
+        import { SliderView } from '../../py/pytanga/viz/templates/views/slider-view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+
+        const sliders = Array.from({ length: 8 }, (_, i) =>
+            new SliderView({ id: 's' + i, label: 'Slider ' + i, min: 0, max: 10, value: i })
+        );
+
+        const scrollable = new GroupView({
+            title: 'Scrollable controls',
+            scrollable: true,
+            children: sliders,
+        });
+
+        const split = new SplitView({ orientation: 'vertical' });
+        split.addChild(scrollable);
+        split.addChild(new GroupView({ title: 'Static' }));
+        split.mount(document.getElementById('host'));
+
+        log('scrollable min height (y):', scrollable.minSizePx('y', 320));
+        log('content overflow:', scrollable._content.style.overflow);
+        log('content is .tanga-scroll:', scrollable._content.classList.contains('tanga-scroll'));
+        log('panel overflow:', scrollable.el.style.overflow);
+    </script>
+</body>
+</html>

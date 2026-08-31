@@ -12,7 +12,7 @@ manual browser smoke page for the scroll region.
 
 ## Steps
 
-- [ ] **3.1 — Unit test (DOM stubs)**
+- [x] **3.1 — Unit test (DOM stubs)**
   - Follow `view.test.mjs` / `control-registry.test.mjs`: stub `ResizeObserver`
     and a minimal `document`/`document.createElement` before importing
     `stack-view.js`/`group-view.js`.
@@ -24,7 +24,7 @@ manual browser smoke page for the scroll region.
     title-bar contribution) and that scrolling targets its content div, not the
     panel.
 
-- [ ] **3.2 — Smoke page**
+- [x] **3.2 — Smoke page**
   - Add `dev/src/js-tests/scrollable-group-smoke.html`: a vertical `SplitView`
     with a fixed-height scrollable `GroupView` holding many control views; verify
     the group shrinks and its content scrolls with a thin dark scrollbar, while a
