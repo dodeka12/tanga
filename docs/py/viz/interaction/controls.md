@@ -195,7 +195,8 @@ self.viz.add_value_edit(
 
 An editable tabular-data grid (rendered with Tabulator). The backend defines
 the columns and initial rows; the user can edit any cell and, when enabled,
-append rows and columns. Each change is reported back to a distinct handler:
+append rows and columns. **Double-click** a cell to edit it (a single click or
+drag selects cells instead). Each change is reported back to a distinct handler:
 
 ```python
 self.viz.add_table(

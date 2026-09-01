@@ -931,6 +931,11 @@ export function createTable(ctrl) {
             keybindings: {
                 navDown: [40, 13],
             },
+            // Double-click (not single click/focus) to edit a cell.  Range
+            // selection (below) reacts to single click + drag, so a single
+            // click must not also open the editor — otherwise the range's
+            // focus transfer immediately blurs and closes it.
+            editTriggerEvent: 'dblclick',
             // Drag to select a range of cells; "− Selected" deletes every row
             // that has at least one selected cell.
             selectableRange: ctrl.allow_delete_rows !== false,

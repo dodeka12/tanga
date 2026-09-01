@@ -14,6 +14,11 @@
   from Python, undo/redo edits and re-sync the grid.
 
 ## Bug Fixes
+- **Table cells are editable again** — enabling drag-to-select cell ranges made a
+  single click both start a range selection and open the cell editor (Tabulator's
+  default `focus` edit trigger), so the editor immediately lost focus and cells
+  could not be changed; cells now open for editing on **double-click**, leaving
+  single click/drag for range selection.
 - **Table cell edits keep their coordinates** — the table event payload, which
   the unified envelope nests under `value`, is now unwrapped in
   `_dispatch_control_event`, so `TableCellChange`, `TableRowAdd`, and

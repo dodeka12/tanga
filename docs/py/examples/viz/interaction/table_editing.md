@@ -4,11 +4,11 @@
 
 Adds a `table` control (backed by Tabulator) and echoes every cell edit, row
 add, column add, and row delete into the viewport annotation, so the handler
-payloads can be inspected.  The grid is wired for spreadsheet-style editing:
-Tab / Shift+Tab move between cells, Enter moves to the next row, Tab past the
-last cell appends a row, and dragging across cells selects rows that can be
-deleted with the "− Selected" button.  Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo and
-redo edits, and the "Undo" / "Redo" buttons drive the same backend API.
+payloads can be inspected.  Double-click a cell to edit it; Tab / Shift+Tab move
+between cells, Enter moves to the next row, Tab past the last cell appends a
+row, and dragging across cells selects rows that can be deleted with the
+"− Selected" button.  Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo and redo edits, and
+the "Undo" / "Redo" buttons drive the same backend API.
 
 ## Run
 
@@ -30,11 +30,11 @@ uv run python py/examples/viz/interaction/table_editing.py
 
 Adds a ``table`` control (backed by Tabulator) and echoes every cell edit, row
 add, column add, and row delete into the viewport annotation, so the handler
-payloads can be inspected.  The grid is wired for spreadsheet-style editing:
-Tab / Shift+Tab move between cells, Enter moves to the next row, Tab past the
-last cell appends a row, and dragging across cells selects rows that can be
-deleted with the "− Selected" button.  Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo and
-redo edits, and the "Undo" / "Redo" buttons drive the same backend API.
+payloads can be inspected.  Double-click a cell to edit it; Tab / Shift+Tab move
+between cells, Enter moves to the next row, Tab past the last cell appends a
+row, and dragging across cells selects rows that can be deleted with the
+"− Selected" button.  Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo and redo edits, and
+the "Undo" / "Redo" buttons drive the same backend API.
 
 Run with:  uv run python py/examples/viz/interaction/table_editing.py
 
@@ -74,7 +74,7 @@ class TableEditingApp(VisualizerApp):
             opacity=0.9,
         )
         self.viz.set_annotation(
-            "Tab / Shift+Tab move between cells · Enter to the next row · "
+            "Double-click to edit · Tab / Shift+Tab move between cells · Enter to the next row · "
             "Ctrl+Z undo · Ctrl+Shift+Z / Ctrl+Y redo · drag cells, then − Selected deletes."
         )
         self.viz.add_table(
