@@ -17,15 +17,18 @@ Usage::
 
     uv run python py/examples/viz/interaction/act_point_two_2d.py
 
-Keywords: interaction, ActPoint, drag, 2D, two points
+Keywords: interaction, ActPoint, drag, click, 2D, two points
 """
 
 import asyncio
 
-from pytanga.viz import ActEventHandler, ActPoint, DragEvent, View2DConfig, Visualizer
-
-# on_drag_start: ActEventHandler[DragEvent, ActPoint]
-# on_drag_end: ActEventHandler[DragEvent, ActPoint]
+from pytanga.viz import (
+    ActPoint,
+    ClickEvent,
+    DragEvent,
+    View2DConfig,
+    Visualizer,
+)
 
 
 async def on_drag_start(ev: DragEvent, control: ActPoint) -> None:
@@ -36,6 +39,10 @@ async def on_drag_end(ev: DragEvent, control: ActPoint) -> None:
     print(f"Drag ended: {ev.world_position} (screen: {ev.screen_position})")
 
 
+async def on_click(ev: ClickEvent, control: ActPoint) -> None:
+    print(f"Clicked: {ev.world_position} (screen: {ev.screen_position})")
+
+
 async def main() -> None:
     viz = Visualizer(
         title="Drag Demo — Two ActPoints (2D)",
@@ -44,7 +51,14 @@ async def main() -> None:
     )
 
     # Two interactive points — style is set via viz.new().
-    ap_a = ActPoint(1.0, 0.5, 0.0, on_drag_start=on_drag_start, on_drag_end=on_drag_end)
+    ap_a = ActPoint(
+        1.0,
+        0.5,
+        0.0,
+        on_click=on_click,
+        on_drag_start=on_drag_start,
+        on_drag_end=on_drag_end,
+    )
     ap_b = ActPoint(-1.0, -0.5, 0.0)
     viz.new(ap_a, color="#ff4444")
     viz.new(ap_b, color="#4488ff")

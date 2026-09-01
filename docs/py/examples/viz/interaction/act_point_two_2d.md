@@ -1,6 +1,6 @@
 # Demo: Drag TWO 2D points interactively with ActPoint
 
-**Keywords:** interaction · ActPoint · drag · 2D · two points
+**Keywords:** interaction · ActPoint · drag · click · 2D · two points
 
 Reproduces the multi-ActPoint interaction bug in 2D mode.  Two draggable
 points in an orthographic 2D view, each with its own colour.
@@ -46,12 +46,30 @@ Usage::
 
     uv run python py/examples/viz/interaction/act_point_two_2d.py
 
-Keywords: interaction, ActPoint, drag, 2D, two points
+Keywords: interaction, ActPoint, drag, click, 2D, two points
 """
 
 import asyncio
 
-from pytanga.viz import ActPoint, View2DConfig, Visualizer
+from pytanga.viz import (
+    ActPoint,
+    ClickEvent,
+    DragEvent,
+    View2DConfig,
+    Visualizer,
+)
+
+
+async def on_drag_start(ev: DragEvent, control: ActPoint) -> None:
+    print(f"Drag started: {ev.world_position} (screen: {ev.screen_position})")
+
+
+async def on_drag_end(ev: DragEvent, control: ActPoint) -> None:
+    print(f"Drag ended: {ev.world_position} (screen: {ev.screen_position})")
+
+
+async def on_click(ev: ClickEvent, control: ActPoint) -> None:
+    print(f"Clicked: {ev.world_position} (screen: {ev.screen_position})")
 
 
 async def main() -> None:
@@ -62,7 +80,14 @@ async def main() -> None:
     )
 
     # Two interactive points — style is set via viz.new().
-    ap_a = ActPoint(1.0, 0.5, 0.0)
+    ap_a = ActPoint(
+        1.0,
+        0.5,
+        0.0,
+        on_click=on_click,
+        on_drag_start=on_drag_start,
+        on_drag_end=on_drag_end,
+    )
     ap_b = ActPoint(-1.0, -0.5, 0.0)
     viz.new(ap_a, color="#ff4444")
     viz.new(ap_b, color="#4488ff")

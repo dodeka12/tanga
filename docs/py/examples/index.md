@@ -92,6 +92,8 @@ uv run python py/examples/<path>.py
 
 - **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
 
+- **click** — [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
+
 - **code generation** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
 - **coefficients** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
