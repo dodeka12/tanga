@@ -322,6 +322,9 @@
             "Table Data": "py/examples/viz/interaction/table_data.md"
           },
           {
+            "Table Editing": "py/examples/viz/interaction/table_editing.md"
+          },
+          {
             "Two Spheres Interact": "py/examples/viz/interaction/two_spheres_interact.md"
           }
         ]

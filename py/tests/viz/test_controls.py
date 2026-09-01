@@ -371,6 +371,7 @@ def test_serialize_table() -> None:
         "rows": [["1", "2", "3"], ["4", "5", "6"]],
         "allow_add_rows": True,
         "allow_add_columns": True,
+        "allow_delete_rows": True,
     }
 
 
@@ -406,12 +407,21 @@ def test_serialize_variant_defaults_to_default() -> None:
 
 
 def test_serialize_menu_variant() -> None:
-    assert _serialize_one_control(Button(id="b", label="B", variant=EControlVariant.MENU))[
-        "variant"
-    ] == "menu"
-    assert _serialize_one_control(
-        Checkbox(id="c", label="C", variant=EControlVariant.MENU)
-    )["variant"] == "menu"
-    assert _serialize_one_control(Slider(id="s", label="S", variant=EControlVariant.MENU))[
-        "variant"
-    ] == "menu"
+    assert (
+        _serialize_one_control(Button(id="b", label="B", variant=EControlVariant.MENU))[
+            "variant"
+        ]
+        == "menu"
+    )
+    assert (
+        _serialize_one_control(
+            Checkbox(id="c", label="C", variant=EControlVariant.MENU)
+        )["variant"]
+        == "menu"
+    )
+    assert (
+        _serialize_one_control(Slider(id="s", label="S", variant=EControlVariant.MENU))[
+            "variant"
+        ]
+        == "menu"
+    )

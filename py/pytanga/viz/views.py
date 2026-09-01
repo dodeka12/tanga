@@ -381,7 +381,9 @@ class MenuView(View):
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
-        result["trigger_icon"] = str(self.trigger_icon) if self.trigger_icon is not None else None
+        result["trigger_icon"] = (
+            str(self.trigger_icon) if self.trigger_icon is not None else None
+        )
         result["label"] = self.label
         result["mode"] = self.mode
         result["direction"] = self.direction
@@ -706,10 +708,12 @@ class TableView(ControlView):
         rows: list[list[str]] | tuple[tuple[str, ...], ...] = (),
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
         tooltip: str = "",
         on_cell_change: Handler | None = None,
         on_row_add: Handler | None = None,
         on_column_add: Handler | None = None,
+        on_row_delete: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
@@ -721,9 +725,11 @@ class TableView(ControlView):
             rows=[list(row) for row in rows],
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
         )
 
 

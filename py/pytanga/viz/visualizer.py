@@ -345,6 +345,8 @@ class Visualizer(_JupyterDisplayMixin):
                 entries.append(("row_add", view.on_row_add))
             if getattr(view, "on_column_add", None) is not None:
                 entries.append(("column_add", view.on_column_add))
+            if getattr(view, "on_row_delete", None) is not None:
+                entries.append(("row_delete", view.on_row_delete))
             for event, h in entries:
                 self._handler_registry.register(view.id, h, event=event)
             if entries:
@@ -388,7 +390,9 @@ class Visualizer(_JupyterDisplayMixin):
             base = [
                 v for v in scene_view.overlay if id(v) not in self._injected_overlay_ids
             ]
-            scene_view.overlay = base + list(self._scene_overlays.get(scene_view.scene, []))
+            scene_view.overlay = base + list(
+                self._scene_overlays.get(scene_view.scene, [])
+            )
 
     def add_menu(
         self,
@@ -2875,10 +2879,12 @@ class Visualizer(_JupyterDisplayMixin):
         rows: list[list[str]] | None = None,
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
         tooltip: str = "",
         on_cell_change: Any = None,
         on_row_add: Any = None,
         on_column_add: Any = None,
+        on_row_delete: Any = None,
         parent_id: str | None = None,
     ) -> str:
         """Add an editable table (tabular data) control."""
@@ -2890,10 +2896,12 @@ class Visualizer(_JupyterDisplayMixin):
             rows=rows,
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
             tooltip=tooltip,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
             parent_id=parent_id,
         )
 
@@ -2907,10 +2915,12 @@ class Visualizer(_JupyterDisplayMixin):
         rows: list[list[str]] | None = None,
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
         tooltip: str = "",
         on_cell_change: Any = None,
         on_row_add: Any = None,
         on_column_add: Any = None,
+        on_row_delete: Any = None,
         parent_id: str | None = None,
     ) -> str:
         from ._controls import Table
@@ -2922,10 +2932,12 @@ class Visualizer(_JupyterDisplayMixin):
             rows=rows or [],
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
             tooltip=tooltip,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
             parent_id=parent_id,
         )
         self._scenes[scene_name].add_control(ctrl)
@@ -2935,6 +2947,8 @@ class Visualizer(_JupyterDisplayMixin):
             self._handler_registry.register(cid, on_row_add, event="row_add")
         if on_column_add is not None:
             self._handler_registry.register(cid, on_column_add, event="column_add")
+        if on_row_delete is not None:
+            self._handler_registry.register(cid, on_row_delete, event="row_delete")
         self._push_controls(scene_name)
         return cid
 
@@ -3897,7 +3911,9 @@ class Visualizer(_JupyterDisplayMixin):
 
         scene = self._scenes[scene_name]
         grouped = self._grouped_control_ids(scene_name)
-        orphan_map = {cid: c for cid, c in scene._controls.items() if cid not in grouped}
+        orphan_map = {
+            cid: c for cid, c in scene._controls.items() if cid not in grouped
+        }
         message = serialize_controls([], orphan_map)
         message["scene"] = scene_name
         asyncio.run_coroutine_threadsafe(
@@ -3926,7 +3942,9 @@ class Visualizer(_JupyterDisplayMixin):
 
         scene = self._scenes.get(scene_name, self._scenes[""])
         grouped = self._grouped_control_ids(scene_name)
-        orphan_map = {cid: c for cid, c in scene._controls.items() if cid not in grouped}
+        orphan_map = {
+            cid: c for cid, c in scene._controls.items() if cid not in grouped
+        }
         message = serialize_controls([], orphan_map)
         message["scene"] = scene_name
         await self._server.push_raw(json.dumps(message))
@@ -3974,6 +3992,7 @@ class Visualizer(_JupyterDisplayMixin):
             TableCellChange,
             TableColumnAdd,
             TableRowAdd,
+            TableRowsDelete,
         )
 
         browser_id = payload.get("browser_id")
@@ -4008,11 +4027,13 @@ class Visualizer(_JupyterDisplayMixin):
             handler = self._handler_registry.get(cid, "cell_change") if cid else None
             if handler is not None:
                 try:
+                    nested = payload.get("value")
+                    table_payload = nested if isinstance(nested, dict) else payload
                     await handler(
                         TableCellChange(
-                            row=int(payload.get("row", 0)),
-                            col=int(payload.get("col", 0)),
-                            value=str(payload.get("value", "")),
+                            row=int(table_payload.get("row", 0)),
+                            col=int(table_payload.get("col", 0)),
+                            value=str(table_payload.get("value", "")),
                         ),
                         event,
                     )
@@ -4029,10 +4050,14 @@ class Visualizer(_JupyterDisplayMixin):
             handler = self._handler_registry.get(cid, "row_add") if cid else None
             if handler is not None:
                 try:
+                    nested = payload.get("value")
+                    table_payload = nested if isinstance(nested, dict) else payload
                     await handler(
                         TableRowAdd(
-                            row=int(payload.get("row", 0)),
-                            values=[str(v) for v in (payload.get("values") or [])],
+                            row=int(table_payload.get("row", 0)),
+                            values=[
+                                str(v) for v in (table_payload.get("values") or [])
+                            ],
                         ),
                         event,
                     )
@@ -4049,11 +4074,15 @@ class Visualizer(_JupyterDisplayMixin):
             handler = self._handler_registry.get(cid, "column_add") if cid else None
             if handler is not None:
                 try:
+                    nested = payload.get("value")
+                    table_payload = nested if isinstance(nested, dict) else payload
                     await handler(
                         TableColumnAdd(
-                            col=int(payload.get("col", 0)),
-                            header=str(payload.get("header", "")),
-                            values=[str(v) for v in (payload.get("values") or [])],
+                            col=int(table_payload.get("col", 0)),
+                            header=str(table_payload.get("header", "")),
+                            values=[
+                                str(v) for v in (table_payload.get("values") or [])
+                            ],
                         ),
                         event,
                     )
@@ -4062,6 +4091,27 @@ class Visualizer(_JupyterDisplayMixin):
 
                     logging.getLogger(__name__).exception(
                         "Error in table column handler for %r", cid
+                    )
+            return
+
+        if msg_type == "control:row_delete":
+            cid = payload.get("control_id")
+            handler = self._handler_registry.get(cid, "row_delete") if cid else None
+            if handler is not None:
+                try:
+                    nested = payload.get("value")
+                    table_payload = nested if isinstance(nested, dict) else payload
+                    await handler(
+                        TableRowsDelete(
+                            rows=[int(r) for r in (table_payload.get("rows") or [])],
+                        ),
+                        event,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table row delete handler for %r", cid
                     )
             return
 
