@@ -2,6 +2,9 @@
 
 | Example | Keywords | Description |
 |---------|----------|-------------|
+| [Control Group Overlay](control_group_overlay.md) | control group, add_control_group, overlay, anchor, parent_id, layout | Unified control groups: overlay-anchored + 3D-anchored |
+| [Control Group Single](control_group_single.md) | control group, add_control_group, overlay, anchor, parent_id, single scene | Unified control groups on a single-scene page |
+| [Group View Icons](group_view_icons.md) | scenes, group view, icon, icon_only, fold, overlay | Group view chrome: leading icon, icon-only, borderless fold |
 | [Multi Scene](multi_scene.md) | scenes, multi-scene, context manager, tabs | Two named scenes, each shown in its own browser tab |
 | [Multi Split](multi_split.md) | scenes, split view, panes, layout, multi-pane | Three scenes side-by-side in one horizontal split |
 | [Nested Groups](nested_groups.md) | scenes, VizGroup, hierarchy, nested | Demonstrate nested VizGroup hierarchies |
@@ -12,4 +15,4 @@
 
 ## Keywords
 
-TableView · VizGroup · context manager · controls · hierarchy · horizontal · layout · multi-pane · multi-scene · nested · panes · scene graph · scenes · split view · stack view · table · tabs · tabular data · toolbar · transforms
+TableView · VizGroup · add_control_group · anchor · context manager · control group · controls · fold · group view · hierarchy · horizontal · icon · icon_only · layout · multi-pane · multi-scene · nested · overlay · panes · parent_id · scene graph · scenes · single scene · split view · stack view · table · tabs · tabular data · toolbar · transforms

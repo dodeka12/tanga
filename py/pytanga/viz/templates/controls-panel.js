@@ -11,7 +11,6 @@ let _rootEl = null;            // #tanga-control-root (fixed container for all p
 let _panelEls = [];            // all active panel wrapper elements
 let _toggleBtn = null;         // hide/restore toggle button
 let _panelsHidden = false;
-let _groupToggleCallbacks = {};// group_id → boolean (has on_toggle server handler)
 let _controlRegistry = {};      // control id → { kind, apply(value) }
 
 // Throttle helpers (sliders send at ≤25 Hz while dragging; final state always flushed via change event)
@@ -36,6 +35,14 @@ export function applyControlValue(id, value) {
 }
 
 /**
+ * Drop a control's registry entry (e.g. when a transient overlay such as a
+ * dialog is unmounted) so later `control_update` messages for that id no-op.
+ */
+export function forgetControl(id) {
+    delete _controlRegistry[id];
+}
+
+/**
  * Process a controls_define message: tear down the old panel tree and
  * rebuild everything from the message payload.
  */
@@ -44,7 +51,6 @@ export function handleControlsDefine(msg, targetEl = null) {
     if (!targetEl) _ensureRoot();
 
     const controls = msg.controls || [];
-    const groups = msg.groups || [];
     const orphanIds = new Set(msg.orphanControls || []);
 
     // Build a lookup controlDefById for rendering
@@ -53,21 +59,7 @@ export function handleControlsDefine(msg, targetEl = null) {
         ctrlById[c.id] = c;
     }
 
-    // Render each group (skip attached groups — controls-attached.js handles them)
-    for (const g of groups) {
-        if (g.parentId) continue;  // handled by controls-attached.js
-
-        const groupCtrls = (g.controls || []).map(id => ctrlById[id]).filter(Boolean);
-        const panel = _createGroupPanel(g, groupCtrls);
-        if (panel) {
-            _mountPanel(panel, g.position || 'bottom-right', targetEl);
-            _panelEls.push(panel);
-        }
-        // Track whether this group has a server-side on_toggle
-        _groupToggleCallbacks[g.id] = false;  // Phase 4 wires this
-    }
-
-    // Render orphan controls in a default title-less panel
+    // Render orphan controls in a default title-less panel.
     if (orphanIds.size > 0) {
         const orphanCtrls = [...orphanIds].map(id => ctrlById[id]).filter(Boolean);
         if (orphanCtrls.length > 0) {
@@ -110,7 +102,6 @@ function _destroyAll({ owner = 'panel', scene = null } = {}) {
         el.remove();
     }
     _panelEls = [];
-    _groupToggleCallbacks = {};
     // Clear only entries owned by the scope being rebuilt (default: panel),
     // leaving layout/banner view controls intact.
     for (const [id, entry] of Object.entries(_controlRegistry)) {
@@ -155,84 +146,6 @@ function _ensureToggleButton() {
         _toggleBtn.style.opacity = _panelsHidden ? '0.5' : '1';
     });
     document.body.appendChild(_toggleBtn);
-}
-
-// ── Internal: group panel ───────────────────────────────────
-
-function _createGroupPanel(group, controls) {
-    const panel = document.createElement('div');
-    panel.className = 'tanga-control-panel tanga-group-panel';
-    panel.setAttribute('data-group-id', group.id);
-
-    // ── Header (drag handle + toggle) ──
-    const header = document.createElement('div');
-    header.className = 'tanga-group-header';
-    if (group.tooltip) header.title = group.tooltip;
-
-    const titleWrap = document.createElement('span');
-    titleWrap.className = 'tanga-group-title-wrap';
-
-    if (group.icon) {
-        const icon = createIconElement(group.icon);
-        icon.classList.add('tanga-group-icon');
-        titleWrap.appendChild(icon);
-    }
-
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'tanga-group-title';
-    titleSpan.textContent = group.title || 'Controls';
-    titleWrap.appendChild(titleSpan);
-
-    header.appendChild(titleWrap);
-
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'tanga-group-toggle';
-    toggleBtn.textContent = '\u25BE'; // ▾
-    toggleBtn.title = 'Collapse / Expand';
-    header.appendChild(toggleBtn);
-
-    panel.appendChild(header);
-
-    // ── Controls container ──
-    const ctrlContainer = document.createElement('div');
-    ctrlContainer.className = 'tanga-group-controls';
-
-    for (const ctrl of controls) {
-        const el = _createControlElement(ctrl);
-        if (el) ctrlContainer.appendChild(el);
-    }
-    panel.appendChild(ctrlContainer);
-
-    // ── Collapse toggle ──
-    let collapsed = !!group.collapsed;
-    function _applyCollapsed() {
-        if (collapsed) {
-            ctrlContainer.style.display = 'none';
-            toggleBtn.textContent = '\u25B4'; // ▴
-        } else {
-            ctrlContainer.style.display = '';
-            toggleBtn.textContent = '\u25BE'; // ▾
-        }
-    }
-    _applyCollapsed();
-
-    toggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        collapsed = !collapsed;
-        _applyCollapsed();
-        if (_groupToggleCallbacks[group.id]) {
-            sendControlEvent('control:group_toggle', group.id, collapsed);
-        }
-    });
-
-    // ── Drag setup (header is the drag handle) ──
-    _setupDrag(panel, header);
-
-    // ── Prevent pointer events on the panel from reaching Three.js ──
-    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
-    panel.addEventListener('pointermove', (e) => e.stopPropagation());
-
-    return panel;
 }
 
 // ── Internal: orphan panel ──────────────────────────────────
@@ -322,6 +235,7 @@ function _mountPanel(panel, anchor, targetEl) {
 
 function _positionPanel(panel, anchor) {
     panel.style.position = 'fixed';
+    panel.style.transform = '';
     switch (anchor) {
         case 'top-left':
             panel.style.top = '60px';
@@ -334,6 +248,26 @@ function _positionPanel(panel, anchor) {
         case 'bottom-left':
             panel.style.bottom = '50px';
             panel.style.left = '10px';
+            break;
+        case 'top':
+            panel.style.top = '60px';
+            panel.style.left = '50%';
+            panel.style.transform = 'translateX(-50%)';
+            break;
+        case 'bottom':
+            panel.style.bottom = '50px';
+            panel.style.left = '50%';
+            panel.style.transform = 'translateX(-50%)';
+            break;
+        case 'left':
+            panel.style.left = '10px';
+            panel.style.top = '50%';
+            panel.style.transform = 'translateY(-50%)';
+            break;
+        case 'right':
+            panel.style.right = '10px';
+            panel.style.top = '50%';
+            panel.style.transform = 'translateY(-50%)';
             break;
         case 'bottom-right':
         default:
@@ -500,6 +434,7 @@ export function createFileChooser(ctrl) {
 export function createSlider(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-slider';
+    if (ctrl.variant === 'menu') wrapper.classList.add('tanga-menu-item');
 
     const labelRow = document.createElement('div');
     labelRow.className = 'tanga-control-label-row';
@@ -601,6 +536,7 @@ export function createDropdown(ctrl) {
 export function createButton(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-button';
+    if (ctrl.variant === 'menu') wrapper.classList.add('tanga-menu-item');
 
     const btn = document.createElement('button');
     btn.className = 'tanga-action-button';
@@ -714,6 +650,7 @@ export function createColorPicker(ctrl) {
 export function createCheckbox(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-checkbox';
+    if (ctrl.variant === 'menu') wrapper.classList.add('tanga-menu-item');
 
     const row = document.createElement('label');
     row.className = 'tanga-checkbox-row';
@@ -1209,7 +1146,7 @@ function _injectStyles() {
         }
         .tanga-group-toggle {
             background: none;
-            border: 1px solid rgba(255,255,255,0.12);
+            border: none;
             border-radius: 3px;
             color: #aaa;
             cursor: pointer;
@@ -1232,6 +1169,42 @@ function _injectStyles() {
         }
         .tanga-orphan-handle:active {
             cursor: grabbing;
+        }
+
+        .tanga-control.tanga-menu-item {
+            border: none;
+            background: none;
+            margin: 0;
+            width: 100%;
+            text-align: left;
+        }
+        .tanga-menu-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+        }
+        .tanga-menu-item .tanga-action-button {
+            background: none;
+            border: none;
+            text-align: left;
+            padding: 6px 8px;
+        }
+        .tanga-menu-item .tanga-action-button:hover {
+            background: none;
+        }
+        .tanga-menu-item .tanga-checkbox-row {
+            padding: 6px 8px;
+        }
+        .tanga-menu-bar .tanga-control {
+            margin: 0;
+        }
+        .tanga-menu-bar .tanga-action-button {
+            width: auto;
+            background: none;
+            border: none;
+            padding: 4px 10px;
+        }
+        .tanga-menu-bar .tanga-action-button:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .tanga-control {

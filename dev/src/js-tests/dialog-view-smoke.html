@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>DialogView smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { position: relative; width: 400px; height: 300px; background: #222; }
+    </style>
+    <script type="importmap">
+        {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"}}
+    </script>
+</head>
+<body>
+    <h3 style="color:#ccc">DialogView smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { DialogView } from '../../py/pytanga/viz/templates/views/dialog-view.js';
+        import { setWebSocket } from '../../py/pytanga/viz/templates/events.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+
+        // Capture `sendEvent` payloads without a live WebSocket.
+        const sent = [];
+        setWebSocket({ readyState: WebSocket.OPEN, send: (m) => sent.push(JSON.parse(m)) });
+
+        const content = {
+            type: 'stack',
+            direction: 'vertical',
+            children: [
+                { type: 'button_view', id: 'close_btn', label: 'Close', tooltip: '', variant: 'default' },
+            ],
+        };
+
+        const dialog = new DialogView({
+            id: 'dlg1',
+            title: 'Settings',
+            content,
+            align_x: 0.5,
+            align_y: 0.5,
+            dismissable: true,
+            ws: null,
+        });
+        const host = document.getElementById('host');
+        dialog.mount(host);
+
+        log('title:', dialog.el.querySelector('.tanga-dialog-title')?.textContent);
+        log('content button:', !!dialog.el.querySelector('.tanga-action-button'));
+        log('close button:', !!dialog.el.querySelector('button[title="Dismiss"]'));
+
+        const titleEl = dialog.el.querySelector('.tanga-dialog-title');
+        log('title is drag handle:', getComputedStyle(titleEl).cursor === 'move');
+        titleEl.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 50, button: 0, bubbles: true }));
+        log('drag switches to px:', dialog.el.style.transform === 'none' && dialog.el.style.left.endsWith('px'));
+        window.dispatchEvent(new PointerEvent('pointermove', { clientX: 90, clientY: 80 }));
+        window.dispatchEvent(new PointerEvent('pointerup', {}));
+        log('drag moved:', dialog.el.style.left.endsWith('px') && dialog.el.style.top.endsWith('px'));
+
+        // Drag far outside the viewport: the dialog must stay fully inside.
+        titleEl.dispatchEvent(new PointerEvent('pointerdown', { clientX: 90, clientY: 80, button: 0, bubbles: true }));
+        window.dispatchEvent(new PointerEvent('pointermove', { clientX: 1e6, clientY: 1e6 }));
+        window.dispatchEvent(new PointerEvent('pointerup', {}));
+        const dragRect = dialog.el.getBoundingClientRect();
+        log('drag clamped:', dragRect.left >= 0 && dragRect.top >= 0 && dragRect.right <= window.innerWidth && dragRect.bottom <= window.innerHeight);
+
+        // A viewport shrink re-pins a dragged dialog inside the viewport.
+        window.dispatchEvent(new Event('resize'));
+        const afterResize = dialog.el.getBoundingClientRect();
+        log('resize keeps inside:', afterResize.left >= 0 && afterResize.top >= 0 && afterResize.right <= window.innerWidth && afterResize.bottom <= window.innerHeight);
+
+        dialog.el.querySelector('button[title="Dismiss"]').click();
+        log('sent close:', sent.some((m) => m.type === 'event' && m.target === 'dlg1' && m.event === 'close'));
+        log('dialog unmounted:', !host.contains(dialog.el));
+
+        // Modal (dismissable=false) dialog: backdrop rendered, no ✕.
+        const modal = new DialogView({
+            id: 'dlg2',
+            title: 'Modal',
+            content: {
+                type: 'stack',
+                direction: 'vertical',
+                children: [
+                    { type: 'button_view', id: 'modal_ok', label: 'OK', tooltip: '', variant: 'default' },
+                ],
+            },
+            align_x: 0.5,
+            align_y: 0.5,
+            dismissable: false,
+            ws: null,
+        });
+        modal.mount(host);
+        log('modal backdrop:', !!modal.el.parentElement.querySelector('.tanga-dialog-backdrop'));
+        log('modal has no ✕:', !modal.el.querySelector('button[title="Dismiss"]'));
+        log('modal has OK button:', !!modal.el.querySelector('.tanga-action-button'));
+        modal.el.querySelector('.tanga-action-button').click();
+        log('modal sent ok:', sent.some((m) => m.type === 'event' && m.target === 'modal_ok' && m.event === 'click'));
+        modal.destroy();
+        log('modal backdrop removed:', !host.parentElement?.contains(modal._backdrop) && modal._backdrop === null);
+    </script>
+</body>
+</html>

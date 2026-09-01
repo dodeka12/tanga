@@ -253,7 +253,9 @@ programmatic `set_control_value` full-replace clears the history.
 
 ## `add_control_group`
 
-Groups controls into a collapsible panel at a fixed position:
+Groups controls into a titled, collapsible
+[`GroupView`](control-views.md#groupview) anchored as an overlay (optionally
+attached to a 3D object):
 
 ```python
 self.viz.add_control_group(
@@ -271,11 +273,18 @@ self.viz.add_control_group(
 | `icon` | `Icon` | `None` | Optional title-bar icon (see [Icons](#icons)) |
 | `tooltip` | `str` | `""` | Hover tooltip for the title bar |
 | `controls` | `list[str]` | `[]` | Ordered list of control IDs |
-| `position` | `str` | `"bottom-right"` | `"top-left"`, `"top-right"`, `"bottom-left"`, `"bottom-right"` |
+| `position` | `EAnchor` | `"bottom-right"` | Corner anchors (`top-left`/`top-right`/`bottom-left`/`bottom-right`) or centered edge anchors (`top`/`bottom`/`left`/`right`) |
 | `collapsed` | `bool` | `False` | Start collapsed |
+| `parent_id` | `str` | `None` | Entity id to attach the group to (follows it in 3D) instead of anchoring it in the overlay |
 | `on_toggle` | `Callable` | `None` | Async callback: `(value: bool, event: ControlEvent) -> None` |
 
 Controls must be created **before** the group that references them.
+
+Groups render identically in **single-scene** and **layout** modes: without
+`parent_id` they anchor in the overlay (`position`); with `parent_id` they
+attach to that entity.  See `py/examples/viz/scenes/control_group_overlay.py`
+(layout mode) and `py/examples/viz/scenes/control_group_single.py`
+(single-scene mode).
 
 ## Icons
 

@@ -214,6 +214,7 @@ class BrowserSession:
     ws: web.WebSocketResponse
     viewer_name: str | None = None  # optional friendly label from ?viewer= URL param
     scenes: list[str] = field(default_factory=list)  # all subscribed scene names
+    layout: str | None = None  # requested layout name (?view=), if any
 
 
 class VizServer:
@@ -246,6 +247,7 @@ class VizServer:
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
         self._layout_callback: LayoutCallback | None = None
+        self._scene_layout_callback: LayoutCallback | None = None
         self._control_callback: ControlCallback | None = None
         self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = (
             None
@@ -277,6 +279,7 @@ class VizServer:
         scene_config_callback: SceneConfigCallback | None = None,
         scene_list_callback: SceneListCallback | None = None,
         layout_callback: LayoutCallback | None = None,
+        scene_layout_callback: LayoutCallback | None = None,
         on_ready: Callable[[], None] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
@@ -285,6 +288,7 @@ class VizServer:
         self._scene_config_callback = scene_config_callback
         self._scene_list_callback = scene_list_callback
         self._layout_callback = layout_callback
+        self._scene_layout_callback = scene_layout_callback
         self._control_callback = control_callback
         self._interaction_callback = interaction_callback
         self._on_connect = on_connect
@@ -425,6 +429,24 @@ class VizServer:
         )
         try:
             await session.ws.send_str(data)
+        except (ConnectionError, Exception):
+            pass
+
+    async def push_layout_to_session(
+        self, browser_id: str, layout_payload: dict[str, Any]
+    ) -> None:
+        """Send a serialized ``view_layout`` to a single browser session."""
+        session = self._browser_sessions.get(browser_id)
+        if session is None:
+            return
+        logger.info(
+            "WS SEND t=%.3f %s browser=%s",
+            time.monotonic(),
+            _ws_msg_brief(json.dumps(layout_payload)),
+            browser_id,
+        )
+        try:
+            await session.ws.send_str(json.dumps(layout_payload))
         except (ConnectionError, Exception):
             pass
 
@@ -583,6 +605,28 @@ class VizServer:
         if self._on_ready is not None:
             self._on_ready()
 
+    def _resolve_layout(
+        self, scene_name: str, layout_name: str | None
+    ) -> tuple[list[str], dict[str, Any] | None]:
+        """Resolve scene subscription + ``view_layout`` payload for a ``ready``.
+
+        Layout mode (``layout_name`` set) subscribes to the named layout's
+        scenes and returns its payload; single-scene mode subscribes to
+        ``[scene_name]`` and returns the auto-derived single-scene layout
+        (``None`` when no ``scene_layout_callback`` is configured).
+        """
+        layout_payload: dict[str, Any] | None = None
+        if layout_name is not None:
+            if self._layout_callback is not None:
+                layout_payload = self._layout_callback(layout_name)
+            if layout_payload is None:
+                return [""], None
+            names = layout_payload.get("scenes") or []
+            return (list(names) if names else [""]), layout_payload
+        if self._scene_layout_callback is not None:
+            layout_payload = self._scene_layout_callback(scene_name)
+        return [scene_name], layout_payload
+
     def get_browser_sessions(self) -> list[dict[str, str | None]]:
         """Return a list of active browser sessions as plain dicts."""
         return [
@@ -591,6 +635,7 @@ class VizServer:
                 "scene": s.scene,
                 "remote_addr": s.remote_addr,
                 "viewer_name": s.viewer_name,
+                "layout": s.layout,
             }
             for s in self._browser_sessions.values()
         ]
@@ -786,23 +831,24 @@ class VizServer:
                                 msg_browser_id,
                                 data.get("viewer_name"),
                             )
-                            # Resolve the set of scenes to subscribe to.
+                            # Resolve the set of scenes to subscribe to (and the
+                            # ``view_layout`` payload, which is always served).
+                            current_session.layout = layout_name
                             layout_payload: dict[str, Any] | None = None
                             if layout_name is not None:
                                 # Layout mode: subscribe to every scene in the layout.
-                                if self._layout_callback is not None:
-                                    layout_payload = self._layout_callback(layout_name)
+                                scene_names, layout_payload = self._resolve_layout(
+                                    scene_name, layout_name
+                                )
                                 if layout_payload is None:
                                     # Unknown layout — navigate to main.
                                     await ws.send_str(
                                         json.dumps({"type": "navigate", "scene": ""})
                                     )
                                     scene_names = [""]
-                                else:
-                                    names = layout_payload.get("scenes") or []
-                                    scene_names = list(names) if names else [""]
                             else:
-                                # Single-scene mode (existing behaviour).
+                                # Single-scene mode: validate the scene, then
+                                # derive its single-scene layout.
                                 if self._scene_list_callback is not None:
                                     available = self._scene_list_callback()
                                     if scene_name and scene_name not in available:
@@ -813,7 +859,9 @@ class VizServer:
                                             )
                                         )
                                         scene_name = ""
-                                scene_names = [scene_name]
+                                scene_names, layout_payload = self._resolve_layout(
+                                    scene_name, None
+                                )
 
                             current_session.scenes = list(scene_names)
                             current_session.scene = scene_names[0]

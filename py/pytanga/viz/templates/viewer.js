@@ -5,8 +5,9 @@
 
 window.__tanga_ready = true;
 
-import { ThreeJsView } from './views/three-view.js';
+import { applyOverlayAnchor } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
+import { getOverlay } from './overlay.js';
 import { applyControlValue } from './controls-panel.js';
 import { setWebSocket as setEventsWebSocket } from './events.js';
 import {
@@ -14,6 +15,11 @@ import {
     handleBannerRemove,
     handleBannerClear,
 } from './banner.js';
+import {
+    handleDialogDefine,
+    handleDialogRemove,
+    handleDialogClear,
+} from './dialog.js';
 import {
     handleFileBrowserShow,
     handleFileBrowserListing,
@@ -26,7 +32,6 @@ import { updateLineResolutions } from './renderers/utils.js';
 import { handleResize } from './view_mode.js';
 
 // ── State ───────────────────────────────────────────────────
-let view = null;
 let ws = null;
 let reconnectTimer = null;
 let _savedPixelRatio = null;     // saved during screenshot capture
@@ -53,6 +58,7 @@ let _layoutName = (() => {
 let _layoutRoot = null;
 let _sceneRoutes = new Map();  // scene -> {sceneViews, controlViews}
 let _viewById = new Map();     // view_id -> ThreeJsView (per-pane camera)
+let _globalOverlayViews = [];  // views mounted into the global overlay singleton
 
 // Per-scene browser-side animation stop binding.
 let _animationStopConfig = { enabled: false, key: null, modifiers: [] };
@@ -432,7 +438,8 @@ function showVersionMismatchBanner(serverVersion, clientVersion) {
 
 // ── Screenshot ───────────────────────────────────────────────
 function handleScreenshot(msg) {
-    if (!view || !view.renderer) return;
+    const active = _activeSceneView();
+    if (!active || !active.renderer) return;
 
     const statusEl = document.getElementById('status');
     if (statusEl) {
@@ -442,21 +449,21 @@ function handleScreenshot(msg) {
 
     if (msg.width && msg.height) {
         const w = msg.width, h = msg.height;
-        _savedPixelRatio = view.renderer.getPixelRatio();
-        view.renderer.setPixelRatio(1);
-        handleResize(view.camera, view.renderer, view.labelRenderer, view.sceneConfig?.space_dim || 3, w, h);
+        _savedPixelRatio = active.renderer.getPixelRatio();
+        active.renderer.setPixelRatio(1);
+        handleResize(active.camera, active.renderer, active.labelRenderer, active.sceneConfig?.space_dim || 3, w, h);
         updateLineResolutions();
         if (window._viewerContainer) {
             window._viewerContainer.style.width = w + 'px';
             window._viewerContainer.style.height = h + 'px';
         }
     }
-    view.renderer.render(view.scene, view.camera);
-    if (view.labelRenderer) {
-        view.labelRenderer.render(view.scene, view.camera);
+    active.renderer.render(active.scene, active.camera);
+    if (active.labelRenderer) {
+        active.labelRenderer.render(active.scene, active.camera);
     }
-    const w = view.renderer.domElement.width;
-    const h = view.renderer.domElement.height;
+    const w = active.renderer.domElement.width;
+    const h = active.renderer.domElement.height;
 
     const send = (data) => {
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -480,10 +487,10 @@ function handleScreenshot(msg) {
             send(domCanvas.toDataURL('image/png'));
         }).catch((err) => {
             console.warn('html2canvas failed, falling back to webgl only:', err);
-            send(view.renderer.domElement.toDataURL('image/png'));
+            send(active.renderer.domElement.toDataURL('image/png'));
         });
     } else {
-        send(view.renderer.domElement.toDataURL('image/png'));
+        send(active.renderer.domElement.toDataURL('image/png'));
     }
 }
 
@@ -540,9 +547,10 @@ async function handleMessage(msg) {
         return;
     }
     if (msg.type === 'restore_size') {
-        if (view) {
+        const active = _activeSceneView();
+        if (active) {
             if (_savedPixelRatio !== null) {
-                view.renderer.setPixelRatio(_savedPixelRatio);
+                active.renderer.setPixelRatio(_savedPixelRatio);
                 _savedPixelRatio = null;
             }
             if (window._viewerContainer) {
@@ -555,7 +563,7 @@ async function handleMessage(msg) {
                 statusEl2.style.display = _savedStatusDisplay || 'block';
                 _savedStatusDisplay = null;
             }
-            view.resize();
+            active.resize();
         }
         return;
     }
@@ -584,6 +592,16 @@ async function handleMessage(msg) {
         // scene-scoped banner: fall through to scene routing below.
     }
 
+    if (msg.type === 'dialog_define' || msg.type === 'dialog_remove' || msg.type === 'dialog_clear') {
+        if (msg.scene === null || msg.scene === undefined) {
+            if (msg.type === 'dialog_define') handleDialogDefine(msg, ws);
+            else if (msg.type === 'dialog_remove') handleDialogRemove(msg);
+            else handleDialogClear();
+            return;
+        }
+        // scene-scoped dialog: fall through to scene routing below.
+    }
+
     if (msg.type === 'file_browser_show' || msg.type === 'file_browser_listing' || msg.type === 'file_browser_close') {
         if (msg.type === 'file_browser_show') handleFileBrowserShow(msg);
         else if (msg.type === 'file_browser_listing') handleFileBrowserListing(msg);
@@ -596,7 +614,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (_layoutName !== null) {
+    if (_layoutRoot !== null) {
         await _routeToScene(msg, msg.scene || '');
         return;
     }
@@ -610,34 +628,86 @@ async function handleMessage(msg) {
     if (msg.type === 'banner_define' || msg.type === 'banner_remove' || msg.type === 'banner_clear') {
         if (!_forMyScene(msg)) return;
     }
+    if (msg.type === 'dialog_define' || msg.type === 'dialog_remove' || msg.type === 'dialog_clear') {
+        if (!_forMyScene(msg)) return;
+    }
 
-    if (view) await view.handleMessage(msg);
+    const active = _activeSceneView();
+    if (active) await active.handleMessage(msg);
 }
 
 // ── Layout / routing helpers ─────────────────────────────────
 
 function _setWsOnAllViews(ws) {
-    if (view) view.setWebSocket(ws);
     for (const route of _sceneRoutes.values()) {
         for (const v of route.sceneViews) v.setWebSocket(ws);
     }
 }
 
 function _setBrowserIdOnAllViews(id) {
-    if (view) view.setBrowserId(id);
     for (const route of _sceneRoutes.values()) {
         for (const v of route.sceneViews) v.setBrowserId(id);
     }
 }
 
+function _activeSceneView() {
+    const route = _sceneRoutes.get(_myScene);
+    if (route && route.sceneViews.length) return route.sceneViews[0];
+    return null;
+}
+
+function _destroyViewTree(view) {
+    if (!view) return;
+    if (Array.isArray(view.children)) {
+        for (const child of [...view.children]) _destroyViewTree(child);
+    }
+    if (typeof view.destroy === 'function') view.destroy();
+}
+
 function _buildLayout(msg) {
     _log('init', 'view_layout name=' + (msg.name || ''));
+
+    // Teardown the previous tree (and its global overlay views) so re-pushes
+    // and reconnects don't leak ResizeObservers / DOM nodes.
+    if (_layoutRoot) {
+        _destroyViewTree(_layoutRoot);
+        _layoutRoot.unmount();
+    }
+    _layoutRoot = null;
+    _sceneRoutes = new Map();
+    _viewById = new Map();
+    const overlay = getOverlay();
+    for (const view of _globalOverlayViews) {
+        overlay.removeChild(view);
+        if (typeof view.destroy === 'function') view.destroy();
+    }
+    _globalOverlayViews = [];
+
     _layoutRoot = buildViewTree(msg.root, ws);
     _layoutRoot.el.style.width = '100%';
     _layoutRoot.el.style.height = '100%';
     _layoutRoot.mount(window._viewerContainer);
     _sceneRoutes = collectSceneRoutes(_layoutRoot);
     _viewById = collectViewByIds(_layoutRoot);
+
+    // Track the active scene's title for the document title.
+    const active = _activeSceneView();
+    if (active) {
+        active.on('titlechange', (e) => {
+            _savedTitle = _shortenTitle(e.detail.title) || _savedTitle;
+            document.title = _savedTitle;
+        });
+    }
+
+    // Global overlay views (e.g. menus) mount into the shared overlay singleton.
+    for (const node of msg.overlay || []) {
+        const view = buildViewTree(node, ws);
+        view.el.style.position = 'absolute';
+        view.el.style.pointerEvents = 'auto';
+        applyOverlayAnchor(view.el, view.position || 'bottom-right');
+        overlay.addChild(view);
+        _globalOverlayViews.push(view);
+    }
 }
 
 async function _routeToScene(msg, sceneName) {
@@ -656,22 +726,15 @@ async function _routeToScene(msg, sceneName) {
 function init() {
     window._viewerContainer = document.getElementById('viewer-container');
 
-    if (_layoutName === null) {
-        view = new ThreeJsView(_myScene);
-        view.mount(window._viewerContainer);
-        view.on('titlechange', (e) => {
-            _savedTitle = _shortenTitle(e.detail.title) || _savedTitle;
-            document.title = _savedTitle;
-        });
-    }
-    // Layout mode: the tree is built lazily when `view_layout` arrives.
+    // The view tree is built lazily when `view_layout` arrives (unified mode).
 
-    // Ctrl+S screenshot shortcut (single-scene mode only).
+    // Ctrl+S screenshot shortcut.
     window.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
-            if (view && view.renderer) {
-                const dataUrl = view.renderer.domElement.toDataURL('image/png');
+            const active = _activeSceneView();
+            if (active && active.renderer) {
+                const dataUrl = active.renderer.domElement.toDataURL('image/png');
                 const now = new Date();
                 const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
                 const link = document.createElement('a');
@@ -691,12 +754,8 @@ function init() {
 
 function animate() {
     requestAnimationFrame(animate);
-    if (view) {
-        view.render();
-    } else {
-        for (const route of _sceneRoutes.values()) {
-            for (const v of route.sceneViews) v.render();
-        }
+    for (const route of _sceneRoutes.values()) {
+        for (const v of route.sceneViews) v.render();
     }
 }
 

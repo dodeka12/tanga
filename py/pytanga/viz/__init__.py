@@ -30,6 +30,7 @@ from ._active import (
     ActPoint,
     ActSceneObject,
 )
+from ._anchor import EAnchor
 from ._app import VisualizerApp
 from ._banner import Banner
 from ._colors import Color
@@ -40,6 +41,7 @@ from ._controls import (
     ControlEvent,
     ControlGroup,
     Dropdown,
+    EControlVariant,
     FileChooser,
     Slider,
     Table,
@@ -52,6 +54,7 @@ from ._controls import (
     ValueEdit,
 )
 from ._coordinate_system import CoordinateSystem, fit_view2d
+from ._dialog import Dialog
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
 from ._interaction import (
@@ -158,6 +161,7 @@ from .views import (
     DropdownView,
     FileChooserView,
     GroupView,
+    MenuView,
     SceneView,
     SliderView,
     SpacerView,
@@ -209,10 +213,12 @@ __all__ = [
     "fit_view2d",
     "ControlView",
     "GroupView",
+    "MenuView",
     "CrossHairPointStyle",
     "CylinderLineStyle",
     "CylinderStyle",
     "DashedWireframe",
+    "Dialog",
     "DilatorStyle",
     "DirectionStyle",
     "DiskStyle",
@@ -221,6 +227,8 @@ __all__ = [
     "DragMode",
     "Dropdown",
     "DropdownView",
+    "EAnchor",
+    "EControlVariant",
     "EIconMaterial",
     "EIconUC",
     "EllipseStyle",

@@ -16,6 +16,8 @@ uv run python py/examples/<path>.py
 
 - **ActPoint** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
+- **add_control_group** — [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
+
 - **add_table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **affine** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
@@ -27,6 +29,8 @@ uv run python py/examples/<path>.py
 - **align modes** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md)
 
 - **all types** — [All geometric entity types in one scene](viz/entities/all_entities.md)
+
+- **anchor** — [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
 
 - **angle vs time** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
 
@@ -57,6 +61,8 @@ uv run python py/examples/<path>.py
 - **Axis** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
 - **banner** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md), [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
+
+- **bar** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
 
 - **basis** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -118,6 +124,8 @@ uv run python py/examples/<path>.py
 
 - **context manager** — [Interactive Visualizer](ga/jupyter/interactive.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
+- **control group** — [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
+
 - **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
@@ -132,7 +140,7 @@ uv run python py/examples/<path>.py
 
 - **defaults** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
-- **dialog** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md)
+- **dialog** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
 
 - **Dilator** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
@@ -148,7 +156,7 @@ uv run python py/examples/<path>.py
 
 - **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
 
-- **dropdown** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
+- **dropdown** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
 
 - **dtype** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -190,6 +198,8 @@ uv run python py/examples/<path>.py
 
 - **fixed modulus** — [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
+- **fold** — [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
+
 - **frame streaming** — [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
 
 - **G(3,0)** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md)
@@ -216,6 +226,8 @@ uv run python py/examples/<path>.py
 
 - **group** — [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
 
+- **group view** — [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
+
 - **Gunn/Dorst** — [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md)
 
 - **heavy work** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md)
@@ -227,6 +239,10 @@ uv run python py/examples/<path>.py
 - **horizontal** — [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **HTML** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
+
+- **icon** — [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
+
+- **icon_only** — [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
 
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
@@ -254,7 +270,7 @@ uv run python py/examples/<path>.py
 
 - **LaTeX** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
-- **layout** — [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **layout** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **least-norm** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -278,11 +294,15 @@ uv run python py/examples/<path>.py
 
 - **Markdown** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
+- **menu** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
+
+- **menu bar** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+
 - **mesh** — [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
 
 - **meshes** — [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
 
-- **modal** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md)
+- **modal** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md), [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
 
 - **modes** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
@@ -318,6 +338,8 @@ uv run python py/examples/<path>.py
 
 - **object model** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
 
+- **on_close** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+
 - **on_release** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md)
 
 - **operators** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
@@ -328,6 +350,8 @@ uv run python py/examples/<path>.py
 
 - **orthographic** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md)
 
+- **overlay** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
+
 - **overrides** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
 - **P2** — [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md)
@@ -335,6 +359,8 @@ uv run python py/examples/<path>.py
 - **P3** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
 - **panes** — [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md)
+
+- **parent_id** — [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
 
 - **PartialDisk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
@@ -388,6 +414,8 @@ uv run python py/examples/<path>.py
 
 - **remove** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
+- **remove_dialog** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+
 - **repeated variables** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
 - **residual** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
@@ -404,7 +432,7 @@ uv run python py/examples/<path>.py
 
 - **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
-- **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **scenes** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -414,9 +442,13 @@ uv run python py/examples/<path>.py
 
 - **show** — [Interactive Visualizer](ga/jupyter/interactive.md)
 
+- **show_dialog** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+
 - **signature** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
 - **simulation** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
+
+- **single scene** — [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
 
 - **singular** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -440,11 +472,15 @@ uv run python py/examples/<path>.py
 
 - **stack view** — [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
+- **StackView** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+
 - **standard viewer** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
 
 - **styled objects** — [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
 
 - **styling** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
+
+- **sub-menu** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
 
 - **sweep** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 

@@ -12,10 +12,25 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
+from ._anchor import EAnchor
 from ._icons import Icon
+
+
+# ── Control variants ─────────────────────────────────────────
+
+
+class EControlVariant(StrEnum):
+    """Visual variants a control can render as.
+
+    ``DEFAULT`` renders the control with its normal panel styling; ``MENU``
+    renders it flat/borderless for use inside menu rows.
+    """
+
+    DEFAULT = "default"
+    MENU = "menu"
 
 
 # ── Control event dataclass ──────────────────────────────────
@@ -117,6 +132,7 @@ class Slider(Control):
     """A numeric slider control with min/max/step bounds."""
 
     kind: str = "slider"
+    variant: EControlVariant = EControlVariant.DEFAULT
     min: float = 0.0
     max: float = 1.0
     step: float = 0.01
@@ -141,6 +157,7 @@ class Button(Control):
     """A clickable button with an optional icon and an async callback."""
 
     kind: str = "button"
+    variant: EControlVariant = EControlVariant.DEFAULT
     icon: Icon | None = None
     """Optional icon id (``family:name``); rendered before the label."""
 
@@ -197,6 +214,7 @@ class Checkbox(Control):
     """A boolean checkbox control."""
 
     kind: str = "checkbox"
+    variant: EControlVariant = EControlVariant.DEFAULT
     value: bool = False
     on_change: Handler | None = None
 
@@ -362,11 +380,11 @@ class ControlGroup:
     controls: list[Control] = field(default_factory=list)
     """The list of :class:`Control` instances belonging to this group."""
 
-    position: str = "bottom-right"
+    position: EAnchor = EAnchor.BOTTOM_RIGHT
     """Viewport anchor for fixed-position panels.
 
-    One of ``"top-left"``, ``"top-right"``, ``"bottom-left"``,
-    ``"bottom-right"``.  Ignored when ``parent_id`` is set.
+    One of :class:`EAnchor` (``"top-left"``, ``"top-right"``, ``"bottom-left"``,
+    ``"bottom-right"``).  Ignored when ``parent_id`` is set.
     """
 
     collapsed: bool = False
@@ -477,6 +495,7 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
         base["tooltip"] = ctrl.tooltip
 
     if isinstance(ctrl, Slider):
+        base["variant"] = str(ctrl.variant)
         base.update(
             {
                 "min": ctrl.min,
@@ -493,6 +512,7 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
             }
         )
     elif isinstance(ctrl, Button):
+        base["variant"] = str(ctrl.variant)
         if ctrl.icon is not None:
             base["icon"] = str(ctrl.icon)
         base["icon_only"] = ctrl.icon_only
@@ -514,6 +534,7 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
     elif isinstance(ctrl, ColorPicker):
         base.update({"value": ctrl.value})
     elif isinstance(ctrl, Checkbox):
+        base["variant"] = str(ctrl.variant)
         base.update({"value": ctrl.value})
     elif isinstance(ctrl, FileChooser):
         base.update(

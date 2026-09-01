@@ -66,7 +66,7 @@ from pytanga.geometry.operators import (
     Rotor,
     Translator,
 )
-from ._compose import Combine, ECompose, SdfElement
+from ._compose import Combine, SdfElement
 from .composed import Composed
 from .group import SdfGroup
 from .object import SdfObject

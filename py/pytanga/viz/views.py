@@ -26,6 +26,7 @@ from ._controls import (
     ColorPicker,
     Control,
     Dropdown,
+    EControlVariant,
     FileChooser,
     Handler,
     Slider,
@@ -35,6 +36,7 @@ from ._controls import (
     ValueEdit,
     _serialize_one_control,
 )
+from ._anchor import EAnchor
 from ._icons import Icon
 from ._size import Size, SizeSpec, size_from_dict
 from .camera import CameraConfig, View2DConfig, View3dConfig, _normalize_camera_config
@@ -291,21 +293,102 @@ class GroupView(StackView):
         children: list[View] | None = None,
         *,
         direction: StackDirection = "vertical",
-        position: str | None = None,
+        position: EAnchor | None = None,
         collapsed: bool = False,
         scrollable: bool = False,
+        icon: Icon | None = None,
+        icon_only: bool = False,
+        parent_id: str | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(direction, children, scrollable=scrollable, **kwargs)
         self.title = title
         self.position = position
         self.collapsed = collapsed
+        self.icon = icon
+        self.icon_only = icon_only
+        self.parent_id = parent_id
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
         result["title"] = self.title
         result["position"] = self.position
         result["collapsed"] = self.collapsed
+        if self.icon is not None:
+            result["icon"] = str(self.icon)
+        result["icon_only"] = self.icon_only
+        if self.parent_id is not None:
+            result["parent_id"] = self.parent_id
+        return result
+
+
+def _apply_menu_variant(view: View) -> None:
+    """Recursively force ``MENU`` onto eligible control views in a menu subtree."""
+    for child in getattr(view, "children", None) or ():
+        if isinstance(child, MenuView):
+            if child.override_variant:
+                _apply_menu_variant(child)
+            continue
+        ctrl = getattr(child, "control", None)
+        if ctrl is not None and hasattr(ctrl, "variant"):
+            ctrl.variant = EControlVariant.MENU
+        _apply_menu_variant(child)
+
+
+class MenuView(View):
+    """A menu: a hamburger dropdown or a permanent horizontal strip of options.
+
+    ``children`` are the options (usually ``*View`` control wrappers); a child
+    may itself be another :class:`MenuView`, forming a nested sub-menu.  When
+    used as an overlay (the global overlay or a :class:`SceneView` overlay
+    child), ``position`` anchors the menu.
+
+    ``override_variant`` (default ``True``) forces every eligible control in the
+    subtree to the ``MENU`` variant, so options render flat/borderless without
+    setting ``variant=`` by hand.
+    """
+
+    _node_type = "menu"
+
+    def __init__(
+        self,
+        label: str = "",
+        children: list[View] | None = None,
+        *,
+        trigger_icon: Icon | None = None,
+        mode: Literal["dropdown", "bar"] = "dropdown",
+        direction: StackDirection = "vertical",
+        position: EAnchor | None = None,
+        override_variant: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        if mode not in ("dropdown", "bar"):
+            raise ValueError(f"mode must be 'dropdown' or 'bar', got {mode!r}")
+        if direction not in ("vertical", "horizontal", "wrap"):
+            raise ValueError(
+                f"direction must be 'vertical', 'horizontal' or 'wrap', got {direction!r}"
+            )
+        self.label = label
+        self.trigger_icon = trigger_icon
+        self.mode = mode
+        self.direction = direction
+        self.position = position
+        self.override_variant = override_variant
+        self.children = list(children or [])
+        if override_variant:
+            _apply_menu_variant(self)
+
+    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+        result = super()._serialize(id_gen)
+        result["trigger_icon"] = (
+            str(self.trigger_icon) if self.trigger_icon is not None else None
+        )
+        result["label"] = self.label
+        result["mode"] = self.mode
+        result["direction"] = self.direction
+        result["position"] = self.position
+        result["children"] = [child._serialize(id_gen) for child in self.children]
         return result
 
 
@@ -362,6 +445,7 @@ class SliderView(ControlView):
         cid: str,
         *,
         label: str = "",
+        variant: EControlVariant = EControlVariant.DEFAULT,
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
@@ -374,6 +458,7 @@ class SliderView(ControlView):
             id=cid,
             label=label,
             tooltip=self.tooltip,
+            variant=variant,
             min=float(min),
             max=float(max),
             step=float(step),
@@ -392,6 +477,7 @@ class ButtonView(ControlView):
         cid: str,
         *,
         label: str = "",
+        variant: EControlVariant = EControlVariant.DEFAULT,
         icon: Icon | None = None,
         icon_only: bool = False,
         on_click: Handler | None = None,
@@ -402,6 +488,7 @@ class ButtonView(ControlView):
             id=cid,
             label=label,
             tooltip=self.tooltip,
+            variant=variant,
             icon=icon,
             icon_only=icon_only,
             on_click=on_click,
@@ -555,6 +642,7 @@ class CheckboxView(ControlView):
         cid: str,
         *,
         label: str = "",
+        variant: EControlVariant = EControlVariant.DEFAULT,
         value: bool = False,
         tooltip: str = "",
         on_change: Handler | None = None,
@@ -565,6 +653,7 @@ class CheckboxView(ControlView):
             id=cid,
             label=label,
             tooltip=tooltip,
+            variant=variant,
             value=value,
             on_change=on_change,
         )
@@ -664,14 +753,142 @@ class TableView(ControlView):
         return self.control.can_redo
 
 
-def serialize_layout(root: View, name: str = "") -> dict[str, Any]:
-    """Serialize a view tree to the ``view_layout`` message."""
-    return {
+def control_to_view(ctrl: Control) -> ControlView:
+    """Wrap an existing :class:`Control` in its ``*View`` counterpart.
+
+    The returned view reuses *ctrl* as its ``control`` (the single source of
+    truth), so backend updates via ``scene._controls`` and control handlers
+    registered under the control id keep working.
+    """
+    if isinstance(ctrl, Slider):
+        view = SliderView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            variant=ctrl.variant,
+            min=ctrl.min,
+            max=ctrl.max,
+            step=ctrl.step,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, Dropdown):
+        view = DropdownView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            options=ctrl.options,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, Button):
+        view = ButtonView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            variant=ctrl.variant,
+            icon=ctrl.icon,
+            icon_only=ctrl.icon_only,
+            on_click=ctrl.on_click,
+        )
+    elif isinstance(ctrl, Checkbox):
+        view = CheckboxView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            variant=ctrl.variant,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, TextField):
+        view = TextFieldView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            placeholder=ctrl.placeholder,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, TextArea):
+        view = TextAreaView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            placeholder=ctrl.placeholder,
+            rows=ctrl.rows,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, ColorPicker):
+        view = ColorPickerView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, FileChooser):
+        view = FileChooserView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            placeholder=ctrl.placeholder,
+            root=ctrl.root,
+            accept=ctrl.accept,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, ValueEdit):
+        view = ValueEditView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            min=ctrl.min,
+            max=ctrl.max,
+            step=ctrl.step,
+            digits=ctrl.digits,
+            value=ctrl.value,
+            editable=ctrl.editable,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, Table):
+        view = TableView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            columns=ctrl.columns,
+            rows=ctrl.rows,
+            allow_add_rows=ctrl.allow_add_rows,
+            allow_add_columns=ctrl.allow_add_columns,
+            on_cell_change=ctrl.on_cell_change,
+            on_row_add=ctrl.on_row_add,
+            on_column_add=ctrl.on_column_add,
+        )
+    else:
+        raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
+    view.control = ctrl  # reuse the same control object (source of truth)
+    return view
+
+
+def serialize_layout(
+    root: View, name: str = "", overlay: list[View] | None = None
+) -> dict[str, Any]:
+    """Serialize a view tree to the ``view_layout`` message.
+
+    ``overlay`` lists extra views (e.g. global menus) mounted into the global
+    overlay container; they are serialized after the root with the same id
+    generator so node ids stay unique across root and overlay.
+    """
+    id_gen = _make_id_gen()
+    result = {
         "type": "view_layout",
         "name": name,
         "scenes": iter_scene_names(root),
-        "root": root._serialize(_make_id_gen()),
+        "root": root._serialize(id_gen),
     }
+    if overlay:
+        result["overlay"] = [view._serialize(id_gen) for view in overlay]
+    return result
 
 
 def iter_scene_names(root: View) -> list[str]:
@@ -691,6 +908,20 @@ def iter_scene_names(root: View) -> list[str]:
 
     _visit(root)
     return names
+
+
+def iter_scene_views(root: View) -> Iterator[SceneView]:
+    """Yield every :class:`SceneView` in the tree (DFS order)."""
+
+    def _visit(view: View) -> Iterator[SceneView]:
+        if isinstance(view, SceneView):
+            yield view
+        for child in getattr(view, "children", None) or ():
+            yield from _visit(child)
+        for child in getattr(view, "overlay", None) or ():
+            yield from _visit(child)
+
+    yield from _visit(root)
 
 
 def iter_control_views(root: View) -> Iterator[ControlView]:
@@ -713,6 +944,7 @@ __all__ = [
     "DropdownView",
     "FileChooserView",
     "GroupView",
+    "MenuView",
     "SceneView",
     "SizeSpec",
     "SliderView",
@@ -722,8 +954,10 @@ __all__ = [
     "TableView",
     "ValueEditView",
     "View",
+    "control_to_view",
     "iter_control_views",
     "iter_scene_names",
+    "iter_scene_views",
     "serialize_layout",
     "size_from_dict",
 ]

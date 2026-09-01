@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Since 1.14.1] — 2026-09-01
+- Menu system (`MenuView`, `add_menu`, `serialize_layout(overlay=...)`) · dialogs (`show_dialog`/`remove_dialog`/`clear_dialogs`) · control variants (`EControlVariant`) · `EAnchor` enum · `GroupView` icon/`icon_only` chrome · unified control groups · single-layout scene serving with live overlay updates
+- Breaking: control groups are now `GroupView` overlays
+→ [Details](2026-09-01_0dcaf306.md)
+
+## [Since 1.14.1] — 2026-09-01
 - Table undo/redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y + `undo_table`/`redo_table` API) · spreadsheet-style keyboard editing · drag-to-select row deletion
 - Bug fixes: table cells editable again (double-click) · cell-edit coordinates preserved · 2D export camera recomputed on resize
 → [Details](2026-09-01_2cf2de71.md)

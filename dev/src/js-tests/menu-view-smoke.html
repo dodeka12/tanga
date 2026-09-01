@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>MenuView smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { padding: 16px; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">MenuView smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { MenuView } from '../../py/pytanga/viz/templates/views/menu-view.js';
+        import { ButtonView } from '../../py/pytanga/viz/templates/views/button-view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+
+        const host = document.getElementById('host');
+
+        const menu = new MenuView({
+            label: 'Menu',
+            children: [
+                new ButtonView({ id: 'b1', label: 'Action' }),
+                new MenuView({
+                    label: 'More',
+                    children: [new ButtonView({ id: 'b2', label: 'Sub action' })],
+                }),
+            ],
+        });
+        menu.mount(host);
+
+        const bar = new MenuView({
+            mode: 'bar',
+            children: [new ButtonView({ id: 'b3', label: 'Bar A' })],
+        });
+        bar.mount(host);
+
+        const panel = menu._panel;
+        log('panel initially hidden:', !!(panel && panel.style.display === 'none'));
+        menu._trigger.click();
+        log('panel open after click:', !!(panel && panel.style.display === 'flex'));
+        menu._trigger.click();
+        log('panel closed after second click:', !!(panel && panel.style.display === 'none'));
+
+        log('bar renders inline (no trigger):', !bar._trigger && bar.el.style.display === 'flex');
+        log('bar has one child:', bar.children.length === 1);
+
+        const sub = menu._subMenus[0];
+        log('submenu detected:', !!sub);
+        if (sub) {
+            log('submenu panel beside parent:',
+                sub._panel.style.left === '100%' && sub._panel.style.top === '0');
+            sub._trigger.click();
+            log('submenu opens:', sub._panel.style.display === 'flex');
+        }
+    </script>
+</body>
+</html>

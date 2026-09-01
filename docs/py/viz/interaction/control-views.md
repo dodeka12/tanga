@@ -35,6 +35,14 @@ The panel API (parameter tables for each `add_*` method) is documented in
 names and defaults, so a `SliderView` mirrors `add_slider`, a `ButtonView`
 mirrors `add_button`, and so on.
 
+### Control variants (`variant`)
+
+`ButtonView`, `CheckboxView`, and `SliderView` accept a `variant=` parameter —
+an `EControlVariant` (`"default"` or `"menu"`). The `"menu"` variant renders the
+control flat and borderless for menu rows. `MenuView` applies the `"menu"`
+variant to its control children automatically (`override_variant=True` by
+default), so you usually don't pass `variant=` by hand.
+
 ## Layout containers
 
 Every view is a `View`. Containers arrange their children; the leaves render
@@ -87,7 +95,7 @@ SceneView(
   scene can be shown from different viewpoints in separate panes. `None` uses
   the scene's camera.
 - `overlay` — views that float over the canvas (e.g. a `GroupView`), anchored
-  by each child's `position`.
+  by each child's `position` (an `EAnchor`).
 
 Scene panes default to a 120 px minimum on both axes so a splitter cannot
 collapse them to nothing (override `min_width`/`min_height`, or pass `None` to
@@ -151,16 +159,57 @@ GroupView(
     children=None,     # list[View] | None
     *,
     direction="vertical",  # StackDirection
-    position=None,     # str | None — "top-left" | "top-right" | "bottom-left" | "bottom-right"
+    position=None,     # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
     collapsed=False,   # bool
     scrollable=False,  # bool — scroll the content (title bar stays pinned)
+    icon=None,         # Icon | None — leading title-bar icon
+    icon_only=False,   # bool — render only the icon (no title text)
     **kwargs,          # forwarded to View (sizes)
 )
 ```
 
 `_node_type` is `"group"`. With `scrollable=True`, the title bar stays pinned
 and the content region scrolls instead of clipping when the pane is smaller
-than the controls (a thin dark scrollbar appears only on overflow).
+than the controls (a thin dark scrollbar appears only on overflow). The
+fold/unfold button in the title bar is a borderless icon.
+
+### MenuView
+
+A menu — a hamburger `dropdown` or a permanent horizontal `bar` of options.
+`children` are the options (control views); a child may be another `MenuView`
+to form a nested sub-menu. `_node_type` is `"menu"`.
+
+```python
+MenuView(
+    label="",           # str
+    children=None,      # list[View] | None — options (control views / sub-menus)
+    *,
+    trigger_icon=None,  # Icon | None — optional leading icon (e.g. EIconMaterial.MENU)
+    mode="dropdown",    # "dropdown" | "bar"
+    direction="vertical",  # StackDirection — options-panel direction
+    position=None,      # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
+    override_variant=True,  # bool — auto-set the MENU variant on control children
+    **kwargs,           # forwarded to View (sizes)
+)
+```
+
+- `mode="dropdown"` renders a click-to-toggle trigger with the options in a
+  hidden panel (outside-click or `Escape` closes it); a nested `MenuView` opens
+  beside its parent as a sub-menu.
+- `mode="bar"` renders the options always-visible in a horizontal strip.
+- `override_variant=True` (default) forces every eligible control in the subtree
+  to the `MENU` variant, so options render flat without setting `variant=` by
+  hand.
+
+Global menus are added with `Visualizer.add_menu(...)`; per-pane menus are
+declared with `SceneView(overlay=[MenuView(...)])`:
+
+```python
+viz.add_menu(label="Settings", trigger_icon=EIconMaterial.MENU, children=[
+    ButtonView("fit", label="Fit camera", on_click=on_fit),
+    SliderView("radius", label="Radius", on_change=on_radius),
+])
+```
 
 ## Control views
 
@@ -190,6 +239,7 @@ SliderView(
     cid,
     *,
     label="",
+    variant="default",  # EControlVariant — "default" | "menu"
     min=0.0,
     max=1.0,
     step=0.01,
@@ -209,6 +259,7 @@ ButtonView(
     cid,
     *,
     label="",
+    variant="default",  # EControlVariant — "default" | "menu"
     icon=None,         # Icon | None
     icon_only=False,   # bool
     on_click=None,     # Handler — async (value: None, event)
@@ -311,6 +362,7 @@ CheckboxView(
     cid,
     *,
     label="",
+    variant="default",  # EControlVariant — "default" | "menu"
     value=False,       # bool
     tooltip="",        # str
     on_change=None,    # Handler — async (value: bool, event)
@@ -394,11 +446,12 @@ through that wrapped control:
 Yield every `ControlView` in the tree in DFS order (descending through
 `children` and `overlay`).
 
-### `serialize_layout(root, name="")`
+### `serialize_layout(root, name="", overlay=None)`
 
 Serialize a view tree to the `view_layout` message (the message consumed by
 the browser frontend). `name` is the layout name used in the URL
-(`/?view=<name>`).
+(`/?view=<name>`); `overlay` is an optional list of views mounted into the
+full-screen global overlay (used by global menus).
 
 ## Minimal example
 

@@ -12,6 +12,7 @@ from pytanga.viz._controls import (
     ControlGroup,
     ControlHandlerRegistry,
     Dropdown,
+    EControlVariant,
     Slider,
     Table,
     TextArea,
@@ -40,6 +41,7 @@ def test_serialize_slider() -> None:
         "id": "pos_x",
         "kind": "slider",
         "label": "X Position",
+        "variant": "default",
         "min": 0.0,
         "max": 5.0,
         "step": 0.1,
@@ -77,6 +79,7 @@ def test_serialize_button() -> None:
         "id": "reset_btn",
         "kind": "button",
         "label": "Reset",
+        "variant": "default",
         "icon_only": False,
     }
 
@@ -270,6 +273,7 @@ def test_serialize_checkbox() -> None:
         "id": "wire",
         "kind": "checkbox",
         "label": "Wireframe",
+        "variant": "default",
         "value": True,
     }
 
@@ -310,6 +314,7 @@ def test_serialize_button_with_icon() -> None:
         "id": "reset",
         "kind": "button",
         "label": "Reset",
+        "variant": "default",
         "icon": "material:refresh",
         "icon_only": True,
     }
@@ -457,3 +462,36 @@ def test_table_set_control_value_clears_history() -> None:
     set_control_value(ctrl, {"columns": ["x"], "rows": [["2"]]})
     assert ctrl.can_undo is False
     assert ctrl.can_redo is False
+
+
+# ── Test: control variants ───────────────────────────────────
+
+
+def test_serialize_variant_defaults_to_default() -> None:
+    for ctrl in (
+        Button(id="b", label="B"),
+        Checkbox(id="c", label="C"),
+        Slider(id="s", label="S"),
+    ):
+        assert _serialize_one_control(ctrl)["variant"] == "default"
+
+
+def test_serialize_menu_variant() -> None:
+    assert (
+        _serialize_one_control(Button(id="b", label="B", variant=EControlVariant.MENU))[
+            "variant"
+        ]
+        == "menu"
+    )
+    assert (
+        _serialize_one_control(
+            Checkbox(id="c", label="C", variant=EControlVariant.MENU)
+        )["variant"]
+        == "menu"
+    )
+    assert (
+        _serialize_one_control(Slider(id="s", label="S", variant=EControlVariant.MENU))[
+            "variant"
+        ]
+        == "menu"
+    )

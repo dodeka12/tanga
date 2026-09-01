@@ -239,6 +239,16 @@
         ]
       },
       {
+        "Dialogs": [
+          {
+            "Overview": "py/examples/viz/dialogs/index.md"
+          },
+          {
+            "Dialog Demo": "py/examples/viz/dialogs/dialog_demo.md"
+          }
+        ]
+      },
+      {
         "Entities": [
           {
             "Overview": "py/examples/viz/entities/index.md"
@@ -339,6 +349,16 @@
         ]
       },
       {
+        "Menus": [
+          {
+            "Overview": "py/examples/viz/menus/index.md"
+          },
+          {
+            "Menu Demo": "py/examples/viz/menus/menu_demo.md"
+          }
+        ]
+      },
+      {
         "Plotting": [
           {
             "Overview": "py/examples/viz/plotting/index.md"
@@ -364,6 +384,15 @@
         "Scenes": [
           {
             "Overview": "py/examples/viz/scenes/index.md"
+          },
+          {
+            "Control Group Overlay": "py/examples/viz/scenes/control_group_overlay.md"
+          },
+          {
+            "Control Group Single": "py/examples/viz/scenes/control_group_single.md"
+          },
+          {
+            "Group View Icons": "py/examples/viz/scenes/group_view_icons.md"
           },
           {
             "Multi Scene": "py/examples/viz/scenes/multi_scene.md"
