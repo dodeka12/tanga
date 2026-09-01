@@ -24,6 +24,7 @@ def test_bootstrap_bundles_single_camera_fit_module():
     b = generate_bootstrap_js("")
     assert "function finiteAspect(" in b
     assert "function orthoFrustum(" in b
+    assert "function applyOrthoFrustum(" in b
     # The old hand-maintained copies must be gone.
     assert "_finiteAspectExport" not in b
     assert "_orthoFrustum2d" not in b
@@ -100,3 +101,13 @@ def test_responsive_figure_uses_container_size():
         "(figContainer.clientWidth || window.innerWidth), "
         "(figContainer.clientHeight || window.innerHeight))" in html
     )
+
+
+def test_snapshot_resize_recomputes_2d_ortho_frustum():
+    html = render_snapshot([], {"space_dim": 2})
+    assert "applyOrthoFrustum(adapterCamera, rw, rh)" in html
+
+
+def test_responsive_figure_resize_recomputes_2d_ortho_frustum():
+    html = render_figure([], {"space_dim": 2}, {"responsive": True}, {})
+    assert "applyOrthoFrustum(figCamera, rw, rh)" in html
