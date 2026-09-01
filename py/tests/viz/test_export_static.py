@@ -204,3 +204,20 @@ class TestCdnUnreachableDetection:
         assert "cdn.jsdelivr.net" in html
         assert "RUNTIME_ERROR_MESSAGE" in html
         assert "Viewer error" in html
+
+
+class TestThemePacking:
+    def test_snapshot_packs_base_theme_css(self):
+        html = render_snapshot([], {})
+        assert "--tanga-bg: #1a1a2e" in html
+        assert ".tanga-icon-button" in html
+
+    def test_light_export_packs_light_tokens_and_overrides(self):
+        html = render_snapshot([], {}, theme="light")
+        assert "--tanga-bg: #f5f5f7" in html
+        assert "accent-color: var(--tanga-accent)" in html
+
+    def test_figure_export_packs_theme_css(self):
+        html = render_figure([], {}, {"width": 400, "height": 300}, {}, theme="dark")
+        assert "--tanga-bg: #1a1a2e" in html
+

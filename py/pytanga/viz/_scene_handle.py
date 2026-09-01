@@ -988,6 +988,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> None:
         """Export this scene as a self-contained HTML file."""
         self._viz._export_scene_snapshot(
@@ -996,6 +997,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             overwrite=overwrite,
             animation=animation,
             anim_style=anim_style,
+            theme=theme,
         )
 
     def open_snapshot(self) -> None:
@@ -1010,6 +1012,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> Any:
         """Export this scene as an HTML snippet (or return the string)."""
         return self._viz._export_scene_figure(
@@ -1019,6 +1022,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             overwrite=overwrite,
             animation=animation,
             anim_style=anim_style,
+            theme=theme,
         )
 
     def export_glb(self, path: Any, *, overwrite: bool = False) -> None:

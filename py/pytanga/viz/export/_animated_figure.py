@@ -21,6 +21,7 @@ from uuid import uuid4
 from pytanga.viz.export._bootstrap import (
     embed_animation_data,
     generate_bootstrap_js,
+    generate_theme_css,
     get_anim_data_js,
     get_anim_decompress_js,
     html_fullpage_template,
@@ -52,6 +53,7 @@ def render_export_animated_figure(
     figure_config: dict[str, Any] | None = None,
     scene_config: dict[str, Any] | None = None,
     anim_style: dict[str, Any] | None = None,
+    theme: str = "dark",
 ) -> str:
     """Render an animated figure HTML snippet for embedding.
 
@@ -64,6 +66,7 @@ def render_export_animated_figure(
             camera).
         anim_style: ``AnimStyle.to_dict()`` result with ``fps``, ``loop``,
             ``show_controls``, ``compress`` keys.
+        theme: UI theme id whose CSS is inlined (default ``"dark"``).
     """
     as_ = anim_style or {}
     fps = as_.get("fps", 30)
@@ -143,6 +146,7 @@ def render_export_animated_figure(
         controls_html=js_controls_html(show_controls),
         bootstrap_js=bootstrap,
         config_data_json=config_json,
+        theme_css=generate_theme_css(theme),
     )
 
 
@@ -152,6 +156,7 @@ def render_export_animated_html(
     scene_config: dict[str, Any] | None = None,
     anim_style: dict[str, Any] | None = None,
     title: str = "Tanga 3D Viewer",
+    theme: str = "dark",
 ) -> str:
     """Render a full-page animated HTML document for standalone viewing.
 
@@ -163,6 +168,7 @@ def render_export_animated_html(
         anim_style: ``AnimStyle.to_dict()`` result with ``fps``, ``loop``,
             ``show_controls``, ``compress`` keys.
         title: HTML ``<title>`` tag content.
+        theme: UI theme id whose CSS is inlined (default ``"dark"``).
     """
     as_ = anim_style or {}
     fps = as_.get("fps", 30)
@@ -207,6 +213,7 @@ def render_export_animated_html(
         annotation_controls_reposition_js="",
         body_div=body_div,
         bootstrap_js=bootstrap,
+        theme_css=generate_theme_css(theme),
     )
 
 

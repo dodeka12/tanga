@@ -25,6 +25,7 @@ from pytanga.viz.export._bootstrap._html import (  # noqa: F401
     _RENDERER_FILES,
     _strip_imports,
     generate_bootstrap_js,
+    generate_theme_css,
     html_fullpage_template,
     html_snippet_template,
     katex_css_if_needed,

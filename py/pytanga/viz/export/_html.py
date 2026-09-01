@@ -16,6 +16,7 @@ from typing import Any
 
 from pytanga.viz.export._bootstrap import (
     generate_bootstrap_js,
+    generate_theme_css,
     js_annotation_panel,
     js_apply_camera,
     js_autofit_camera,
@@ -37,21 +38,25 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates"
 def render_snapshot(
     objects: list[dict[str, Any]],
     scene_config: dict[str, Any],
+    theme: str = "dark",
 ) -> str:
     """Render a self-contained HTML file from the unified scene objects.
 
     *objects* is the ``Scene.full_state()`` output (scene entities and
-    overlay labels in DFS pre-order).
+    overlay labels in DFS pre-order).  *theme* selects the UI theme whose CSS
+    is inlined (default ``"dark"``).
     """
     scene_json = json.dumps({"objects": objects}, indent=0)
     config_json = json.dumps(scene_config, indent=0)
 
     html = (_TEMPLATES_DIR / "export_viewer.html").read_text(encoding="utf-8")
     bootstrap = generate_bootstrap_js(_build_static_fullpage_adapter(scene_config))
+    theme_css = generate_theme_css(theme)
 
     return (
         html.replace("__CDN_CHECK_SCRIPT__", _CDN_CHECK_SCRIPT)
         .replace("__LOADING_OVERLAY__", _LOADING_OVERLAY_HTML)
+        .replace("__THEME_CSS__", theme_css)
         .replace("__SCENE_DATA_JSON__", scene_json)
         .replace("__SCENE_CONFIG_JSON__", config_json)
         .replace("__BOOTSTRAP_JS__", bootstrap)

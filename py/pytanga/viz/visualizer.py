@@ -4350,7 +4350,9 @@ class Visualizer(_JupyterDisplayMixin):
         *,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str:
+        theme = theme or self._theme
         scene = self._scenes[scene_name]
         if animation is not None:
             from pytanga.viz.export._animated_figure import (
@@ -4362,11 +4364,14 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
                 title=self._title,
+                theme=theme,
             )
         from pytanga.viz.export._html import render_snapshot
 
         objects = scene.full_state(styles_map=scene.styles.kind)
-        return render_snapshot(objects=objects, scene_config=scene.config.to_dict())
+        return render_snapshot(
+            objects=objects, scene_config=scene.config.to_dict(), theme=theme
+        )
 
     def _open_scene_snapshot(self, scene_name: str) -> None:
         import tempfile
@@ -4386,11 +4391,12 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> None:
         from pathlib import Path
 
         html = self._render_snapshot_html(
-            scene_name, animation=animation, anim_style=anim_style
+            scene_name, animation=animation, anim_style=anim_style, theme=theme
         )
         p = Path(path).expanduser()
         if not p.suffix:
@@ -4408,14 +4414,21 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> None:
         """Export the current scene as a self-contained HTML file.
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
-        snapshot instead of a static one.
+        snapshot instead of a static one.  *theme* overrides the active UI theme
+        for the packed CSS (default: the active theme).
         """
         self._export_scene_snapshot(
-            "", path, overwrite=overwrite, animation=animation, anim_style=anim_style
+            "",
+            path,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
         )
 
     def open_snapshot(self) -> None:
@@ -4429,10 +4442,12 @@ class Visualizer(_JupyterDisplayMixin):
         style: Any = None,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str:
         from pytanga.viz._figure import FigureConfig
         from pytanga.viz._styles import FigureStyle
 
+        theme = theme or self._theme
         scene = self._scenes[scene_name]
         resolved = style if style is not None else FigureStyle()
         fig_config = FigureConfig(
@@ -4449,6 +4464,7 @@ class Visualizer(_JupyterDisplayMixin):
                 figure_config=fig_config.to_dict(),
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
+                theme=theme,
             )
         from pytanga.viz.export._figure_html import render_figure
 
@@ -4458,6 +4474,7 @@ class Visualizer(_JupyterDisplayMixin):
             scene.config.to_dict(),
             resolved.to_dict(),
             fig_config.to_dict(),
+            theme=theme,
         )
 
     def _export_scene_figure(
@@ -4469,11 +4486,16 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str | None:
         from pathlib import Path
 
         html = self._render_figure_html(
-            scene_name, style=style, animation=animation, anim_style=anim_style
+            scene_name,
+            style=style,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
         )
         if path is None:
             return html
@@ -4495,11 +4517,13 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str | None:
         """Export the current scene as an HTML snippet (or return the string).
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
-        figure instead of a static one.
+        figure instead of a static one.  *theme* overrides the active UI theme
+        for the packed CSS (default: the active theme).
         """
         return self._export_scene_figure(
             "",
@@ -4508,6 +4532,7 @@ class Visualizer(_JupyterDisplayMixin):
             overwrite=overwrite,
             animation=animation,
             anim_style=anim_style,
+            theme=theme,
         )
 
     def _export_scene_glb(

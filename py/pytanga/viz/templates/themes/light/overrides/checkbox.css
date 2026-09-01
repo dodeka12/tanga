@@ -1,1 +1,10 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — light theme checkbox override. */
+
+.tanga-checkbox-input {
+    accent-color: var(--tanga-accent);
+}
+
+.tanga-checkbox-label {
+    color: var(--tanga-fg);
+}
+
