@@ -34,7 +34,6 @@ from ._anchor import EAnchor
 from ._app import VisualizerApp
 from ._banner import Banner
 from ._colors import Color
-from ._dialog import Dialog
 from ._controls import (
     Button,
     Checkbox,
@@ -54,6 +53,7 @@ from ._controls import (
     ValueEdit,
 )
 from ._coordinate_system import CoordinateSystem, fit_view2d
+from ._dialog import Dialog
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
 from ._interaction import (

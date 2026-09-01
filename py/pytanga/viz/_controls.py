@@ -308,6 +308,20 @@ class HandlerOrigin(str, Enum):
     INTERACTION = "interaction"
 
 
+class HandlerOrigin(str, Enum):
+    """Owner of an entry in :class:`ControlHandlerRegistry`.
+
+    ``CONTROL`` entries belong to UI panel controls (sliders/buttons/…);
+    ``INTERACTION`` entries belong to entity object-interaction handlers
+    (``on_interaction`` / ``ActPoint`` drag & click handlers).  Both share one
+    ``(id, event)`` registry; the origin lets ``clear_controls()`` remove only
+    the control entries.
+    """
+
+    CONTROL = "control"
+    INTERACTION = "interaction"
+
+
 class ControlHandlerRegistry:
     """Maps ``(control_id, event)`` pairs to async handler callables.
 
@@ -318,12 +332,22 @@ class ControlHandlerRegistry:
 
     Each entry is tagged with a :class:`HandlerOrigin` so callers can clear
     only one class of handler (see :meth:`clear`).
+
+    Each entry is tagged with a :class:`HandlerOrigin` so callers can clear
+    only one class of handler (see :meth:`clear`).
     """
 
     def __init__(self) -> None:
         self._handlers: dict[tuple[str, str], tuple[HandlerOrigin, Handler]] = {}
+        self._handlers: dict[tuple[str, str], tuple[HandlerOrigin, Handler]] = {}
 
     def register(
+        self,
+        control_id: str,
+        handler: Handler,
+        *,
+        event: str = "change",
+        origin: HandlerOrigin = HandlerOrigin.CONTROL,
         self,
         control_id: str,
         handler: Handler,
@@ -335,11 +359,14 @@ class ControlHandlerRegistry:
 
         Args:
             control_id: The ``id`` of the :class:`Control` (or entity).
+            control_id: The ``id`` of the :class:`Control` (or entity).
             handler: An ``async def`` callable that receives the control's
                 value (float for sliders, str for dropdowns).
             event: The event name (default ``"change"``).
             origin: Which class of handler this entry belongs to.
+            origin: Which class of handler this entry belongs to.
         """
+        self._handlers[(control_id, event)] = (origin, handler)
         self._handlers[(control_id, event)] = (origin, handler)
 
     def unregister(self, control_id: str, event: str | None = None) -> None:
@@ -358,7 +385,20 @@ class ControlHandlerRegistry:
         """Look up the handler for ``(control_id, event)``, or ``None``."""
         entry = self._handlers.get((control_id, event))
         return entry[1] if entry is not None else None
+        entry = self._handlers.get((control_id, event))
+        return entry[1] if entry is not None else None
 
+    def clear(self, origin: HandlerOrigin | None = None) -> None:
+        """Remove registered handlers.
+
+        With ``origin=None`` removes every handler.  Otherwise only handlers
+        tagged with *origin* are removed.
+        """
+        if origin is None:
+            self._handlers.clear()
+        else:
+            for key in [k for k, v in self._handlers.items() if v[0] == origin]:
+                del self._handlers[key]
     def clear(self, origin: HandlerOrigin | None = None) -> None:
         """Remove registered handlers.
 
