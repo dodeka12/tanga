@@ -14,9 +14,9 @@ call the shared `applyOrthoFrustum` — a behavior-identical refactor.
 - [x] **2.1 — Import the shared helper**
   - Change `import { finiteAspect, orthoFrustum } from './camera-fit.js';` to
     also import `applyOrthoFrustum`.
-- [ ] **2.2 — Delete the private `_applyOrthoFrustum`**
+- [x] **2.2 — Delete the private `_applyOrthoFrustum`**
   - Remove the function and its doc comment (currently lines 33–80).
-- [ ] **2.3 — Update `handleResize`**
+- [x] **2.3 — Update `handleResize`**
   - Replace `_applyOrthoFrustum(camera, width, height);` with
     `applyOrthoFrustum(camera, width, height);`, keeping the
     `spaceDim === 2 && camera.isOrthographicCamera` guard.
