@@ -9,9 +9,9 @@
 | [Drag Point](drag_point.md) | interaction, drag, point, constraints, low-level | Demo: Drag a 3D point interactively with the mouse |
 | [File Chooser](file_chooser.md) | controls, file chooser, file browser, VisualizerApp | A file chooser with a backend-driven file browser |
 | [Table Data](table_data.md) | controls, table, tabular data, add_table, VisualizerApp | An editable tabular-data control driven by the backend |
-| [Table Editing](table_editing.md) | controls, table, tabular data, add_table, cell editing, keyboard navigation, row delete | An editable table with spreadsheet-style keyboard editing |
+| [Table Editing](table_editing.md) | controls, table, tabular data, add_table, cell editing, keyboard navigation, row delete, undo, redo | An editable table with spreadsheet-style keyboard editing |
 | [Two Spheres Interact](two_spheres_interact.md) | interaction, IPNS, spheres, slider, dropdown, VisualizerApp | Two Spheres Intersection — Interactive Controls Demo (IPNS) |
 
 ## Keywords
 
-2D · ActPoint · IPNS · VisualizerApp · add_table · button · cell editing · click · constraints · controls · drag · dropdown · file browser · file chooser · interaction · keyboard navigation · low-level · point · row delete · slider · spheres · table · tabular data · two points
+2D · ActPoint · IPNS · VisualizerApp · add_table · button · cell editing · click · constraints · controls · drag · dropdown · file browser · file chooser · interaction · keyboard navigation · low-level · point · redo · row delete · slider · spheres · table · tabular data · two points · undo
