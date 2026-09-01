@@ -109,3 +109,17 @@ def test_components_drift_guard() -> None:
         "registry 'components' lists CSS files that do not exist on disk: "
         f"{sorted(stale)}"
     )
+
+
+def test_visualizer_theme_default_and_set() -> None:
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    assert viz.theme == "dark"
+
+    viz.set_theme("light")
+    assert viz.theme == "light"
+
+    with pytest.raises(KeyError):
+        viz.set_theme("nope")
+

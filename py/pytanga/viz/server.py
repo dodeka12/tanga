@@ -200,6 +200,7 @@ InteractionCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 SceneListCallback = Callable[[], list[str]]
 LayoutCallback = Callable[[str], dict[str, Any] | None]
 PushControlsCallback = Callable[[str], Awaitable[None]]
+ThemeCallback = Callable[[], dict[str, Any]]
 
 
 @dataclass
@@ -250,6 +251,7 @@ class VizServer:
         self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = (
             None
         )
+        self._theme_callback: ThemeCallback | None = None
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -278,6 +280,7 @@ class VizServer:
         scene_list_callback: SceneListCallback | None = None,
         layout_callback: LayoutCallback | None = None,
         scene_layout_callback: LayoutCallback | None = None,
+        theme_callback: ThemeCallback | None = None,
         on_ready: Callable[[], None] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
@@ -287,6 +290,7 @@ class VizServer:
         self._scene_list_callback = scene_list_callback
         self._layout_callback = layout_callback
         self._scene_layout_callback = scene_layout_callback
+        self._theme_callback = theme_callback
         self._control_callback = control_callback
         self._interaction_callback = interaction_callback
         self._on_connect = on_connect
@@ -648,6 +652,22 @@ class VizServer:
         app.router.add_get("/{name:.*}", self._catch_all_handler)
         return app
 
+    def _theme_links_html(self) -> str:
+        """Return the active theme's ``<link>`` tags, or an empty string.
+
+        Calls the optional ``theme_callback`` (if set) and emits one
+        ``<link rel="stylesheet" data-tanga-theme>`` per resolved CSS file.
+        The browser-side ``themes.js`` swaps these tags on ``theme_define``.
+        """
+        if self._theme_callback is None:
+            return ""
+        payload = self._theme_callback()
+        css = payload.get("css") or []
+        return "".join(
+            f'<link rel="stylesheet" data-tanga-theme href="themes/{css_path}">\n'
+            for css_path in css
+        )
+
     async def _catch_all_handler(self, request: web.Request) -> web.StreamResponse:
         """Serve a static file if it exists, otherwise serve viewer.html.
 
@@ -698,8 +718,9 @@ class VizServer:
         inject = (
             f'<script>window.__tanga_page_token = "{page_token}";</script>\n'
             f"<script>window.__tanga_frontend_version = "
-            f'"{self._frontend_version}";</script>'
+            f'"{self._frontend_version}";</script>\n'
         )
+        inject += self._theme_links_html()
         # Inject after <head> or at start of file
         if "</head>" in html:
             html = html.replace("</head>", f"{inject}\n</head>")

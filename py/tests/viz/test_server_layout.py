@@ -110,3 +110,22 @@ class TestResolveLayout:
         scene_names, payload = server._resolve_layout("main", None)
         assert scene_names == ["main"]
         assert payload is None
+
+
+class TestThemeServing:
+    def test_theme_links_injected_when_callback_set(self):
+        server = VizServer()
+        server._theme_callback = lambda: {
+            "theme": "dark",
+            "label": "Dark",
+            "css": ["base.css", "tokens.css", "dark/tokens.css"],
+        }
+        html = server._theme_links_html()
+        assert 'data-tanga-theme href="themes/base.css"' in html
+        assert 'data-tanga-theme href="themes/tokens.css"' in html
+        assert 'data-tanga-theme href="themes/dark/tokens.css"' in html
+
+    def test_theme_links_omitted_when_callback_unset(self):
+        server = VizServer()
+        assert server._theme_links_html() == ""
+

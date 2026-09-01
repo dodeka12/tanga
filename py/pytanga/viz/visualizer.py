@@ -161,6 +161,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
+        self._theme = "dark"
         self._saved_signal_handlers: dict[int, Any] | None = None
         self._atexit_registered = False
         self._display_pending: set[str] = set()
@@ -971,6 +972,34 @@ class Visualizer(_JupyterDisplayMixin):
         self._default_objects_added.discard(scene_name)
         self._add_default_scene_objects(scene_name)
 
+    # ── Theme selection ─────────────────────────────────────────
+
+    @property
+    def theme(self) -> str:
+        """The active UI theme id (default ``"dark"``)."""
+        return self._theme
+
+    def set_theme(self, theme_id: str) -> None:
+        """Select the active UI theme.
+
+        Validates *theme_id* against the theme registry (raising on unknown
+        themes) and records it as the active theme.
+        """
+        from ._themes import theme_css_files
+
+        theme_css_files(theme_id)  # raises KeyError on unknown theme
+        self._theme = theme_id
+
+    def _theme_define_payload(self) -> dict[str, Any]:
+        """Return the active theme's ``theme_define``-shaped payload (no ``type``)."""
+        from ._themes import theme_css_files, theme_label
+
+        return {
+            "theme": self._theme,
+            "label": theme_label(self._theme),
+            "css": theme_css_files(self._theme),
+        }
+
     # ── Title & annotation ──────────────────────────────────
 
     def set_title(self, title: str) -> None:
@@ -1686,6 +1715,7 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_list_callback=self.list_scenes,
                 layout_callback=self._layout_serialized_for,
                 scene_layout_callback=self._scene_layout_for,
+                theme_callback=self._theme_define_payload,
             )
             _boot_done.set()
 
