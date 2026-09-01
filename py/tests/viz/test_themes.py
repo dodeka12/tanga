@@ -123,3 +123,46 @@ def test_visualizer_theme_default_and_set() -> None:
     with pytest.raises(KeyError):
         viz.set_theme("nope")
 
+
+def test_set_theme_emits_theme_define(monkeypatch) -> None:
+    from pytanga.viz import Visualizer
+    from pytanga.viz._themes import theme_css_files
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    pushed: list[dict] = []
+    monkeypatch.setattr(viz, "_push_theme", lambda: pushed.append(viz._theme_message()))
+
+    viz.set_theme("light")
+
+    assert len(pushed) == 1
+    msg = pushed[0]
+    assert msg["type"] == "theme_define"
+    assert msg["theme"] == "light"
+    assert msg["label"] == "Light"
+    assert msg["css"] == theme_css_files("light")
+
+
+def test_set_theme_async_pushes_once() -> None:
+    import asyncio
+
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+
+    class _FakeServer:
+        def __init__(self) -> None:
+            self.pushed: list[str] = []
+
+        async def push_raw(self, data: str) -> None:
+            self.pushed.append(data)
+
+    viz._server = _FakeServer()
+    asyncio.run(viz.set_theme_async("light"))
+
+    assert len(viz._server.pushed) == 1
+    msg = json.loads(viz._server.pushed[0])
+    assert msg["type"] == "theme_define"
+    assert msg["theme"] == "light"
+    assert msg["label"] == "Light"
+
+

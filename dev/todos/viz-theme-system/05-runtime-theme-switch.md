@@ -13,18 +13,18 @@ connected clients so `themes.js` swaps the `<link>`s without a page reload.
 
 ## Steps
 
-- [ ] **5.1 — Push on `set_theme` (`visualizer.py`)**
+- [x] **5.1 — Push on `set_theme` (`visualizer.py`)**
   - `set_theme(theme_id)` validates, stores `self._theme`, and pushes
     `theme_define { theme, label, css: theme_css_files(theme_id) }` to all clients
     via `asyncio.run_coroutine_threadsafe(self._server.push_raw(...), self._loop)`.
   - Add `set_theme_async` (loop-safe, mirroring `_push_controls_async`).
 
-- [ ] **5.2 — Frontend swap (`themes.js`)**
+- [x] **5.2 — Frontend swap (`themes.js`)**
   - `handleThemeDefine` replaces `[data-tanga-theme]` links and updates a
     `data-tanga-theme-name` marker on `<html>`/`<body>` (for any theme-scoped
     selectors); no reload.
 
-- [ ] **5.3 — Tests**
+- [x] **5.3 — Tests**
   - `set_theme` emits exactly one `theme_define` with the resolved `css` list and
     the new `theme`/`label` (fake server / captured push).
 

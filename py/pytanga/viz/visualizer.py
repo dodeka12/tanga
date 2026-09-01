@@ -980,15 +980,38 @@ class Visualizer(_JupyterDisplayMixin):
         return self._theme
 
     def set_theme(self, theme_id: str) -> None:
-        """Select the active UI theme.
+        """Select the active UI theme and push it to all connected clients.
 
         Validates *theme_id* against the theme registry (raising on unknown
-        themes) and records it as the active theme.
+        themes), records it as the active theme, and pushes a ``theme_define``
+        message so connected viewers restyle without a page reload.
         """
         from ._themes import theme_css_files
 
         theme_css_files(theme_id)  # raises KeyError on unknown theme
         self._theme = theme_id
+        self._push_theme()
+
+    async def set_theme_async(self, theme_id: str) -> None:
+        """Async variant of :meth:`set_theme` — call from the server's event loop."""
+        from ._themes import theme_css_files
+
+        theme_css_files(theme_id)  # raises KeyError on unknown theme
+        self._theme = theme_id
+        if self._server is not None:
+            await self._server.push_raw(json.dumps(self._theme_message()))
+
+    def _theme_message(self) -> dict[str, Any]:
+        """Return the full ``theme_define`` message for the active theme."""
+        return {"type": "theme_define", **self._theme_define_payload()}
+
+    def _push_theme(self) -> None:
+        """Push the active theme to all connected clients (thread-safe)."""
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(json.dumps(self._theme_message())), self._loop
+        )
 
     def _theme_define_payload(self) -> dict[str, Any]:
         """Return the active theme's ``theme_define``-shaped payload (no ``type``)."""

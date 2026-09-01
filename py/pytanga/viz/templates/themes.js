@@ -7,7 +7,8 @@ let _activeTheme = null;
 
 /**
  * Apply a `theme_define` message: replace the existing theme `<link>`s with one
- * per `msg.css` path (in order).  Idempotent per theme.
+ * per `msg.css` path (in order) and mark the active theme name on `<html>`.
+ * Idempotent per theme.
  */
 export function handleThemeDefine(msg) {
     const css = msg.css || [];
@@ -24,6 +25,10 @@ export function handleThemeDefine(msg) {
         link.href = 'themes/' + path;
         document.head.appendChild(link);
     }
+
+    // Marker for any theme-scoped selectors
+    // (e.g. `html[data-tanga-theme-name="light"] …`).
+    document.documentElement.setAttribute('data-tanga-theme-name', theme);
 
     _activeTheme = theme;
 }
