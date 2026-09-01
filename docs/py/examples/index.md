@@ -84,7 +84,7 @@ uv run python py/examples/<path>.py
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
-- **button** — [Showcase every interactive control in one app](viz/interaction/all_controls.md)
+- **button** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
 
 - **C++ backend** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
@@ -97,6 +97,8 @@ uv run python py/examples/<path>.py
 - **cell editing** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
+
+- **checkbox** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
 
 - **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
 
@@ -126,11 +128,13 @@ uv run python py/examples/<path>.py
 
 - **control group** — [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
 
-- **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
 
 - **CSG** — [per-object CSG combine modes](viz/sdf/booleans.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
+
+- **css** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
 
 - **Ctrl+C** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
@@ -242,7 +246,7 @@ uv run python py/examples/<path>.py
 
 - **icon** — [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
 
-- **icon_only** — [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
+- **icon_only** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
 
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
@@ -430,7 +434,7 @@ uv run python py/examples/<path>.py
 
 - **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
-- **scenes** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **scenes** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -450,7 +454,7 @@ uv run python py/examples/<path>.py
 
 - **singular** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
-- **slider** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md), [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
+- **slider** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md), [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
 
 - **snapshot** — [Export](ga/jupyter/export.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
 
@@ -493,6 +497,8 @@ uv run python py/examples/<path>.py
 - **tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **texture labels** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md), [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md)
+
+- **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
 
 - **tilted plane** — [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 

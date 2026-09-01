@@ -392,6 +392,9 @@
             "Control Group Single": "py/examples/viz/scenes/control_group_single.md"
           },
           {
+            "Control Theming": "py/examples/viz/scenes/control_theming.md"
+          },
+          {
             "Group View Icons": "py/examples/viz/scenes/group_view_icons.md"
           },
           {
