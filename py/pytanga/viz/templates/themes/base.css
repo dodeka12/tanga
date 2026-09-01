@@ -36,11 +36,111 @@
 
     /* Typography. */
     --tanga-font: sans-serif;
+
+    /* Status + loading. */
+    --tanga-status-ok: #4f4;
+    --tanga-status-err: #f44;
+    --tanga-loading-bg: rgba(26, 26, 46, 0.95);
+    --tanga-spinner: #fff;
+
+    /* Warning banner. */
+    --tanga-warning-bg: #ffc107;
+    --tanga-warning-fg: #1a1a2e;
+    --tanga-warning-button-bg: #1a1a2e;
+    --tanga-warning-button-fg: #fff;
 }
 
 body {
     font-family: var(--tanga-font);
     color: var(--tanga-fg);
+}
+
+/* Global reset + shell (moved from `viewer.html`). */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--tanga-bg);
+}
+
+canvas {
+    display: block;
+}
+
+#viewer-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+#tanga-status-area {
+    position: fixed;
+    top: 8px;
+    right: 10px;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+}
+
+#status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--tanga-status-err);
+    pointer-events: none;
+    transition: background 0.3s;
+}
+
+#status.connected {
+    background: var(--tanga-status-ok);
+}
+
+#status.disconnected {
+    background: var(--tanga-status-err);
+}
+
+.tanga-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--tanga-loading-bg);
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--tanga-font);
+    color: var(--tanga-fg);
+    font-size: 14px;
+    transition: opacity 0.3s;
+}
+
+.tanga-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--tanga-border-strong);
+    border-top: 3px solid var(--tanga-spinner);
+    border-radius: 50%;
+    animation: tanga-spin 0.8s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes tanga-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Borderless icon contract — icon buttons and group toggles never draw chrome

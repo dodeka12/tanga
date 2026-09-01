@@ -1,1 +1,109 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — banner + warning banner chrome. */
+
+.tanga-warning-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100001;
+    background: var(--tanga-warning-bg);
+    color: var(--tanga-warning-fg);
+    font-family: var(--tanga-font);
+    font-size: 13px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    line-height: 1.5;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.tanga-warning-banner button {
+    padding: 4px 12px;
+    background: var(--tanga-warning-button-bg);
+    color: var(--tanga-warning-button-fg);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Banner panel chrome. */
+.tanga-banner {
+    position: absolute;
+    pointer-events: auto;
+    z-index: 2;
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: var(--tanga-font);
+    font-size: 14px;
+    color: var(--tanga-fg-strong);
+    box-shadow: var(--tanga-shadow);
+    max-width: 90%;
+    max-height: 80%;
+    min-width: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tanga-banner-backdrop {
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    pointer-events: auto;
+    z-index: 1;
+}
+
+.tanga-banner-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--tanga-fg-strong);
+}
+
+.tanga-banner-text {
+    line-height: 1.5;
+}
+
+.tanga-banner-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.tanga-banner-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tanga-banner .tanga-control {
+    margin: 0;
+}
+
+.tanga-banner button.tanga-action-button {
+    width: auto;
+    padding: 6px 14px;
+}
+
+.tanga-banner-close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--tanga-fg-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+}
+
+

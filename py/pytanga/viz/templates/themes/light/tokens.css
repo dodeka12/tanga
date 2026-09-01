@@ -24,5 +24,10 @@
     --tanga-scrollbar-track: rgba(0, 0, 0, 0.06);
 
     --tanga-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+
+    --tanga-status-ok: #2a2;
+    --tanga-status-err: #d33;
+    --tanga-loading-bg: rgba(255, 255, 255, 0.95);
+    --tanga-spinner: #333;
 }
 

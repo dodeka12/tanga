@@ -30,35 +30,13 @@ function _showSdfWebGL2Warning() {
     _sdfWebGL2WarningShown = true;
 
     const banner = document.createElement('div');
-    banner.style.position = 'fixed';
-    banner.style.top = '0';
-    banner.style.left = '0';
-    banner.style.right = '0';
-    banner.style.zIndex = '100001';
-    banner.style.background = '#ffc107';
-    banner.style.color = '#1a1a2e';
-    banner.style.fontFamily = 'sans-serif';
-    banner.style.fontSize = '13px';
-    banner.style.padding = '10px 16px';
-    banner.style.display = 'flex';
-    banner.style.alignItems = 'center';
-    banner.style.justifyContent = 'center';
-    banner.style.gap = '12px';
-    banner.style.lineHeight = '1.5';
-    banner.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+    banner.className = 'tanga-warning-banner';
 
     const text = document.createElement('span');
     text.textContent = 'SDF objects require WebGL2 — they are hidden in this viewer.';
 
     const btn = document.createElement('button');
     btn.textContent = 'Dismiss';
-    btn.style.padding = '4px 12px';
-    btn.style.background = '#1a1a2e';
-    btn.style.color = '#ffffff';
-    btn.style.border = 'none';
-    btn.style.borderRadius = '3px';
-    btn.style.cursor = 'pointer';
-    btn.style.fontWeight = 'bold';
     btn.onclick = () => banner.remove();
 
     banner.appendChild(text);
@@ -369,19 +347,11 @@ export class ThreeJsView extends View {
     _renderTitle(titleText) {
         if (!this._titleElement) {
             this._titleElement = document.createElement('div');
+            this._titleElement.className = 'tanga-title-overlay';
             this._titleElement.style.position = 'absolute';
             this._titleElement.style.top = '10px';
             this._titleElement.style.left = '50%';
             this._titleElement.style.transform = 'translateX(-50%)';
-            this._titleElement.style.color = '#ffffff';
-            this._titleElement.style.fontFamily = 'sans-serif';
-            this._titleElement.style.fontSize = '20px';
-            this._titleElement.style.fontWeight = 'bold';
-            this._titleElement.style.background = 'rgba(0, 0, 0, 0.6)';
-            this._titleElement.style.padding = '6px 20px';
-            this._titleElement.style.borderRadius = '4px';
-            this._titleElement.style.pointerEvents = 'none';
-            this._titleElement.style.zIndex = '5';
             this.el.appendChild(this._titleElement);
         }
         this._titleElement.textContent = '';

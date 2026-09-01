@@ -6,74 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tanga 3D Viewer</title>
     <link rel="stylesheet" href="themes/base.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #1a1a2e;
-        }
-
-        canvas {
-            display: block;
-        }
-
-        #viewer-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        #tanga-status-area {
-            position: fixed;
-            top: 8px;
-            right: 10px;
-            display: flex;
-            flex-direction: row-reverse;
-            align-items: center;
-            gap: 8px;
-            z-index: 10;
-        }
-
-        #status {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #f44;
-            pointer-events: none;
-            transition: background 0.3s;
-        }
-
-        #status.connected {
-            background: #4f4;
-        }
-
-        #status.disconnected {
-            background: #f44;
-        }
-    </style>
 </head>
 
 <body>
-    <div id="tanga-loading"
-        style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,26,46,0.95);z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:#ccc;font-size:14px;transition:opacity 0.3s;">
-        <div
-            style="width:32px;height:32px;border:3px solid rgba(255,255,255,0.2);border-top:3px solid #fff;border-radius:50%;animation:tanga-spin 0.8s linear infinite;margin-bottom:12px;">
-        </div>Loading 3D Viewer<style>
-            @keyframes tanga-spin {
-                to {
-                    transform: rotate(360deg)
-                }
-            }
-        </style>
+    <div id="tanga-loading" class="tanga-loading">
+        <div class="tanga-loading-spinner"></div>Loading 3D Viewer
     </div>
     <script>
         (function () {

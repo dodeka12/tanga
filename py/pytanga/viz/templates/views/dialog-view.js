@@ -35,42 +35,14 @@ export class DialogView extends View {
 
         this.el.classList.add('tanga-dialog');
         Object.assign(this.el.style, {
-            position: 'absolute',
-            pointerEvents: 'auto',
             left: (align_x * 100) + '%',
             top: (align_y * 100) + '%',
             transform: 'translate(-' + (align_x * 100) + '%, -' + (align_y * 100) + '%)',
-            zIndex: '2',
-            background: 'rgba(20, 20, 40, 0.96)',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
-            borderRadius: '8px',
-            padding: '14px 18px',
-            fontFamily: 'sans-serif',
-            fontSize: '14px',
-            color: '#ddd',
-            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.6)',
-            maxWidth: '90%',
-            maxHeight: '80%',
-            minWidth: '200px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
         });
 
         if (!dismissable) {
             this._backdrop = document.createElement('div');
             this._backdrop.className = 'tanga-dialog-backdrop';
-            Object.assign(this._backdrop.style, {
-                position: 'fixed',
-                top: '0',
-                left: '0',
-                right: '0',
-                bottom: '0',
-                background: 'rgba(0, 0, 0, 0.55)',
-                pointerEvents: 'auto',
-                zIndex: '1',
-            });
         }
     }
 
@@ -86,25 +58,12 @@ export class DialogView extends View {
             const title = document.createElement('div');
             title.className = 'tanga-dialog-title';
             title.textContent = this.title;
-            Object.assign(title.style, {
-                fontWeight: '600',
-                fontSize: '16px',
-                color: '#eee',
-                cursor: 'move',
-                userSelect: 'none',
-                touchAction: 'none',
-            });
             this._setupDrag(title);
             this.el.appendChild(title);
         }
 
         const contentEl = document.createElement('div');
         contentEl.className = 'tanga-dialog-content';
-        Object.assign(contentEl.style, {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-        });
         if (this.contentNode) {
             this._contentView = buildViewTree(this.contentNode, this.ws);
             this._contentView.mount(contentEl);
@@ -115,17 +74,7 @@ export class DialogView extends View {
             const close = document.createElement('button');
             close.textContent = '✕';
             close.title = 'Dismiss';
-            Object.assign(close.style, {
-                position: 'absolute',
-                top: '6px',
-                right: '8px',
-                background: 'none',
-                border: 'none',
-                color: '#aaa',
-                cursor: 'pointer',
-                fontSize: '14px',
-                padding: '2px 6px',
-            });
+            close.className = 'tanga-dialog-close';
             close.addEventListener('click', () => this._dismiss(true));
             this.el.appendChild(close);
         }

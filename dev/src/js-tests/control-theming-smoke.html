@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/controls/button.css">
     <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/controls/slider.css">
     <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/controls/checkbox.css">
+    <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/views/banner-view.css">
     <style>
         html, body { height: 100%; margin: 0; background: #1a1a2e; }
         #host { width: 300px; background: #222; padding: 12px; }
@@ -21,6 +22,7 @@
         import { ButtonView } from '../../py/pytanga/viz/templates/views/button-view.js';
         import { SliderView } from '../../py/pytanga/viz/templates/views/slider-view.js';
         import { CheckboxView } from '../../py/pytanga/viz/templates/views/checkbox-view.js';
+        import { BannerView } from '../../py/pytanga/viz/templates/views/banner-view.js';
 
         const logEl = document.getElementById('log');
         const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
@@ -67,6 +69,40 @@
             // A non-icon button still shows the button chrome.
             log('plain button background:', getComputedStyle(actionBtn).backgroundColor);
         }
+
+        // Banner panel: appearance comes from `.tanga-banner` (theme tokens).
+        const banner = new BannerView({
+            id: 'banner1',
+            title: 'Banner',
+            text: 'Themed from `.tanga-banner`.',
+            align_x: 0.5,
+            align_y: 0.5,
+        });
+        banner.mount(document.body);
+        const bannerEl = banner.el;
+        const bannerCs = getComputedStyle(bannerEl);
+        log('banner rendered:', bannerEl.classList.contains('tanga-banner') ? 'yes' : 'NO');
+        log('banner background:', bannerCs.backgroundColor);
+        log('banner is flex column:', bannerCs.display === 'flex' ? 'yes' : 'NO');
+        const closeBtn = bannerEl.querySelector('.tanga-banner-close');
+        log('banner close borderless:', closeBtn
+            ? (getComputedStyle(closeBtn).borderTopWidth === '0px' ? 'yes' : 'NO')
+            : 'NO');
+
+        // Warning banner: appearance comes from `.tanga-warning-banner`.
+        const warn = document.createElement('div');
+        warn.className = 'tanga-warning-banner';
+        const warnText = document.createElement('span');
+        warnText.textContent = 'SDF objects require WebGL2.';
+        const warnBtn = document.createElement('button');
+        warnBtn.textContent = 'Dismiss';
+        warn.appendChild(warnText);
+        warn.appendChild(warnBtn);
+        document.body.appendChild(warn);
+        const warnCs = getComputedStyle(warn);
+        log('warning banner rendered:', warnCs.position === 'fixed' ? 'yes' : 'NO');
+        log('warning banner background:', warnCs.backgroundColor);
+        log('warning banner button background:', getComputedStyle(warnBtn).backgroundColor);
     </script>
 </body>
 </html>
