@@ -860,6 +860,11 @@ export function createTable(ctrl) {
             keybindings: {
                 navDown: [40, 13],
             },
+            // Double-click (not single click/focus) to edit a cell.  Range
+            // selection (below) reacts to single click + drag, so a single
+            // click must not also open the editor — otherwise the range's
+            // focus transfer immediately blurs and closes it.
+            editTriggerEvent: 'dblclick',
             // Drag to select a range of cells; "− Selected" deletes every row
             // that has at least one selected cell.
             selectableRange: ctrl.allow_delete_rows !== false,
@@ -957,6 +962,24 @@ export function createTable(ctrl) {
     };
     _applyTooltip(wrapper, ctrl);
 
+    // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo & redo, round-tripped through the
+    // backend so Python stays authoritative.  Skipped while focus is inside the
+    // Tabulator cell editor so native text undo still works mid-edit.
+    wrapper.addEventListener('keydown', (e) => {
+        const target = e.target;
+        if (target && target.closest && target.closest('.tabulator-editor')) {
+            return;
+        }
+        const action = resolveUndoRedoAction(e);
+        if (!action) return;
+        e.preventDefault();
+        sendControlEvent(
+            action === 'undo' ? 'control:undo' : 'control:redo',
+            ctrl.id,
+            null
+        );
+    });
+
     return wrapper;
 }
 
@@ -971,8 +994,28 @@ const _CONTROL_EVENTS = {
     'control:row_add': 'row_add',
     'control:column_add': 'column_add',
     'control:row_delete': 'row_delete',
+    'control:undo': 'undo',
+    'control:redo': 'redo',
     'control:group_toggle': 'group_toggle',
 };
+
+/**
+ * Map a keyboard-event shape to the undo/redo action it requests, or ``null``.
+ *
+ * Pure helper (no DOM/Tabulator) so the key mapping is unit-testable:
+ * Ctrl+Z → ``"undo"``, Ctrl+Shift+Z or Ctrl+Y → ``"redo"``, otherwise ``null``.
+ */
+export function resolveUndoRedoAction(e) {
+    if (!e.ctrlKey) return null;
+    const key = (e.key || '').toLowerCase();
+    if (key === 'z') {
+        return e.shiftKey ? 'redo' : 'undo';
+    }
+    if (key === 'y') {
+        return 'redo';
+    }
+    return null;
+}
 
 export function sendControlEvent(type, controlId, value) {
     const event = _CONTROL_EVENTS[type];
