@@ -1,0 +1,37 @@
+/* Tanga viewer — pastel theme checkbox override (switch-style). */
+
+.tanga-checkbox-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--tanga-input-bg);
+    border: 1px solid var(--tanga-border-strong);
+    position: relative;
+    margin: 0;
+    transition: background 0.2s;
+}
+
+.tanga-checkbox-input::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s;
+}
+
+.tanga-checkbox-input:checked {
+    background: var(--tanga-accent);
+    border-color: var(--tanga-accent);
+}
+
+.tanga-checkbox-input:checked::before {
+    transform: translateX(16px);
+}
+
+

@@ -32,6 +32,14 @@
         "button": "light/overrides/button.css",
         "checkbox": "light/overrides/checkbox.css"
       }
+    },
+    "pastel": {
+      "label": "Pastel",
+      "tokens": "pastel/tokens.css",
+      "overrides": {
+        "button": "pastel/overrides/button.css",
+        "checkbox": "pastel/overrides/checkbox.css"
+      }
     }
   }
 }

@@ -33,7 +33,7 @@ _COMPONENTS = [
 
 
 def test_list_themes() -> None:
-    assert list_themes() == ["dark", "light"]
+    assert list_themes() == ["dark", "light", "pastel"]
 
 
 def test_default_theme_is_dark() -> None:
@@ -60,6 +60,18 @@ def test_light_resolved_order() -> None:
         "light/overrides/checkbox.css",
     ]
     assert theme_css_files("light") == expected
+
+
+def test_pastel_resolved_order() -> None:
+    expected = [
+        "base.css",
+        "tokens.css",
+        "pastel/tokens.css",
+        *_COMPONENTS,
+        "pastel/overrides/button.css",
+        "pastel/overrides/checkbox.css",
+    ]
+    assert theme_css_files("pastel") == expected
 
 
 def test_unknown_theme_raises() -> None:

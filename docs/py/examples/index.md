@@ -84,7 +84,7 @@ uv run python py/examples/<path>.py
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
-- **button** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
+- **button** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
 
 - **C++ backend** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
@@ -98,7 +98,7 @@ uv run python py/examples/<path>.py
 
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **checkbox** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
+- **checkbox** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
 
 - **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
 
@@ -139,6 +139,8 @@ uv run python py/examples/<path>.py
 - **Ctrl+C** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
 - **custom intervals** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
+
+- **custom theme** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
 
 - **Cylinder** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
@@ -186,7 +188,7 @@ uv run python py/examples/<path>.py
 
 - **explicit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
-- **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
+- **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
 
 - **expressions** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
@@ -358,6 +360,8 @@ uv run python py/examples/<path>.py
 
 - **overlay** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
 
+- **override** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
+
 - **overrides** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
 - **P2** — [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md)
@@ -438,7 +442,7 @@ uv run python py/examples/<path>.py
 
 - **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
-- **scenes** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **scenes** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -504,7 +508,7 @@ uv run python py/examples/<path>.py
 
 - **texture labels** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md), [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md)
 
-- **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
+- **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
 
 - **tilted plane** — [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 

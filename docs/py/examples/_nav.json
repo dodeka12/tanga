@@ -395,6 +395,9 @@
             "Control Theming": "py/examples/viz/scenes/control_theming.md"
           },
           {
+            "Custom Theme Override": "py/examples/viz/scenes/custom_theme_override.md"
+          },
+          {
             "Group View Icons": "py/examples/viz/scenes/group_view_icons.md"
           },
           {
