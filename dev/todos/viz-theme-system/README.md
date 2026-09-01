@@ -1,6 +1,6 @@
 # Viz Theme System — Overview
 
-**Created:** 2026-09-01 | **Status:** Planned | **Branch:** `feat/viz-theme-system`
+**Created:** 2026-09-01 | **Status:** In progress | **Branch:** `feat/viz-theme-system`
 
 ## Goal
 

@@ -16,7 +16,7 @@ both the live server and the export bundler.
 
 ## Steps
 
-- [ ] **1.1 — `registry.json`**
+- [x] **1.1 — `registry.json`**
   - Create the manifest per the README contract: `base`, `tokens`, `components`
     (the control/view `.css` files), and `themes` with `dark` (no overrides) and
     `light` (token sheet + `button`/`checkbox` overrides).
@@ -25,7 +25,7 @@ both the live server and the export bundler.
     and the listed `controls/*.css` / `views/*.css` (empty or minimal) so every
     referenced path exists.
 
-- [ ] **1.2 — `_themes.py` loader**
+- [x] **1.2 — `_themes.py` loader**
   - `ThemeRegistry` that reads `registry.json` (relative to the `themes/` dir),
     validates every referenced file exists, and exposes:
     - `list_themes() -> list[str]`
@@ -35,11 +35,11 @@ both the live server and the export bundler.
     - `default_theme() -> str` (first entry, `"dark"`).
   - Raise `ValueError`/`KeyError` on unknown theme or missing file.
 
-- [ ] **1.3 — Exports**
+- [x] **1.3 — Exports**
   - Export `list_themes` / `theme_css_files` (and the registry object if useful)
     from `py/pytanga/viz/__init__.py` (`__all__`).
 
-- [ ] **1.4 — Tests (`test_themes.py`)**
+- [x] **1.4 — Tests (`test_themes.py`)**
   - Resolved order for `dark` and `light` (exact list).
   - Unknown theme raises; missing file raises.
   - `list_themes()` returns `["dark", "light"]`.
