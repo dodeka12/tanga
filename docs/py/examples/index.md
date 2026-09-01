@@ -382,6 +382,8 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
+- **redo** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
+
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
 - **remove** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
@@ -475,6 +477,8 @@ uv run python py/examples/<path>.py
 - **two points** — [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
 - **two-body** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
+
+- **undo** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **up vector** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 

@@ -387,3 +387,73 @@ def test_table_set_control_value() -> None:
     set_control_value(ctrl, {"columns": ["y", "z"], "rows": [[2], [3]]})
     assert ctrl.columns == ["y", "z"]
     assert ctrl.rows == [["2"], ["3"]]
+
+
+# ── Test: Table undo/redo history ────────────────────────────
+
+
+def test_table_undo_redo_cell() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    assert ctrl.set_cell(0, 0, "9") is True
+    assert ctrl.rows == [["9"]]
+    assert ctrl.undo() is True
+    assert ctrl.rows == [["1"]]
+    assert ctrl.redo() is True
+    assert ctrl.rows == [["9"]]
+
+
+def test_table_undo_row_add_and_delete() -> None:
+    ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]])
+    ctrl.insert_row(1, ["a", "b"])
+    assert ctrl.rows == [["1", "2"], ["a", "b"], ["3", "4"]]
+    assert ctrl.undo() is True
+    assert ctrl.rows == [["1", "2"], ["3", "4"]]
+    ctrl.delete_rows([0, 1])
+    assert ctrl.rows == []
+    assert ctrl.undo() is True
+    assert ctrl.rows == [["1", "2"], ["3", "4"]]
+
+
+def test_table_undo_column_add() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"], ["2"]])
+    ctrl.insert_column(1, "y", ["a", "b"])
+    assert ctrl.columns == ["x", "y"]
+    assert ctrl.rows == [["1", "a"], ["2", "b"]]
+    assert ctrl.undo() is True
+    assert ctrl.columns == ["x"]
+    assert ctrl.rows == [["1"], ["2"]]
+
+
+def test_table_new_edit_clears_redo() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    ctrl.set_cell(0, 0, "9")
+    assert ctrl.undo() is True
+    assert ctrl.can_redo is True
+    ctrl.set_cell(0, 0, "5")
+    assert ctrl.can_redo is False
+
+
+def test_table_max_history_caps_undo() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["0"]], max_history=2)
+    for i in range(1, 5):
+        ctrl.set_cell(0, 0, str(i))
+    assert len(ctrl._undo) == 2
+    assert ctrl.rows == [["4"]]
+
+
+def test_table_out_of_range_no_history() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    assert ctrl.set_cell(5, 0, "9") is False
+    assert ctrl.set_cell(0, 5, "9") is False
+    assert ctrl.insert_row(5, [""]) is False
+    assert ctrl.insert_column(5, "y", [""]) is False
+    assert ctrl.can_undo is False
+
+
+def test_table_set_control_value_clears_history() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    ctrl.set_cell(0, 0, "9")
+    assert ctrl.can_undo is True
+    set_control_value(ctrl, {"columns": ["x"], "rows": [["2"]]})
+    assert ctrl.can_undo is False
+    assert ctrl.can_redo is False

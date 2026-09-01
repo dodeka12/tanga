@@ -231,10 +231,105 @@ class Table(Control):
     allow_add_rows: bool = True
     allow_add_columns: bool = True
     allow_delete_rows: bool = True
+    max_history: int = 100
     on_cell_change: Handler | None = None
     on_row_add: Handler | None = None
     on_column_add: Handler | None = None
     on_row_delete: Handler | None = None
+    _undo: list[dict[str, Any]] = field(default_factory=list, repr=False, compare=False)
+    _redo: list[dict[str, Any]] = field(default_factory=list, repr=False, compare=False)
+
+    def _snapshot(self) -> dict[str, Any]:
+        """Return a deep copy of the current grid state."""
+        return {
+            "columns": list(self.columns),
+            "rows": [list(row) for row in self.rows],
+        }
+
+    def _push_undo(self) -> None:
+        """Record the current state on the undo stack and clear the redo stack."""
+        self._undo.append(self._snapshot())
+        if self.max_history is not None and len(self._undo) > self.max_history:
+            del self._undo[0]
+        self._redo.clear()
+
+    def _restore(self, snap: dict[str, Any]) -> None:
+        """Restore columns/rows from a snapshot."""
+        self.columns = list(snap["columns"])
+        self.rows = [list(row) for row in snap["rows"]]
+
+    def set_cell(self, row: int, col: int, value: str) -> bool:
+        """Record history and set a single cell's value."""
+        if not (0 <= row < len(self.rows)) or not (0 <= col < len(self.columns)):
+            return False
+        self._push_undo()
+        self.rows[row][col] = str(value)
+        return True
+
+    def insert_row(self, row: int, values: list[str]) -> bool:
+        """Record history and insert a row at *row* (zero-based)."""
+        if not 0 <= row <= len(self.rows):
+            return False
+        self._push_undo()
+        vals = [str(v) for v in values]
+        while len(vals) < len(self.columns):
+            vals.append("")
+        self.rows.insert(row, vals)
+        return True
+
+    def insert_column(self, col: int, header: str, values: list[str]) -> bool:
+        """Record history and insert a column at *col* (zero-based)."""
+        if not 0 <= col <= len(self.columns):
+            return False
+        self._push_undo()
+        self.columns.insert(col, str(header))
+        vals = [str(v) for v in values]
+        while len(vals) < len(self.rows):
+            vals.append("")
+        for r, val in enumerate(vals[: len(self.rows)]):
+            self.rows[r].insert(col, val)
+        return True
+
+    def delete_rows(self, rows: list[int]) -> bool:
+        """Record history and delete the given rows (zero-based indexes)."""
+        valid = sorted({r for r in rows if 0 <= r < len(self.rows)}, reverse=True)
+        if not valid:
+            return False
+        self._push_undo()
+        for r in valid:
+            del self.rows[r]
+        return True
+
+    def clear_history(self) -> None:
+        """Clear both the undo and redo stacks."""
+        self._undo.clear()
+        self._redo.clear()
+
+    @property
+    def can_undo(self) -> bool:
+        """True when there is history to undo."""
+        return bool(self._undo)
+
+    @property
+    def can_redo(self) -> bool:
+        """True when there is history to redo."""
+        return bool(self._redo)
+
+    def undo(self) -> bool:
+        """Restore the previous grid state; return whether anything was undone."""
+        if not self._undo:
+            return False
+        self._redo.append(self._snapshot())
+        self._restore(self._undo.pop())
+        return True
+
+    def redo(self) -> bool:
+        """Restore the next grid state; return whether anything was redone."""
+        if not self._redo:
+            return False
+        self._undo.append(self._snapshot())
+        self._restore(self._redo.pop())
+        return True
 
 
 # ── Control group ────────────────────────────────────────────
@@ -568,6 +663,7 @@ def set_control_value(ctrl: Control, value: Any) -> None:
     elif isinstance(ctrl, Table):
         ctrl.columns = [str(c) for c in value["columns"]]
         ctrl.rows = [[str(cell) for cell in row] for row in value["rows"]]
+        ctrl.clear_history()
     elif isinstance(ctrl, Checkbox):
         ctrl.value = bool(value)
     elif isinstance(ctrl, (Dropdown, ColorPicker, TextField, TextArea, FileChooser)):

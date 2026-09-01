@@ -7,13 +7,13 @@ import asyncio
 import json
 
 import pytest
-
 from pytanga.viz import ButtonView, SliderView, TableView, Visualizer
 from pytanga.viz._controls import (
     Button,
     Slider,
-    Table,
     ValueEdit,
+)
+from pytanga.viz._controls import (
     set_control_value as _set_ctrl,
 )
 
@@ -209,3 +209,92 @@ def test_update_control_other_fields_redefines(monkeypatch) -> None:
 
     assert viz._scenes[""]._controls["s"].max == 20.0
     assert _messages(server)[-1]["type"] == "controls_define"
+
+
+# ── Table undo/redo API ─────────────────────────────────────
+
+
+def test_undo_table_mutates_and_pushes(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    assert viz.undo_table("tbl") is True
+
+    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["1"]]}
+    assert _messages(server) == [
+        {
+            "type": "control_update",
+            "scene": "",
+            "id": "tbl",
+            "value": {"columns": ["x"], "rows": [["1"]]},
+        },
+    ]
+
+
+def test_undo_table_empty_history_returns_false(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    assert viz.undo_table("tbl") is False
+    assert server.pushed == []
+
+
+def test_redo_table_reapplies_after_undo(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    viz.undo_table("tbl")
+    assert viz.redo_table("tbl") is True
+    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["9"]]}
+    assert _messages(server)[-1]["value"] == {"columns": ["x"], "rows": [["9"]]}
+
+
+def test_can_undo_redo_table_reflect_state() -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    assert viz.can_undo_table("tbl") is False
+    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
+    assert viz.can_undo_table("tbl") is True
+    assert viz.can_redo_table("tbl") is False
+    viz.undo_table("tbl")
+    assert viz.can_redo_table("tbl") is True
+
+
+def test_scene_handle_undo_table_routes(monkeypatch) -> None:
+    viz = _viz()
+    handle = viz.scene("detail")
+    handle.add_table("tbl", columns=["x"], rows=[["1"]])
+    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    assert handle.undo_table("tbl") is True
+    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["1"]]}
+    assert _messages(server)[-1]["scene"] == "detail"
+
+
+def test_table_view_undo_redo_operate_on_control() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    view.control.set_cell(0, 0, "9")
+    assert view.can_undo is True
+    assert view.undo() is True
+    assert view.control.rows == [["1"]]
+    assert view.redo() is True
+    assert view.control.rows == [["9"]]
+
+
+def test_max_history_flows_through_add_table_and_table_view() -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], max_history=5)
+    assert viz._resolve_control("tbl").control.max_history == 5
+
+    view = TableView("tv", columns=["x"], max_history=7)
+    assert view.control.max_history == 7

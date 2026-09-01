@@ -191,3 +191,138 @@ async def test_dispatch_row_delete_nested_payload() -> None:
 
     assert len(calls) == 1
     assert calls[0] == TableRowsDelete(rows=[1, 2])
+
+
+# ── Test: dispatch mutates the authoritative Table model ─────
+
+
+@pytest.mark.anyio
+async def test_dispatch_cell_change_mutates_model() -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]])
+    await viz._dispatch_control_event(
+        "control:cell_change", {"control_id": "tbl", "row": 1, "col": 0, "value": "42"}
+    )
+    assert viz.get_control("tbl") == {
+        "columns": ["x", "y"],
+        "rows": [["1", "2"], ["42", "4"]],
+    }
+
+
+@pytest.mark.anyio
+async def test_dispatch_row_add_mutates_model() -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x", "y"], rows=[["1", "2"]])
+    await viz._dispatch_control_event(
+        "control:row_add", {"control_id": "tbl", "row": 1, "values": ["a", "b"]}
+    )
+    assert viz.get_control("tbl")["rows"] == [["1", "2"], ["a", "b"]]
+
+
+@pytest.mark.anyio
+async def test_dispatch_column_add_mutates_model() -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"], ["2"]])
+    await viz._dispatch_control_event(
+        "control:column_add",
+        {"control_id": "tbl", "col": 1, "header": "y", "values": ["a", "b"]},
+    )
+    assert viz.get_control("tbl") == {
+        "columns": ["x", "y"],
+        "rows": [["1", "a"], ["2", "b"]],
+    }
+
+
+@pytest.mark.anyio
+async def test_dispatch_row_delete_mutates_model() -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"], ["2"], ["3"]])
+    await viz._dispatch_control_event(
+        "control:row_delete", {"control_id": "tbl", "rows": [0, 2]}
+    )
+    assert viz.get_control("tbl")["rows"] == [["2"]]
+
+
+@pytest.mark.anyio
+async def test_dispatch_mutates_layout_table_view_model() -> None:
+    from pytanga.viz.views import TableView
+
+    viz = _viz()
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
+    await viz._dispatch_control_event(
+        "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
+    )
+    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["9"]]}
+
+
+@pytest.mark.anyio
+async def test_dispatch_without_control_still_calls_handler() -> None:
+    viz = _viz()
+    calls = []
+
+    async def _on_cell(change, event):
+        calls.append(change)
+
+    viz._handler_registry.register("noid", _on_cell, event="cell_change")
+    await viz._dispatch_control_event(
+        "control:cell_change", {"control_id": "noid", "row": 0, "col": 0, "value": "x"}
+    )
+    assert len(calls) == 1
+    assert calls[0] == TableCellChange(row=0, col=0, value="x")
+
+
+@pytest.mark.anyio
+async def test_undo_after_dispatch_restores_model() -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    await viz._dispatch_control_event(
+        "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
+    )
+    assert viz.get_control("tbl")["rows"] == [["9"]]
+    ref = viz._resolve_control("tbl")
+    assert ref.control.undo() is True
+    assert viz.get_control("tbl")["rows"] == [["1"]]
+
+
+# ── Test: control:undo / control:redo dispatch ───────────────
+
+
+@pytest.mark.anyio
+async def test_dispatch_undo_restores_model_and_pushes(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    await viz._dispatch_control_event(
+        "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
+    )
+
+    pushed = []
+    monkeypatch.setattr(
+        viz,
+        "_push_control_update",
+        lambda scene, cid, value: pushed.append((scene, cid, value)),
+    )
+
+    await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
+
+    assert viz.get_control("tbl")["rows"] == [["1"]]
+    assert pushed == [("", "tbl", {"columns": ["x"], "rows": [["1"]]})]
+
+
+@pytest.mark.anyio
+async def test_dispatch_redo_reapplies(monkeypatch) -> None:
+    viz = _viz()
+    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    await viz._dispatch_control_event(
+        "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
+    )
+    await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
+    await viz._dispatch_control_event("control:redo", {"control_id": "tbl"})
+
+    assert viz.get_control("tbl")["rows"] == [["9"]]
+
+
+@pytest.mark.anyio
+async def test_dispatch_undo_unknown_id_noop() -> None:
+    viz = _viz()
+    await viz._dispatch_control_event("control:undo", {"control_id": "nope"})
+    await viz._dispatch_control_event("control:redo", {"control_id": "nope"})

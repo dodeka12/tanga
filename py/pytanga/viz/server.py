@@ -41,6 +41,8 @@ _EVENT_MSG_MAP = {
     "row_add": "control:row_add",
     "column_add": "control:column_add",
     "row_delete": "control:row_delete",
+    "undo": "control:undo",
+    "redo": "control:redo",
     "group_toggle": "control:group_toggle",
     "close": "close",
     "file_browser_navigate": "file_browser_navigate",

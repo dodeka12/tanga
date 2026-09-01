@@ -8,11 +8,12 @@ add, column add, and row delete into the viewport annotation, so the handler
 payloads can be inspected.  The grid is wired for spreadsheet-style editing:
 Tab / Shift+Tab move between cells, Enter moves to the next row, Tab past the
 last cell appends a row, and dragging across cells selects rows that can be
-deleted with the "− Selected" button.
+deleted with the "− Selected" button.  Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo and
+redo edits, and the "Undo" / "Redo" buttons drive the same backend API.
 
 Run with:  uv run python py/examples/viz/interaction/table_editing.py
 
-Keywords: controls, table, tabular data, add_table, cell editing, keyboard navigation, row delete
+Keywords: controls, table, tabular data, add_table, cell editing, keyboard navigation, row delete, undo, redo
 """
 
 from __future__ import annotations
@@ -48,19 +49,32 @@ class TableEditingApp(VisualizerApp):
             opacity=0.9,
         )
         self.viz.set_annotation(
-            "Tab / Shift+Tab to move between cells · Enter to the next row · "
-            "Tab past the last cell adds a row · drag cells, then − Selected deletes."
+            "Tab / Shift+Tab move between cells · Enter to the next row · "
+            "Ctrl+Z undo · Ctrl+Shift+Z / Ctrl+Y redo · drag cells, then − Selected deletes."
         )
         self.viz.add_table(
             "data",
             label="Data",
             columns=self._columns,
             rows=self._rows,
+            max_history=100,
             tooltip="Editable data grid (keyboard friendly)",
             on_cell_change=self.on_cell_change,
             on_row_add=self.on_row_add,
             on_column_add=self.on_column_add,
             on_row_delete=self.on_row_delete,
+        )
+        self.viz.add_button(
+            "undo",
+            label="Undo",
+            tooltip="Undo the last table edit (Ctrl+Z)",
+            on_click=self.on_undo,
+        )
+        self.viz.add_button(
+            "redo",
+            label="Redo",
+            tooltip="Redo the last undone edit (Ctrl+Shift+Z)",
+            on_click=self.on_redo,
         )
         self.viz.add_button(
             "reset",
@@ -87,6 +101,18 @@ class TableEditingApp(VisualizerApp):
         self, delete: TableRowsDelete, _event: ControlEvent
     ) -> None:
         self.viz.set_annotation(f"Deleted rows {delete.rows}")
+
+    async def on_undo(self, _value: None, _event: ControlEvent) -> None:
+        if self.viz.undo_table("data"):
+            self.viz.set_annotation("Undid the last table edit.")
+        else:
+            self.viz.set_annotation("Nothing to undo.")
+
+    async def on_redo(self, _value: None, _event: ControlEvent) -> None:
+        if self.viz.redo_table("data"):
+            self.viz.set_annotation("Redid the last table edit.")
+        else:
+            self.viz.set_annotation("Nothing to redo.")
 
     async def on_reset(self, _value: None, _event: ControlEvent) -> None:
         self.viz.set_control_value(

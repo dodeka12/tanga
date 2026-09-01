@@ -353,16 +353,25 @@ TableView(
     rows=(),                # list[list[str]] | tuple[tuple[str, ...], ...]
     allow_add_rows=True,    # bool
     allow_add_columns=True, # bool
+    allow_delete_rows=True, # bool
+    max_history=100,        # int
     tooltip="",             # str
     on_cell_change=None,    # Handler
     on_row_add=None,        # Handler
     on_column_add=None,     # Handler
+    on_row_delete=None,     # Handler
     **kwargs,
 )
 ```
 
 Cell values are strings on the wire. See [Panel Controls](controls.md) for the
-handler payloads (`TableCellChange` / `TableRowAdd` / `TableColumnAdd`).
+handler payloads (`TableCellChange` / `TableRowAdd` / `TableColumnAdd` /
+`TableRowsDelete`) and for undo/redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y and the
+`undo_table` / `redo_table` backend API).
+
+`TableView` also exposes `undo()` / `redo()` / `can_undo` / `can_redo`, which
+operate directly on the wrapped `Table` model (`view.control`); to re-sync the
+browser grid, drive undo/redo through `viz.undo_table(cid)` / `redo_table(cid)`.
 
 ## Runtime helpers
 

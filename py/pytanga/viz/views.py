@@ -620,6 +620,7 @@ class TableView(ControlView):
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
         allow_delete_rows: bool = True,
+        max_history: int = 100,
         tooltip: str = "",
         on_cell_change: Handler | None = None,
         on_row_add: Handler | None = None,
@@ -637,11 +638,30 @@ class TableView(ControlView):
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
             allow_delete_rows=allow_delete_rows,
+            max_history=max_history,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
             on_row_delete=on_row_delete,
         )
+
+    def undo(self) -> bool:
+        """Undo the last edit of the wrapped ``Table`` (model-only)."""
+        return self.control.undo()
+
+    def redo(self) -> bool:
+        """Redo the last undone edit of the wrapped ``Table`` (model-only)."""
+        return self.control.redo()
+
+    @property
+    def can_undo(self) -> bool:
+        """Whether the wrapped ``Table`` can be undone."""
+        return self.control.can_undo
+
+    @property
+    def can_redo(self) -> bool:
+        """Whether the wrapped ``Table`` can be redone."""
+        return self.control.can_redo
 
 
 def serialize_layout(root: View, name: str = "") -> dict[str, Any]:

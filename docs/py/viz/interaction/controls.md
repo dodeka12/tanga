@@ -219,16 +219,36 @@ self.viz.add_table(
 | `rows` | `list[list[str]]` | `[]` | Row-major initial cell data (strings) |
 | `allow_add_rows` | `bool` | `True` | Show the "+ Row" button |
 | `allow_add_columns` | `bool` | `True` | Show the "+ Column" button |
+| `allow_delete_rows` | `bool` | `True` | Show the "− Selected" row-delete button |
+| `max_history` | `int` | `100` | Number of undo steps kept (one per committed edit) |
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_cell_change` | `Callable` | `None` | Async callback: `(change: TableCellChange, event) -> None` |
 | `on_row_add` | `Callable` | `None` | Async callback: `(add: TableRowAdd, event) -> None` |
 | `on_column_add` | `Callable` | `None` | Async callback: `(add: TableColumnAdd, event) -> None` |
+| `on_row_delete` | `Callable` | `None` | Async callback: `(delete: TableRowsDelete, event) -> None` |
 
 The handler payloads are `TableCellChange(row, col, value)`,
 `TableRowAdd(row, values)`, and `TableColumnAdd(col, header, values)` (all
 zero-based). Cell values are strings on the wire — coerce in the handler as
 needed. Refresh the grid from the backend with
 `self.viz.set_control_value("data", {"columns": [...], "rows": [...]})`.
+
+### Undo and redo
+
+The grid keeps a backend-side undo history (one snapshot per *committed* edit —
+entering a cell and pressing Enter/Tab, adding a row/column, or deleting rows;
+not per keystroke). In the browser, **Ctrl+Z** undoes and **Ctrl+Shift+Z** (or
+**Ctrl+Y**) redoes. The same operations are available programmatically:
+
+```python
+self.viz.undo_table("data")          # -> bool
+self.viz.redo_table("data")          # -> bool
+self.viz.clear_table_history("data")
+self.viz.can_undo_table("data")      # -> bool
+```
+
+`max_history` bounds the number of retained undo steps (default 100). A
+programmatic `set_control_value` full-replace clears the history.
 
 ## `add_control_group`
 

@@ -7,6 +7,11 @@
 - **Row deletion by range selection** — table grids gain drag-to-select cell
   ranges and a "− Selected" button that deletes every row with at least one
   selected cell, reporting a `TableRowsDelete` payload via `on_row_delete`.
+- **Table undo/redo** — `add_table` and `TableView` grids keep a backend-side
+  undo history (one snapshot per committed edit, `max_history=100` default).
+  Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y in the browser, or `undo_table` /
+  `redo_table` / `clear_table_history` / `can_undo_table` / `can_redo_table`
+  from Python, undo/redo edits and re-sync the grid.
 
 ## Bug Fixes
 - **Table cell edits keep their coordinates** — the table event payload, which
