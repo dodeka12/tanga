@@ -106,7 +106,15 @@ const {camera_var} = new THREE.OrthographicCamera(
     0.1, 1000
 );
 {camera_var}.position.set(0, 0, 20);
-{camera_var}.lookAt(0, 0, 0);"""
+{camera_var}.lookAt(0, 0, 0);
+{camera_var}.userData._view2d = {{
+    xmin: _frustumSize * ({width_expr} / {height_expr}) / -2,
+    xmax: _frustumSize * ({width_expr} / {height_expr}) / 2,
+    ymin: -_frustumSize / 2,
+    ymax: _frustumSize / 2,
+    uniform: true,
+    border_px: 0,
+}};"""
     else:
         camera_js = f"""const {camera_var} = new THREE.PerspectiveCamera(
     50, {width_expr} / {height_expr}, 0.1, 1000

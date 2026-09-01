@@ -24,7 +24,7 @@ matches the live viewer.
   - Inside the `typeof cfg.xmin === 'number' && …` guard, after setting
     `left/right/top/bottom`, store
     `camera.userData._view2d = { xmin: cfg.xmin, xmax: cfg.xmax, ymin: cfg.ymin, ymax: cfg.ymax, uniform: cfg.uniform !== false, border_px: cfg.border_px || 0 };`.
-- [ ] **3.3 — `js_scene_setup` stores `_view2d` on the default 2D camera**
+- [x] **3.3 — `js_scene_setup` stores `_view2d` on the default 2D camera**
   - After `{camera_var}.lookAt(0, 0, 0);`, add
     `{camera_var}.userData._view2d = { xmin: _frustumSize * ({width_expr} / {height_expr}) / -2, xmax: _frustumSize * ({width_expr} / {height_expr}) / 2, ymin: -_frustumSize / 2, ymax: _frustumSize / 2, uniform: true, border_px: 0 };`
     (mirroring `switchToCamera`'s default-2D branch).
