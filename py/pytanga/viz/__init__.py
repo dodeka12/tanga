@@ -23,7 +23,13 @@ Usage::
 """
 
 from ._act_style import ActObjectStyle, ActPointStyle
-from ._active import ActEventHandler, ActHandler, ActPoint, ActSceneObject
+from ._active import (
+    ActClickHandler,
+    ActEventHandler,
+    ActHandler,
+    ActPoint,
+    ActSceneObject,
+)
 from ._app import VisualizerApp
 from ._banner import Banner
 from ._colors import Color
@@ -165,6 +171,7 @@ from .views import (
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
+    "ActClickHandler",
     "ActEventHandler",
     "ActHandler",
     "ActObjectStyle",

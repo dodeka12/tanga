@@ -18,6 +18,7 @@ All active elements inherit from `ActSceneObject` and share:
 |---------|-------------|
 | Auto-registration | Triggers and handlers are set up automatically by `viz.add()` |
 | Custom handler | Optional callback invoked before default movement; returns `bool` to signal full handling |
+| Click handler | Optional `on_click` callback invoked on a click (press-and-release without dragging) |
 | Standard drag triggers | View-plane, XY, XZ, YZ with Shift/Ctrl modifiers (left mouse button) |
 | Self-contained flush | Default handler calls `update()` + `flush()` after moving |
 | Labels | `viz.add(ap, label=...)` creates an attached label, removed together with the entity |
@@ -78,6 +79,20 @@ ap = ActPoint(
 move handler, but their return value is ignored — they observe the drag
 lifecycle and never override the default movement.
 
+## Click Handler
+
+An active element can also accept an `on_click` notification callback, fired on
+a press-and-release without dragging:
+
+```python
+ActClickHandler = Callable[[ClickEvent, ActSceneObject], Awaitable[None]]
+
+ap = ActPoint(Point(0, 0, 2), on_click=on_click)
+```
+
+`event.world_position` reports the element's ideal point (its centre), not the
+ray/mesh hit.  The return value is ignored.
+
 ## Writing Custom Active Elements
 
 Subclass `ActSceneObject` and implement three properties:
@@ -88,11 +103,20 @@ from pytanga.viz._active import _default_drag_triggers
 from pytanga.geometry import Sphere, Point
 
 class ActSphere(ActSceneObject):
-    def __init__(self, sphere, *, handler=None, on_drag_start=None, on_drag_end=None):
+    def __init__(
+        self,
+        sphere,
+        *,
+        handler=None,
+        on_drag_start=None,
+        on_drag_end=None,
+        on_click=None,
+    ):
         super().__init__(
             handler=handler,
             on_drag_start=on_drag_start,
             on_drag_end=on_drag_end,
+            on_click=on_click,
         )
         self._sphere = sphere
 

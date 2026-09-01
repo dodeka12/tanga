@@ -40,6 +40,7 @@ ActPoint(
     handler: ActHandler | None = None,
     on_drag_start: ActEventHandler | None = None,
     on_drag_end: ActEventHandler | None = None,
+    on_click: ActClickHandler | None = None,
 )
 ```
 
@@ -53,6 +54,7 @@ ActPoint(
 | `handler` | `ActHandler \| None` | `None` | Move-phase callback invoked before the default movement |
 | `on_drag_start` | `ActEventHandler \| None` | `None` | Callback invoked when a drag starts |
 | `on_drag_end` | `ActEventHandler \| None` | `None` | Callback invoked when a drag ends |
+| `on_click` | `ActClickHandler \| None` | `None` | Callback invoked when the point is clicked |
 
 The point's visual style (colour, size, opacity) and an optional text `label`
 are set via `viz.add(ap, color=..., style=..., label=...)`, not on the
@@ -159,6 +161,24 @@ These lifecycle handlers receive the same `(event, ap)` arguments as the move
 handler, but their return value is ignored — they are pure notifications and
 never override the default movement. `event.event_type` is
 `InteractionEventType.DRAG_START` / `DRAG_END` respectively.
+
+## Click Handler
+
+Pass `on_click` to be notified when the point is clicked (a press-and-release
+without moving the pointer):
+
+```python
+async def on_click(event, ap):
+    # event: ClickEvent — event.world_position is the point's centre (the
+    #        ideal anchor), not the ray/mesh hit; also carries
+    #        screen_position, world_normal, modifiers, and camera.
+
+ap = ActPoint(Point(0, 0, 2), on_click=on_click)
+```
+
+Providing `on_click` also registers a `CLICK` trigger so the frontend emits
+`interaction:click` for the point.  Like the drag lifecycle handlers, its
+return value is ignored.
 
 ## Properties
 
