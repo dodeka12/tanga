@@ -416,6 +416,9 @@
             "Table Split": "py/examples/viz/scenes/table_split.md"
           },
           {
+            "Theme Switching": "py/examples/viz/scenes/theme_switching.md"
+          },
+          {
             "Toolbar": "py/examples/viz/scenes/toolbar.md"
           }
         ]

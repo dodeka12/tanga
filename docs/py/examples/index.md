@@ -128,7 +128,7 @@ uv run python py/examples/<path>.py
 
 - **control group** — [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
 
-- **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
 
@@ -141,6 +141,8 @@ uv run python py/examples/<path>.py
 - **custom intervals** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
 - **Cylinder** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
+
+- **dark** — [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
 
 - **defaults** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
@@ -280,7 +282,7 @@ uv run python py/examples/<path>.py
 
 - **least-squares** — [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **light** — [Animate a directional light around a sphere](viz/sdf/light_animation.md)
+- **light** — [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
 - **Line** — [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [All geometric entity types in one scene](viz/entities/all_entities.md)
 
@@ -430,17 +432,21 @@ uv run python py/examples/<path>.py
 
 - **row delete** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
+- **runtime** — [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
+
 - **scene** — [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
 
 - **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
-- **scenes** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **scenes** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
 - **SDF** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md), [per-object CSG combine modes](viz/sdf/booleans.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md), [First vertical slice for the SDF viewer](viz/sdf/entities.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md), [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md), [the unified SDF object model in the standard viewer](viz/sdf/object_model.md), [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
 
 - **set_default_color** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
+
+- **set_theme** — [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
 
 - **show** — [Interactive Visualizer](ga/jupyter/interactive.md)
 
@@ -498,7 +504,7 @@ uv run python py/examples/<path>.py
 
 - **texture labels** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md), [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md)
 
-- **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
+- **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
 
 - **tilted plane** — [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 

@@ -12,8 +12,9 @@
 | [Scene Graph](scene_graph.md) | scenes, VizGroup, transforms, scene graph | Demonstrate VizGroup + direct transforms |
 | [Split View](split_view.md) | scenes, split view, panes, layout | A single page showing multiple scenes in split panes |
 | [Table Split](table_split.md) | scenes, split view, table, tabular data, TableView | An editable data table beside a 3D scene |
+| [Theme Switching](theme_switching.md) | scenes, theme, set_theme, runtime, controls, light, dark | Switch the viewer theme at runtime without a reload |
 | [Toolbar](toolbar.md) | scenes, stack view, toolbar, horizontal, layout, controls | A horizontal control toolbar nested inside a vertical stack |
 
 ## Keywords
 
-TableView · VizGroup · add_control_group · anchor · button · checkbox · context manager · control group · controls · css · fold · group view · hierarchy · horizontal · icon · icon_only · layout · multi-pane · multi-scene · nested · overlay · panes · parent_id · scene graph · scenes · single scene · slider · split view · stack view · table · tabs · tabular data · theme · toolbar · transforms
+TableView · VizGroup · add_control_group · anchor · button · checkbox · context manager · control group · controls · css · dark · fold · group view · hierarchy · horizontal · icon · icon_only · layout · light · multi-pane · multi-scene · nested · overlay · panes · parent_id · runtime · scene graph · scenes · set_theme · single scene · slider · split view · stack view · table · tabs · tabular data · theme · toolbar · transforms
