@@ -923,6 +923,14 @@ export function createTable(ctrl) {
             layout: 'fitColumns',
             data: buildData(columns, rows),
             columns: buildDefs(columns),
+            // Spreadsheet-style keyboard editing. Tab / Shift+Tab already move
+            // between cells (Tabulator defaults `navNext` / `navPrev`);
+            // `tabEndNewRow` appends a blank row when Tab moves past the last
+            // cell; Enter is bound to `navDown` to move to the next row.
+            tabEndNewRow: ctrl.allow_add_rows !== false,
+            keybindings: {
+                navDown: [40, 13],
+            },
         });
 
         table.on('cellEdited', (cell) => {

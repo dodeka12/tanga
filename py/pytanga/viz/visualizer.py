@@ -3574,11 +3574,13 @@ class Visualizer(_JupyterDisplayMixin):
             handler = self._handler_registry.get(cid, "cell_change") if cid else None
             if handler is not None:
                 try:
+                    nested = payload.get("value")
+                    table_payload = nested if isinstance(nested, dict) else payload
                     await handler(
                         TableCellChange(
-                            row=int(payload.get("row", 0)),
-                            col=int(payload.get("col", 0)),
-                            value=str(payload.get("value", "")),
+                            row=int(table_payload.get("row", 0)),
+                            col=int(table_payload.get("col", 0)),
+                            value=str(table_payload.get("value", "")),
                         ),
                         event,
                     )
@@ -3595,10 +3597,14 @@ class Visualizer(_JupyterDisplayMixin):
             handler = self._handler_registry.get(cid, "row_add") if cid else None
             if handler is not None:
                 try:
+                    nested = payload.get("value")
+                    table_payload = nested if isinstance(nested, dict) else payload
                     await handler(
                         TableRowAdd(
-                            row=int(payload.get("row", 0)),
-                            values=[str(v) for v in (payload.get("values") or [])],
+                            row=int(table_payload.get("row", 0)),
+                            values=[
+                                str(v) for v in (table_payload.get("values") or [])
+                            ],
                         ),
                         event,
                     )
@@ -3615,11 +3621,15 @@ class Visualizer(_JupyterDisplayMixin):
             handler = self._handler_registry.get(cid, "column_add") if cid else None
             if handler is not None:
                 try:
+                    nested = payload.get("value")
+                    table_payload = nested if isinstance(nested, dict) else payload
                     await handler(
                         TableColumnAdd(
-                            col=int(payload.get("col", 0)),
-                            header=str(payload.get("header", "")),
-                            values=[str(v) for v in (payload.get("values") or [])],
+                            col=int(table_payload.get("col", 0)),
+                            header=str(table_payload.get("header", "")),
+                            values=[
+                                str(v) for v in (table_payload.get("values") or [])
+                            ],
                         ),
                         event,
                     )
