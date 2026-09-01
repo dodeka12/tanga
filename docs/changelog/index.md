@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.13.0] — 2026-09-01
+- `ActSceneObject`/`ActPoint` `on_click` handler · ideal-point drag-start & click position · zoom-aware 2D drag scale
+- Bug fixes: `clear_controls()` no longer wipes interaction handlers · stationary click no longer emits `drag_end`
+→ [Details](2026-09-01_cada3cce.md)
+
 ## [Since 1.12.0] — 2026-08-31
 - Scrollable `StackView`/`GroupView` panes (`scrollable=True` + custom scrollbar) · horizontal-toolbar example
 - Breaking: banner `on_close` now receives the control value, not the banner id

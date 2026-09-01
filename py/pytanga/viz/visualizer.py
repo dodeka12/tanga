@@ -913,7 +913,10 @@ class Visualizer(_JupyterDisplayMixin):
         Mirrors :meth:`set_view_camera`: the view must be a :class:`ControlView`
         and the update is keyed by ``view.id``.
         """
-        from ._controls import get_control_value, set_control_value as _set_control_value
+        from ._controls import (
+            get_control_value,
+            set_control_value as _set_control_value,
+        )
 
         _set_control_value(view.control, value)
         self._push_control_update("", view.id, get_control_value(view.control))
@@ -929,7 +932,10 @@ class Visualizer(_JupyterDisplayMixin):
             cid: The control id (panel or layout view).
             value: The new value (coerced to the control kind's type).
         """
-        from ._controls import get_control_value, set_control_value as _set_control_value
+        from ._controls import (
+            get_control_value,
+            set_control_value as _set_control_value,
+        )
 
         ref = self._resolve_control(cid)
         if ref is None:
@@ -1595,9 +1601,9 @@ class Visualizer(_JupyterDisplayMixin):
                         pass
 
                 try:
-                    asyncio.run_coroutine_threadsafe(
-                        _cleanup(), self._loop
-                    ).result(timeout=5.0)
+                    asyncio.run_coroutine_threadsafe(_cleanup(), self._loop).result(
+                        timeout=5.0
+                    )
                 except Exception:
                     pass
             self._loop.call_soon_threadsafe(self._loop.stop)
@@ -1844,9 +1850,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self.stop_server(timeout=timeout)
 
-    def wait_for_browser(
-        self, timeout: float = 120.0, path: str | None = None
-    ) -> bool:
+    def wait_for_browser(self, timeout: float = 120.0, path: str | None = None) -> bool:
         """Block until a browser connects, or the user opens one interactively.
 
         Prints a prompt and waits for EITHER:
@@ -2229,10 +2233,25 @@ class Visualizer(_JupyterDisplayMixin):
                 :class:`DragEvent`, or :class:`ScrollEvent`.
             scene_name: Target scene (default ``""`` = main scene).
         """
-        self._handler_registry.register(object_id, handler, event=event_type.value)
+        from ._controls import HandlerOrigin
+
+        self._handler_registry.register(
+            object_id,
+            handler,
+            event=event_type.value,
+            origin=HandlerOrigin.INTERACTION,
+        )
 
     async def _send_drag_anchor(self, event: Any) -> None:
-        """Send the ideal drag anchor to the originating browser on DRAG_START."""
+        """Resolve the ideal drag anchor and rebase the event on it.
+
+        On ``DRAG_START`` the frontend reports ``world_position`` at the
+        raycast hit point on the rendered mesh (e.g. a point's sphere surface),
+        which can carry an off-plane component in a 2D scene.  The ideal anchor
+        is computed here and written back into ``event.world_position`` so the
+        ``DRAG_START`` handler observes the ideal point, before the anchor is
+        also replied to the originating browser for the frontend's rebasing.
+        """
         from ._interaction import DragEvent, InteractionEventType
 
         if not isinstance(event, DragEvent):
@@ -2248,6 +2267,8 @@ class Visualizer(_JupyterDisplayMixin):
             anchor = act.drag_anchor(event.ray_origin, event.ray_direction)
         except NotImplementedError:
             return
+        # Use the ideal point as the drag-start position for handlers.
+        event.world_position = anchor
         if self._server is not None:
             await self._server.push_raw_to_browser(
                 event.browser_id,
@@ -2259,6 +2280,35 @@ class Visualizer(_JupyterDisplayMixin):
                     }
                 ),
             )
+
+    async def _resolve_click_anchor(self, event: Any) -> None:
+        """Overwrite a CLICK event's world_position with the ideal anchor.
+
+        The frontend reports ``world_position`` at the raycast hit on the
+        rendered mesh (e.g. a point's sphere surface), which can carry an
+        off-plane component in a 2D scene.  Rebuild the picking ray from the
+        event's camera + screen position and replace ``world_position`` with
+        the ideal point from :meth:`drag_anchor`.
+        """
+        from ._interaction import ClickEvent, InteractionEventType
+
+        if not isinstance(event, ClickEvent):
+            return
+        if event.event_type is not InteractionEventType.CLICK:
+            return
+        act = self._act_objects.get(event.object_id)
+        if act is None:
+            return
+        if event.camera is None:
+            return
+        try:
+            ray_origin, ray_direction = event.camera.pixel_ray(
+                event.screen_position[0], event.screen_position[1]
+            )
+            anchor = act.drag_anchor(ray_origin, ray_direction)
+        except NotImplementedError:
+            return
+        event.world_position = anchor
 
     async def _dispatch_interaction_event(
         self, msg_type: str, data: dict[str, Any]
@@ -2275,6 +2325,7 @@ class Visualizer(_JupyterDisplayMixin):
         except (ValueError, KeyError):
             return
         await self._send_drag_anchor(event)
+        await self._resolve_click_anchor(event)
         await self._interaction_registry.dispatch(event)
 
     # ── Interactive Controls (main scene) ───────────────────
@@ -2377,7 +2428,10 @@ class Visualizer(_JupyterDisplayMixin):
             value: The new value (coerced to the control kind's type).
             scene_name: Target scene (default ``""`` = main scene).
         """
-        from ._controls import get_control_value, set_control_value as _set_control_value
+        from ._controls import (
+            get_control_value,
+            set_control_value as _set_control_value,
+        )
 
         scene = self._scenes[scene_name]
         ctrl = scene._controls.get(cid)
@@ -3055,10 +3109,17 @@ class Visualizer(_JupyterDisplayMixin):
         self._push_controls(scene_name)
 
     def clear_controls(self) -> None:
+        """Remove all UI panel controls (and their handlers) from the main scene.
+
+        Only panel controls are removed; entity object-interaction handlers
+        (``on_interaction`` / ``ActPoint``) are left intact.
+        """
         self._clear_scene_controls("")
 
     def _clear_scene_controls(self, scene_name: str) -> None:
-        self._handler_registry.clear()
+        from ._controls import HandlerOrigin
+
+        self._handler_registry.clear(origin=HandlerOrigin.CONTROL)
         self._scenes[scene_name].clear_controls()
         self._push_controls_clear(scene_name)
 
@@ -3474,7 +3535,12 @@ class Visualizer(_JupyterDisplayMixin):
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
         """Handle an incoming control event from the frontend."""
-        from ._controls import ControlEvent, TableCellChange, TableColumnAdd, TableRowAdd
+        from ._controls import (
+            ControlEvent,
+            TableCellChange,
+            TableColumnAdd,
+            TableRowAdd,
+        )
 
         browser_id = payload.get("browser_id")
         event = ControlEvent(browser_id=browser_id)
@@ -3546,9 +3612,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:column_add":
             cid = payload.get("control_id")
-            handler = (
-                self._handler_registry.get(cid, "column_add") if cid else None
-            )
+            handler = self._handler_registry.get(cid, "column_add") if cid else None
             if handler is not None:
                 try:
                     await handler(

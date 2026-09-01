@@ -4,7 +4,7 @@
 |---------|----------|-------------|
 | [Act Point](act_point.md) | interaction, ActPoint, drag, point | Demo: Drag a 3D point interactively with ActPoint |
 | [Act Point Two](act_point_two.md) | interaction, ActPoint, drag, two points | Demo: Drag TWO 3D points interactively with ActPoint |
-| [Act Point Two 2D](act_point_two_2d.md) | interaction, ActPoint, drag, 2D, two points | Demo: Drag TWO 2D points interactively with ActPoint |
+| [Act Point Two 2D](act_point_two_2d.md) | interaction, ActPoint, drag, click, 2D, two points | Demo: Drag TWO 2D points interactively with ActPoint |
 | [All Controls](all_controls.md) | controls, slider, dropdown, button, VisualizerApp | Showcase every interactive control in one app |
 | [Drag Point](drag_point.md) | interaction, drag, point, constraints, low-level | Demo: Drag a 3D point interactively with the mouse |
 | [File Chooser](file_chooser.md) | controls, file chooser, file browser, VisualizerApp | A file chooser with a backend-driven file browser |
@@ -13,4 +13,4 @@
 
 ## Keywords
 
-2D · ActPoint · IPNS · VisualizerApp · add_table · button · constraints · controls · drag · dropdown · file browser · file chooser · interaction · low-level · point · slider · spheres · table · tabular data · two points
+2D · ActPoint · IPNS · VisualizerApp · add_table · button · click · constraints · controls · drag · dropdown · file browser · file chooser · interaction · low-level · point · slider · spheres · table · tabular data · two points
