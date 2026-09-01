@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 
-import { finiteAspect, orthoFrustum } from './camera-fit.js';
+import { finiteAspect, orthoFrustum, applyOrthoFrustum } from './camera-fit.js';
 
 /**
  * Create a camera appropriate for the given space dimension.
