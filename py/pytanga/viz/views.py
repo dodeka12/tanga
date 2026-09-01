@@ -619,10 +619,12 @@ class TableView(ControlView):
         rows: list[list[str]] | tuple[tuple[str, ...], ...] = (),
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
         tooltip: str = "",
         on_cell_change: Handler | None = None,
         on_row_add: Handler | None = None,
         on_column_add: Handler | None = None,
+        on_row_delete: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
@@ -634,9 +636,11 @@ class TableView(ControlView):
             rows=[list(row) for row in rows],
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
         )
 
 

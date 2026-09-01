@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""table_editing.py — An editable table with spreadsheet-style keyboard navigation.
+"""table_editing.py — An editable table with spreadsheet-style keyboard editing.
 
 Adds a ``table`` control (backed by Tabulator) and echoes every cell edit, row
-add, and column add into the viewport annotation, so the exact
-``TableCellChange(row, col, value)`` payload can be inspected.  The grid is wired
-for spreadsheet-style editing: Tab / Shift+Tab move between cells, Enter moves to
-the same column in the next row, and Tab past the last cell appends a new row.
+add, column add, and row delete into the viewport annotation, so the handler
+payloads can be inspected.  The grid is wired for spreadsheet-style editing:
+Tab / Shift+Tab move between cells, Enter moves to the next row, Tab past the
+last cell appends a row, and dragging across cells selects rows that can be
+deleted with the "− Selected" button.
 
 Run with:  uv run python py/examples/viz/interaction/table_editing.py
 
-Keywords: controls, table, tabular data, add_table, cell editing, keyboard navigation
+Keywords: controls, table, tabular data, add_table, cell editing, keyboard navigation, row delete
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from pytanga.viz import (
     TableCellChange,
     TableColumnAdd,
     TableRowAdd,
+    TableRowsDelete,
     VisualizerApp,
 )
 
@@ -47,7 +49,7 @@ class TableEditingApp(VisualizerApp):
         )
         self.viz.set_annotation(
             "Tab / Shift+Tab to move between cells · Enter to the next row · "
-            "Tab past the last cell adds a row."
+            "Tab past the last cell adds a row · drag cells, then − Selected deletes."
         )
         self.viz.add_table(
             "data",
@@ -58,6 +60,7 @@ class TableEditingApp(VisualizerApp):
             on_cell_change=self.on_cell_change,
             on_row_add=self.on_row_add,
             on_column_add=self.on_column_add,
+            on_row_delete=self.on_row_delete,
         )
         self.viz.add_button(
             "reset",
@@ -79,6 +82,11 @@ class TableEditingApp(VisualizerApp):
 
     async def on_column_add(self, add: TableColumnAdd, _event: ControlEvent) -> None:
         self.viz.set_annotation(f"Added column {add.col} ({add.header!r})")
+
+    async def on_row_delete(
+        self, delete: TableRowsDelete, _event: ControlEvent
+    ) -> None:
+        self.viz.set_annotation(f"Deleted rows {delete.rows}")
 
     async def on_reset(self, _value: None, _event: ControlEvent) -> None:
         self.viz.set_control_value(

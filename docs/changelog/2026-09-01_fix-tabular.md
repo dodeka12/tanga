@@ -4,6 +4,9 @@
 - **Spreadsheet-style table editing** — `add_table` and `TableView` grids now
   enable Tabulator's keyboard navigation (Tab / Shift+Tab between cells, Enter
   to the next row, Tab past the last cell appends a row).
+- **Row deletion by range selection** — table grids gain drag-to-select cell
+  ranges and a "− Selected" button that deletes every row with at least one
+  selected cell, reporting a `TableRowsDelete` payload via `on_row_delete`.
 
 ## Bug Fixes
 - **Table cell edits keep their coordinates** — the table event payload, which

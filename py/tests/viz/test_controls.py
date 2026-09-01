@@ -366,6 +366,7 @@ def test_serialize_table() -> None:
         "rows": [["1", "2", "3"], ["4", "5", "6"]],
         "allow_add_rows": True,
         "allow_add_columns": True,
+        "allow_delete_rows": True,
     }
 
 

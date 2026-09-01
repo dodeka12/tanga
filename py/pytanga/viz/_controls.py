@@ -69,6 +69,17 @@ class TableColumnAdd:
     values: list[str]
 
 
+@dataclass
+class TableRowsDelete:
+    """Rows deleted from a :class:`Table` control.
+
+    ``rows`` holds the zero-based indexes of the deleted rows, in ascending
+    order.
+    """
+
+    rows: list[int]
+
+
 # ── Handler type alias ──────────────────────────────────────
 
 Handler = Callable[[Any, ControlEvent], Awaitable[None]]
@@ -210,7 +221,8 @@ class Table(Control):
 
     ``columns`` lists the column headers (its length is the column count) and
     ``rows`` is the row-major grid of cell strings.  ``allow_add_rows`` /
-    ``allow_add_columns`` gate the frontend's "+ Row" / "+ Column" buttons.
+    ``allow_add_columns`` gate the frontend's "+ Row" / "+ Column" buttons;
+    ``allow_delete_rows`` gates the "− Selected" row-delete button.
     """
 
     kind: str = "table"
@@ -218,9 +230,11 @@ class Table(Control):
     rows: list[list[str]] = field(default_factory=list)
     allow_add_rows: bool = True
     allow_add_columns: bool = True
+    allow_delete_rows: bool = True
     on_cell_change: Handler | None = None
     on_row_add: Handler | None = None
     on_column_add: Handler | None = None
+    on_row_delete: Handler | None = None
 
 
 # ── Control group ────────────────────────────────────────────
@@ -433,6 +447,7 @@ def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
                 "rows": [list(row) for row in ctrl.rows],
                 "allow_add_rows": ctrl.allow_add_rows,
                 "allow_add_columns": ctrl.allow_add_columns,
+                "allow_delete_rows": ctrl.allow_delete_rows,
             }
         )
     else:

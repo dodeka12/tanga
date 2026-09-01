@@ -488,10 +488,12 @@ class VizSceneHandle(_JupyterDisplayMixin):
         rows: list[list[str]] | None = None,
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
         tooltip: str = "",
         on_cell_change: Any = None,
         on_row_add: Any = None,
         on_column_add: Any = None,
+        on_row_delete: Any = None,
         parent_id: str | None = None,
     ) -> str:
         """Add an editable table (tabular data) control to this scene."""
@@ -503,10 +505,12 @@ class VizSceneHandle(_JupyterDisplayMixin):
             rows=rows,
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
             tooltip=tooltip,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
             parent_id=parent_id,
         )
 

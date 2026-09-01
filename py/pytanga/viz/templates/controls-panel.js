@@ -931,6 +931,11 @@ export function createTable(ctrl) {
             keybindings: {
                 navDown: [40, 13],
             },
+            // Drag to select a range of cells; "− Selected" deletes every row
+            // that has at least one selected cell.
+            selectableRange: ctrl.allow_delete_rows !== false,
+            selectableRangeInitializeDefault: false,
+            selectableRangeAutoFocus: false,
         });
 
         table.on('cellEdited', (cell) => {
@@ -986,6 +991,24 @@ export function createTable(ctrl) {
         buttonRow.appendChild(addColBtn);
     }
 
+    if (table && ctrl.allow_delete_rows !== false) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'tanga-action-button';
+        delBtn.textContent = '− Selected';
+        delBtn.addEventListener('click', () => {
+            const selected = new Set();
+            table.getRanges().forEach((range) => {
+                range.getRows().forEach((row) => selected.add(row));
+            });
+            if (!selected.size) return;
+            const indexes = [...selected].map((row) => row.getIndex());
+            selected.forEach((row) => row.delete());
+            sendControlEvent('control:row_delete', ctrl.id, { rows: indexes });
+        });
+        buttonRow.appendChild(delBtn);
+    }
+
     if (buttonRow.children.length > 0) {
         wrapper.appendChild(buttonRow);
     }
@@ -1018,6 +1041,7 @@ const _CONTROL_EVENTS = {
     'control:cell_change': 'cell_change',
     'control:row_add': 'row_add',
     'control:column_add': 'column_add',
+    'control:row_delete': 'row_delete',
     'control:group_toggle': 'group_toggle',
 };
 
