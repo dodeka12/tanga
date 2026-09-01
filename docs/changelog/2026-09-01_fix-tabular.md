@@ -14,3 +14,8 @@
   `_dispatch_control_event`, so `TableCellChange`, `TableRowAdd`, and
   `TableColumnAdd` receive the real `row` / `col` / `value` instead of a
   stringified dict.
+- **Standalone HTML export of 2D views now recomputes the orthographic camera on
+  window resize** — the export resize handler only updated the camera `aspect`
+  (a no-op for orthographic cameras), so 2D snapshots and figures stretched and
+  never self-corrected; it now recomputes `left`/`right`/`top`/`bottom` via the
+  shared `applyOrthoFrustum`, matching the live viewer.

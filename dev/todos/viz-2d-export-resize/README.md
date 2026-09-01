@@ -1,6 +1,6 @@
 # 2D standalone HTML export — recompute the ortho camera on resize — Overview
 
-**Created:** 2026-09-01 | **Status:** In progress | **Branch:** `fix/tabular`
+**Created:** 2026-09-01 | **Status:** Done | **Branch:** `fix/tabular`
 
 ## Goal
 
