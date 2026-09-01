@@ -6,6 +6,7 @@ import { View } from './view.js';
 import { SplitView } from './split-view.js';
 import { StackView } from './stack-view.js';
 import { GroupView } from './group-view.js';
+import { MenuView } from './menu-view.js';
 import { ThreeJsView } from './three-view.js';
 import { SliderView } from './slider-view.js';
 import { ButtonView } from './button-view.js';
@@ -67,12 +68,31 @@ export function buildViewTree(node, ws) {
             position: node.position,
             collapsed: node.collapsed,
             scrollable: node.scrollable,
+            icon: node.icon,
+            icon_only: node.icon_only,
+            parent_id: node.parent_id,
+            id: node.id,
         });
         applySizeSpecs(group, node);
         for (const childNode of node.children || []) {
             group.addChild(buildViewTree(childNode, ws));
         }
         return group;
+    }
+
+    if (node.type === 'menu') {
+        const menu = new MenuView({
+            trigger_icon: node.trigger_icon,
+            label: node.label,
+            mode: node.mode,
+            direction: node.direction,
+            position: node.position,
+        });
+        applySizeSpecs(menu, node);
+        for (const childNode of node.children || []) {
+            menu.addChild(buildViewTree(childNode, ws));
+        }
+        return menu;
     }
 
     if (node.type === 'scene_view') {
@@ -89,11 +109,13 @@ export function buildViewTree(node, ws) {
         view = new SliderView({
             id: node.id, label: node.label, tooltip: node.tooltip,
             min: node.min, max: node.max, step: node.step, value: node.value,
+            variant: node.variant,
         });
     } else if (node.type === 'button_view') {
         view = new ButtonView({
             id: node.id, label: node.label, tooltip: node.tooltip,
             icon: node.icon, icon_only: node.icon_only,
+            variant: node.variant,
         });
     } else if (node.type === 'dropdown_view') {
         view = new DropdownView({
@@ -124,7 +146,7 @@ export function buildViewTree(node, ws) {
     } else if (node.type === 'checkbox_view') {
         view = new CheckboxView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value,
+            value: node.value, variant: node.variant,
         });
     } else if (node.type === 'value_edit_view') {
         view = new ValueEditView({

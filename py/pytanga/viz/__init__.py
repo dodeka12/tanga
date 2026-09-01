@@ -23,10 +23,18 @@ Usage::
 """
 
 from ._act_style import ActObjectStyle, ActPointStyle
-from ._active import ActEventHandler, ActHandler, ActPoint, ActSceneObject
+from ._active import (
+    ActClickHandler,
+    ActEventHandler,
+    ActHandler,
+    ActPoint,
+    ActSceneObject,
+)
+from ._anchor import EAnchor
 from ._app import VisualizerApp
 from ._banner import Banner
 from ._colors import Color
+from ._dialog import Dialog
 from ._controls import (
     Button,
     Checkbox,
@@ -34,6 +42,7 @@ from ._controls import (
     ControlEvent,
     ControlGroup,
     Dropdown,
+    EControlVariant,
     FileChooser,
     Slider,
     Table,
@@ -151,6 +160,7 @@ from .views import (
     DropdownView,
     FileChooserView,
     GroupView,
+    MenuView,
     SceneView,
     SliderView,
     SpacerView,
@@ -165,6 +175,7 @@ from .views import (
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
+    "ActClickHandler",
     "ActEventHandler",
     "ActHandler",
     "ActObjectStyle",
@@ -201,10 +212,12 @@ __all__ = [
     "fit_view2d",
     "ControlView",
     "GroupView",
+    "MenuView",
     "CrossHairPointStyle",
     "CylinderLineStyle",
     "CylinderStyle",
     "DashedWireframe",
+    "Dialog",
     "DilatorStyle",
     "DirectionStyle",
     "DiskStyle",
@@ -213,6 +226,8 @@ __all__ = [
     "DragMode",
     "Dropdown",
     "DropdownView",
+    "EAnchor",
+    "EControlVariant",
     "EIconMaterial",
     "EIconUC",
     "EllipseStyle",

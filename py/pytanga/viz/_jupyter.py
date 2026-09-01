@@ -9,8 +9,6 @@ renders an inline iframe when displayed in a Jupyter notebook cell.
 
 from __future__ import annotations
 
-from typing import Any
-
 
 class _JupyterDisplayMixin:
     """Mixin providing Jupyter notebook inline display via ``_repr_html_``.

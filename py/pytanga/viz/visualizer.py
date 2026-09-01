@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
+from ._anchor import EAnchor
 from ._icons import Icon
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
@@ -190,8 +191,13 @@ class Visualizer(_JupyterDisplayMixin):
         # scene name.  Banner ids are unique across scopes (auto-generated).
         self._banners: dict[str | None, dict[str, Any]] = {}
         self._banner_counter = 0
-        # Banner/editor ``on_close`` handlers live in ``_handler_registry``
+        # Banner/editor/dialog ``on_close`` handlers live in ``_handler_registry``
         # under ``(id, "close")``.
+
+        # Dialog storage: global dialogs under ``None``, per-scene under the
+        # scene name.  Dialog ids are unique across scopes (auto-generated).
+        self._dialogs: dict[str | None, dict[str, Any]] = {}
+        self._dialog_counter = 0
 
         # Interaction handler registry (shared across all scenes)
         from ._interaction import InteractionHandlerRegistry
@@ -210,9 +216,26 @@ class Visualizer(_JupyterDisplayMixin):
         # Key "" is the default layout (shown at "/?view=").
         self._layouts: dict[str, View] = {}
         self._layouts_serialized: dict[str, dict[str, Any]] = {}
+        # Single-scene layouts (one ``SceneView`` stack per named scene), cached
+        # for the unified view mode.  The base scene reuses ``_layouts[""]``.
+        self._scene_layouts_serialized: dict[str, dict[str, Any]] = {}
         # Control ids registered by the currently-registered layout, so they can
         # be unregistered cleanly when the layout is overwritten.
         self._layout_control_ids: set[str] = set()
+
+        # Global overlay views (e.g. global menus) mounted into the browser's
+        # full-screen overlay container and serialized alongside every layout.
+        self._global_overlay: list[View] = []
+        self._menus: dict[str, View] = {}
+        self._menu_counter = 0
+
+        # Control groups unified onto `GroupView`: per-scene overlay views
+        # (injected into each layout's matching `SceneView` pane), the id → view
+        # registry, and the set of injected view ids so re-sync can strip and
+        # re-append them idempotently.
+        self._scene_overlays: dict[str, list[View]] = {}
+        self._scene_groups: dict[str, dict[str, View]] = {}
+        self._injected_overlay_ids: set[int] = set()
 
         self._default_objects_added: set[str] = set()
 
@@ -301,18 +324,15 @@ class Visualizer(_JupyterDisplayMixin):
         if not isinstance(root, View):
             raise TypeError(f"layout must be a View, got {type(root).__name__}")
         self._layouts[name] = root
-        self._layouts_serialized[name] = serialize_layout(root, name=name)
         self._register_control_handlers(root)
+        self._sync_overlays()
         return name
 
-    def _register_control_handlers(self, root: View) -> None:
-        """Register control-view handlers into the control handler registry."""
+    def _register_view_handlers(self, root: View) -> set[str]:
+        """Register control-view handlers in *root*'s subtree; return their ids."""
         from .views import iter_control_views
 
-        for cid in self._layout_control_ids:
-            self._handler_registry.unregister(cid)
-        self._layout_control_ids.clear()
-
+        registered: set[str] = set()
         for view in iter_control_views(root):
             entries: list[tuple[str, Any]] = []
             if getattr(view, "on_change", None) is not None:
@@ -328,11 +348,146 @@ class Visualizer(_JupyterDisplayMixin):
             for event, h in entries:
                 self._handler_registry.register(view.id, h, event=event)
             if entries:
-                self._layout_control_ids.add(view.id)
+                registered.add(view.id)
+        return registered
+
+    def _register_control_handlers(self, root: View) -> None:
+        """Register control-view handlers into the control handler registry."""
+        for cid in self._layout_control_ids:
+            self._handler_registry.unregister(cid)
+        self._layout_control_ids = self._register_view_handlers(root)
+
+    def _sync_overlays(self) -> None:
+        """Re-serialize every registered layout with global + scene overlays."""
+        from .views import SceneView, StackView
+
+        if (self._global_overlay or self._scene_overlays) and not self._layouts:
+            # No-layout case: create a minimal default layout so overlays have a
+            # root (and a matching ``SceneView`` pane) to attach to.
+            self._layouts[""] = StackView("vertical", [SceneView("")])
+        overlay = self._global_overlay or None
+        for name, root in self._layouts.items():
+            self._inject_scene_overlays(root)
+            self._layouts_serialized[name] = serialize_layout(
+                root, name=name, overlay=overlay
+            )
+        # Rebuild cached single-scene layouts for named scenes (their per-scene
+        # overlays may have changed).  The base scene is covered by the loop above.
+        for name in list(self._scene_layouts_serialized):
+            root = StackView("vertical", [SceneView(name)])
+            self._inject_scene_overlays(root)
+            self._scene_layouts_serialized[name] = serialize_layout(root, name=name)
+        # Live re-push (unified view mode): connected browsers see overlay changes.
+        self._push_layout_updates_threadsafe()
+
+    def _inject_scene_overlays(self, root: View) -> None:
+        """Merge per-scene overlay views into each matching ``SceneView`` pane."""
+        from .views import iter_scene_views
+
+        for scene_view in iter_scene_views(root):
+            base = [
+                v for v in scene_view.overlay if id(v) not in self._injected_overlay_ids
+            ]
+            scene_view.overlay = base + list(self._scene_overlays.get(scene_view.scene, []))
+
+    def add_menu(
+        self,
+        mid: str | None = None,
+        *,
+        label: str = "",
+        trigger_icon: Icon | None = None,
+        mode: str = "dropdown",
+        direction: str = "vertical",
+        position: EAnchor | None = None,
+        override_variant: bool = True,
+        children: list[View] | None = None,
+        scene_name: str | None = None,
+    ) -> str:
+        """Add a menu to the global overlay and return its id.
+
+        ``scene_name=None`` (or the base scene ``""``) adds a **global** menu,
+        mounted in the browser's full-screen overlay.  Per-pane menus are
+        declared declaratively via ``SceneView(overlay=[MenuView(...)])``;
+        per-scene-name menus are out of scope and raise ``NotImplementedError``.
+        """
+        from .views import MenuView
+
+        if scene_name not in (None, ""):
+            raise NotImplementedError(
+                "Per-scene-name menus are out of scope; declare per-pane menus "
+                "with SceneView(overlay=[MenuView(...)])"
+            )
+        if mid is None:
+            mid = f"menu_{self._menu_counter}"
+            self._menu_counter += 1
+        menu = MenuView(
+            label=label,
+            trigger_icon=trigger_icon,
+            mode=mode,
+            direction=direction,
+            position=position,
+            override_variant=override_variant,
+            children=list(children or []),
+        )
+        self._menus[mid] = menu
+        self._global_overlay.append(menu)
+        self._register_view_handlers(menu)
+        self._sync_overlays()
+        return mid
 
     def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
         """Callback: return the serialized layout for *layout_name*, or None."""
         return self._layouts_serialized.get(layout_name)
+
+    def _scene_layout_for(self, scene_name: str) -> dict[str, Any] | None:
+        """Return the serialized single-scene layout for *scene_name*.
+
+        A single scene is served as a one-``SceneView`` stack merged with the
+        global overlay (base scene only) and any per-scene overlays.  This is
+        the model the server uses to always serve a ``view_layout``.
+        """
+        from .views import SceneView, StackView
+
+        if scene_name == "":
+            if "" not in self._layouts:
+                self._layouts[""] = StackView("vertical", [SceneView("")])
+            if "" not in self._layouts_serialized:
+                self._inject_scene_overlays(self._layouts[""])
+                self._layouts_serialized[""] = serialize_layout(
+                    self._layouts[""], name="", overlay=self._global_overlay or None
+                )
+            return self._layouts_serialized.get("")
+
+        layout = self._scene_layouts_serialized.get(scene_name)
+        if layout is None:
+            root = StackView("vertical", [SceneView(scene_name)])
+            self._inject_scene_overlays(root)
+            layout = serialize_layout(root, name=scene_name)
+            self._scene_layouts_serialized[scene_name] = layout
+        return layout
+
+    async def _push_layout_updates(self) -> None:
+        """Re-push each connected session's ``view_layout`` after overlays change.
+
+        A layout tab gets its named layout; a single-scene tab gets its scene's
+        auto-derived single-scene layout.  Runs on the server event loop.
+        """
+        if self._server is None:
+            return
+        for session in self._server.get_browser_sessions():
+            layout_name = session.get("layout")
+            if layout_name is not None:
+                payload = self._layout_serialized_for(layout_name)
+            else:
+                payload = self._scene_layout_for(session["scene"])
+            if payload is not None:
+                await self._server.push_layout_to_session(session["id"], payload)
+
+    def _push_layout_updates_threadsafe(self) -> None:
+        """Schedule :meth:`_push_layout_updates` onto the server loop (no-op pre-server)."""
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(self._push_layout_updates(), self._loop)
 
     def list_browsers(self) -> list[dict[str, str]]:
         """Return connected browser sessions as ``[{id, scene, remote_addr}]``.
@@ -913,7 +1068,10 @@ class Visualizer(_JupyterDisplayMixin):
         Mirrors :meth:`set_view_camera`: the view must be a :class:`ControlView`
         and the update is keyed by ``view.id``.
         """
-        from ._controls import get_control_value, set_control_value as _set_control_value
+        from ._controls import (
+            get_control_value,
+            set_control_value as _set_control_value,
+        )
 
         _set_control_value(view.control, value)
         self._push_control_update("", view.id, get_control_value(view.control))
@@ -929,7 +1087,10 @@ class Visualizer(_JupyterDisplayMixin):
             cid: The control id (panel or layout view).
             value: The new value (coerced to the control kind's type).
         """
-        from ._controls import get_control_value, set_control_value as _set_control_value
+        from ._controls import (
+            get_control_value,
+            set_control_value as _set_control_value,
+        )
 
         ref = self._resolve_control(cid)
         if ref is None:
@@ -1520,6 +1681,7 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
                 layout_callback=self._layout_serialized_for,
+                scene_layout_callback=self._scene_layout_for,
             )
             _boot_done.set()
 
@@ -1595,9 +1757,9 @@ class Visualizer(_JupyterDisplayMixin):
                         pass
 
                 try:
-                    asyncio.run_coroutine_threadsafe(
-                        _cleanup(), self._loop
-                    ).result(timeout=5.0)
+                    asyncio.run_coroutine_threadsafe(_cleanup(), self._loop).result(
+                        timeout=5.0
+                    )
                 except Exception:
                     pass
             self._loop.call_soon_threadsafe(self._loop.stop)
@@ -1844,9 +2006,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self.stop_server(timeout=timeout)
 
-    def wait_for_browser(
-        self, timeout: float = 120.0, path: str | None = None
-    ) -> bool:
+    def wait_for_browser(self, timeout: float = 120.0, path: str | None = None) -> bool:
         """Block until a browser connects, or the user opens one interactively.
 
         Prints a prompt and waits for EITHER:
@@ -2229,10 +2389,25 @@ class Visualizer(_JupyterDisplayMixin):
                 :class:`DragEvent`, or :class:`ScrollEvent`.
             scene_name: Target scene (default ``""`` = main scene).
         """
-        self._handler_registry.register(object_id, handler, event=event_type.value)
+        from ._controls import HandlerOrigin
+
+        self._handler_registry.register(
+            object_id,
+            handler,
+            event=event_type.value,
+            origin=HandlerOrigin.INTERACTION,
+        )
 
     async def _send_drag_anchor(self, event: Any) -> None:
-        """Send the ideal drag anchor to the originating browser on DRAG_START."""
+        """Resolve the ideal drag anchor and rebase the event on it.
+
+        On ``DRAG_START`` the frontend reports ``world_position`` at the
+        raycast hit point on the rendered mesh (e.g. a point's sphere surface),
+        which can carry an off-plane component in a 2D scene.  The ideal anchor
+        is computed here and written back into ``event.world_position`` so the
+        ``DRAG_START`` handler observes the ideal point, before the anchor is
+        also replied to the originating browser for the frontend's rebasing.
+        """
         from ._interaction import DragEvent, InteractionEventType
 
         if not isinstance(event, DragEvent):
@@ -2248,6 +2423,8 @@ class Visualizer(_JupyterDisplayMixin):
             anchor = act.drag_anchor(event.ray_origin, event.ray_direction)
         except NotImplementedError:
             return
+        # Use the ideal point as the drag-start position for handlers.
+        event.world_position = anchor
         if self._server is not None:
             await self._server.push_raw_to_browser(
                 event.browser_id,
@@ -2259,6 +2436,35 @@ class Visualizer(_JupyterDisplayMixin):
                     }
                 ),
             )
+
+    async def _resolve_click_anchor(self, event: Any) -> None:
+        """Overwrite a CLICK event's world_position with the ideal anchor.
+
+        The frontend reports ``world_position`` at the raycast hit on the
+        rendered mesh (e.g. a point's sphere surface), which can carry an
+        off-plane component in a 2D scene.  Rebuild the picking ray from the
+        event's camera + screen position and replace ``world_position`` with
+        the ideal point from :meth:`drag_anchor`.
+        """
+        from ._interaction import ClickEvent, InteractionEventType
+
+        if not isinstance(event, ClickEvent):
+            return
+        if event.event_type is not InteractionEventType.CLICK:
+            return
+        act = self._act_objects.get(event.object_id)
+        if act is None:
+            return
+        if event.camera is None:
+            return
+        try:
+            ray_origin, ray_direction = event.camera.pixel_ray(
+                event.screen_position[0], event.screen_position[1]
+            )
+            anchor = act.drag_anchor(ray_origin, ray_direction)
+        except NotImplementedError:
+            return
+        event.world_position = anchor
 
     async def _dispatch_interaction_event(
         self, msg_type: str, data: dict[str, Any]
@@ -2275,6 +2481,7 @@ class Visualizer(_JupyterDisplayMixin):
         except (ValueError, KeyError):
             return
         await self._send_drag_anchor(event)
+        await self._resolve_click_anchor(event)
         await self._interaction_registry.dispatch(event)
 
     # ── Interactive Controls (main scene) ───────────────────
@@ -2377,7 +2584,10 @@ class Visualizer(_JupyterDisplayMixin):
             value: The new value (coerced to the control kind's type).
             scene_name: Target scene (default ``""`` = main scene).
         """
-        from ._controls import get_control_value, set_control_value as _set_control_value
+        from ._controls import (
+            get_control_value,
+            set_control_value as _set_control_value,
+        )
 
         scene = self._scenes[scene_name]
         ctrl = scene._controls.get(cid)
@@ -2985,7 +3195,7 @@ class Visualizer(_JupyterDisplayMixin):
         icon: Icon | None = None,
         tooltip: str = "",
         controls: list[str] | None = None,
-        position: str = "bottom-right",
+        position: EAnchor = EAnchor.BOTTOM_RIGHT,
         collapsed: bool = False,
         parent_id: str | None = None,
         on_toggle: Any = None,
@@ -3004,6 +3214,26 @@ class Visualizer(_JupyterDisplayMixin):
             on_toggle=on_toggle,
         )
 
+    def _grouped_control_ids(self, scene_name: str) -> set[str]:
+        """Return the control ids currently owned by groups in *scene_name*."""
+        ids: set[str] = set()
+        for group in self._scene_groups.get(scene_name, {}).values():
+            for child in getattr(group, "children", ()):
+                cid = getattr(child, "id", None)
+                if cid is not None:
+                    ids.add(cid)
+        return ids
+
+    def _remove_group_view(self, scene_name: str, group: View) -> None:
+        """Unmount a group view from the global or per-scene overlay."""
+        if group in self._global_overlay:
+            self._global_overlay.remove(group)
+        else:
+            overlays = self._scene_overlays.get(scene_name)
+            if overlays and group in overlays:
+                overlays.remove(group)
+        self._injected_overlay_ids.discard(id(group))
+
     def _add_scene_group(
         self,
         scene_name: str,
@@ -3013,27 +3243,49 @@ class Visualizer(_JupyterDisplayMixin):
         icon: Icon | None = None,
         tooltip: str = "",
         controls: list[str] | None = None,
-        position: str = "bottom-right",
+        position: EAnchor = EAnchor.BOTTOM_RIGHT,
         collapsed: bool = False,
         parent_id: str | None = None,
         on_toggle: Any = None,
     ) -> str:
-        from ._controls import ControlGroup
+        """Create a UI control group as a ``GroupView`` overlay.
 
-        group = ControlGroup(
-            id=gid,
-            title=title,
-            icon=icon,
-            tooltip=tooltip,
-            controls=controls or [],
+        Referenced control ids are resolved to their ``*View`` wrappers (reusing
+        the stored ``Control`` objects) and mounted as the group's children.  The
+        group is anchored in the overlay — the global overlay for the base scene,
+        or the matching ``SceneView`` pane for a named scene — unless
+        ``parent_id`` is set, in which case the frontend attaches it to that 3D
+        entity.
+        """
+        from .views import GroupView, control_to_view
+
+        scene = self._scenes[scene_name]
+        children: list[View] = []
+        for cid in controls or []:
+            ctrl = scene._controls.get(cid)
+            if ctrl is None:
+                continue
+            children.append(control_to_view(ctrl))
+
+        group = GroupView(
+            title,
+            children,
             position=position,
             collapsed=collapsed,
+            icon=icon,
             parent_id=parent_id,
-            on_toggle=on_toggle,
         )
-        self._scenes[scene_name].add_control_group(group)
         if on_toggle is not None:
             self._handler_registry.register(gid, on_toggle, event="toggle")
+        self._scene_groups.setdefault(scene_name, {})[gid] = group
+
+        if parent_id is not None or scene_name != "":
+            self._scene_overlays.setdefault(scene_name, []).append(group)
+            self._injected_overlay_ids.add(id(group))
+        else:
+            self._global_overlay.append(group)
+
+        self._sync_overlays()
         self._push_controls(scene_name)
         return gid
 
@@ -3050,16 +3302,32 @@ class Visualizer(_JupyterDisplayMixin):
         self._remove_scene_group("", gid)
 
     def _remove_scene_group(self, scene_name: str, gid: str) -> None:
+        groups = self._scene_groups.get(scene_name, {})
+        group = groups.pop(gid, None)
+        if group is None:
+            return
         self._handler_registry.unregister(gid)
-        self._scenes[scene_name].remove_control_group(gid)
+        self._remove_group_view(scene_name, group)
+        self._sync_overlays()
         self._push_controls(scene_name)
 
     def clear_controls(self) -> None:
+        """Remove all UI panel controls (and their handlers) from the main scene.
+
+        Only panel controls are removed; entity object-interaction handlers
+        (``on_interaction`` / ``ActPoint``) are left intact.
+        """
         self._clear_scene_controls("")
 
     def _clear_scene_controls(self, scene_name: str) -> None:
-        self._handler_registry.clear()
+        from ._controls import HandlerOrigin
+
+        self._handler_registry.clear(origin=HandlerOrigin.CONTROL)
         self._scenes[scene_name].clear_controls()
+        for group in list(self._scene_groups.pop(scene_name, {}).values()):
+            self._remove_group_view(scene_name, group)
+        self._scene_overlays.pop(scene_name, None)
+        self._sync_overlays()
         self._push_controls_clear(scene_name)
 
     # ── Banners ─────────────────────────────────────────────
@@ -3361,6 +3629,231 @@ class Visualizer(_JupyterDisplayMixin):
             self._unregister_banner(banner)
         await self._on_server_loop(lambda: self._push_banner_clear_async(scene_name))
 
+    # ── Dialogs ─────────────────────────────────────────────
+
+    def _next_dialog_id(self) -> str:
+        """Return a fresh, unique dialog id."""
+        self._dialog_counter += 1
+        return f"dialog_{self._dialog_counter}"
+
+    def _register_dialog(
+        self,
+        content: View,
+        *,
+        id: str | None,
+        title: str,
+        align_x: float,
+        align_y: float,
+        dismissable: bool,
+        on_close: Any,
+        scene_name: str | None,
+    ) -> Any:
+        """Create, store, and register a dialog; return it (un-pushed)."""
+        from ._dialog import Dialog
+
+        if not isinstance(content, View):
+            raise TypeError(f"content must be a View, got {type(content).__name__}")
+
+        if id is None:
+            id = self._next_dialog_id()
+        else:
+            for scoped in self._dialogs.values():
+                if id in scoped:
+                    raise ValueError(f"Dialog id {id!r} is already in use")
+
+        dialog = Dialog(
+            id=id,
+            content=content,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+        )
+        # Register the content's control-view handlers, then the close callback.
+        self._register_view_handlers(content)
+        if on_close is not None:
+            self._handler_registry.register(id, on_close, event="close")
+        self._dialogs.setdefault(scene_name, {})[id] = dialog
+        return dialog
+
+    def show_dialog(
+        self,
+        content: View,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+        scene_name: str | None = None,
+    ) -> str:
+        """Show a dialog and return its id.
+
+        A global dialog (``scene_name=None``) spans the whole viewport; a
+        per-scene dialog (``scene_name="<name>"``) is shown inside every pane
+        displaying that scene.  ``content`` is any :class:`View` (e.g. a
+        :class:`StackView` of ``*View`` control wrappers) rendered inside the
+        dialog body; its control-view handlers are registered automatically.
+        Closing the dialog (the ✕, or a backend ``remove_dialog``) fires
+        ``on_close`` on the server loop.  With ``dismissable=False`` the dialog
+        is modal — a dimmed backdrop blocks the scene and there is no ✕ (close
+        it via a control in ``content`` or ``remove_dialog``).
+        """
+        dialog = self._register_dialog(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            scene_name=scene_name,
+        )
+        self._push_dialog(dialog, scene_name)
+        return dialog.id
+
+    def _unregister_dialog(self, dialog: Any) -> None:
+        """Unregister a dialog's content control handlers and ``on_close``."""
+        from .views import iter_control_views
+
+        for view in iter_control_views(dialog.content):
+            self._handler_registry.unregister(view.id)
+        self._handler_registry.unregister(dialog.id, "close")
+
+    def remove_dialog(self, dialog_id: str, *, scene_name: str | None = None) -> None:
+        """Remove a dialog by id (and unregister its handlers)."""
+        scoped = self._dialogs.get(scene_name, {})
+        dialog = scoped.get(dialog_id)
+        if dialog is None:
+            return
+        self._unregister_dialog(dialog)
+        del scoped[dialog_id]
+        self._push_dialog_remove(dialog_id, scene_name)
+
+    def clear_dialogs(self, *, scene_name: str | None = None) -> None:
+        """Remove all dialogs in a scope (or globally when ``scene_name=None``)."""
+        scoped = self._dialogs.pop(scene_name, {})
+        for dialog in scoped.values():
+            self._unregister_dialog(dialog)
+        self._push_dialog_clear(scene_name)
+
+    def _push_dialog(self, dialog: Any, scene_name: str | None) -> None:
+        from ._dialog import serialize_dialog
+
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(
+                json.dumps(serialize_dialog(dialog, scene=scene_name))
+            ),
+            self._loop,
+        )
+
+    def _push_dialog_remove(self, dialog_id: str, scene_name: str | None) -> None:
+        from ._dialog import serialize_dialog_remove
+
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(
+                json.dumps(serialize_dialog_remove(dialog_id, scene=scene_name))
+            ),
+            self._loop,
+        )
+
+    def _push_dialog_clear(self, scene_name: str | None) -> None:
+        from ._dialog import serialize_dialog_clear
+
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(json.dumps(serialize_dialog_clear(scene=scene_name))),
+            self._loop,
+        )
+
+    async def _push_dialog_async(self, dialog: Any, scene_name: str | None) -> None:
+        from ._dialog import serialize_dialog
+
+        if self._server is None:
+            return
+        await self._server.push_raw(
+            json.dumps(serialize_dialog(dialog, scene=scene_name))
+        )
+
+    async def _push_dialog_remove_async(
+        self, dialog_id: str, scene_name: str | None
+    ) -> None:
+        from ._dialog import serialize_dialog_remove
+
+        if self._server is None:
+            return
+        await self._server.push_raw(
+            json.dumps(serialize_dialog_remove(dialog_id, scene=scene_name))
+        )
+
+    async def _push_dialog_clear_async(self, scene_name: str | None) -> None:
+        from ._dialog import serialize_dialog_clear
+
+        if self._server is None:
+            return
+        await self._server.push_raw(
+            json.dumps(serialize_dialog_clear(scene=scene_name))
+        )
+
+    async def show_dialog_async(
+        self,
+        content: View,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+        scene_name: str | None = None,
+    ) -> str:
+        """Awaitable :meth:`show_dialog` (see its docs).
+
+        Awaits the ``dialog_define`` push so the dialog is visible before the
+        caller proceeds; safe from a handler (on ``self._loop``) or from
+        ``init()`` / ``cleanup()`` (user loop).
+        """
+        dialog = self._register_dialog(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            scene_name=scene_name,
+        )
+        await self._on_server_loop(lambda: self._push_dialog_async(dialog, scene_name))
+        return dialog.id
+
+    async def remove_dialog_async(
+        self, dialog_id: str, *, scene_name: str | None = None
+    ) -> None:
+        """Awaitable :meth:`remove_dialog`."""
+        scoped = self._dialogs.get(scene_name, {})
+        dialog = scoped.get(dialog_id)
+        if dialog is None:
+            return
+        self._unregister_dialog(dialog)
+        del scoped[dialog_id]
+        await self._on_server_loop(
+            lambda: self._push_dialog_remove_async(dialog_id, scene_name)
+        )
+
+    async def clear_dialogs_async(self, *, scene_name: str | None = None) -> None:
+        """Awaitable :meth:`clear_dialogs`."""
+        scoped = self._dialogs.pop(scene_name, {})
+        for dialog in scoped.values():
+            self._unregister_dialog(dialog)
+        await self._on_server_loop(lambda: self._push_dialog_clear_async(scene_name))
+
     # ── Editor ─────────────────────────────────────────────
 
     def open_editor(
@@ -3397,14 +3890,15 @@ class Visualizer(_JupyterDisplayMixin):
         )
 
     def _push_controls(self, scene_name: str = "") -> None:
-        """Serialise current controls/groups for a scene and push to the frontend."""
+        """Push the scene's orphan controls (grouped controls ride the overlay)."""
         if self._server is None or self._loop is None:
             return
         from ._controls import serialize_controls
 
         scene = self._scenes[scene_name]
-        groups = list(scene._groups.values())
-        message = serialize_controls(groups, scene._controls)
+        grouped = self._grouped_control_ids(scene_name)
+        orphan_map = {cid: c for cid, c in scene._controls.items() if cid not in grouped}
+        message = serialize_controls([], orphan_map)
         message["scene"] = scene_name
         asyncio.run_coroutine_threadsafe(
             self._server.push_raw(json.dumps(message)), self._loop
@@ -3431,8 +3925,9 @@ class Visualizer(_JupyterDisplayMixin):
         from ._controls import serialize_controls
 
         scene = self._scenes.get(scene_name, self._scenes[""])
-        groups = list(scene._groups.values())
-        message = serialize_controls(groups, scene._controls)
+        grouped = self._grouped_control_ids(scene_name)
+        orphan_map = {cid: c for cid, c in scene._controls.items() if cid not in grouped}
+        message = serialize_controls([], orphan_map)
         message["scene"] = scene_name
         await self._server.push_raw(json.dumps(message))
 
@@ -3474,7 +3969,12 @@ class Visualizer(_JupyterDisplayMixin):
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
         """Handle an incoming control event from the frontend."""
-        from ._controls import ControlEvent, TableCellChange, TableColumnAdd, TableRowAdd
+        from ._controls import (
+            ControlEvent,
+            TableCellChange,
+            TableColumnAdd,
+            TableRowAdd,
+        )
 
         browser_id = payload.get("browser_id")
         event = ControlEvent(browser_id=browser_id)
@@ -3546,9 +4046,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:column_add":
             cid = payload.get("control_id")
-            handler = (
-                self._handler_registry.get(cid, "column_add") if cid else None
-            )
+            handler = self._handler_registry.get(cid, "column_add") if cid else None
             if handler is not None:
                 try:
                     await handler(

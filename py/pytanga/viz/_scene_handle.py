@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from ._viz_styles import VizStyles
     from .visualizer import Visualizer
 
+from ._anchor import EAnchor
 from ._icons import Icon
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
@@ -599,7 +600,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         icon: Icon | None = None,
         tooltip: str = "",
         controls: list[str] | None = None,
-        position: str = "bottom-right",
+        position: EAnchor = EAnchor.BOTTOM_RIGHT,
         collapsed: bool = False,
         parent_id: str | None = None,
         on_toggle: Any = None,
@@ -616,6 +617,35 @@ class VizSceneHandle(_JupyterDisplayMixin):
             collapsed=collapsed,
             parent_id=parent_id,
             on_toggle=on_toggle,
+        )
+
+    def add_menu(
+        self,
+        mid: str | None = None,
+        *,
+        label: str = "",
+        trigger_icon: Icon | None = None,
+        mode: str = "dropdown",
+        direction: str = "vertical",
+        position: EAnchor | None = None,
+        override_variant: bool = True,
+        children: list[Any] | None = None,
+    ) -> str:
+        """Add a global menu (only valid for the base scene ``""``).
+
+        Non-base scenes raise :class:`NotImplementedError`; declare per-pane
+        menus instead via ``SceneView(overlay=[MenuView(...)])``.
+        """
+        return self._viz.add_menu(
+            mid,
+            label=label,
+            trigger_icon=trigger_icon,
+            mode=mode,
+            direction=direction,
+            position=position,
+            override_variant=override_variant,
+            children=children,
+            scene_name=self._name,
         )
 
     def remove_control(self, cid: str) -> None:
@@ -763,6 +793,70 @@ class VizSceneHandle(_JupyterDisplayMixin):
     async def clear_banners_async(self) -> None:
         """Awaitable :meth:`clear_banners`."""
         await self._viz.clear_banners_async(scene_name=self._name)
+
+    # ── Dialogs ──────────────────────────────────────────────
+
+    def show_dialog(
+        self,
+        content: Any,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+    ) -> str:
+        """Show a dialog scoped to this scene (see :meth:`Visualizer.show_dialog`)."""
+        return self._viz.show_dialog(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            scene_name=self._name,
+        )
+
+    async def show_dialog_async(
+        self,
+        content: Any,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+    ) -> str:
+        """Awaitable :meth:`show_dialog` scoped to this scene."""
+        return await self._viz.show_dialog_async(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            scene_name=self._name,
+        )
+
+    def remove_dialog(self, dialog_id: str) -> None:
+        """Remove a dialog from this scene."""
+        self._viz.remove_dialog(dialog_id, scene_name=self._name)
+
+    async def remove_dialog_async(self, dialog_id: str) -> None:
+        """Awaitable :meth:`remove_dialog`."""
+        await self._viz.remove_dialog_async(dialog_id, scene_name=self._name)
+
+    def clear_dialogs(self) -> None:
+        """Remove all dialogs from this scene."""
+        self._viz.clear_dialogs(scene_name=self._name)
+
+    async def clear_dialogs_async(self) -> None:
+        """Awaitable :meth:`clear_dialogs`."""
+        await self._viz.clear_dialogs_async(scene_name=self._name)
 
     # ── Object Interaction ───────────────────────────────────
 

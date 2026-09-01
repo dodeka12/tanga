@@ -255,20 +255,22 @@ def _build_animated_figure_adapter(
 
     loop_js = "true" if loop else "false"
 
-    autofit_js = js_autofit_camera(
-        registry_var="figRegistry",
-        camera_var="figCamera",
-        controls_var="figControls",
-        cam_explicit=cam_explicit,
-        space_dim=space_dim,
-    )
-
     if responsive:
         dim_w = "(figContainer.clientWidth || window.innerWidth)"
         dim_h = "(figContainer.clientHeight || window.innerHeight)"
     else:
         dim_w = str(w)
         dim_h = str(h)
+
+    autofit_js = js_autofit_camera(
+        registry_var="figRegistry",
+        camera_var="figCamera",
+        controls_var="figControls",
+        cam_explicit=cam_explicit,
+        space_dim=space_dim,
+        width_expr=dim_w,
+        height_expr=dim_h,
+    )
 
     parts = [
         "window.__tanga_ready = true;",
@@ -391,6 +393,8 @@ def _build_animated_fullpage_adapter(
         controls_var="figControls",
         cam_explicit=cam_explicit,
         space_dim=space_dim,
+        width_expr="window.innerWidth",
+        height_expr="window.innerHeight",
     )
 
     parts = [

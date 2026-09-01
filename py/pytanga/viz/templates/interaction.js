@@ -290,14 +290,16 @@ export class InteractionController {
         // Compute world-space vectors corresponding to +1 pixel in
         // screen X and screen Y.  Perspective cameras scale by the vertical
         // FOV at the intersection depth; orthographic cameras (2D) use the
-        // constant frustum height instead (camera.fov is undefined there).
+        // frustum height divided by OrbitControls' `camera.zoom`, which scales
+        // the effective frustum without changing top/bottom (camera.fov is
+        // undefined there).
         const dist = intersectPoint.distanceTo(this.camera.position);
         const viewportHeight = this.rendererDomElement.clientHeight;
 
         let scale;
         if (this.camera.isOrthographicCamera) {
             const frustumHeight = this.camera.top - this.camera.bottom;
-            scale = frustumHeight / viewportHeight;
+            scale = frustumHeight / (viewportHeight * this.camera.zoom);
         } else {
             const vFov = THREE.MathUtils.degToRad(this.camera.fov || 50);
             scale = 2 * dist * Math.tan(vFov / 2) / viewportHeight;
@@ -616,31 +618,40 @@ export class InteractionController {
 
     _onPointerUp(event) {
         if (this._activeDrag && this._activeDrag.pointerId === event.pointerId) {
-            const { dragMode, accWorldPos } = this._activeDrag;
+            const wasDrag = this._dragStarted;
 
-            // drag_end: no camera payload (backend cached it from drag_start)
-            const payload = {
-                type: 'interaction:drag_end',
-                event_type: 'drag_end',
-                object_id: this._activeDrag.objectId,
-                mouse_button: this._activeDrag.button,
-                modifiers: Array.from(this._activeDrag.modifiers),
-                screen_position: [event.clientX, event.clientY],
-                delta_pixels: [
-                    event.clientX - this._activeDrag.startPos.x,
-                    event.clientY - this._activeDrag.startPos.y,
-                ],
-                world_position: [accWorldPos.x, accWorldPos.y, accWorldPos.z],
-                world_delta: [0, 0, 0],
-                drag_mode: dragMode,
-            };
-            if (this.ws) this.ws.send(JSON.stringify(payload));
+            if (wasDrag) {
+                const { dragMode, accWorldPos } = this._activeDrag;
+
+                // drag_end: no camera payload (backend cached it from drag_start)
+                const payload = {
+                    type: 'interaction:drag_end',
+                    event_type: 'drag_end',
+                    object_id: this._activeDrag.objectId,
+                    mouse_button: this._activeDrag.button,
+                    modifiers: Array.from(this._activeDrag.modifiers),
+                    screen_position: [event.clientX, event.clientY],
+                    delta_pixels: [
+                        event.clientX - this._activeDrag.startPos.x,
+                        event.clientY - this._activeDrag.startPos.y,
+                    ],
+                    world_position: [accWorldPos.x, accWorldPos.y, accWorldPos.z],
+                    world_delta: [0, 0, 0],
+                    drag_mode: dragMode,
+                };
+                if (this.ws) this.ws.send(JSON.stringify(payload));
+            }
 
             this.rendererDomElement.releasePointerCapture(event.pointerId);
             if (this.controls) this.controls.enabled = true;
             this._activeDrag = null;
             this._dragStarted = false;
-            return;
+
+            // A stationary press never started a drag — fall through to click
+            // detection below instead of emitting a drag_end that didn't happen.
+            if (wasDrag) {
+                return;
+            }
         }
 
         const hit = this._getInteractiveHit(event);

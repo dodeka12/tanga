@@ -9,6 +9,10 @@ For the underlying view model (sizes, splitters, panes), see
 [Split Views](../visualizer/split-views.md); for the panel-control methods, see
 [Controls](../interaction/controls.md).
 
+The plain scene URL that `VisualizerApp.run()` opens is itself a one-`SceneView`
+layout, so panel controls and `add_control_group` overlays render there exactly
+as they do inside a custom split layout — the two modes share one render path.
+
 ## Two kinds of controls
 
 | Style | API | Where it appears | Use for |

@@ -65,3 +65,48 @@ class TestPushFullState:
         asyncio.run(server._push_full_state(ws, scene_names=["a"], browser_id="b1"))
         types = [m["type"] for m in ws.sent]
         assert "view_layout" not in types
+
+
+class TestResolveLayout:
+    def _server(self) -> VizServer:
+        server = VizServer()
+        server._layout_callback = lambda name: {
+            "type": "view_layout",
+            "name": name,
+            "scenes": ["a", "b"],
+            "root": {},
+        }
+        server._scene_layout_callback = lambda name: {
+            "type": "view_layout",
+            "name": name,
+            "scenes": [name],
+            "root": {"type": "stack"},
+        }
+        return server
+
+    def test_single_scene_uses_scene_layout_callback(self):
+        server = self._server()
+        scene_names, payload = server._resolve_layout("detail", None)
+        assert scene_names == ["detail"]
+        assert payload == server._scene_layout_callback("detail")
+
+    def test_layout_mode_uses_layout_callback(self):
+        server = self._server()
+        scene_names, payload = server._resolve_layout("", "demo")
+        assert scene_names == ["a", "b"]
+        assert payload["name"] == "demo"
+
+    def test_unknown_layout_falls_back_to_main_scene(self):
+        server = VizServer()
+        server._layout_callback = lambda name: None
+        server._scene_layout_callback = lambda name: None
+        scene_names, payload = server._resolve_layout("", "missing")
+        assert scene_names == [""]
+        assert payload is None
+
+    def test_single_scene_without_scene_layout_callback_returns_no_payload(self):
+        server = VizServer()
+        server._layout_callback = lambda name: None
+        scene_names, payload = server._resolve_layout("main", None)
+        assert scene_names == ["main"]
+        assert payload is None

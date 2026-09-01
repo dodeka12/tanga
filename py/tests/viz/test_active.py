@@ -228,9 +228,7 @@ class TestDragModeConstraint:
             DragMode.YZ_PLANE,
         }
         # Unmodified trigger remains view-plane.
-        unmodified = [
-            t for t in config.triggers if t.modifiers == frozenset()
-        ]
+        unmodified = [t for t in config.triggers if t.modifiers == frozenset()]
         assert len(unmodified) == 1
         assert unmodified[0].drag_mode == DragMode.VIEW_PLANE
 
@@ -353,6 +351,185 @@ class TestDragAnchor:
             }
 
         asyncio.run(_run())
+
+    def test_drag_start_handler_receives_ideal_anchor(self):
+        class _RecordingServer:
+            def __init__(self):
+                self.sent = []
+
+            async def push_raw_to_browser(self, browser_id, data):
+                self.sent.append((browser_id, data))
+
+        async def _run():
+            viz = Visualizer(add_default_axes=False, add_default_grid=False)
+            viz._server = _RecordingServer()
+
+            received: list[Point] = []
+
+            async def on_drag_start(event):
+                received.append(event.world_position)
+
+            handle = _FakeSceneHandle()
+            ap = ActPoint(Point(0, 2, 0))
+            ap._init(handle, "pt1")
+            viz._act_objects["pt1"] = ap
+            viz.on_interaction("pt1", InteractionEventType.DRAG_START, on_drag_start)
+
+            # The reported world_position is the mesh-surface hit (off-plane in
+            # 2D); the handler must instead observe the ideal point's centre.
+            await viz._dispatch_interaction_event(
+                "interaction:drag_start",
+                {
+                    "type": "interaction:drag_start",
+                    "event_type": "drag_start",
+                    "object_id": "pt1",
+                    "browser_id": "b1",
+                    "world_position": [0.0, 2.0, 0.15],
+                    "world_delta": [0.0, 0.0, 0.0],
+                    "ray_origin": [9.0, 9.0, 9.0],
+                    "ray_direction": [0.0, 0.0, 1.0],
+                },
+            )
+
+            # The handler is dispatched via asyncio.create_task; yield so it runs.
+            await asyncio.sleep(0)
+
+            assert received == [Point(0, 2, 0)]
+
+        asyncio.run(_run())
+
+
+class TestClickHandler:
+    _IDENTITY = [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+    ]
+
+    def test_click_trigger_added_when_on_click(self):
+        async def on_click(event, act):
+            pass
+
+        ap = ActPoint(Point(0, 2, 0), on_click=on_click)
+        cfg = ap.interaction_config
+        assert any(t.event_type == InteractionEventType.CLICK for t in cfg.triggers)
+
+        ap_no_click = ActPoint(Point(0, 2, 0))
+        cfg_no_click = ap_no_click.interaction_config
+        assert not any(
+            t.event_type == InteractionEventType.CLICK for t in cfg_no_click.triggers
+        )
+
+    def test_click_handler_receives_ideal_anchor(self):
+        class _RecordingServer:
+            def __init__(self):
+                self.sent = []
+
+            async def push_raw_to_browser(self, browser_id, data):
+                self.sent.append((browser_id, data))
+
+        async def _run():
+            viz = Visualizer(add_default_axes=False, add_default_grid=False)
+            viz._server = _RecordingServer()
+
+            received: list[Point] = []
+
+            async def on_click(event, act):
+                received.append(event.world_position)
+
+            handle = _FakeSceneHandle()
+            ap = ActPoint(Point(0, 2, 0), on_click=on_click)
+            ap._init(handle, "pt1")
+            viz._act_objects["pt1"] = ap
+            viz.on_interaction("pt1", InteractionEventType.CLICK, ap._on_click_event)
+
+            # world_position is the mesh-surface hit (off-plane in 2D); the
+            # handler must instead observe the ideal point's centre.
+            await viz._dispatch_interaction_event(
+                "interaction:click",
+                {
+                    "type": "interaction:click",
+                    "event_type": "click",
+                    "object_id": "pt1",
+                    "browser_id": "b1",
+                    "screen_position": [400.0, 300.0],
+                    "world_position": [0.0, 2.0, 0.15],
+                    "world_normal": [0.0, 0.0, 1.0],
+                    "camera": {
+                        "view": TestClickHandler._IDENTITY,
+                        "view_inv": TestClickHandler._IDENTITY,
+                        "proj": TestClickHandler._IDENTITY,
+                        "proj_inv": TestClickHandler._IDENTITY,
+                        "viewport_width": 800,
+                        "viewport_height": 600,
+                        "space_dim": 3,
+                    },
+                },
+            )
+
+            # The handler is dispatched via asyncio.create_task; yield so it runs.
+            await asyncio.sleep(0)
+
+            assert received == [Point(0, 2, 0)]
+
+        asyncio.run(_run())
+
+
+class TestClearControls:
+    def test_clear_controls_preserves_interaction_handlers(self):
+        async def _run():
+            viz = Visualizer(add_default_axes=False, add_default_grid=False)
+            received: list[Point] = []
+
+            async def on_drag_end(event, act):
+                received.append(event.world_position)
+
+            ap = ActPoint(Point(0, 2, 0), on_drag_end=on_drag_end)
+            eid = viz.add(ap)
+
+            viz.clear_controls()
+
+            await viz._dispatch_interaction_event(
+                "interaction:drag_end",
+                {
+                    "type": "interaction:drag_end",
+                    "event_type": "drag_end",
+                    "object_id": eid,
+                    "browser_id": "b1",
+                    "world_position": [0.0, 2.0, 0.0],
+                    "world_delta": [0.0, 0.0, 0.0],
+                },
+            )
+            await asyncio.sleep(0)
+
+            assert received == [Point(0, 2, 0)]
+
+        asyncio.run(_run())
+
+    def test_clear_controls_removes_control_handlers(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+
+        async def on_change(value, event):
+            pass
+
+        viz.add_slider("s1", on_change=on_change)
+        assert viz._handler_registry.get("s1", "change") is on_change
+
+        viz.clear_controls()
+        assert viz._handler_registry.get("s1", "change") is None
 
 
 def test_on_interaction_registers_in_unified_registry():

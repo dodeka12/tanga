@@ -26,7 +26,7 @@ from typing import Any
 
 from pytanga.geometry import Direction, Point
 
-from ._controls import ControlHandlerRegistry
+from ._controls import ControlHandlerRegistry, HandlerOrigin
 
 _logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class InteractionEventType(Enum):
 
     CLICK = "click"
     DBLCLICK = "dblclick"
-    DRAG = "drag"            # umbrella for triggers — never sent as event_type
+    DRAG = "drag"  # umbrella for triggers — never sent as event_type
     DRAG_START = "drag_start"
     DRAG_MOVE = "drag_move"
     DRAG_END = "drag_end"
@@ -55,9 +55,9 @@ class InteractionEventType(Enum):
 class MouseButton(Enum):
     """Mouse button identifiers matching Three.js button codes."""
 
-    LEFT = "left"       # button 0 in Three.js
-    MIDDLE = "middle"   # button 1 in Three.js
-    RIGHT = "right"     # button 2 in Three.js
+    LEFT = "left"  # button 0 in Three.js
+    MIDDLE = "middle"  # button 1 in Three.js
+    RIGHT = "right"  # button 2 in Three.js
 
     @classmethod
     def from_js_code(cls, code: int) -> "MouseButton":
@@ -89,10 +89,10 @@ class DragMode(Enum):
     mouse buttons or modifier combinations can use different planes.
     """
 
-    VIEW_PLANE = "view_plane"   # plane ⟂ camera view at initial depth
-    XY_PLANE = "xy_plane"       # world XY plane at z = z₀
-    XZ_PLANE = "xz_plane"       # world XZ plane at y = y₀
-    YZ_PLANE = "yz_plane"       # world YZ plane at x = x₀
+    VIEW_PLANE = "view_plane"  # plane ⟂ camera view at initial depth
+    XY_PLANE = "xy_plane"  # world XY plane at z = z₀
+    XZ_PLANE = "xz_plane"  # world XZ plane at y = y₀
+    YZ_PLANE = "yz_plane"  # world YZ plane at x = x₀
 
 
 # ── Configuration dataclasses ──────────────────────────────────
@@ -139,9 +139,7 @@ class InteractionTrigger:
             mouse_button=MouseButton(data["mouse_button"])
             if data.get("mouse_button")
             else None,
-            modifiers=frozenset(
-                ModifierKey(m) for m in data.get("modifiers", [])
-            ),
+            modifiers=frozenset(ModifierKey(m) for m in data.get("modifiers", [])),
             drag_mode=drag_mode,
         )
 
@@ -229,7 +227,9 @@ def apply_delta_transform(
 
 def extract_camera_directions(
     transform: tuple[float, ...],
-) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]]:
+) -> tuple[
+    tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
+]:
     """Extract right, up, and forward direction vectors from a 4×4 column-major matrix.
 
     Returns ``(right, up, forward)``, each as a ``(x, y, z)`` tuple.
@@ -256,30 +256,86 @@ class Camera:
     matching Three.js ``Matrix4.elements``.
     """
 
-    view: tuple[float, ...] = field(default_factory=lambda: (
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    ))
-    view_inv: tuple[float, ...] = field(default_factory=lambda: (
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    ))
-    proj: tuple[float, ...] = field(default_factory=lambda: (
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    ))
-    proj_inv: tuple[float, ...] = field(default_factory=lambda: (
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    ))
+    view: tuple[float, ...] = field(
+        default_factory=lambda: (
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+        )
+    )
+    view_inv: tuple[float, ...] = field(
+        default_factory=lambda: (
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+        )
+    )
+    proj: tuple[float, ...] = field(
+        default_factory=lambda: (
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+        )
+    )
+    proj_inv: tuple[float, ...] = field(
+        default_factory=lambda: (
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+        )
+    )
     viewport_width: int = 800
     viewport_height: int = 600
     space_dim: int = 3
@@ -429,7 +485,9 @@ class Camera:
         denom = ray_dir.dot(cam_view)
         if abs(denom) < 1e-12:
             return Point(float("nan"), float("nan"), float("nan"))
-        t = (plane_point - Point(near_world[0], near_world[1], near_world[2])).dot(cam_view) / denom
+        t = (plane_point - Point(near_world[0], near_world[1], near_world[2])).dot(
+            cam_view
+        ) / denom
 
         result = Point(
             near_world[0] + ray_dir.x * t,
@@ -452,9 +510,51 @@ class Camera:
     @unproject.register(type(None))
     def _(self, _obj: None, depth: float = 0.0) -> None:
         """Handle None gracefully (e.g., default event fields)."""
-        raise TypeError(
-            "unproject() expects Point or Direction, got None"
+        raise TypeError("unproject() expects Point or Direction, got None")
+
+    def pixel_ray(self, px: float, py: float) -> tuple[Point, Direction]:
+        """Return the world-space picking ray through a screen pixel.
+
+        ``px`` / ``py`` are pixel coordinates with ``(0, 0)`` at the top-left
+        (matching the frontend's ``screen_position``).  Returns the near-plane
+        ray origin and a unit direction.  For an orthographic camera the
+        direction is constant; for a perspective camera it fans out from the
+        camera position.
+        """
+        ndc_x = (px / self.viewport_width) * 2.0 - 1.0
+        ndc_y = 1.0 - (py / self.viewport_height) * 2.0
+
+        near_clip = _mat4_mul_vec4(self.proj_inv, (ndc_x, ndc_y, -1.0, 1.0))
+        far_clip = _mat4_mul_vec4(self.proj_inv, (ndc_x, ndc_y, 1.0, 1.0))
+        if abs(near_clip[3]) < 1e-12 or abs(far_clip[3]) < 1e-12:
+            return (
+                Point(float("nan"), float("nan"), float("nan")),
+                Direction(0.0, 0.0, 0.0),
+            )
+
+        near_eye = (
+            near_clip[0] / near_clip[3],
+            near_clip[1] / near_clip[3],
+            near_clip[2] / near_clip[3],
+            1.0,
         )
+        far_eye = (
+            far_clip[0] / far_clip[3],
+            far_clip[1] / far_clip[3],
+            far_clip[2] / far_clip[3],
+            1.0,
+        )
+
+        near_world = _mat4_mul_vec4(self.view_inv, near_eye)
+        far_world = _mat4_mul_vec4(self.view_inv, far_eye)
+
+        origin = Point(near_world[0], near_world[1], near_world[2])
+        direction = Direction(
+            far_world[0] - near_world[0],
+            far_world[1] - near_world[1],
+            far_world[2] - near_world[2],
+        ).normalized()
+        return origin, direction
 
 
 # ── Event dataclasses ──────────────────────────────────────────
@@ -728,7 +828,10 @@ class InteractionHandlerRegistry:
         """Register an async handler for a specific object + event type."""
         if self._handlers_registry is not None:
             self._handlers_registry.register(
-                object_id, handler, event=event_type.value
+                object_id,
+                handler,
+                event=event_type.value,
+                origin=HandlerOrigin.INTERACTION,
             )
         else:
             self._own_handlers[(object_id, event_type)] = handler
@@ -753,9 +856,7 @@ class InteractionHandlerRegistry:
         else:
             self._own_handlers.pop((object_id, event_type), None)
 
-    def get(
-        self, object_id: str, event_type: InteractionEventType
-    ) -> Handler | None:
+    def get(self, object_id: str, event_type: InteractionEventType) -> Handler | None:
         """Look up a handler, or ``None``."""
         if self._handlers_registry is not None:
             return self._handlers_registry.get(object_id, event_type.value)
@@ -847,13 +948,9 @@ class InteractionHandlerRegistry:
             if pending:
                 self._pending.pop(obj_id, None)
                 coalesced = _coalesce_drag_events(pending)
-                next_handler = self.get(
-                    obj_id, InteractionEventType.DRAG_MOVE
-                )
+                next_handler = self.get(obj_id, InteractionEventType.DRAG_MOVE)
                 if next_handler is not None:
                     self._running[obj_id] = True
-                    asyncio.create_task(
-                        self._run_handler(next_handler, coalesced)
-                    )
+                    asyncio.create_task(self._run_handler(next_handler, coalesced))
                     return  # _run_handler will clear _running when done
             self._running[obj_id] = False

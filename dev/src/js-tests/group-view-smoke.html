@@ -22,6 +22,7 @@
 
         const group = new GroupView({
             title: 'Actions',
+            icon: 'material:settings',
             children: [
                 new SliderView({ id: 's1', label: 'Radius', min: 0, max: 5, value: 2 }),
                 new ButtonView({ id: 'b1', label: 'Go' }),
@@ -29,7 +30,19 @@
         });
         group.mount(document.getElementById('host'));
 
+        const iconOnly = new GroupView({
+            icon: 'material:tune',
+            icon_only: true,
+            children: [new ButtonView({ id: 'b2', label: 'Icon-only group' })],
+        });
+        iconOnly.mount(document.getElementById('host'));
+
         log('title:', group.el.querySelector('.tanga-group-title')?.textContent);
+        log('icon rendered:', !!group.el.querySelector('.tanga-group-icon'));
+        log('icon_only has no title:', !iconOnly.el.querySelector('.tanga-group-title'));
+        log('icon_only has icon:', !!iconOnly.el.querySelector('.tanga-group-icon'));
+        const toggle = group.el.querySelector('.tanga-group-toggle');
+        log('toggle border-style:', toggle ? getComputedStyle(toggle).borderStyle : 'none');
         log('children:', group.children.map((c) => c.controlId).join(', '));
         log('content is flex:', getComputedStyle(group._content).display);
         log('has slider:', !!group.el.querySelector('.tanga-slider'));

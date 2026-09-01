@@ -89,11 +89,45 @@ async def on_release(self, value, event):
 For plain synchronous scripts (no `VisualizerApp`), use
 `await self.viz.run_blocking(fn)` instead of `submit_user`.
 
+## Dialogs
+
+A `Dialog` is a titled overlay whose body holds arbitrary view content (any
+`View`, e.g. a `StackView` of control views).  It is a sibling of the banner —
+removable from the backend, draggable by its title bar (clamped to the
+viewport), and closable by a ✕ unless modal:
+
+```python
+viz.show_dialog(
+    StackView("vertical", [
+        SliderView("gain", label="Gain", min=0.0, max=2.0, value=1.0),
+        ButtonView("apply", label="Apply"),
+    ]),
+    title="Settings",
+    on_close=self.on_dialog_closed,
+)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `content` | `View` | *(required)* | The dialog body (any view; control handlers are registered automatically) |
+| `id` | `str` | auto | Dialog id (returned by `show_dialog`) |
+| `title` | `str` | `""` | Title-bar text |
+| `align_x` / `align_y` | `float` | `0.5` | Anchor in `[0, 1]` (see [Alignment](#alignment)) |
+| `dismissable` | `bool` | `True` | `False` = modal (dimmed backdrop, no ✕) |
+| `on_close` | `Callable` | `None` | Async callback fired when the dialog closes |
+| `scene_name` | `str` | `None` | `None` = global; `"<name>"` = per-scene (every pane of that scene) |
+
+Remove with `viz.remove_dialog(id)` or `viz.clear_dialogs()`.  `VizSceneHandle`
+exposes `show_dialog` / `remove_dialog` / `clear_dialogs` scoped to its scene
+(plus `*_async` forms), mirroring the banner API.
+
 ## Examples
 
 - `py/examples/viz/banners/banner_types.py` — every banner kind.
 - `py/examples/viz/banners/heavy_work.py` — a slider that triggers a 3 s
   computation on release.
+- `py/examples/viz/dialogs/dialog_demo.py` — a dialog with view content, a
+  menu-bar reopen, and a modal variant.
 
 ## See Also
 

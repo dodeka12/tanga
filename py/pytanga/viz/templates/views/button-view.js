@@ -4,10 +4,11 @@ import { ControlView } from './control-view.js';
 import { createButton } from '../controls-panel.js';
 
 export class ButtonView extends ControlView {
-    constructor({ id, label = '', icon = null, icon_only = false, tooltip = '' } = {}) {
+    constructor({ id, label = '', icon = null, icon_only = false, tooltip = '', variant = 'default' } = {}) {
         super({ id, label, tooltip });
         this.icon = icon;
         this.icon_only = icon_only;
+        this.variant = variant;
     }
 
     render() {
@@ -18,6 +19,7 @@ export class ButtonView extends ControlView {
             tooltip: this.tooltip,
             icon: this.icon,
             icon_only: this.icon_only,
+            variant: this.variant,
         });
     }
 }

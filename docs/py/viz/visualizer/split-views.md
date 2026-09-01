@@ -8,6 +8,10 @@ fixed size. The existing per-scene URLs keep working
 unchanged — a split view is just an additional layout served at one URL
 (`/?view=<name>`).
 
+A single scene is also a layout: a per-scene URL (`/` or `/{name}`) is served as
+a one-`SceneView` stack, so overlays (control groups, menus, dialogs) mount and
+update identically in single-scene and split-view modes.
+
 ## The View Hierarchy
 
 Everything in a layout is a `View`. Two containers arrange their children, and
@@ -20,6 +24,7 @@ the leaves render content:
 | `StackView` | A flex container that stacks children vertically, horizontally, or wraps. |
 | `SceneView` | A pane that renders a named scene (`scene` name or handle), optionally with overlay views. |
 | `GroupView` | A titled `StackView` (panel chrome) for grouping control views; usable as a pane or a scene overlay. |
+| `MenuView` | A hamburger dropdown or a permanent horizontal `bar` of options, with nestable sub-menus. |
 | `SliderView` / `ButtonView` / `DropdownView` / `TableView` | A single HTML control rendered as a `View`. |
 | `SpacerView` | An empty, fully-flexible filler pane. |
 
@@ -136,7 +141,8 @@ runnable toolbar example.
 ## Overlays
 
 A `SceneView` can host overlay views that float over its canvas, anchored by each
-child's `position` (`top-left` / `top-right` / `bottom-left` / `bottom-right`):
+child's `position` (an `EAnchor` — a corner such as `top-right`, or a centered
+edge such as `top` / `bottom` / `left` / `right`):
 
 ```python
 SceneView(

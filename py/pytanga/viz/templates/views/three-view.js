@@ -13,7 +13,7 @@ import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } 
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { handleControlsDefine, handleControlsClear } from '../controls-panel.js';
 import { sendEvent } from '../events.js';
-import { attachGroup, detachGroup, detachAll } from '../controls-attached.js';
+import { attachGroupView, detachGroup, detachAll } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
 import { InteractionController } from '../interaction.js';
@@ -66,23 +66,46 @@ function _showSdfWebGL2Warning() {
     document.body.insertBefore(banner, document.body.firstChild);
 }
 
-function _applyOverlayAnchor(el, anchor) {
+export function applyOverlayAnchor(el, anchor) {
     el.style.top = 'auto';
     el.style.right = 'auto';
     el.style.bottom = 'auto';
     el.style.left = 'auto';
+    el.style.transform = '';
     switch (anchor) {
         case 'top-left':
             el.style.top = '8px';
             el.style.left = '8px';
             break;
         case 'top-right':
-            el.style.top = '8px';
+            // Stay clear of the fixed connection status dot + "Reconnect"
+            // button that occupy the viewport's top-right corner.
+            el.style.top = '36px';
             el.style.right = '8px';
             break;
         case 'bottom-left':
             el.style.bottom = '8px';
             el.style.left = '8px';
+            break;
+        case 'top':
+            el.style.top = '8px';
+            el.style.left = '50%';
+            el.style.transform = 'translateX(-50%)';
+            break;
+        case 'bottom':
+            el.style.bottom = '8px';
+            el.style.left = '50%';
+            el.style.transform = 'translateX(-50%)';
+            break;
+        case 'left':
+            el.style.left = '8px';
+            el.style.top = '50%';
+            el.style.transform = 'translateY(-50%)';
+            break;
+        case 'right':
+            el.style.right = '8px';
+            el.style.top = '50%';
+            el.style.transform = 'translateY(-50%)';
             break;
         case 'bottom-right':
         default:
@@ -142,11 +165,22 @@ export class ThreeJsView extends View {
      * its `position` (`top-left`/`top-right`/`bottom-left`/`bottom-right`).
      */
     addOverlay(view) {
+        if (view.parent_id) {
+            const parentMesh = this.sceneObjects.get(view.parent_id)?.obj;
+            if (parentMesh) {
+                attachGroupView(view, parentMesh);
+            } else {
+                console.warn(
+                    'Cannot attach group: parent entity "' + view.parent_id + '" not found'
+                );
+            }
+            return view;
+        }
         view.mount(this.el);
         const el = view.el;
         el.style.position = 'absolute';
         el.style.zIndex = '20';
-        _applyOverlayAnchor(el, view.position || 'bottom-right');
+        applyOverlayAnchor(el, view.position || 'bottom-right');
         this._overlays.push(view);
         return view;
     }
@@ -225,7 +259,9 @@ export class ThreeJsView extends View {
 
     fitCamera() {
         if (!this.camera) return;
-        fitCamera(this.sceneObjects, this.camera, this.controls, this.sceneConfig?.space_dim || 3);
+        fitCamera(this.sceneObjects, this.camera, this.controls,
+            this.sceneConfig?.space_dim || 3,
+            this.width || window.innerWidth, this.height || window.innerHeight);
     }
 
     render() {
@@ -304,9 +340,10 @@ export class ThreeJsView extends View {
      */
     _applyCamera(cameraConfig) {
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
-        const viewAspect = (this.width > 0 && this.height > 0) ? this.width / this.height : null;
+        const viewWidth = this.width > 0 ? this.width : null;
+        const viewHeight = this.height > 0 ? this.height : null;
 
-        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null, viewAspect);
+        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null, viewWidth, viewHeight);
         this._interaction.setCamera(this.camera);
 
         const cc = cameraConfig || {};
@@ -478,11 +515,6 @@ export class ThreeJsView extends View {
         } else if (msg.type === 'controls_define') {
             this._log('init', 'controls_define controls=' + (msg.controls ? msg.controls.length : 0) + ' groups=' + (msg.groups ? msg.groups.length : 0));
             handleControlsDefine(msg);
-            const controls2 = msg.controls || [];
-            const groups = msg.groups || [];
-            for (const g of groups) {
-                if (g.parentId) attachGroup(g, controls2, this.sceneObjects);
-            }
         } else if (msg.type === 'controls_clear') {
             handleControlsClear();
             detachAll();

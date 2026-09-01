@@ -39,6 +39,47 @@ Three orthogonal concerns, one model:
    `(event)`, with drag-move coalescing + camera caching) — reading from the
    same registry.
 
+## View & layout model
+
+The layout tree is the single render path for **every** page — a single scene
+and a split layout differ only in their root:
+
+- `View` is the base for every pane/container (`SceneView`, `StackView`,
+  `SplitView`, `GroupView`, `MenuView`, and the `*View` control wrappers).
+- `SceneView` is a pane that renders a named scene; its `overlay` lists views
+  (e.g. a `GroupView`) that float over that pane's canvas, anchored by each
+  child's `position` (`EAnchor`).
+- `GroupView` is a titled `StackView` with an optional leading `icon`,
+  `icon_only` mode, and a borderless fold button — the **only** control-group
+  container (`add_control_group` builds one; the legacy fixed-panel group path
+  is retired).
+- `MenuView` is a hamburger `dropdown` or a permanent `bar` of options
+  (`EControlVariant.MENU` flattens its control children).
+
+The whole tree serializes to one `view_layout` message via
+`serialize_layout(root, name=..., overlay=[...])`, where `overlay` mounts views
+(e.g. global menus) in the full-screen **global overlay**; per-pane views ride a
+`SceneView`'s `overlay`.  These are the two overlay containers — per-pane
+(`SceneView.overlay` → `scene_view.children`) and global
+(`templates/overlay.js` singleton).
+
+## View-mode unification
+
+There is one view mode. A "single scene" is served as a layout whose root is a
+one-`SceneView` stack (`StackView("vertical", [SceneView(name)])`) merged with
+the global overlay (base scene `""` only) and per-scene overlays:
+
+- `Visualizer._scene_layout_for(scene_name)` resolves any scene to its
+  serialized `view_layout` (the base scene reuses the default layout).
+- The server always resolves a `view_layout` on `ready` (`layout` →
+  `_layout_callback`, else `_scene_layout_callback(scene_name)`) and the
+  frontend always renders through `_buildLayout` — there is no separate
+  single-scene bootstrap.
+- Overlay changes re-serialize and re-push the affected layout per session
+  (`_push_layout_updates`), so `add_control_group` / `add_menu` / dialogs update
+  connected browsers live (including `VisualizerApp` examples that call them in
+  `init()`, after connect).
+
 ## Event names
 
 Control events (→ `_control_callback`): `change`, `click`, `press`, `release`,

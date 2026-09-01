@@ -4,6 +4,7 @@
 
 import { StackView } from './stack-view.js';
 import { stackMainAxis } from './stack-size.js';
+import { createIconElement } from '../controls-panel.js';
 
 const HEADER_HEIGHT = 28; // px — approximate title-bar height
 
@@ -14,6 +15,10 @@ export class GroupView extends StackView {
         position = null,
         collapsed = false,
         scrollable = false,
+        icon = null,
+        icon_only = false,
+        parent_id = null,
+        id = null,
         children = [],
     } = {}) {
         super({ direction, children: [] });
@@ -21,6 +26,10 @@ export class GroupView extends StackView {
         this.position = position;
         this.collapsed = collapsed;
         this.scrollable = scrollable;
+        this.icon = icon;
+        this.icon_only = icon_only;
+        this.parent_id = parent_id;
+        this.groupId = id;
 
         this.el.classList.add('tanga-group');
         this._setupChrome();
@@ -63,17 +72,35 @@ export class GroupView extends StackView {
             this._header.style.flexShrink = '0';
         }
 
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'tanga-group-title';
-        titleSpan.textContent = this.title || 'Controls';
-        this._header.appendChild(titleSpan);
+        const titleWrap = document.createElement('div');
+        titleWrap.className = 'tanga-group-title-wrap';
+        Object.assign(titleWrap.style, {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+        });
+
+        if (this.icon) {
+            const icon = createIconElement(this.icon);
+            icon.classList.add('tanga-group-icon');
+            titleWrap.appendChild(icon);
+        }
+
+        if (!this.icon_only) {
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'tanga-group-title';
+            titleSpan.textContent = this.title || 'Controls';
+            titleWrap.appendChild(titleSpan);
+        }
+
+        this._header.appendChild(titleWrap);
 
         const toggleBtn = document.createElement('button');
-        toggleBtn.textContent = '▾';
+        toggleBtn.className = 'tanga-group-toggle';
         toggleBtn.title = 'Collapse / Expand';
         Object.assign(toggleBtn.style, {
             background: 'none',
-            border: '1px solid rgba(255,255,255,0.12)',
+            border: 'none',
             borderRadius: '3px',
             color: '#aaa',
             cursor: 'pointer',
@@ -85,10 +112,20 @@ export class GroupView extends StackView {
             alignItems: 'center',
             justifyContent: 'center',
         });
+
+        const updateFoldIcon = () => {
+            toggleBtn.replaceChildren(
+                createIconElement(
+                    this.collapsed ? 'material:expand_less' : 'material:expand_more'
+                )
+            );
+        };
+        updateFoldIcon();
+
         toggleBtn.addEventListener('click', () => {
             this.collapsed = !this.collapsed;
             this._applyCollapsed();
-            toggleBtn.textContent = this.collapsed ? '▴' : '▾';
+            updateFoldIcon();
         });
         this._header.appendChild(toggleBtn);
         this.el.appendChild(this._header);

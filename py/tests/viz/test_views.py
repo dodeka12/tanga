@@ -5,6 +5,8 @@
 
 import pytest
 
+from pytanga.viz import EAnchor
+from pytanga.viz._controls import EControlVariant
 from pytanga.viz._size import Size
 from pytanga.viz.views import (
     ButtonView,
@@ -12,6 +14,7 @@ from pytanga.viz.views import (
     ColorPickerView,
     DropdownView,
     GroupView,
+    MenuView,
     SceneView,
     SliderView,
     SpacerView,
@@ -175,6 +178,121 @@ class TestGroupView:
             is True
         )
 
+    def test_serialize_icon(self):
+        node = serialize_layout(GroupView("Actions", icon="material:settings"))["root"]
+        assert node["icon"] == "material:settings"
+        assert node["icon_only"] is False
+
+    def test_serialize_icon_omitted_when_none(self):
+        node = serialize_layout(GroupView("Actions"))["root"]
+        assert "icon" not in node
+
+    def test_serialize_icon_only(self):
+        node = serialize_layout(
+            GroupView("Actions", icon="material:settings", icon_only=True)
+        )["root"]
+        assert node["icon"] == "material:settings"
+        assert node["icon_only"] is True
+
+    def test_serialize_parent_id(self):
+        node = serialize_layout(GroupView("Actions", parent_id="sphere"))["root"]
+        assert node["parent_id"] == "sphere"
+
+    def test_serialize_parent_id_omitted_when_none(self):
+        node = serialize_layout(GroupView("Actions"))["root"]
+        assert "parent_id" not in node
+
+
+class TestMenuView:
+    def test_serialize_fields(self):
+        node = serialize_layout(MenuView("Actions", [ButtonView("b1", label="Go")]))[
+            "root"
+        ]
+        assert node["type"] == "menu"
+        assert node["trigger_icon"] is None
+        assert node["label"] == "Actions"
+        assert node["mode"] == "dropdown"
+        assert node["direction"] == "vertical"
+        assert node["position"] is None
+        assert node["children"][0]["type"] == "button_view"
+
+    def test_serialize_custom_trigger_icon(self):
+        node = serialize_layout(MenuView("Actions", trigger_icon="material:settings"))[
+            "root"
+        ]
+        assert node["trigger_icon"] == "material:settings"
+
+    def test_serialize_nested_child(self):
+        sub = MenuView("Sub", [SliderView("s1")])
+        node = serialize_layout(MenuView("Root", [sub]))["root"]
+        assert node["children"][0]["type"] == "menu"
+        assert node["children"][0]["label"] == "Sub"
+
+    def test_serialize_bar_mode(self):
+        node = serialize_layout(
+            MenuView("Bar", mode="bar", direction="horizontal", position="top-right")
+        )["root"]
+        assert node["mode"] == "bar"
+        assert node["direction"] == "horizontal"
+        assert node["position"] == "top-right"
+
+    def test_mode_validation(self):
+        with pytest.raises(ValueError, match="mode"):
+            MenuView("Menu", mode="popup")
+
+    def test_direction_validation(self):
+        with pytest.raises(ValueError, match="direction"):
+            MenuView("Menu", direction="diagonal")
+
+    def test_override_variant_forces_menu(self):
+        menu = MenuView(
+            "Menu",
+            [
+                ButtonView("b1", label="Go"),
+                SliderView("s1", label="S"),
+                CheckboxView("c1", label="C"),
+            ],
+        )
+        node = serialize_layout(menu)["root"]
+        assert [child["variant"] for child in node["children"]] == [
+            "menu",
+            "menu",
+            "menu",
+        ]
+
+    def test_override_variant_disabled(self):
+        menu = MenuView("Menu", [ButtonView("b1", label="Go")], override_variant=False)
+        node = serialize_layout(menu)["root"]
+        assert node["children"][0]["variant"] == "default"
+
+    def test_override_variant_recurses_into_submenu(self):
+        menu = MenuView("Menu", [MenuView("Sub", [ButtonView("b1", label="Go")])])
+        node = serialize_layout(menu)["root"]
+        assert node["children"][0]["type"] == "menu"
+        assert node["children"][0]["children"][0]["variant"] == "menu"
+
+
+class TestEAnchor:
+    def test_anchor_values(self):
+        assert [a.value for a in EAnchor] == [
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right",
+            "top",
+            "bottom",
+            "left",
+            "right",
+        ]
+
+    def test_group_view_serializes_anchor(self):
+        node = serialize_layout(GroupView("G", position=EAnchor.TOP_RIGHT))["root"]
+        assert node["position"] == "top-right"
+
+    def test_menu_view_serializes_anchor(self):
+        node = serialize_layout(MenuView("M", position=EAnchor.BOTTOM_LEFT))["root"]
+        assert node["position"] == "bottom-left"
+
 
 class TestControlViews:
     def test_slider_serialize(self):
@@ -212,6 +330,17 @@ class TestControlViews:
         assert node["type"] == "button_view"
         assert node["icon"] == "material:refresh"
         assert node["icon_only"] is True
+
+    def test_button_variant_serialize(self):
+        node = serialize_layout(
+            ButtonView("b1", label="Go", variant=EControlVariant.MENU)
+        )["root"]
+        assert node["type"] == "button_view"
+        assert node["variant"] == "menu"
+
+    def test_button_variant_defaults_to_default(self):
+        node = serialize_layout(ButtonView("b1", label="Go"))["root"]
+        assert node["variant"] == "default"
 
     def test_text_field_serialize(self):
         node = serialize_layout(
