@@ -106,7 +106,15 @@ const {camera_var} = new THREE.OrthographicCamera(
     0.1, 1000
 );
 {camera_var}.position.set(0, 0, 20);
-{camera_var}.lookAt(0, 0, 0);"""
+{camera_var}.lookAt(0, 0, 0);
+{camera_var}.userData._view2d = {{
+    xmin: _frustumSize * ({width_expr} / {height_expr}) / -2,
+    xmax: _frustumSize * ({width_expr} / {height_expr}) / 2,
+    ymin: -_frustumSize / 2,
+    ymax: _frustumSize / 2,
+    uniform: true,
+    border_px: 0,
+}};"""
     else:
         camera_js = f"""const {camera_var} = new THREE.PerspectiveCamera(
     50, {width_expr} / {height_expr}, 0.1, 1000
@@ -194,17 +202,31 @@ def js_resize_handler(
     height_expr: str,
     conditional: bool = False,
     container_expr: str = "",
+    space_dim: int = 3,
 ) -> str:
-    """Generate JS for window resize handler."""
+    """Generate JS for window resize handler.
+
+    For 2D scenes the orthographic frustum is recomputed from the stored
+    ``camera.userData._view2d`` rect (via the bundled ``applyOrthoFrustum``)
+    before the ``aspect``/``updateProjectionMatrix``/``setSize`` calls, so a
+    resize no longer stretches the view.
+    """
+    ortho_block = ""
+    if space_dim == 2:
+        ortho_block = (
+            f"    if ({camera_var}.isOrthographicCamera) {{\n"
+            f"        applyOrthoFrustum({camera_var}, rw, rh);\n"
+            f"    }}\n"
+        )
+
     if conditional:
         if not container_expr:
             return ""
-        else:
-            return f"""// Resize handler
+        return f"""// Resize handler
 window.addEventListener('resize', () => {{
     const rw = {container_expr}.clientWidth || window.innerWidth;
     const rh = {container_expr}.clientHeight || window.innerHeight;
-    {camera_var}.aspect = rw / rh;
+{ortho_block}    {camera_var}.aspect = rw / rh;
     {camera_var}.updateProjectionMatrix();
     {renderer_var}.setSize(rw, rh);
     {label_renderer_var}.setSize(rw, rh);
@@ -212,10 +234,12 @@ window.addEventListener('resize', () => {{
 
     return f"""// Resize handler
 window.addEventListener('resize', () => {{
-    {camera_var}.aspect = {width_expr} / {height_expr};
+    const rw = {width_expr};
+    const rh = {height_expr};
+{ortho_block}    {camera_var}.aspect = rw / rh;
     {camera_var}.updateProjectionMatrix();
-    {renderer_var}.setSize({width_expr}, {height_expr});
-    {label_renderer_var}.setSize({width_expr}, {height_expr});
+    {renderer_var}.setSize(rw, rh);
+    {label_renderer_var}.setSize(rw, rh);
 }});"""
 
 
@@ -275,6 +299,10 @@ function applyCameraConfig(camera, controls, cfg, w, h) {
             camera.right = f.right;
             camera.top = f.top;
             camera.bottom = f.bottom;
+            camera.userData._view2d = {
+                xmin: cfg.xmin, xmax: cfg.xmax, ymin: cfg.ymin, ymax: cfg.ymax,
+                uniform: cfg.uniform !== false, border_px: cfg.border_px || 0,
+            };
         }
         if (cfg.position) camera.position.set(cfg.position[0], cfg.position[1], cfg.position[2]);
         const t2 = cfg.target || [0, 0, 0];

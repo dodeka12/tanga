@@ -325,6 +325,8 @@ class Visualizer(_JupyterDisplayMixin):
                 entries.append(("row_add", view.on_row_add))
             if getattr(view, "on_column_add", None) is not None:
                 entries.append(("column_add", view.on_column_add))
+            if getattr(view, "on_row_delete", None) is not None:
+                entries.append(("row_delete", view.on_row_delete))
             for event, h in entries:
                 self._handler_registry.register(view.id, h, event=event)
             if entries:
@@ -2440,6 +2442,62 @@ class Visualizer(_JupyterDisplayMixin):
         _set_control_value(ctrl, value)
         self._push_control_update(scene_name, cid, get_control_value(ctrl))
 
+    def undo_table(self, cid: str) -> bool:
+        """Undo the last edit of the table control with id *cid*.
+
+        Resolves *cid* across panel controls and layout views; raises
+        :class:`KeyError` when there is no such ``Table`` control.  On success
+        pushes a ``control_update`` so the browser grid re-syncs.
+        """
+        from ._controls import Table, get_control_value
+
+        ref = self._resolve_control(cid)
+        if ref is None or not isinstance(ref.control, Table):
+            raise KeyError(f"Table control {cid!r} not found")
+        if ref.control.undo():
+            self._push_control_update(ref.scene, cid, get_control_value(ref.control))
+            return True
+        return False
+
+    def redo_table(self, cid: str) -> bool:
+        """Redo the last undone edit of the table control with id *cid*."""
+        from ._controls import Table, get_control_value
+
+        ref = self._resolve_control(cid)
+        if ref is None or not isinstance(ref.control, Table):
+            raise KeyError(f"Table control {cid!r} not found")
+        if ref.control.redo():
+            self._push_control_update(ref.scene, cid, get_control_value(ref.control))
+            return True
+        return False
+
+    def clear_table_history(self, cid: str) -> None:
+        """Clear the undo/redo history of the table control with id *cid*."""
+        from ._controls import Table
+
+        ref = self._resolve_control(cid)
+        if ref is None or not isinstance(ref.control, Table):
+            raise KeyError(f"Table control {cid!r} not found")
+        ref.control.clear_history()
+
+    def can_undo_table(self, cid: str) -> bool:
+        """Return whether the table control with id *cid* can be undone."""
+        from ._controls import Table
+
+        ref = self._resolve_control(cid)
+        if ref is None or not isinstance(ref.control, Table):
+            raise KeyError(f"Table control {cid!r} not found")
+        return ref.control.can_undo
+
+    def can_redo_table(self, cid: str) -> bool:
+        """Return whether the table control with id *cid* can be redone."""
+        from ._controls import Table
+
+        ref = self._resolve_control(cid)
+        if ref is None or not isinstance(ref.control, Table):
+            raise KeyError(f"Table control {cid!r} not found")
+        return ref.control.can_redo
+
     def add_dropdown(
         self,
         cid: str,
@@ -2719,10 +2777,13 @@ class Visualizer(_JupyterDisplayMixin):
         rows: list[list[str]] | None = None,
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
+        max_history: int = 100,
         tooltip: str = "",
         on_cell_change: Any = None,
         on_row_add: Any = None,
         on_column_add: Any = None,
+        on_row_delete: Any = None,
         parent_id: str | None = None,
     ) -> str:
         """Add an editable table (tabular data) control."""
@@ -2734,10 +2795,13 @@ class Visualizer(_JupyterDisplayMixin):
             rows=rows,
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
+            max_history=max_history,
             tooltip=tooltip,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
             parent_id=parent_id,
         )
 
@@ -2751,10 +2815,13 @@ class Visualizer(_JupyterDisplayMixin):
         rows: list[list[str]] | None = None,
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
+        max_history: int = 100,
         tooltip: str = "",
         on_cell_change: Any = None,
         on_row_add: Any = None,
         on_column_add: Any = None,
+        on_row_delete: Any = None,
         parent_id: str | None = None,
     ) -> str:
         from ._controls import Table
@@ -2766,10 +2833,13 @@ class Visualizer(_JupyterDisplayMixin):
             rows=rows or [],
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
+            max_history=max_history,
             tooltip=tooltip,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
             parent_id=parent_id,
         )
         self._scenes[scene_name].add_control(ctrl)
@@ -2779,6 +2849,8 @@ class Visualizer(_JupyterDisplayMixin):
             self._handler_registry.register(cid, on_row_add, event="row_add")
         if on_column_add is not None:
             self._handler_registry.register(cid, on_column_add, event="column_add")
+        if on_row_delete is not None:
+            self._handler_registry.register(cid, on_row_delete, event="row_delete")
         self._push_controls(scene_name)
         return cid
 
@@ -3537,9 +3609,12 @@ class Visualizer(_JupyterDisplayMixin):
         """Handle an incoming control event from the frontend."""
         from ._controls import (
             ControlEvent,
+            Table,
             TableCellChange,
             TableColumnAdd,
             TableRowAdd,
+            TableRowsDelete,
+            get_control_value,
         )
 
         browser_id = payload.get("browser_id")
@@ -3571,17 +3646,18 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:cell_change":
             cid = payload.get("control_id")
+            nested = payload.get("value")
+            table_payload = nested if isinstance(nested, dict) else payload
+            row = int(table_payload.get("row", 0))
+            col = int(table_payload.get("col", 0))
+            value = str(table_payload.get("value", ""))
+            ref = self._resolve_control(cid) if cid else None
+            if ref is not None and isinstance(ref.control, Table):
+                ref.control.set_cell(row, col, value)
             handler = self._handler_registry.get(cid, "cell_change") if cid else None
             if handler is not None:
                 try:
-                    await handler(
-                        TableCellChange(
-                            row=int(payload.get("row", 0)),
-                            col=int(payload.get("col", 0)),
-                            value=str(payload.get("value", "")),
-                        ),
-                        event,
-                    )
+                    await handler(TableCellChange(row=row, col=col, value=value), event)
                 except Exception:
                     import logging
 
@@ -3592,16 +3668,17 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:row_add":
             cid = payload.get("control_id")
+            nested = payload.get("value")
+            table_payload = nested if isinstance(nested, dict) else payload
+            row = int(table_payload.get("row", 0))
+            values = [str(v) for v in (table_payload.get("values") or [])]
+            ref = self._resolve_control(cid) if cid else None
+            if ref is not None and isinstance(ref.control, Table):
+                ref.control.insert_row(row, values)
             handler = self._handler_registry.get(cid, "row_add") if cid else None
             if handler is not None:
                 try:
-                    await handler(
-                        TableRowAdd(
-                            row=int(payload.get("row", 0)),
-                            values=[str(v) for v in (payload.get("values") or [])],
-                        ),
-                        event,
-                    )
+                    await handler(TableRowAdd(row=row, values=values), event)
                 except Exception:
                     import logging
 
@@ -3612,22 +3689,65 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:column_add":
             cid = payload.get("control_id")
+            nested = payload.get("value")
+            table_payload = nested if isinstance(nested, dict) else payload
+            col = int(table_payload.get("col", 0))
+            header = str(table_payload.get("header", ""))
+            values = [str(v) for v in (table_payload.get("values") or [])]
+            ref = self._resolve_control(cid) if cid else None
+            if ref is not None and isinstance(ref.control, Table):
+                ref.control.insert_column(col, header, values)
             handler = self._handler_registry.get(cid, "column_add") if cid else None
             if handler is not None:
                 try:
                     await handler(
-                        TableColumnAdd(
-                            col=int(payload.get("col", 0)),
-                            header=str(payload.get("header", "")),
-                            values=[str(v) for v in (payload.get("values") or [])],
-                        ),
-                        event,
+                        TableColumnAdd(col=col, header=header, values=values), event
                     )
                 except Exception:
                     import logging
 
                     logging.getLogger(__name__).exception(
                         "Error in table column handler for %r", cid
+                    )
+            return
+
+        if msg_type == "control:row_delete":
+            cid = payload.get("control_id")
+            nested = payload.get("value")
+            table_payload = nested if isinstance(nested, dict) else payload
+            rows = [int(r) for r in (table_payload.get("rows") or [])]
+            ref = self._resolve_control(cid) if cid else None
+            if ref is not None and isinstance(ref.control, Table):
+                ref.control.delete_rows(rows)
+            handler = self._handler_registry.get(cid, "row_delete") if cid else None
+            if handler is not None:
+                try:
+                    await handler(TableRowsDelete(rows=rows), event)
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Error in table row delete handler for %r", cid
+                    )
+            return
+
+        if msg_type == "control:undo":
+            cid = payload.get("control_id")
+            ref = self._resolve_control(cid) if cid else None
+            if ref is not None and isinstance(ref.control, Table):
+                if ref.control.undo():
+                    self._push_control_update(
+                        ref.scene, cid, get_control_value(ref.control)
+                    )
+            return
+
+        if msg_type == "control:redo":
+            cid = payload.get("control_id")
+            ref = self._resolve_control(cid) if cid else None
+            if ref is not None and isinstance(ref.control, Table):
+                if ref.control.redo():
+                    self._push_control_update(
+                        ref.scene, cid, get_control_value(ref.control)
                     )
             return
 

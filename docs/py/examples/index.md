@@ -16,7 +16,7 @@ uv run python py/examples/<path>.py
 
 - **ActPoint** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
-- **add_table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md)
+- **add_table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **affine** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
@@ -88,6 +88,8 @@ uv run python py/examples/<path>.py
 
 - **capped cone** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
 
+- **cell editing** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
+
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
 - **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
@@ -116,7 +118,7 @@ uv run python py/examples/<path>.py
 
 - **context manager** — [Interactive Visualizer](ga/jupyter/interactive.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
-- **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
 
@@ -241,6 +243,8 @@ uv run python py/examples/<path>.py
 - **IPNS** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
 - **KaTeX** — [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md), [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
+
+- **keyboard navigation** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **keyframe** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
@@ -378,6 +382,8 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
+- **redo** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
+
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
 - **remove** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
@@ -391,6 +397,8 @@ uv run python py/examples/<path>.py
 - **Rotor** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
 - **rotor estimation** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
+
+- **row delete** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **scene** — [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
 
@@ -440,13 +448,13 @@ uv run python py/examples/<path>.py
 
 - **sweep** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
-- **table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
+- **table** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **TableView** — [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **tabs** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
-- **tabular data** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
+- **tabular data** — [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
 - **tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
@@ -469,6 +477,8 @@ uv run python py/examples/<path>.py
 - **two points** — [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
 - **two-body** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
+
+- **undo** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **up vector** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 

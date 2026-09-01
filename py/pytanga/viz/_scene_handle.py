@@ -488,10 +488,13 @@ class VizSceneHandle(_JupyterDisplayMixin):
         rows: list[list[str]] | None = None,
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
+        max_history: int = 100,
         tooltip: str = "",
         on_cell_change: Any = None,
         on_row_add: Any = None,
         on_column_add: Any = None,
+        on_row_delete: Any = None,
         parent_id: str | None = None,
     ) -> str:
         """Add an editable table (tabular data) control to this scene."""
@@ -503,10 +506,13 @@ class VizSceneHandle(_JupyterDisplayMixin):
             rows=rows,
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
+            max_history=max_history,
             tooltip=tooltip,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
             parent_id=parent_id,
         )
 
@@ -625,6 +631,26 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def set_control_value(self, cid: str, value: Any) -> None:
         """Update a control's value in place (see :meth:`Visualizer.set_control_value`)."""
         self._viz.set_control_value(cid, value, scene_name=self._name)
+
+    def undo_table(self, cid: str) -> bool:
+        """Undo the last edit of the table control (see :meth:`Visualizer.undo_table`)."""
+        return self._viz.undo_table(cid)
+
+    def redo_table(self, cid: str) -> bool:
+        """Redo the last undone edit of the table control (see :meth:`Visualizer.redo_table`)."""
+        return self._viz.redo_table(cid)
+
+    def clear_table_history(self, cid: str) -> None:
+        """Clear the table control's undo/redo history."""
+        self._viz.clear_table_history(cid)
+
+    def can_undo_table(self, cid: str) -> bool:
+        """Return whether the table control can be undone."""
+        return self._viz.can_undo_table(cid)
+
+    def can_redo_table(self, cid: str) -> bool:
+        """Return whether the table control can be redone."""
+        return self._viz.can_redo_table(cid)
 
     def update_control(self, ctrl_id: str, **fields: Any) -> None:
         """Mutate fields of a stored control (see :meth:`Visualizer.update_control`)."""

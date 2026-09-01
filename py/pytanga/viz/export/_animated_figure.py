@@ -313,6 +313,7 @@ def _build_animated_figure_adapter(
             height_expr=dim_h,
             conditional=not responsive,
             container_expr="figContainer" if responsive else "",
+            space_dim=space_dim,
         ),
         "",
         js_title_overlay(
@@ -436,6 +437,7 @@ def _build_animated_fullpage_adapter(
             camera_var="figCamera",
             width_expr="window.innerWidth",
             height_expr="window.innerHeight",
+            space_dim=space_dim,
         ),
         "",
         js_title_overlay(

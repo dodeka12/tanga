@@ -40,6 +40,9 @@ _EVENT_MSG_MAP = {
     "cell_change": "control:cell_change",
     "row_add": "control:row_add",
     "column_add": "control:column_add",
+    "row_delete": "control:row_delete",
+    "undo": "control:undo",
+    "redo": "control:redo",
     "group_toggle": "control:group_toggle",
     "close": "close",
     "file_browser_navigate": "file_browser_navigate",
@@ -167,6 +170,11 @@ def _ws_msg_brief(payload: Any) -> str:
         return (
             f"control:column_add id={obj.get('control_id', '')!r} "
             f"col={obj.get('col', '?')} ({size}B)"
+        )
+    if t == "control:row_delete":
+        return (
+            f"control:row_delete id={obj.get('control_id', '')!r} "
+            f"rows={obj.get('rows', '?')} ({size}B)"
         )
     return f"type={t} ({size}B)"
 
@@ -879,7 +887,9 @@ class VizServer:
                                     if msg_browser_id:
                                         event_data["browser_id"] = msg_browser_id
                                     asyncio.create_task(
-                                        self._interaction_callback(event_name, event_data)
+                                        self._interaction_callback(
+                                            event_name, event_data
+                                        )
                                     )
                             elif self._control_callback is not None and target:
                                 event_data["control_id"] = target
@@ -897,6 +907,7 @@ class VizServer:
                             "control:cell_change",
                             "control:row_add",
                             "control:column_add",
+                            "control:row_delete",
                             "control:group_toggle",
                             "control:press",
                             "control:release",

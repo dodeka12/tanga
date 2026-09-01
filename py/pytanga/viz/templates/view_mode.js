@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 
-import { finiteAspect, orthoFrustum } from './camera-fit.js';
+import { finiteAspect, orthoFrustum, applyOrthoFrustum } from './camera-fit.js';
 
 /**
  * Create a camera appropriate for the given space dimension.
@@ -28,55 +28,6 @@ function _newOrthographic() {
 
 function _newPerspective(aspect, fov = 50) {
     return new THREE.PerspectiveCamera(fov, aspect, 0.1, 1000);
-}
-
-/**
- * Set the 2D orthographic frustum (left/right/top/bottom) for the given
- * viewport size.  Recomputed from the stored fit (``camera.userData._view2d``)
- * when available; otherwise the current full height is preserved.  Never
- * writes NaN/Infinity — a corrupt frustum is reset to a sane default box.
- *
- * @param {THREE.OrthographicCamera} camera
- * @param {number} width   viewport width in CSS pixels
- * @param {number} height  viewport height in CSS pixels
- */
-function _applyOrthoFrustum(camera, width, height) {
-    const aspect = finiteAspect(width, height);
-    const v2d = camera.userData?._view2d;
-    const finiteRect = v2d
-        && Number.isFinite(v2d.xmin) && Number.isFinite(v2d.xmax)
-        && Number.isFinite(v2d.ymin) && Number.isFinite(v2d.ymax);
-
-    if (finiteRect) {
-        const f = orthoFrustum(
-            v2d.xmin, v2d.xmax, v2d.ymin, v2d.ymax,
-            v2d.uniform !== false, v2d.border_px || 0, width, height
-        );
-        camera.left = f.left;
-        camera.right = f.right;
-        camera.top = f.top;
-        camera.bottom = f.bottom;
-        return;
-    }
-
-    // Fall back to preserving the current full height, but never propagate a
-    // non-finite/corrupt frustum (Math.max(NaN, …) === NaN).
-    const extX = Math.abs(camera.right - camera.left);
-    const extY = Math.abs(camera.top - camera.bottom);
-    if (!Number.isFinite(extX) || !Number.isFinite(extY) || extX <= 0 || extY <= 0) {
-        const height = 10;  // sane default full height
-        camera.left = -height * aspect / 2;
-        camera.right = height * aspect / 2;
-        camera.top = height / 2;
-        camera.bottom = -height / 2;
-        return;
-    }
-
-    const fit = Math.max(extX / aspect, extY);
-    camera.left = -fit * aspect / 2;
-    camera.right = fit * aspect / 2;
-    camera.top = fit / 2;
-    camera.bottom = -fit / 2;
 }
 
 /**
@@ -258,7 +209,7 @@ export function handleResize(camera, renderer, labelRenderer, spaceDim, width, h
     if (!Number.isFinite(aspect)) return;
 
     if (spaceDim === 2 && camera.isOrthographicCamera) {
-        _applyOrthoFrustum(camera, width, height);
+        applyOrthoFrustum(camera, width, height);
     }
 
     camera.aspect = aspect;
