@@ -105,6 +105,6 @@ def test_set_layout_registers_table_handlers() -> None:
         )
     )
 
-    assert viz._handler_registry.get("tbl") is _on_cell
-    assert viz._handler_registry.get("__row_add__tbl") is _on_row
-    assert viz._handler_registry.get("__column_add__tbl") is _on_col
+    assert viz._handler_registry.get("tbl", "cell_change") is _on_cell
+    assert viz._handler_registry.get("tbl", "row_add") is _on_row
+    assert viz._handler_registry.get("tbl", "column_add") is _on_col

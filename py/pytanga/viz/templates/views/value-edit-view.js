@@ -17,6 +17,7 @@ export class ValueEditView extends ControlView {
     render() {
         return createValueEdit({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             min: this.min,

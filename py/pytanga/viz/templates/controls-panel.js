@@ -4,9 +4,9 @@
 // messages defined in Phase 1.
 
 import { openFileBrowser } from './file-browser.js';
+import { sendEvent } from './events.js';
 
 // ── Module state ─────────────────────────────────────────────
-let _ws = null;
 let _rootEl = null;            // #tanga-control-root (fixed container for all panels)
 let _panelEls = [];            // all active panel wrapper elements
 let _toggleBtn = null;         // hide/restore toggle button
@@ -23,20 +23,15 @@ const THROTTLE_MS = 40;
 // ── Public API (called from viewer.js) ──────────────────────
 
 /**
- * Store the WebSocket instance so the panel can send events back to Python.
- * Called from viewer.js after the WebSocket connects.
- */
-export function setWebSocket(ws) {
-    _ws = ws;
-}
-
-/**
  * Apply a server-driven `control_update` to a rendered control's DOM value
  * without firing a `control:change` event.  No-ops for unknown/unrendered ids.
  */
 export function applyControlValue(id, value) {
     const entry = _controlRegistry[id];
-    if (!entry) return;
+    if (!entry) {
+        console.debug('[tanga] control_update for unknown id:', id);
+        return;
+    }
     entry.apply(value);
 }
 
@@ -110,13 +105,19 @@ function _ensureRoot() {
     document.body.appendChild(_rootEl);
 }
 
-function _destroyAll() {
+function _destroyAll({ owner = 'panel', scene = null } = {}) {
     for (const el of _panelEls) {
         el.remove();
     }
     _panelEls = [];
     _groupToggleCallbacks = {};
-    _controlRegistry = {};
+    // Clear only entries owned by the scope being rebuilt (default: panel),
+    // leaving layout/banner view controls intact.
+    for (const [id, entry] of Object.entries(_controlRegistry)) {
+        if (entry.owner === owner && (scene === null || entry.scene === scene)) {
+            delete _controlRegistry[id];
+        }
+    }
     // Clear throttle timers
     for (const k of Object.keys(_throttleTimers)) {
         clearTimeout(_throttleTimers[k]);
@@ -486,6 +487,7 @@ export function createFileChooser(ctrl) {
     row.appendChild(browse);
     wrapper.appendChild(row);
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'file_chooser',
         apply: (value) => { input.value = value == null ? '' : String(value); },
     };
@@ -548,6 +550,7 @@ export function createSlider(ctrl) {
     // Stop propagation to prevent orbit control interference
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'slider',
         apply: (value) => {
             const coerced = Number(value);
@@ -586,6 +589,7 @@ export function createDropdown(ctrl) {
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'dropdown',
         apply: (value) => { select.value = value == null ? '' : String(value); },
     };
@@ -645,6 +649,7 @@ export function createTextField(ctrl) {
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'text',
         apply: (value) => { input.value = value == null ? '' : String(value); },
     };
@@ -671,6 +676,7 @@ export function createTextArea(ctrl) {
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'textarea',
         apply: (value) => { input.value = value == null ? '' : String(value); },
     };
@@ -696,6 +702,7 @@ export function createColorPicker(ctrl) {
     _attachDebouncedChange(input, ctrl.id);
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'color',
         apply: (value) => { input.value = value == null ? '#ffffff' : String(value); },
     };
@@ -730,6 +737,7 @@ export function createCheckbox(ctrl) {
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'checkbox',
         apply: (value) => { input.checked = !!value; },
     };
@@ -854,6 +862,7 @@ export function createValueEdit(ctrl) {
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
 
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'value_edit',
         apply: (v) => {
             value = round(clamp(Number(v)));
@@ -976,6 +985,7 @@ export function createTable(ctrl) {
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
 
     _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
         kind: 'table',
         apply: (value) => {
             if (!table || !value) return;
@@ -992,13 +1002,25 @@ export function createTable(ctrl) {
 
 // ── WebSocket event dispatch ────────────────────────────────
 
+const _CONTROL_EVENTS = {
+    'control:change': 'change',
+    'control:click': 'click',
+    'control:press': 'press',
+    'control:release': 'release',
+    'control:cell_change': 'cell_change',
+    'control:row_add': 'row_add',
+    'control:column_add': 'column_add',
+    'control:group_toggle': 'group_toggle',
+};
+
 export function sendControlEvent(type, controlId, value) {
-    if (!_ws || _ws.readyState !== WebSocket.OPEN) return;
-    const msg = { type, control_id: controlId };
+    const event = _CONTROL_EVENTS[type];
+    if (!event) return;
+    const data = {};
     if (value !== null && value !== undefined) {
-        msg.value = value;
+        data.value = value;
     }
-    _ws.send(JSON.stringify(msg));
+    sendEvent(controlId, event, data);
 }
 
 /**

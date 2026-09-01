@@ -3,18 +3,12 @@
 
 import { getOverlay } from './overlay.js';
 import { BannerView } from './views/banner-view.js';
+import { sendEvent } from './events.js';
 
-let _ws = null;
 const _banners = new Map();
 
-export function setWebSocket(ws) {
-    _ws = ws;
-}
-
 function _notifyClosed(id) {
-    if (_ws && _ws.readyState === WebSocket.OPEN) {
-        _ws.send(JSON.stringify({ type: 'banner_closed', id }));
-    }
+    sendEvent(id, 'close');
 }
 
 export function handleBannerDefine(msg) {

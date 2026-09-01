@@ -7,21 +7,19 @@ window.__tanga_ready = true;
 
 import { ThreeJsView } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
-import { setWebSocket, applyControlValue } from './controls-panel.js';
+import { applyControlValue } from './controls-panel.js';
+import { setWebSocket as setEventsWebSocket } from './events.js';
 import {
-    setWebSocket as setBannerWebSocket,
     handleBannerDefine,
     handleBannerRemove,
     handleBannerClear,
 } from './banner.js';
 import {
-    setWebSocket as setFileBrowserWebSocket,
     handleFileBrowserShow,
     handleFileBrowserListing,
     handleFileBrowserClose,
 } from './file-browser.js';
 import {
-    setWebSocket as setEditorWebSocket,
     handleEditorDefine,
 } from './editor.js';
 import { updateLineResolutions } from './renderers/utils.js';
@@ -194,10 +192,7 @@ function connectWebSocket() {
             || new URLSearchParams(window.location.search).get('token');
         _log('ws-open', 'attempt=' + _reconnectAttempts + ' token=' + (pageToken || 'none'));
         setStatus('connected');
-        setWebSocket(ws);
-        setBannerWebSocket(ws);
-        setFileBrowserWebSocket(ws);
-        setEditorWebSocket(ws);
+        setEventsWebSocket(ws);
         _setWsOnAllViews(ws);
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);

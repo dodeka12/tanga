@@ -2,9 +2,37 @@
 // vertically, horizontally, or wraps.  Content-size math lives in `stack-size.js`.
 
 import { View } from './view.js';
-import { GAP, stackMinSize, stackPreferredSize } from './stack-size.js';
+import { GAP, stackMainAxis, stackMinSize, stackPreferredSize } from './stack-size.js';
 
 const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
+
+function _injectScrollStyles() {
+    if (document.getElementById('tanga-scroll-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'tanga-scroll-styles';
+    style.textContent = `
+        .tanga-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.06);
+        }
+        .tanga-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .tanga-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+        }
+        .tanga-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 4px;
+        }
+        .tanga-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 /**
  * A flex container of `View` children laid out in normal flow (no splitters).
@@ -12,7 +40,7 @@ const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
  * (row that wraps to a new line when out of space).
  */
 export class StackView extends View {
-    constructor({ direction = 'vertical', children = [] } = {}) {
+    constructor({ direction = 'vertical', scrollable = false, children = [] } = {}) {
         super();
         if (!DIRECTIONS.includes(direction)) {
             throw new Error(
@@ -20,12 +48,14 @@ export class StackView extends View {
             );
         }
         this.direction = direction;
+        this.scrollable = scrollable;
         this.children = [];
         this._childSubs = new Map(); // view -> AbortController
         this._content = this.el; // children mount here (GroupView retargets this)
 
         this.el.classList.add('tanga-stack', `tanga-stack-${direction}`);
         this._applyFlex();
+        this._applyScroll();
 
         for (const child of children) this.addChild(child);
     }
@@ -37,6 +67,18 @@ export class StackView extends View {
         s.gap = `${GAP}px`;
         s.flexDirection = this.direction === 'vertical' ? 'column' : 'row';
         s.flexWrap = this.direction === 'wrap' ? 'wrap' : 'nowrap';
+    }
+
+    _applyScroll() {
+        if (!this.scrollable) return;
+        _injectScrollStyles();
+        this._content.classList.add('tanga-scroll');
+        Object.assign(this._content.style, {
+            overflow: 'auto',
+            minWidth: '0',
+            minHeight: '0',
+            flex: '1 1 auto',
+        });
     }
 
     addChild(view) {
@@ -62,14 +104,22 @@ export class StackView extends View {
     }
 
     // A stack's minimum is at least what its children need (content sizing).
+    // A scrollable stack instead decouples from content along its main axis so
+    // an enclosing SplitView may shrink it and the content scrolls.
     minSizePx(axis, available) {
         const explicit = super.minSizePx(axis, available);
+        if (this.scrollable && axis === stackMainAxis(this.direction)) {
+            return explicit;
+        }
         return Math.max(explicit, stackMinSize(axis, this.direction, this.children, available));
     }
 
     preferredPx(axis, available) {
         const explicit = super.preferredPx(axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
+        if (this.scrollable && axis === stackMainAxis(this.direction)) {
+            return null;
+        }
         return stackPreferredSize(axis, this.direction, this.children, available);
     }
 

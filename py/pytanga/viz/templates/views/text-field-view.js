@@ -13,6 +13,7 @@ export class TextFieldView extends ControlView {
     render() {
         return createTextField({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             value: this.value,

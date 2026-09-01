@@ -24,7 +24,6 @@ from pytanga.viz.views import (
     View,
     iter_scene_names,
     serialize_layout,
-    set_control_view_value,
 )
 
 
@@ -169,6 +168,13 @@ class TestGroupView:
         assert node["collapsed"] is False
         assert node["children"][0]["type"] == "spacer"
 
+    def test_scrollable_serialize(self):
+        assert serialize_layout(GroupView("Actions"))["root"]["scrollable"] is False
+        assert (
+            serialize_layout(GroupView("Actions", scrollable=True))["root"]["scrollable"]
+            is True
+        )
+
 
 class TestControlViews:
     def test_slider_serialize(self):
@@ -273,11 +279,26 @@ class TestControlViews:
         assert node["allow_add_columns"] is True
 
 
-def test_table_view_set_control_view_value() -> None:
+def test_table_view_set_control_value() -> None:
+    from pytanga.viz._controls import set_control_value
+
     view = TableView("tbl", columns=["x"], rows=[["1"]])
-    set_control_view_value(view, {"columns": ["y", "z"], "rows": [[2], [3]]})
+    set_control_value(view.control, {"columns": ["y", "z"], "rows": [[2], [3]]})
     assert view.columns == ["y", "z"]
     assert view.rows == [["2"], ["3"]]
+
+
+def test_view_serialize_matches_control_fields() -> None:
+    from pytanga.viz._controls import Slider, _serialize_one_control
+
+    view = SliderView("s1", label="Radius", min=0.0, max=5.0, step=0.1, value=2.0)
+    node = serialize_layout(view)["root"]
+    panel = _serialize_one_control(
+        Slider(id="s1", label="Radius", min=0.0, max=5.0, step=0.1, value=2.0)
+    )
+    for key, val in panel.items():
+        if key != "kind":
+            assert node[key] == val
 
 
 class TestStackView:
@@ -297,6 +318,13 @@ class TestStackView:
         assert len(node["children"]) == 2
         assert node["children"][0]["type"] == "spacer"
 
+    def test_scrollable_serialize(self):
+        assert serialize_layout(StackView("vertical"))["root"]["scrollable"] is False
+        assert (
+            serialize_layout(StackView("vertical", scrollable=True))["root"]["scrollable"]
+            is True
+        )
+
 
 class TestSplitView:
     def test_requires_two_children(self):
@@ -314,6 +342,17 @@ class TestSplitView:
                 [SceneView("a"), SceneView("b")],
                 sizes=[Size.px(1)],
             )
+
+    def test_accepts_arbitrary_child_count(self):
+        # A single split holds any number of children (N − 1 splitters on the
+        # frontend); only a lower bound of 2 is enforced here.
+        layout = SplitView(
+            "horizontal",
+            [SceneView("a"), SpacerView(), SceneView("b"), SceneView("c")],
+        )
+        node = serialize_layout(layout)["root"]
+        assert len(node["children"]) == 4
+        assert node["sizes"] == [None, None, None, None]
 
 
 class TestSerialize:
@@ -363,6 +402,24 @@ class TestSerialize:
         assert inner["children"][0]["scene"] == "side"
         assert inner["children"][1]["type"] == "group"
         assert inner["children"][1]["title"] == "Controls"
+
+    def test_three_children_serialize_in_order(self):
+        layout = SplitView(
+            orientation="horizontal",
+            sizes=[Size.percent(25), Size.percent(50), Size.percent(25)],
+            children=[SceneView("a"), SceneView("b"), SceneView("c")],
+        )
+        root = serialize_layout(layout)["root"]
+
+        assert root["type"] == "split"
+        assert root["orientation"] == "horizontal"
+        assert root["sizes"] == [
+            {"value": 25.0, "unit": "%"},
+            {"value": 50.0, "unit": "%"},
+            {"value": 25.0, "unit": "%"},
+        ]
+        assert [c["scene"] for c in root["children"]] == ["a", "b", "c"]
+        assert all(c["type"] == "scene_view" for c in root["children"])
 
     def test_ids_are_unique_and_deterministic(self):
         layout = SplitView("horizontal", [SceneView("a"), SceneView("b"), SpacerView()])

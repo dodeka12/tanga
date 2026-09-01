@@ -29,6 +29,23 @@ from aiohttp import web
 
 logger = logging.getLogger("tanga.viz.server")
 
+# Unified client→server event envelope: short event name → legacy message type
+# routed to the control callback.  Interaction events (``interaction:*``) are
+# routed to the interaction callback instead (coalescing dispatcher).
+_EVENT_MSG_MAP = {
+    "change": "control:change",
+    "click": "control:click",
+    "press": "control:press",
+    "release": "control:release",
+    "cell_change": "control:cell_change",
+    "row_add": "control:row_add",
+    "column_add": "control:column_add",
+    "group_toggle": "control:group_toggle",
+    "close": "close",
+    "file_browser_navigate": "file_browser_navigate",
+    "file_browser_select": "file_browser_select",
+}
+
 
 class PortInUseError(RuntimeError):
     """Raised when the viewer server cannot bind its port because it is in use."""
@@ -851,6 +868,29 @@ class VizServer:
                                     self._pending_screenshots[rid].set_result(
                                         data["data"]
                                     )
+                        elif msg_type == "event":
+                            # Unified envelope: { type, target, event, data }.
+                            target = data.get("target")
+                            event_name = data.get("event")
+                            event_data = data.get("data") or {}
+                            if event_name and event_name.startswith("interaction:"):
+                                if self._interaction_callback is not None:
+                                    event_data["object_id"] = target
+                                    if msg_browser_id:
+                                        event_data["browser_id"] = msg_browser_id
+                                    asyncio.create_task(
+                                        self._interaction_callback(event_name, event_data)
+                                    )
+                            elif self._control_callback is not None and target:
+                                event_data["control_id"] = target
+                                if msg_browser_id:
+                                    event_data["browser_id"] = msg_browser_id
+                                asyncio.create_task(
+                                    self._control_callback(
+                                        _EVENT_MSG_MAP.get(event_name, event_name),
+                                        event_data,
+                                    )
+                                )
                         elif msg_type in (
                             "control:change",
                             "control:click",

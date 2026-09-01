@@ -366,6 +366,9 @@
             "Multi Scene": "py/examples/viz/scenes/multi_scene.md"
           },
           {
+            "Multi Split": "py/examples/viz/scenes/multi_split.md"
+          },
+          {
             "Nested Groups": "py/examples/viz/scenes/nested_groups.md"
           },
           {
@@ -376,6 +379,9 @@
           },
           {
             "Table Split": "py/examples/viz/scenes/table_split.md"
+          },
+          {
+            "Toolbar": "py/examples/viz/scenes/toolbar.md"
           }
         ]
       },

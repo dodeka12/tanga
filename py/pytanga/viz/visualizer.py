@@ -16,7 +16,7 @@ import signal
 import threading
 import time
 import warnings
-from typing import TYPE_CHECKING, Any, Iterator, Sequence
+from typing import TYPE_CHECKING, Any, Iterator, NamedTuple, Sequence
 
 if TYPE_CHECKING:
     from ._object_ref import VizObjectRef
@@ -52,9 +52,7 @@ from .views import (
     ControlView,
     SceneView,
     View,
-    get_control_view_value,
     serialize_layout,
-    set_control_view_value,
 )
 
 logger = logging.getLogger("tanga.viz")
@@ -75,6 +73,19 @@ def _find_free_port(host: str) -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((bind_host, 0))
         return int(sock.getsockname()[1])
+
+
+class ControlRef(NamedTuple):
+    """A control resolved by id, regardless of placement.
+
+    ``placement`` is ``"panel"`` (a :class:`~pytanga.viz._controls.Control`
+    stored in a scene) or ``"view"`` (a layout ``ControlView``).  ``scene`` is
+    the owning scene name (``""`` for layout views, which are global).
+    """
+
+    placement: str
+    control: Any
+    scene: str
 
 
 class Visualizer(_JupyterDisplayMixin):
@@ -179,15 +190,13 @@ class Visualizer(_JupyterDisplayMixin):
         # scene name.  Banner ids are unique across scopes (auto-generated).
         self._banners: dict[str | None, dict[str, Any]] = {}
         self._banner_counter = 0
-        self._banner_close_handlers: dict[str, Any] = {}
-
-        # Editor close handlers, keyed by editor id (set via ``open_editor``).
-        self._editor_close_handlers: dict[str, Any] = {}
+        # Banner/editor ``on_close`` handlers live in ``_handler_registry``
+        # under ``(id, "close")``.
 
         # Interaction handler registry (shared across all scenes)
         from ._interaction import InteractionHandlerRegistry
 
-        self._interaction_registry = InteractionHandlerRegistry()
+        self._interaction_registry = InteractionHandlerRegistry(self._handler_registry)
         self._interaction_configs: dict[str, dict[str, Any]] = {}
         self._act_objects: dict[str, Any] = {}
 
@@ -300,24 +309,26 @@ class Visualizer(_JupyterDisplayMixin):
         """Register control-view handlers into the control handler registry."""
         from .views import iter_control_views
 
-        for key in self._layout_control_ids:
-            self._handler_registry.unregister(key)
+        for cid in self._layout_control_ids:
+            self._handler_registry.unregister(cid)
         self._layout_control_ids.clear()
 
         for view in iter_control_views(root):
             entries: list[tuple[str, Any]] = []
-            handler = getattr(view, "on_change", None) or getattr(view, "on_click", None)
-            if handler is not None:
-                entries.append((view.id, handler))
+            if getattr(view, "on_change", None) is not None:
+                entries.append(("change", view.on_change))
+            elif getattr(view, "on_click", None) is not None:
+                entries.append(("click", view.on_click))
             if getattr(view, "on_cell_change", None) is not None:
-                entries.append((view.id, view.on_cell_change))
+                entries.append(("cell_change", view.on_cell_change))
             if getattr(view, "on_row_add", None) is not None:
-                entries.append((f"__row_add__{view.id}", view.on_row_add))
+                entries.append(("row_add", view.on_row_add))
             if getattr(view, "on_column_add", None) is not None:
-                entries.append((f"__column_add__{view.id}", view.on_column_add))
-            for key, h in entries:
-                self._handler_registry.register(key, h)
-                self._layout_control_ids.add(key)
+                entries.append(("column_add", view.on_column_add))
+            for event, h in entries:
+                self._handler_registry.register(view.id, h, event=event)
+            if entries:
+                self._layout_control_ids.add(view.id)
 
     def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
         """Callback: return the serialized layout for *layout_name*, or None."""
@@ -902,8 +913,38 @@ class Visualizer(_JupyterDisplayMixin):
         Mirrors :meth:`set_view_camera`: the view must be a :class:`ControlView`
         and the update is keyed by ``view.id``.
         """
-        set_control_view_value(view, value)
-        self._push_control_update("", view.id, get_control_view_value(view))
+        from ._controls import get_control_value, set_control_value as _set_control_value
+
+        _set_control_value(view.control, value)
+        self._push_control_update("", view.id, get_control_value(view.control))
+
+    def set_control(self, cid: str, value: Any) -> None:
+        """Set a control's value in place and push ``control_update``.
+
+        Resolves *cid* across panel controls (any scene) and layout view
+        controls, so this is the single value-update entry point regardless of
+        placement.
+
+        Args:
+            cid: The control id (panel or layout view).
+            value: The new value (coerced to the control kind's type).
+        """
+        from ._controls import get_control_value, set_control_value as _set_control_value
+
+        ref = self._resolve_control(cid)
+        if ref is None:
+            raise KeyError(f"Control {cid!r} not found")
+        _set_control_value(ref.control, value)
+        self._push_control_update(ref.scene, cid, get_control_value(ref.control))
+
+    def get_control(self, cid: str) -> Any:
+        """Return the current value of the control/view with id *cid*."""
+        from ._controls import get_control_value
+
+        ref = self._resolve_control(cid)
+        if ref is None:
+            raise KeyError(f"Control {cid!r} not found")
+        return get_control_value(ref.control)
 
     # ── Default scene objects ───────────────────────────────
 
@@ -2188,7 +2229,7 @@ class Visualizer(_JupyterDisplayMixin):
                 :class:`DragEvent`, or :class:`ScrollEvent`.
             scene_name: Target scene (default ``""`` = main scene).
         """
-        self._interaction_registry.register(object_id, event_type, handler)
+        self._handler_registry.register(object_id, handler, event=event_type.value)
 
     async def _send_drag_anchor(self, event: Any) -> None:
         """Send the ideal drag anchor to the originating browser on DRAG_START."""
@@ -2303,9 +2344,9 @@ class Visualizer(_JupyterDisplayMixin):
         if on_change is not None:
             self._handler_registry.register(cid, on_change)
         if on_press is not None:
-            self._handler_registry.register(f"__press__{cid}", on_press)
+            self._handler_registry.register(cid, on_press, event="press")
         if on_release is not None:
-            self._handler_registry.register(f"__release__{cid}", on_release)
+            self._handler_registry.register(cid, on_release, event="release")
         self._push_controls(scene_name)
         return cid
 
@@ -2443,7 +2484,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self._scenes[scene_name].add_control(ctrl)
         if on_click is not None:
-            self._handler_registry.register(cid, on_click)
+            self._handler_registry.register(cid, on_click, event="click")
         self._push_controls(scene_name)
         return cid
 
@@ -2679,11 +2720,11 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self._scenes[scene_name].add_control(ctrl)
         if on_cell_change is not None:
-            self._handler_registry.register(cid, on_cell_change)
+            self._handler_registry.register(cid, on_cell_change, event="cell_change")
         if on_row_add is not None:
-            self._handler_registry.register(f"__row_add__{cid}", on_row_add)
+            self._handler_registry.register(cid, on_row_add, event="row_add")
         if on_column_add is not None:
-            self._handler_registry.register(f"__column_add__{cid}", on_column_add)
+            self._handler_registry.register(cid, on_column_add, event="column_add")
         self._push_controls(scene_name)
         return cid
 
@@ -2886,12 +2927,23 @@ class Visualizer(_JupyterDisplayMixin):
             self._loop,
         )
 
-    def _find_control(self, cid: str) -> Any | None:
-        """Return the control with id *cid* from any scene, or ``None``."""
-        for scene in self._scenes.values():
+    def _resolve_control(self, cid: str) -> ControlRef | None:
+        """Return the panel control or layout view with id *cid*, or ``None``.
+
+        Searches panel controls across all scenes first, then layout view
+        controls registered via :meth:`set_layout`.  The result carries the
+        owning scene (``""`` for layout views).
+        """
+        for name, scene in self._scenes.items():
             ctrl = scene._controls.get(cid)
             if ctrl is not None:
-                return ctrl
+                return ControlRef("panel", ctrl, name)
+        from .views import iter_control_views
+
+        for layout in self._layouts.values():
+            for view in iter_control_views(layout):
+                if view.id == cid:
+                    return ControlRef("view", view.control, "")
         return None
 
     async def _handle_file_browser_navigate(self, payload: dict[str, Any]) -> None:
@@ -2901,8 +2953,8 @@ class Visualizer(_JupyterDisplayMixin):
             return
         cid = payload.get("control_id")
         path = payload.get("path") or ""
-        ctrl = self._find_control(cid) if cid else None
-        root = getattr(ctrl, "root", None)
+        ref = self._resolve_control(cid) if cid else None
+        root = getattr(ref.control, "root", None) if ref is not None else None
         message = list_directory(path, root=root)
         message.update({"type": "file_browser_listing", "control_id": cid})
         await self._server.push_raw(json.dumps(message))
@@ -2912,10 +2964,8 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> None:
         cid = payload.get("control_id")
         path = payload.get("path") or ""
-        if cid:
-            ctrl = self._find_control(cid)
-            if ctrl is not None:
-                ctrl.value = path
+        if cid and self._resolve_control(cid) is not None:
+            self.set_control(cid, path)
         handler = self._handler_registry.get(cid) if cid else None
         if handler is not None:
             try:
@@ -2983,7 +3033,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self._scenes[scene_name].add_control_group(group)
         if on_toggle is not None:
-            self._handler_registry.register(f"__group__{gid}", on_toggle)
+            self._handler_registry.register(gid, on_toggle, event="toggle")
         self._push_controls(scene_name)
         return gid
 
@@ -2992,8 +3042,6 @@ class Visualizer(_JupyterDisplayMixin):
 
     def _remove_scene_control(self, scene_name: str, cid: str) -> None:
         self._handler_registry.unregister(cid)
-        self._handler_registry.unregister(f"__press__{cid}")
-        self._handler_registry.unregister(f"__release__{cid}")
         self._scenes[scene_name].remove_control(cid)
         self._push_controls(scene_name)
 
@@ -3002,7 +3050,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._remove_scene_group("", gid)
 
     def _remove_scene_group(self, scene_name: str, gid: str) -> None:
-        self._handler_registry.unregister(f"__group__{gid}")
+        self._handler_registry.unregister(gid)
         self._scenes[scene_name].remove_control_group(gid)
         self._push_controls(scene_name)
 
@@ -3058,13 +3106,12 @@ class Visualizer(_JupyterDisplayMixin):
             on_close=on_close,
         )
         for ctrl in ctrl_list:
-            handler = getattr(ctrl, "on_click", None) or getattr(
-                ctrl, "on_change", None
-            )
-            if handler is not None:
-                self._handler_registry.register(ctrl.id, handler)
+            if getattr(ctrl, "on_click", None) is not None:
+                self._handler_registry.register(ctrl.id, ctrl.on_click, event="click")
+            elif getattr(ctrl, "on_change", None) is not None:
+                self._handler_registry.register(ctrl.id, ctrl.on_change, event="change")
         if on_close is not None:
-            self._banner_close_handlers[id] = on_close
+            self._handler_registry.register(id, on_close, event="close")
         self._banners.setdefault(scene_name, {})[id] = banner
         return banner
 
@@ -3176,7 +3223,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Unregister a banner's control handlers and ``on_close`` handler."""
         for ctrl in banner.controls:
             self._handler_registry.unregister(ctrl.id)
-        self._banner_close_handlers.pop(banner.id, None)
+        self._handler_registry.unregister(banner.id, "close")
 
     def remove_banner(self, banner_id: str, *, scene_name: str | None = None) -> None:
         """Remove a banner by id (and unregister its handlers)."""
@@ -3331,7 +3378,7 @@ class Visualizer(_JupyterDisplayMixin):
         ``None`` when the edit is discarded (✕).  The editor is one-shot: the
         handler is consumed after it runs.
         """
-        self._editor_close_handlers[cid] = on_close
+        self._handler_registry.register(cid, on_close, event="close")
         self._push_editor_define(cid, label=label, value=value)
         return cid
 
@@ -3400,6 +3447,29 @@ class Visualizer(_JupyterDisplayMixin):
             self._loop,
         )
 
+    async def _dispatch_event(
+        self, target: str | None, event: str, data: Any, browser_id: Any
+    ) -> None:
+        """Dispatch ``(target, event)`` to its handler with ``data``.
+
+        The single lookup-and-invoke tail shared by control, banner, and editor
+        events: the handler is awaited as ``handler(data, ControlEvent)`` and
+        any exception is logged without propagating.
+        """
+        from ._controls import ControlEvent
+
+        handler = self._handler_registry.get(target, event) if target else None
+        if handler is None:
+            return
+        try:
+            await handler(data, ControlEvent(browser_id=browser_id))
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Error in %r handler for %r", event, target
+            )
+
     async def _dispatch_control_event(
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
@@ -3408,31 +3478,21 @@ class Visualizer(_JupyterDisplayMixin):
 
         browser_id = payload.get("browser_id")
         event = ControlEvent(browser_id=browser_id)
-        if msg_type == "banner_closed":
-            bid = payload.get("id")
-            handler = self._banner_close_handlers.get(bid) if bid else None
+        if msg_type in ("banner_closed", "editor_closed", "close"):
+            target = payload.get("id") or payload.get("control_id")
+            value = payload.get("value")
+            if msg_type == "editor_closed":
+                value = payload.get("text")
+            handler = self._handler_registry.get(target, "close") if target else None
             if handler is not None:
+                self._handler_registry.unregister(target, "close")
                 try:
-                    await handler(bid, event)
+                    await handler(value, event)
                 except Exception:
                     import logging
 
                     logging.getLogger(__name__).exception(
-                        "Error in banner on_close handler for %r", bid
-                    )
-            return
-
-        if msg_type == "editor_closed":
-            eid = payload.get("id")
-            handler = self._editor_close_handlers.pop(eid, None) if eid else None
-            if handler is not None:
-                try:
-                    await handler(payload.get("text"), event)
-                except Exception:
-                    import logging
-
-                    logging.getLogger(__name__).exception(
-                        "Error in editor on_close handler for %r", eid
+                        "Error in close handler for %r", target
                     )
             return
 
@@ -3445,7 +3505,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:cell_change":
             cid = payload.get("control_id")
-            handler = self._handler_registry.get(cid) if cid else None
+            handler = self._handler_registry.get(cid, "cell_change") if cid else None
             if handler is not None:
                 try:
                     await handler(
@@ -3466,7 +3526,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         if msg_type == "control:row_add":
             cid = payload.get("control_id")
-            handler = self._handler_registry.get(f"__row_add__{cid}") if cid else None
+            handler = self._handler_registry.get(cid, "row_add") if cid else None
             if handler is not None:
                 try:
                     await handler(
@@ -3487,7 +3547,7 @@ class Visualizer(_JupyterDisplayMixin):
         if msg_type == "control:column_add":
             cid = payload.get("control_id")
             handler = (
-                self._handler_registry.get(f"__column_add__{cid}") if cid else None
+                self._handler_registry.get(cid, "column_add") if cid else None
             )
             if handler is not None:
                 try:
@@ -3509,26 +3569,16 @@ class Visualizer(_JupyterDisplayMixin):
 
         cid = payload.get("control_id")
         if msg_type == "control:press":
-            handler = self._handler_registry.get(f"__press__{cid}") if cid else None
+            event_name, data = "press", payload.get("value")
         elif msg_type == "control:release":
-            handler = self._handler_registry.get(f"__release__{cid}") if cid else None
+            event_name, data = "release", payload.get("value")
+        elif msg_type == "control:click":
+            event_name, data = "click", None
+        elif msg_type == "control:group_toggle":
+            event_name, data = "toggle", payload.get("value")
         else:
-            handler = self._handler_registry.get(cid) if cid else None
-
-        if handler is None:
-            return
-
-        try:
-            if msg_type == "control:click":
-                await handler(None, event)
-            else:
-                await handler(payload.get("value"), event)
-        except Exception:
-            import logging
-
-            logging.getLogger(__name__).exception(
-                "Error in control handler for %r", cid
-            )
+            event_name, data = "change", payload.get("value")
+        await self._dispatch_event(cid, event_name, data, browser_id)
 
     async def _on_client_connect(self, remote_addr: str) -> None:
         """Push controls state when a new client connects.

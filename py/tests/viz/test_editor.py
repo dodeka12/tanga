@@ -26,14 +26,14 @@ def test_open_editor_registers_and_pushes(monkeypatch):
 
     cid = viz.open_editor("e", label="Edit", value="x", on_close=_on_close)
     assert cid == "e"
-    assert viz._editor_close_handlers["e"] is _on_close
+    assert viz._handler_registry.get("e", "close") is _on_close
     assert pushed == [("e", {"label": "Edit", "value": "x"})]
 
 
 def test_open_editor_without_handler():
     viz = _viz()
     viz.open_editor("e", value="x")
-    assert viz._editor_close_handlers["e"] is None
+    assert viz._handler_registry.get("e", "close") is None
 
 
 @pytest.mark.anyio
@@ -44,10 +44,10 @@ async def test_dispatch_editor_closed_keep():
     async def _on_close(text, event):
         calls.append(text)
 
-    viz._editor_close_handlers["e"] = _on_close
+    viz._handler_registry.register("e", _on_close, event="close")
     await viz._dispatch_control_event("editor_closed", {"id": "e", "text": "x"})
     assert calls == ["x"]
-    assert "e" not in viz._editor_close_handlers
+    assert viz._handler_registry.get("e", "close") is None
 
 
 @pytest.mark.anyio
@@ -58,10 +58,10 @@ async def test_dispatch_editor_closed_discard():
     async def _on_close(text, event):
         calls.append(text)
 
-    viz._editor_close_handlers["e"] = _on_close
+    viz._handler_registry.register("e", _on_close, event="close")
     await viz._dispatch_control_event("editor_closed", {"id": "e", "text": None})
     assert calls == [None]
-    assert "e" not in viz._editor_close_handlers
+    assert viz._handler_registry.get("e", "close") is None
 
 
 @pytest.mark.anyio

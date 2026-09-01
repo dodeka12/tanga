@@ -12,6 +12,7 @@ export class CheckboxView extends ControlView {
     render() {
         return createCheckbox({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             value: this.value,

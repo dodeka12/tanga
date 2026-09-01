@@ -14,10 +14,11 @@ The docs are organized by decision-making surface instead of by header name.
 
 1. [architecture/system-overview.md](architecture/system-overview.md)
 2. [architecture/type-system-and-storage.md](architecture/type-system-and-storage.md)
-3. [ga/operation-pipeline.md](ga/operation-pipeline.md)
-4. [workflows/build-test-and-navigation.md](workflows/build-test-and-navigation.md)
-5. [workflows/use-case-examples.md](workflows/use-case-examples.md)
-6. [workflows/precompiled-wheels.md](workflows/precompiled-wheels.md) — building, cleaning, and uploading platform-specific wheels
+3. [architecture/viz-controls-and-interactions.md](architecture/viz-controls-and-interactions.md) — the Python visualization frontend/backend event model
+4. [ga/operation-pipeline.md](ga/operation-pipeline.md)
+5. [workflows/build-test-and-navigation.md](workflows/build-test-and-navigation.md)
+6. [workflows/use-case-examples.md](workflows/use-case-examples.md)
+7. [workflows/precompiled-wheels.md](workflows/precompiled-wheels.md) — building, cleaning, and uploading platform-specific wheels
 
 ## What This Library Is
 

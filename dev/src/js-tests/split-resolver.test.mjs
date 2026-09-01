@@ -57,6 +57,24 @@ test('three children → two splitters with correct positions', () => {
     assert.equal(plan.spacer, 0);
 });
 
+test('four children → three splitters; a fixed middle pins its two neighbors', () => {
+    // 350px of child space: 100 + 50 (fixed) + 100 + 100.
+    const plan = resolveSplit(
+        [d(0, null, 100), d(50, 50, null), d(0, null, 100), d(0, null, 100)],
+        350 + 3 * SPLITTER_SIZE,
+    );
+    assert.equal(plan.items.length, 4);
+    assert.equal(plan.splitters.length, 3);
+    // The fixed middle child (index 1) pins the splitters on both of its sides.
+    assert.equal(plan.splitters[0].movable, false);
+    assert.equal(plan.splitters[1].movable, false);
+    assert.equal(plan.splitters[2].movable, true);
+    assert.equal(plan.splitters[0].position, 100);
+    assert.equal(plan.splitters[1].position, 100 + SPLITTER_SIZE + 50);
+    assert.equal(plan.splitters[2].position, 100 + SPLITTER_SIZE + 50 + SPLITTER_SIZE + 100);
+    assert.equal(plan.spacer, 0);
+});
+
 // Fake child exposing minSizePx along an axis.
 const child = (minX, minY) => ({ minSizePx: (axis) => (axis === 'x' ? minX : minY) });
 

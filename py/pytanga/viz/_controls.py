@@ -276,32 +276,45 @@ class ControlGroup:
 
 
 class ControlHandlerRegistry:
-    """Maps ``control_id`` strings to async handler callables.
+    """Maps ``(control_id, event)`` pairs to async handler callables.
 
-    The server's WebSocket handler uses this registry to dispatch
-    incoming ``control:change`` and ``control:click`` messages.
+    ``event`` is a short string (``"change"``, ``"click"``, ``"press"``,
+    ``"release"``, ``"cell_change"``, ``"row_add"``, ``"column_add"``,
+    ``"toggle"``).  ``register(control_id, handler)`` is a convenience that
+    registers under ``"change"`` for the common single-handler case.
     """
 
     def __init__(self) -> None:
-        self._handlers: dict[str, Handler] = {}
+        self._handlers: dict[tuple[str, str], Handler] = {}
 
-    def register(self, control_id: str, handler: Handler) -> None:
-        """Register an async handler for a control.
+    def register(
+        self, control_id: str, handler: Handler, *, event: str = "change"
+    ) -> None:
+        """Register an async handler for a control event.
 
         Args:
             control_id: The ``id`` of the :class:`Control`.
             handler: An ``async def`` callable that receives the control's
                 value (float for sliders, str for dropdowns).
+            event: The event name (default ``"change"``).
         """
-        self._handlers[control_id] = handler
+        self._handlers[(control_id, event)] = handler
 
-    def unregister(self, control_id: str) -> None:
-        """Remove a previously registered handler (no-op if not found)."""
-        self._handlers.pop(control_id, None)
+    def unregister(self, control_id: str, event: str | None = None) -> None:
+        """Remove a handler (no-op if not found).
 
-    def get(self, control_id: str) -> Handler | None:
-        """Look up the handler for *control_id*, or ``None``."""
-        return self._handlers.get(control_id)
+        With ``event=None`` removes every handler registered under
+        *control_id*.
+        """
+        if event is None:
+            for key in [k for k in self._handlers if k[0] == control_id]:
+                del self._handlers[key]
+        else:
+            self._handlers.pop((control_id, event), None)
+
+    def get(self, control_id: str, event: str = "change") -> Handler | None:
+        """Look up the handler for ``(control_id, event)``, or ``None``."""
+        return self._handlers.get((control_id, event))
 
     def clear(self) -> None:
         """Remove all registered handlers."""

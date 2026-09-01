@@ -13,6 +13,7 @@ export class ButtonView extends ControlView {
     render() {
         return createButton({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             icon: this.icon,

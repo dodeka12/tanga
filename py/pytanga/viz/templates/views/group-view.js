@@ -13,12 +13,14 @@ export class GroupView extends StackView {
         direction = 'vertical',
         position = null,
         collapsed = false,
+        scrollable = false,
         children = [],
     } = {}) {
         super({ direction, children: [] });
         this.title = title;
         this.position = position;
         this.collapsed = collapsed;
+        this.scrollable = scrollable;
 
         this.el.classList.add('tanga-group');
         this._setupChrome();
@@ -41,6 +43,10 @@ export class GroupView extends StackView {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
         });
 
+        if (this.scrollable) {
+            this.el.style.overflow = 'hidden';
+        }
+
         this._header = document.createElement('div');
         this._header.className = 'tanga-group-header';
         Object.assign(this._header.style, {
@@ -52,6 +58,10 @@ export class GroupView extends StackView {
             fontSize: '14px',
             color: '#ddd',
         });
+
+        if (this.scrollable) {
+            this._header.style.flexShrink = '0';
+        }
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'tanga-group-title';
@@ -87,6 +97,7 @@ export class GroupView extends StackView {
         this._content.className = 'tanga-group-content';
         this.el.appendChild(this._content);
         this._applyFlex(); // retarget flex onto the content div
+        this._applyScroll(); // scroll the content region below the title bar
         this._applyCollapsed();
     }
 

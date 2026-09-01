@@ -276,6 +276,22 @@ class TestHandlerRegistry:
         await asyncio.sleep(0.01)
         assert results == []
 
+    def test_delegates_to_shared_registry(self):
+        from pytanga.viz._controls import ControlHandlerRegistry
+
+        shared = ControlHandlerRegistry()
+        registry = InteractionHandlerRegistry(shared)
+
+        async def handler(event):
+            pass
+
+        registry.register("obj1", InteractionEventType.CLICK, handler)
+        assert shared.get("obj1", "click") is handler
+        assert registry.get("obj1", InteractionEventType.CLICK) is handler
+
+        registry.unregister("obj1", InteractionEventType.CLICK)
+        assert shared.get("obj1", "click") is None
+
 
 class TestUtilityFunctions:
     def test_apply_delta_transform(self):

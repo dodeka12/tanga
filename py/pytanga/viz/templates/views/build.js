@@ -52,7 +52,7 @@ export function buildViewTree(node, ws) {
     }
 
     if (node.type === 'stack') {
-        const stack = new StackView({ direction: node.direction });
+        const stack = new StackView({ direction: node.direction, scrollable: node.scrollable });
         applySizeSpecs(stack, node);
         for (const childNode of node.children || []) {
             stack.addChild(buildViewTree(childNode, ws));
@@ -66,6 +66,7 @@ export function buildViewTree(node, ws) {
             direction: node.direction,
             position: node.position,
             collapsed: node.collapsed,
+            scrollable: node.scrollable,
         });
         applySizeSpecs(group, node);
         for (const childNode of node.children || []) {

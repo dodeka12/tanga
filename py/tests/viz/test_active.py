@@ -353,3 +353,13 @@ class TestDragAnchor:
             }
 
         asyncio.run(_run())
+
+
+def test_on_interaction_registers_in_unified_registry():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+
+    async def handler(event):
+        pass
+
+    viz.on_interaction("obj1", InteractionEventType.CLICK, handler)
+    assert viz._handler_registry.get("obj1", "click") is handler

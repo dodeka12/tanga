@@ -23,6 +23,7 @@ export class TableView extends ControlView {
     render() {
         return createTable({
             id: this.controlId,
+            owner: 'layout',
             label: this.label,
             tooltip: this.tooltip,
             columns: this.columns,

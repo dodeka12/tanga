@@ -3,28 +3,18 @@
 
 import { getOverlay } from './overlay.js';
 import { FileBrowserView } from './views/file-browser-view.js';
+import { sendEvent } from './events.js';
 
-let _ws = null;
 let _view = null;
-
-export function setWebSocket(ws) {
-    _ws = ws;
-}
-
-function _send(msg) {
-    if (_ws && _ws.readyState === WebSocket.OPEN) {
-        _ws.send(JSON.stringify(msg));
-    }
-}
 
 export function openFileBrowser(controlId, path) {
     _close();
     _view = new FileBrowserView({
         controlId,
         path: path || '',
-        onNavigate: (p) => _send({ type: 'file_browser_navigate', control_id: controlId, path: p }),
+        onNavigate: (p) => sendEvent(controlId, 'file_browser_navigate', { path: p }),
         onSelect: (p) => {
-            _send({ type: 'file_browser_select', control_id: controlId, path: p });
+            sendEvent(controlId, 'file_browser_select', { path: p });
             _close();
         },
         onClose: () => _close(),

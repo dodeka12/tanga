@@ -163,6 +163,7 @@ export class BannerView extends View {
     }
 
     _buildControl(ctrl) {
+        ctrl = { ...ctrl, owner: 'banner' };
         if (ctrl.kind === 'slider') return createSlider(ctrl);
         if (ctrl.kind === 'dropdown') return createDropdown(ctrl);
         if (ctrl.kind === 'button') return createButton(ctrl);

@@ -113,7 +113,8 @@ SplitView(
 )
 ```
 
-Requires at least 2 children. `sizes`, when given, must have one entry per
+Requires at least 2 children; any number ≥ 2 is allowed (N children → N − 1
+splitters). `sizes`, when given, must have one entry per
 child. `movable=False` locks every splitter; the default `None` auto-detects
 (an implicit `SpacerView` fills leftover space). `_node_type` is `"split"`.
 
@@ -125,13 +126,18 @@ axis.
 
 ```python
 StackView(
-    direction,         # "vertical" | "horizontal" | "wrap"
-    children=None,     # list[View] | None
-    **kwargs,          # forwarded to View (sizes)
+    direction,            # "vertical" | "horizontal" | "wrap"
+    children=None,        # list[View] | None
+    *,
+    scrollable=False,     # bool — scroll instead of clipping when content overflows
+    **kwargs,             # forwarded to View (sizes)
 )
 ```
 
-`_node_type` is `"stack"`.
+`_node_type` is `"stack"`. With `scrollable=True`, the stack stops forcing
+its content size along the stack axis, so an enclosing `SplitView` may shrink
+it and the content scrolls inside the pane (a thin dark scrollbar appears only
+on overflow).
 
 ### GroupView
 
@@ -147,11 +153,14 @@ GroupView(
     direction="vertical",  # StackDirection
     position=None,     # str | None — "top-left" | "top-right" | "bottom-left" | "bottom-right"
     collapsed=False,   # bool
+    scrollable=False,  # bool — scroll the content (title bar stays pinned)
     **kwargs,          # forwarded to View (sizes)
 )
 ```
 
-`_node_type` is `"group"`.
+`_node_type` is `"group"`. With `scrollable=True`, the title bar stays pinned
+and the content region scrolls instead of clipping when the pane is smaller
+than the controls (a thin dark scrollbar appears only on overflow).
 
 ## Control views
 
@@ -357,25 +366,19 @@ handler payloads (`TableCellChange` / `TableRowAdd` / `TableColumnAdd`).
 
 ## Runtime helpers
 
-These free functions mirror the panel-control value API for view controls.
+Each `ControlView` wraps a `pytanga.viz._controls.Control` — the same model the
+panel controls use — exposed as `view.control`.  Values are updated and read
+through that wrapped control:
 
-### `set_control_view_value(view, value)`
-
-Coerce and set *value* on a control view, mirroring
-`pytanga.viz._controls.set_control_value`. Coercion matches the control kind:
-`SliderView`/`ValueEditView` → `float`, `CheckboxView` → `bool`,
-`DropdownView`/`ColorPickerView`/`TextFieldView`/`TextAreaView`/
-`FileChooserView` → `str`, and `TableView` → a
-`{"columns": [...], "rows": [...]}` dict.
-
-### `get_control_view_value(view)`
-
-Return the current value of a value-bearing control view (`TableView` returns
-the `{"columns": ..., "rows": ...}` dict).
+- `pytanga.viz._controls.set_control_value(view.control, value)` /
+  `pytanga.viz._controls.get_control_value(view.control)` coerce and set/read
+  the value (the same helpers the panel controls use).
+- `Visualizer.set_control_view_value(view, value)` is a convenience that calls
+  the above and pushes a `control_update`.
 
 !!! note "`ButtonView` carries no value"
-    `ButtonView` raises `TypeError` from both `set_control_view_value` and
-    `get_control_view_value` — a button has no value to set or read.
+    Both raise `TypeError` for a `ButtonView` — a button has no value to set
+    or read.
 
 ### `iter_control_views(root)`
 
