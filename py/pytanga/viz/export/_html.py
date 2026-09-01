@@ -181,6 +181,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             camera_var="adapterCamera",
             width_expr="window.innerWidth",
             height_expr="window.innerHeight",
+            space_dim=space_dim,
         )
     )
 

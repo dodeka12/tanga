@@ -202,6 +202,7 @@ def _build_static_figure_adapter(
             height_expr=dim_h,
             conditional=not responsive,
             container_expr="figContainer" if responsive else "",
+            space_dim=space_dim,
         ),
         "",
         js_title_overlay(
