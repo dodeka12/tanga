@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.14.0] — 2026-09-01
+- 2D `fit_camera=True` frames to the pane size (not the window) · unified ortho/aspect camera-fit math in one shared `camera-fit.js`
+- Bug fixes: split-view 2D scenes correctly aspected on first paint
+→ [Details](2026-09-01_f6125a1e.md)
+
 ## [Since 1.13.0] — 2026-09-01
 - `ActSceneObject`/`ActPoint` `on_click` handler · ideal-point drag-start & click position · zoom-aware 2D drag scale
 - Bug fixes: `clear_controls()` no longer wipes interaction handlers · stationary click no longer emits `drag_end`
