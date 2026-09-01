@@ -110,8 +110,10 @@ _TEMPLATES_DIR = _RENDERERS_DIR.parent
 
 # Shared (non-renderer) JS modules bundled alongside the renderer modules.
 # ``scene-builder.js`` provides the scene-graph construction shared by the
-# live viewer and the export bootstrap.
+# live viewer and the export bootstrap.  ``camera-fit.js`` is the shared,
+# pure ortho/aspect math used by ``fit_camera.js`` and ``js_apply_camera``.
 _SHARED_JS_FILES: list[Path] = [
+    _TEMPLATES_DIR / "camera-fit.js",
     _TEMPLATES_DIR / "scene-builder.js",
     _TEMPLATES_DIR / "fit_camera.js",
     # SDF tree emitters used by the per-object SDF proxy renderer (`sdf.js`).

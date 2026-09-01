@@ -232,6 +232,8 @@ def _build_static_figure_adapter(
             controls_var="figControls",
             cam_explicit=cam_explicit,
             space_dim=space_dim,
+            width_expr=dim_w,
+            height_expr=dim_h,
         )
         + "\n})();",
         "",

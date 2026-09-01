@@ -226,73 +226,37 @@ def js_autofit_camera(
     controls_var: str,
     cam_explicit: bool,
     space_dim: int = 3,
+    width_expr: str,
+    height_expr: str,
 ) -> str:
     """Generate JS that fits the camera via the shared ``fitCamera()``.
 
     The shared function lives in ``templates/fit_camera.js``, which is bundled
     into the export bootstrap and re-exported by the live viewer's
-    ``view_mode.js``, so every viewer runs the exact same auto-fit.
+    ``view_mode.js``, so every viewer runs the exact same auto-fit.  The
+    viewport size expressions are passed through so the 2D fit uses the pane's
+    size rather than ``window``.
     """
     if cam_explicit:
         return ""
     return (
-        f"    fitCamera({registry_var}, {camera_var}, {controls_var}, {space_dim});\n"
+        f"    fitCamera({registry_var}, {camera_var}, {controls_var}, {space_dim}, "
+        f"{width_expr}, {height_expr});\n"
     )
 
 
 def js_apply_camera() -> str:
     """Generate the shared camera-application helper for export bootstraps.
 
-    Emits ``_orthoFrustum2d(...)`` and ``applyCameraConfig(camera, controls,
-    cfg, w, h)``.  ``applyCameraConfig`` dispatches on ``cfg.type``
-    (``"2d"`` / ``"3d"``) and applies the full camera config, falling back to
-    the flat fields for legacy/partial configs and doing nothing when ``cfg``
-    is null/undefined.  The 2D ortho math mirrors ``view_mode.js`` so the
-    export matches the live viewer (uniform letterbox by default, stretch when
-    ``uniform`` is false, ``border_px`` applied in pixels).
+    Emits ``applyCameraConfig(camera, controls, cfg, w, h)``, which dispatches
+    on ``cfg.type`` (``"2d"`` / ``"3d"``) and applies the full camera config,
+    falling back to the flat fields for legacy/partial configs and doing nothing
+    when ``cfg`` is null/undefined.  The 2D ortho math is delegated to the
+    bundled ``orthoFrustum``/``finiteAspect`` from ``camera-fit.js``, so the
+    export matches the live viewer exactly (uniform letterbox by default,
+    stretch when ``uniform`` is false, ``border_px`` applied in pixels).
     """
     return """// ── Shared camera applier (mirrors view_mode.js switchToCamera) ──
-function _finiteAspectExport(w, h) {
-    const width = Number(w);
-    const height = Number(h);
-    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        return NaN;
-    }
-    return width / height;
-}
-
-function _orthoFrustum2d(xmin, xmax, ymin, ymax, uniform, borderPx, w, h) {
-    const extX = Math.abs(xmax - xmin) || 10;
-    const extY = Math.abs(ymax - ymin) || 10;
-    const bp = borderPx || 0;
-    const cw = w - 2 * bp;
-    const ch = h - 2 * bp;
-
-    if (uniform === false) {
-        const fX = cw > 0 ? w / cw : 1;
-        const fY = ch > 0 ? h / ch : 1;
-        return {
-            left: -(extX / 2) * fX,
-            right: (extX / 2) * fX,
-            top: (extY / 2) * fY,
-            bottom: -(extY / 2) * fY,
-        };
-    }
-
-    const aspect = _finiteAspectExport(w, h);
-    const safeAspect = Number.isFinite(aspect) ? aspect : 1;
-    const aspectContent = (cw > 0 && ch > 0) ? (cw / ch) : safeAspect;
-    const fit = Math.max(extX / aspectContent, extY);
-    const fitFull = (bp > 0 && cw > 0 && ch > 0) ? (fit * h / ch) : fit;
-
-    return {
-        left: -fitFull * safeAspect / 2,
-        right: fitFull * safeAspect / 2,
-        top: fitFull / 2,
-        bottom: -fitFull / 2,
-    };
-}
-
 function applyCameraConfig(camera, controls, cfg, w, h) {
     if (!cfg) return;
     const width = Number(w);
@@ -303,7 +267,7 @@ function applyCameraConfig(camera, controls, cfg, w, h) {
             typeof cfg.xmin === 'number' && typeof cfg.xmax === 'number' &&
             typeof cfg.ymin === 'number' && typeof cfg.ymax === 'number'
         ) {
-            const f = _orthoFrustum2d(
+            const f = orthoFrustum(
                 cfg.xmin, cfg.xmax, cfg.ymin, cfg.ymax,
                 cfg.uniform !== false, cfg.border_px || 0, width, height
             );

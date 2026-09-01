@@ -4,6 +4,8 @@
 
 import * as THREE from 'three';
 
+import { finiteAspect, orthoFrustum } from './camera-fit.js';
+
 /**
  * Create a camera appropriate for the given space dimension.
  *
@@ -29,98 +31,26 @@ function _newPerspective(aspect, fov = 50) {
 }
 
 /**
- * Compute the orthographic left/right/top/bottom for a 2D camera.
- *
- * @param {number} xmin
- * @param {number} xmax
- * @param {number} ymin
- * @param {number} ymax
- * @param {boolean} uniform  letterbox (true) vs stretch-to-fill (false)
- * @param {number} borderPx  pixel margin (all modes)
- * @param {number} aspect     window.innerWidth / window.innerHeight
- * @returns {{left:number, right:number, top:number, bottom:number}}
- */
-function _orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, aspect) {
-    const extX = Math.abs(xmax - xmin) || 10;
-    const extY = Math.abs(ymax - ymin) || 10;
-
-    if (!uniform) {
-        // Stretch-to-fill: the rectangle's width/height each fill the content
-        // area (viewport inset by border_px), scaling X and Y independently
-        // (non-uniform).  The camera is centered on the rectangle, so use
-        // symmetric half-extents expanded back to the full window.
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const bp = borderPx || 0;
-        const cw = w - 2 * bp;
-        const ch = h - 2 * bp;
-        const fX = cw > 0 ? w / cw : 1;
-        const fY = ch > 0 ? h / ch : 1;
-        return {
-            left: -(extX / 2) * fX,
-            right: (extX / 2) * fX,
-            top: (extY / 2) * fY,
-            bottom: -(extY / 2) * fY,
-        };
-    }
-
-    // Undistorted letterboxing: a single world-units-per-pixel scale so the
-    // full requested rectangle is contained.  An optional pixel border shrinks
-    // the effective content area before the fit.
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const bp = borderPx || 0;
-    const cw = w - 2 * bp;
-    const ch = h - 2 * bp;
-    const aspectContent = (cw > 0 && ch > 0) ? (cw / ch) : aspect;
-
-    const fit = Math.max(extX / aspectContent, extY);
-    // Expand the fitted content frustum back to the full viewport so the
-    // border appears as extra margin (still uniform scale).
-    const fitFull = (bp > 0 && cw > 0 && ch > 0) ? (fit * h / ch) : fit;
-
-    return {
-        left: -fitFull * aspect / 2,
-        right: fitFull * aspect / 2,
-        top: fitFull / 2,
-        bottom: -fitFull / 2,
-    };
-}
-
-/**
- * Return a finite aspect ratio (width / height), or NaN when the size is not
- * usable (zero, negative, or non-finite).  Callers must never write NaN into a
- * camera frustum, so they guard on this result.
- *
- * @param {number} width
- * @param {number} height
- * @returns {number}
- */
-function _finiteAspect(width, height) {
-    if (!Number.isFinite(width) || !Number.isFinite(height)) return NaN;
-    if (width <= 0 || height <= 0) return NaN;
-    return width / height;
-}
-
-/**
- * Set the 2D orthographic frustum (left/right/top/bottom) for the given aspect
- * ratio.  Recomputed from the stored fit (``camera.userData._view2d``) when
- * available; otherwise the current full height is preserved.  Never writes
- * NaN/Infinity — a corrupt frustum is reset to a sane default box.
+ * Set the 2D orthographic frustum (left/right/top/bottom) for the given
+ * viewport size.  Recomputed from the stored fit (``camera.userData._view2d``)
+ * when available; otherwise the current full height is preserved.  Never
+ * writes NaN/Infinity — a corrupt frustum is reset to a sane default box.
  *
  * @param {THREE.OrthographicCamera} camera
- * @param {number} aspect  finite width/height ratio
+ * @param {number} width   viewport width in CSS pixels
+ * @param {number} height  viewport height in CSS pixels
  */
-function _applyOrthoFrustum(camera, aspect) {
+function _applyOrthoFrustum(camera, width, height) {
+    const aspect = finiteAspect(width, height);
     const v2d = camera.userData?._view2d;
     const finiteRect = v2d
         && Number.isFinite(v2d.xmin) && Number.isFinite(v2d.xmax)
         && Number.isFinite(v2d.ymin) && Number.isFinite(v2d.ymax);
 
     if (finiteRect) {
-        const f = _orthoFrustum(
+        const f = orthoFrustum(
             v2d.xmin, v2d.xmax, v2d.ymin, v2d.ymax,
-            v2d.uniform !== false, v2d.border_px || 0, aspect
+            v2d.uniform !== false, v2d.border_px || 0, width, height
         );
         camera.left = f.left;
         camera.right = f.right;
@@ -166,13 +96,17 @@ function _applyOrthoFrustum(camera, aspect) {
  * @param {THREE.OrbitControls} controls
  * @param {number} spaceDim  2 or 3
  * @param {object|null} cameraConfig  normalized ``camera`` config dict
- * @param {number|null} viewAspect  pane aspect (width/height); falls back to the
- *   window aspect when null/non-finite.
+ * @param {number|null} viewWidth  pane width in CSS px; falls back to the window
+ *   width when null/non-finite.
+ * @param {number|null} viewHeight  pane height in CSS px; falls back to the window
+ *   height when null/non-finite.
  * @returns {THREE.Camera} the (possibly replaced) camera
  */
-export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewAspect = null) {
+export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWidth = null, viewHeight = null) {
     const cc = cameraConfig || {};
-    const aspect = (Number.isFinite(viewAspect) && viewAspect > 0) ? viewAspect : window.innerWidth / window.innerHeight;
+    const w = (Number.isFinite(viewWidth) && viewWidth > 0) ? viewWidth : window.innerWidth;
+    const h = (Number.isFinite(viewHeight) && viewHeight > 0) ? viewHeight : window.innerHeight;
+    const aspect = finiteAspect(w, h);
 
     // ── 2D orthographic ──
     if (cc.type === '2d') {
@@ -191,7 +125,7 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewAsp
             controls.object = cam;
         }
 
-        const f = _orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, aspect);
+        const f = orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, w, h);
         cam.left = f.left;
         cam.right = f.right;
         cam.top = f.top;
@@ -320,11 +254,11 @@ export { fitCamera } from './fit_camera.js';
  * @param {number} height  renderer height in CSS pixels
  */
 export function handleResize(camera, renderer, labelRenderer, spaceDim, width, height) {
-    const aspect = _finiteAspect(width, height);
+    const aspect = finiteAspect(width, height);
     if (!Number.isFinite(aspect)) return;
 
     if (spaceDim === 2 && camera.isOrthographicCamera) {
-        _applyOrthoFrustum(camera, aspect);
+        _applyOrthoFrustum(camera, width, height);
     }
 
     camera.aspect = aspect;
