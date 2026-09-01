@@ -291,6 +291,10 @@ function applyCameraConfig(camera, controls, cfg, w, h) {
             camera.right = f.right;
             camera.top = f.top;
             camera.bottom = f.bottom;
+            camera.userData._view2d = {
+                xmin: cfg.xmin, xmax: cfg.xmax, ymin: cfg.ymin, ymax: cfg.ymax,
+                uniform: cfg.uniform !== false, border_px: cfg.border_px || 0,
+            };
         }
         if (cfg.position) camera.position.set(cfg.position[0], cfg.position[1], cfg.position[2]);
         const t2 = cfg.target || [0, 0, 0];

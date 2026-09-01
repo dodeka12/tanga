@@ -20,7 +20,7 @@ matches the live viewer.
     before the `aspect`/`updateProjectionMatrix()`/`setSize` lines.
   - Non-conditional branch uses `rw = {width_expr}`, `rh = {height_expr}`; the
     conditional branch already reads the container.
-- [ ] **3.2 — `js_apply_camera` stores `_view2d` in the 2D branch**
+- [x] **3.2 — `js_apply_camera` stores `_view2d` in the 2D branch**
   - Inside the `typeof cfg.xmin === 'number' && …` guard, after setting
     `left/right/top/bottom`, store
     `camera.userData._view2d = { xmin: cfg.xmin, xmax: cfg.xmax, ymin: cfg.ymin, ymax: cfg.ymax, uniform: cfg.uniform !== false, border_px: cfg.border_px || 0 };`.
