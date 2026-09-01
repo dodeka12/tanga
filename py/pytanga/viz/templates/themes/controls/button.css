@@ -1,1 +1,40 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — button control. */
+
+.tanga-action-button {
+    width: 100%;
+    padding: 5px 12px;
+    background: var(--tanga-surface);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    color: var(--tanga-fg-strong);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.tanga-action-button:hover {
+    background: var(--tanga-surface-strong);
+}
+
+.tanga-action-button:active {
+    background: var(--tanga-input-bg);
+}
+
+.tanga-icon-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Icon buttons share `.tanga-action-button`; reset its chrome (this rule
+     * follows `.tanga-action-button` in the cascade so the borderless contract
+     * wins). */
+    border: none;
+    background: none;
+}
+
+.tanga-icon-button .material-icons {
+    font-size: 18px;
+}
+

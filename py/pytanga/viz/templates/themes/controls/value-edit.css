@@ -1,1 +1,48 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — value edit (stepper) control. */
+
+.tanga-value-edit-row {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+}
+
+.tanga-value-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--tanga-input-bg);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    color: var(--tanga-fg);
+    padding: 4px 6px;
+    font-size: 13px;
+    outline: none;
+    text-align: right;
+}
+
+.tanga-value-input:focus {
+    border-color: var(--tanga-accent);
+}
+
+.tanga-step-button {
+    width: 24px;
+    padding: 0;
+    background: var(--tanga-surface);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    color: var(--tanga-fg-strong);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tanga-step-button:hover {
+    background: var(--tanga-surface-strong);
+}
+
+.tanga-step-button .tanga-icon-uc {
+    font-size: 10px;
+    line-height: 1;
+}
+

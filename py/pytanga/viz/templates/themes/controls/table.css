@@ -1,1 +1,37 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — table control. */
+
+.tanga-table-container {
+    min-height: 220px;
+}
+
+.tanga-table-buttons {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.tanga-table-buttons .tanga-action-button {
+    width: auto;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+.tanga-table-unavailable {
+    color: var(--tanga-danger);
+    font-size: 12px;
+    padding: 8px;
+}
+
+.tanga-control-view .tanga-table {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.tanga-control-view .tanga-table .tanga-table-container {
+    flex: 1;
+    min-height: 0;
+}
+

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Control theming smoke test</title>
+    <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/base.css">
+    <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/controls/button.css">
+    <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/controls/slider.css">
+    <link rel="stylesheet" href="../../py/pytanga/viz/templates/themes/controls/checkbox.css">
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 300px; background: #222; padding: 12px; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">Control theming smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { StackView } from '../../py/pytanga/viz/templates/views/stack-view.js';
+        import { ButtonView } from '../../py/pytanga/viz/templates/views/button-view.js';
+        import { SliderView } from '../../py/pytanga/viz/templates/views/slider-view.js';
+        import { CheckboxView } from '../../py/pytanga/viz/templates/views/checkbox-view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+        const fail = (msg) => { log('FAIL:', msg); };
+        const pass = (msg) => { log('ok:', msg); };
+
+        const stack = new StackView({
+            direction: 'vertical',
+            children: [
+                new ButtonView({ id: 'b1', label: 'Go', icon: 'uc:⚙', icon_only: true }),
+                new SliderView({ id: 's1', label: 'Radius', min: 0, max: 5, step: 0.1, value: 2 }),
+                new CheckboxView({ id: 'c1', label: 'Enable', value: true }),
+            ],
+        });
+        stack.mount(document.getElementById('host'));
+
+        const iconBtn = stack.el.querySelector('.tanga-icon-button');
+        if (!iconBtn) { fail('icon button missing'); }
+        else {
+            const cs = getComputedStyle(iconBtn);
+            const borderless = cs.borderTopWidth === '0px'
+                && cs.borderRightWidth === '0px'
+                && cs.borderBottomWidth === '0px'
+                && cs.borderLeftWidth === '0px';
+            const bg = cs.backgroundColor;
+            pass('icon button rendered');
+            log('  borderless:', borderless ? 'yes' : 'NO (' + cs.borderTopWidth + ', ' + bg + ')');
+            log('  background:', bg);
+        }
+
+        // Colors must come from the CSS custom properties (`var(--tanga-…)`),
+        // not hardcoded literals in the component sheets.
+        const root = getComputedStyle(document.documentElement);
+        const accent = root.getPropertyValue('--tanga-accent').trim();
+        const surface = root.getPropertyValue('--tanga-surface').trim();
+        log('  --tanga-accent =', accent);
+        log('  --tanga-surface =', surface);
+
+        const actionBtn = stack.el.querySelector('.tanga-action-button:not(.tanga-icon-button)');
+        const slider = stack.el.querySelector('.tanga-range-input');
+        log('slider present:', slider ? 'yes' : 'NO');
+        log('checkbox present:', stack.el.querySelector('.tanga-checkbox-input') ? 'yes' : 'NO');
+        if (actionBtn) {
+            // A non-icon button still shows the button chrome.
+            log('plain button background:', getComputedStyle(actionBtn).backgroundColor);
+        }
+    </script>
+</body>
+</html>

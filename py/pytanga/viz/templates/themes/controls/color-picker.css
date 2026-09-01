@@ -1,1 +1,12 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — color picker control. */
+
+.tanga-color-input {
+    width: 100%;
+    height: 28px;
+    padding: 2px;
+    background: var(--tanga-input-bg);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    cursor: pointer;
+}
+

@@ -1,1 +1,26 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — stack view scrollbar. */
+
+.tanga-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tanga-scrollbar-thumb) var(--tanga-scrollbar-track);
+}
+
+.tanga-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.tanga-scroll::-webkit-scrollbar-track {
+    background: var(--tanga-scrollbar-track);
+    border-radius: 4px;
+}
+
+.tanga-scroll::-webkit-scrollbar-thumb {
+    background: var(--tanga-scrollbar-thumb);
+    border-radius: 4px;
+}
+
+.tanga-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--tanga-scrollbar-thumb-hover);
+}
+

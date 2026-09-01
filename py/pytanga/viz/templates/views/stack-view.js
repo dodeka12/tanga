@@ -6,34 +6,6 @@ import { GAP, stackMainAxis, stackMinSize, stackPreferredSize } from './stack-si
 
 const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
 
-function _injectScrollStyles() {
-    if (document.getElementById('tanga-scroll-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'tanga-scroll-styles';
-    style.textContent = `
-        .tanga-scroll {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.06);
-        }
-        .tanga-scroll::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        .tanga-scroll::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 4px;
-        }
-        .tanga-scroll::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.35);
-            border-radius: 4px;
-        }
-        .tanga-scroll::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-    `;
-    document.head.appendChild(style);
-}
-
 /**
  * A flex container of `View` children laid out in normal flow (no splitters).
  * `direction` is `"vertical"` (column), `"horizontal"` (row), or `"wrap"`
@@ -71,7 +43,6 @@ export class StackView extends View {
 
     _applyScroll() {
         if (!this.scrollable) return;
-        _injectScrollStyles();
         this._content.classList.add('tanga-scroll');
         Object.assign(this._content.style, {
             overflow: 'auto',

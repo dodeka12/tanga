@@ -1,1 +1,17 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — text field control. */
+
+.tanga-text-input {
+    width: 100%;
+    background: var(--tanga-input-bg);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    color: var(--tanga-fg);
+    padding: 4px 6px;
+    font-size: 13px;
+    outline: none;
+}
+
+.tanga-text-input:focus {
+    border-color: var(--tanga-accent);
+}
+

@@ -1,1 +1,23 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — dropdown control. */
+
+.tanga-select-input {
+    width: 100%;
+    background: var(--tanga-input-bg);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    color: var(--tanga-fg);
+    padding: 4px 6px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+}
+
+.tanga-select-input:focus {
+    border-color: var(--tanga-accent);
+}
+
+.tanga-select-input option {
+    background: var(--tanga-bg);
+    color: var(--tanga-fg);
+}
+

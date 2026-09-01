@@ -1,1 +1,45 @@
-/* Tanga theme CSS — placeholder (populated in later phases). */
+/* Tanga viewer — menu control styling (menu item + menu bar variants). */
+
+.tanga-control.tanga-menu-item {
+    border: none;
+    background: none;
+    margin: 0;
+    width: 100%;
+    text-align: left;
+}
+
+.tanga-menu-item:hover {
+    background: var(--tanga-border-subtle);
+    border-radius: 3px;
+}
+
+.tanga-menu-item .tanga-action-button {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 6px 8px;
+}
+
+.tanga-menu-item .tanga-action-button:hover {
+    background: none;
+}
+
+.tanga-menu-item .tanga-checkbox-row {
+    padding: 6px 8px;
+}
+
+.tanga-menu-bar .tanga-control {
+    margin: 0;
+}
+
+.tanga-menu-bar .tanga-action-button {
+    width: auto;
+    background: none;
+    border: none;
+    padding: 4px 10px;
+}
+
+.tanga-menu-bar .tanga-action-button:hover {
+    background: var(--tanga-surface);
+}
+
