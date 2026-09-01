@@ -20,7 +20,7 @@ import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js
 
 def js_scene_setup(
     *,
-    bg_color: str,
+    bg_color: str | None,
     container_expr: str,
     append_to: str,
     renderer_var: str,
@@ -45,7 +45,9 @@ def js_scene_setup(
     Args:
         bg_color: CSS color for scene background.  When ``"transparent"``,
             the renderer uses ``alpha: true`` and a fully transparent clear
-            colour so the figure blends into its parent container.
+            colour so the figure blends into its parent container.  When
+            ``None`` (or empty), the scene background follows the active
+            theme's ``--tanga-bg`` CSS token.
         container_expr: JS expression for the container DOM element.
         append_to: JS expression for where to append renderer DOM elements.
         renderer_var: JS variable name for ``WebGLRenderer``.
@@ -89,8 +91,17 @@ def js_scene_setup(
         scene_bg = f"{scene_var}.background = null;"
         renderer_opts = "{ antialias: true, alpha: true }"
         clear_color = f"\n{renderer_var}.setClearColor(0x000000, 0);"
-    else:
+    elif bg_color:
         scene_bg = f"{scene_var}.background = new THREE.Color('{bg_color}');"
+        renderer_opts = "{ antialias: true }"
+        clear_color = ""
+    else:
+        # No explicit background → follow the active theme's `--tanga-bg` token.
+        scene_bg = (
+            f"const _tangaBg = getComputedStyle(document.documentElement)"
+            f".getPropertyValue('--tanga-bg').trim();\n"
+            f"{scene_var}.background = _tangaBg ? new THREE.Color(_tangaBg) : null;"
+        )
         renderer_opts = "{ antialias: true }"
         clear_color = ""
 

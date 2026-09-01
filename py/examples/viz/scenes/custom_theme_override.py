@@ -5,13 +5,14 @@
 
 Adds a ``pastel`` theme whose token sheet re-themes the palette and whose
 ``overrides`` fully re-style the button (a pill) and checkbox (a switch).
-``viz.set_theme("pastel")`` applies it live, and
-``viz.export_snapshot(..., theme="pastel")`` packs the override into a
-self-contained HTML export.
+Buttons switch live between the custom ``pastel``, ``light``, and standard
+``dark`` themes via ``viz.set_theme(...)``, the checkbox toggles the sphere's
+wireframe, and ``viz.export_snapshot(..., theme="pastel")`` packs the override
+into a self-contained HTML export.
 
 Run with:  uv run python py/examples/viz/scenes/custom_theme_override.py
 
-Keywords: scenes, theme, custom theme, override, export, button, checkbox
+Keywords: scenes, theme, custom theme, override, theme switching, button, checkbox, wireframe, light
 """
 
 from pytanga.geometry import Point, Sphere
@@ -38,15 +39,28 @@ async def _on_radius(value, _event):
     viz.flush()
 
 
+async def _on_wireframe(value, _event):
+    viz.update("sphere", wireframe=bool(value))
+    viz.flush()
+
+
 async def _apply_pastel(_value, _event):
     viz.set_theme("pastel")
+
+
+async def _apply_light(_value, _event):
+    viz.set_theme("light")
+
+
+async def _apply_standard(_value, _event):
+    viz.set_theme("dark")
 
 
 layout = SceneView(
     "",
     overlay=[
         GroupView(
-            "Custom Theme",
+            "Themes",
             [
                 SliderView(
                     "radius",
@@ -56,8 +70,14 @@ layout = SceneView(
                     value=2.0,
                     on_change=_on_radius,
                 ),
-                CheckboxView("wire", label="Wireframe", value=False),
+                CheckboxView(
+                    "wire", label="Wireframe", value=True, on_change=_on_wireframe
+                ),
                 ButtonView("btn_pastel", label="Apply Pastel", on_click=_apply_pastel),
+                ButtonView("btn_light", label="Apply Light", on_click=_apply_light),
+                ButtonView(
+                    "btn_standard", label="Apply Standard", on_click=_apply_standard
+                ),
             ],
             position=EAnchor.TOP_LEFT,
         ),
@@ -68,5 +88,8 @@ layout = SceneView(
 viz.set_theme("pastel")
 viz.show(layout=layout)
 viz.export_snapshot("pastel_theme.html", theme="pastel", overwrite=True)
-print("Pastel theme applied and exported to pastel_theme.html. Press Ctrl+C to exit.")
+print(
+    "Buttons switch between the pastel, light, and standard themes. "
+    "Pastel theme exported to pastel_theme.html. Press Ctrl+C to exit."
+)
 viz.wait()

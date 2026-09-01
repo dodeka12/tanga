@@ -384,7 +384,7 @@ def _build_animated_fullpage_adapter(
     show_controls: bool,
 ) -> str:
     """Generate the JS bootstrap adapter for a full-page animated document."""
-    bg = scene_config.get("background_color", "#1a1a2e")
+    bg = scene_config.get("background_color")
     space_dim = scene_config.get("space_dim", 3)
 
     title_raw = scene_config.get("title", "")

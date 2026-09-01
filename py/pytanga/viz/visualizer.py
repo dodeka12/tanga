@@ -123,7 +123,7 @@ class Visualizer(_JupyterDisplayMixin):
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
-        background_color: str = "#1a1a2e",
+        background_color: str | None = None,
         # Camera configuration (None = auto-fit from entities). Accepts a
         # CameraConfig, or a View2DConfig/View3dConfig input spec.
         camera: CameraConfig | View2DConfig | View3dConfig | None = None,

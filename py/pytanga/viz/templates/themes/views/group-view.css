@@ -1,5 +1,16 @@
 /* Tanga viewer — group/panel chrome (control panel, group header, attached groups). */
 
+.tanga-group {
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: var(--tanga-font);
+    font-size: 13px;
+    color: var(--tanga-fg);
+    box-shadow: var(--tanga-shadow);
+}
+
 .tanga-control-panel {
     position: absolute;
     z-index: 20;
@@ -30,6 +41,7 @@
     margin-bottom: 6px;
     border-bottom: 1px solid var(--tanga-border-subtle);
     cursor: grab;
+    color: var(--tanga-fg-strong);
 }
 
 .tanga-group-header:active {

@@ -83,7 +83,7 @@ def render_export_html(
 
 def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     """Generate the JS bootstrap adapter for static full-page HTML exports."""
-    bg_color = scene_config.get("background_color", "#1a1a2e")
+    bg_color = scene_config.get("background_color")
     space_dim = scene_config.get("space_dim", 3)
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")

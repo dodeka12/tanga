@@ -188,7 +188,7 @@ uv run python py/examples/<path>.py
 
 - **explicit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
-- **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
+- **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
 - **expressions** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
@@ -284,7 +284,7 @@ uv run python py/examples/<path>.py
 
 - **least-squares** — [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **light** — [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
+- **light** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
 - **Line** — [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [All geometric entity types in one scene](viz/entities/all_entities.md)
 
@@ -512,6 +512,8 @@ uv run python py/examples/<path>.py
 
 - **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
 
+- **theme switching** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
+
 - **tilted plane** — [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
 - **timeline** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
@@ -559,6 +561,8 @@ uv run python py/examples/<path>.py
 - **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **VizSceneHandle** — [Banners scoped to a named scene via VizSceneHandle](viz/banners/scene_banner.md)
+
+- **wireframe** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
 
 ## Topics
 

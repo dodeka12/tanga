@@ -112,6 +112,7 @@ export class ThreeJsView extends View {
         this.controls = null;
         this.labelRenderer = null;
         this.sceneConfig = null;
+        this._explicitBackground = null;
         this.cameraPositioned = false;
         this._titleElement = null;
         this._annotationPanel = null;
@@ -291,7 +292,11 @@ export class ThreeJsView extends View {
         const cameraConfig = this._cameraOverride || config.camera;
 
         if (config.background_color) {
+            this._explicitBackground = config.background_color;
             this.scene.background = new THREE.Color(config.background_color);
+        } else {
+            this._explicitBackground = null;
+            this.applyThemeBackground();
         }
 
         this._applyCamera(cameraConfig);
@@ -310,6 +315,17 @@ export class ThreeJsView extends View {
         } else if (config.annotation === '') {
             this._removeAnnotation();
         }
+    }
+
+    /**
+     * Point this pane's scene background at the active theme's `--tanga-bg`
+     * token.  A no-op when the scene config set an explicit `background_color`.
+     */
+    applyThemeBackground() {
+        if (this._explicitBackground) return;
+        const bg = getComputedStyle(document.documentElement)
+            .getPropertyValue('--tanga-bg').trim();
+        this.scene.background = bg ? new THREE.Color(bg) : null;
     }
 
     /**

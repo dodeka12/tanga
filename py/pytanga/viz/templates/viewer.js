@@ -579,7 +579,17 @@ async function handleMessage(msg) {
     }
 
     if (msg.type === 'theme_define') {
-        handleThemeDefine(msg);
+        const applyThemeBackgrounds = () => {
+            for (const route of _sceneRoutes.values()) {
+                for (const v of route.sceneViews) v.applyThemeBackground();
+            }
+        };
+        const ready = handleThemeDefine(msg);
+        if (ready && typeof ready.then === 'function') {
+            ready.then(applyThemeBackgrounds);
+        } else {
+            applyThemeBackgrounds();
+        }
         return;
     }
 
