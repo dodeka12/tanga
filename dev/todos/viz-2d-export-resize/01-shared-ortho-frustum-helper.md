@@ -23,7 +23,7 @@ Add `applyOrthoFrustum(camera, width, height)` to the pure, shared
 - [x] **1.2 — Update the module header comment**
   - Note that `applyOrthoFrustum` is a mutating helper (still `three`/DOM-free
     and Node-testable).
-- [ ] **1.3 — Add Node unit tests**
+- [x] **1.3 — Add Node unit tests**
   - `applyOrthoFrustum` recomputes from a stored `_view2d` rect (e.g.
     `{xmin:-5,xmax:5,ymin:-5,ymax:5,uniform:true,border_px:0}` in a 200×800 pane
     → `left:-5,right:5,top:20,bottom:-20`).

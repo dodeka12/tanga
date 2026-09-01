@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { finiteAspect, orthoFrustum } from '../../../py/pytanga/viz/templates/camera-fit.js';
+import { finiteAspect, orthoFrustum, applyOrthoFrustum } from '../../../py/pytanga/viz/templates/camera-fit.js';
 
 test('finiteAspect returns width / height for valid sizes', () => {
     assert.equal(finiteAspect(200, 100), 2);
@@ -53,4 +53,36 @@ test('orthoFrustum border_px insets the content area in both modes', () => {
     const stretch = orthoFrustum(-10, 10, -5, 5, false, 10, 200, 100);
     assert.ok(stretch.left < -10, 'stretch mode expands to cover the border');
     assert.ok(stretch.top > 5);
+});
+
+test('applyOrthoFrustum recomputes from a stored _view2d rect', () => {
+    const cam = {
+        userData: {
+            _view2d: { xmin: -5, xmax: 5, ymin: -5, ymax: 5, uniform: true, border_px: 0 },
+        },
+        left: 0, right: 0, top: 0, bottom: 0,
+    };
+    applyOrthoFrustum(cam, 200, 800);
+    assert.deepEqual(
+        { left: cam.left, right: cam.right, top: cam.top, bottom: cam.bottom },
+        { left: -5, right: 5, top: 20, bottom: -20 },
+    );
+});
+
+test('applyOrthoFrustum preserves current height when no _view2d', () => {
+    const cam = { userData: {}, left: -10, right: 10, top: -5, bottom: 5 };
+    applyOrthoFrustum(cam, 100, 100);
+    assert.deepEqual(
+        { left: cam.left, right: cam.right, top: cam.top, bottom: cam.bottom },
+        { left: -10, right: 10, top: 10, bottom: -10 },
+    );
+});
+
+test('applyOrthoFrustum resets a corrupt frustum to a default box', () => {
+    const cam = { userData: {}, left: NaN, right: NaN, top: NaN, bottom: NaN };
+    applyOrthoFrustum(cam, 200, 100);
+    assert.deepEqual(
+        { left: cam.left, right: cam.right, top: cam.top, bottom: cam.bottom },
+        { left: -10, right: 10, top: 5, bottom: -5 },
+    );
 });
