@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2021 Christian Perwass
 //
-// Shared, pure camera-fit math used by the live viewer, the HTML export
-// bootstrap, and (because it has no `three`/DOM dependency) the Node unit
-// tests.  This is the single source of truth for the 2D ortho frustum and the
-// finite-aspect computation — `view_mode.js`, `fit_camera.js`, and
-// `js_apply_camera` (export) all call these, so the three can never drift
-// apart.
+// Shared camera-fit math used by the live viewer, the HTML export bootstrap,
+// and (because it has no `three`/DOM dependency) the Node unit tests.  This is
+// the single source of truth for the 2D ortho frustum and the finite-aspect
+// computation — `view_mode.js`, `fit_camera.js`, and `js_apply_camera`
+// (export) all call these, so the three can never drift apart.  Everything
+// here is `three`/DOM-free; `applyOrthoFrustum` additionally mutates a camera
+// object (`left`/`right`/`top`/`bottom`) but remains dependency-free.
 
 /**
  * Return a finite aspect ratio (width / height), or NaN when the size is not

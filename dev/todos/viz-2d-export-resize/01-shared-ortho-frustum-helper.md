@@ -20,7 +20,7 @@ Add `applyOrthoFrustum(camera, width, height)` to the pure, shared
     letterbox, corrupt-frustum reset to a 10-unit-high default box.
   - No `three`/DOM references — it only reads/writes `camera.left/right/top/bottom`
     and `camera.userData`.
-- [ ] **1.2 — Update the module header comment**
+- [x] **1.2 — Update the module header comment**
   - Note that `applyOrthoFrustum` is a mutating helper (still `three`/DOM-free
     and Node-testable).
 - [ ] **1.3 — Add Node unit tests**
