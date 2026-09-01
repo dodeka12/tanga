@@ -225,7 +225,9 @@ export class ThreeJsView extends View {
 
     fitCamera() {
         if (!this.camera) return;
-        fitCamera(this.sceneObjects, this.camera, this.controls, this.sceneConfig?.space_dim || 3);
+        fitCamera(this.sceneObjects, this.camera, this.controls,
+            this.sceneConfig?.space_dim || 3,
+            this.width || window.innerWidth, this.height || window.innerHeight);
     }
 
     render() {
@@ -304,9 +306,10 @@ export class ThreeJsView extends View {
      */
     _applyCamera(cameraConfig) {
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
-        const viewAspect = (this.width > 0 && this.height > 0) ? this.width / this.height : null;
+        const viewWidth = this.width > 0 ? this.width : null;
+        const viewHeight = this.height > 0 ? this.height : null;
 
-        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null, viewAspect);
+        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null, viewWidth, viewHeight);
         this._interaction.setCamera(this.camera);
 
         const cc = cameraConfig || {};

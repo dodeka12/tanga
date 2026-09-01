@@ -156,6 +156,8 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             controls_var="adapterControls",
             cam_explicit=cam_explicit,
             space_dim=space_dim,
+            width_expr="window.innerWidth",
+            height_expr="window.innerHeight",
         )
         + "})();"
     )

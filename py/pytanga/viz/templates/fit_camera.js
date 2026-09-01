@@ -9,16 +9,9 @@
 
 import * as THREE from 'three';
 
-const _REFERENCE_KINDS = new Set(['Axes3D', 'Axes2D', 'Axis', 'Grid']);
+import { orthoFrustum } from './camera-fit.js';
 
-function _finiteAspect(w, h) {
-    const width = Number(w);
-    const height = Number(h);
-    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        return NaN;
-    }
-    return width / height;
-}
+const _REFERENCE_KINDS = new Set(['Axes3D', 'Axes2D', 'Axis', 'Grid']);
 
 /**
  * Auto-fit the camera to the scene contents.
@@ -27,9 +20,11 @@ function _finiteAspect(w, h) {
  * @param {THREE.Camera} camera
  * @param {THREE.OrbitControls} controls
  * @param {number} spaceDim  2 or 3
+ * @param {number|null} width   viewport width in CSS px (falls back to window)
+ * @param {number|null} height  viewport height in CSS px (falls back to window)
  */
-export function fitCamera(sceneObjects, camera, controls, spaceDim) {
-    // ── 2D orthographic fit (top-down; unchanged behaviour) ──
+export function fitCamera(sceneObjects, camera, controls, spaceDim, width, height) {
+    // ── 2D orthographic fit (top-down; contain the content box) ──
     if (spaceDim === 2) {
         const box = new THREE.Box3();
         sceneObjects.forEach(entry => {
@@ -42,13 +37,21 @@ export function fitCamera(sceneObjects, camera, controls, spaceDim) {
         const size = new THREE.Vector3();
         box.getSize(size);
 
-        const frustumSize = Math.max(size.x, size.y, 1) * 1.2;
-        const aspect = _finiteAspect(window.innerWidth, window.innerHeight);
-        const safeAspect = Number.isFinite(aspect) ? aspect : 1.0;
-        camera.left = frustumSize * safeAspect / -2;
-        camera.right = frustumSize * safeAspect / 2;
-        camera.top = frustumSize / 2;
-        camera.bottom = frustumSize / -2;
+        // Expand the content box by a small margin (10% of the max extent,
+        // matching the historical 1.2 factor) and let `orthoFrustum` letterbox
+        // it to the actual viewport aspect.
+        const margin = Math.max(size.x, size.y, 1) * 0.1;
+        const xmin = center.x - size.x / 2 - margin;
+        const xmax = center.x + size.x / 2 + margin;
+        const ymin = center.y - size.y / 2 - margin;
+        const ymax = center.y + size.y / 2 + margin;
+
+        const f = orthoFrustum(xmin, xmax, ymin, ymax, true, 0,
+            width ?? window.innerWidth, height ?? window.innerHeight);
+        camera.left = f.left;
+        camera.right = f.right;
+        camera.top = f.top;
+        camera.bottom = f.bottom;
         camera.position.set(center.x, center.y, 20);
         camera.lookAt(center.x, center.y, 0);
         camera.updateProjectionMatrix();
@@ -56,14 +59,7 @@ export function fitCamera(sceneObjects, camera, controls, spaceDim) {
         controls.update();
         // Persist the fitted rectangle so resize recomputes from the original
         // fit (letterbox) rather than the current, possibly-corrupt frustum.
-        camera.userData._view2d = {
-            xmin: center.x - frustumSize * safeAspect / 2,
-            xmax: center.x + frustumSize * safeAspect / 2,
-            ymin: center.y - frustumSize / 2,
-            ymax: center.y + frustumSize / 2,
-            uniform: true,
-            border_px: 0,
-        };
+        camera.userData._view2d = { xmin, xmax, ymin, ymax, uniform: true, border_px: 0 };
         return;
     }
 
