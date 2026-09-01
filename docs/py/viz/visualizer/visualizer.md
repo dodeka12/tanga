@@ -487,3 +487,11 @@ viz.export_glb("scene.glb")
 | `export_animated_html()` | `export_snapshot(animation=rec)` |
 | `export_animated_figure()` | `export_figure(animation=rec)` |
 | `SceneExporter` | `viz` / `viz.scene(name)` |
+
+## Themes
+
+The UI chrome (controls, panels, banners, dialogs, menus) is themed via CSS.
+Select a theme with `viz.set_theme(id)` (default `"dark"`; also `"light"` and
+`"pastel"`), list them with `list_themes()`, and pack a specific theme into an
+export with `viz.export_snapshot("scene.html", theme=...)`.  See
+[Themes](theming.md).

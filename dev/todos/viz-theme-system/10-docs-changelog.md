@@ -14,23 +14,23 @@ packing), add API docs, write the changelog, and run the full suite.
 
 ## Steps
 
-- [ ] **10.1 — Architecture doc**
+- [x] **10.1 — Architecture doc**
   - Document: theme layers (base → tokens → components → overrides), the
     `registry.json` schema + resolved order, the **stable class-name contract**,
     the `theme_define` wire message, runtime switching, and export packing.
   - Note that the JS assigns semantic classes and only inline computed geometry.
 
-- [ ] **10.2 — API docs**
+- [x] **10.2 — API docs**
   - Document `Visualizer.set_theme` / `theme` property, `list_themes` /
     `theme_css_files`, and the `theme=` export parameter; link the three new
     examples (control theming, theme switching, custom override).
 
-- [ ] **10.3 — Changelog**
+- [x] **10.3 — Changelog**
   - Create `docs/changelog/YYYY-MM-DD_<branch>.md` per `dev/workflows/changelog.md`
     (title via `uv run python tools/last-release.py`); add a New Features bullet
     for the theme system.
 
-- [ ] **10.4 — Full validation**
+- [x] **10.4 — Full validation**
   - `uv run pytest -q`, `uv run ruff check py/pytanga/viz/`, `node --check` on all
     touched JS, `uv run python tools/generate-example-docs.py --check`,
     `uv run mkdocs build --strict`.

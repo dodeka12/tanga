@@ -139,6 +139,7 @@ nav:
       - Multi-Scene: py/viz/visualizer/multi-scene.md
       - Split Views: py/viz/visualizer/split-views.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
+      - Themes: py/viz/visualizer/theming.md
     - Visualizer App:
       - Overview: py/viz/app/index.md
       - Quickstart: py/viz/app/app.md
@@ -203,6 +204,7 @@ nav:
       - System overview: dev/architecture/system-overview.md
       - Type system & storage: dev/architecture/type-system-and-storage.md
       - Viz controls & interactions: dev/architecture/viz-controls-and-interactions.md
+      - Viz theme system: dev/architecture/viz-theme-system.md
     - GA Pipeline:
       - Operation pipeline: dev/ga/operation-pipeline.md
     - Guides:
