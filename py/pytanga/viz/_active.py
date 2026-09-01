@@ -28,6 +28,7 @@ from pytanga.geometry import Direction, Point
 
 from ._act_style import ActPointStyle
 from ._interaction import (
+    ClickEvent,
     DragEvent,
     DragMode,
     InteractionConfig,
@@ -57,6 +58,14 @@ Receives the drag event and the :class:`ActSceneObject` instance for the
 ``DRAG_START`` and ``DRAG_END`` phases.  The return value is ignored —
 these handlers observe the drag lifecycle and never override the default
 movement behaviour.
+"""
+
+ActClickHandler = Callable[[ClickEvent, "ActSceneObject"], Awaitable[None]]
+"""Click handler signature for active scene objects.
+
+Receives the click event and the :class:`ActSceneObject` instance.  The
+return value is ignored — click handlers observe the click and never override
+default behaviour.
 """
 
 
@@ -133,10 +142,12 @@ class ActSceneObject:
         handler: ActHandler | None = None,
         on_drag_start: ActEventHandler | None = None,
         on_drag_end: ActEventHandler | None = None,
+        on_click: ActClickHandler | None = None,
     ) -> None:
         self._handler: ActHandler | None = handler
         self._on_drag_start: ActEventHandler | None = on_drag_start
         self._on_drag_end: ActEventHandler | None = on_drag_end
+        self._on_click: ActClickHandler | None = on_click
         self._viz_handle: VizSceneHandle | None = None
         self._entity_id: str = ""
 
@@ -158,9 +169,9 @@ class ActSceneObject:
         """Register interaction config and handlers with the scene.
 
         Registers a handler for ``DRAG_MOVE`` (the per-frame event), which
-        calls :meth:`_on_drag`.  When ``on_drag_start`` / ``on_drag_end``
-        handlers were supplied, they are additionally registered for
-        ``DRAG_START`` / ``DRAG_END``.
+        calls :meth:`_on_drag`.  When ``on_drag_start`` / ``on_drag_end`` /
+        ``on_click`` handlers were supplied, they are additionally registered
+        for ``DRAG_START`` / ``DRAG_END`` / ``CLICK``.
         """
         if self._viz_handle is None:
             return
@@ -180,6 +191,12 @@ class ActSceneObject:
                 self._entity_id,
                 InteractionEventType.DRAG_END,
                 self._on_drag_end_event,
+            )
+        if self._on_click is not None:
+            self._viz_handle.on_interaction(
+                self._entity_id,
+                InteractionEventType.CLICK,
+                self._on_click_event,
             )
 
     # ── Default drag handler ───────────────────────────────
@@ -213,6 +230,11 @@ class ActSceneObject:
         """Dispatch a ``DRAG_END`` event to the user handler, if any."""
         if self._on_drag_end is not None:
             await self._on_drag_end(event, self)
+
+    async def _on_click_event(self, event: ClickEvent) -> None:
+        """Dispatch a ``CLICK`` event to the user handler, if any."""
+        if self._on_click is not None:
+            await self._on_click(event, self)
 
     def _move_to(self, pos: Point) -> None:
         """Update the internal position.  Override in subclasses."""
@@ -295,6 +317,12 @@ class ActPoint(ActSceneObject):
             ``async def on_drag_end(event: DragEvent, ap: ActPoint) -> None``.
             The return value is ignored; this observes the end of the
             drag and does not override default movement.
+        on_click: Optional async callback invoked when the point is clicked.
+            Signature:
+            ``async def on_click(event: ClickEvent, ap: ActPoint) -> None``.
+            The return value is ignored; this observes a click and does not
+            override default behaviour.  Providing it also registers a
+            ``CLICK`` trigger so the frontend emits ``interaction:click``.
     """
 
     def __init__(
@@ -308,11 +336,13 @@ class ActPoint(ActSceneObject):
         handler: ActHandler | None = None,
         on_drag_start: ActEventHandler | None = None,
         on_drag_end: ActEventHandler | None = None,
+        on_click: ActClickHandler | None = None,
     ) -> None:
         super().__init__(
             handler=handler,
             on_drag_start=on_drag_start,
             on_drag_end=on_drag_end,
+            on_click=on_click,
         )
         if isinstance(x, Point):
             self._point = x
@@ -374,6 +404,13 @@ class ActPoint(ActSceneObject):
                     drag_mode=mode,
                 )
             ]
+        if self._on_click is not None:
+            triggers.append(
+                InteractionTrigger(
+                    event_type=InteractionEventType.CLICK,
+                    mouse_button=MouseButton.LEFT,
+                )
+            )
         return InteractionConfig(
             enabled=True,
             triggers=triggers,
