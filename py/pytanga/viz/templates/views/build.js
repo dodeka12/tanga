@@ -124,9 +124,7 @@ export function buildViewTree(node, ws) {
         });
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value, placeholder: node.placeholder,
-            root: node.root, accept: node.accept,
+            id: node.id, value: node.value, root: node.root, accept: node.accept,
         });
     } else if (node.type === 'text_field_view') {
         view = new TextFieldView({

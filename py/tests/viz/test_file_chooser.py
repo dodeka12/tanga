@@ -25,6 +25,7 @@ def test_list_directory_dirs_first_and_hidden_omitted(tmp_path):
 
     assert result["error"] is None
     assert result["path"] == str(tmp_path.resolve())
+    assert result["parent"] == str(tmp_path.resolve().parent)
     names = [e["name"] for e in result["entries"]]
     assert names == ["a_dir", "a.txt", "b.txt"]
     assert result["entries"][0]["is_dir"] is True
@@ -216,6 +217,65 @@ def test_file_chooser_view_serialization():
     assert data["root"] == "/tmp"
     assert data["placeholder"] == ""
     assert data["accept"] == ""
+
+
+def test_file_chooser_dialog_serialization():
+    from pytanga.viz import FileChooserDialog
+    from pytanga.viz._dialog import serialize_dialog
+
+    dlg = FileChooserDialog("fc", root="/data", value="/data/file.csv")
+    msg = serialize_dialog(dlg.build_dialog("d1"))
+
+    assert msg["type"] == "dialog_define"
+    assert msg["variant"] == "file_chooser"
+    assert msg["control_id"] == "fc"
+    content = msg["content"]
+    assert content["type"] == "file_chooser_view"
+    assert content["id"] == "fc"
+    assert content["value"] == "/data/file.csv"
+    assert content["root"] == "/data"
+
+
+def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):
+    from pytanga.viz import FileChooserDialog
+
+    viz = _viz()
+    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
+
+    async def _on_accept(path, event):
+        pass
+
+    did = viz.show_dialog(FileChooserDialog("fc", root="/data", on_accept=_on_accept))
+    assert did == "dialog_1"
+    dialog = viz._dialogs[None][did]
+    assert dialog.id == did
+    assert dialog.variant == "file_chooser"
+    assert dialog.control_id == "fc"
+    assert viz._handler_registry.get(did, "accept") is _on_accept
+
+
+@pytest.mark.anyio
+async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch):
+    from pytanga.viz import FileChooserDialog
+
+    viz = _viz()
+    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
+    removed: list = []
+    monkeypatch.setattr(viz, "_push_dialog_remove", lambda i, s: removed.append((i, s)))
+    accepted: list = []
+
+    async def _on_accept(path, event):
+        accepted.append(path)
+
+    did = viz.show_dialog(FileChooserDialog("fc", on_accept=_on_accept))
+    await viz._dispatch_control_event(
+        "file_browser_select", {"control_id": "fc", "path": "/x.csv"}
+    )
+    await viz._dispatch_control_event("accept", {"id": did})
+
+    assert accepted == ["/x.csv"]
+    assert did not in viz._dialogs[None]
+    assert removed == [(did, None)]
 
 
 def test_set_layout_registers_file_chooser_handler():

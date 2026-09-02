@@ -405,7 +405,7 @@ class Visualizer(_JupyterDisplayMixin):
         label: str = "",
         trigger_icon: Icon | None = None,
         mode: str = "dropdown",
-        direction: str = "vertical",
+        direction: str | None = None,
         position: EAnchor | None = None,
         override_variant: bool = True,
         children: list[View] | None = None,
@@ -3357,6 +3357,11 @@ class Visualizer(_JupyterDisplayMixin):
             for view in iter_control_views(layout):
                 if view.id == cid:
                     return ControlRef("view", view.control, "")
+        for scoped in self._dialogs.values():
+            for dialog in scoped.values():
+                for view in iter_control_views(dialog.content):
+                    if view.id == cid:
+                        return ControlRef("view", view.control, "")
         return None
 
     async def _handle_file_browser_navigate(self, payload: dict[str, Any]) -> None:
@@ -3841,7 +3846,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     def _register_dialog(
         self,
-        content: View,
+        content: Any,
         *,
         id: str | None,
         title: str,
@@ -3849,13 +3854,13 @@ class Visualizer(_JupyterDisplayMixin):
         align_y: float,
         dismissable: bool,
         on_close: Any,
+        width: Any,
+        height: Any,
         scene_name: str | None,
     ) -> Any:
         """Create, store, and register a dialog; return it (un-pushed)."""
-        from ._dialog import Dialog
-
-        if not isinstance(content, View):
-            raise TypeError(f"content must be a View, got {type(content).__name__}")
+        from ._dialog import Dialog, FileChooserDialog
+        from .views import View
 
         if id is None:
             id = self._next_dialog_id()
@@ -3864,25 +3869,46 @@ class Visualizer(_JupyterDisplayMixin):
                 if id in scoped:
                     raise ValueError(f"Dialog id {id!r} is already in use")
 
-        dialog = Dialog(
-            id=id,
-            content=content,
-            title=title,
-            align_x=align_x,
-            align_y=align_y,
-            dismissable=dismissable,
-            on_close=on_close,
-        )
-        # Register the content's control-view handlers, then the close callback.
-        self._register_view_handlers(content)
-        if on_close is not None:
-            self._handler_registry.register(id, on_close, event="close")
+        if isinstance(content, FileChooserDialog):
+            dialog = content.build_dialog(id)
+            if title:
+                dialog.title = title
+            if width is not None:
+                dialog.width = width
+            if height is not None:
+                dialog.height = height
+            if on_close is not None:
+                dialog.on_close = on_close
+        elif isinstance(content, View):
+            dialog = Dialog(
+                id=id,
+                content=content,
+                title=title,
+                align_x=align_x,
+                align_y=align_y,
+                dismissable=dismissable,
+                on_close=on_close,
+                width=width,
+                height=height,
+            )
+        else:
+            raise TypeError(
+                f"content must be a View or FileChooserDialog, got "
+                f"{type(content).__name__}"
+            )
+
+        # Register the content's control-view handlers, then close/accept callbacks.
+        self._register_view_handlers(dialog.content)
+        if dialog.on_close is not None:
+            self._handler_registry.register(id, dialog.on_close, event="close")
+        if dialog.on_accept is not None:
+            self._handler_registry.register(id, dialog.on_accept, event="accept")
         self._dialogs.setdefault(scene_name, {})[id] = dialog
         return dialog
 
     def show_dialog(
         self,
-        content: View,
+        content: Any,
         *,
         id: str | None = None,
         title: str = "",
@@ -3890,6 +3916,8 @@ class Visualizer(_JupyterDisplayMixin):
         align_y: float = 0.5,
         dismissable: bool = True,
         on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
         scene_name: str | None = None,
     ) -> str:
         """Show a dialog and return its id.
@@ -3898,11 +3926,15 @@ class Visualizer(_JupyterDisplayMixin):
         per-scene dialog (``scene_name="<name>"``) is shown inside every pane
         displaying that scene.  ``content`` is any :class:`View` (e.g. a
         :class:`StackView` of ``*View`` control wrappers) rendered inside the
-        dialog body; its control-view handlers are registered automatically.
-        Closing the dialog (the ✕, or a backend ``remove_dialog``) fires
-        ``on_close`` on the server loop.  With ``dismissable=False`` the dialog
-        is modal — a dimmed backdrop blocks the scene and there is no ✕ (close
-        it via a control in ``content`` or ``remove_dialog``).
+        dialog body, or a :class:`FileChooserDialog` spec; its control-view
+        handlers are registered automatically.
+
+        ``width`` / ``height`` optionally size the dialog (``Size.px`` or
+        ``Size.percent``); ``None`` shrink-wraps the content.  Closing the
+        dialog (the ✕, or a backend ``remove_dialog``) fires ``on_close`` on
+        the server loop.  With ``dismissable=False`` the dialog is modal — a
+        dimmed backdrop blocks the scene and there is no ✕ (close it via a
+        control in ``content`` or ``remove_dialog``).
         """
         dialog = self._register_dialog(
             content,
@@ -3912,18 +3944,28 @@ class Visualizer(_JupyterDisplayMixin):
             align_y=align_y,
             dismissable=dismissable,
             on_close=on_close,
+            width=width,
+            height=height,
             scene_name=scene_name,
         )
         self._push_dialog(dialog, scene_name)
         return dialog.id
 
     def _unregister_dialog(self, dialog: Any) -> None:
-        """Unregister a dialog's content control handlers and ``on_close``."""
+        """Unregister a dialog's content control handlers and close/accept callbacks."""
         from .views import iter_control_views
 
         for view in iter_control_views(dialog.content):
             self._handler_registry.unregister(view.id)
         self._handler_registry.unregister(dialog.id, "close")
+        self._handler_registry.unregister(dialog.id, "accept")
+
+    def _find_dialog(self, dialog_id: str) -> tuple[Any, str | None] | None:
+        """Return ``(dialog, scene_name)`` for *dialog_id*, or ``None``."""
+        for scene_name, scoped in self._dialogs.items():
+            if dialog_id in scoped:
+                return scoped[dialog_id], scene_name
+        return None
 
     def remove_dialog(self, dialog_id: str, *, scene_name: str | None = None) -> None:
         """Remove a dialog by id (and unregister its handlers)."""
@@ -4007,7 +4049,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     async def show_dialog_async(
         self,
-        content: View,
+        content: Any,
         *,
         id: str | None = None,
         title: str = "",
@@ -4015,6 +4057,8 @@ class Visualizer(_JupyterDisplayMixin):
         align_y: float = 0.5,
         dismissable: bool = True,
         on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
         scene_name: str | None = None,
     ) -> str:
         """Awaitable :meth:`show_dialog` (see its docs).
@@ -4031,6 +4075,8 @@ class Visualizer(_JupyterDisplayMixin):
             align_y=align_y,
             dismissable=dismissable,
             on_close=on_close,
+            width=width,
+            height=height,
             scene_name=scene_name,
         )
         await self._on_server_loop(lambda: self._push_dialog_async(dialog, scene_name))
@@ -4204,6 +4250,32 @@ class Visualizer(_JupyterDisplayMixin):
                     logging.getLogger(__name__).exception(
                         "Error in close handler for %r", target
                     )
+            if msg_type == "close":
+                found = self._find_dialog(target) if target else None
+                if found is not None:
+                    self.remove_dialog(target, scene_name=found[1])
+            return
+
+        if msg_type == "accept":
+            target = payload.get("id") or payload.get("control_id")
+            found = self._find_dialog(target) if target else None
+            if found is not None:
+                dialog, scene_name = found
+                value = (
+                    self.get_control(dialog.control_id) if dialog.control_id else None
+                )
+                handler = self._handler_registry.get(target, "accept")
+                if handler is not None:
+                    self._handler_registry.unregister(target, "accept")
+                    try:
+                        await handler(value, event)
+                    except Exception:
+                        import logging
+
+                        logging.getLogger(__name__).exception(
+                            "Error in accept handler for %r", target
+                        )
+                self.remove_dialog(target, scene_name=scene_name)
             return
 
         if msg_type == "file_browser_navigate":

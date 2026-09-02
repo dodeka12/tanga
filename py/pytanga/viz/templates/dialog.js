@@ -3,20 +3,36 @@
 
 import { getOverlay } from './overlay.js';
 import { DialogView } from './views/dialog-view.js';
+import { FileChooserDialogView } from './views/file-chooser-dialog-view.js';
 
 const _dialogs = new Map();
 
 export function handleDialogDefine(msg, ws) {
     _removeDialog(msg.id);
-    const view = new DialogView({
-        id: msg.id,
-        title: msg.title,
-        content: msg.content,
-        align_x: msg.align_x,
-        align_y: msg.align_y,
-        dismissable: msg.dismissable,
-        ws: ws,
-    });
+    const isFileChooser = msg.variant === 'file_chooser';
+    const view = isFileChooser
+        ? new FileChooserDialogView({
+            id: msg.id,
+            title: msg.title,
+            content: msg.content,
+            align_x: msg.align_x,
+            align_y: msg.align_y,
+            dismissable: msg.dismissable,
+            width: msg.width,
+            height: msg.height,
+            ws: ws,
+        })
+        : new DialogView({
+            id: msg.id,
+            title: msg.title,
+            content: msg.content,
+            align_x: msg.align_x,
+            align_y: msg.align_y,
+            dismissable: msg.dismissable,
+            width: msg.width,
+            height: msg.height,
+            ws: ws,
+        });
     _dialogs.set(msg.id, view);
     getOverlay().addChild(view);
 }

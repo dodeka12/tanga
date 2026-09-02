@@ -54,7 +54,7 @@ from ._controls import (
     ValueEdit,
 )
 from ._coordinate_system import CoordinateSystem, fit_view2d
-from ._dialog import Dialog
+from ._dialog import Dialog, FileChooserDialog
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
 from ._interaction import (
@@ -245,6 +245,7 @@ __all__ = [
     "FigureConfig",
     "FigureStyle",
     "FileChooser",
+    "FileChooserDialog",
     "FileChooserView",
     "GeneralRotorStyle",
     "Grid",

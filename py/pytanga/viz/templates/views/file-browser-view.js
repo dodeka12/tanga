@@ -12,6 +12,7 @@ export class FileBrowserView extends View {
         this.onSelect = onSelect;
         this.onClose = onClose;
         this._currentPath = path;
+        this._parentPath = null;
 
         this.el.classList.add('tanga-file-browser');
 
@@ -104,13 +105,12 @@ export class FileBrowserView extends View {
     }
 
     _up() {
-        const parts = this._currentPath.split('/').filter((s) => s !== '');
-        const parent = parts.length ? '/' + parts.slice(0, -1).join('/') : '/';
-        if (this.onNavigate) this.onNavigate(parent);
+        if (this._parentPath && this.onNavigate) this.onNavigate(this._parentPath);
     }
 
-    updateListing(path, entries, error) {
+    updateListing(path, entries, error, parent) {
         this._currentPath = path;
+        this._parentPath = parent || null;
         this._pathText.textContent = path;
         this._listEl.innerHTML = '';
 
