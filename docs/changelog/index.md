@@ -3,7 +3,7 @@
 ## [Since 1.16.0] — 2026-09-02
 - Flexible flow layout (`gap`/`align`/`justify`) · `Size.fr(n)` grows a child to fill leftover space · Python control size floors · `SpacerView` fills leftover flow space
 - Bug fixes: fixed split pane no longer locks unrelated splitters
-→ [Details](2026-09-02_feat-viz-layout-sizing.md)
+→ [Details](2026-09-02_d1203c2d.md)
 
 ## [Since 1.16.0] — 2026-09-02
 - `FileChooserDialog` file-open dialog (`FileChooserView` listing + path line + OK/Cancel) · dialog `width`/`height` + drag-to-resize corner
