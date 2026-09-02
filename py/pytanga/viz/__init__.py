@@ -139,7 +139,15 @@ from ._styles import (
     VizStyle,
     WireframeDashPattern,
 )
-from ._themes import default_theme, list_themes, theme_css_files, theme_label
+from ._themes import (
+    copy_theme,
+    default_theme,
+    external_theme_dirs,
+    list_themes,
+    register_theme,
+    theme_css_files,
+    theme_label,
+)
 from ._types import SceneEntity, VizInputType
 from ._viz_styles import VizStyles
 from .camera import (
@@ -332,8 +340,11 @@ __all__ = [
     "VizStyle",
     "VizStyles",
     "WireframeDashPattern",
+    "copy_theme",
     "default_theme",
+    "external_theme_dirs",
     "list_themes",
+    "register_theme",
     "theme_css_files",
     "theme_label",
 ]

@@ -1,6 +1,6 @@
 # Viz User Themes — Overview
 
-**Created:** 2026-09-02 | **Status:** Planned | **Branch:** `feat/viz-theme-system`
+**Created:** 2026-09-02 | **Status:** Done | **Branch:** `feat/viz-theme-system`
 
 ## Goal
 
@@ -12,6 +12,7 @@ folder — and load it in the viewer without editing the bundled
 - `register_theme(name, path)` — register an external theme folder (global, one-time).
 - `copy_theme(theme_id, dest)` — scaffold a new theme from a built-in one.
 - `refresh_theme()` — live-reload the active theme's CSS in a connected browser.
+- `enable_theme_auto_reload()` — watch the active theme and auto-refresh on edit.
 - Documentation of every themeable token and the stable override class contract.
 
 ## Architecture (short)
@@ -49,8 +50,8 @@ folder — and load it in the viewer without editing the bundled
   bundled `dark/`, `light/`, `pastel/`, `controls/`, `views/`).
 - `copy_theme` copies the theme's **own** `tokens.css` + `overrides/` (faithful),
   not the library-owned `base.css`/`components`.
-- Live refresh is **manual** (`refresh_theme()`); an auto file-watcher is a
-  deferred follow-up (no new dependency).
+- Live refresh is **manual** (`refresh_theme()`) or **automatic**
+  (`enable_theme_auto_reload()`, a polling thread — no new dependency).
 
 ## Phases
 
@@ -76,7 +77,6 @@ folder — and load it in the viewer without editing the bundled
 
 ## Non-goals
 
-- Auto file-watching / hot-reload daemon (manual `refresh_theme()` only, for now).
 - Per-scene or per-pane themes (theme is viewer-global).
 - A browser-side theme picker (theme is selected from the backend).
 - Theming the 3D geometry/entity renderers (unchanged — UI chrome only).

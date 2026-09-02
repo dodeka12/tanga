@@ -91,7 +91,11 @@ def test_missing_file_raises(tmp_path) -> None:
                 "tokens": "tokens.css",
                 "components": [],
                 "themes": {
-                    "dark": {"label": "Dark", "tokens": "dark/tokens.css", "overrides": {}},
+                    "dark": {
+                        "label": "Dark",
+                        "tokens": "dark/tokens.css",
+                        "overrides": {},
+                    },
                 },
             }
         ),
@@ -178,3 +182,88 @@ def test_set_theme_async_pushes_once() -> None:
     assert msg["label"] == "Light"
 
 
+def _external_theme_dir(tmp_path):
+    d = tmp_path / "corp"
+    (d / "overrides").mkdir(parents=True)
+    (d / "tokens.css").write_text(":root { --tanga-bg: #000; }", encoding="utf-8")
+    (d / "overrides" / "button.css").write_text(
+        ".tanga-action-button {}", encoding="utf-8"
+    )
+    (d / "overrides" / "checkbox.css").write_text(
+        ".tanga-checkbox-input {}", encoding="utf-8"
+    )
+    return d
+
+
+def test_register_external_theme_resolution(tmp_path):
+    reg = ThemeRegistry()
+    theme_dir = _external_theme_dir(tmp_path)
+    reg.register("corp", theme_dir, label="Corporate")
+
+    assert reg.list_themes() == ["dark", "light", "pastel", "corp"]
+    assert reg.default_theme() == "dark"
+    assert reg.theme_label("corp") == "Corporate"
+
+    files = reg.theme_css_files("corp")
+    assert files[:2] == ["base.css", "tokens.css"]
+    idx_tokens = files.index("user/corp/tokens.css")
+    idx_components = files.index(_COMPONENTS[0])
+    idx_override = files.index("user/corp/overrides/button.css")
+    assert idx_tokens < idx_components < idx_override
+    assert "user/corp/overrides/checkbox.css" in files
+
+    src_paths = {str(p) for p in reg.theme_css_paths("corp")}
+    assert str(theme_dir / "tokens.css") in src_paths
+    assert str(theme_dir / "overrides" / "button.css") in src_paths
+
+    assert reg.external_theme_dirs() == {"user/corp": theme_dir.resolve()}
+
+    watched = {str(p) for p in reg.theme_source_files("corp")}
+    assert str(theme_dir / "tokens.css") in watched
+    assert str(theme_dir / "overrides" / "button.css") in watched
+    assert not any("base.css" in p for p in watched)
+
+
+def test_register_duplicate_and_missing_tokens(tmp_path):
+    reg = ThemeRegistry()
+    theme_dir = _external_theme_dir(tmp_path)
+    reg.register("corp", theme_dir)
+
+    with pytest.raises(ValueError):
+        reg.register("corp", theme_dir)
+    with pytest.raises(ValueError):
+        reg.register("dark", theme_dir)
+
+    missing = tmp_path / "missing"
+    missing.mkdir()
+    with pytest.raises(ValueError):
+        reg.register("nope", missing)
+
+
+def test_copy_theme(tmp_path):
+    from pytanga.viz import copy_theme
+
+    dest = copy_theme("pastel", tmp_path / "mine")
+    assert (dest / "tokens.css").is_file()
+    assert (dest / "overrides" / "button.css").is_file()
+    assert (dest / "overrides" / "checkbox.css").is_file()
+
+    with pytest.raises(FileExistsError):
+        copy_theme("pastel", tmp_path / "mine")
+    copy_theme("pastel", tmp_path / "mine", overwrite=True)
+
+
+def test_set_theme_and_refresh_emit_version(monkeypatch):
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    pushed = []
+    monkeypatch.setattr(viz, "_push_theme", lambda: pushed.append(viz._theme_message()))
+
+    viz.set_theme("light")
+    assert pushed[-1]["theme"] == "light"
+    assert pushed[-1]["version"] == 1
+
+    viz.refresh_theme()
+    assert pushed[-1]["theme"] == "light"
+    assert pushed[-1]["version"] == 2

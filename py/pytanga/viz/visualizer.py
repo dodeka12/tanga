@@ -162,6 +162,9 @@ class Visualizer(_JupyterDisplayMixin):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._theme = "dark"
+        self._theme_version = 0
+        self._theme_watch_thread: threading.Thread | None = None
+        self._theme_watch_stop: threading.Event | None = None
         self._saved_signal_handlers: dict[int, Any] | None = None
         self._atexit_registered = False
         self._display_pending: set[str] = set()
@@ -990,6 +993,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         theme_css_files(theme_id)  # raises KeyError on unknown theme
         self._theme = theme_id
+        self._theme_version += 1
         self._push_theme()
 
     async def set_theme_async(self, theme_id: str) -> None:
@@ -998,8 +1002,77 @@ class Visualizer(_JupyterDisplayMixin):
 
         theme_css_files(theme_id)  # raises KeyError on unknown theme
         self._theme = theme_id
+        self._theme_version += 1
         if self._server is not None:
             await self._server.push_raw(json.dumps(self._theme_message()))
+
+    def refresh_theme(self) -> None:
+        """Re-push the active theme so connected viewers reload its CSS.
+
+        Useful after editing the active theme's ``tokens.css`` / ``overrides``
+        files; see :meth:`enable_theme_auto_reload` for automatic refresh.
+        """
+        self._theme_version += 1
+        self._push_theme()
+
+    async def refresh_theme_async(self) -> None:
+        """Async variant of :meth:`refresh_theme` — call from the server's loop."""
+        self._theme_version += 1
+        if self._server is not None:
+            await self._server.push_raw(json.dumps(self._theme_message()))
+
+    def enable_theme_auto_reload(self, poll_interval: float = 1.0) -> None:
+        """Watch the active theme's files and auto-refresh the viewer on change.
+
+        Polls the active theme's ``tokens.css`` and ``overrides`` files and
+        calls :meth:`refresh_theme` when one of them changes, so theme edits
+        show up live without a page reload.  No-op if already enabled.
+        """
+        if self._theme_watch_thread is not None:
+            return
+        self._theme_watch_stop = threading.Event()
+        self._theme_watch_thread = threading.Thread(
+            target=self._watch_theme_files,
+            args=(float(poll_interval),),
+            name="tanga-theme-watch",
+            daemon=True,
+        )
+        self._theme_watch_thread.start()
+
+    def disable_theme_auto_reload(self) -> None:
+        """Stop the theme auto-reload watcher started by :meth:`enable_theme_auto_reload`."""
+        if self._theme_watch_thread is None:
+            return
+        if self._theme_watch_stop is not None:
+            self._theme_watch_stop.set()
+        self._theme_watch_thread = None
+        self._theme_watch_stop = None
+
+    def _watch_theme_files(self, poll_interval: float) -> None:
+        from ._themes import theme_source_files
+
+        def _signature(files):
+            sig = []
+            for p in files:
+                try:
+                    st = p.stat()
+                    sig.append((str(p), st.st_mtime_ns, st.st_size))
+                except OSError:
+                    sig.append((str(p), -1, -1))
+            return tuple(sig)
+
+        last = None
+        while (
+            self._theme_watch_stop is not None and not self._theme_watch_stop.is_set()
+        ):
+            try:
+                sig = _signature(theme_source_files(self._theme))
+                if last is not None and sig != last:
+                    self.refresh_theme()
+                last = sig
+            except Exception:
+                logger.exception("theme auto-reload check failed")
+            self._theme_watch_stop.wait(poll_interval)
 
     def _theme_message(self) -> dict[str, Any]:
         """Return the full ``theme_define`` message for the active theme."""
@@ -1021,6 +1094,7 @@ class Visualizer(_JupyterDisplayMixin):
             "theme": self._theme,
             "label": theme_label(self._theme),
             "css": theme_css_files(self._theme),
+            "version": self._theme_version,
         }
 
     # ── Title & annotation ──────────────────────────────────
@@ -1715,6 +1789,7 @@ class Visualizer(_JupyterDisplayMixin):
         if self._server is not None:
             return
 
+        from ._themes import external_theme_dirs
         from .server import VizServer
 
         logger.info("Starting VizServer on %s:%d", self._host, self._port)
@@ -1739,6 +1814,7 @@ class Visualizer(_JupyterDisplayMixin):
                 layout_callback=self._layout_serialized_for,
                 scene_layout_callback=self._scene_layout_for,
                 theme_callback=self._theme_define_payload,
+                theme_static_dirs=external_theme_dirs(),
             )
             _boot_done.set()
 

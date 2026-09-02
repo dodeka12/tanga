@@ -4,17 +4,21 @@
 // sends it in a `theme_define` message; the browser never parses the JSON.
 
 let _activeTheme = null;
+let _activeVersion = 0;
 
 /**
  * Apply a `theme_define` message: replace the existing theme `<link>`s with one
  * per `msg.css` path (in order) and mark the active theme name on `<html>`.
- * Idempotent per theme.
+ * Idempotent per (theme, version); a bumped version re-fetches the CSS.
  */
 export function handleThemeDefine(msg) {
     const css = msg.css || [];
     const theme = msg.theme || '';
+    const version = msg.version || 0;
 
-    if (theme && theme === _activeTheme) return Promise.resolve();
+    if (theme && theme === _activeTheme && version === _activeVersion) {
+        return Promise.resolve();
+    }
 
     document.querySelectorAll('link[data-tanga-theme]').forEach((el) => el.remove());
 
@@ -22,7 +26,7 @@ export function handleThemeDefine(msg) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.setAttribute('data-tanga-theme', '');
-        link.href = 'themes/' + path;
+        link.href = 'themes/' + path + (version ? '?v=' + version : '');
         document.head.appendChild(link);
         return link;
     });
@@ -32,6 +36,7 @@ export function handleThemeDefine(msg) {
     document.documentElement.setAttribute('data-tanga-theme-name', theme);
 
     _activeTheme = theme;
+    _activeVersion = version;
 
     // Resolve once the new stylesheets finish loading, so callers that read a
     // computed token (e.g. `--tanga-bg`) observe the new theme, not the old one.

@@ -14,7 +14,7 @@ point for a custom theme (they then register it with `register_theme`).
 
 ## Steps
 
-- [ ] **3.1 — `copy_theme` implementation**
+- [x] **3.1 — `copy_theme` implementation**
   - Add `copy_theme(theme_id, dest_dir, *, overwrite=False) -> Path`:
     - resolve `theme_id` (bundled or registered external);
     - create `dest_dir` if missing;
@@ -25,10 +25,10 @@ point for a custom theme (they then register it with `register_theme`).
   - Document that `"pastel"` is the recommended source (full token sheet +
     button/checkbox overrides).
 
-- [ ] **3.2 — Exports**
+- [x] **3.2 — Exports**
   - Export `copy_theme` from `py/pytanga/viz/__init__.py` (`__all__`).
 
-- [ ] **3.3 — Tests (`test_themes.py`)**
+- [x] **3.3 — Tests (`test_themes.py`)**
   - `copy_theme("pastel", tmp_path/"mine")` copies `tokens.css` and the
     `overrides/` files.
   - Re-copying without `overwrite=True` raises; with `overwrite=True` succeeds.

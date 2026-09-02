@@ -254,6 +254,7 @@ class VizServer:
             None
         )
         self._theme_callback: ThemeCallback | None = None
+        self._theme_static_dirs: dict[str, Path] = {}
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -283,6 +284,7 @@ class VizServer:
         layout_callback: LayoutCallback | None = None,
         scene_layout_callback: LayoutCallback | None = None,
         theme_callback: ThemeCallback | None = None,
+        theme_static_dirs: dict[str, Path] | None = None,
         on_ready: Callable[[], None] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
@@ -293,6 +295,7 @@ class VizServer:
         self._layout_callback = layout_callback
         self._scene_layout_callback = scene_layout_callback
         self._theme_callback = theme_callback
+        self._theme_static_dirs = theme_static_dirs or {}
         self._control_callback = control_callback
         self._interaction_callback = interaction_callback
         self._on_connect = on_connect
@@ -649,6 +652,10 @@ class VizServer:
     def _build_app(self) -> web.Application:
         app = web.Application()
         app.router.add_get("/ws", self._ws_handler)
+        # External themes are served under /themes/user/<id>/ (more
+        # specific than the catch-all below, so they win for those paths).
+        for prefix, directory in self._theme_static_dirs.items():
+            app.router.add_static(f"/themes/{prefix}", directory, show_index=False)
         # Catch-all route: serve static files if they exist, otherwise serve
         # viewer.html (SPA-style scene URL routing).
         app.router.add_get("/{name:.*}", self._catch_all_handler)

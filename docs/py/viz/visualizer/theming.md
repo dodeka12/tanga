@@ -43,8 +43,10 @@ viz.export_snapshot("scene.html", theme="pastel")
 
 ## Custom themes
 
-Add a theme by dropping a `tokens.css` (and optional `overrides/*.css`) into
-`py/pytanga/viz/templates/themes/<name>/` and registering it in `registry.json`.
+Create and load your own theme with `copy_theme` / `register_theme` and iterate
+live with `enable_theme_auto_reload`. See [Custom themes](custom-themes.md) for the
+full walkthrough and the themeable-token reference.
+
 See the examples:
 
 - [Control theming](../../examples/viz/scenes/control_theming.md) — controls styled from the theme CSS.

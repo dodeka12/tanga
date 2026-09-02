@@ -14,7 +14,7 @@ without reloading the page, via `viz.refresh_theme()`.
 
 ## Steps
 
-- [ ] **4.1 — Backend `version` + `refresh_theme()`**
+- [x] **4.1 — Backend `version` + `refresh_theme()`**
   - Add `self._theme_version = 0` on `Visualizer`; bump it in `set_theme` and
     `refresh_theme` (and the async variants).
   - Add `refresh_theme()` that re-pushes `theme_define` for the **current**
@@ -22,7 +22,7 @@ without reloading the page, via `viz.refresh_theme()`.
     `refresh_theme_async()`.
   - Include `"version": self._theme_version` in `_theme_define_payload()`.
 
-- [ ] **4.2 — Frontend idempotency + cache-bust (`themes.js`)**
+- [x] **4.2 — Frontend idempotency + cache-bust (`themes.js`)**
   - Track `_activeVersion`; make the idempotency key `(theme, version)`.
   - When re-applying, append `?v=<version>` to each `href` so the browser
     re-fetches (the server already serves `Cache-Control: no-cache`).
@@ -30,10 +30,21 @@ without reloading the page, via `viz.refresh_theme()`.
     `applyThemeBackgrounds()` still runs after the swap (this refreshes
     `--tanga-bg` too).
 
-- [ ] **4.3 — Tests (`test_themes.py`)**
+- [x] **4.3 — Tests (`test_themes.py`)**
   - `set_theme` emits `version`; `refresh_theme` emits a `theme_define` with the
     same `theme` but a bumped `version`.
   - `_theme_define_payload` contains `version`.
+
+- [x] **4.4 — Auto-reload (`visualizer.py`)**
+  - `enable_theme_auto_reload(poll_interval=1.0)` — a daemon thread polls
+    the active theme's `tokens.css` + `overrides/*.css` (via
+    `theme_source_files`) and calls `refresh_theme()` on change.
+  - `disable_theme_auto_reload()` — stops the watcher.
+
+- [x] **4.5 — Auto-reload + custom-theme docs**
+  - New `docs/py/viz/visualizer/custom-themes.md` (create / load /
+    auto-reload walkthrough + token reference), wired into `mkdocs.yml` and
+    linked from `theming.md`.
 
 ## Validation
 

@@ -16,14 +16,14 @@ the live server and the export bundler can resolve an external theme.
 
 ## Steps
 
-- [ ] **1.1 — `_ResolvedCss` record**
+- [x] **1.1 — `_ResolvedCss` record**
   - Add an internal dataclass `_ResolvedCss(served_rel: str, source: Path)`.
   - Refactor `ThemeRegistry._resolve()` to return `list[_ResolvedCss]` instead
     of `list[Path]`, keeping the current bundled resolution order
     (`base → tokens → theme tokens → components → overrides`) intact and
     byte-identical for bundled themes.
 
-- [ ] **1.2 — External theme state**
+- [x] **1.2 — External theme state**
   - Add `self._external: dict[str, _ExternalTheme]` (id → `{label, dir,
     served_prefix, tokens_rel, overrides}`).
   - Add `register(theme_id, theme_dir, label=None)`:
@@ -34,7 +34,7 @@ the live server and the export bundler can resolve an external theme.
   - Keep `list_themes()` = bundled + external; keep `default_theme()` = first
     **bundled** theme (`"dark"`).
 
-- [ ] **1.3 — Served vs source resolution**
+- [x] **1.3 — Served vs source resolution**
   - For an external theme, resolve:
     - `base`, default `tokens`, and `components` from the bundled dir
       (`served_rel` = path relative to `themes/`, `source` = under `_themes_dir`);
@@ -45,18 +45,18 @@ the live server and the export bundler can resolve an external theme.
   - `theme_css_files(id)` → `[r.served_rel for r in _resolve(id)]`.
   - `theme_css_paths(id)` → `[r.source for r in _resolve(id)]`.
 
-- [ ] **1.4 — `external_theme_dirs()`**
+- [x] **1.4 — `external_theme_dirs()`**
   - Add `external_theme_dirs() -> dict[str, Path]` returning
     `{"user/<id>": theme_dir}` for every registered theme (used by the server in
     Phase 2).
 
-- [ ] **1.5 — Module API + exports**
+- [x] **1.5 — Module API + exports**
   - Add module-level `register_theme(theme_id, theme_dir, *, label=None)` that
     delegates to the singleton registry.
   - Export `register_theme` (and `external_theme_dirs`) from
     `py/pytanga/viz/__init__.py` (`__all__`).
 
-- [ ] **1.6 — Tests (`test_themes.py`)**
+- [x] **1.6 — Tests (`test_themes.py`)**
   - Register a temp-dir theme (`tmp_path`) with `tokens.css` + two overrides;
     assert `theme_css_files()` returns the expected served order
     (`base.css`, `tokens.css`, `user/<id>/tokens.css`, `*_COMPONENTS`,

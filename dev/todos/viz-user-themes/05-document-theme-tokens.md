@@ -13,7 +13,7 @@ properties defined in `base.css`) and the **stable override class contract**
 
 ## Steps
 
-- [ ] **5.1 — Token reference**
+- [x] **5.1 — Token reference**
   - Add a "Theme tokens" section to `theming.md` listing all 27 tokens with a
     one-line description and their `base.css` default, grouped:
     - Palette: `--tanga-bg`, `--tanga-fg`, `--tanga-fg-muted`,
@@ -33,7 +33,7 @@ properties defined in `base.css`) and the **stable override class contract**
       `--tanga-warning-button-bg`, `--tanga-warning-button-fg`.
   - Note that `base.css` is the single source of truth; the table must mirror it.
 
-- [ ] **5.2 — Override class contract**
+- [x] **5.2 — Override class contract**
   - Add an "Override targets" section listing the stable classes with a one-line
     description each: `.tanga-action-button`, `.tanga-checkbox-input`,
     `.tanga-range-input`, `.tanga-select-input`, `.tanga-text-input`,
@@ -42,7 +42,7 @@ properties defined in `base.css`) and the **stable override class contract**
     `.tanga-dialog`, `.tanga-title-overlay`, `.tanga-warning-banner`, etc.
   - Link the deeper explanation in `viz-theme-system.md`.
 
-- [ ] **5.3 — Custom-theme walkthrough**
+- [x] **5.3 — Custom-theme walkthrough**
   - Update the "Custom themes" section of `theming.md` to describe the new
     `register_theme` + `copy_theme` flow (replacing the "drop files into
     templates/themes and edit registry.json" instructions).

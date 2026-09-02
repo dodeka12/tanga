@@ -140,6 +140,7 @@ nav:
       - Split Views: py/viz/visualizer/split-views.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
       - Themes: py/viz/visualizer/theming.md
+      - Custom Themes: py/viz/visualizer/custom-themes.md
     - Visualizer App:
       - Overview: py/viz/app/index.md
       - Quickstart: py/viz/app/app.md
