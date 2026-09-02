@@ -21,12 +21,14 @@ import { TableView } from './table-view.js';
 import { SpacerView } from './spacer-view.js';
 
 function applySizeSpecs(view, node) {
-    if (node.min_width) view.minWidth = node.min_width;
-    if (node.max_width) view.maxWidth = node.max_width;
-    if (node.min_height) view.minHeight = node.min_height;
-    if (node.max_height) view.maxHeight = node.max_height;
-    if (node.preferred_width) view.preferredWidth = node.preferred_width;
-    if (node.preferred_height) view.preferredHeight = node.preferred_height;
+    // Assign unconditionally so a `null` from Python clears any JS default
+    // (e.g. the ControlView min floors set at construction time).
+    view.minWidth = node.min_width ?? null;
+    view.maxWidth = node.max_width ?? null;
+    view.minHeight = node.min_height ?? null;
+    view.maxHeight = node.max_height ?? null;
+    view.preferredWidth = node.preferred_width ?? null;
+    view.preferredHeight = node.preferred_height ?? null;
 }
 
 /** Build a `View` tree from a serialized `view_layout` node. */
@@ -53,7 +55,13 @@ export function buildViewTree(node, ws) {
     }
 
     if (node.type === 'stack') {
-        const stack = new StackView({ direction: node.direction, scrollable: node.scrollable });
+        const stack = new StackView({
+            direction: node.direction,
+            scrollable: node.scrollable,
+            gap: node.gap,
+            align: node.align,
+            justify: node.justify,
+        });
         applySizeSpecs(stack, node);
         for (const childNode of node.children || []) {
             stack.addChild(buildViewTree(childNode, ws));
@@ -68,6 +76,9 @@ export function buildViewTree(node, ws) {
             position: node.position,
             collapsed: node.collapsed,
             scrollable: node.scrollable,
+            gap: node.gap,
+            align: node.align,
+            justify: node.justify,
             icon: node.icon,
             icon_only: node.icon_only,
             parent_id: node.parent_id,

@@ -48,7 +48,9 @@ from pytanga.viz import (
 )
 
 viz = Visualizer(reuse_existing=False, title="Tanga — File Open Menu")
-viz.add(Sphere(Point(0, 0, 0), radius=2), entity_id="sphere", color="#4488ff", opacity=0.4)
+viz.add(
+    Sphere(Point(0, 0, 0), radius=2), entity_id="sphere", color="#4488ff", opacity=0.4
+)
 
 _dialog_id: str | None = None
 

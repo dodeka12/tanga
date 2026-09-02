@@ -204,6 +204,11 @@ class TestGroupView:
         node = serialize_layout(GroupView("Actions"))["root"]
         assert "parent_id" not in node
 
+    def test_serialize_gap(self):
+        node = serialize_layout(GroupView("t", [], gap=0))["root"]
+        assert node["type"] == "group"
+        assert node["gap"] == 0
+
 
 class TestMenuView:
     def test_serialize_fields(self):
@@ -320,6 +325,16 @@ class TestControlViews:
         assert node["type"] == "button_view"
         assert node["id"] == "b1"
         assert node["label"] == "Go"
+
+    def test_button_default_min_floors(self):
+        view = ButtonView("b1")
+        assert view.min_width == Size.px(120)
+        assert view.min_height == Size.px(32)
+
+    def test_button_min_floor_disable(self):
+        view = ButtonView("b1", min_width=None)
+        assert view.min_width is None
+        assert view.min_height == Size.px(32)
 
     def test_dropdown_serialize(self):
         node = serialize_layout(
@@ -452,6 +467,8 @@ class TestStackView:
         assert node["direction"] == "horizontal"
         assert len(node["children"]) == 2
         assert node["children"][0]["type"] == "spacer"
+        assert node["children"][0]["preferred_width"] == {"value": 1.0, "unit": "fr"}
+        assert node["children"][0]["preferred_height"] == {"value": 1.0, "unit": "fr"}
 
     def test_scrollable_serialize(self):
         assert serialize_layout(StackView("vertical"))["root"]["scrollable"] is False
@@ -461,6 +478,29 @@ class TestStackView:
             ]
             is True
         )
+
+    def test_serialize_gap_align_justify(self):
+        node = serialize_layout(
+            StackView("vertical", [], gap=8, align="center", justify="end")
+        )["root"]
+        assert node["type"] == "stack"
+        assert node["gap"] == 8
+        assert node["align"] == "center"
+        assert node["justify"] == "end"
+
+    def test_serialize_gap_align_justify_defaults(self):
+        node = serialize_layout(StackView("vertical", []))["root"]
+        assert node["gap"] is None
+        assert node["align"] == "stretch"
+        assert node["justify"] == "start"
+
+    def test_invalid_align(self):
+        with pytest.raises(ValueError, match="align"):
+            StackView("vertical", align="bogus")
+
+    def test_invalid_justify(self):
+        with pytest.raises(ValueError, match="justify"):
+            StackView("vertical", justify="bogus")
 
 
 class TestSplitView:

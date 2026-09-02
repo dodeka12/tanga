@@ -83,10 +83,14 @@ export class View extends EventTarget {
     // Render min/max size specs as real CSS so they take effect outside a
     // SplitView too (dialogs, overlays, standalone content).  Preferred sizes
     // stay as flex/layout hints and are not forced onto the element here.
+    // `null`/`fr`/`auto` clear the inline constraint so clearing a min/max
+    // actually releases it (previously it left a stale inline value behind).
     _applySizeCss(name, size) {
-        if (!size || size.unit === 'fr' || size.unit === 'auto') return;
         if (!this.el.style) return;
-        const value = size.unit === '%' ? (size.value + '%') : (size.value + 'px');
+        let value = '';
+        if (size && size.unit !== 'fr' && size.unit !== 'auto') {
+            value = size.unit === '%' ? (size.value + '%') : (size.value + 'px');
+        }
         if (name === 'minWidth') this.el.style.minWidth = value;
         else if (name === 'maxWidth') this.el.style.maxWidth = value;
         else if (name === 'minHeight') this.el.style.minHeight = value;

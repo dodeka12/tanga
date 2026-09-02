@@ -43,6 +43,10 @@ from .camera import CameraConfig, View2DConfig, View3dConfig, _normalize_camera_
 
 Orientation = Literal["horizontal", "vertical"]
 StackDirection = Literal["vertical", "horizontal", "wrap"]
+StackAlign = Literal["start", "center", "end", "stretch"]
+StackJustify = Literal[
+    "start", "center", "end", "space-between", "space-around", "space-evenly"
+]
 
 #: Default minimum extent for a scene pane on both axes, so a scene can never
 #: be collapsed to nothing (override per view, or pass ``None`` to disable).
@@ -195,9 +199,20 @@ class SceneView(View):
 
 
 class SpacerView(View):
-    """An empty, fully-flexible filler pane."""
+    """An empty, fully-flexible filler pane.
+
+    A spacer grows to fill leftover space along a flow container's main axis:
+    it defaults ``preferred_width``/``preferred_height`` to ``Size.fr(1)``,
+    which the frontend maps to ``flex: 1 1 0``.  Inside a ``SplitView`` it is
+    positioned absolutely, so the preferred size is inert there.
+    """
 
     _node_type = "spacer"
+
+    def __init__(self, **kwargs: Any) -> None:
+        kwargs.setdefault("preferred_width", Size.fr(1))
+        kwargs.setdefault("preferred_height", Size.fr(1))
+        super().__init__(**kwargs)
 
 
 class SplitView(View):
@@ -258,6 +273,9 @@ class StackView(View):
         children: list[View] | None = None,
         *,
         scrollable: bool = False,
+        gap: int | None = None,
+        align: StackAlign = "stretch",
+        justify: StackJustify = "start",
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -265,14 +283,40 @@ class StackView(View):
             raise ValueError(
                 f"direction must be 'vertical', 'horizontal' or 'wrap', got {direction!r}"
             )
+        if align not in ("start", "center", "end", "stretch"):
+            raise ValueError(
+                f"align must be 'start', 'center', 'end' or 'stretch', got {align!r}"
+            )
+        if justify not in (
+            "start",
+            "center",
+            "end",
+            "space-between",
+            "space-around",
+            "space-evenly",
+        ):
+            raise ValueError(
+                f"justify must be one of 'start', 'center', 'end', 'space-between', "
+                f"'space-around', 'space-evenly', got {justify!r}"
+            )
+        if gap is not None and (
+            isinstance(gap, bool) or not isinstance(gap, int) or gap < 0
+        ):
+            raise ValueError(f"gap must be a non-negative int or None, got {gap!r}")
         self.direction = direction
         self.children = list(children or [])
         self.scrollable = scrollable
+        self.gap = gap
+        self.align = align
+        self.justify = justify
 
     def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
         result = super()._serialize(id_gen)
         result["direction"] = self.direction
         result["scrollable"] = self.scrollable
+        result["gap"] = self.gap
+        result["align"] = self.align
+        result["justify"] = self.justify
         result["children"] = [child._serialize(id_gen) for child in self.children]
         return result
 
@@ -296,12 +340,23 @@ class GroupView(StackView):
         position: EAnchor | None = None,
         collapsed: bool = False,
         scrollable: bool = False,
+        gap: int | None = None,
+        align: StackAlign = "stretch",
+        justify: StackJustify = "start",
         icon: Icon | None = None,
         icon_only: bool = False,
         parent_id: str | None = None,
         **kwargs: Any,
     ) -> None:
-        super().__init__(direction, children, scrollable=scrollable, **kwargs)
+        super().__init__(
+            direction,
+            children,
+            scrollable=scrollable,
+            gap=gap,
+            align=align,
+            justify=justify,
+            **kwargs,
+        )
         self.title = title
         self.position = position
         self.collapsed = collapsed
@@ -414,6 +469,8 @@ class ControlView(View):
         tooltip: str = "",
         **kwargs: Any,
     ) -> None:
+        kwargs.setdefault("min_width", Size.px(120))
+        kwargs.setdefault("min_height", Size.px(32))
         super().__init__(**kwargs)
         self.id = cid
         self.label = label

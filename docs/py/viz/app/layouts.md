@@ -13,6 +13,11 @@ The plain scene URL that `VisualizerApp.run()` opens is itself a one-`SceneView`
 layout, so panel controls and `add_control_group` overlays render there exactly
 as they do inside a custom split layout — the two modes share one render path.
 
+Flow containers (`StackView`/`GroupView`) accept `gap`/`align`/`justify`, and a
+child's `preferred_*` maps to CSS flex (e.g. `Size.fr(1)` fills the leftover
+space beside a button). See [Split Views](../visualizer/split-views.md) for the
+sizing model and the flex mapping table.
+
 ## Two kinds of controls
 
 | Style | API | Where it appears | Use for |

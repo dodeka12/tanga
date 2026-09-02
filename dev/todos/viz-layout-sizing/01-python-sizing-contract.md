@@ -14,7 +14,7 @@ wire.
 
 ## Steps
 
-- [ ] **1.1 — Add `gap`/`align`/`justify` to `StackView`.**
+- [x] **1.1 — Add `gap`/`align`/`justify` to `StackView`.**
   - Add `gap: int | None = None`, `align: Literal[...] = "stretch"`,
     `justify: Literal[...] = "start"` keyword-only params to
     `StackView.__init__` after `scrollable`.
@@ -23,24 +23,24 @@ wire.
   - Store `self.gap`, `self.align`, `self.justify`.
   - `gap` accepts `None` (default) or a non-negative `int`; `0` means "no gap".
 
-- [ ] **1.2 — Forward the new knobs through `GroupView`.**
+- [x] **1.2 — Forward the new knobs through `GroupView`.**
   - Add the same three keyword-only params to `GroupView.__init__` and pass
     them explicitly to `super().__init__(direction, children, scrollable=..., gap=..., align=..., justify=..., **kwargs)`.
 
-- [ ] **1.3 — Move control floors into `ControlView`.**
+- [x] **1.3 — Move control floors into `ControlView`.**
   - In `ControlView.__init__`, before `super().__init__(**kwargs)`, do
     `kwargs.setdefault("min_width", Size.px(120))` and
     `kwargs.setdefault("min_height", Size.px(32))`.
   - This makes the floors Python-authoritative and overridable; `min_width=None`
     / `min_height=None` still disable them (setdefault won't apply).
 
-- [ ] **1.4 — Serialize the new fields.**
+- [x] **1.4 — Serialize the new fields.**
   - In `StackView._serialize`, add `result["gap"] = self.gap`,
     `result["align"] = self.align`, `result["justify"] = self.justify`.
   - `GroupView` inherits this; confirm `GroupView._serialize` calls
     `super()._serialize` (it does) so `group` nodes carry the fields too.
 
-- [ ] **1.5 — Tests.**
+- [x] **1.5 — Tests.**
   - `StackView("vertical", [], gap=8, align="center", justify="end")` serializes
     to a `stack` node with `gap == 8`, `align == "center"`, `justify == "end"`.
   - Defaults serialize as `gap is None`, `align == "stretch"`,

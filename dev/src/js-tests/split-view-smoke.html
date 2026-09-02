@@ -19,6 +19,11 @@
 
         const logEl = document.getElementById('log');
         const log = (...args) => { logEl.textContent += args.join(' ') + '\n'; };
+        const check = (name, actual, expected) => {
+            const ok = actual === expected;
+            log((ok ? 'ok' : 'FAIL') + ': ' + name + ' = ' + JSON.stringify(actual)
+                + (ok ? '' : ' (expected ' + JSON.stringify(expected) + ')'));
+        };
 
         const makePane = (label) => {
             const v = new View();
@@ -44,9 +49,18 @@
 
         setTimeout(() => {
             log('layout sizes (left/fixed/right):', JSON.stringify(split._sizes));
-            log('splitter 0 movable:', split._splitters[0].dataset.movable);
-            log('splitter 1 movable:', split._splitters[1].dataset.movable);
-            log('Drag the first splitter to resize the left pane.');
+            // A fixed middle pane must leave both adjacent splitters draggable.
+            check('splitter 0 draggable', split._splitters[0].dataset.movable, '1');
+            check('splitter 1 draggable', split._splitters[1].dataset.movable, '1');
+
+            const fixedPx = () => Math.round(split._sizes[1] * split.width);
+            const before = fixedPx();
+            const bar = split._splitters[1];
+            const startX = bar.getBoundingClientRect().left;
+            split._onSplitterDown(1, { clientX: startX, preventDefault() {} });
+            split._onSplitterMove({ clientX: startX + 20 });
+            check('fixed pane unchanged after dragging splitter 1', fixedPx(), before);
+            log('sizes after drag (left/fixed/right):', JSON.stringify(split._sizes));
         }, 200);
     </script>
 </body>

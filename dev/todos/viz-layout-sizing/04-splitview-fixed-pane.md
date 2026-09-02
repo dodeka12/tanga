@@ -16,7 +16,7 @@ movable (A↔B borrows from C; B↔C borrows from A) while `fixed_B` never chang
 
 ## Steps
 
-- [ ] **4.1 — `split-resolver.js`: nearest-movable-neighbor movability.**
+- [x] **4.1 — `split-resolver.js`: nearest-movable-neighbor movability.**
   - Replace the per-splitter `movable: !fixed[i] && !fixed[i + 1]` with a helper
     `_hasMovableSide(fixed, start, step)` that scans outward from a side and
     returns `true` once it finds a non-fixed index (or `false` if it runs off
@@ -24,7 +24,7 @@ movable (A↔B borrows from C; B↔C borrows from A) while `fixed_B` never chang
   - For splitter `i`, `movable = _hasMovableSide(fixed, i, -1) && _hasMovableSide(fixed, i + 1, +1)`.
   - Keep `items[i].fixed` and `sizes[i]` unchanged (fixed sizes are still honored).
 
-- [ ] **4.2 — `split-view.js`: redistribute across fixed panes.**
+- [x] **4.2 — `split-view.js`: redistribute across fixed panes.**
   - In `_onSplitterMove`, replace the immediate `leftIdx = index` /
     `rightIdx = index + 1` with a scan: step `leftIdx` down past fixed children
     and `rightIdx` up past fixed children to the nearest non-fixed panes.
@@ -32,7 +32,7 @@ movable (A↔B borrows from C; B↔C borrows from A) while `fixed_B` never chang
     `minSizePx`/`maxSizePx` clamps (exactly as today, but on the scanned
     indices). Fixed children's `_sizes` are never touched.
 
-- [ ] **4.3 — Update `split-resolver.test.mjs`.**
+- [x] **4.3 — Update `split-resolver.test.mjs`.**
   - Rewrite/rename the "a fixed middle pins its two neighbors" test: with
     `[A, fixed_B, C, D]`, assert splitters 0 and 1 are now `movable: true` and
     `fixed_B.size === 50`.
@@ -41,7 +41,7 @@ movable (A↔B borrows from C; B↔C borrows from A) while `fixed_B` never chang
     - `[A, fixed_B]` → splitter 0 `movable: false` (no movable right side).
     - `[fixed_A, fixed_B, C]` → both splitters `movable: false`.
 
-- [ ] **4.4 — Smoke page.**
+- [x] **4.4 — Smoke page.**
   - Extend `split-view-smoke.html` (or add a focused page) to build
     `[A, fixed_B, C]`, assert both splitters are draggable, and assert
     `fixed_B`'s size is unchanged after simulating a drag on splitter 1.

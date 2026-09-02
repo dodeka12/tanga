@@ -26,6 +26,8 @@ uv run python py/examples/<path>.py
 
 - **Algebra** — [How pytanga builds C++ backends on the fly](binding_demo.md), [Creating and configuring an Algebra](ga/algebra/algebra_demo.md), [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
+- **align** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
+
 - **align modes** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md)
 
 - **all types** — [All geometric entity types in one scene](viz/entities/all_entities.md)
@@ -214,7 +216,11 @@ uv run python py/examples/<path>.py
 
 - **fixed modulus** — [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
+- **flex** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
+
 - **fold** — [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
+
+- **fr** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
 
 - **frame streaming** — [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
 
@@ -225,6 +231,8 @@ uv run python py/examples/<path>.py
 - **G(4,0)** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md)
 
 - **G(5,0b10000)** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md)
+
+- **gap** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
 
 - **general solve** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_01.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
 
@@ -274,6 +282,8 @@ uv run python py/examples/<path>.py
 
 - **IPNS** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
+- **justify** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
+
 - **KaTeX** — [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md), [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
 - **keyboard navigation** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
@@ -286,7 +296,7 @@ uv run python py/examples/<path>.py
 
 - **LaTeX** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
-- **layout** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **layout** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **least-norm** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -476,6 +486,10 @@ uv run python py/examples/<path>.py
 
 - **singular** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
+- **Size** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
+
+- **sizing** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
+
 - **slider** — [Slider that triggers a blocking computation on release](viz/banners/heavy_work.md), [Showcase every interactive control in one app](viz/interaction/all_controls.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md)
 
 - **snapshot** — [Export](ga/jupyter/export.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
@@ -492,9 +506,9 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
+- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/scenes/multi_split.md), [A single page showing multiple scenes in split panes](viz/scenes/split_view.md), [An editable data table beside a 3D scene](viz/scenes/table_split.md)
 
-- **stack view** — [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
+- **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 
 - **StackView** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
 

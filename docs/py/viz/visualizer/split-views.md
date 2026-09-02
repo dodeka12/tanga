@@ -3,8 +3,8 @@
 Split views let a **single browser page** show multiple scenes (or control
 panels) in separate panes, arranged with horizontal or vertical splits. Each split can hold **any number
 of panes** in one direction (N panes → N − 1 splitters), splits can be nested to
-any depth, and each divider is draggable unless a pane on either side has a
-fixed size. The existing per-scene URLs keep working
+any depth, and each divider is draggable when a non-fixed pane sits on each
+side of it. The existing per-scene URLs keep working
 unchanged — a split view is just an additional layout served at one URL
 (`/?view=<name>`).
 
@@ -45,14 +45,25 @@ units:
 `View` constructor arguments: `size` (sets both preferred axes), and the
 per-axis `preferred_width/height`, `min_width/height`, `max_width/height`.
 
+A `GroupView` adds its title bar and panel padding to the derived content size,
+so its natural `preferred_height` is its controls plus that chrome. The chrome
+is measured from the rendered DOM, so it follows the active theme's fonts and
+paddings; collapsing a `GroupView` sizes it to just the title bar's bottom
+border (the drawn rule).
+
 ## Fixed vs. Movable Splitters
 
 A view is **fixed** along an axis when its `min` and `max` are equal
-(`View.fixed_x` / `View.fixed_y`). A splitter is draggable only when **both**
-neighbors are non-fixed along the split axis; a fixed neighbor pins it. Even a
-movable splitter is clamped so neither neighbor leaves its `[min, max]` range.
-`SplitView(movable=False)` locks every splitter in that split; the default
-`movable=None` auto-detects.
+(`View.fixed_x` / `View.fixed_y`). A splitter is draggable when there is a
+**non-fixed pane on each side** of it, searching across any fixed panes in
+between. Dragging trades space between the **nearest non-fixed** panes on each
+side, so a fixed pane keeps its size without walling off the panes beyond it:
+in `[A, fixed_B, C]` both splitters stay movable (`A↔B` borrows from `C`, and
+`B↔C` borrows from `A`) while `fixed_B` never changes. A splitter with no
+non-fixed pane on one side (e.g. `[fixed_A, B]` or `[A, fixed_B]`) is locked.
+Even a movable splitter is clamped so the resized panes stay within their
+`[min, max]` ranges. `SplitView(movable=False)` locks every splitter in that
+split; the default `movable=None` auto-detects.
 
 If a split is given more space than its fixed/maxed children can use, the
 leftover is filled by an implicit `SpacerView`.
@@ -76,9 +87,10 @@ SplitView(
 )
 ```
 
-Each divider between neighboring panes is independently draggable (unless a
-neighbor is fixed). `sizes`, when given, needs one entry per child. See
-`py/examples/viz/scenes/multi_split.py` for a runnable three-pane example.
+Each divider between neighboring panes is independently draggable when a
+non-fixed pane sits on each side of it. `sizes`, when given, needs one entry
+per child. See `py/examples/viz/scenes/multi_split.py` for a runnable
+three-pane example.
 
 ## Stacks and Controls
 
@@ -109,6 +121,44 @@ GroupView(
 
 `GroupView` is a `StackView` with a title bar (and collapse toggle); by default it
 stacks its children vertically.
+
+### Spacing, alignment, and flexible children
+
+`StackView` and `GroupView` accept three layout-policy keywords:
+
+- `gap` — spacing between children in pixels. `None` uses the default `4` px;
+  `0` removes the spacing.
+- `align` — cross-axis alignment: `"start"`, `"center"`, `"end"`, or
+  `"stretch"` (default).
+- `justify` — main-axis packing: `"start"` (default), `"center"`, `"end"`,
+  `"space-between"`, `"space-around"`, or `"space-evenly"`.
+
+A child's `preferred_*` along the container's **main** axis maps to CSS flex
+(`flex: <grow> <shrink> <basis>`):
+
+| `preferred_<main>`      | flex        | meaning                                  |
+|-------------------------|-------------|------------------------------------------|
+| `None` / `Size.auto()`  | `0 1 auto`  | natural size, may shrink to `min`        |
+| `Size.fr(n)`            | `n 1 0`     | grow to fill leftover, weighted by `n`   |
+| `Size.px(v)`            | `0 0 <v>px` | fixed basis, no grow/shrink              |
+| `Size.percent(v)`       | `0 0 <v>%`  | fixed basis, no grow/shrink              |
+
+`min_*`/`max_*` still clamp the result (applied as CSS `min-*`/`max-*`). For
+`fr`, the container also sets `min-<main>` to `0` when the child has no
+explicit `min_<main>`, so a growing child can shrink below its content size.
+Cross-axis "fill" is the container's `align` (`stretch` by default), matching
+HTML's `align-items`.
+
+```python
+StackView(
+    "horizontal",
+    [
+        TextAreaView("notes", label="Notes", preferred_width=Size.fr(1)),
+        ButtonView("send", label="Send"),
+    ],
+    gap=8,
+)
+```
 
 ### Horizontal stacks & toolbars
 

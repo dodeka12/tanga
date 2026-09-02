@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>StackView flex smoke test</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #1a1a2e; }
+        #host { width: 500px; height: 200px; background: #222; }
+    </style>
+</head>
+<body>
+    <h3 style="color:#ccc">StackView flex smoke test</h3>
+    <pre id="log" style="color:#0c0"></pre>
+    <div id="host"></div>
+    <script type="module">
+        import { StackView } from '../../py/pytanga/viz/templates/views/stack-view.js';
+        import { TextAreaView } from '../../py/pytanga/viz/templates/views/text-area-view.js';
+        import { ButtonView } from '../../py/pytanga/viz/templates/views/button-view.js';
+
+        const logEl = document.getElementById('log');
+        const log = (...a) => { logEl.textContent += a.join(' ') + '\n'; };
+        const check = (name, actual, expected) => {
+            const ok = actual === expected;
+            log((ok ? 'ok' : 'FAIL') + ': ' + name + ' = ' + JSON.stringify(actual)
+                + (ok ? '' : ' (expected ' + JSON.stringify(expected) + ')'));
+        };
+        // Browsers may report a `0` flex-basis as `0px`; normalize for the check.
+        const flex = (el) => getComputedStyle(el).flex.replace(/\b0px\b/, '0');
+
+        const textArea = new TextAreaView({ id: 'ta1', label: 'Notes', value: '' });
+        textArea.preferredWidth = { value: 1, unit: 'fr' };
+        const button = new ButtonView({ id: 'b1', label: 'Go' });
+
+        const stack = new StackView({
+            direction: 'horizontal',
+            gap: 8,
+            children: [textArea, button],
+        });
+        stack.mount(document.getElementById('host'));
+
+        const s = getComputedStyle(stack.el);
+        check('stack gap', s.gap, '8px');
+        check('stack alignItems', s.alignItems, 'stretch');
+        check('text area flex', flex(textArea.el), '1 1 0');
+        check('button flex', flex(button.el), '0 1 auto');
+    </script>
+</body>
+</html>

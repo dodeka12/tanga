@@ -10,9 +10,9 @@ export class ControlView extends View {
         this.label = label;
         this.tooltip = tooltip;
         this.el.classList.add('tanga-control-view');
-        // Don't let a flex parent shrink the control below its content.
-        this.el.style.flexShrink = '0';
-        // Sensible floors so a StackView can size to its controls.
+        // Sensible floors so a StackView can size to its controls.  These are a
+        // safety net for direct JS construction; `build.js` overrides them with
+        // the Python-serialized values (which may be `null` to disable them).
         this.minWidth = { value: 120, unit: 'px' };
         this.minHeight = { value: 32, unit: 'px' };
     }

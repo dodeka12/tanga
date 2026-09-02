@@ -15,30 +15,30 @@ the branch changelog. Then run the full validation gate.
 
 ## Steps
 
-- [ ] **5.1 — Document the flex mapping.**
+- [x] **5.1 — Document the flex mapping.**
   - In `split-views.md`, document `StackView`/`GroupView` `gap`/`align`/`justify`
     and the `preferred_*` → flex table from the README (`fr` = grow, `px`/`%` =
     fixed basis, `None`/`auto` = natural), plus the new `SplitView` fixed-pane
     splitter behavior.
 
-- [ ] **5.2 — Document control floors.**
+- [x] **5.2 — Document control floors.**
   - In `control-views.md`, note the `ControlView` default `min_width`/`min_height`
     floors and that `None` disables them; add `gap`/`align`/`justify` to the
     `StackView`/`GroupView` signatures shown there.
 
-- [ ] **5.3 — Example.**
+- [x] **5.3 — Example.**
   - Extend `py/examples/viz/dialogs/dialog_demo.py` (or add a sibling example) to
     show: a horizontal `StackView` where a `TextAreaView` uses
     `preferred_width=Size.fr(1)` to fill beside a button, `gap=8`, and a dialog
     shown with `width=Size.px(600)`; update the example docs per
     `dev/workflows/example-docs.md` if a new example file is added.
 
-- [ ] **5.4 — Changelog.**
+- [x] **5.4 — Changelog.**
   - Follow `dev/workflows/changelog.md`: create the branch changelog under
     `docs/changelog/` (title from `uv run python tools/last-release.py`; sections
     `New Features` and `Bug Fixes`), then update `docs/changelog/index.md`.
 
-- [ ] **5.5 — Full validation.**
+- [x] **5.5 — Full validation.**
   - Run the whole Python suite, all JS pure tests, and the docs build (below).
 
 ## Validation

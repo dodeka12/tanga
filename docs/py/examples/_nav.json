@@ -407,6 +407,9 @@
             "Group View Icons": "py/examples/viz/scenes/group_view_icons.md"
           },
           {
+            "Layout Sizing": "py/examples/viz/scenes/layout_sizing.md"
+          },
+          {
             "Multi Scene": "py/examples/viz/scenes/multi_scene.md"
           },
           {

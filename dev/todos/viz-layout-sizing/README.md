@@ -1,6 +1,6 @@
 # Viz Layout Sizing — Overview
 
-**Created:** 2026-09-02 | **Status:** Planned | **Branch:** `feat/file-chooser-update`
+**Created:** 2026-09-02 | **Status:** Done | **Branch:** `feat/viz-layout-sizing`
 
 > Note: this work is about the declarative layout model, not the file chooser.
 > It is recommended to branch a dedicated `feat/viz-layout-sizing` from here

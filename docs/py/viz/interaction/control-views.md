@@ -49,6 +49,11 @@ Every view is a `View`. Containers arrange their children; the leaves render
 content. For the full view model — `Size` units, splitters, per-pane cameras —
 see [Split Views](../visualizer/split-views.md).
 
+Every control view is a `ControlView`. By default it sets a size floor of
+`min_width=Size.px(120)` and `min_height=Size.px(32)` so a `StackView`/`GroupView`
+can size to its controls; pass `min_width=None` / `min_height=None` to disable
+the floors.
+
 ### View
 
 Base for every pane/container in a layout. Split-agnostic.
@@ -138,6 +143,9 @@ StackView(
     children=None,        # list[View] | None
     *,
     scrollable=False,     # bool — scroll instead of clipping when content overflows
+    gap=None,             # int | None — px spacing (None = default 4 px, 0 = none)
+    align="stretch",      # "start" | "center" | "end" | "stretch"
+    justify="start",      # "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly"
     **kwargs,             # forwarded to View (sizes)
 )
 ```
@@ -162,6 +170,9 @@ GroupView(
     position=None,     # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
     collapsed=False,   # bool
     scrollable=False,  # bool — scroll the content (title bar stays pinned)
+    gap=None,          # int | None — px spacing (None = default 4 px, 0 = none)
+    align="stretch",   # "start" | "center" | "end" | "stretch"
+    justify="start",   # "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly"
     icon=None,         # Icon | None — leading title-bar icon
     icon_only=False,   # bool — render only the icon (no title text)
     **kwargs,          # forwarded to View (sizes)
