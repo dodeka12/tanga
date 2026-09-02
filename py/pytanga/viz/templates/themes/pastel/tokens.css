@@ -1,0 +1,32 @@
+/* Tanga viewer — pastel theme token overrides. */
+
+:root {
+    --tanga-bg: #2a1d27;
+    --tanga-fg: #e6d2de;
+    --tanga-fg-muted: #b39aa8;
+    --tanga-fg-strong: #f7ecf2;
+    --tanga-accent: #e879a8;
+    --tanga-accent-soft: #d06a9f;
+    --tanga-danger: #e06c75;
+
+    --tanga-panel-bg: rgba(48, 33, 44, 0.92);
+    --tanga-panel-hover: rgba(64, 44, 59, 0.95);
+    --tanga-surface: rgba(232, 121, 168, 0.16);
+    --tanga-surface-strong: rgba(232, 121, 168, 0.3);
+    --tanga-input-bg: rgba(255, 255, 255, 0.07);
+
+    --tanga-border: rgba(232, 121, 168, 0.22);
+    --tanga-border-strong: rgba(232, 121, 168, 0.36);
+    --tanga-border-subtle: rgba(232, 121, 168, 0.12);
+
+    --tanga-scrollbar-thumb: rgba(232, 121, 168, 0.35);
+    --tanga-scrollbar-thumb-hover: rgba(232, 121, 168, 0.5);
+    --tanga-scrollbar-track: rgba(232, 121, 168, 0.08);
+
+    --tanga-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+
+    --tanga-status-ok: #7fc77f;
+    --tanga-status-err: #e06c75;
+    --tanga-loading-bg: rgba(42, 29, 39, 0.95);
+    --tanga-spinner: #e6d2de;
+}

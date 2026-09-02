@@ -202,6 +202,7 @@ InteractionCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 SceneListCallback = Callable[[], list[str]]
 LayoutCallback = Callable[[str], dict[str, Any] | None]
 PushControlsCallback = Callable[[str], Awaitable[None]]
+ThemeCallback = Callable[[], dict[str, Any]]
 
 
 @dataclass
@@ -252,6 +253,8 @@ class VizServer:
         self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = (
             None
         )
+        self._theme_callback: ThemeCallback | None = None
+        self._theme_static_dirs: dict[str, Path] = {}
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -280,6 +283,8 @@ class VizServer:
         scene_list_callback: SceneListCallback | None = None,
         layout_callback: LayoutCallback | None = None,
         scene_layout_callback: LayoutCallback | None = None,
+        theme_callback: ThemeCallback | None = None,
+        theme_static_dirs: dict[str, Path] | None = None,
         on_ready: Callable[[], None] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
@@ -289,6 +294,8 @@ class VizServer:
         self._scene_list_callback = scene_list_callback
         self._layout_callback = layout_callback
         self._scene_layout_callback = scene_layout_callback
+        self._theme_callback = theme_callback
+        self._theme_static_dirs = theme_static_dirs or {}
         self._control_callback = control_callback
         self._interaction_callback = interaction_callback
         self._on_connect = on_connect
@@ -645,10 +652,30 @@ class VizServer:
     def _build_app(self) -> web.Application:
         app = web.Application()
         app.router.add_get("/ws", self._ws_handler)
+        # External themes are served under /themes/user/<id>/ (more
+        # specific than the catch-all below, so they win for those paths).
+        for prefix, directory in self._theme_static_dirs.items():
+            app.router.add_static(f"/themes/{prefix}", directory, show_index=False)
         # Catch-all route: serve static files if they exist, otherwise serve
         # viewer.html (SPA-style scene URL routing).
         app.router.add_get("/{name:.*}", self._catch_all_handler)
         return app
+
+    def _theme_links_html(self) -> str:
+        """Return the active theme's ``<link>`` tags, or an empty string.
+
+        Calls the optional ``theme_callback`` (if set) and emits one
+        ``<link rel="stylesheet" data-tanga-theme>`` per resolved CSS file.
+        The browser-side ``themes.js`` swaps these tags on ``theme_define``.
+        """
+        if self._theme_callback is None:
+            return ""
+        payload = self._theme_callback()
+        css = payload.get("css") or []
+        return "".join(
+            f'<link rel="stylesheet" data-tanga-theme href="themes/{css_path}">\n'
+            for css_path in css
+        )
 
     async def _catch_all_handler(self, request: web.Request) -> web.StreamResponse:
         """Serve a static file if it exists, otherwise serve viewer.html.
@@ -700,8 +727,9 @@ class VizServer:
         inject = (
             f'<script>window.__tanga_page_token = "{page_token}";</script>\n'
             f"<script>window.__tanga_frontend_version = "
-            f'"{self._frontend_version}";</script>'
+            f'"{self._frontend_version}";</script>\n'
         )
+        inject += self._theme_links_html()
         # Inject after <head> or at start of file
         if "</head>" in html:
             html = html.replace("</head>", f"{inject}\n</head>")

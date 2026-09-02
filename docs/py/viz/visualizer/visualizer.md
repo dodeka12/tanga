@@ -11,7 +11,7 @@ Visualizer(
     reuse_existing=True,
     title="Tanga 3D Viewer",
     annotation=None,
-    background_color="#1a1a2e",
+    background_color=None,   # None = follow the active theme
     camera=None,  # None = auto-fit from entities
     space_dim=None,          # 2 or 3; deduced from camera when None
     add_default_axes=True,   # insert a default Axes3D/Axes2D per scene
@@ -25,7 +25,7 @@ Visualizer(
 | `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
 | `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
-| `background_color` | `str` | `"#1a1a2e"` | CSS background color |
+| `background_color` | `str \| None` | `None` | CSS background color for the 3D viewport. `None` (default) follows the active theme's background (`--tanga-bg`, e.g. `#1a1a2e` for dark, `#f5f5f7` for light). |
 | `camera` | `CameraConfig \| View2DConfig \| View3dConfig \| None` | `None` | Explicit camera settings. Also accepts a `View2DConfig` / `View3dConfig` input spec, which is converted via `get_camera()` (see [Camera & Controls](camera.md)). |
 | `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](../entities/axes-grid.md). |
 | `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](../entities/axes-grid.md). |
@@ -487,3 +487,11 @@ viz.export_glb("scene.glb")
 | `export_animated_html()` | `export_snapshot(animation=rec)` |
 | `export_animated_figure()` | `export_figure(animation=rec)` |
 | `SceneExporter` | `viz` / `viz.scene(name)` |
+
+## Themes
+
+The UI chrome (controls, panels, banners, dialogs, menus) is themed via CSS.
+Select a theme with `viz.set_theme(id)` (default `"dark"`; also `"light"` and
+`"pastel"`), list them with `list_themes()`, and pack a specific theme into an
+export with `viz.export_snapshot("scene.html", theme=...)`.  See
+[Themes](theming.md).

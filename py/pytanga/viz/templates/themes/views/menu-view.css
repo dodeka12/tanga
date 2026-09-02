@@ -1,0 +1,104 @@
+/* Tanga viewer — menu control styling (menu item + menu bar variants). */
+
+.tanga-control.tanga-menu-item {
+    border: none;
+    background: none;
+    margin: 0;
+    width: 100%;
+    text-align: left;
+}
+
+.tanga-menu-item:hover {
+    background: var(--tanga-border-subtle);
+    border-radius: 3px;
+}
+
+.tanga-menu-item .tanga-action-button {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 6px 8px;
+}
+
+.tanga-menu-item .tanga-action-button:hover {
+    background: none;
+}
+
+.tanga-menu-item .tanga-checkbox-row {
+    padding: 6px 8px;
+}
+
+.tanga-menu-bar .tanga-control {
+    margin: 0;
+}
+
+.tanga-menu-bar .tanga-action-button {
+    width: auto;
+    background: none;
+    border: none;
+    padding: 4px 10px;
+}
+
+.tanga-menu-bar .tanga-action-button:hover {
+    background: var(--tanga-surface);
+}
+
+/* Menu chrome (trigger + panel + bar). */
+.tanga-menu {
+    font-family: var(--tanga-font);
+}
+
+.tanga-menu-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.tanga-menu-trigger {
+    background: none;
+    border: none;
+    color: var(--tanga-fg);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.tanga-menu-panel {
+    position: absolute;
+    top: 100%;
+    z-index: 30;
+    min-width: 160px;
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border);
+    border-radius: 4px;
+    padding: 4px;
+    box-shadow: var(--tanga-shadow);
+    display: none;
+    gap: 2px;
+}
+
+.tanga-menu-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    box-sizing: border-box;
+}
+
+.tanga-menu-sub > .tanga-menu-trigger {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.tanga-menu-chevron {
+    font-size: 16px;
+}
+
+

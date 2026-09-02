@@ -1,0 +1,7 @@
+/* Tanga viewer — text area control. */
+
+.tanga-textarea {
+    resize: vertical;
+    font-family: var(--tanga-font);
+}
+

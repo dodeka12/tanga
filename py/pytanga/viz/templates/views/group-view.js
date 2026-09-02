@@ -42,14 +42,6 @@ export class GroupView extends StackView {
             display: 'flex',
             flexDirection: 'column',
             position: 'relative',
-            background: 'rgba(20, 20, 40, 0.92)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderRadius: '6px',
-            padding: '8px 12px',
-            fontFamily: 'sans-serif',
-            fontSize: '13px',
-            color: '#ccc',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
         });
 
         if (this.scrollable) {
@@ -63,9 +55,6 @@ export class GroupView extends StackView {
             alignItems: 'center',
             justifyContent: 'space-between',
             marginBottom: '6px',
-            fontWeight: '600',
-            fontSize: '14px',
-            color: '#ddd',
         });
 
         if (this.scrollable) {
@@ -98,20 +87,6 @@ export class GroupView extends StackView {
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'tanga-group-toggle';
         toggleBtn.title = 'Collapse / Expand';
-        Object.assign(toggleBtn.style, {
-            background: 'none',
-            border: 'none',
-            borderRadius: '3px',
-            color: '#aaa',
-            cursor: 'pointer',
-            fontSize: '14px',
-            width: '22px',
-            height: '22px',
-            padding: '0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-        });
 
         const updateFoldIcon = () => {
             toggleBtn.replaceChildren(

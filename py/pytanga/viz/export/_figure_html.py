@@ -16,6 +16,7 @@ from uuid import uuid4
 from pytanga.viz.export._bootstrap import (
     contains_math,
     generate_bootstrap_js,
+    generate_theme_css,
     html_snippet_template,
     js_annotation_panel,
     js_apply_camera,
@@ -36,6 +37,7 @@ def render_figure(
     scene_config: Dict[str, Any],
     figure_style: Dict[str, Any],
     figure_config: Dict[str, Any],
+    theme: str = "dark",
 ) -> str:
     """Render a figure HTML snippet from the unified scene objects."""
     fig_id = "tanga-fig-" + uuid4().hex[:8]
@@ -109,6 +111,7 @@ def render_figure(
         responsive_style_block=responsive_style_block,
         bootstrap_js=bootstrap,
         config_data_json=config_json,
+        theme_css=generate_theme_css(theme),
     )
 
 

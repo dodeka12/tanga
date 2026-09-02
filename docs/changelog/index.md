@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.15.0] — 2026-09-01
+- CSS theme system · runtime theme switching · themed exports & viewport background · user-provided themes (`register_theme`/`copy_theme`) · theme auto-reload
+- Bug fixes: group panel chrome is now token-driven (light/pastel themes render correctly)
+→ [Details](2026-09-01_412e5f48.md)
+
 ## [Since 1.14.1] — 2026-09-01
 - Menu system (`MenuView`, `add_menu`, `serialize_layout(overlay=...)`) · dialogs (`show_dialog`/`remove_dialog`/`clear_dialogs`) · control variants (`EControlVariant`) · `EAnchor` enum · `GroupView` icon/`icon_only` chrome · unified control groups · single-layout scene serving with live overlay updates
 - Breaking: control groups are now `GroupView` overlays

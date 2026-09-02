@@ -1,0 +1,18 @@
+/* Tanga viewer — checkbox control. */
+
+.tanga-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.tanga-checkbox-input {
+    cursor: pointer;
+}
+
+.tanga-checkbox-label {
+    font-size: 12px;
+    color: var(--tanga-fg);
+}
+

@@ -16,12 +16,12 @@ switch-style checkbox or pill button), plus a themed export.
 
 ## Steps
 
-- [ ] **9.1 — Custom theme files**
+- [x] **9.1 — Custom theme files**
   - Add a `custom` (or `pastel`) theme to `registry.json` with a token sheet and
     a full `button` and/or `checkbox` override; implement the override CSS
     targeting the stable classes (e.g. switch-style checkbox via `::before`).
 
-- [ ] **9.2 — Example script**
+- [x] **9.2 — Example script**
   - Create `py/examples/viz/scenes/custom_theme_override.py` with the required
     header (one-line description, `Run with:`, `Keywords:` — see
     `dev/workflows/example-docs.md`).
@@ -29,7 +29,7 @@ switch-style checkbox or pill button), plus a themed export.
     `export_snapshot(..., theme="custom")` (or equivalent) so the override is
     visible in a packed export.
 
-- [ ] **9.3 — Docs generation**
+- [x] **9.3 — Docs generation**
   - Run `uv run python tools/generate-example-docs.py` and confirm the example
     appears under the examples nav.
 

@@ -12,7 +12,7 @@ Demonstrate backend theme selection changing live: a control triggers
 
 ## Steps
 
-- [ ] **6.1 — Example script**
+- [x] **6.1 — Example script**
   - Create `py/examples/viz/scenes/theme_switching.py` with the required header
     (one-line description, `Run with:`, `Keywords:` — see
     `dev/workflows/example-docs.md`).
@@ -20,7 +20,7 @@ Demonstrate backend theme selection changing live: a control triggers
     `viz.set_theme("light")` (and a slider/checkbox so the change is visible
     across controls), plus some scene content.
 
-- [ ] **6.2 — Docs generation**
+- [x] **6.2 — Docs generation**
   - Run `uv run python tools/generate-example-docs.py` and confirm the example
     appears under the examples nav.
 

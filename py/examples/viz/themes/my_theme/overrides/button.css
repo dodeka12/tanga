@@ -1,0 +1,15 @@
+/* Tanga viewer — example "ocean" button override (rounded pill). */
+
+.tanga-action-button {
+    background: linear-gradient(135deg, #34d6c6, #2ec4b6);
+    border: 1px solid rgba(46, 196, 182, 0.5);
+    border-radius: 8px;
+    color: #04262e;
+    font-weight: 600;
+    padding: 6px 16px;
+    box-shadow: 0 2px 8px rgba(46, 196, 182, 0.35);
+}
+
+.tanga-action-button:hover {
+    background: linear-gradient(135deg, #4ee0d1, #2ec4b6);
+}

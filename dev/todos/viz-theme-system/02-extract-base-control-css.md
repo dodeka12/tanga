@@ -20,32 +20,32 @@ replace inline appearance on the control factories with stable class names.
 
 ## Steps
 
-- [ ] **2.1 — `base.css` tokens + global rules**
+- [x] **2.1 — `base.css` tokens + global rules**
   - `:root { --tanga-bg: #1a1a2e; --tanga-fg: #ccc; --tanga-accent: #4488ff;
     --tanga-border: rgba(255,255,255,0.12); … }` (carry over today's palette).
   - Add global look & feel: font stack, scrollbar (from `_injectScrollStyles`),
     and the **borderless icon rule**
     (`.tanga-icon-button, .tanga-group-toggle { border: none; background: none; }`).
 
-- [ ] **2.2 — `controls/*.css`**
+- [x] **2.2 — `controls/*.css`**
   - Port each control's rules from `controls-panel.js::_injectStyles` into its
     own file, replacing hardcoded colors with `var(--tanga-…)`. Keep the same
     class selectors (`.tanga-action-button`, `.tanga-range-input`, …).
 
-- [ ] **2.3 — `views/stack-view.css`**
+- [x] **2.3 — `views/stack-view.css`**
   - Move `_injectScrollStyles` CSS into this file.
 
-- [ ] **2.4 — Remove injected CSS from JS**
+- [x] **2.4 — Remove injected CSS from JS**
   - Delete `_injectStyles()` (and its `_injectStyles()` call) from
     `controls-panel.js` and `controls-attached.js`; delete `_injectScrollStyles()`
     from `stack-view.js`. Keep the classes the factories already add.
 
-- [ ] **2.5 — De-inline control appearance**
+- [x] **2.5 — De-inline control appearance**
   - In `controls-panel.js` factories, move `Object.assign(…style…)` appearance
     (background/border/color/padding) to the corresponding `.css` via classes;
     keep computed geometry (e.g. flex sizing of the file-chooser row) inline.
 
-- [ ] **2.6 — Smoke**
+- [x] **2.6 — Smoke**
   - New `dev/src/js-tests/control-theming-smoke.html` that links `base.css` +
     the component CSS directly and renders a button/slider/checkbox, asserting
     the button icon is borderless and colors come from `var()`.

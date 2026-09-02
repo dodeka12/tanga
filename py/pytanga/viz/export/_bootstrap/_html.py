@@ -209,6 +209,20 @@ def generate_bootstrap_js(adapter_js: str) -> str:
     return "\n\n".join(parts)
 
 
+def generate_theme_css(theme_id: str) -> str:
+    """Return the active theme's CSS inlined into a single ``<style>`` block.
+
+    Symmetric to :func:`generate_bootstrap_js`: reads the resolved CSS files
+    (via the theme registry) and concatenates them in order, so standalone HTML
+    exports carry the active theme with no external ``<link>``.
+    """
+    from pytanga.viz._themes import registry
+
+    parts = [p.read_text(encoding="utf-8") for p in registry.theme_css_paths(theme_id)]
+    css = "\n".join(parts)
+    return f"<style>\n{css}\n</style>\n"
+
+
 def _sdf_shader_injection() -> str:
     """Inline the SDF proxy GLSL as a global for standalone HTML exports.
 
@@ -281,6 +295,7 @@ def html_fullpage_template(
     annotation_controls_reposition_js: str = "",
     body_div: str = "",
     bootstrap_js: str = "",
+    theme_css: str = "",
 ) -> str:
     """Return a full-page HTML document (``<!DOCTYPE html>`` ... ``</html>``).
 
@@ -296,6 +311,7 @@ def html_fullpage_template(
         annotation_controls_reposition_js: Repositioning script block.
         body_div: The main container ``<div>`` for the 3D viewport.
         bootstrap_js: The concatenated renderer modules + adapter JS.
+        theme_css: Inlined theme CSS ``<style>`` block (``generate_theme_css``).
 
     Returns:
         Full HTML document string.
@@ -316,6 +332,7 @@ def html_fullpage_template(
         + katex_css
         + _CDN_SCRIPTS
         + _THREEJS_IMPORT_MAP
+        + theme_css
         + anim_embed
         + decompress_js
         + "</head>\n"
@@ -346,6 +363,7 @@ def html_snippet_template(
     controls_html: str = "",
     bootstrap_js: str = "",
     config_data_json: str = "{}",
+    theme_css: str = "",
 ) -> str:
     """Return an HTML snippet (``<div>`` + ``<script type="module">``) for embedding.
 
@@ -360,6 +378,7 @@ def html_snippet_template(
             div for animated figures).
         bootstrap_js: Concatenated renderer modules + adapter JS.
         config_data_json: JSON string for ``data-figure-config`` attribute.
+        theme_css: Inlined theme CSS ``<style>`` block (``generate_theme_css``).
 
     Returns:
         HTML snippet string.
@@ -376,6 +395,7 @@ def html_snippet_template(
         + _CDN_SCRIPTS
         + katex_css
         + responsive_style_block
+        + theme_css
         + _THREEJS_IMPORT_MAP
         + anim_embed
         + decompress_js

@@ -28,6 +28,7 @@ import {
 import {
     handleEditorDefine,
 } from './editor.js';
+import { handleThemeDefine } from './themes.js';
 import { updateLineResolutions } from './renderers/utils.js';
 import { handleResize } from './view_mode.js';
 
@@ -574,6 +575,21 @@ async function handleMessage(msg) {
     if (msg.type === 'view_camera') {
         const target = _viewById.get(msg.view_id);
         if (target) target.setCamera(msg.camera);
+        return;
+    }
+
+    if (msg.type === 'theme_define') {
+        const applyThemeBackgrounds = () => {
+            for (const route of _sceneRoutes.values()) {
+                for (const v of route.sceneViews) v.applyThemeBackground();
+            }
+        };
+        const ready = handleThemeDefine(msg);
+        if (ready && typeof ready.then === 'function') {
+            ready.then(applyThemeBackgrounds);
+        } else {
+            applyThemeBackgrounds();
+        }
         return;
     }
 

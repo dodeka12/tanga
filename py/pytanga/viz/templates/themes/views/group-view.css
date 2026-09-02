@@ -1,0 +1,181 @@
+/* Tanga viewer — group/panel chrome (control panel, group header, attached groups). */
+
+.tanga-group {
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: var(--tanga-font);
+    font-size: 13px;
+    color: var(--tanga-fg);
+    box-shadow: var(--tanga-shadow);
+}
+
+.tanga-control-panel {
+    position: absolute;
+    z-index: 20;
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    min-width: 220px;
+    max-width: 320px;
+    font-family: var(--tanga-font);
+    font-size: 13px;
+    color: var(--tanga-fg);
+    box-shadow: var(--tanga-shadow);
+    user-select: none;
+    pointer-events: auto;
+}
+
+.tanga-control-panel.dragging {
+    cursor: grabbing;
+    opacity: 0.95;
+}
+
+.tanga-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--tanga-border-subtle);
+    cursor: grab;
+    color: var(--tanga-fg-strong);
+}
+
+.tanga-group-header:active {
+    cursor: grabbing;
+}
+
+.tanga-group-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--tanga-fg-strong);
+}
+
+.tanga-group-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tanga-group-toggle {
+    border-radius: 3px;
+    color: var(--tanga-fg-muted);
+    cursor: pointer;
+    font-size: 14px;
+    width: 22px;
+    height: 22px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tanga-group-toggle:hover {
+    background: var(--tanga-surface);
+    color: var(--tanga-fg-strong);
+}
+
+.tanga-orphan-handle {
+    cursor: grab;
+}
+
+.tanga-orphan-handle:active {
+    cursor: grabbing;
+}
+
+/* Attached controls (CSS2D-anchored groups). */
+.tanga-attached-group {
+    font-family: var(--tanga-font);
+    font-size: 12px;
+    color: var(--tanga-fg-strong);
+    pointer-events: auto;
+    user-select: none;
+}
+
+.tanga-attached-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tanga-attached-title:hover {
+    background: var(--tanga-panel-hover);
+}
+
+.tanga-attached-toggle {
+    font-size: 10px;
+    transition: transform 0.2s;
+    display: inline-block;
+}
+
+.tanga-attached-toggle.expanded {
+    transform: rotate(90deg);
+}
+
+.tanga-attached-controls {
+    margin-top: 4px;
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-width: 200px;
+    max-width: 280px;
+    box-shadow: var(--tanga-shadow);
+    overflow: hidden;
+}
+
+.tanga-attached-controls.tanga-collapsed {
+    display: none;
+}
+
+.tanga-attached-controls .tanga-control {
+    margin: 4px 0;
+}
+
+.tanga-attached-controls .tanga-control label {
+    font-size: 11px;
+    color: var(--tanga-fg-muted);
+}
+
+.tanga-attached-controls .tanga-value {
+    font-size: 11px;
+}
+
+.tanga-attached-controls .tanga-range-input {
+    height: 3px;
+}
+
+.tanga-attached-controls .tanga-range-input::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+}
+
+.tanga-attached-controls .tanga-range-input::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+}
+
+.tanga-attached-controls .tanga-select-input {
+    font-size: 11px;
+    padding: 2px 4px;
+}
+
+.tanga-attached-controls .tanga-action-button {
+    font-size: 11px;
+    padding: 3px 10px;
+}
+
+.tanga-attached-title .material-icons {
+    font-size: 13px;
+}
+

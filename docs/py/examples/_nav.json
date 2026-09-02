@@ -392,6 +392,12 @@
             "Control Group Single": "py/examples/viz/scenes/control_group_single.md"
           },
           {
+            "Control Theming": "py/examples/viz/scenes/control_theming.md"
+          },
+          {
+            "Custom Theme Override": "py/examples/viz/scenes/custom_theme_override.md"
+          },
+          {
             "Group View Icons": "py/examples/viz/scenes/group_view_icons.md"
           },
           {
@@ -411,6 +417,9 @@
           },
           {
             "Table Split": "py/examples/viz/scenes/table_split.md"
+          },
+          {
+            "Theme Switching": "py/examples/viz/scenes/theme_switching.md"
           },
           {
             "Toolbar": "py/examples/viz/scenes/toolbar.md"
@@ -458,6 +467,16 @@
           },
           {
             "Custom Defaults": "py/examples/viz/styling/custom_defaults.md"
+          }
+        ]
+      },
+      {
+        "Themes": [
+          {
+            "Overview": "py/examples/viz/themes/index.md"
+          },
+          {
+            "Custom Theme Autoreload": "py/examples/viz/themes/custom_theme_autoreload.md"
           }
         ]
       }

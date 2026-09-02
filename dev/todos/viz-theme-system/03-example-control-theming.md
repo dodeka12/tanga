@@ -12,7 +12,7 @@ the extracted CSS, with borderless icon buttons and token-driven colors.
 
 ## Steps
 
-- [ ] **3.1 — Example script**
+- [x] **3.1 — Example script**
   - Create `py/examples/viz/scenes/control_theming.py` with the required header
     (one-line description, `Run with:`, `Keywords:` — see
     `dev/workflows/example-docs.md`).
@@ -21,7 +21,7 @@ the extracted CSS, with borderless icon buttons and token-driven colors.
     exercise the themed, borderless-icon look.
   - Note in the docstring that styling now comes from the theme CSS files.
 
-- [ ] **3.2 — Docs generation**
+- [x] **3.2 — Docs generation**
   - Run `uv run python tools/generate-example-docs.py` and confirm the example
     appears under the examples nav.
 

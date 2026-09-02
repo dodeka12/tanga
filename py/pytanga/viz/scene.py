@@ -33,7 +33,7 @@ class SceneConfig:
     message, before any entity data.
     """
 
-    background_color: str = "#1a1a2e"
+    background_color: str | None = None
     camera: CameraConfig | None = None  # None = auto-fit from entities
     title: str = "Tanga 3D Viewer"  # viewport title overlay
     annotation: str | None = None  # markdown annotation text
@@ -44,12 +44,15 @@ class SceneConfig:
         """Serialize to a JSON-compatible dict."""
         result: dict[str, Any] = {
             "type": "scene_config",
-            "background_color": self.background_color,
             "title": self.title,
             "name": self.name,
             "scene": self.name,
             "space_dim": self.space_dim,
         }
+        if self.background_color is not None:
+            # Omitted (not ``None``) means "follow the active theme's
+            # ``--tanga-bg`` token" on the frontend.
+            result["background_color"] = self.background_color
         if self.camera is not None:
             cam = self.camera.to_dict()
             if cam:

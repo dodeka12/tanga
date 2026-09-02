@@ -1,0 +1,45 @@
+{
+  "base": ["base.css"],
+  "tokens": "tokens.css",
+  "components": [
+    "controls/button.css",
+    "controls/slider.css",
+    "controls/checkbox.css",
+    "controls/dropdown.css",
+    "controls/text-field.css",
+    "controls/text-area.css",
+    "controls/color-picker.css",
+    "controls/value-edit.css",
+    "controls/file-chooser.css",
+    "controls/table.css",
+    "views/group-view.css",
+    "views/menu-view.css",
+    "views/dialog-view.css",
+    "views/banner-view.css",
+    "views/overlay-view.css",
+    "views/stack-view.css"
+  ],
+  "themes": {
+    "dark": {
+      "label": "Dark",
+      "tokens": "dark/tokens.css",
+      "overrides": {}
+    },
+    "light": {
+      "label": "Light",
+      "tokens": "light/tokens.css",
+      "overrides": {
+        "button": "light/overrides/button.css",
+        "checkbox": "light/overrides/checkbox.css"
+      }
+    },
+    "pastel": {
+      "label": "Pastel",
+      "tokens": "pastel/tokens.css",
+      "overrides": {
+        "button": "pastel/overrides/button.css",
+        "checkbox": "pastel/overrides/checkbox.css"
+      }
+    }
+  }
+}

@@ -146,7 +146,7 @@ class TestCameraBuilders:
 class TestSceneConfig:
     def test_defaults(self):
         sc = SceneConfig()
-        assert sc.background_color == "#1a1a2e"
+        assert sc.background_color is None
         assert sc.camera is None
 
     def test_to_dict_includes_type(self):
@@ -154,6 +154,7 @@ class TestSceneConfig:
         d = sc.to_dict()
         assert d["type"] == "scene_config"
         assert "camera" not in d  # None camera should be omitted
+        assert "background_color" not in d  # None → follow theme
 
     def test_to_dict_includes_scene_field(self):
         # The frontend filters messages via `_forMyScene(msg)` which reads
@@ -1596,5 +1597,6 @@ class TestDefaultSceneObjects:
         # Idempotency: a later default-add pass must still add nothing to a
         # scene that opted out at creation.
         viz._add_default_scene_objects("plot")
-        assert sorted(o.kind for o in viz._scenes["plot"]._objects.values()) == plot_kinds
-
+        assert (
+            sorted(o.kind for o in viz._scenes["plot"]._objects.values()) == plot_kinds
+        )

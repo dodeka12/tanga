@@ -123,7 +123,7 @@ class Visualizer(_JupyterDisplayMixin):
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
-        background_color: str = "#1a1a2e",
+        background_color: str | None = None,
         # Camera configuration (None = auto-fit from entities). Accepts a
         # CameraConfig, or a View2DConfig/View3dConfig input spec.
         camera: CameraConfig | View2DConfig | View3dConfig | None = None,
@@ -161,6 +161,10 @@ class Visualizer(_JupyterDisplayMixin):
         self._server = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
+        self._theme = "dark"
+        self._theme_version = 0
+        self._theme_watch_thread: threading.Thread | None = None
+        self._theme_watch_stop: threading.Event | None = None
         self._saved_signal_handlers: dict[int, Any] | None = None
         self._atexit_registered = False
         self._display_pending: set[str] = set()
@@ -971,6 +975,128 @@ class Visualizer(_JupyterDisplayMixin):
         self._default_objects_added.discard(scene_name)
         self._add_default_scene_objects(scene_name)
 
+    # ── Theme selection ─────────────────────────────────────────
+
+    @property
+    def theme(self) -> str:
+        """The active UI theme id (default ``"dark"``)."""
+        return self._theme
+
+    def set_theme(self, theme_id: str) -> None:
+        """Select the active UI theme and push it to all connected clients.
+
+        Validates *theme_id* against the theme registry (raising on unknown
+        themes), records it as the active theme, and pushes a ``theme_define``
+        message so connected viewers restyle without a page reload.
+        """
+        from ._themes import theme_css_files
+
+        theme_css_files(theme_id)  # raises KeyError on unknown theme
+        self._theme = theme_id
+        self._theme_version += 1
+        self._push_theme()
+
+    async def set_theme_async(self, theme_id: str) -> None:
+        """Async variant of :meth:`set_theme` — call from the server's event loop."""
+        from ._themes import theme_css_files
+
+        theme_css_files(theme_id)  # raises KeyError on unknown theme
+        self._theme = theme_id
+        self._theme_version += 1
+        if self._server is not None:
+            await self._server.push_raw(json.dumps(self._theme_message()))
+
+    def refresh_theme(self) -> None:
+        """Re-push the active theme so connected viewers reload its CSS.
+
+        Useful after editing the active theme's ``tokens.css`` / ``overrides``
+        files; see :meth:`enable_theme_auto_reload` for automatic refresh.
+        """
+        self._theme_version += 1
+        self._push_theme()
+
+    async def refresh_theme_async(self) -> None:
+        """Async variant of :meth:`refresh_theme` — call from the server's loop."""
+        self._theme_version += 1
+        if self._server is not None:
+            await self._server.push_raw(json.dumps(self._theme_message()))
+
+    def enable_theme_auto_reload(self, poll_interval: float = 1.0) -> None:
+        """Watch the active theme's files and auto-refresh the viewer on change.
+
+        Polls the active theme's ``tokens.css`` and ``overrides`` files and
+        calls :meth:`refresh_theme` when one of them changes, so theme edits
+        show up live without a page reload.  No-op if already enabled.
+        """
+        if self._theme_watch_thread is not None:
+            return
+        self._theme_watch_stop = threading.Event()
+        self._theme_watch_thread = threading.Thread(
+            target=self._watch_theme_files,
+            args=(float(poll_interval),),
+            name="tanga-theme-watch",
+            daemon=True,
+        )
+        self._theme_watch_thread.start()
+
+    def disable_theme_auto_reload(self) -> None:
+        """Stop the theme auto-reload watcher started by :meth:`enable_theme_auto_reload`."""
+        if self._theme_watch_thread is None:
+            return
+        if self._theme_watch_stop is not None:
+            self._theme_watch_stop.set()
+        self._theme_watch_thread = None
+        self._theme_watch_stop = None
+
+    def _watch_theme_files(self, poll_interval: float) -> None:
+        from ._themes import theme_source_files
+
+        def _signature(files):
+            sig = []
+            for p in files:
+                try:
+                    st = p.stat()
+                    sig.append((str(p), st.st_mtime_ns, st.st_size))
+                except OSError:
+                    sig.append((str(p), -1, -1))
+            return tuple(sig)
+
+        last = None
+        while (
+            self._theme_watch_stop is not None and not self._theme_watch_stop.is_set()
+        ):
+            try:
+                sig = _signature(theme_source_files(self._theme))
+                if last is not None and sig != last:
+                    self.refresh_theme()
+                last = sig
+            except Exception:
+                logger.exception("theme auto-reload check failed")
+            self._theme_watch_stop.wait(poll_interval)
+
+    def _theme_message(self) -> dict[str, Any]:
+        """Return the full ``theme_define`` message for the active theme."""
+        return {"type": "theme_define", **self._theme_define_payload()}
+
+    def _push_theme(self) -> None:
+        """Push the active theme to all connected clients (thread-safe)."""
+        if self._server is None or self._loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._server.push_raw(json.dumps(self._theme_message())), self._loop
+        )
+
+    def _theme_define_payload(self) -> dict[str, Any]:
+        """Return the active theme's ``theme_define``-shaped payload (no ``type``)."""
+        from ._themes import theme_css_files, theme_label
+
+        return {
+            "theme": self._theme,
+            "label": theme_label(self._theme),
+            "css": theme_css_files(self._theme),
+            "version": self._theme_version,
+        }
+
     # ── Title & annotation ──────────────────────────────────
 
     def set_title(self, title: str) -> None:
@@ -1663,6 +1789,7 @@ class Visualizer(_JupyterDisplayMixin):
         if self._server is not None:
             return
 
+        from ._themes import external_theme_dirs
         from .server import VizServer
 
         logger.info("Starting VizServer on %s:%d", self._host, self._port)
@@ -1686,6 +1813,8 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_list_callback=self.list_scenes,
                 layout_callback=self._layout_serialized_for,
                 scene_layout_callback=self._scene_layout_for,
+                theme_callback=self._theme_define_payload,
+                theme_static_dirs=external_theme_dirs(),
             )
             _boot_done.set()
 
@@ -4373,7 +4502,9 @@ class Visualizer(_JupyterDisplayMixin):
         *,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str:
+        theme = theme or self._theme
         scene = self._scenes[scene_name]
         if animation is not None:
             from pytanga.viz.export._animated_figure import (
@@ -4385,11 +4516,14 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
                 title=self._title,
+                theme=theme,
             )
         from pytanga.viz.export._html import render_snapshot
 
         objects = scene.full_state(styles_map=scene.styles.kind)
-        return render_snapshot(objects=objects, scene_config=scene.config.to_dict())
+        return render_snapshot(
+            objects=objects, scene_config=scene.config.to_dict(), theme=theme
+        )
 
     def _open_scene_snapshot(self, scene_name: str) -> None:
         import tempfile
@@ -4409,11 +4543,12 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> None:
         from pathlib import Path
 
         html = self._render_snapshot_html(
-            scene_name, animation=animation, anim_style=anim_style
+            scene_name, animation=animation, anim_style=anim_style, theme=theme
         )
         p = Path(path).expanduser()
         if not p.suffix:
@@ -4431,14 +4566,21 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> None:
         """Export the current scene as a self-contained HTML file.
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
-        snapshot instead of a static one.
+        snapshot instead of a static one.  *theme* overrides the active UI theme
+        for the packed CSS (default: the active theme).
         """
         self._export_scene_snapshot(
-            "", path, overwrite=overwrite, animation=animation, anim_style=anim_style
+            "",
+            path,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
         )
 
     def open_snapshot(self) -> None:
@@ -4452,10 +4594,12 @@ class Visualizer(_JupyterDisplayMixin):
         style: Any = None,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str:
         from pytanga.viz._figure import FigureConfig
         from pytanga.viz._styles import FigureStyle
 
+        theme = theme or self._theme
         scene = self._scenes[scene_name]
         resolved = style if style is not None else FigureStyle()
         fig_config = FigureConfig(
@@ -4472,6 +4616,7 @@ class Visualizer(_JupyterDisplayMixin):
                 figure_config=fig_config.to_dict(),
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
+                theme=theme,
             )
         from pytanga.viz.export._figure_html import render_figure
 
@@ -4481,6 +4626,7 @@ class Visualizer(_JupyterDisplayMixin):
             scene.config.to_dict(),
             resolved.to_dict(),
             fig_config.to_dict(),
+            theme=theme,
         )
 
     def _export_scene_figure(
@@ -4492,11 +4638,16 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str | None:
         from pathlib import Path
 
         html = self._render_figure_html(
-            scene_name, style=style, animation=animation, anim_style=anim_style
+            scene_name,
+            style=style,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
         )
         if path is None:
             return html
@@ -4518,11 +4669,13 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
     ) -> str | None:
         """Export the current scene as an HTML snippet (or return the string).
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
-        figure instead of a static one.
+        figure instead of a static one.  *theme* overrides the active UI theme
+        for the packed CSS (default: the active theme).
         """
         return self._export_scene_figure(
             "",
@@ -4531,6 +4684,7 @@ class Visualizer(_JupyterDisplayMixin):
             overwrite=overwrite,
             animation=animation,
             anim_style=anim_style,
+            theme=theme,
         )
 
     def _export_scene_glb(
