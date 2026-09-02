@@ -6,6 +6,12 @@
 → [Details](2026-09-02_feat-viz-layout-sizing.md)
 
 ## [Since 1.16.0] — 2026-09-02
+- `FileChooserDialog` file-open dialog (`FileChooserView` listing + path line + OK/Cancel) · dialog `width`/`height` + drag-to-resize corner
+- Breaking: `FileChooserView` no longer renders a path field or "Browse…" button
+- Bug fixes: menu bar renders horizontally, left-aligned · nested bar-menu submenus open downwards · file-chooser "Up" steps one level on every platform
+→ [Details](2026-09-02_868c81bb.md)
+
+## [Since 1.16.0] — 2026-09-02
 - Stacked `+`/`-` merge & single-stacked `*` composition · integer axis labels (`AxisLabel`) · integer variable-label pool · `project_onto` (MV / `BladeMask`) · constant `Expression(A)`
 - Breaking: `MVLabeledTensor.labels` is now structured · `Variable.label` is an integer · `project_to` removed
 → [Details](2026-09-02_951a9a19.md)

@@ -1,6 +1,6 @@
 # A titled dialog whose body holds view-based controls
 
-**Keywords:** dialog · modal · show_dialog · remove_dialog · on_close · StackView · flex · Size
+**Keywords:** dialog · modal · show_dialog · remove_dialog · on_close · menu bar · StackView · flex · Size
 
 Demonstrates `show_dialog <pytanga.viz.Visualizer.show_dialog>`: a dialog
 whose content is a `StackView` of control views — a slider that edits the
@@ -50,7 +50,7 @@ The settings dialog can be dismissed three ways:
 
 Run with:  uv run python py/examples/viz/dialogs/dialog_demo.py
 
-Keywords: dialog, modal, show_dialog, remove_dialog, on_close, StackView, flex, Size
+Keywords: dialog, modal, show_dialog, remove_dialog, on_close, menu bar, StackView, flex, Size
 """
 
 from pytanga.geometry import Point, Sphere

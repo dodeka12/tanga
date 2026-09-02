@@ -19,7 +19,7 @@ The settings dialog can be dismissed three ways:
 
 Run with:  uv run python py/examples/viz/dialogs/dialog_demo.py
 
-Keywords: dialog, modal, show_dialog, remove_dialog, on_close, StackView, flex, Size
+Keywords: dialog, modal, show_dialog, remove_dialog, on_close, menu bar, StackView, flex, Size
 """
 
 from pytanga.geometry import Point, Sphere

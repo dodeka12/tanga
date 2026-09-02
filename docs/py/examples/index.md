@@ -322,7 +322,7 @@ uv run python py/examples/<path>.py
 
 - **menu** — [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md), [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
 
-- **menu bar** — [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md)
+- **menu bar** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md)
 
 - **mesh** — [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
 
