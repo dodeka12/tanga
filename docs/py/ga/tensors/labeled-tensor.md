@@ -16,8 +16,10 @@ after construction.  Relabeling returns a new instance.
 
 ### Syntax
 
-Each axis is described by a **raw name** (a single letter `a–z`, `A–Z`)
-followed by an optional **mode character**:
+Each axis is described by an `AxisLabel(name, mode)` — a **name** (either a
+single ASCII letter or an integer index) plus a **mode** (`"*"` for contraction
+or `"_"` for element-wise).  The compact string form uses a single letter name
+(`a–z`, `A–Z`) followed by the mode:
 
 | Mode | Written as | Meaning |
 |------|------------|---------|
@@ -58,6 +60,22 @@ Two ways to obtain an `MVLabeledTensor`:
    Z = MVLabeledTensor.zeros("kij", [mask, mask, mask])
    Z = MVLabeledTensor.zeros_from_dict("in", {"i": mask, "n": 5})
    ```
+
+3. **Structured `AxisLabel` labels** — axis names may also be integers, and
+   modes may be given explicitly, so labels are not limited to the single-letter
+   alphabet:
+   ```python
+   from pytanga.tensor import AxisLabel
+
+   Z = MVLabeledTensor.zeros([0, 1, 2], [mask, mask, mask])
+   Z = MVLabeledTensor.zeros([("k", "*"), (0, "*"), ("n", "_")], [mask, mask, 5])
+   Z = MVLabeledTensor.zeros([AxisLabel("k"), AxisLabel(0), AxisLabel("n", "_")],
+                             [mask, mask, 5])
+   ```
+
+   `AxisLabel` is a frozen dataclass with `name: str | int` and `mode: str`
+   (``"*"`` or ``"_"``).  The legacy string form is parsed into the same
+   structured representation, so string and integer names can be mixed freely.
 
 ## Arithmetic operations
 

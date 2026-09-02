@@ -105,15 +105,31 @@ def sp_def(ctype: str) -> str:
 """
 
 
-def project_to_def() -> str:
+def project_onto_def() -> str:
     return """
-    m.def("project_to", [](const TDynMV& a, const TDynMV& b) {
+    m.def("project_onto", [](const TDynMV& a, const TDynMV& b) {
         TDynMV c = a;
-        Tan::GA::ProjectTo(c, b);
+        Tan::GA::ProjectOnto(c, b);
         c.Prune();
         return c;
     }, py::arg("a"), py::arg("b"),
-       "Restrict a to the blade set of b (retain only blades present in b).");
+       "Restrict a to the blade set of b (retain a's blades that are non-zero in b).");
+"""
+
+
+def project_onto_mask_def() -> str:
+    return """
+    m.def("project_onto_mask", [](const TDynMV& a, std::vector<unsigned> ids) {
+        TDynMV c = a;
+        Tan::GA::CBladeMask<TBlade> xMask;
+        for (unsigned id : ids) {
+            xMask << id;
+        }
+        Tan::GA::ProjectOnto(c, xMask);
+        c.Prune();
+        return c;
+    }, py::arg("a"), py::arg("ids"),
+       "Restrict a to the given blade ids (exact membership).");
 """
 
 

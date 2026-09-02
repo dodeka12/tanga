@@ -94,7 +94,7 @@ the scalar is automatically promoted to a scalar multivector.
 | `a.dual()` | — | Signed dual ★A = A · I⁺ — see [Duals](duals.md) |
 | `a.ldual()` | — | Left dual I · A — see [Duals](duals.md) |
 | `a.sp(b)` | — | Scalar product: scalar part of a * b |
-| `a.project_to(b)` | — | Restrict a to the blade set of b (also accepts `int` mask / `list[int]`) |
+| `a.project_onto(b)` | — | Restrict `a` to a blade set: keep `a`'s blades that are non-zero in `b` (`MV`), or whose id is in `b` (`BladeMask`) |
 | `a.blade_inverse()` | — | Proper blade inverse $A^{-1} = \tilde{A} / \mathrm{IP}(A, \tilde{A})$ |
 | `a.blade_pseudo_inverse()` | — | Pseudo-inverse of a blade: an inverse only w.r.t. the inner product $\langle A \cdot A^{-1} \rangle_0 = 1$; the reciprocal of a null blade |
 | `a.blade_factorize()` | — | Factorize blade into $k$ normalized grade-1 vectors |

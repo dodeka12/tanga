@@ -174,8 +174,8 @@ template TValue GA::Scalar(const TDynMultivector &wA);
 
 template bool GA::IsScalar(const TMultivector &wA);
 template bool GA::IsZero(const TMultivector &wA);
-template void GA::ProjectTo(TMultivector &wA, const TMultivector &wB);
-template void GA::ProjectToBlade(TValue &fValA, const TBlade &blA, const TMultivector &wB);
+template void GA::ProjectOnto(TMultivector &wA, const TMultivector &wB);
+template void GA::ProjectOnto(TMultivector &wA, const TBladeMask &xMask);
 template void GA::ConvertMultivectorType(TMultivector &wA, const TMultivector &wB);
 
 template TMultivector &GA::Add(TMultivector &wC, const TMultivector &wA, const TMultivector &wB);

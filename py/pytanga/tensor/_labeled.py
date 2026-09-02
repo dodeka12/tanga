@@ -102,6 +102,16 @@ def _raw_names(extended_labels: str) -> str:
     return "".join(extended_labels[i] for i in range(0, len(extended_labels), 2))
 
 
+def _axis_names(labels) -> tuple[AxisName, ...]:
+    """Return the ordered axis-name sequence for *labels*.
+
+    Accepts a legacy string or the structured ``tuple[AxisLabel, ...]``.
+    """
+    if isinstance(labels, str):
+        return tuple(_raw_names(labels))
+    return tuple(ax.name for ax in labels)
+
+
 def _mode_at(extended_labels: str, axis: int) -> str:
     """Return the mode character (``'*'`` or ``'_'``) for *axis*."""
     pos = 2 * axis + 1
@@ -119,8 +129,7 @@ def _validate_labels(labels: str, ndim: int) -> None:
     """Validate that *labels* has length 2*ndim and contains valid names."""
     if len(labels) != 2 * ndim:
         raise ValueError(
-            f"labels '{labels}' have {len(labels)//2} axes "
-            f"but tensor has ndim={ndim}"
+            f"labels '{labels}' have {len(labels) // 2} axes but tensor has ndim={ndim}"
         )
     # Check each pair
     for a in range(ndim):
@@ -133,9 +142,7 @@ def _validate_labels(labels: str, ndim: int) -> None:
     # Check for duplicate raw names
     raw = _raw_names(labels)
     if len(set(raw)) != len(raw):
-        raise ValueError(
-            f"duplicate raw index names in labels '{labels}'"
-        )
+        raise ValueError(f"duplicate raw index names in labels '{labels}'")
 
 
 def _extended_from_raw(raw: str, modes: dict[str, str]) -> str:
@@ -145,6 +152,95 @@ def _extended_from_raw(raw: str, modes: dict[str, str]) -> str:
     to ``'*'``.
     """
     return "".join(ch + modes.get(ch, "*") for ch in raw)
+
+
+AxisName = str | int
+
+
+@dataclass(frozen=True, slots=True)
+class AxisLabel:
+    """One labeled-tensor axis: a name plus a contraction/element-wise mode.
+
+    ``name`` is either a single ASCII letter (legacy string form) or an
+    integer pool index.  ``mode`` is ``"*"`` (contraction) or ``"_"``
+    (element-wise).
+    """
+
+    name: AxisName
+    mode: str = "*"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.name, bool) or not isinstance(self.name, (str, int)):
+            raise TypeError(
+                f"axis name must be str or int, got {type(self.name).__name__}"
+            )
+        if self.mode not in ("*", "_"):
+            raise ValueError(f"axis mode must be '*' or '_', got {self.mode!r}")
+
+    @property
+    def is_elemwise(self) -> bool:
+        return self.mode == "_"
+
+    @property
+    def is_contract(self) -> bool:
+        return self.mode == "*"
+
+    def __str__(self) -> str:
+        return f"{self.name}{self.mode}"
+
+
+def _parse_labels(labels) -> tuple[AxisLabel, ...]:
+    """Coerce a user label specification into a tuple of ``AxisLabel``.
+
+    Accepted forms: a legacy string, a single ``AxisLabel`` or ``AxisName``,
+    an iterable of ``AxisName`` (default mode ``"*"``), an iterable of
+    ``AxisLabel``, or an iterable of ``(name, mode)`` pairs.
+    """
+    if isinstance(labels, str):
+        canonical = _canonicalise(labels)
+        return tuple(
+            AxisLabel(canonical[i], canonical[i + 1])
+            for i in range(0, len(canonical), 2)
+        )
+    if isinstance(labels, AxisLabel):
+        return (labels,)
+    if isinstance(labels, int) and not isinstance(labels, bool):
+        return (AxisLabel(labels),)
+
+    result: list[AxisLabel] = []
+    for item in labels:
+        if isinstance(item, AxisLabel):
+            result.append(item)
+        elif isinstance(item, (str, int)) and not isinstance(item, bool):
+            result.append(AxisLabel(item))
+        else:
+            name, mode = item
+            result.append(AxisLabel(name, mode))
+    return tuple(result)
+
+
+def _axis_modes(labels) -> tuple[str, ...]:
+    """Return the ordered ``"*"``/``"_"`` sequence for *labels*."""
+    if isinstance(labels, str):
+        return tuple(labels[i] for i in range(1, len(labels), 2))
+    return tuple(ax.mode for ax in labels)
+
+
+def _labels_str(labels) -> str:
+    """Render *labels* as the legacy extended string (single-letter names only)."""
+    if isinstance(labels, str):
+        return labels
+    out: list[str] = []
+    for ax in labels:
+        if not isinstance(ax.name, str) or len(ax.name) != 1:
+            raise ValueError(f"cannot render non-letter axis name {ax.name!r}")
+        out.append(f"{ax.name}{ax.mode}")
+    return "".join(out)
+
+
+def _labels_from_names(names, modes) -> tuple[AxisLabel, ...]:
+    """Build ``AxisLabel`` instances from an ordered name sequence and a mode map."""
+    return tuple(AxisLabel(name, modes.get(name, "*")) for name in names)
 
 
 # ---------------------------------------------------------------------------
@@ -159,24 +255,30 @@ class MVLabeledTensor:
     Parameters
     ----------
     tensor : MVTensor
-        The underlying multi‑vector tensor.
-    labels : str
-        User label string (canonicalised internally).
+        The underlying multi-vector tensor.
+    labels : str | AxisName | iterable
+        Axis labels in any supported form (see :func:`_parse_labels`):
+        a legacy string, a single ``AxisLabel``/name, an iterable of names,
+        an iterable of ``AxisLabel``, or an iterable of ``(name, mode)``
+        pairs.  Stored canonically as ``tuple[AxisLabel, ...]``.
     """
 
     tensor: MVTensor
-    labels: str  # stored in canonical (extended) form
+    labels: tuple[AxisLabel, ...]
 
     def __post_init__(self) -> None:
-        # Canonicalise the user‑supplied labels string
-        canonical = _canonicalise(self.labels)
-        if canonical != self.labels:
-            # Use object.__setattr__ because the dataclass is frozen
-            object.__setattr__(self, "labels", canonical)
-        _validate_labels(self.labels, self.tensor.data.ndim)
+        parsed = _parse_labels(self.labels)
+        if len(parsed) != self.tensor.data.ndim:
+            raise ValueError(
+                f"labels have {len(parsed)} axes but tensor has ndim={self.tensor.data.ndim}"
+            )
+        names = _axis_names(parsed)
+        if len(set(names)) != len(names):
+            raise ValueError(f"duplicate raw index names in labels {parsed}")
+        object.__setattr__(self, "labels", parsed)
 
     def __repr__(self) -> str:
-        return f"MVLabeledTensor(labels='{self.labels}', tensor={self.tensor!r})"
+        return f"MVLabeledTensor(labels={self.labels!r}, tensor={self.tensor!r})"
 
     @property
     def ndim(self) -> int:
@@ -224,13 +326,12 @@ class MVLabeledTensor:
         from ._data import MVTensor as _MVTensor
 
         key_canon = _canonicalise(key)
-        key_raw = _raw_names(key_canon)
-        self_raw = _raw_names(self.labels)
+        key_raw = _axis_names(key_canon)
+        self_raw = _axis_names(self.labels)
 
         if set(key_raw) != set(self_raw):
             raise ValueError(
-                f"key labels '{key_raw}' do not match tensor labels "
-                f"'{self_raw}'"
+                f"key labels '{key_raw}' do not match tensor labels '{self_raw}'"
             )
 
         # If value is a plain MVTensor, wrap it with the key labels
@@ -239,11 +340,10 @@ class MVLabeledTensor:
 
         if not isinstance(value, MVLabeledTensor):
             raise TypeError(
-                f"expected MVLabeledTensor or MVTensor, got "
-                f"{type(value).__name__}"
+                f"expected MVLabeledTensor or MVTensor, got {type(value).__name__}"
             )
 
-        val_raw = _raw_names(value.labels)
+        val_raw = _axis_names(value.labels)
 
         # Check masks compatibility on shared axes
         for name in set(self_raw) & set(val_raw):
@@ -253,13 +353,9 @@ class MVLabeledTensor:
             v_mask = value.tensor.masks[v_ax]
             if s_mask is not None and v_mask is not None:
                 if s_mask.algebra is not v_mask.algebra:
-                    raise ValueError(
-                        f"label '{name}': algebra mismatch"
-                    )
+                    raise ValueError(f"label '{name}': algebra mismatch")
                 if s_mask.ids != v_mask.ids:
-                    raise ValueError(
-                        f"label '{name}': mask ids differ"
-                    )
+                    raise ValueError(f"label '{name}': mask ids differ")
             elif (s_mask is None) != (v_mask is None):
                 raise ValueError(
                     f"label '{name}': one side has a mask, the other does not"
@@ -273,9 +369,7 @@ class MVLabeledTensor:
         # Names in value but not self → error
         extra = set(val_raw) - set(self_raw)
         if extra:
-            raise ValueError(
-                f"value has extra labels {extra} not in target {self_raw}"
-            )
+            raise ValueError(f"value has extra labels {extra} not in target {self_raw}")
 
         # Build broadcast mapping: for each self axis, find the
         # corresponding axis in value (or insert newaxis)
@@ -336,9 +430,7 @@ class MVLabeledTensor:
         raw = _raw_names(canonical)
         for name in raw:
             if name not in specs:
-                raise ValueError(
-                    f"label '{name}' not found in specs dict"
-                )
+                raise ValueError(f"label '{name}' not found in specs dict")
         positional_specs = [specs[name] for name in raw]
         return MVLabeledTensor.zeros(labels, positional_specs, dtype=dtype)
 
@@ -379,15 +471,14 @@ class MVLabeledTensor:
             A new tensor with the summed axes removed.
         """
         sum_canon = _canonicalise(labels)
-        sum_raw = _raw_names(sum_canon)
-        self_raw = _raw_names(self.labels)
+        sum_raw = _axis_names(sum_canon)
+        self_raw = _axis_names(self.labels)
 
         # Validate that all sum labels exist on this tensor
         missing = set(sum_raw) - set(self_raw)
         if missing:
             raise ValueError(
-                f"sum labels {missing} not found in tensor labels "
-                f"'{self_raw}'"
+                f"sum labels {missing} not found in tensor labels '{self_raw}'"
             )
 
         # Determine which axes to keep and which to sum over
@@ -396,7 +487,7 @@ class MVLabeledTensor:
         keep_modes: dict[str, str] = {}
 
         for ax, name in enumerate(self_raw):
-            mode = _mode_at(self.labels, ax)
+            mode = _axis_modes(self.labels)[ax]
             if name in sum_raw:
                 sum_axes.append(ax)
             else:
@@ -407,6 +498,7 @@ class MVLabeledTensor:
         if not sum_axes:
             # Nothing to sum — return a copy
             from ._data import MVTensor as _MVTensor
+
             return MVLabeledTensor(
                 _MVTensor(data=self.tensor.data.copy(), masks=self.tensor.masks),
                 self.labels,
@@ -415,18 +507,14 @@ class MVLabeledTensor:
         axis_tuple = tuple(sum_axes)
         new_data = np.sum(self.tensor.data, axis=axis_tuple)
         new_masks = tuple(
-            self.tensor.masks[ax]
-            for ax in range(self.ndim)
-            if ax not in sum_axes
+            self.tensor.masks[ax] for ax in range(self.ndim) if ax not in sum_axes
         )
 
-        new_labels = _extended_from_raw("".join(keep_names), keep_modes)
+        new_labels = _labels_from_names(keep_names, keep_modes)
 
         from ._data import MVTensor as _MVTensor
 
-        return MVLabeledTensor(
-            _MVTensor(data=new_data, masks=new_masks), new_labels
-        )
+        return MVLabeledTensor(_MVTensor(data=new_data, masks=new_masks), new_labels)
 
     def norm(self, labels: str) -> MVLabeledTensor:
         """L2 norm over the given labelled axes.
@@ -449,14 +537,13 @@ class MVLabeledTensor:
         """
         squared = np.square(self.tensor.data)
         sum_canon = _canonicalise(labels)
-        sum_raw = _raw_names(sum_canon)
-        self_raw = _raw_names(self.labels)
+        sum_raw = _axis_names(sum_canon)
+        self_raw = _axis_names(self.labels)
 
         missing = set(sum_raw) - set(self_raw)
         if missing:
             raise ValueError(
-                f"norm labels {missing} not found in tensor labels "
-                f"'{self_raw}'"
+                f"norm labels {missing} not found in tensor labels '{self_raw}'"
             )
 
         sum_axes: list[int] = []
@@ -464,7 +551,7 @@ class MVLabeledTensor:
         keep_modes: dict[str, str] = {}
 
         for ax, name in enumerate(self_raw):
-            mode = _mode_at(self.labels, ax)
+            mode = _axis_modes(self.labels)[ax]
             if name in sum_raw:
                 sum_axes.append(ax)
             else:
@@ -482,18 +569,14 @@ class MVLabeledTensor:
         summed = np.sum(squared, axis=tuple(sum_axes))
         new_data = np.sqrt(summed)
         new_masks = tuple(
-            self.tensor.masks[ax]
-            for ax in range(self.ndim)
-            if ax not in sum_axes
+            self.tensor.masks[ax] for ax in range(self.ndim) if ax not in sum_axes
         )
 
-        new_labels = _extended_from_raw("".join(keep_names), keep_modes)
+        new_labels = _labels_from_names(keep_names, keep_modes)
 
         from ._data import MVTensor as _MVTensor
 
-        return MVLabeledTensor(
-            _MVTensor(data=new_data, masks=new_masks), new_labels
-        )
+        return MVLabeledTensor(_MVTensor(data=new_data, masks=new_masks), new_labels)
 
     # ------------------------------------------------------------------
     # Phase 4 – __mul__ (contraction)
@@ -601,8 +684,8 @@ def _add_or_sub(
     op : callable
         ``np.add`` or ``np.subtract``.
     """
-    raw_a = _raw_names(a.labels)
-    raw_b = _raw_names(b.labels)
+    raw_a = _axis_names(a.labels)
+    raw_b = _axis_names(b.labels)
 
     # Check shared axes for compatibility
     shared = set(raw_a) & set(raw_b)
@@ -633,18 +716,17 @@ def _add_or_sub(
     # Determine modes for output
     output_modes: dict[str, str] = {}
     for idx, ch in enumerate(raw_a):
-        output_modes[ch] = _mode_at(a.labels, idx)
+        output_modes[ch] = _axis_modes(a.labels)[idx]
     for idx, ch in enumerate(raw_b):
         if ch not in output_modes:
-            output_modes[ch] = _mode_at(b.labels, idx)
+            output_modes[ch] = _axis_modes(b.labels)[idx]
         else:
-            # Shared name: _ wins if either is element‑wise
-            mode_a = _mode_at(a.labels, raw_a.index(ch))
-            mode_b = _mode_at(b.labels, raw_b.index(ch))
+            # Shared name: _ wins if either is element-wise
+            mode_a = _axis_modes(a.labels)[raw_a.index(ch)]
+            mode_b = _axis_modes(b.labels)[raw_b.index(ch)]
             output_modes[ch] = "_" if (mode_a == "_" or mode_b == "_") else "*"
 
     # Expand dims to broadcast
-    n_out = len(output_raw)
     # Build a map from axis name → position in a/b
     a_pos = {raw_a[i]: i for i in range(len(raw_a))}
     b_pos = {raw_b[i]: i for i in range(len(raw_b))}
@@ -656,11 +738,9 @@ def _add_or_sub(
         if name not in a_pos:
             a_data = np.expand_dims(a_data, i)
             a_masks.insert(i, None)
-    # Reorder a axes to match output_raw order
-    a_map = [a_pos.get(name, -1) for name in output_raw]
-    # We just expand; the existing axes are already in raw_a order which
-    # matches the front of output_raw, so no permutation is needed as
-    # long as we inserted new axes at the right positions.
+    # The existing axes are already in raw_a order, which matches the front of
+    # output_raw, so no permutation is needed as long as we inserted new axes at
+    # the right positions.
 
     # Expand b
     b_data = b.tensor.data
@@ -685,13 +765,14 @@ def _add_or_sub(
 
     return MVLabeledTensor(
         _MVTensor(data=result_data, masks=tuple(result_masks)),
-        _extended_from_raw("".join(output_raw), output_modes),
+        _labels_from_names(output_raw, output_modes),
     )
 
 
 # ---------------------------------------------------------------------------
 # 2.3 – Transpose helper
 # ---------------------------------------------------------------------------
+
 
 def _transpose(tensor: MVLabeledTensor, key: str) -> MVLabeledTensor:
     """Transpose/reorder axes according to ``\"src->dst\"`` key.
@@ -705,7 +786,7 @@ def _transpose(tensor: MVLabeledTensor, key: str) -> MVLabeledTensor:
     if "->" not in key:
         raise ValueError(f"transpose key must contain '->', got '{key}'")
     src_str, dst_str = key.split("->", 1)
-    self_raw = _raw_names(tensor.labels)
+    self_raw = _axis_names(tensor.labels)
 
     if src_str == "":
         # Infer source from tensor's existing labels
@@ -726,8 +807,7 @@ def _transpose(tensor: MVLabeledTensor, key: str) -> MVLabeledTensor:
         )
     if set(src_raw) != set(self_raw):
         raise ValueError(
-            f"source labels '{src_raw}' do not match tensor labels "
-            f"'{self_raw}'"
+            f"source labels '{src_raw}' do not match tensor labels '{self_raw}'"
         )
     if set(dst_raw) != set(src_raw):
         raise ValueError(
@@ -743,14 +823,12 @@ def _transpose(tensor: MVLabeledTensor, key: str) -> MVLabeledTensor:
     new_masks = tuple(tensor.tensor.masks[ax] for ax in axes)
 
     # Build new extended labels by permuting the modes
-    src_modes = {self_raw[i]: _mode_at(tensor.labels, i) for i in range(tensor.ndim)}
-    new_labels = _extended_from_raw(dst_raw, src_modes)
+    src_modes = {self_raw[i]: _axis_modes(tensor.labels)[i] for i in range(tensor.ndim)}
+    new_labels = _labels_from_names(dst_raw, src_modes)
 
     from ._data import MVTensor as _MVTensor
 
-    return MVLabeledTensor(
-        _MVTensor(data=new_data, masks=new_masks), new_labels
-    )
+    return MVLabeledTensor(_MVTensor(data=new_data, masks=new_masks), new_labels)
 
 
 # ---------------------------------------------------------------------------
@@ -765,11 +843,10 @@ def iter_labels(name: str, *tensors: MVLabeledTensor):
     """
     axes: list[int] = []
     for t in tensors:
-        raw = _raw_names(t.labels)
+        raw = _axis_names(t.labels)
         if name not in raw:
             raise ValueError(
-                f"label '{name}' not found in tensor with labels "
-                f"'{t.labels}'"
+                f"label '{name}' not found in tensor with labels '{t.labels}'"
             )
         axes.append(raw.index(name))
 
@@ -788,10 +865,8 @@ def iter_labels(name: str, *tensors: MVLabeledTensor):
             sliced_data = t.tensor.data.take(i, axis=ax)
             # Drop the iterated axis from masks
             sliced_masks = t.tensor.masks[:ax] + t.tensor.masks[ax + 1 :]
-            # Drop the iterated label from the label string (2 chars per axis)
-            sliced_labels = (
-                t.labels[: 2 * ax] + t.labels[2 * ax + 2 :]
-            )
+            # Drop the iterated axis from the structured labels
+            sliced_labels = t.labels[:ax] + t.labels[ax + 1 :]
             slices.append(
                 MVLabeledTensor(
                     _MVTensor(data=sliced_data, masks=sliced_masks),

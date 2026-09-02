@@ -7,11 +7,12 @@ import pytest
 
 from pytanga import BladeMask
 from pytanga.basis import BasisE3, BasisN3
-from pytanga.geometry import Direction
+from pytanga.geometry import Direction, Geometry, Motor, Point, Rotor, Translator
 from pytanga.geometry.create_e3 import create_rotor
 from pytanga.expression._expression import AffineExpression, Expression
 from pytanga.expression._labels import _reset_allocator
 from pytanga.expression._variable import Variable
+from pytanga.tensor._labeled import _axis_modes, _axis_names
 
 
 def _close(a, b) -> bool:
@@ -77,8 +78,8 @@ class TestExpression:
         e = v * self._mv({"e1": 2.0})
         t = e.tensor
         assert t.ndim == 2
-        assert t.labels[0] == "k"
-        assert t.labels[2] == v.label
+        assert t.labels[0].name == "k"
+        assert t.labels[1].name == v.label
         assert e.names == {"V1": (v.label,)}
         assert e.masks["V1"] is v.mask
 
@@ -481,7 +482,7 @@ class TestPartial:
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         partial = e(V1=("n", xs))
-        assert "n" in partial.tensor.labels
+        assert "n" in _axis_names(partial.tensor.labels)
         y = self._mv({"e2": 3.0})
         result = partial(V2=y)
         for r, x in zip(result, xs):
@@ -490,13 +491,33 @@ class TestPartial:
     def test_stacked_guards(self):
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
+        z = Variable("V3", self.full)
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         partial = e(V1=xs)
+        c = self._mv({"e1": 1.0})
+
+        # A single stacked operand may now be composed with a constant/variable.
+        for comp in (partial * c, c * partial, partial * z, z * partial):
+            assert isinstance(comp, Expression)
+            assert comp._has_counting_axes()
+        assert "n" in _axis_names((partial * c).tensor.labels)
+        names = _axis_names((partial * c).tensor.labels)
+        assert _axis_modes((partial * c).tensor.labels)[names.index("n")] == "_"
+
+        # Structurally identical stacked operands merge under addition.
+        merged = partial + partial
+        assert isinstance(merged, Expression)
+        assert merged._has_counting_axes()
+        y = self._mv({"e2": 3.0})
+        result = merged(V2=y)
+        assert isinstance(result, list) and len(result) == 2
+        for r, x in zip(result, xs):
+            assert _close(r, 2.0 * (x * y))
+
+        # Two stacked operands still cannot be composed.
         with pytest.raises(ValueError):
-            partial * self._mv({"e1": 1.0})
-        with pytest.raises(ValueError):
-            partial + partial
+            partial * partial
         with pytest.raises(ValueError):
             partial.inv("V3")
         assert (~partial)._has_counting_axes()
@@ -561,3 +582,74 @@ class TestRepeatedVariables:
         assert isinstance(result, list) and len(result) == 2
         for r, x in zip(result, xs):
             assert _close(r, x * x)
+
+
+def test_batched_sandwich_merge():
+    """The note's repro: (motor * X)(X=batch) - (Y * motor)(Y=batch) merges."""
+    _reset_allocator()
+    N3 = BasisN3()
+    geo = Geometry(N3)
+    motor = geo.create_var("motor", Motor)
+    X = geo.create_var("X", Point)
+    Y = geo.create_var("Y", Point)
+
+    local_points = [geo(Point(0, 0, 0)), geo(Point(1, 0, 0)), geo(Point(0, 1, 0))]
+    world_points = [geo(Point(1, 2, 3)), geo(Point(2, 2, 3)), geo(Point(1, 3, 3))]
+
+    lm = (motor * X)(X=("n", local_points))
+    rm = (Y * motor)(Y=("n", world_points))
+
+    eqn = lm - rm
+    assert isinstance(eqn, Expression)
+    assert eqn._has_counting_axes()
+    assert set(eqn.names) == {"motor"}
+
+    m = geo(
+        Motor(
+            rotor=Rotor(0.0, Direction(1, 0, 0)),
+            translator=Translator(Direction(0, 0, 0)),
+        )
+    )
+    result = eqn(motor=m)
+    assert isinstance(result, list) and len(result) == 3
+    for r, x, y in zip(result, local_points, world_points):
+        assert _close(r, m * x - y * m)
+
+
+def test_stacked_add_different_labels_raises():
+    _reset_allocator()
+    alg = BasisE3()
+    full = BladeMask.full(alg)
+    v = Variable("V1", full)
+    w = Variable("V2", full)
+    e = v * w
+    xs = [alg.multivector({"e1": 1.0}), alg.multivector({"e1": 2.0})]
+    p1 = e(V1=("n", xs))
+    p2 = e(V1=("m", xs))
+    with pytest.raises(ValueError):
+        p1 + p2
+
+
+def test_constant_expression():
+    _reset_allocator()
+    alg = BasisE3()
+    A = alg.multivector({"s": 1.0, "e1": 2.0, "e2": 3.0})
+    E = Expression(A)
+    assert E.names == {}
+    assert E.masks == {}
+    assert E.out_mask == BladeMask(A)
+    assert E.ndim == 1
+    assert _close(E(), A)
+
+
+def test_constant_expression_with_mask():
+    from pytanga.tensor.convert import from_tensor
+
+    _reset_allocator()
+    alg = BasisE3()
+    A = alg.multivector({"s": 1.0, "e1": 2.0, "e2": 3.0, "e12": 4.0})
+    mask = BladeMask(alg, [1, 3])  # e1, e12
+    E = Expression(A, mask)
+    assert E.out_mask == mask
+    result = from_tensor(E.tensor.tensor)
+    assert _close(result, A.project_onto(mask))
