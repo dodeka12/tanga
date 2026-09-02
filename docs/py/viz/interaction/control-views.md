@@ -49,6 +49,11 @@ Every view is a `View`. Containers arrange their children; the leaves render
 content. For the full view model — `Size` units, splitters, per-pane cameras —
 see [Split Views](../visualizer/split-views.md).
 
+Every control view is a `ControlView`. By default it sets a size floor of
+`min_width=Size.px(120)` and `min_height=Size.px(32)` so a `StackView`/`GroupView`
+can size to its controls; pass `min_width=None` / `min_height=None` to disable
+the floors.
+
 ### View
 
 Base for every pane/container in a layout. Split-agnostic.
@@ -138,6 +143,9 @@ StackView(
     children=None,        # list[View] | None
     *,
     scrollable=False,     # bool — scroll instead of clipping when content overflows
+    gap=None,             # int | None — px spacing (None = default 4 px, 0 = none)
+    align="stretch",      # "start" | "center" | "end" | "stretch"
+    justify="start",      # "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly"
     **kwargs,             # forwarded to View (sizes)
 )
 ```
@@ -162,6 +170,9 @@ GroupView(
     position=None,     # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
     collapsed=False,   # bool
     scrollable=False,  # bool — scroll the content (title bar stays pinned)
+    gap=None,          # int | None — px spacing (None = default 4 px, 0 = none)
+    align="stretch",   # "start" | "center" | "end" | "stretch"
+    justify="start",   # "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly"
     icon=None,         # Icon | None — leading title-bar icon
     icon_only=False,   # bool — render only the icon (no title text)
     **kwargs,          # forwarded to View (sizes)
@@ -186,7 +197,7 @@ MenuView(
     *,
     trigger_icon=None,  # Icon | None — optional leading icon (e.g. EIconMaterial.MENU)
     mode="dropdown",    # "dropdown" | "bar"
-    direction="vertical",  # StackDirection — options-panel direction
+    direction=None,      # StackDirection | None — "horizontal" for bars, else "vertical"
     position=None,      # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
     override_variant=True,  # bool — auto-set the MENU variant on control children
     **kwargs,           # forwarded to View (sizes)
@@ -196,7 +207,9 @@ MenuView(
 - `mode="dropdown"` renders a click-to-toggle trigger with the options in a
   hidden panel (outside-click or `Escape` closes it); a nested `MenuView` opens
   beside its parent as a sub-menu.
-- `mode="bar"` renders the options always-visible in a horizontal strip.
+- `mode="bar"` renders the options always-visible in a horizontal strip; a
+  nested `MenuView` renders as a plain menu-bar label and opens its panel
+  downwards (flipping upwards near the bottom of the viewport).
 - `override_variant=True` (default) forces every eligible control in the subtree
   to the `MENU` variant, so options render flat without setting `variant=` by
   hand.
@@ -285,20 +298,60 @@ DropdownView(
 
 ### FileChooserView
 
-A file-path control (text field + backend file browser). `_node_type` is
-`"file_chooser_view"`.
+The bare file-selection view: an embedded directory listing (path bar + entries)
+with no path field, no "Browse…" button, and no path display.  Selecting a file
+sends `file_browser_select`; directory navigation is clamped to `root`.  The
+listing fills its container and scrolls internally, so it keeps a stable size
+as entries change. `_node_type` is `"file_chooser_view"`.
 
 ```python
 FileChooserView(
     cid,
     *,
-    label="",
-    value="",          # str
-    placeholder="",    # str
+    value="",          # str — initial path
     root=None,         # str | None — browse root
     accept="",         # str
     on_change=None,    # Handler — async (value: str, event)
     **kwargs,
+)
+```
+
+A path display / edit field / browse button are intentionally **not** part of
+this view.  Compose them yourself (e.g. a `TextFieldView` plus a `ButtonView`
+that calls `open_file_chooser`), or use
+[`FileChooserDialog`](#filechooserdialog) to show the listing inside a dialog.
+
+### FileChooserDialog
+
+A full file-open dialog — a [`FileChooserView`](#filechooserview) listing plus a
+path line and OK/Cancel buttons — rendered as a `DialogView` variant.  Pass it
+to `show_dialog`:
+
+```python
+viz.show_dialog(
+    FileChooserDialog("fc", root="/data", on_accept=...),
+    title="Select a file",
+)
+```
+
+Selecting a file fills the dialog's path line (no close); `OK` fires
+`on_accept(path)` and closes, while `Cancel`/✕ fire `on_close` (dismiss).
+
+```python
+FileChooserDialog(
+    cid,
+    *,
+    title="Select a file",  # str
+    value="",               # str — initial path
+    root=None,              # str | None — browse root
+    accept="",              # str
+    on_accept=None,         # Handler — async (path: str, event) on OK
+    on_close=None,          # Handler — async (value, event) on Cancel/✕
+    align_x=0.5,            # float
+    align_y=0.5,            # float
+    dismissable=True,       # bool
+    width=None,             # SizeSpec | None — dialog width (default 520px)
+    height=None,            # SizeSpec | None — dialog height (default 420px)
 )
 ```
 

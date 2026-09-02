@@ -245,6 +245,9 @@
           },
           {
             "Dialog Demo": "py/examples/viz/dialogs/dialog_demo.md"
+          },
+          {
+            "File Chooser Dialog": "py/examples/viz/dialogs/file_chooser_dialog.md"
           }
         ]
       },
@@ -354,6 +357,9 @@
             "Overview": "py/examples/viz/menus/index.md"
           },
           {
+            "File Open Menu": "py/examples/viz/menus/file_open_menu.md"
+          },
+          {
             "Menu Demo": "py/examples/viz/menus/menu_demo.md"
           }
         ]
@@ -399,6 +405,9 @@
           },
           {
             "Group View Icons": "py/examples/viz/scenes/group_view_icons.md"
+          },
+          {
+            "Layout Sizing": "py/examples/viz/scenes/layout_sizing.md"
           },
           {
             "Multi Scene": "py/examples/viz/scenes/multi_scene.md"

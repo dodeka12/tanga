@@ -36,3 +36,13 @@ test('empty children derive no min/preferred', () => {
     assert.equal(stackMinSize('y', 'vertical', [], 0), 0);
     assert.equal(stackPreferredSize('y', 'vertical', [], 0), null);
 });
+
+test('gap = 0 removes the gap term from a vertical stack min height', () => {
+    const children = [child({ x: 100, y: 20 }, {}), child({ x: 100, y: 30 }, {})];
+    assert.equal(stackMinSize('y', 'vertical', children, 0, 0), 20 + 30);
+});
+
+test('non-default gap = 10 adds (n - 1) * 10', () => {
+    const children = [child({ x: 100, y: 20 }, {}), child({ x: 100, y: 30 }, {}), child({ x: 100, y: 40 }, {})];
+    assert.equal(stackMinSize('y', 'vertical', children, 0, 10), 20 + 30 + 40 + 2 * 10);
+});

@@ -97,6 +97,18 @@
     justify-content: space-between;
 }
 
+/* Menu-bar sub-menu labels look like the bar's other items (no chevron). */
+.tanga-menu-bar-sub > .tanga-menu-trigger {
+    width: auto;
+    justify-content: flex-start;
+    padding: 4px 10px;
+    border-radius: 3px;
+}
+
+.tanga-menu-bar-sub > .tanga-menu-trigger:hover {
+    background: var(--tanga-surface);
+}
+
 .tanga-menu-chevron {
     font-size: 16px;
 }

@@ -5,9 +5,11 @@
 
 Demonstrates :meth:`show_dialog <pytanga.viz.Visualizer.show_dialog>`: a dialog
 whose content is a ``StackView`` of control views — a slider that edits the
-sphere's opacity and a "Close" button.  A menu bar at the top reopens the dialog
-after it has been closed, and also opens a **modal** dialog (``dismissable=False``)
-whose dimmed backdrop blocks the scene.
+sphere's opacity, a multi-line ``TextAreaView`` that fills the remaining width
+(``preferred_width=Size.fr(1)``) beside a "Close" button, and a fixed dialog
+``width=Size.px(600)``.  A menu bar at the top reopens the dialog after it has
+been closed, and also opens a **modal** dialog (``dismissable=False``) whose
+dimmed backdrop blocks the scene.
 
 The settings dialog can be dismissed three ways:
 
@@ -17,7 +19,7 @@ The settings dialog can be dismissed three ways:
 
 Run with:  uv run python py/examples/viz/dialogs/dialog_demo.py
 
-Keywords: dialog, modal, show_dialog, remove_dialog, on_close, menu bar, StackView
+Keywords: dialog, modal, show_dialog, remove_dialog, on_close, StackView, flex, Size
 """
 
 from pytanga.geometry import Point, Sphere
@@ -25,8 +27,10 @@ from pytanga.viz import (
     ButtonView,
     MenuView,
     SceneView,
+    Size,
     SliderView,
     StackView,
+    TextAreaView,
     Visualizer,
 )
 
@@ -64,7 +68,20 @@ def _settings_content() -> StackView:
                 value=0.4,
                 on_change=_on_opacity,
             ),
-            ButtonView("dlg_close", label="Close", on_click=_on_close_button),
+            StackView(
+                "horizontal",
+                [
+                    TextAreaView(
+                        "dlg_notes",
+                        label="Notes",
+                        value="Edit me",
+                        preferred_width=Size.fr(1),
+                    ),
+                    ButtonView("dlg_close", label="Close", on_click=_on_close_button),
+                ],
+                gap=8,
+                align="center",
+            ),
         ],
     )
 
@@ -74,7 +91,10 @@ async def _on_show_dialog(_value, _event):
     if _settings_id:
         viz.remove_dialog(_settings_id)
     _settings_id = await viz.show_dialog_async(
-        _settings_content(), title="Scene settings", on_close=_on_close
+        _settings_content(),
+        title="Scene settings",
+        on_close=_on_close,
+        width=Size.px(600),
     )
     print("Dialog re-opened from the menu bar")
 
@@ -104,7 +124,10 @@ bar = MenuView(
 viz.show(layout=StackView("vertical", [bar, SceneView("")]))
 
 _settings_id = viz.show_dialog(
-    _settings_content(), title="Scene settings", on_close=_on_close
+    _settings_content(),
+    title="Scene settings",
+    on_close=_on_close,
+    width=Size.px(600),
 )
 print("Dialog shown — use the menu bar to reopen it or show a modal dialog.")
 

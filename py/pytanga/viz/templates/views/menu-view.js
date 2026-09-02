@@ -13,10 +13,13 @@ export class MenuView extends StackView {
         trigger_icon = null,
         label = '',
         mode = 'dropdown',
-        direction = 'vertical',
+        direction = null,
         position = null,
         children = [],
     } = {}) {
+        if (direction === null) {
+            direction = (mode === 'bar' ? 'horizontal' : 'vertical');
+        }
         super({ direction, children: [] });
         if (!MODES.includes(mode)) {
             throw new Error(
@@ -104,6 +107,10 @@ export class MenuView extends StackView {
     }
 
     _positionSubmenu() {
+        if (this._parentMenu && this._parentMenu.mode === 'bar') {
+            this._positionBarSubmenu();
+            return;
+        }
         const panel = this._panel;
         const rect = this.el.getBoundingClientRect();
         const width = panel.offsetWidth || 160;
@@ -115,6 +122,22 @@ export class MenuView extends StackView {
             panel.style.left = '100%';
         }
         panel.style.top = '0';
+        panel.style.bottom = 'auto';
+    }
+
+    // A menu-bar sub-menu opens below its trigger (like a desktop File/Edit
+    // menu), flipping above only when it would overflow the bottom of the viewport.
+    _positionBarSubmenu() {
+        const panel = this._panel;
+        panel.style.left = '0';
+        panel.style.right = 'auto';
+        panel.style.top = '100%';
+        panel.style.bottom = 'auto';
+        const rect = panel.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight) {
+            panel.style.top = 'auto';
+            panel.style.bottom = '100%';
+        }
     }
 
     close() {
@@ -133,6 +156,7 @@ export class MenuView extends StackView {
             child._parentMenu = this;
             child._isSubmenu = true;
             child.el.classList.add('tanga-menu-sub');
+            if (this.mode === 'bar') child.el.classList.add('tanga-menu-bar-sub');
             this._subMenus.push(child);
             child._markSubmenu();
         }
@@ -142,7 +166,9 @@ export class MenuView extends StackView {
 
     _markSubmenu() {
         // Widen the trigger and add a chevron so the sub-menu reads as a row.
+        // Menu-bar sub-menus are plain labels (no chevron).
         if (!this._trigger) return;
+        if (this._parentMenu && this._parentMenu.mode === 'bar') return;
         if (!this._trigger.querySelector('.tanga-menu-chevron')) {
             const chevron = createIconElement('material:chevron_right');
             chevron.classList.add('tanga-menu-chevron');

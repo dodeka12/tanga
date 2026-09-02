@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Since 1.16.0] — 2026-09-02
+- Flexible flow layout (`gap`/`align`/`justify`) · `Size.fr(n)` grows a child to fill leftover space · Python control size floors · `SpacerView` fills leftover flow space
+- Bug fixes: fixed split pane no longer locks unrelated splitters
+→ [Details](2026-09-02_feat-viz-layout-sizing.md)
+
+## [Since 1.16.0] — 2026-09-02
 - Stacked `+`/`-` merge & single-stacked `*` composition · integer axis labels (`AxisLabel`) · integer variable-label pool · `project_onto` (MV / `BladeMask`) · constant `Expression(A)`
 - Breaking: `MVLabeledTensor.labels` is now structured · `Variable.label` is an integer · `project_to` removed
 → [Details](2026-09-02_951a9a19.md)

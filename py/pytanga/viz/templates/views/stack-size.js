@@ -18,12 +18,12 @@ export function stackCrossAxis(direction) {
  * main axis, max along the cross axis).  `wrap` stacks are measured from the
  * rendered DOM, so their derived min is 0 here.
  */
-export function stackMinSize(axis, direction, children, available) {
+export function stackMinSize(axis, direction, children, available, gap = GAP) {
     if (!children || children.length === 0) return 0;
     if (direction === 'wrap') return 0;
     if (axis === stackMainAxis(direction)) {
         return children.reduce((s, c) => s + c.minSizePx(axis, available), 0)
-            + (children.length - 1) * GAP;
+            + (children.length - 1) * gap;
     }
     return children.reduce((m, c) => Math.max(m, c.minSizePx(axis, available)), 0);
 }
@@ -32,7 +32,7 @@ export function stackMinSize(axis, direction, children, available) {
  * Preferred content size of a stack along `axis`, or `null` if not derivable
  * (empty children, or `wrap` direction whose size depends on the rendered DOM).
  */
-export function stackPreferredSize(axis, direction, children, available) {
+export function stackPreferredSize(axis, direction, children, available, gap = GAP) {
     if (!children || children.length === 0) return null;
     if (direction === 'wrap') return null;
     const main = stackMainAxis(direction);
@@ -40,7 +40,7 @@ export function stackPreferredSize(axis, direction, children, available) {
         return children.reduce((s, c) => {
             const p = c.preferredPx(axis, available);
             return s + (p !== null && p !== undefined ? p : c.minSizePx(axis, available));
-        }, 0) + (children.length - 1) * GAP;
+        }, 0) + (children.length - 1) * gap;
     }
     let m = 0;
     for (const c of children) {

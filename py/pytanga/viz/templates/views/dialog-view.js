@@ -7,6 +7,7 @@ import { View } from './view.js';
 import { buildViewTree } from './build.js';
 import { sendEvent } from '../events.js';
 import { forgetControl } from '../controls-panel.js';
+import { unregisterFileBrowser } from '../file-browser.js';
 
 export class DialogView extends View {
     constructor({
@@ -16,6 +17,8 @@ export class DialogView extends View {
         align_x = 0.5,
         align_y = 0.5,
         dismissable = true,
+        width = null,
+        height = null,
         ws = null,
     } = {}) {
         super();
@@ -39,6 +42,11 @@ export class DialogView extends View {
             top: (align_y * 100) + '%',
             transform: 'translate(-' + (align_x * 100) + '%, -' + (align_y * 100) + '%)',
         });
+
+        const widthCss = _sizeToCss(width);
+        const heightCss = _sizeToCss(height);
+        if (widthCss) this.el.style.width = widthCss;
+        if (heightCss) this.el.style.height = heightCss;
 
         if (!dismissable) {
             this._backdrop = document.createElement('div');
@@ -78,6 +86,42 @@ export class DialogView extends View {
             close.addEventListener('click', () => this._dismiss(true));
             this.el.appendChild(close);
         }
+
+        this._setupResize();
+    }
+
+    // Resize by dragging the bottom-right corner.  On first move the
+    // percentage/transform anchor becomes a pixel position so the dialog stays
+    // anchored at its top-left while growing/shrinking.
+    _setupResize() {
+        this._resizeHandle = document.createElement('div');
+        this._resizeHandle.className = 'tanga-dialog-resize';
+        this._resizeHandle.title = 'Resize';
+        this._resizeHandle.addEventListener('pointerdown', (e) => this._startResize(e));
+        this.el.appendChild(this._resizeHandle);
+    }
+
+    _startResize(e) {
+        if (e.button !== 0) return; // left button only
+        e.preventDefault();
+        const rect = this.el.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startW = rect.width;
+        const startH = rect.height;
+        this.el.style.left = rect.left + 'px';
+        this.el.style.top = rect.top + 'px';
+        this.el.style.transform = 'none';
+        const onMove = (ev) => {
+            this.el.style.width = Math.max(200, startW + ev.clientX - startX) + 'px';
+            this.el.style.height = Math.max(120, startH + ev.clientY - startY) + 'px';
+        };
+        const onUp = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
     }
 
     // Drag the dialog by its title bar.  On first move the percentage/transform
@@ -134,7 +178,10 @@ export class DialogView extends View {
         }
         this._backdrop = null;
         if (this._contentView) {
-            for (const id of _collectControlIds(this._contentView)) forgetControl(id);
+            for (const id of _collectControlIds(this._contentView)) {
+                forgetControl(id);
+                unregisterFileBrowser(id);
+            }
             this._contentView.destroy();
             this._contentView = null;
         }
@@ -152,4 +199,12 @@ function _collectControlIds(view, out = []) {
 
 function _clamp(value, min, max) {
     return Math.max(min, Math.min(value, max));
+}
+
+/** Convert a `{value, unit}` size dict to a CSS length string (or null). */
+function _sizeToCss(size) {
+    if (!size) return null;
+    if (size.unit === '%') return size.value + '%';
+    if (size.unit === 'px') return size.value + 'px';
+    return null;
 }

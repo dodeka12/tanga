@@ -29,7 +29,21 @@ async def on_file(self, path, event):
   file in the browser.
 
 The control is also available as a `FileChooserView` for layouts/panels, like
-`ButtonView`.
+`ButtonView` — but that view renders only the **file-selection listing** (no
+path field, no "Browse…" button, no path display).  Compose a path field and
+browse button yourself, or use `FileChooserDialog` to show the listing in a
+full dialog with a path line and OK/Cancel:
+
+```python
+viz.show_dialog(
+    FileChooserDialog("data_file", root="/home/me", on_accept=on_file),
+    title="Select a data file",
+)
+```
+
+Selecting a file fills the dialog's path line; `OK` fires `on_accept(path)` and
+closes, while `Cancel`/✕ fire `on_close`.  The dialog has a fixed default size
+(and a drag-to-resize corner).
 
 ## Opening the browser from the backend
 

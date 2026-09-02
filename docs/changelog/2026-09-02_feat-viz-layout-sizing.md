@@ -1,0 +1,32 @@
+# Changes since version 1.16.0
+
+## New Features
+- **Flexible flow layout (`StackView`/`GroupView`)** — `gap`/`align`/`justify`
+  spacing and alignment knobs, plus a `preferred_* → flex` mapping so
+  `Size.fr(n)` grows a child to fill the leftover space.
+- **Control size floors in Python** — `ControlView` defaults
+  `min_width=Size.px(120)` / `min_height=Size.px(32)` (overridable; `None`
+  disables), and the frontend no longer hardcodes them.
+- **`SpacerView` fills leftover flow space** — a spacer grows along a flow
+  container's main axis (`flex: 1 1 0`).
+
+## Bug Fixes
+- **Fixed split pane no longer locks unrelated splitters** — a splitter now
+  trades space between the nearest non-fixed panes on each side, so
+  `[A, fixed_B, C]` keeps both splitters movable while `fixed_B` never changes.
+- **`GroupView` fixed panes read as fixed** — a `GroupView` with equal
+  `min_height`/`max_height` no longer reports a derived minimum above its
+  maximum (the title bar was double-counted), so it keeps its exact size when
+  used as a fixed split pane.
+- **Collapsing a `GroupView` shrinks its pane** — folding a group now updates
+  its min/max to the folded title-bar size and broadcasts `constraintschange`,
+  so an enclosing `SplitView`/`StackView` re-lays out; expanding restores the
+  previous size.
+- **`GroupView` preferred/collapsed height tracks the rendered chrome** — a
+  group's natural height is now its controls plus the measured title bar and
+  panel padding, and folding sizes it to the title bar's bottom border; both
+  follow the active theme (measured from the DOM, not hardcoded).
+- **`SpacerView` actually grows in a flow container** — it now reports a `fr`
+  preferred size so `StackView` maps it to `flex: 1 1 0`; previously the
+  container overwrote the spacer's inline flex with `0 1 auto`, so it never
+  pushed following children to the far end.

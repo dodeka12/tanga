@@ -75,8 +75,26 @@ export class View extends EventTarget {
         const parsed = Size.fromJSON(size);
         if (this._sameSize(this[field], parsed)) return;
         this[field] = parsed;
+        this._applySizeCss(name, parsed);
         const event = name.startsWith('pref') ? 'preferredchange' : 'constraintschange';
         this.emit(event, { fields: [name] });
+    }
+
+    // Render min/max size specs as real CSS so they take effect outside a
+    // SplitView too (dialogs, overlays, standalone content).  Preferred sizes
+    // stay as flex/layout hints and are not forced onto the element here.
+    // `null`/`fr`/`auto` clear the inline constraint so clearing a min/max
+    // actually releases it (previously it left a stale inline value behind).
+    _applySizeCss(name, size) {
+        if (!this.el.style) return;
+        let value = '';
+        if (size && size.unit !== 'fr' && size.unit !== 'auto') {
+            value = size.unit === '%' ? (size.value + '%') : (size.value + 'px');
+        }
+        if (name === 'minWidth') this.el.style.minWidth = value;
+        else if (name === 'maxWidth') this.el.style.maxWidth = value;
+        else if (name === 'minHeight') this.el.style.minHeight = value;
+        else if (name === 'maxHeight') this.el.style.maxHeight = value;
     }
 
     _sameSize(a, b) {

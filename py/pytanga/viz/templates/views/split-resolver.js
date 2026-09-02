@@ -63,7 +63,8 @@ export function resolveSplit(descriptors, available) {
     for (let i = 0; i < n; i++) {
         offset += sizes[i];
         if (i < n - 1) {
-            splitters.push({ position: offset, movable: !fixed[i] && !fixed[i + 1] });
+            const movable = _hasMovableSide(fixed, i, -1) && _hasMovableSide(fixed, i + 1, +1);
+            splitters.push({ position: offset, movable });
             offset += SPLITTER_SIZE;
         }
     }
@@ -89,6 +90,17 @@ export function deriveMinSize(axis, splitAxis, children, available) {
             + (children.length - 1) * SPLITTER_SIZE;
     }
     return children.reduce((max, c) => Math.max(max, c.minSizePx(axis, available)), 0);
+}
+
+/**
+ * Scan outward from `start` in `step` direction and report whether any
+ * non-fixed child exists before running off the end of `fixed`.
+ */
+function _hasMovableSide(fixed, start, step) {
+    for (let i = start; i >= 0 && i < fixed.length; i += step) {
+        if (!fixed[i]) return true;
+    }
+    return false;
 }
 
 function _distribute(indices, descriptors, remaining) {

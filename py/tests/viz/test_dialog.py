@@ -51,6 +51,16 @@ def test_serialize_dialog_modal():
     assert msg["dismissable"] is False
 
 
+def test_serialize_dialog_width_height():
+    from pytanga.viz import Size
+
+    msg = serialize_dialog(
+        Dialog(id="d1", content=_content(), width=Size.px(600), height=Size.percent(80))
+    )
+    assert msg["width"] == {"value": 600, "unit": "px"}
+    assert msg["height"] == {"value": 80, "unit": "%"}
+
+
 def test_serialize_dialog_content_children():
     msg = serialize_dialog(Dialog(id="d1", content=_content()))
     children = msg["content"]["children"]

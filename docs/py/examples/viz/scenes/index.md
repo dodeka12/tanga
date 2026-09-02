@@ -7,6 +7,7 @@
 | [Control Theming](control_theming.md) | scenes, controls, theme, css, button, slider, checkbox, icon_only | Controls styled from the extracted theme CSS files |
 | [Custom Theme Override](custom_theme_override.md) | scenes, theme, custom theme, override, theme switching, button, checkbox, wireframe, light | A custom theme with a full button/checkbox override |
 | [Group View Icons](group_view_icons.md) | scenes, group view, icon, icon_only, fold, overlay | Group view chrome: leading icon, icon-only, borderless fold |
+| [Layout Sizing](layout_sizing.md) | layout, sizing, stack view, split view, gap, align, justify, flex, fr, Size | A tour of StackView/SplitView spacing, alignment, and flex |
 | [Multi Scene](multi_scene.md) | scenes, multi-scene, context manager, tabs | Two named scenes, each shown in its own browser tab |
 | [Multi Split](multi_split.md) | scenes, split view, panes, layout, multi-pane | Three scenes side-by-side in one horizontal split |
 | [Nested Groups](nested_groups.md) | scenes, VizGroup, hierarchy, nested | Demonstrate nested VizGroup hierarchies |
@@ -18,4 +19,4 @@
 
 ## Keywords
 
-TableView · VizGroup · add_control_group · anchor · button · checkbox · context manager · control group · controls · css · custom theme · dark · fold · group view · hierarchy · horizontal · icon · icon_only · layout · light · multi-pane · multi-scene · nested · overlay · override · panes · parent_id · runtime · scene graph · scenes · set_theme · single scene · slider · split view · stack view · table · tabs · tabular data · theme · theme switching · toolbar · transforms · wireframe
+Size · TableView · VizGroup · add_control_group · align · anchor · button · checkbox · context manager · control group · controls · css · custom theme · dark · flex · fold · fr · gap · group view · hierarchy · horizontal · icon · icon_only · justify · layout · light · multi-pane · multi-scene · nested · overlay · override · panes · parent_id · runtime · scene graph · scenes · set_theme · single scene · sizing · slider · split view · stack view · table · tabs · tabular data · theme · theme switching · toolbar · transforms · wireframe

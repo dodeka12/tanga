@@ -57,7 +57,7 @@ test('three children → two splitters with correct positions', () => {
     assert.equal(plan.spacer, 0);
 });
 
-test('four children → three splitters; a fixed middle pins its two neighbors', () => {
+test('four children → three splitters; a fixed middle leaves its neighbors movable', () => {
     // 350px of child space: 100 + 50 (fixed) + 100 + 100.
     const plan = resolveSplit(
         [d(0, null, 100), d(50, 50, null), d(0, null, 100), d(0, null, 100)],
@@ -65,14 +65,37 @@ test('four children → three splitters; a fixed middle pins its two neighbors',
     );
     assert.equal(plan.items.length, 4);
     assert.equal(plan.splitters.length, 3);
-    // The fixed middle child (index 1) pins the splitters on both of its sides.
-    assert.equal(plan.splitters[0].movable, false);
-    assert.equal(plan.splitters[1].movable, false);
+    // The fixed middle child (index 1) keeps its size but no longer pins the
+    // splitters on its sides: each splitter trades between the nearest
+    // non-fixed children.
+    assert.equal(plan.items[1].fixed, true);
+    assert.equal(plan.items[1].size, 50);
+    assert.equal(plan.splitters[0].movable, true);
+    assert.equal(plan.splitters[1].movable, true);
     assert.equal(plan.splitters[2].movable, true);
     assert.equal(plan.splitters[0].position, 100);
     assert.equal(plan.splitters[1].position, 100 + SPLITTER_SIZE + 50);
     assert.equal(plan.splitters[2].position, 100 + SPLITTER_SIZE + 50 + SPLITTER_SIZE + 100);
     assert.equal(plan.spacer, 0);
+});
+
+test('[fixed_A, B] → splitter locked (no movable left side)', () => {
+    const plan = resolveSplit([d(50, 50, null), d(0, null, 100)], 200);
+    assert.equal(plan.splitters[0].movable, false);
+});
+
+test('[A, fixed_B] → splitter locked (no movable right side)', () => {
+    const plan = resolveSplit([d(0, null, 100), d(50, 50, null)], 200);
+    assert.equal(plan.splitters[0].movable, false);
+});
+
+test('[fixed_A, fixed_B, C] → both splitters locked', () => {
+    const plan = resolveSplit(
+        [d(50, 50, null), d(50, 50, null), d(0, null, 100)],
+        250 + 2 * SPLITTER_SIZE,
+    );
+    assert.equal(plan.splitters[0].movable, false);
+    assert.equal(plan.splitters[1].movable, false);
 });
 
 // Fake child exposing minSizePx along an axis.

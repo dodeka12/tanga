@@ -584,11 +584,15 @@ async function handleMessage(msg) {
                 for (const v of route.sceneViews) v.applyThemeBackground();
             }
         };
+        const onApplied = () => {
+            applyThemeBackgrounds();
+            document.dispatchEvent(new CustomEvent('tanga:themechange'));
+        };
         const ready = handleThemeDefine(msg);
         if (ready && typeof ready.then === 'function') {
-            ready.then(applyThemeBackgrounds);
+            ready.then(onApplied);
         } else {
-            applyThemeBackgrounds();
+            onApplied();
         }
         return;
     }

@@ -2,6 +2,7 @@
 // vertically, horizontally, or wraps.  Content-size math lives in `stack-size.js`.
 
 import { View } from './view.js';
+import { flowFlex, flexCss } from './flow-size.js';
 import { GAP, stackMainAxis, stackMinSize, stackPreferredSize } from './stack-size.js';
 
 const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
@@ -12,7 +13,14 @@ const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
  * (row that wraps to a new line when out of space).
  */
 export class StackView extends View {
-    constructor({ direction = 'vertical', scrollable = false, children = [] } = {}) {
+    constructor({
+        direction = 'vertical',
+        scrollable = false,
+        gap = null,
+        align = 'stretch',
+        justify = 'start',
+        children = [],
+    } = {}) {
         super();
         if (!DIRECTIONS.includes(direction)) {
             throw new Error(
@@ -21,6 +29,9 @@ export class StackView extends View {
         }
         this.direction = direction;
         this.scrollable = scrollable;
+        this.gap = gap;
+        this.align = align;
+        this.justify = justify;
         this.children = [];
         this._childSubs = new Map(); // view -> AbortController
         this._content = this.el; // children mount here (GroupView retargets this)
@@ -36,7 +47,9 @@ export class StackView extends View {
         const s = this._content.style;
         s.display = 'flex';
         s.position = 'relative';
-        s.gap = `${GAP}px`;
+        s.gap = `${this.gap == null ? GAP : this.gap}px`;
+        s.alignItems = this.align;
+        s.justifyContent = this.justify;
         s.flexDirection = this.direction === 'vertical' ? 'column' : 'row';
         s.flexWrap = this.direction === 'wrap' ? 'wrap' : 'nowrap';
     }
@@ -55,6 +68,18 @@ export class StackView extends View {
     addChild(view) {
         const ac = new AbortController();
         view.mount(this._content);
+        const mainAxis = stackMainAxis(this.direction);
+        const pref = mainAxis === 'x' ? view.preferredWidth : view.preferredHeight;
+        view.el.style.flex = flexCss(flowFlex(pref));
+        if (pref && pref.unit === 'fr') {
+            // A growing child must be able to shrink below its content size;
+            // only clear the main-axis min when the child has no explicit one.
+            if (mainAxis === 'x' && view.minWidth === null) {
+                view.el.style.minWidth = '0';
+            } else if (mainAxis === 'y' && view.minHeight === null) {
+                view.el.style.minHeight = '0';
+            }
+        }
         view.on('preferredchange', () => this._relayout(), { signal: ac.signal });
         view.on('constraintschange', () => this._relayout(), { signal: ac.signal });
         this._childSubs.set(view, ac);
