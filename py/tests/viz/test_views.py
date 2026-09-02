@@ -174,7 +174,9 @@ class TestGroupView:
     def test_scrollable_serialize(self):
         assert serialize_layout(GroupView("Actions"))["root"]["scrollable"] is False
         assert (
-            serialize_layout(GroupView("Actions", scrollable=True))["root"]["scrollable"]
+            serialize_layout(GroupView("Actions", scrollable=True))["root"][
+                "scrollable"
+            ]
             is True
         )
 
@@ -235,6 +237,10 @@ class TestMenuView:
         assert node["mode"] == "bar"
         assert node["direction"] == "horizontal"
         assert node["position"] == "top-right"
+
+    def test_bar_defaults_to_horizontal_direction(self):
+        node = serialize_layout(MenuView("Bar", mode="bar"))["root"]
+        assert node["direction"] == "horizontal"
 
     def test_mode_validation(self):
         with pytest.raises(ValueError, match="mode"):
@@ -450,7 +456,9 @@ class TestStackView:
     def test_scrollable_serialize(self):
         assert serialize_layout(StackView("vertical"))["root"]["scrollable"] is False
         assert (
-            serialize_layout(StackView("vertical", scrollable=True))["root"]["scrollable"]
+            serialize_layout(StackView("vertical", scrollable=True))["root"][
+                "scrollable"
+            ]
             is True
         )
 

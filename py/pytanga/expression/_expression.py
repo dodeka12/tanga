@@ -10,7 +10,7 @@ import numpy as np
 from pytanga.algebra import EInv, EProduct, MV
 from pytanga.blade_mask import BladeMask
 from pytanga.tensor import MVTensor, MVLabeledTensor
-from pytanga.tensor._labeled import _raw_names
+from pytanga.tensor._labeled import _axis_names
 from pytanga.tensor.convert import from_tensor, to_tensor
 from pytanga.tensor.ops import contract_labeled
 from pytanga.tensor.product import (
@@ -38,7 +38,14 @@ class Expression:
 
     __slots__ = ("_tensor", "_names", "_masks")
 
-    def __init__(self, tensor, names, masks) -> None:
+    def __init__(self, tensor, names=None, masks=None) -> None:
+        if isinstance(tensor, MV):
+            # Constant multivector expression.
+            mask = names if isinstance(names, BladeMask) else BladeMask(tensor)
+            self._tensor = MVLabeledTensor(to_tensor(tensor, mask=mask), OUT_LABEL)
+            self._names = {}
+            self._masks = {}
+            return
         self._tensor = tensor  # MVLabeledTensor
         self._names = dict(names)  # name -> occurrence labels
         self._masks = dict(masks)  # name -> BladeMask
@@ -85,7 +92,7 @@ class Expression:
 
     def _var_axes(self):
         """Return ``(labels, masks)`` of the variable axes, in order."""
-        raw = _raw_names(self._tensor.labels)
+        raw = _axis_names(self._tensor.labels)
         masks = self._tensor.tensor.masks
         return list(raw[1:]), list(masks[1:])
 
@@ -125,7 +132,7 @@ class Expression:
 
         labeled = [self._tensor]
         alg = self.algebra
-        used = set(_raw_names(self._tensor.labels))
+        used = set(_axis_names(self._tensor.labels))
 
         for name, value in bindings.items():
             labels = self._names[name]
@@ -149,7 +156,7 @@ class Expression:
                 for label in labels:
                     labeled.append(
                         MVLabeledTensor(
-                            to_tensor(items, mask=mask), label + batch + "_"
+                            to_tensor(items, mask=mask), [(label, "*"), (batch, "_")]
                         )
                     )
                 continue
@@ -162,7 +169,7 @@ class Expression:
                 for label in labels:
                     labeled.append(
                         MVLabeledTensor(
-                            to_tensor(items, mask=mask), label + batch + "_"
+                            to_tensor(items, mask=mask), [(label, "*"), (batch, "_")]
                         )
                     )
                 continue
@@ -330,7 +337,7 @@ class Expression:
 
         new_label = allocate_block()[0]
         result = MVTensor(data=inv_mat, masks=(var_mask, out_mask))
-        labeled = MVLabeledTensor(result, OUT_LABEL + new_label)
+        labeled = MVLabeledTensor(result, [(OUT_LABEL, "*"), (new_label, "*")])
         return Expression(labeled, {var_name: (new_label,)}, {var_name: out_mask})
 
     def _variable_matrix(self):
@@ -355,7 +362,7 @@ class Expression:
         var_label = labels[0]
         var_mask = self._masks[var_name]
 
-        raw = _raw_names(self._tensor.labels)
+        raw = _axis_names(self._tensor.labels)
         var_axis = raw.index(var_label)
         data = np.asarray(self._tensor.tensor.data, dtype=np.float64)
         n_var = data.shape[var_axis]
@@ -759,12 +766,16 @@ def _product(left, right, product, a_inv=EInv.ID, b_inv=EInv.ID) -> Expression:
     Lkind, Lval = _operand(left)
     Rkind, Rval = _operand(right)
 
-    for kind, val in ((Lkind, Lval), (Rkind, Rval)):
-        if kind == "expr" and val._has_counting_axes():
-            raise ValueError(
-                "cannot compose a stacked (batched) expression; "
-                "fully evaluate it before further products"
-            )
+    stacked = [
+        kind
+        for kind, val in ((Lkind, Lval), (Rkind, Rval))
+        if kind == "expr" and val._has_counting_axes()
+    ]
+    if len(stacked) == 2:
+        raise ValueError(
+            "cannot compose two stacked (batched) expressions; "
+            "fully evaluate one of them before the product"
+        )
 
     m_L = _value_mask(Lkind, Lval)
     m_R = _value_mask(Rkind, Rval)
@@ -780,7 +791,7 @@ def _product(left, right, product, a_inv=EInv.ID, b_inv=EInv.ID) -> Expression:
     out_axes = [0]
     next_ax = 3
 
-    var_labels: list[str] = []
+    var_specs: list[tuple[str, str]] = []
     var_masks: list[BladeMask] = []
     names: dict[str, tuple[str, ...]] = {}
     masks: dict[str, BladeMask] = {}
@@ -796,7 +807,7 @@ def _product(left, right, product, a_inv=EInv.ID, b_inv=EInv.ID) -> Expression:
                     "in a product term"
                 )
             lab = block[occ]
-            var_labels.append(lab)
+            var_specs.append((lab, "*"))
             var_masks.append(val.mask)
             names[val.name] = names.get(val.name, ()) + (lab,)
             masks[val.name] = val.mask
@@ -827,12 +838,13 @@ def _product(left, right, product, a_inv=EInv.ID, b_inv=EInv.ID) -> Expression:
                 else:
                     names[nm] = lbls
                     masks[nm] = val.masks[nm]
-            raw = _raw_names(val.tensor.labels)
+            raw = _axis_names(val.tensor.labels)
             e_masks = val.tensor.tensor.masks
             sub = [value_axis]
             for i in range(1, val.ndim):
                 lab = raw[i]
-                var_labels.append(rename.get(lab, lab))
+                mode = "_" if e_masks[i] is None else "*"
+                var_specs.append((rename.get(lab, lab), mode))
                 var_masks.append(e_masks[i])
                 sub.append(next_ax)
                 out_axes.append(next_ax)
@@ -851,8 +863,7 @@ def _product(left, right, product, a_inv=EInv.ID, b_inv=EInv.ID) -> Expression:
     args.append(out_axes)
     result_data = np.einsum(*args)
 
-    raw_labels = OUT_LABEL + "".join(var_labels)
-    labels = "".join(ch + "*" for ch in raw_labels)
+    labels = [(OUT_LABEL, "*"), *var_specs]
     result = MVTensor(data=result_data, masks=(m_C, *var_masks))
     labeled = MVLabeledTensor(result, labels)
     return Expression(labeled, names, masks)
@@ -895,12 +906,13 @@ def _add(left, right, subtract: bool = False):
     """
     L = _to_expression(left)
     R = _to_expression(right)
-    if L._has_counting_axes() or R._has_counting_axes():
+    same_axes = _axis_names(L.tensor.labels) == _axis_names(R.tensor.labels)
+    if (L._has_counting_axes() or R._has_counting_axes()) and not same_axes:
         raise ValueError(
-            "cannot add a stacked (batched) expression; "
-            "fully evaluate it before addition"
+            "cannot add stacked (batched) expressions with different axis "
+            "layouts; fully evaluate them before addition"
         )
-    if _raw_names(L.tensor.labels) == _raw_names(R.tensor.labels):
+    if same_axes:
         union = L.out_mask.union(R.out_mask)
         Lt = _reindex_output(L, union)
         Rt = _reindex_output(R, union)
@@ -938,7 +950,9 @@ def _involution(x, inv: EInv) -> Expression:
     ``~E`` applies the sign to the expression's output axis.
     """
     if isinstance(x, Variable):
-        labeled = MVLabeledTensor(_involution_tensor(x.mask, inv), OUT_LABEL + x.label)
+        labeled = MVLabeledTensor(
+            _involution_tensor(x.mask, inv), [(OUT_LABEL, "*"), (x.label, "*")]
+        )
         return Expression(labeled, {x.name: (x.label,)}, {x.name: x.mask})
     if isinstance(x, Expression):
         return _apply_involution(x, inv)

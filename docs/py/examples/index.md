@@ -42,7 +42,7 @@ uv run python py/examples/<path>.py
 
 - **animation** — [Animation](ga/jupyter/animation.md), [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Keyframe timeline with fade-in and move](viz/animation/timeline.md), [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
-- **annotation** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
+- **annotation** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md), [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md)
 
 - **annotations** — [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md)
 
@@ -150,7 +150,7 @@ uv run python py/examples/<path>.py
 
 - **defaults** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
-- **dialog** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+- **dialog** — [Demonstrates every banner/dialog kind](viz/banners/banner_types.md), [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/dialogs/file_chooser_dialog.md)
 
 - **Dilator** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
@@ -200,7 +200,13 @@ uv run python py/examples/<path>.py
 
 - **file browser** — [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md)
 
-- **file chooser** — [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md)
+- **file chooser** — [A file-selection view, embedded and in a dialog box](viz/dialogs/file_chooser_dialog.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md)
+
+- **file dialog** — [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md)
+
+- **FileChooserDialog** — [A file-selection view, embedded and in a dialog box](viz/dialogs/file_chooser_dialog.md), [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md)
+
+- **FileChooserView** — [A file-selection view, embedded and in a dialog box](viz/dialogs/file_chooser_dialog.md)
 
 - **first slice** — [First vertical slice for the SDF viewer](viz/sdf/entities.md)
 
@@ -304,9 +310,9 @@ uv run python py/examples/<path>.py
 
 - **Markdown** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
-- **menu** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
+- **menu** — [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md), [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
 
-- **menu bar** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+- **menu bar** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md)
 
 - **mesh** — [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
 
@@ -460,7 +466,7 @@ uv run python py/examples/<path>.py
 
 - **show** — [Interactive Visualizer](ga/jupyter/interactive.md)
 
-- **show_dialog** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md)
+- **show_dialog** — [A titled dialog whose body holds view-based controls](viz/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/dialogs/file_chooser_dialog.md)
 
 - **signature** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -499,6 +505,8 @@ uv run python py/examples/<path>.py
 - **styling** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
 - **sub-menu** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md)
+
+- **submenu** — [A menu bar with a File → Open… file dialog](viz/menus/file_open_menu.md)
 
 - **sweep** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 

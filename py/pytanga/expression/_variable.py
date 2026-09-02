@@ -50,12 +50,12 @@ class Variable:
         return self._mask.algebra
 
     @property
-    def label(self) -> str:
-        """The first single-letter axis label (backward-compatible)."""
+    def label(self) -> int:
+        """The first axis label (backward-compatible; an integer from the pool)."""
         return self._labels[0]
 
     @property
-    def labels(self) -> tuple[str, ...]:
+    def labels(self) -> tuple[int, ...]:
         """The variable's label block; ``labels[k]`` is the ``k``-th occurrence."""
         return self._labels
 

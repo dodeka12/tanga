@@ -632,7 +632,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         label: str = "",
         trigger_icon: Icon | None = None,
         mode: str = "dropdown",
-        direction: str = "vertical",
+        direction: str | None = None,
         position: EAnchor | None = None,
         override_variant: bool = True,
         children: list[Any] | None = None,
@@ -832,6 +832,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         align_y: float = 0.5,
         dismissable: bool = True,
         on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
     ) -> str:
         """Show a dialog scoped to this scene (see :meth:`Visualizer.show_dialog`)."""
         return self._viz.show_dialog(
@@ -842,6 +844,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             align_y=align_y,
             dismissable=dismissable,
             on_close=on_close,
+            width=width,
+            height=height,
             scene_name=self._name,
         )
 
@@ -855,6 +859,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         align_y: float = 0.5,
         dismissable: bool = True,
         on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
     ) -> str:
         """Awaitable :meth:`show_dialog` scoped to this scene."""
         return await self._viz.show_dialog_async(
@@ -865,6 +871,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             align_y=align_y,
             dismissable=dismissable,
             on_close=on_close,
+            width=width,
+            height=height,
             scene_name=self._name,
         )
 

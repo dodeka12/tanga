@@ -52,7 +52,8 @@ from ._mv_operators import (
     magnitude_sq_def,
     op_conj_def,
     op_rev_def,
-    project_to_def,
+    project_onto_def,
+    project_onto_mask_def,
     scalar_def,
     sp_def,
 )
@@ -117,7 +118,8 @@ def generate(dim: int, sig: int, dtype: str, output: Path) -> None:
     template = sub_bare(template, "IS_ZERO_DEF", is_zero_def())
     template = sub_bare(template, "IS_SCALAR_DEF", is_scalar_def())
     template = sub_bare(template, "SP_DEF", sp_def(ctype))
-    template = sub_bare(template, "PROJECT_TO_DEF", project_to_def())
+    template = sub_bare(template, "PROJECT_ONTO_DEF", project_onto_def())
+    template = sub_bare(template, "PROJECT_ONTO_MASK_DEF", project_onto_mask_def())
     template = sub_bare(template, "GP_REV_DEF", gp_rev_def())
     template = sub_bare(template, "GP_CONJ_DEF", gp_conj_def())
     template = sub_bare(template, "IP_REV_DEF", ip_rev_def())

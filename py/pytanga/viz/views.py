@@ -357,7 +357,7 @@ class MenuView(View):
         *,
         trigger_icon: Icon | None = None,
         mode: Literal["dropdown", "bar"] = "dropdown",
-        direction: StackDirection = "vertical",
+        direction: StackDirection | None = None,
         position: EAnchor | None = None,
         override_variant: bool = True,
         **kwargs: Any,
@@ -365,6 +365,8 @@ class MenuView(View):
         super().__init__(**kwargs)
         if mode not in ("dropdown", "bar"):
             raise ValueError(f"mode must be 'dropdown' or 'bar', got {mode!r}")
+        if direction is None:
+            direction = "horizontal" if mode == "bar" else "vertical"
         if direction not in ("vertical", "horizontal", "wrap"):
             raise ValueError(
                 f"direction must be 'vertical', 'horizontal' or 'wrap', got {direction!r}"
@@ -522,7 +524,14 @@ class DropdownView(ControlView):
 
 
 class FileChooserView(ControlView):
-    """A file-path control (text field + backend file browser) as a view."""
+    """A file-selection (directory listing) view with no path field/browse button.
+
+    The view renders the backend-driven directory listing only; it is meant to be
+    embedded in any view container (or inside a :class:`FileChooserDialog`).  A
+    path display, edit field, and browse button are intentionally not part of this
+    view — compose those yourself (e.g. a :class:`TextFieldView` plus a
+    :class:`ButtonView` that calls ``open_file_chooser``).
+    """
 
     _node_type = "file_chooser_view"
 
@@ -538,6 +547,10 @@ class FileChooserView(ControlView):
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
+        kwargs.setdefault("min_width", Size.px(320))
+        kwargs.setdefault("min_height", Size.px(240))
+        kwargs.setdefault("preferred_width", Size.px(400))
+        kwargs.setdefault("preferred_height", Size.px(320))
         super().__init__(cid, label=label, **kwargs)
         self.control = FileChooser(
             id=cid,

@@ -94,7 +94,8 @@ For plain synchronous scripts (no `VisualizerApp`), use
 A `Dialog` is a titled overlay whose body holds arbitrary view content (any
 `View`, e.g. a `StackView` of control views).  It is a sibling of the banner —
 removable from the backend, draggable by its title bar (clamped to the
-viewport), and closable by a ✕ unless modal:
+viewport), resizable from its bottom-right corner, and closable by a ✕ unless
+modal:
 
 ```python
 viz.show_dialog(
@@ -115,7 +116,12 @@ viz.show_dialog(
 | `align_x` / `align_y` | `float` | `0.5` | Anchor in `[0, 1]` (see [Alignment](#alignment)) |
 | `dismissable` | `bool` | `True` | `False` = modal (dimmed backdrop, no ✕) |
 | `on_close` | `Callable` | `None` | Async callback fired when the dialog closes |
+| `width` | `SizeSpec` | `None` | Explicit dialog width (`Size.px` / `Size.percent`); `None` shrink-wraps |
+| `height` | `SizeSpec` | `None` | Explicit dialog height; `None` shrink-wraps |
 | `scene_name` | `str` | `None` | `None` = global; `"<name>"` = per-scene (every pane of that scene) |
+
+`FileChooserDialog` (see [File Chooser](file-chooser.md)) is a full file-open
+dialog (a listing + path line + OK/Cancel) you pass to `show_dialog`.
 
 Remove with `viz.remove_dialog(id)` or `viz.clear_dialogs()`.  `VizSceneHandle`
 exposes `show_dialog` / `remove_dialog` / `clear_dialogs` scoped to its scene

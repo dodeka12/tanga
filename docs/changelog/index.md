@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.16.0] — 2026-09-02
+- Stacked `+`/`-` merge & single-stacked `*` composition · integer axis labels (`AxisLabel`) · integer variable-label pool · `project_onto` (MV / `BladeMask`) · constant `Expression(A)`
+- Breaking: `MVLabeledTensor.labels` is now structured · `Variable.label` is an integer · `project_to` removed
+→ [Details](2026-09-02_951a9a19.md)
+
 ## [Since 1.15.0] — 2026-09-01
 - CSS theme system · runtime theme switching · themed exports & viewport background · user-provided themes (`register_theme`/`copy_theme`) · theme auto-reload
 - Bug fixes: group panel chrome is now token-driven (light/pastel themes render correctly)

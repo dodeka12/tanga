@@ -245,6 +245,9 @@
           },
           {
             "Dialog Demo": "py/examples/viz/dialogs/dialog_demo.md"
+          },
+          {
+            "File Chooser Dialog": "py/examples/viz/dialogs/file_chooser_dialog.md"
           }
         ]
       },
@@ -352,6 +355,9 @@
         "Menus": [
           {
             "Overview": "py/examples/viz/menus/index.md"
+          },
+          {
+            "File Open Menu": "py/examples/viz/menus/file_open_menu.md"
           },
           {
             "Menu Demo": "py/examples/viz/menus/menu_demo.md"
