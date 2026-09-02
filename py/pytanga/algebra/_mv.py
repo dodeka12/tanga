@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._algebra import Algebra
+    from pytanga.blade_mask import BladeMask
 
 
 class MV:
@@ -266,14 +267,14 @@ class MV:
         """Scalar product (scalar part of self * other)."""
         return self._alg.sp(self, other)
 
-    def project_to(self, other: "MV | int | list[int]") -> "MV":
-        """Restrict self to blade set of *other*.
+    def project_onto(self, other: "MV | BladeMask") -> "MV":
+        """Restrict self to a blade set, keeping only self's components.
 
-        - ``MV`` — retain only blades present in *other*.
-        - ``int`` — blade mask; retain blades whose mask is a subset.
-        - ``list[int]`` — blade IDs; retain only those exact blades.
+        - ``MV`` — retain self's blades that are non-zero in *other*.
+        - ``BladeMask`` — retain self's blades whose id is exactly in
+          ``other.ids``.
         """
-        return self._alg.project_to(self, other)
+        return self._alg.project_onto(self, other)
 
     # -----------------------------------------------------------------------
     # Phase A — Grade‑based involution & conjugation

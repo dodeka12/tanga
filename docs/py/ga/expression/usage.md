@@ -18,6 +18,17 @@ e5 = 2.0 * v * a    # scalar scale
 e6 = v * v          # repeated variable (polynomial form)
 ```
 
+### Constant expressions
+
+An `Expression` can also be built directly from a multivector, producing a
+zero-variable constant expression:
+
+```python
+E = Expression(A)              # out mask = non-zero blades of A
+E = Expression(A, mask)        # out mask = mask (BladeMask); A's other blades dropped
+E()                            # -> A (or A restricted to mask)
+```
+
 ## Evaluating
 
 Call the expression with some or all variables bound by name.  Values must be
@@ -47,8 +58,11 @@ jac(V2=z)         # == x * z
 jac.tensor        # (output × w) matrix
 ```
 
-Stacked (batched) partial results can be evaluated and inspected via `.tensor`,
-but cannot be further composed with `*`/`+`/`inv` until fully evaluated.
+Stacked (batched) partial results can be evaluated and inspected via `.tensor`.
+Two stacked expressions with the same axis layout merge under `+`/`-`, and a
+single stacked expression composes with a constant or variable under `*`.
+Composing two stacked expressions, or calling `inv` on a stacked expression,
+still requires full evaluation.
 
 ## Addition, subtraction, and affine sums
 
@@ -58,6 +72,10 @@ order** into a single tensor (unifying their output blade masks):
 ```python
 e = v * a + v * b   # == v * (a + b)
 ```
+
+The same merge applies to stacked expressions that share the exact same axis
+layout (including their counting axes): `(motor * X)(X=batch) - (Y * motor)(Y=batch)`
+is a single stacked `Expression` over `motor`.
 
 When the operands cannot be merged (different variable sets, different
 occurrence degrees, or a constant), the result is an `AffineExpression` — a
@@ -153,8 +171,9 @@ inspection or custom contraction.
 
 - A variable may appear at most `MAX_DEGREE` (4) times per product term;
   exceeding this raises `ValueError`.
-- Each variable owns a contiguous block of `MAX_DEGREE` **single-letter axis
-  labels**, so the 50-letter alphabet supports `floor(50 / MAX_DEGREE)` = 12
-  live variables per process.
-- Stacked (batched) partial expressions are read-only: they support evaluation
-  and `.tensor` inspection, but not further `*`/`+`/`inv` composition.
+- Variable axis labels are **integers** from a monotonic, effectively unbounded
+  pool, so there is no practical limit on the number of live variables (the old
+  12-variable single-letter ceiling is gone).
+- A single stacked expression may be composed with a constant or variable under
+  `*`, and matching stacked expressions merge under `+`/`-`; two stacked
+  operands still cannot be composed with each other.

@@ -17,6 +17,8 @@ a product term (see the repeated-variables plan).
 
 from __future__ import annotations
 
+import sys
+
 OUT_LABEL = "k"
 BATCH_LABEL = "n"
 
@@ -31,39 +33,37 @@ MAX_DEGREE = 4
 
 _counter = 0
 
-# Maps every allocated variable label to its full block, so a label can be
-# resolved back to (block, occurrence) when a variable repeats in a product.
-_label_to_block: dict[str, tuple[str, ...]] = {}
+# Maps every allocated variable label (an integer) to its full block, so a
+# label can be resolved back to (block, occurrence) when a variable repeats.
+_label_to_block: dict[int, tuple[int, ...]] = {}
 
 
 def max_variables() -> int:
-    """Return the maximum number of live variables the alphabet supports."""
-    return len(_VAR_ALPHABET) // MAX_DEGREE
+    """Return the maximum number of live variables the integer pool supports.
+
+    The pool is monotonic and effectively unbounded; this reports the largest
+    practical count (``sys.maxsize // MAX_DEGREE``).
+    """
+    return sys.maxsize // MAX_DEGREE
 
 
-def allocate_block(size: int = MAX_DEGREE) -> tuple[str, ...]:
-    """Return the next unused block of *size* contiguous variable labels.
+def allocate_block(size: int = MAX_DEGREE) -> tuple[int, ...]:
+    """Return the next unused block of *size* contiguous integer labels.
 
     A block is assigned once per ``Variable``; ``labels[k]`` labels that
     variable's ``k``-th occurrence in a product.  Blocks are never reused.
-    Raises ``RuntimeError`` once the alphabet cannot supply a full block.
     """
     global _counter
     if size < 1:
         raise ValueError(f"block size must be positive, got {size}")
-    if _counter + size > len(_VAR_ALPHABET):
-        raise RuntimeError(
-            f"label alphabet exhausted: need {size} letters but only "
-            f"{len(_VAR_ALPHABET) - _counter} remain"
-        )
-    block = tuple(_VAR_ALPHABET[_counter : _counter + size])
+    block = tuple(range(_counter, _counter + size))
     _counter += size
-    for ch in block:
-        _label_to_block[ch] = block
+    for lab in block:
+        _label_to_block[lab] = block
     return block
 
 
-def allocate_label() -> str:
+def allocate_label() -> int:
     """Return a single variable label (backward-compatible shim).
 
     Kept for the single-label inverse path; prefer :func:`allocate_block`.
@@ -71,7 +71,7 @@ def allocate_label() -> str:
     return allocate_block(1)[0]
 
 
-def block_for_label(label: str) -> tuple[str, ...]:
+def block_for_label(label: int) -> tuple[int, ...]:
     """Return the full label block containing *label*."""
     return _label_to_block[label]
 

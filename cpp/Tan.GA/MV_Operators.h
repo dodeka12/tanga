@@ -24,6 +24,7 @@
 #pragma once
 
 #include "Blade_Operators.h"
+#include "BladeMask.h"
 
 namespace Tan
 {
@@ -803,29 +804,35 @@ namespace Tan
 		}
 
 		template <typename TMultivectorA, typename TMultivectorB>
-		void ProjectTo(TMultivectorA &wA, const TMultivectorB &wB)
+		void ProjectOnto(TMultivectorA &wA, const TMultivectorB &wB)
 		{
 			typedef typename TMultivectorA::TValue TValue;
 			typedef typename TMultivectorA::TBlade TBlade;
 
-			wA.Zero();
-
 			wA.ForEachBlade([&](TValue &fValA, const TBlade &blA)
-							{ ProjectToBlade(fValA, blA, wB); });
+							{
+								typename TMultivectorB::TValue fValB;
+								if (!wB.GetValueBlade(fValB, blA))
+								{
+									fValA = TValue(0);
+								}
+							});
 		}
 
-		template <typename TValueA, typename TBladeA, typename TMultivectorB>
-		void ProjectToBlade(TValueA &fValA, const TBladeA &blA, const TMultivectorB &wB)
+		template <typename TMultivectorA>
+		void ProjectOnto(TMultivectorA &wA,
+						 const GA::CBladeMask<typename TMultivectorA::TBlade> &xMask)
 		{
-			typedef typename TMultivectorB::TValue TValueB;
-			typedef typename TMultivectorB::TBlade TBladeB;
+			typedef typename TMultivectorA::TValue TValue;
+			typedef typename TMultivectorA::TBlade TBlade;
 
-			TValueB fValB;
-
-			if (wB.GetValueBlade(fValB, blA))
-			{
-				fValA = fValB;
-			}
+			wA.ForEachBlade([&](TValue &fValA, const TBlade &blA)
+							{
+								if (!xMask.Contains(blA))
+								{
+									fValA = TValue(0);
+								}
+							});
 		}
 
 		template <typename TMultivectorA, typename TMultivectorB>
