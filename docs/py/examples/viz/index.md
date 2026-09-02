@@ -16,3 +16,4 @@
 - [Scenes](scenes/index.md)
 - [SDF](sdf/index.md)
 - [Styling](styling/index.md)
+- [Themes](themes/index.md)

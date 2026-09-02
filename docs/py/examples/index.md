@@ -52,6 +52,8 @@ uv run python py/examples/<path>.py
 
 - **arrowhead** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
 
+- **auto reload** — [Load a custom theme and edit it live](viz/themes/custom_theme_autoreload.md)
+
 - **auto-fit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
 - **auto_clear** — [Animation](ga/jupyter/animation.md)
@@ -140,7 +142,7 @@ uv run python py/examples/<path>.py
 
 - **custom intervals** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
-- **custom theme** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
+- **custom theme** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Load a custom theme and edit it live](viz/themes/custom_theme_autoreload.md)
 
 - **Cylinder** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
@@ -360,7 +362,7 @@ uv run python py/examples/<path>.py
 
 - **overlay** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/menus/menu_demo.md), [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/scenes/group_view_icons.md)
 
-- **override** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
+- **override** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Load a custom theme and edit it live](viz/themes/custom_theme_autoreload.md)
 
 - **overrides** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
@@ -421,6 +423,8 @@ uv run python py/examples/<path>.py
 - **redo** — [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md)
 
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
+
+- **register_theme** — [Load a custom theme and edit it live](viz/themes/custom_theme_autoreload.md)
 
 - **remove** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
@@ -510,15 +514,19 @@ uv run python py/examples/<path>.py
 
 - **texture labels** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md), [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md)
 
-- **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
+- **theme** — [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [Load a custom theme and edit it live](viz/themes/custom_theme_autoreload.md)
 
 - **theme switching** — [A custom theme with a full button/checkbox override](viz/scenes/custom_theme_override.md)
+
+- **themes** — [Load a custom theme and edit it live](viz/themes/custom_theme_autoreload.md)
 
 - **tilted plane** — [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
 - **timeline** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
 - **title** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
+
+- **tokens** — [Load a custom theme and edit it live](viz/themes/custom_theme_autoreload.md)
 
 - **toolbar** — [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
 

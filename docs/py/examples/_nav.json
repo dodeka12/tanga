@@ -469,6 +469,16 @@
             "Custom Defaults": "py/examples/viz/styling/custom_defaults.md"
           }
         ]
+      },
+      {
+        "Themes": [
+          {
+            "Overview": "py/examples/viz/themes/index.md"
+          },
+          {
+            "Custom Theme Autoreload": "py/examples/viz/themes/custom_theme_autoreload.md"
+          }
+        ]
       }
     ]
   }

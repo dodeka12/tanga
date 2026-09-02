@@ -99,7 +99,9 @@ layout = SceneView(
                 ),
                 ButtonView("btn_pastel", label="Apply Pastel", on_click=_apply_pastel),
                 ButtonView("btn_light", label="Apply Light", on_click=_apply_light),
-                ButtonView("btn_standard", label="Apply Standard", on_click=_apply_standard),
+                ButtonView(
+                    "btn_standard", label="Apply Standard", on_click=_apply_standard
+                ),
             ],
             position=EAnchor.TOP_LEFT,
         ),
