@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.16.0 (1.17.0-rc3)] — 2026-09-02
+- `DataArray` binding & counting-axis reduction · `RndMV` random multivectors · `Constant`/fixed components in random generators · expression & tensor type hints
+- Breaking: `Expression.__call__` accepts only `MV`/`DataArray` (legacy list/`MVTensor`/`(array, specs)` forms removed) · `pytanga.random_mv` removed
+→ [Details](2026-09-02_8ac6344a.md)
+
 ## [Since 1.16.0 (1.17.0-rc2)] — 2026-09-02
 - Flexible flow layout (`gap`/`align`/`justify`) · `Size.fr(n)` grows a child to fill leftover space · Python control size floors · `SpacerView` fills leftover flow space
 - Bug fixes: fixed split pane no longer locks unrelated splitters
