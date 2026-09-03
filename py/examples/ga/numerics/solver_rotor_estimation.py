@@ -40,7 +40,7 @@ import math
 
 import numpy as np
 from pytanga import Algebra, BladeMask, MVMatrix
-from pytanga.algebra import random_mv
+from pytanga.geometry import RndMV
 from pytanga.matrix.convert import from_matrix
 from pytanga.matrix.product import product_matrix
 
@@ -76,7 +76,11 @@ hr("Generate n point pairs X_i → Y_i = R * X_i * ~R")
 n = 10
 noise_level = 0.01
 
-vectors = [random_mv(alg, mask=BladeMask(alg, grades=[1]), rng=i) for i in range(n)]
+vec_mask = BladeMask(alg, grades=[1])
+vectors = [
+    RndMV(vec_mask, [(-1.0, 1.0)] * len(vec_mask))(np.random.default_rng(i))
+    for i in range(n)
+]
 
 # Apply R via the normalised versor product
 rotated = [alg.nvp(R_true, v) for v in vectors]

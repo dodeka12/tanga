@@ -27,14 +27,17 @@ from pytanga.solver.solve import solve, solve_lsq, solve_mod
 ## Quick start
 
 ```python
-from pytanga import Algebra
+from pytanga import Algebra, BladeMask
 from pytanga.basis import BasisE3
+from pytanga.geometry import RndMV
 from pytanga.solver.solve import solve
+import numpy as np
 
 alg = BasisE3(dtype="float64")
 
 # Solve A * X = 1 (multiplicative inverse)
-A = alg.random_mv(rng=42)
+full = BladeMask.full(alg)
+A = RndMV(full, [(-1.0, 1.0)] * len(full))(np.random.default_rng(42))
 X = solve(A, 1.0, algebra=alg)
 
 # Verify

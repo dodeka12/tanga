@@ -130,6 +130,8 @@ uv run python py/examples/<path>.py
 
 - **context manager** — [Interactive Visualizer](ga/jupyter/interactive.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
+- **contraction** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
+
 - **control group** — [Unified control groups: overlay-anchored + 3D-anchored](viz/scenes/control_group_overlay.md), [Unified control groups on a single-scene page](viz/scenes/control_group_single.md)
 
 - **controls** — [Showcase every interactive control in one app](viz/interaction/all_controls.md), [A file chooser with a backend-driven file browser](viz/interaction/file_chooser.md), [An editable tabular-data control driven by the backend](viz/interaction/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/interaction/table_editing.md), [Controls styled from the extracted theme CSS files](viz/scenes/control_theming.md), [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md), [A horizontal control toolbar nested inside a vertical stack](viz/scenes/toolbar.md)
@@ -149,6 +151,8 @@ uv run python py/examples/<path>.py
 - **Cylinder** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
 - **dark** — [Switch the viewer theme at runtime without a reload](viz/scenes/theme_switching.md)
+
+- **DataArray** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
 - **defaults** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
@@ -194,6 +198,8 @@ uv run python py/examples/<path>.py
 
 - **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
+- **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
+
 - **expressions** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **figure** — [Export](ga/jupyter/export.md), [Presentation figure export with FigureStyle](viz/export/figure.md)
@@ -235,6 +241,8 @@ uv run python py/examples/<path>.py
 - **gap** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/scenes/layout_sizing.md)
 
 - **general solve** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_01.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
+
+- **geometric algebra** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
 - **geometric product** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md)
 
@@ -569,6 +577,8 @@ uv run python py/examples/<path>.py
 - **update** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
 - **update in place** — [Animation](ga/jupyter/animation.md)
+
+- **variable** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
 - **Variable** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 

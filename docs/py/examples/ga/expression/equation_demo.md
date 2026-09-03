@@ -36,7 +36,7 @@ Run
 Keywords: expressions, variables, linear equations, Variable
 """
 
-import pytanga as pt
+from pytanga import BladeMask, Variable
 from pytanga.basis import BasisE3
 
 
@@ -46,15 +46,15 @@ def show(label: str, mv) -> None:
 
 def main() -> None:
     alg = BasisE3()
-    full = pt.BladeMask.full(alg)
+    full = BladeMask.full(alg)
 
-    v = pt.Variable("V1", full)
-    w = pt.Variable("V2", full)
+    v = Variable("V1", full)
+    w = Variable("V2", full)
 
-    a = alg.multivector({"e1": 2.0})
-    b = alg.multivector({"e2": 3.0})
-    x = alg.multivector({"e1": 1.0, "e3": -1.0})
-    y = alg.multivector({"e2": 2.0})
+    a = alg("2 e1")
+    b = alg("3 e2")
+    x = alg("e1 - e3")
+    y = alg("2 e2")
 
     # GP + addition over a shared variable: (v*a + v*b) == v*(a+b)
     E = v * a + v * b

@@ -42,12 +42,15 @@ blades of A and Y.  Delegates to `numpy.linalg.solve`.
 ### Example — float inverse
 
 ```python
-from pytanga import Algebra
+from pytanga import Algebra, BladeMask
 from pytanga.basis import BasisE3
+from pytanga.geometry import RndMV
 from pytanga.solver.solve import solve
+import numpy as np
 
 alg = BasisE3(dtype="float64")
-A = alg.random_mv(rng=42)
+full = BladeMask.full(alg)
+A = RndMV(full, [(-1.0, 1.0)] * len(full))(np.random.default_rng(42))
 
 X = solve(A, 1.0, algebra=alg)            # solve A * X = 1
 

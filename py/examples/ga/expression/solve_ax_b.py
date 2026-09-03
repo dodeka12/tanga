@@ -28,12 +28,12 @@ from pytanga.basis import BasisP3
 
 
 def main() -> None:
-    alg = BasisP3()
-    full = BladeMask.full(alg)
+    P3 = BasisP3()
+    full = BladeMask(P3)
 
     # A concrete invertible multivector and its "true" solution.
-    A = alg.multivector({0: 1.0, 1: 2.0, 2: -1.0, 4: 0.5})
-    X_true = alg.multivector({0: 3.0, 1: -2.0, 2: 1.0, 4: 0.25, 7: 1.5})
+    A = P3("1 + 2 e1 - e2 + 0.5 e3")
+    X_true = P3("3 - 2 e1 + e2 + 0.25 e3 + 1.5 e123")
     B = A * X_true
 
     # The linear map  X -> A * X  (full-mask variable).

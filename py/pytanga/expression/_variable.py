@@ -12,7 +12,9 @@ from pytanga.blade_mask import BladeMask
 from ._labels import allocate_block
 
 if TYPE_CHECKING:
-    from pytanga.algebra import Algebra
+    from pytanga.algebra import Algebra, MV
+
+    from ._expression import AffineExpression, Expression
 
 
 class Variable:
@@ -66,7 +68,9 @@ class Variable:
     # Arithmetic — each overload delegates to the expression builder.
     # ------------------------------------------------------------------
 
-    def __mul__(self, other):
+    def __mul__(
+        self, other: "MV | Variable | Expression | int | float"
+    ) -> "Expression":
         from pytanga.algebra import EProduct
 
         from ._expression import _product
@@ -75,7 +79,9 @@ class Variable:
             other = self.algebra.multivector({0: float(other)})
         return _product(self, other, EProduct.GP)
 
-    def __rmul__(self, other):
+    def __rmul__(
+        self, other: "MV | Variable | Expression | int | float"
+    ) -> "Expression":
         from pytanga.algebra import EProduct
 
         from ._expression import _product
@@ -84,65 +90,73 @@ class Variable:
             other = self.algebra.multivector({0: float(other)})
         return _product(other, self, EProduct.GP)
 
-    def __or__(self, other):
+    def __or__(self, other: "MV | Variable | Expression") -> "Expression":
         from pytanga.algebra import EProduct
 
         from ._expression import _product
 
         return _product(self, other, EProduct.IP)
 
-    def __ror__(self, other):
+    def __ror__(self, other: "MV | Variable | Expression") -> "Expression":
         from pytanga.algebra import EProduct
 
         from ._expression import _product
 
         return _product(other, self, EProduct.IP)
 
-    def __xor__(self, other):
+    def __xor__(self, other: "MV | Variable | Expression") -> "Expression":
         from pytanga.algebra import EProduct
 
         from ._expression import _product
 
         return _product(self, other, EProduct.OP)
 
-    def __rxor__(self, other):
+    def __rxor__(self, other: "MV | Variable | Expression") -> "Expression":
         from pytanga.algebra import EProduct
 
         from ._expression import _product
 
         return _product(other, self, EProduct.OP)
 
-    def __neg__(self):
+    def __neg__(self) -> "Expression":
         return self.__rmul__(-1.0)
 
-    def __add__(self, other):
+    def __add__(
+        self, other: "MV | Variable | Expression | int | float"
+    ) -> "Expression | AffineExpression":
         from ._expression import _add, _to_expression
 
         return _add(_to_expression(self), other)
 
-    def __radd__(self, other):
+    def __radd__(
+        self, other: "MV | Variable | Expression | int | float"
+    ) -> "Expression | AffineExpression":
         from ._expression import _add, _to_expression
 
         return _add(other, _to_expression(self))
 
-    def __sub__(self, other):
+    def __sub__(
+        self, other: "MV | Variable | Expression | int | float"
+    ) -> "Expression | AffineExpression":
         from ._expression import _add, _to_expression
 
         return _add(_to_expression(self), other, subtract=True)
 
-    def __rsub__(self, other):
+    def __rsub__(
+        self, other: "MV | Variable | Expression | int | float"
+    ) -> "Expression | AffineExpression":
         from ._expression import _add, _to_expression
 
         return _add(other, _to_expression(self), subtract=True)
 
-    def __invert__(self):
+    def __invert__(self) -> "Expression":
         from pytanga.algebra import EInv
 
         from ._expression import _involution
 
         return _involution(self, EInv.REV)
 
-    def conj(self):
+    def conj(self) -> "Expression":
         from pytanga.algebra import EInv
 
         from ._expression import _involution

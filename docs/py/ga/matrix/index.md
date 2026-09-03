@@ -26,6 +26,7 @@ from pytanga.matrix import MVMatrix, MVProductMatrix
 ```python
 from pytanga import Algebra, BladeMask
 from pytanga.basis import BasisE3
+from pytanga.geometry import RndMV
 from pytanga.matrix import MVMatrix
 from pytanga.matrix.product import product_matrix
 import numpy as np
@@ -37,7 +38,7 @@ full = BladeMask.full(alg)             # all 8 blades
 v = MVMatrix(data=np.zeros((8, 1)), row_mask=full)
 
 # Build a product matrix for a random multivector
-A = alg.random_mv(rng=42)
+A = RndMV(full, [(-1.0, 1.0)] * len(full))(np.random.default_rng(42))
 a_mask = BladeMask(A)
 b_mask = BladeMask(alg, grades=[1])   # vector subspace
 

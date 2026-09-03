@@ -5,7 +5,7 @@
 
 import pytest
 
-from pytanga import AffineExpression, BladeMask, Expression, Variable
+from pytanga import AffineExpression, BladeMask, DataArray, Expression, Variable
 from pytanga.basis import BasisE3
 from pytanga.expression._labels import _reset_allocator
 
@@ -76,7 +76,7 @@ class TestAffineExpression:
         w = Variable("V2", self.full)
         a = (v * v) + w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
-        result = a(V1=xs)
+        result = a(V1=DataArray(xs, masks=("n", self.full)))
         assert isinstance(result, list) and len(result) == 2
         assert all(isinstance(t, AffineExpression) for t in result)
         y = self._mv({"e2": 3.0})
@@ -89,7 +89,7 @@ class TestAffineExpression:
         a = (v * v) + w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         y = self._mv({"e2": 3.0})
-        result = a(V1=xs, V2=y)
+        result = a(V1=DataArray(xs, masks=("n", self.full)), V2=y)
         assert isinstance(result, list) and len(result) == 2
         for r, x in zip(result, xs):
             assert _close(r, (x * x) + y)

@@ -73,8 +73,10 @@ matrix.
 ```python
 from pytanga import Algebra, BladeMask
 from pytanga.basis import BasisE3
+from pytanga.geometry import RndMV
 from pytanga.matrix.product import product_matrix
 from pytanga.enums import EInv
+import numpy as np
 
 alg = BasisE3()
 full = BladeMask.full(alg)
@@ -92,7 +94,7 @@ M_op = product_matrix(A, a_mask=BladeMask(A),
                       b_mask=full, c_mask=full, product='op')
 
 # Batch: product matrices for a list of MVs
-points = [alg.random_mv(rng=i) for i in range(5)]
+points = [RndMV(full, [(-1.0, 1.0)] * len(full))(np.random.default_rng(i)) for i in range(5)]
 M_arr = product_matrix(points, b_mask=full, c_mask=full)
 # M_arr.data.shape == (5, 8, 8)
 ```

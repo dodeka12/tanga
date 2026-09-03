@@ -5,7 +5,7 @@
 
 import pytest
 
-from pytanga import BladeMask
+from pytanga import BladeMask, DataArray
 from pytanga.basis import BasisE3, BasisN3
 from pytanga.geometry import Direction, Geometry, Motor, Point, Rotor, Translator
 from pytanga.geometry.create_e3 import create_rotor
@@ -251,7 +251,7 @@ class TestBatched:
             self._mv({"e2": 3.0}),
             self._mv({"e3": -1.0}),
         ]
-        result = e(V1=xs)
+        result = e(V1=DataArray(xs, masks=("n", self.full)))
         assert isinstance(result, list)
         assert len(result) == 3
         for r, x in zip(result, xs):
@@ -263,17 +263,15 @@ class TestBatched:
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e2": 2.0})]
         ys = [self._mv({"e3": 3.0}), self._mv({"e1": 4.0})]
-        result = e(V1=xs, V2=ys)
+        result = e(
+            V1=DataArray(xs, masks=("n", self.full)),
+            V2=DataArray(ys, masks=("m", self.full)),
+        )
         assert isinstance(result, list) and len(result) == 2
         assert all(isinstance(row, list) and len(row) == 2 for row in result)
         for i, x in enumerate(xs):
             for j, y in enumerate(ys):
                 assert _close(result[i][j], x * y)
-
-    def test_empty_list(self):
-        v = Variable("V1", self.full)
-        e = v * self._mv({"e1": 2.0})
-        assert e(V1=[]) == []
 
 
 class TestExpressionN3:
@@ -370,7 +368,7 @@ class TestLeastSquares:
         L = geo.create_var("L", Line)
 
         pts = [geo.create(Point(t, 0.0, 0.0)) for t in (1.0, 2.0, 3.0, 4.0)]
-        constraints = (P ^ L)(P=pts)
+        constraints = (P ^ L)(P=DataArray(pts, masks=("n", P.mask)))
         L_est = constraints.lstsq()
 
         # A point on the fitted line should satisfy incidence ~ 0.
@@ -408,7 +406,7 @@ class TestLeastSquares:
         P = geo.create_var("P", Point)
         L = geo.create_var("L", Line)
         pts = [geo.create(Point(t, 0.0, 0.0)) for t in (1.0, 2.0, 3.0, 4.0)]
-        constraints = (P ^ L)(P=pts)
+        constraints = (P ^ L)(P=DataArray(pts, masks=("n", P.mask)))
 
         values, mvs = constraints.svd()
         L_svd = mvs[-1]  # smallest singular vector
@@ -468,7 +466,7 @@ class TestPartial:
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         y = self._mv({"e2": 3.0})
-        partial = e(V1=xs)
+        partial = e(V1=DataArray(xs, masks=("n", self.full)))
         assert isinstance(partial, Expression)
         assert partial._has_counting_axes()
         result = partial(V2=y)
@@ -481,7 +479,7 @@ class TestPartial:
         w = Variable("V2", self.full)
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
-        partial = e(V1=("n", xs))
+        partial = e(V1=DataArray(xs, masks=("n", self.full)))
         assert "n" in _axis_names(partial.tensor.labels)
         y = self._mv({"e2": 3.0})
         result = partial(V2=y)
@@ -494,7 +492,7 @@ class TestPartial:
         z = Variable("V3", self.full)
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
-        partial = e(V1=xs)
+        partial = e(V1=DataArray(xs, masks=("n", self.full)))
         c = self._mv({"e1": 1.0})
 
         # A single stacked operand may now be composed with a constant/variable.
@@ -578,7 +576,7 @@ class TestRepeatedVariables:
         v = Variable("V1", self.full)
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         e = v * v
-        result = e(V1=xs)
+        result = e(V1=DataArray(xs, masks=("n", self.full)))
         assert isinstance(result, list) and len(result) == 2
         for r, x in zip(result, xs):
             assert _close(r, x * x)
@@ -596,8 +594,8 @@ def test_batched_sandwich_merge():
     local_points = [geo(Point(0, 0, 0)), geo(Point(1, 0, 0)), geo(Point(0, 1, 0))]
     world_points = [geo(Point(1, 2, 3)), geo(Point(2, 2, 3)), geo(Point(1, 3, 3))]
 
-    lm = (motor * X)(X=("n", local_points))
-    rm = (Y * motor)(Y=("n", world_points))
+    lm = (motor * X)(X=DataArray(local_points, masks=("n", X.mask)))
+    rm = (Y * motor)(Y=DataArray(world_points, masks=("n", Y.mask)))
 
     eqn = lm - rm
     assert isinstance(eqn, Expression)
@@ -624,8 +622,8 @@ def test_stacked_add_different_labels_raises():
     w = Variable("V2", full)
     e = v * w
     xs = [alg.multivector({"e1": 1.0}), alg.multivector({"e1": 2.0})]
-    p1 = e(V1=("n", xs))
-    p2 = e(V1=("m", xs))
+    p1 = e(V1=DataArray(xs, masks=("n", full)))
+    p2 = e(V1=DataArray(xs, masks=("m", full)))
     with pytest.raises(ValueError):
         p1 + p2
 

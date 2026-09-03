@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Print the latest stable release tag the current branch is based on.
+"""Print the release the current branch is based on.
 
 Walks back from the merge-base of the current branch with ``main`` and prints
 the most recent non-prerelease (no ``-rcN`` suffix) version tag, without the
-leading ``v``. This is the version to use in changelog titles
-(``# Changes since version <this>``).
+leading ``v``. If a newer release-candidate tag is reachable, it is appended in
+parentheses, e.g. ``1.16.0 (1.17.0-rc3)``. This is the value to use in
+changelog titles (``# Changes since version <this>``).
 
 Usage:
   uv run python tools/last-release.py            # current branch vs main
@@ -21,7 +22,7 @@ import re
 import subprocess
 import sys
 
-RC_RE = re.compile(r"-rc\d+$")
+RC_RE = re.compile(r"-rc(\d+)$")
 
 
 def git(*args: str) -> str:
@@ -30,15 +31,23 @@ def git(*args: str) -> str:
     ).stdout.strip()
 
 
+def strip_v(tag: str) -> str:
+    return tag[1:] if tag.startswith("v") else tag
+
+
 def version_key(tag: str) -> tuple[int, ...]:
-    ver = tag[1:] if tag.startswith("v") else tag
-    ver = ver.split("-", 1)[0]  # drop any prerelease suffix
+    ver = strip_v(tag).split("-", 1)[0]  # drop any prerelease suffix
     return tuple(int(p) for p in ver.split(".") if p.isdigit())
+
+
+def rc_key(tag: str) -> tuple[tuple[int, ...], int]:
+    match = RC_RE.search(tag)
+    return (version_key(tag), int(match.group(1)) if match else -1)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Print the latest stable release tag the current branch is based on."
+        description="Print the release the current branch is based on."
     )
     parser.add_argument("ref", nargs="?", default="HEAD")
     parser.add_argument("--main", default="main", help="base branch (default: main)")
@@ -52,7 +61,15 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     latest = max(stable, key=version_key)
-    print(latest[1:] if latest.startswith("v") else latest)
+    result = strip_v(latest)
+
+    # Append the newest release candidate newer than the stable release, if any
+    # (e.g. 1.17.0-rc3 when several PRs target the same 1.17.0 release).
+    rcs = [t for t in tags if RC_RE.search(t) and version_key(t) > version_key(latest)]
+    if rcs:
+        result += f" ({strip_v(max(rcs, key=rc_key))})"
+
+    print(result)
     return 0
 
 

@@ -42,6 +42,13 @@ Rename the changelog by replacing the branch name with that hash, e.g.
 Also update the `→ [Details](...)` link in `docs/changelog/index.md` to the new
 filename, then commit the rename.
 
+Before committing, re-run `uv run python tools/last-release.py` and make sure
+the changelog title (`# Changes since version ...`) and the
+`docs/changelog/index.md` heading match its current output — including the
+parenthesised release candidate (e.g. `1.16.0 (1.17.0-rc3)`). If another PR
+merged while this branch was open, the release candidate may have advanced;
+update both the title and the index heading to match.
+
 ### 3. Write the PR body to a temp file
 
 Write a short summary of the changes to a temporary file. Using a file keeps

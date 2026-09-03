@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Iterator
 
 import numpy as np
 
@@ -102,7 +102,7 @@ def _raw_names(extended_labels: str) -> str:
     return "".join(extended_labels[i] for i in range(0, len(extended_labels), 2))
 
 
-def _axis_names(labels) -> tuple[AxisName, ...]:
+def _axis_names(labels: Any) -> tuple[AxisName, ...]:
     """Return the ordered axis-name sequence for *labels*.
 
     Accepts a legacy string or the structured ``tuple[AxisLabel, ...]``.
@@ -189,7 +189,7 @@ class AxisLabel:
         return f"{self.name}{self.mode}"
 
 
-def _parse_labels(labels) -> tuple[AxisLabel, ...]:
+def _parse_labels(labels: Any) -> tuple[AxisLabel, ...]:
     """Coerce a user label specification into a tuple of ``AxisLabel``.
 
     Accepted forms: a legacy string, a single ``AxisLabel`` or ``AxisName``,
@@ -219,14 +219,14 @@ def _parse_labels(labels) -> tuple[AxisLabel, ...]:
     return tuple(result)
 
 
-def _axis_modes(labels) -> tuple[str, ...]:
+def _axis_modes(labels: Any) -> tuple[str, ...]:
     """Return the ordered ``"*"``/``"_"`` sequence for *labels*."""
     if isinstance(labels, str):
         return tuple(labels[i] for i in range(1, len(labels), 2))
     return tuple(ax.mode for ax in labels)
 
 
-def _labels_str(labels) -> str:
+def _labels_str(labels: Any) -> str:
     """Render *labels* as the legacy extended string (single-letter names only)."""
     if isinstance(labels, str):
         return labels
@@ -238,7 +238,9 @@ def _labels_str(labels) -> str:
     return "".join(out)
 
 
-def _labels_from_names(names, modes) -> tuple[AxisLabel, ...]:
+def _labels_from_names(
+    names: list[AxisName], modes: dict[AxisName, str]
+) -> tuple[AxisLabel, ...]:
     """Build ``AxisLabel`` instances from an ordered name sequence and a mode map."""
     return tuple(AxisLabel(name, modes.get(name, "*")) for name in names)
 
@@ -299,7 +301,7 @@ class MVLabeledTensor:
     # 2.3 – __getitem__ (relabel & transpose)
     # ------------------------------------------------------------------
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> Any:
         """Relabel or transpose via string key; forward slices to tensor.
 
         - ``A[\"ijk\"]`` → new ``MVLabeledTensor`` with labels ``\"i*j*k*\"``.
@@ -317,7 +319,7 @@ class MVLabeledTensor:
     # 2.5 – __setitem__ (label‑aware assignment)
     # ------------------------------------------------------------------
 
-    def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key: Any, value: Any) -> None:
         """Assign data from *value* into *self* using label alignment.
 
         ``A[\"kij\"] = B[\"ji\"]`` aligns on shared labels and
@@ -674,7 +676,7 @@ class MVLabeledTensor:
 def _add_or_sub(
     a: MVLabeledTensor,
     b: MVLabeledTensor,
-    op,
+    op: Callable[[np.ndarray, np.ndarray], np.ndarray],
 ) -> MVLabeledTensor:
     """Broadcast addition/subtraction of two labeled tensors.
 
@@ -836,7 +838,9 @@ def _transpose(tensor: MVLabeledTensor, key: str) -> MVLabeledTensor:
 # ---------------------------------------------------------------------------
 
 
-def iter_labels(name: str, *tensors: MVLabeledTensor):
+def iter_labels(
+    name: str, *tensors: MVLabeledTensor
+) -> Iterator["MVLabeledTensor | tuple[MVLabeledTensor, ...]"]:
     """Iterate synchronously over *name* across all tensors.
 
     Yields ``MVLabeledTensor`` instances with the named axis removed.

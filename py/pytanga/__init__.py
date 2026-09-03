@@ -3,10 +3,10 @@
 
 """Public Python API for TANGA geometric algebra."""
 
-from .algebra import MV, Algebra, EInv, EProduct, random_mask, random_mv
+from .algebra import MV, Algebra, EInv, EProduct, random_mask
 from .blade_mask import BladeMask
 from .codegen import precompile
-from .expression import AffineExpression, Expression, Variable
+from .expression import AffineExpression, DataArray, Expression, Variable
 from .geometry import (
     Circle,
     Direction,
@@ -29,6 +29,7 @@ __all__ = [
     "install_docs",
     "install_examples",
     "Circle",
+    "DataArray",
     "Direction",
     "EInv",
     "EProduct",
@@ -46,5 +47,4 @@ __all__ = [
     "Variable",
     "precompile",
     "random_mask",
-    "random_mv",
 ]
