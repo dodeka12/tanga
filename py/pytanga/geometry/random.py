@@ -25,10 +25,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from pytanga.blade_mask import BladeMask
+
 from .entities import Direction, Point
 
 if TYPE_CHECKING:
-    from pytanga.algebra._algebra import Algebra
+    from pytanga.algebra._mv import MV
 
 
 # ── Distributions ──────────────────────────────────────────────
@@ -41,7 +43,9 @@ class Distribution:
     from a NumPy random number generator.
     """
 
-    def __call__(self, rng: np.random.Generator) -> float:  # pragma: no cover - abstract
+    def __call__(
+        self, rng: np.random.Generator
+    ) -> float:  # pragma: no cover - abstract
         raise NotImplementedError
 
 
@@ -73,18 +77,35 @@ class Normal(Distribution):
         return f"Normal({self.mean}, {self.stddev})"
 
 
+class Constant(Distribution):
+    """A fixed scalar value (ignores the random generator)."""
+
+    def __init__(self, value: float | int) -> None:
+        self.value = value
+
+    def __call__(self, rng: np.random.Generator) -> float | int:
+        return self.value
+
+    def __repr__(self) -> str:  # pragma: no cover - helper
+        return f"Constant({self.value})"
+
+
 def _as_distribution(spec) -> Distribution:
     """Coerce a coordinate spec into a :class:`Distribution`.
 
     - ``Distribution`` → passed through.
     - 2-tuple ``(low, high)`` → :class:`Uniform`.
+    - scalar ``int``/``float`` → :class:`Constant`.
     """
     if isinstance(spec, Distribution):
         return spec
     if isinstance(spec, tuple) and len(spec) == 2:
         return Uniform(spec[0], spec[1])
+    if isinstance(spec, (int, float)) and not isinstance(spec, bool):
+        return Constant(spec)
     raise TypeError(
-        f"Expected Distribution or (low, high) tuple, got {type(spec).__name__}: {spec!r}"
+        f"Expected Distribution, (low, high) tuple, or fixed value, "
+        f"got {type(spec).__name__}: {spec!r}"
     )
 
 
@@ -166,11 +187,54 @@ class RndDirection(RndEntity):
         return [self._sample_one(rng) for _ in range(self.count)]
 
 
+class RndMV(RndEntity):
+    """Generator for random multivectors over a fixed :class:`~pytanga.BladeMask`.
+
+    Parameters
+    ----------
+    mask : BladeMask
+        The blade mask to populate.  Its algebra is used to build the result.
+    spec : Sequence
+        One entry per blade in ``mask``.  Each entry is a :class:`Distribution`
+        instance, a 2-tuple ``(low, high)`` (uniform), or a scalar fixed value.
+    count : int | None
+        When None, :meth:`__call__` returns a single ``MV``; otherwise it
+        returns a list of ``count`` multivectors.
+    """
+
+    def __init__(self, mask: BladeMask, spec, *, count: int | None = None) -> None:
+        self._mask = mask
+        specs = list(spec)
+        if len(specs) != len(mask):
+            raise ValueError(
+                f"RndMV spec has {len(specs)} entries but mask has {len(mask)} blades"
+            )
+        self._specs = [_as_distribution(s) for s in specs]
+        self.count = count
+
+    def _sample_one(self, rng: np.random.Generator) -> "MV":
+        alg = self._mask.algebra
+        coeffs = {}
+        for bid, dist in zip(self._mask.ids, self._specs):
+            value = dist(rng)
+            coeffs[int(bid)] = (
+                int(value) if alg.dtype.startswith("int") else float(value)
+            )
+        return alg.multivector(coeffs)
+
+    def __call__(self, rng: np.random.Generator) -> "MV | list[MV]":
+        if self.count is None:
+            return self._sample_one(rng)
+        return [self._sample_one(rng) for _ in range(self.count)]
+
+
 __all__ = [
+    "Constant",
     "Distribution",
-    "Uniform",
     "Normal",
-    "RndEntity",
-    "RndPoint",
     "RndDirection",
+    "RndEntity",
+    "RndMV",
+    "RndPoint",
+    "Uniform",
 ]

@@ -21,7 +21,8 @@ Keywords: tensor, product tensor, rotor, einsum, E3
 
 import numpy as np
 import pytanga as pt
-from pytanga.algebra import EInv, random_mv, to_rotor
+from pytanga.algebra import EInv, to_rotor
+from pytanga.geometry import RndMV
 from pytanga.tensor.convert import from_tensor, to_tensor
 from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
@@ -83,7 +84,7 @@ def main() -> None:
     print(f"\n  Angle: {angle:.4f} rad")
     print(f"\n  Rotor: {rotor!s}")
 
-    point = random_mv(alg, mask=point_mask, rng=rng)
+    point = RndMV(point_mask, [(-1.0, 1.0)] * len(point_mask))(rng)
 
     rot_t = to_tensor(rotor, mask=rot_mask)
     point_t = to_tensor(point, mask=point_mask)

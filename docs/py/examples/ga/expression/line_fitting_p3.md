@@ -67,37 +67,33 @@ Keywords: expressions, line fitting, least-squares, P3, visualization
 from __future__ import annotations
 
 import numpy as np
-
 from pytanga.basis import BasisP3
-from pytanga.geometry import Direction, Geometry, Line, Point
+from pytanga.expression import DataArray
+from pytanga.geometry import Direction, Geometry, Line, Normal, Point, RndPoint
 from pytanga.viz import LineStyle, PointStyle, Visualizer
 
 
 def main() -> None:
-    alg = BasisP3()
-    geo = Geometry(alg)
+    P3 = BasisP3()
+    geo = Geometry(P3, seed=0)
 
     # Build the incidence expression E(P, L) = P ^ L.
-    P = geo.create_var("P", Point)
-    L = geo.create_var("L", Line)
+    P = geo("P", Point)
+    L = geo("L", Line)
     incidence = P ^ L
 
     # Ground-truth line: the x-axis (y = z = 0), through the origin.
-    L_true = geo.create(Line(Point(0, 0, 0), Direction(1, 0, 0)))
+    L_true = geo(Line(Point(0, 0, 0), Direction(1, 0, 0)))
 
     # Noisy sample points scattered near the x-axis.
-    rng = np.random.default_rng(0)
     n = 20
-    t = rng.uniform(-3.0, 3.0, n)
-    noise = rng.normal(0.0, 0.2, (n, 2))
-    points = [
-        geo.create(Point(float(t[i]), float(noise[i, 0]), float(noise[i, 1])))
-        for i in range(n)
-    ]
+    points = geo(
+        RndPoint((-3.0, 3.0), Normal(0.0, 0.2), Normal(0.0, 0.2), count=n)
+    )
 
     # Partially evaluate P over all sample points: a linear map in L whose
     # counting axis stacks the per-point incidence constraints.
-    constraints = incidence(P=points)
+    constraints = incidence(P=DataArray(points, masks=("n", geo.mask_for(Point))))
 
     # Singular-value decomposition: the singular vectors are candidate lines,
     # and the smallest singular value is the homogeneous least-squares fit.

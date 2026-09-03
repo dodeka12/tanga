@@ -7,7 +7,8 @@ Builds a fixed-rotor application expression ``E = R * v * ~R`` once (linear in
 the variable ``v``), then compares:
 
 1. single evaluation ``E(V1=x)`` vs. the fresh sandwich ``R * x * ~R``,
-2. batched evaluation ``E(V1=[xs])`` vs. a Python loop of fresh sandwiches.
+2. batched evaluation ``E(V1=DataArray(xs, ...))`` vs. a Python loop of fresh
+   sandwiches.
 
 Run:  uv run python dev/src/dev_expression_bench.py
 """
@@ -15,7 +16,7 @@ Run:  uv run python dev/src/dev_expression_bench.py
 import sys
 import timeit
 
-from pytanga import BladeMask, Variable
+from pytanga import BladeMask, DataArray, Variable
 from pytanga.basis import BasisE3
 from pytanga.geometry import Direction
 from pytanga.geometry.create_e3 import create_rotor
@@ -59,7 +60,7 @@ def fresh_loop():
 
 
 def batched():
-    return E(V1=xs)
+    return E(V1=DataArray(xs, masks=("n", mask)))
 
 
 def bench(label, fn, number):

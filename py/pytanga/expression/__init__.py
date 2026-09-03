@@ -21,9 +21,35 @@ one output axis.  Evaluate an expression by binding variables to multivectors::
 
 Binding a variable to a ``list`` of multivectors returns a ``list`` of results
 (nested lists for several batched variables).
+
+Variables may also be bound to NumPy arrays via the ``(array, specs)`` form,
+where ``specs`` is a per-axis sequence mixing a ``BladeMask`` (the blade axis)
+and ``str`` names for counting axes::
+
+    expr(x_pnt=(points, ("pnt_idx", point_mask)))
+
+A plain ``MVTensor`` with one matching blade axis and one ``None`` axis is
+equivalent to a list of multivectors::
+
+    expr(x_pnt=MVTensor(points, masks=(None, point_mask)))
+
+A counting axis introduced this way can then be reduced, either summed away or
+multiplied element-wise and kept::
+
+    expr(x_pnt=(points, ("pnt_idx", point_mask)))(pnt_idx=scalars)
+    expr(x_pnt=(points, ("pnt_idx", point_mask)))(pnt_idx=(scalars, "pnt_idx_"))
+
+.. note::
+
+    The geometric-product operators ``^`` and ``|`` bind more loosely than
+    ``+``/``-`` in Python, so sums/differences of products must be
+    parenthesised.  ``a * (v | e3) ^ e3 + (b * (v ^ e3) | e3)`` parses as
+    ``(a * (v | e3)) ^ (e3 + (b * (v ^ e3) | e3))``; write
+    ``(a * (v | e3) ^ e3) + (b * (v ^ e3) | e3)`` instead.
 """
 
+from ._data_array import DataArray
 from ._expression import AffineExpression, Expression
 from ._variable import Variable
 
-__all__ = ["AffineExpression", "Expression", "Variable"]
+__all__ = ["AffineExpression", "DataArray", "Expression", "Variable"]

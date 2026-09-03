@@ -116,6 +116,8 @@ nav:
     - Expressions:
       - Overview: py/ga/expression/index.md
       - Usage: py/ga/expression/usage.md
+      - DataArray: py/ga/expression/data-array.md
+      - Weighted sum example: py/ga/expression/example-weighted-sum.ipynb
     - Geometry:
       - Overview: py/ga/geometry/index.md
       - Entities: py/ga/geometry/entities.md

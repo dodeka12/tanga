@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-
 from pytanga.basis import (
     BasisE2,
     BasisE3,
@@ -18,10 +17,13 @@ from pytanga.basis import (
     BasisPGA2,
     BasisPGA3,
 )
+from pytanga.blade_mask import BladeMask
 from pytanga.geometry import (
+    Constant,
     Geometry,
     Normal,
     RndDirection,
+    RndMV,
     RndPoint,
     Uniform,
 )
@@ -156,3 +158,109 @@ def test_uniform_class_sampling():
 def test_unknown_spec_raises():
     with pytest.raises(TypeError):
         RndPoint("not-a-spec", (-1, 1), (-1, 1))
+
+
+# ── Constant / fixed components ─────────────────────────────────
+
+
+def test_constant_sampling():
+    gen = np.random.default_rng(0)
+    assert Constant(3.45)(gen) == 3.45
+    assert Constant(-2)(gen) == -2
+
+
+def test_rndpoint_fixed_components():
+    gen = np.random.default_rng(0)
+    rnd = RndPoint((-1, 1), 3.45, Normal(1.2, 0.1))
+    for _ in range(20):
+        p = rnd(gen)
+        assert -1.0 <= p.x < 1.0
+        assert p.y == 3.45
+        assert isinstance(p.z, float)
+
+
+def test_rnddirection_fixed_components():
+    gen = np.random.default_rng(0)
+    rnd = RndDirection((-1, 1), 2.0, (-3, 3))
+    for _ in range(20):
+        d = rnd(gen)
+        assert d.y == 2.0
+
+
+# ── RndMV ───────────────────────────────────────────────────────
+
+
+def _vector_mask(algebra):
+    return BladeMask(algebra, grades=[1])
+
+
+def test_rndmv_returns_mv():
+    from pytanga.blade_mask import BladeMask
+
+    algebra = BasisE3()
+    mask = BladeMask(algebra, grades=[1])
+    mv = RndMV(mask, [(-1, 1), (-1, 1), (-1, 1)])(np.random.default_rng(0))
+    assert hasattr(mv, "to_dict")
+    assert set(mv.to_dict()) <= {"e1", "e2", "e3"}
+
+
+def test_rndmv_fixed_and_distributions():
+    from pytanga.blade_mask import BladeMask
+
+    algebra = BasisE3()
+    mask = BladeMask(algebra, [algebra.E1, algebra.E2, algebra.E3])
+    rnd = RndMV(mask, [(-1, 1), 3.45, Normal(1.2, 0.1)])
+    samples = [rnd(np.random.default_rng(i)) for i in range(20)]
+    for mv in samples:
+        d = mv.to_dict()
+        assert d["e2"] == 3.45
+        assert -1.0 <= d["e1"] < 1.0
+
+
+def test_rndmv_count():
+    from pytanga.blade_mask import BladeMask
+
+    algebra = BasisE3()
+    mask = BladeMask(algebra, grades=[1])
+    mvs = RndMV(mask, [(-1, 1), (-1, 1), (-1, 1)], count=5)(np.random.default_rng(0))
+    assert isinstance(mvs, list)
+    assert len(mvs) == 5
+    assert all(hasattr(mv, "to_dict") for mv in mvs)
+
+
+def test_rndmv_reproducible():
+    from pytanga.blade_mask import BladeMask
+
+    algebra = BasisE3()
+    mask = BladeMask(algebra, grades=[1])
+    spec = [(-1, 1), (-1, 1), (-1, 1)]
+    a = RndMV(mask, spec)(np.random.default_rng(42))
+    b = RndMV(mask, spec)(np.random.default_rng(42))
+    assert a.to_dict() == b.to_dict()
+
+
+def test_rndmv_spec_length_mismatch_raises():
+    from pytanga.blade_mask import BladeMask
+
+    algebra = BasisE3()
+    mask = BladeMask(algebra, grades=[1])
+    with pytest.raises(ValueError):
+        RndMV(mask, [(-1, 1)])
+
+
+def test_geometry_call_rndmv(algebra):
+    from pytanga.blade_mask import BladeMask
+
+    mask = BladeMask(algebra, grades=[1])
+    mv = Geometry(algebra, seed=0)(RndMV(mask, [(-1, 1)] * len(mask)))
+    assert hasattr(mv, "to_dict")
+
+
+def test_geometry_call_rndmv_count(algebra):
+    from pytanga.blade_mask import BladeMask
+
+    mask = BladeMask(algebra, grades=[1])
+    mvs = Geometry(algebra, seed=0)(RndMV(mask, [(-1, 1)] * len(mask), count=4))
+    assert isinstance(mvs, list)
+    assert len(mvs) == 4
+    assert all(hasattr(mv, "to_dict") for mv in mvs)

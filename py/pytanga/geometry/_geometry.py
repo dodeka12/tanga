@@ -101,8 +101,10 @@ class Geometry:
             return self.create_var(obj, typ)
         if isinstance(obj, RndEntity):
             result = obj(self._rng)
+            if _is_mv(result):
+                return result
             if isinstance(result, (list, tuple)):
-                return [self.create(item) for item in result]
+                return [item if _is_mv(item) else self.create(item) for item in result]
             return self.create(result)
         if isinstance(obj, (list, tuple)):
             return [self(item) for item in obj]

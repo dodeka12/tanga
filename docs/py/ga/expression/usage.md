@@ -31,20 +31,44 @@ E()                            # -> A (or A restricted to mask)
 
 ## Evaluating
 
-Call the expression with some or all variables bound by name.  Values must be
-`MV`s whose non-zero blades lie within the variable's mask.
+Call the expression with some or all variables bound by name.  A value is either
+a single `MV` (whose non-zero blades lie within the variable's mask) or a
+`DataArray` whose blade axis matches the variable's mask.
 
 ```python
-result = e(V1=x)           # all bound -> MV
-results = e(V1=[x0, x1])   # batch -> list[MV] (one einsum)
+result = e(V1=x)                                       # all bound -> MV
+batch = e(V1=DataArray([x0, x1], masks=("n", full)))   # list[MV]
 ```
 
-Binding several variables to lists returns a nested `list` (cross product).
-A batch may carry an explicit counting-axis label via a `(label, list)` tuple:
+A `DataArray` pairs a NumPy array (or a list of MVs) with per-axis specs: one
+`BladeMask` per blade axis, and a `str` name per counting axis.
 
 ```python
-e(V1=("n", [x0, x1]), V2=y)
+import numpy as np
+from pytanga import DataArray
+
+points = DataArray(np.random.rand(100, 3), masks=("pnt_idx", point_mask))
 ```
+
+A counting axis introduced by a binding is reduced with the same `__call__`
+syntax: a raw 1-D array sums it away, while a `DataArray` can sum or
+multiply-and-keep.
+
+```python
+contract = expr(x_pnt=points)
+contract(pnt_idx=scalars)                               # sum
+contract(pnt_idx=DataArray(scalars, masks=("_",)))      # multiply, keep
+```
+
+For a multi-axis reduction, `"_"`/`"*"` mark the key axis (multiply vs sum) and
+the other axes are kept as new named dimensions:
+
+```python
+contract(pnt_idx=DataArray(scalars2d, masks=("pnt_idx", "group_idx")))
+```
+
+Rename counting axes with `data.rename_axis("n", "pnt_idx")` (returns a new
+`DataArray`) or `data(n="pnt_idx")` (in place, returns `data`).
 
 ### Partial evaluation (Jacobians)
 
@@ -74,8 +98,9 @@ e = v * a + v * b   # == v * (a + b)
 ```
 
 The same merge applies to stacked expressions that share the exact same axis
-layout (including their counting axes): `(motor * X)(X=batch) - (Y * motor)(Y=batch)`
-is a single stacked `Expression` over `motor`.
+layout (including their counting axes): binding `X` and `Y` to `DataArray`s with
+the same counting-axis name makes `(motor * X) - (Y * motor)` a single stacked
+`Expression` over `motor`.
 
 When the operands cannot be merged (different variable sets, different
 occurrence degrees, or a constant), the result is an `AffineExpression` — a

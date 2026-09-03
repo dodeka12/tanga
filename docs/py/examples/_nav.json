@@ -6,6 +6,9 @@
     "Binding Demo": "py/examples/binding_demo.md"
   },
   {
+    "Expression Dataarray": "py/examples/expression_dataarray.md"
+  },
+  {
     "Geometric Algebra": [
       {
         "Overview": "py/examples/ga/index.md"

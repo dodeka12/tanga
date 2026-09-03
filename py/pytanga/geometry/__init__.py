@@ -27,10 +27,12 @@ from .mask import (
     mask_for,
 )
 from .random import (
+    Constant,
     Distribution,
     Normal,
     RndDirection,
     RndEntity,
+    RndMV,
     RndPoint,
     Uniform,
 )
@@ -126,10 +128,12 @@ __all__ = [
     "create_var",
     "mask_for",
     # Random generation
+    "Constant",
     "Distribution",
     "Normal",
     "RndDirection",
     "RndEntity",
+    "RndMV",
     "RndPoint",
     "Uniform",
 ]

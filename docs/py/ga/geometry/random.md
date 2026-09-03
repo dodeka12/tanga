@@ -2,9 +2,13 @@
 
 The `pytanga.geometry` submodule provides deterministic, seedable random
 generators for geometric entities.  Instead of hand-rolling random
-coordinates, you build a **generator** object (`RndPoint`, `RndDirection`)
-and pass it to a [`Geometry`](https://github.com/dodeka12/tanga/blob/main/py/pytanga/geometry/_geometry.py) instance, which materializes it
+coordinates, you build a **generator** object (`RndPoint`, `RndDirection`,
+`RndMV`) and pass it to a [`Geometry`](https://github.com/dodeka12/tanga/blob/main/py/pytanga/geometry/_geometry.py) instance, which materializes it
 with the geometry's own random number generator and produces multivectors.
+
+> **Note:** the module-level `pytanga.random_mv` was removed.  Use
+> `RndMV` (below) for random multivectors; `pytanga.random_mask` remains for
+> random blade masks.
 
 ## Seeding
 
@@ -63,11 +67,19 @@ distribution, pass a `Distribution` instance per coordinate.
 Available distributions:
 - `Uniform(low, high)`
 - `Normal(mean=0.0, stddev=1.0)`
+- `Constant(value)` — a fixed component (no randomness)
 
 ```python
 from pytanga.geometry import Normal
 
 mv = geo(RndPoint(Normal(0, 1), (-1, 1), Normal(2, 0.1)))
+```
+
+A component may also be a plain fixed value, which is turned into a
+`Constant` automatically:
+
+```python
+mv = geo(RndPoint((-1, 1), 3.45, Normal(1.2, 0.1)))   # y is fixed at 3.45
 ```
 
 ## Directions
@@ -79,6 +91,39 @@ from pytanga.geometry import RndDirection
 
 d = geo(RndDirection((-1, 1), (-1, 1), (-1, 1)))
 ```
+
+## Random multivectors (`RndMV`)
+
+For general multivectors (not geometric entities), use `RndMV(mask, spec)`.
+The first argument is a `BladeMask`; the second is a sequence with **one entry
+per blade** — a `Distribution`, a `(low, high)` uniform tuple, or a fixed
+value.
+
+```python
+import numpy as np
+from pytanga import BladeMask
+from pytanga.geometry import RndMV, Normal
+
+alg = BasisE3()
+mask = BladeMask(alg, grades=[1])                     # e1, e2, e3
+
+rnd = RndMV(mask, [(-1, 1), 3.45, Normal(1.2, 0.1)])
+mv = rnd(np.random.default_rng(0))                    # one MV
+```
+
+`count` returns a list instead of a single MV:
+
+```python
+mvs = RndMV(mask, [(-1, 1), (-1, 1), (-1, 1)], count=10)(np.random.default_rng(0))
+```
+
+`RndMV` can also be passed to `Geometry`, which uses `geo.rng`:
+
+```python
+mv = geo(RndMV(mask, [(-1, 1), (-1, 1), (-1, 1)]))
+```
+
+Coefficients are cast to the algebra's dtype (integers for integer algebras).
 
 ## How it works
 

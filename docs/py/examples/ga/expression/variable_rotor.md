@@ -38,33 +38,36 @@ Run
 Keywords: expressions, Variable, rotor, points
 """
 
-import pytanga as pt
 from pytanga.basis import BasisN3
-from pytanga.geometry import Direction, Geometry, Point
-from pytanga.geometry.create_n3 import create_rotor
+from pytanga.blade_mask import BladeMask
+from pytanga.expression import DataArray, Variable
+from pytanga.geometry import Direction, Geometry, Point, RndPoint, Rotor
 
 
 def main() -> None:
-    alg = BasisN3()
-    geo = Geometry(alg)
+    N3 = BasisN3()
+    geo = Geometry(N3)
 
     # A fixed rotor: 1.2 rad about the z axis.
-    R = create_rotor(alg, 1.2, Direction(0, 0, 1))
+    R = geo(Rotor(1.2, Direction(0, 0, 1)))
 
     # A variable that can hold any N3 multivector.
-    v = pt.Variable("P", pt.BladeMask.full(alg))
+    v = Variable("P", geo.mask_for(Point))
 
     # Build the rotation expression once (linear in the point P).
     E = R * v * ~R
 
     # Evaluate for a single point.
     p = geo(Point(1, 0, 0))
+    p_rotated = E(P=p)
     print("rotate one point:")
-    print("  ", p, "->", geo(E(P=p)))
+    print("  ", p, "->", geo(p_rotated))
 
     # Evaluate for a batch of points in a single call.
-    points = [geo(Point(x, 0, 0)) for x in (0.0, 1.0, 2.0, 3.0)]
-    rotated = E(P=points)
+    # Create a list of random points in N3.
+    points = geo(RndPoint(count=4))
+
+    rotated = E(P=DataArray(points, masks=("pnt_idx", geo.mask_for(Point))))
     print("\nrotate a batch of points:")
     for src, dst in zip(points, rotated):
         print("  ", src, "->", geo(dst))

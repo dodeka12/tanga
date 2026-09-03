@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def _rebuild_mvtensor(
-    tensor: MVTensor, key, result: np.ndarray
+    tensor: MVTensor, key: Any, result: np.ndarray
 ) -> MVTensor | np.ndarray:
     """Attempt to preserve mask metadata when slicing an MVTensor.
 
@@ -46,7 +46,6 @@ def _rebuild_mvtensor(
     # Expand ellipsis / None to track all axes
     # We use numpy's index expansion logic to map old axes → new axes
     # Simple approach: iterate original axes, determine if collapsed
-    basic_idx: list = []
     ellipsis_seen = False
     n_ellipsis = ndim_orig - len(key) + sum(1 for k in key if k is not Ellipsis)
 
@@ -156,7 +155,7 @@ class MVTensor:
     # 1.1 – __getitem__
     # ------------------------------------------------------------------
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> "MVTensor | np.ndarray":
         """Label or NumPy indexing.
 
         String keys create an ``MVLabeledTensor`` (lazy import).
@@ -223,22 +222,14 @@ class MVTensor:
                 masks.append(None)
                 shape.append(spec)
             else:
-                raise TypeError(
-                    f"expected BladeMask or int, got {type(spec).__name__}"
-                )
+                raise TypeError(f"expected BladeMask or int, got {type(spec).__name__}")
         if dtype is None:
             dtype = np.float64
-        return MVTensor(
-            data=np.zeros(tuple(shape), dtype=dtype), masks=tuple(masks)
-        )
+        return MVTensor(data=np.zeros(tuple(shape), dtype=dtype), masks=tuple(masks))
 
     @staticmethod
-    def zeros_like(
-        other: MVTensor, *, dtype: np.dtype | str | None = None
-    ) -> MVTensor:
+    def zeros_like(other: MVTensor, *, dtype: np.dtype | str | None = None) -> MVTensor:
         """Create a zero-initialised MVTensor with the same shape and masks."""
         if dtype is None:
             dtype = other.data.dtype
-        return MVTensor(
-            data=np.zeros(other.data.shape, dtype=dtype), masks=other.masks
-        )
+        return MVTensor(data=np.zeros(other.data.shape, dtype=dtype), masks=other.masks)
