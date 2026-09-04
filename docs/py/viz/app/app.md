@@ -7,7 +7,7 @@ the scene and its handlers.
 
 ```python
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import ControlEvent, VisualizerApp
+from pytanga.viz import ControlEvent, SliderView, VisualizerApp
 
 
 class MyApp(VisualizerApp):
@@ -15,15 +15,17 @@ class MyApp(VisualizerApp):
         super().__init__(title="My Interactive App")
 
     async def init(self) -> None:
-        # Build the scene and register controls.
+        # Build the scene and mount a control view in the layout overlay.
         self._sphere = self.viz(Sphere(Point(0, 0, 0), radius=1), opacity=0.3)
-        self.viz.add_slider(
-            "radius",
-            label="Radius",
-            min=0.2,
-            max=5.0,
-            value=1.0,
-            on_change=self.on_radius,
+        self.viz.add(
+            SliderView(
+                "radius",
+                label="Radius",
+                min=0.2,
+                max=5.0,
+                value=1.0,
+                on_change=self.on_radius,
+            )
         )
         self.viz.flush()
 
@@ -63,7 +65,7 @@ Shutdown can be requested three ways:
 ```python
 class MyApp(VisualizerApp):
     async def init(self) -> None:
-        self.viz.add_button("quit", label="Quit", on_click=self.on_quit)
+        self.viz.add(ButtonView("quit", label="Quit", on_click=self.on_quit))
 
     async def on_quit(self, _value, _event) -> None:
         self.request_shutdown()
@@ -73,30 +75,32 @@ In every case `cleanup()` runs and the server stops.
 
 ## Controls
 
-Controls are created on `self.viz` and appear as an overlaid panel in the
-browser. Each takes a unique id and an **async** handler callback.
+Controls are declarative `*View` classes mounted via `self.viz.add(view)` (or a
+`set_layout`/`show(layout=...)` layout). Each takes a unique id and an **async**
+handler callback.
 
-| Control | Method | Handler signature |
-|---------|--------|-------------------|
-| Slider | `add_slider(id, label, min, max, step, default, on_change)` | `(value: float, event) -> None` |
-| Dropdown | `add_dropdown(id, label, options, default, on_change)` | `(value: str, event) -> None` |
-| Button | `add_button(id, label, on_click)` | `(value: None, event) -> None` |
+| Control | View class | Handler signature |
+|---------|-----------|-------------------|
+| Slider | `SliderView(id, label, min, max, step, value, on_change)` | `(value: float, event) -> None` |
+| Dropdown | `DropdownView(id, label, options, value, on_change)` | `(value: str, event) -> None` |
+| Button | `ButtonView(id, label, on_click)` | `(value: None, event) -> None` |
 
-Group them into a collapsible panel:
+Group them into a titled, collapsible panel with `GroupView`:
 
 ```python
-self.viz.add_control_group(
-    "controls",
-    title="Controls",
-    controls=["radius", "reset"],
-    position="bottom-right",
+self.viz.add(
+    GroupView(
+        "Controls",
+        [radius_view, reset_view],
+        position="bottom-right",
+    )
 )
 ```
 
-Remove them with `remove_control(id)`, `remove_control_group(id)`, or `clear_controls()`.
 Handlers receive the new value plus a `ControlEvent`; use
 `self.viz.update_entity(...)` / `self.viz.update(...)` then `flush()` to apply
-changes.
+changes. For the full control reference (all control kinds + parameters), see
+[Controls](../interaction/controls.md).
 
 ## Complete example
 

@@ -114,7 +114,7 @@ def _viz() -> Visualizer:
 def test_show_dialog_stores_registers_pushes(monkeypatch):
     viz = _viz()
     pushed: list[tuple] = []
-    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: pushed.append((d.id, s)))
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: pushed.append((d.id, s)))
 
     async def _on_click(value, event):
         pass
@@ -132,7 +132,7 @@ def test_show_dialog_stores_registers_pushes(monkeypatch):
 
 def test_show_dialog_explicit_id_collision_raises(monkeypatch):
     viz = _viz()
-    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
     viz.show_dialog(_content(), id="dup")
     with pytest.raises(ValueError):
         viz.show_dialog(_content(), id="dup")
@@ -141,8 +141,8 @@ def test_show_dialog_explicit_id_collision_raises(monkeypatch):
 def test_remove_dialog_unregisters_and_pushes(monkeypatch):
     viz = _viz()
     removed: list = []
-    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
-    monkeypatch.setattr(viz, "_push_dialog_remove", lambda i, s: removed.append((i, s)))
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog_remove", lambda i, s: removed.append((i, s)))
 
     async def _on_click(value, event):
         pass
@@ -159,8 +159,8 @@ def test_remove_dialog_unregisters_and_pushes(monkeypatch):
 def test_clear_dialogs_scoped(monkeypatch):
     viz = _viz()
     cleared: list = []
-    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
-    monkeypatch.setattr(viz, "_push_dialog_clear", lambda s: cleared.append(s))
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog_clear", lambda s: cleared.append(s))
 
     viz.show_dialog(_content(), id="g")
     viz.show_dialog(_content(), id="s", scene_name="detail")
@@ -174,7 +174,7 @@ def test_clear_dialogs_scoped(monkeypatch):
 @pytest.mark.anyio
 async def test_dialog_closed_dispatches_on_close(monkeypatch):
     viz = _viz()
-    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
     closed: list = []
 
     async def _on_close(value, event):
@@ -194,3 +194,22 @@ def test_scene_handle_show_dialog_scopes(monkeypatch):
     monkeypatch.setattr(viz, "show_dialog", lambda *a, **kw: calls.append(kw) or "x")
     handle.show_dialog(_content())
     assert calls[0]["scene_name"] == "detail"
+
+
+def test_overlay_dialog_direct_lifecycle():
+    viz = _viz()
+    overlay = viz._layout.overlay
+
+    async def _on_click(value, event):
+        pass
+
+    did = overlay.show_dialog(
+        StackView("vertical", [ButtonView("b", label="Close", on_click=_on_click)])
+    )
+    assert did == "dialog_1"
+    assert overlay._dialogs[None][did].id == did
+    assert viz._handler_registry.get("b", "click") is _on_click
+
+    overlay.remove_dialog(did)
+    assert did not in overlay._dialogs[None]
+    assert viz._handler_registry.get("b", "click") is None

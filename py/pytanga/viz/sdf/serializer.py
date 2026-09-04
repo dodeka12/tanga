@@ -273,6 +273,7 @@ def _serialize_sdf_group(
         local_tree = _translate_tree(tree, (-center[0], -center[1], -center[2]))
         child = copy.copy(local_tree)
         child.combine = combine_mode.value
+        child.smoothness = getattr(obj, "smoothness", None)
         children.append(child)
         centers.append(center)
         halves.append(half)
@@ -448,6 +449,7 @@ def _composed_tree(composed: Composed, styles_map: dict[str, Any] | None) -> Sdf
     for part_obj, combine_mode in composed.parts:
         child = copy.copy(_lower_member(part_obj))
         child.combine = combine_mode.value
+        child.smoothness = getattr(part_obj, "smoothness", None)
         children.append(child)
     return group(children)
 

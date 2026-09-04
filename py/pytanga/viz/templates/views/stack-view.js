@@ -67,6 +67,9 @@ export class StackView extends View {
 
     addChild(view) {
         const ac = new AbortController();
+        // Let "auto"-orientation children (e.g. SeparatorView) derive the
+        // perpendicular orientation from this container's direction.
+        if (typeof view.resolveOrientation === 'function') view.resolveOrientation(this.direction);
         view.mount(this._content);
         const mainAxis = stackMainAxis(this.direction);
         const pref = mainAxis === 'x' ? view.preferredWidth : view.preferredHeight;

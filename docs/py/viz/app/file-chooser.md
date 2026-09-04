@@ -8,14 +8,24 @@ dialog).
 
 ## Using it
 
+The file browser is driven by the backend. Two surfaces expose it:
+
+- `FileChooserView` — a declarative control view that renders the directory
+  listing (no path field or "Browse…" button — compose those yourself, or use
+  the dialog below). Mount it in a layout with `viz.add(view)` / `set_layout`.
+- `FileChooserDialog` — a full modal dialog with a path line and OK/Cancel,
+  shown with `viz.show_dialog(...)`.
+
 ```python
 async def init(self):
-    self.viz.add_file_chooser(
-        "data_file",
-        label="Data file",
-        placeholder="/path/to/file",
-        root="/home/me",          # browse root (defaults to ~)
-        on_change=self.on_file,
+    self.viz.add(
+        FileChooserView(
+            "data_file",
+            label="Data file",
+            value="/path/to/file",      # initial path
+            root="/home/me",            # browse root (defaults to ~)
+            on_change=self.on_file,
+        )
     )
 
 async def on_file(self, path, event):
@@ -23,16 +33,12 @@ async def on_file(self, path, event):
 ```
 
 - `value` — initial path.
-- `root` — browse root (defaults to the home directory).  The text field
-  accepts any absolute path regardless of `root`.
-- `on_change(path, event)` — fires when the user types a path or selects a
-  file in the browser.
+- `root` — browse root (defaults to the home directory). The listing clamps to
+  `root` when set.
+- `on_change(path, event)` — fires when the user selects a file in the browser.
 
-The control is also available as a `FileChooserView` for layouts/panels, like
-`ButtonView` — but that view renders only the **file-selection listing** (no
-path field, no "Browse…" button, no path display).  Compose a path field and
-browse button yourself, or use `FileChooserDialog` to show the listing in a
-full dialog with a path line and OK/Cancel:
+For the full path-field + browse-button experience, use `FileChooserDialog`
+instead:
 
 ```python
 viz.show_dialog(
@@ -60,4 +66,4 @@ cancels.
 
 ## Example
 
-- `py/examples/viz/interaction/file_chooser.py`
+- `py/examples/viz/ui/controls/file_chooser.py`

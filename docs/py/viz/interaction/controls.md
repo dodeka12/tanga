@@ -1,16 +1,56 @@
 # Controls
 
-Controls are created on the `Visualizer` instance (`self.viz`) and appear as an
-overlaid control panel in the browser. Each control takes a unique id and an
-**async** handler callback.
-
-For the handler contract and the `VisualizerApp` lifecycle, see
-[Handlers & Lifecycle](../app/handlers.md).
-
-## `add_slider`
+`pytanga.viz` controls are **declarative `*View` classes** — `SliderView`,
+`DropdownView`, `ButtonView`, `CheckboxView`, `TextFieldView`, `TextAreaView`,
+`ColorPickerView`, `ValueEditView`, `TableView`, `FileChooserView`,
+`LabelView`, and `MarkdownView`.  There are no `add_*` facade methods: build a
+view, give it a unique `id` and an **async** handler, and place it in a
+`GroupView`/`StackView` inside a layout (or mount it with `viz.add(view)`).
 
 ```python
-self.viz.add_slider(
+layout = GroupView(
+    "Controls",
+    [
+        SliderView(
+            "radius", label="Radius", min=0.2, max=5.0, value=1.0,
+            on_change=self.on_radius,
+        ),
+        ButtonView("reset", label="Reset", on_click=self.on_reset),
+    ],
+)
+viz.show(layout=layout)   # registers the layout + control-view handlers
+```
+
+- The full constructor signatures and how views fit into split/stack layouts are
+  on the [Control Views](control-views.md) page.
+- The handler contract and the `VisualizerApp` lifecycle are on
+  [Handlers & Lifecycle](../app/handlers.md).
+
+## Quick mapping (former `add_*` facade → view class)
+
+| Former `add_*` facade | View class |
+|---|---|
+| `add_slider` | [`SliderView`](control-views.md#sliderview) |
+| `add_dropdown` | [`DropdownView`](control-views.md#dropdownview) |
+| `add_button` | [`ButtonView`](control-views.md#buttonview) |
+| `add_text_field` | [`TextFieldView`](control-views.md#textfieldview) |
+| `add_text_area` | [`TextAreaView`](control-views.md#textareaview) |
+| `add_color_picker` | [`ColorPickerView`](control-views.md#colorpickerview) |
+| `add_checkbox` | [`CheckboxView`](control-views.md#checkboxview) |
+| `add_value_edit` | [`ValueEditView`](control-views.md#valueeditview) |
+| `add_table` | [`TableView`](control-views.md#tableview) |
+| `add_file_chooser` | [`FileChooserView`](control-views.md#filechooserview) |
+| `add_control_group` | [`GroupView`](control-views.md#groupview) |
+
+Each `*View` constructor takes the same parameters the old `add_*` method did
+(``cid`` first, then keyword args); a `SliderView` mirrors `add_slider`
+(including `on_press` / `on_release` and `variant`), a `ButtonView` mirrors
+`add_button`, and so on.
+
+## `SliderView`
+
+```python
+SliderView(
     "sphere_b_x",
     label="X Position",
     min=-3.5,
@@ -25,16 +65,19 @@ self.viz.add_slider(
 |-----------|------|---------|-------------|
 | `cid` | `str` | *(required)* | Control ID (unique string) |
 | `label` | `str` | `""` | Label text displayed above the slider |
+| `variant` | `EControlVariant` | `"default"` | Visual variant (`"default"` or `"menu"`) |
 | `min` | `float` | `0.0` | Minimum value |
 | `max` | `float` | `1.0` | Maximum value |
 | `step` | `float` | `0.01` | Step increment |
 | `value` | `float` | `min` | Initial value |
 | `on_change` | `Callable` | `None` | Async callback: `(value: float, event: ControlEvent) -> None` |
+| `on_press` | `Callable` | `None` | Async callback on drag start: `(value: float, event) -> None` |
+| `on_release` | `Callable` | `None` | Async callback on drag end: `(value: float, event) -> None` |
 
-## `add_dropdown`
+## `DropdownView`
 
 ```python
-self.viz.add_dropdown(
+DropdownView(
     "mode",
     label="Display",
     options=["Both", "Sphere A only", "Sphere B only"],
@@ -51,10 +94,10 @@ self.viz.add_dropdown(
 | `value` | `str` | `""` | Initial selection |
 | `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
 
-## `add_button`
+## `ButtonView`
 
 ```python
-self.viz.add_button(
+ButtonView(
     "reset",
     label="Reset",
     icon=EIconMaterial.REFRESH,
@@ -66,17 +109,18 @@ self.viz.add_button(
 |-----------|------|---------|-------------|
 | `cid` | `str` | *(required)* | Control ID |
 | `label` | `str` | `""` | Button text |
+| `variant` | `EControlVariant` | `"default"` | Visual variant (`"default"` or `"menu"`) |
 | `icon` | `Icon` | `None` | Optional icon (see [Icons](#icons)) |
 | `icon_only` | `bool` | `False` | Render only the icon as a small square button |
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_click` | `Callable` | `None` | Async callback: `(value: None, event: ControlEvent) -> None` |
 
-## `add_text_field`
+## `TextFieldView`
 
 Single-line text input:
 
 ```python
-self.viz.add_text_field(
+TextFieldView(
     "name",
     label="Name",
     placeholder="Enter a name…",
@@ -93,12 +137,12 @@ self.viz.add_text_field(
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
 
-## `add_text_area`
+## `TextAreaView`
 
 Multi-line text input:
 
 ```python
-self.viz.add_text_area(
+TextAreaView(
     "notes",
     label="Notes",
     rows=6,
@@ -116,12 +160,12 @@ self.viz.add_text_area(
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
 
-## `add_color_picker`
+## `ColorPickerView`
 
 Native color input (hex value):
 
 ```python
-self.viz.add_color_picker(
+ColorPickerView(
     "color",
     label="Color",
     value="#ff0000",
@@ -137,12 +181,12 @@ self.viz.add_color_picker(
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: str, event: ControlEvent) -> None` |
 
-## `add_checkbox`
+## `CheckboxView`
 
 Boolean checkbox:
 
 ```python
-self.viz.add_checkbox(
+CheckboxView(
     "wireframe",
     label="Wireframe",
     value=False,
@@ -154,11 +198,12 @@ self.viz.add_checkbox(
 |-----------|------|---------|-------------|
 | `cid` | `str` | *(required)* | Control ID |
 | `label` | `str` | `""` | Label text |
+| `variant` | `EControlVariant` | `"default"` | Visual variant (`"default"` or `"menu"`) |
 | `value` | `bool` | `False` | Initial checked state |
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: bool, event: ControlEvent) -> None` |
 
-## `add_value_edit`
+## `ValueEditView`
 
 A numeric stepper with up/down buttons; arrow keys (while the pointer hovers
 over the control) and the scroll wheel also step the value.  By default the
@@ -166,7 +211,7 @@ value can also be typed directly (`editable=True`); set `editable=False` to
 restrict input to the buttons, keys, and wheel:
 
 ```python
-self.viz.add_value_edit(
+ValueEditView(
     "zoom",
     label="Zoom",
     min=0.5,
@@ -191,7 +236,7 @@ self.viz.add_value_edit(
 | `tooltip` | `str` | `""` | Hover tooltip |
 | `on_change` | `Callable` | `None` | Async callback: `(value: float, event: ControlEvent) -> None` |
 
-## `add_table`
+## `TableView`
 
 An editable tabular-data grid (rendered with Tabulator). The backend defines
 the columns and initial rows; the user can edit any cell and, when enabled,
@@ -199,7 +244,7 @@ append rows and columns. **Double-click** a cell to edit it (a single click or
 drag selects cells instead). Each change is reported back to a distinct handler:
 
 ```python
-self.viz.add_table(
+TableView(
     "data",
     label="Data",
     columns=["x", "y", "z"],
@@ -227,64 +272,69 @@ self.viz.add_table(
 | `on_row_add` | `Callable` | `None` | Async callback: `(add: TableRowAdd, event) -> None` |
 | `on_column_add` | `Callable` | `None` | Async callback: `(add: TableColumnAdd, event) -> None` |
 | `on_row_delete` | `Callable` | `None` | Async callback: `(delete: TableRowsDelete, event) -> None` |
+| `on_change` | `Callable` | `None` | Async callback: `(value: dict, event) -> None` — fires once with the full `{"columns", "rows"}` on undo/redo |
 
 The handler payloads are `TableCellChange(row, col, value)`,
-`TableRowAdd(row, values)`, and `TableColumnAdd(col, header, values)` (all
-zero-based). Cell values are strings on the wire — coerce in the handler as
-needed. Refresh the grid from the backend with
-`self.viz.set_control_value("data", {"columns": [...], "rows": [...]})`.
+`TableRowAdd(row, values)`, `TableColumnAdd(col, header, values)`, and
+`TableRowsDelete(rows)` (all zero-based). Cell values are strings on the wire —
+coerce in the handler as needed. Replace the grid and push it to the browser
+with `table_view.set_value({"columns": [...], "rows": [...]})`.
 
 ### Undo and redo
 
 The grid keeps a backend-side undo history (one snapshot per *committed* edit —
 entering a cell and pressing Enter/Tab, adding a row/column, or deleting rows;
 not per keystroke). In the browser, **Ctrl+Z** undoes and **Ctrl+Shift+Z** (or
-**Ctrl+Y**) redoes. The same operations are available programmatically:
+**Ctrl+Y**) redoes. The same operations are available on the view:
 
 ```python
-self.viz.undo_table("data")          # -> bool
-self.viz.redo_table("data")          # -> bool
-self.viz.clear_table_history("data")
-self.viz.can_undo_table("data")      # -> bool
+table_view.undo()               # -> bool (restores + pushes the grid)
+table_view.redo()               # -> bool (restores + pushes the grid)
+table_view.can_undo             # -> bool
+table_view.can_redo             # -> bool
+table_view.control.clear_history()
 ```
 
 `max_history` bounds the number of retained undo steps (default 100). A
-programmatic `set_control_value` full-replace clears the history.
+programmatic `set_value` full-replace clears the history.  `undo()` and
+`redo()` restore the previous grid **and push it to the browser**, so the
+rendered grid updates in place (no need to call `set_value`).
 
-## `add_control_group`
+Register a single coarse-grained callback with `on_change` to be notified when
+many cells change at once — it fires **once** with the full table value
+(`{"columns": [...], "rows": [[...]]}`) on every undo/redo (browser Ctrl+Z /
+Ctrl+Shift+Z / Ctrl+Y), instead of one `on_cell_change` per cell.
 
-Groups controls into a titled, collapsible
-[`GroupView`](control-views.md#groupview) anchored as an overlay (optionally
-attached to a 3D object):
+## `FileChooserView`
+
+A backend-driven directory-listing view (no path field or "Browse…" button —
+compose those yourself, or use `FileChooserDialog`).  See
+[File Chooser](../app/file-chooser.md).
+
+## `LabelView` / `MarkdownView`
+
+Read-only display views: `LabelView("id", value="…", font_size=14)` renders a
+single text line and `MarkdownView("id", value="…")` renders markdown with
+optional KaTeX math.  Both carry a settable `value` (use `view.set_value(...)`).
+See [Control Views](control-views.md) for the full signatures.
+
+## Grouping (`GroupView`)
+
+Group controls into a titled, collapsible [`GroupView`](control-views.md#groupview),
+anchored over a scene (or attached to a 3D object) or used as a split pane:
 
 ```python
-self.viz.add_control_group(
-    "viewport_controls",
-    title="Controls",
-    controls=["sphere_b_x", "mode", "reset"],
+GroupView(
+    "Controls",
+    [sphere_b_x_view, mode_view, reset_view],
     position="bottom-right",
 )
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `gid` | `str` | *(required)* | Group ID |
-| `title` | `str` | `""` | Group header (empty = no header) |
-| `icon` | `Icon` | `None` | Optional title-bar icon (see [Icons](#icons)) |
-| `tooltip` | `str` | `""` | Hover tooltip for the title bar |
-| `controls` | `list[str]` | `[]` | Ordered list of control IDs |
-| `position` | `EAnchor` | `"bottom-right"` | Corner anchors (`top-left`/`top-right`/`bottom-left`/`bottom-right`) or centered edge anchors (`top`/`bottom`/`left`/`right`) |
-| `collapsed` | `bool` | `False` | Start collapsed |
-| `parent_id` | `str` | `None` | Entity id to attach the group to (follows it in 3D) instead of anchoring it in the overlay |
-| `on_toggle` | `Callable` | `None` | Async callback: `(value: bool, event: ControlEvent) -> None` |
-
-Controls must be created **before** the group that references them.
-
-Groups render identically in **single-scene** and **layout** modes: without
-`parent_id` they anchor in the overlay (`position`); with `parent_id` they
-attach to that entity.  See `py/examples/viz/scenes/control_group_overlay.py`
-(layout mode) and `py/examples/viz/scenes/control_group_single.py`
-(single-scene mode).
+`position` anchors the group over a scene canvas (`top-left` / `top-right` /
+`bottom-left` / `bottom-right`, or centered edges `top` / `bottom` / `left` /
+`right`); `parent_id` attaches it to a 3D entity instead.  See the full
+signature on the [Control Views](control-views.md#groupview) page.
 
 ## Icons
 
@@ -305,68 +355,36 @@ string such as `"material:home"`:
 ```python
 from pytanga.viz import EIconMaterial, EIconUC
 
-self.viz.add_button("delete", icon=EIconMaterial.DELETE, icon_only=True)
-self.viz.add_control_group("g", title="Settings", icon=EIconUC.GEAR)
+ButtonView("delete", icon=EIconMaterial.DELETE, icon_only=True)
+GroupView("Settings", [settings_view], icon=EIconUC.GEAR)
 ```
 
 ## Tooltips
 
-Every control — and the control-group title bar — accepts a `tooltip` string,
+Every control — and the `GroupView` title bar — accepts a `tooltip` string,
 rendered as a native `title` hover tooltip. Icon-only buttons show their
 tooltip (or label) as the button's accessible name.
 
-## Removing controls
-
-```python
-self.viz.remove_control("sphere_b_x")
-self.viz.remove_control_group("viewport_controls")
-self.viz.clear_controls()  # remove all
-```
-
 ## Updating control values
 
-After a control has been created, its value can be updated from the backend
-**in place** — the panel is not rebuilt, so collapse, drag, and focus state are
-preserved:
+A control view can be updated from the backend **in place** — the layout is not
+rebuilt, so collapse, drag, and focus state are preserved:
 
 ```python
-# Panel / add_* controls
-self.viz.set_control_value("radius", 3.0)
+radius_view.set_value(3.0)            # sets + pushes control_update to the browser
 
-# Scene-scoped controls
-detail.set_control_value("radius", 3.0)
-
-# Layout control views
-self.viz.set_control_view_value(radius_view, 3.0)
+value = radius_view.control.get_value()   # read the current value
+radius_view.control.set_value(3.0)        # model-only (no push)
 ```
 
-`update_control` also accepts a `value=` keyword and routes it through
-`set_control_value`:
-
-```python
-self.viz.update_control("radius", value=3.0)
-detail.update_control("radius", label="Radius (m)")  # scene-scoped
-```
-
-## Scene-scoped controls
-
-Controls are scoped per-scene — when using :class:`VizSceneHandle`, controls
-are created on the target scene and only appear for browsers viewing that
-scene:
-
-```python
-detail = viz.scene("detail")
-detail.add_slider("radius", label="Radius", min=0.1, max=5.0, on_change=on_radius)
-detail.add_button("reset", label="Reset", on_click=on_reset)
-detail.add_control_group("detail_controls", controls=["radius", "reset"], title="Detail")
-```
-
-Controls and groups are pushed only to browsers viewing the ``"detail"`` scene.
-This allows different scenes to have completely independent control panels.
+`view.set_value(...)` is the push path: it mutates the wrapped control and sends
+a `control_update`, so the browser reflects the change immediately. `view.control`
+exposes the raw model (`get_value` / `set_value`, and `Table` `undo` / `redo` /
+`clear_history`).
 
 ## Example
 
-- `py/examples/viz/interaction/all_controls.py` — one of every control kind in
+- `py/examples/viz/ui/controls/all_controls.py` — one of every control kind in
   a single app.
-- `py/examples/viz/interaction/table_data.py` — an editable table control with
+- `py/examples/viz/ui/controls/table_data.py` — an editable table control with
   cell / row / column handlers.

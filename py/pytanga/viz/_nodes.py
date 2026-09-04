@@ -142,6 +142,16 @@ class Transform:
         """Alias for :meth:`set_matrix`."""
         return self.set_matrix(m)
 
+    @classmethod
+    def from_operator(cls, op: TransformOperator) -> "Transform":
+        """Build a ``Transform`` from a GA operator (``Translator``/``Rotor``/
+        ``GeneralRotor``/``Motor``/``Dilator``).
+
+        Uses the same ``operator_to_matrix`` conversion that
+        :meth:`VizSceneObject.apply_transform` relies on.
+        """
+        return cls().set_matrix(_T.operator_to_matrix(op))
+
     def apply_matrix(self, m: Any, space: str = "local") -> "Transform":
         """Compose with *m* in local or world space.
 

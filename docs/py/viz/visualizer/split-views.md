@@ -22,10 +22,14 @@ the leaves render content:
 | `View` | Base for every pane/container. Exposes per-axis preferred/min/max sizes. |
 | `SplitView` | A container that lays children out along one axis with draggable splitters. |
 | `StackView` | A flex container that stacks children vertically, horizontally, or wraps. |
+| `ToolbarView` | A horizontal `StackView` row with a thin border, inner margin, and configurable alignment. |
 | `SceneView` | A pane that renders a named scene (`scene` name or handle), optionally with overlay views. |
 | `GroupView` | A titled `StackView` (panel chrome) for grouping control views; usable as a pane or a scene overlay. |
 | `MenuView` | A hamburger dropdown or a permanent horizontal `bar` of options, with nestable sub-menus. |
 | `SliderView` / `ButtonView` / `DropdownView` / `TableView` | A single HTML control rendered as a `View`. |
+| `LabelView` / `MarkdownView` | Read-only display text / rendered markdown (with KaTeX math) as a `View`. |
+| `LogView` | A live, auto-scrolling two-column (time \| message) log with a history cap and JSON-lines file I/O. |
+| `SeparatorView` | A thin 1px divider line with spacing; auto-oriented perpendicular to its container. |
 | `SpacerView` | An empty, fully-flexible filler pane. |
 
 Containers are themselves `View`s, so layouts nest freely.
@@ -50,6 +54,45 @@ so its natural `preferred_height` is its controls plus that chrome. The chrome
 is measured from the rendered DOM, so it follows the active theme's fonts and
 paddings; collapsing a `GroupView` sizes it to just the title bar's bottom
 border (the drawn rule).
+
+## Display Views
+
+Three read-only content views render text, markdown, and a live log inside a
+layout (no scene required):
+
+| Class | Purpose |
+|-------|---------|
+| `LabelView` | A single line of text with a configurable `font_size` (default `14` px). |
+| `MarkdownView` | A multi-line block of rendered markdown with KaTeX math (`$…$` / `$$…$$`). |
+| `LogView` | A live, auto-scrolling two-column (time \| message) log. |
+
+`LabelView` and `MarkdownView` are **display-only controls**: they carry a
+`value` and can be updated in place after creation via `view.set_value(value)`,
+which pushes the same `control_update` message used by every other control:
+
+```python
+label = LabelView("label", value="hello", font_size=20)
+markdown = MarkdownView("md", value="# Title\n\n$E = mc^2$")
+```
+
+`LogView` is not a control — its lines are appended from the backend, so it has
+its own `log_update` push.  `log()` captures a UTC timestamp and accepts either
+a string (stored as `message`) or a dict (whose keys are folded into the line);
+the frontend shows `message`, falling back to JSON of the other keys:
+
+```python
+log = LogView(id="log", max_history=1000)   # None = unlimited
+log.log("plain line")
+log.log({"message": "structured", "level": "info"})
+log.get_log()          # -> list[dict] (copies)
+log.write_file(path)   # JSON lines (one dict per line)
+log.load_file(path)    # replace (truncated to max_history)
+log.clear()
+```
+
+Rows alternate shading, new lines auto-scroll into view (unless the user has
+scrolled up), and `max_history` drops the oldest lines on both the backend and
+the browser.
 
 ## Fixed vs. Movable Splitters
 
@@ -89,7 +132,7 @@ SplitView(
 
 Each divider between neighboring panes is independently draggable when a
 non-fixed pane sits on each side of it. `sizes`, when given, needs one entry
-per child. See `py/examples/viz/scenes/multi_split.py` for a runnable
+per child. See `py/examples/viz/ui/layout/multi_split.py` for a runnable
 three-pane example.
 
 ## Stacks and Controls
@@ -124,7 +167,7 @@ stacks its children vertically.
 
 ### Spacing, alignment, and flexible children
 
-`StackView` and `GroupView` accept three layout-policy keywords:
+`StackView`, `GroupView`, and `ToolbarView` accept three layout-policy keywords:
 
 - `gap` — spacing between children in pixels. `None` uses the default `4` px;
   `0` removes the spacing.
@@ -132,6 +175,10 @@ stacks its children vertically.
   `"stretch"` (default).
 - `justify` — main-axis packing: `"start"` (default), `"center"`, `"end"`,
   `"space-between"`, `"space-around"`, or `"space-evenly"`.
+
+`direction`, `align`, and `justify` also accept the `EStackDirection`,
+`EStackAlign`, and `EStackJustify` enums (the same names with an `E` prefix);
+the plain strings above remain valid and equivalent.
 
 A child's `preferred_*` along the container's **main** axis maps to CSS flex
 (`flex: <grow> <shrink> <basis>`):
@@ -185,8 +232,34 @@ controls = StackView(
 ```
 
 Add `scrollable=True` to a toolbar row to scroll horizontally instead of
-clipping when it is too narrow. See `py/examples/viz/scenes/toolbar.py` for a
+clipping when it is too narrow. See `py/examples/viz/ui/controls/toolbar.py` for a
 runnable toolbar example.
+
+### ToolbarView
+
+`ToolbarView` is a dedicated horizontal toolbar: a `StackView("horizontal", ...)`
+with a thin border and an inner margin, plus one setting to align its controls
+left / right / block-centered / equally spaced:
+
+```python
+ToolbarView(
+    [ButtonView("cut", label="Cut"), ButtonView("copy", label="Copy"), ButtonView("paste", label="Paste")],
+    gap=8,
+    justify=EStackJustify.SPACE_EVENLY,
+)
+```
+
+- `margin` — the inner spacing between the border and the controls (a `Size`,
+  default `Size.px(6)`; `None` removes it).
+- `border` — whether to draw the thin outline (default `True`).
+- `gap` — spacing between the controls (px, default `None` → `4`).
+- `align` — vertical alignment of the controls (`EStackAlign.CENTER` by default).
+- `justify` — horizontal placement of the controls; the four toolbar alignments
+  are `EStackJustify.START` (left), `END` (right), `CENTER` (block-centered),
+  and `SPACE_EVENLY` (equally spaced).
+
+See `py/examples/viz/ui/controls/toolbar.py` for a four-pane example showing all four
+alignments.
 
 ## Overlays
 

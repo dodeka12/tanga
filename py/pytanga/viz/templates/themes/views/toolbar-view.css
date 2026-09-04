@@ -1,0 +1,17 @@
+/* Tanga viewer — toolbar chrome (thin border + radius for the horizontal row). */
+
+.tanga-toolbar {
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+}
+
+.tanga-toolbar.tanga-toolbar-borderless {
+    border: none;
+}
+
+/* Toolbar-variant controls (slider, dropdown) get a little extra horizontal
+ * breathing room so their wider fields don't crowd the adjacent controls. */
+.tanga-toolbar-item {
+    margin-left: 6px;
+    margin-right: 6px;
+}

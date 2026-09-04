@@ -17,6 +17,17 @@ export const MAX_STEPS = 256;
 // identity and never read).
 export const MAX_GROUP_MEMBERS = 16;
 
+// Smooth-blend radius default for the `smooth_*` fold modes (matches
+// `sdf/composer.js`). A member with no explicit `smoothness` uses this.
+const GROUP_SMOOTHNESS_DEFAULT = 0.1;
+
+function _groupSmoothness(child) {
+    const k = Number(
+        child.smoothness != null ? child.smoothness : GROUP_SMOOTHNESS_DEFAULT,
+    );
+    return Number.isFinite(k) ? k : GROUP_SMOOTHNESS_DEFAULT;
+}
+
 export function buildProxyVertex() {
     return `
 out vec3 vLocalPos;
@@ -49,6 +60,7 @@ function buildGroupMap(ent) {
     lines.push('    float m = 0.0;');
     children.forEach((child, i) => {
         const combine = (child.combine || 'union').toLowerCase();
+        const k = _groupSmoothness(child);
         const local = hasTransforms
             ? `(uMemberInvTransform[${i}] * vec4(p, 1.0)).xyz`
             : 'p';
@@ -62,6 +74,18 @@ function buildGroupMap(ent) {
         } else if (combine === 'xor') {
             lines.push(`    if (d${i} < d) m = ${i}.0;`);
             lines.push(`    d = opXor(d, d${i});`);
+        } else if (combine === 'smooth_subtract') {
+            // The cut contributes no material; the material stays with `d`.
+            lines.push(`    vec2 sm${i} = opSmoothSubtract(d, d${i}, ${k});`);
+            lines.push(`    d = sm${i}.x;`);
+        } else if (combine === 'smooth_intersection') {
+            lines.push(`    vec2 sm${i} = opSmoothIntersect(d, d${i}, ${k});`);
+            lines.push(`    d = sm${i}.x;`);
+            lines.push(`    m = mix(${i}.0, m, sm${i}.y);`);
+        } else if (combine === 'smooth_union') {
+            lines.push(`    vec2 sm${i} = opSmoothUnion(d, d${i}, ${k});`);
+            lines.push(`    d = sm${i}.x;`);
+            lines.push(`    m = mix(${i}.0, m, sm${i}.y);`);
         } else {
             lines.push(`    if (d${i} < d) m = ${i}.0;`);
             lines.push(`    d = opUnion(d, d${i});`);

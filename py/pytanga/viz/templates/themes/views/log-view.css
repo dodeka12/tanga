@@ -1,0 +1,31 @@
+/* Tanga viewer — live log view (two-column rows with alternating shading). */
+
+.tanga-log-view {
+    font-family: var(--tanga-font);
+    color: var(--tanga-fg);
+    background: var(--tanga-bg);
+}
+
+.tanga-log-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--tanga-border-subtle);
+}
+
+.tanga-log-row:nth-child(even) {
+    background: var(--tanga-surface);
+}
+
+.tanga-log-time {
+    color: var(--tanga-fg-muted);
+    font-family: monospace;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.tanga-log-message {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

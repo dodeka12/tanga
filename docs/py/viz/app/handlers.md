@@ -12,14 +12,14 @@ Derive from `VisualizerApp`, override `init()` and `cleanup()`, and call
 `run()` from your `main()` function:
 
 ```python
-from pytanga.viz import ControlEvent, VisualizerApp
+from pytanga.viz import ControlEvent, SliderView, VisualizerApp
 
 class MyApp(VisualizerApp):
     def __init__(self):
         super().__init__(title="My Scene")
 
     async def init(self) -> None:
-        self.viz.add_slider("x", on_change=self.on_x)
+        self.viz.add(SliderView("x", on_change=self.on_x))
 
     async def on_x(self, value: float, event: ControlEvent) -> None:
         self.viz.flush()
@@ -99,8 +99,7 @@ async def on_mode(self, mode: str, event: ControlEvent) -> None:
 async def on_reset(self, _: None, event: ControlEvent) -> None:
     """Called when the button is clicked."""
     self._x = 2.5
-    self.viz.clear_controls()
-    self._setup_controls()
+    self._x_slider.set_value(2.5)   # update the slider in place (set + push)
 ```
 
 The :class:`ControlEvent` currently carries a ``browser_id`` attribute that

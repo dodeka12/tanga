@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from ._viz_styles import VizStyles
     from .visualizer import Visualizer
 
-from ._anchor import EAnchor
-from ._icons import Icon
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
 from ._timeline import Timeline
@@ -52,7 +50,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
     def _scene(self) -> Scene:
         """Return the underlying Scene object."""
-        return self._viz._scenes[self._name]
+        return self._viz._layout.scene(self._name)
 
     @property
     def name(self) -> str:
@@ -103,8 +101,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
         See :meth:`Visualizer.add` for full documentation.
         """
-        return self._viz._add_to_scene(
-            self._name,
+        return self._scene().add_viz(
             obj=obj,
             entity_id=entity_id,
             color=color,
@@ -139,8 +136,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Like :meth:`add`, but returns a :class:`VizObjectRef` for the node."""
         from ._object_ref import VizObjectRef
 
-        eid = self._viz._add_to_scene(
-            self._name,
+        eid = self._scene().add_viz(
             obj=obj,
             entity_id=entity_id,
             color=color,
@@ -328,268 +324,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
     # ── Interactive Controls ─────────────────────────────────
 
-    def add_slider(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.01,
-        value: float | None = None,
-        on_change: Any = None,
-        on_press: Any = None,
-        on_release: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a slider control to this scene."""
-        return self._viz._add_scene_slider(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            value=value,
-            on_change=on_change,
-            on_press=on_press,
-            on_release=on_release,
-            parent_id=parent_id,
-        )
-
-    def add_dropdown(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        options: list[str] | None = None,
-        value: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a dropdown control to this scene."""
-        return self._viz._add_scene_dropdown(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            options=options,
-            value=value,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_button(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        icon: Icon | None = None,
-        icon_only: bool = False,
-        tooltip: str = "",
-        on_click: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a button control to this scene."""
-        return self._viz._add_scene_button(
-            self._name,
-            cid,
-            label=label,
-            icon=icon,
-            icon_only=icon_only,
-            tooltip=tooltip,
-            on_click=on_click,
-            parent_id=parent_id,
-        )
-
-    def add_file_chooser(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        value: str = "",
-        placeholder: str = "",
-        root: str | None = None,
-        accept: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a file chooser control to this scene."""
-        return self._viz._add_scene_file_chooser(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            value=value,
-            placeholder=placeholder,
-            root=root,
-            accept=accept,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_text_field(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a single-line text input control to this scene."""
-        return self._viz._add_scene_text_field(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_text_area(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        rows: int = 4,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a multi-line text input control to this scene."""
-        return self._viz._add_scene_text_area(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            rows=rows,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_table(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        columns: list[str] | None = None,
-        rows: list[list[str]] | None = None,
-        allow_add_rows: bool = True,
-        allow_add_columns: bool = True,
-        allow_delete_rows: bool = True,
-        max_history: int = 100,
-        tooltip: str = "",
-        on_cell_change: Any = None,
-        on_row_add: Any = None,
-        on_column_add: Any = None,
-        on_row_delete: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add an editable table (tabular data) control to this scene."""
-        return self._viz._add_scene_table(
-            self._name,
-            cid,
-            label=label,
-            columns=columns,
-            rows=rows,
-            allow_add_rows=allow_add_rows,
-            allow_add_columns=allow_add_columns,
-            allow_delete_rows=allow_delete_rows,
-            max_history=max_history,
-            tooltip=tooltip,
-            on_cell_change=on_cell_change,
-            on_row_add=on_row_add,
-            on_column_add=on_column_add,
-            on_row_delete=on_row_delete,
-            parent_id=parent_id,
-        )
-
-    def add_color_picker(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "#ffffff",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a color picker control to this scene."""
-        return self._viz._add_scene_color_picker(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_checkbox(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: bool = False,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a checkbox control to this scene."""
-        return self._viz._add_scene_checkbox(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_value_edit(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.1,
-        digits: int = 2,
-        editable: bool = True,
-        value: float | None = None,
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a numeric value-edit (stepper) control to this scene."""
-        return self._viz._add_scene_value_edit(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            digits=digits,
-            editable=editable,
-            value=value,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
     def open_file_chooser(self, cid: str, *, path: str | None = None) -> None:
         """Open the file browser dialog for control *cid*."""
         self._viz.open_file_chooser(cid, scene_name=self._name, path=path)
@@ -597,104 +331,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def close_file_chooser(self, cid: str) -> None:
         """Close the file browser dialog for control *cid*."""
         self._viz.close_file_chooser(cid, scene_name=self._name)
-
-    def add_control_group(
-        self,
-        gid: str,
-        *,
-        title: str = "",
-        icon: Icon | None = None,
-        tooltip: str = "",
-        controls: list[str] | None = None,
-        position: EAnchor = EAnchor.BOTTOM_RIGHT,
-        collapsed: bool = False,
-        parent_id: str | None = None,
-        on_toggle: Any = None,
-    ) -> str:
-        """Create a UI control group in this scene."""
-        return self._viz._add_scene_group(
-            self._name,
-            gid,
-            title=title,
-            icon=icon,
-            tooltip=tooltip,
-            controls=controls,
-            position=position,
-            collapsed=collapsed,
-            parent_id=parent_id,
-            on_toggle=on_toggle,
-        )
-
-    def add_menu(
-        self,
-        mid: str | None = None,
-        *,
-        label: str = "",
-        trigger_icon: Icon | None = None,
-        mode: str = "dropdown",
-        direction: str | None = None,
-        position: EAnchor | None = None,
-        override_variant: bool = True,
-        children: list[Any] | None = None,
-    ) -> str:
-        """Add a global menu (only valid for the base scene ``""``).
-
-        Non-base scenes raise :class:`NotImplementedError`; declare per-pane
-        menus instead via ``SceneView(overlay=[MenuView(...)])``.
-        """
-        return self._viz.add_menu(
-            mid,
-            label=label,
-            trigger_icon=trigger_icon,
-            mode=mode,
-            direction=direction,
-            position=position,
-            override_variant=override_variant,
-            children=children,
-            scene_name=self._name,
-        )
-
-    def remove_control(self, cid: str) -> None:
-        """Remove a control from this scene."""
-        self._viz._remove_scene_control(self._name, cid)
-
-    def set_control_value(self, cid: str, value: Any) -> None:
-        """Update a control's value in place (see :meth:`Visualizer.set_control_value`)."""
-        self._viz.set_control_value(cid, value, scene_name=self._name)
-
-    def undo_table(self, cid: str) -> bool:
-        """Undo the last edit of the table control (see :meth:`Visualizer.undo_table`)."""
-        return self._viz.undo_table(cid)
-
-    def redo_table(self, cid: str) -> bool:
-        """Redo the last undone edit of the table control (see :meth:`Visualizer.redo_table`)."""
-        return self._viz.redo_table(cid)
-
-    def clear_table_history(self, cid: str) -> None:
-        """Clear the table control's undo/redo history."""
-        self._viz.clear_table_history(cid)
-
-    def can_undo_table(self, cid: str) -> bool:
-        """Return whether the table control can be undone."""
-        return self._viz.can_undo_table(cid)
-
-    def can_redo_table(self, cid: str) -> bool:
-        """Return whether the table control can be redone."""
-        return self._viz.can_redo_table(cid)
-
-    def update_control(self, ctrl_id: str, **fields: Any) -> None:
-        """Mutate fields of a stored control (see :meth:`Visualizer.update_control`)."""
-        self._viz.update_control(ctrl_id, scene_name=self._name, **fields)
-
-    def remove_control_group(self, gid: str) -> None:
-        """Remove a UI control group from this scene."""
-        self._viz._remove_scene_group(self._name, gid)
-
-    def clear_controls(self) -> None:
-        """Remove all controls and groups from this scene."""
-        self._viz._clear_scene_controls(self._name)
-
-    # ── Banners ──────────────────────────────────────────────
 
     def show_banner(
         self,

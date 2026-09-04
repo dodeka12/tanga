@@ -39,7 +39,6 @@ from ._controls import (
     Checkbox,
     ColorPicker,
     ControlEvent,
-    ControlGroup,
     Dropdown,
     EControlVariant,
     FileChooser,
@@ -73,7 +72,7 @@ from ._interaction import (
 )
 from ._keys import KeyModifier
 from ._label import Label
-from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
+from ._nodes import Transform, VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
 from ._scale import LinearScale, LogScale, Scale
@@ -168,10 +167,17 @@ from .views import (
     ColorPickerView,
     ControlView,
     DropdownView,
+    EStackAlign,
+    EStackDirection,
+    EStackJustify,
     FileChooserView,
     GroupView,
+    LabelView,
+    LogView,
+    MarkdownView,
     MenuView,
     SceneView,
+    SeparatorView,
     SliderView,
     SpacerView,
     SplitView,
@@ -179,6 +185,7 @@ from .views import (
     TableView,
     TextAreaView,
     TextFieldView,
+    ToolbarView,
     ValueEditView,
     View,
 )
@@ -218,7 +225,6 @@ __all__ = [
     "ClickEvent",
     "ControlEvent",
     "CircleStyle",
-    "ControlGroup",
     "fit_view2d",
     "ControlView",
     "GroupView",
@@ -240,6 +246,9 @@ __all__ = [
     "EControlVariant",
     "EIconMaterial",
     "EIconUC",
+    "EStackAlign",
+    "EStackDirection",
+    "EStackJustify",
     "EllipseStyle",
     "EllipsoidStyle",
     "FigureConfig",
@@ -263,7 +272,10 @@ __all__ = [
     "KeyModifier",
     "Label",
     "LabelStyle",
+    "LabelView",
     "LineStyle",
+    "LogView",
+    "MarkdownView",
     "LinearScale",
     "LogScale",
     "ModifierKey",
@@ -286,6 +298,7 @@ __all__ = [
     "SceneExporter",
     "SceneView",
     "ScrollEvent",
+    "SeparatorView",
     "SdfBoxStyle",
     "SdfCircleStyle",
     "SdfCylinderStyle",
@@ -324,6 +337,8 @@ __all__ = [
     "gradient_colors",
     "multi_gradient_colors",
     "TitleStyle",
+    "ToolbarView",
+    "Transform",
     "TranslatorStyle",
     "ValueEdit",
     "ValueEditView",

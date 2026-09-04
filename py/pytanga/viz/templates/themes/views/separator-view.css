@@ -1,0 +1,14 @@
+/* Tanga viewer — separator (thin 1px divider line; spacing via inline margin). */
+
+.tanga-separator {
+    align-self: stretch;
+    background: var(--tanga-border-strong);
+}
+
+.tanga-separator-vertical {
+    width: 1px;
+}
+
+.tanga-separator-horizontal {
+    height: 1px;
+}

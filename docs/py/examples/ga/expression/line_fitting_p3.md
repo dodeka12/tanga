@@ -87,9 +87,7 @@ def main() -> None:
 
     # Noisy sample points scattered near the x-axis.
     n = 20
-    points = geo(
-        RndPoint((-3.0, 3.0), Normal(0.0, 0.2), Normal(0.0, 0.2), count=n)
-    )
+    points = geo(RndPoint((-3.0, 3.0), Normal(0.0, 0.2), Normal(0.0, 0.2), count=n))
 
     # Partially evaluate P over all sample points: a linear map in L whose
     # counting axis stacks the per-point incidence constraints.

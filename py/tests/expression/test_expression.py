@@ -5,7 +5,7 @@
 
 import pytest
 
-from pytanga import BladeMask, DataArray
+from pytanga import BladeMask, DataArray, MV
 from pytanga.basis import BasisE3, BasisN3
 from pytanga.geometry import Direction, Geometry, Motor, Point, Rotor, Translator
 from pytanga.geometry.create_e3 import create_rotor
@@ -49,6 +49,63 @@ class TestExpression:
         x = self._mv({"e1": 1.0, "e2": 4.0})
         assert _close((v | a)(V1=x), x | a)
         assert _close((v ^ a)(V1=x), x ^ a)
+
+    def test_reflected_op_constant_left_expression(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        a = self._mv({"e1": 2.0})
+        inner = v1 | v2  # Expression with both variables
+        e = a ^ inner
+        assert isinstance(e, Expression)
+        assert set(e.names) == {"V1", "V2"}
+        x = self._mv({"e1": 1.0})
+        y = self._mv({"e2": 3.0})
+        assert _close(e(V1=x, V2=y), a ^ (x | y))
+
+    def test_bind_returns_partial_expression(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        e = v1 * v2
+        x = self._mv({"e1": 2.0})
+        partial = e.bind(V1=x)
+        assert isinstance(partial, Expression)
+        assert set(partial.names) == {"V2"}
+        y = self._mv({"e2": 3.0})
+        assert _close(partial(V2=y), x * y)
+
+    def test_bind_raises_on_full_collapse(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        e = v1 * v2
+        x = self._mv({"e1": 2.0})
+        y = self._mv({"e2": 3.0})
+        with pytest.raises(ValueError):
+            e.bind(V1=x, V2=y)
+
+    def test_evaluate_returns_mv(self):
+        v = Variable("V1", self.full)
+        a = self._mv({"e1": 2.0})
+        e = v * a
+        x = self._mv({"e1": 3.0})
+        result = e.evaluate(V1=x)
+        assert isinstance(result, MV)
+        assert _close(result, x * a)
+
+    def test_evaluate_raises_on_partial(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        e = v1 * v2
+        x = self._mv({"e1": 2.0})
+        with pytest.raises(ValueError):
+            e.evaluate(V1=x)
+
+    def test_evaluate_raises_on_batched(self):
+        v = Variable("V1", self.full)
+        a = self._mv({"e1": 2.0})
+        e = v * a
+        xs = [self._mv({"e1": 1.0}), self._mv({"e2": 3.0})]
+        with pytest.raises(ValueError):
+            e.evaluate(V1=DataArray(xs, masks=("n", self.full)))
 
     def test_two_variables(self):
         v1 = Variable("V1", self.full)

@@ -8,7 +8,7 @@ import threading
 
 import pytest
 
-from pytanga.viz import Visualizer
+from pytanga.viz import SliderView, Visualizer
 from pytanga.viz._banner import (
     Banner,
     serialize_banner,
@@ -110,7 +110,7 @@ def _viz() -> Visualizer:
 def test_show_banner_stores_registers_pushes(monkeypatch):
     viz = _viz()
     pushed: list[tuple] = []
-    monkeypatch.setattr(viz, "_push_banner", lambda b, s: pushed.append((b.id, s)))
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: pushed.append((b.id, s)))
 
     async def _on_ok(value, event):
         pass
@@ -136,7 +136,7 @@ def test_show_banner_auto_id_unique():
 
 def test_show_banner_explicit_id_reuse_raises(monkeypatch):
     viz = _viz()
-    monkeypatch.setattr(viz, "_push_banner", lambda b, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
     viz.show_banner("a", id="dup")
     with pytest.raises(ValueError):
         viz.show_banner("b", id="dup")
@@ -145,8 +145,8 @@ def test_show_banner_explicit_id_reuse_raises(monkeypatch):
 def test_remove_banner_unregisters_and_pushes(monkeypatch):
     viz = _viz()
     removed: list = []
-    monkeypatch.setattr(viz, "_push_banner", lambda b, s: None)
-    monkeypatch.setattr(viz, "_push_banner_remove", lambda i, s: removed.append((i, s)))
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner_remove", lambda i, s: removed.append((i, s)))
 
     async def _on_ok(value, event):
         pass
@@ -170,8 +170,8 @@ def test_remove_banner_unregisters_and_pushes(monkeypatch):
 def test_clear_banners_scoped(monkeypatch):
     viz = _viz()
     cleared: list = []
-    monkeypatch.setattr(viz, "_push_banner", lambda b, s: None)
-    monkeypatch.setattr(viz, "_push_banner_clear", lambda s: cleared.append(s))
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner_clear", lambda s: cleared.append(s))
 
     viz.show_banner("a")
     viz.show_banner("b", scene_name="detail")
@@ -185,7 +185,7 @@ def test_clear_banners_scoped(monkeypatch):
 def test_alert_confirm_buttons(monkeypatch):
     viz = _viz()
     pushed: dict = {}
-    monkeypatch.setattr(viz, "_push_banner", lambda b, s: pushed.update({b.id: b}))
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: pushed.update({b.id: b}))
 
     async def _ok(value, event):
         pass
@@ -244,7 +244,7 @@ async def test_show_banner_async_awaits_push(monkeypatch):
     async def _push(banner, scene_name):
         pushed.append((banner.id, scene_name))
 
-    monkeypatch.setattr(viz, "_push_banner_async", _push)
+    monkeypatch.setattr(viz._layout.overlay, "_push_banner_async", _push)
 
     bid = await viz.show_banner_async("hi")
     assert pushed == [(bid, None)]
@@ -298,16 +298,6 @@ def test_scene_handle_confirm_scopes(monkeypatch):
     assert calls[0]["cancel_label"] == "Abort"
 
 
-def test_scene_handle_update_control_scopes(monkeypatch):
-    viz = _viz()
-    handle = viz.scene("detail")
-    calls: list = []
-    monkeypatch.setattr(viz, "update_control", lambda *a, **kw: calls.append(kw))
-    handle.update_control("s", label="Speed", min=1.0)
-    assert calls[0]["scene_name"] == "detail"
-    assert calls[0]["label"] == "Speed"
-    assert calls[0]["min"] == 1.0
-
 
 # ── Phase 6.2 — slider press/release events ─────────────────
 
@@ -324,12 +314,12 @@ def test_add_slider_press_release_registration():
     async def _on_release(v, e):
         pass
 
-    viz.add_slider(
+    viz.set_layout(SliderView(
         "s",
         on_change=_on_change,
         on_press=_on_press,
         on_release=_on_release,
-    )
+    ))
     assert viz._handler_registry.get("s") is _on_change
     assert viz._handler_registry.get("s", "press") is _on_press
     assert viz._handler_registry.get("s", "release") is _on_release
@@ -358,3 +348,20 @@ async def test_dispatch_press_and_release():
     )
     assert press_calls == [1.0]
     assert release_calls == [2.0]
+
+
+def test_overlay_banner_direct_lifecycle():
+    viz = _viz()
+    overlay = viz._layout.overlay
+
+    async def _on_ok(value, event):
+        pass
+
+    bid = overlay.show_banner("hi", controls=[Button(id="ok", on_click=_on_ok)])
+    assert bid == "banner_1"
+    assert overlay._banners[None][bid].text == "hi"
+    assert viz._handler_registry.get("ok", "click") is _on_ok
+
+    overlay.remove_banner(bid)
+    assert bid not in overlay._banners[None]
+    assert viz._handler_registry.get("ok", "click") is None

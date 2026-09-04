@@ -10,24 +10,27 @@ For the underlying view model (sizes, splitters, panes), see
 [Controls](../interaction/controls.md).
 
 The plain scene URL that `VisualizerApp.run()` opens is itself a one-`SceneView`
-layout, so panel controls and `add_control_group` overlays render there exactly
-as they do inside a custom split layout — the two modes share one render path.
+layout, so a `GroupView` overlay (or any control view mounted via `viz.add`)
+renders there exactly as it does inside a custom split layout — the two modes
+share one render path.
 
 Flow containers (`StackView`/`GroupView`) accept `gap`/`align`/`justify`, and a
 child's `preferred_*` maps to CSS flex (e.g. `Size.fr(1)` fills the leftover
 space beside a button). See [Split Views](../visualizer/split-views.md) for the
 sizing model and the flex mapping table.
 
-## Two kinds of controls
+## Controls in a layout
 
-| Style | API | Where it appears | Use for |
-|-------|-----|------------------|---------|
-| Panel controls | `self.viz.add_slider` / `add_dropdown` / `add_button` / `add_control_group` | A floating panel overlaid on the scene | Simple, quick UIs without a custom layout |
-| View controls | `SliderView` / `DropdownView` / `ButtonView` (inside a `GroupView`/`StackView`) | A pane in your `SplitView` layout | A sidebar/toolbar next to one or more scene panes |
+Controls are declarative `*View` classes placed in a `GroupView`/`StackView`
+pane (or mounted in the overlay via `viz.add(view)`):
 
-Both use the same **async** handler contract — `(value, event)` — so a handler
-written for one style works with the other. The declarative view classes are
-documented in full in [Control Views (xxxView)](../interaction/control-views.md).
+| API | Where it appears | Use for |
+|-----|------------------|---------|
+| `SliderView` / `DropdownView` / `ButtonView` / `GroupView` (inside a `GroupView`/`StackView`) | A pane in your `SplitView` layout | A sidebar/toolbar next to one or more scene panes |
+| `viz.add(view)` | The default layout's overlay | Quick controls over a scene without a custom layout |
+
+The **async** handler contract is `(value, event)`. The declarative view classes
+are documented in full in [Control Views (xxxView)](../interaction/control-views.md).
 
 ## A split-view app
 
@@ -166,13 +169,13 @@ async def init(self):
     self.viz.flush()
 ```
 
-Controls can also be scoped per scene (see [Controls](../interaction/controls.md)); in a layout
-they're simply placed in whichever pane's `GroupView`/`StackView` you want.
+Controls live in layouts, not scenes: place them in whichever pane's
+`GroupView`/`StackView` (or overlay) you want.
 
 ## See Also
 
 - [Split Views](../visualizer/split-views.md) — the view hierarchy, `Size` units,
   splitters, overlays, and per-pane cameras
-- [Controls](../interaction/controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_control_group`
+- [Controls](../interaction/controls.md) — `SliderView`/`DropdownView`/`ButtonView`/`GroupView`
 - [Handlers & Lifecycle](handlers.md) — the handler contract and the app lifecycle
 

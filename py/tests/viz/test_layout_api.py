@@ -31,7 +31,7 @@ class TestSetLayout:
         layout = _layout()
         name = viz.set_layout(layout, name="demo")
         assert name == "demo"
-        assert viz._layouts["demo"] is layout
+        assert viz._layouts["demo"].base is layout
         assert viz._layouts_serialized["demo"] == serialize_layout(layout, name="demo")
 
     def test_default_name(self):
@@ -44,7 +44,7 @@ class TestSetLayout:
         b = SceneView("b")
         viz.set_layout(a, name="x")
         viz.set_layout(b, name="x")
-        assert viz._layouts["x"] is b
+        assert viz._layouts["x"].base is b
 
     def test_rejects_non_view(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -88,50 +88,37 @@ class TestControlHandlerRegistration:
         assert viz._handler_registry.get("b1") is None
 
 
-class TestAddControlGroup:
-    @staticmethod
-    async def _noop(value, event):
-        return None
-
-    def test_overlay_group(self):
+class TestSetValuePush:
+    def test_view_set_value_pushes_control_update(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.add_slider("s", label="S", on_change=self._noop)
-        viz.add_button("b", label="B", on_click=self._noop)
-        gid = viz.add_control_group("g", title="G", controls=["s", "b"], position="top-right")
-        assert gid == "g"
-        group = viz._scene_groups[""]["g"]
-        assert isinstance(group, GroupView)
-        assert group in viz._global_overlay
-        assert [c.id for c in group.children] == ["s", "b"]
-        # No legacy ControlGroup remains in the scene.
-        assert viz._scenes[""]._groups == {}
-        assert viz._grouped_control_ids("") == {"s", "b"}
-        overlay = viz._layouts_serialized[""]["overlay"]
-        assert overlay[0]["type"] == "group"
-        assert overlay[0]["title"] == "G"
-        assert "parent_id" not in overlay[0]
+        view = SliderView("radius", value=1.0)
+        viz.set_layout(view)
 
-    def test_parent_id_serializes_into_scene_overlay(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.add_slider("s", label="S")
-        assert viz.add_control_group("g", controls=["s"], parent_id="sphere") == "g"
-        group = viz._scene_groups[""]["g"]
-        # A parent_id group mounts per-pane (not in the global overlay).
-        assert group not in viz._global_overlay
-        assert group in viz._scene_overlays[""]
-        scene_node = viz._layouts_serialized[""]["root"]["children"][0]
-        assert scene_node["type"] == "scene_view"
-        assert scene_node["children"][0]["type"] == "group"
-        assert scene_node["children"][0]["parent_id"] == "sphere"
+        server = _FakeServer()
+        monkeypatch.setattr(viz, "_server", server)
+        monkeypatch.setattr(viz, "_loop", object())
+        monkeypatch.setattr(
+            asyncio,
+            "run_coroutine_threadsafe",
+            lambda coro, loop: asyncio.run(coro),
+        )
 
-    def test_on_toggle_registered(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        view.set_value(3.5)
 
-        async def _toggle(value, event):
-            return None
+        assert view.value == 3.5
+        msg = json.loads(server.captured[0])
+        assert msg == {
+            "type": "control_update",
+            "scene": "",
+            "id": "radius",
+            "value": 3.5,
+        }
 
-        viz.add_control_group("g", controls=[], on_toggle=_toggle)
-        assert viz._handler_registry.get("g", "toggle") is _toggle
+    def test_view_set_value_unmounted_only_mutates(self):
+        view = SliderView("radius", value=1.0)
+        assert view._push is None  # not yet mounted → no push callback
+        view.set_value(3.5)
+        assert view.value == 3.5
 
 
 class TestShowLayout:
@@ -143,12 +130,14 @@ class TestShowLayout:
         monkeypatch.setattr(
             viz,
             "_open_layout_browser",
-            lambda name, wait_for_browser, timeout=None: opened.setdefault("name", name),
+            lambda name, wait_for_browser, timeout=None: opened.setdefault(
+                "name", name
+            ),
         )
 
         viz.show(layout=layout, layout_name="demo")
 
-        assert viz._layouts["demo"] is layout
+        assert viz._layouts["demo"].base is layout
         assert opened["name"] == "demo"
 
     def test_show_layout_default_name(self, monkeypatch):
@@ -158,7 +147,9 @@ class TestShowLayout:
         monkeypatch.setattr(
             viz,
             "_open_layout_browser",
-            lambda name, wait_for_browser, timeout=None: opened.setdefault("name", name),
+            lambda name, wait_for_browser, timeout=None: opened.setdefault(
+                "name", name
+            ),
         )
 
         viz.show(layout=_layout())
@@ -220,27 +211,6 @@ class TestSetViewCamera:
 
 
 class TestMenuApi:
-    def test_add_menu_returns_id_and_reflected_in_layout(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.set_layout(SceneView("a"), name="demo")
-        mid = viz.add_menu(children=[ButtonView("b1", label="Go")])
-        assert mid == "menu_0"
-        payload = viz._layout_serialized_for("demo")
-        assert payload["overlay"][0]["type"] == "menu"
-
-    def test_add_menu_creates_default_layout_when_none(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        mid = viz.add_menu()
-        assert mid == "menu_0"
-        payload = viz._layout_serialized_for("")
-        assert payload["root"]["type"] == "stack"
-        assert payload["overlay"][0]["type"] == "menu"
-
-    def test_add_menu_per_scene_name_raises(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        with pytest.raises(NotImplementedError):
-            viz.add_menu(scene_name="other")
-
     def test_serialize_layout_overlay_omitted_when_empty(self):
         node = serialize_layout(SceneView("a"))
         assert "overlay" not in node
@@ -270,32 +240,6 @@ class TestSceneLayoutFor:
         assert scene_node["type"] == "scene_view"
         assert scene_node["scene"] == "detail"
 
-    def test_per_scene_overlay_appears_under_pane(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.scene("detail")
-        viz._add_scene_group("detail", "g", controls=[], parent_id="obj")
-        payload = viz._scene_layout_for("detail")
-        scene_node = payload["root"]["children"][0]
-        assert scene_node["children"][0]["type"] == "group"
-
-    def test_global_overlay_only_for_base_scene(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.scene("detail")
-        viz.add_menu()
-        base = viz._scene_layout_for("")
-        assert any(o["type"] == "menu" for o in base.get("overlay", []))
-        detail = viz._scene_layout_for("detail")
-        assert "overlay" not in detail
-
-    def test_cached_named_layout_refreshes_on_overlay_change(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.scene("detail")
-        viz._scene_layout_for("detail")  # populate the cache
-        viz._add_scene_group("detail", "g", controls=[], parent_id="obj")
-        payload = viz._scene_layout_for("detail")
-        scene_node = payload["root"]["children"][0]
-        assert scene_node["children"][0]["type"] == "group"
-
 
 class _FakeLayoutServer:
     def __init__(self, sessions):
@@ -324,19 +268,87 @@ class TestPushLayoutUpdates:
     def test_layout_session_gets_named_layout(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(SceneView("a"), name="demo")
-        viz._server = _FakeLayoutServer(
-            [{"id": "b1", "scene": "a", "layout": "demo"}]
-        )
+        viz._server = _FakeLayoutServer([{"id": "b1", "scene": "a", "layout": "demo"}])
         asyncio.run(viz._push_layout_updates())
         browser_id, payload = viz._server.pushed[0]
         assert browser_id == "b1"
         assert payload["name"] == "demo"
 
-    def test_overlay_change_schedules_repush(self, monkeypatch):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        scheduled = []
-        monkeypatch.setattr(
-            viz, "_push_layout_updates_threadsafe", lambda: scheduled.append(True)
-        )
-        viz.add_menu()
-        assert scheduled
+
+def test_layout_host_getitem_base_overlay():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    root = SceneView("a")
+    viz.set_layout(root, name="demo")
+    assert viz._layout["demo"].base is root
+    assert viz._layout.base is viz._layout[""].base
+    assert viz._layout.overlay is viz._layout[""].overlay
+
+
+def test_add_layout_conflict_raises():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.add_scene("a")
+    with pytest.raises(ValueError):
+        viz.add_layout(SceneView("b"), name="a")
+    viz.add_layout(SceneView("a"), name="ab")
+    assert viz._layout["ab"].base.scene == "a"
+
+
+def test_add_polymorphic_view_goes_to_overlay():
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    group = GroupView("panel", [SliderView("s")])
+    assert viz.add(group) is None
+    assert group in viz._layout._global_overlay
+
+
+def test_add_global_overlay_sends_granular_define(monkeypatch):
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    sent = []
+    monkeypatch.setattr(viz._transport, "send", lambda msg: sent.append(msg))
+
+    viz.add(GroupView("panel", [SliderView("s")]))
+
+    assert [m["type"] for m in sent] == ["overlay_define"]
+    # The cached layout is refreshed but no full `view_layout` is re-pushed.
+    assert viz._layout._layouts_serialized[""]["overlay"][0]["type"] == "group"
+
+
+def test_add_polymorphic_entity_goes_to_scene():
+    from pytanga.geometry.entities import Point
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    eid = viz.add(Point(0, 0, 0))
+    assert eid in viz._layout.scene("")._objects
+
+
+def test_views_have_stable_unique_ids():
+    a = GroupView("a")
+    b = GroupView("b")
+    assert a.id and b.id
+    assert a.id != b.id
+
+
+def test_remove_global_overlay_sends_granular_remove(monkeypatch):
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    group = GroupView("panel", [SliderView("s")])
+    viz.add(group)
+
+    sent = []
+    monkeypatch.setattr(viz._transport, "send", lambda msg: sent.append(msg))
+    viz.remove_view(group.id)
+
+    assert [m["type"] for m in sent] == ["overlay_remove"]
+    assert sent[0]["id"] == group.id
+    assert group not in viz._layout._global_overlay
+    assert "overlay" not in viz._layout._layouts_serialized[""]
+
+
+def test_remove_global_overlay_unknown_id_is_noop(monkeypatch):
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.add(GroupView("panel", [SliderView("s")]))
+
+    sent = []
+    monkeypatch.setattr(viz._transport, "send", lambda msg: sent.append(msg))
+    viz.remove_view("nope")
+
+    assert sent == []
+    assert len(viz._layout._global_overlay) == 1

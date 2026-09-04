@@ -55,6 +55,17 @@ def test_sdf_group_combine_modes_preserved() -> None:
     assert combines == ["union", "subtract"]
 
 
+def test_sdf_group_smooth_combine_mode_preserved() -> None:
+    group = SdfGroup(
+        sphere(1.0),
+        (capped_cylinder(0.6, 0.4), "smooth_union", 0.2),
+    )
+    result = serialize_entity_local(group, "g", {"style": SdfStyle()})
+    children = result["tree"]["children"]
+    assert [c.get("combine", "union") for c in children] == ["union", "smooth_union"]
+    assert [c.get("smoothness") for c in children] == [None, 0.2]
+
+
 def test_sdf_group_invalid_combine_mode() -> None:
     with pytest.raises(ValueError):
         SdfGroup((sphere(1.0), "bogus"))

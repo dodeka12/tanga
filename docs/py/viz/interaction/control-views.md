@@ -1,39 +1,21 @@
 # Control Views (`xxxView`)
 
-`pytanga.viz` offers two ways to put controls in front of the user, backed by
-the **same async handler contract** — `(value, event)`:
+`pytanga.viz` controls are the **declarative `xxxView` classes** — `SliderView`,
+`DropdownView`, `ButtonView`, `FileChooserView`, `TextFieldView`, `TextAreaView`,
+`ColorPickerView`, `CheckboxView`, `ValueEditView`, `TableView`, `LabelView`,
+and `MarkdownView`.  Build a view, place it inside a `GroupView`/`StackView` as
+a pane of a split-view layout (or mount it with `viz.add(view)`), and its value
+flows back through an `on_change`/`on_click` handler (registered automatically
+when the layout is set).
 
-- **Panel controls** — `viz.add_slider` / `add_dropdown` / `add_button` / …
-  (a floating panel overlaid on the scene). See [Panel Controls](controls.md).
-- **Control views** — the declarative `xxxView` classes documented here, placed
-  inside a `GroupView`/`StackView` as a pane of a split-view layout. See
-  [Layouts](../app/layouts.md).
+There are no `add_*` facade methods — every control kind is declared as a view.
+For the per-kind parameter tables and handler payloads, see
+[Controls](controls.md); for placing views in layouts, see
+[Layouts](../app/layouts.md).
 
 Every control view is a plain `View` (no scene) that renders a single HTML
-control and sends its value back through an `on_change`/`on_click` handler
-(registered automatically when the layout is set). A handler written for one
-surface works unchanged with the other.
-
-## Two control surfaces
-
-| Panel control (`viz.add_*`) | View class |
-|-----------------------------|------------|
-| `add_slider` | [`SliderView`](#sliderview) |
-| `add_dropdown` | [`DropdownView`](#dropdownview) |
-| `add_button` | [`ButtonView`](#buttonview) |
-| `add_file_chooser` | [`FileChooserView`](#filechooserview) |
-| `add_text_field` | [`TextFieldView`](#textfieldview) |
-| `add_text_area` | [`TextAreaView`](#textareaview) |
-| `add_color_picker` | [`ColorPickerView`](#colorpickerview) |
-| `add_checkbox` | [`CheckboxView`](#checkboxview) |
-| `add_value_edit` | [`ValueEditView`](#valueeditview) |
-| `add_table` | [`TableView`](#tableview) |
-| `add_control_group` | [`GroupView`](#groupview) |
-
-The panel API (parameter tables for each `add_*` method) is documented in
-[Panel Controls](controls.md). The view classes below use the same parameter
-names and defaults, so a `SliderView` mirrors `add_slider`, a `ButtonView`
-mirrors `add_button`, and so on.
+control. A handler written for one control kind works unchanged for the others
+— the contract is always `(value, event)`.
 
 ### Control variants (`variant`)
 
@@ -159,7 +141,7 @@ on overflow).
 
 A titled `StackView` (panel chrome), usable as a split pane or as an overlay
 child of a `SceneView` (where `position` anchors it over the canvas). This is
-the view form of the panel `add_control_group`.
+the declarative grouping view (the former `add_control_group`).
 
 ```python
 GroupView(
@@ -175,6 +157,8 @@ GroupView(
     justify="start",   # "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly"
     icon=None,         # Icon | None — leading title-bar icon
     icon_only=False,   # bool — render only the icon (no title text)
+    tooltip="",        # str — hover tooltip on the title bar
+    parent_id=None,    # str | None — attach to a 3D entity (follow it) instead of anchoring in the overlay
     **kwargs,          # forwarded to View (sizes)
 )
 ```
@@ -214,14 +198,20 @@ MenuView(
   to the `MENU` variant, so options render flat without setting `variant=` by
   hand.
 
-Global menus are added with `Visualizer.add_menu(...)`; per-pane menus are
-declared with `SceneView(overlay=[MenuView(...)])`:
+Global menus are declared as a `MenuView` in the default layout's overlay (via
+`viz.add(menu)` or `viz.set_layout`); per-pane menus are declared with
+`SceneView(overlay=[MenuView(...)])`:
 
 ```python
-viz.add_menu(label="Settings", trigger_icon=EIconMaterial.MENU, children=[
-    ButtonView("fit", label="Fit camera", on_click=on_fit),
-    SliderView("radius", label="Radius", on_change=on_radius),
-])
+menu = MenuView(
+    label="Settings",
+    trigger_icon=EIconMaterial.MENU,
+    children=[
+        ButtonView("fit", label="Fit camera", on_click=on_fit),
+        SliderView("radius", label="Radius", on_change=on_radius),
+    ],
+)
+viz.add(menu)  # mounts in the default layout's overlay
 ```
 
 ## Control views
@@ -258,6 +248,8 @@ SliderView(
     step=0.01,
     value=None,        # float | None — defaults to min
     on_change=None,    # Handler — async (value: float, event)
+    on_press=None,     # Handler — async (value: float, event) on drag start
+    on_release=None,   # Handler — async (value: float, event) on drag end
     **kwargs,
 )
 ```
@@ -465,34 +457,36 @@ TableView(
     on_row_add=None,        # Handler
     on_column_add=None,     # Handler
     on_row_delete=None,     # Handler
+    on_change=None,         # Handler — (value: dict, event) on undo/redo
     **kwargs,
 )
 ```
 
-Cell values are strings on the wire. See [Panel Controls](controls.md) for the
+Cell values are strings on the wire. See [Controls](controls.md) for the
 handler payloads (`TableCellChange` / `TableRowAdd` / `TableColumnAdd` /
-`TableRowsDelete`) and for undo/redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y and the
-`undo_table` / `redo_table` backend API).
+`TableRowsDelete`) and for undo/redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y).
 
-`TableView` also exposes `undo()` / `redo()` / `can_undo` / `can_redo`, which
-operate directly on the wrapped `Table` model (`view.control`); to re-sync the
-browser grid, drive undo/redo through `viz.undo_table(cid)` / `redo_table(cid)`.
+`TableView` also exposes `undo()` / `redo()` / `can_undo` / `can_redo`.
+`undo()` / `redo()` restore the wrapped `Table` model (`view.control`) **and
+push the restored grid to the browser**.  To replace the grid programmatically
+(which also clears the undo history), call `table_view.set_value({...})`.
+
+`on_change` is a bulk handler that fires once with the full `{columns, rows}`
+value on undo/redo (see [Controls](controls.md)).
 
 ## Runtime helpers
 
-Each `ControlView` wraps a `pytanga.viz._controls.Control` — the same model the
-panel controls use — exposed as `view.control`.  Values are updated and read
-through that wrapped control:
+Each `ControlView` wraps a `pytanga.viz._controls.Control`, exposed as
+`view.control`.  Values are updated and read through the view and its control:
 
-- `pytanga.viz._controls.set_control_value(view.control, value)` /
-  `pytanga.viz._controls.get_control_value(view.control)` coerce and set/read
-  the value (the same helpers the panel controls use).
-- `Visualizer.set_control_view_value(view, value)` is a convenience that calls
-  the above and pushes a `control_update`.
+- `view.set_value(value)` sets the value **and** pushes a `control_update` to
+  the browser (the backend-initiated update path).
+- `view.control.get_value()` / `view.control.set_value(value)` read/coerce the
+  wrapped model directly (no push).
 
 !!! note "`ButtonView` carries no value"
-    Both raise `TypeError` for a `ButtonView` — a button has no value to set
-    or read.
+    Setting or reading a value on a `ButtonView` raises `TypeError` — a button
+    has no value to set or read.
 
 ### `iter_control_views(root)`
 
@@ -540,5 +534,5 @@ viz.wait()
 Handlers are registered automatically when the layout is set, so a
 `SliderView`/`ButtonView` behaves exactly like a panel control. For a complete
 app, see the [Layouts](../app/layouts.md) guide and
-[`all_controls.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/all_controls.py)
+[`all_controls.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/ui/controls/all_controls.py)
 (one of every control kind in a single app).

@@ -5,7 +5,7 @@
 
 import pytest
 
-from pytanga import AffineExpression, BladeMask, DataArray, Expression, Variable
+from pytanga import AffineExpression, BladeMask, DataArray, Expression, MV, Variable
 from pytanga.basis import BasisE3
 from pytanga.expression._labels import _reset_allocator
 
@@ -126,6 +126,43 @@ class TestAffineExpression:
         x = self._mv({"e1": 1.0})
         y = self._mv({"e2": 1.0})
         assert _close((-a)(V1=x, V2=y), -((x * x) + y))
+
+    def test_bind_returns_partial_affine(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        a = (v * v) + w
+        x = self._mv({"e1": 2.0})
+        partial = a.bind(V1=x)
+        assert isinstance(partial, AffineExpression)
+        y = self._mv({"e2": 3.0})
+        assert _close(partial(V2=y), (x * x) + y)
+
+    def test_bind_raises_on_full_collapse(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        a = (v * v) + w
+        x = self._mv({"e1": 2.0})
+        y = self._mv({"e2": 3.0})
+        with pytest.raises(ValueError):
+            a.bind(V1=x, V2=y)
+
+    def test_evaluate_returns_mv(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        a = (v * v) + w
+        x = self._mv({"e1": 2.0})
+        y = self._mv({"e2": 3.0})
+        result = a.evaluate(V1=x, V2=y)
+        assert isinstance(result, MV)
+        assert _close(result, (x * x) + y)
+
+    def test_evaluate_raises_on_partial(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        a = (v * v) + w
+        x = self._mv({"e1": 2.0})
+        with pytest.raises(ValueError):
+            a.evaluate(V1=x)
 
     def test_inv_raises(self):
         v = Variable("V1", self.full)

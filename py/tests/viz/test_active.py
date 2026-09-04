@@ -17,6 +17,7 @@ from pytanga.viz._interaction import (
     InteractionEventType,
     MouseButton,
 )
+from pytanga.viz import SliderView
 from pytanga.viz.visualizer import Visualizer
 
 
@@ -487,49 +488,6 @@ class TestClickHandler:
 
         asyncio.run(_run())
 
-
-class TestClearControls:
-    def test_clear_controls_preserves_interaction_handlers(self):
-        async def _run():
-            viz = Visualizer(add_default_axes=False, add_default_grid=False)
-            received: list[Point] = []
-
-            async def on_drag_end(event, act):
-                received.append(event.world_position)
-
-            ap = ActPoint(Point(0, 2, 0), on_drag_end=on_drag_end)
-            eid = viz.add(ap)
-
-            viz.clear_controls()
-
-            await viz._dispatch_interaction_event(
-                "interaction:drag_end",
-                {
-                    "type": "interaction:drag_end",
-                    "event_type": "drag_end",
-                    "object_id": eid,
-                    "browser_id": "b1",
-                    "world_position": [0.0, 2.0, 0.0],
-                    "world_delta": [0.0, 0.0, 0.0],
-                },
-            )
-            await asyncio.sleep(0)
-
-            assert received == [Point(0, 2, 0)]
-
-        asyncio.run(_run())
-
-    def test_clear_controls_removes_control_handlers(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-
-        async def on_change(value, event):
-            pass
-
-        viz.add_slider("s1", on_change=on_change)
-        assert viz._handler_registry.get("s1", "change") is on_change
-
-        viz.clear_controls()
-        assert viz._handler_registry.get("s1", "change") is None
 
 
 def test_on_interaction_registers_in_unified_registry():

@@ -4,7 +4,7 @@
 """Tests for the Phase 6 entry points (new / add_group / parent_id / attach_to)."""
 
 from pytanga.geometry.entities import Point
-from pytanga.viz import Visualizer, VizObjectRef
+from pytanga.viz import SliderView, Visualizer, VizObjectRef
 
 
 class TestEntryPoints:
@@ -47,12 +47,6 @@ class TestEntryPoints:
         viz.add(Point(0, 0, 0), label="L", attach_to=other)
         label_ids = viz._scenes[""].get_label_ids(other)
         assert len(label_ids) == 1
-
-    def test_update_control(self):
-        viz = Visualizer(add_default_axes=False, add_default_grid=False)
-        viz.add_slider("s", min=0.0, max=1.0)
-        viz.update_control("s", max=10.0)
-        assert viz._scenes[""]._controls["s"].max == 10.0
 
     def test_scene_handle_new(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)

@@ -42,30 +42,29 @@ globalThis.document = {
 
 const {
     createFileChooser,
-    handleControlsDefine,
     applyControlValue,
+    forgetControl,
 } = await import('../../../py/pytanga/viz/templates/controls-panel.js');
 
-test('controls_define rebuilds only panel-scope registry entries', () => {
+test('applyControlValue and forgetControl manage the control registry', () => {
     createFileChooser({ id: 'fc', owner: 'layout', label: 'File', value: '' });
-    createFileChooser({ id: 'panel', label: 'Panel', value: '' }); // default owner 'panel'
+    createFileChooser({ id: 'panel', label: 'Panel', value: '' });
 
     const unknown = [];
     const origDebug = console.debug;
     console.debug = (...args) => unknown.push(args);
     try {
-        // Both entries live before a panel rebuild.
+        // Both entries live initially.
         applyControlValue('fc', '/x');
         applyControlValue('panel', '/x');
         assert.equal(unknown.length, 0);
 
-        handleControlsDefine({ type: 'controls_define', controls: [], groups: [] });
-
-        // Layout entry survived the panel rebuild → no "unknown id" log.
+        // forgetControl drops a single entry, leaving other entries intact.
+        forgetControl('panel');
         applyControlValue('fc', '/y');
         assert.equal(unknown.length, 0);
 
-        // Panel entry was cleared → reported unknown.
+        // The forgotten entry now reports unknown.
         applyControlValue('panel', '/y');
         assert.equal(unknown.length, 1);
     } finally {

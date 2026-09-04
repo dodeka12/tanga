@@ -47,6 +47,17 @@ def test_composed_nested() -> None:
     assert tree["children"][1]["combine"] == "subtract"
 
 
+def test_composed_smooth_union_roundtrip() -> None:
+    body = Composed(sphere(1.0), (capped_cylinder(0.5, 0.3), "smooth_union", 0.15))
+    result = serialize_entity(body, "c")
+    tree = result["tree"]
+    assert [c.get("combine", "union") for c in tree["children"]] == [
+        "union",
+        "smooth_union",
+    ]
+    assert [c.get("smoothness") for c in tree["children"]] == [None, 0.15]
+
+
 def test_composed_invalid_combine_raises() -> None:
     with pytest.raises(ValueError):
         Composed(sphere(1.0), (box((0.5, 0.5, 0.5)), "xor"))

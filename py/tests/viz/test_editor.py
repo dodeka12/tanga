@@ -18,7 +18,7 @@ def test_open_editor_registers_and_pushes(monkeypatch):
     viz = _viz()
     pushed: list[tuple] = []
     monkeypatch.setattr(
-        viz, "_push_editor_define", lambda c, **kw: pushed.append((c, kw))
+        viz._layout.overlay, "_push_editor_define", lambda c, **kw: pushed.append((c, kw))
     )
 
     async def _on_close(text, event):
@@ -70,3 +70,20 @@ async def test_dispatch_editor_closed_unknown_id():
     await viz._dispatch_control_event(
         "editor_closed", {"id": "missing", "text": "x"}
     )
+
+
+def test_overlay_editor_direct_lifecycle(monkeypatch):
+    viz = _viz()
+    overlay = viz._layout.overlay
+    pushed: list[tuple] = []
+    monkeypatch.setattr(
+        overlay, "_push_editor_define", lambda c, **kw: pushed.append((c, kw))
+    )
+
+    async def _on_close(text, event):
+        pass
+
+    cid = overlay.open_editor("e", label="Edit", value="x", on_close=_on_close)
+    assert cid == "e"
+    assert viz._handler_registry.get("e", "close") is _on_close
+    assert pushed == [("e", {"label": "Edit", "value": "x"})]

@@ -1,0 +1,9 @@
+/* Tanga viewer — read-only label view. */
+
+.tanga-label-text {
+    color: var(--tanga-fg);
+    font-family: var(--tanga-font);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

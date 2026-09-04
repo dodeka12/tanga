@@ -10,7 +10,7 @@ import time
 
 import pytest
 
-from pytanga.viz import Visualizer
+from pytanga.viz import FileChooserView, TableView, Visualizer
 from pytanga.viz._controls import FileChooser, Table, _serialize_one_control
 from pytanga.viz._file_browser import list_directory
 
@@ -88,28 +88,22 @@ def _running_loop():
     return loop, thread
 
 
-def test_add_file_chooser_registers_and_pushes(monkeypatch):
+def test_add_file_chooser_registers_handler_and_view():
     viz = _viz()
-    pushed: list = []
-    monkeypatch.setattr(viz, "_push_controls", lambda scene: pushed.append(scene))
 
     async def _on_change(path, event):
         pass
 
-    cid = viz.add_file_chooser("fc", value="/tmp", on_change=_on_change)
+    viz.set_layout(FileChooserView("fc", value="/tmp", on_change=_on_change))
 
-    assert cid == "fc"
     assert viz._handler_registry.get("fc") is _on_change
-    ctrl = viz._scenes[""]._controls["fc"]
-    assert isinstance(ctrl, FileChooser)
-    assert ctrl.value == "/tmp"
-    assert pushed == [""]
+    ref = viz._resolve_control("fc")
+    assert isinstance(ref, FileChooser)
+    assert ref.value == "/tmp"
 
 
-def test_add_table_registers_handlers_and_pushes(monkeypatch):
+def test_add_table_registers_handlers():
     viz = _viz()
-    pushed: list = []
-    monkeypatch.setattr(viz, "_push_controls", lambda scene: pushed.append(scene))
 
     async def _on_cell(change, event):
         pass
@@ -120,30 +114,30 @@ def test_add_table_registers_handlers_and_pushes(monkeypatch):
     async def _on_col(add, event):
         pass
 
-    cid = viz.add_table(
-        "tbl",
-        columns=["x", "y"],
-        rows=[["1", "2"]],
-        on_cell_change=_on_cell,
-        on_row_add=_on_row,
-        on_column_add=_on_col,
+    viz.set_layout(
+        TableView(
+            "tbl",
+            columns=["x", "y"],
+            rows=[["1", "2"]],
+            on_cell_change=_on_cell,
+            on_row_add=_on_row,
+            on_column_add=_on_col,
+        )
     )
 
-    assert cid == "tbl"
     assert viz._handler_registry.get("tbl", "cell_change") is _on_cell
     assert viz._handler_registry.get("tbl", "row_add") is _on_row
     assert viz._handler_registry.get("tbl", "column_add") is _on_col
-    ctrl = viz._scenes[""]._controls["tbl"]
-    assert isinstance(ctrl, Table)
-    assert ctrl.columns == ["x", "y"]
-    assert ctrl.rows == [["1", "2"]]
-    assert pushed == [""]
+    ref = viz._resolve_control("tbl")
+    assert isinstance(ref, Table)
+    assert ref.columns == ["x", "y"]
+    assert ref.rows == [["1", "2"]]
 
 
 def test_open_file_chooser_pushes_show():
     viz = _viz()
     viz._server = _FakeServer()
-    viz.add_file_chooser("fc", value="/tmp")
+    viz.set_layout(FileChooserView("fc", value="/tmp"))
     loop, thread = _running_loop()
     viz._loop = loop
     try:
@@ -170,20 +164,20 @@ async def test_dispatch_file_browser_select():
     async def _on_change(path, event):
         calls.append(path)
 
-    viz.add_file_chooser("fc", on_change=_on_change)
+    viz.set_layout(FileChooserView("fc", on_change=_on_change))
     await viz._dispatch_control_event(
         "file_browser_select", {"control_id": "fc", "path": "/data/x.csv"}
     )
 
     assert calls == ["/data/x.csv"]
-    assert viz._scenes[""]._controls["fc"].value == "/data/x.csv"
+    assert viz._resolve_control("fc").get_value() == "/data/x.csv"
 
 
 @pytest.mark.anyio
 async def test_dispatch_file_browser_navigate(tmp_path):
     viz = _viz()
     viz._server = _FakeServer()
-    viz.add_file_chooser("fc", root=str(tmp_path))
+    viz.set_layout(FileChooserView("fc", root=str(tmp_path)))
 
     (tmp_path / "a.txt").write_text("x")
     (tmp_path / "sub").mkdir()
@@ -208,7 +202,7 @@ def test_file_chooser_view_serialization():
     from pytanga.viz.views import FileChooserView
 
     fc = FileChooserView("fc", label="File", value="/tmp", root="/tmp")
-    data = fc._serialize(iter(["n0"]))
+    data = fc._serialize()
 
     assert data["type"] == "file_chooser_view"
     assert data["id"] == "fc"
@@ -240,7 +234,7 @@ def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):
     from pytanga.viz import FileChooserDialog
 
     viz = _viz()
-    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
 
     async def _on_accept(path, event):
         pass
@@ -259,9 +253,11 @@ async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch):
     from pytanga.viz import FileChooserDialog
 
     viz = _viz()
-    monkeypatch.setattr(viz, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
     removed: list = []
-    monkeypatch.setattr(viz, "_push_dialog_remove", lambda i, s: removed.append((i, s)))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_dialog_remove", lambda i, s: removed.append((i, s))
+    )
     accepted: list = []
 
     async def _on_accept(path, event):
@@ -298,21 +294,21 @@ async def test_dispatch_file_browser_select_panel_pushes(monkeypatch):
     viz = _viz()
     updates: list = []
     monkeypatch.setattr(
-        viz,
+        viz._layout,
         "_push_control_update",
-        lambda scene, cid, value: updates.append((scene, cid, value)),
+        lambda cid, value: updates.append((cid, value)),
     )
 
     async def _on_change(path, event):
         pass
 
-    viz.add_file_chooser("fc", on_change=_on_change)
+    viz.set_layout(FileChooserView("fc", on_change=_on_change))
     await viz._dispatch_control_event(
         "file_browser_select", {"control_id": "fc", "path": "/data/x.csv"}
     )
 
-    assert viz._scenes[""]._controls["fc"].value == "/data/x.csv"
-    assert updates == [("", "fc", "/data/x.csv")]
+    assert viz._resolve_control("fc").get_value() == "/data/x.csv"
+    assert updates == [("fc", "/data/x.csv")]
 
 
 @pytest.mark.anyio
@@ -322,9 +318,9 @@ async def test_dispatch_file_browser_select_view_sets_and_pushes(monkeypatch):
     viz = _viz()
     updates: list = []
     monkeypatch.setattr(
-        viz,
+        viz._layout,
         "_push_control_update",
-        lambda scene, cid, value: updates.append((scene, cid, value)),
+        lambda cid, value: updates.append((cid, value)),
     )
 
     async def _on_change(path, event):
@@ -337,29 +333,7 @@ async def test_dispatch_file_browser_select_view_sets_and_pushes(monkeypatch):
     )
 
     assert view.value == "/data/x.csv"
-    assert updates == [("", "fc", "/data/x.csv")]
-
-
-@pytest.mark.anyio
-async def test_dispatch_file_browser_select_named_scene(monkeypatch):
-    viz = _viz()
-    updates: list = []
-    monkeypatch.setattr(
-        viz,
-        "_push_control_update",
-        lambda scene, cid, value: updates.append((scene, cid, value)),
-    )
-
-    async def _on_change(path, event):
-        pass
-
-    viz.scene("other").add_file_chooser("fc", on_change=_on_change)
-    await viz._dispatch_control_event(
-        "file_browser_select", {"control_id": "fc", "path": "/x.csv"}
-    )
-
-    assert viz._scenes["other"]._controls["fc"].value == "/x.csv"
-    assert updates == [("other", "fc", "/x.csv")]
+    assert updates == [("fc", "/data/x.csv")]
 
 
 @pytest.mark.anyio

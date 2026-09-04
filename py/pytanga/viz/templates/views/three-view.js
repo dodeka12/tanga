@@ -11,7 +11,6 @@ import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
-import { handleControlsDefine, handleControlsClear } from '../controls-panel.js';
 import { sendEvent } from '../events.js';
 import { attachGroupView, detachGroup, detachAll } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
@@ -164,6 +163,15 @@ export class ThreeJsView extends View {
         return view;
     }
 
+    /** Remove and destroy all mounted overlay views (used when a scene pane is reused). */
+    clearOverlays() {
+        for (const view of this._overlays) {
+            if (typeof view.unmount === 'function') view.unmount();
+            if (typeof view.destroy === 'function') view.destroy();
+        }
+        this._overlays = [];
+    }
+
     _log(phase, detail) {
         const parts = ['[tanga:' + phase + ']'];
         if (this._browserId) parts.push('id=' + this._browserId);
@@ -275,7 +283,6 @@ export class ThreeJsView extends View {
             this._titleElement.remove();
             this._titleElement = null;
         }
-        handleControlsClear();
         detachAll();
         this._clearBanners();
         this.cameraPositioned = false;
@@ -498,12 +505,6 @@ export class ThreeJsView extends View {
             this._handleAnimate(msg);
         } else if (msg.type === 'timeline') {
             this._handleTimeline(msg);
-        } else if (msg.type === 'controls_define') {
-            this._log('init', 'controls_define controls=' + (msg.controls ? msg.controls.length : 0) + ' groups=' + (msg.groups ? msg.groups.length : 0));
-            handleControlsDefine(msg);
-        } else if (msg.type === 'controls_clear') {
-            handleControlsClear();
-            detachAll();
         } else if (msg.type === 'banner_define') {
             this._showBanner(msg);
         } else if (msg.type === 'banner_remove') {

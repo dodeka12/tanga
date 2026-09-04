@@ -39,7 +39,6 @@ Keywords: expressions, Variable, rotor, points
 """
 
 from pytanga.basis import BasisN3
-from pytanga.blade_mask import BladeMask
 from pytanga.expression import DataArray, Variable
 from pytanga.geometry import Direction, Geometry, Point, RndPoint, Rotor
 

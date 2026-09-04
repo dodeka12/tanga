@@ -1,20 +1,19 @@
 # Interaction & Controls
 
-Interactivity in `pytanga.viz` has three surfaces, from the quickest to the
+Interactivity in `pytanga.viz` has two surfaces, from the quickest to the
 most custom:
 
 | Surface | API | Where it appears |
 |---------|-----|------------------|
-| Panel controls | `viz.add_slider` / `add_dropdown` / `add_button` / `add_control_group` / … | A floating panel overlaid on the scene |
-| Control views | `SliderView` / `ButtonView` / … inside a `GroupView`/`StackView` | A pane in a split-view layout |
+| Controls | `SliderView` / `ButtonView` / `DropdownView` / `GroupView` / … | A pane in a layout, or a `GroupView`/`MenuView` overlay on a scene |
 | Object interaction | `InteractionConfig` / `on_interaction` | Directly on scene entities |
 
 ## Topics
 
 | Guide | What you will learn |
 |-------|---------------------|
-| [Panel Controls](controls.md) | `add_slider`/`add_dropdown`/`add_button`/`add_control_group` and the other `add_*` controls |
-| [Control Views (xxxView)](control-views.md) | The declarative `xxxView` layout/control classes and their mapping to the `add_*` controls |
+| [Controls](controls.md) | The control kinds (`SliderView`, `DropdownView`, `ButtonView`, `TableView`, …) and their handler payloads |
+| [Control Views (xxxView)](control-views.md) | The declarative `xxxView` layout/control classes and their constructor signatures |
 | [Object Interaction](object-interaction.md) | Click/drag/scroll handlers on scene entities |
 
 !!! note "Control views"

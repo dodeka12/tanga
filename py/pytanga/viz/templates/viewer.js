@@ -9,6 +9,7 @@ import { applyOverlayAnchor } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
 import { getOverlay } from './overlay.js';
 import { applyControlValue } from './controls-panel.js';
+import { applyLogUpdate } from './views/log-view.js';
 import { setWebSocket as setEventsWebSocket } from './events.js';
 import {
     handleBannerDefine,
@@ -572,6 +573,27 @@ async function handleMessage(msg) {
         _buildLayout(msg);
         return;
     }
+    if (msg.type === 'overlay_define') {
+        const overlayEl = getOverlay();
+        const view = buildViewTree(msg.view, ws);
+        view.el.style.position = 'absolute';
+        view.el.style.pointerEvents = 'auto';
+        applyOverlayAnchor(view.el, view.position || 'bottom-right');
+        overlayEl.addChild(view);
+        _globalOverlayViews.push(view);
+        return;
+    }
+    if (msg.type === 'overlay_remove') {
+        const overlayEl = getOverlay();
+        const idx = _globalOverlayViews.findIndex((v) => v.viewId === msg.id);
+        if (idx !== -1) {
+            const view = _globalOverlayViews[idx];
+            overlayEl.removeChild(view);
+            if (typeof view.destroy === 'function') view.destroy();
+            _globalOverlayViews.splice(idx, 1);
+        }
+        return;
+    }
     if (msg.type === 'view_camera') {
         const target = _viewById.get(msg.view_id);
         if (target) target.setCamera(msg.camera);
@@ -599,6 +621,11 @@ async function handleMessage(msg) {
 
     if (msg.type === 'control_update') {
         applyControlValue(msg.id, msg.value);
+        return;
+    }
+
+    if (msg.type === 'log_update') {
+        applyLogUpdate(msg);
         return;
     }
 
@@ -642,9 +669,6 @@ async function handleMessage(msg) {
     if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update') {
         if (!_forMyScene(msg)) return;
     }
-    if (msg.type === 'controls_define' || msg.type === 'controls_clear') {
-        if (!_forMyScene(msg)) return;
-    }
     if (msg.type === 'banner_define' || msg.type === 'banner_remove' || msg.type === 'banner_clear') {
         if (!_forMyScene(msg)) return;
     }
@@ -676,10 +700,11 @@ function _activeSceneView() {
     return null;
 }
 
-function _destroyViewTree(view) {
+function _destroyViewTree(view, skip) {
     if (!view) return;
+    if (skip && skip.has(view)) return;
     if (Array.isArray(view.children)) {
-        for (const child of [...view.children]) _destroyViewTree(child);
+        for (const child of [...view.children]) _destroyViewTree(child, skip);
     }
     if (typeof view.destroy === 'function') view.destroy();
 }
@@ -687,10 +712,27 @@ function _destroyViewTree(view) {
 function _buildLayout(msg) {
     _log('init', 'view_layout name=' + (msg.name || ''));
 
-    // Teardown the previous tree (and its global overlay views) so re-pushes
-    // and reconnects don't leak ResizeObservers / DOM nodes.
+    // A re-push (had a previous layout) may introduce scene panes the browser
+    // hasn't seen yet; those need their state requested from the server.
+    const hadLayout = _layoutRoot !== null;
+
+    // Reuse the existing scene panes (keyed by scene name) so a layout re-push
+    // only rebuilds the DOM chrome and never tears down the WebGL scenes.
+    const reuse = new Map();
     if (_layoutRoot) {
-        _destroyViewTree(_layoutRoot);
+        for (const [scene, route] of _sceneRoutes) {
+            for (const v of route.sceneViews) {
+                if (!reuse.has(scene)) reuse.set(scene, v);
+            }
+        }
+    }
+    const skip = new Set(reuse.values());
+
+    // Teardown the previous tree (and its global overlay views) so re-pushes
+    // and reconnects don't leak ResizeObservers / DOM nodes — except the scene
+    // panes we are reusing.
+    if (_layoutRoot) {
+        _destroyViewTree(_layoutRoot, skip);
         _layoutRoot.unmount();
     }
     _layoutRoot = null;
@@ -703,12 +745,27 @@ function _buildLayout(msg) {
     }
     _globalOverlayViews = [];
 
-    _layoutRoot = buildViewTree(msg.root, ws);
+    const newScenes = [];
+    _layoutRoot = buildViewTree(msg.root, ws, reuse, newScenes);
     _layoutRoot.el.style.width = '100%';
     _layoutRoot.el.style.height = '100%';
     _layoutRoot.mount(window._viewerContainer);
     _sceneRoutes = collectSceneRoutes(_layoutRoot);
     _viewById = collectViewByIds(_layoutRoot);
+
+    // Destroy any scene panes that are no longer present in the layout.
+    for (const view of reuse.values()) {
+        if (typeof view.destroy === 'function') view.destroy();
+        if (typeof view.unmount === 'function') view.unmount();
+    }
+
+    // Request state for scene panes newly introduced by this re-push (the
+    // `ready` handshake only sent state for scenes present at connect time).
+    if (hadLayout && ws && ws.readyState === WebSocket.OPEN) {
+        for (const scene of newScenes) {
+            ws.send(JSON.stringify({ type: 'scene_sync_request', scene }));
+        }
+    }
 
     // Track the active scene's title for the document title.
     const active = _activeSceneView();

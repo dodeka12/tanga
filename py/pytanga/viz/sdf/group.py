@@ -43,11 +43,17 @@ class SdfGroup(SdfElement):
         default=None, init=False, repr=False, compare=False
     )
 
-    def __init__(self, *parts: Any, combine: ECompose = ECompose.UNION) -> None:
+    def __init__(
+        self,
+        *parts: Any,
+        combine: ECompose = ECompose.UNION,
+        smoothness: float | None = None,
+    ) -> None:
         self.parts = tuple(_normalize_part(p) for p in parts)
         self.transforms = {}
         self.on_change = None
         self.combine = combine
+        self.smoothness = smoothness
 
     # ── Member addressing ─────────────────────────────────────
 
@@ -106,6 +112,7 @@ class SdfGroup(SdfElement):
         for element, mode in self.parts:
             child = copy.copy(_member_node(element))
             child.combine = mode.value
+            child.smoothness = getattr(element, "smoothness", None)
             children.append(child)
         return group(children)
 

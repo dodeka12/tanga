@@ -64,10 +64,12 @@ def main() -> None:
     B_mask_list = [random_mask(alg, 4) for _ in range(5)]
 
     A_list = [
-        RndMV(A_mask_list[i], [(-1.0, 1.0)] * len(A_mask_list[i]))(rng) for i in range(5)
+        RndMV(A_mask_list[i], [(-1.0, 1.0)] * len(A_mask_list[i]))(rng)
+        for i in range(5)
     ]
     B_list = [
-        RndMV(B_mask_list[i], [(-1.0, 1.0)] * len(B_mask_list[i]))(rng) for i in range(5)
+        RndMV(B_mask_list[i], [(-1.0, 1.0)] * len(B_mask_list[i]))(rng)
+        for i in range(5)
     ]
 
     # The BladeMask constructor can take a multivector or a list of blade ids

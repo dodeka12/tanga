@@ -46,14 +46,21 @@ TOPIC_TITLES = {
     "animation": "Animation",
     "banners": "Banners",
     "camera": "Camera",
+    "controls": "Controls",
+    "dialogs": "Dialogs",
     "entities": "Entities",
     "export": "Export",
     "interaction": "Interaction",
     "labels": "Labels",
+    "layout": "Layout",
+    "menus": "Menus",
     "plotting": "Plotting",
     "scenes": "Scenes",
     "sdf": "SDF",
+    "static": "Static",
     "styling": "Styling",
+    "themes": "Themes",
+    "ui": "UI",
 }
 
 

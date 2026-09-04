@@ -123,12 +123,6 @@ def _ws_msg_brief(payload: Any) -> str:
             f"removed={len(obj.get('removed', []))} "
             f"scene={obj.get('scene', '')!r} ({size}B)"
         )
-    if t == "controls_define":
-        return (
-            f"controls_define controls={len(obj.get('controls', []))} "
-            f"groups={len(obj.get('groups', []))} "
-            f"scene={obj.get('scene', '')!r} ({size}B)"
-        )
     if t == "scene_config":
         return (
             f"scene_config name={obj.get('name', '')!r} "
@@ -201,7 +195,6 @@ ControlCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 InteractionCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 SceneListCallback = Callable[[], list[str]]
 LayoutCallback = Callable[[str], dict[str, Any] | None]
-PushControlsCallback = Callable[[str], Awaitable[None]]
 ThemeCallback = Callable[[], dict[str, Any]]
 
 
@@ -276,7 +269,6 @@ class VizServer:
         interaction_callback: InteractionCallback | None = None,
         on_connect: Callable[[str], Awaitable[None]] | None = None,
         on_disconnect: Callable[[str], Awaitable[None]] | None = None,
-        push_controls: PushControlsCallback | None = None,
         animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = None,
         push_animation_stop: Callable[[str], Awaitable[None]] | None = None,
         scene_config_callback: SceneConfigCallback | None = None,
@@ -300,7 +292,6 @@ class VizServer:
         self._interaction_callback = interaction_callback
         self._on_connect = on_connect
         self._on_disconnect = on_disconnect
-        self._push_controls_cb = push_controls
         self._animation_stop_callback = animation_stop_callback
         self._push_animation_stop = push_animation_stop
         self._on_ready = on_ready
@@ -915,11 +906,6 @@ class VizServer:
                                 pass
                             for scene_name in scene_names:
                                 try:
-                                    if self._push_controls_cb is not None:
-                                        await self._push_controls_cb(scene_name)
-                                except Exception:
-                                    pass
-                                try:
                                     if self._push_animation_stop is not None:
                                         await self._push_animation_stop(scene_name)
                                 except Exception:
@@ -936,6 +922,25 @@ class VizServer:
                                 msg_browser_id,
                             )
                             self._signal_ws_ready()
+
+                        elif msg_type == "scene_sync_request":
+                            # A layout re-push introduced a scene pane the
+                            # browser hasn't rendered yet; send its config +
+                            # full state on demand (mirrors `_push_full_state`).
+                            from .serializer import serialize_scene_update
+
+                            scene_name = data.get("scene", "")
+                            if self._scene_config_callback is not None:
+                                cfg = self._scene_config_callback(scene_name)
+                                if cfg is not None:
+                                    cfg.setdefault("name", scene_name)
+                                    await ws.send_str(json.dumps(cfg))
+                            if self._flush_callback is not None:
+                                entities, _ = self._flush_callback(scene_name)
+                                if entities:
+                                    message = serialize_scene_update(entities, [])
+                                    message["scene"] = scene_name
+                                    await ws.send_str(json.dumps(message))
 
                         elif msg_type == "animation_stop":
                             if self._animation_stop_callback is not None:
