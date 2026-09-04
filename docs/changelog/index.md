@@ -1,5 +1,11 @@
 # Changelog
 
+## [Since 1.17.0] — 2026-09-03
+- Scene/layout/overlay model · control display views (`LabelView`/`MarkdownView`/`LogView`/`SeparatorView`/`ToolbarView`) · `Expression.bind()`/`evaluate()` · `Transform.from_operator()` · smooth SDF CSG
+- Breaking: `add_*` control facades, `control_position`, runtime value API, and the legacy `controls_define` path removed
+- Bug fixes: reflected `MV ^ Variable` / `MV | Variable` now build an `Expression`
+→ [Details](2026-09-03_58f34cb0.md)
+
 ## [Since 1.16.0 (1.17.0-rc3)] — 2026-09-02
 - `DataArray` binding & counting-axis reduction · `RndMV` random multivectors · `Constant`/fixed components in random generators · expression & tensor type hints
 - Breaking: `Expression.__call__` accepts only `MV`/`DataArray` (legacy list/`MVTensor`/`(array, specs)` forms removed) · `pytanga.random_mv` removed
