@@ -12,15 +12,20 @@ generates unique IDs, and computes dirty/removal diffs for efficient updates.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraConfig
 from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
-from ._types import TransformRotation, Triple, Vec3
+from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
+from ._props import _normalize_color
+from ._style_dict import _resolve_label_style, _resolve_tex_label_style
 from ._viz_styles import VizStyles, make_styles
+
+if TYPE_CHECKING:
+    from ._styles import LabelStyle, ObjVizStyle, TextureLabelStyle
 
 # ── Configuration ──────────────────────────────────────────
 
@@ -99,11 +104,13 @@ class Scene:
         *,
         name: str = "",
         styles: VizStyles | None = None,
+        host: Any = None,
     ) -> None:
         self.config = config or SceneConfig()
         self.config.name = name
         self.name: str = name
         self.styles: VizStyles = styles or make_styles()
+        self._host = host
         self._objects: dict[str, SceneObject] = {}
         self._nodes: dict[str, VizNode] = {}
         self._order: list[str] = []
@@ -281,6 +288,246 @@ class Scene:
             dirty=True,
         )
         return self.add_object(obj, object_id=lid)
+
+
+    # ── High-level entity facade (moved from Visualizer) ────
+    def add_viz(
+        self,
+        obj: VizInputType | None = None,
+        *,
+        entity_id: str | None = None,
+        color: Any = None,
+        opacity: float | None = None,
+        style: ObjVizStyle | None = None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
+    ) -> str:
+        """Add an entity to this scene.
+
+        ``parent_id`` parents the new scene node under an existing scene node;
+        ``attach_to`` sets the scene-node reference for a label created here.
+        """
+        from ._active import ActSceneObject
+        from ._label import Label
+        from ._nodes import VizGroup, VizSceneObject
+        from ._scene_handle import VizSceneHandle
+        from ._styles import TextureLabelStyle as _TLS
+
+        if isinstance(obj, VizGroup):
+            from .scene import _generate_id
+
+            gid = entity_id or obj.id or _generate_id()
+            obj.id = gid
+            self.add_node(obj, object_id=gid)
+            if parent_id is not None:
+                parent = self.get_node(parent_id)
+                if isinstance(parent, VizSceneObject):
+                    parent.add_child(obj)
+            return gid
+
+        if isinstance(obj, ActSceneObject):
+            properties: dict[str, Any] = {}
+            if color is not None:
+                normalized = _normalize_color(color)
+                if isinstance(normalized, tuple):
+                    properties["color"] = normalized[0]
+                    if opacity is None:
+                        properties["opacity"] = normalized[1]
+                else:
+                    properties["color"] = normalized
+            if opacity is not None:
+                properties["opacity"] = float(opacity)
+            if style is not None:
+                properties["style"] = style
+            eid = self.add(obj.entity, entity_id=entity_id, **properties)
+            obj._init(VizSceneHandle(self._host, self.name), eid)
+            self._host._act_objects[eid] = obj
+            self._attach_to_parent(eid, parent_id)
+            self._add_label_for_entity(
+                obj.entity,
+                eid,
+                label=label,
+                label_style=label_style,
+                attach_to=attach_to,
+                properties=properties,
+            )
+            return eid
+
+        if isinstance(obj, Label):
+            if attach_to is not None:
+                obj.parent_id = attach_to
+            return self.add_label(obj)
+
+        properties: dict[str, Any] = {}
+
+        if color is not None:
+            normalized = _normalize_color(color)
+            if isinstance(normalized, tuple):
+                properties["color"] = normalized[0]
+                if opacity is None:
+                    properties["opacity"] = normalized[1]
+            else:
+                properties["color"] = normalized
+
+        if opacity is not None:
+            properties["opacity"] = float(opacity)
+
+        # Build texture label convenience style if tex_label is set
+        _tex_label_merged: _TLS | None = None
+        if tex_label is not None:
+            entity_for_kind = _resolve_scene_entity(obj)
+            kind = type(entity_for_kind).__name__
+            _tex_label_merged = _resolve_tex_label_style(
+                self.styles.tex_label_base,
+                self.styles.tex_label_kind.get(kind),
+                tex_label_style,
+            )
+            _tex_label_merged.text = tex_label
+
+        # Merge texture label into style if the user didn't provide
+        # texture_label explicitly via style
+        if _tex_label_merged is not None:
+            if style is not None:
+                from ._styles import PlaneStyle, SphereStyle
+
+                style_for_check = style
+                if isinstance(style_for_check, (SphereStyle, PlaneStyle)):
+                    if style_for_check.texture_label is None:
+                        style_for_check.texture_label = _tex_label_merged
+                # Otherwise leave the user's explicit style alone
+            else:
+                kind_for_style = None
+                entity_for_style = _resolve_scene_entity(obj)
+                if entity_for_style is not None:
+                    kind_for_style = type(entity_for_style).__name__
+                if kind_for_style == "Sphere":
+                    from ._styles import SphereStyle as SS
+
+                    style = SS(
+                        texture_label=_tex_label_merged,
+                        wireframe=False,
+                        # double_sided=True,
+                    )
+                elif kind_for_style == "Plane":
+                    from ._styles import PlaneStyle as PS
+
+                    style = PS(texture_label=_tex_label_merged, wireframe=False)
+
+        if style is not None:
+            properties["style"] = style
+
+        entity = _resolve_scene_entity(obj)
+
+        # Viz-level drawables (PointPath, etc.) go through add_object
+        from pytanga.geometry.entities import Entity as GeoEntity
+        from pytanga.geometry.operators import Operator as GeoOperator
+
+        if not isinstance(entity, (GeoEntity, GeoOperator)):
+            kind = type(entity).__name__
+            oid = self.add_object(
+                SceneObject(
+                    id=entity_id or "",
+                    layer="scene",
+                    kind=kind,
+                    data=entity,
+                    properties=properties,
+                    dirty=True,
+                ),
+                object_id=entity_id,
+            )
+            self._attach_to_parent(oid, parent_id)
+            self._add_label_for_entity(
+                entity,
+                oid,
+                label=label,
+                label_style=label_style,
+                attach_to=attach_to,
+                properties=properties,
+            )
+            return oid
+
+        eid = self.add(entity, entity_id=entity_id, **properties)
+        self._attach_to_parent(eid, parent_id)
+
+        self._add_label_for_entity(
+            entity,
+            eid,
+            label=label,
+            label_style=label_style,
+            attach_to=attach_to,
+            properties=properties,
+        )
+        return eid
+
+    def _attach_to_parent(self, oid: str, parent_id: str | None) -> None:
+        """Attach a scene node to a parent scene node (no-op when ``parent_id`` is ``None``)."""
+        if parent_id is None:
+            return
+        from ._nodes import VizSceneObject
+
+        child = self.get_node(oid)
+        parent = self.get_node(parent_id)
+        if isinstance(child, VizSceneObject) and isinstance(parent, VizSceneObject):
+            parent.add_child(child)
+
+    def _add_label_for_entity(
+        self,
+        entity: Any,
+        eid: str,
+        *,
+        label: str | None,
+        label_style: LabelStyle | None,
+        attach_to: str | None,
+        properties: dict[str, Any],
+    ) -> None:
+        """Create a label for *entity* attached to *eid*.
+
+        No-op when *label* is ``None``.  Shared by the regular entity path and
+        the :class:`ActSceneObject` path so active objects support ``label=``.
+        """
+        if label is None:
+            return
+        from ._label import Label
+        from ._label_frame import compute_label_position
+        from .serializer import resolve_line_length
+
+        from pytanga.geometry.entities import Line
+        from pytanga.geometry.operators import ReflectionLine
+
+        kind = type(entity).__name__
+        resolved_ls = _resolve_label_style(
+            self.styles.label_base,
+            self.styles.label_kind.get(kind),
+            label_style,
+        )
+
+        line_length = None
+        if isinstance(entity, Line):
+            line_length = resolve_line_length(
+                entity, styles_map=self.styles.kind, props=properties
+            )
+        elif isinstance(entity, ReflectionLine):
+            line_length = resolve_line_length(
+                entity.line, styles_map=self.styles.kind, props=properties
+            )
+
+        position = compute_label_position(
+            entity,
+            resolved_ls.offset_local,
+            along=resolved_ls.along,
+            line_length=line_length,
+        )
+        lbl = Label(
+            text=label,
+            position=position,
+            parent_id=attach_to if attach_to is not None else eid,
+            style=resolved_ls,
+        )
+        self.add_label(lbl)
 
     def update(self, object_id: str, **properties: Any) -> None:
         """Update rendering properties of an existing object."""
@@ -578,6 +825,42 @@ class Scene:
         """Remove all controls and groups."""
         self._controls.clear()
         self._groups.clear()
+
+
+def _resolve_scene_entity(obj: Any) -> SceneEntity:
+    """Resolve an MV to a :class:`SceneEntity`.
+
+    Viz-level drawables (PointPath, …) are passed through unchanged.
+    GeoEntities and Operators are returned as-is.
+    MVs are resolved via :func:`pytanga.geometry.analyze`, reading the
+    MV's ``algebra.opns`` flag.
+    """
+    from pytanga.geometry.operators import Operator as GeoOperator
+
+    if isinstance(obj, SceneEntity):
+        return obj  # type: ignore[return-value]
+
+    from .sdf._compose import SdfElement as _SdfElement
+    from .sdf.primitives import SdfNode as _SdfNode
+
+    if isinstance(obj, (_SdfElement, _SdfNode)):
+        return obj  # type: ignore[return-value]
+
+    if isinstance(obj, (GeoEntity, GeoOperator)):
+        return obj  # type: ignore[return-value]
+
+    try:
+        from pytanga.geometry import analyze
+
+        result = analyze(obj)
+        if result is None:
+            raise ValueError(f"Could not analyze object: {obj!r}")
+        return result
+    except ImportError:
+        raise TypeError(
+            f"Object of type {type(obj).__name__} is not a recognized "
+            f"geometry entity, operator, or multivector."
+        ) from None
 
 
 def _generate_id() -> str:

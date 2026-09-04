@@ -5,6 +5,7 @@
 import { View } from './view.js';
 import { SplitView } from './split-view.js';
 import { StackView } from './stack-view.js';
+import { ToolbarView } from './toolbar-view.js';
 import { GroupView } from './group-view.js';
 import { MenuView } from './menu-view.js';
 import { ThreeJsView } from './three-view.js';
@@ -13,12 +14,16 @@ import { ButtonView } from './button-view.js';
 import { DropdownView } from './dropdown-view.js';
 import { FileChooserView } from './file-chooser-view.js';
 import { TextFieldView } from './text-field-view.js';
+import { LogView, registerLogView } from './log-view.js';
+import { LabelView } from './label-view.js';
+import { MarkdownView } from './markdown-view.js';
 import { TextAreaView } from './text-area-view.js';
 import { ColorPickerView } from './color-picker-view.js';
 import { CheckboxView } from './checkbox-view.js';
 import { ValueEditView } from './value-edit-view.js';
 import { TableView } from './table-view.js';
 import { SpacerView } from './spacer-view.js';
+import { SeparatorView } from './separator-view.js';
 
 function applySizeSpecs(view, node) {
     // Assign unconditionally so a `null` from Python clears any JS default
@@ -32,16 +37,17 @@ function applySizeSpecs(view, node) {
 }
 
 /** Build a `View` tree from a serialized `view_layout` node. */
-export function buildViewTree(node, ws) {
+export function buildViewTree(node, ws, reuse, newScenes) {
     if (!node) return new View();
 
     if (node.type === 'split') {
         const split = new SplitView({ orientation: node.orientation, movable: node.movable });
+        split.viewId = node.id;
         applySizeSpecs(split, node);
         const children = node.children || [];
         const sizes = node.sizes || [];
         children.forEach((childNode, i) => {
-            const child = buildViewTree(childNode, ws);
+            const child = buildViewTree(childNode, ws, reuse, newScenes);
             // Initial splitter positions (`sizes`) → the child's preferred size
             // along the split axis.
             const sizeSpec = sizes[i] || null;
@@ -62,9 +68,10 @@ export function buildViewTree(node, ws) {
             align: node.align,
             justify: node.justify,
         });
+        stack.viewId = node.id;
         applySizeSpecs(stack, node);
         for (const childNode of node.children || []) {
-            stack.addChild(buildViewTree(childNode, ws));
+            stack.addChild(buildViewTree(childNode, ws, reuse, newScenes));
         }
         return stack;
     }
@@ -81,14 +88,32 @@ export function buildViewTree(node, ws) {
             justify: node.justify,
             icon: node.icon,
             icon_only: node.icon_only,
+            tooltip: node.tooltip,
             parent_id: node.parent_id,
             id: node.id,
         });
+        group.viewId = node.id;
         applySizeSpecs(group, node);
         for (const childNode of node.children || []) {
-            group.addChild(buildViewTree(childNode, ws));
+            group.addChild(buildViewTree(childNode, ws, reuse, newScenes));
         }
         return group;
+    }
+
+    if (node.type === 'toolbar') {
+        const toolbar = new ToolbarView({
+            margin: node.margin,
+            border: node.border,
+            gap: node.gap,
+            align: node.align,
+            justify: node.justify,
+        });
+        toolbar.viewId = node.id;
+        applySizeSpecs(toolbar, node);
+        for (const childNode of node.children || []) {
+            toolbar.addChild(buildViewTree(childNode, ws, reuse, newScenes));
+        }
+        return toolbar;
     }
 
     if (node.type === 'menu') {
@@ -99,19 +124,44 @@ export function buildViewTree(node, ws) {
             direction: node.direction,
             position: node.position,
         });
+        menu.viewId = node.id;
         applySizeSpecs(menu, node);
         for (const childNode of node.children || []) {
-            menu.addChild(buildViewTree(childNode, ws));
+            menu.addChild(buildViewTree(childNode, ws, reuse, newScenes));
         }
         return menu;
     }
 
     if (node.type === 'scene_view') {
-        const view = new ThreeJsView(node.scene, ws, node.camera || null, node.id || null);
-        applySizeSpecs(view, node);
-        for (const childNode of node.children || []) {
-            view.addOverlay(buildViewTree(childNode, ws));
+        const sceneName = node.scene ?? '';
+        let view = (reuse && reuse.get(sceneName)) || null;
+        if (view) {
+            // Reuse the existing scene pane so its WebGL context, objects and
+            // camera survive a layout re-push; only the overlay chrome rebuilds.
+            reuse.delete(sceneName);
+            view.clearOverlays();
+            view.viewId = node.id || null;
+            applySizeSpecs(view, node);
+        } else {
+            view = new ThreeJsView(sceneName, ws, node.camera || null, node.id || null);
+            applySizeSpecs(view, node);
+            if (newScenes) newScenes.push(sceneName);
         }
+        for (const childNode of node.children || []) {
+            view.addOverlay(buildViewTree(childNode, ws, reuse, newScenes));
+        }
+        return view;
+    }
+
+    if (node.type === 'log_view') {
+        const view = new LogView({
+            id: node.id,
+            max_history: node.max_history ?? null,
+            lines: node.lines || [],
+        });
+        view.viewId = node.id;
+        applySizeSpecs(view, node);
+        registerLogView(view.logId, view);
         return view;
     }
 
@@ -131,7 +181,7 @@ export function buildViewTree(node, ws) {
     } else if (node.type === 'dropdown_view') {
         view = new DropdownView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            options: node.options, value: node.value,
+            options: node.options, value: node.value, variant: node.variant,
         });
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
@@ -141,6 +191,14 @@ export function buildViewTree(node, ws) {
         view = new TextFieldView({
             id: node.id, label: node.label, tooltip: node.tooltip,
             value: node.value, placeholder: node.placeholder,
+        });
+    } else if (node.type === 'label_view') {
+        view = new LabelView({
+            id: node.id, value: node.value, font_size: node.font_size,
+        });
+    } else if (node.type === 'markdown_view') {
+        view = new MarkdownView({
+            id: node.id, value: node.value,
         });
     } else if (node.type === 'text_area_view') {
         view = new TextAreaView({
@@ -171,9 +229,15 @@ export function buildViewTree(node, ws) {
         });
     } else if (node.type === 'spacer') {
         view = new SpacerView();
+    } else if (node.type === 'separator') {
+        view = new SeparatorView({
+            orientation: node.orientation,
+            spacing: node.spacing,
+        });
     } else {
         view = new View();
     }
+    view.viewId = node.id;
     applySizeSpecs(view, node);
     return view;
 }

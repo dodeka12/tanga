@@ -129,13 +129,13 @@ exposes `show_dialog` / `remove_dialog` / `clear_dialogs` scoped to its scene
 
 ## Examples
 
-- `py/examples/viz/banners/banner_types.py` — every banner kind.
-- `py/examples/viz/banners/heavy_work.py` — a slider that triggers a 3 s
+- `py/examples/viz/ui/banners/banner_types.py` — every banner kind.
+- `py/examples/viz/ui/banners/heavy_work.py` — a slider that triggers a 3 s
   computation on release.
-- `py/examples/viz/dialogs/dialog_demo.py` — a dialog with view content, a
+- `py/examples/viz/ui/dialogs/dialog_demo.py` — a dialog with view content, a
   menu-bar reopen, and a modal variant.
 
 ## See Also
 
-- [Controls](../interaction/controls.md) — `add_slider`/`add_dropdown`/`add_button`/`add_control_group`
+- [Controls](../interaction/controls.md) — `SliderView`/`DropdownView`/`ButtonView`/`GroupView`
 - [Handlers & Lifecycle](handlers.md) — the handler contract and the app lifecycle

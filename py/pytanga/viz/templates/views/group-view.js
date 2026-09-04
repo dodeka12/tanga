@@ -31,6 +31,7 @@ export class GroupView extends StackView {
         justify = 'start',
         icon = null,
         icon_only = false,
+        tooltip = '',
         parent_id = null,
         id = null,
         children = [],
@@ -52,6 +53,7 @@ export class GroupView extends StackView {
         }
         this.icon = icon;
         this.icon_only = icon_only;
+        this.tooltip = tooltip;
         this.parent_id = parent_id;
         this.groupId = id;
 
@@ -107,6 +109,10 @@ export class GroupView extends StackView {
         }
 
         this._header.appendChild(titleWrap);
+
+        if (this.tooltip) {
+            titleWrap.title = this.tooltip;
+        }
 
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'tanga-group-toggle';

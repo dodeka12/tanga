@@ -49,6 +49,6 @@ full walkthrough and the themeable-token reference.
 
 See the examples:
 
-- [Control theming](../../examples/viz/scenes/control_theming.md) — controls styled from the theme CSS.
-- [Theme switching](../../examples/viz/scenes/theme_switching.md) — runtime `set_theme` switching.
-- [Custom theme override](../../examples/viz/scenes/custom_theme_override.md) — a `pastel` theme with full button/checkbox overrides.
+- [Control theming](../../examples/viz/ui/controls/control_theming.md) — controls styled from the theme CSS.
+- [Theme switching](../../examples/viz/ui/themes/theme_switching.md) — runtime `set_theme` switching.
+- [Custom theme override](../../examples/viz/ui/themes/custom_theme_override.md) — a `pastel` theme with full button/checkbox overrides.

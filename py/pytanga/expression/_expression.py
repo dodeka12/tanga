@@ -213,6 +213,37 @@ class Expression:
 
         return from_tensor(result.tensor)
 
+    def bind(self, **bindings: Any) -> "Expression":
+        """Evaluate some bindings, asserting at least one variable/axis stays free.
+
+        Returns a new :class:`Expression` over the remaining variables. Raises
+        :class:`ValueError` if the binding would fully collapse the expression to
+        a plain ``MV`` or a batched ``list`` (use :meth:`evaluate` or
+        :meth:`__call__` for that instead).
+        """
+        result = self._evaluate(bindings, True)
+        if not isinstance(result, Expression):
+            raise ValueError(
+                "bind() expected a partially-evaluated Expression, but the "
+                "binding fully collapsed it. Use evaluate() or __call__()."
+            )
+        return result
+
+    def evaluate(self, **bindings: Any) -> MV:
+        """Evaluate all variables to a concrete :class:`MV`.
+
+        Raises :class:`ValueError` if the result is still an ``Expression``
+        (variables/axes unbound) or a batched ``list``.
+        """
+        result = self._evaluate(bindings, True)
+        if not isinstance(result, MV):
+            raise ValueError(
+                "evaluate() expected a fully-bound MV, but the binding left "
+                "variables/axes unbound (Expression) or produced a batched "
+                "result (list)."
+            )
+        return result
+
     # ------------------------------------------------------------------
     # Products — chain into the tensor builder
     # ------------------------------------------------------------------
@@ -581,6 +612,35 @@ class AffineExpression:
             results.append(term._evaluate(sub, False))
 
         return _combine_terms(results)
+
+    def bind(self, **bindings: Any) -> "AffineExpression":
+        """Evaluate some bindings, asserting at least one variable stays free.
+
+        Raises :class:`ValueError` if the sum fully collapses to an ``MV`` or a
+        batched ``list`` (use :meth:`evaluate` or :meth:`__call__` instead).
+        """
+        result = self(**bindings)
+        if not isinstance(result, AffineExpression):
+            raise ValueError(
+                "bind() expected a partially-evaluated AffineExpression, but "
+                "the binding fully collapsed it. Use evaluate() or __call__()."
+            )
+        return result
+
+    def evaluate(self, **bindings: Any) -> MV:
+        """Evaluate all variables to a concrete :class:`MV`.
+
+        Raises :class:`ValueError` if the result is still an
+        ``AffineExpression`` (variables unbound) or a batched ``list``.
+        """
+        result = self(**bindings)
+        if not isinstance(result, MV):
+            raise ValueError(
+                "evaluate() expected a fully-bound MV, but the binding left "
+                "variables unbound (AffineExpression) or produced a batched "
+                "result (list)."
+            )
+        return result
 
     # ------------------------------------------------------------------
     # Addition / subtraction — concatenate term lists

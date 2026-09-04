@@ -9,20 +9,126 @@ from pytanga.viz._controls import (
     Button,
     Checkbox,
     ColorPicker,
-    ControlGroup,
     ControlHandlerRegistry,
+    Dispatch,
     Dropdown,
     EControlVariant,
+    Label,
+    Markdown,
     Slider,
     Table,
+    TableCellChange,
     TextArea,
     TextField,
     ValueEdit,
     _serialize_one_control,
     get_control_value,
-    serialize_controls,
     set_control_value,
 )
+
+# ── Test: Dispatch + Control.handle_event ────────────────────
+
+
+def test_dispatch_defaults() -> None:
+    d = Dispatch()
+    assert (d.event, d.value, d.push) == (None, None, None)
+
+
+def test_handle_event_change_is_pass_through() -> None:
+    slider = Slider(id="s", value=0.25)
+    d = slider.handle_event("change", {"value": 0.5})
+    assert (d.event, d.value, d.push) == ("change", 0.5, None)
+    assert slider.value == 0.25  # generic dispatch does not mutate the model
+
+
+def test_handle_event_click_returns_no_value() -> None:
+    d = Button(id="b").handle_event("click", {})
+    assert (d.event, d.value, d.push) == ("click", None, None)
+
+
+def test_handle_event_press_release_pass_through() -> None:
+    slider = Slider(id="s")
+    assert slider.handle_event("press", {"value": 0.1}).value == 0.1
+    d = slider.handle_event("release", {"value": 0.9})
+    assert (d.event, d.value, d.push) == ("release", 0.9, None)
+
+
+def test_handle_event_unknown_falls_back_to_change() -> None:
+    d = Dropdown(id="d").handle_event("unknown", {"value": "x"})
+    assert (d.event, d.value) == ("change", "x")
+
+
+# ── Test: Table.handle_event ─────────────────────────────────
+
+
+def test_table_handle_event_cell_change_mutates_model() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    d = ctrl.handle_event("cell_change", {"value": {"row": 0, "col": 0, "value": "9"}})
+    assert d.event == "cell_change"
+    assert isinstance(d.value, TableCellChange)
+    assert (d.value.row, d.value.col, d.value.value) == (0, 0, "9")
+    assert d.push is None
+    assert ctrl.rows == [["9"]]
+
+
+def test_table_handle_event_row_add_mutates_model() -> None:
+    ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"]])
+    d = ctrl.handle_event("row_add", {"value": {"row": 1, "values": ["3", "4"]}})
+    assert d.event == "row_add"
+    assert d.value.row == 1
+    assert ctrl.rows == [["1", "2"], ["3", "4"]]
+
+
+def test_table_handle_event_column_add_mutates_model() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"], ["2"]])
+    d = ctrl.handle_event(
+        "column_add", {"value": {"col": 1, "header": "y", "values": ["a", "b"]}}
+    )
+    assert d.event == "column_add"
+    assert (d.value.col, d.value.header) == (1, "y")
+    assert ctrl.columns == ["x", "y"]
+    assert ctrl.rows == [["1", "a"], ["2", "b"]]
+
+
+def test_table_handle_event_row_delete_mutates_model() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"], ["2"], ["3"]])
+    d = ctrl.handle_event("row_delete", {"value": {"rows": [1]}})
+    assert d.event == "row_delete"
+    assert d.value.rows == [1]
+    assert ctrl.rows == [["1"], ["3"]]
+
+
+def test_table_handle_event_undo_fires_change() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    ctrl.set_cell(0, 0, "9")
+    d = ctrl.handle_event("undo", {})
+    assert d.event == "change"
+    assert d.value == {"columns": ["x"], "rows": [["1"]]}
+    assert d.push == d.value
+    assert ctrl.rows == [["1"]]
+
+
+def test_table_handle_event_redo_fires_change() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    ctrl.set_cell(0, 0, "9")
+    ctrl.undo()
+    d = ctrl.handle_event("redo", {})
+    assert d.event == "change"
+    assert d.value == {"columns": ["x"], "rows": [["9"]]}
+    assert ctrl.rows == [["9"]]
+
+
+def test_table_handle_event_undo_empty_history_noop() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    d = ctrl.handle_event("undo", {})
+    assert (d.event, d.value, d.push) == (None, None, None)
+
+
+def test_table_handle_event_unknown_noop() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    d = ctrl.handle_event("click", {})
+    assert (d.event, d.value, d.push) == (None, None, None)
+
 
 # ── Test: Slider serialization ──────────────────────────────
 
@@ -64,9 +170,20 @@ def test_serialize_dropdown() -> None:
         "id": "mode",
         "kind": "dropdown",
         "label": "Mode",
+        "variant": "default",
         "options": ["Wireframe", "Solid", "Translucent"],
         "value": "Solid",
     }
+
+
+def test_serialize_dropdown_toolbar_variant() -> None:
+    ctrl = Dropdown(
+        id="mode",
+        variant=EControlVariant.TOOLBAR,
+        options=["A", "B"],
+        value="A",
+    )
+    assert _serialize_one_control(ctrl)["variant"] == "toolbar"
 
 
 # ── Test: Button serialization ──────────────────────────────
@@ -82,74 +199,6 @@ def test_serialize_button() -> None:
         "variant": "default",
         "icon_only": False,
     }
-
-
-# ── Test: serialize_controls builds the full JSON message ──
-
-
-def test_serialize_controls_empty() -> None:
-    result = serialize_controls([])
-    assert result == {
-        "type": "controls_define",
-        "controls": [],
-        "groups": [],
-        "orphanControls": [],
-    }
-
-
-def test_serialize_controls_single_group() -> None:
-    slider = Slider(id="pos_x", label="X", min=0.0, max=10.0, step=0.5, value=5.0)
-    dropdown = Dropdown(id="mode", label="Mode", options=["A", "B"], value="A")
-    button = Button(id="btn", label="Go")
-    group = ControlGroup(
-        id="main_group",
-        title="Controls",
-        controls=[slider, dropdown, button],
-        position="bottom-right",
-        collapsed=False,
-    )
-    result = serialize_controls([group])
-    assert result["type"] == "controls_define"
-    assert len(result["controls"]) == 3
-    assert len(result["groups"]) == 1
-    assert result["groups"][0] == {
-        "id": "main_group",
-        "title": "Controls",
-        "controls": ["pos_x", "mode", "btn"],
-        "position": "bottom-right",
-        "collapsed": False,
-        "parentId": None,
-    }
-    # Verify all three controls are present
-    control_ids = {c["id"] for c in result["controls"]}
-    assert control_ids == {"pos_x", "mode", "btn"}
-
-
-def test_serialize_controls_multiple_groups() -> None:
-    s1 = Slider(id="s1", label="S1", min=0.0, max=1.0, step=0.1, value=0.5)
-    s2 = Slider(id="s2", label="S2", min=0.0, max=1.0, step=0.1, value=0.5)
-    g1 = ControlGroup(id="g1", title="Group 1", controls=[s1], position="top-left")
-    g2 = ControlGroup(id="g2", title="Group 2", controls=[s2], position="bottom-right")
-    result = serialize_controls([g1, g2])
-    assert len(result["controls"]) == 2
-    assert len(result["groups"]) == 2
-    assert result["groups"][0]["id"] == "g1"
-    assert result["groups"][1]["id"] == "g2"
-
-
-def test_serialize_controls_group_with_parent_id() -> None:
-    """Groups with parentId should serialize that field correctly."""
-    slider = Slider(id="s", label="S", min=0.0, max=1.0, step=0.1, value=0.5)
-    group = ControlGroup(
-        id="attached_group",
-        title="Attached",
-        controls=[slider],
-        parent_id="some_sphere_id",
-        collapsed=True,
-    )
-    result = serialize_controls([group])
-    assert result["groups"][0]["parentId"] == "some_sphere_id"
-    assert result["groups"][0]["collapsed"] is True
 
 
 # ── Test: ControlHandlerRegistry ────────────────────────────
@@ -337,21 +386,6 @@ def test_serialize_control_tooltip_absent_when_empty() -> None:
     assert "tooltip" not in _serialize_one_control(ctrl)
 
 
-def test_serialize_group_with_icon_and_tooltip() -> None:
-    slider = Slider(id="s", label="S")
-    group = ControlGroup(
-        id="g",
-        title="Group",
-        controls=[slider],
-        icon="material:settings",
-        tooltip="group tooltip",
-    )
-    result = serialize_controls([group])
-    entry = result["groups"][0]
-    assert entry["icon"] == "material:settings"
-    assert entry["tooltip"] == "group tooltip"
-
-
 # ── Test: Table control ──────────────────────────────────────
 
 
@@ -392,6 +426,28 @@ def test_table_set_control_value() -> None:
     set_control_value(ctrl, {"columns": ["y", "z"], "rows": [[2], [3]]})
     assert ctrl.columns == ["y", "z"]
     assert ctrl.rows == [["2"], ["3"]]
+
+
+def test_label_get_control_value() -> None:
+    ctrl = Label(id="lbl", value="hello")
+    assert get_control_value(ctrl) == "hello"
+
+
+def test_label_set_control_value_coerces_to_str() -> None:
+    ctrl = Label(id="lbl")
+    set_control_value(ctrl, 123)
+    assert ctrl.value == "123"
+
+
+def test_markdown_get_control_value() -> None:
+    ctrl = Markdown(id="md", value="# Title")
+    assert get_control_value(ctrl) == "# Title"
+
+
+def test_markdown_set_control_value_coerces_to_str() -> None:
+    ctrl = Markdown(id="md")
+    set_control_value(ctrl, 99)
+    assert ctrl.value == "99"
 
 
 # ── Test: Table undo/redo history ────────────────────────────

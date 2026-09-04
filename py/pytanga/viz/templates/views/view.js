@@ -16,9 +16,10 @@ import { ViewEvent } from './view-event.js';
  * - `destroy`
  */
 export class View extends EventTarget {
-    constructor({ el } = {}) {
+    constructor({ el, viewId } = {}) {
         super();
         this.el = el || document.createElement('div');
+        this.viewId = viewId || null;
         this.el.classList.add('tanga-view');
 
         // Per-axis constraints (Size|null).

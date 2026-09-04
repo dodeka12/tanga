@@ -70,8 +70,6 @@ A `VizSceneHandle` exposes the same API as `Visualizer`, scoped to its scene:
 | `set_title(title)` | Update the title overlay |
 | `set_annotation(text, *, style)` | Update the annotation panel |
 | `set_camera(camera)` | Update the camera at runtime |
-| `add_slider` / `add_dropdown` / `add_button` | Add interactive controls |
-| `add_control_group` / `remove_control` / `remove_control_group` / `clear_controls` | Control management |
 | `set_interaction` / `on_interaction` | Low-level pointer interaction |
 | `animate_to(entity_id, *, ...)` | Animate an entity in this scene |
 | `timeline()` | Create a scene-aware `Timeline` |
@@ -190,17 +188,18 @@ async def on_scene_change(selected_scene, event):
     if event.browser_id:
         viz.navigate_to(selected_scene, target=f"browser:{event.browser_id}")
 
-viz.add_dropdown(
+scene_selector = DropdownView(
     "scene_selector",
     options=["overview", "detail"],
     value="overview",
     on_change=on_scene_change,
 )
+viz.add(scene_selector)   # mounts in the default layout's overlay
 viz.flush()
 ```
 
-Controls are per scene: the dropdown above belongs to whichever scene (or the
-main visualizer) you attach it to.
+Controls are layout-scoped: place the dropdown in whichever layout/overlay you
+want it to appear in (here, the default layout's overlay via `viz.add`).
 
 ## Scene-Aware Animation
 

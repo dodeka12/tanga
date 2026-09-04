@@ -78,6 +78,21 @@ ref.apply_transform(Motor(
 `.scale`, `apply_matrix`, …), and `ref.world_matrix` returns the composed world
 matrix through the parent chain.
 
+`Transform` is importable from `pytanga.viz`, and can be built directly from a
+GA operator with :meth:`~pytanga.viz.Transform.from_operator` — useful for
+baking a body's static placement into a `VizGroup` at construction time:
+
+```python
+from pytanga.geometry.operators import Motor, Rotor, Translator
+from pytanga.viz import Transform, VizGroup
+
+op = Motor(
+    rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
+    translator=Translator(vector=Direction(1, 0, 0)),
+)
+group = VizGroup(id="body", transform=Transform.from_operator(op))
+```
+
 ### Labels & overlays
 
 ```python

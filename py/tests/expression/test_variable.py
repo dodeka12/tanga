@@ -7,6 +7,7 @@ import pytest
 
 from pytanga import BladeMask
 from pytanga.basis import BasisE3
+from pytanga.expression import Expression
 from pytanga.expression._labels import MAX_DEGREE, _reset_allocator
 from pytanga.expression._variable import Variable
 
@@ -59,3 +60,12 @@ class TestVariable:
         assert TopVar is Variable
         assert PkgVar is Variable
         assert PkgExpr is Expression
+
+    def test_reflected_ops_constant_left(self):
+        _reset_allocator()
+        alg = BasisE3()
+        omega = Variable("omega", BladeMask(alg, grades=[2]))
+        x_cm = alg.multivector({"e12": 1.0, "e13": 2.0})
+        for result in (x_cm ^ omega, x_cm | omega, x_cm * omega):
+            assert isinstance(result, Expression)
+            assert set(result.names) == {"omega"}

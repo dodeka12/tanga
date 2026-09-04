@@ -11,11 +11,10 @@ dispatching WebSocket events from the JS frontend.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from enum import Enum, StrEnum
-from typing import Any
+from typing import Any, ClassVar
 
-from ._anchor import EAnchor
 from ._icons import Icon
 
 
@@ -26,11 +25,13 @@ class EControlVariant(StrEnum):
     """Visual variants a control can render as.
 
     ``DEFAULT`` renders the control with its normal panel styling; ``MENU``
-    renders it flat/borderless for use inside menu rows.
+    renders it flat/borderless for use inside menu rows; ``TOOLBAR`` renders it
+    compactly for use inside a horizontal toolbar.
     """
 
     DEFAULT = "default"
     MENU = "menu"
+    TOOLBAR = "toolbar"
 
 
 # ── Control event dataclass ──────────────────────────────────
@@ -106,6 +107,24 @@ toggles) and a :class:`ControlEvent`, and returns an awaitable.
 """
 
 
+@dataclass
+class Dispatch:
+    """What the ``Visualizer`` should do after a control applied an event.
+
+    Returned by :meth:`Control.handle_event`.  The three fields describe the
+    single lookup-and-invoke tail the visualizer runs for every control event:
+
+    - ``event`` — the ``(id, event)`` handler to fire, or ``None`` for none.
+    - ``value`` — the value handed to that handler.
+    - ``push`` — a value to push back to the browser as ``control_update``, or
+      ``None`` to skip the push.
+    """
+
+    event: str | None = None
+    value: Any = None
+    push: Any = None
+
+
 # ── Control dataclasses ──────────────────────────────────────
 
 
@@ -126,12 +145,89 @@ class Control:
     """If set, attach this control (via CSS2DRenderer) to the 3D entity
     with this ID.  ``None`` means the control lives in a fixed DOM panel."""
 
+    def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
+        """Apply an incoming frontend *event* and return the dispatch to run.
+
+        The generic implementation is a pass-through for value-bearing
+        controls: it does **not** mutate the model (only :class:`Table` keeps
+        its state authoritative).  Subclasses override this to map their own
+        events onto model mutations.
+        """
+        if event == "click":
+            return Dispatch("click", None, None)
+        if event in ("press", "release"):
+            return Dispatch(event, payload.get("value"), None)
+        return Dispatch("change", payload.get("value"), None)
+
+    _value_type: ClassVar[type | None] = None
+
+    def set_value(self, value: Any) -> None:
+        """Coerce and set this control's value in place.
+
+        Scalar controls coerce via their ``_value_type`` (``float`` / ``bool`` /
+        ``str``); :class:`Table` replaces its grid; ``Button`` has no value and
+        raises :class:`TypeError`.
+        """
+        if self._value_type is None:
+            raise TypeError(f"{type(self).__name__} controls do not carry a value")
+        self.value = self._value_type(value)
+
+    def get_value(self) -> Any:
+        """Return this control's current value (see :meth:`set_value`)."""
+        if self._value_type is None:
+            raise TypeError(f"{type(self).__name__} controls do not carry a value")
+        return self.value
+
+    def _fields(self) -> dict[str, Any]:
+        """Return the kind-specific fields merged into :meth:`serialize`."""
+        return {}
+
+    def serialize(self) -> dict[str, Any]:
+        """Return this control's JSON-ready dict form."""
+        result: dict[str, Any] = {
+            "id": self.id,
+            "kind": self.kind,
+            "label": self.label,
+        }
+        if self.tooltip:
+            result["tooltip"] = self.tooltip
+        result.update(self._fields())
+        return result
+
+    def register_handlers(self, transport: Any) -> bool:
+        """Register each ``on_*`` handler under its ``(id, event)`` key.
+
+        The naming convention maps ``on_change`` → ``"change"``, ``on_click`` →
+        ``"click"``, ``on_cell_change`` → ``"cell_change"``, …  Returns whether any
+        handler was registered.
+        """
+        registered = False
+        for f in fields(self):
+            if not f.name.startswith("on_"):
+                continue
+            handler = getattr(self, f.name)
+            if handler is not None:
+                transport.register(self.id, handler, event=f.name[3:])
+                registered = True
+        return registered
+
 
 @dataclass
 class Slider(Control):
     """A numeric slider control with min/max/step bounds."""
 
     kind: str = "slider"
+    _value_type: ClassVar[type | None] = float
+
+    def _fields(self) -> dict[str, Any]:
+        return {
+            "variant": str(self.variant),
+            "min": self.min,
+            "max": self.max,
+            "step": self.step,
+            "value": self.value,
+        }
+
     variant: EControlVariant = EControlVariant.DEFAULT
     min: float = 0.0
     max: float = 1.0
@@ -147,6 +243,16 @@ class Dropdown(Control):
     """A dropdown / select control with a fixed set of string options."""
 
     kind: str = "dropdown"
+    _value_type: ClassVar[type | None] = str
+
+    def _fields(self) -> dict[str, Any]:
+        return {
+            "variant": str(self.variant),
+            "options": list(self.options),
+            "value": self.value,
+        }
+
+    variant: EControlVariant = EControlVariant.DEFAULT
     options: list[str] = field(default_factory=list)
     value: str = ""
     on_change: Handler | None = None
@@ -157,6 +263,13 @@ class Button(Control):
     """A clickable button with an optional icon and an async callback."""
 
     kind: str = "button"
+
+    def _fields(self) -> dict[str, Any]:
+        d = {"variant": str(self.variant), "icon_only": self.icon_only}
+        if self.icon is not None:
+            d["icon"] = str(self.icon)
+        return d
+
     variant: EControlVariant = EControlVariant.DEFAULT
     icon: Icon | None = None
     """Optional icon id (``family:name``); rendered before the label."""
@@ -172,6 +285,16 @@ class FileChooser(Control):
     """A file-path control: a text field plus a backend-driven file browser."""
 
     kind: str = "file_chooser"
+    _value_type: ClassVar[type | None] = str
+
+    def _fields(self) -> dict[str, Any]:
+        return {
+            "value": self.value,
+            "placeholder": self.placeholder,
+            "root": self.root,
+            "accept": self.accept,
+        }
+
     value: str = ""
     placeholder: str = ""
     root: str | None = None
@@ -184,6 +307,11 @@ class TextField(Control):
     """A single-line text input control."""
 
     kind: str = "text"
+    _value_type: ClassVar[type | None] = str
+
+    def _fields(self) -> dict[str, Any]:
+        return {"value": self.value, "placeholder": self.placeholder}
+
     value: str = ""
     placeholder: str = ""
     on_change: Handler | None = None
@@ -194,6 +322,11 @@ class TextArea(Control):
     """A multi-line text input control."""
 
     kind: str = "textarea"
+    _value_type: ClassVar[type | None] = str
+
+    def _fields(self) -> dict[str, Any]:
+        return {"value": self.value, "placeholder": self.placeholder, "rows": self.rows}
+
     value: str = ""
     placeholder: str = ""
     rows: int = 4
@@ -205,6 +338,11 @@ class ColorPicker(Control):
     """A color chooser control (native color input, hex value)."""
 
     kind: str = "color"
+    _value_type: ClassVar[type | None] = str
+
+    def _fields(self) -> dict[str, Any]:
+        return {"value": self.value}
+
     value: str = "#ffffff"
     on_change: Handler | None = None
 
@@ -214,6 +352,11 @@ class Checkbox(Control):
     """A boolean checkbox control."""
 
     kind: str = "checkbox"
+    _value_type: ClassVar[type | None] = bool
+
+    def _fields(self) -> dict[str, Any]:
+        return {"variant": str(self.variant), "value": self.value}
+
     variant: EControlVariant = EControlVariant.DEFAULT
     value: bool = False
     on_change: Handler | None = None
@@ -224,6 +367,18 @@ class ValueEdit(Control):
     """A numeric stepper control with up/down buttons and keyboard/wheel steps."""
 
     kind: str = "value_edit"
+    _value_type: ClassVar[type | None] = float
+
+    def _fields(self) -> dict[str, Any]:
+        return {
+            "min": self.min,
+            "max": self.max,
+            "step": self.step,
+            "digits": self.digits,
+            "value": self.value,
+            "editable": self.editable,
+        }
+
     min: float = 0.0
     max: float = 1.0
     step: float = 0.1
@@ -231,6 +386,50 @@ class ValueEdit(Control):
     value: float = 0.0
     editable: bool = True
     on_change: Handler | None = None
+
+
+def parse_table_event(event: str, payload: dict[str, Any]) -> Dispatch:
+    """Parse a table event's payload into its handler payload (no mutation).
+
+    Shared by :meth:`Table.handle_event` (which also mutates the model) and the
+    visualizer's dispatch fallback, which still fires a handler when a table
+    control id is not resolvable but a handler is registered.
+    """
+    nested = payload.get("value")
+    table_payload = nested if isinstance(nested, dict) else payload
+
+    if event == "cell_change":
+        return Dispatch(
+            "cell_change",
+            TableCellChange(
+                row=int(table_payload.get("row", 0)),
+                col=int(table_payload.get("col", 0)),
+                value=str(table_payload.get("value", "")),
+            ),
+        )
+    if event == "row_add":
+        return Dispatch(
+            "row_add",
+            TableRowAdd(
+                row=int(table_payload.get("row", 0)),
+                values=[str(v) for v in (table_payload.get("values") or [])],
+            ),
+        )
+    if event == "column_add":
+        return Dispatch(
+            "column_add",
+            TableColumnAdd(
+                col=int(table_payload.get("col", 0)),
+                header=str(table_payload.get("header", "")),
+                values=[str(v) for v in (table_payload.get("values") or [])],
+            ),
+        )
+    if event == "row_delete":
+        return Dispatch(
+            "row_delete",
+            TableRowsDelete(rows=[int(r) for r in (table_payload.get("rows") or [])]),
+        )
+    return Dispatch()
 
 
 @dataclass
@@ -244,6 +443,24 @@ class Table(Control):
     """
 
     kind: str = "table"
+
+    def set_value(self, value: Any) -> None:
+        self.columns = [str(c) for c in value["columns"]]
+        self.rows = [[str(cell) for cell in row] for row in value["rows"]]
+        self.clear_history()
+
+    def get_value(self) -> dict[str, Any]:
+        return {"columns": list(self.columns), "rows": [list(r) for r in self.rows]}
+
+    def _fields(self) -> dict[str, Any]:
+        return {
+            "columns": list(self.columns),
+            "rows": [list(row) for row in self.rows],
+            "allow_add_rows": self.allow_add_rows,
+            "allow_add_columns": self.allow_add_columns,
+            "allow_delete_rows": self.allow_delete_rows,
+        }
+
     columns: list[str] = field(default_factory=list)
     rows: list[list[str]] = field(default_factory=list)
     allow_add_rows: bool = True
@@ -254,8 +471,43 @@ class Table(Control):
     on_row_add: Handler | None = None
     on_column_add: Handler | None = None
     on_row_delete: Handler | None = None
+    on_change: Handler | None = None
     _undo: list[dict[str, Any]] = field(default_factory=list, repr=False, compare=False)
     _redo: list[dict[str, Any]] = field(default_factory=list, repr=False, compare=False)
+
+    def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
+        """Apply a table event, mutating the model and recording history.
+
+        Overrides :meth:`Control.handle_event` so the table stays authoritative:
+        each frontend event maps to a mutation method and reports the matching
+        payload dataclass to the registered handler.  The per-event mutation is
+        best-effort (bounds-checked); the handler fires with the reported payload
+        regardless, matching the legacy dispatch.  ``undo``/``redo`` restore a
+        whole snapshot and report the bulk ``on_change`` handler (registered
+        under ``"change"``) with the full ``{columns, rows}`` value, pushing the
+        same value back to the browser.
+        """
+        if event in ("undo", "redo"):
+            changed = self.undo() if event == "undo" else self.redo()
+            if changed:
+                value = self._snapshot()
+                return Dispatch("change", value, push=value)
+            return Dispatch()
+
+        d = parse_table_event(event, payload)
+        if d.event is None:
+            return Dispatch()
+
+        change = d.value
+        if event == "cell_change":
+            self.set_cell(change.row, change.col, change.value)
+        elif event == "row_add":
+            self.insert_row(change.row, change.values)
+        elif event == "column_add":
+            self.insert_column(change.col, change.header, change.values)
+        else:  # row_delete
+            self.delete_rows(change.rows)
+        return d
 
     def _snapshot(self) -> dict[str, Any]:
         """Return a deep copy of the current grid state."""
@@ -350,54 +602,31 @@ class Table(Control):
         return True
 
 
-# ── Control group ────────────────────────────────────────────
+@dataclass
+class Label(Control):
+    """A read-only display label control (text with an optional font size)."""
+
+    kind: str = "label"
+    _value_type: ClassVar[type | None] = str
+
+    def _fields(self) -> dict[str, Any]:
+        return {"value": self.value, "font_size": self.font_size}
+
+    value: str = ""
+    font_size: float = 14
 
 
 @dataclass
-class ControlGroup:
-    """A visual group of related controls with a title bar.
+class Markdown(Control):
+    """A read-only display markdown control (rendered with optional KaTeX math)."""
 
-    Can either be a **fixed-position** DOM panel (``parent_id=None``)
-    or **attached** to a 3D entity via CSS2DRenderer (``parent_id`` set).
-    """
+    kind: str = "markdown"
+    _value_type: ClassVar[type | None] = str
 
-    id: str
-    """Unique group identifier."""
+    def _fields(self) -> dict[str, Any]:
+        return {"value": self.value}
 
-    title: str = ""
-    """Title displayed in the group's title bar.
-
-    When the group is attached to a 3D object (``parent_id`` is set),
-    this title doubles as a persistent label rendered alongside the object.
-    """
-
-    icon: Icon | None = None
-    """Optional icon id (``family:name``) rendered in the title bar."""
-
-    tooltip: str = ""
-    """Optional hover tooltip text for the title bar."""
-
-    controls: list[Control] = field(default_factory=list)
-    """The list of :class:`Control` instances belonging to this group."""
-
-    position: EAnchor = EAnchor.BOTTOM_RIGHT
-    """Viewport anchor for fixed-position panels.
-
-    One of :class:`EAnchor` (``"top-left"``, ``"top-right"``, ``"bottom-left"``,
-    ``"bottom-right"``).  Ignored when ``parent_id`` is set.
-    """
-
-    collapsed: bool = False
-    """If ``True``, the group starts collapsed (controls hidden)."""
-
-    parent_id: str | None = None
-    """If set, the group is rendered as a CSS2DObject attached to the
-    3D entity with this ID.  The title bar serves as a persistent label.
-    When ``None``, the group is a fixed-position DOM panel."""
-
-    on_toggle: Handler | None = None
-    """Optional callback invoked when the group is expanded or collapsed.
-    Receives a ``bool`` (``True`` = collapsed)."""
+    value: str = ""
 
 
 # ── Handler registry ─────────────────────────────────────────
@@ -485,211 +714,38 @@ class ControlHandlerRegistry:
 
 
 def _serialize_one_control(ctrl: Control) -> dict[str, Any]:
-    """Serialize a single :class:`Control` to its JSON-ready dict form."""
-    base: dict[str, Any] = {
-        "id": ctrl.id,
-        "kind": ctrl.kind,
-        "label": ctrl.label,
-    }
-    if ctrl.tooltip:
-        base["tooltip"] = ctrl.tooltip
+    """Serialize a single :class:`Control` to its JSON-ready dict form.
 
-    if isinstance(ctrl, Slider):
-        base["variant"] = str(ctrl.variant)
-        base.update(
-            {
-                "min": ctrl.min,
-                "max": ctrl.max,
-                "step": ctrl.step,
-                "value": ctrl.value,
-            }
-        )
-    elif isinstance(ctrl, Dropdown):
-        base.update(
-            {
-                "options": list(ctrl.options),
-                "value": ctrl.value,
-            }
-        )
-    elif isinstance(ctrl, Button):
-        base["variant"] = str(ctrl.variant)
-        if ctrl.icon is not None:
-            base["icon"] = str(ctrl.icon)
-        base["icon_only"] = ctrl.icon_only
-    elif isinstance(ctrl, TextField):
-        base.update(
-            {
-                "value": ctrl.value,
-                "placeholder": ctrl.placeholder,
-            }
-        )
-    elif isinstance(ctrl, TextArea):
-        base.update(
-            {
-                "value": ctrl.value,
-                "placeholder": ctrl.placeholder,
-                "rows": ctrl.rows,
-            }
-        )
-    elif isinstance(ctrl, ColorPicker):
-        base.update({"value": ctrl.value})
-    elif isinstance(ctrl, Checkbox):
-        base["variant"] = str(ctrl.variant)
-        base.update({"value": ctrl.value})
-    elif isinstance(ctrl, FileChooser):
-        base.update(
-            {
-                "value": ctrl.value,
-                "placeholder": ctrl.placeholder,
-                "root": ctrl.root,
-                "accept": ctrl.accept,
-            }
-        )
-    elif isinstance(ctrl, ValueEdit):
-        base.update(
-            {
-                "min": ctrl.min,
-                "max": ctrl.max,
-                "step": ctrl.step,
-                "digits": ctrl.digits,
-                "value": ctrl.value,
-                "editable": ctrl.editable,
-            }
-        )
-    elif isinstance(ctrl, Table):
-        base.update(
-            {
-                "columns": list(ctrl.columns),
-                "rows": [list(row) for row in ctrl.rows],
-                "allow_add_rows": ctrl.allow_add_rows,
-                "allow_add_columns": ctrl.allow_add_columns,
-                "allow_delete_rows": ctrl.allow_delete_rows,
-            }
-        )
-    else:
-        raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
-
-    return base
+    Thin delegate over :meth:`Control.serialize` (kept for backward
+    compatibility); the per-kind logic lives on each control class.
+    """
+    return ctrl.serialize()
 
 
 def serialize_control_defs(controls: list[Control]) -> list[dict[str, Any]]:
     """Serialize a flat list of :class:`Control` objects to their dict forms.
 
-    Reuses :func:`_serialize_one_control`; banners and other consumers use this
-    to embed the same control shapes as ``controls_define``.
+    Reuses :meth:`Control.serialize`; banners and other consumers use this to
+    embed the same control shapes.
     """
-    return [_serialize_one_control(ctrl) for ctrl in controls]
-
-
-def serialize_controls(
-    groups: list[ControlGroup],
-    controls_map: dict[str, Control] | None = None,
-) -> dict[str, Any]:
-    """Build the ``controls_define`` JSON message from group definitions.
-
-    Args:
-        groups: A (possibly empty) list of :class:`ControlGroup` instances.
-        controls_map: Optional dict of ``control_id`` → :class:`Control` for
-            resolving group control ID references to full control objects.
-            When ``None``, groups must store :class:`Control` objects directly.
-
-    Returns:
-        A dict ready for ``json.dumps`` with ``"type": "controls_define"``
-        and ``"controls"``, ``"groups"``, ``"orphanControls"`` fields.
-    """
-    all_controls: dict[str, dict[str, Any]] = {}
-    group_list: list[dict[str, Any]] = []
-    seen_ids: set[str] = set()
-
-    for group in groups:
-        group_control_ids: list[str] = []
-        for ctrl in group.controls:
-            # Resolve control: either it's already a Control object or
-            # it's a string ID that needs lookup in controls_map
-            if isinstance(ctrl, Control):
-                ctrl_obj = ctrl
-            elif controls_map is not None:
-                ctrl_obj = controls_map.get(ctrl)
-                if ctrl_obj is None:
-                    continue  # skip orphaned IDs
-            else:
-                continue
-            group_control_ids.append(ctrl_obj.id)
-            seen_ids.add(ctrl_obj.id)
-            all_controls[ctrl_obj.id] = _serialize_one_control(ctrl_obj)
-        group_entry: dict[str, Any] = {
-            "id": group.id,
-            "title": group.title,
-            "controls": group_control_ids,
-            "position": group.position,
-            "collapsed": group.collapsed,
-            "parentId": group.parent_id,
-        }
-        if group.icon is not None:
-            group_entry["icon"] = str(group.icon)
-        if group.tooltip:
-            group_entry["tooltip"] = group.tooltip
-        group_list.append(group_entry)
-
-    # Collect orphan controls: all registered controls not in any group
-    orphan_ids: list[str] = []
-    if controls_map is not None:
-        for cid in controls_map:
-            if cid not in seen_ids:
-                orphan_ids.append(cid)
-                all_controls[cid] = _serialize_one_control(controls_map[cid])
-    return {
-        "type": "controls_define",
-        "controls": list(all_controls.values()),
-        "groups": group_list,
-        "orphanControls": orphan_ids,
-    }
+    return [ctrl.serialize() for ctrl in controls]
 
 
 def get_control_value(ctrl: Control) -> Any:
     """Return the current value of a value-bearing control.
 
-    ``Button`` controls have no value and raise :class:`TypeError`.
+    ``Button`` controls have no value and raise :class:`TypeError`.  Thin
+    delegate over :meth:`Control.get_value`.
     """
-    if isinstance(ctrl, Button):
-        raise TypeError("Button controls do not carry a value")
-    if isinstance(ctrl, Table):
-        return {"columns": list(ctrl.columns), "rows": [list(r) for r in ctrl.rows]}
-    if isinstance(
-        ctrl,
-        (
-            Slider,
-            Dropdown,
-            ColorPicker,
-            Checkbox,
-            TextField,
-            TextArea,
-            FileChooser,
-            ValueEdit,
-        ),
-    ):
-        return ctrl.value
-    raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
+    return ctrl.get_value()
 
 
 def set_control_value(ctrl: Control, value: Any) -> None:
     """Coerce and set *value* on a value-bearing control.
 
-    Sliders and value edits coerce to ``float``, checkboxes to ``bool``, and the
-    string-valued controls (dropdown, color, text, textarea, file chooser) to
-    ``str``.  ``Button`` controls have no value and raise :class:`TypeError`.
+    Sliders/value-edits coerce to ``float``, checkboxes to ``bool``, string
+    controls to ``str``, and :class:`Table` replaces its grid.  ``Button``
+    controls have no value and raise :class:`TypeError`.  Thin delegate over
+    :meth:`Control.set_value`.
     """
-    if isinstance(ctrl, (Slider, ValueEdit)):
-        ctrl.value = float(value)
-    elif isinstance(ctrl, Table):
-        ctrl.columns = [str(c) for c in value["columns"]]
-        ctrl.rows = [[str(cell) for cell in row] for row in value["rows"]]
-        ctrl.clear_history()
-    elif isinstance(ctrl, Checkbox):
-        ctrl.value = bool(value)
-    elif isinstance(ctrl, (Dropdown, ColorPicker, TextField, TextArea, FileChooser)):
-        ctrl.value = str(value)
-    elif isinstance(ctrl, Button):
-        raise TypeError("Button controls do not carry a value")
-    else:
-        raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
+    ctrl.set_value(value)

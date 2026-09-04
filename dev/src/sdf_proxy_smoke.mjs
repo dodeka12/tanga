@@ -108,4 +108,44 @@ assert(groupFrag.includes('m = 0.0'), 'group propagates material index 0 (union)
 assert(groupFrag.includes('m = 2.0'), 'group propagates material index 2 (intersection)');
 assert(!groupFrag.includes('m = 1.0'), 'subtract member contributes no material index');
 
+// ── SDF group smooth fold ───────────────────────────────────
+const smoothGroup = {
+    id: 'sg',
+    sdfKind: 'SdfGroup',
+    tree: {
+        kind: 'group',
+        children: [
+            { kind: 'sphere', params: { radius: 1.0 }, combine: 'union' },
+            { kind: 'cappedCylinder', params: { halfHeight: 0.6, radius: 0.4 }, combine: 'smooth_union', smoothness: 0.2 },
+        ],
+    },
+    members: [
+        { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, bound: { min: [-1, -1, -1], max: [1, 1, 1] } },
+        { transform: { position: [1, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, bound: { min: [-1, -1, -1], max: [1, 1, 1] } },
+    ],
+};
+
+const smoothFrag = buildProxyFragment(smoothGroup, parts);
+assert(smoothFrag.includes('opSmoothUnion(d, d1, 0.2)'), 'group folds member1 as smooth_union with k=0.2');
+assert(smoothFrag.includes('d = sm1.x'), 'smooth fold reads the blended distance .x');
+assert(smoothFrag.includes('m = mix(1.0, m, sm1.y)'), 'smooth fold blends material by sm.y');
+
+// ── SDF smooth Combine tree (single-object path) ────────────
+const smoothCombine = {
+    id: 'sc',
+    sdfKind: 'Combine',
+    tree: {
+        kind: 'smooth_union',
+        smoothness: 0.3,
+        children: [
+            { kind: 'sphere', params: { radius: 1.0 } },
+            { kind: 'sphere', params: { radius: 0.5, transform: { position: [1, 0, 0] } } },
+        ],
+    },
+};
+
+const scFrag = buildProxyFragment(smoothCombine, parts);
+assert(scFrag.includes('opSmoothUnion('), 'smooth combine tree emits opSmoothUnion');
+assert(scFrag.includes(', 0.3).x'), 'smooth combine tree folds with k=0.3 and takes .x');
+
 console.log('OK: SDF proxy shader / lighting smoke');

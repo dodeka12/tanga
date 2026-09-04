@@ -31,11 +31,20 @@ def test_ecompose_is_string_compatible() -> None:
     assert ECompose.INTERSECTION == "intersection"
     assert ECompose.UNION == "union"
     assert ECompose.XOR == "xor"
+    assert ECompose.SMOOTH_UNION == "smooth_union"
+    assert ECompose.SMOOTH_INTERSECTION == "smooth_intersection"
+    assert ECompose.SMOOTH_SUBTRACT == "smooth_subtract"
 
 
 def test_coerce_mode_roundtrip() -> None:
     assert _coerce_mode("subtract") is ECompose.SUBTRACT
     assert _coerce_mode(ECompose.INTERSECTION) is ECompose.INTERSECTION
+
+
+def test_coerce_mode_accepts_smooth_as_fold() -> None:
+    assert _coerce_mode("smooth_union") is ECompose.SMOOTH_UNION
+    assert _coerce_mode("smooth_intersection") is ECompose.SMOOTH_INTERSECTION
+    assert _coerce_mode("smooth_subtract") is ECompose.SMOOTH_SUBTRACT
 
 
 def test_coerce_mode_rejects_xor_in_fold_context() -> None:
@@ -132,8 +141,23 @@ def test_combine_to_sdf_node_shape() -> None:
         (ECompose.INTERSECTION, "intersect"),
         (ECompose.SUBTRACT, "subtract"),
         (ECompose.XOR, "xor"),
+        (ECompose.SMOOTH_UNION, "smooth_union"),
+        (ECompose.SMOOTH_INTERSECTION, "smooth_intersection"),
+        (ECompose.SMOOTH_SUBTRACT, "smooth_subtract"),
     ],
 )
 def test_combine_kind_mapping(op, kind) -> None:
     node = Combine(op, _Leaf(sphere(1.0)), _Leaf(sphere(0.5))).to_sdf_node()
     assert node.kind == kind
+
+
+def test_combine_smoothness_serializes() -> None:
+    node = Combine(
+        ECompose.SMOOTH_UNION,
+        _Leaf(sphere(1.0)),
+        _Leaf(sphere(0.5)),
+        smoothness=0.25,
+    ).to_sdf_node()
+    assert node.kind == "smooth_union"
+    assert node.smoothness == 0.25
+    assert node.to_dict()["smoothness"] == 0.25

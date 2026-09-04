@@ -1,45 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Tests for the control value-update API (``control_update``)."""
-
-import asyncio
-import json
+"""Tests for the control value/history API (``Control.set_value`` / ``Table`` undo/redo)."""
 
 import pytest
-from pytanga.viz import ButtonView, SliderView, TableView, Visualizer
-from pytanga.viz._controls import (
-    Button,
-    Slider,
-    ValueEdit,
-)
-from pytanga.viz._controls import (
-    set_control_value as _set_ctrl,
-)
 
-
-class _FakeServer:
-    def __init__(self):
-        self.pushed: list[str] = []
-
-    async def push_raw(self, data: str) -> None:
-        self.pushed.append(data)
-
-
-def _viz() -> Visualizer:
-    return Visualizer(add_default_axes=False, add_default_grid=False)
-
-
-def _patch_push(viz: Visualizer, server: _FakeServer, monkeypatch) -> None:
-    monkeypatch.setattr(viz, "_server", server)
-    monkeypatch.setattr(viz, "_loop", object())
-    monkeypatch.setattr(
-        asyncio, "run_coroutine_threadsafe", lambda coro, loop: asyncio.run(coro)
-    )
-
-
-def _messages(server: _FakeServer) -> list[dict]:
-    return [json.loads(d) for d in server.pushed]
+from pytanga.viz import Size, TableView
+from pytanga.viz._controls import Button, Slider, Table, ValueEdit
+from pytanga.viz._controls import set_control_value as _set_ctrl
 
 
 # ── Helper coercion ─────────────────────────────────────────
@@ -62,223 +30,27 @@ def test_helper_button_raises() -> None:
         _set_ctrl(Button(id="go"), None)
 
 
-# ── Visualizer.set_control_value ────────────────────────────
+# ── Control.set_value / get_value ───────────────────────────
 
 
-def test_set_control_value_slider_mutates_and_pushes(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_slider("radius", min=0, max=5, value=2.0)
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.set_control_value("radius", 3.5)
-
-    assert viz._scenes[""]._controls["radius"].value == 3.5
-    assert _messages(server) == [
-        {"type": "control_update", "scene": "", "id": "radius", "value": 3.5},
-    ]
+def test_control_set_value_get_value() -> None:
+    s = Slider(id="s")
+    s.set_value("3.5")
+    assert s.get_value() == 3.5
+    assert s.value == 3.5
 
 
-def test_set_control_value_dropdown_coerces_to_str(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_dropdown("mode", options=["a", "b"], value="a")
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.set_control_value("mode", "b")
-
-    assert viz._scenes[""]._controls["mode"].value == "b"
-    assert _messages(server)[-1]["value"] == "b"
+def test_table_set_value_replaces_grid_and_clears_history() -> None:
+    t = Table(id="t", columns=["x"], rows=[["1"]])
+    t.set_cell(0, 0, "9")
+    assert t.can_undo is True
+    t.set_value({"columns": ["y"], "rows": [["2"]]})
+    assert t.columns == ["y"]
+    assert t.rows == [["2"]]
+    assert t.can_undo is False  # set_value clears history
 
 
-def test_set_control_value_checkbox_coerces_to_bool(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_checkbox("wire", value=False)
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.set_control_value("wire", True)
-
-    assert viz._scenes[""]._controls["wire"].value is True
-    assert _messages(server)[-1]["value"] is True
-
-
-def test_set_control_value_missing_raises() -> None:
-    viz = _viz()
-    with pytest.raises(KeyError):
-        viz.set_control_value("nope", 1.0)
-
-
-def test_set_control_value_button_raises() -> None:
-    viz = _viz()
-    viz.add_button("go")
-    with pytest.raises(TypeError):
-        viz.set_control_value("go", None)
-
-
-def test_set_control_value_table_pushes_grid(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.set_control_value("tbl", {"columns": ["y", "z"], "rows": [[2], [3]]})
-
-    ctrl = viz._scenes[""]._controls["tbl"]
-    assert ctrl.columns == ["y", "z"]
-    assert ctrl.rows == [["2"], ["3"]]
-    assert _messages(server) == [
-        {
-            "type": "control_update",
-            "scene": "",
-            "id": "tbl",
-            "value": {"columns": ["y", "z"], "rows": [["2"], ["3"]]},
-        },
-    ]
-
-
-# ── Visualizer.set_control_view_value ───────────────────────
-
-
-def test_set_control_view_value_mutates_and_pushes(monkeypatch) -> None:
-    viz = _viz()
-    view = SliderView("s1", min=0, max=5, value=2.0)
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.set_control_view_value(view, 4.0)
-
-    assert view.value == 4.0
-    assert _messages(server) == [
-        {"type": "control_update", "scene": "", "id": "s1", "value": 4.0},
-    ]
-
-
-def test_set_control_view_value_button_view_raises() -> None:
-    viz = _viz()
-    with pytest.raises(TypeError):
-        viz.set_control_view_value(ButtonView("b1"), None)
-
-
-def test_set_control_view_value_table_pushes_grid(monkeypatch) -> None:
-    viz = _viz()
-    view = TableView("tbl", columns=["x"], rows=[["1"]])
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.set_control_view_value(view, {"columns": ["y"], "rows": [[2]]})
-
-    assert view.columns == ["y"]
-    assert view.rows == [["2"]]
-    assert _messages(server) == [
-        {
-            "type": "control_update",
-            "scene": "",
-            "id": "tbl",
-            "value": {"columns": ["y"], "rows": [["2"]]},
-        },
-    ]
-
-
-# ── Visualizer.update_control routes value= ─────────────────
-
-
-def test_update_control_value_routes_in_place(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_slider("s", min=0, max=10, value=1.0)
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.update_control("s", value=5.5)
-
-    assert viz._scenes[""]._controls["s"].value == 5.5
-    msgs = _messages(server)
-    assert len(msgs) == 1
-    assert msgs[0]["type"] == "control_update"
-    assert msgs[0]["id"] == "s"
-    assert msgs[0]["value"] == 5.5
-
-
-def test_update_control_other_fields_redefines(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_slider("s", min=0, max=10, value=1.0)
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.update_control("s", max=20.0)
-
-    assert viz._scenes[""]._controls["s"].max == 20.0
-    assert _messages(server)[-1]["type"] == "controls_define"
-
-
-# ── Table undo/redo API ─────────────────────────────────────
-
-
-def test_undo_table_mutates_and_pushes(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
-    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    assert viz.undo_table("tbl") is True
-
-    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["1"]]}
-    assert _messages(server) == [
-        {
-            "type": "control_update",
-            "scene": "",
-            "id": "tbl",
-            "value": {"columns": ["x"], "rows": [["1"]]},
-        },
-    ]
-
-
-def test_undo_table_empty_history_returns_false(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    assert viz.undo_table("tbl") is False
-    assert server.pushed == []
-
-
-def test_redo_table_reapplies_after_undo(monkeypatch) -> None:
-    viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
-    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    viz.undo_table("tbl")
-    assert viz.redo_table("tbl") is True
-    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["9"]]}
-    assert _messages(server)[-1]["value"] == {"columns": ["x"], "rows": [["9"]]}
-
-
-def test_can_undo_redo_table_reflect_state() -> None:
-    viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
-    assert viz.can_undo_table("tbl") is False
-    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
-    assert viz.can_undo_table("tbl") is True
-    assert viz.can_redo_table("tbl") is False
-    viz.undo_table("tbl")
-    assert viz.can_redo_table("tbl") is True
-
-
-def test_scene_handle_undo_table_routes(monkeypatch) -> None:
-    viz = _viz()
-    handle = viz.scene("detail")
-    handle.add_table("tbl", columns=["x"], rows=[["1"]])
-    viz._resolve_control("tbl").control.set_cell(0, 0, "9")
-    server = _FakeServer()
-    _patch_push(viz, server, monkeypatch)
-
-    assert handle.undo_table("tbl") is True
-    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["1"]]}
-    assert _messages(server)[-1]["scene"] == "detail"
+# ── TableView forwards history/value through its control ────
 
 
 def test_table_view_undo_redo_operate_on_control() -> None:
@@ -291,10 +63,37 @@ def test_table_view_undo_redo_operate_on_control() -> None:
     assert view.control.rows == [["9"]]
 
 
-def test_max_history_flows_through_add_table_and_table_view() -> None:
-    viz = _viz()
-    viz.add_table("tbl", columns=["x"], max_history=5)
-    assert viz._resolve_control("tbl").control.max_history == 5
-
+def test_table_view_max_history_flows_through() -> None:
     view = TableView("tv", columns=["x"], max_history=7)
     assert view.control.max_history == 7
+
+
+def test_table_view_undo_redo_push_grid() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    pushed: list[tuple] = []
+    view._push = lambda vid, value: pushed.append((vid, value))
+    view.control.set_cell(0, 0, "9")
+
+    assert view.undo() is True
+    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]]})]
+
+    assert view.redo() is True
+    assert pushed[-1] == ("tbl", {"columns": ["x"], "rows": [["9"]]})
+
+
+def test_table_view_undo_empty_history_does_not_push() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    pushed: list[tuple] = []
+    view._push = lambda vid, value: pushed.append((vid, value))
+
+    assert view.undo() is False
+    assert pushed == []
+
+
+def test_table_view_default_min_width_scales_with_columns() -> None:
+    assert TableView("a", columns=["x"]).min_width == Size.px(120)
+    assert TableView("b", columns=["x", "y", "z"]).min_width == Size.px(180)
+    # An explicit min_width still wins.
+    assert TableView(
+        "c", columns=["x", "y", "z"], min_width=Size.px(99)
+    ).min_width == Size.px(99)

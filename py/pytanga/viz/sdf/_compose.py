@@ -27,24 +27,31 @@ class ECompose(StrEnum):
     Members are string-compatible (``ECompose.SUBTRACT == "subtract"``) so they
     interoperate with the legacy string modes used by ``Composed``/``SdfGroup``.
 
-    ``UNION``/``INTERSECTION``/``SUBTRACT`` double as ordered-fold modes;
-    ``XOR`` (symmetric difference) is binary-only and cannot be a fold mode.
+    ``UNION``/``INTERSECTION``/``SUBTRACT`` (and their ``SMOOTH_*`` variants)
+    double as ordered-fold modes; ``XOR`` (symmetric difference) is binary-only
+    and cannot be a fold mode.
     """
 
     UNION = "union"
     INTERSECTION = "intersection"
     SUBTRACT = "subtract"
     XOR = "xor"
+    SMOOTH_UNION = "smooth_union"
+    SMOOTH_INTERSECTION = "smooth_intersection"
+    SMOOTH_SUBTRACT = "smooth_subtract"
 
 
 #: Map an ``ECompose`` mode to the GLSL combinator kind used by
-#: ``primitives.combine`` (note: the combinator kind spells it ``intersect``,
-#: while the fold mode spells it ``intersection``).
+#: ``primitives.combine`` (note: the hard combinator kind spells it
+#: ``intersect``, while the fold mode spells it ``intersection``).
 _COMBINE_KIND = {
     ECompose.UNION: "union",
     ECompose.INTERSECTION: "intersect",
     ECompose.SUBTRACT: "subtract",
     ECompose.XOR: "xor",
+    ECompose.SMOOTH_UNION: "smooth_union",
+    ECompose.SMOOTH_INTERSECTION: "smooth_intersection",
+    ECompose.SMOOTH_SUBTRACT: "smooth_subtract",
 }
 
 
@@ -78,6 +85,7 @@ class SdfElement:
     """
 
     combine: ECompose = ECompose.UNION
+    smoothness: float | None = None
 
     # ── Unary polarity (ordered-fold membership) ───────────
 
@@ -145,16 +153,23 @@ class Combine(SdfElement):
         b: SdfElement,
         *,
         combine: ECompose = ECompose.UNION,
+        smoothness: float | None = None,
     ) -> None:
         object.__setattr__(self, "op", op)
         object.__setattr__(self, "a", a)
         object.__setattr__(self, "b", b)
         object.__setattr__(self, "combine", combine)
+        object.__setattr__(self, "smoothness", smoothness)
 
     def to_sdf_node(self) -> Any:
         from .primitives import combine
 
-        return combine(_COMBINE_KIND[self.op], self.a.to_sdf_node(), self.b.to_sdf_node())
+        return combine(
+            _COMBINE_KIND[self.op],
+            self.a.to_sdf_node(),
+            self.b.to_sdf_node(),
+            smoothness=self.smoothness,
+        )
 
 
 def _resolve_mv(obj: Any) -> Any:
@@ -202,17 +217,33 @@ def _normalize_part(part: Any) -> tuple[Any, ECompose]:
     """Normalize a ``Composed``/``SdfGroup`` part to ``(element, fold_mode)``.
 
     Accepts a bare element (its own ``combine`` is the mode), a unary-tagged
-    element (``-el``/``~el``), or a legacy ``(obj, mode)`` tuple/string.
+    element (``-el``/``~el``), a legacy ``(obj, mode)`` tuple/string, or a
+    ``(obj, mode, smoothness)`` tuple. Any ``smoothness`` is stamped onto the
+    returned element.
     """
     if (
         isinstance(part, tuple)
-        and len(part) == 2
+        and len(part) >= 2
         and isinstance(part[1], (ECompose, str))
     ):
-        return _coerce(part[0]), _coerce_mode(part[1])
-    element = _coerce(part)
-    mode = element.combine if isinstance(element, SdfElement) else ECompose.UNION
+        element = _coerce(part[0])
+        mode = _coerce_mode(part[1])
+        smoothness = part[2] if len(part) == 3 else None
+    else:
+        element = _coerce(part)
+        mode = element.combine if isinstance(element, SdfElement) else ECompose.UNION
+        smoothness = getattr(element, "smoothness", None)
+
+    if smoothness is not None:
+        element = _stamp_smoothness(element, float(smoothness))
     return element, mode
+
+
+def _stamp_smoothness(element: Any, smoothness: float) -> Any:
+    """Return a shallow copy of *element* with its ``smoothness`` set."""
+    obj = copy.copy(element)
+    object.__setattr__(obj, "smoothness", smoothness)
+    return obj
 
 
 def _with_combine(el: SdfElement, mode: ECompose) -> SdfElement:

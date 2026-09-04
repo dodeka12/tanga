@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from types import NotImplementedType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -91,10 +92,14 @@ class MV:
             return self._alg.scale(self._alg.inv(self), other)
         return NotImplemented
 
-    def __xor__(self, other: "MV") -> "MV":
+    def __xor__(self, other: "MV") -> "MV | NotImplementedType":
+        if not isinstance(other, MV):
+            return NotImplemented
         return self._alg.op(self, other)
 
-    def __or__(self, other: "MV") -> "MV":
+    def __or__(self, other: "MV") -> "MV | NotImplementedType":
+        if not isinstance(other, MV):
+            return NotImplemented
         return self._alg.ip(self, other)
 
     def __invert__(self) -> "MV":

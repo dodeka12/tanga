@@ -98,6 +98,31 @@ Python CSG operators:
 `Composed` / `SdfGroup` also accept the legacy `(obj, "subtract")` tuple form and
 `ECompose` enum values.
 
+### Smooth blending
+
+Smooth combine modes replace the hard min/max seam with a rounded, blended join
+of radius `smoothness` (frontend default `0.1`):
+
+| Mode                          | Combine mode                                  |
+|-------------------------------|-----------------------------------------------|
+| `(obj, "smooth_union")`       | `ECompose.SMOOTH_UNION`                       |
+| `(obj, "smooth_intersection")`| `ECompose.SMOOTH_INTERSECTION`                |
+| `(obj, "smooth_subtract")`    | `ECompose.SMOOTH_SUBTRACT`                    |
+
+`Composed` / `SdfGroup` accept a `(obj, mode, smoothness)` 3-tuple to set the
+blend radius per member, `Combine(ECompose.SMOOTH_UNION, a, b, smoothness=…)`
+builds a smooth binary combine, and `SdfStyle(smoothness=…)` sets a per-object
+default:
+
+```python
+from pytanga.viz.sdf import SdfGroup, capped_cylinder, sphere
+
+group = SdfGroup(
+    sphere(1.0, id="hub"),
+    (capped_cylinder(1.5, 0.35, id="shaft"), "smooth_union", 0.15),  # rounded join
+)
+```
+
 ### Per-object materials
 
 `Composed` / `SdfGroup` members keep their own color/opacity (a per-member

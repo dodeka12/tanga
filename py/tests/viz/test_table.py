@@ -5,7 +5,7 @@
 
 import pytest
 
-from pytanga.viz import Visualizer
+from pytanga.viz import TableView, Visualizer
 from pytanga.viz._controls import (
     TableCellChange,
     TableColumnAdd,
@@ -26,7 +26,9 @@ async def test_dispatch_cell_change() -> None:
     async def _on_cell(change, event):
         calls.append(change)
 
-    viz.add_table("tbl", columns=["x", "y"], rows=[["1", "2"]], on_cell_change=_on_cell)
+    viz.set_layout(
+        TableView("tbl", columns=["x", "y"], rows=[["1", "2"]], on_cell_change=_on_cell)
+    )
     await viz._dispatch_control_event(
         "control:cell_change", {"control_id": "tbl", "row": 1, "col": 0, "value": "42"}
     )
@@ -43,7 +45,7 @@ async def test_dispatch_row_add() -> None:
     async def _on_row(add, event):
         calls.append(add)
 
-    viz.add_table("tbl", columns=["x", "y"], on_row_add=_on_row)
+    viz.set_layout(TableView("tbl", columns=["x", "y"], on_row_add=_on_row))
     await viz._dispatch_control_event(
         "control:row_add", {"control_id": "tbl", "row": 2, "values": ["", ""]}
     )
@@ -60,7 +62,7 @@ async def test_dispatch_column_add() -> None:
     async def _on_col(add, event):
         calls.append(add)
 
-    viz.add_table("tbl", columns=["x"], rows=[["1"]], on_column_add=_on_col)
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]], on_column_add=_on_col))
     await viz._dispatch_control_event(
         "control:column_add",
         {"control_id": "tbl", "col": 1, "header": "y", "values": [""]},
@@ -102,6 +104,9 @@ def test_set_layout_registers_table_handlers() -> None:
     async def _on_del(delete, event):
         pass
 
+    async def _on_change(value, event):
+        pass
+
     viz.set_layout(
         TableView(
             "tbl",
@@ -111,6 +116,7 @@ def test_set_layout_registers_table_handlers() -> None:
             on_row_add=_on_row,
             on_column_add=_on_col,
             on_row_delete=_on_del,
+            on_change=_on_change,
         )
     )
 
@@ -118,6 +124,17 @@ def test_set_layout_registers_table_handlers() -> None:
     assert viz._handler_registry.get("tbl", "row_add") is _on_row
     assert viz._handler_registry.get("tbl", "column_add") is _on_col
     assert viz._handler_registry.get("tbl", "row_delete") is _on_del
+    assert viz._handler_registry.get("tbl", "change") is _on_change
+
+
+def test_add_table_on_change_registers_change_handler() -> None:
+    viz = _viz()
+
+    async def _on_change(value, event):
+        pass
+
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]], on_change=_on_change))
+    assert viz._handler_registry.get("tbl", "change") is _on_change
 
 
 @pytest.mark.anyio
@@ -129,7 +146,9 @@ async def test_dispatch_cell_change_nested_payload() -> None:
     async def _on_cell(change, event):
         calls.append(change)
 
-    viz.add_table("tbl", columns=["x", "y"], rows=[["1", "2"]], on_cell_change=_on_cell)
+    viz.set_layout(
+        TableView("tbl", columns=["x", "y"], rows=[["1", "2"]], on_cell_change=_on_cell)
+    )
     await viz._dispatch_control_event(
         "control:cell_change",
         {"control_id": "tbl", "value": {"row": 1, "col": 0, "value": "42"}},
@@ -147,7 +166,7 @@ async def test_dispatch_row_add_nested_payload() -> None:
     async def _on_row(add, event):
         calls.append(add)
 
-    viz.add_table("tbl", columns=["x", "y"], on_row_add=_on_row)
+    viz.set_layout(TableView("tbl", columns=["x", "y"], on_row_add=_on_row))
     await viz._dispatch_control_event(
         "control:row_add",
         {"control_id": "tbl", "value": {"row": 2, "values": ["", ""]}},
@@ -165,7 +184,7 @@ async def test_dispatch_column_add_nested_payload() -> None:
     async def _on_col(add, event):
         calls.append(add)
 
-    viz.add_table("tbl", columns=["x"], rows=[["1"]], on_column_add=_on_col)
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]], on_column_add=_on_col))
     await viz._dispatch_control_event(
         "control:column_add",
         {"control_id": "tbl", "value": {"col": 1, "header": "y", "values": [""]}},
@@ -183,7 +202,9 @@ async def test_dispatch_row_delete_nested_payload() -> None:
     async def _on_del(delete, event):
         calls.append(delete)
 
-    viz.add_table("tbl", columns=["x", "y"], rows=[["1", "2"]], on_row_delete=_on_del)
+    viz.set_layout(
+        TableView("tbl", columns=["x", "y"], rows=[["1", "2"]], on_row_delete=_on_del)
+    )
     await viz._dispatch_control_event(
         "control:row_delete",
         {"control_id": "tbl", "value": {"rows": [1, 2]}},
@@ -199,11 +220,11 @@ async def test_dispatch_row_delete_nested_payload() -> None:
 @pytest.mark.anyio
 async def test_dispatch_cell_change_mutates_model() -> None:
     viz = _viz()
-    viz.add_table("tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]])
+    viz.set_layout(TableView("tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]]))
     await viz._dispatch_control_event(
         "control:cell_change", {"control_id": "tbl", "row": 1, "col": 0, "value": "42"}
     )
-    assert viz.get_control("tbl") == {
+    assert viz._resolve_control("tbl").get_value() == {
         "columns": ["x", "y"],
         "rows": [["1", "2"], ["42", "4"]],
     }
@@ -212,22 +233,22 @@ async def test_dispatch_cell_change_mutates_model() -> None:
 @pytest.mark.anyio
 async def test_dispatch_row_add_mutates_model() -> None:
     viz = _viz()
-    viz.add_table("tbl", columns=["x", "y"], rows=[["1", "2"]])
+    viz.set_layout(TableView("tbl", columns=["x", "y"], rows=[["1", "2"]]))
     await viz._dispatch_control_event(
         "control:row_add", {"control_id": "tbl", "row": 1, "values": ["a", "b"]}
     )
-    assert viz.get_control("tbl")["rows"] == [["1", "2"], ["a", "b"]]
+    assert viz._resolve_control("tbl").get_value()["rows"] == [["1", "2"], ["a", "b"]]
 
 
 @pytest.mark.anyio
 async def test_dispatch_column_add_mutates_model() -> None:
     viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"], ["2"]])
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"], ["2"]]))
     await viz._dispatch_control_event(
         "control:column_add",
         {"control_id": "tbl", "col": 1, "header": "y", "values": ["a", "b"]},
     )
-    assert viz.get_control("tbl") == {
+    assert viz._resolve_control("tbl").get_value() == {
         "columns": ["x", "y"],
         "rows": [["1", "a"], ["2", "b"]],
     }
@@ -236,11 +257,11 @@ async def test_dispatch_column_add_mutates_model() -> None:
 @pytest.mark.anyio
 async def test_dispatch_row_delete_mutates_model() -> None:
     viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"], ["2"], ["3"]])
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"], ["2"], ["3"]]))
     await viz._dispatch_control_event(
         "control:row_delete", {"control_id": "tbl", "rows": [0, 2]}
     )
-    assert viz.get_control("tbl")["rows"] == [["2"]]
+    assert viz._resolve_control("tbl").get_value()["rows"] == [["2"]]
 
 
 @pytest.mark.anyio
@@ -252,7 +273,10 @@ async def test_dispatch_mutates_layout_table_view_model() -> None:
     await viz._dispatch_control_event(
         "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
     )
-    assert viz.get_control("tbl") == {"columns": ["x"], "rows": [["9"]]}
+    assert viz._resolve_control("tbl").get_value() == {
+        "columns": ["x"],
+        "rows": [["9"]],
+    }
 
 
 @pytest.mark.anyio
@@ -274,14 +298,14 @@ async def test_dispatch_without_control_still_calls_handler() -> None:
 @pytest.mark.anyio
 async def test_undo_after_dispatch_restores_model() -> None:
     viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
     await viz._dispatch_control_event(
         "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
     )
-    assert viz.get_control("tbl")["rows"] == [["9"]]
+    assert viz._resolve_control("tbl").get_value()["rows"] == [["9"]]
     ref = viz._resolve_control("tbl")
-    assert ref.control.undo() is True
-    assert viz.get_control("tbl")["rows"] == [["1"]]
+    assert ref.undo() is True
+    assert viz._resolve_control("tbl").get_value()["rows"] == [["1"]]
 
 
 # ── Test: control:undo / control:redo dispatch ───────────────
@@ -290,35 +314,62 @@ async def test_undo_after_dispatch_restores_model() -> None:
 @pytest.mark.anyio
 async def test_dispatch_undo_restores_model_and_pushes(monkeypatch) -> None:
     viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
     await viz._dispatch_control_event(
         "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
     )
 
     pushed = []
     monkeypatch.setattr(
-        viz,
+        viz._layout,
         "_push_control_update",
-        lambda scene, cid, value: pushed.append((scene, cid, value)),
+        lambda cid, value: pushed.append((cid, value)),
     )
 
     await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
 
-    assert viz.get_control("tbl")["rows"] == [["1"]]
-    assert pushed == [("", "tbl", {"columns": ["x"], "rows": [["1"]]})]
+    assert viz._resolve_control("tbl").get_value()["rows"] == [["1"]]
+    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]]})]
+
+
+@pytest.mark.anyio
+async def test_dispatch_undo_fires_on_change(monkeypatch) -> None:
+    viz = _viz()
+    calls = []
+
+    async def _on_change(value, event):
+        calls.append(value)
+
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
+    viz._handler_registry.register("tbl", _on_change, event="change")
+    await viz._dispatch_control_event(
+        "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
+    )
+
+    pushed = []
+    monkeypatch.setattr(
+        viz._layout,
+        "_push_control_update",
+        lambda cid, value: pushed.append((cid, value)),
+    )
+
+    await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
+
+    assert calls == [{"columns": ["x"], "rows": [["1"]]}]
+    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]]})]
 
 
 @pytest.mark.anyio
 async def test_dispatch_redo_reapplies(monkeypatch) -> None:
     viz = _viz()
-    viz.add_table("tbl", columns=["x"], rows=[["1"]])
+    viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
     await viz._dispatch_control_event(
         "control:cell_change", {"control_id": "tbl", "row": 0, "col": 0, "value": "9"}
     )
     await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
     await viz._dispatch_control_event("control:redo", {"control_id": "tbl"})
 
-    assert viz.get_control("tbl")["rows"] == [["9"]]
+    assert viz._resolve_control("tbl").get_value()["rows"] == [["9"]]
 
 
 @pytest.mark.anyio

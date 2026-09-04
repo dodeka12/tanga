@@ -39,7 +39,9 @@ class VisualizerApp:
 
             async def init(self) -> None:
                 self.viz.add(...)
-                self.viz.add_slider("x", on_change=self.on_x)
+                self.viz.set_layout(
+                    SceneView("", overlay=[SliderView("x", on_change=self.on_x)])
+                )
 
             async def on_x(self, value: float, event: ControlEvent) -> None:
                 self.viz.update_entity("ent", ...)

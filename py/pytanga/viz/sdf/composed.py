@@ -41,16 +41,19 @@ class Composed(SdfElement):
         *parts: Any,
         id: str | None = None,
         combine: ECompose = ECompose.UNION,
+        smoothness: float | None = None,
     ) -> None:
         object.__setattr__(self, "parts", tuple(_normalize_part(p) for p in parts))
         object.__setattr__(self, "id", id)
         object.__setattr__(self, "combine", combine)
+        object.__setattr__(self, "smoothness", smoothness)
 
     def to_sdf_node(self) -> SdfNode:
         children: list[SdfNode] = []
         for element, mode in self.parts:
             child = copy.copy(_member_node(element))
             child.combine = mode.value
+            child.smoothness = getattr(element, "smoothness", None)
             children.append(child)
         return group(children, id=self.id)
 

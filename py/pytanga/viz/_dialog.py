@@ -17,7 +17,7 @@ from typing import Any
 
 from ._controls import Handler
 from ._size import Size, SizeSpec
-from .views import FileChooserView, View, _make_id_gen
+from .views import FileChooserView, View
 
 
 @dataclass
@@ -141,7 +141,7 @@ def serialize_dialog(dialog: Dialog, scene: str | None = None) -> dict[str, Any]
         "dismissable": dialog.dismissable,
         "width": None if dialog.width is None else dialog.width.to_dict(),
         "height": None if dialog.height is None else dialog.height.to_dict(),
-        "content": dialog.content._serialize(_make_id_gen()),
+        "content": dialog.content._serialize(),
     }
 
 

@@ -1,16 +1,11 @@
 // Tanga 3D Viewer — Control Panel
-// DOM-based interactive controls (sliders, dropdowns, buttons) overlaid on the
-// Three.js viewer.  Driven by the controls_define / controls_clear WebSocket
-// messages defined in Phase 1.
+// DOM control factories (sliders, dropdowns, buttons, …) shared by the
+// layout/``view_layout`` rendering path (views/*.js) and by banners/dialogs.
 
 import { openFileBrowser } from './file-browser.js';
 import { sendEvent } from './events.js';
 
 // ── Module state ─────────────────────────────────────────────
-let _rootEl = null;            // #tanga-control-root (fixed container for all panels)
-let _panelEls = [];            // all active panel wrapper elements
-let _toggleBtn = null;         // hide/restore toggle button
-let _panelsHidden = false;
 let _controlRegistry = {};      // control id → { kind, apply(value) }
 
 // Throttle helpers (sliders send at ≤25 Hz while dragging; final state always flushed via change event)
@@ -40,241 +35,6 @@ export function applyControlValue(id, value) {
  */
 export function forgetControl(id) {
     delete _controlRegistry[id];
-}
-
-/**
- * Process a controls_define message: tear down the old panel tree and
- * rebuild everything from the message payload.
- */
-export function handleControlsDefine(msg, targetEl = null) {
-    _destroyAll();
-    if (!targetEl) _ensureRoot();
-
-    const controls = msg.controls || [];
-    const orphanIds = new Set(msg.orphanControls || []);
-
-    // Build a lookup controlDefById for rendering
-    const ctrlById = {};
-    for (const c of controls) {
-        ctrlById[c.id] = c;
-    }
-
-    // Render orphan controls in a default title-less panel.
-    if (orphanIds.size > 0) {
-        const orphanCtrls = [...orphanIds].map(id => ctrlById[id]).filter(Boolean);
-        if (orphanCtrls.length > 0) {
-            const panel = _createOrphanPanel(orphanCtrls);
-            if (panel) {
-                _mountPanel(panel, 'bottom-right', targetEl);
-                _panelEls.push(panel);
-            }
-        }
-    }
-
-    if (!targetEl) _ensureToggleButton();
-}
-
-/**
- * Process a controls_clear message: remove all control DOM elements.
- */
-export function handleControlsClear() {
-    _destroyAll();
-}
-
-// ── Internal: lifecycle ─────────────────────────────────────
-
-function _ensureRoot() {
-    if (_rootEl) return;
-    _rootEl = document.createElement('div');
-    _rootEl.id = 'tanga-control-root';
-    _rootEl.style.position = 'fixed';
-    _rootEl.style.top = '0';
-    _rootEl.style.left = '0';
-    _rootEl.style.width = '0';
-    _rootEl.style.height = '0';
-    _rootEl.style.pointerEvents = 'none';
-    _rootEl.style.zIndex = '100';
-    document.body.appendChild(_rootEl);
-}
-
-function _destroyAll({ owner = 'panel', scene = null } = {}) {
-    for (const el of _panelEls) {
-        el.remove();
-    }
-    _panelEls = [];
-    // Clear only entries owned by the scope being rebuilt (default: panel),
-    // leaving layout/banner view controls intact.
-    for (const [id, entry] of Object.entries(_controlRegistry)) {
-        if (entry.owner === owner && (scene === null || entry.scene === scene)) {
-            delete _controlRegistry[id];
-        }
-    }
-    // Clear throttle timers
-    for (const k of Object.keys(_throttleTimers)) {
-        clearTimeout(_throttleTimers[k]);
-        delete _throttleTimers[k];
-    }
-}
-
-function _ensureToggleButton() {
-    if (_toggleBtn) return;
-    _toggleBtn = document.createElement('button');
-    _toggleBtn.textContent = '\u2699'; // gear ⚙
-    _toggleBtn.style.position = 'fixed';
-    _toggleBtn.style.bottom = '10px';
-    _toggleBtn.style.right = '10px';
-    _toggleBtn.style.zIndex = '200';
-    _toggleBtn.style.width = '32px';
-    _toggleBtn.style.height = '32px';
-    _toggleBtn.style.border = '1px solid rgba(255,255,255,0.15)';
-    _toggleBtn.style.borderRadius = '4px';
-    _toggleBtn.style.background = 'rgba(20,20,40,0.85)';
-    _toggleBtn.style.color = '#ccc';
-    _toggleBtn.style.fontSize = '18px';
-    _toggleBtn.style.cursor = 'pointer';
-    _toggleBtn.style.lineHeight = '1';
-    _toggleBtn.style.display = 'flex';
-    _toggleBtn.style.alignItems = 'center';
-    _toggleBtn.style.justifyContent = 'center';
-    _toggleBtn.style.padding = '0';
-    _toggleBtn.title = 'Toggle control panels';
-    _toggleBtn.addEventListener('click', () => {
-        _panelsHidden = !_panelsHidden;
-        for (const el of _panelEls) {
-            el.style.display = _panelsHidden ? 'none' : '';
-        }
-        _toggleBtn.style.opacity = _panelsHidden ? '0.5' : '1';
-    });
-    document.body.appendChild(_toggleBtn);
-}
-
-// ── Internal: orphan panel ──────────────────────────────────
-
-function _createOrphanPanel(controls) {
-    if (controls.length === 0) return null;
-
-    const panel = document.createElement('div');
-    panel.className = 'tanga-control-panel tanga-orphan-panel';
-
-    // Simple drag handle bar
-    const handle = document.createElement('div');
-    handle.className = 'tanga-orphan-handle';
-    handle.style.height = '8px';
-    panel.appendChild(handle);
-
-    for (const ctrl of controls) {
-        const el = _createControlElement(ctrl);
-        if (el) panel.appendChild(el);
-    }
-
-    _setupDrag(panel, handle);
-    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
-    panel.addEventListener('pointermove', (e) => e.stopPropagation());
-
-    return panel;
-}
-
-// ── Internal: drag-to-move ──────────────────────────────────
-
-function _setupDrag(panelEl, handleEl) {
-    let dragging = false;
-    let startX, startY, startLeft, startTop;
-
-    handleEl.style.cursor = 'grab';
-
-    handleEl.addEventListener('mousedown', (e) => {
-        dragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        const rect = panelEl.getBoundingClientRect();
-        startLeft = rect.left;
-        startTop = rect.top;
-        panelEl.classList.add('dragging');
-        handleEl.style.cursor = 'grabbing';
-        e.preventDefault();
-    });
-
-    const onMove = (e) => {
-        if (!dragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        panelEl.style.left = (startLeft + dx) + 'px';
-        panelEl.style.top = (startTop + dy) + 'px';
-        // Clear anchor-based positioning once dragged
-        panelEl.style.right = '';
-        panelEl.style.bottom = '';
-    };
-
-    const onUp = () => {
-        dragging = false;
-        panelEl.classList.remove('dragging');
-        handleEl.style.cursor = 'grab';
-    };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', function cleanup() {
-        onUp();
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', cleanup);
-    }, { once: true });
-}
-
-// ── Internal: position panel ────────────────────────────────
-
-function _mountPanel(panel, anchor, targetEl) {
-    if (targetEl) {
-        // Inside a pane: stack panels normally (no fixed positioning).
-        panel.style.position = 'relative';
-        panel.style.margin = '4px 0';
-        targetEl.appendChild(panel);
-    } else {
-        _positionPanel(panel, anchor);
-        document.body.appendChild(panel);
-    }
-}
-
-function _positionPanel(panel, anchor) {
-    panel.style.position = 'fixed';
-    panel.style.transform = '';
-    switch (anchor) {
-        case 'top-left':
-            panel.style.top = '60px';
-            panel.style.left = '10px';
-            break;
-        case 'top-right':
-            panel.style.top = '60px';
-            panel.style.right = '10px';
-            break;
-        case 'bottom-left':
-            panel.style.bottom = '50px';
-            panel.style.left = '10px';
-            break;
-        case 'top':
-            panel.style.top = '60px';
-            panel.style.left = '50%';
-            panel.style.transform = 'translateX(-50%)';
-            break;
-        case 'bottom':
-            panel.style.bottom = '50px';
-            panel.style.left = '50%';
-            panel.style.transform = 'translateX(-50%)';
-            break;
-        case 'left':
-            panel.style.left = '10px';
-            panel.style.top = '50%';
-            panel.style.transform = 'translateY(-50%)';
-            break;
-        case 'right':
-            panel.style.right = '10px';
-            panel.style.top = '50%';
-            panel.style.transform = 'translateY(-50%)';
-            break;
-        case 'bottom-right':
-        default:
-            panel.style.bottom = '50px';
-            panel.style.right = '10px';
-            break;
-    }
 }
 
 // ── Icon rendering ──────────────────────────────────────────
@@ -340,36 +100,6 @@ function _attachDebouncedChange(input, controlId) {
     });
 }
 
-// ── Internal: control element dispatch ──────────────────────
-
-function _createControlElement(ctrl) {
-    switch (ctrl.kind) {
-        case 'slider':
-            return createSlider(ctrl);
-        case 'dropdown':
-            return createDropdown(ctrl);
-        case 'button':
-            return createButton(ctrl);
-        case 'file_chooser':
-            return createFileChooser(ctrl);
-        case 'text':
-            return createTextField(ctrl);
-        case 'textarea':
-            return createTextArea(ctrl);
-        case 'color':
-            return createColorPicker(ctrl);
-        case 'checkbox':
-            return createCheckbox(ctrl);
-        case 'value_edit':
-            return createValueEdit(ctrl);
-        case 'table':
-            return createTable(ctrl);
-        default:
-            console.warn('Unknown control kind:', ctrl.kind);
-            return null;
-    }
-}
-
 // ── File chooser ─────────────────────────────────────────────
 
 export function createFileChooser(ctrl) {
@@ -427,6 +157,7 @@ export function createSlider(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-slider';
     if (ctrl.variant === 'menu') wrapper.classList.add('tanga-menu-item');
+    if (ctrl.variant === 'toolbar') wrapper.classList.add('tanga-toolbar-item');
 
     const labelRow = document.createElement('div');
     labelRow.className = 'tanga-control-label-row';
@@ -493,6 +224,7 @@ export function createSlider(ctrl) {
 export function createDropdown(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-dropdown';
+    if (ctrl.variant === 'toolbar') wrapper.classList.add('tanga-toolbar-item');
 
     const label = document.createElement('label');
     label.textContent = ctrl.label || ctrl.id;
@@ -607,6 +339,71 @@ export function createTextArea(ctrl) {
         owner: ctrl.owner || 'panel',
         kind: 'textarea',
         apply: (value) => { input.value = value == null ? '' : String(value); },
+    };
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
+export function createLabel(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-label';
+
+    const text = document.createElement('div');
+    text.className = 'tanga-label-text';
+    text.textContent = ctrl.value != null ? String(ctrl.value) : '';
+    if (ctrl.font_size != null) text.style.fontSize = `${ctrl.font_size}px`;
+    wrapper.appendChild(text);
+
+    _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
+        kind: 'label',
+        apply: (value) => { text.textContent = value == null ? '' : String(value); },
+    };
+    _applyTooltip(wrapper, ctrl);
+
+    return wrapper;
+}
+
+function _renderMarkdown(el, text) {
+    const src = text == null ? '' : String(text);
+    // No `breaks: true` here: it turns the newlines inside a multi-line
+    // `$$…$$` display-math block into `<br>`, which splits the two `$$`
+    // delimiters into separate text nodes and KaTeX's auto-render can no
+    // longer match them (leaving the math as literal source).
+    if (typeof marked !== 'undefined') {
+        el.innerHTML = marked.parse(src);
+    } else {
+        el.textContent = src;
+    }
+    if (typeof renderMathInElement !== 'undefined') {
+        try {
+            renderMathInElement(el, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                ],
+                throwOnError: false,
+            });
+        } catch (e) {
+            console.warn('KaTeX markdown rendering error:', e);
+        }
+    }
+}
+
+export function createMarkdown(ctrl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tanga-control tanga-markdown';
+
+    const body = document.createElement('div');
+    body.className = 'tanga-markdown-body';
+    _renderMarkdown(body, ctrl.value);
+    wrapper.appendChild(body);
+
+    _controlRegistry[ctrl.id] = {
+        owner: ctrl.owner || 'panel',
+        kind: 'markdown',
+        apply: (value) => _renderMarkdown(body, value),
     };
     _applyTooltip(wrapper, ctrl);
 
@@ -882,7 +679,12 @@ export function createTable(ctrl) {
 
         // Tabulator's virtual DOM needs a concrete height; re-layout when the
         // surrounding pane is resized (split drag / window resize / first size).
-        new ResizeObserver(() => { table.redraw(true); }).observe(container);
+        // A ResizeObserver fires once immediately on `observe()`, so start it
+        // only after `tableBuilt` — calling `redraw` before Tabulator built its
+        // holder element throws and mis-measures the container width.
+        table.on('tableBuilt', () => {
+            new ResizeObserver(() => { table.redraw(true); }).observe(container);
+        });
     }
 
     const buttonRow = document.createElement('div');

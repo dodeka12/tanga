@@ -21,3 +21,10 @@
     color: var(--tanga-fg);
 }
 
+/* Compact select inside a toolbar: a shorter field keeps the row's controls at
+ * a common height. */
+.tanga-toolbar-item .tanga-select-input {
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
