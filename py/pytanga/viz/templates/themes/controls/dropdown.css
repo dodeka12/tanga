@@ -6,6 +6,7 @@
     border: 1px solid var(--tanga-border-strong);
     border-radius: 4px;
     color: var(--tanga-fg);
+    color-scheme: var(--tanga-color-scheme);
     padding: 4px 6px;
     font-size: 13px;
     outline: none;

@@ -8,6 +8,7 @@
     --tanga-accent: #2266cc;
     --tanga-accent-soft: #3355aa;
     --tanga-danger: #c33;
+    --tanga-color-scheme: light;
 
     --tanga-panel-bg: rgba(255, 255, 255, 0.94);
     --tanga-panel-hover: rgba(220, 225, 235, 0.95);
@@ -22,6 +23,18 @@
     --tanga-scrollbar-thumb: rgba(0, 0, 0, 0.3);
     --tanga-scrollbar-thumb-hover: rgba(0, 0, 0, 0.45);
     --tanga-scrollbar-track: rgba(0, 0, 0, 0.06);
+
+    --tanga-table-row-height: 24px;
+    --tanga-table-header-bg: rgba(0, 0, 0, 0.06);
+    --tanga-table-header-fg: #111;
+    --tanga-table-border: rgba(0, 0, 0, 0.12);
+    --tanga-table-cell-bg: rgba(0, 0, 0, 0.02);
+    --tanga-table-row-alt-bg: rgba(0, 0, 0, 0.04);
+    --tanga-table-row-hover-bg: rgba(0, 0, 0, 0.08);
+    --tanga-table-active-border: #2266cc;
+    --tanga-table-sort-arrow: #3355aa;
+    --tanga-table-row-number-bg: rgba(0, 0, 0, 0.05);
+    --tanga-table-row-number-fg: #666;
 
     --tanga-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 

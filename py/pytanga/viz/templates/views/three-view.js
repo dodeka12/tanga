@@ -11,8 +11,8 @@ import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
-import { sendEvent } from '../events.js';
-import { attachGroupView, detachGroup, detachAll } from '../controls-attached.js';
+import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
+import { attachGroupView, detachGroup, detachAll, releaseAttachedGroups } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
 import { InteractionController } from '../interaction.js';
@@ -116,6 +116,7 @@ export class ThreeJsView extends View {
         this._titleElement = null;
         this._annotationPanel = null;
         this._overlays = [];
+        this._pendingAttachedGroups = new Map(); // parent_id → [GroupView, …]
         this._banners = new Map();
         this._isWebGL2 = false;
 
@@ -148,9 +149,15 @@ export class ThreeJsView extends View {
             if (parentMesh) {
                 attachGroupView(view, parentMesh);
             } else {
-                console.warn(
-                    'Cannot attach group: parent entity "' + view.parent_id + '" not found'
-                );
+                // The layout arrives before the scene entities, so defer the
+                // CSS2D attach until `_upsertObject` registers the parent mesh.
+                const pending = this._pendingAttachedGroups.get(view.parent_id) || [];
+                pending.push(view);
+                this._pendingAttachedGroups.set(view.parent_id, pending);
+                sendLog('debug', 'Deferring group attach until parent entity arrives', {
+                    source: 'three-view.js',
+                    data: { parent_id: view.parent_id },
+                });
             }
             return view;
         }
@@ -163,6 +170,25 @@ export class ThreeJsView extends View {
         return view;
     }
 
+    /** Soft-release a mesh's attached groups and re-defer them for re-attach. */
+    _redeferAttachedGroups(obj) {
+        const released = releaseAttachedGroups(obj);
+        for (const { groupView } of released) {
+            const parentId = groupView.parent_id;
+            const pending = this._pendingAttachedGroups.get(parentId) || [];
+            pending.push(groupView);
+            this._pendingAttachedGroups.set(parentId, pending);
+        }
+    }
+
+    /** Attach any deferred groups waiting on entity id `id` to `obj`. */
+    _attachPendingGroups(id, obj) {
+        const pending = this._pendingAttachedGroups.get(id);
+        if (!pending) return;
+        for (const group of pending) attachGroupView(group, obj);
+        this._pendingAttachedGroups.delete(id);
+    }
+
     /** Remove and destroy all mounted overlay views (used when a scene pane is reused). */
     clearOverlays() {
         for (const view of this._overlays) {
@@ -170,6 +196,16 @@ export class ThreeJsView extends View {
             if (typeof view.destroy === 'function') view.destroy();
         }
         this._overlays = [];
+        // Detach CSS2D-attached groups belonging to this pane's objects so a
+        // layout re-push that reuses the pane doesn't leak or double-attach.
+        for (const entry of this.sceneObjects.values()) {
+            if (entry.obj && entry.obj.userData._attachedGroups) {
+                for (const groupId of entry.obj.userData._attachedGroups) {
+                    detachGroup(groupId);
+                }
+            }
+        }
+        this._pendingAttachedGroups.clear();
     }
 
     _log(phase, detail) {
@@ -178,6 +214,9 @@ export class ThreeJsView extends View {
         if (this.sceneName) parts.push('scene=' + this.sceneName);
         if (detail) parts.push(detail);
         console.log(parts.join(' '));
+        if (logForwardingEnabled()) {
+            sendLog('info', detail || phase, { source: 'three-view.js', data: { phase } });
+        }
     }
 
     // ── scene setup ────────────────────────────────────────────
@@ -193,6 +232,7 @@ export class ThreeJsView extends View {
             this._isWebGL2 = !!this.renderer.capabilities.isWebGL2;
         } catch (e) {
             console.warn('WebGL renderer failed — falling back to headless mode:', e.message);
+            sendLog('error', 'WebGL renderer failed — falling back to headless mode', { source: 'three-view.js', data: { error: e && e.message ? e.message : String(e) } });
             webglOk = false;
             this.renderer = null;
         }
@@ -284,6 +324,7 @@ export class ThreeJsView extends View {
             this._titleElement = null;
         }
         detachAll();
+        this._pendingAttachedGroups.clear();
         this._clearBanners();
         this.cameraPositioned = false;
         this._addDefaultLights();
@@ -553,6 +594,7 @@ export class ThreeJsView extends View {
         const old = this.sceneObjects.get(msg.id);
         if (old) {
             if (old.layer === 'scene' && old.obj) {
+                this._redeferAttachedGroups(old.obj);
                 removeEntityMesh(old.obj);
             } else if (old.obj && old.obj.removeFromParent) {
                 old.obj.removeFromParent();
@@ -568,6 +610,9 @@ export class ThreeJsView extends View {
                 return;
             }
             const entry = await buildSceneObject(msg, this.scene, this.sceneObjects);
+            if (entry && entry.obj) {
+                this._attachPendingGroups(msg.id, entry.obj);
+            }
             if (entry && msg.interaction) {
                 this._interaction.registerInteractive(msg.id, entry.obj, msg.interaction);
             }
@@ -646,6 +691,7 @@ export class ThreeJsView extends View {
         if (entry.obj === entry.mesh) {
             const attachedLabels = (entry.obj.userData._labels || []).slice();
             const parent = entry.obj.parent;
+            this._redeferAttachedGroups(entry.obj);
             removeEntityMesh(entry.obj);
             entry.obj = newMesh;
             entry.mesh = newMesh;
@@ -659,6 +705,7 @@ export class ThreeJsView extends View {
                     newMesh.userData._labels.push(lblId);
                 }
             }
+            this._attachPendingGroups(id, newMesh);
         } else {
             removeEntityMesh(entry.mesh);
             entry.obj.add(newMesh);

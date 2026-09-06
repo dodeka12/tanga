@@ -123,7 +123,7 @@ const {camera_var} = new THREE.OrthographicCamera(
     xmax: _frustumSize * ({width_expr} / {height_expr}) / 2,
     ymin: -_frustumSize / 2,
     ymax: _frustumSize / 2,
-    uniform: true,
+    stretch: 'fit',
     border_px: 0,
 }};"""
     else:
@@ -288,8 +288,8 @@ def js_apply_camera() -> str:
     falling back to the flat fields for legacy/partial configs and doing nothing
     when ``cfg`` is null/undefined.  The 2D ortho math is delegated to the
     bundled ``orthoFrustum``/``finiteAspect`` from ``camera-fit.js``, so the
-    export matches the live viewer exactly (uniform letterbox by default,
-    stretch when ``uniform`` is false, ``border_px`` applied in pixels).
+    export matches the live viewer exactly (``stretch`` modes, ``border_px``
+    applied in pixels).
     """
     return """// ── Shared camera applier (mirrors view_mode.js switchToCamera) ──
 function applyCameraConfig(camera, controls, cfg, w, h) {
@@ -304,7 +304,7 @@ function applyCameraConfig(camera, controls, cfg, w, h) {
         ) {
             const f = orthoFrustum(
                 cfg.xmin, cfg.xmax, cfg.ymin, cfg.ymax,
-                cfg.uniform !== false, cfg.border_px || 0, width, height
+                cfg.stretch || 'fit', cfg.border_px || 0, width, height
             );
             camera.left = f.left;
             camera.right = f.right;
@@ -312,7 +312,7 @@ function applyCameraConfig(camera, controls, cfg, w, h) {
             camera.bottom = f.bottom;
             camera.userData._view2d = {
                 xmin: cfg.xmin, xmax: cfg.xmax, ymin: cfg.ymin, ymax: cfg.ymax,
-                uniform: cfg.uniform !== false, border_px: cfg.border_px || 0,
+                stretch: cfg.stretch || 'fit', border_px: cfg.border_px || 0,
             };
         }
         if (cfg.position) camera.position.set(cfg.position[0], cfg.position[1], cfg.position[2]);

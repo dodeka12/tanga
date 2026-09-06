@@ -936,3 +936,51 @@ def test_scale2_space_doubles(b):
     r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
     assert r.scale == pytest.approx(5.0, abs=1e-6)
+
+
+# Degenerate versor factorization (regression: previously looped forever)
+
+
+def test_degenerate_motor_does_not_hang(b):
+    # Near-zero-angle motor must terminate and yield a real operator (not hang,
+    # not fall back to an empty VersorFactors).
+    motor = Motor(
+        Rotor(1e-5, Direction(0, 0, 1)),
+        Translator(Direction(math.sin(1e-5), math.cos(1e-5), 0)),
+    )
+    mv = create_operator(b, motor)
+    op = analyze_operator(mv)
+    assert op is not None
+    assert not isinstance(op, VersorFactors)
+
+
+def test_blade_factorize_versor_returns_stable_factors(b):
+    # Degenerate versor: the numerical-noise grade is discarded, so the stable
+    # factors found so far are returned (not zero factors, not an exception).
+    motor = Motor(
+        Rotor(1e-5, Direction(0, 0, 1)),
+        Translator(Direction(math.sin(1e-5), math.cos(1e-5), 0)),
+    )
+    mv = create_operator(b, motor)
+    scale, factors = mv.blade_factorize_versor()
+    assert len(factors) >= 1
+
+
+def test_blade_factorize_versor_accepts_eps_and_max_iterations(b):
+    motor = Motor(
+        Rotor(0.12, Direction(0, 0, 1)),
+        Translator(Direction(math.sin(0.12), math.cos(0.12), 0)),
+    )
+    mv = create_operator(b, motor)
+    scale, factors = mv.blade_factorize_versor(eps=1e-6, max_iterations=64)
+    assert len(factors) >= 1
+
+
+def test_blade_factorize_versor_max_iterations_guard(b):
+    motor = Motor(
+        Rotor(0.12, Direction(0, 0, 1)),
+        Translator(Direction(math.sin(0.12), math.cos(0.12), 0)),
+    )
+    mv = create_operator(b, motor)
+    with pytest.raises(RuntimeError):
+        mv.blade_factorize_versor(max_iterations=1)

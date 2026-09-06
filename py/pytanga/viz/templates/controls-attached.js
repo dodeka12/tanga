@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 // ── Module state ─────────────────────────────────────────────
-const _attachedGroups = new Map();  // groupId → { css2d, parentMesh }
+const _attachedGroups = new Map();  // groupId → { css2d, parentMesh, groupView }
 
 // ── Public API ──────────────────────────────────────────────
 
@@ -33,10 +33,29 @@ export function attachGroupView(groupView, parentMesh) {
     parentMesh.add(css2d);
 
     const groupId = groupView.groupId || 'unknown';
-    _attachedGroups.set(groupId, { css2d, parentMesh });
+    _attachedGroups.set(groupId, { css2d, parentMesh, groupView });
 
     parentMesh.userData._attachedGroups = parentMesh.userData._attachedGroups || [];
     parentMesh.userData._attachedGroups.push(groupId);
+}
+
+/**
+ * Soft-release all control groups attached to `parentMesh` (keeping their DOM
+ * elements) and return them as `{ groupId, groupView }` pairs so the caller can
+ * re-defer them (e.g. when the entity's mesh is rebuilt) or fully detach them.
+ */
+export function releaseAttachedGroups(parentMesh) {
+    const ids = parentMesh.userData._attachedGroups || [];
+    const released = [];
+    for (const groupId of ids) {
+        const entry = _attachedGroups.get(groupId);
+        if (!entry) continue;
+        entry.css2d.removeFromParent();
+        _attachedGroups.delete(groupId);
+        released.push({ groupId, groupView: entry.groupView });
+    }
+    parentMesh.userData._attachedGroups = [];
+    return released;
 }
 
 /**

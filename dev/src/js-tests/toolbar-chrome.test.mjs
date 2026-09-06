@@ -126,3 +126,55 @@ test('default slider has no toolbar-item class', () => {
     const el = createSlider({ id: 's', min: 0, max: 1, value: 0.5 });
     assert.ok(!el.classList.contains('tanga-toolbar-item'));
 });
+
+// ── cross-axis content measurement ────────────────────────────
+
+const measurableChild = (h) => ({
+    el: { getBoundingClientRect: () => ({ height: h }) },
+    minSizePx: () => 0,
+    preferredPx: () => null,
+});
+
+test('_measureContent returns the tallest rendered child height', () => {
+    const toolbar = new ToolbarView({});
+    toolbar.children = [measurableChild(28), measurableChild(38), measurableChild(32)];
+    assert.equal(toolbar._measureContent(), 38);
+});
+
+test('_measureContent returns null when no child is measurable', () => {
+    const toolbar = new ToolbarView({});
+    toolbar.children = [child(32, 32)];
+    assert.equal(toolbar._measureContent(), null);
+});
+
+test('cross-axis content height falls back to the stack min when unmeasurable', () => {
+    const toolbar = new ToolbarView({});
+    toolbar.children = [child(32, 32)];
+    toolbar._contentHeightCache = null;
+    assert.equal(toolbar._contentHeight(0), 32);
+});
+
+test('cross-axis min height uses the measured content height', () => {
+    const toolbar = new ToolbarView({});
+    toolbar.children = [measurableChild(38)];
+    toolbar._contentHeightCache = null;
+    assert.equal(toolbar.minSizePx('y', 0), 38 + 14);
+});
+
+test('cross-axis preferred height uses the measured content height', () => {
+    const toolbar = new ToolbarView({});
+    toolbar.children = [measurableChild(38)];
+    toolbar._contentHeightCache = null;
+    assert.equal(toolbar.preferredPx('y', 0), 38 + 14);
+});
+
+test('main-axis width still sums children (not measured)', () => {
+    const toolbar = new ToolbarView({});
+    const child28 = measurableChild(38);
+    child28.minSizePx = (a) => (a === 'x' ? 40 : 0);
+    child28.preferredPx = (a) => (a === 'x' ? 40 : null);
+    toolbar.children = [child28];
+    toolbar._contentHeightCache = null;
+    // main axis uses stackMinSize: 40 + chrome(14) = 54
+    assert.equal(toolbar.minSizePx('x', 0), 40 + 14);
+});

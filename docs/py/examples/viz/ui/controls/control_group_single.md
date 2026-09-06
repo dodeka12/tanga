@@ -1,13 +1,11 @@
-# Unified control groups on a single-scene page
+# Declarative control groups on a single-scene page
 
-**Keywords:** control group · add_control_group · overlay · anchor · parent_id · single scene
+**Keywords:** control group · GroupView · overlay · anchor · parent_id · single scene
 
 Same as `control_group_overlay.py`, but shown on the plain single-scene URL
-(`/`) — no `show(layout=...)`.  Because a single scene is served as a
-one-`SceneView` layout, both `add_control_group` styles render here too:
+(`/`).  Two `GroupView` overlays declared on the base `SceneView`:
 
-- an **overlay-anchored** group (`position="top-right"`) mounted in the global
-  overlay, and
+- an **overlay-anchored** group (`position="top-right"`), and
 - a group **anchored to a 3D object** (`parent_id=...`) that follows the sphere
   via the CSS2D attach path.
 
@@ -27,24 +25,22 @@ uv run python py/examples/viz/ui/controls/control_group_single.py
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""control_group_single.py — Unified control groups on a single-scene page.
+"""control_group_single.py — Declarative control groups on a single-scene page.
 
 Same as ``control_group_overlay.py``, but shown on the plain single-scene URL
-(``/``) — no ``show(layout=...)``.  Because a single scene is served as a
-one-``SceneView`` layout, both ``add_control_group`` styles render here too:
+(``/``).  Two ``GroupView`` overlays declared on the base ``SceneView``:
 
-- an **overlay-anchored** group (``position="top-right"``) mounted in the global
-  overlay, and
+- an **overlay-anchored** group (``position="top-right"``), and
 - a group **anchored to a 3D object** (``parent_id=...``) that follows the sphere
   via the CSS2D attach path.
 
 Run with:  uv run python py/examples/viz/ui/controls/control_group_single.py
 
-Keywords: control group, add_control_group, overlay, anchor, parent_id, single scene
+Keywords: control group, GroupView, overlay, anchor, parent_id, single scene
 """
 
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import Visualizer
+from pytanga.viz import ButtonView, GroupView, SceneView, SliderView, Visualizer
 
 viz = Visualizer(reuse_existing=False, title="Tanga — Control Groups (single scene)")
 viz.add(
@@ -68,27 +64,47 @@ async def _on_reset(_value, _event):
     viz.flush()
 
 
-viz.add_slider("radius", label="Radius", min=0.2, max=5.0, value=2.0, on_change=_on_radius)
-viz.add_slider("opacity", label="Opacity", min=0.05, max=1.0, value=0.4, on_change=_on_opacity)
-viz.add_button("reset", label="Reset", on_click=_on_reset)
-
-# Overlay-anchored group: mounted in the full-screen overlay.
-viz.add_control_group(
-    "overlay_group",
-    title="View",
-    controls=["radius", "reset"],
-    position="top-right",
-)
-
-# 3D-anchored group: attaches to the sphere (CSS2D object).
-viz.add_control_group(
-    "attached_group",
-    title="Sphere",
-    controls=["opacity"],
-    parent_id="sphere",
+viz.set_layout(
+    SceneView(
+        "",
+        overlay=[
+            GroupView(
+                "View",
+                [
+                    SliderView(
+                        "radius",
+                        label="Radius",
+                        min=0.2,
+                        max=5.0,
+                        value=2.0,
+                        on_change=_on_radius,
+                    ),
+                    ButtonView("reset", label="Reset", on_click=_on_reset),
+                ],
+                position="top-right",
+            ),
+            # BUG: The following group is not shown on the single-scene page. Why?
+            GroupView(
+                "Sphere",
+                [
+                    SliderView(
+                        "opacity",
+                        label="Opacity",
+                        min=0.05,
+                        max=1.0,
+                        value=0.4,
+                        on_change=_on_opacity,
+                    ),
+                ],
+                parent_id="sphere",
+            ),
+        ],
+    )
 )
 
 viz.show()
-print("Overlay and attached control groups shown on the single-scene page. Press Ctrl+C to exit.")
+print(
+    "Overlay and attached control groups shown on the single-scene page. Press Ctrl+C to exit."
+)
 viz.wait()
 ````

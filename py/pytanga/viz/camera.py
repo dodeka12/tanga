@@ -22,6 +22,21 @@ from dataclasses import dataclass, fields
 from typing import Any, Literal
 
 
+StretchMode = Literal["fit", "fill", "fill_x", "fill_y"]
+
+#: Canonical 2D camera stretch modes.
+_STRETCH_MODES: tuple[str, ...] = ("fit", "fill", "fill_x", "fill_y")
+
+
+def _validate_stretch(stretch: str) -> str:
+    """Validate a 2D camera stretch mode and return it unchanged."""
+    if stretch not in _STRETCH_MODES:
+        raise ValueError(
+            f"stretch must be one of {_STRETCH_MODES}, got {stretch!r}"
+        )
+    return stretch
+
+
 def _to_json(value: Any) -> Any:
     """Convert a dataclass field value to a JSON-compatible value."""
     if isinstance(value, tuple):
@@ -84,12 +99,18 @@ class CameraConfig2d(CameraConfig):
     ymin: float
     ymax: float
 
-    # True  = preserve aspect ratio via letterboxing (uniform world scale)
-    # False = stretch the rect to exactly fill the viewport (non-uniform scale)
-    uniform: bool = True
+    # How the rectangle is framed into the viewport:
+    #   "fit"    — letterbox, preserve aspect (uniform world scale)
+    #   "fill"   — stretch the rect to exactly fill the viewport (non-uniform)
+    #   "fill_x" — x fills the viewport, y keeps aspect (uniform, may clip)
+    #   "fill_y" — y fills the viewport, x keeps aspect (uniform, may clip)
+    stretch: StretchMode = "fit"
 
     # Additional fixed border in pixels, applied by the frontend
     border_px: float = 0.0
+
+    def __post_init__(self) -> None:
+        _validate_stretch(self.stretch)
 
 
 @dataclass(kw_only=True)
@@ -124,8 +145,10 @@ class View2DConfig:
             Python by :func:`get_camera_view2d`).
         border_px: Pixel margin added on all four sides (applied by the
             frontend).
-        uniform: ``True`` preserves aspect ratio via letterboxing; ``False``
-            stretches the rectangle to exactly fill the viewport.
+        stretch: How the rectangle is framed into the viewport — ``"fit"``
+            (letterbox, default), ``"fill"`` (stretch both axes),
+            ``"fill_x"`` (x fills, y keeps aspect), or ``"fill_y"`` (y fills,
+            x keeps aspect).
     """
 
     xmin: float
@@ -134,7 +157,10 @@ class View2DConfig:
     ymax: float
     border_world: float = 0.0
     border_px: float = 0.0
-    uniform: bool = True
+    stretch: StretchMode = "fit"
+
+    def __post_init__(self) -> None:
+        _validate_stretch(self.stretch)
 
 
 @dataclass
@@ -200,7 +226,7 @@ def get_camera_view2d(config: View2DConfig) -> CameraConfig2d:
         xmax=xmax,
         ymin=ymin,
         ymax=ymax,
-        uniform=config.uniform,
+        stretch=config.stretch,
         border_px=config.border_px,
         position=(cx, cy, 20.0),
         target=(cx, cy, 0.0),

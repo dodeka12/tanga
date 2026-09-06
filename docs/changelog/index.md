@@ -1,5 +1,11 @@
 # Changelog
 
+## [Since 1.17.0 (2.0.0-rc1)] — 2026-09-05
+- Native typed/editable `TableView` (column types & editors, JSON/CSV persistence, sorting, zoom/resize, row/column control) · per-scene `space_dim` + live 2D/3D switch · 2D camera `stretch` modes · `fit_view2d` label margins · client→server log channel · `SdfCompose` combine descriptor · unified transform arguments
+- Breaking: 2D camera `uniform` replaced by `stretch`
+- Bug fixes: split-pane 2D clipping, table editing/scrollbar/toolbar, versor factorization hang
+→ [Details](2026-09-05_6ced30c0.md)
+
 ## [Since 1.17.0] — 2026-09-03
 - Scene/layout/overlay model · control display views (`LabelView`/`MarkdownView`/`LogView`/`SeparatorView`/`ToolbarView`) · `Expression.bind()`/`evaluate()` · `Transform.from_operator()` · smooth SDF CSG
 - Breaking: `add_*` control facades, `control_position`, runtime value API, and the legacy `controls_define` path removed

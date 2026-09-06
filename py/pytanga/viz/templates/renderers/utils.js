@@ -8,6 +8,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { styleNeedsRebuild } from './style-diff.js';
+import { sendLog } from '../events.js';
 
 /**
  * Create a MeshPhongMaterial with sensible defaults for Tanga entities.
@@ -687,6 +688,7 @@ export async function createTextureLabel(text, style) {
         }
     } catch (err) {
         console.warn('createTextureLabel: rendering failed', err);
+        sendLog('warn', 'createTextureLabel: rendering failed', { source: 'utils.js', data: { error: String(err) } });
         ctx.restore();
         return null;
     }

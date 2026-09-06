@@ -29,7 +29,7 @@ from . import _transforms as _T
 from ._point_path import PointPath
 from ._scale import LogScale, Scale, make_scale
 from ._scene_objects import Axis, Grid
-from .camera import CameraConfig2d, View2DConfig
+from .camera import CameraConfig2d, StretchMode, View2DConfig, _validate_stretch
 from ._styles import AxisStyle, GridStyle, LabelStyle, PlaneStyle
 
 # Local-frame z ordering within the group.
@@ -100,8 +100,8 @@ def fit_view2d(
     yscale: Scale | str = "linear",
     base: float = 10.0,
     border_world: float = 0.0,
-    border_px: float = 0.0,
-    uniform: bool = True,
+    border_px: float = 60.0,
+    stretch: StretchMode = "fit",
 ) -> View2DConfig:
     """Compute a centred :class:`View2DConfig` for the given data ranges.
 
@@ -121,7 +121,11 @@ def fit_view2d(
         base: Logarithm base when a scale is given as ``"log"``.
         border_world: World-unit margin added on all sides.
         border_px: Pixel margin added on all sides (applied by the frontend).
-        uniform: ``True`` preserves aspect ratio via letterboxing.
+            Defaults to ``60.0``, matching :class:`CoordinateSystem`'s label
+            margin, so per-pane cameras keep axis labels visible.
+        stretch: How the plot fills the view — ``"fit"`` (letterbox, default),
+            ``"fill"`` (stretch both axes), ``"fill_x"`` (x fills, y keeps
+            aspect), or ``"fill_y"`` (y fills, x keeps aspect).
 
     Returns:
         A :class:`View2DConfig` centred at the origin.
@@ -139,7 +143,7 @@ def fit_view2d(
         ymax=span_y / 2.0,
         border_world=border_world,
         border_px=border_px,
-        uniform=uniform,
+        stretch=stretch,
     )
 
 
@@ -264,6 +268,11 @@ class CoordinateSystem:
         (always set/update), or ``False`` (never).  Only affects 2D (and only
         when ``size`` is not given); a 3D coordinate system never sets the
         camera.
+    stretch:
+        How the 2D camera frames the plot plane: ``"fit"`` (letterbox,
+        default), ``"fill"`` (stretch both axes), ``"fill_x"`` (x fills, y
+        keeps aspect), or ``"fill_y"`` (y fills, x keeps aspect).  Only
+        affects 2D (when this coordinate system owns the camera).
     border_px, border_world:
         2D camera margins so axis labels are visible.
     position, normal, up:
@@ -291,6 +300,7 @@ class CoordinateSystem:
         axes: bool = True,
         plane: bool | None = None,
         camera: str | bool = "auto",
+        stretch: StretchMode = "fit",
         border_px: float = 60.0,
         border_world: float = 0.0,
         position=(0.0, 0.0, 0.0),
@@ -335,6 +345,7 @@ class CoordinateSystem:
         self._up = _as_vec3(up)
 
         self._camera_mode = camera
+        self._stretch = _validate_stretch(stretch)
         self._recompute_camera_ownership()
 
         cfg = self._handle.scene.config
@@ -613,7 +624,7 @@ class CoordinateSystem:
             base=self._base,
             border_world=self.border_world,
             border_px=self.border_px,
-            uniform=True,
+            stretch=self._stretch,
         )
         self._handle.set_camera(cam)
 

@@ -83,6 +83,10 @@ The layout tree is the single render path for **every** page:
 - `SceneView` is a pane that renders a named scene; its `overlay` lists views
   (e.g. a `GroupView`) that float over that pane's canvas, anchored by each
   child's `position` (`EAnchor`).
+- A `GroupView(parent_id="<entity>")` in a `SceneView(overlay=[...])` is instead
+  attached to that entity via CSS2D.  Because `view_layout` arrives before the
+  scene entities, `ThreeJsView` **defers** the attach until the parent entity is
+  registered (`_pendingAttachedGroups`), so anchored groups appear on first load.
 - `GroupView` is a titled `StackView` with an optional leading `icon`,
   `icon_only` mode, and a borderless fold button — the control-group container.
 - `MenuView` is a hamburger `dropdown` or a permanent `bar` of options
@@ -124,6 +128,27 @@ text or `null`), `file_browser_navigate`, `file_browser_select`.
 Interaction events (→ `InteractionHost._dispatch_interaction_event`, coalesced):
 `interaction:click`, `interaction:dblclick`, `interaction:drag_start`,
 `interaction:drag_move`, `interaction:drag_end`, `interaction:scroll`.
+
+## Client → server logging
+
+The browser reports warnings/errors to the backend over the **same** event
+envelope, targeting a backend-only `ClientLog` control (`_controls.py`, id
+`"client_log"`):
+
+- Frontend `sendLog(level, message, { source, data })` →
+  `sendEvent("client_log", "log", { level, message, source, data })`
+  (`templates/events.js`); `level` ∈ `debug|info|warn|error`.
+- `server.py::_EVENT_MSG_MAP` maps `"log"` → `"control:log"`, routing it to
+  `LayoutHost.dispatch_control_event`, which resolves the reserved id to the
+  `ClientLog` control (a `LayoutHost` hook — the control is not in a layout).
+- `ClientLog.handle_event("log", payload)` normalizes the payload into a
+  `ClientLogRecord` and fires `("client_log", "log")`; the default sink logs via
+  `logging.getLogger("tanga.viz.client")`, replaceable with
+  `viz.on_client_log(handler)`.
+- `ClientLog` is **backend-only**: never serialized, never placed in a layout.
+- Opt-in **trace forwarding**: `setLogForwarding(true)` / `?log=1` additionally
+  forwards the frontend `_log(...)` init/WS lines at `info` level (default off —
+  only `console.warn`/`console.error` are forwarded).
 
 ## Adding a new control kind
 

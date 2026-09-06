@@ -447,16 +447,23 @@ TableView(
     *,
     label="",
     columns=(),             # list[str] | tuple[str, ...]
-    rows=(),                # list[list[str]] | tuple[tuple[str, ...], ...]
+    rows=(),                # list[list[Any]] | tuple[tuple[Any, ...], ...]
+    column_types=None,      # per-column hints: None | "number" | "string" | "bool" | [..values]
+    json_path=None,         # str | None — auto-save JSON path
     allow_add_rows=True,    # bool
     allow_add_columns=True, # bool
     allow_delete_rows=True, # bool
     max_history=100,        # int
+    editable_titles=True,   # bool — double-click a header to rename it
     tooltip="",             # str
     on_cell_change=None,    # Handler
     on_row_add=None,        # Handler
     on_column_add=None,     # Handler
     on_row_delete=None,     # Handler
+    on_column_delete=None,  # Handler
+    on_column_title_change=None,  # Handler — (change: TableColumnTitleChange, event)
+    on_column_type_change=None,   # Handler — (change: TableColumnTypeChange, event)
+    on_cell_select=None,    # Handler — (select: TableCellSelect, event)
     on_change=None,         # Handler — (value: dict, event) on undo/redo
     **kwargs,
 )
@@ -466,13 +473,28 @@ Cell values are strings on the wire. See [Controls](controls.md) for the
 handler payloads (`TableCellChange` / `TableRowAdd` / `TableColumnAdd` /
 `TableRowsDelete`) and for undo/redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y).
 
-`TableView` also exposes `undo()` / `redo()` / `can_undo` / `can_redo`.
-`undo()` / `redo()` restore the wrapped `Table` model (`view.control`) **and
-push the restored grid to the browser**.  To replace the grid programmatically
-(which also clears the undo history), call `table_view.set_value({...})`.
+Each column has a type — `number`, `string`, `bool`, or an `enum` (a fixed list
+of allowed strings).  `column_types` sets them explicitly (one entry per
+column: `None` deduces, a scalar name picks a scalar type, a list of strings is
+an enum); omitted entries deduce from the initial data (all bools → `bool`, all
+numbers → `number`, else `string`).  Numbers right-align and reject non-numeric
+input, booleans show an always-on checkbox, enums edit through a dropdown.
 
-`on_change` is a bulk handler that fires once with the full `{columns, rows}`
-value on undo/redo (see [Controls](controls.md)).
+`TableView` also exposes `undo()` / `redo()` / `can_undo` / `can_redo`, plus
+`insert_row(index, values=None)` / `insert_column(index, header="", values=None,
+column_type=None)` / `delete_row(index)` / `delete_column(index)` /
+`rename_column(col, title)` / `set_column_format(col, fmt)` /
+`convert_column(col, target)` (mutate the model and push the full grid back to
+the browser), the selected-cell `active_cell` property (`(row, col)` or
+`None`), `save(path)` / `load(path)` (versioned JSON, including types + column
+widths + row height + sort) and `to_csv(path)` / `from_csv(path)` (plain data).
+Pass `json_path=...` to load the file at construction and auto-save on every
+change.  `set_column_format` sets a `number` column's `str.format` display
+template; `convert_column` applies (or rejects) a type change and fires
+`on_column_type_change` with the result.
+
+`on_change` is a bulk handler that fires once with the full grid value on
+undo/redo (see [Controls](controls.md)).
 
 ## Runtime helpers
 

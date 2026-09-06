@@ -18,7 +18,7 @@ import math
 
 from pytanga.geometry import Cylinder, Direction, Point, Sphere
 from pytanga.viz import SdfStyle, Visualizer
-from pytanga.viz.sdf import SdfGroup, capped_cylinder, sphere
+from pytanga.viz.sdf import ECompose, SdfCompose, SdfGroup, capped_cylinder, sphere
 
 viz = Visualizer(title="Tanga — SDF groups")
 viz.show()
@@ -28,7 +28,7 @@ viz.show()
 group = SdfGroup(
     sphere(1.0, position=(-1.0, 0.0, 0.0), id="left"),  # member 0 (union)
     sphere(1.0, position=(1.0, 0.0, 0.0), id="orbit"),  # member 1 (union)
-    (capped_cylinder(1.5, 0.35), "subtract"),  # member 2 (cut-out)
+    SdfCompose(capped_cylinder(1.5, 0.35), ECompose.SUBTRACT),  # member 2 (cut-out)
 )
 sdf_grp = viz.new(group, style=SdfStyle(color="#ffaa00"), label="SDF group")
 

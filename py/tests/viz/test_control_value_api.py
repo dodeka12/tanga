@@ -75,10 +75,10 @@ def test_table_view_undo_redo_push_grid() -> None:
     view.control.set_cell(0, 0, "9")
 
     assert view.undo() is True
-    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]]})]
+    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]})]
 
     assert view.redo() is True
-    assert pushed[-1] == ("tbl", {"columns": ["x"], "rows": [["9"]]})
+    assert pushed[-1] == ("tbl", {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]})
 
 
 def test_table_view_undo_empty_history_does_not_push() -> None:
@@ -97,3 +97,126 @@ def test_table_view_default_min_width_scales_with_columns() -> None:
     assert TableView(
         "c", columns=["x", "y", "z"], min_width=Size.px(99)
     ).min_width == Size.px(99)
+
+
+def test_table_view_default_preferred_size() -> None:
+    view = TableView("tbl", columns=["x", "y"])
+    assert view.preferred_width == Size.px(480)
+    assert view.preferred_height == Size.px(320)
+    # An explicit preferred still wins.
+    assert TableView("tbl", preferred_height=Size.px(200)).preferred_height == Size.px(200)
+
+
+def test_table_get_cell_out_of_range_raises() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    with pytest.raises(IndexError):
+        ctrl.get_cell(1, 0)
+    with pytest.raises(IndexError):
+        ctrl.get_cell(0, 1)
+    with pytest.raises(IndexError):
+        ctrl.get_cell(-1, 0)
+
+
+def test_table_view_get_cell_set_cell_round_trip() -> None:
+    view = TableView("tbl", columns=["x", "y"], rows=[["1", "2"]])
+    assert view.get_cell(0, 0) == "1"
+    assert view.set_cell(0, 1, "9") is True
+    assert view.get_cell(0, 1) == "9"
+    assert view.control.rows == [["1", "9"]]
+
+
+def test_table_view_set_cell_pushes_grid() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    pushed: list[tuple] = []
+    view._push = lambda vid, value: pushed.append((vid, value))
+    assert view.set_cell(0, 0, "9") is True
+    assert pushed == [("tbl", {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]})]
+
+
+def test_table_view_set_cell_records_history() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    view.set_cell(0, 0, "9")
+    assert view.can_undo is True
+    assert view.undo() is True
+    assert view.get_value()["rows"] == [["1"]]
+
+
+def test_table_view_clear_history() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    view.control.set_cell(0, 0, "9")
+    assert view.can_undo is True
+    view.clear_history()
+    assert view.can_undo is False
+    assert view.can_redo is False
+
+
+def test_table_view_add_delete_row_column() -> None:
+    view = TableView("tbl", columns=["x", "y"], rows=[["1", "2"]])
+    pushed: list[tuple] = []
+    view._push = lambda vid, value: pushed.append((vid, value))
+
+    assert view.add_row(["3", "4"]) is True
+    assert view.control.rows == [["1", "2"], ["3", "4"]]
+
+    assert view.add_column("z", ["a", "b"]) is True
+    assert view.control.columns == ["x", "y", "z"]
+    assert view.control.rows == [["1", "2", "a"], ["3", "4", "b"]]
+
+    assert view.delete_row(0) is True
+    assert view.control.rows == [["3", "4", "b"]]
+
+    assert view.delete_column(0) is True
+    assert view.control.columns == ["y", "z"]
+    assert view.control.rows == [["4", "b"]]
+
+    # Every mutation pushed a control_update.
+    assert len(pushed) == 4
+    assert pushed[-1] == (
+        "tbl",
+        {"columns": ["y", "z"], "rows": [["4", "b"]], "column_types": [{"kind": "string"}, {"kind": "string"}]},
+    )
+
+
+def test_table_view_insert_row_column() -> None:
+    view = TableView("tbl", columns=["x", "y"], rows=[["1", "2"]])
+    pushed: list[tuple] = []
+    view._push = lambda vid, value: pushed.append((vid, value))
+
+    assert view.insert_row(0, ["0a", "0b"]) is True
+    assert view.control.rows == [["0a", "0b"], ["1", "2"]]
+
+    assert view.insert_column(0, "z", ["za", "zb"]) is True
+    assert view.control.columns == ["z", "x", "y"]
+    assert view.control.rows == [["za", "0a", "0b"], ["zb", "1", "2"]]
+
+    assert view.insert_row(5) is False  # out of range
+    assert len(pushed) == 2
+
+
+def test_table_view_active_cell_delegates() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"], ["2"]])
+    assert view.active_cell is None
+    view.control.handle_event("cell_select", {"value": {"row": 1, "col": 0}})
+    assert view.active_cell == (1, 0)
+
+
+def test_table_view_editable_titles_and_title_handler() -> None:
+    async def handler(*_args, **_kwargs) -> None:
+        """No-op title handler."""
+
+    view = TableView("tbl", columns=["a"], rows=[["1"]], on_column_title_change=handler)
+    assert view.control.editable_titles is True
+    assert view.control.serialize()["editable_titles"] is True
+    assert view.control.on_column_title_change is handler
+    off = TableView("t2", columns=["a"], rows=[["1"]], editable_titles=False)
+    assert off.control.editable_titles is False
+
+
+def test_table_view_delete_out_of_range_no_push() -> None:
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    pushed: list[tuple] = []
+    view._push = lambda vid, value: pushed.append((vid, value))
+
+    assert view.delete_row(5) is False
+    assert view.delete_column(5) is False
+    assert pushed == []

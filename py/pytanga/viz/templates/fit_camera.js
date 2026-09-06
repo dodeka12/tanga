@@ -46,7 +46,7 @@ export function fitCamera(sceneObjects, camera, controls, spaceDim, width, heigh
         const ymin = center.y - size.y / 2 - margin;
         const ymax = center.y + size.y / 2 + margin;
 
-        const f = orthoFrustum(xmin, xmax, ymin, ymax, true, 0,
+        const f = orthoFrustum(xmin, xmax, ymin, ymax, 'fit', 0,
             width ?? window.innerWidth, height ?? window.innerHeight);
         camera.left = f.left;
         camera.right = f.right;
@@ -59,7 +59,7 @@ export function fitCamera(sceneObjects, camera, controls, spaceDim, width, heigh
         controls.update();
         // Persist the fitted rectangle so resize recomputes from the original
         // fit (letterbox) rather than the current, possibly-corrupt frustum.
-        camera.userData._view2d = { xmin, xmax, ymin, ymax, uniform: true, border_px: 0 };
+        camera.userData._view2d = { xmin, xmax, ymin, ymax, stretch: 'fit', border_px: 0 };
         return;
     }
 

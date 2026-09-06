@@ -28,13 +28,14 @@ class SdfGroup(SdfElement):
     """A grouped SDF object with per-member combine modes + runtime transforms.
 
     Each part is a bare element (defaults to union), a unary-tagged element
-    (``-el`` / ``~el``), or a legacy ``(obj, mode)`` tuple/string. ``obj`` may be
-    a geometry entity, an ``SdfNode``, an ``SdfObject``/``Combine``, or a nested
-    ``Composed``/``SdfGroup``.
+    (``-el`` / ``~el``), an :class:`SdfCompose` descriptor, or the legacy
+    ``(obj, mode)`` tuple/string. ``obj`` may be a geometry entity, an
+    ``SdfNode``, an ``SdfObject``/``Combine``, or a nested ``Composed``/
+    ``SdfGroup``.
 
     Example::
 
-        SdfGroup(sphere(1.0), (capped_cylinder(0.6, 0.4), "subtract"))
+        SdfGroup(sphere(1.0), SdfCompose(capped_cylinder(0.6, 0.4), ECompose.SUBTRACT))
     """
 
     parts: tuple[tuple[Any, ECompose], ...]

@@ -68,6 +68,15 @@ def _find_free_port(host: str) -> int:
         return int(sock.getsockname()[1])
 
 
+def _validate_space_dim(space_dim: int) -> int:
+    """Validate a ``space_dim`` value (2 or 3) and return it unchanged."""
+    if isinstance(space_dim, bool) or not isinstance(space_dim, int):
+        raise ValueError(f"space_dim must be 2 or 3, got {space_dim!r}")
+    if space_dim not in (2, 3):
+        raise ValueError(f"space_dim must be 2 or 3, got {space_dim!r}")
+    return space_dim
+
+
 class Visualizer(_JupyterDisplayMixin):
     """Interactive 3D visualization of geometric entities via Three.js in a browser.
 
@@ -165,7 +174,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._global_styles = make_styles()
 
         # Control handler registry (shared across all scenes)
-        from ._controls import ControlHandlerRegistry
+        from ._controls import CLIENT_LOG_ID, ClientLog, ControlHandlerRegistry
 
         self._handler_registry = ControlHandlerRegistry()
 
@@ -174,6 +183,10 @@ class Visualizer(_JupyterDisplayMixin):
         from ._transport import WebSocketTransport
 
         self._transport = WebSocketTransport(self._server_state, self._handler_registry)
+
+        # Backend-only sink for browser log events (see `on_client_log`).
+        self._client_log = ClientLog(CLIENT_LOG_ID)
+        self._client_log.register_handlers(self._transport)
 
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
@@ -189,6 +202,7 @@ class Visualizer(_JupyterDisplayMixin):
             self._server_state,
             scene_factory=self._create_scene,
             transport=self._transport,
+            client_log=self._client_log,
         )
         self._layout.add_scene("")
         self._theme_host = ThemeHost(self._transport, self._layout)
@@ -226,6 +240,16 @@ class Visualizer(_JupyterDisplayMixin):
     def remove_view(self, view_id: str, *, scene: str | None = None) -> None:
         """Remove a mounted overlay view by its stable id (see ``viz.add``)."""
         self._layout.remove_view(view_id, scene=scene)
+
+    def on_client_log(self, handler: Any) -> None:
+        """Replace the backend sink for browser ``sendLog`` events.
+
+        *handler* is an ``async def(value, event)`` receiving a
+        :class:`~pytanga.viz._controls.ClientLogRecord`; the default logs via
+        ``logging.getLogger("tanga.viz.client")``.
+        """
+        self._client_log.on_log = handler
+        self._client_log.register_handlers(self._transport)
 
     # ── Facade: file chooser ───────────────────────────────
 
@@ -348,26 +372,39 @@ class Visualizer(_JupyterDisplayMixin):
     def _loop(self, value: Any) -> None:
         self._server_state.loop = value
 
-    def _create_scene(self, name: str) -> Scene:
-        """Create a bare :class:`Scene` for *name* (no default objects)."""
+    def _create_scene(self, name: str, space_dim: int | None = None) -> Scene:
+        """Create a bare :class:`Scene` for *name* (no default objects).
+
+        *space_dim* (2 or 3) overrides the visualizer default for a named
+        scene; ``None`` inherits it.  The main scene (``""``) always uses the
+        visualizer's own config.
+        """
         if name == "":
             return Scene(
                 self._config, name="", styles=self._global_styles.copy(), host=self
             )
+        dim = self._config.space_dim if space_dim is None else _validate_space_dim(space_dim)
         cfg = SceneConfig(
             background_color=self._config.background_color,
             camera=None,
             title=name or self._config.title,
             name=name,
-            space_dim=self._config.space_dim,
+            space_dim=dim,
         )
         return Scene(cfg, name=name, styles=self._global_styles.copy(), host=self)
 
     def add_scene(
-        self, name: str, *, add_axes: bool = True, add_grid: bool = True
+        self,
+        name: str,
+        *,
+        space_dim: int | None = None,
+        add_axes: bool = True,
+        add_grid: bool = True,
     ) -> VizSceneHandle:
         """Create a scene + an auto single-``SceneView`` layout (raise if name taken)."""
-        self._layout.add_scene(name)
+        if space_dim is not None:
+            _validate_space_dim(space_dim)
+        self._layout.add_scene(name, space_dim)
         self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
         return VizSceneHandle(self, name)
 
@@ -375,6 +412,7 @@ class Visualizer(_JupyterDisplayMixin):
         self,
         name: str,
         *,
+        space_dim: int | None = None,
         enable_server_stop_key: bool = False,
         add_axes: bool = True,
         add_grid: bool = True,
@@ -388,6 +426,9 @@ class Visualizer(_JupyterDisplayMixin):
 
         Args:
             name: Scene name (URL-path-friendly).
+            space_dim: Space dimension for a newly created scene (``2`` or
+                ``3``); ``None`` (default) inherits the visualizer's dimension.
+                Applies only at creation.
             enable_server_stop_key: When ``True``, enable the
                 browser-triggered full-server stop key (Ctrl+Q) for this
                 scene, equivalent to calling
@@ -402,7 +443,9 @@ class Visualizer(_JupyterDisplayMixin):
                 ``add_default_grid`` constructor flag instead.
         """
         if name not in self._layout.scenes:
-            self._layout.add_scene(name)
+            if space_dim is not None:
+                _validate_space_dim(space_dim)
+            self._layout.add_scene(name, space_dim)
             self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
         if enable_server_stop_key:
             self._set_server_stop_key(
@@ -726,6 +769,43 @@ class Visualizer(_JupyterDisplayMixin):
         """
         scene = self._layout.scenes[scene_name]
         scene.config.camera = _normalize_camera_config(camera)
+        self._push_scene_config(scene_name)
+
+    def set_space_dim(
+        self,
+        space_dim: int,
+        *,
+        scene_name: str = "",
+        camera: CameraConfig | View2DConfig | View3dConfig | None = None,
+    ) -> None:
+        """Switch a scene's space dimension (2D/3D) at runtime.
+
+        Updates the scene's ``space_dim`` and re-pushes its config so the
+        browser switches camera mode and controls without a reload.
+
+        Args:
+            space_dim: ``2`` or ``3``.
+            scene_name: Target scene (default ``""`` = main scene).
+            camera: Optional camera to apply with the new dimension.  When
+                omitted and the scene's current camera conflicts with
+                ``space_dim``, the camera is cleared so the frontend auto-fits
+                with the correct camera type.
+        """
+        _validate_space_dim(space_dim)
+        scene = self._layout.scenes[scene_name]
+        scene.config.space_dim = space_dim
+        if camera is not None:
+            cam = _normalize_camera_config(camera)
+            cam_dim = _deduce_space_dim(cam)
+            if cam_dim is not None and cam_dim != space_dim:
+                raise ValueError(
+                    f"camera implies space_dim={cam_dim}, but {space_dim} was requested"
+                )
+            scene.config.camera = cam
+        else:
+            cam_dim = _deduce_space_dim(scene.config.camera)
+            if cam_dim is not None and cam_dim != space_dim:
+                scene.config.camera = None
         self._push_scene_config(scene_name)
 
     def set_view_camera(

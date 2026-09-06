@@ -3,11 +3,12 @@
 
 """table_data.py — An editable tabular-data control driven by the backend.
 
-Adds a declarative ``TableView`` control (backed by Tabulator) whose columns and
-initial rows are defined by the backend.  Editing a cell, adding a row, or
+Adds a declarative ``TableView`` (a dependency-free native grid) whose columns
+and initial rows are defined by the backend.  Editing a cell, adding a row, or
 adding a column each fires a distinct async handler; this app echoes the latest
-change into the viewport annotation.  A "Reset table" button pushes the grid
-back to its initial state via ``TableView.set_value``.
+change into the viewport annotation.  The "+ Row" / "+ Column" / "Reset table"
+buttons drive the table from the backend via ``TableView.add_row`` /
+``add_column`` / ``set_value``.
 
 Run with:  uv run python py/examples/viz/ui/controls/table_data.py
 
@@ -35,8 +36,8 @@ class TableDataApp(VisualizerApp):
 
     def __init__(self) -> None:
         super().__init__(title="Table Data")
-        self._columns = ["x", "y", "z"]
-        self._rows = [["1", "2", "3"], ["4", "5", "6"]]
+        self._columns = ["x", "y", "active", "status"]
+        self._rows = [[1.5, 2.5, True, "on"], [3.5, 4.5, False, "off"]]
         self._table: TableView | None = None
 
     async def init(self) -> None:
@@ -52,6 +53,7 @@ class TableDataApp(VisualizerApp):
             label="Data",
             columns=self._columns,
             rows=self._rows,
+            column_types=[None, None, "bool", ["on", "off"]],
             tooltip="Editable data grid",
             on_cell_change=self.on_cell_change,
             on_row_add=self.on_row_add,
@@ -70,6 +72,18 @@ class TableDataApp(VisualizerApp):
                                 label="Reset table",
                                 tooltip="Restore the initial grid",
                                 on_click=self.on_reset,
+                            ),
+                            ButtonView(
+                                "add_row",
+                                label="+ Row",
+                                tooltip="Append a row",
+                                on_click=self.on_add_row,
+                            ),
+                            ButtonView(
+                                "add_column",
+                                label="+ Column",
+                                tooltip="Append a column",
+                                on_click=self.on_add_column,
                             ),
                         ],
                         position="bottom-right",
@@ -93,6 +107,19 @@ class TableDataApp(VisualizerApp):
     async def on_reset(self, _value: None, _event: ControlEvent) -> None:
         self._table.set_value({"columns": self._columns, "rows": self._rows})
         self.viz.set_annotation("Table reset.")
+
+    async def on_add_row(self, _value: None, _event: ControlEvent) -> None:
+        if self._table.add_row():
+            self.viz.set_annotation("Added a row.")
+        else:
+            self.viz.set_annotation("Could not add a row.")
+
+    async def on_add_column(self, _value: None, _event: ControlEvent) -> None:
+        header = f"C{len(self._table.columns) + 1}"
+        if self._table.add_column(header):
+            self.viz.set_annotation(f"Added column {header!r}.")
+        else:
+            self.viz.set_annotation("Could not add a column.")
 
 
 if __name__ == "__main__":

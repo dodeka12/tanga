@@ -733,11 +733,16 @@ class LayoutHostImpl:
     """Owns the scenes and the layouts (each a base + overlay) and serialization."""
 
     def __init__(
-        self, state: ServerState, scene_factory: Any, transport: Any = None
+        self,
+        state: ServerState,
+        scene_factory: Any,
+        transport: Any = None,
+        client_log: Any = None,
     ) -> None:
         self._state = state
         self._scene_factory = scene_factory
         self._transport = transport
+        self._client_log = client_log
         self._layout_control_ids: set[str] = set()
         self._scenes: dict[str, Any] = {}
         self._overlay = OverlayContainer(
@@ -755,11 +760,11 @@ class LayoutHostImpl:
     def scene_names(self) -> list[str]:
         return list(self._scenes.keys())
 
-    def add_scene(self, name: str) -> Any:
+    def add_scene(self, name: str, space_dim: int | None = None) -> Any:
         """Create a scene + an auto single-``SceneView`` layout (raise if name taken)."""
         if name in self._scenes or name in self._layouts:
             raise ValueError(f"Scene or layout {name!r} already exists")
-        scene = self._scene_factory(name)
+        scene = self._scene_factory(name, space_dim)
         self._scenes[name] = scene
         self._layouts[name] = Layout(
             StackView("vertical", [SceneView(name)]), self._overlay
@@ -856,6 +861,8 @@ class LayoutHostImpl:
         event_name = msg_type[len("control:") :]
         cid = payload.get("control_id")
         ctrl = self.resolve_control(cid) if cid else None
+        if ctrl is None and self._client_log is not None and cid == self._client_log.id:
+            ctrl = self._client_log
 
         if ctrl is not None:
             d = ctrl.handle_event(event_name, payload)

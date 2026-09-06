@@ -12,7 +12,7 @@ frontend assets live alongside under ``templates/sdf/``.
 
 from __future__ import annotations
 
-from ._compose import Combine, ECompose, SdfElement
+from ._compose import Combine, ECompose, SdfCompose, SdfElement
 from .composed import Composed
 from .group import SdfGroup
 from .lights import DirectionalLight, Light
@@ -50,6 +50,7 @@ __all__ = [
     "ECompose",
     "Grid",
     "Light",
+    "SdfCompose",
     "SdfElement",
     "SdfNode",
     "SdfObject",

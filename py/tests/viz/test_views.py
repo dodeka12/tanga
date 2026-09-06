@@ -524,6 +524,8 @@ class TestControlViews:
         assert node["rows"] == [["1", "2"], ["3", "4"]]
         assert node["allow_add_rows"] is True
         assert node["allow_add_columns"] is True
+        assert node["preferred_width"] == {"value": 480, "unit": "px"}
+        assert node["preferred_height"] == {"value": 320, "unit": "px"}
 
 
 def test_table_view_set_control_value() -> None:
@@ -532,7 +534,7 @@ def test_table_view_set_control_value() -> None:
     view = TableView("tbl", columns=["x"], rows=[["1"]])
     set_control_value(view.control, {"columns": ["y", "z"], "rows": [[2], [3]]})
     assert view.columns == ["y", "z"]
-    assert view.rows == [["2"], ["3"]]
+    assert view.rows == [[2], [3]]
 
 
 def test_table_view_on_change_not_serialized() -> None:

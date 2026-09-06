@@ -3,7 +3,7 @@
 // layout/``view_layout`` rendering path (views/*.js) and by banners/dialogs.
 
 import { openFileBrowser } from './file-browser.js';
-import { sendEvent } from './events.js';
+import { sendEvent, sendLog } from './events.js';
 
 // ── Module state ─────────────────────────────────────────────
 let _controlRegistry = {};      // control id → { kind, apply(value) }
@@ -37,10 +37,14 @@ export function forgetControl(id) {
     delete _controlRegistry[id];
 }
 
+export function registerControl(id, entry) {
+    _controlRegistry[id] = entry;
+}
+
 // ── Icon rendering ──────────────────────────────────────────
 
 const _iconFontLinks = {
-    material: 'https://fonts.googleapis.com/icon?family=Material+Icons',
+    material: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
 };
 
 function _ensureIconFont(family) {
@@ -64,7 +68,7 @@ export function createIconElement(iconId) {
     if (family === 'material') {
         _ensureIconFont('material');
         const span = document.createElement('span');
-        span.className = 'material-icons';
+        span.className = 'material-symbols-outlined';
         span.textContent = name;
         return span;
     }
@@ -85,6 +89,7 @@ export function createIconElement(iconId) {
 function _applyTooltip(wrapper, ctrl) {
     if (ctrl && ctrl.tooltip) wrapper.title = ctrl.tooltip;
 }
+export { _applyTooltip as applyTooltip };
 
 function _attachDebouncedChange(input, controlId) {
     let debounceTimer = null;
@@ -387,6 +392,7 @@ function _renderMarkdown(el, text) {
             });
         } catch (e) {
             console.warn('KaTeX markdown rendering error:', e);
+            sendLog('warn', 'KaTeX markdown rendering error', { source: 'controls-panel.js', data: { error: String(e) } });
         }
     }
 }
@@ -600,190 +606,6 @@ export function createValueEdit(ctrl) {
     return wrapper;
 }
 
-export function createTable(ctrl) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'tanga-control tanga-table';
-
-    const label = document.createElement('label');
-    label.textContent = ctrl.label || ctrl.id;
-    wrapper.appendChild(label);
-
-    const container = document.createElement('div');
-    container.className = 'tanga-table-container';
-    wrapper.appendChild(container);
-
-    const columns = ctrl.columns || [];
-    const rows = ctrl.rows || [];
-    const height = ctrl.height || '220px';
-    const fieldOf = (i) => 'c' + i;
-    const colOf = (field) => {
-        const idx = parseInt(String(field).slice(1), 10);
-        return Number.isFinite(idx) ? idx : 0;
-    };
-
-    const buildDefs = (cols) =>
-        cols.map((title, i) => ({
-            title: String(title),
-            field: fieldOf(i),
-            editor: 'input',
-        }));
-    const buildData = (cols, rowsData) =>
-        (rowsData || []).map((r) => {
-            const obj = {};
-            cols.forEach((_, i) => {
-                obj[fieldOf(i)] = r && r[i] !== undefined ? String(r[i]) : '';
-            });
-            return obj;
-        });
-
-    let table = null;
-
-    if (typeof Tabulator === 'undefined') {
-        const notice = document.createElement('div');
-        notice.className = 'tanga-table-unavailable';
-        notice.textContent = 'Tabulator unavailable — editable table disabled.';
-        container.appendChild(notice);
-    } else {
-        table = new Tabulator(container, {
-            height,
-            layout: 'fitColumns',
-            data: buildData(columns, rows),
-            columns: buildDefs(columns),
-            // Spreadsheet-style keyboard editing. Tab / Shift+Tab already move
-            // between cells (Tabulator defaults `navNext` / `navPrev`);
-            // `tabEndNewRow` appends a blank row when Tab moves past the last
-            // cell; Enter is bound to `navDown` to move to the next row.
-            tabEndNewRow: ctrl.allow_add_rows !== false,
-            keybindings: {
-                navDown: [40, 13],
-            },
-            // Double-click (not single click/focus) to edit a cell.  Range
-            // selection (below) reacts to single click + drag, so a single
-            // click must not also open the editor — otherwise the range's
-            // focus transfer immediately blurs and closes it.
-            editTriggerEvent: 'dblclick',
-            // Drag to select a range of cells; "− Selected" deletes every row
-            // that has at least one selected cell.
-            selectableRange: ctrl.allow_delete_rows !== false,
-            selectableRangeInitializeDefault: false,
-            selectableRangeAutoFocus: false,
-        });
-
-        table.on('cellEdited', (cell) => {
-            sendControlEvent('control:cell_change', ctrl.id, {
-                row: cell.getRow().getPosition(),
-                col: colOf(cell.getColumn().getField()),
-                value: String(cell.getValue()),
-            });
-        });
-
-        // Tabulator's virtual DOM needs a concrete height; re-layout when the
-        // surrounding pane is resized (split drag / window resize / first size).
-        // A ResizeObserver fires once immediately on `observe()`, so start it
-        // only after `tableBuilt` — calling `redraw` before Tabulator built its
-        // holder element throws and mis-measures the container width.
-        table.on('tableBuilt', () => {
-            new ResizeObserver(() => { table.redraw(true); }).observe(container);
-        });
-    }
-
-    const buttonRow = document.createElement('div');
-    buttonRow.className = 'tanga-table-buttons';
-
-    if (table && ctrl.allow_add_rows !== false) {
-        const addRowBtn = document.createElement('button');
-        addRowBtn.type = 'button';
-        addRowBtn.className = 'tanga-action-button';
-        addRowBtn.textContent = '+ Row';
-        addRowBtn.addEventListener('click', () => {
-            const blank = {};
-            table.getColumns().forEach((c) => { blank[c.getField()] = ''; });
-            const rowIndex = table.getRows().length;
-            table.addRow(blank);
-            sendControlEvent('control:row_add', ctrl.id, {
-                row: rowIndex,
-                values: table.getColumns().map(() => ''),
-            });
-        });
-        buttonRow.appendChild(addRowBtn);
-    }
-
-    if (table && ctrl.allow_add_columns !== false) {
-        const addColBtn = document.createElement('button');
-        addColBtn.type = 'button';
-        addColBtn.className = 'tanga-action-button';
-        addColBtn.textContent = '+ Column';
-        addColBtn.addEventListener('click', () => {
-            const colIndex = table.getColumns().length;
-            const field = fieldOf(colIndex);
-            const header = 'C' + (colIndex + 1);
-            table.addColumn({ title: header, field, editor: 'input' });
-            sendControlEvent('control:column_add', ctrl.id, {
-                col: colIndex,
-                header,
-                values: Array(table.getRows().length).fill(''),
-            });
-        });
-        buttonRow.appendChild(addColBtn);
-    }
-
-    if (table && ctrl.allow_delete_rows !== false) {
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.className = 'tanga-action-button';
-        delBtn.textContent = '− Selected';
-        delBtn.addEventListener('click', () => {
-            const selected = new Set();
-            table.getRanges().forEach((range) => {
-                range.getRows().forEach((row) => selected.add(row));
-            });
-            if (!selected.size) return;
-            const indexes = [...selected].map((row) => row.getIndex());
-            selected.forEach((row) => row.delete());
-            sendControlEvent('control:row_delete', ctrl.id, { rows: indexes });
-        });
-        buttonRow.appendChild(delBtn);
-    }
-
-    if (buttonRow.children.length > 0) {
-        wrapper.appendChild(buttonRow);
-    }
-
-    wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
-
-    _controlRegistry[ctrl.id] = {
-        owner: ctrl.owner || 'panel',
-        kind: 'table',
-        apply: (value) => {
-            if (!table || !value) return;
-            const cols = value.columns || [];
-            const rowsData = value.rows || [];
-            table.setColumns(buildDefs(cols));
-            table.setData(buildData(cols, rowsData));
-        },
-    };
-    _applyTooltip(wrapper, ctrl);
-
-    // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo & redo, round-tripped through the
-    // backend so Python stays authoritative.  Skipped while focus is inside the
-    // Tabulator cell editor so native text undo still works mid-edit.
-    wrapper.addEventListener('keydown', (e) => {
-        const target = e.target;
-        if (target && target.closest && target.closest('.tabulator-editor')) {
-            return;
-        }
-        const action = resolveUndoRedoAction(e);
-        if (!action) return;
-        e.preventDefault();
-        sendControlEvent(
-            action === 'undo' ? 'control:undo' : 'control:redo',
-            ctrl.id,
-            null
-        );
-    });
-
-    return wrapper;
-}
 
 // ── WebSocket event dispatch ────────────────────────────────
 
@@ -793,18 +615,23 @@ const _CONTROL_EVENTS = {
     'control:press': 'press',
     'control:release': 'release',
     'control:cell_change': 'cell_change',
+    'control:cell_select': 'cell_select',
     'control:row_add': 'row_add',
     'control:column_add': 'column_add',
     'control:row_delete': 'row_delete',
+    'control:column_delete': 'column_delete',
+    'control:column_title_change': 'column_title_change',
+    'control:column_type_change': 'column_type_change',
     'control:undo': 'undo',
     'control:redo': 'redo',
+    'control:table_view_change': 'table_view_change',
     'control:group_toggle': 'group_toggle',
 };
 
 /**
  * Map a keyboard-event shape to the undo/redo action it requests, or ``null``.
  *
- * Pure helper (no DOM/Tabulator) so the key mapping is unit-testable:
+ * Pure helper (no DOM) so the key mapping is unit-testable:
  * Ctrl+Z → ``"undo"``, Ctrl+Shift+Z or Ctrl+Y → ``"redo"``, otherwise ``null``.
  */
 export function resolveUndoRedoAction(e) {

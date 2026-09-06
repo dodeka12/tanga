@@ -36,7 +36,7 @@ class TestCameraConfig:
     def test_camera2d_type(self):
         c = CameraConfig2d(xmin=0.0, xmax=2.0, ymin=0.0, ymax=1.0)
         assert c.type == "2d"
-        assert c.uniform is True
+        assert c.stretch == "fit"
         assert c.border_px == 0.0
 
     def test_camera3d_to_dict_omits_none(self):
@@ -74,7 +74,7 @@ class TestCameraConfig:
             "xmax": 1.0,
             "ymin": -2.0,
             "ymax": 2.0,
-            "uniform": True,
+            "stretch": "fit",
             "border_px": 0.0,
         }
 
@@ -95,7 +95,7 @@ class TestCameraBuilders:
         assert cam.ymax == 4.0
         assert cam.position == (2.0, 1.5, 20.0)
         assert cam.target == (2.0, 1.5, 0.0)
-        assert cam.uniform is True
+        assert cam.stretch == "fit"
         assert cam.border_px == 0.0
 
     def test_view3d_builder(self):
@@ -799,6 +799,59 @@ class TestVisualizer:
             camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1), space_dim=3
         )
         assert viz._config.space_dim == 3
+
+    def test_named_scene_space_dim_override(self):
+        viz = Visualizer(space_dim=3, add_default_axes=False, add_default_grid=False)
+        sub = viz.scene("sub", space_dim=2)
+        assert sub.scene.config.space_dim == 2
+
+    def test_named_scene_inherits_space_dim(self):
+        viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
+        sub = viz.add_scene("sub")
+        assert sub.scene.config.space_dim == 2
+
+    def test_scene_space_dim_invalid(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        with pytest.raises(ValueError):
+            viz.scene("sub", space_dim=4)
+
+    def test_set_space_dim_updates_config_and_clears_conflicting_camera(self):
+        viz = Visualizer(
+            space_dim=2,
+            camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1),
+            add_default_axes=False,
+            add_default_grid=False,
+        )
+        assert isinstance(viz._config.camera, CameraConfig2d)
+        viz.set_space_dim(3)
+        assert viz._config.space_dim == 3
+        # A 2D camera conflicts with 3D, so it is cleared for auto-fit.
+        assert viz._config.camera is None
+
+    def test_set_space_dim_keeps_matching_camera(self):
+        viz = Visualizer(
+            space_dim=2,
+            camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1),
+            add_default_axes=False,
+            add_default_grid=False,
+        )
+        viz.set_space_dim(2)
+        assert isinstance(viz._config.camera, CameraConfig2d)
+
+    def test_set_space_dim_rejects_mismatched_camera(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        with pytest.raises(ValueError):
+            viz.set_space_dim(
+                2, camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0)
+            )
+
+    def test_scene_handle_space_dim_accessor(self):
+        viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
+        handle = viz.scene("sub")
+        assert handle.space_dim == 2
+        handle.space_dim = 3
+        assert handle.space_dim == 3
+        assert viz._scenes["sub"].config.space_dim == 3
 
     def test_add_entity_returns_id(self):
         viz = Visualizer()

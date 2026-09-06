@@ -476,7 +476,13 @@ def analyze_operator(
         return _classify_single_grade_versor(mv, einf, eo)
 
     # Multivector versor
-    scale, factors = mv.blade_factorize_versor()
+    try:
+        scale, factors = mv.blade_factorize_versor()
+    except RuntimeError:
+        # Degenerate versor (a factor's magnitude fell below the eps threshold,
+        # or the factorization exceeded its iteration cap). Return a defined
+        # fallback instead of hanging or propagating the error.
+        return VersorFactors(factors=())
     _ = scale
     n = len(factors)
 

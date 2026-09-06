@@ -481,9 +481,17 @@ class MV:
         """
         return self._alg.meet(self, other)
 
-    def blade_factorize_versor(self) -> "tuple[MV, list[MV]]":
-        """Factorize this versor into (scale, factor_vectors)."""
-        return self._alg.blade_factorize_versor(self)
+    def blade_factorize_versor(
+        self, eps: float = 1e-6, max_iterations: int = 64
+    ) -> "tuple[MV, list[MV]]":
+        """Factorize this versor into (scale, factor_vectors).
+
+        See :meth:`pytanga.algebra.Algebra.blade_factorize_versor` for the
+        ``eps`` / ``max_iterations`` semantics.
+        """
+        return self._alg.blade_factorize_versor(
+            self, eps=eps, max_iterations=max_iterations
+        )
 
     def project(self, blade: "MV") -> "MV":
         """Project this multivector onto a non-degenerate blade: proj_N(A) = (A . N) N^-1.

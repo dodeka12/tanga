@@ -226,6 +226,15 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             id: node.id, label: node.label, tooltip: node.tooltip,
             columns: node.columns, rows: node.rows,
             allow_add_rows: node.allow_add_rows, allow_add_columns: node.allow_add_columns,
+            allow_delete_rows: node.allow_delete_rows,
+            show_column_titles: node.show_column_titles,
+            show_row_numbers: node.show_row_numbers,
+            allow_delete_columns: node.allow_delete_columns,
+            sortable: node.sortable,
+            column_types: node.column_types,
+            column_widths: node.column_widths,
+            row_height: node.row_height,
+            sort: node.sort,
         });
     } else if (node.type === 'spacer') {
         view = new SpacerView();

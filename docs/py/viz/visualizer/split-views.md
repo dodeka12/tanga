@@ -258,6 +258,10 @@ ToolbarView(
   are `EStackJustify.START` (left), `END` (right), `CENTER` (block-centered),
   and `SPACE_EVENLY` (equally spaced).
 
+The toolbar's height is automatic: it sizes to the tallest control plus the
+`margin`/`border` chrome, so a row of icon-only buttons collapses to fit the
+icons (with a small margin) instead of reserving the full control height.
+
 See `py/examples/viz/ui/controls/toolbar.py` for a four-pane example showing all four
 alignments.
 

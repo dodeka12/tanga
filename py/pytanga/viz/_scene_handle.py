@@ -241,6 +241,19 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update the camera configuration for this scene at runtime."""
         self._viz.set_camera(camera, scene_name=self._name)
 
+    @property
+    def space_dim(self) -> int:
+        """The scene's current space dimension (``2`` or ``3``)."""
+        return self._scene().config.space_dim
+
+    @space_dim.setter
+    def space_dim(self, value: int) -> None:
+        self._viz.set_space_dim(value, scene_name=self._name)
+
+    def set_space_dim(self, space_dim: int, camera: Any = None) -> None:
+        """Set the space dimension (and optionally the camera) for this scene."""
+        self._viz.set_space_dim(space_dim, scene_name=self._name, camera=camera)
+
     def set_annotation(
         self, text: str | None, *, style: AnnotationStyle | None = None
     ) -> None:

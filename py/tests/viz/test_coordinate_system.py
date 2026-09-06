@@ -31,7 +31,7 @@ class TestFitView2D:
         assert cam.xmax == 5.0
         assert cam.ymin == -2.0
         assert cam.ymax == 2.0
-        assert cam.uniform is True
+        assert cam.stretch == "fit"
 
     def test_log_span(self):
         cam = fit_view2d((0.1, 100), (0.1, 100), xscale="log", yscale="log")
@@ -41,13 +41,30 @@ class TestFitView2D:
         assert cam.ymin == pytest.approx(-1.5)
         assert cam.ymax == pytest.approx(1.5)
 
-    def test_border_and_uniform(self):
-        cam = fit_view2d((0, 2), (0, 2), border_world=0.5, border_px=10.0, uniform=False)
+    def test_border_and_stretch(self):
+        cam = fit_view2d((0, 2), (0, 2), border_world=0.5, border_px=10.0, stretch="fill")
         assert cam.xmin == -1.0
         assert cam.xmax == 1.0
         assert cam.border_world == 0.5
         assert cam.border_px == 10.0
-        assert cam.uniform is False
+        assert cam.stretch == "fill"
+
+    def test_default_stretch_is_fit(self):
+        cam = fit_view2d((0, 10), (0, 4))
+        assert cam.stretch == "fit"
+
+    def test_stretch_modes_pass_through(self):
+        assert fit_view2d((0, 10), (0, 4), stretch="fill").stretch == "fill"
+        assert fit_view2d((0, 10), (0, 4), stretch="fill_x").stretch == "fill_x"
+        assert fit_view2d((0, 10), (0, 4), stretch="fill_y").stretch == "fill_y"
+
+    def test_stretch_rejects_unknown_mode(self):
+        with pytest.raises(ValueError):
+            fit_view2d((0, 10), (0, 4), stretch="bogus")
+
+    def test_default_border_px_matches_coordinate_system(self):
+        cam = fit_view2d((0, 10), (0, 4))
+        assert cam.border_px == 60.0
 
 
 class TestCoordinateSystem2D:

@@ -48,18 +48,27 @@ viz.set_layout(
                 "View",
                 [
                     SliderView(
-                        "radius", label="Radius", min=0.2, max=5.0, value=2.0,
+                        "radius",
+                        label="Radius",
+                        min=0.2,
+                        max=5.0,
+                        value=2.0,
                         on_change=_on_radius,
                     ),
                     ButtonView("reset", label="Reset", on_click=_on_reset),
                 ],
                 position="top-right",
             ),
+            # BUG: The following group is not shown on the single-scene page. Why?
             GroupView(
                 "Sphere",
                 [
                     SliderView(
-                        "opacity", label="Opacity", min=0.05, max=1.0, value=0.4,
+                        "opacity",
+                        label="Opacity",
+                        min=0.05,
+                        max=1.0,
+                        value=0.4,
                         on_change=_on_opacity,
                     ),
                 ],
@@ -70,5 +79,7 @@ viz.set_layout(
 )
 
 viz.show()
-print("Overlay and attached control groups shown on the single-scene page. Press Ctrl+C to exit.")
+print(
+    "Overlay and attached control groups shown on the single-scene page. Press Ctrl+C to exit."
+)
 viz.wait()

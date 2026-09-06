@@ -95,31 +95,34 @@ Python CSG operators:
 | `-a`            | tags `a` with `SUBTRACT` polarity (fold)  |
 | `~a`            | tags `a` with `INTERSECTION` polarity (fold) |
 
-`Composed` / `SdfGroup` also accept the legacy `(obj, "subtract")` tuple form and
-`ECompose` enum values.
+`Composed` / `SdfGroup` members can be tagged with a fold mode via an
+`SdfCompose(element, mode, smoothness=…)` descriptor — the named replacement
+for the legacy `(obj, "subtract")` / `(obj, "smooth_union", 0.15)` tuple form
+(both remain supported).
 
 ### Smooth blending
 
 Smooth combine modes replace the hard min/max seam with a rounded, blended join
 of radius `smoothness` (frontend default `0.1`):
 
-| Mode                          | Combine mode                                  |
-|-------------------------------|-----------------------------------------------|
-| `(obj, "smooth_union")`       | `ECompose.SMOOTH_UNION`                       |
-| `(obj, "smooth_intersection")`| `ECompose.SMOOTH_INTERSECTION`                |
-| `(obj, "smooth_subtract")`    | `ECompose.SMOOTH_SUBTRACT`                    |
+| Mode                           | Combine mode                                  |
+|--------------------------------|-----------------------------------------------|
+| `SdfCompose(obj, ECompose.SMOOTH_UNION)`        | `ECompose.SMOOTH_UNION`        |
+| `SdfCompose(obj, ECompose.SMOOTH_INTERSECTION)` | `ECompose.SMOOTH_INTERSECTION` |
+| `SdfCompose(obj, ECompose.SMOOTH_SUBTRACT)`     | `ECompose.SMOOTH_SUBTRACT`     |
 
-`Composed` / `SdfGroup` accept a `(obj, mode, smoothness)` 3-tuple to set the
-blend radius per member, `Combine(ECompose.SMOOTH_UNION, a, b, smoothness=…)`
+`SdfCompose(obj, mode, smoothness=…)` sets a per-member blend radius in a
+`Composed` / `SdfGroup`, `Combine(ECompose.SMOOTH_UNION, a, b, smoothness=…)`
 builds a smooth binary combine, and `SdfStyle(smoothness=…)` sets a per-object
 default:
 
 ```python
-from pytanga.viz.sdf import SdfGroup, capped_cylinder, sphere
+from pytanga.viz.sdf import ECompose, SdfCompose, SdfGroup, capped_cylinder, sphere
 
 group = SdfGroup(
     sphere(1.0, id="hub"),
-    (capped_cylinder(1.5, 0.35, id="shaft"), "smooth_union", 0.15),  # rounded join
+    SdfCompose(capped_cylinder(1.5, 0.35, id="shaft"),
+               ECompose.SMOOTH_UNION, smoothness=0.15),  # rounded join
 )
 ```
 
@@ -142,11 +145,11 @@ A single SDF object can be internally `Composed` — its own combinator tree
 
 ```python
 from pytanga.viz import SdfStyle, Visualizer
-from pytanga.viz.sdf import Composed, capped_cylinder, sphere
+from pytanga.viz.sdf import Composed, ECompose, SdfCompose, capped_cylinder, sphere
 
 bead = Composed(
     sphere(0.7),
-    (capped_cylinder(1.0, 0.45), "subtract"),
+    SdfCompose(capped_cylinder(1.0, 0.45), ECompose.SUBTRACT),
 )
 viz.add(bead, style=SdfStyle(color="#44ff44"))
 ```
@@ -165,12 +168,12 @@ keyword), so a member can be addressed by name or by 0-based index:
 
 ```python
 from pytanga.viz import SdfStyle, Visualizer
-from pytanga.viz.sdf import SdfGroup, capped_cylinder, sphere
+from pytanga.viz.sdf import ECompose, SdfCompose, SdfGroup, capped_cylinder, sphere
 
 group = SdfGroup(
     sphere(1.0, position=(-1.0, 0.0, 0.0), id="left"),
     sphere(1.0, position=(1.0, 0.0, 0.0), id="orbit"),
-    (capped_cylinder(1.5, 0.35), "subtract"),   # cut through both spheres
+    SdfCompose(capped_cylinder(1.5, 0.35), ECompose.SUBTRACT),  # cut through both spheres
 )
 sdf_grp = viz.new(group, style=SdfStyle(color="#ffaa00"))
 

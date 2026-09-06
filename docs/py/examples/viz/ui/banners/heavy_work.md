@@ -31,7 +31,7 @@ import asyncio
 import time
 
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import ControlEvent, VisualizerApp
+from pytanga.viz import ControlEvent, GroupView, SceneView, SliderView, VisualizerApp
 
 
 class HeavyWorkApp(VisualizerApp):
@@ -52,17 +52,27 @@ class HeavyWorkApp(VisualizerApp):
             color="#4488ff",
             opacity=0.4,
         )
-        self.viz.add_slider(
-            "radius",
-            label="Radius",
-            min=0.2,
-            max=3.0,
-            step=0.05,
-            value=1.0,
-            on_release=self.on_release,
-        )
-        self.viz.add_control_group(
-            "controls", title="", controls=["radius"], position="bottom-right"
+        self.viz.set_layout(
+            SceneView(
+                "",
+                overlay=[
+                    GroupView(
+                        "",
+                        [
+                            SliderView(
+                                "radius",
+                                label="Radius",
+                                min=0.2,
+                                max=3.0,
+                                step=0.05,
+                                value=1.0,
+                                on_release=self.on_release,
+                            )
+                        ],
+                        position="bottom-right",
+                    )
+                ],
+            )
         )
         self.viz.flush()
 

@@ -8,19 +8,13 @@ uv run python py/examples/<path>.py
 
 ## Keyword index
 
-- **2D** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
+- **2D** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
 
-- **3D** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
+- **3D** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
 - **A X = B** — [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md)
 
 - **ActPoint** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
-
-- **add_control_group** — [Unified control groups: overlay-anchored + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Unified control groups on a single-scene page](viz/ui/controls/control_group_single.md)
-
-- **add_slider** — [Anchor bare add_* controls per scene](viz/ui/controls/control_position.md), [One control, two ways: add_* and *View](viz/ui/controls/controls_add_and_view.md)
-
-- **add_table** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md)
 
 - **affine** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
@@ -36,7 +30,7 @@ uv run python py/examples/<path>.py
 
 - **all types** — [All geometric entity types in one scene](viz/entities/all_entities.md)
 
-- **anchor** — [Unified control groups: overlay-anchored + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Unified control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Anchor bare add_* controls per scene](viz/ui/controls/control_position.md)
+- **anchor** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **angle vs time** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
 
@@ -46,7 +40,7 @@ uv run python py/examples/<path>.py
 
 - **animated** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
-- **animation** — [Animation](ga/jupyter/animation.md), [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Keyframe timeline with fade-in and move](viz/animation/timeline.md), [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
+- **animation** — [Animation](ga/jupyter/animation.md), [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Keyframe timeline with fade-in and move](viz/animation/timeline.md), [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
 - **annotation** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
@@ -62,6 +56,8 @@ uv run python py/examples/<path>.py
 
 - **auto-fit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
+- **auto-save** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
+
 - **auto_clear** — [Animation](ga/jupyter/animation.md)
 
 - **Axes2D** — [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md)
@@ -70,7 +66,7 @@ uv run python py/examples/<path>.py
 
 - **banner** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 
-- **bar** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/ui/menus/menu_demo.md)
+- **bar** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **basis** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -78,7 +74,7 @@ uv run python py/examples/<path>.py
 
 - **BasisE3** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md), [Three ways to work with named basis blades](ga/basis/basis_usage.md)
 
-- **BasisN3** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md)
+- **BasisN3** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md)
 
 - **BasisP3** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md)
 
@@ -94,19 +90,23 @@ uv run python py/examples/<path>.py
 
 - **button** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
+- **ButtonView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
+
 - **C++ backend** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
 - **cache** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
-- **camera** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
+- **camera** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
 - **capped cone** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
 
-- **cell editing** — [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md)
+- **cell editing** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **checkbox** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **checkbox** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+
+- **CheckboxView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
 - **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
 
@@ -116,13 +116,15 @@ uv run python py/examples/<path>.py
 
 - **coefficients** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
+- **column types** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
+
 - **combine** — [per-object CSG combine modes](viz/sdf/booleans.md)
 
 - **comparison** — [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
 
 - **compilation** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
-- **Composed** — [Composed SDF objects + the primitive library](viz/sdf/composed.md)
+- **Composed** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md)
 
 - **confirm** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 
@@ -136,19 +138,19 @@ uv run python py/examples/<path>.py
 
 - **contraction** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
-- **control group** — [Unified control groups: overlay-anchored + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Unified control groups on a single-scene page](viz/ui/controls/control_group_single.md)
+- **control group** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **control update** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **control_position** — [Anchor bare add_* controls per scene](viz/ui/controls/control_position.md)
+- **controls** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
-- **controls** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Anchor bare add_* controls per scene](viz/ui/controls/control_position.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [One control, two ways: add_* and *View](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
-
-- **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
+- **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
 
 - **CSG** — [per-object CSG combine modes](viz/sdf/booleans.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
 
 - **css** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md)
+
+- **CSV** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
 - **Ctrl+C** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
@@ -180,7 +182,7 @@ uv run python py/examples/<path>.py
 
 - **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
 
-- **dropdown** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/ui/menus/menu_demo.md)
+- **dropdown** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **dtype** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -210,8 +212,6 @@ uv run python py/examples/<path>.py
 
 - **expressions** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
-- **facade** — [One control, two ways: add_* and *View](viz/ui/controls/controls_add_and_view.md)
-
 - **figure** — [Export](ga/jupyter/export.md), [Presentation figure export with FigureStyle](viz/export/figure.md)
 
 - **FigureStyle** — [Presentation figure export with FigureStyle](viz/export/figure.md)
@@ -229,6 +229,8 @@ uv run python py/examples/<path>.py
 - **first slice** — [First vertical slice for the SDF viewer](viz/sdf/entities.md)
 
 - **fit camera** — [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md)
+
+- **fit_view2d** — [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
 
 - **fixed modulus** — [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
@@ -270,7 +272,7 @@ uv run python py/examples/<path>.py
 
 - **group view** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
-- **GroupView** — [One control, two ways: add_* and *View](viz/ui/controls/controls_add_and_view.md)
+- **GroupView** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
 - **Gunn/Dorst** — [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md)
 
@@ -302,11 +304,13 @@ uv run python py/examples/<path>.py
 
 - **IPNS** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
+- **JSON** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
+
 - **justify** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
 - **KaTeX** — [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md), [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **keyboard navigation** — [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md)
+- **keyboard navigation** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **keyframe** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
@@ -318,7 +322,7 @@ uv run python py/examples/<path>.py
 
 - **LaTeX** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
-- **layout** — [Unified control groups: overlay-anchored + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/ui/menus/menu_demo.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **layout** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **least-norm** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -346,9 +350,11 @@ uv run python py/examples/<path>.py
 
 - **markdown** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **menu** — [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/ui/menus/menu_demo.md)
+- **menu** — [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **menu bar** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
+
+- **merge** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
 
 - **mesh** — [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
 
@@ -360,7 +366,7 @@ uv run python py/examples/<path>.py
 
 - **modulus** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md), [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
-- **Motor** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
+- **Motor** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md)
 
 - **multi-pane** — [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md)
 
@@ -382,6 +388,8 @@ uv run python py/examples/<path>.py
 
 - **nested loops** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
+- **nesting** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
+
 - **notebook** — [Animation](ga/jupyter/animation.md), [Export](ga/jupyter/export.md), [Interactive Visualizer](ga/jupyter/interactive.md)
 
 - **NTRU** — [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md)
@@ -402,7 +410,7 @@ uv run python py/examples/<path>.py
 
 - **orthographic** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md)
 
-- **overlay** — [Unified control groups: overlay-anchored + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Unified control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Anchor bare add_* controls per scene](viz/ui/controls/control_position.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/ui/menus/menu_demo.md)
+- **overlay** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **override** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
@@ -412,13 +420,15 @@ uv run python py/examples/<path>.py
 
 - **P3** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **panes** — [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md)
+- **panes** — [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md)
 
-- **parent_id** — [Unified control groups: overlay-anchored + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Unified control groups on a single-scene page](viz/ui/controls/control_group_single.md)
+- **parent_id** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **PartialDisk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
 - **pendulum** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
+
+- **persistence** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
 - **PGA3** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md), [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md)
 
@@ -430,7 +440,9 @@ uv run python py/examples/<path>.py
 
 - **playback** — [Animated HTML export with JS playback engine](viz/export/animated.md)
 
-- **plotting** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
+- **plot** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
+
+- **plotting** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
 - **PNG** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -462,7 +474,7 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **redo** — [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md)
+- **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
@@ -482,19 +494,19 @@ uv run python py/examples/<path>.py
 
 - **rotor estimation** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **row delete** — [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md)
-
 - **runtime** — [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
-- **scene** — [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md), [Anchor bare add_* controls per scene](viz/ui/controls/control_position.md), [One control, two ways: add_* and *View](viz/ui/controls/controls_add_and_view.md)
+- **scene** — [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
-- **scene graph** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
+- **scene graph** — [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
-- **SDF** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md), [per-object CSG combine modes](viz/sdf/booleans.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md), [First vertical slice for the SDF viewer](viz/sdf/entities.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md), [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md), [the unified SDF object model in the standard viewer](viz/sdf/object_model.md), [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
+- **SDF** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md), [per-object CSG combine modes](viz/sdf/booleans.md), [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md), [First vertical slice for the SDF viewer](viz/sdf/entities.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md), [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md), [the unified SDF object model in the standard viewer](viz/sdf/object_model.md), [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md), [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
+
+- **SdfGroup** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
 
 - **separator** — [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
@@ -510,7 +522,7 @@ uv run python py/examples/<path>.py
 
 - **simulation** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
 
-- **single scene** — [Unified control groups on a single-scene page](viz/ui/controls/control_group_single.md)
+- **single scene** — [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **singular** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -520,7 +532,15 @@ uv run python py/examples/<path>.py
 
 - **slider** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
-- **SliderView** — [One control, two ways: add_* and *View](viz/ui/controls/controls_add_and_view.md)
+- **SliderView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
+
+- **smooth CSG** — [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
+
+- **smooth_intersection** — [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
+
+- **smooth_union** — [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
+
+- **smoothness** — [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
 
 - **snapshot** — [Export](ga/jupyter/export.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
 
@@ -530,13 +550,15 @@ uv run python py/examples/<path>.py
 
 - **solver** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_01.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md)
 
+- **space_dim** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
+
 - **Sphere** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [All geometric entity types in one scene](viz/entities/all_entities.md)
 
 - **sphere** — [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -546,23 +568,29 @@ uv run python py/examples/<path>.py
 
 - **streaming** — [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
+- **stretch** — [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
+
 - **styled objects** — [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
 
 - **styling** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
-- **sub-menu** — [Menus: global hamburger, per-pane overlay, sub-menu, and a bar](viz/ui/menus/menu_demo.md)
+- **sub-menu** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+
+- **sub-sub-menu** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **submenu** — [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
 - **sweep** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
-- **table** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+- **switch view** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
 
-- **TableView** — [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+- **table** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+
+- **TableView** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
 
 - **tabs** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
-- **tabular data** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+- **tabular data** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
 
 - **tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
@@ -586,6 +614,8 @@ uv run python py/examples/<path>.py
 
 - **trail** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
 
+- **Transform** — [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md)
+
 - **transforms** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **Translator** — [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
@@ -594,7 +624,7 @@ uv run python py/examples/<path>.py
 
 - **two-body** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
 
-- **undo** — [An editable table with spreadsheet-style keyboard editing](viz/ui/controls/table_editing.md)
+- **undo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **up vector** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 
@@ -622,7 +652,7 @@ uv run python py/examples/<path>.py
 
 - **VisualizerApp** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md)
 
-- **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
+- **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **VizSceneHandle** — [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 

@@ -67,7 +67,7 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
         const ymax = cc.ymax ?? 0;
         const cx = (xmin + xmax) / 2;
         const cy = (ymin + ymax) / 2;
-        const uniform = cc.uniform !== false;  // default true
+        const stretch = cc.stretch || 'fit';  // default letterbox
         const borderPx = cc.border_px || 0;
 
         let cam = camera;
@@ -76,7 +76,7 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
             controls.object = cam;
         }
 
-        const f = orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, w, h);
+        const f = orthoFrustum(xmin, xmax, ymin, ymax, stretch, borderPx, w, h);
         cam.left = f.left;
         cam.right = f.right;
         cam.top = f.top;
@@ -95,7 +95,7 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
             cc.target ? cc.target[2] : 0
         );
         cam.updateProjectionMatrix();
-        cam.userData._view2d = { xmin, xmax, ymin, ymax, uniform, border_px: borderPx };
+        cam.userData._view2d = { xmin, xmax, ymin, ymax, stretch, border_px: borderPx };
         controls.target.set(
             cc.target ? cc.target[0] : cx,
             cc.target ? cc.target[1] : cy,
@@ -149,9 +149,19 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
             xmax: frustumSize * safeAspect / 2,
             ymin: -frustumSize / 2,
             ymax: frustumSize / 2,
-            uniform: true,
+            stretch: 'fit',
             border_px: 0,
         };
+        controls.object = newCam;
+        return newCam;
+    }
+
+    // ── Default 3D (no explicit view config) ──
+    if (spaceDim === 3 && camera.isOrthographicCamera) {
+        const newCam = _newPerspective(aspect, 50);
+        newCam.position.set(6, 4.5, 7.5);
+        newCam.lookAt(0, 0, 0);
+        newCam.updateProjectionMatrix();
         controls.object = newCam;
         return newCam;
     }
