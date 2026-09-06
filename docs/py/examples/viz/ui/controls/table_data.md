@@ -1,12 +1,13 @@
 # An editable tabular-data control driven by the backend
 
-**Keywords:** controls · table · tabular data · add_table · VisualizerApp
+**Keywords:** controls · table · tabular data · TableView · VisualizerApp
 
-Adds a `table` control (backed by Tabulator) whose columns and initial rows
-are defined by the backend.  Editing a cell, adding a row, or adding a column
-each fires a distinct async handler; this app echoes the latest change into the
-viewport annotation.  A "Reset table" button pushes the grid back to its initial
-state via `set_control_value`.
+Adds a declarative `TableView` (a dependency-free native grid) whose columns
+and initial rows are defined by the backend.  Editing a cell, adding a row, or
+adding a column each fires a distinct async handler; this app echoes the latest
+change into the viewport annotation.  The "+ Row" / "+ Column" / "Reset table"
+buttons drive the table from the backend via `TableView.add_row` /
+`add_column` / `set_value`.
 
 ## Run
 
@@ -26,25 +27,30 @@ uv run python py/examples/viz/ui/controls/table_data.py
 
 """table_data.py — An editable tabular-data control driven by the backend.
 
-Adds a ``table`` control (backed by Tabulator) whose columns and initial rows
-are defined by the backend.  Editing a cell, adding a row, or adding a column
-each fires a distinct async handler; this app echoes the latest change into the
-viewport annotation.  A "Reset table" button pushes the grid back to its initial
-state via ``set_control_value``.
+Adds a declarative ``TableView`` (a dependency-free native grid) whose columns
+and initial rows are defined by the backend.  Editing a cell, adding a row, or
+adding a column each fires a distinct async handler; this app echoes the latest
+change into the viewport annotation.  The "+ Row" / "+ Column" / "Reset table"
+buttons drive the table from the backend via ``TableView.add_row`` /
+``add_column`` / ``set_value``.
 
 Run with:  uv run python py/examples/viz/ui/controls/table_data.py
 
-Keywords: controls, table, tabular data, add_table, VisualizerApp
+Keywords: controls, table, tabular data, TableView, VisualizerApp
 """
 
 from __future__ import annotations
 
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
+    ButtonView,
     ControlEvent,
+    GroupView,
+    SceneView,
     TableCellChange,
     TableColumnAdd,
     TableRowAdd,
+    TableView,
     VisualizerApp,
 )
 
@@ -54,8 +60,9 @@ class TableDataApp(VisualizerApp):
 
     def __init__(self) -> None:
         super().__init__(title="Table Data")
-        self._columns = ["x", "y", "z"]
-        self._rows = [["1", "2", "3"], ["4", "5", "6"]]
+        self._columns = ["x", "y", "active", "status"]
+        self._rows = [[1.5, 2.5, True, "on"], [3.5, 4.5, False, "off"]]
+        self._table: TableView | None = None
 
     async def init(self) -> None:
         self.viz.add(
@@ -65,21 +72,48 @@ class TableDataApp(VisualizerApp):
             opacity=0.9,
         )
         self.viz.set_annotation("Edit the table — every change is echoed here.")
-        self.viz.add_table(
+        self._table = TableView(
             "data",
             label="Data",
             columns=self._columns,
             rows=self._rows,
+            column_types=[None, None, "bool", ["on", "off"]],
             tooltip="Editable data grid",
             on_cell_change=self.on_cell_change,
             on_row_add=self.on_row_add,
             on_column_add=self.on_column_add,
         )
-        self.viz.add_button(
-            "reset",
-            label="Reset table",
-            tooltip="Restore the initial grid",
-            on_click=self.on_reset,
+        self.viz.set_layout(
+            SceneView(
+                "",
+                overlay=[
+                    GroupView(
+                        "",
+                        [
+                            self._table,
+                            ButtonView(
+                                "reset",
+                                label="Reset table",
+                                tooltip="Restore the initial grid",
+                                on_click=self.on_reset,
+                            ),
+                            ButtonView(
+                                "add_row",
+                                label="+ Row",
+                                tooltip="Append a row",
+                                on_click=self.on_add_row,
+                            ),
+                            ButtonView(
+                                "add_column",
+                                label="+ Column",
+                                tooltip="Append a column",
+                                on_click=self.on_add_column,
+                            ),
+                        ],
+                        position="bottom-right",
+                    )
+                ],
+            )
         )
         self.viz.flush()
 
@@ -95,10 +129,21 @@ class TableDataApp(VisualizerApp):
         self.viz.set_annotation(f"Added column {add.col} ({add.header!r})")
 
     async def on_reset(self, _value: None, _event: ControlEvent) -> None:
-        self.viz.set_control_value(
-            "data", {"columns": self._columns, "rows": self._rows}
-        )
+        self._table.set_value({"columns": self._columns, "rows": self._rows})
         self.viz.set_annotation("Table reset.")
+
+    async def on_add_row(self, _value: None, _event: ControlEvent) -> None:
+        if self._table.add_row():
+            self.viz.set_annotation("Added a row.")
+        else:
+            self.viz.set_annotation("Could not add a row.")
+
+    async def on_add_column(self, _value: None, _event: ControlEvent) -> None:
+        header = f"C{len(self._table.columns) + 1}"
+        if self._table.add_column(header):
+            self.viz.set_annotation(f"Added column {header!r}.")
+        else:
+            self.viz.set_annotation("Could not add a column.")
 
 
 if __name__ == "__main__":

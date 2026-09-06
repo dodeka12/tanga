@@ -9,6 +9,7 @@ from pytanga.viz import TableView, Visualizer
 from pytanga.viz._controls import (
     TableCellChange,
     TableColumnAdd,
+    TableColumnDelete,
     TableRowAdd,
     TableRowsDelete,
 )
@@ -70,6 +71,25 @@ async def test_dispatch_column_add() -> None:
 
     assert len(calls) == 1
     assert calls[0] == TableColumnAdd(col=1, header="y", values=[""])
+
+
+@pytest.mark.anyio
+async def test_dispatch_column_delete() -> None:
+    viz = _viz()
+    calls = []
+
+    async def _on_del(delete, event):
+        calls.append(delete)
+
+    viz.set_layout(
+        TableView("tbl", columns=["x", "y"], rows=[["1", "2"]], on_column_delete=_on_del)
+    )
+    await viz._dispatch_control_event(
+        "control:column_delete", {"control_id": "tbl", "col": 1}
+    )
+
+    assert len(calls) == 1
+    assert calls[0] == TableColumnDelete(col=1)
 
 
 @pytest.mark.anyio
@@ -135,6 +155,22 @@ def test_add_table_on_change_registers_change_handler() -> None:
 
     viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]], on_change=_on_change))
     assert viz._handler_registry.get("tbl", "change") is _on_change
+
+
+def test_table_view_flags_pass_through() -> None:
+    view = TableView(
+        "tbl",
+        columns=["x"],
+        rows=[["1"]],
+        show_column_titles=False,
+        show_row_numbers=True,
+        allow_delete_columns=False,
+        sortable=False,
+    )
+    assert view.control.show_column_titles is False
+    assert view.control.show_row_numbers is True
+    assert view.control.allow_delete_columns is False
+    assert view.control.sortable is False
 
 
 @pytest.mark.anyio
@@ -214,6 +250,25 @@ async def test_dispatch_row_delete_nested_payload() -> None:
     assert calls[0] == TableRowsDelete(rows=[1, 2])
 
 
+@pytest.mark.anyio
+async def test_dispatch_column_delete_nested_payload() -> None:
+    viz = _viz()
+    calls = []
+
+    async def _on_del(delete, event):
+        calls.append(delete)
+
+    viz.set_layout(
+        TableView("tbl", columns=["x", "y"], rows=[["1", "2"]], on_column_delete=_on_del)
+    )
+    await viz._dispatch_control_event(
+        "control:column_delete", {"control_id": "tbl", "value": {"col": 0}}
+    )
+
+    assert len(calls) == 1
+    assert calls[0] == TableColumnDelete(col=0)
+
+
 # ── Test: dispatch mutates the authoritative Table model ─────
 
 
@@ -227,6 +282,7 @@ async def test_dispatch_cell_change_mutates_model() -> None:
     assert viz._resolve_control("tbl").get_value() == {
         "columns": ["x", "y"],
         "rows": [["1", "2"], ["42", "4"]],
+        "column_types": [{"kind": "string"}, {"kind": "string"}],
     }
 
 
@@ -251,6 +307,7 @@ async def test_dispatch_column_add_mutates_model() -> None:
     assert viz._resolve_control("tbl").get_value() == {
         "columns": ["x", "y"],
         "rows": [["1", "a"], ["2", "b"]],
+        "column_types": [{"kind": "string"}, {"kind": "string"}],
     }
 
 
@@ -265,6 +322,20 @@ async def test_dispatch_row_delete_mutates_model() -> None:
 
 
 @pytest.mark.anyio
+async def test_dispatch_column_delete_mutates_model() -> None:
+    viz = _viz()
+    viz.set_layout(TableView("tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]]))
+    await viz._dispatch_control_event(
+        "control:column_delete", {"control_id": "tbl", "col": 0}
+    )
+    assert viz._resolve_control("tbl").get_value() == {
+        "columns": ["y"],
+        "rows": [["2"], ["4"]],
+        "column_types": [{"kind": "string"}],
+    }
+
+
+@pytest.mark.anyio
 async def test_dispatch_mutates_layout_table_view_model() -> None:
     from pytanga.viz.views import TableView
 
@@ -276,6 +347,7 @@ async def test_dispatch_mutates_layout_table_view_model() -> None:
     assert viz._resolve_control("tbl").get_value() == {
         "columns": ["x"],
         "rows": [["9"]],
+        "column_types": [{"kind": "string"}],
     }
 
 
@@ -329,7 +401,7 @@ async def test_dispatch_undo_restores_model_and_pushes(monkeypatch) -> None:
     await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
 
     assert viz._resolve_control("tbl").get_value()["rows"] == [["1"]]
-    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]]})]
+    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]})]
 
 
 @pytest.mark.anyio
@@ -355,8 +427,8 @@ async def test_dispatch_undo_fires_on_change(monkeypatch) -> None:
 
     await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
 
-    assert calls == [{"columns": ["x"], "rows": [["1"]]}]
-    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]]})]
+    assert calls == [{"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]}]
+    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]})]
 
 
 @pytest.mark.anyio

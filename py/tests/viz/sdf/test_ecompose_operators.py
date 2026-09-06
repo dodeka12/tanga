@@ -8,7 +8,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
-from pytanga.viz.sdf._compose import Combine, ECompose, SdfElement, _coerce, _coerce_mode
+from pytanga.viz.sdf._compose import (
+    Combine,
+    ECompose,
+    SdfCompose,
+    SdfElement,
+    _coerce,
+    _coerce_mode,
+    _normalize_part,
+)
 from pytanga.viz.sdf.primitives import box, sphere
 
 
@@ -161,3 +169,36 @@ def test_combine_smoothness_serializes() -> None:
     assert node.kind == "smooth_union"
     assert node.smoothness == 0.25
     assert node.to_dict()["smoothness"] == 0.25
+
+
+# ── SdfCompose member descriptor ────────────────────────────
+
+
+def test_sdfcompose_coerces_mode_and_smoothness() -> None:
+    sc = SdfCompose(sphere(1.0), "smooth_union", smoothness="0.25")
+    assert sc.mode is ECompose.SMOOTH_UNION
+    assert sc.smoothness == 0.25
+
+
+def test_sdfcompose_accepts_enum_and_default_smoothness() -> None:
+    sc = SdfCompose(sphere(1.0), ECompose.SUBTRACT)
+    assert sc.mode is ECompose.SUBTRACT
+    assert sc.smoothness is None
+
+
+def test_sdfcompose_rejects_xor() -> None:
+    with pytest.raises(ValueError):
+        SdfCompose(sphere(1.0), ECompose.XOR)
+
+
+def test_sdfcompose_rejects_unknown_mode() -> None:
+    with pytest.raises(ValueError):
+        SdfCompose(sphere(1.0), "bogus")
+
+
+def test_normalize_part_sdfcompose() -> None:
+    element, mode = _normalize_part(
+        SdfCompose(sphere(1.0), ECompose.SMOOTH_UNION, smoothness=0.3)
+    )
+    assert mode is ECompose.SMOOTH_UNION
+    assert element.smoothness == 0.3

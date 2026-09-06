@@ -18,6 +18,8 @@ from pytanga.viz._controls import (
     Slider,
     Table,
     TableCellChange,
+    TableCellSelect,
+    TableColumnTitleChange,
     TextArea,
     TextField,
     ValueEdit,
@@ -98,12 +100,69 @@ def test_table_handle_event_row_delete_mutates_model() -> None:
     assert ctrl.rows == [["1"], ["3"]]
 
 
+def test_table_handle_event_column_delete_mutates_model() -> None:
+    ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]])
+    d = ctrl.handle_event("column_delete", {"value": {"col": 0}})
+    assert d.event == "column_delete"
+    assert d.value.col == 0
+    assert ctrl.columns == ["y"]
+    assert ctrl.rows == [["2"], ["4"]]
+
+
+def test_table_handle_event_cell_select_sets_active_cell() -> None:
+    ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]])
+    d = ctrl.handle_event("cell_select", {"value": {"row": 1, "col": 0}})
+    assert d.event == "cell_select"
+    assert isinstance(d.value, TableCellSelect)
+    assert (d.value.row, d.value.col) == (1, 0)
+    assert d.push is None
+    assert ctrl.active_cell == (1, 0)
+
+
+def test_table_handle_event_cell_select_clear() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    ctrl.active_cell = (0, 0)
+    d = ctrl.handle_event("cell_select", {})
+    assert d.event == "cell_select"
+    assert (d.value.row, d.value.col) == (None, None)
+    assert ctrl.active_cell is None
+
+
+def test_table_handle_event_column_title_change_mutates_model() -> None:
+    ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"]])
+    d = ctrl.handle_event("column_title_change", {"value": {"col": 1, "title": "renamed"}})
+    assert d.event == "column_title_change"
+    assert isinstance(d.value, TableColumnTitleChange)
+    assert (d.value.col, d.value.title) == (1, "renamed")
+    assert d.push is None
+    assert ctrl.columns == ["x", "renamed"]
+
+
+def test_table_rename_column_bounds_and_history() -> None:
+    ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
+    assert ctrl.rename_column(0, "new") is True
+    assert ctrl.columns == ["new"]
+    assert ctrl.rename_column(5, "x") is False
+    assert ctrl.undo() is True
+    assert ctrl.columns == ["x"]
+
+
+def test_table_registers_on_column_type_change() -> None:
+    async def handler(*_args, **_kwargs) -> None:
+        """No-op type-change handler."""
+
+    registry = ControlHandlerRegistry()
+    ctrl = Table(id="tbl", columns=["a"], rows=[["1"]], on_column_type_change=handler)
+    ctrl.register_handlers(registry)
+    assert registry.get("tbl", "column_type_change") is handler
+
+
 def test_table_handle_event_undo_fires_change() -> None:
     ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
     ctrl.set_cell(0, 0, "9")
     d = ctrl.handle_event("undo", {})
     assert d.event == "change"
-    assert d.value == {"columns": ["x"], "rows": [["1"]]}
+    assert d.value == {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]}
     assert d.push == d.value
     assert ctrl.rows == [["1"]]
 
@@ -114,7 +173,7 @@ def test_table_handle_event_redo_fires_change() -> None:
     ctrl.undo()
     d = ctrl.handle_event("redo", {})
     assert d.event == "change"
-    assert d.value == {"columns": ["x"], "rows": [["9"]]}
+    assert d.value == {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]}
     assert ctrl.rows == [["9"]]
 
 
@@ -403,9 +462,15 @@ def test_serialize_table() -> None:
         "label": "Data",
         "columns": ["x", "y", "z"],
         "rows": [["1", "2", "3"], ["4", "5", "6"]],
+        "column_types": [{"kind": "string"}, {"kind": "string"}, {"kind": "string"}],
         "allow_add_rows": True,
         "allow_add_columns": True,
         "allow_delete_rows": True,
+        "show_column_titles": True,
+        "show_row_numbers": False,
+        "allow_delete_columns": True,
+        "sortable": True,
+        "editable_titles": True,
     }
 
 
@@ -416,16 +481,47 @@ def test_serialize_table_disallows_adds() -> None:
     assert result["allow_add_columns"] is False
 
 
+def test_serialize_table_flags_custom() -> None:
+    ctrl = Table(
+        id="tbl",
+        columns=["a"],
+        show_column_titles=False,
+        show_row_numbers=True,
+        allow_delete_columns=False,
+        sortable=False,
+    )
+    result = _serialize_one_control(ctrl)
+    assert result["show_column_titles"] is False
+    assert result["show_row_numbers"] is True
+    assert result["allow_delete_columns"] is False
+    assert result["sortable"] is False
+
+
+def test_table_sortable_defaults_true() -> None:
+    assert Table(id="tbl").sortable is True
+    assert _serialize_one_control(Table(id="tbl"))["sortable"] is True
+
+
 def test_table_get_control_value() -> None:
     ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
-    assert get_control_value(ctrl) == {"columns": ["x"], "rows": [["1"]]}
+    assert get_control_value(ctrl) == {
+        "columns": ["x"],
+        "rows": [["1"]],
+        "column_types": [{"kind": "string"}],
+    }
 
 
 def test_table_set_control_value() -> None:
     ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
     set_control_value(ctrl, {"columns": ["y", "z"], "rows": [[2], [3]]})
     assert ctrl.columns == ["y", "z"]
-    assert ctrl.rows == [["2"], ["3"]]
+    assert ctrl.rows == [[2], [3]]
+
+
+def test_table_get_cell() -> None:
+    ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]])
+    assert ctrl.get_cell(0, 0) == "1"
+    assert ctrl.get_cell(1, 1) == "4"
 
 
 def test_label_get_control_value() -> None:
@@ -485,6 +581,16 @@ def test_table_undo_column_add() -> None:
     assert ctrl.rows == [["1"], ["2"]]
 
 
+def test_table_undo_column_delete() -> None:
+    ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"], ["3", "4"]])
+    assert ctrl.delete_column(1) is True
+    assert ctrl.columns == ["x"]
+    assert ctrl.rows == [["1"], ["3"]]
+    assert ctrl.undo() is True
+    assert ctrl.columns == ["x", "y"]
+    assert ctrl.rows == [["1", "2"], ["3", "4"]]
+
+
 def test_table_new_edit_clears_redo() -> None:
     ctrl = Table(id="tbl", columns=["x"], rows=[["1"]])
     ctrl.set_cell(0, 0, "9")
@@ -508,6 +614,8 @@ def test_table_out_of_range_no_history() -> None:
     assert ctrl.set_cell(0, 5, "9") is False
     assert ctrl.insert_row(5, [""]) is False
     assert ctrl.insert_column(5, "y", [""]) is False
+    assert ctrl.delete_column(1) is False
+    assert ctrl.delete_column(-1) is False
     assert ctrl.can_undo is False
 
 

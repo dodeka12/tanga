@@ -1,19 +1,282 @@
-/* Tanga viewer — table control. */
+/* Tanga viewer — table control (native grid). */
 
 .tanga-table-container {
     min-height: 220px;
 }
 
-.tanga-table-buttons {
-    display: flex;
-    gap: 6px;
-    margin-top: 6px;
+.tanga-table {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
 }
 
-.tanga-table-buttons .tanga-action-button {
-    width: auto;
-    padding: 4px 12px;
+.tanga-table-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    z-index: 2;
+    /* Opaque corner so the grip cleanly covers the scrollbar corner (and the
+     * adjacent ends of the horizontal/vertical scrollbars) instead of the
+     * scrollbar track showing through the handle. */
+    background: var(--tanga-bg);
+}
+
+.tanga-table-resize::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--tanga-fg-muted);
+    border-bottom: 2px solid var(--tanga-fg-muted);
+}
+
+.tanga-table-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.tanga-table-title {
+    font-size: 12px;
+    color: var(--tanga-fg-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.tanga-table-zoom {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tanga-zoom-icon {
+    font-size: 10px;
+    color: var(--tanga-fg-muted);
+    opacity: 0.8;
+}
+
+.tanga-zoom-btn {
+    min-width: 22px;
+    padding: 1px 6px;
+    font-size: 12px;
+    line-height: 1;
+}
+
+/* Native grid: a scrollable container wrapping a single fixed-layout table. */
+.tanga-table-grid {
+    overflow: auto;
+    position: relative;
+    min-width: 0;
+    /* Small gap below the horizontal scrollbar so it isn't flush with the
+     * bottom edge (the resize grip occupies the bottom-right corner). */
+    margin-bottom: 4px;
+}
+
+.tanga-table-element {
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.tanga-table-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.tanga-table-head-cell {
+    position: relative;
+    padding: 4px 22px 4px 8px;
+    height: var(--tanga-table-row-height);
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tanga-table-header-fg);
+    background: var(--tanga-table-header-bg);
+    border-bottom: 1px solid var(--tanga-table-border);
+    border-right: 1px solid var(--tanga-table-border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+
+.tanga-table-head-cell.tanga-sortable {
+    cursor: pointer;
+}
+
+.tanga-table-title-text {
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tanga-table-title-editor {
+    width: 100%;
+    height: calc(var(--tanga-table-row-height) - 8px);
+    font: inherit;
+    color: inherit;
+    background: var(--tanga-table-header-bg);
+    border: 1px solid var(--tanga-table-border);
+    padding: 0 4px;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+.tanga-table-type-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 96px;
+    padding: 2px 0;
+    background: var(--tanga-panel-bg);
+    border: 1px solid var(--tanga-border);
+    border-radius: 4px;
+    box-shadow: var(--tanga-shadow);
+}
+
+.tanga-table-type-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--tanga-fg);
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.tanga-table-type-menu-item:hover {
+    background: var(--tanga-panel-hover);
+}
+
+.tanga-sort-arrow {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    font-size: 14px;
+    line-height: 1;
+    color: var(--tanga-table-sort-arrow);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: filter 0.12s ease;
+}
+
+.tanga-sort-arrow:hover {
+    filter: brightness(1.3);
+}
+
+.tanga-cell {
+    padding: 4px 8px;
+    height: var(--tanga-table-row-height);
+    font-size: 12px;
+    color: var(--tanga-fg);
+    background: var(--tanga-table-cell-bg);
+    border-bottom: 1px solid var(--tanga-table-border);
+    border-right: 1px solid var(--tanga-table-border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Single active cell (moved by click / cursor keys; target for deletion). */
+.tanga-cell:focus,
+.tanga-cell:focus-visible {
+    outline: none;
+}
+
+.tanga-cell-active {
+    box-shadow: inset 0 0 0 2px var(--tanga-table-active-border);
+}
+
+/* Row striping + hover. */
+.tanga-table-row:nth-child(even) .tanga-cell,
+.tanga-table-row:nth-child(even) .tanga-row-number {
+    background: var(--tanga-table-row-alt-bg);
+}
+
+.tanga-table-row:hover .tanga-cell,
+.tanga-table-row:hover .tanga-row-number {
+    background: var(--tanga-table-row-hover-bg);
+}
+
+/* Leading frozen row-number column. */
+.tanga-row-number {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    padding: 4px 6px;
+    height: var(--tanga-table-row-height);
+    text-align: right;
+    font-size: 11px;
+    color: var(--tanga-table-row-number-fg);
+    background: var(--tanga-table-row-number-bg);
+    border-bottom: 1px solid var(--tanga-table-border);
+    border-right: 1px solid var(--tanga-table-border);
+    user-select: none;
+}
+
+/* Column resize handle (4px, right edge of a header cell). */
+.tanga-col-resize {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 2;
+}
+
+/* Inline cell editor (double-click). */
+.tanga-cell .tanga-table-editor {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+    color: var(--tanga-fg);
+    font: inherit;
+    font-size: 12px;
+    padding: 0;
+    margin: 0;
+    outline: none;
+    text-align: inherit;
+}
+
+/* A bool editor is a checkbox, not a text field — don't stretch it. */
+.tanga-cell input.tanga-table-editor[type="checkbox"] {
+    width: auto;
+}
+
+/* Enum editor: force the native <select> dropdown into the theme's color
+   scheme and give its options a solid themed background, so the highlighted
+   option keeps readable contrast in every theme. */
+.tanga-cell select.tanga-table-editor {
+    color-scheme: var(--tanga-color-scheme);
+}
+
+.tanga-cell select.tanga-table-editor option {
+    background: var(--tanga-bg);
+    color: var(--tanga-fg);
+}
+
+.tanga-cell-checkbox {
+    cursor: pointer;
+    vertical-align: middle;
 }
 
 .tanga-table-unavailable {

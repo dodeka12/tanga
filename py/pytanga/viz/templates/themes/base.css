@@ -14,6 +14,9 @@
     --tanga-accent-soft: #88aaff;
     --tanga-danger: #c88;
 
+    /* Native control color scheme (select dropdowns, etc.). */
+    --tanga-color-scheme: dark;
+
     /* Surfaces. */
     --tanga-panel-bg: rgba(20, 20, 40, 0.92);
     --tanga-panel-hover: rgba(40, 40, 80, 0.9);
@@ -30,6 +33,19 @@
     --tanga-scrollbar-thumb: rgba(255, 255, 255, 0.35);
     --tanga-scrollbar-thumb-hover: rgba(255, 255, 255, 0.5);
     --tanga-scrollbar-track: rgba(255, 255, 255, 0.06);
+
+    /* Table (native grid). */
+    --tanga-table-row-height: 24px;
+    --tanga-table-header-bg: rgba(255, 255, 255, 0.16);
+    --tanga-table-header-fg: #ddd;
+    --tanga-table-border: rgba(255, 255, 255, 0.12);
+    --tanga-table-cell-bg: rgba(255, 255, 255, 0.02);
+    --tanga-table-row-alt-bg: rgba(255, 255, 255, 0.05);
+    --tanga-table-row-hover-bg: rgba(255, 255, 255, 0.1);
+    --tanga-table-active-border: #4488ff;
+    --tanga-table-sort-arrow: #88aaff;
+    --tanga-table-row-number-bg: rgba(255, 255, 255, 0.08);
+    --tanga-table-row-number-fg: #aaa;
 
     /* Elevation. */
     --tanga-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -152,7 +168,7 @@ canvas {
 }
 
 /* Shared icon rendering (material + unicode codepoint icons). */
-.material-icons {
+.material-symbols-outlined {
     font-size: 16px;
     line-height: 1;
     vertical-align: middle;

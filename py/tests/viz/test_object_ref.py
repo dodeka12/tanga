@@ -135,6 +135,61 @@ class TestTransforms:
         ref.apply_transform(Dilator(factor=2.0))
         assert node.dirty_for("transform")
 
+    def test_set_transform_accepts_operator(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = _point_ref(h)
+        node = h.scene.get_node(ref.id)
+        node.consume_dirty()
+        ref.set_transform(Translator(vector=Direction(1.0, 2.0, 3.0)))
+        assert node.dirty_for("transform")
+        assert node.transform.position == (1.0, 2.0, 3.0)
+
+    def test_set_transform_accepts_transform(self):
+        from pytanga.viz import Transform
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = _point_ref(h)
+        node = h.scene.get_node(ref.id)
+        node.consume_dirty()
+        ref.set_transform(Transform(position=(4.0, 5.0, 6.0)))
+        assert node.dirty_for("transform")
+        assert node.transform.position == (4.0, 5.0, 6.0)
+
+    def test_apply_transform_accepts_transform(self):
+        from pytanga.viz import Transform
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = _point_ref(h)
+        node = h.scene.get_node(ref.id)
+        node.consume_dirty()
+        ref.apply_transform(Transform(position=(1.0, 0.0, 0.0)))
+        assert node.dirty_for("transform")
+        assert node.transform.position == (1.0, 0.0, 0.0)
+
+    def test_set_and_apply_transform_accept_mv(self):
+        from pytanga.basis import BasisN3
+        from pytanga.geometry import Geometry
+
+        geo = Geometry(BasisN3())
+        mv = geo.create(Translator(vector=Direction(1.0, 2.0, 3.0)))
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = _point_ref(h)
+        node = h.scene.get_node(ref.id)
+        node.consume_dirty()
+        ref.set_transform(mv)
+        assert node.dirty_for("transform")
+        assert node.transform.position == (1.0, 2.0, 3.0)
+
+        node.consume_dirty()
+        ref.apply_transform(geo.create(Translator(vector=Direction(1.0, 0.0, 0.0))))
+        assert node.dirty_for("transform")
+        assert node.transform.position == (2.0, 2.0, 3.0)
+
     def test_world_matrix(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")

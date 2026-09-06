@@ -59,11 +59,14 @@ def meet_def() -> str:
 
 def blade_factorize_versor_def() -> str:
     return """
-    m.def("blade_factorize_versor", [](const TDynMV& a) {
-        auto [wScale, vecFactors] = Tan::GA::FactorizeVersor(a);
+    m.def("blade_factorize_versor", [](const TDynMV& a, double eps, int maxIterations) {
+        auto [wScale, vecFactors] = Tan::GA::FactorizeVersor(
+            a,
+            static_cast<TDynMV::TValue>(eps),
+            static_cast<unsigned>(maxIterations));
         return py::make_tuple(wScale, vecFactors);
-    }, py::arg("a"),
-       "Factorize a versor into (scale, [factor_vectors]).");
+    }, py::arg("a"), py::arg("eps") = 1e-6, py::arg("max_iterations") = 64,
+       "Factorize a versor into (scale, [factor_vectors]). Raises RuntimeError for a degenerate versor (a factor's magnitude <= eps, or max_iterations exceeded).");
 """
 
 

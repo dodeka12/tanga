@@ -708,7 +708,10 @@ namespace Tan
 		/// <returns>Pair of (scale multivector, vector of factor vectors).</returns>
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		template<typename TMultivector>
-		std::pair<TMultivector, std::vector<TMultivector>> FactorizeVersor(const TMultivector& wV)
+		std::pair<TMultivector, std::vector<TMultivector>> FactorizeVersor(
+			const TMultivector& wV,
+			typename TMultivector::TValue fEps = typename TMultivector::TValue(1e-6),
+			unsigned uMaxIter = 64)
 		{
 			typedef typename TMultivector::TValue TValue;
 			typedef typename TMultivector::TBlade TBlade;
@@ -718,8 +721,13 @@ namespace Tan
 				std::vector<TMultivector> vecFactors;
 				TMultivector wRemaining(wV);
 
+				unsigned uIter = 0;
+
 				while (true)
 				{
+					if (++uIter > uMaxIter)
+						TAN_THROW_RT("FactorizeVersor: exceeded maximum iteration count (degenerate versor)");
+
 					unsigned uMaxGrade = 0;
 					bool bHasNonScalar = false;
 
@@ -741,6 +749,19 @@ namespace Tan
 						break;
 
 					TMultivector wA = GetGradeProjection(wRemaining, uMaxGrade);
+
+					// A max-grade blade whose magnitude is <= eps is numerical noise
+					// (a pruned high-grade component). Discard it and keep peeling the
+					// real lower grades, retaining the stable factors already found.
+					TValue fMagA = Magnitude(wA);
+					if (fMagA <= fEps)
+					{
+						TMultivector wNewV(wRemaining.GetValuePrecision());
+						Sub(wNewV, wRemaining, wA);
+						wRemaining = std::move(wNewV);
+						continue;
+					}
+
 					std::vector<TMultivector> vecA = FactorizeBlade(wA);
 
 					TMultivector wN_j;
@@ -773,6 +794,8 @@ namespace Tan
 					}
 
 					TValue fMag = Magnitude(wN_j);
+					if (fMag <= fEps)
+						TAN_THROW_RT("FactorizeVersor: factor magnitude below threshold (degenerate versor)");
 					wN_j = wN_j / fMag;
 					vecFactors.push_back(wN_j);
 

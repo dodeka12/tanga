@@ -37,6 +37,19 @@ export class ToolbarView extends StackView {
         if (border === false) this.el.classList.add('tanga-toolbar-borderless');
         this._applyMargin();
 
+        // The cross axis (height) tracks the tallest rendered child rather than
+        // the controls' min-height floors, so icon-only toolbars stay compact
+        // and taller controls (dropdowns, sliders) don't overflow the chrome.
+        this._contentHeightCache = null;
+        this._contentObserver = null;
+        this._onThemeChange = () => this._invalidateContent();
+        if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+            document.addEventListener('tanga:themechange', this._onThemeChange);
+        }
+        if (typeof ResizeObserver !== 'undefined') {
+            this._contentObserver = new ResizeObserver(() => this._remeasureContent());
+        }
+
         for (const child of children) this.addChild(child);
     }
 
@@ -64,17 +77,22 @@ export class ToolbarView extends StackView {
 
     // An explicit min/preferred describes the whole toolbar (chrome included),
     // so it is returned unchanged; otherwise the derived content size is bumped
-    // by the border/padding on both axes.
+    // by the border/padding on both axes.  The cross axis uses the measured
+    // content height so the toolbar hugs its tallest control.
     minSizePx(axis, available) {
         const explicit = View.prototype.minSizePx.call(this, axis, available);
-        const contentMin = stackMinSize(axis, this.direction, this.children, available);
+        const contentMin = axis === stackCrossAxis(this.direction)
+            ? this._contentHeight(available)
+            : stackMinSize(axis, this.direction, this.children, available);
         return Math.max(explicit, contentMin + this._chrome()[axis]);
     }
 
     preferredPx(axis, available) {
         const explicit = View.prototype.preferredPx.call(this, axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
-        const contentPref = stackPreferredSize(axis, this.direction, this.children, available);
+        const contentPref = axis === stackCrossAxis(this.direction)
+            ? this._contentHeight(available)
+            : stackPreferredSize(axis, this.direction, this.children, available);
         return contentPref === null || contentPref === undefined
             ? null
             : contentPref + this._chrome()[axis];
@@ -92,5 +110,73 @@ export class ToolbarView extends StackView {
             return this.minSizePx(axis, available);
         }
         return null;
+    }
+
+    // ── cross-axis content measurement ─────────────────────────
+
+    // Measure the tallest child's rendered height (border-box px) along the
+    // cross axis, or `null` when the DOM isn't measurable (fake DOM in tests,
+    // or no laid-out children yet).
+    _measureContent() {
+        let max = 0;
+        let measurable = false;
+        for (const child of this.children) {
+            const el = child.el;
+            if (!el || typeof el.getBoundingClientRect !== 'function') continue;
+            const rect = el.getBoundingClientRect();
+            if (rect && rect.height > 0) {
+                measurable = true;
+                max = Math.max(max, rect.height);
+            }
+        }
+        return measurable ? Math.round(max) : null;
+    }
+
+    // Cross-axis content height — the measured tallest child where possible,
+    // otherwise the pure stack min (max of the children's min floors).  Cached;
+    // invalidated on child add/remove/resize and theme change.
+    _contentHeight(available) {
+        if (this._contentHeightCache != null) return this._contentHeightCache;
+        const measured = this._measureContent();
+        this._contentHeightCache = measured !== null
+            ? measured
+            : stackMinSize(stackCrossAxis(this.direction), this.direction, this.children, available);
+        return this._contentHeightCache;
+    }
+
+    // A child resized — drop the cached height and tell enclosing containers to
+    // re-layout so they pick up the new value.
+    _remeasureContent() {
+        if (this._contentHeightCache == null) return;
+        this._invalidateContent();
+    }
+
+    _invalidateContent() {
+        this._contentHeightCache = null;
+        this.emit('preferredchange', { fields: ['preferredWidth', 'preferredHeight'] });
+        this.emit('constraintschange', { fields: ['minWidth', 'minHeight', 'maxWidth', 'maxHeight'] });
+    }
+
+    addChild(view) {
+        this._contentHeightCache = null;
+        const added = super.addChild(view);
+        if (this._contentObserver && added.el) this._contentObserver.observe(added.el);
+        this.emit('constraintschange', { fields: ['minWidth', 'minHeight', 'maxWidth', 'maxHeight'] });
+        return added;
+    }
+
+    removeChild(view) {
+        this._contentHeightCache = null;
+        if (this._contentObserver && view.el) this._contentObserver.unobserve(view.el);
+        super.removeChild(view);
+        this.emit('constraintschange', { fields: ['minWidth', 'minHeight', 'maxWidth', 'maxHeight'] });
+    }
+
+    destroy() {
+        if (this._contentObserver) this._contentObserver.disconnect();
+        if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
+            document.removeEventListener('tanga:themechange', this._onThemeChange);
+        }
+        super.destroy();
     }
 }

@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-__all__ = ["Combine", "ECompose", "SdfElement"]
+__all__ = ["Combine", "ECompose", "SdfCompose", "SdfElement"]
 
 
 class ECompose(StrEnum):
@@ -74,6 +74,27 @@ def _coerce_mode(value: Any, *, allow_xor: bool = False) -> ECompose:
     if mode is ECompose.XOR and not allow_xor:
         raise ValueError("XOR is a binary-only combine mode, not a fold mode")
     return mode
+
+
+@dataclass(frozen=True)
+class SdfCompose:
+    """A tagged member for ``Composed``/``SdfGroup``.
+
+    Binds an element to a fold ``mode`` (``ECompose``) with an optional
+    ``smoothness`` blend radius — the named, self-documenting replacement for
+    the legacy ``(element, mode[, smoothness])`` tuple form. ``element`` is
+    whatever :func:`_coerce` accepts (an ``SdfElement``/``SdfNode``, a geometry
+    entity, or a raw multivector).
+    """
+
+    element: Any
+    mode: ECompose = ECompose.UNION
+    smoothness: float | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "mode", _coerce_mode(self.mode))
+        if self.smoothness is not None:
+            object.__setattr__(self, "smoothness", float(self.smoothness))
 
 
 @dataclass
@@ -217,11 +238,15 @@ def _normalize_part(part: Any) -> tuple[Any, ECompose]:
     """Normalize a ``Composed``/``SdfGroup`` part to ``(element, fold_mode)``.
 
     Accepts a bare element (its own ``combine`` is the mode), a unary-tagged
-    element (``-el``/``~el``), a legacy ``(obj, mode)`` tuple/string, or a
-    ``(obj, mode, smoothness)`` tuple. Any ``smoothness`` is stamped onto the
-    returned element.
+    element (``-el``/``~el``), an :class:`SdfCompose` descriptor, or the legacy
+    ``(obj, mode)`` / ``(obj, mode, smoothness)`` tuple/string. Any
+    ``smoothness`` is stamped onto the returned element.
     """
-    if (
+    if isinstance(part, SdfCompose):
+        element = _coerce(part.element)
+        mode = part.mode  # already coerced/validated at construction
+        smoothness = part.smoothness
+    elif (
         isinstance(part, tuple)
         and len(part) >= 2
         and isinstance(part[1], (ECompose, str))

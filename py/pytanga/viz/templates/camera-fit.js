@@ -34,13 +34,13 @@ export function finiteAspect(width, height) {
  * @param {number} xmax
  * @param {number} ymin
  * @param {number} ymax
- * @param {boolean} uniform  letterbox (true) vs stretch-to-fill (false)
+ * @param {string} stretch  "fit" (letterbox) | "fill" | "fill_x" | "fill_y"
  * @param {number} borderPx  pixel margin (all modes)
  * @param {number} width     viewport width in CSS pixels
  * @param {number} height    viewport height in CSS pixels
  * @returns {{left:number, right:number, top:number, bottom:number}}
  */
-export function orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, width, height) {
+export function orthoFrustum(xmin, xmax, ymin, ymax, stretch, borderPx, width, height) {
     const extX = Math.abs(xmax - xmin) || 10;
     const extY = Math.abs(ymax - ymin) || 10;
     const w = Number(width);
@@ -48,8 +48,9 @@ export function orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, width, h
     const bp = borderPx || 0;
     const cw = w - 2 * bp;
     const ch = h - 2 * bp;
+    const mode = stretch || 'fit';
 
-    if (uniform === false) {
+    if (mode === 'fill') {
         // Stretch-to-fill: the rectangle's width/height each fill the content
         // area (viewport inset by border_px), scaling X and Y independently
         // (non-uniform).  The camera is centered on the rectangle, so use
@@ -64,9 +65,33 @@ export function orthoFrustum(xmin, xmax, ymin, ymax, uniform, borderPx, width, h
         };
     }
 
-    // Undistorted letterboxing: a single world-units-per-pixel scale so the
-    // full requested rectangle is contained.  An optional pixel border shrinks
-    // the effective content area before the fit.
+    // fill_x / fill_y: one axis fills the content area at a uniform scale;
+    // the other keeps the aspect ratio and may over- or under-fill.
+    if (mode === 'fill_x' && cw > 0 && ch > 0) {
+        const fullW = extX * w / cw;
+        const fullH = extX * h / cw;
+        return {
+            left: -fullW / 2,
+            right: fullW / 2,
+            top: fullH / 2,
+            bottom: -fullH / 2,
+        };
+    }
+    if (mode === 'fill_y' && cw > 0 && ch > 0) {
+        const fullW = extY * w / ch;
+        const fullH = extY * h / ch;
+        return {
+            left: -fullW / 2,
+            right: fullW / 2,
+            top: fullH / 2,
+            bottom: -fullH / 2,
+        };
+    }
+
+    // Undistorted letterboxing (fit, the default): a single
+    // world-units-per-pixel scale so the full requested rectangle is
+    // contained.  An optional pixel border shrinks the effective content area
+    // before the fit.
     const aspect = finiteAspect(w, h);
     const safeAspect = Number.isFinite(aspect) ? aspect : 1;
     const aspectContent = (cw > 0 && ch > 0) ? (cw / ch) : safeAspect;
@@ -104,7 +129,7 @@ export function applyOrthoFrustum(camera, width, height) {
     if (finiteRect) {
         const f = orthoFrustum(
             v2d.xmin, v2d.xmax, v2d.ymin, v2d.ymax,
-            v2d.uniform !== false, v2d.border_px || 0, width, height
+            v2d.stretch || 'fit', v2d.border_px || 0, width, height
         );
         camera.left = f.left;
         camera.right = f.right;

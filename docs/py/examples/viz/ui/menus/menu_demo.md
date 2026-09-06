@@ -1,14 +1,14 @@
-# Menus: global hamburger, per-pane overlay, sub-menu, and a bar
+# Menus: per-pane overlay, sub-menus, and sub-sub-menus
 
-**Keywords:** menu · dropdown · sub-menu · bar · overlay · layout
+**Keywords:** menu · dropdown · sub-menu · sub-sub-menu · bar · overlay · layout
 
-Demonstrates the menu system end-to-end:
+Demonstrates the menu system declaratively:
 
-- a **global** hamburger menu added with `add_menu()` (no scene name), holding
-  a button, checkbox, and slider (auto-styled as flat menu items) plus a nested
-  sub-menu;
-- a **per-pane** `MenuView` overlaid on one `SceneView` pane; and
-- a permanent `mode="bar"` horizontal strip shown at the top of the layout.
+- a **per-pane** `MenuView` overlaid on one `SceneView` pane, with a nested
+  sub-menu, a sub-sub-menu, and a sub-sub-sub-menu (any depth is supported: a
+  `MenuView` child of a `MenuView` is rendered as its sub-menu), and
+- a permanent `mode="bar"` horizontal strip shown at the top of the layout,
+  including its own nested sub-menu.
 
 ## Run
 
@@ -26,19 +26,19 @@ uv run python py/examples/viz/ui/menus/menu_demo.py
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""menu_demo.py — Menus: global hamburger, per-pane overlay, sub-menu, and a bar.
+"""menu_demo.py — Menus: per-pane overlay, sub-menus, and sub-sub-menus.
 
-Demonstrates the menu system end-to-end:
+Demonstrates the menu system declaratively:
 
-- a **global** hamburger menu added with ``add_menu()`` (no scene name), holding
-  a button, checkbox, and slider (auto-styled as flat menu items) plus a nested
-  sub-menu;
-- a **per-pane** ``MenuView`` overlaid on one ``SceneView`` pane; and
-- a permanent ``mode="bar"`` horizontal strip shown at the top of the layout.
+- a **per-pane** ``MenuView`` overlaid on one ``SceneView`` pane, with a nested
+  sub-menu, a sub-sub-menu, and a sub-sub-sub-menu (any depth is supported: a
+  ``MenuView`` child of a ``MenuView`` is rendered as its sub-menu), and
+- a permanent ``mode="bar"`` horizontal strip shown at the top of the layout,
+  including its own nested sub-menu.
 
 Run with:  uv run python py/examples/viz/ui/menus/menu_demo.py
 
-Keywords: menu, dropdown, sub-menu, bar, overlay, layout
+Keywords: menu, dropdown, sub-menu, sub-sub-menu, bar, overlay, layout
 """
 
 from pytanga.geometry import Point, Sphere
@@ -46,7 +46,6 @@ from pytanga.viz import (
     ButtonView,
     CheckboxView,
     EAnchor,
-    EIconMaterial,
     MenuView,
     SceneView,
     Size,
@@ -78,13 +77,47 @@ async def _on_wireframe(value, _event):
     print("Wireframe:", value)
 
 
-# A global hamburger menu in the full-screen overlay, with a nested sub-menu.
-viz.add_menu(
-    label="Settings",
-    trigger_icon=EIconMaterial.MENU,
-    position=EAnchor.TOP_RIGHT,
+def _menu_action(label):
+    """Return an async handler that prints which menu item was chosen."""
+
+    async def _handler(_value, _event):
+        print(f"[menu] {label}")
+
+    return _handler
+
+
+# A permanent horizontal strip (bar) shown at the top of the layout, with a
+# nested sub-menu (and a sub-sub-menu inside it).
+bar = MenuView(
+    mode="bar",
     children=[
-        ButtonView("m_fit", label="Fit camera", on_click=_on_fit),
+        ButtonView("bar_fit", label="Fit", on_click=_on_fit),
+        ButtonView("bar_reset", label="Reset view", on_click=_on_fit),
+        MenuView(
+            "Tools",
+            [
+                ButtonView("bar_tool", label="Tool A", on_click=_menu_action("Tool A")),
+                MenuView(
+                    "More tools",
+                    [
+                        ButtonView(
+                            "bar_tool_deep",
+                            label="Deep tool",
+                            on_click=_menu_action("Deep tool"),
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ],
+)
+
+# A per-pane menu overlaid on the main scene, demonstrating three levels of
+# nesting: View -> Sub -> Sub-sub -> Deepest.
+view_menu = MenuView(
+    "View",
+    [
+        ButtonView("v_zoom", label="Zoom", on_click=_on_fit),
         SliderView(
             "m_radius",
             label="Radius",
@@ -102,23 +135,39 @@ viz.add_menu(
         MenuView(
             "Sub",
             [
+                ButtonView("m_sub", label="Fit (sub)", on_click=_on_fit),
+                MenuView(
+                    "Sub-sub",
+                    [
+                        ButtonView(
+                            "m_subsub",
+                            label="Fit (sub-sub)",
+                            on_click=_on_fit,
+                        ),
+                        MenuView(
+                            "Deepest",
+                            [
+                                ButtonView(
+                                    "m_deep",
+                                    label="Deepest action",
+                                    on_click=_menu_action("Deepest action"),
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        MenuView(
+            "Other",
+            [
                 ButtonView(
-                    "m_sub",
-                    label="Fit (sub)",
-                    on_click=_on_fit,
+                    "m_other", label="Other action", on_click=_menu_action("Other")
                 ),
             ],
         ),
     ],
-)
-
-# A permanent horizontal strip (bar) shown at the top of the layout.
-bar = MenuView(
-    mode="bar",
-    children=[
-        ButtonView("bar_fit", label="Fit", on_click=_on_fit),
-        ButtonView("bar_reset", label="Reset view", on_click=_on_fit),
-    ],
+    position=EAnchor.TOP_LEFT,
 )
 
 layout = StackView(
@@ -129,23 +178,7 @@ layout = StackView(
             orientation="horizontal",
             sizes=[Size.percent(50), Size.percent(50)],
             children=[
-                # Per-pane menu overlaid on the main scene.
-                SceneView(
-                    "",
-                    overlay=[
-                        MenuView(
-                            "View",
-                            [
-                                ButtonView(
-                                    "v_zoom",
-                                    label="Zoom",
-                                    on_click=_on_fit,
-                                ),
-                            ],
-                            position=EAnchor.TOP_LEFT,
-                        ),
-                    ],
-                ),
+                SceneView("", overlay=[view_menu]),
                 SceneView("side"),
             ],
         ),

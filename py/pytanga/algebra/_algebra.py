@@ -829,9 +829,19 @@ class Algebra:
             return a.op(b)
         return self._meet(a, b)
 
-    def blade_factorize_versor(self, versor: MV) -> tuple[MV, list[MV]]:
-        """Factorize a versor into (scale, factor_vectors)."""
-        wScale_impl, vecFactors_impl = self._mod.blade_factorize_versor(versor._impl)
+    def blade_factorize_versor(
+        self, versor: MV, eps: float = 1e-6, max_iterations: int = 64
+    ) -> tuple[MV, list[MV]]:
+        """Factorize a versor into (scale, factor_vectors).
+
+        ``eps`` is the minimum magnitude a factor must have to be considered
+        valid; a factor whose magnitude is ``<= eps`` (a degenerate versor)
+        raises ``RuntimeError``. ``max_iterations`` caps the factor-peeling loop
+        as a safety net against non-convergence.
+        """
+        wScale_impl, vecFactors_impl = self._mod.blade_factorize_versor(
+            versor._impl, eps, max_iterations
+        )
         return (MV(wScale_impl, self), [MV(impl, self) for impl in vecFactors_impl])
 
     def blade_project(self, a: MV, blade: MV) -> MV:

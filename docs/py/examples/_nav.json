@@ -222,6 +222,9 @@
           },
           {
             "Modes": "py/examples/viz/camera/modes.md"
+          },
+          {
+            "Switch 2D 3D": "py/examples/viz/camera/switch_2d_3d.md"
           }
         ]
       },
@@ -328,6 +331,9 @@
             "Log Plot": "py/examples/viz/plotting/log_plot.md"
           },
           {
+            "Multi Plot": "py/examples/viz/plotting/multi_plot.md"
+          },
+          {
             "Pendulum Plot": "py/examples/viz/plotting/pendulum_plot.md"
           },
           {
@@ -339,6 +345,9 @@
         "Scenes": [
           {
             "Overview": "py/examples/viz/scenes/index.md"
+          },
+          {
+            "Motor Group Transform": "py/examples/viz/scenes/motor_group_transform.md"
           },
           {
             "Multi Scene": "py/examples/viz/scenes/multi_scene.md"
@@ -363,6 +372,9 @@
             "Booleans": "py/examples/viz/sdf/booleans.md"
           },
           {
+            "Combine Groups": "py/examples/viz/sdf/combine_groups.md"
+          },
+          {
             "Composed": "py/examples/viz/sdf/composed.md"
           },
           {
@@ -382,6 +394,9 @@
           },
           {
             "Objects": "py/examples/viz/sdf/objects.md"
+          },
+          {
+            "Smooth Csg": "py/examples/viz/sdf/smooth_csg.md"
           }
         ]
       },
@@ -431,9 +446,6 @@
                 "Control Group Single": "py/examples/viz/ui/controls/control_group_single.md"
               },
               {
-                "Control Position": "py/examples/viz/ui/controls/control_position.md"
-              },
-              {
                 "Control Theming": "py/examples/viz/ui/controls/control_theming.md"
               },
               {
@@ -450,6 +462,9 @@
               },
               {
                 "Table Editing": "py/examples/viz/ui/controls/table_editing.md"
+              },
+              {
+                "Table File": "py/examples/viz/ui/controls/table_file.md"
               },
               {
                 "Table Split": "py/examples/viz/ui/controls/table_split.md"

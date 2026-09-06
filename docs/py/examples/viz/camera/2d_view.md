@@ -8,9 +8,9 @@ Demonstrates the 2D camera input spec:
 - `border_world` adds a fixed world-unit margin (applied in Python).
 - `border_px` adds a fixed pixel margin (applied by the frontend, since it
   needs the live viewport size).
-- `uniform` selects letterboxing (`True`, default) or stretch-to-fill
-  (`False`, non-uniform axes — for graph-style plots that should fill the
-  whole window).
+- `stretch` selects the framing mode: `"fit"` (letterbox, default),
+  `"fill"` (non-uniform stretch-to-fill), `"fill_x"` (x fills, y keeps
+  aspect), or `"fill_y"` (y fills, x keeps aspect).
 
 The `View2DConfig` can be passed directly to `Visualizer(camera=...)`.
 
@@ -38,9 +38,9 @@ Demonstrates the 2D camera input spec:
 - ``border_world`` adds a fixed world-unit margin (applied in Python).
 - ``border_px`` adds a fixed pixel margin (applied by the frontend, since it
   needs the live viewport size).
-- ``uniform`` selects letterboxing (``True``, default) or stretch-to-fill
-  (``False``, non-uniform axes — for graph-style plots that should fill the
-  whole window).
+- ``stretch`` selects the framing mode: ``"fit"`` (letterbox, default),
+  ``"fill"`` (non-uniform stretch-to-fill), ``"fill_x"`` (x fills, y keeps
+  aspect), or ``"fill_y"`` (y fills, x keeps aspect).
 
 The ``View2DConfig`` can be passed directly to ``Visualizer(camera=...)``.
 
@@ -62,7 +62,7 @@ from pytanga.viz import (
     Visualizer,
 )
 
-# Letterboxed (uniform scale) with a world-unit margin and a pixel margin.
+# Letterboxed (stretch="fit") with a world-unit margin and a pixel margin.
 viz = Visualizer(
     title="Tanga — 2D Camera (View2DConfig, letterboxed)",
     camera=View2DConfig(
@@ -72,7 +72,7 @@ viz = Visualizer(
         ymax=3.0,
         border_world=0.5,
         border_px=40.0,
-        uniform=True,
+        stretch="fit",
     ),
 )
 

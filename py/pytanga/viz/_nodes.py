@@ -27,7 +27,15 @@ import numpy as np
 
 from . import _transforms as _T
 from ._style_dict import _merge_style
-from ._types import TransformOperator, TransformRotation, Triple, Vec3, _as_euler, _as_vec3
+from ._types import (
+    TransformInput,
+    TransformOperator,
+    TransformRotation,
+    Triple,
+    Vec3,
+    _as_euler,
+    _as_vec3,
+)
 
 
 def _is_vector_like(value: Any) -> bool:
@@ -226,6 +234,27 @@ class Transform:
             "rotation": list(self.rotation),
             "scale": list(self.scale),
         }
+
+
+def _coerce_transform_matrix(obj: Any) -> np.ndarray:
+    """Return the 4×4 matrix for a ``Transform``, an ``MV``, or a GA operator.
+
+    Accepts a :class:`Transform` node, a raw multivector (analyzed to a
+    ``Rotor``/``GeneralRotor``/``Motor``/``Translator``/``Dilator``), or one of
+    those operator dataclasses directly.
+    """
+    if isinstance(obj, Transform):
+        return obj.matrix()
+    from pytanga.algebra import MV
+
+    if isinstance(obj, MV):
+        from pytanga.geometry import analyze_operator
+
+        op = analyze_operator(obj)
+        if op is None:
+            raise TypeError(f"Could not analyze multivector as an operator: {obj!r}")
+        return _T.operator_to_matrix(op)
+    return _T.operator_to_matrix(obj)
 
 
 class VizNode:
@@ -482,12 +511,23 @@ class VizSceneObject(VizNode):
 
     def set_transform(
         self,
+        spec: TransformInput = None,
+        *,
         position: Vec3 = None,
         rotation: TransformRotation = None,
         scale: Triple = None,
     ) -> None:
-        """Set transform components (marks ``transform``)."""
-        self.transform.set(position=position, rotation=rotation, scale=scale)
+        """Set the transform (marks ``transform``).
+
+        ``spec`` replaces the whole transform and may be a :class:`Transform`,
+        an ``MV``, or a GA operator (``Rotor``/``GeneralRotor``/``Motor``/
+        ``Translator``/``Dilator``). Alternatively, pass explicit ``position``/
+        ``rotation``/``scale`` components (only the provided ones change).
+        """
+        if spec is not None:
+            self.transform.set_matrix(_coerce_transform_matrix(spec))
+        else:
+            self.transform.set(position=position, rotation=rotation, scale=scale)
         self.mark("transform")
 
     def translate(self, x: Any = 0.0, y: float = 0.0, z: float = 0.0) -> None:
@@ -510,13 +550,14 @@ class VizSceneObject(VizNode):
         self.transform.scale_by(x, y, z)
         self.mark("transform")
 
-    def apply_transform(self, op: TransformOperator) -> None:
-        """Apply an operator (Rotor/Motor/Translator/Dilator/…) in local space.
+    def apply_transform(self, spec: TransformInput) -> None:
+        """Compose a transform in local space (marks ``transform``).
 
-        Marks ``transform``.  Supports the same operator dataclasses as
-        :func:`pytanga.viz._transforms.operator_to_matrix`.
+        ``spec`` may be a :class:`Transform`, an ``MV``, or a GA operator
+        (``Rotor``/``GeneralRotor``/``Motor``/``Translator``/``Dilator``) — the
+        same inputs :meth:`set_transform` accepts.
         """
-        self.transform.apply_matrix(_T.operator_to_matrix(op), space="local")
+        self.transform.apply_matrix(_coerce_transform_matrix(spec), space="local")
         self.mark("transform")
 
 

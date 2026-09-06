@@ -28,7 +28,14 @@ Keywords: controls, file chooser, file browser, VisualizerApp
 from __future__ import annotations
 
 from pytanga.geometry import Point
-from pytanga.viz import ControlEvent, VisualizerApp
+from pytanga.viz import (
+    ButtonView,
+    ControlEvent,
+    FileChooserView,
+    GroupView,
+    SceneView,
+    VisualizerApp,
+)
 
 
 class FileChooserApp(VisualizerApp):
@@ -40,18 +47,27 @@ class FileChooserApp(VisualizerApp):
 
     async def init(self) -> None:
         self.viz.add(Point(0, 0, 0), color="#4488ff")
-        self.viz.add_file_chooser(
-            "data_file",
-            label="Data file",
-            placeholder="/path/to/file",
-            on_change=self.on_file,
-        )
-        self.viz.add_button("open", label="Open browser", on_click=self.on_open)
-        self.viz.add_control_group(
-            "controls",
-            title="",
-            controls=["data_file", "open"],
-            position="bottom-right",
+        self.viz.set_layout(
+            SceneView(
+                "",
+                overlay=[
+                    GroupView(
+                        "",
+                        [
+                            FileChooserView(
+                                "data_file",
+                                label="Data file",
+                                placeholder="/path/to/file",
+                                on_change=self.on_file,
+                            ),
+                            ButtonView(
+                                "open", label="Open browser", on_click=self.on_open
+                            ),
+                        ],
+                        position="bottom-right",
+                    )
+                ],
+            )
         )
         self.viz.flush()
 

@@ -1069,24 +1069,39 @@ class TableView(ControlView):
         *,
         label: str = "",
         columns: list[str] | tuple[str, ...] = (),
-        rows: list[list[str]] | tuple[tuple[str, ...], ...] = (),
+        rows: list[list[Any]] | tuple[tuple[Any, ...], ...] = (),
+        column_types: list[Any] | tuple[Any, ...] | None = None,
         allow_add_rows: bool = True,
         allow_add_columns: bool = True,
         allow_delete_rows: bool = True,
+        show_column_titles: bool = True,
+        show_row_numbers: bool = False,
+        allow_delete_columns: bool = True,
+        sortable: bool = True,
+        editable_titles: bool = True,
         max_history: int = 100,
         tooltip: str = "",
+        json_path: str | None = None,
         on_cell_change: Handler | None = None,
         on_row_add: Handler | None = None,
         on_column_add: Handler | None = None,
         on_row_delete: Handler | None = None,
+        on_column_delete: Handler | None = None,
+        on_column_title_change: Handler | None = None,
+        on_column_type_change: Handler | None = None,
+        on_cell_select: Handler | None = None,
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
-        # A Tabulator grid needs horizontal room for every column; default the
-        # min width to a per-column estimate so an auto-sized overlay panel
-        # doesn't clip the last column.  An explicit ``min_width=`` still wins.
+        # A native grid needs horizontal room for every column; default the min
+        # width to a per-column estimate so an auto-sized overlay panel doesn't
+        # clip the last column.  Default a natural preferred size so flow
+        # containers bound the grid and it scrolls internally instead of growing
+        # with content.  Explicit ``min_width=``/``preferred_*`` still win.
         ncols = max(1, len(columns))
         kwargs.setdefault("min_width", Size.px(max(120, ncols * _TABLE_COLUMN_MIN_PX)))
+        kwargs.setdefault("preferred_width", Size.px(480))
+        kwargs.setdefault("preferred_height", Size.px(320))
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
         self.control = Table(
             id=cid,
@@ -1094,16 +1109,34 @@ class TableView(ControlView):
             tooltip=tooltip,
             columns=list(columns),
             rows=[list(row) for row in rows],
+            column_types=list(column_types) if column_types is not None else None,
             allow_add_rows=allow_add_rows,
             allow_add_columns=allow_add_columns,
             allow_delete_rows=allow_delete_rows,
+            show_column_titles=show_column_titles,
+            show_row_numbers=show_row_numbers,
+            allow_delete_columns=allow_delete_columns,
+            sortable=sortable,
+            editable_titles=editable_titles,
             max_history=max_history,
             on_cell_change=on_cell_change,
             on_row_add=on_row_add,
             on_column_add=on_column_add,
             on_row_delete=on_row_delete,
+            on_column_delete=on_column_delete,
+            on_column_title_change=on_column_title_change,
+            on_column_type_change=on_column_type_change,
+            on_cell_select=on_cell_select,
             on_change=on_change,
+            _json_path=json_path,
         )
+        if json_path is not None:
+            import os
+
+            if os.path.exists(json_path):
+                self.control.from_json(json_path)
+            else:
+                self.control._save()
 
     def undo(self) -> bool:
         """Undo the last edit of the wrapped ``Table`` and push the grid."""
@@ -1119,10 +1152,135 @@ class TableView(ControlView):
             self._push_value()
         return changed
 
+    def get_value(self) -> dict[str, Any]:
+        """Return the wrapped ``Table``'s current grid (``{columns, rows}``)."""
+        return self.control.get_value()
+
+    def get_cell(self, row: int, col: int) -> str:
+        """Return the cell at *row*/*col* from the wrapped ``Table``."""
+        return self.control.get_cell(row, col)
+
+    def set_cell(self, row: int, col: int, value: str) -> bool:
+        """Set a single cell (recording history) and push the grid."""
+        changed = self.control.set_cell(row, col, value)
+        if changed:
+            self._push_value()
+        return changed
+
+    def clear_history(self) -> None:
+        """Clear the wrapped ``Table``'s undo and redo stacks."""
+        self.control.clear_history()
+
+    def add_row(self, values: list[str] | None = None) -> bool:
+        """Append a row (blank by default) and push the grid to the browser."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_row(len(self.control.rows), vals)
+        if changed:
+            self._push_value()
+        return changed
+
+    def add_column(
+        self,
+        header: str = "",
+        values: list[Any] | None = None,
+        column_type: Any = None,
+    ) -> bool:
+        """Append a column (blank cells by default) and push the grid."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_column(
+            len(self.control.columns), header, vals, column_type
+        )
+        if changed:
+            self._push_value()
+        return changed
+
+    def delete_row(self, index: int) -> bool:
+        """Delete the row at *index* (zero-based) and push the grid."""
+        changed = self.control.delete_rows([index])
+        if changed:
+            self._push_value()
+        return changed
+
+    def delete_column(self, index: int) -> bool:
+        """Delete the column at *index* (zero-based) and push the grid."""
+        changed = self.control.delete_column(index)
+        if changed:
+            self._push_value()
+        return changed
+
+    def insert_row(self, index: int, values: list[str] | None = None) -> bool:
+        """Insert a row at *index* (zero-based) and push the grid."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_row(index, vals)
+        if changed:
+            self._push_value()
+        return changed
+
+    def insert_column(
+        self,
+        index: int,
+        header: str = "",
+        values: list[Any] | None = None,
+        column_type: Any = None,
+    ) -> bool:
+        """Insert a column at *index* (zero-based) and push the grid."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_column(index, header, vals, column_type)
+        if changed:
+            self._push_value()
+        return changed
+
+    def set_column_format(self, col: int, fmt: str | None) -> bool:
+        """Set the ``format`` template of a ``number`` column and push the grid."""
+        changed = self.control.set_column_format(col, fmt)
+        if changed:
+            self._push_value()
+        return changed
+
+    def rename_column(self, col: int, title: str) -> bool:
+        """Rename the column at *col* (zero-based) without a full-grid push."""
+        return self.control.rename_column(col, title)
+
+    def convert_column(self, col: int, target: str) -> bool:
+        """Convert the column at *col* to *target* type and push the grid."""
+        changed = self.control.convert_column(col, target)
+        if changed:
+            self._push_value()
+        return changed
+
+    @property
+    def active_cell(self) -> tuple[int, int] | None:
+        """The currently selected cell (``(row, col)``), or ``None``."""
+        return self.control.active_cell
+
     def _push_value(self) -> None:
         """Push the wrapped ``Table``'s grid to the browser (if mounted)."""
         if self._push is not None:
             self._push(self.id, self.control.get_value())
+
+    def save(self, path: str | None = None) -> None:
+        """Write the table to JSON (defaults to the auto-save ``json_path``)."""
+        target = path if path is not None else self.control._json_path
+        if target is None:
+            raise ValueError("no path: pass path= or construct with json_path=")
+        self.control.to_json(target)
+
+    def load(self, path: str | None = None) -> None:
+        """Load the table from JSON (defaults to the auto-save ``json_path``)."""
+        target = path if path is not None else self.control._json_path
+        if target is None:
+            raise ValueError("no path: pass path= or construct with json_path=")
+        self.control.from_json(target)
+        self._push_value()
+
+    def to_csv(self, path: str) -> None:
+        """Export the table data to CSV (no column types)."""
+        self.control.to_csv(path)
+
+    def from_csv(self, path: str) -> None:
+        """Import table data from CSV and push the grid."""
+        self.control.from_csv(path)
+        self._push_value()
 
     @property
     def can_undo(self) -> bool:
@@ -1246,11 +1404,20 @@ def control_to_view(ctrl: Control) -> ControlView:
             allow_add_rows=ctrl.allow_add_rows,
             allow_add_columns=ctrl.allow_add_columns,
             allow_delete_rows=ctrl.allow_delete_rows,
+            show_column_titles=ctrl.show_column_titles,
+            show_row_numbers=ctrl.show_row_numbers,
+            allow_delete_columns=ctrl.allow_delete_columns,
+            sortable=ctrl.sortable,
+            editable_titles=ctrl.editable_titles,
             max_history=ctrl.max_history,
             on_cell_change=ctrl.on_cell_change,
             on_row_add=ctrl.on_row_add,
             on_column_add=ctrl.on_column_add,
             on_row_delete=ctrl.on_row_delete,
+            on_column_delete=ctrl.on_column_delete,
+            on_column_title_change=ctrl.on_column_title_change,
+            on_column_type_change=ctrl.on_column_type_change,
+            on_cell_select=ctrl.on_cell_select,
             on_change=ctrl.on_change,
         )
     else:

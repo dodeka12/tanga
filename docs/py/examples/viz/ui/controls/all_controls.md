@@ -4,11 +4,11 @@
 
 Creates one of each control kind — slider, dropdown, button (with icon and
 icon-only variants), text field, text area, color picker, checkbox, and file
-chooser — grouped into titled panels with icons and tooltips, plus a
-full-screen text editor (`open_editor`).  Each handler updates either the
-sphere or the viewport annotation, so the effect of every control is visible.
-Two synced radius sliders, a stepper value-edit, and a live readout text field
-demonstrate programmatic value updates (`set_control_value`).
+chooser — grouped into titled `GroupView` panels with icons and tooltips,
+plus a full-screen text editor (`open_editor`).  Each handler updates either
+the sphere or the viewport annotation, so the effect of every control is
+visible.  Two synced radius sliders, a stepper value-edit, and a live readout
+text field demonstrate programmatic value updates (`*View.set_value`).
 
 ## Run
 
@@ -30,11 +30,11 @@ uv run python py/examples/viz/ui/controls/all_controls.py
 
 Creates one of each control kind — slider, dropdown, button (with icon and
 icon-only variants), text field, text area, color picker, checkbox, and file
-chooser — grouped into titled panels with icons and tooltips, plus a
-full-screen text editor (`open_editor`).  Each handler updates either the
-sphere or the viewport annotation, so the effect of every control is visible.
-Two synced radius sliders, a stepper value-edit, and a live readout text field
-demonstrate programmatic value updates (`set_control_value`).
+chooser — grouped into titled ``GroupView`` panels with icons and tooltips,
+plus a full-screen text editor (`open_editor`).  Each handler updates either
+the sphere or the viewport annotation, so the effect of every control is
+visible.  Two synced radius sliders, a stepper value-edit, and a live readout
+text field demonstrate programmatic value updates (`*View.set_value`).
 
 Run with:  uv run python py/examples/viz/ui/controls/all_controls.py
 
@@ -44,7 +44,23 @@ Keywords: controls, slider, dropdown, button, VisualizerApp
 from __future__ import annotations
 
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import ControlEvent, EIconMaterial, EIconUC, VisualizerApp
+from pytanga.viz import (
+    ButtonView,
+    CheckboxView,
+    ColorPickerView,
+    ControlEvent,
+    DropdownView,
+    EIconMaterial,
+    EIconUC,
+    FileChooserView,
+    GroupView,
+    SceneView,
+    SliderView,
+    TextAreaView,
+    TextFieldView,
+    ValueEditView,
+    VisualizerApp,
+)
 
 
 class AllControlsApp(VisualizerApp):
@@ -77,21 +93,21 @@ class AllControlsApp(VisualizerApp):
 
     async def on_radius(self, value: float, _event: ControlEvent) -> None:
         self._apply_radius(value)
-        self.viz.set_control_value("radius2", value)
-        self.viz.set_control_value("radius_value", value)
-        self.viz.set_control_value("radius_display", f"{value:.2f}")
+        self._radius2_view.set_value(value)
+        self._radius_value_view.set_value(value)
+        self._radius_display_view.set_value(f"{value:.2f}")
 
     async def on_radius2(self, value: float, _event: ControlEvent) -> None:
         self._apply_radius(value)
-        self.viz.set_control_value("radius", value)
-        self.viz.set_control_value("radius_value", value)
-        self.viz.set_control_value("radius_display", f"{value:.2f}")
+        self._radius_view.set_value(value)
+        self._radius_value_view.set_value(value)
+        self._radius_display_view.set_value(f"{value:.2f}")
 
     async def on_radius_value(self, value: float, _event: ControlEvent) -> None:
         self._apply_radius(value)
-        self.viz.set_control_value("radius", value)
-        self.viz.set_control_value("radius2", value)
-        self.viz.set_control_value("radius_display", f"{value:.2f}")
+        self._radius_view.set_value(value)
+        self._radius2_view.set_value(value)
+        self._radius_display_view.set_value(f"{value:.2f}")
 
     async def on_color(self, value: str, _event: ControlEvent) -> None:
         self._color = value
@@ -138,14 +154,13 @@ class AllControlsApp(VisualizerApp):
         self.viz.update("ball", color=self._color, opacity=0.9, wireframe=False)
         self._set_annotation("Reset to defaults.")
         self.viz.flush()
-        # Push each control's value back in place (no panel rebuild).
-        self.viz.set_control_value("radius", self._radius)
-        self.viz.set_control_value("radius2", self._radius)
-        self.viz.set_control_value("radius_value", self._radius)
-        self.viz.set_control_value("radius_display", f"{self._radius:.2f}")
-        self.viz.set_control_value("mode", "Solid")
-        self.viz.set_control_value("color", self._color)
-        self.viz.set_control_value("wireframe", False)
+        self._radius_view.set_value(self._radius)
+        self._radius2_view.set_value(self._radius)
+        self._radius_value_view.set_value(self._radius)
+        self._radius_display_view.set_value(f"{self._radius:.2f}")
+        self._mode_view.set_value("Solid")
+        self._color_view.set_value(self._color)
+        self._wireframe_view.set_value(False)
 
     async def on_quit(self, _value: None, _event: ControlEvent) -> None:
         self.request_shutdown()
@@ -166,7 +181,7 @@ class AllControlsApp(VisualizerApp):
     # ── controls ────────────────────────────────────────────
 
     def _setup_controls(self) -> None:
-        self.viz.add_slider(
+        self._radius_view = SliderView(
             "radius",
             label="Radius",
             min=0.3,
@@ -176,7 +191,7 @@ class AllControlsApp(VisualizerApp):
             tooltip="Scale the sphere",
             on_change=self.on_radius,
         )
-        self.viz.add_slider(
+        self._radius2_view = SliderView(
             "radius2",
             label="Radius 2",
             min=0.3,
@@ -186,7 +201,7 @@ class AllControlsApp(VisualizerApp):
             tooltip="Also scales the sphere (synced with Radius)",
             on_change=self.on_radius2,
         )
-        self.viz.add_value_edit(
+        self._radius_value_view = ValueEditView(
             "radius_value",
             label="Radius (stepper)",
             min=0.3,
@@ -198,13 +213,13 @@ class AllControlsApp(VisualizerApp):
             tooltip="Increment with buttons, arrow keys, or the scroll wheel; type to edit",
             on_change=self.on_radius_value,
         )
-        self.viz.add_text_field(
+        self._radius_display_view = TextFieldView(
             "radius_display",
             label="Radius value",
             value=f"{self._radius:.2f}",
             tooltip="Live value of the radius sliders",
         )
-        self.viz.add_dropdown(
+        self._mode_view = DropdownView(
             "mode",
             label="Appearance",
             options=["Solid", "Translucent", "Hidden"],
@@ -212,21 +227,21 @@ class AllControlsApp(VisualizerApp):
             tooltip="Switch the material",
             on_change=self.on_mode,
         )
-        self.viz.add_color_picker(
+        self._color_view = ColorPickerView(
             "color",
             label="Color",
             value=self._color,
             tooltip="Sphere color",
             on_change=self.on_color,
         )
-        self.viz.add_checkbox(
+        self._wireframe_view = CheckboxView(
             "wireframe",
             label="Wireframe",
             value=True,
             tooltip="Toggle wireframe",
             on_change=self.on_wireframe,
         )
-        self.viz.add_text_field(
+        name_view = TextFieldView(
             "name",
             label="Name",
             value="The ball",
@@ -234,7 +249,7 @@ class AllControlsApp(VisualizerApp):
             tooltip="Echoed to the annotation",
             on_change=self.on_name,
         )
-        self.viz.add_text_area(
+        notes_view = TextAreaView(
             "notes",
             label="Notes",
             value="",
@@ -243,71 +258,76 @@ class AllControlsApp(VisualizerApp):
             tooltip="Echoed to the annotation (supports $…$ math)",
             on_change=self.on_notes,
         )
-        self.viz.add_file_chooser(
+        data_file_view = FileChooserView(
             "data_file",
             label="Data file",
             placeholder="/path/to/file",
             tooltip="Pick a file",
             on_change=self.on_file,
         )
-        self.viz.add_button(
-            "edit_annotation",
-            label="Edit annotation",
-            icon=EIconUC.PENCIL,
-            tooltip="Edit the annotation in a full editor",
-            on_click=self.on_edit_annotation,
-        )
-        self.viz.add_button(
-            "poke",
-            label="Poke",
-            icon=EIconMaterial.PLAY_ARROW,
-            tooltip="Do something",
-            on_click=self.on_poke,
-        )
-        self.viz.add_button(
-            "reset",
-            label="Reset",
-            icon=EIconMaterial.REFRESH,
-            tooltip="Reset everything",
-            on_click=self.on_reset,
-        )
-        self.viz.add_button(
-            "quit",
-            icon=EIconUC.CLOSE,
-            icon_only=True,
-            tooltip="Quit",
-            on_click=self.on_quit,
-        )
-        self.viz.add_control_group(
-            "appearance",
-            title="Appearance",
-            icon=EIconUC.GEAR,
-            tooltip="Shape and material",
-            controls=[
-                "radius",
-                "radius2",
-                "radius_value",
-                "radius_display",
-                "mode",
-                "color",
-                "wireframe",
-                "name",
-            ],
-            position="bottom-right",
-        )
-        self.viz.add_control_group(
-            "text_files",
-            title="Text & files",
-            icon="material:edit",  # raw-string icon (same as the enum form)
-            controls=["notes", "data_file"],
-            position="top-right",
-        )
-        self.viz.add_control_group(
-            "actions",
-            title="Actions",
-            icon=EIconMaterial.SETTINGS,
-            controls=["edit_annotation", "poke", "reset", "quit"],
-            position="top-left",
+        self.viz.set_layout(
+            SceneView(
+                "",
+                overlay=[
+                    GroupView(
+                        "Appearance",
+                        [
+                            self._radius_view,
+                            self._radius2_view,
+                            self._radius_value_view,
+                            self._radius_display_view,
+                            self._mode_view,
+                            self._color_view,
+                            self._wireframe_view,
+                            name_view,
+                        ],
+                        icon=EIconUC.GEAR,
+                        tooltip="Shape and material",
+                        position="bottom-right",
+                    ),
+                    GroupView(
+                        "Text & files",
+                        [notes_view, data_file_view],
+                        icon="material:edit",  # raw-string icon (same as the enum form)
+                        position="top-right",
+                    ),
+                    GroupView(
+                        "Actions",
+                        [
+                            ButtonView(
+                                "edit_annotation",
+                                label="Edit annotation",
+                                icon=EIconUC.PENCIL,
+                                tooltip="Edit the annotation in a full editor",
+                                on_click=self.on_edit_annotation,
+                            ),
+                            ButtonView(
+                                "poke",
+                                label="Poke",
+                                icon=EIconMaterial.PLAY_ARROW,
+                                tooltip="Do something",
+                                on_click=self.on_poke,
+                            ),
+                            ButtonView(
+                                "reset",
+                                label="Reset",
+                                icon=EIconMaterial.REFRESH,
+                                tooltip="Reset everything",
+                                on_click=self.on_reset,
+                            ),
+                            ButtonView(
+                                "quit",
+                                icon=EIconUC.CLOSE,
+                                icon_only=True,
+                                tooltip="Quit",
+                                on_click=self.on_quit,
+                            ),
+                        ],
+                        icon=EIconMaterial.SETTINGS,
+                        position="top-left",
+                    ),
+                ],
+            )
         )
 
 

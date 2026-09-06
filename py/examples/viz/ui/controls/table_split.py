@@ -4,9 +4,10 @@
 """table_split.py — An editable data table beside a 3D scene.
 
 A horizontal split layout: the left pane is a single ``TableView`` (an editable
-Tabulator grid) filling its pane, and the right pane is the 3D ``SceneView``.
-Editing a cell, or adding a row/column, echoes the change into the scene's
-annotation; a button overlaid on the scene resets the table to its initial grid.
+native grid) filling its pane, and the right pane is the 3D ``SceneView``.
+Editing a cell echoes the change into the scene's annotation; buttons overlaid
+on the scene add rows/columns (``TableView.add_row`` / ``add_column``) and reset
+the table.
 
 Run with:  uv run python py/examples/viz/ui/controls/table_split.py
 
@@ -55,6 +56,16 @@ async def _on_reset(_value, _event):
     viz.set_annotation("Table reset.")
 
 
+async def _on_add_row(_value, _event):
+    table_view.add_row()
+    viz.set_annotation("Added a row.")
+
+
+async def _on_add_column(_value, _event):
+    table_view.add_column(f"C{len(table_view.columns) + 1}")
+    viz.set_annotation("Added a column.")
+
+
 table_view = TableView(
     "data",
     label="Data",
@@ -75,7 +86,11 @@ layout = SplitView(
             overlay=[
                 GroupView(
                     "Actions",
-                    [ButtonView("btn_reset", label="Reset table", on_click=_on_reset)],
+                    [
+                        ButtonView("btn_add_row", label="+ Row", on_click=_on_add_row),
+                        ButtonView("btn_add_col", label="+ Column", on_click=_on_add_column),
+                        ButtonView("btn_reset", label="Reset table", on_click=_on_reset),
+                    ],
                     position="top-left",
                 ),
             ],

@@ -1,6 +1,7 @@
 // Entity renderer factory — thin dispatcher importing from per-entity
 // and per-operator modules.  Phase 5+6 refactoring complete.
 
+import { sendLog } from '../events.js';
 import { createPoint } from './point.js';
 import { createCrossHairPoint } from './crosshair_point.js';
 import { createDirection, updateDirection } from './direction.js';
@@ -155,6 +156,7 @@ export async function createEntityMesh(ent) {
 
         default:
             console.warn(`Unknown entity kind: ${ent.kind}`);
+            sendLog('warn', `Unknown entity kind: ${ent.kind}`, { source: 'factory.js' });
             return null;
     }
 

@@ -42,7 +42,7 @@ def test_bundled_fit_camera_accepts_size():
 def test_bundled_fit_camera_delegates_to_shared_ortho_frustum():
     b = generate_bootstrap_js("")
     # The 2D branch calls the shared helper rather than computing aspect inline.
-    assert "orthoFrustum(xmin, xmax, ymin, ymax, true, 0" in b
+    assert "orthoFrustum(xmin, xmax, ymin, ymax, 'fit', 0" in b
 
 
 def test_fit_camera_3d_branch_is_aspect_independent():

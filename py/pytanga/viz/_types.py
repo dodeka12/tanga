@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypeAlias, Union
+from typing import TYPE_CHECKING, Any, TypeAlias, Union
 
 from pytanga.geometry.entities import (
     Arc,
@@ -74,6 +74,16 @@ TransformRotation: TypeAlias = Rotor | Triple
 #: An operator dataclass that :func:`pytanga.viz._transforms.operator_to_matrix`
 #: can convert to a 4×4 matrix (Rotor/GeneralRotor/Translator/Motor/Dilator).
 TransformOperator: TypeAlias = _T.TransformOperator
+
+if TYPE_CHECKING:
+    from pytanga.algebra import MV
+
+    from ._nodes import Transform
+
+
+#: A scene-transform argument: a ``Transform`` node, an ``MV`` (analyzed to an
+#: operator), or a GA operator dataclass (Rotor/GeneralRotor/Translator/Motor/Dilator).
+TransformInput: TypeAlias = Union["Transform", "MV", TransformOperator]
 
 
 def _as_vec3(value: Any) -> tuple[float, float, float]:

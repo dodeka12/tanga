@@ -10,7 +10,7 @@ import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/bui
 import { getOverlay } from './overlay.js';
 import { applyControlValue } from './controls-panel.js';
 import { applyLogUpdate } from './views/log-view.js';
-import { setWebSocket as setEventsWebSocket } from './events.js';
+import { logForwardingEnabled, sendLog, setLogForwarding, setWebSocket as setEventsWebSocket } from './events.js';
 import {
     handleBannerDefine,
     handleBannerRemove,
@@ -57,6 +57,11 @@ let _layoutName = (() => {
     const params = new URLSearchParams(window.location.search);
     return params.has('view') ? (params.get('view') || '') : null;
 })();
+// Opt-in frontend trace forwarding: `?log=1` forwards the `_log(...)` init/WS
+// lines to the backend log at `info` level (default off).
+if (new URLSearchParams(window.location.search).has('log')) {
+    setLogForwarding(true);
+}
 let _layoutRoot = null;
 let _sceneRoutes = new Map();  // scene -> {sceneViews, controlViews}
 let _viewById = new Map();     // view_id -> ThreeJsView (per-pane camera)
@@ -83,6 +88,9 @@ function _log(phase, detail) {
     if (_myScene) parts.push('scene=' + _myScene);
     if (detail) parts.push(detail);
     console.log(parts.join(' '));
+    if (logForwardingEnabled()) {
+        sendLog('info', detail || phase, { source: 'viewer.js', data: { phase } });
+    }
 }
 
 function _shortenTitle(text, max = 40) {
@@ -227,6 +235,7 @@ function connectWebSocket() {
             msg = JSON.parse(event.data);
         } catch (e) {
             console.error('Failed to parse WebSocket message:', e);
+            sendLog('error', 'Failed to parse WebSocket message', { source: 'viewer.js', data: { error: String(e) } });
             return;
         }
         handleMessage(msg);

@@ -4,6 +4,7 @@
 
 import { View } from './view.js';
 import { createSlider, createButton, createDropdown, createTextField, createTextArea, createColorPicker, createCheckbox } from '../controls-panel.js';
+import { sendLog } from '../events.js';
 
 export class BannerView extends View {
     constructor({
@@ -75,6 +76,7 @@ export class BannerView extends View {
                 });
             } catch (e) {
                 console.warn('KaTeX banner rendering error:', e);
+                sendLog('warn', 'KaTeX banner rendering error', { source: 'banner-view.js', data: { error: String(e) } });
             }
         }
         this.el.appendChild(body);
