@@ -1273,13 +1273,32 @@ class TableView(ControlView):
         self.control.from_json(target)
         self._push_value()
 
-    def to_csv(self, path: str) -> None:
-        """Export the table data to CSV (no column types)."""
-        self.control.to_csv(path)
+    def to_csv(
+        self, path: str, delimiter: str = ",", decimal_separator: str = "."
+    ) -> None:
+        """Export the table data to CSV (no column types).
 
-    def from_csv(self, path: str) -> None:
-        """Import table data from CSV and push the grid."""
-        self.control.from_csv(path)
+        ``delimiter`` and ``decimal_separator`` control the CSV dialect; use
+        ``delimiter=";"`` / ``decimal_separator=","`` for European locales.
+        """
+        self.control.to_csv(
+            path, delimiter=delimiter, decimal_separator=decimal_separator
+        )
+
+    def from_csv(
+        self,
+        path: str,
+        delimiter: str | None = None,
+        decimal_separator: str | None = None,
+    ) -> None:
+        """Import table data from CSV and push the grid.
+
+        ``delimiter`` / ``decimal_separator`` default to ``None`` (auto-detect
+        from file content); pass explicit values to override.
+        """
+        self.control.from_csv(
+            path, delimiter=delimiter, decimal_separator=decimal_separator
+        )
         self._push_value()
 
     @property
