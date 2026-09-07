@@ -316,8 +316,11 @@ stored in the JSON as `{"kind": "number", "format": "{:.2f}m"}`.
 `save(path)` / `load(path)` round-trip the whole table — data, types, relative
 column widths, row height, and sort order — as a versioned JSON file
 (`{"id": "pytanga-table", "version": "1.0", ...}`).  `to_csv(path)` /
-`from_csv(path)` exchange plain data (no types).  Pass `json_path=...` to
-auto-load the file at construction and auto-save after every change.
+`from_csv(path)` exchange plain data (no types).  Both accept `delimiter` and
+`decimal_separator`; export defaults to `,`/`.`, while import auto-detects the
+delimiter (`;` vs `,`) and decimal separator (`,` vs `.`) so German/European
+CSVs load directly, with explicit overrides available.  Pass `json_path=...`
+to auto-load the file at construction and auto-save after every change.
 
 The handler payloads are `TableCellChange(row, col, value)`,
 `TableRowAdd(row, values)`, `TableColumnAdd(col, header, values)`,

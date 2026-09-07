@@ -71,7 +71,10 @@ def test_serialized_rows_are_strings() -> None:
 def test_add_column_with_type() -> None:
     view = TableView("tbl", columns=["a"], rows=[[1]])
     assert view.add_column("b", values=["x"], column_type=["x", "y"]) is True
-    assert _types(view.control) == [{"kind": "number"}, {"kind": "enum", "values": ["x", "y"]}]
+    assert _types(view.control) == [
+        {"kind": "number"},
+        {"kind": "enum", "values": ["x", "y"]},
+    ]
 
 
 def test_delete_column_drops_its_type() -> None:
@@ -82,7 +85,10 @@ def test_delete_column_drops_its_type() -> None:
 
 def test_column_type_to_dict() -> None:
     assert ColumnType("number").to_dict() == {"kind": "number"}
-    assert ColumnType("enum", ("a", "b")).to_dict() == {"kind": "enum", "values": ["a", "b"]}
+    assert ColumnType("enum", ("a", "b")).to_dict() == {
+        "kind": "enum",
+        "values": ["a", "b"],
+    }
 
 
 def test_column_type_format_to_dict() -> None:
@@ -162,10 +168,17 @@ def test_convert_to_string_always_succeeds() -> None:
 
 
 def test_convert_to_enum_requires_less_than_20() -> None:
-    t = Table(id="t", columns=["s"], rows=[["a"], ["b"], ["a"]], column_types=["string"])
+    t = Table(
+        id="t", columns=["s"], rows=[["a"], ["b"], ["a"]], column_types=["string"]
+    )
     assert t.convert_column(0, "enum") is True
     assert _types(t)[0]["kind"] == "enum"
-    t2 = Table(id="t2", columns=["s"], rows=[[str(i)] for i in range(20)], column_types=["string"])
+    t2 = Table(
+        id="t2",
+        columns=["s"],
+        rows=[[str(i)] for i in range(20)],
+        column_types=["string"],
+    )
     assert t2.convert_column(0, "enum") is False
     assert _types(t2) == [{"kind": "string"}]  # unchanged
 
@@ -206,7 +219,13 @@ def test_table_view_change_sets_view_state() -> None:
     t = Table(id="t", columns=["a"], rows=[[1]])
     d = t.handle_event(
         "table_view_change",
-        {"value": {"column_widths": [0.5], "row_height": 30, "sort": {"column": 0, "order": "desc"}}},
+        {
+            "value": {
+                "column_widths": [0.5],
+                "row_height": 30,
+                "sort": {"column": 0, "order": "desc"},
+            }
+        },
     )
     assert d.event is None
     assert t.get_value()["column_widths"] == [0.5]
@@ -216,7 +235,9 @@ def test_table_view_change_sets_view_state() -> None:
 
 def test_table_view_change_partial_update_preserves_other_keys() -> None:
     t = Table(id="t", columns=["a"], rows=[[1]])
-    t.handle_event("table_view_change", {"value": {"sort": {"column": 0, "order": "asc"}}})
+    t.handle_event(
+        "table_view_change", {"value": {"sort": {"column": 0, "order": "asc"}}}
+    )
     t.handle_event("table_view_change", {"value": {"row_height": 40}})
     assert t.get_value()["sort"] == {"column": 0, "order": "asc"}  # preserved
     assert t.get_value()["row_height"] == 40
@@ -224,7 +245,9 @@ def test_table_view_change_partial_update_preserves_other_keys() -> None:
 
 def test_table_view_change_can_clear_sort() -> None:
     t = Table(id="t", columns=["a"], rows=[[1]])
-    t.handle_event("table_view_change", {"value": {"sort": {"column": 0, "order": "asc"}}})
+    t.handle_event(
+        "table_view_change", {"value": {"sort": {"column": 0, "order": "asc"}}}
+    )
     t.handle_event("table_view_change", {"value": {"sort": None}})
     assert "sort" not in t.get_value()
 
@@ -275,7 +298,9 @@ def test_to_from_dict_round_trip() -> None:
 
 def test_from_dict_rejects_wrong_id() -> None:
     with pytest.raises(ValueError):
-        Table(id="t").from_dict({"id": "nope", "version": "1.0", "columns": [], "rows": []})
+        Table(id="t").from_dict(
+            {"id": "nope", "version": "1.0", "columns": [], "rows": []}
+        )
 
 
 def test_from_dict_rejects_major_mismatch() -> None:
@@ -310,6 +335,55 @@ def test_to_from_csv_round_trip(tmp_path) -> None:
     assert t2.columns == ["a", "b"]
     assert t2.get_value()["rows"] == [["1", "true"], ["2", "false"]]
     assert _types(t2) == [{"kind": "number"}, {"kind": "bool"}]
+
+
+def test_to_from_csv_european_round_trip(tmp_path) -> None:
+    t = Table(id="t", columns=["x", "active"], rows=[[1.5, True], [2.25, False]])
+    path = tmp_path / "european.csv"
+    t.to_csv(path, delimiter=";", decimal_separator=",")
+    t2 = Table(id="t2")
+    t2.from_csv(path, delimiter=";", decimal_separator=",")
+    assert t2.columns == ["x", "active"]
+    assert t2.get_value()["rows"] == [["1.5", "true"], ["2.25", "false"]]
+    assert _types(t2) == [{"kind": "number"}, {"kind": "bool"}]
+
+
+def test_to_csv_semicolon_writes_expected_bytes(tmp_path) -> None:
+    t = Table(id="t", columns=["x", "active"], rows=[[1.5, True]])
+    path = tmp_path / "t.csv"
+    t.to_csv(path, delimiter=";", decimal_separator=",")
+    assert path.read_bytes() == b"x;active\r\n1,5;true\r\n"
+
+
+def test_from_csv_auto_detects_semicolon_and_comma_decimal(tmp_path) -> None:
+    path = tmp_path / "german.csv"
+    path.write_text("preis;menge\n1,5;2\n3,25;4\n", encoding="utf-8")
+    t = Table(id="t")
+    t.from_csv(path)
+    assert t.columns == ["preis", "menge"]
+    assert t.get_value()["rows"] == [["1.5", "2"], ["3.25", "4"]]
+    assert _types(t) == [{"kind": "number"}, {"kind": "number"}]
+
+
+def test_from_csv_auto_detects_comma_and_dot_decimal(tmp_path) -> None:
+    path = tmp_path / "us.csv"
+    path.write_text("x,y\n1.5,2\n3.25,4\n", encoding="utf-8")
+    t = Table(id="t")
+    t.from_csv(path)
+    assert t.columns == ["x", "y"]
+    assert t.get_value()["rows"] == [["1.5", "2"], ["3.25", "4"]]
+    assert _types(t) == [{"kind": "number"}, {"kind": "number"}]
+
+
+def test_from_csv_explicit_delimiter_overrides_detection(tmp_path) -> None:
+    path = tmp_path / "t.csv"
+    path.write_text("x;y\n1;2\n", encoding="utf-8")
+    t = Table(id="t")
+    # Forcing a comma delimiter makes each line a single column, proving the
+    # explicit value wins over the `;` that auto-detection would have chosen.
+    t.from_csv(path, delimiter=",")
+    assert t.columns == ["x;y"]
+    assert t.get_value()["rows"] == [["1;2"]]
 
 
 def test_auto_save_writes_on_mutation(tmp_path) -> None:

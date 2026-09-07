@@ -1,6 +1,6 @@
 // Tanga Viewer — the native table DOM factory (column types, editors, zoom).
 
-import { fitColumnWidths, fitContentColumnWidths, TABLE_MIN_COLUMN, cellCoordinates, moveCell, sortRows, clamp } from '../table-grid.js';
+import { fitColumnWidths, fitContentColumnWidths, resizeColumnWidths, TABLE_MIN_COLUMN, cellCoordinates, moveCell, sortRows, clamp } from '../table-grid.js';
 import { sendControlEvent, resolveUndoRedoAction, applyTooltip, registerControl, createIconElement } from '../controls-panel.js';
 
 const TABLE_FIT_MAX = 240;
@@ -425,25 +425,14 @@ export function createTable(ctrl) {
         e.stopPropagation();
         const startX = e.clientX;
         const startWidths = colWidths.slice();
-        const isLast = colIndex === columns.length - 1;
 
         function onMove(ev) {
             const dx = ev.clientX - startX;
-            if (isLast) {
-                // Rightmost border: resize only the last column, so the table's
-                // total width grows/shrinks with the border and no other column
-                // is affected.
-                colWidths[colIndex] = Math.max(TABLE_MIN_COLUMN, startWidths[colIndex] + dx);
-            } else {
-                // Resize the pair (this column grows, its right neighbour
-                // shrinks) so the total stays fixed and other columns keep their
-                // widths; clamp so neither column drops below the minimum.
-                const minDelta = TABLE_MIN_COLUMN - startWidths[colIndex];
-                const maxDelta = startWidths[colIndex + 1] - TABLE_MIN_COLUMN;
-                const delta = clamp(dx, minDelta, maxDelta);
-                colWidths[colIndex] = startWidths[colIndex] + delta;
-                colWidths[colIndex + 1] = startWidths[colIndex + 1] - delta;
-            }
+            // Resizing only changes the dragged column; its right neighbours
+            // keep their widths and shift as the table's total width grows or
+            // shrinks (the grid scrolls horizontally when it exceeds the
+            // container width).
+            colWidths = resizeColumnWidths(startWidths, colIndex, dx);
             fit();
         }
         function onUp() {

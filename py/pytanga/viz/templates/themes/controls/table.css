@@ -103,7 +103,12 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--tanga-table-header-fg);
-    background: var(--tanga-table-header-bg);
+    /* The header is sticky (`top: 0`) so scrolled rows pass underneath it; paint
+     * the translucent header tint over the opaque theme background so content
+     * can't show through the titles. */
+    background:
+        linear-gradient(var(--tanga-table-header-bg), var(--tanga-table-header-bg)),
+        var(--tanga-bg);
     border-bottom: 1px solid var(--tanga-table-border);
     border-right: 1px solid var(--tanga-table-border);
     white-space: nowrap;
@@ -229,6 +234,14 @@
     border-bottom: 1px solid var(--tanga-table-border);
     border-right: 1px solid var(--tanga-table-border);
     user-select: none;
+}
+
+/* The sticky row-number header cell must also be opaque (see the head-cell
+ * rule above) so scrolled rows don't show through it. */
+.tanga-table-head .tanga-row-number {
+    background:
+        linear-gradient(var(--tanga-table-row-number-bg), var(--tanga-table-row-number-bg)),
+        var(--tanga-bg);
 }
 
 /* Column resize handle (4px, right edge of a header cell). */

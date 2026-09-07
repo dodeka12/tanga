@@ -43,7 +43,7 @@ globalThis.document = {
 
 const { ToolbarView } = await import('../../../py/pytanga/viz/templates/views/toolbar-view.js');
 const { Size } = await import('../../../py/pytanga/viz/templates/views/size.js');
-const { createDropdown, createSlider } = await import('../../../py/pytanga/viz/templates/controls-panel.js');
+const { createCheckbox, createDropdown, createSlider } = await import('../../../py/pytanga/viz/templates/controls-panel.js');
 
 const child = (minY, prefY) => ({
     minSizePx: (a) => (a === 'y' ? minY : 0),
@@ -124,6 +124,16 @@ test('toolbar-variant slider gets the toolbar-item class', () => {
 
 test('default slider has no toolbar-item class', () => {
     const el = createSlider({ id: 's', min: 0, max: 1, value: 0.5 });
+    assert.ok(!el.classList.contains('tanga-toolbar-item'));
+});
+
+test('toolbar-variant checkbox gets the toolbar-item class', () => {
+    const el = createCheckbox({ id: 'cb', variant: 'toolbar', value: false });
+    assert.ok(el.classList.contains('tanga-toolbar-item'));
+});
+
+test('default checkbox has no toolbar-item class', () => {
+    const el = createCheckbox({ id: 'cb', value: false });
     assert.ok(!el.classList.contains('tanga-toolbar-item'));
 });
 

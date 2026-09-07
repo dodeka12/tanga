@@ -487,7 +487,12 @@ column_type=None)` / `delete_row(index)` / `delete_column(index)` /
 `convert_column(col, target)` (mutate the model and push the full grid back to
 the browser), the selected-cell `active_cell` property (`(row, col)` or
 `None`), `save(path)` / `load(path)` (versioned JSON, including types + column
-widths + row height + sort) and `to_csv(path)` / `from_csv(path)` (plain data).
+widths + row height + sort) and `to_csv(path, delimiter=",",
+decimal_separator=".")` / `from_csv(path, delimiter=None,
+decimal_separator=None)` (plain data).  Import auto-detects the delimiter
+(`;` vs `,`) and decimal separator (`,` vs `.`), so German/European CSVs load
+without configuration; both parameters can be overridden explicitly and
+`to_csv` defaults to the `,`/`.` (US) dialect.
 Pass `json_path=...` to load the file at construction and auto-save on every
 change.  `set_column_format` sets a `number` column's `str.format` display
 template; `convert_column` applies (or rejects) a type change and fires

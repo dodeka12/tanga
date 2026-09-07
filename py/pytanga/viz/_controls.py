@@ -633,6 +633,38 @@ def _cell_to_str(value: Any, column_type: ColumnType | None = None) -> str:
     return str(value)
 
 
+def _cell_to_csv(
+    value: Any, column_type: ColumnType | None, decimal_separator: str
+) -> str:
+    """Serialize a cell for CSV export.
+
+    Like :func:`_cell_to_str`, but numbers in ``number`` columns have their
+    decimal point rewritten to *decimal_separator* when it differs from ``"."``.
+    """
+    text = _cell_to_str(value, column_type)
+    if (
+        column_type is not None
+        and column_type.kind == "number"
+        and decimal_separator != "."
+    ):
+        text = text.replace(".", decimal_separator)
+    return text
+
+
+def _normalize_decimal_cell(
+    value: Any, column_type: ColumnType | None, decimal_separator: str
+) -> str:
+    """Rewrite a ``number`` cell's *decimal_separator* back to ``"."`` on import."""
+    text = str(value)
+    if (
+        column_type is not None
+        and column_type.kind == "number"
+        and decimal_separator != "."
+    ):
+        text = text.replace(decimal_separator, ".")
+    return text
+
+
 def _is_bool_value(value: Any) -> bool:
     """Return whether *value* counts as a boolean cell for type deduction."""
     return isinstance(value, bool)
@@ -717,24 +749,82 @@ def _validate_table_file(data: dict[str, Any]) -> None:
         )
 
 
-def _infer_column_type_from_strings(values: list[Any]) -> ColumnType:
+def _infer_column_type_from_strings(
+    values: list[Any], decimal_separator: str = "."
+) -> ColumnType:
     """Infer a column type from string content (used by CSV import)."""
-    nonempty = [str(v).strip() for v in values if v is not None and str(v).strip() != ""]
+    nonempty = [
+        str(v).strip() for v in values if v is not None and str(v).strip() != ""
+    ]
     if not nonempty:
         return ColumnType("string")
     if all(v.lower() in ("true", "false") for v in nonempty):
         return ColumnType("bool")
-    if all(_parse_number(v) is not None for v in nonempty):
+    if all(_parse_number(v, decimal_separator) is not None for v in nonempty):
         return ColumnType("number")
     return ColumnType("string")
 
 
-def _parse_number(text: str) -> float | None:
-    """Return ``float(text)`` or ``None`` when *text* is not numeric."""
+def _parse_number(text: str, decimal_separator: str = ".") -> float | None:
+    """Return ``float(text)`` or ``None`` when *text* is not numeric.
+
+    When *decimal_separator* differs from ``"."``, it is rewritten to ``"."``
+    first so locale-style numbers (e.g. ``"1,5"``) parse correctly.
+    """
+    s = str(text)
+    if decimal_separator != ".":
+        s = s.replace(decimal_separator, ".")
     try:
-        return float(text)
+        return float(s)
     except (TypeError, ValueError):
         return None
+
+
+_CSV_DELIMITER_CANDIDATES = (",", ";", "\t", "|")
+
+
+def _detect_delimiter(sample: str) -> str:
+    """Detect the CSV delimiter from *sample* text.
+
+    Counts each candidate delimiter (``,`` ``;`` tab ``|``) across non-empty
+    lines and picks the one that appears in the most lines with the most
+    consistent per-line count.  Falls back to ``","`` when inconclusive (e.g. a
+    single-column file).
+    """
+    lines = [line for line in sample.splitlines() if line.strip()]
+    if not lines:
+        return ","
+    best = ","
+    best_score: tuple[float, float, float] = (-1.0, -1.0, -1.0)
+    for candidate in _CSV_DELIMITER_CANDIDATES:
+        counts = [line.count(candidate) for line in lines]
+        present = [c for c in counts if c > 0]
+        if not present:
+            continue
+        coverage = len(present) / len(lines)
+        consistency = 1.0 / (1.0 + (max(counts) - min(counts)))
+        score = (coverage, consistency, float(sum(present)))
+        if score > best_score:
+            best = candidate
+            best_score = score
+    return best
+
+
+def _detect_decimal_separator(sample: str, delimiter: str) -> str:
+    """Detect the decimal separator (``"."`` vs ``","``) from *sample* text.
+
+    A ``","`` delimiter precludes a comma decimal separator (an unquoted comma
+    is already the column boundary), so ``"."`` is returned.  Otherwise the
+    fractional tokens (``digit[.,]digit``) are counted and the majority wins,
+    defaulting to ``"."``.
+    """
+    if delimiter == ",":
+        return "."
+    import re
+
+    dots = len(re.findall(r"\d\.\d", sample))
+    commas = len(re.findall(r"\d,\d", sample))
+    return "," if commas > dots else "."
 
 
 def _split_format_template(fmt: str) -> tuple[str, str, str] | None:
@@ -761,7 +851,9 @@ def _split_format_template(fmt: str) -> tuple[str, str, str] | None:
     return fmt[:start], spec, fmt[end + 1 :]
 
 
-def _coerce_number_cell(text: str, column_type: ColumnType | None) -> int | float | None:
+def _coerce_number_cell(
+    text: str, column_type: ColumnType | None
+) -> int | float | None:
     """Parse *text* back into a number for a ``number`` column.
 
     Accepts a plain int/float, or — when the column has a ``format`` — the
@@ -886,7 +978,9 @@ class Table(Control):
     columns: list[str] = field(default_factory=list)
     rows: list[list[Any]] = field(default_factory=list)
     column_types: list[Any] | None = field(default=None)
-    _column_types: list[ColumnType] = field(default_factory=list, repr=False, compare=False)
+    _column_types: list[ColumnType] = field(
+        default_factory=list, repr=False, compare=False
+    )
     allow_add_rows: bool = True
     allow_add_columns: bool = True
     allow_delete_rows: bool = True
@@ -937,7 +1031,10 @@ class Table(Control):
     def _serialize_cells(self) -> tuple[list[list[str]], list[dict[str, Any]]]:
         types = self._column_types
         rows = [
-            [_cell_to_str(v, types[c] if c < len(types) else None) for c, v in enumerate(row)]
+            [
+                _cell_to_str(v, types[c] if c < len(types) else None)
+                for c, v in enumerate(row)
+            ]
             for row in self.rows
         ]
         return rows, [t.to_dict() for t in types]
@@ -957,7 +1054,9 @@ class Table(Control):
         """Merge a partial view-state payload (from ``table_view_change``)."""
         if "column_widths" in view:
             widths = view["column_widths"]
-            self.column_widths = [float(w) for w in widths] if widths is not None else None
+            self.column_widths = (
+                [float(w) for w in widths] if widths is not None else None
+            )
         if "row_height" in view:
             self.row_height = int(view["row_height"])
         if "sort" in view:
@@ -965,7 +1064,10 @@ class Table(Control):
             self.sort = (
                 None
                 if sort is None
-                else {"column": int(sort.get("column", 0)), "order": str(sort.get("order", "asc"))}
+                else {
+                    "column": int(sort.get("column", 0)),
+                    "order": str(sort.get("order", "asc")),
+                }
             )
         self._save()
 
@@ -1009,7 +1111,9 @@ class Table(Control):
         import json
         from pathlib import Path
 
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8")
+        Path(path).write_text(
+            json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8"
+        )
 
     def from_json(self, path: Any) -> None:
         import json
@@ -1017,32 +1121,77 @@ class Table(Control):
 
         self.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
 
-    def to_csv(self, path: Any) -> None:
+    def to_csv(
+        self, path: Any, delimiter: str = ",", decimal_separator: str = "."
+    ) -> None:
+        """Write the table to CSV using *delimiter* and *decimal_separator*.
+
+        Numbers in ``number`` columns are serialized with *decimal_separator*
+        (``"."`` by default); booleans, strings, and enums are unchanged.  Set
+        ``delimiter=";"`` and ``decimal_separator=","`` for German/European
+        locale conventions.
+        """
         import csv
 
+        types = self._column_types
         with open(path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, delimiter=delimiter)
             writer.writerow(self.columns)
             for row in self.rows:
-                writer.writerow([_cell_to_str(v) for v in row])
+                writer.writerow(
+                    [
+                        _cell_to_csv(
+                            v, types[c] if c < len(types) else None, decimal_separator
+                        )
+                        for c, v in enumerate(row)
+                    ]
+                )
 
-    def from_csv(self, path: Any) -> None:
+    def from_csv(
+        self,
+        path: Any,
+        delimiter: str | None = None,
+        decimal_separator: str | None = None,
+    ) -> None:
+        """Import table data from CSV, auto-detecting delimiter and decimal separator.
+
+        When *delimiter* / *decimal_separator* are ``None`` (the default) they
+        are detected from the file content (``","`` vs ``";"`` and ``"."`` vs
+        ``","``); pass explicit values to override.  Number cells are normalized
+        to the canonical ``"."`` decimal form on import.
+        """
         import csv
+        import io
+        from pathlib import Path
 
-        with open(path, newline="", encoding="utf-8") as f:
-            data = list(csv.reader(f))
+        text = Path(path).read_text(encoding="utf-8")
+        delim = delimiter if delimiter is not None else _detect_delimiter(text)
+        dec = (
+            decimal_separator
+            if decimal_separator is not None
+            else _detect_decimal_separator(text, delim)
+        )
+        data = list(csv.reader(io.StringIO(text), delimiter=delim))
         self.columns = [str(c) for c in data[0]] if data else []
-        self.rows = [list(row) for row in data[1:]] if data else []
+        raw_rows = [list(row) for row in data[1:]] if data else []
         hints = []
         for c in range(len(self.columns)):
-            col_values = [row[c] for row in self.rows if c < len(row)]
-            hints.append(_infer_column_type_from_strings(col_values))
+            col_values = [row[c] for row in raw_rows if c < len(row)]
+            hints.append(_infer_column_type_from_strings(col_values, dec))
         self.column_types = hints
+        self._normalize_column_type_hints()
+        self._resolve_column_types()
+        types = self._column_types
+        self.rows = [
+            [
+                _normalize_decimal_cell(v, types[c] if c < len(types) else None, dec)
+                for c, v in enumerate(row)
+            ]
+            for row in raw_rows
+        ]
         self.column_widths = None
         self.row_height = 24
         self.sort = None
-        self._normalize_column_type_hints()
-        self._resolve_column_types()
         self.clear_history()
 
     def _save(self) -> None:
@@ -1124,7 +1273,9 @@ class Table(Control):
             self.delete_column(change.col)
         elif event == "cell_select":
             self.active_cell = (
-                None if change.row is None or change.col is None else (change.row, change.col)
+                None
+                if change.row is None or change.col is None
+                else (change.row, change.col)
             )
         elif event == "column_title_change":
             self.rename_column(change.col, change.title)
@@ -1135,7 +1286,9 @@ class Table(Control):
         return {
             "columns": list(self.columns),
             "rows": [list(row) for row in self.rows],
-            "column_types": list(self.column_types) if self.column_types is not None else None,
+            "column_types": list(self.column_types)
+            if self.column_types is not None
+            else None,
         }
 
     def _push_undo(self) -> None:
@@ -1149,7 +1302,9 @@ class Table(Control):
         """Restore columns/rows and type hints from a snapshot."""
         self.columns = list(snap["columns"])
         self.rows = [list(row) for row in snap["rows"]]
-        self.column_types = list(snap["column_types"]) if snap.get("column_types") is not None else None
+        self.column_types = (
+            list(snap["column_types"]) if snap.get("column_types") is not None else None
+        )
         self._normalize_column_type_hints()
         self._resolve_column_types()
 

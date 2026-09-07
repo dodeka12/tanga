@@ -6,6 +6,7 @@ import { createCheckbox } from '../controls-panel.js';
 export class CheckboxView extends ControlView {
     constructor({ id, label = '', value = false, tooltip = '', variant = 'default' } = {}) {
         super({ id, label, tooltip });
+        this.el.classList.add('tanga-checkbox-view');
         this.value = value;
         this.variant = variant;
     }
