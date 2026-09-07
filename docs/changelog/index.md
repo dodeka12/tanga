@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 1.17.0 (2.0.0-rc2)] — 2026-09-06
+- Configurable CSV delimiter & decimal separator in `Table`/`TableView` (auto-detected, overridable)
+- Bug fixes: `SplitView` fills flow containers · `TableView` shrinks to fit narrow panes · opaque sticky table headers · column resize grows the table · toolbar checkbox alignment
+→ [Details](2026-09-06_a175b015.md)
+
 ## [Since 1.17.0 (2.0.0-rc1)] — 2026-09-05
 - Native typed/editable `TableView` (column types & editors, JSON/CSV persistence, sorting, zoom/resize, row/column control) · per-scene `space_dim` + live 2D/3D switch · 2D camera `stretch` modes · `fit_view2d` label margins · client→server log channel · `SdfCompose` combine descriptor · unified transform arguments
 - Breaking: 2D camera `uniform` replaced by `stretch`
