@@ -387,7 +387,18 @@ class LogView(View):
 
 
 class SplitView(View):
-    """A container that lays its children out along one axis."""
+    """A container that lays its children out along one axis.
+
+    A split has no intrinsic size on the axis perpendicular to its layout axis
+    (its children are positioned absolutely), so it defaults
+    ``preferred_width``/``preferred_height`` to ``Size.fr(1)``.  This makes a
+    split fill the leftover space when it is a child of a flow container
+    (``StackView`` / ``GroupView`` / ``ToolbarView``) instead of collapsing to
+    zero.  ``fr`` is inert elsewhere — a root layout is forced to fill its
+    container and an enclosing ``SplitView`` resolves ``fr`` to a natural size —
+    so the default only affects the flow case.  Pass an explicit
+    ``preferred_width`` / ``preferred_height`` (or ``size``) to override.
+    """
 
     _node_type = "split"
 
@@ -401,6 +412,10 @@ class SplitView(View):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        if self.preferred_width is None:
+            self.preferred_width = Size.fr(1)
+        if self.preferred_height is None:
+            self.preferred_height = Size.fr(1)
         if orientation not in ("horizontal", "vertical"):
             raise ValueError(
                 f"orientation must be 'horizontal' or 'vertical', got {orientation!r}"

@@ -56,7 +56,7 @@ test('resolveUndoRedoAction maps Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y', () => {
     assert.equal(resolveUndoRedoAction({ ctrlKey: true, shiftKey: false, key: '' }), null);
 });
 
-const { fitColumnWidths, fitContentColumnWidths, cellCoordinates, moveCell, clampCell, sortRows, clamp } = await import(
+const { fitColumnWidths, fitContentColumnWidths, resizeColumnWidths, cellCoordinates, moveCell, clampCell, sortRows, clamp } = await import(
     '../../../py/pytanga/viz/templates/table-grid.js'
 );
 
@@ -85,6 +85,26 @@ test('fitContentColumnWidths defaults', () => {
     assert.deepEqual(fitContentColumnWidths([10]), [24]); // min default clamps
     assert.deepEqual(fitContentColumnWidths([300]), [240]); // max default clamps
     assert.deepEqual(fitContentColumnWidths([]), []);
+});
+
+test('resizeColumnWidths changes only the dragged column', () => {
+    // Growing a middle column leaves its neighbours unchanged (the table's total
+    // width grows, and the columns to the right just shift).
+    assert.deepEqual(resizeColumnWidths([100, 100, 100], 1, 40), [100, 140, 100]);
+    assert.deepEqual(resizeColumnWidths([100, 100, 100], 0, -30), [70, 100, 100]);
+});
+
+test('resizeColumnWidths clamps at the minimum width', () => {
+    assert.deepEqual(resizeColumnWidths([100, 100, 100], 1, -100), [100, 24, 100]);
+    // Custom minimum.
+    assert.deepEqual(resizeColumnWidths([40, 40], 0, -100, 40), [40, 40]);
+});
+
+test('resizeColumnWidths does not mutate the input array', () => {
+    const widths = [100, 100];
+    const result = resizeColumnWidths(widths, 0, 50);
+    assert.deepEqual(result, [150, 100]);
+    assert.deepEqual(widths, [100, 100]);
 });
 
 test('cellCoordinates maps a rendered cell to its original row + column', () => {

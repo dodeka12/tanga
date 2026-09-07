@@ -33,6 +33,18 @@ export function fitContentColumnWidths(measured, { min = TABLE_MIN_COLUMN, max =
 }
 
 /**
+ * Resize a single column by `delta` px, leaving every other column unchanged
+ * (and clamped at `min`).  The caller re-sums the widths to grow/shrink the
+ * table's total width, so dragging a column boundary moves its right neighbours
+ * without squeezing them.
+ */
+export function resizeColumnWidths(widths, index, delta, min = TABLE_MIN_COLUMN) {
+    const next = widths.slice();
+    next[index] = Math.max(min, next[index] + delta);
+    return next;
+}
+
+/**
  * Return the display order (array of original row indexes) for a stable sort of
  * `rows` by `colIndex`.  `direction` is `'asc'`, `'desc'`, or anything else
  * (identity order).  Numeric-aware: cells that both parse as finite numbers

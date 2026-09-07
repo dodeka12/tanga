@@ -53,6 +53,13 @@ export class TableView extends ControlView {
         // overrides these inline sizes with its splitter sizes.
         this.el.style.width = '480px';
         this.el.style.height = '320px';
+        // Cap the pinned width at the parent so a narrower flow container
+        // (scrollable GroupView / StackView pane) shrinks the table instead of
+        // scrolling the whole widget (title bar included) horizontally.  The
+        // grid then becomes the horizontal scroll region.  In an auto-sized
+        // parent the percentage resolves against an indefinite width and is
+        // ignored, so the 480px natural size is preserved.
+        this.el.style.maxWidth = '100%';
         this.el.style.overflow = 'hidden';
     }
 

@@ -401,7 +401,9 @@ class TestControlViews:
         assert view.min_height == Size.px(28)
 
     def test_button_icon_only_explicit_min_override(self):
-        view = ButtonView("b1", icon="material:add", icon_only=True, min_width=Size.px(40))
+        view = ButtonView(
+            "b1", icon="material:add", icon_only=True, min_width=Size.px(40)
+        )
         assert view.min_width == Size.px(40)
         assert view.min_height == Size.px(28)
 
@@ -656,7 +658,9 @@ class TestSeparatorView:
         assert node["spacing"] == 6
 
     def test_serialize_vertical(self):
-        node = serialize_layout(SeparatorView(orientation="vertical", spacing=8))["root"]
+        node = serialize_layout(SeparatorView(orientation="vertical", spacing=8))[
+            "root"
+        ]
         assert node["type"] == "separator"
         assert node["orientation"] == "vertical"
         assert node["spacing"] == 8
@@ -705,6 +709,42 @@ class TestSplitView:
         node = serialize_layout(layout)["root"]
         assert len(node["children"]) == 4
         assert node["sizes"] == [None, None, None, None]
+
+    def test_defaults_flow_sizes_to_fr(self):
+        # A split has no intrinsic cross-axis size (children are absolutely
+        # positioned), so it defaults to `fr(1)` on both axes.  This lets a
+        # flow container (`StackView` / `GroupView`) grow it to fill leftover
+        # space instead of collapsing it to zero.
+        split = SplitView("horizontal", [SceneView("a"), SceneView("b")])
+        assert split.preferred_width == Size.fr(1)
+        assert split.preferred_height == Size.fr(1)
+
+    def test_default_fr_serializes(self):
+        node = serialize_layout(
+            SplitView("horizontal", [SceneView("a"), SceneView("b")])
+        )["root"]
+        assert node["preferred_width"] == {"value": 1.0, "unit": "fr"}
+        assert node["preferred_height"] == {"value": 1.0, "unit": "fr"}
+
+    def test_explicit_preferred_overrides_default(self):
+        split = SplitView(
+            "horizontal",
+            [SceneView("a"), SceneView("b")],
+            preferred_height=Size.px(300),
+        )
+        assert split.preferred_width == Size.fr(1)
+        assert split.preferred_height == Size.px(300)
+
+    def test_size_shorthand_still_applies(self):
+        # `size=` is applied to preferred axes that were left unset, so it must
+        # not be shadowed by the new `fr(1)` default.
+        split = SplitView(
+            "horizontal",
+            [SceneView("a"), SceneView("b")],
+            size=Size.px(250),
+        )
+        assert split.preferred_width == Size.px(250)
+        assert split.preferred_height == Size.px(250)
 
 
 class TestSerialize:

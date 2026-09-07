@@ -1,10 +1,14 @@
 /* Tanga viewer — checkbox control. */
 
-.tanga-checkbox-row {
+/* The checkbox row is a <label>, so the generic `.tanga-control label` rule
+ * (higher specificity) would otherwise override its `display: flex` and add a
+ * stacked-label margin.  Scope it under `.tanga-control` to win that cascade. */
+.tanga-control .tanga-checkbox-row {
     display: flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
+    margin-bottom: 0;
 }
 
 .tanga-checkbox-input {
@@ -14,5 +18,13 @@
 .tanga-checkbox-label {
     font-size: 12px;
     color: var(--tanga-fg);
+}
+
+/* A checkbox is much shorter than the 32px min-height field a control view gets;
+ * center it vertically in a toolbar so it doesn't ride the row's top edge. */
+.tanga-toolbar > .tanga-checkbox-view {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 

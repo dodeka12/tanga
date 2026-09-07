@@ -446,6 +446,7 @@ export function createCheckbox(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-checkbox';
     if (ctrl.variant === 'menu') wrapper.classList.add('tanga-menu-item');
+    if (ctrl.variant === 'toolbar') wrapper.classList.add('tanga-toolbar-item');
 
     const row = document.createElement('label');
     row.className = 'tanga-checkbox-row';
