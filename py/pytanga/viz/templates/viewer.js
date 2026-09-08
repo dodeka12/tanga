@@ -8,8 +8,8 @@ window.__tanga_ready = true;
 import { applyOverlayAnchor } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
 import { getOverlay } from './overlay.js';
-import { applyControlValue } from './controls-panel.js';
-import { applyLogUpdate } from './views/log-view.js';
+import { applyControlValue, applyEnumOptions } from './controls-panel.js';
+import { applyMessageUpdate } from './views/message-view.js';
 import { logForwardingEnabled, sendLog, setLogForwarding, setWebSocket as setEventsWebSocket } from './events.js';
 import {
     handleBannerDefine,
@@ -633,8 +633,13 @@ async function handleMessage(msg) {
         return;
     }
 
+    if (msg.type === 'enum_options') {
+        applyEnumOptions(msg.id, msg.request_id, msg.values);
+        return;
+    }
+
     if (msg.type === 'log_update') {
-        applyLogUpdate(msg);
+        applyMessageUpdate(msg);
         return;
     }
 

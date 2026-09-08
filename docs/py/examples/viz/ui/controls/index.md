@@ -11,10 +11,11 @@
 | [Group View Icons](group_view_icons.md) | group view, icon, icon_only, fold, overlay | Group view chrome: leading icon, icon-only, borderless fold |
 | [Table Data](table_data.md) | controls, table, tabular data, TableView, VisualizerApp | An editable tabular-data control driven by the backend |
 | [Table Editing](table_editing.md) | controls, table, tabular data, TableView, column types, cell editing, keyboard navigation, undo, redo | Editable table: column types, keyboard nav, undo/redo |
+| [Table Enum Columns](table_enum_columns.md) | controls, table, tabular data, TableView, column types, enum, custom enum | A TableView with a column-fed enum and a backend-fed enum |
 | [Table File](table_file.md) | controls, table, tabular data, TableView, persistence, JSON, CSV, auto-save | Table auto-save: JSON load/save + CSV export |
 | [Table Split](table_split.md) | split view, table, tabular data, TableView | An editable data table beside a 3D scene |
 | [Toolbar](toolbar.md) | toolbar, alignment, split view, slider, dropdown, icon, separator, layout | Four toolbars, one per alignment, stacked in a vertical split |
 
 ## Keywords
 
-ButtonView · CSV · CheckboxView · GroupView · JSON · SliderView · TableView · VisualizerApp · alignment · anchor · auto-save · button · cell editing · checkbox · column types · control group · controls · css · dropdown · file browser · file chooser · fold · group view · icon · icon_only · keyboard navigation · layout · overlay · parent_id · persistence · redo · scene · separator · single scene · slider · split view · table · tabular data · theme · toolbar · undo
+ButtonView · CSV · CheckboxView · GroupView · JSON · SliderView · TableView · VisualizerApp · alignment · anchor · auto-save · button · cell editing · checkbox · column types · control group · controls · css · custom enum · dropdown · enum · file browser · file chooser · fold · group view · icon · icon_only · keyboard navigation · layout · overlay · parent_id · persistence · redo · scene · separator · single scene · slider · split view · table · tabular data · theme · toolbar · undo

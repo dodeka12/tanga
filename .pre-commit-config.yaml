@@ -11,3 +11,12 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: viewer-bundle
+        name: rebuild viewer bundle
+        entry: uv run python tools/build-viewer-js.py
+        language: system
+        pass_filenames: false
+        files: ^(py/pytanga/viz/templates/.*\.(js|glsl)|py/pytanga/viz/export/_bootstrap/.*\.py)$

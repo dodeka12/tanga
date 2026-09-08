@@ -14,18 +14,20 @@ import json
 from pathlib import Path
 from typing import Any
 
+from pytanga.viz.export._cdn import build_library_script_tag
 from pytanga.viz.export._bootstrap import (
-    generate_bootstrap_js,
     generate_theme_css,
     js_annotation_panel,
     js_apply_camera,
     js_autofit_camera,
-    js_imports,
+    js_tanga_destructure,
     js_render_loop,
     js_resize_handler,
     js_scene_build,
     js_scene_setup,
     js_title_overlay,
+    static_third_party,
+    three_import_map,
 )
 from pytanga.viz.export._bootstrap._html import (
     _CDN_CHECK_SCRIPT,
@@ -39,27 +41,33 @@ def render_snapshot(
     objects: list[dict[str, Any]],
     scene_config: dict[str, Any],
     theme: str = "dark",
+    delivery: str = "cdn",
+    delivery_ref: str | None = None,
 ) -> str:
     """Render a self-contained HTML file from the unified scene objects.
 
     *objects* is the ``Scene.full_state()`` output (scene entities and
     overlay labels in DFS pre-order).  *theme* selects the UI theme whose CSS
-    is inlined (default ``"dark"``).
+    is inlined (default ``"dark"``).  *delivery* selects how the viewer
+    runtime is delivered: ``"cdn"`` (default), ``"inline"``, or ``"offline"``.
     """
     scene_json = json.dumps({"objects": objects}, indent=0)
     config_json = json.dumps(scene_config, indent=0)
 
     html = (_TEMPLATES_DIR / "export_viewer.html").read_text(encoding="utf-8")
-    bootstrap = generate_bootstrap_js(_build_static_fullpage_adapter(scene_config))
+    adapter = _build_static_fullpage_adapter(scene_config)
     theme_css = generate_theme_css(theme)
 
     return (
         html.replace("__CDN_CHECK_SCRIPT__", _CDN_CHECK_SCRIPT)
         .replace("__LOADING_OVERLAY__", _LOADING_OVERLAY_HTML)
         .replace("__THEME_CSS__", theme_css)
+        .replace("__THIRD_PARTY__", static_third_party(delivery))
+        .replace("__IMPORT_MAP__", three_import_map(delivery))
         .replace("__SCENE_DATA_JSON__", scene_json)
         .replace("__SCENE_CONFIG_JSON__", config_json)
-        .replace("__BOOTSTRAP_JS__", bootstrap)
+        .replace("__LIBRARY_SCRIPT__", build_library_script_tag(delivery, delivery_ref))
+        .replace("__BOOTSTRAP_JS__", adapter)
     )
 
 
@@ -95,7 +103,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
         "window.__tanga_ready = true;",
         "// ── Bootstrap adapter for Tanga self-contained HTML exports ──",
         "",
-        js_imports(),
+        js_tanga_destructure(),
         "",
         js_apply_camera(),
         "",

@@ -100,6 +100,8 @@ uv run python py/examples/<path>.py
 
 - **capped cone** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
 
+- **cdn** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
+
 - **cell editing** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
@@ -116,7 +118,7 @@ uv run python py/examples/<path>.py
 
 - **coefficients** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
-- **column types** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
+- **column types** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
 
 - **combine** — [per-object CSG combine modes](viz/sdf/booleans.md)
 
@@ -142,7 +144,7 @@ uv run python py/examples/<path>.py
 
 - **control update** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **controls** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+- **controls** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
 
@@ -153,6 +155,8 @@ uv run python py/examples/<path>.py
 - **CSV** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
 - **Ctrl+C** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
+
+- **custom enum** — [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
 
 - **custom intervals** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
@@ -165,6 +169,8 @@ uv run python py/examples/<path>.py
 - **DataArray** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
 - **defaults** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
+
+- **delivery** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
 
 - **dialog** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md)
 
@@ -202,11 +208,13 @@ uv run python py/examples/<path>.py
 
 - **entity** — [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
+- **enum** — [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
+
 - **Euclidean** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md)
 
 - **explicit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
-- **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
+- **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
@@ -284,13 +292,15 @@ uv run python py/examples/<path>.py
 
 - **homogeneous** — [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md)
 
-- **HTML** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
+- **HTML** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
 
 - **icon** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
+
+- **inline** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
 
 - **integer** — [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
@@ -397,6 +407,8 @@ uv run python py/examples/<path>.py
 - **null vector** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
 - **object model** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
+
+- **offline** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
 
 - **on_close** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md)
 
@@ -584,13 +596,13 @@ uv run python py/examples/<path>.py
 
 - **switch view** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
 
-- **table** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+- **table** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
 
-- **TableView** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+- **TableView** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
 
 - **tabs** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
-- **tabular data** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+- **tabular data** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
 
 - **tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 

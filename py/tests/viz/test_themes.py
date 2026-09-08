@@ -29,7 +29,7 @@ _COMPONENTS = [
     "views/banner-view.css",
     "views/overlay-view.css",
     "views/label-view.css",
-    "views/log-view.css",
+    "views/message-view.css",
     "views/markdown-view.css",
     "views/separator-view.css",
     "views/stack-view.css",
@@ -151,7 +151,11 @@ def test_set_theme_emits_theme_define(monkeypatch) -> None:
 
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     pushed: list[dict] = []
-    monkeypatch.setattr(viz._theme_host, "_push_theme", lambda: pushed.append(viz._theme_host._theme_message()))
+    monkeypatch.setattr(
+        viz._theme_host,
+        "_push_theme",
+        lambda: pushed.append(viz._theme_host._theme_message()),
+    )
 
     viz.set_theme("light")
 
@@ -263,7 +267,11 @@ def test_set_theme_and_refresh_emit_version(monkeypatch):
 
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     pushed = []
-    monkeypatch.setattr(viz._theme_host, "_push_theme", lambda: pushed.append(viz._theme_host._theme_message()))
+    monkeypatch.setattr(
+        viz._theme_host,
+        "_push_theme",
+        lambda: pushed.append(viz._theme_host._theme_message()),
+    )
 
     viz.set_theme("light")
     assert pushed[-1]["theme"] == "light"

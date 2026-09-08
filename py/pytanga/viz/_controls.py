@@ -156,15 +156,43 @@ class TableColumnTypeChange:
     """A column type conversion was requested.
 
     ``col`` is the zero-based column index, ``target`` the requested kind
-    (``"number" | "string" | "bool" | "enum"``), ``ok`` whether the base
-    conversion succeeded, and ``column_type`` the resulting resolved type (or
-    ``None`` when the conversion was rejected).
+    (``"number" | "string" | "bool" | "enum" | "column"``), ``source`` the
+    requested source column for a ``"column"`` target (``None`` otherwise),
+    ``ok`` whether the base conversion succeeded, and ``column_type`` the
+    resulting resolved type (or ``None`` when the conversion was rejected).
     """
 
     col: int
     target: str
     ok: bool
     column_type: ColumnType | None
+    source: int | None = None
+
+
+@dataclass
+class TableEnumOptionsRequest:
+    """A request for the allowed values of a ``custom`` enum cell.
+
+    Sent by the frontend when a cell in a ``custom`` column enters edit mode.
+    ``col`` is the zero-based column index, ``row`` the zero-based row index
+    (or ``None`` when the editor has no row), and ``current`` the cell's current
+    value as a string.
+    """
+
+    col: int
+    row: int | None
+    current: str
+
+
+EnumOptionsHandler = Callable[
+    [TableEnumOptionsRequest, ControlEvent], Awaitable[list[str] | tuple | None]
+]
+"""Async provider for a ``custom`` enum column's available values.
+
+Takes the :class:`TableEnumOptionsRequest` and a :class:`ControlEvent` and
+returns the list of allowed display strings (an empty/``None`` result is
+treated as no options).
+"""
 
 
 # ── Handler type alias ──────────────────────────────────────
@@ -182,18 +210,23 @@ toggles) and a :class:`ControlEvent`, and returns an awaitable.
 class Dispatch:
     """What the ``Visualizer`` should do after a control applied an event.
 
-    Returned by :meth:`Control.handle_event`.  The three fields describe the
-    single lookup-and-invoke tail the visualizer runs for every control event:
+    Returned by :meth:`Control.handle_event` (and
+    :meth:`Control.handle_event_async`).  The four fields describe the single
+    lookup-and-invoke tail the visualizer runs for every control event:
 
     - ``event`` — the ``(id, event)`` handler to fire, or ``None`` for none.
     - ``value`` — the value handed to that handler.
     - ``push`` — a value to push back to the browser as ``control_update``, or
       ``None`` to skip the push.
+    - ``reply`` — a message dict to send **only** to the requesting browser (via
+      ``Transport.send_to_browser``), or ``None`` for no targeted reply.  Used by
+      async request/response events (e.g. ``enum_options``).
     """
 
     event: str | None = None
     value: Any = None
     push: Any = None
+    reply: dict[str, Any] | None = None
 
 
 # ── Control dataclasses ──────────────────────────────────────
@@ -229,6 +262,16 @@ class Control:
         if event in ("press", "release"):
             return Dispatch(event, payload.get("value"), None)
         return Dispatch("change", payload.get("value"), None)
+
+    async def handle_event_async(self, event: str, payload: dict[str, Any]) -> Dispatch:
+        """Async variant of :meth:`handle_event`.
+
+        ``LayoutHost.dispatch_control_event`` calls this for every resolved
+        control so a kind can ``await`` a provider (e.g. an async request handler)
+        before reporting its :class:`Dispatch`.  The default delegates to the
+        synchronous :meth:`handle_event`.
+        """
+        return self.handle_event(event, payload)
 
     _value_type: ClassVar[type | None] = None
 
@@ -568,6 +611,7 @@ def parse_table_event(event: str, payload: dict[str, Any]) -> Dispatch:
             ),
         )
     if event == "column_type_change":
+        raw_source = table_payload.get("source")
         return Dispatch(
             "column_type_change",
             TableColumnTypeChange(
@@ -575,6 +619,7 @@ def parse_table_event(event: str, payload: dict[str, Any]) -> Dispatch:
                 target=str(table_payload.get("type", "string")),
                 ok=False,
                 column_type=None,
+                source=None if raw_source is None else int(raw_source),
             ),
         )
     return Dispatch()
@@ -590,25 +635,30 @@ TABLE_FORMAT_VERSION = "1.0"
 @dataclass(frozen=True)
 class ColumnType:
     """A resolved per-column type: ``kind`` + optional enum ``values`` + number
-    ``format``.
+    ``format`` + ``column`` ``source``.
 
-    ``kind`` is one of ``"number" | "string" | "bool" | "enum"``; ``values``
-    holds the allowed display strings for an ``enum`` column (empty otherwise);
-    ``format`` is a Python ``str.format`` template for a ``number`` column
-    (``None`` for every other kind).
+    ``kind`` is one of ``"number" | "string" | "bool" | "enum" | "column" |
+    "custom"``; ``values`` holds the allowed display strings for an ``enum``
+    column (empty otherwise); ``format`` is a Python ``str.format`` template for
+    a ``number`` column (``None`` for every other kind); ``source`` is the
+    zero-based source column index for a ``column`` column (whose allowed values
+    are the de-duped values of that column, ``None`` otherwise).
     """
 
     kind: str
     values: tuple[str, ...] = ()
     format: str | None = None
+    source: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Return the wire form ``{"kind", "values"?, "format"?}``."""
+        """Return the wire form ``{"kind", "values"?, "format"?, "source"?}``."""
         out: dict[str, Any] = {"kind": self.kind}
         if self.kind == "enum":
             out["values"] = list(self.values)
         if self.kind == "number" and self.format is not None:
             out["format"] = self.format
+        if self.kind == "column":
+            out["source"] = self.source if self.source is not None else 0
         return out
 
 
@@ -709,6 +759,8 @@ def _resolve_column_type(hint: Any, values: list[Any]) -> ColumnType:
             return ColumnType("string")
         if name in ("bool", "boolean"):
             return ColumnType("bool")
+        if name == "custom":
+            return ColumnType("custom")
         raise ValueError(f"unknown column type {hint!r}")
     if isinstance(hint, dict):
         kind = str(hint.get("kind", "string"))
@@ -717,6 +769,10 @@ def _resolve_column_type(hint: Any, values: list[Any]) -> ColumnType:
         if kind == "number":
             fmt = hint.get("format")
             return ColumnType("number", format=None if fmt is None else str(fmt))
+        if kind == "column":
+            return ColumnType("column", source=int(hint.get("source", 0)))
+        if kind == "custom":
+            return ColumnType("custom")
         return ColumnType(kind)
     if isinstance(hint, (list, tuple, set, frozenset)):
         return ColumnType("enum", tuple(str(v) for v in hint))
@@ -1003,6 +1059,9 @@ class Table(Control):
     on_column_type_change: Handler | None = None
     on_cell_select: Handler | None = None
     on_change: Handler | None = None
+    on_enum_options: EnumOptionsHandler | None = field(
+        default=None, repr=False, compare=False
+    )
     active_cell: tuple[int, int] | None = field(default=None, repr=False, compare=False)
     _undo: list[dict[str, Any]] = field(default_factory=list, repr=False, compare=False)
     _redo: list[dict[str, Any]] = field(default_factory=list, repr=False, compare=False)
@@ -1010,6 +1069,45 @@ class Table(Control):
     def __post_init__(self) -> None:
         self._normalize_column_type_hints()
         self._resolve_column_types()
+
+    async def handle_event_async(self, event: str, payload: dict[str, Any]) -> Dispatch:
+        """Resolve ``enum_options`` requests and report a targeted reply.
+
+        Every other event delegates to the synchronous :meth:`Table.handle_event`.
+        """
+        if event == "enum_options":
+            nested = payload.get("value")
+            data = nested if isinstance(nested, dict) else {}
+            request = TableEnumOptionsRequest(
+                col=int(data.get("col", 0)),
+                row=None if data.get("row") is None else int(data.get("row")),
+                current=str(data.get("current", "")),
+            )
+            event_obj = ControlEvent(browser_id=payload.get("browser_id"))
+            values = await self.enum_options_values(request, event_obj)
+            return Dispatch(
+                reply={
+                    "type": "enum_options",
+                    "id": self.id,
+                    "request_id": data.get("request_id"),
+                    "values": values,
+                }
+            )
+        return self.handle_event(event, payload)
+
+    async def enum_options_values(
+        self, request: TableEnumOptionsRequest, event: ControlEvent
+    ) -> list[str]:
+        """Resolve the available values for a ``custom`` enum cell.
+
+        Invokes the registered ``on_enum_options`` handler with *request* and
+        *event*, stringifying each returned entry.  Returns ``[]`` when no
+        handler is registered (or the handler returns an empty/``None`` list).
+        """
+        if self.on_enum_options is None:
+            return []
+        values = await self.on_enum_options(request, event)
+        return [str(v) for v in (values or [])]
 
     def _normalize_column_type_hints(self) -> None:
         n = len(self.columns)
@@ -1237,7 +1335,7 @@ class Table(Control):
 
         if event == "column_type_change":
             change = parse_table_event(event, payload).value
-            ok = self.convert_column(change.col, change.target)
+            ok = self.convert_column(change.col, change.target, change.source)
             return Dispatch(
                 "column_type_change",
                 TableColumnTypeChange(
@@ -1245,6 +1343,7 @@ class Table(Control):
                     change.target,
                     ok,
                     self._column_types[change.col] if ok else None,
+                    source=change.source,
                 ),
                 push=(self.get_value() if ok else None),
             )
@@ -1436,22 +1535,47 @@ class Table(Control):
         self._save()
         return True
 
-    def convert_column(self, col: int, target: str) -> bool:
+    def convert_column(self, col: int, target: str, source: int | None = None) -> bool:
         """Convert the column at *col* to *target* type; return whether applied.
 
         ``string`` always works; ``number`` (bool → 1/0, string → parse, else
         fail); ``bool`` (number 0/1 only, else fail; string
         ``"true"``/``"1"``/``"false"``/``"0"``); ``enum`` (distinct non-empty
-        values, only when ``0 < len < 20``).  On success records undo, rewrites
-        the column cells, sets the resolved type and saves; otherwise leaves the
-        model untouched and returns ``False``.
+        values, only when ``0 < len < 20``); ``column`` (requires a valid
+        in-range *source* column different from *col*, and keeps cell values).
+        ``"custom"`` is never a valid target, and a column whose current kind is
+        ``"custom"`` cannot be converted.  On success records undo, rewrites the
+        column cells (except ``column``), sets the resolved type and saves;
+        otherwise leaves the model untouched and returns ``False``.
         """
         target = str(target).strip().lower()
-        if target not in ("number", "string", "bool", "enum"):
+        if target not in ("number", "string", "bool", "enum", "column"):
             return False
         if not 0 <= col < len(self.columns):
             return False
-        if self._column_types[col].kind == target:
+        current = self._column_types[col]
+        if current.kind == "custom":
+            return False
+        if current.kind == target:
+            if target != "column" or current.source == source:
+                return True
+
+        if target == "column":
+            if source is None or not 0 <= source < len(self.columns) or source == col:
+                return False
+            self._push_undo()
+            new_type = ColumnType("column", source=source)
+            self._column_types[col] = new_type
+            hints = (
+                list(self.column_types)
+                if self.column_types is not None
+                else [None] * len(self.columns)
+            )
+            while len(hints) <= col:
+                hints.append(None)
+            hints[col] = new_type.to_dict()
+            self.column_types = hints
+            self._save()
             return True
 
         values = [row[col] if col < len(row) else "" for row in self.rows]

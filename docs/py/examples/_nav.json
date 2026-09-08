@@ -265,6 +265,9 @@
             "Animated Camera 3D": "py/examples/viz/export/animated_camera_3d.md"
           },
           {
+            "Export Delivery": "py/examples/viz/export/export_delivery.md"
+          },
+          {
             "Figure": "py/examples/viz/export/figure.md"
           },
           {
@@ -462,6 +465,9 @@
               },
               {
                 "Table Editing": "py/examples/viz/ui/controls/table_editing.md"
+              },
+              {
+                "Table Enum Columns": "py/examples/viz/ui/controls/table_enum_columns.md"
               },
               {
                 "Table File": "py/examples/viz/ui/controls/table_file.md"

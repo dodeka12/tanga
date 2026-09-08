@@ -47,6 +47,13 @@ Three orthogonal concerns, one model:
    Interactions route through `InteractionHost._dispatch_interaction_event`
    (handler `(event)`, with drag-move coalescing + camera caching) — reading
    from the same registry.
+6. **One async request/reply seam.** `Control.handle_event_async(event,
+   payload) -> Dispatch` (default delegates to the sync `handle_event`) lets a
+   kind `await` a provider before reporting its dispatch.  A `Dispatch` may also
+   carry a `reply` message dict, which `dispatch_control_event` sends **only** to
+   the requesting browser via `Transport.send_to_browser`.  Request/response
+   events (e.g. a `custom` enum column's `enum_options`) use `reply` instead of
+   a broadcast `control_update`.
 
 ## Host layer
 
@@ -164,17 +171,23 @@ envelope, targeting a backend-only `ClientLog` control (`_controls.py`, id
    Handler registration is automatic: the `on_*` constructor kwargs are
    dataclass fields on the control, and `Control.register_handlers` maps each
    `on_<event>` to its `(id, event)` registry entry at mount time.
-3. **Frontend** — add a `create<Kind>` factory in `templates/controls-panel.js`
-   (registering a `_controlRegistry` entry with an `owner` and an `apply(value)`),
-   and, for a layout view, a `views/<kind>-view.js` whose `render()` calls it
-   with `owner: 'layout'`.  Send events via `sendEvent(id, "<event>", { value })`.
+3. **Frontend** — add a `create<Kind>` factory in
+   `templates/controls/<kind>.js` (importing the shared registry/event/icon
+   helpers from `controls-panel.js`, and registering a `_controlRegistry` entry
+   with an `owner` and an `apply(value)`), and, for a layout view, a
+   `views/<kind>-view.js` whose `render()` calls it with `owner: 'layout'`.
+   Send events via `sendEvent(id, "<event>", { value })`.
 4. **Server routing** — if the kind introduces a new *event* (not just a value),
    add the `event`→message mapping to `server.py::_EVENT_MSG_MAP`.  Event
    *handling* lives on the control: override `Control.handle_event(event,
    payload) -> Dispatch` in `_controls.py` to mutate the model and report which
    `(id, event)` handler to fire and what to push back (see `Table.handle_event`).
    For a kind whose handler must still fire when the control id is not
-   resolvable, mirror the `parse_table_event` helper.
+   resolvable, mirror the `parse_table_event` helper.  For an async
+   *request/response* event, override `Control.handle_event_async` (declare the
+   provider as an `on_*` field so `register_handlers` registers it) and return
+   `Dispatch(reply=<message>)`; the dispatcher sends that reply to the requesting
+   browser only (see `Table.handle_event_async` for `enum_options`).
 5. **Tests** — serialization round-trip, registration, and dispatch.
 
 ## Interactive objects

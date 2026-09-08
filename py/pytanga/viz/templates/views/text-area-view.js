@@ -1,7 +1,7 @@
 // Tanga Viewer — `TextAreaView`: a multi-line text control rendered as a `View`.
 
 import { ControlView } from './control-view.js';
-import { createTextArea } from '../controls-panel.js';
+import { createTextArea } from '../controls/text-area.js';
 
 export class TextAreaView extends ControlView {
     constructor({ id, label = '', value = '', placeholder = '', rows = 4, tooltip = '' } = {}) {

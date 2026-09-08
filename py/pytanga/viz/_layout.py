@@ -865,9 +865,13 @@ class LayoutHostImpl:
             ctrl = self._client_log
 
         if ctrl is not None:
-            d = ctrl.handle_event(event_name, payload)
+            d = await ctrl.handle_event_async(event_name, payload)
             if d.push is not None:
                 self._push_control_update(cid, d.push)
+            if d.reply is not None:
+                await self._transport.send_to_browser(
+                    payload.get("browser_id") or "", d.reply
+                )
             if d.event is not None:
                 await self._fire(cid, d.event, d.value, event)
             return

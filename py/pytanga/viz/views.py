@@ -31,6 +31,7 @@ from ._controls import (
     Control,
     Dropdown,
     EControlVariant,
+    EnumOptionsHandler,
     FileChooser,
     Handler,
     Label,
@@ -1106,6 +1107,7 @@ class TableView(ControlView):
         on_column_type_change: Handler | None = None,
         on_cell_select: Handler | None = None,
         on_change: Handler | None = None,
+        on_enum_options: EnumOptionsHandler | None = None,
         **kwargs: Any,
     ) -> None:
         # A native grid needs horizontal room for every column; default the min
@@ -1143,6 +1145,7 @@ class TableView(ControlView):
             on_column_type_change=on_column_type_change,
             on_cell_select=on_cell_select,
             on_change=on_change,
+            on_enum_options=on_enum_options,
             _json_path=json_path,
         )
         if json_path is not None:
@@ -1453,6 +1456,7 @@ def control_to_view(ctrl: Control) -> ControlView:
             on_column_type_change=ctrl.on_column_type_change,
             on_cell_select=ctrl.on_cell_select,
             on_change=ctrl.on_change,
+            on_enum_options=ctrl.on_enum_options,
         )
     else:
         raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")

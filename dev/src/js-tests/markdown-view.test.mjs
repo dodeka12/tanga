@@ -44,7 +44,7 @@ globalThis.marked = {
 };
 globalThis.renderMathInElement = () => {};
 
-const { createMarkdown } = await import('../../../py/pytanga/viz/templates/controls-panel.js');
+const { createMarkdown } = await import('../../../py/pytanga/viz/templates/controls/markdown.js');
 
 test('createMarkdown renders markdown without `breaks` so `$$…$$` math survives', () => {
     createMarkdown({ id: 'md', value: '$$x$$', owner: 'layout' });

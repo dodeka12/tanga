@@ -68,6 +68,21 @@ resolved CSS files and returns one inlined `<style>` block — symmetric to how
 `Visualizer.export_snapshot` / `export_figure` accept `theme=` (defaulting to
 `self.theme`).
 
+### Delivery modes
+
+`export_snapshot` / `export_figure` / `display_snapshot` accept `delivery=`
+(`"cdn"` default, `"inline"`, `"offline"`) and `delivery_ref=` to override the
+jsDelivr ref.  The export bootstrap is split into a scene-independent
+**library** (`generate_library_js` — the stripped renderer + shared modules,
+the Three.js/addons imports, the SDF shaders, and a `window.__tanga` bridge)
+and a scene-specific **adapter** that destructures from that bridge.
+`"cdn"` serves the committed library from
+`https://cdn.jsdelivr.net/gh/dodeka12/tanga@<ref>/js/tanga-viewer.js`;
+`"inline"` inlines it; `"offline"` downloads pinned three.js/marked/KaTeX/
+html2canvas to a user cache and bundles three.js + the library with esbuild at
+export time (requiring Node.js + esbuild; see `export/_offline.py`), then
+inlines everything.
+
 ## Non-goals
 
 - 3D geometry/entity renderer colors remain style-driven via the Python style

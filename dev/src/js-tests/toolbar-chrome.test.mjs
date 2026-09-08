@@ -43,7 +43,9 @@ globalThis.document = {
 
 const { ToolbarView } = await import('../../../py/pytanga/viz/templates/views/toolbar-view.js');
 const { Size } = await import('../../../py/pytanga/viz/templates/views/size.js');
-const { createCheckbox, createDropdown, createSlider } = await import('../../../py/pytanga/viz/templates/controls-panel.js');
+const { createCheckbox } = await import('../../../py/pytanga/viz/templates/controls/checkbox.js');
+const { createDropdown } = await import('../../../py/pytanga/viz/templates/controls/dropdown.js');
+const { createSlider } = await import('../../../py/pytanga/viz/templates/controls/slider.js');
 
 const child = (minY, prefY) => ({
     minSizePx: (a) => (a === 'y' ? minY : 0),

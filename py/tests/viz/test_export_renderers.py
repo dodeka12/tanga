@@ -122,9 +122,7 @@ def test_bootstrap_has_no_duplicate_top_level_declarations():
         for group in match
         if group
     ]
-    duplicates = sorted(
-        name for name, count in Counter(names).items() if count > 1
-    )
+    duplicates = sorted(name for name, count in Counter(names).items() if count > 1)
     assert not duplicates, (
         "Duplicate top-level declarations in the HTML export bundle: "
         f"{duplicates}. Rename the colliding helpers so each renderer module "
@@ -152,8 +150,6 @@ def test_render_export_figure_alias_deprecated():
     with pytest.warns(DeprecationWarning):
         result = render_export_figure([], {}, {}, {})
     assert isinstance(result, str)
-    assert "function createEntityMesh(" in result
-    assert "function buildSceneObject(" in result
 
 
 def test_build_gltf_scene_alias_deprecated():

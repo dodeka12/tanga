@@ -1,7 +1,7 @@
 // Tanga Viewer — `DropdownView`: a dropdown/select control rendered as a `View`.
 
 import { ControlView } from './control-view.js';
-import { createDropdown } from '../controls-panel.js';
+import { createDropdown } from '../controls/dropdown.js';
 
 export class DropdownView extends ControlView {
     constructor({ id, label = '', tooltip = '', options = [], value = '', variant = 'default' } = {}) {

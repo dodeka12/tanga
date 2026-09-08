@@ -18,9 +18,9 @@ import json
 from typing import Any
 from uuid import uuid4
 
+from pytanga.viz.export._cdn import build_library_script_tag
 from pytanga.viz.export._bootstrap import (
     embed_animation_data,
-    generate_bootstrap_js,
     generate_theme_css,
     get_anim_data_js,
     get_anim_decompress_js,
@@ -35,12 +35,15 @@ from pytanga.viz.export._bootstrap import (
     js_controls_html,
     js_controls_ui,
     js_footer,
-    js_imports,
+    js_tanga_destructure,
     js_reconcile_frame,
     js_resize_handler,
     js_scene_setup,
     js_title_overlay,
+    katex_css_for_delivery,
     katex_css_if_needed,
+    third_party_scripts,
+    three_import_map,
 )
 
 # ── Public API ──────────────────────────────────────────────────
@@ -54,6 +57,8 @@ def render_export_animated_figure(
     scene_config: dict[str, Any] | None = None,
     anim_style: dict[str, Any] | None = None,
     theme: str = "dark",
+    delivery: str = "cdn",
+    delivery_ref: str | None = None,
 ) -> str:
     """Render an animated figure HTML snippet for embedding.
 
@@ -92,17 +97,15 @@ def render_export_animated_figure(
     anim_embed = embed_animation_data(anim_data_json, compress=compress)
     decompress_js = get_anim_decompress_js(compress)
 
-    bootstrap = generate_bootstrap_js(
-        _build_animated_figure_adapter(
-            fig_id,
-            recording_data,
-            fps,
-            loop,
-            fig_style,
-            fig_cfg,
-            show_controls,
-            scene_config or {},
-        )
+    adapter = _build_animated_figure_adapter(
+        fig_id,
+        recording_data,
+        fps,
+        loop,
+        fig_style,
+        fig_cfg,
+        show_controls,
+        scene_config or {},
     )
 
     if responsive:
@@ -125,7 +128,9 @@ def render_export_animated_figure(
             "</style>\n"
         )
 
-    katex_css = katex_css_if_needed(recording_data, fig_cfg)
+    katex_css = katex_css_for_delivery(
+        delivery, katex_css_if_needed(recording_data, fig_cfg)
+    )
 
     config_json = json.dumps(
         {
@@ -144,7 +149,10 @@ def render_export_animated_figure(
         decompress_js=decompress_js,
         responsive_style_block=responsive_style_block,
         controls_html=js_controls_html(show_controls),
-        bootstrap_js=bootstrap,
+        library_script=build_library_script_tag(delivery, delivery_ref),
+        adapter_js=adapter,
+        third_party_html=third_party_scripts(delivery),
+        import_map_html=three_import_map(delivery),
         config_data_json=config_json,
         theme_css=generate_theme_css(theme),
     )
@@ -157,6 +165,8 @@ def render_export_animated_html(
     anim_style: dict[str, Any] | None = None,
     title: str = "Tanga 3D Viewer",
     theme: str = "dark",
+    delivery: str = "cdn",
+    delivery_ref: str | None = None,
 ) -> str:
     """Render a full-page animated HTML document for standalone viewing.
 
@@ -187,14 +197,12 @@ def render_export_animated_html(
     anim_embed = embed_animation_data(anim_data_json, compress=compress)
     decompress_js = get_anim_decompress_js(compress)
 
-    bootstrap = generate_bootstrap_js(
-        _build_animated_fullpage_adapter(
-            fig_id, recording_data, fps, loop, sc, show_controls
-        )
+    adapter = _build_animated_fullpage_adapter(
+        fig_id, recording_data, fps, loop, sc, show_controls
     )
 
     controls_html = js_controls_html(show_controls)
-    katex_css = katex_css_if_needed(recording_data)
+    katex_css = katex_css_for_delivery(delivery, katex_css_if_needed(recording_data))
 
     body_div = (
         f'<div id="{fig_id}" style="width:100%;height:100%;position:relative;'
@@ -212,7 +220,10 @@ def render_export_animated_html(
         controls_html=controls_html,
         annotation_controls_reposition_js="",
         body_div=body_div,
-        bootstrap_js=bootstrap,
+        library_script=build_library_script_tag(delivery, delivery_ref),
+        adapter_js=adapter,
+        third_party_html=third_party_scripts(delivery),
+        import_map_html=three_import_map(delivery),
         theme_css=generate_theme_css(theme),
     )
 
@@ -283,7 +294,7 @@ def _build_animated_figure_adapter(
         "window.__tanga_ready = true;",
         "// Animated figure bootstrap",
         "",
-        js_imports(),
+        js_tanga_destructure(),
         "",
         js_apply_camera(),
         "",
@@ -409,7 +420,7 @@ def _build_animated_fullpage_adapter(
         "window.__tanga_ready = true;",
         "// Animated full-page bootstrap",
         "",
-        js_imports(),
+        js_tanga_destructure(),
         "",
         js_apply_camera(),
         "",

@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.17.0 (2.0.0-rc3)] — 2026-09-07
+- jsDelivr CDN bundle delivery (default) · `delivery="inline"` / `"offline"` options · committed `js/tanga-viewer.js` bundle + vendored offline assets with CI/pre-commit drift gates · `column`/`custom` table column types · per-control DOM factories moved to `templates/controls/*.js`
+→ [Details](2026-09-07_c059c59e.md)
+
 ## [Since 1.17.0 (2.0.0-rc2)] — 2026-09-06
 - Configurable CSV delimiter & decimal separator in `Table`/`TableView` (auto-detected, overridable)
 - Bug fixes: `SplitView` fills flow containers · `TableView` shrinks to fit narrow panes · opaque sticky table headers · column resize grows the table · toolbar checkbox alignment
