@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 1.17.0 (2.0.0-rc4)] — 2026-09-08
+- Standalone HTML exports no longer inline UI control/view CSS (base + token shell only) · `delivery="cdn"` references the theme shell from jsDelivr
+→ [Details](2026-09-08_7184d679.md)
+
 ## [Since 1.17.0 (2.0.0-rc3)] — 2026-09-07
 - jsDelivr CDN bundle delivery (default) · `delivery="inline"` / `"offline"` options · committed `js/tanga-viewer.js` bundle + vendored offline assets with CI/pre-commit drift gates · `column`/`custom` table column types · per-control DOM factories moved to `templates/controls/*.js`
 → [Details](2026-09-07_c059c59e.md)
