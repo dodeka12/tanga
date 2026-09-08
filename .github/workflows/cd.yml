@@ -57,9 +57,6 @@ jobs:
       - name: Install Python toolchain
         run: uv sync --group dev
 
-      - name: Install esbuild
-        run: npm install --prefix dev
-
       - name: Check viewer bundle
         run: uv run python tools/build-viewer-js.py --check
 

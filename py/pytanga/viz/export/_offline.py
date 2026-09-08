@@ -157,7 +157,6 @@ def _build_offline_bundle(work: Path, three_dir: Path) -> Path:
 
     entry.write_text(lib, encoding="utf-8")
     cmd = [
-        find_node(),
         find_esbuild(),
         "--bundle",
         "--format=esm",

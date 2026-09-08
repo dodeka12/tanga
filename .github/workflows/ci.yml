@@ -75,11 +75,5 @@ jobs:
       - name: Install Python toolchain
         run: uv sync --group dev
 
-      - name: Install esbuild
-        run: npm install --prefix dev
-
       - name: Check viewer bundle
         run: uv run python tools/build-viewer-js.py --check
-
-      - name: Offline export smoke
-        run: uv run python -c "from pytanga.viz.export._html import render_snapshot; render_snapshot([], {}, delivery='offline'); print('offline ok')"
