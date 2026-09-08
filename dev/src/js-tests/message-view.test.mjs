@@ -48,13 +48,13 @@ globalThis.document = {
 };
 
 const {
-    LogView,
-    registerLogView,
-    applyLogUpdate,
-} = await import('../../../py/pytanga/viz/templates/views/log-view.js');
+    MessageView,
+    registerMessageView,
+    applyMessageUpdate,
+} = await import('../../../py/pytanga/viz/templates/views/message-view.js');
 
 test('initial lines render on mount (two columns)', () => {
-    const view = new LogView({
+    const view = new MessageView({
         id: 'log0',
         lines: [{ time: 't1', message: 'a' }, { time: 't2', message: 'b' }],
     });
@@ -66,13 +66,13 @@ test('initial lines render on mount (two columns)', () => {
 });
 
 test('_messageOf uses message else JSON of non-time keys', () => {
-    const view = new LogView({ id: 'log0' });
+    const view = new MessageView({ id: 'log0' });
     assert.equal(view._messageOf({ time: 't', message: 'hi' }), 'hi');
     assert.equal(view._messageOf({ time: 't', level: 'info' }), '{"level":"info"}');
 });
 
 test('appendLines adds rows and enforces max_history', () => {
-    const view = new LogView({ id: 'log0', max_history: 2 });
+    const view = new MessageView({ id: 'log0', max_history: 2 });
     view.appendLines([
         { time: 't', message: 'a' },
         { time: 't', message: 'b' },
@@ -84,7 +84,7 @@ test('appendLines adds rows and enforces max_history', () => {
 });
 
 test('clearLines empties and replaceLines replaces', () => {
-    const view = new LogView({ id: 'log0' });
+    const view = new MessageView({ id: 'log0' });
     view.replaceLines([{ time: 't', message: 'x' }]);
     assert.equal(view.el.children.length, 1);
 
@@ -97,14 +97,14 @@ test('clearLines empties and replaceLines replaces', () => {
 });
 
 test('append auto-scrolls only when already at the bottom', () => {
-    const view = new LogView({ id: 'log0' });
+    const view = new MessageView({ id: 'log0' });
     view.el.scrollTop = 0;
     view.el.clientHeight = 100;
     view.el.scrollHeight = 100; // at bottom
     view.appendLines([{ time: 't', message: 'm' }]);
     assert.equal(view.el.scrollTop, 100);
 
-    const scrolled = new LogView({ id: 'log1' });
+    const scrolled = new MessageView({ id: 'log1' });
     scrolled.el.scrollTop = 0;
     scrolled.el.clientHeight = 100;
     scrolled.el.scrollHeight = 300; // scrolled up
@@ -112,28 +112,28 @@ test('append auto-scrolls only when already at the bottom', () => {
     assert.equal(scrolled.el.scrollTop, 0);
 });
 
-test('applyLogUpdate routes append/clear/replace by id', () => {
-    const view = new LogView({ id: 'log0' });
-    registerLogView('log0', view);
+test('applyMessageUpdate routes append/clear/replace by id', () => {
+    const view = new MessageView({ id: 'log0' });
+    registerMessageView('log0', view);
 
-    applyLogUpdate({ type: 'log_update', id: 'log0', action: 'append', lines: [{ time: 't', message: 'a' }] });
+    applyMessageUpdate({ type: 'log_update', id: 'log0', action: 'append', lines: [{ time: 't', message: 'a' }] });
     assert.equal(view.el.children.length, 1);
 
-    applyLogUpdate({ type: 'log_update', id: 'log0', action: 'clear' });
+    applyMessageUpdate({ type: 'log_update', id: 'log0', action: 'clear' });
     assert.equal(view.el.children.length, 0);
 
-    applyLogUpdate({ type: 'log_update', id: 'log0', action: 'replace', lines: [{ time: 't', message: 'b' }, { time: 't', message: 'c' }] });
+    applyMessageUpdate({ type: 'log_update', id: 'log0', action: 'replace', lines: [{ time: 't', message: 'b' }, { time: 't', message: 'c' }] });
     assert.equal(view.el.children.length, 2);
 });
 
-test('applyLogUpdate no-ops for unknown ids', () => {
-    assert.doesNotThrow(() => applyLogUpdate({ type: 'log_update', id: 'nope', action: 'clear' }));
+test('applyMessageUpdate no-ops for unknown ids', () => {
+    assert.doesNotThrow(() => applyMessageUpdate({ type: 'log_update', id: 'nope', action: 'clear' }));
 });
 
 test('destroy deregisters the view', () => {
-    const view = new LogView({ id: 'log0' });
-    registerLogView('log0', view);
+    const view = new MessageView({ id: 'log0' });
+    registerMessageView('log0', view);
     view.destroy();
-    applyLogUpdate({ type: 'log_update', id: 'log0', action: 'append', lines: [{ time: 't', message: 'x' }] });
+    applyMessageUpdate({ type: 'log_update', id: 'log0', action: 'append', lines: [{ time: 't', message: 'x' }] });
     assert.equal(view.el.children.length, 0);
 });

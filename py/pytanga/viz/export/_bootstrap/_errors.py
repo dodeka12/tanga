@@ -105,7 +105,11 @@ def js_cdn_check_script() -> str:
     var _resultsShown = false;
     function _pollReady() {{
         _pollCount++;
-        if (window.__tanga_ready) {{
+        if (window.__tanga_ready && typeof window.__tanga === 'undefined') {{
+            // The adapter ran, but the viewer library never exposed its bridge.
+            ESSENTIAL_FAILED = true;
+        }}
+        if (window.__tanga_ready && typeof window.__tanga !== 'undefined') {{
 {hide_loading}
             if (_slowNotice) {{ _slowNotice.remove(); _slowNotice = null; }}
             return;
@@ -228,10 +232,10 @@ def js_cdn_check_script() -> str:
             banner.style.textAlign = 'center';
             banner.style.lineHeight = '1.5';
             banner.innerHTML =
-                '<strong>Failed to load Three.js.</strong> ' +
+                '<strong>Failed to load the viewer.</strong> ' +
                 'The 3D viewer cannot start. Please check your internet connection, ' +
-                'firewall, or corporate proxy settings. Three.js loads from CDN ' +
-                '(cdn.jsdelivr.net).';
+                'firewall, or corporate proxy settings. Three.js and the Tanga viewer ' +
+                'bundle load from CDN (cdn.jsdelivr.net).';
             document.body.insertBefore(banner, document.body.firstChild);
         }}
 

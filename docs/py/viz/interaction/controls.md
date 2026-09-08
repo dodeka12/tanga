@@ -294,18 +294,32 @@ TableView(
 
 ### Column types, alignment & persistence
 
-Each column has a type — `"number"`, `"string"`, `"bool"`, or an `enum` with a
-fixed list of allowed values.  Pass `column_types=[...]` with one entry per
-column: `None` (deduce), a scalar (`"number"`/`"float"`/`"int"`,
-`"string"`/`"text"`, `"bool"`/`"boolean"`), or a list of strings (enum).
-Deduction uses the Python types of the initial cells — all bools → `bool`, all
-numbers → `number`, otherwise `string` (a mixed number/string column is
-`string`).
+Each column has a type — `"number"`, `"string"`, `"bool"`, an `enum` with a
+fixed list of allowed values, a `column` whose allowed values are the de-duped
+values of another column, or a backend-only `custom` enum.  Pass
+`column_types=[...]` with one entry per column: `None` (deduce), a scalar
+(`"number"`/`"float"`/`"int"`, `"string"`/`"text"`, `"bool"`/`"boolean"`,
+`"custom"`), a list of strings (enum), `{"kind": "column", "source": <index>}`,
+or `{"kind": "custom"}`.  Deduction uses the Python types of the initial cells —
+all bools → `bool`, all numbers → `number`, otherwise `string` (a mixed
+number/string column is `string`).
 
 The type drives rendering and editing: numbers right-align and reject
-non-numeric input, booleans render an always-on checkbox, enums edit via a
-dropdown of the allowed values, and strings edit as free text.  Cell values are
-always strings on the wire (`"true"`/`"false"` for booleans).
+non-numeric input, booleans render an always-on checkbox, enums and `column`
+columns edit via a dropdown of the allowed values, and strings edit as free
+text.  A `column` column's dropdown is the de-duped, first-seen values of the
+zero-based `source` column (computed live, so it follows edits to that column);
+it can be selected with the header context menu's "From column…" submenu.  A
+`custom` column cannot be selected or changed from the frontend — it is set by
+the backend and its dropdown is populated at edit time by an `enum_options`
+handler (see below).  Cell values are always strings on the wire
+(`"true"`/`"false"` for booleans).
+
+For a `custom` column, pass `on_enum_options=...` to `TableView` (or `Table`)
+with an async handler `async def handler(request, event) -> list[str]`; it
+receives a `TableEnumOptionsRequest(col, row, current)` every time a cell
+enters edit mode and must return the list of available display strings for the
+dropdown.
 
 A `number` column can carry a **format string** — a Python `str.format`
 template applied to the numeric value at serialization (e.g. `"{:.2f}m"`
@@ -326,7 +340,7 @@ The handler payloads are `TableCellChange(row, col, value)`,
 `TableRowAdd(row, values)`, `TableColumnAdd(col, header, values)`,
 `TableRowsDelete(rows)`, `TableColumnDelete(col)`,
 `TableCellSelect(row, col)`, `TableColumnTitleChange(col, title)`, and
-`TableColumnTypeChange(col, target, ok, column_type)` (all zero-based;
+`TableColumnTypeChange(col, target, ok, column_type, source=None)` (all zero-based;
 `TableCellSelect` fields are `None` when the selection is cleared). Cell values
 are strings on the wire —
 coerce in the handler as needed. Read and write single cells with

@@ -1,7 +1,7 @@
 // Tanga Viewer — `MarkdownView`: a read-only rendered-markdown control (with KaTeX).
 
 import { ControlView } from './control-view.js';
-import { createMarkdown } from '../controls-panel.js';
+import { createMarkdown } from '../controls/markdown.js';
 
 export class MarkdownView extends ControlView {
     constructor({ id, value = '' } = {}) {

@@ -1,7 +1,7 @@
 // Tanga Viewer — `CheckboxView`: a checkbox control rendered as a `View`.
 
 import { ControlView } from './control-view.js';
-import { createCheckbox } from '../controls-panel.js';
+import { createCheckbox } from '../controls/checkbox.js';
 
 export class CheckboxView extends ControlView {
     constructor({ id, label = '', value = false, tooltip = '', variant = 'default' } = {}) {

@@ -3,9 +3,20 @@
 
 """Tests for Table column-type deduction, explicit hints, and serialization."""
 
+import asyncio
+
 import pytest
 
-from pytanga.viz import ColumnType, Table, TableColumnTypeChange, TableView, Visualizer
+from pytanga.viz import (
+    ColumnType,
+    ControlEvent,
+    Table,
+    TableColumnTypeChange,
+    TableEnumOptionsRequest,
+    TableView,
+    Visualizer,
+)
+from pytanga.viz._controls import _resolve_column_type
 
 
 def _types(ctrl: Table) -> list[dict]:
@@ -100,6 +111,36 @@ def test_column_type_format_to_dict() -> None:
     assert ColumnType("number").to_dict() == {"kind": "number"}
 
 
+def test_column_type_column_to_dict() -> None:
+    assert ColumnType("column", source=1).to_dict() == {"kind": "column", "source": 1}
+
+
+def test_column_type_custom_to_dict() -> None:
+    assert ColumnType("custom").to_dict() == {"kind": "custom"}
+
+
+def test_resolve_column_type_column_and_custom() -> None:
+    assert _resolve_column_type({"kind": "column", "source": 2}, []) == ColumnType(
+        "column", source=2
+    )
+    assert _resolve_column_type({"kind": "custom"}, []) == ColumnType("custom")
+    assert _resolve_column_type("custom", []) == ColumnType("custom")
+
+
+def test_table_serializes_column_and_custom_types() -> None:
+    t = Table(
+        id="t",
+        columns=["names", "seat", "notes"],
+        rows=[["alice", "bob", "x"], ["bob", "alice", "y"]],
+        column_types=[None, {"kind": "column", "source": 0}, "custom"],
+    )
+    assert _types(t) == [
+        {"kind": "string"},
+        {"kind": "column", "source": 0},
+        {"kind": "custom"},
+    ]
+
+
 def test_number_format_serializes() -> None:
     t = Table(
         id="t",
@@ -183,6 +224,75 @@ def test_convert_to_enum_requires_less_than_20() -> None:
     assert _types(t2) == [{"kind": "string"}]  # unchanged
 
 
+def test_convert_to_column_sets_source_and_keeps_cells() -> None:
+    t = Table(
+        id="t",
+        columns=["names", "seat"],
+        rows=[["alice", "bob"], ["bob", "alice"]],
+        column_types=[None, "string"],
+    )
+    assert t.convert_column(1, "column", source=0) is True
+    assert _types(t) == [{"kind": "string"}, {"kind": "column", "source": 0}]
+    assert t.rows == [["alice", "bob"], ["bob", "alice"]]  # cells untouched
+
+
+def test_convert_to_column_rejects_invalid_source() -> None:
+    t = Table(
+        id="t",
+        columns=["a", "b"],
+        rows=[["x", "y"]],
+        column_types=["string", "string"],
+    )
+    assert t.convert_column(0, "column") is False  # missing source
+    assert t.convert_column(0, "column", source=5) is False  # out of range
+    assert t.convert_column(0, "column", source=0) is False  # self
+    assert _types(t) == [{"kind": "string"}, {"kind": "string"}]
+
+
+def test_convert_to_custom_rejected() -> None:
+    t = Table(id="t", columns=["a"], rows=[["x"]], column_types=["string"])
+    assert t.convert_column(0, "custom") is False
+    assert _types(t) == [{"kind": "string"}]
+
+
+def test_custom_column_cannot_be_converted() -> None:
+    t = Table(id="t", columns=["a"], rows=[["x"]], column_types=["custom"])
+    assert t.convert_column(0, "number") is False
+    assert t.convert_column(0, "string") is False
+    assert _types(t) == [{"kind": "custom"}]
+
+
+def test_convert_column_repurposes_source() -> None:
+    t = Table(
+        id="t",
+        columns=["a", "b", "c"],
+        rows=[["x", "y", "z"]],
+        column_types=["string", {"kind": "column", "source": 0}, "string"],
+    )
+    assert t.convert_column(1, "column", source=2) is True
+    assert _types(t)[1] == {"kind": "column", "source": 2}
+
+
+def test_handle_event_column_type_change_carries_source() -> None:
+    t = Table(
+        id="t",
+        columns=["names", "seat"],
+        rows=[["alice", "bob"], ["bob", "alice"]],
+        column_types=[None, "string"],
+    )
+    d = t.handle_event(
+        "column_type_change",
+        {"value": {"col": 1, "type": "column", "source": 0}},
+    )
+    assert isinstance(d.value, TableColumnTypeChange)
+    assert d.value.source == 0
+    assert d.value.ok is True
+    assert d.push["column_types"] == [
+        {"kind": "string"},
+        {"kind": "column", "source": 0},
+    ]
+
+
 def test_handle_event_column_type_change_push_on_success() -> None:
     t = Table(id="t", columns=["b"], rows=[[True], [False]], column_types=["bool"])
     d = t.handle_event("column_type_change", {"value": {"col": 0, "type": "number"}})
@@ -203,6 +313,123 @@ def test_undo_restores_column_types() -> None:
     t.undo()
     assert t.columns == ["a", "b"]
     assert _types(t) == [{"kind": "number"}, {"kind": "string"}]
+
+
+def test_enum_options_request_fields() -> None:
+    req = TableEnumOptionsRequest(col=0, row=3, current="alice")
+    assert req.col == 0
+    assert req.row == 3
+    assert req.current == "alice"
+
+
+def test_enum_options_values_invokes_handler_and_stringifies() -> None:
+    async def handler(request: TableEnumOptionsRequest, event: ControlEvent) -> list:
+        assert request.col == 0
+        assert request.row == 1
+        assert request.current == "x"
+        return ["a", "b", 3]
+
+    t = Table(id="t", columns=["a"], rows=[["x"]], on_enum_options=handler)
+    result = asyncio.run(
+        t.enum_options_values(TableEnumOptionsRequest(0, 1, "x"), ControlEvent())
+    )
+    assert result == ["a", "b", "3"]
+
+
+def test_enum_options_values_empty_when_unset() -> None:
+    t = Table(id="t", columns=["a"], rows=[["x"]])
+    assert (
+        asyncio.run(
+            t.enum_options_values(TableEnumOptionsRequest(0, 0, ""), ControlEvent())
+        )
+        == []
+    )
+
+
+def test_enum_options_not_serialized() -> None:
+    t = Table(id="t", columns=["a"], rows=[["x"]], on_enum_options=lambda: None)
+    assert "on_enum_options" not in t.serialize()
+
+
+def test_on_enum_options_registered_as_handler() -> None:
+    from pytanga.viz._controls import ControlHandlerRegistry
+
+    async def handler(request, event) -> None:
+        return None
+
+    registry = ControlHandlerRegistry()
+    ctrl = Table(id="tbl", columns=["a"], rows=[["x"]], on_enum_options=handler)
+    ctrl.register_handlers(registry)
+    assert registry.get("tbl", "enum_options") is handler
+
+
+def test_table_view_forwards_enum_options() -> None:
+    from pytanga.viz.views import control_to_view
+
+    def handler(request, event) -> None:
+        return None
+
+    view = TableView("tv", columns=["a"], rows=[["x"]], on_enum_options=handler)
+    assert view.control.on_enum_options is handler
+    # control_to_view reuses the same control object.
+    assert control_to_view(view.control).control.on_enum_options is handler
+
+
+class _FakeLayoutTransport:
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, dict]] = []
+
+    def send(self, message: dict) -> None:
+        return None
+
+    async def send_to_browser(self, browser_id: str, message: dict) -> None:
+        self.sent.append((browser_id, message))
+
+    def get(self, id: str, event: str = "change"):
+        return None
+
+    def unregister(self, id: str, event: str | None = None) -> None:
+        return None
+
+
+def test_dispatch_enum_options_replies_to_browser(monkeypatch) -> None:
+    from pytanga.viz._layout import LayoutHostImpl
+
+    async def handler(request: TableEnumOptionsRequest, event: ControlEvent) -> list:
+        assert request.col == 0
+        assert request.row == 1
+        assert request.current == "x"
+        return ["a", "b"]
+
+    ctrl = Table(id="tbl", columns=["a"], rows=[["x"]], on_enum_options=handler)
+    transport = _FakeLayoutTransport()
+    layout = LayoutHostImpl(
+        None, scene_factory=lambda name: None, transport=transport, client_log=None
+    )
+    monkeypatch.setattr(layout, "resolve_control", lambda cid: ctrl)
+
+    asyncio.run(
+        layout.dispatch_control_event(
+            "control:enum_options",
+            {
+                "control_id": "tbl",
+                "browser_id": "b1",
+                "value": {"col": 0, "row": 1, "current": "x", "request_id": 7},
+            },
+        )
+    )
+
+    assert transport.sent == [
+        (
+            "b1",
+            {
+                "type": "enum_options",
+                "id": "tbl",
+                "request_id": 7,
+                "values": ["a", "b"],
+            },
+        )
+    ]
 
 
 # ── view state (column widths, row height, sort) ────────────

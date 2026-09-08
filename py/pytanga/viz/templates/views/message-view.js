@@ -1,22 +1,23 @@
-// Tanga Viewer — `LogView`: a live, scrollable two-column (time | message) log.
-// Rows alternate shading via CSS; appends auto-scroll only when already at the
-// bottom, and `max_history` (when set) mirrors the backend's FIFO drop-oldest.
+// Tanga Viewer — `MessageView`: a live, scrollable two-column (time | message)
+// list.  Rows alternate shading via CSS; appends auto-scroll only when already
+// at the bottom, and `max_history` (when set) mirrors the backend's FIFO
+// drop-oldest.
 
 import { View } from './view.js';
 
-const _logViews = new Map(); // id → LogView (runtime registry for `log_update`)
+const _messageViews = new Map(); // id → MessageView (runtime registry)
 
-export function registerLogView(id, view) {
-    _logViews.set(id, view);
+export function registerMessageView(id, view) {
+    _messageViews.set(id, view);
 }
 
-export function forgetLogView(id) {
-    _logViews.delete(id);
+export function forgetMessageView(id) {
+    _messageViews.delete(id);
 }
 
-/** Route a server `log_update` message to the registered `LogView` (no-op if unknown). */
-export function applyLogUpdate(msg) {
-    const view = _logViews.get(msg.id);
+/** Route a server update message to the registered `MessageView` (no-op if unknown). */
+export function applyMessageUpdate(msg) {
+    const view = _messageViews.get(msg.id);
     if (!view) return;
     if (msg.action === 'clear') {
         view.clearLines();
@@ -27,13 +28,13 @@ export function applyLogUpdate(msg) {
     }
 }
 
-export class LogView extends View {
+export class MessageView extends View {
     constructor({ id = null, max_history = null, lines = [] } = {}) {
         super();
-        this.logId = id;
+        this.messageId = id;
         this.maxHistory = max_history;
         this.initialLines = lines || [];
-        this.el.classList.add('tanga-log-view');
+        this.el.classList.add('tanga-message-view');
         this.el.style.overflow = 'auto';
     }
 
@@ -53,15 +54,15 @@ export class LogView extends View {
 
     _appendRow(line) {
         const row = document.createElement('div');
-        row.className = 'tanga-log-row';
+        row.className = 'tanga-message-row';
 
         const time = document.createElement('div');
-        time.className = 'tanga-log-time';
+        time.className = 'tanga-message-time';
         time.textContent = line && line.time != null ? String(line.time) : '';
         row.appendChild(time);
 
         const message = document.createElement('div');
-        message.className = 'tanga-log-message';
+        message.className = 'tanga-message-text';
         message.textContent = this._messageOf(line);
         row.appendChild(message);
 
@@ -98,7 +99,7 @@ export class LogView extends View {
     }
 
     destroy() {
-        if (this.logId != null) forgetLogView(this.logId);
+        if (this.messageId != null) forgetMessageView(this.messageId);
         super.destroy();
     }
 }

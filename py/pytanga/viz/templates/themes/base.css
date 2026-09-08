@@ -14,8 +14,12 @@
     --tanga-accent-soft: #88aaff;
     --tanga-danger: #c88;
 
-    /* Native control color scheme (select dropdowns, etc.). */
+    /* Native control color scheme (select dropdowns, etc.).  Set the actual
+       `color-scheme` at the root so native widgets — including the option list
+       of a <select> in Firefox — follow the active theme instead of rendering
+       with a hard white background. */
     --tanga-color-scheme: dark;
+    color-scheme: var(--tanga-color-scheme);
 
     /* Surfaces. */
     --tanga-panel-bg: rgba(20, 20, 40, 0.92);

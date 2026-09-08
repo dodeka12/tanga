@@ -3,7 +3,13 @@
 // as `controls-panel.js` (sliders/dropdowns stacked, buttons in a row).
 
 import { View } from './view.js';
-import { createSlider, createButton, createDropdown, createTextField, createTextArea, createColorPicker, createCheckbox } from '../controls-panel.js';
+import { createSlider } from '../controls/slider.js';
+import { createButton } from '../controls/button.js';
+import { createDropdown } from '../controls/dropdown.js';
+import { createTextField } from '../controls/text-field.js';
+import { createTextArea } from '../controls/text-area.js';
+import { createColorPicker } from '../controls/color-picker.js';
+import { createCheckbox } from '../controls/checkbox.js';
 import { sendLog } from '../events.js';
 
 export class BannerView extends View {

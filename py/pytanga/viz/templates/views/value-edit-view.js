@@ -1,7 +1,7 @@
 // Tanga Viewer — `ValueEditView`: a numeric stepper control rendered as a `View`.
 
 import { ControlView } from './control-view.js';
-import { createValueEdit } from '../controls-panel.js';
+import { createValueEdit } from '../controls/value-edit.js';
 
 export class ValueEditView extends ControlView {
     constructor({ id, label = '', tooltip = '', min = 0, max = 1, step = 0.1, digits = 2, value = 0, editable = true } = {}) {

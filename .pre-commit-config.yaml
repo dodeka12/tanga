@@ -11,3 +11,12 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: viewer-bundle-drift
+        name: viewer bundle drift check
+        entry: uv run python tools/build-viewer-js.py --check
+        language: system
+        pass_filenames: false
+        files: ^(py/pytanga/viz/templates/.*\.(js|glsl)|py/pytanga/viz/export/_bootstrap/.*\.py)$

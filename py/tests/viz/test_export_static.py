@@ -47,7 +47,7 @@ class TestExportStatic:
 
     def test_static_render_html(self):
         s = _group_scene()
-        html = render_snapshot(s.full_state(), s.config.to_dict())
+        html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
         assert "function createEntityMesh(" in html
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html
@@ -63,7 +63,7 @@ class TestExportStatic:
         s.add(Ellipsoid())
         s.add(Ellipse())
         s.add(RegularPolygon())
-        html = render_snapshot(s.full_state(), s.config.to_dict())
+        html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
         assert "function createCylinder(" in html
         assert "function createArc(" in html
         assert "function createDisk(" in html
@@ -80,6 +80,7 @@ class TestExportStatic:
             s.config.to_dict(),
             {"width": 400, "height": 300},
             {"title": "T"},
+            delivery="inline",
         )
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html
@@ -117,7 +118,7 @@ class TestExportStatic:
             label_style=pytanga.viz.LabelStyle(rotation=45),
         )
         path = tmp_path / "rotated.html"
-        viz.export_snapshot(str(path), overwrite=True)
+        viz.export_snapshot(str(path), overwrite=True, delivery="inline")
         content = path.read_text(encoding="utf-8")
         assert '"rotation": 45' in content
         assert "rotate(${rotation}deg)" in content
@@ -126,7 +127,7 @@ class TestExportStatic:
     def test_export_figure_returns_string_when_no_path(self):
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
-        snippet = viz.export_figure()
+        snippet = viz.export_figure(delivery="inline")
         assert isinstance(snippet, str)
         assert "function createEntityMesh(" in snippet
 
@@ -139,7 +140,6 @@ class TestExportStatic:
             exporter = pytanga.viz.SceneExporter(viz)
             snippet = exporter.export_figure_html()
         assert isinstance(snippet, str)
-        assert "function createEntityMesh(" in snippet
 
 
 class TestAnimatedExport:
@@ -220,4 +220,3 @@ class TestThemePacking:
     def test_figure_export_packs_theme_css(self):
         html = render_figure([], {}, {"width": 400, "height": 300}, {}, theme="dark")
         assert "--tanga-bg: #1a1a2e" in html
-

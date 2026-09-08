@@ -10,15 +10,19 @@ Usage::
     glb_bytes = build_gltf_scene(entities, config)
 """
 
+from ._cdn import DeliveryMode, build_bundle_url, resolve_delivery_ref
 from ._figure_html import render_export_figure, render_figure
 from ._gltf import build_glb, build_gltf_scene
 from ._html import render_export_html, render_snapshot
 
 __all__ = [
+    "DeliveryMode",
+    "build_bundle_url",
     "build_glb",
     "build_gltf_scene",
     "render_export_figure",
     "render_export_html",
     "render_figure",
     "render_snapshot",
+    "resolve_delivery_ref",
 ]

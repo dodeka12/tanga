@@ -14,7 +14,7 @@ import { ButtonView } from './button-view.js';
 import { DropdownView } from './dropdown-view.js';
 import { FileChooserView } from './file-chooser-view.js';
 import { TextFieldView } from './text-field-view.js';
-import { LogView, registerLogView } from './log-view.js';
+import { MessageView, registerMessageView } from './message-view.js';
 import { LabelView } from './label-view.js';
 import { MarkdownView } from './markdown-view.js';
 import { TextAreaView } from './text-area-view.js';
@@ -154,14 +154,14 @@ export function buildViewTree(node, ws, reuse, newScenes) {
     }
 
     if (node.type === 'log_view') {
-        const view = new LogView({
+        const view = new MessageView({
             id: node.id,
             max_history: node.max_history ?? null,
             lines: node.lines || [],
         });
         view.viewId = node.id;
         applySizeSpecs(view, node);
-        registerLogView(view.logId, view);
+        registerMessageView(view.messageId, view);
         return view;
     }
 

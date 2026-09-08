@@ -41,14 +41,14 @@ globalThis.document = {
 };
 
 const {
-    createFileChooser,
     applyControlValue,
     forgetControl,
 } = await import('../../../py/pytanga/viz/templates/controls-panel.js');
+const { createTextField } = await import('../../../py/pytanga/viz/templates/controls/text-field.js');
 
 test('applyControlValue and forgetControl manage the control registry', () => {
-    createFileChooser({ id: 'fc', owner: 'layout', label: 'File', value: '' });
-    createFileChooser({ id: 'panel', label: 'Panel', value: '' });
+    createTextField({ id: 'fc', owner: 'layout', label: 'File', value: '' });
+    createTextField({ id: 'panel', label: 'Panel', value: '' });
 
     const unknown = [];
     const origDebug = console.debug;

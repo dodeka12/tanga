@@ -1,12 +1,12 @@
-/* Tanga viewer — live log view (two-column rows with alternating shading). */
+/* Tanga viewer — live message view (two-column rows with alternating shading). */
 
-.tanga-log-view {
+.tanga-message-view {
     font-family: var(--tanga-font);
     color: var(--tanga-fg);
     background: var(--tanga-bg);
 }
 
-.tanga-log-row {
+.tanga-message-row {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 8px;
@@ -14,18 +14,18 @@
     border-bottom: 1px solid var(--tanga-border-subtle);
 }
 
-.tanga-log-row:nth-child(even) {
+.tanga-message-row:nth-child(even) {
     background: var(--tanga-surface);
 }
 
-.tanga-log-time {
+.tanga-message-time {
     color: var(--tanga-fg-muted);
     font-family: monospace;
     white-space: nowrap;
     user-select: none;
 }
 
-.tanga-log-message {
+.tanga-message-text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }

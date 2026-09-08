@@ -22,9 +22,10 @@ function normalizeColumnType(t) {
             kind: String(t.kind),
             values: Array.isArray(t.values) ? t.values.map(String) : [],
             format: typeof t.format === 'string' ? t.format : null,
+            source: Number.isInteger(t.source) ? t.source : null,
         };
     }
-    return { kind: 'string', values: [], format: null };
+    return { kind: 'string', values: [], format: null, source: null };
 }
 
 export function createTable(ctrl) {
@@ -72,15 +73,31 @@ export function createTable(ctrl) {
     let sortState = ctrl.sort ? { colIndex: ctrl.sort.column, dir: ctrl.sort.order } : null;
     let rowHeight = ctrl.row_height || 24;
     let colScale = 1;
+    let enumRequestSeq = 0;
+    let pendingEnum = null;
 
     const clearChildren = (el) => {
         while (el.firstChild) el.removeChild(el.firstChild);
     };
 
     const columnKind = (ci) => (columnTypes[ci] && columnTypes[ci].kind) || 'string';
-    const enumValues = (ci) => {
+    const columnValues = (ci) => {
         const t = columnTypes[ci];
-        return (t && t.kind === 'enum' && Array.isArray(t.values)) ? t.values : [];
+        if (t && t.kind === 'enum' && Array.isArray(t.values)) return t.values;
+        if (t && t.kind === 'column' && Number.isInteger(t.source)) {
+            const out = [];
+            const seen = new Set();
+            for (const row of rows) {
+                const v = row[t.source];
+                const s = (v === undefined || v === null) ? '' : String(v);
+                if (s !== '' && !seen.has(s)) {
+                    seen.add(s);
+                    out.push(s);
+                }
+            }
+            return out;
+        }
+        return [];
     };
     const alignFor = (kind) => (kind === 'number' ? 'right' : kind === 'bool' ? 'center' : 'left');
     const isNumeric = (text) => {
@@ -245,30 +262,70 @@ export function createTable(ctrl) {
         }
     }
 
+    function typeMenuButton(menu, text, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tanga-table-type-menu-item';
+        btn.textContent = text;
+        btn.addEventListener('click', (e) => {
+            // Stop the click from reaching the document-level "close menu"
+            // handler.  `fillColumnSubmenu`/`fillTypeMenu` clear+re-fill the menu
+            // synchronously (detaching the clicked button), which would otherwise
+            // make the bubbling click look "outside" the menu and close it.
+            e.stopPropagation();
+            onClick();
+        });
+        menu.appendChild(btn);
+        return btn;
+    }
+
+    function fillColumnSubmenu(menu, i) {
+        clearChildren(menu);
+        const current = columnTypes[i] ? columnTypes[i].kind : 'string';
+        const back = typeMenuButton(menu, '‹ Back', () => fillTypeMenu(menu, i, current));
+        back.classList.add('tanga-table-type-menu-back');
+        columns.forEach((title, idx) => {
+            if (idx === i) return;
+            typeMenuButton(menu, String(title) || ('Column ' + (idx + 1)), () => {
+                closeTypeMenu();
+                sendControlEvent('control:column_type_change', ctrl.id, { col: i, type: 'column', source: idx });
+            });
+        });
+    }
+
+    function fillTypeMenu(menu, i, current) {
+        clearChildren(menu);
+        ['number', 'string', 'bool', 'enum'].forEach((t) => {
+            if (t === current) return;
+            typeMenuButton(menu, t.charAt(0).toUpperCase() + t.slice(1), () => {
+                closeTypeMenu();
+                sendControlEvent('control:column_type_change', ctrl.id, { col: i, type: t });
+            });
+        });
+        // "From column…" is always offered so a column-typed column can re-point
+        // its source as well.
+        typeMenuButton(menu, 'From column…', () => fillColumnSubmenu(menu, i));
+    }
+
     function openTypeMenu(i, clientX, clientY) {
         closeTypeMenu();
         const current = columnTypes[i] ? columnTypes[i].kind : 'string';
-        const options = ['number', 'string', 'bool', 'enum'].filter((t) => t !== current);
+        if (current === 'custom') return;  // backend-only type cannot be changed
         const menu = document.createElement('div');
         menu.className = 'tanga-table-type-menu';
         menu.style.left = clientX + 'px';
         menu.style.top = clientY + 'px';
-        options.forEach((t) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'tanga-table-type-menu-item';
-            btn.textContent = t.charAt(0).toUpperCase() + t.slice(1);
-            btn.addEventListener('click', () => {
-                closeTypeMenu();
-                sendControlEvent('control:column_type_change', ctrl.id, { col: i, type: t });
-            });
-            menu.appendChild(btn);
-        });
+        fillTypeMenu(menu, i, current);
         document.body.appendChild(menu);
         typeMenu = menu;
     }
 
-    document.addEventListener('click', closeTypeMenu);
+    document.addEventListener('click', (e) => {
+        // Keep the menu open while clicking inside it (e.g. the "From column…"
+        // submenu buttons); close it only for clicks elsewhere.
+        if (e.target && e.target.closest && e.target.closest('.tanga-table-type-menu')) return;
+        closeTypeMenu();
+    });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeTypeMenu();
     });
@@ -520,6 +577,23 @@ export function createTable(ctrl) {
         setActive(cellAt(target.row, target.col));
     }
 
+    function attachEditorEvents(widget, td, finish) {
+        widget.addEventListener('blur', () => finish(true));
+        widget.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (finish(true)) moveEditor(td, 0, 1);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                finish(false);
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                if (finish(true)) moveEditor(td, e.shiftKey ? -1 : 1, 0);
+            }
+        });
+    }
+
     function openEditor(td) {
         if (!td || editorCell === td) return false;
         const { row: ri, col: ci } = cellCoordinates(td);
@@ -527,10 +601,11 @@ export function createTable(ctrl) {
         const original = rows[ri] && rows[ri][ci] !== undefined ? rows[ri][ci] : '';
 
         let widget;
-        if (kind === 'enum') {
+        let pending = null;
+        if (kind === 'enum' || kind === 'column') {
             widget = document.createElement('select');
             widget.className = 'tanga-table-editor';
-            const values = enumValues(ci);
+            const values = columnValues(ci);
             values.forEach((v) => {
                 const opt = document.createElement('option');
                 opt.value = String(v);
@@ -553,6 +628,31 @@ export function createTable(ctrl) {
             // which would re-focus the cell and blur this editor (committing
             // early). Stop it so space toggles without closing the editor.
             widget.addEventListener('click', (e) => e.stopPropagation());
+        } else if (kind === 'custom') {
+            widget = document.createElement('select');
+            widget.className = 'tanga-table-editor';
+            const loading = document.createElement('option');
+            loading.textContent = 'Loading…';
+            widget.appendChild(loading);
+            pending = {
+                requestId: ++enumRequestSeq,
+                td,
+                ri,
+                ci,
+                original,
+                kind,
+                widget,
+                loading: true,
+                done: false,
+                finish: null,
+            };
+            pendingEnum = pending;
+            sendControlEvent('control:enum_options', ctrl.id, {
+                col: ci,
+                row: ri,
+                current: String(original),
+                request_id: pending.requestId,
+            });
         } else {
             widget = document.createElement('input');
             widget.type = 'text';
@@ -563,16 +663,26 @@ export function createTable(ctrl) {
         let done = false;
         const finish = (commit) => {
             if (done) return false;
-            const raw = kind === 'bool' ? (widget.checked ? 'true' : 'false') : String(widget.value);
+            const currentWidget = pending ? pending.widget : widget;
+            const raw = kind === 'bool'
+                ? (currentWidget.checked ? 'true' : 'false')
+                : String(currentWidget.value);
             const fmt = columnTypes[ci] && columnTypes[ci].format;
             // A formatted number column lets the backend parse the value (it may
             // be entered in the formatted form, e.g. "3.50m"), so skip the local
             // numeric check there; unformatted number columns keep it.
             const invalid = kind === 'number' && !fmt && !isNumeric(raw);
-            const value = commit && !invalid ? raw : String(original);
+            // A custom column that hasn't received its options yet has nothing to
+            // commit; treat it as a revert to the original value.
+            const stillLoading = pending && pending.loading;
+            const value = commit && !invalid && !stillLoading ? raw : String(original);
             done = true;
+            if (pending) {
+                pending.done = true;
+                if (pendingEnum === pending) pendingEnum = null;
+            }
             if (editorCell === td) editorCell = null;
-            if (commit && !invalid) {
+            if (commit && !invalid && !stillLoading) {
                 rows[ri][ci] = value;
                 sendControlEvent('control:cell_change', ctrl.id, { row: ri, col: ci, value });
             }
@@ -584,23 +694,11 @@ export function createTable(ctrl) {
             }
             // Return focus to the active cell so the cursor keys keep working.
             if (activeTd && activeTd.focus) activeTd.focus();
-            return commit && !invalid;
+            return commit && !invalid && !stillLoading;
         };
+        if (pending) pending.finish = finish;
 
-        widget.addEventListener('blur', () => finish(true));
-        widget.addEventListener('keydown', (e) => {
-            e.stopPropagation();
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (finish(true)) moveEditor(td, 0, 1);
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                finish(false);
-            } else if (e.key === 'Tab') {
-                e.preventDefault();
-                if (finish(true)) moveEditor(td, e.shiftKey ? -1 : 1, 0);
-            }
-        });
+        attachEditorEvents(widget, td, finish);
 
         // Commit any other open editor before opening this one.
         if (editorCell) {
@@ -619,6 +717,37 @@ export function createTable(ctrl) {
         return true;
     }
 
+    function applyEnumOptions(requestId, values) {
+        if (!pendingEnum || pendingEnum.requestId !== requestId) return;
+        const p = pendingEnum;
+        if (p.done) {
+            pendingEnum = null;
+            return;
+        }
+        // Reuse the "Loading…" <select> already in the cell instead of swapping
+        // in a new one — replacing the focused element would fire its blur and
+        // commit prematurely.
+        const widget = p.widget;
+        const opts = (values || []).map(String);
+        widget.replaceChildren();
+        opts.forEach((v) => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            widget.appendChild(opt);
+        });
+        const original = String(p.original);
+        if (original !== '' && !opts.includes(original)) {
+            const opt = document.createElement('option');
+            opt.value = original;
+            opt.textContent = original;
+            widget.appendChild(opt);
+        }
+        widget.value = original;
+        p.loading = false;
+        widget.focus();
+    }
+
     render();
 
     tbody.addEventListener('dblclick', (e) => {
@@ -627,6 +756,10 @@ export function createTable(ctrl) {
     });
 
     tbody.addEventListener('click', (e) => {
+        // Clicking inside an open editor (e.g. opening the enum/column dropdown)
+        // must not steal focus back to the cell — that would blur the editor and
+        // close it immediately.
+        if (e.target && e.target.closest && e.target.closest('.tanga-table-editor')) return;
         const td = e.target && e.target.closest ? e.target.closest('td.tanga-cell') : null;
         if (td) setActive(td);
     });
@@ -706,9 +839,11 @@ export function createTable(ctrl) {
             rowHeight = value.row_height || 24;
             sortState = value.sort ? { colIndex: value.sort.column, dir: value.sort.order } : null;
             editorCell = null;
+            pendingEnum = null;
             setActive(null);
             render();
         },
+        applyEnumOptions,
     });
     applyTooltip(wrapper, ctrl);
 

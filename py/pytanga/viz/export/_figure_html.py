@@ -13,22 +13,25 @@ import json
 from typing import Any, Dict, List
 from uuid import uuid4
 
+from pytanga.viz.export._cdn import build_library_script_tag
 from pytanga.viz.export._bootstrap import (
     contains_math,
-    generate_bootstrap_js,
     generate_theme_css,
     html_snippet_template,
     js_annotation_panel,
     js_apply_camera,
     js_autofit_camera,
     js_footer,
-    js_imports,
+    js_tanga_destructure,
     js_render_loop,
     js_resize_handler,
     js_scene_build,
     js_scene_setup,
     js_title_overlay,
+    katex_css_for_delivery,
     katex_css_if_needed,
+    third_party_scripts,
+    three_import_map,
 )
 
 
@@ -38,15 +41,15 @@ def render_figure(
     figure_style: Dict[str, Any],
     figure_config: Dict[str, Any],
     theme: str = "dark",
+    delivery: str = "cdn",
+    delivery_ref: str | None = None,
 ) -> str:
     """Render a figure HTML snippet from the unified scene objects."""
     fig_id = "tanga-fig-" + uuid4().hex[:8]
     scene_json = json.dumps({"objects": objects}, indent=0)
 
-    bootstrap = generate_bootstrap_js(
-        _build_static_figure_adapter(
-            fig_id, scene_json, scene_config, figure_style, figure_config
-        )
+    adapter = _build_static_figure_adapter(
+        fig_id, scene_json, scene_config, figure_style, figure_config
     )
 
     w = figure_style.get("width", 800)
@@ -84,6 +87,8 @@ def render_figure(
                 '@0.16.11/dist/katex.min.css">\n'
             )
 
+    katex_css = katex_css_for_delivery(delivery, katex_css)
+
     if responsive:
         container_style = (
             f"width:100%;height:100%;position:relative;overflow:hidden;"
@@ -109,7 +114,10 @@ def render_figure(
         container_style=container_style,
         katex_css=katex_css,
         responsive_style_block=responsive_style_block,
-        bootstrap_js=bootstrap,
+        library_script=build_library_script_tag(delivery, delivery_ref),
+        adapter_js=adapter,
+        third_party_html=third_party_scripts(delivery),
+        import_map_html=three_import_map(delivery),
         config_data_json=config_json,
         theme_css=generate_theme_css(theme),
     )
@@ -173,7 +181,7 @@ def _build_static_figure_adapter(
         "window.__tanga_ready = true;",
         "// Figure bootstrap for Tanga 3D figure export",
         "",
-        js_imports(),
+        js_tanga_destructure(),
         "",
         js_apply_camera(),
         "",

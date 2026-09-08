@@ -383,7 +383,11 @@ class Visualizer(_JupyterDisplayMixin):
             return Scene(
                 self._config, name="", styles=self._global_styles.copy(), host=self
             )
-        dim = self._config.space_dim if space_dim is None else _validate_space_dim(space_dim)
+        dim = (
+            self._config.space_dim
+            if space_dim is None
+            else _validate_space_dim(space_dim)
+        )
         cfg = SceneConfig(
             background_color=self._config.background_color,
             camera=None,
@@ -2521,6 +2525,8 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str:
         theme = theme or self._theme
         scene = self._layout.scenes[scene_name]
@@ -2535,20 +2541,34 @@ class Visualizer(_JupyterDisplayMixin):
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
                 title=self._title,
                 theme=theme,
+                delivery=delivery,
+                delivery_ref=delivery_ref,
             )
         from pytanga.viz.export._html import render_snapshot
 
         objects = scene.full_state(styles_map=scene.styles.kind)
         return render_snapshot(
-            objects=objects, scene_config=scene.config.to_dict(), theme=theme
+            objects=objects,
+            scene_config=scene.config.to_dict(),
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
-    def _open_scene_snapshot(self, scene_name: str) -> None:
+    def _open_scene_snapshot(
+        self,
+        scene_name: str,
+        *,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
+    ) -> None:
         import tempfile
         import webbrowser
         from pathlib import Path
 
-        html = self._render_snapshot_html(scene_name)
+        html = self._render_snapshot_html(
+            scene_name, delivery=delivery, delivery_ref=delivery_ref
+        )
         tmp = Path(tempfile.mktemp(suffix=".html"))
         tmp.write_text(html, encoding="utf-8")
         webbrowser.open(str(tmp))
@@ -2562,11 +2582,18 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> None:
         from pathlib import Path
 
         html = self._render_snapshot_html(
-            scene_name, animation=animation, anim_style=anim_style, theme=theme
+            scene_name,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
         p = Path(path).expanduser()
         if not p.suffix:
@@ -2585,12 +2612,16 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> None:
         """Export the current scene as a self-contained HTML file.
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
         snapshot instead of a static one.  *theme* overrides the active UI theme
-        for the packed CSS (default: the active theme).
+        for the packed CSS (default: the active theme).  *delivery* selects how
+        the viewer runtime is delivered: ``"cdn"`` (default), ``"inline"``, or
+        ``"offline"``.
         """
         self._export_scene_snapshot(
             "",
@@ -2599,6 +2630,8 @@ class Visualizer(_JupyterDisplayMixin):
             animation=animation,
             anim_style=anim_style,
             theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def open_snapshot(self) -> None:
@@ -2613,6 +2646,8 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str:
         from pytanga.viz._figure import FigureConfig
         from pytanga.viz._styles import FigureStyle
@@ -2635,6 +2670,8 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
                 theme=theme,
+                delivery=delivery,
+                delivery_ref=delivery_ref,
             )
         from pytanga.viz.export._figure_html import render_figure
 
@@ -2645,6 +2682,8 @@ class Visualizer(_JupyterDisplayMixin):
             resolved.to_dict(),
             fig_config.to_dict(),
             theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def _export_scene_figure(
@@ -2657,6 +2696,8 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str | None:
         from pathlib import Path
 
@@ -2666,6 +2707,8 @@ class Visualizer(_JupyterDisplayMixin):
             animation=animation,
             anim_style=anim_style,
             theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
         if path is None:
             return html
@@ -2688,12 +2731,16 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str | None:
         """Export the current scene as an HTML snippet (or return the string).
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
         figure instead of a static one.  *theme* overrides the active UI theme
-        for the packed CSS (default: the active theme).
+        for the packed CSS (default: the active theme).  *delivery* selects how
+        the viewer runtime is delivered: ``"cdn"`` (default), ``"inline"``, or
+        ``"offline"``.
         """
         return self._export_scene_figure(
             "",
@@ -2703,6 +2750,8 @@ class Visualizer(_JupyterDisplayMixin):
             animation=animation,
             anim_style=anim_style,
             theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def _export_scene_glb(
@@ -2745,14 +2794,19 @@ class Visualizer(_JupyterDisplayMixin):
         height: int | str = "500px",
         *,
         scene_name: str = "",
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> Any:
         """Display a scene as standalone HTML (no server required).
 
         In Jupyter, returns an ``IPython.display.IFrame`` embedding the
         standalone document via a data URL (no server, no style leakage).
-        Outside Jupyter, opens the snapshot in a browser window.
+        Outside Jupyter, opens the snapshot in a browser window.  *delivery*
+        selects how the viewer runtime is delivered (``"cdn"`` default).
         """
-        html = self._render_snapshot_html(scene_name)
+        html = self._render_snapshot_html(
+            scene_name, delivery=delivery, delivery_ref=delivery_ref
+        )
 
         if self._jupyter:
             import base64

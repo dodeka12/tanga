@@ -1,7 +1,7 @@
 // Tanga Viewer — `LabelView`: a read-only text label rendered as a `View`.
 
 import { ControlView } from './control-view.js';
-import { createLabel } from '../controls-panel.js';
+import { createLabel } from '../controls/label.js';
 
 export class LabelView extends ControlView {
     constructor({ id, value = '', font_size = 14 } = {}) {

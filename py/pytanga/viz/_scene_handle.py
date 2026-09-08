@@ -640,11 +640,20 @@ class VizSceneHandle(_JupyterDisplayMixin):
         )
 
     def display_snapshot(
-        self, width: int | str = "100%", height: int | str = "500px"
+        self,
+        width: int | str = "100%",
+        height: int | str = "500px",
+        *,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> Any:
         """Display this scene as standalone HTML (no server required)."""
         return self._viz.display_snapshot(
-            width=width, height=height, scene_name=self._name
+            width=width,
+            height=height,
+            scene_name=self._name,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def display_static(
@@ -668,6 +677,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> None:
         """Export this scene as a self-contained HTML file."""
         self._viz._export_scene_snapshot(
@@ -677,6 +688,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             animation=animation,
             anim_style=anim_style,
             theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def open_snapshot(self) -> None:
@@ -692,6 +705,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> Any:
         """Export this scene as an HTML snippet (or return the string)."""
         return self._viz._export_scene_figure(
@@ -702,6 +717,8 @@ class VizSceneHandle(_JupyterDisplayMixin):
             animation=animation,
             anim_style=anim_style,
             theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def export_glb(self, path: Any, *, overwrite: bool = False) -> None:

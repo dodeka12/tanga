@@ -18,6 +18,30 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';"""
 
 
+_TANGA_BRIDGE_SYMBOLS = (
+    "THREE, OrbitControls, CSS2DRenderer, CSS2DObject, "
+    "Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, "
+    "buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect"
+)
+
+
+def js_runtime_imports() -> str:
+    """Return the full runtime import block: ``THREE`` + the used addons."""
+    return "import * as THREE from 'three';\n" + js_imports()
+
+
+def js_tanga_destructure() -> str:
+    """Return the line that destructures the runtime + API from ``window.__tanga``."""
+    return f"const {{ {_TANGA_BRIDGE_SYMBOLS} }} = window.__tanga;"
+
+
+def js_tanga_bridge() -> str:
+    """Return the ``window.__tanga = { … };`` assignment exposing the library API."""
+    return f"""window.__tanga = {{
+    {_TANGA_BRIDGE_SYMBOLS},
+}};"""
+
+
 def js_scene_setup(
     *,
     bg_color: str | None,

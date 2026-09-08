@@ -40,10 +40,33 @@ jobs:
       id-token: write
       contents: read
 
+  drift-check:
+    name: Verify viewer bundles
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python toolchain
+        run: uv sync --group dev
+
+      - name: Install esbuild
+        run: npm install --prefix dev
+
+      - name: Check viewer bundle
+        run: uv run python tools/build-viewer-js.py --check
+
   push-tag:
     name: Push RC tag
-    needs: [version-bump, publish-wheels]
-    if: needs.version-bump.result == 'success' && needs.publish-wheels.result == 'success'
+    needs: [version-bump, publish-wheels, drift-check]
+    if: needs.version-bump.result == 'success' && needs.publish-wheels.result == 'success' && needs.drift-check.result == 'success'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout

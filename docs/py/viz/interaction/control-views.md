@@ -448,7 +448,7 @@ TableView(
     label="",
     columns=(),             # list[str] | tuple[str, ...]
     rows=(),                # list[list[Any]] | tuple[tuple[Any, ...], ...]
-    column_types=None,      # per-column hints: None | "number" | "string" | "bool" | [..values]
+    column_types=None,      # None | "number"/"string"/"bool"/"custom" | [..values] | {"kind": "column", "source": <index>}
     json_path=None,         # str | None — auto-save JSON path
     allow_add_rows=True,    # bool
     allow_add_columns=True, # bool
@@ -465,6 +465,7 @@ TableView(
     on_column_type_change=None,   # Handler — (change: TableColumnTypeChange, event)
     on_cell_select=None,    # Handler — (select: TableCellSelect, event)
     on_change=None,         # Handler — (value: dict, event) on undo/redo
+    on_enum_options=None,   # EnumOptionsHandler — backend-only custom-enum provider
     **kwargs,
 )
 ```
@@ -473,12 +474,17 @@ Cell values are strings on the wire. See [Controls](controls.md) for the
 handler payloads (`TableCellChange` / `TableRowAdd` / `TableColumnAdd` /
 `TableRowsDelete`) and for undo/redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y).
 
-Each column has a type — `number`, `string`, `bool`, or an `enum` (a fixed list
-of allowed strings).  `column_types` sets them explicitly (one entry per
-column: `None` deduces, a scalar name picks a scalar type, a list of strings is
-an enum); omitted entries deduce from the initial data (all bools → `bool`, all
-numbers → `number`, else `string`).  Numbers right-align and reject non-numeric
-input, booleans show an always-on checkbox, enums edit through a dropdown.
+Each column has a type — `number`, `string`, `bool`, an `enum` (a fixed list of
+allowed strings), a `column` (dropdown of the de-duped values of another
+column), or a backend-only `custom` enum.  `column_types` sets them explicitly
+(one entry per column: `None` deduces, a scalar name picks a scalar type, a
+list of strings is an enum, `{"kind": "column", "source": <index>}` points at
+another column); omitted entries deduce from the initial data (all bools →
+`bool`, all numbers → `number`, else `string`).  Numbers right-align and reject
+non-numeric input, booleans show an always-on checkbox, enums and `column`
+columns edit through a dropdown.  A `custom` column is set by the backend only
+(`column_types=[..., "custom"]`), cannot be changed from the frontend, and its
+dropdown is populated at edit time by the `on_enum_options` handler.
 
 `TableView` also exposes `undo()` / `redo()` / `can_undo` / `can_redo`, plus
 `insert_row(index, values=None)` / `insert_column(index, header="", values=None,

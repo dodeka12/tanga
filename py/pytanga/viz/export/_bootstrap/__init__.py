@@ -25,10 +25,17 @@ from pytanga.viz.export._bootstrap._html import (  # noqa: F401
     _RENDERER_FILES,
     _strip_imports,
     generate_bootstrap_js,
+    generate_library_js,
     generate_theme_css,
     html_fullpage_template,
     html_snippet_template,
     katex_css_if_needed,
+    katex_css_for_delivery,
+    library_source_files,
+    offline_katex_css,
+    static_third_party,
+    third_party_scripts,
+    three_import_map,
 )
 from pytanga.viz.export._bootstrap._overlays import (  # noqa: F401
     js_annotation_panel,
@@ -41,7 +48,10 @@ from pytanga.viz.export._bootstrap._scene import (  # noqa: F401
     js_imports,
     js_render_loop,
     js_resize_handler,
+    js_runtime_imports,
     js_scene_setup,
+    js_tanga_bridge,
+    js_tanga_destructure,
 )
 from pytanga.viz.export._bootstrap._utils import (  # noqa: F401
     _escape_html,

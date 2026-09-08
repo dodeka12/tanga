@@ -45,6 +45,7 @@ _EVENT_MSG_MAP = {
     "column_delete": "control:column_delete",
     "column_title_change": "control:column_title_change",
     "column_type_change": "control:column_type_change",
+    "enum_options": "control:enum_options",
     "undo": "control:undo",
     "redo": "control:redo",
     "table_view_change": "control:table_view_change",

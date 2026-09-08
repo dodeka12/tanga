@@ -169,6 +169,12 @@
     background: var(--tanga-panel-hover);
 }
 
+.tanga-table-type-menu-item.tanga-table-type-menu-back {
+    color: var(--tanga-fg-muted, var(--tanga-fg));
+    border-bottom: 1px solid var(--tanga-border);
+    margin-bottom: 2px;
+}
+
 .tanga-sort-arrow {
     position: absolute;
     top: 50%;
@@ -275,11 +281,17 @@
     width: auto;
 }
 
-/* Enum editor: force the native <select> dropdown into the theme's color
-   scheme and give its options a solid themed background, so the highlighted
-   option keeps readable contrast in every theme. */
+/* Enum/column editor: a compact <select> styled like the standard dropdown —
+   soft input background + themed options, so the highlighted/selected option
+   keeps readable contrast instead of a harsh native white. */
 .tanga-cell select.tanga-table-editor {
     color-scheme: var(--tanga-color-scheme);
+    background: var(--tanga-input-bg);
+    border: 1px solid var(--tanga-border-strong);
+    border-radius: 4px;
+    color: var(--tanga-fg);
+    padding: 2px 6px;
+    cursor: pointer;
 }
 
 .tanga-cell select.tanga-table-editor option {
