@@ -107,13 +107,50 @@ class ThemeRegistry:
         entry = self._entry(theme_id)
         return str(entry.get("label", theme_id))
 
-    def theme_css_files(self, theme_id: str) -> list[str]:
-        """Return the resolved CSS file list (URL paths relative to ``themes/``)."""
-        return [r.served_rel for r in self._resolve(theme_id)]
+    def is_bundled(self, theme_id: str) -> bool:
+        """Return True when *theme_id* is a bundled theme (CDN-servable).
 
-    def theme_css_paths(self, theme_id: str) -> list[Path]:
+        Runtime-registered external themes resolve to on-disk ``user/<id>/...``
+        files that are not published to the repo, so they cannot be served from
+        the jsDelivr CDN.
+        """
+        if theme_id in self._themes:
+            return True
+        if theme_id in self._external:
+            return False
+        raise KeyError(f"unknown theme: {theme_id!r}")
+
+    def theme_css_files(
+        self,
+        theme_id: str,
+        *,
+        components: bool = True,
+        overrides: bool = True,
+    ) -> list[str]:
+        """Return the resolved CSS file list (URL paths relative to ``themes/``).
+
+        *components* / *overrides* select whether the UI component sheets and
+        per-theme overrides are included (both default True).  Standalone exports
+        without themed controls pass ``components=False, overrides=False`` to keep
+        only the base + token shell.
+        """
+        return [
+            r.served_rel
+            for r in self._resolve(theme_id, components=components, overrides=overrides)
+        ]
+
+    def theme_css_paths(
+        self,
+        theme_id: str,
+        *,
+        components: bool = True,
+        overrides: bool = True,
+    ) -> list[Path]:
         """Return the resolved CSS file list as absolute source paths."""
-        return [r.source for r in self._resolve(theme_id)]
+        return [
+            r.source
+            for r in self._resolve(theme_id, components=components, overrides=overrides)
+        ]
 
     def theme_source_files(self, theme_id: str) -> list[Path]:
         """Return the theme's own source files (tokens + overrides), for watching."""
@@ -184,7 +221,13 @@ class ThemeRegistry:
             raise KeyError(f"unknown theme: {theme_id!r}") from None
         return dict(entry)
 
-    def _resolve(self, theme_id: str) -> list[_ResolvedCss]:
+    def _resolve(
+        self,
+        theme_id: str,
+        *,
+        components: bool = True,
+        overrides: bool = True,
+    ) -> list[_ResolvedCss]:
         resolved: list[_ResolvedCss] = []
 
         def _bundled(rel: str) -> _ResolvedCss:
@@ -200,30 +243,34 @@ class ThemeRegistry:
             resolved.append(
                 _ResolvedCss(f"{ext.served_prefix}/tokens.css", ext.dir / "tokens.css")
             )
-            for rel in self._components:
-                resolved.append(_bundled(rel))
-            for name in ext.overrides:
-                resolved.append(
-                    _ResolvedCss(
-                        f"{ext.served_prefix}/overrides/{name}",
-                        ext.dir / "overrides" / name,
+            if components:
+                for rel in self._components:
+                    resolved.append(_bundled(rel))
+            if overrides:
+                for name in ext.overrides:
+                    resolved.append(
+                        _ResolvedCss(
+                            f"{ext.served_prefix}/overrides/{name}",
+                            ext.dir / "overrides" / name,
+                        )
                     )
-                )
             return resolved
 
         entry = self._entry(theme_id)
         theme_tokens = entry.get("tokens")
         if theme_tokens:
             resolved.append(_bundled(str(theme_tokens)))
-        for rel in self._components:
-            resolved.append(_bundled(rel))
-        overrides = entry.get("overrides") or {}
-        if not isinstance(overrides, dict):
-            raise ValueError(
-                f"theme {theme_id!r} 'overrides' must be an object of id → path"
-            )
-        for rel in overrides.values():
-            resolved.append(_bundled(str(rel)))
+        if components:
+            for rel in self._components:
+                resolved.append(_bundled(rel))
+        if overrides:
+            overrides_map = entry.get("overrides") or {}
+            if not isinstance(overrides_map, dict):
+                raise ValueError(
+                    f"theme {theme_id!r} 'overrides' must be an object of id → path"
+                )
+            for rel in overrides_map.values():
+                resolved.append(_bundled(str(rel)))
         return resolved
 
     def _path(self, rel: str) -> Path:

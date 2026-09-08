@@ -16,7 +16,7 @@ from uuid import uuid4
 from pytanga.viz.export._cdn import build_library_script_tag
 from pytanga.viz.export._bootstrap import (
     contains_math,
-    generate_theme_css,
+    theme_css_for_delivery,
     html_snippet_template,
     js_annotation_panel,
     js_apply_camera,
@@ -119,7 +119,13 @@ def render_figure(
         third_party_html=third_party_scripts(delivery),
         import_map_html=three_import_map(delivery),
         config_data_json=config_json,
-        theme_css=generate_theme_css(theme),
+        theme_css=theme_css_for_delivery(
+            theme,
+            delivery,
+            delivery_ref,
+            include_components=False,
+            include_overrides=False,
+        ),
     )
 
 

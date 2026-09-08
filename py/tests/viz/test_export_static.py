@@ -207,16 +207,29 @@ class TestCdnUnreachableDetection:
 
 
 class TestThemePacking:
-    def test_snapshot_packs_base_theme_css(self):
+    def test_snapshot_cdn_references_theme_css(self):
         html = render_snapshot([], {})
-        assert "--tanga-bg: #1a1a2e" in html
-        assert ".tanga-icon-button" in html
+        assert "cdn.jsdelivr.net/gh/dodeka12/tanga" in html
+        assert "/py/pytanga/viz/templates/themes/base.css" in html
+        # Static exports render no controls, so the UI component sheets are gone.
+        assert "controls/button.css" not in html
+        assert "views/group-view.css" not in html
+        # In cdn mode the theme shell is referenced, not inlined.
+        assert "--tanga-bg: #1a1a2e" not in html
 
-    def test_light_export_packs_light_tokens_and_overrides(self):
-        html = render_snapshot([], {}, theme="light")
+    def test_snapshot_inline_inlines_shell_without_components(self):
+        html = render_snapshot([], {}, delivery="inline")
+        assert "--tanga-bg: #1a1a2e" in html
+        assert ".tanga-icon-button" in html  # base.css shell
+        assert ".tanga-action-button" not in html  # component sheet dropped
+
+    def test_light_export_inlines_light_tokens_without_overrides(self):
+        html = render_snapshot([], {}, theme="light", delivery="inline")
         assert "--tanga-bg: #f5f5f7" in html
-        assert "accent-color: var(--tanga-accent)" in html
+        # Per-theme button/checkbox overrides are UI CSS and dropped.
+        assert "accent-color: var(--tanga-accent)" not in html
 
-    def test_figure_export_packs_theme_css(self):
+    def test_figure_cdn_references_theme_css(self):
         html = render_figure([], {}, {"width": 400, "height": 300}, {}, theme="dark")
-        assert "--tanga-bg: #1a1a2e" in html
+        assert "/py/pytanga/viz/templates/themes/base.css" in html
+        assert "controls/button.css" not in html
