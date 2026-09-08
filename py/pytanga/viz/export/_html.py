@@ -16,7 +16,7 @@ from typing import Any
 
 from pytanga.viz.export._cdn import build_library_script_tag
 from pytanga.viz.export._bootstrap import (
-    generate_theme_css,
+    theme_css_for_delivery,
     js_annotation_panel,
     js_apply_camera,
     js_autofit_camera,
@@ -56,7 +56,13 @@ def render_snapshot(
 
     html = (_TEMPLATES_DIR / "export_viewer.html").read_text(encoding="utf-8")
     adapter = _build_static_fullpage_adapter(scene_config)
-    theme_css = generate_theme_css(theme)
+    theme_css = theme_css_for_delivery(
+        theme,
+        delivery,
+        delivery_ref,
+        include_components=False,
+        include_overrides=False,
+    )
 
     return (
         html.replace("__CDN_CHECK_SCRIPT__", _CDN_CHECK_SCRIPT)

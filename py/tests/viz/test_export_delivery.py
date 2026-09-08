@@ -70,6 +70,45 @@ def test_figure_cdn_references_bundle():
     assert "function createEntityMesh(" not in html
 
 
+def test_snapshot_cdn_references_theme_css():
+    s = _scene()
+    html = render_snapshot(s.full_state(), s.config.to_dict())
+    assert "/py/pytanga/viz/templates/themes/base.css" in html
+    # Static exports have no themed controls, so component sheets are dropped.
+    assert "controls/button.css" not in html
+    assert "--tanga-bg: #1a1a2e" not in html
+
+
+def test_snapshot_inline_inlines_shell_without_components():
+    s = _scene()
+    html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
+    assert "--tanga-bg: #1a1a2e" in html
+    assert ".tanga-action-button" not in html
+
+
+def test_snapshot_external_theme_falls_back_to_inline(tmp_path):
+    from pytanga.viz._themes import register_theme, registry
+
+    theme_dir = tmp_path / "corp"
+    theme_dir.mkdir()
+    (theme_dir / "tokens.css").write_text(
+        ":root { --tanga-bg: #123456; }\n", encoding="utf-8"
+    )
+    register_theme("corp_cdn_fallback", theme_dir)
+    try:
+        s = _scene()
+        html = render_snapshot(
+            s.full_state(),
+            s.config.to_dict(),
+            theme="corp_cdn_fallback",
+            delivery="cdn",
+        )
+        assert "--tanga-bg: #123456" in html
+        assert "themes/user/corp_cdn_fallback" not in html
+    finally:
+        registry._external.pop("corp_cdn_fallback", None)
+
+
 def test_resolve_ref_falls_back_to_main_for_dev(monkeypatch):
     import pytanga.viz.export._cdn as cdn
 

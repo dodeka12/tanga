@@ -60,13 +60,22 @@ themes target those stable classes.
 
 ## Export packing
 
-`generate_theme_css(theme_id)` (in `export/_bootstrap/_html.py`) reads the
-resolved CSS files and returns one inlined `<style>` block — symmetric to how
-`generate_bootstrap_js` packs the renderer modules.  It is threaded through
-`render_snapshot` / `render_figure` / the animated renderers via a `theme: str =
-"dark"` parameter (and `__THEME_CSS__` in `export_viewer.html`), and
-`Visualizer.export_snapshot` / `export_figure` accept `theme=` (defaulting to
-`self.theme`).
+`generate_theme_css(theme_id, *, include_components=True, include_overrides=True)`
+(in `export/_bootstrap/_html.py`) reads the resolved CSS files and returns one
+inlined `<style>` block — symmetric to how `generate_bootstrap_js` packs the
+renderer modules.  `theme_css_for_delivery(theme_id, delivery, delivery_ref, *,
+include_components=…, include_overrides=…)` adapts that per delivery mode:
+`"cdn"` returns one jsDelivr `<link>` per bundled theme file (pinned to the same
+ref as the viewer bundle), `"inline"`/`"offline"` inline, and runtime-registered
+external themes always inline (they are not on the CDN).
+
+Standalone exports render no themed controls, so `render_snapshot`,
+`render_figure`, and the animated renderers pass `include_components=False,
+include_overrides=False` to pack only the base + token shell — dropping
+`controls/*.css`, `views/*.css`, and per-theme overrides.  The `theme: str =
+"dark"` parameter (and `__THEME_CSS__` in `export_viewer.html`) still selects
+the active theme, and `Visualizer.export_snapshot` / `export_figure` accept
+`theme=` (defaulting to `self.theme`).
 
 ### Delivery modes
 

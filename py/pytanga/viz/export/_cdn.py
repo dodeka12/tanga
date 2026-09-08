@@ -13,6 +13,7 @@ DeliveryMode = Literal["cdn", "inline", "offline"]
 
 _CDN_BASE = "https://cdn.jsdelivr.net/gh/dodeka12/tanga"
 _BUNDLE_PATH = "js/tanga-viewer.js"
+_THEMES_REPO_PATH = "py/pytanga/viz/templates/themes"
 
 _FINAL_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 _RC_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)rc(\d+)$")
@@ -95,6 +96,15 @@ def resolve_delivery_ref(override: str | None = None) -> str:
 def build_bundle_url(ref: str | None = None) -> str:
     """Return the full jsDelivr URL for the committed viewer bundle."""
     return f"{_CDN_BASE}@{resolve_delivery_ref(ref)}/{_BUNDLE_PATH}"
+
+
+def build_theme_css_url(rel: str, ref: str | None = None) -> str:
+    """Return the jsDelivr URL for a bundled theme CSS file.
+
+    *rel* is a theme-relative path as returned by
+    ``ThemeRegistry.theme_css_files`` (e.g. ``base.css`` or ``dark/tokens.css``).
+    """
+    return f"{_CDN_BASE}@{resolve_delivery_ref(ref)}/{_THEMES_REPO_PATH}/{rel}"
 
 
 def build_library_script_tag(

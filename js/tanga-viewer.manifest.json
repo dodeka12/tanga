@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "ab388095bb39b6a9a67a97cb022806d47a1bf947d7e7b4d0af8a01855b33c45c",
+  "generator_sha256": "6b5c09b3ad6b218deccac9a0248f2be6a7fd9e93aed2070d7bf0cce0cf2224aa",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -195,6 +195,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "8a74a721837cf04047603813bc3b5baf62110e64c6e11c0880571fc2d31d9413",
+  "fingerprint_sha256": "892c74ab5d4e8026d3926a691444ee5605650f359a1418eb7328e1485590a04a",
   "bundle_sha256": "781676822e6a3d30670b27c48c000ccd501f49e7e862c0fc07e67ecd27f65caa"
 }

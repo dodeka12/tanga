@@ -35,6 +35,7 @@ from pytanga.viz.export._bootstrap._html import (  # noqa: F401
     offline_katex_css,
     static_third_party,
     third_party_scripts,
+    theme_css_for_delivery,
     three_import_map,
 )
 from pytanga.viz.export._bootstrap._overlays import (  # noqa: F401

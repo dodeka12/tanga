@@ -272,18 +272,71 @@ def generate_bootstrap_js(adapter_js: str) -> str:
     return generate_library_js() + "\n\n" + adapter_js
 
 
-def generate_theme_css(theme_id: str) -> str:
+def generate_theme_css(
+    theme_id: str,
+    *,
+    include_components: bool = True,
+    include_overrides: bool = True,
+) -> str:
     """Return the active theme's CSS inlined into a single ``<style>`` block.
 
     Symmetric to :func:`generate_bootstrap_js`: reads the resolved CSS files
     (via the theme registry) and concatenates them in order, so standalone HTML
     exports carry the active theme with no external ``<link>``.
+
+    *include_components* / *include_overrides* drop the UI component sheets and
+    per-theme overrides (both True by default).  Static exports that render no
+    themed controls pass both as ``False`` to pack only the base + token shell.
     """
     from pytanga.viz._themes import registry
 
-    parts = [p.read_text(encoding="utf-8") for p in registry.theme_css_paths(theme_id)]
+    parts = [
+        p.read_text(encoding="utf-8")
+        for p in registry.theme_css_paths(
+            theme_id,
+            components=include_components,
+            overrides=include_overrides,
+        )
+    ]
     css = "\n".join(parts)
     return f"<style>\n{css}\n</style>\n"
+
+
+def theme_css_for_delivery(
+    theme_id: str,
+    delivery: str,
+    delivery_ref: str | None = None,
+    *,
+    include_components: bool = True,
+    include_overrides: bool = True,
+) -> str:
+    """Return the theme CSS for *delivery* as ``<link>`` tags or an inline block.
+
+    ``"cdn"`` references each bundled theme CSS file from jsDelivr (pinned to the
+    same ref as the viewer bundle).  Runtime-registered external themes are not
+    published to the CDN, so they fall back to inlining.  ``"inline"`` and
+    ``"offline"`` always inline via :func:`generate_theme_css`.
+    """
+    from pytanga.viz._themes import registry
+
+    if delivery == "cdn" and registry.is_bundled(theme_id):
+        from pytanga.viz.export._cdn import build_theme_css_url
+
+        files = registry.theme_css_files(
+            theme_id,
+            components=include_components,
+            overrides=include_overrides,
+        )
+        return "".join(
+            f'<link rel="stylesheet" href="{build_theme_css_url(rel, delivery_ref)}">\n'
+            for rel in files
+        )
+
+    return generate_theme_css(
+        theme_id,
+        include_components=include_components,
+        include_overrides=include_overrides,
+    )
 
 
 def _sdf_shader_injection() -> str:
