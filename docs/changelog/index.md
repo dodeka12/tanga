@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.0.0] — 2026-09-09
+- `install_info()` + hardened `install_docs()`/`install_examples()` · `LogView`/`MessageView` local-time timestamp formatting (`show_date`/`show_utc_offset`)
+- Bug fixes: animated HTML export froze on frame 0 (missing `updateEntityMesh`/`removeEntityMesh` on the viewer bridge) · exported "Loop" checkbox had no effect
+→ [Details](2026-09-09_c331b359.md)
+
 ## [Since 1.17.0 (2.0.0-rc4)] — 2026-09-08
 - Standalone HTML exports no longer inline UI control/view CSS (base + token shell only) · `delivery="cdn"` references the theme shell from jsDelivr
 → [Details](2026-09-08_7184d679.md)
