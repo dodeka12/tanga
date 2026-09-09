@@ -29,11 +29,19 @@ export function applyMessageUpdate(msg) {
 }
 
 export class MessageView extends View {
-    constructor({ id = null, max_history = null, lines = [] } = {}) {
+    constructor({
+        id = null,
+        max_history = null,
+        lines = [],
+        show_date = false,
+        show_utc_offset = false,
+    } = {}) {
         super();
         this.messageId = id;
         this.maxHistory = max_history;
         this.initialLines = lines || [];
+        this.showDate = show_date;
+        this.showUtcOffset = show_utc_offset;
         this.el.classList.add('tanga-message-view');
         this.el.style.overflow = 'auto';
     }
@@ -52,13 +60,52 @@ export class MessageView extends View {
         return JSON.stringify(rest);
     }
 
+    /**
+     * Column 1 text: the stored UTC ISO-8601 timestamp rendered in the
+     * browser's local timezone.  `show_date` / `show_utc_offset` add the local
+     * date and the local offset to UTC; the time (with microseconds, when the
+     * source string carries them) is always shown.
+     */
+    _timeOf(line) {
+        const raw = line && line.time != null ? String(line.time) : '';
+        const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/.exec(raw);
+        if (!m) return raw;
+
+        const [, year, month, day, hour, minute, second, frac, zone] = m;
+
+        // Stored offset → minutes east of UTC (default 0 = UTC).
+        let zoneMin = 0;
+        if (zone && zone !== 'Z') {
+            const sign = zone[0] === '-' ? -1 : 1;
+            const [hh, mm] = zone.slice(1).split(':');
+            zoneMin = sign * (Number(hh) * 60 + Number(mm || 0));
+        }
+
+        // Wall-clock time (in the stored zone) → UTC instant → local time.
+        const utcMs = Date.UTC(+year, +month - 1, +day, +hour, +minute, +second) - zoneMin * 60000;
+        const d = new Date(utcMs);
+
+        const pad = (n) => String(n).padStart(2, '0');
+        const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${frac ? '.' + frac : ''}`;
+        const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        const offMin = -d.getTimezoneOffset();
+        const off = `${offMin >= 0 ? '+' : '-'}${pad(Math.floor(Math.abs(offMin) / 60))}:${pad(Math.abs(offMin) % 60)}`;
+
+        const parts = [];
+        if (this.showDate) parts.push(date);
+        parts.push(time);
+        if (this.showUtcOffset) parts.push(off);
+        return parts.join(' ');
+    }
+
     _appendRow(line) {
         const row = document.createElement('div');
         row.className = 'tanga-message-row';
 
         const time = document.createElement('div');
         time.className = 'tanga-message-time';
-        time.textContent = line && line.time != null ? String(line.time) : '';
+        time.textContent = this._timeOf(line);
         row.appendChild(time);
 
         const message = document.createElement('div');

@@ -71,6 +71,40 @@ test('_messageOf uses message else JSON of non-time keys', () => {
     assert.equal(view._messageOf({ time: 't', level: 'info' }), '{"level":"info"}');
 });
 
+test('_timeOf renders the local time per flags', () => {
+    const ts = '2026-09-09T12:34:56.789012+00:00';
+    const d = new Date(Date.UTC(2026, 8, 9, 12, 34, 56));
+    const pad = (n) => String(n).padStart(2, '0');
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.789012`;
+    const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const offMin = -d.getTimezoneOffset();
+    const off = `${offMin >= 0 ? '+' : '-'}${pad(Math.floor(Math.abs(offMin) / 60))}:${pad(Math.abs(offMin) % 60)}`;
+
+    assert.equal(new MessageView({ id: 'log0' })._timeOf({ time: ts }), time);
+    assert.equal(
+        new MessageView({ id: 'log1', show_date: true })._timeOf({ time: ts }),
+        `${date} ${time}`,
+    );
+    assert.equal(
+        new MessageView({ id: 'log2', show_utc_offset: true })._timeOf({ time: ts }),
+        `${time} ${off}`,
+    );
+    assert.equal(
+        new MessageView({ id: 'log3', show_date: true, show_utc_offset: true })._timeOf({ time: ts }),
+        `${date} ${time} ${off}`,
+    );
+});
+
+test('_timeOf handles missing microseconds and non-ISO values', () => {
+    const view = new MessageView({ id: 'log0' });
+    const d = new Date(Date.UTC(2026, 8, 9, 12, 34, 56));
+    const pad = (n) => String(n).padStart(2, '0');
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    assert.equal(view._timeOf({ time: '2026-09-09T12:34:56+00:00' }), time);
+    assert.equal(view._timeOf({ time: 't1' }), 't1');
+    assert.equal(view._timeOf({}), '');
+});
+
 test('appendLines adds rows and enforces max_history', () => {
     const view = new MessageView({ id: 'log0', max_history: 2 });
     view.appendLines([

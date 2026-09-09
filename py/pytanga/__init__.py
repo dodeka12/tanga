@@ -19,6 +19,7 @@ from .geometry import (
 )
 from .install_docs import install_docs
 from .install_examples import install_examples
+from .install_info import install_info
 from .matrix import MVMatrix, MVProductMatrix
 from .tensor import MVTensor
 
@@ -28,6 +29,7 @@ __all__ = [
     "BladeMask",
     "install_docs",
     "install_examples",
+    "install_info",
     "Circle",
     "DataArray",
     "Direction",

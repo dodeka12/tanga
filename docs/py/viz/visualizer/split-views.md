@@ -78,10 +78,13 @@ markdown = MarkdownView("md", value="# Title\n\n$E = mc^2$")
 `LogView` is not a control — its lines are appended from the backend, so it has
 its own `log_update` push.  `log()` captures a UTC timestamp and accepts either
 a string (stored as `message`) or a dict (whose keys are folded into the line);
-the frontend shows `message`, falling back to JSON of the other keys:
+the frontend shows `message`, falling back to JSON of the other keys.  The
+first column shows the timestamp in the browser's local timezone — by default
+just the time with microseconds; `show_date=True` adds the date and
+`show_utc_offset=True` adds the local offset to UTC:
 
 ```python
-log = LogView(id="log", max_history=1000)   # None = unlimited
+log = LogView(id="log", max_history=1000, show_date=True, show_utc_offset=True)   # None = unlimited
 log.log("plain line")
 log.log({"message": "structured", "level": "info"})
 log.get_log()          # -> list[dict] (copies)

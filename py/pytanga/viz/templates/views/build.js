@@ -158,6 +158,8 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             id: node.id,
             max_history: node.max_history ?? null,
             lines: node.lines || [],
+            show_date: node.show_date ?? false,
+            show_utc_offset: node.show_utc_offset ?? false,
         });
         view.viewId = node.id;
         applySizeSpecs(view, node);
