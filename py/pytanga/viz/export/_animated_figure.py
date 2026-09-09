@@ -101,7 +101,6 @@ def render_export_animated_figure(
         fig_id,
         recording_data,
         fps,
-        loop,
         fig_style,
         fig_cfg,
         show_controls,
@@ -204,7 +203,7 @@ def render_export_animated_html(
     decompress_js = get_anim_decompress_js(compress)
 
     adapter = _build_animated_fullpage_adapter(
-        fig_id, recording_data, fps, loop, sc, show_controls
+        fig_id, recording_data, fps, sc, show_controls
     )
 
     controls_html = js_controls_html(show_controls)
@@ -260,7 +259,6 @@ def _build_animated_figure_adapter(
     fig_id: str,
     recording_data: dict[str, Any],
     fps: int,
-    loop: bool,
     figure_style: dict[str, Any],
     figure_config: dict[str, Any],
     show_controls: bool,
@@ -282,8 +280,6 @@ def _build_animated_figure_adapter(
     title_raw = figure_config.get("title", "")
     annotation_raw = figure_config.get("annotation", "")
     footer_raw = figure_config.get("footer", "")
-
-    loop_js = "true" if loop else "false"
 
     if responsive:
         dim_w = "(figContainer.clientWidth || window.innerWidth)"
@@ -389,7 +385,6 @@ def _build_animated_figure_adapter(
         "",
         js_animated_render_loop(
             fps=fps,
-            loop_js_bool=loop_js,
             scene_var="figScene",
             label_objects_map_var="labelObjects",
         ),
@@ -402,7 +397,6 @@ def _build_animated_fullpage_adapter(
     fig_id: str,
     recording_data: dict[str, Any],
     fps: int,
-    loop: bool,
     scene_config: dict[str, Any],
     show_controls: bool,
 ) -> str:
@@ -415,8 +409,6 @@ def _build_animated_fullpage_adapter(
 
     cam_cfg = scene_config.get("camera") or {}
     cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
-
-    loop_js = "true" if loop else "false"
 
     autofit_js = js_autofit_camera(
         registry_var="figRegistry",
@@ -505,7 +497,6 @@ def _build_animated_fullpage_adapter(
         "",
         js_animated_render_loop(
             fps=fps,
-            loop_js_bool=loop_js,
             scene_var="figScene",
             label_objects_map_var="labelObjects",
         ),

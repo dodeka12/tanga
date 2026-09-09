@@ -63,6 +63,7 @@ import pytanga
 
 pytanga.install_docs()     # copies docs to .dep-docs/pytanga/
 pytanga.install_examples() # copies examples to .dep-examples/pytanga/
+pytanga.install_info()     # installs docs and examples in one call
 ```
 
 `install_docs()` copies the packaged `_docs/` directory (or the local
@@ -75,7 +76,13 @@ local `py/examples/` in a source checkout) to `.dep-examples/pytanga/`.
 AI tools can then reference e.g.
 `.dep-examples/pytanga/geometry/e3_entities.py` for usage examples.
 
-Both functions are idempotent — call them again to refresh the copies.
+`install_info()` runs `install_docs()` followed by `install_examples()`. Each
+function removes any previously installed copy first, so the target is always a
+faithful mirror of the packaged docs/examples, and it raises an error (after
+printing a message) if the old copy cannot be removed or the new one cannot be
+written.
+
+All three functions are idempotent — call them again to refresh the copies.
 
 ## Example Scripts
 

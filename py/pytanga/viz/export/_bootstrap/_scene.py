@@ -21,7 +21,8 @@ import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js
 _TANGA_BRIDGE_SYMBOLS = (
     "THREE, OrbitControls, CSS2DRenderer, CSS2DObject, "
     "Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, "
-    "buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect"
+    "buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect, "
+    "updateEntityMesh, removeEntityMesh"
 )
 
 

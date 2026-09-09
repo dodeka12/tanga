@@ -8,7 +8,9 @@ Builds a vertical :class:`~pytanga.viz.SplitView` with a
 The button appends lines (a plain string and a structured dict) via
 ``log_view.log``, which pushes ``log_update`` to the browser; the log
 auto-scrolls to the newest line, alternates row shading, and keeps only the
-last ``max_history`` entries.
+last ``max_history`` entries.  The timestamp column shows local time with
+microseconds by default; the date and the local UTC offset are opt-in via
+``show_date`` / ``show_utc_offset``.
 
 Run with:  uv run python py/examples/viz/ui/static/log_view.py
 
@@ -21,7 +23,9 @@ from pytanga.viz import ButtonView, LogView, Size, SplitView, Visualizer
 
 viz = Visualizer(reuse_existing=False, title="Tanga — Live Log")
 
-log = LogView(id="log", max_history=100)
+# Timestamps show local time + microseconds by default; opt into the date and
+# the local UTC offset via show_date / show_utc_offset.
+log = LogView(id="log", max_history=100, show_date=True, show_utc_offset=True)
 log.log("Log view ready.")
 log.log({"message": "structured line", "level": "info"})
 

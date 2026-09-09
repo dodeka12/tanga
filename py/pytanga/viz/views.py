@@ -316,6 +316,11 @@ class LogView(View):
     ``id`` is an optional stable identifier (auto-generated as ``"logN"`` when
     omitted); it is the key used to address this view at runtime.  ``max_history``
     caps the retained line count (FIFO drop-oldest); ``None`` keeps everything.
+
+    The first column is formatted from the stored UTC ISO-8601 timestamp,
+    converted to the browser's local timezone.  By default only the time-of-day
+    with microseconds is shown; ``show_date`` adds the date and
+    ``show_utc_offset`` adds the local offset to UTC (e.g. ``+02:00``).
     """
 
     _node_type = "log_view"
@@ -325,6 +330,8 @@ class LogView(View):
         id: str | None = None,
         *,
         max_history: int | None = None,
+        show_date: bool = False,
+        show_utc_offset: bool = False,
         **kwargs: Any,
     ) -> None:
         kwargs.setdefault("min_width", Size.px(200))
@@ -336,6 +343,8 @@ class LogView(View):
         ):
             raise ValueError("max_history must be None or a non-negative integer")
         self.max_history = max_history
+        self.show_date = show_date
+        self.show_utc_offset = show_utc_offset
         self.lines: list[dict[str, Any]] = []
         self._push = None  # callback slot injected by the Visualizer
 
@@ -383,6 +392,8 @@ class LogView(View):
         result = super()._serialize()
         result["id"] = self.id
         result["max_history"] = self.max_history
+        result["show_date"] = self.show_date
+        result["show_utc_offset"] = self.show_utc_offset
         result["lines"] = [dict(line) for line in self.lines]
         return result
 

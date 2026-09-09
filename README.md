@@ -100,6 +100,7 @@ packaged inside the wheel. AI coding tools can expose them by calling:
 import pytanga
 pytanga.install_docs()     # copies docs to .dep-docs/pytanga/
 pytanga.install_examples() # copies examples to .dep-examples/pytanga/
+pytanga.install_info()     # installs docs and examples in one call
 ```
 
 ---

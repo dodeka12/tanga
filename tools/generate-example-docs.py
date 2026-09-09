@@ -423,8 +423,30 @@ def generate() -> dict[str, str]:
     return files
 
 
+def _remove_stale(files: dict[str, str]) -> None:
+    """Delete files under ``DOCS_OUT`` that ``generate()`` no longer produces.
+
+    Without this, removed or renamed examples leave orphaned ``.md`` pages (and
+    empty directories) behind, so the on-disk tree drifts from the generated
+    output.  Only generated artifacts (``.md`` files and ``_nav.json``) are
+    removed.
+    """
+    if not DOCS_OUT.exists():
+        return
+    expected = set(files)
+    for path in sorted(DOCS_OUT.rglob("*"), reverse=True):
+        if path.is_dir():
+            if not any(path.iterdir()):
+                path.rmdir()
+            continue
+        rel = path.relative_to(DOCS_OUT).as_posix()
+        if rel not in expected and (path.suffix == ".md" or path.name == "_nav.json"):
+            path.unlink()
+
+
 def _write(files: dict[str, str]) -> None:
     DOCS_OUT.mkdir(parents=True, exist_ok=True)
+    _remove_stale(files)
     for rel, content in files.items():
         path = DOCS_OUT / rel
         path.parent.mkdir(parents=True, exist_ok=True)

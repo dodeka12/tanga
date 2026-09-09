@@ -55,7 +55,7 @@ viz.flush()
 # the Tanga library, and ``offline`` downloads + bundles three.js/marked/KaTeX/
 # html2canvas at export time (requires Node + esbuild) for a fully offline file.
 for delivery in ("cdn", "inline", "offline"):
-    path = Path(f"scene_{delivery}.html")
+    path = Path(f"_output/scene_{delivery}.html")
     viz.export_snapshot(str(path), overwrite=True, delivery=delivery)
     size_kb = path.stat().st_size / 1024
     print(f"{delivery:>7}: {path} ({size_kb:,.1f} KB)")

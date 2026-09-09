@@ -3461,5 +3461,5 @@ function emitTree(tree) {
 }
 
 window.__tanga = {
-    THREE, OrbitControls, CSS2DRenderer, CSS2DObject, Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect,
+    THREE, OrbitControls, CSS2DRenderer, CSS2DObject, Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect, updateEntityMesh, removeEntityMesh,
 };

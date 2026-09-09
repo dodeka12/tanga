@@ -135,6 +135,33 @@ def test_animated_figure_honours_delivery():
     assert "cdn.jsdelivr.net/gh/dodeka12/tanga" in cdn
 
 
+def test_animated_export_bridge_exposes_entity_mesh_updaters():
+    """Regression: the animated adapter calls ``updateEntityMesh``/``removeEntityMesh``.
+
+    Those two functions are imported by the live viewer (``three-view.js``), but the
+    exported HTML adapter runs against the ``window.__tanga`` bridge and must
+    destructure them from it — otherwise playback throws ``ReferenceError:
+    updateEntityMesh is not defined`` on frame 1+.
+    """
+    from pytanga.viz.export._bootstrap import (
+        generate_library_js,
+        js_tanga_bridge,
+        js_tanga_destructure,
+    )
+
+    for source in (js_tanga_destructure(), js_tanga_bridge(), generate_library_js()):
+        assert "updateEntityMesh" in source
+        assert "removeEntityMesh" in source
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.add(Point(1, 2, 3))
+    rec = viz.start_animation_recording()
+    rec.capture_frame()
+    html = viz.export_figure(animation=rec, delivery="inline")
+    assert "updateEntityMesh" in html
+    assert "removeEntityMesh" in html
+
+
 def test_offline_raises_when_toolchain_missing(monkeypatch):
     offline._build_assets.cache_clear()
 

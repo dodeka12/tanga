@@ -63,7 +63,7 @@ def test_max_history_drops_oldest() -> None:
     view.log("a")
     view.log("b")
     view.log("c")
-    assert [l["message"] for l in view.lines] == ["b", "c"]
+    assert [line["message"] for line in view.lines] == ["b", "c"]
 
 
 def test_max_history_none_keeps_all() -> None:
@@ -113,7 +113,7 @@ def test_load_file_truncates_to_max_history(tmp_path) -> None:
     )
     view = LogView(max_history=2)
     view.load_file(path)
-    assert [l["message"] for l in view.lines] == ["b", "c"]
+    assert [line["message"] for line in view.lines] == ["b", "c"]
 
 
 def test_serialize() -> None:
@@ -123,7 +123,16 @@ def test_serialize() -> None:
     assert node["type"] == "log_view"
     assert node["id"] == "log0"
     assert node["max_history"] == 1000
+    assert node["show_date"] is False
+    assert node["show_utc_offset"] is False
     assert node["lines"][0]["message"] == "x"
+
+
+def test_show_date_and_utc_offset_serialize() -> None:
+    view = LogView(id="log0", show_date=True, show_utc_offset=True)
+    node = serialize_layout(view)["root"]
+    assert node["show_date"] is True
+    assert node["show_utc_offset"] is True
 
 
 def test_auto_id_assigned() -> None:
@@ -138,7 +147,9 @@ def test_log_push_callback() -> None:
     view = LogView(id="log0")
     calls = _push_calls(view)
     view.log("x")
-    assert calls == [("log0", "append", [{"time": view.lines[0]["time"], "message": "x"}])]
+    assert calls == [
+        ("log0", "append", [{"time": view.lines[0]["time"], "message": "x"}])
+    ]
 
 
 def test_clear_push_callback() -> None:

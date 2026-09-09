@@ -20,10 +20,13 @@ control. A handler written for one control kind works unchanged for the others
 ### Control variants (`variant`)
 
 `ButtonView`, `CheckboxView`, and `SliderView` accept a `variant=` parameter —
-an `EControlVariant` (`"default"` or `"menu"`). The `"menu"` variant renders the
-control flat and borderless for menu rows. `MenuView` applies the `"menu"`
-variant to its control children automatically (`override_variant=True` by
-default), so you usually don't pass `variant=` by hand.
+an `EControlVariant` (`"default"`, `"menu"`, or `"toolbar"`). The `"menu"`
+variant renders the control flat and borderless for menu rows, and the
+`"toolbar"` variant renders it compactly for a horizontal toolbar. `MenuView`
+applies the `"menu"` variant to its control children automatically
+(`override_variant=True` by default) and `ToolbarView` applies the `"toolbar"`
+variant to its eligible control children, so you usually don't pass `variant=`
+by hand.
 
 ## Layout containers
 
@@ -167,6 +170,30 @@ GroupView(
 and the content region scrolls instead of clipping when the pane is smaller
 than the controls (a thin dark scrollbar appears only on overflow). The
 fold/unfold button in the title bar is a borderless icon.
+
+### ToolbarView
+
+A horizontal control toolbar — a bordered `StackView` row with `direction`
+fixed to `"horizontal"`. `margin` is the inner spacing between the border and
+the controls; `border` toggles the thin outline. `gap` spaces the controls,
+`align` sets the cross-axis (vertical) alignment, and `justify` positions the
+controls along the row.
+
+```python
+ToolbarView(
+    children=None,       # list[View] | None — control views to lay out
+    *,
+    margin=Size.px(6),   # SizeSpec | None — inner spacing between border and controls
+    border=True,         # bool — draw the thin outline
+    gap=None,            # int | None — px spacing (None = default 4 px, 0 = none)
+    align="center",      # "start" | "center" | "end" | "stretch"
+    justify="start",     # "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly"
+    **kwargs,            # forwarded to View (sizes)
+)
+```
+
+Every eligible control child is forced to the `TOOLBAR` variant (a nested
+`MenuView` keeps its own `MENU` styling). `_node_type` is `"toolbar"`.
 
 ### MenuView
 
