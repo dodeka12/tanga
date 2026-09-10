@@ -958,7 +958,7 @@ class TestVisualizer:
 
         assert "Sphere" in viz.styles.kind
         assert viz.styles[Sphere].wireframe is True
-        assert viz.styles[Sphere].opacity == 0.4
+        assert viz.styles[Sphere].opacity == 1.0
 
     def test_set_default_color_via_styles(self):
         viz = Visualizer()

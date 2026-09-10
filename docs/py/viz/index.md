@@ -82,11 +82,14 @@ Runnable example: [`multi_scene.py`](https://github.com/dodeka12/tanga/blob/main
         - **Single snapshot** — `viz.export_snapshot("scene.html")` (standalone HTML file), see [Standalone HTML](export/html.md)
         - **Animation recording** — record a loop with `start_animation_recording()` and export standalone animated HTML, see [Animated HTML](export/html.md#animated-html)
 - **Jupyter notebook** — [Use Cases — Notebooks](use-cases-notebooks.md)
+    - **Re-run safety** — `Visualizer()` is a singleton under Jupyter; re-running a
+      construction cell clears the default scene and re-adds axes/grid (see
+      [Caveats](use-cases-notebooks.md#caveats))
     - **One-off demo**
         - **No animation** — context manager, see [Interactive Visualizer](use-cases-notebooks.md#interactive-visualizer)
         - **Animation** — `animate(auto_clear=True)`, see [Animation](use-cases-notebooks.md#animation)
     - **Performance / long-running**
-        - **No animation** — idempotent `show()`/`display()` re-renders
+        - **No animation** — idempotent `show()`/`display()` re-renders; multiple scenes via `viz.scene(name)`
         - **Animation** — pre-create with `viz(...)` and update `.entity` in place, see [Animation](use-cases-notebooks.md#animation)
     - **Interactive** — [VisualizerApp](app/app.md)
     - **Static snapshot**

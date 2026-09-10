@@ -15,16 +15,19 @@ import errno
 import hashlib
 import json
 import logging
+import socket
 import sys
 import threading
 import time
 import webbrowser
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import psutil
 from aiohttp import web
 
 logger = logging.getLogger("tanga.viz.server")
@@ -84,6 +87,93 @@ def _is_port_in_use_error(exc: OSError) -> bool:
         "address already in use" in message
         or "only one usage of each socket address" in message
     )
+
+
+class PortConflictMode(str, Enum):
+    """How to resolve a port that is already in use when the server boots."""
+
+    CANCEL = "cancel"  # raise PortInUseError (today's standard behaviour)
+    AUTO = "auto"  # silently pick a free port and bind there
+    KILL = "kill"  # terminate the blocking process and rebind
+    ASK = "ask"  # delegate to an injected interaction function
+
+
+@dataclass(frozen=True)
+class PortOccupant:
+    """A process holding the viewer port (discovered via ``psutil``)."""
+
+    pid: int
+    name: str
+    cmdline: tuple[str, ...] | None = None
+
+
+# An ASK interaction function presents the conflict (port + occupants) and
+# returns the action the user chose — one of CANCEL/AUTO/KILL (never ASK).
+PortConflictAsk = Callable[[int, list[PortOccupant]], PortConflictMode]
+
+
+def default_port_conflict_ask(
+    port: int, occupants: list[PortOccupant]
+) -> PortConflictMode:
+    """Fallback ASK handler with no interaction available: cancel."""
+    return PortConflictMode.CANCEL
+
+
+def find_port_occupants(port: int) -> list[PortOccupant]:
+    """Return the processes LISTENing on *port* (deduplicated by pid)."""
+    occupants: list[PortOccupant] = []
+    seen: set[int] = set()
+    for conn in psutil.net_connections(kind="tcp"):
+        if conn.status != "LISTEN" or not conn.laddr:
+            continue
+        if conn.laddr.port != port or conn.pid is None:
+            continue
+        if conn.pid in seen:
+            continue
+        seen.add(conn.pid)
+        name = "?"
+        cmdline: tuple[str, ...] | None = None
+        try:
+            proc = psutil.Process(conn.pid)
+            name = proc.name() or "?"
+            try:
+                cmdline = tuple(proc.cmdline())
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                cmdline = None
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+        occupants.append(PortOccupant(pid=conn.pid, name=name, cmdline=cmdline))
+    return occupants
+
+
+def _find_free_port(host: str) -> int:
+    """Return an available TCP port on *host*."""
+    bind_host = "127.0.0.1" if host in ("localhost", "127.0.0.1") else host
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((bind_host, 0))
+        return int(sock.getsockname()[1])
+
+
+def _terminate_port_occupants(occupants: list[PortOccupant]) -> None:
+    """Terminate the given PIDs (SIGTERM, escalating to SIGKILL)."""
+    for occupant in occupants:
+        try:
+            proc = psutil.Process(occupant.pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        try:
+            proc.terminate()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        try:
+            proc.wait(timeout=2.0)
+        except psutil.TimeoutExpired:
+            try:
+                proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
 
 
 def compute_frontend_version(static_dir: Path) -> str:
@@ -232,9 +322,13 @@ class VizServer:
         port: int = 8765,
         static_dir: Path | None = None,
         entry_page: str = "viewer.html",
+        port_conflict_mode: PortConflictMode = PortConflictMode.CANCEL,
+        port_conflict_ask: PortConflictAsk | None = None,
     ) -> None:
         self._host = host
         self._port = port
+        self._port_conflict_mode = port_conflict_mode
+        self._port_conflict_ask = port_conflict_ask or default_port_conflict_ask
         self._static_dir = static_dir or Path(__file__).parent / "templates"
         self._entry_page = entry_page
         self._frontend_version = compute_frontend_version(self._static_dir)
@@ -264,6 +358,11 @@ class VizServer:
         self._any_ws_ready_thread: threading.Event = threading.Event()
         self._ws_error_event: asyncio.Event = asyncio.Event()
         self._ws_error_msg: str = ""
+
+    @property
+    def port(self) -> int:
+        """The (possibly resolved) port the server is bound to."""
+        return self._port
 
     # ── Lifecycle ───────────────────────────────────────────
 
@@ -306,46 +405,71 @@ class VizServer:
 
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
-        try:
-            # When host is "localhost", bind both IPv4 and IPv6 loopback so
-            # browsers that resolve `localhost` to `::1` can still reach the
-            # WebSocket endpoint — otherwise Firefox's WS connection can hang
-            # in CONNECTING on Windows (the server would only listen on IPv4).
-            reuse_address = sys.platform != "win32"
-            bind_hosts = (
-                ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
-            )
+        await self._bind_with_resolution()
 
-            self._sites = []
-            for bind_host in bind_hosts:
-                site = web.TCPSite(
-                    self._runner, bind_host, self._port, reuse_address=reuse_address
+    async def _bind_sites(self) -> None:
+        """Bind the server to its host; raise ``OSError`` if the primary bind fails.
+
+        When ``host`` is ``"localhost"`` this binds both IPv4 and IPv6 loopback
+        so browsers that resolve ``localhost`` to ``::1`` can still reach the
+        WebSocket endpoint — otherwise Firefox's WS connection can hang in
+        CONNECTING on Windows (the server would only listen on IPv4).
+        """
+        reuse_address = sys.platform != "win32"
+        bind_hosts = (
+            ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
+        )
+
+        self._sites = []
+        for bind_host in bind_hosts:
+            site = web.TCPSite(
+                self._runner, bind_host, self._port, reuse_address=reuse_address
+            )
+            try:
+                await site.start()
+                self._sites.append(site)
+            except OSError:
+                # The primary (IPv4) bind must succeed; the IPv6 loopback
+                # bind is best-effort (may be unavailable on some systems).
+                if not self._sites:
+                    raise
+                logger.info("Could not bind to %s (skipping)", bind_host)
+
+        logger.info(
+            "Server listening: bind=%s port=%d (http://%s:%d, ws /ws)",
+            ",".join(bind_hosts[: len(self._sites)]),
+            self._port,
+            self._host,
+            self._port,
+        )
+
+    async def _bind_with_resolution(self) -> None:
+        """Bind, resolving a busy port according to ``port_conflict_mode``."""
+        while True:
+            try:
+                await self._bind_sites()
+                return
+            except OSError as e:
+                if not _is_port_in_use_error(e):
+                    raise
+                occupants = find_port_occupants(self._port)
+                mode = self._port_conflict_mode
+                action = (
+                    self._port_conflict_ask(self._port, occupants)
+                    if mode is PortConflictMode.ASK
+                    else mode
                 )
-                try:
-                    await site.start()
-                    self._sites.append(site)
-                except OSError:
-                    # The primary (IPv4) bind must succeed; the IPv6 loopback
-                    # bind is best-effort (may be unavailable on some systems).
-                    if not self._sites:
-                        raise
-                    logger.info("Could not bind to %s (skipping)", bind_host)
-
-            logger.info(
-                "Server listening: bind=%s port=%d (http://%s:%d, ws /ws)",
-                ",".join(bind_hosts[: len(self._sites)]),
-                self._port,
-                self._host,
-                self._port,
-            )
-        except OSError as e:
-            if _is_port_in_use_error(e):
+                if action is PortConflictMode.KILL:
+                    _terminate_port_occupants(occupants)
+                    continue
+                if action is PortConflictMode.AUTO:
+                    self._port = _find_free_port(self._host)
+                    continue
                 raise PortInUseError(
                     f"Port {self._port} is already in use. "
                     f"Close the other process or use start_server(port=...) "
                     f"to choose a different port."
                 ) from e
-            raise
 
     async def stop(self) -> None:
         """Gracefully shut down all connections and the server."""

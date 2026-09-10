@@ -2,7 +2,9 @@
 
 The `Visualizer` detects Jupyter/IPython automatically and adapts behaviour
 for notebook environments: `show()` renders inline, `run()` is unavailable,
-and the serverless `display_snapshot()` produces static embeds.
+and the serverless `display_snapshot()` produces static embeds.  Under Jupyter,
+`Visualizer()` is a singleton — re-running a construction cell reuses the same
+instance and resets the default scene.
 
 ## Auto-detection
 
@@ -12,6 +14,16 @@ and the serverless `display_snapshot()` produces static embeds.
   instead (or `show()` to also open a browser).
 - When the `Visualizer` object is the last expression in a notebook cell,
   it renders an inline `<iframe>` via the `_repr_html_()` method.
+
+## Re-running cells
+
+`Visualizer()` is a **singleton under Jupyter** — re-running a cell that
+re-creates it returns the same instance (one server, one scene host) instead of
+trying to bind the port again.  Re-running a construction cell also **clears
+the default scene** and re-adds axes/grid per `add_default_axes` /
+`add_default_grid`.  A scene created with `viz.scene(name)` is cleared when the
+same cell is re-run, but get-or-create when a different cell touches it.  See
+[Use Cases — Notebooks](../use-cases-notebooks.md#caveats) for the full caveats.
 
 ## Live vs static
 

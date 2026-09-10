@@ -5,14 +5,23 @@
 
 import asyncio
 import errno
+import os
 import signal
 import socket
+import subprocess
+import sys
 import threading
 
 import pytest
 
-from pytanga.viz import Visualizer, VisualizerApp
-from pytanga.viz.server import PortInUseError, VizServer, _is_port_in_use_error
+from pytanga.viz import Visualizer, VisualizerApp, visualizer as viz_module
+from pytanga.viz.server import (
+    PortConflictMode,
+    PortInUseError,
+    VizServer,
+    _is_port_in_use_error,
+    find_port_occupants,
+)
 
 
 def _viz() -> Visualizer:
@@ -214,3 +223,167 @@ def test_wait_for_browser_opens_given_path(monkeypatch):
 
     viz.wait_for_browser(timeout=0.0, path="/?view=main&token=abc")
     assert opened == ["/?view=main&token=abc"]
+
+
+# ── Port-conflict resolution ────────────────────────────────────────────
+
+
+def _block_port() -> tuple[socket.socket, int]:
+    """Bind + listen a socket on 127.0.0.1 and return ``(sock, port)``."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("127.0.0.1", 0))
+    sock.listen(1)
+    return sock, sock.getsockname()[1]
+
+
+def test_find_port_occupants_detects_local_listener():
+    sock, port = _block_port()
+    try:
+        occupants = find_port_occupants(port)
+        assert any(o.pid == os.getpid() for o in occupants)
+        assert all(o.name for o in occupants)
+    finally:
+        sock.close()
+
+
+def test_auto_mode_picks_free_port():
+    sock, port = _block_port()
+    viz = Visualizer(
+        add_default_axes=False,
+        add_default_grid=False,
+        port_conflict_mode=PortConflictMode.AUTO,
+    )
+    try:
+        viz.start_server(port=port)
+        assert viz._port != port
+        assert viz._port == viz._server.port
+    finally:
+        viz.stop_server()
+        sock.close()
+
+
+def test_cancel_mode_reports_busy_port():
+    sock, port = _block_port()
+    viz = Visualizer(
+        add_default_axes=False,
+        add_default_grid=False,
+        port_conflict_mode=PortConflictMode.CANCEL,
+    )
+    try:
+        with pytest.raises(SystemExit):
+            viz.start_server(port=port)
+    finally:
+        sock.close()
+
+
+def test_kill_mode_terminates_blocking_process():
+    code = (
+        "import socket, time; "
+        "s = socket.socket(); s.bind(('127.0.0.1', 0)); s.listen(1); "
+        "print(s.getsockname()[1], flush=True); time.sleep(60)"
+    )
+    proc = subprocess.Popen(
+        [sys.executable, "-c", code], stdout=subprocess.PIPE, text=True
+    )
+    port = int(proc.stdout.readline().strip())
+    viz = Visualizer(
+        add_default_axes=False,
+        add_default_grid=False,
+        port_conflict_mode=PortConflictMode.KILL,
+    )
+    try:
+        viz.start_server(port=port)
+        assert proc.wait(timeout=10) is not None  # the blocker was terminated
+        assert viz._port == port
+    finally:
+        viz.stop_server()
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+
+def test_ask_mode_without_handler_cancels():
+    sock, port = _block_port()
+    server = VizServer(
+        host="localhost", port=port, port_conflict_mode=PortConflictMode.ASK
+    )
+
+    async def _go() -> None:
+        try:
+            await server.start(lambda: {}, lambda: {})
+        finally:
+            await server.stop()
+
+    try:
+        with pytest.raises(PortInUseError):
+            asyncio.run(_go())
+    finally:
+        sock.close()
+
+
+def test_ask_mode_honours_injected_handler():
+    sock, port = _block_port()
+    viz = Visualizer(
+        add_default_axes=False,
+        add_default_grid=False,
+        port_conflict_mode=PortConflictMode.ASK,
+    )
+    try:
+        viz.start_server(port=port, ask=lambda p, occ: PortConflictMode.AUTO)
+        assert viz._port != port
+        assert viz._port == viz._server.port
+    finally:
+        viz.stop_server()
+        sock.close()
+
+
+def test_visualizer_default_mode_resolution(monkeypatch):
+    Visualizer.reset()
+    try:
+        monkeypatch.setattr(viz_module, "_is_jupyter", lambda: True)
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        assert viz._port_conflict_mode is PortConflictMode.AUTO
+
+        Visualizer.reset()
+        monkeypatch.setattr(viz_module, "_is_jupyter", lambda: False)
+        viz2 = Visualizer(add_default_axes=False, add_default_grid=False)
+        assert viz2._port_conflict_mode is PortConflictMode.ASK
+
+        viz3 = Visualizer(
+            add_default_axes=False,
+            add_default_grid=False,
+            port_conflict_mode=PortConflictMode.CANCEL,
+        )
+        assert viz3._port_conflict_mode is PortConflictMode.CANCEL
+    finally:
+        Visualizer.reset()
+
+
+def test_ask_terminal_prompt_returns_action(monkeypatch):
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+
+    class _TTY:
+        def isatty(self) -> bool:
+            return True
+
+    monkeypatch.setattr(sys, "stdin", _TTY())
+    monkeypatch.setattr("builtins.input", lambda *_: "a")
+    assert viz._ask_port_conflict(8765, []) is PortConflictMode.AUTO
+
+    monkeypatch.setattr("builtins.input", lambda *_: "k")
+    assert viz._ask_port_conflict(8765, []) is PortConflictMode.KILL
+
+    monkeypatch.setattr("builtins.input", lambda *_: "c")
+    assert viz._ask_port_conflict(8765, []) is PortConflictMode.CANCEL
+
+
+def test_ask_terminal_prompt_non_tty_cancels(monkeypatch):
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+
+    class _Pipe:
+        def isatty(self) -> bool:
+            return False
+
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    assert viz._ask_port_conflict(8765, []) is PortConflictMode.CANCEL

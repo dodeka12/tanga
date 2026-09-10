@@ -13,6 +13,7 @@ import concurrent.futures
 import json
 import logging
 import signal
+import sys
 import threading
 import time
 import warnings
@@ -43,6 +44,7 @@ from .camera import (
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
+from .server import PortConflictAsk, PortConflictMode, PortOccupant
 from .views import (
     SceneView,
     View,
@@ -103,6 +105,17 @@ class Visualizer(_JupyterDisplayMixin):
     _viewer_name: str | None = None
     _name: str = ""
 
+    # ── Jupyter-scoped singleton cache ─────────────────────
+    _instance: "Visualizer | None" = None
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Visualizer":
+        """Return the cached instance under Jupyter; otherwise a fresh one."""
+        if _is_jupyter():
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+        return super().__new__(cls)
+
     # ── Visualizer ─────────────────────────────────────────
 
     def __init__(
@@ -126,7 +139,13 @@ class Visualizer(_JupyterDisplayMixin):
         # (Ctrl+Q by default) for the main scene only.  Named scenes opt in via
         # ``VizSceneHandle.enable_server_stop_key()``.
         enable_server_stop_key: bool = False,
+        port_conflict_mode: PortConflictMode | None = None,
     ) -> None:
+        if getattr(self, "_initialized", False):
+            self._add_default_axes = add_default_axes
+            self._add_default_grid = add_default_grid
+            self._reset_scene("")
+            return
         if space_dim is None:
             space_dim = _deduce_space_dim(camera) or 3
         if space_dim == 2 and title == "Tanga 3D Viewer":
@@ -167,6 +186,12 @@ class Visualizer(_JupyterDisplayMixin):
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
         self._open_browser = not self._jupyter
+
+        # Port-conflict resolution policy (see PortConflictMode).
+        self._port_conflict_mode = port_conflict_mode or (
+            PortConflictMode.AUTO if self._jupyter else PortConflictMode.ASK
+        )
+        self._port_conflict_ask: PortConflictAsk | None = None
 
         # Bundled default style configuration (master instance; scenes copy it).
         from ._viz_styles import make_styles
@@ -214,6 +239,8 @@ class Visualizer(_JupyterDisplayMixin):
         self._register_routes()
 
         self._default_objects_added: set[str] = set()
+        # Per-scene (cell_id, execution_token) at creation, for re-run detection.
+        self._scene_keys: dict[str, tuple[str | None, int]] = {}
 
         # Seed default axes/grid immediately — independent of server start.
         self._add_default_scene_objects("")
@@ -221,6 +248,19 @@ class Visualizer(_JupyterDisplayMixin):
         # Opt-in browser-triggered server stop for the main scene.
         if enable_server_stop_key:
             self.enable_server_stop_key()
+
+        self._initialized = True
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the Jupyter-scoped singleton so a fresh instance can be created."""
+        instance = cls._instance
+        if instance is not None:
+            try:
+                instance.stop_server()
+            except Exception:
+                pass
+            cls._instance = None
 
     # ── Facade: layout ─────────────────────────────────────
 
@@ -446,11 +486,27 @@ class Visualizer(_JupyterDisplayMixin):
                 (``""``) is created in ``__init__`` and uses the
                 ``add_default_grid`` constructor flag instead.
         """
+        cid = current_cell_id()
+        token = execution_token()
         if name not in self._layout.scenes:
             if space_dim is not None:
                 _validate_space_dim(space_dim)
             self._layout.add_scene(name, space_dim)
             self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
+            self._scene_keys[name] = (cid, token)
+        else:
+            stored = self._scene_keys.get(name)
+            if (
+                stored is not None
+                and stored[0] is not None
+                and stored[0] == cid
+                and stored[1] != token
+            ):
+                # Same cell re-run: clear the scene and re-add its defaults.
+                self._layout.scenes[name].clear()
+                self._default_objects_added.discard(name)
+                self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
+                self._scene_keys[name] = (cid, token)
         if enable_server_stop_key:
             self._set_server_stop_key(
                 name, enabled=True, key="q", modifiers=[KeyModifier.CTRL]
@@ -491,7 +547,9 @@ class Visualizer(_JupyterDisplayMixin):
             scene_name: The target scene name (``""`` for the main scene).
             target: One of ``"all"`` (all connected browsers),
                 ``"scene:<name>"`` (only browsers currently viewing a
-                specific scene), or ``"browser:<id>"`` (a single browser).
+                specific scene), ``"viewer:<name>"`` (browsers whose ``?viewer=``
+                label matches, set via ``display``/``display_row``), or
+                ``"browser:<id>"`` (a single browser).
         """
         if self._server is None or self._loop is None:
             return
@@ -586,20 +644,47 @@ class Visualizer(_JupyterDisplayMixin):
         return VizObjectRef(VizSceneHandle(self, ""), node)
 
     def __call__(
-        self, obj: VizInputType | None = None, **kwargs: Any
+        self,
+        obj: VizInputType | None = None,
+        *,
+        entity_id: str | None = None,
+        color: str
+        | tuple[float, float, float]
+        | tuple[float, float, float, float]
+        | None = None,
+        opacity: float | None = None,
+        style: ObjVizStyle | None = None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
     ) -> "VizObjectRef":
         """Shorthand for :meth:`new`: ``viz(point, color=...)``.
 
         Adds *obj* to the main scene and returns a :class:`VizObjectRef`, just
-        like :meth:`new`.  This keeps the pre-create + update animation pattern
-        concise::
+        like :meth:`new` (and accepts exactly the same keyword arguments).  This
+        keeps the pre-create + update animation pattern concise::
 
             p = viz(Point(3, 0, 0), color="#ff4444")
             for dt in viz.animate(fps=30):
                 p.entity = Point(...)
                 viz.flush()
         """
-        return self.new(obj, **kwargs)
+        return self.new(
+            obj,
+            entity_id=entity_id,
+            color=color,
+            opacity=opacity,
+            style=style,
+            label=label,
+            label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
+            parent_id=parent_id,
+            attach_to=attach_to,
+        )
 
     def add_group(
         self, name: str | None = None, *, scene_name: str = ""
@@ -1329,7 +1414,13 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Server lifecycle ───────────────────────────────────
 
-    def start_server(self, host: str = "localhost", port: int | None = None) -> None:
+    def start_server(
+        self,
+        host: str = "localhost",
+        port: int | None = None,
+        *,
+        ask: PortConflictAsk | None = None,
+    ) -> None:
         """Start serving the visualization without opening a browser.
 
         Parameters
@@ -1350,6 +1441,7 @@ class Visualizer(_JupyterDisplayMixin):
             raise ValueError(f"port must be 0 or a positive integer, got {port}")
         self._host = host
         self._port = port
+        self._port_conflict_ask = ask
         from .server import PortInUseError
 
         try:
@@ -1366,7 +1458,12 @@ class Visualizer(_JupyterDisplayMixin):
         from .server import VizServer
 
         logger.info("Starting VizServer on %s:%d", self._host, self._port)
-        self._server = VizServer(host=self._host, port=self._port)
+        self._server = VizServer(
+            host=self._host,
+            port=self._port,
+            port_conflict_mode=self._port_conflict_mode,
+            port_conflict_ask=self._port_conflict_ask or self._ask_port_conflict,
+        )
 
         _boot_done = threading.Event()
         _boot_start = time.monotonic()
@@ -1414,6 +1511,10 @@ class Visualizer(_JupyterDisplayMixin):
 
         logger.debug("Server booted in %.1fs", time.monotonic() - _boot_start)
 
+        # An AUTO resolution may have picked a different port; reflect it back
+        # so the URL / self._port are correct.
+        self._port = self._server.port
+
         # Graceful shutdown on interpreter exit, even if the script forgets to
         # call stop_server() — otherwise the daemon server thread is killed
         # abruptly and browsers see an abnormal 1006 reset instead of a clean
@@ -1440,12 +1541,32 @@ class Visualizer(_JupyterDisplayMixin):
             for event in self._interrupt_events.values():
                 event.set()
 
+        def _on_sigterm(signum: int, frame: object) -> None:
+            # SIGTERM is the OS "please terminate" signal (kill, systemd, and
+            # VSCode's kernel restart all send it).  We must not swallow it:
+            # request a graceful shutdown, tear the server down, then re-raise
+            # with the default disposition restored so the process actually
+            # exits and the OS releases the port.  An open listening socket
+            # never blocks termination — the process just has to be allowed to
+            # die.
+            logger.info("SIGTERM received - shutting down")
+            self._shutdown_requested.set()
+            for event in self._interrupt_events.values():
+                event.set()
+            try:
+                # stop_server() calls _restore_signal_handlers() first, but we
+                # force SIG_DFL here regardless so the re-raise always exits.
+                self.stop_server()
+            finally:
+                signal.signal(signal.SIGTERM, signal.SIG_DFL)
+                signal.raise_signal(signal.SIGTERM)
+
         self._saved_signal_handlers = {
             signal.SIGINT: signal.getsignal(signal.SIGINT),
             signal.SIGTERM: signal.getsignal(signal.SIGTERM),
         }
         signal.signal(signal.SIGINT, _on_sigint)
-        signal.signal(signal.SIGTERM, _on_sigint)
+        signal.signal(signal.SIGTERM, _on_sigterm)
 
         # Print URLs
         self._print_startup_urls()
@@ -1611,6 +1732,39 @@ class Visualizer(_JupyterDisplayMixin):
             Console().print(Text(http_url, style="bold cyan"))
         except Exception:
             print(http_url)
+
+    def _ask_port_conflict(
+        self, port: int, occupants: list[PortOccupant]
+    ) -> PortConflictMode:
+        """Prompt on the terminal to resolve a busy port (``ASK`` mode).
+
+        Returns ``CANCEL`` when stdin is not a terminal or input fails, so
+        non-interactive callers degrade to the standard error instead of
+        hanging.
+        """
+        try:
+            if not sys.stdin.isatty():
+                return PortConflictMode.CANCEL
+        except Exception:
+            return PortConflictMode.CANCEL
+
+        print(f"Port {port} is already in use.")
+        for occ in occupants:
+            cmd = " ".join(occ.cmdline) if occ.cmdline else ""
+            print(f"  pid {occ.pid}: {occ.name} {cmd}".rstrip())
+        while True:
+            try:
+                answer = input(
+                    "[k]ill the process, [a]uto-pick a free port, or [c]ancel? "
+                ).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                return PortConflictMode.CANCEL
+            if answer in ("k", "kill"):
+                return PortConflictMode.KILL
+            if answer in ("a", "auto"):
+                return PortConflictMode.AUTO
+            if answer in ("c", "cancel", ""):
+                return PortConflictMode.CANCEL
 
     def _print_connect_prompt(self, path: str | None = None) -> None:
         """Print the interactive connect prompt including the server URL.
@@ -2462,15 +2616,25 @@ class Visualizer(_JupyterDisplayMixin):
         """Display multiple scenes side by side in a single flex row.
 
         Each element in *scenes* is a ``(handle, viewer_name)`` tuple where
-        *viewer_name* may be ``None``.
+        *viewer_name* is an optional friendly label for that viewer.
 
         *mode* is ``"live"`` (default — embeds the server URL) or
         ``"static"`` (embeds a serverless standalone snapshot).
+
+        The *viewer_name* is passed to the browser as a ``?viewer=`` URL
+        parameter and reported back by the frontend, so the connection can be
+        identified in :meth:`list_browsers` and targeted with :meth:`navigate_to`
+        via ``target="viewer:<name>"``.  It is optional (pass ``None`` for an
+        unlabelled viewer) and is ignored in ``"static"`` mode.
 
         Usage::
 
             viz.display_row((one, None), (two, None))            # live
             viz.display_row((one, None), (two, None), mode="static")
+
+            # Label a pane, then drive it independently later:
+            viz.display_row((one, "left"), (two, "right"))
+            viz.navigate_to("two", target="viewer:left")
 
         Args:
             *scenes: One or more ``(VizSceneHandle, viewer_name | None)`` pairs.

@@ -34,13 +34,13 @@ uv run python py/examples/<path>.py
 
 - **angle vs time** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
 
-- **animate** — [Animation](ga/jupyter/animation.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
+- **animate** — [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Animation](viz/jupyter/animation.md)
 
 - **animate_to** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
 - **animated** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
-- **animation** — [Animation](ga/jupyter/animation.md), [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Keyframe timeline with fade-in and move](viz/animation/timeline.md), [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
+- **animation** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Keyframe timeline with fade-in and move](viz/animation/timeline.md), [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md), [Animation](viz/jupyter/animation.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
 - **annotation** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
@@ -58,7 +58,7 @@ uv run python py/examples/<path>.py
 
 - **auto-save** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
-- **auto_clear** — [Animation](ga/jupyter/animation.md)
+- **auto_clear** — [Animation](viz/jupyter/animation.md)
 
 - **Axes2D** — [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md)
 
@@ -136,7 +136,7 @@ uv run python py/examples/<path>.py
 
 - **construction** — [Three ways to work with named basis blades](ga/basis/basis_usage.md)
 
-- **context manager** — [Interactive Visualizer](ga/jupyter/interactive.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
+- **context manager** — [Interactive Visualizer](viz/jupyter/interactive.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
 - **contraction** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
@@ -182,7 +182,7 @@ uv run python py/examples/<path>.py
 
 - **Disk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
-- **display** — [Interactive Visualizer](ga/jupyter/interactive.md)
+- **display** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **double pendulum** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
@@ -214,13 +214,13 @@ uv run python py/examples/<path>.py
 
 - **explicit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
-- **export** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
+- **export** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [Export](viz/jupyter/export.md)
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
 - **expressions** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
-- **figure** — [Export](ga/jupyter/export.md), [Presentation figure export with FigureStyle](viz/export/figure.md)
+- **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
 - **FigureStyle** — [Presentation figure export with FigureStyle](viz/export/figure.md)
 
@@ -268,7 +268,7 @@ uv run python py/examples/<path>.py
 
 - **geometry** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
-- **glTF** — [Export](ga/jupyter/export.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
+- **glTF** — [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
 - **gradient** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
 
@@ -292,7 +292,7 @@ uv run python py/examples/<path>.py
 
 - **homogeneous** — [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md)
 
-- **HTML** — [Export](ga/jupyter/export.md), [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
+- **HTML** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
 - **icon** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
@@ -306,7 +306,7 @@ uv run python py/examples/<path>.py
 
 - **interaction** — [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **interactive** — [Interactive Visualizer](ga/jupyter/interactive.md)
+- **interactive** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **inverse** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_01.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
 
@@ -400,7 +400,7 @@ uv run python py/examples/<path>.py
 
 - **nesting** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
 
-- **notebook** — [Animation](ga/jupyter/animation.md), [Export](ga/jupyter/export.md), [Interactive Visualizer](ga/jupyter/interactive.md)
+- **notebook** — [Animation](viz/jupyter/animation.md), [Export](viz/jupyter/export.md), [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **NTRU** — [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md)
 
@@ -486,6 +486,8 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
+- **re-run** — [Interactive Visualizer](viz/jupyter/interactive.md)
+
 - **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
@@ -526,7 +528,7 @@ uv run python py/examples/<path>.py
 
 - **set_theme** — [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
-- **show** — [Interactive Visualizer](ga/jupyter/interactive.md)
+- **show** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **show_dialog** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md)
 
@@ -535,6 +537,8 @@ uv run python py/examples/<path>.py
 - **simulation** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
 
 - **single scene** — [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
+
+- **singleton** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **singular** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -554,7 +558,7 @@ uv run python py/examples/<path>.py
 
 - **smoothness** — [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
 
-- **snapshot** — [Export](ga/jupyter/export.md), [Self-contained HTML and glTF export](viz/export/html_export.md)
+- **snapshot** — [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
 - **solve** — [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md)
 
@@ -642,7 +646,7 @@ uv run python py/examples/<path>.py
 
 - **update** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
-- **update in place** — [Animation](ga/jupyter/animation.md)
+- **update in place** — [Animation](viz/jupyter/animation.md)
 
 - **variable** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
@@ -658,7 +662,7 @@ uv run python py/examples/<path>.py
 
 - **visualization-only** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
-- **visualizer** — [Interactive Visualizer](ga/jupyter/interactive.md)
+- **visualizer** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **Visualizer** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md)
 

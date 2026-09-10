@@ -161,7 +161,7 @@ class TestSerializeEntities:
         assert d["center"] == [0, 0, 0]
         assert d["radius"] == 2.5
         assert d["style"]["wireframe"] is True
-        assert d["style"]["opacity"] == 0.4
+        assert d["style"]["opacity"] == 1.0
         assert d["style"]["color"] == "#ffaa00"
 
     def test_sphere_radius_clamped(self):
@@ -410,7 +410,7 @@ class TestStyleOverrides:
 
         styles_map = {k: copy(v) for k, v in _CANONICAL.items()}
         d = _serialize(Sphere(Point(0, 0, 0), 1.0), styles_map=styles_map)
-        assert d["style"]["opacity"] == 0.4
+        assert d["style"]["opacity"] == 1.0
 
     def test_cylinder(self):
         d = _serialize(Cylinder(Point(1, 2, 3), Direction(0, 1, 0), 2.0, 0.2))

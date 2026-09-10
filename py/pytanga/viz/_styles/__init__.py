@@ -54,9 +54,15 @@ from pytanga.geometry.operators import (
 
 from ._base import (
     DashedWireframe as DashedWireframe,
+)
+from ._base import (
     DottedWireframe,
-    SolidWireframe as SolidWireframe,
     VizStyle,
+)
+from ._base import (
+    SolidWireframe as SolidWireframe,
+)
+from ._base import (
     WireframeDashPattern as WireframeDashPattern,
 )
 from ._entity_styles import (
@@ -96,6 +102,21 @@ from ._operator_styles import (
     RotorStyle,
     TranslatorStyle,
 )
+from ._overlay_styles import (
+    AnimStyle as AnimStyle,
+)
+from ._overlay_styles import (
+    AnnotationStyle as AnnotationStyle,
+)
+from ._overlay_styles import (
+    FigureStyle as FigureStyle,
+)
+from ._overlay_styles import (
+    LabelStyle,
+)
+from ._overlay_styles import (
+    TitleStyle as TitleStyle,
+)
 from ._sdf_style import (
     SdfBoxStyle,
     SdfCircleStyle,
@@ -110,13 +131,6 @@ from ._sdf_style import (
     SdfRegularPolygonStyle,
     SdfSphereStyle,
     SdfStyle,
-)
-from ._overlay_styles import (
-    AnimStyle as AnimStyle,
-    AnnotationStyle as AnnotationStyle,
-    FigureStyle as FigureStyle,
-    LabelStyle,
-    TitleStyle as TitleStyle,
 )
 from ._tex_label_style import TextureLabelStyle as TextureLabelStyle
 
@@ -184,7 +198,9 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Line": LineStyle(color="#44ff44", opacity=0.8, length=20.0, thickness=1.0),
     "Plane": PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0),
     "Circle": CircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
-    "Sphere": SphereStyle(color="#ffaa00", opacity=0.4, wireframe=True),
+    "Sphere": SphereStyle(
+        color="#ffaa00", opacity=1.0, wireframe=True, wireframe_opacity=0.2
+    ),
     "Cylinder": CylinderStyle(color="#44aaff", opacity=0.9),
     "Arc": ArcStyle(color="#ffcc44", opacity=0.9),
     "Disk": DiskStyle(color="#ff8844", opacity=0.9, thickness=0.02),
