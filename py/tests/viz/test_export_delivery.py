@@ -27,6 +27,10 @@ def _toolchain_available() -> bool:
     return True
 
 
+# Offline export bundles third-party assets with esbuild, so these tests skip
+# when the Node.js/esbuild toolchain isn't installed (CI intentionally runs
+# without it). Install the dev JS deps locally (`npm install` in `dev/`, or
+# `npm install esbuild`) to run them.
 requires_toolchain = pytest.mark.skipif(
     not _toolchain_available(), reason="node/esbuild unavailable"
 )
