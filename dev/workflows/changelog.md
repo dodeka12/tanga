@@ -4,17 +4,20 @@ How to create and maintain changelog entries for this repository.
 
 ## Location & naming
 
-- New changelogs live in `docs/changelog/`.
+- New changelogs live in `docs/changelog/YYYY/MM/` — one subfolder per year and
+  month, e.g. `docs/changelog/2026/08/` and `docs/changelog/2026/09/`.
 - **On a feature/fix branch (any branch other than `main`)** name the file
-  `YYYY-MM-DD_<branch-name>.md`, e.g. `2026-08-19_fix-join-meet.md`.
+  `DD_<branch-name>.md` inside the year/month folder for the branch's start
+  date, e.g. `docs/changelog/2026/08/19_fix-join-meet.md`.
   - Replace `/` in the branch name with `-` (branch names commonly contain
     `/`, which would be read as a path separator in a filename).
   - Integrate **all** changes made on the branch into this single branch
     changelog — append to it as the branch evolves; do **not** create a new
     file per commit.
 - **When opening a PR**, the file is renamed to its final
-  `YYYY-MM-DD_<short-commit-hash>.md` form (the hash of the branch's last
-  commit). See `dev/workflows/pull-request.md`.
+  `DD_<short-commit-hash>.md` form (the hash of the branch's last commit) and
+  moved into the year/month folder for the date the PR is submitted. See
+  `dev/workflows/pull-request.md`.
 
 ## Title
 
@@ -89,15 +92,15 @@ to the hash-based filename). When adding a changelog:
    where `<version>` is the same value printed by `tools/last-release.py`
    (e.g. `## [Since 0.10.0] — 2026-08-18`, or
    `## [Since 1.16.0 (1.17.0-rc3)] — 2026-09-02` when a release candidate is
-   shown). Do **not** use an `[Unreleased]` tag, since the version is not yet
-   known.
+   shown) and `<YYYY-MM-DD>` is the PR submission date. Do **not** use an
+   `[Unreleased]` tag, since the version is not yet known.
 3. Add a one-line summary of the main features (dot-separated, `·`), a second
    line for breaking/bug highlights if needed, and a details link:
 
    ```
    - OPNS/IPNS flag on `Algebra.opns` · typed analyzers · ...
    - Breaking: per-call `opns` removed · ...
-   → [Details](2026-08-16_7cb2db1.md)
+   → [Details](2026/08/16_7cb2db1.md)
    ```
 
 4. Leave existing (older) entries untouched.

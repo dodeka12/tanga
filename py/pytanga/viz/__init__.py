@@ -168,6 +168,7 @@ from .camera import (
 )
 from .export._exporter import SceneExporter
 from .scene import SceneConfig
+from .server import PortConflictMode, PortOccupant
 from .views import (
     ButtonView,
     CheckboxView,
@@ -297,6 +298,8 @@ __all__ = [
     "PointPathStyle",
     "PointPairStyle",
     "PointStyle",
+    "PortConflictMode",
+    "PortOccupant",
     "ReflectionLineStyle",
     "ReflectionPlaneStyle",
     "RegularPolygonStyle",

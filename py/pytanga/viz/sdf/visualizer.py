@@ -448,8 +448,24 @@ class SdfVisualizer:
             signal.SIGINT: signal.getsignal(signal.SIGINT),
             signal.SIGTERM: signal.getsignal(signal.SIGTERM),
         }
-        signal.signal(signal.SIGINT, lambda *_: self._shutdown_requested.set())
-        signal.signal(signal.SIGTERM, lambda *_: self._shutdown_requested.set())
+
+        def _on_sigint(signum: int, frame: object) -> None:
+            self._shutdown_requested.set()
+
+        def _on_sigterm(signum: int, frame: object) -> None:
+            # SIGTERM must terminate the process (same as the standard
+            # Visualizer): request a graceful shutdown, tear the server down,
+            # then re-raise with the default disposition restored so the OS
+            # releases the port.
+            self._shutdown_requested.set()
+            try:
+                self.stop_server()
+            finally:
+                signal.signal(signal.SIGTERM, signal.SIG_DFL)
+                signal.raise_signal(signal.SIGTERM)
+
+        signal.signal(signal.SIGINT, _on_sigint)
+        signal.signal(signal.SIGTERM, _on_sigterm)
 
     def _cleanup_failed_boot(self) -> None:
         """Tear down a server whose boot task failed before it fully started."""

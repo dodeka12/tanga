@@ -102,22 +102,6 @@
         ]
       },
       {
-        "Jupyter Notebooks": [
-          {
-            "Overview": "py/examples/ga/jupyter/index.md"
-          },
-          {
-            "Animation": "py/examples/ga/jupyter/animation.md"
-          },
-          {
-            "Export": "py/examples/ga/jupyter/export.md"
-          },
-          {
-            "Interactive": "py/examples/ga/jupyter/interactive.md"
-          }
-        ]
-      },
-      {
         "Numerics": [
           {
             "Overview": "py/examples/ga/numerics/index.md"
@@ -297,6 +281,22 @@
           },
           {
             "Two Spheres Interact": "py/examples/viz/interaction/two_spheres_interact.md"
+          }
+        ]
+      },
+      {
+        "Jupyter Notebooks": [
+          {
+            "Overview": "py/examples/viz/jupyter/index.md"
+          },
+          {
+            "Animation": "py/examples/viz/jupyter/animation.md"
+          },
+          {
+            "Export": "py/examples/viz/jupyter/export.md"
+          },
+          {
+            "Interactive": "py/examples/viz/jupyter/interactive.md"
           }
         ]
       },
