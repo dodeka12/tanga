@@ -20,17 +20,26 @@ from pytanga.viz import (
     ArcStyle,
     BoxStyle,
     CircleStyle,
+    ConeStyle,
+    ConicStyle,
     CylinderCircleStyle,
     CylinderLineStyle,
     CylinderStyle,
     DiskStyle,
     EllipseStyle,
     EllipsoidStyle,
+    HyperbolaStyle,
     LabelStyle,
+    LinePairStyle,
     LineStyle,
+    ParabolaStyle,
+    ParallelLinePairStyle,
     PartialDiskStyle,
+    PlaneStyle,
     PointStyle,
+    Quadric3DStyle,
     RegularPolygonStyle,
+    SphereStyle,
     Visualizer,
 )
 from pytanga.viz._style_dict import _StyleDict
@@ -213,4 +222,28 @@ def test_line_circle_style_has_no_wireframe() -> None:
     assert d["style_type"] == "CircleStyle"
     assert d["thickness"] == 2.0
     assert "wireframe" not in d
+
+
+
+def test_conic_style_hierarchy() -> None:
+    assert issubclass(EllipseStyle, ConicStyle)
+    assert issubclass(HyperbolaStyle, ConicStyle)
+    assert issubclass(ParabolaStyle, ConicStyle)
+    assert issubclass(LinePairStyle, ConicStyle)
+    assert issubclass(ParallelLinePairStyle, ConicStyle)
+
+
+def test_quadric_style_hierarchy() -> None:
+    assert issubclass(SphereStyle, Quadric3DStyle)
+    assert issubclass(EllipsoidStyle, Quadric3DStyle)
+    assert issubclass(CylinderStyle, Quadric3DStyle)
+    assert issubclass(PlaneStyle, Quadric3DStyle)
+    assert issubclass(ConeStyle, Quadric3DStyle)
+
+
+def test_conic_and_quadric_styles_registered() -> None:
+    s = make_styles()
+    for kind in ("Ellipse", "Hyperbola", "Parabola", "LinePair", "ParallelLinePair", "Cone"):
+        assert kind in s.kind
+        assert s.kind[kind].color is not None
 

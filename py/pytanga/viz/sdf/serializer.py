@@ -1165,8 +1165,20 @@ def _ellipse_tree(
     props: dict[str, Any],
     styles_map: dict[str, Any] | None,
 ) -> tuple[Any, dict[str, Any]]:
-    resolved = _resolve(props, "Ellipse", {"thickness": 0.02}, styles_map)
-    thickness = float(_param(resolved, "thickness", 0.02))
+    resolved = _resolve(props, "Ellipse", {}, styles_map)
+    # The SDF ellipse is a thin ellipsoid; its slab `thickness` (default 0.02)
+    # is a different concept from the mesh `EllipseStyle.thickness` (a line
+    # width), so read it from the SDF ellipse default rather than inheriting
+    # the mesh default.
+    from pytanga.viz._styles import SdfEllipseStyle
+
+    thickness = SdfEllipseStyle().thickness
+    style = props.get("style")
+    if isinstance(style, SdfEllipseStyle):
+        thickness = style.thickness
+    elif "thickness" in props and props["thickness"] is not None:
+        thickness = float(props["thickness"])
+    thickness = float(thickness)
     normal = _normalize((ent.normal.x, ent.normal.y, ent.normal.z))
     if normal == (0.0, 0.0, 0.0):
         normal = _Z

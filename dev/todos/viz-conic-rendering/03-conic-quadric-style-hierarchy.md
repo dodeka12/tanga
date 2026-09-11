@@ -22,31 +22,31 @@ line, no wireframe/slab).
 
 ## Steps
 
-- [ ] **3.1 — `ConicStyle(VizStyle)` base.**
+- [x] **3.1 — `ConicStyle(VizStyle)` base.**
   - Fields `color`, `opacity`, `thickness` (line width). `to_dict()` →
     `{"style_type":"ConicStyle", ...}`.
-- [ ] **3.2 — `EllipseStyle(ConicStyle)`.**
+- [x] **3.2 — `EllipseStyle(ConicStyle)`.**
   - Drop `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity`
     and the slab-`thickness`; `thickness` becomes the line width (inherited from
     `ConicStyle`). Update the docstring: 2D line ellipse (keep `normal` on the
     entity, not the style).
-- [ ] **3.3 — `HyperbolaStyle`/`ParabolaStyle`/`LinePairStyle`/
+- [x] **3.3 — `HyperbolaStyle`/`ParabolaStyle`/`LinePairStyle`/
   `ParallelLinePairStyle` subclasses.**
   - `HyperbolaStyle(ConicStyle)` + `extent`; `ParabolaStyle(ConicStyle)` +
     `extent`; `LinePairStyle(ConicStyle)` + `length`;
     `ParallelLinePairStyle(ConicStyle)` + `length`. Each with its own `to_dict()`
     `style_type`.
-- [ ] **3.4 — `Quadric3DStyle(VizStyle)` base + `ConeStyle`.**
+- [x] **3.4 — `Quadric3DStyle(VizStyle)` base + `ConeStyle`.**
   - `Quadric3DStyle` base (solid-surface style: `color`, `opacity`, and the
     wireframe fields). Subclass `SphereStyle`, `EllipsoidStyle`, `CylinderStyle`,
     `PlaneStyle`; add `ConeStyle(Quadric3DStyle)` (no extra knobs).
-- [ ] **3.5 — Canonical defaults.**
+- [x] **3.5 — Canonical defaults.**
   - Register `_DEFAULT_STYLE_FOR_KIND` for `Hyperbola`, `Parabola`, `LinePair`,
     `ParallelLinePair`, `Cone`. Update `Ellipse` default to a line style
     (`color`, `opacity`, `thickness`).
-- [ ] **3.6 — Export + union.**
+- [x] **3.6 — Export + union.**
   - Add all new classes to `ObjVizStyle` and the `_styles`/`viz` exports.
-- [ ] **3.7 — Tests.**
+- [x] **3.7 — Tests.**
   - Assert the new kinds exist in `make_styles().kind`; assert `EllipseStyle`
     has no wireframe; assert the `ConicStyle`/`Quadric3DStyle` subclass
     relationships.

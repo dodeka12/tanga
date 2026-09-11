@@ -522,7 +522,7 @@ class TestStyleOverrides:
         assert d["radiusV"] == 1.0
         assert d["normal"] == [0, 1, 0]
         assert d["style"]["style_type"] == "EllipseStyle"
-        assert d["style"]["thickness"] == 0.02
+        assert d["style"]["thickness"] == 1.0
 
     def test_regular_polygon(self):
         d = _serialize(RegularPolygon(radius=1.5, sides=6))
