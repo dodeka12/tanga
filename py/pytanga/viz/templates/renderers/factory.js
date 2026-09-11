@@ -10,6 +10,7 @@ import { createPlane } from './plane.js';
 import { createArc, updateArc } from './arc.js';
 import { createCircle } from './circle.js';
 import { createCylinder, updateCylinder } from './cylinder.js';
+import { createCone } from './cone.js';
 import { createSphere } from './sphere.js';
 import { createDisk } from './disk.js';
 import { createPartialDisk } from './partial_disk.js';
@@ -79,6 +80,9 @@ export async function createEntityMesh(ent) {
             break;
         case 'Cylinder':
             mesh = createCylinder(ent);
+            break;
+        case 'Cone':
+            mesh = createCone(ent);
             break;
         case 'Disk':
             mesh = createDisk(ent);

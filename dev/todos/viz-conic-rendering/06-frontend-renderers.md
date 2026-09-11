@@ -19,18 +19,18 @@ add a `Cone` renderer, and wire `factory.js`.
 
 ## Steps
 
-- [ ] **6.1 — `ellipse.js` → fat line.**
+- [x] **6.1 — `ellipse.js` → fat line.**
   - Sample `N` points `center + (radiusU·cos t) e_u + (radiusV·sin t) e_v` in the
     plane perpendicular to `normal`, and draw with `makeFatLine(color, opacity,
     thickness)` (mirror `hyperbola.js`/`parabola.js`). Read `thickness` via
     `styleParam(ent, 'thickness', 1.0)`. Remove the filled `CircleGeometry` mesh.
-- [ ] **6.2 — `cone.js` (new).**
+- [x] **6.2 — `cone.js` (new).**
   - Draw a double cone from `vertex`, `axis`, `halfAngle` (`ConeGeometry` +
     `makeMaterial`), oriented along `axis`, with `wireframe` overlay support.
-- [ ] **6.3 — `factory.js`.**
+- [x] **6.3 — `factory.js`.**
   - Add `case 'Cone': mesh = createCone(ent);`. Confirm `ParallelLinePair` already
     routes to `createLinePair` (it does at the `LinePair` case); keep it.
-- [ ] **6.4 — Export lockstep.**
+- [x] **6.4 — Export lockstep.**
   - Ensure the renderer bundle test (`test_export_renderers.py`) still passes;
     add `cone.js` to the expected set if the test enumerates renderers.
 

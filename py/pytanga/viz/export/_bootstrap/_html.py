@@ -79,6 +79,7 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "plane.js",
     _RENDERERS_DIR / "arc.js",
     _RENDERERS_DIR / "circle.js",
+    _RENDERERS_DIR / "cone.js",
     _RENDERERS_DIR / "cylinder.js",
     _RENDERERS_DIR / "box.js",
     _RENDERERS_DIR / "disk.js",

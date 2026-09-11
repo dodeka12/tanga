@@ -12,7 +12,7 @@ import {
     addWireframeOverlay,
 } from './utils.js';
 
-const SEGMENTS = 96;
+const CIRCLE_SEGMENTS = 96;
 
 function isLineStyle(ent) {
     return !!(ent.style && ent.style.style_type === 'CircleStyle');
@@ -31,8 +31,8 @@ function createLineCircle(ent) {
     const ey = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
 
     const points = [];
-    for (let i = 0; i <= SEGMENTS; i++) {
-        const t = (2 * Math.PI * i) / SEGMENTS;
+    for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
+        const t = (2 * Math.PI * i) / CIRCLE_SEGMENTS;
         points.push(
             new THREE.Vector3(center[0], center[1], center[2])
                 .addScaledVector(ex, radius * Math.cos(t))
