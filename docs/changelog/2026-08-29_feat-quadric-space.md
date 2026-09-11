@@ -19,6 +19,10 @@
   writes `gl_FragDepth`; `Quadric3D` renders via this path by default.
 - **2D conic curve renderers** — `Hyperbola`, `Parabola`, `LinePair`
   (`ParallelLinePair`), and `PointSet` frontend renderers.
+- **2D conic visualization** — `Ellipse` renders as a 2D line, and the viewer
+  auto-refines a raw `Conic` to its specific 2D entity; `ParallelLinePair` and
+  `Cone` gained serializers + frontend renderers, and circles can be drawn as a
+  thick line via `CircleStyle`.
 
 ## Bug Fixes
 - **Ray renderer one-sided quadrics** — the analytic ray proxy now rasterizes
@@ -31,4 +35,18 @@
   intersection now returns the nearest root inside `[tNear, tFar]` rather than
   the nearest root on the unbounded ray, so unbounded quadrics no longer pop
   out of view when their closest intersection sits just outside the ±10 cube.
+- **Silent scene-push failure now logged** — a failed full-state WebSocket push
+  logs the exception instead of leaving the viewer blank with no diagnostics.
+
+## Refactor
+- **Quadric style hierarchy** — new `ConicStyle` / `Quadric3DStyle` base classes
+  with `EllipseStyle`, `HyperbolaStyle`, `ParabolaStyle`, `LinePairStyle`,
+  `ParallelLinePairStyle`, and `ConeStyle`; `SphereStyle` / `EllipsoidStyle` /
+  `CylinderStyle` / `PlaneStyle` now subclass `Quadric3DStyle`.
+- **Circle style split** — the tube (torus) style is renamed
+  `CylinderCircleStyle` (default for `Circle`); `CircleStyle` is now the
+  thick-line variant.
+- **Wireframe params removed from thick-line styles** — `LineStyle` no longer
+  carries wireframe fields (they moved to the solid `CylinderLineStyle`).
+
 

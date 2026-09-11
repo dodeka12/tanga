@@ -18,17 +18,17 @@ Update documentation and the branch changelog, and run the full regression.
 
 ## Steps
 
-- [ ] **7.1 — Update developer docs.**
+- [x] **7.1 — Update developer docs.**
   - If `_resolve_scene_entity`'s refine behavior or the style dispatch is a new
     documented contract, note it in `docs/dev/architecture/viz-architecture.md`.
-- [ ] **7.2 — Update example docs.**
+- [x] **7.2 — Update example docs.**
   - Refresh `conic_demo` docs to reflect that `viz.add(raw_conic)` now works
     (auto-refine) and that conics render as 2D lines. Follow
     `dev/workflows/example-docs.md` if the example source changes.
-- [ ] **7.3 — Changelog.**
+- [x] **7.3 — Changelog.**
   - Write the branch changelog per `dev/workflows/changelog.md`; finalize the
     hash rename + PR per `dev/workflows/pull-request.md`.
-- [ ] **7.4 — Full regression.**
+- [x] **7.4 — Full regression.**
   - Run the full Python + JS + docs validation below.
 
 ## Validation

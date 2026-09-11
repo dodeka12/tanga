@@ -57,7 +57,9 @@ inbound dispatch that resolves them.
   `layouts[name]`; `add_scene(name)` supplies scene-URL sugar for free.
 - **Add an entity** — `viz.add(...)` -> `layout.scene("").add_viz(...)` ->
   `Scene.add`/`add_object` -> `SceneObject` + `VizNode` -> `flush()` -> `entity_*`
-  messages.  `_resolve_scene_entity` turns MVs into `SceneEntity`.
+  messages.  `_resolve_scene_entity` turns MVs into `SceneEntity` (and refines
+  a raw `Conic` to its specific 2D entity so the viewer can serialize it;
+  `Quadric3D` is left alone and renders via the analytic ray path).
 - **Add a control** — build a `*View`, mount it via `set_layout` (or declaratively
   in `SceneView(overlay=[...])`); `LayoutHost.register` walks the tree and calls
   each `Control.register_handlers` (registers `(id, event)` handlers).

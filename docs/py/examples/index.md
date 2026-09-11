@@ -302,11 +302,11 @@ uv run python py/examples/<path>.py
 
 - **HTML** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
+- **hyperboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+
 - **icon** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
-
-- **hyperboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
 
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
@@ -444,9 +444,9 @@ uv run python py/examples/<path>.py
 
 - **panes** — [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md)
 
-- **parent_id** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
-
 - **paraboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+
+- **parent_id** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **PartialDisk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
@@ -498,10 +498,6 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **re-run** — [Interactive Visualizer](viz/jupyter/interactive.md)
-
-- **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
-
 - **quadric** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **Quadric3D** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
@@ -509,6 +505,10 @@ uv run python py/examples/<path>.py
 - **quadric_from_points** — [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **ray** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+
+- **re-run** — [Interactive Visualizer](viz/jupyter/interactive.md)
+
+- **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **refine** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
