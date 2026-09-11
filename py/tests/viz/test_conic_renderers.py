@@ -4,11 +4,13 @@
 """Tests for the 2D conic curve renderer serializers."""
 
 from pytanga.geometry import (
+    Cone,
     Direction,
     Hyperbola,
     Line,
     LinePair,
     Parabola,
+    ParallelLinePair,
     Point,
     PointSet,
 )
@@ -57,6 +59,34 @@ class TestConicRenderers:
         assert d["kind"] == "PointSet"
         assert d["points"] == [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
         assert d["pointKind"] == "pair"
+
+    def test_serialize_ellipse_line(self):
+        e = Ellipse(radius_u=2.0, radius_v=1.0)
+        d = serialize_entity(e, "el1", kind="Ellipse")
+        assert d["kind"] == "Ellipse"
+        assert d["radiusU"] == 2.0
+        assert d["radiusV"] == 1.0
+        assert d["style"]["thickness"] == 1.0
+        for key in ("wireframe", "wireframe_dash", "wireframe_color", "wireframe_opacity"):
+            assert key not in d
+            assert key not in d["style"]
+
+    def test_serialize_parallel_line_pair(self):
+        l1 = Line(Point(0.0, 0.0, 0.0), Direction(1.0, 0.0, 0.0))
+        l2 = Line(Point(0.0, 1.0, 0.0), Direction(1.0, 0.0, 0.0))
+        plp = ParallelLinePair(l1, l2)
+        d = serialize_entity(plp, "plp1", kind="ParallelLinePair")
+        assert d["kind"] == "ParallelLinePair"
+        assert d["line1"]["origin"] == [0.0, 0.0, 0.0]
+        assert d["line2"]["origin"] == [0.0, 1.0, 0.0]
+
+    def test_serialize_cone(self):
+        c = Cone(Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0), 0.5)
+        d = serialize_entity(c, "c1", kind="Cone")
+        assert d["kind"] == "Cone"
+        assert d["vertex"] == [0.0, 0.0, 0.0]
+        assert d["axis"] == [0.0, 0.0, 1.0]
+        assert d["halfAngle"] == 0.5
 
 
 import numpy as np

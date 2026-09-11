@@ -14,6 +14,7 @@ from pytanga.geometry.entities import (
     Arc,
     Box,
     Circle,
+    Cone,
     Cylinder,
     Direction,
     Disk,
@@ -25,6 +26,7 @@ from pytanga.geometry.entities import (
     Line,
     LinePair,
     Parabola,
+    ParallelLinePair,
     PartialDisk,
     Plane,
     Point,
@@ -157,6 +159,8 @@ def _dispatch_entity(
         return _serialize_space(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Cylinder):
         return _serialize_cylinder(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Cone):
+        return _serialize_cone(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Arc):
         return _serialize_arc(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Disk):
@@ -177,6 +181,10 @@ def _dispatch_entity(
         return _serialize_hyperbola(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Parabola):
         return _serialize_parabola(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ParallelLinePair):
+        return _serialize_parallel_line_pair(
+            entity, props, kind=kind, styles_map=styles_map
+        )
     if isinstance(entity, LinePair):
         return _serialize_line_pair(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, PointSet):
@@ -1136,12 +1144,7 @@ def _serialize_ellipse(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    return _apply_defaults(
-        props,
-        kind,
-        {"thickness": 0.02},
-        styles_map=styles_map,
-    ) | {
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "center": [ent.center.x, ent.center.y, ent.center.z],
         "radiusU": ent.radius_u,
         "radiusV": ent.radius_v,
@@ -1231,6 +1234,34 @@ def _serialize_point_set(
     result["points"] = [[p.x, p.y, p.z] for p in ent.points]
     result["pointKind"] = ent.kind
     return result
+
+
+def _serialize_parallel_line_pair(
+    ent: ParallelLinePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["line1"] = _line_wire(ent.line1)
+    result["line2"] = _line_wire(ent.line2)
+    return result
+
+
+def _serialize_cone(
+    ent: Cone,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "halfAngle": ent.half_angle,
+    }
+
 
 
 # ── Operators ──────────────────────────────────────────────
