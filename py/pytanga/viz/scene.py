@@ -833,9 +833,18 @@ def _resolve_scene_entity(obj: Any) -> SceneEntity:
     Viz-level drawables (PointPath, …) are passed through unchanged.
     GeoEntities and Operators are returned as-is.
     MVs are resolved via :func:`pytanga.geometry.analyze`, reading the
-    MV's ``algebra.opns`` flag.
+    MV's ``algebra.opns`` flag.  A raw :class:`Conic` (an intermediate
+    analysis result) is refined to its specific 2D entity so the
+    visualizer can serialize it; :class:`Quadric3D` is left alone (it
+    renders via the analytic ray path).
     """
+    from pytanga.geometry.entities import Conic
     from pytanga.geometry.operators import Operator as GeoOperator
+
+    if isinstance(obj, Conic):
+        from pytanga.geometry import refine
+
+        return refine(obj)
 
     if isinstance(obj, SceneEntity):
         return obj  # type: ignore[return-value]

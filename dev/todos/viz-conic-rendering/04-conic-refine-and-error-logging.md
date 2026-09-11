@@ -19,17 +19,17 @@ so a bad scene no longer renders blank.
 
 ## Steps
 
-- [ ] **4.1 — Refine `Conic` in `_resolve_scene_entity`.**
+- [x] **4.1 — Refine `Conic` in `_resolve_scene_entity`.**
   - At the top of `_resolve_scene_entity`, before the `SceneEntity` passthrough:
     `from pytanga.geometry.entities import Conic; if isinstance(obj, Conic):
     from pytanga.geometry import refine; return refine(obj)`.
   - Do **not** refine `Quadric3D` (it renders via the ray path). Let `refine`'s
     `ValueError` (imaginary/point-pair conic) propagate as the "raise" behavior.
-- [ ] **4.2 — Log the silent WebSocket full-state failure.**
+- [x] **4.2 — Log the silent WebSocket full-state failure.**
   - In `server.py`, replace the bare `except Exception: pass` around
     `await self._push_full_state(...)` with `except Exception: logger.exception(
     "full-state push failed", exc_info=True)` (keep the no-crash behavior).
-- [ ] **4.3 — Tests.**
+- [x] **4.3 — Tests.**
   - `_resolve_scene_entity(Conic(...))` returns the refined entity (e.g.
     `Ellipse`); `_resolve_scene_entity(Quadric3D(...))` returns the `Quadric3D`
     unchanged; a user `ConicStyle` + refine resolves to the merged style
