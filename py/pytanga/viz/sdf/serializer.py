@@ -922,7 +922,7 @@ def _circle_tree(
 ) -> tuple[Any, dict[str, Any]]:
     # The existing style key is `tube_radius`; the SDF plan calls it
     # `thickness`. Resolve via the standard key for consistency, so a
-    # `CircleStyle(tube_radius=…)` keeps working.
+    # `CylinderCircleStyle(tube_radius=…)` keeps working.
     resolved = _resolve(props, "Circle", {"tube_radius": 0.03}, styles_map)
     thickness = float(
         props.get("thickness", resolved.get("tube_radius", 0.03))

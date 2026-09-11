@@ -22,24 +22,24 @@ line. The frontend dispatches the two by `style_type`.
 
 ## Steps
 
-- [ ] **2.1 — Rename `CircleStyle` → `CylinderCircleStyle`.**
+- [x] **2.1 — Rename `CircleStyle` → `CylinderCircleStyle`.**
   - Keep its fields (`color`, `opacity`, `tube_radius`, wireframe…); change
     `to_dict()` `style_type` to `"CylinderCircleStyle"`. Keep `ImagCircle`
     using it (imaginary circle stays a tube).
-- [ ] **2.2 — Add the new thick-line `CircleStyle(VizStyle)`.**
+- [x] **2.2 — Add the new thick-line `CircleStyle(VizStyle)`.**
   - Fields: `color`, `opacity`, `thickness` (line width, same name as
     `LineStyle.thickness`). `to_dict()` `style_type` = `"CircleStyle"`.
-- [ ] **2.3 — Update canonical defaults.**
+- [x] **2.3 — Update canonical defaults.**
   - `_DEFAULT_STYLE_FOR_KIND["Circle"]` = `CylinderCircleStyle(...)` (tube is the
     default); keep `ImagCircle` on `CylinderCircleStyle`.
-- [ ] **2.4 — Export + union.**
+- [x] **2.4 — Export + union.**
   - Add `CylinderCircleStyle` and `CircleStyle` to the `ObjVizStyle` union and the
     `_styles` / `viz` `__init__` exports.
-- [ ] **2.5 — Frontend dispatch.**
+- [x] **2.5 — Frontend dispatch.**
   - In `circle.js`, dispatch on `ent.style?.style_type`: `"CircleStyle"` samples
     the circle and draws it with `makeFatLine`; otherwise keep the existing torus
     path (which is `CylinderCircleStyle` by default).
-- [ ] **2.6 — Tests.**
+- [x] **2.6 — Tests.**
   - Assert `make_styles()["Circle"]` is a `CylinderCircleStyle`, that
     `CircleStyle.to_dict()` has no wireframe, and that both styles serialize.
 

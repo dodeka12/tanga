@@ -72,6 +72,7 @@ from ._entity_styles import (
     AxisStyle,
     BoxStyle,
     CircleStyle,
+    CylinderCircleStyle,
     CylinderLineStyle,
     CylinderStyle,
     DirectionStyle,
@@ -145,6 +146,7 @@ ObjVizStyle: TypeAlias = Union[
     LineStyle,
     PlaneStyle,
     CircleStyle,
+    CylinderCircleStyle,
     CylinderLineStyle,
     CylinderStyle,
     ArcStyle,
@@ -200,7 +202,7 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     ),
     "Line": LineStyle(color="#44ff44", opacity=0.8, length=20.0, thickness=1.0),
     "Plane": PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0),
-    "Circle": CircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
+    "Circle": CylinderCircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
     "Sphere": SphereStyle(
         color="#ffaa00", opacity=1.0, wireframe=True, wireframe_opacity=0.2
     ),
@@ -247,7 +249,7 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
         wireframe_dash=DottedWireframe(),
         wireframe_opacity=0.6,
     ),
-    "ImagCircle": CircleStyle(
+    "ImagCircle": CylinderCircleStyle(
         color="#ff88ff",
         opacity=0.0,
         tube_radius=0.03,

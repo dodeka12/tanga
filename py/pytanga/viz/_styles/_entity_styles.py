@@ -226,10 +226,12 @@ class PlaneStyle(VizStyle):
 
 
 @dataclass
-class CircleStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.Circle`.
+class CylinderCircleStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Circle` rendered as a solid
+    tube (torus).
 
     Attributes:
+        tube_radius: Radius of the tube cross-section.
         wireframe: When ``True``, a wireframe cage is drawn over the
             torus surface.
         wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
@@ -249,7 +251,7 @@ class CircleStyle(VizStyle):
     wireframe_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "CircleStyle"}
+        result: dict[str, Any] = {"style_type": "CylinderCircleStyle"}
         if self.color is not None:
             result["color"] = self.color
         if self.opacity is not None:
@@ -264,6 +266,30 @@ class CircleStyle(VizStyle):
             result["wireframe_color"] = self.wireframe_color
         if self.wireframe_opacity is not None:
             result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class CircleStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Circle` rendered as a thick
+    (screen-space fat) line.
+
+    ``thickness`` is the line width in screen-space pixels (same parameter name
+    as :class:`LineStyle`).
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "CircleStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
         return result
 
 

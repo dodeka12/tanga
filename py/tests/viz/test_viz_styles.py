@@ -19,6 +19,8 @@ from pytanga.geometry import (
 from pytanga.viz import (
     ArcStyle,
     BoxStyle,
+    CircleStyle,
+    CylinderCircleStyle,
     CylinderLineStyle,
     CylinderStyle,
     DiskStyle,
@@ -199,4 +201,16 @@ def test_cylinder_line_style_keeps_wireframe() -> None:
     assert d["style_type"] == "CylinderLineStyle"
     assert d["wireframe"] is True
     assert d["wireframe_color"] == "#000000"
+
+
+def test_circle_default_is_tube_style() -> None:
+    s = make_styles()
+    assert isinstance(s["Circle"], CylinderCircleStyle)
+
+
+def test_line_circle_style_has_no_wireframe() -> None:
+    d = CircleStyle(thickness=2.0).to_dict()
+    assert d["style_type"] == "CircleStyle"
+    assert d["thickness"] == 2.0
+    assert "wireframe" not in d
 
