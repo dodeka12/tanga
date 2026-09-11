@@ -123,25 +123,14 @@ class PointPairStyle(VizStyle):
 class LineStyle(VizStyle):
     """Visual style for :class:`~pytanga.geometry.Line`.
 
-    Attributes:
-        wireframe: When ``True``, a wireframe cage is drawn over the
-            cylinder surface.
-        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
-            wireframe lines.  ``None`` defaults to solid lines.
-        wireframe_color: Optional override color for wireframe lines.
-            ``None`` uses the entity's main color.
-        wireframe_opacity: Optional opacity for wireframe lines (0..1).
-            ``None`` defaults to fully opaque.
+    Renders the line as a screen-space fat line; ``thickness`` is a pixel
+    width.  A fat line has no surface, so there are no wireframe parameters.
     """
 
     color: str | None = None
     opacity: float | None = None
     length: float | None = None
     thickness: float | None = None
-    wireframe: bool | None = None
-    wireframe_dash: WireframeDashPattern | None = None
-    wireframe_color: str | None = None
-    wireframe_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "LineStyle"}
@@ -153,14 +142,6 @@ class LineStyle(VizStyle):
             result["length"] = self.length
         if self.thickness is not None:
             result["thickness"] = self.thickness
-        if self.wireframe is not None:
-            result["wireframe"] = self.wireframe
-        if self.wireframe_dash is not None:
-            result["wireframe_dash"] = self.wireframe_dash.to_dict()
-        if self.wireframe_color is not None:
-            result["wireframe_color"] = self.wireframe_color
-        if self.wireframe_opacity is not None:
-            result["wireframe_opacity"] = self.wireframe_opacity
         return result
 
 
@@ -171,14 +152,27 @@ class CylinderLineStyle(LineStyle):
 
     ``thickness`` is interpreted in **world units** (the cylinder radius),
     unlike the base :class:`LineStyle`, whose ``thickness`` is a screen-space
-    pixel width.
+    pixel width.  Because this renders a solid surface, it keeps the wireframe
+    parameters that the fat-line base does not have.
     """
 
     thickness: float = 0.03
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
         result["style_type"] = "CylinderLineStyle"
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
         return result
 
 

@@ -1,6 +1,6 @@
 # Conic Visualization Rendering — Overview
 
-**Created:** 2026-09-11 | **Status:** Planned | **Branch:** `feat/quadric-space`
+**Created:** 2026-09-11 | **Status:** In progress | **Branch:** `feat/quadric-space`
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this

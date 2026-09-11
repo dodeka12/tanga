@@ -185,3 +185,18 @@ def test_new_entity_style_class_key_access() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     for entity in (Disk, PartialDisk, Box, Ellipsoid, Ellipse, RegularPolygon):
         assert viz.styles[entity] is viz.styles[entity.__name__]
+
+
+def test_line_style_omits_wireframe() -> None:
+    d = LineStyle().to_dict()
+    assert d["style_type"] == "LineStyle"
+    for key in ("wireframe", "wireframe_dash", "wireframe_color", "wireframe_opacity"):
+        assert key not in d
+
+
+def test_cylinder_line_style_keeps_wireframe() -> None:
+    d = CylinderLineStyle(wireframe=True, wireframe_color="#000000").to_dict()
+    assert d["style_type"] == "CylinderLineStyle"
+    assert d["wireframe"] is True
+    assert d["wireframe_color"] == "#000000"
+
