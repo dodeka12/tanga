@@ -11,11 +11,11 @@ import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
-import { handleControlsDefine, handleControlsClear } from '../controls-panel.js';
-import { attachGroup, detachGroup, detachAll } from '../controls-attached.js';
+import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
+import { attachGroupView, detachGroup, detachAll, releaseAttachedGroups } from '../controls-attached.js';
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
-import { initInteraction, registerInteractive, unregisterInteractive, clearAllInteractive, setSpaceDim, setCamera } from '../interaction.js';
+import { InteractionController } from '../interaction.js';
 
 // ── WebGL1 SDF fallback warning banner ──────────────────────
 // SDF proxies need GLSL3 + `gl_FragDepth` (WebGL2). On WebGL1 those objects
@@ -29,35 +29,13 @@ function _showSdfWebGL2Warning() {
     _sdfWebGL2WarningShown = true;
 
     const banner = document.createElement('div');
-    banner.style.position = 'fixed';
-    banner.style.top = '0';
-    banner.style.left = '0';
-    banner.style.right = '0';
-    banner.style.zIndex = '100001';
-    banner.style.background = '#ffc107';
-    banner.style.color = '#1a1a2e';
-    banner.style.fontFamily = 'sans-serif';
-    banner.style.fontSize = '13px';
-    banner.style.padding = '10px 16px';
-    banner.style.display = 'flex';
-    banner.style.alignItems = 'center';
-    banner.style.justifyContent = 'center';
-    banner.style.gap = '12px';
-    banner.style.lineHeight = '1.5';
-    banner.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+    banner.className = 'tanga-warning-banner';
 
     const text = document.createElement('span');
     text.textContent = 'SDF objects require WebGL2 — they are hidden in this viewer.';
 
     const btn = document.createElement('button');
     btn.textContent = 'Dismiss';
-    btn.style.padding = '4px 12px';
-    btn.style.background = '#1a1a2e';
-    btn.style.color = '#ffffff';
-    btn.style.border = 'none';
-    btn.style.borderRadius = '3px';
-    btn.style.cursor = 'pointer';
-    btn.style.fontWeight = 'bold';
     btn.onclick = () => banner.remove();
 
     banner.appendChild(text);
@@ -65,23 +43,46 @@ function _showSdfWebGL2Warning() {
     document.body.insertBefore(banner, document.body.firstChild);
 }
 
-function _applyOverlayAnchor(el, anchor) {
+export function applyOverlayAnchor(el, anchor) {
     el.style.top = 'auto';
     el.style.right = 'auto';
     el.style.bottom = 'auto';
     el.style.left = 'auto';
+    el.style.transform = '';
     switch (anchor) {
         case 'top-left':
             el.style.top = '8px';
             el.style.left = '8px';
             break;
         case 'top-right':
-            el.style.top = '8px';
+            // Stay clear of the fixed connection status dot + "Reconnect"
+            // button that occupy the viewport's top-right corner.
+            el.style.top = '36px';
             el.style.right = '8px';
             break;
         case 'bottom-left':
             el.style.bottom = '8px';
             el.style.left = '8px';
+            break;
+        case 'top':
+            el.style.top = '8px';
+            el.style.left = '50%';
+            el.style.transform = 'translateX(-50%)';
+            break;
+        case 'bottom':
+            el.style.bottom = '8px';
+            el.style.left = '50%';
+            el.style.transform = 'translateX(-50%)';
+            break;
+        case 'left':
+            el.style.left = '8px';
+            el.style.top = '50%';
+            el.style.transform = 'translateY(-50%)';
+            break;
+        case 'right':
+            el.style.right = '8px';
+            el.style.top = '50%';
+            el.style.transform = 'translateY(-50%)';
             break;
         case 'bottom-right':
         default:
@@ -100,6 +101,7 @@ export class ThreeJsView extends View {
         this._cameraOverride = cameraOverride || null;
         this.viewId = viewId || null;
         this._browserId = null;
+        this._interaction = null;
 
         this.sceneObjects = new Map(); // id → {obj, mesh, data, layer, el?}
         this.scene = new THREE.Scene();
@@ -109,10 +111,12 @@ export class ThreeJsView extends View {
         this.controls = null;
         this.labelRenderer = null;
         this.sceneConfig = null;
+        this._explicitBackground = null;
         this.cameraPositioned = false;
         this._titleElement = null;
         this._annotationPanel = null;
         this._overlays = [];
+        this._pendingAttachedGroups = new Map(); // parent_id → [GroupView, …]
         this._banners = new Map();
         this._isWebGL2 = false;
 
@@ -127,7 +131,10 @@ export class ThreeJsView extends View {
 
     // ── context setters ────────────────────────────────────────
 
-    setWebSocket(ws) { this._ws = ws; }
+    setWebSocket(ws) {
+        this._ws = ws;
+        if (this._interaction) this._interaction.setWebSocket(ws);
+    }
     setBrowserId(id) { this._browserId = id; }
 
     // ── overlay ─────────────────────────────────────────────────
@@ -137,13 +144,68 @@ export class ThreeJsView extends View {
      * its `position` (`top-left`/`top-right`/`bottom-left`/`bottom-right`).
      */
     addOverlay(view) {
+        if (view.parent_id) {
+            const parentMesh = this.sceneObjects.get(view.parent_id)?.obj;
+            if (parentMesh) {
+                attachGroupView(view, parentMesh);
+            } else {
+                // The layout arrives before the scene entities, so defer the
+                // CSS2D attach until `_upsertObject` registers the parent mesh.
+                const pending = this._pendingAttachedGroups.get(view.parent_id) || [];
+                pending.push(view);
+                this._pendingAttachedGroups.set(view.parent_id, pending);
+                sendLog('debug', 'Deferring group attach until parent entity arrives', {
+                    source: 'three-view.js',
+                    data: { parent_id: view.parent_id },
+                });
+            }
+            return view;
+        }
         view.mount(this.el);
         const el = view.el;
         el.style.position = 'absolute';
         el.style.zIndex = '20';
-        _applyOverlayAnchor(el, view.position || 'bottom-right');
+        applyOverlayAnchor(el, view.position || 'bottom-right');
         this._overlays.push(view);
         return view;
+    }
+
+    /** Soft-release a mesh's attached groups and re-defer them for re-attach. */
+    _redeferAttachedGroups(obj) {
+        const released = releaseAttachedGroups(obj);
+        for (const { groupView } of released) {
+            const parentId = groupView.parent_id;
+            const pending = this._pendingAttachedGroups.get(parentId) || [];
+            pending.push(groupView);
+            this._pendingAttachedGroups.set(parentId, pending);
+        }
+    }
+
+    /** Attach any deferred groups waiting on entity id `id` to `obj`. */
+    _attachPendingGroups(id, obj) {
+        const pending = this._pendingAttachedGroups.get(id);
+        if (!pending) return;
+        for (const group of pending) attachGroupView(group, obj);
+        this._pendingAttachedGroups.delete(id);
+    }
+
+    /** Remove and destroy all mounted overlay views (used when a scene pane is reused). */
+    clearOverlays() {
+        for (const view of this._overlays) {
+            if (typeof view.unmount === 'function') view.unmount();
+            if (typeof view.destroy === 'function') view.destroy();
+        }
+        this._overlays = [];
+        // Detach CSS2D-attached groups belonging to this pane's objects so a
+        // layout re-push that reuses the pane doesn't leak or double-attach.
+        for (const entry of this.sceneObjects.values()) {
+            if (entry.obj && entry.obj.userData._attachedGroups) {
+                for (const groupId of entry.obj.userData._attachedGroups) {
+                    detachGroup(groupId);
+                }
+            }
+        }
+        this._pendingAttachedGroups.clear();
     }
 
     _log(phase, detail) {
@@ -152,6 +214,9 @@ export class ThreeJsView extends View {
         if (this.sceneName) parts.push('scene=' + this.sceneName);
         if (detail) parts.push(detail);
         console.log(parts.join(' '));
+        if (logForwardingEnabled()) {
+            sendLog('info', detail || phase, { source: 'three-view.js', data: { phase } });
+        }
     }
 
     // ── scene setup ────────────────────────────────────────────
@@ -167,6 +232,7 @@ export class ThreeJsView extends View {
             this._isWebGL2 = !!this.renderer.capabilities.isWebGL2;
         } catch (e) {
             console.warn('WebGL renderer failed — falling back to headless mode:', e.message);
+            sendLog('error', 'WebGL renderer failed — falling back to headless mode', { source: 'three-view.js', data: { error: e && e.message ? e.message : String(e) } });
             webglOk = false;
             this.renderer = null;
         }
@@ -191,7 +257,7 @@ export class ThreeJsView extends View {
 
         if (webglOk && this.renderer) {
             this.controls = setupControls(this.camera, this.renderer);
-            initInteraction(this.camera, this.renderer.domElement, this.controls, this._ws);
+            this._interaction = new InteractionController(this.camera, this.renderer.domElement, this.controls, this._ws);
         }
     }
 
@@ -220,7 +286,9 @@ export class ThreeJsView extends View {
 
     fitCamera() {
         if (!this.camera) return;
-        fitCamera(this.sceneObjects, this.camera, this.controls, this.sceneConfig?.space_dim || 3);
+        fitCamera(this.sceneObjects, this.camera, this.controls,
+            this.sceneConfig?.space_dim || 3,
+            this.width || window.innerWidth, this.height || window.innerHeight);
     }
 
     render() {
@@ -248,15 +316,15 @@ export class ThreeJsView extends View {
         if (this.labelRenderer && this.labelRenderer.domElement) {
             this.labelRenderer.domElement.innerHTML = '';
         }
-        clearAllInteractive();
+        this._interaction.clearAllInteractive();
         this.sceneObjects.clear();
         this._removeAnnotation();
         if (this._titleElement) {
             this._titleElement.remove();
             this._titleElement = null;
         }
-        handleControlsClear();
         detachAll();
+        this._pendingAttachedGroups.clear();
         this._clearBanners();
         this.cameraPositioned = false;
         this._addDefaultLights();
@@ -272,13 +340,17 @@ export class ThreeJsView extends View {
         const cameraConfig = this._cameraOverride || config.camera;
 
         if (config.background_color) {
+            this._explicitBackground = config.background_color;
             this.scene.background = new THREE.Color(config.background_color);
+        } else {
+            this._explicitBackground = null;
+            this.applyThemeBackground();
         }
 
         this._applyCamera(cameraConfig);
 
         configureControls(this.controls, this.renderer, spaceDim);
-        setSpaceDim(spaceDim);
+        this._interaction.setSpaceDim(spaceDim);
         this.resize();
 
         if (config.title !== undefined) {
@@ -294,14 +366,27 @@ export class ThreeJsView extends View {
     }
 
     /**
+     * Point this pane's scene background at the active theme's `--tanga-bg`
+     * token.  A no-op when the scene config set an explicit `background_color`.
+     */
+    applyThemeBackground() {
+        if (this._explicitBackground) return;
+        const bg = getComputedStyle(document.documentElement)
+            .getPropertyValue('--tanga-bg').trim();
+        this.scene.background = bg ? new THREE.Color(bg) : null;
+    }
+
+    /**
      * Apply a camera config to this pane's camera + orbit controls.  Shared by
      * `_applySceneConfig` and `setCamera`.
      */
     _applyCamera(cameraConfig) {
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
+        const viewWidth = this.width > 0 ? this.width : null;
+        const viewHeight = this.height > 0 ? this.height : null;
 
-        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null);
-        setCamera(this.camera);
+        this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null, viewWidth, viewHeight);
+        this._interaction.setCamera(this.camera);
 
         const cc = cameraConfig || {};
         if (cc.position) this.camera.position.set(cc.position[0], cc.position[1], cc.position[2]);
@@ -326,19 +411,11 @@ export class ThreeJsView extends View {
     _renderTitle(titleText) {
         if (!this._titleElement) {
             this._titleElement = document.createElement('div');
+            this._titleElement.className = 'tanga-title-overlay';
             this._titleElement.style.position = 'absolute';
             this._titleElement.style.top = '10px';
             this._titleElement.style.left = '50%';
             this._titleElement.style.transform = 'translateX(-50%)';
-            this._titleElement.style.color = '#ffffff';
-            this._titleElement.style.fontFamily = 'sans-serif';
-            this._titleElement.style.fontSize = '20px';
-            this._titleElement.style.fontWeight = 'bold';
-            this._titleElement.style.background = 'rgba(0, 0, 0, 0.6)';
-            this._titleElement.style.padding = '6px 20px';
-            this._titleElement.style.borderRadius = '4px';
-            this._titleElement.style.pointerEvents = 'none';
-            this._titleElement.style.zIndex = '5';
             this.el.appendChild(this._titleElement);
         }
         this._titleElement.textContent = '';
@@ -469,23 +546,14 @@ export class ThreeJsView extends View {
             this._handleAnimate(msg);
         } else if (msg.type === 'timeline') {
             this._handleTimeline(msg);
-        } else if (msg.type === 'controls_define') {
-            this._log('init', 'controls_define controls=' + (msg.controls ? msg.controls.length : 0) + ' groups=' + (msg.groups ? msg.groups.length : 0));
-            handleControlsDefine(msg);
-            const controls2 = msg.controls || [];
-            const groups = msg.groups || [];
-            for (const g of groups) {
-                if (g.parentId) attachGroup(g, controls2, this.sceneObjects);
-            }
-        } else if (msg.type === 'controls_clear') {
-            handleControlsClear();
-            detachAll();
         } else if (msg.type === 'banner_define') {
             this._showBanner(msg);
         } else if (msg.type === 'banner_remove') {
             this._removeBanner(msg.id);
         } else if (msg.type === 'banner_clear') {
             this._clearBanners();
+        } else if (msg.type === 'interaction:drag_anchor') {
+            this._interaction.setDragAnchor(msg.object_id, msg.world_position);
         }
     }
 
@@ -519,17 +587,14 @@ export class ThreeJsView extends View {
     }
 
     _sendBannerClosed(id) {
-        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
-            this._ws.send(
-                JSON.stringify({ type: 'banner_closed', id, browser_id: this._browserId })
-            );
-        }
+        sendEvent(id, 'close');
     }
 
     async _upsertObject(msg) {
         const old = this.sceneObjects.get(msg.id);
         if (old) {
             if (old.layer === 'scene' && old.obj) {
+                this._redeferAttachedGroups(old.obj);
                 removeEntityMesh(old.obj);
             } else if (old.obj && old.obj.removeFromParent) {
                 old.obj.removeFromParent();
@@ -545,8 +610,11 @@ export class ThreeJsView extends View {
                 return;
             }
             const entry = await buildSceneObject(msg, this.scene, this.sceneObjects);
+            if (entry && entry.obj) {
+                this._attachPendingGroups(msg.id, entry.obj);
+            }
             if (entry && msg.interaction) {
-                registerInteractive(msg.id, entry.obj, msg.interaction);
+                this._interaction.registerInteractive(msg.id, entry.obj, msg.interaction);
             }
         } else if (msg.layer === 'overlay') {
             if (msg.kind === 'annotation') {
@@ -562,7 +630,7 @@ export class ThreeJsView extends View {
     }
 
     _removeSceneObject(id) {
-        unregisterInteractive(id);
+        this._interaction.unregisterInteractive(id);
         const entry = this.sceneObjects.get(id);
         if (entry && entry.layer === 'scene' && entry.obj && entry.obj.userData._attachedGroups) {
             for (const groupId of entry.obj.userData._attachedGroups) {
@@ -623,6 +691,7 @@ export class ThreeJsView extends View {
         if (entry.obj === entry.mesh) {
             const attachedLabels = (entry.obj.userData._labels || []).slice();
             const parent = entry.obj.parent;
+            this._redeferAttachedGroups(entry.obj);
             removeEntityMesh(entry.obj);
             entry.obj = newMesh;
             entry.mesh = newMesh;
@@ -636,6 +705,7 @@ export class ThreeJsView extends View {
                     newMesh.userData._labels.push(lblId);
                 }
             }
+            this._attachPendingGroups(id, newMesh);
         } else {
             removeEntityMesh(entry.mesh);
             entry.obj.add(newMesh);
@@ -643,7 +713,7 @@ export class ThreeJsView extends View {
         }
         entry.data = { ...prev, ...content };
         if (prev.interaction) {
-            registerInteractive(id, entry.obj, prev.interaction);
+            this._interaction.registerInteractive(id, entry.obj, prev.interaction);
         }
     }
 

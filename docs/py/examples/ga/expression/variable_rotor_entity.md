@@ -45,8 +45,8 @@ from pytanga.geometry import Direction, Geometry, Point, Rotor
 
 
 def main() -> None:
-    alg = BasisN3()
-    geo = Geometry(alg)
+    N3 = BasisN3()
+    geo = Geometry(N3)
 
     # Symbolic variables with geometry-derived blade masks:
     #   R  may hold any rotor    (scalar + Euclidean bivectors)

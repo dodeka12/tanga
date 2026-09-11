@@ -77,11 +77,13 @@ class SdfObject(SdfElement):
         style: SdfStyle | None = None,
         *,
         combine: ECompose = ECompose.UNION,
+        smoothness: float | None = None,
     ) -> None:
         object.__setattr__(self, "entity", entity)
         object.__setattr__(self, "id", id)
         object.__setattr__(self, "style", style)
         object.__setattr__(self, "combine", combine)
+        object.__setattr__(self, "smoothness", smoothness)
 
     def to_sdf_node(self) -> SdfNode:
         node = _entity_to_sdf(self.entity, self.style)

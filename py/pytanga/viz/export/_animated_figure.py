@@ -18,9 +18,10 @@ import json
 from typing import Any
 from uuid import uuid4
 
+from pytanga.viz.export._cdn import build_library_script_tag
 from pytanga.viz.export._bootstrap import (
     embed_animation_data,
-    generate_bootstrap_js,
+    theme_css_for_delivery,
     get_anim_data_js,
     get_anim_decompress_js,
     html_fullpage_template,
@@ -34,12 +35,15 @@ from pytanga.viz.export._bootstrap import (
     js_controls_html,
     js_controls_ui,
     js_footer,
-    js_imports,
+    js_tanga_destructure,
     js_reconcile_frame,
     js_resize_handler,
     js_scene_setup,
     js_title_overlay,
+    katex_css_for_delivery,
     katex_css_if_needed,
+    third_party_scripts,
+    three_import_map,
 )
 
 # ── Public API ──────────────────────────────────────────────────
@@ -52,6 +56,9 @@ def render_export_animated_figure(
     figure_config: dict[str, Any] | None = None,
     scene_config: dict[str, Any] | None = None,
     anim_style: dict[str, Any] | None = None,
+    theme: str = "dark",
+    delivery: str = "cdn",
+    delivery_ref: str | None = None,
 ) -> str:
     """Render an animated figure HTML snippet for embedding.
 
@@ -64,6 +71,7 @@ def render_export_animated_figure(
             camera).
         anim_style: ``AnimStyle.to_dict()`` result with ``fps``, ``loop``,
             ``show_controls``, ``compress`` keys.
+        theme: UI theme id whose CSS is inlined (default ``"dark"``).
     """
     as_ = anim_style or {}
     fps = as_.get("fps", 30)
@@ -89,17 +97,14 @@ def render_export_animated_figure(
     anim_embed = embed_animation_data(anim_data_json, compress=compress)
     decompress_js = get_anim_decompress_js(compress)
 
-    bootstrap = generate_bootstrap_js(
-        _build_animated_figure_adapter(
-            fig_id,
-            recording_data,
-            fps,
-            loop,
-            fig_style,
-            fig_cfg,
-            show_controls,
-            scene_config or {},
-        )
+    adapter = _build_animated_figure_adapter(
+        fig_id,
+        recording_data,
+        fps,
+        fig_style,
+        fig_cfg,
+        show_controls,
+        scene_config or {},
     )
 
     if responsive:
@@ -122,7 +127,9 @@ def render_export_animated_figure(
             "</style>\n"
         )
 
-    katex_css = katex_css_if_needed(recording_data, fig_cfg)
+    katex_css = katex_css_for_delivery(
+        delivery, katex_css_if_needed(recording_data, fig_cfg)
+    )
 
     config_json = json.dumps(
         {
@@ -141,8 +148,18 @@ def render_export_animated_figure(
         decompress_js=decompress_js,
         responsive_style_block=responsive_style_block,
         controls_html=js_controls_html(show_controls),
-        bootstrap_js=bootstrap,
+        library_script=build_library_script_tag(delivery, delivery_ref),
+        adapter_js=adapter,
+        third_party_html=third_party_scripts(delivery),
+        import_map_html=three_import_map(delivery),
         config_data_json=config_json,
+        theme_css=theme_css_for_delivery(
+            theme,
+            delivery,
+            delivery_ref,
+            include_components=False,
+            include_overrides=False,
+        ),
     )
 
 
@@ -152,6 +169,9 @@ def render_export_animated_html(
     scene_config: dict[str, Any] | None = None,
     anim_style: dict[str, Any] | None = None,
     title: str = "Tanga 3D Viewer",
+    theme: str = "dark",
+    delivery: str = "cdn",
+    delivery_ref: str | None = None,
 ) -> str:
     """Render a full-page animated HTML document for standalone viewing.
 
@@ -163,6 +183,7 @@ def render_export_animated_html(
         anim_style: ``AnimStyle.to_dict()`` result with ``fps``, ``loop``,
             ``show_controls``, ``compress`` keys.
         title: HTML ``<title>`` tag content.
+        theme: UI theme id whose CSS is inlined (default ``"dark"``).
     """
     as_ = anim_style or {}
     fps = as_.get("fps", 30)
@@ -181,14 +202,12 @@ def render_export_animated_html(
     anim_embed = embed_animation_data(anim_data_json, compress=compress)
     decompress_js = get_anim_decompress_js(compress)
 
-    bootstrap = generate_bootstrap_js(
-        _build_animated_fullpage_adapter(
-            fig_id, recording_data, fps, loop, sc, show_controls
-        )
+    adapter = _build_animated_fullpage_adapter(
+        fig_id, recording_data, fps, sc, show_controls
     )
 
     controls_html = js_controls_html(show_controls)
-    katex_css = katex_css_if_needed(recording_data)
+    katex_css = katex_css_for_delivery(delivery, katex_css_if_needed(recording_data))
 
     body_div = (
         f'<div id="{fig_id}" style="width:100%;height:100%;position:relative;'
@@ -206,7 +225,17 @@ def render_export_animated_html(
         controls_html=controls_html,
         annotation_controls_reposition_js="",
         body_div=body_div,
-        bootstrap_js=bootstrap,
+        library_script=build_library_script_tag(delivery, delivery_ref),
+        adapter_js=adapter,
+        third_party_html=third_party_scripts(delivery),
+        import_map_html=three_import_map(delivery),
+        theme_css=theme_css_for_delivery(
+            theme,
+            delivery,
+            delivery_ref,
+            include_components=False,
+            include_overrides=False,
+        ),
     )
 
 
@@ -230,7 +259,6 @@ def _build_animated_figure_adapter(
     fig_id: str,
     recording_data: dict[str, Any],
     fps: int,
-    loop: bool,
     figure_style: dict[str, Any],
     figure_config: dict[str, Any],
     show_controls: bool,
@@ -253,16 +281,6 @@ def _build_animated_figure_adapter(
     annotation_raw = figure_config.get("annotation", "")
     footer_raw = figure_config.get("footer", "")
 
-    loop_js = "true" if loop else "false"
-
-    autofit_js = js_autofit_camera(
-        mesh_map_var="figMeshMap",
-        camera_var="figCamera",
-        controls_var="figControls",
-        cam_explicit=cam_explicit,
-        space_dim=space_dim,
-    )
-
     if responsive:
         dim_w = "(figContainer.clientWidth || window.innerWidth)"
         dim_h = "(figContainer.clientHeight || window.innerHeight)"
@@ -270,11 +288,21 @@ def _build_animated_figure_adapter(
         dim_w = str(w)
         dim_h = str(h)
 
+    autofit_js = js_autofit_camera(
+        registry_var="figRegistry",
+        camera_var="figCamera",
+        controls_var="figControls",
+        cam_explicit=cam_explicit,
+        space_dim=space_dim,
+        width_expr=dim_w,
+        height_expr=dim_h,
+    )
+
     parts = [
         "window.__tanga_ready = true;",
         "// Animated figure bootstrap",
         "",
-        js_imports(),
+        js_tanga_destructure(),
         "",
         js_apply_camera(),
         "",
@@ -311,6 +339,7 @@ def _build_animated_figure_adapter(
             height_expr=dim_h,
             conditional=not responsive,
             container_expr="figContainer" if responsive else "",
+            space_dim=space_dim,
         ),
         "",
         js_title_overlay(
@@ -356,7 +385,6 @@ def _build_animated_figure_adapter(
         "",
         js_animated_render_loop(
             fps=fps,
-            loop_js_bool=loop_js,
             scene_var="figScene",
             label_objects_map_var="labelObjects",
         ),
@@ -369,12 +397,11 @@ def _build_animated_fullpage_adapter(
     fig_id: str,
     recording_data: dict[str, Any],
     fps: int,
-    loop: bool,
     scene_config: dict[str, Any],
     show_controls: bool,
 ) -> str:
     """Generate the JS bootstrap adapter for a full-page animated document."""
-    bg = scene_config.get("background_color", "#1a1a2e")
+    bg = scene_config.get("background_color")
     space_dim = scene_config.get("space_dim", 3)
 
     title_raw = scene_config.get("title", "")
@@ -383,21 +410,21 @@ def _build_animated_fullpage_adapter(
     cam_cfg = scene_config.get("camera") or {}
     cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
-    loop_js = "true" if loop else "false"
-
     autofit_js = js_autofit_camera(
-        mesh_map_var="figMeshMap",
+        registry_var="figRegistry",
         camera_var="figCamera",
         controls_var="figControls",
         cam_explicit=cam_explicit,
         space_dim=space_dim,
+        width_expr="window.innerWidth",
+        height_expr="window.innerHeight",
     )
 
     parts = [
         "window.__tanga_ready = true;",
         "// Animated full-page bootstrap",
         "",
-        js_imports(),
+        js_tanga_destructure(),
         "",
         js_apply_camera(),
         "",
@@ -432,6 +459,7 @@ def _build_animated_fullpage_adapter(
             camera_var="figCamera",
             width_expr="window.innerWidth",
             height_expr="window.innerHeight",
+            space_dim=space_dim,
         ),
         "",
         js_title_overlay(
@@ -469,7 +497,6 @@ def _build_animated_fullpage_adapter(
         "",
         js_animated_render_loop(
             fps=fps,
-            loop_js_bool=loop_js,
             scene_var="figScene",
             label_objects_map_var="labelObjects",
         ),

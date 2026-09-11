@@ -1,0 +1,33 @@
+/* Tanga viewer — slider control. */
+
+.tanga-range-input {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--tanga-border-strong);
+    border-radius: 2px;
+    outline: none;
+    margin: 4px 0;
+}
+
+.tanga-range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--tanga-accent);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.tanga-range-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--tanga-accent);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+

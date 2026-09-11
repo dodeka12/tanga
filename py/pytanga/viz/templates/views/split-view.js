@@ -189,8 +189,19 @@ export class SplitView extends View {
         const delta = current - startPos;
         const available = startAvailable;
 
-        const leftIdx = index;
-        const rightIdx = index + 1;
+        const isFixed = (i) => {
+            const max = this.children[i].maxSizePx(this.axis, available);
+            return max !== null && max !== undefined
+                && this.children[i].minSizePx(this.axis, available) === max;
+        };
+
+        // Skip fixed panes: a splitter trades space between the nearest
+        // non-fixed panes on each side, never resizing a fixed pane.
+        let leftIdx = index;
+        while (leftIdx > 0 && isFixed(leftIdx)) leftIdx -= 1;
+        let rightIdx = index + 1;
+        while (rightIdx < this.children.length - 1 && isFixed(rightIdx)) rightIdx += 1;
+
         const left = startSizes[leftIdx] * available;
         const right = startSizes[rightIdx] * available;
         const leftMin = this.children[leftIdx].minSizePx(this.axis, available);

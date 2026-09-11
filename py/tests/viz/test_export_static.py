@@ -47,7 +47,7 @@ class TestExportStatic:
 
     def test_static_render_html(self):
         s = _group_scene()
-        html = render_snapshot(s.full_state(), s.config.to_dict())
+        html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
         assert "function createEntityMesh(" in html
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html
@@ -63,7 +63,7 @@ class TestExportStatic:
         s.add(Ellipsoid())
         s.add(Ellipse())
         s.add(RegularPolygon())
-        html = render_snapshot(s.full_state(), s.config.to_dict())
+        html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
         assert "function createCylinder(" in html
         assert "function createArc(" in html
         assert "function createDisk(" in html
@@ -80,9 +80,27 @@ class TestExportStatic:
             s.config.to_dict(),
             {"width": 400, "height": 300},
             {"title": "T"},
+            delivery="inline",
         )
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html
+
+    def test_snapshot_export_includes_html2canvas(self):
+        """Math texture labels require html2canvas, loaded like the live viewer."""
+        s = _group_scene()
+        html = render_snapshot(s.full_state(), s.config.to_dict())
+        assert "html2canvas@1.4.1" in html
+
+    def test_figure_export_includes_html2canvas(self):
+        """Math texture labels require html2canvas, loaded like the live viewer."""
+        s = _group_scene()
+        html = render_figure(
+            s.full_state(),
+            s.config.to_dict(),
+            {"width": 400, "height": 300},
+            {"title": "T"},
+        )
+        assert "html2canvas@1.4.1" in html
 
     def test_parent_before_child(self):
         s = _group_scene()
@@ -100,7 +118,7 @@ class TestExportStatic:
             label_style=pytanga.viz.LabelStyle(rotation=45),
         )
         path = tmp_path / "rotated.html"
-        viz.export_snapshot(str(path), overwrite=True)
+        viz.export_snapshot(str(path), overwrite=True, delivery="inline")
         content = path.read_text(encoding="utf-8")
         assert '"rotation": 45' in content
         assert "rotate(${rotation}deg)" in content
@@ -109,7 +127,7 @@ class TestExportStatic:
     def test_export_figure_returns_string_when_no_path(self):
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
-        snippet = viz.export_figure()
+        snippet = viz.export_figure(delivery="inline")
         assert isinstance(snippet, str)
         assert "function createEntityMesh(" in snippet
 
@@ -122,7 +140,6 @@ class TestExportStatic:
             exporter = pytanga.viz.SceneExporter(viz)
             snippet = exporter.export_figure_html()
         assert isinstance(snippet, str)
-        assert "function createEntityMesh(" in snippet
 
 
 class TestAnimatedExport:
@@ -187,3 +204,32 @@ class TestCdnUnreachableDetection:
         assert "cdn.jsdelivr.net" in html
         assert "RUNTIME_ERROR_MESSAGE" in html
         assert "Viewer error" in html
+
+
+class TestThemePacking:
+    def test_snapshot_cdn_references_theme_css(self):
+        html = render_snapshot([], {})
+        assert "cdn.jsdelivr.net/gh/dodeka12/tanga" in html
+        assert "/py/pytanga/viz/templates/themes/base.css" in html
+        # Static exports render no controls, so the UI component sheets are gone.
+        assert "controls/button.css" not in html
+        assert "views/group-view.css" not in html
+        # In cdn mode the theme shell is referenced, not inlined.
+        assert "--tanga-bg: #1a1a2e" not in html
+
+    def test_snapshot_inline_inlines_shell_without_components(self):
+        html = render_snapshot([], {}, delivery="inline")
+        assert "--tanga-bg: #1a1a2e" in html
+        assert ".tanga-icon-button" in html  # base.css shell
+        assert ".tanga-action-button" not in html  # component sheet dropped
+
+    def test_light_export_inlines_light_tokens_without_overrides(self):
+        html = render_snapshot([], {}, theme="light", delivery="inline")
+        assert "--tanga-bg: #f5f5f7" in html
+        # Per-theme button/checkbox overrides are UI CSS and dropped.
+        assert "accent-color: var(--tanga-accent)" not in html
+
+    def test_figure_cdn_references_theme_css(self):
+        html = render_figure([], {}, {"width": 400, "height": 300}, {}, theme="dark")
+        assert "/py/pytanga/viz/templates/themes/base.css" in html
+        assert "controls/button.css" not in html

@@ -1,6 +1,7 @@
 // Entity renderer factory — thin dispatcher importing from per-entity
 // and per-operator modules.  Phase 5+6 refactoring complete.
 
+import { sendLog } from '../events.js';
 import { createPoint } from './point.js';
 import { createCrossHairPoint } from './crosshair_point.js';
 import { createDirection, updateDirection } from './direction.js';
@@ -181,6 +182,7 @@ export async function createEntityMesh(ent) {
 
         default:
             console.warn(`Unknown entity kind: ${ent.kind}`);
+            sendLog('warn', `Unknown entity kind: ${ent.kind}`, { source: 'factory.js' });
             return null;
     }
 
@@ -231,6 +233,15 @@ export function updateEntityMesh(mesh, ent, prev) {
         const dir = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
         const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
         mesh.setRotationFromQuaternion(quat);
+    }
+    if (ent.rotation) {
+        // Top-level Euler triple (Box / Ellipsoid). Applied in place so a
+        // rotation-only content update doesn't require a mesh rebuild.
+        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
+    } else if (ent.rotation === null) {
+        // Explicitly cleared rotation (e.g. `Box(rotation=None)`) → identity,
+        // i.e. back to axis-aligned.
+        mesh.rotation.set(0, 0, 0);
     }
     applyStyleUpdate(mesh, ent);
 

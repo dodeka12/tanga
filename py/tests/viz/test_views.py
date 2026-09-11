@@ -5,20 +5,31 @@
 
 import pytest
 
+from pytanga.viz import EAnchor
+from pytanga.viz._controls import EControlVariant
 from pytanga.viz._size import Size
 from pytanga.viz.views import (
     ButtonView,
     CheckboxView,
     ColorPickerView,
     DropdownView,
+    EStackAlign,
+    EStackDirection,
+    EStackJustify,
     GroupView,
+    LabelView,
+    MarkdownView,
+    MenuView,
     SceneView,
+    SeparatorView,
     SliderView,
     SpacerView,
     SplitView,
     StackView,
+    TableView,
     TextAreaView,
     TextFieldView,
+    ToolbarView,
     ValueEditView,
     View,
     iter_scene_names,
@@ -167,6 +178,191 @@ class TestGroupView:
         assert node["collapsed"] is False
         assert node["children"][0]["type"] == "spacer"
 
+    def test_scrollable_serialize(self):
+        assert serialize_layout(GroupView("Actions"))["root"]["scrollable"] is False
+        assert (
+            serialize_layout(GroupView("Actions", scrollable=True))["root"][
+                "scrollable"
+            ]
+            is True
+        )
+
+    def test_serialize_icon(self):
+        node = serialize_layout(GroupView("Actions", icon="material:settings"))["root"]
+        assert node["icon"] == "material:settings"
+        assert node["icon_only"] is False
+
+    def test_serialize_icon_omitted_when_none(self):
+        node = serialize_layout(GroupView("Actions"))["root"]
+        assert "icon" not in node
+
+    def test_serialize_icon_only(self):
+        node = serialize_layout(
+            GroupView("Actions", icon="material:settings", icon_only=True)
+        )["root"]
+        assert node["icon"] == "material:settings"
+        assert node["icon_only"] is True
+
+    def test_serialize_parent_id(self):
+        node = serialize_layout(GroupView("Actions", parent_id="sphere"))["root"]
+        assert node["parent_id"] == "sphere"
+
+    def test_serialize_parent_id_omitted_when_none(self):
+        node = serialize_layout(GroupView("Actions"))["root"]
+        assert "parent_id" not in node
+
+    def test_serialize_tooltip(self):
+        node = serialize_layout(GroupView("Actions", tooltip="Shape and material"))[
+            "root"
+        ]
+        assert node["tooltip"] == "Shape and material"
+
+    def test_serialize_tooltip_omitted_when_empty(self):
+        node = serialize_layout(GroupView("Actions"))["root"]
+        assert "tooltip" not in node
+
+    def test_serialize_gap(self):
+        node = serialize_layout(GroupView("t", [], gap=0))["root"]
+        assert node["type"] == "group"
+        assert node["gap"] == 0
+
+
+class TestMenuView:
+    def test_serialize_fields(self):
+        node = serialize_layout(MenuView("Actions", [ButtonView("b1", label="Go")]))[
+            "root"
+        ]
+        assert node["type"] == "menu"
+        assert node["trigger_icon"] is None
+        assert node["label"] == "Actions"
+        assert node["mode"] == "dropdown"
+        assert node["direction"] == "vertical"
+        assert node["position"] is None
+        assert node["children"][0]["type"] == "button_view"
+
+    def test_serialize_custom_trigger_icon(self):
+        node = serialize_layout(MenuView("Actions", trigger_icon="material:settings"))[
+            "root"
+        ]
+        assert node["trigger_icon"] == "material:settings"
+
+    def test_serialize_nested_child(self):
+        sub = MenuView("Sub", [SliderView("s1")])
+        node = serialize_layout(MenuView("Root", [sub]))["root"]
+        assert node["children"][0]["type"] == "menu"
+        assert node["children"][0]["label"] == "Sub"
+
+    def test_serialize_bar_mode(self):
+        node = serialize_layout(
+            MenuView("Bar", mode="bar", direction="horizontal", position="top-right")
+        )["root"]
+        assert node["mode"] == "bar"
+        assert node["direction"] == "horizontal"
+        assert node["position"] == "top-right"
+
+    def test_bar_defaults_to_horizontal_direction(self):
+        node = serialize_layout(MenuView("Bar", mode="bar"))["root"]
+        assert node["direction"] == "horizontal"
+
+    def test_mode_validation(self):
+        with pytest.raises(ValueError, match="mode"):
+            MenuView("Menu", mode="popup")
+
+    def test_direction_validation(self):
+        with pytest.raises(ValueError, match="direction"):
+            MenuView("Menu", direction="diagonal")
+
+    def test_override_variant_forces_menu(self):
+        menu = MenuView(
+            "Menu",
+            [
+                ButtonView("b1", label="Go"),
+                SliderView("s1", label="S"),
+                CheckboxView("c1", label="C"),
+            ],
+        )
+        node = serialize_layout(menu)["root"]
+        assert [child["variant"] for child in node["children"]] == [
+            "menu",
+            "menu",
+            "menu",
+        ]
+
+    def test_override_variant_disabled(self):
+        menu = MenuView("Menu", [ButtonView("b1", label="Go")], override_variant=False)
+        node = serialize_layout(menu)["root"]
+        assert node["children"][0]["variant"] == "default"
+
+    def test_override_variant_recurses_into_submenu(self):
+        menu = MenuView("Menu", [MenuView("Sub", [ButtonView("b1", label="Go")])])
+        node = serialize_layout(menu)["root"]
+        assert node["children"][0]["type"] == "menu"
+        assert node["children"][0]["children"][0]["variant"] == "menu"
+
+
+class TestEAnchor:
+    def test_anchor_values(self):
+        assert [a.value for a in EAnchor] == [
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right",
+            "top",
+            "bottom",
+            "left",
+            "right",
+        ]
+
+    def test_group_view_serializes_anchor(self):
+        node = serialize_layout(GroupView("G", position=EAnchor.TOP_RIGHT))["root"]
+        assert node["position"] == "top-right"
+
+    def test_menu_view_serializes_anchor(self):
+        node = serialize_layout(MenuView("M", position=EAnchor.BOTTOM_LEFT))["root"]
+        assert node["position"] == "bottom-left"
+
+
+class TestEStackEnums:
+    def test_direction_values(self):
+        assert [d.value for d in EStackDirection] == [
+            "vertical",
+            "horizontal",
+            "wrap",
+        ]
+
+    def test_align_values(self):
+        assert [a.value for a in EStackAlign] == [
+            "start",
+            "center",
+            "end",
+            "stretch",
+        ]
+
+    def test_justify_values(self):
+        assert [j.value for j in EStackJustify] == [
+            "start",
+            "center",
+            "end",
+            "space-between",
+            "space-around",
+            "space-evenly",
+        ]
+
+    def test_members_equal_strings(self):
+        assert EStackDirection.HORIZONTAL == "horizontal"
+        assert EStackAlign.STRETCH == "stretch"
+        assert EStackJustify.SPACE_EVENLY == "space-evenly"
+
+    def test_stack_serializes_string_justify(self):
+        node = serialize_layout(StackView("horizontal", justify="start"))["root"]
+        assert node["justify"] == "start"
+
+    def test_stack_serializes_enum_justify(self):
+        node = serialize_layout(
+            StackView("horizontal", justify=EStackJustify.SPACE_EVENLY)
+        )["root"]
+        assert node["justify"] == "space-evenly"
+
 
 class TestControlViews:
     def test_slider_serialize(self):
@@ -189,6 +385,28 @@ class TestControlViews:
         assert node["id"] == "b1"
         assert node["label"] == "Go"
 
+    def test_button_default_min_floors(self):
+        view = ButtonView("b1")
+        assert view.min_width == Size.px(120)
+        assert view.min_height == Size.px(32)
+
+    def test_button_min_floor_disable(self):
+        view = ButtonView("b1", min_width=None)
+        assert view.min_width is None
+        assert view.min_height == Size.px(32)
+
+    def test_button_icon_only_min_floors(self):
+        view = ButtonView("b1", icon="material:add", icon_only=True)
+        assert view.min_width == Size.px(28)
+        assert view.min_height == Size.px(28)
+
+    def test_button_icon_only_explicit_min_override(self):
+        view = ButtonView(
+            "b1", icon="material:add", icon_only=True, min_width=Size.px(40)
+        )
+        assert view.min_width == Size.px(40)
+        assert view.min_height == Size.px(28)
+
     def test_dropdown_serialize(self):
         node = serialize_layout(
             DropdownView("d1", label="Mode", options=["a", "b"], value="a")
@@ -196,6 +414,16 @@ class TestControlViews:
         assert node["type"] == "dropdown_view"
         assert node["options"] == ["a", "b"]
         assert node["value"] == "a"
+        assert node["variant"] == "default"
+
+    def test_dropdown_toolbar_variant_serialize(self):
+        node = serialize_layout(
+            DropdownView(
+                "d1", label="Mode", options=["a", "b"], variant=EControlVariant.TOOLBAR
+            )
+        )["root"]
+        assert node["type"] == "dropdown_view"
+        assert node["variant"] == "toolbar"
 
     def test_button_serialize_with_icon(self):
         node = serialize_layout(
@@ -204,6 +432,17 @@ class TestControlViews:
         assert node["type"] == "button_view"
         assert node["icon"] == "material:refresh"
         assert node["icon_only"] is True
+
+    def test_button_variant_serialize(self):
+        node = serialize_layout(
+            ButtonView("b1", label="Go", variant=EControlVariant.MENU)
+        )["root"]
+        assert node["type"] == "button_view"
+        assert node["variant"] == "menu"
+
+    def test_button_variant_defaults_to_default(self):
+        node = serialize_layout(ButtonView("b1", label="Go"))["root"]
+        assert node["variant"] == "default"
 
     def test_text_field_serialize(self):
         node = serialize_layout(
@@ -214,6 +453,24 @@ class TestControlViews:
         assert node["label"] == "Name"
         assert node["value"] == "a"
         assert node["placeholder"] == "…"
+
+    def test_label_serialize(self):
+        node = serialize_layout(LabelView("l1", value="hi", font_size=20))["root"]
+        assert node["type"] == "label_view"
+        assert node["id"] == "l1"
+        assert node["value"] == "hi"
+        assert node["font_size"] == 20
+
+    def test_label_defaults(self):
+        view = LabelView("l1")
+        assert view.value == ""
+        assert view.font_size == 14
+
+    def test_markdown_serialize(self):
+        node = serialize_layout(MarkdownView("m1", value="# Hi"))["root"]
+        assert node["type"] == "markdown_view"
+        assert node["id"] == "m1"
+        assert node["value"] == "# Hi"
 
     def test_text_area_serialize(self):
         node = serialize_layout(TextAreaView("ta1", label="Notes", rows=6))["root"]
@@ -253,6 +510,59 @@ class TestControlViews:
         node = serialize_layout(SliderView("s1", tooltip="hover"))["root"]
         assert node["tooltip"] == "hover"
 
+    def test_table_view_serialize(self):
+        node = serialize_layout(
+            TableView(
+                "tbl",
+                label="Data",
+                columns=["x", "y"],
+                rows=[["1", "2"], ["3", "4"]],
+            )
+        )["root"]
+        assert node["type"] == "table_view"
+        assert node["id"] == "tbl"
+        assert node["label"] == "Data"
+        assert node["columns"] == ["x", "y"]
+        assert node["rows"] == [["1", "2"], ["3", "4"]]
+        assert node["allow_add_rows"] is True
+        assert node["allow_add_columns"] is True
+        assert node["preferred_width"] == {"value": 480, "unit": "px"}
+        assert node["preferred_height"] == {"value": 320, "unit": "px"}
+
+
+def test_table_view_set_control_value() -> None:
+    from pytanga.viz._controls import set_control_value
+
+    view = TableView("tbl", columns=["x"], rows=[["1"]])
+    set_control_value(view.control, {"columns": ["y", "z"], "rows": [[2], [3]]})
+    assert view.columns == ["y", "z"]
+    assert view.rows == [[2], [3]]
+
+
+def test_table_view_on_change_not_serialized() -> None:
+    async def _on_change(value, event):
+        pass
+
+    view = TableView("tbl", columns=["x"], rows=[["1"]], on_change=_on_change)
+    assert view.on_change is _on_change
+    assert view.control.on_change is _on_change
+
+    node = serialize_layout(view)["root"]
+    assert "on_change" not in node
+
+
+def test_view_serialize_matches_control_fields() -> None:
+    from pytanga.viz._controls import Slider, _serialize_one_control
+
+    view = SliderView("s1", label="Radius", min=0.0, max=5.0, step=0.1, value=2.0)
+    node = serialize_layout(view)["root"]
+    panel = _serialize_one_control(
+        Slider(id="s1", label="Radius", min=0.0, max=5.0, step=0.1, value=2.0)
+    )
+    for key, val in panel.items():
+        if key != "kind":
+            assert node[key] == val
+
 
 class TestStackView:
     def test_direction_validation(self):
@@ -270,6 +580,106 @@ class TestStackView:
         assert node["direction"] == "horizontal"
         assert len(node["children"]) == 2
         assert node["children"][0]["type"] == "spacer"
+        assert node["children"][0]["preferred_width"] == {"value": 1.0, "unit": "fr"}
+        assert node["children"][0]["preferred_height"] == {"value": 1.0, "unit": "fr"}
+
+    def test_scrollable_serialize(self):
+        assert serialize_layout(StackView("vertical"))["root"]["scrollable"] is False
+        assert (
+            serialize_layout(StackView("vertical", scrollable=True))["root"][
+                "scrollable"
+            ]
+            is True
+        )
+
+    def test_serialize_gap_align_justify(self):
+        node = serialize_layout(
+            StackView("vertical", [], gap=8, align="center", justify="end")
+        )["root"]
+        assert node["type"] == "stack"
+        assert node["gap"] == 8
+        assert node["align"] == "center"
+        assert node["justify"] == "end"
+
+    def test_serialize_gap_align_justify_defaults(self):
+        node = serialize_layout(StackView("vertical", []))["root"]
+        assert node["gap"] is None
+        assert node["align"] == "stretch"
+        assert node["justify"] == "start"
+
+    def test_invalid_align(self):
+        with pytest.raises(ValueError, match="align"):
+            StackView("vertical", align="bogus")
+
+    def test_invalid_justify(self):
+        with pytest.raises(ValueError, match="justify"):
+            StackView("vertical", justify="bogus")
+
+
+class TestToolbarView:
+    def test_serialize(self):
+        node = serialize_layout(
+            ToolbarView(
+                [ButtonView("b")],
+                gap=4,
+                margin=Size.px(8),
+                border=False,
+                justify=EStackJustify.SPACE_EVENLY,
+            )
+        )["root"]
+        assert node["type"] == "toolbar"
+        assert node["direction"] == "horizontal"
+        assert node["gap"] == 4
+        assert node["margin"] == {"value": 8.0, "unit": "px"}
+        assert node["border"] is False
+        assert node["justify"] == "space-evenly"
+        assert node["align"] == "center"
+
+    def test_children_serialize_in_order(self):
+        node = serialize_layout(ToolbarView([ButtonView("b")]))["root"]
+        assert len(node["children"]) == 1
+        assert node["children"][0]["type"] == "button_view"
+        assert node["children"][0]["id"] == "b"
+
+    def test_dropdown_child_forced_to_toolbar_variant(self):
+        node = serialize_layout(
+            ToolbarView([DropdownView("d1", label="Mode", options=["a", "b"])])
+        )["root"]
+        child = node["children"][0]
+        assert child["type"] == "dropdown_view"
+        assert child["variant"] == "toolbar"
+
+
+class TestSeparatorView:
+    def test_serialize_auto_default(self):
+        node = serialize_layout(SeparatorView())["root"]
+        assert node["type"] == "separator"
+        assert node["orientation"] == "auto"
+        assert node["spacing"] == 6
+
+    def test_serialize_vertical(self):
+        node = serialize_layout(SeparatorView(orientation="vertical", spacing=8))[
+            "root"
+        ]
+        assert node["type"] == "separator"
+        assert node["orientation"] == "vertical"
+        assert node["spacing"] == 8
+        assert node["preferred_width"] == {"value": 1.0, "unit": "px"}
+
+    def test_serialize_horizontal(self):
+        node = serialize_layout(SeparatorView(orientation="horizontal"))["root"]
+        assert node["type"] == "separator"
+        assert node["orientation"] == "horizontal"
+        assert node["spacing"] == 6
+        assert node["preferred_height"] == {"value": 1.0, "unit": "px"}
+
+    def test_invalid_orientation_raises(self):
+        with pytest.raises(ValueError):
+            SeparatorView(orientation="diagonal")
+
+    def test_invalid_spacing_raises(self):
+        with pytest.raises(ValueError):
+            SeparatorView(spacing=-1)
 
 
 class TestSplitView:
@@ -288,6 +698,53 @@ class TestSplitView:
                 [SceneView("a"), SceneView("b")],
                 sizes=[Size.px(1)],
             )
+
+    def test_accepts_arbitrary_child_count(self):
+        # A single split holds any number of children (N − 1 splitters on the
+        # frontend); only a lower bound of 2 is enforced here.
+        layout = SplitView(
+            "horizontal",
+            [SceneView("a"), SpacerView(), SceneView("b"), SceneView("c")],
+        )
+        node = serialize_layout(layout)["root"]
+        assert len(node["children"]) == 4
+        assert node["sizes"] == [None, None, None, None]
+
+    def test_defaults_flow_sizes_to_fr(self):
+        # A split has no intrinsic cross-axis size (children are absolutely
+        # positioned), so it defaults to `fr(1)` on both axes.  This lets a
+        # flow container (`StackView` / `GroupView`) grow it to fill leftover
+        # space instead of collapsing it to zero.
+        split = SplitView("horizontal", [SceneView("a"), SceneView("b")])
+        assert split.preferred_width == Size.fr(1)
+        assert split.preferred_height == Size.fr(1)
+
+    def test_default_fr_serializes(self):
+        node = serialize_layout(
+            SplitView("horizontal", [SceneView("a"), SceneView("b")])
+        )["root"]
+        assert node["preferred_width"] == {"value": 1.0, "unit": "fr"}
+        assert node["preferred_height"] == {"value": 1.0, "unit": "fr"}
+
+    def test_explicit_preferred_overrides_default(self):
+        split = SplitView(
+            "horizontal",
+            [SceneView("a"), SceneView("b")],
+            preferred_height=Size.px(300),
+        )
+        assert split.preferred_width == Size.fr(1)
+        assert split.preferred_height == Size.px(300)
+
+    def test_size_shorthand_still_applies(self):
+        # `size=` is applied to preferred axes that were left unset, so it must
+        # not be shadowed by the new `fr(1)` default.
+        split = SplitView(
+            "horizontal",
+            [SceneView("a"), SceneView("b")],
+            size=Size.px(250),
+        )
+        assert split.preferred_width == Size.px(250)
+        assert split.preferred_height == Size.px(250)
 
 
 class TestSerialize:
@@ -337,6 +794,24 @@ class TestSerialize:
         assert inner["children"][0]["scene"] == "side"
         assert inner["children"][1]["type"] == "group"
         assert inner["children"][1]["title"] == "Controls"
+
+    def test_three_children_serialize_in_order(self):
+        layout = SplitView(
+            orientation="horizontal",
+            sizes=[Size.percent(25), Size.percent(50), Size.percent(25)],
+            children=[SceneView("a"), SceneView("b"), SceneView("c")],
+        )
+        root = serialize_layout(layout)["root"]
+
+        assert root["type"] == "split"
+        assert root["orientation"] == "horizontal"
+        assert root["sizes"] == [
+            {"value": 25.0, "unit": "%"},
+            {"value": 50.0, "unit": "%"},
+            {"value": 25.0, "unit": "%"},
+        ]
+        assert [c["scene"] for c in root["children"]] == ["a", "b", "c"]
+        assert all(c["type"] == "scene_view" for c in root["children"])
 
     def test_ids_are_unique_and_deterministic(self):
         layout = SplitView("horizontal", [SceneView("a"), SceneView("b"), SpacerView()])

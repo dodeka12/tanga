@@ -13,6 +13,7 @@ import concurrent.futures
 import json
 import logging
 import signal
+import sys
 import threading
 import time
 import warnings
@@ -23,9 +24,6 @@ if TYPE_CHECKING:
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
     from ._viz_styles import VizStyles
 
-from pytanga.geometry.entities import Entity as GeoEntity
-
-from ._icons import Icon
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
 from ._notebook_cell import current_cell_id, execution_token
@@ -34,8 +32,6 @@ from ._scene_handle import VizSceneHandle
 from ._style_dict import (
     _kind_to_key,
     _resolve_annotation_style,
-    _resolve_label_style,
-    _resolve_tex_label_style,
 )
 from ._timeline import Timeline
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
@@ -48,12 +44,10 @@ from .camera import (
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
+from .server import PortConflictAsk, PortConflictMode, PortOccupant
 from .views import (
-    ControlView,
     SceneView,
     View,
-    serialize_layout,
-    set_control_view_value,
 )
 
 logger = logging.getLogger("tanga.viz")
@@ -74,6 +68,15 @@ def _find_free_port(host: str) -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((bind_host, 0))
         return int(sock.getsockname()[1])
+
+
+def _validate_space_dim(space_dim: int) -> int:
+    """Validate a ``space_dim`` value (2 or 3) and return it unchanged."""
+    if isinstance(space_dim, bool) or not isinstance(space_dim, int):
+        raise ValueError(f"space_dim must be 2 or 3, got {space_dim!r}")
+    if space_dim not in (2, 3):
+        raise ValueError(f"space_dim must be 2 or 3, got {space_dim!r}")
+    return space_dim
 
 
 class Visualizer(_JupyterDisplayMixin):
@@ -102,18 +105,26 @@ class Visualizer(_JupyterDisplayMixin):
     _viewer_name: str | None = None
     _name: str = ""
 
+    # ── Jupyter-scoped singleton cache ─────────────────────
+    _instance: "Visualizer | None" = None
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Visualizer":
+        """Return the cached instance under Jupyter; otherwise a fresh one."""
+        if _is_jupyter():
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+        return super().__new__(cls)
+
     # ── Visualizer ─────────────────────────────────────────
 
     def __init__(
         self,
         *,
-        port: int | None = None,
-        host: str | None = None,
-        open_browser: bool | None = None,
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
-        background_color: str = "#1a1a2e",
+        background_color: str | None = None,
         # Camera configuration (None = auto-fit from entities). Accepts a
         # CameraConfig, or a View2DConfig/View3dConfig input spec.
         camera: CameraConfig | View2DConfig | View3dConfig | None = None,
@@ -128,7 +139,13 @@ class Visualizer(_JupyterDisplayMixin):
         # (Ctrl+Q by default) for the main scene only.  Named scenes opt in via
         # ``VizSceneHandle.enable_server_stop_key()``.
         enable_server_stop_key: bool = False,
+        port_conflict_mode: PortConflictMode | None = None,
     ) -> None:
+        if getattr(self, "_initialized", False):
+            self._add_default_axes = add_default_axes
+            self._add_default_grid = add_default_grid
+            self._reset_scene("")
+            return
         if space_dim is None:
             space_dim = _deduce_space_dim(camera) or 3
         if space_dim == 2 and title == "Tanga 3D Viewer":
@@ -141,24 +158,20 @@ class Visualizer(_JupyterDisplayMixin):
             name="",
             space_dim=space_dim,
         )
-        if port is not None or host is not None:
-            warnings.warn(
-                "Visualizer(port=..., host=...) is deprecated; use "
-                "start_server(host=..., port=...) instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        self._port = port if port is not None else DEFAULT_PORT
-        self._host = host if host is not None else "localhost"
-        self._open_browser = open_browser
+        self._port = DEFAULT_PORT
+        self._host = "localhost"
         self._reuse_existing = reuse_existing
         self._title = title
         self._annotation = annotation
         self._add_default_axes = add_default_axes
         self._add_default_grid = add_default_grid
-        self._server = None
-        self._loop: asyncio.AbstractEventLoop | None = None
+        # Late-bound server/loop holder shared with the Transport and hosts.
+        # ``_server`` / ``_loop`` are properties backed by this state.
+        from ._ports import ServerState
+
+        self._server_state = ServerState()
         self._thread: threading.Thread | None = None
+        self._saved_signal_handlers: dict[int, Any] | None = None
         self._atexit_registered = False
         self._display_pending: set[str] = set()
         self._display_execution: int | None = None
@@ -172,9 +185,13 @@ class Visualizer(_JupyterDisplayMixin):
 
         # Auto-detect Jupyter: disable browser open, enable _repr_html_
         self._jupyter = _is_jupyter()
-        if open_browser is None:
-            open_browser = not self._jupyter
-        self._open_browser = open_browser
+        self._open_browser = not self._jupyter
+
+        # Port-conflict resolution policy (see PortConflictMode).
+        self._port_conflict_mode = port_conflict_mode or (
+            PortConflictMode.AUTO if self._jupyter else PortConflictMode.ASK
+        )
+        self._port_conflict_ask: PortConflictAsk | None = None
 
         # Bundled default style configuration (master instance; scenes copy it).
         from ._viz_styles import make_styles
@@ -182,40 +199,48 @@ class Visualizer(_JupyterDisplayMixin):
         self._global_styles = make_styles()
 
         # Control handler registry (shared across all scenes)
-        from ._controls import ControlHandlerRegistry
+        from ._controls import CLIENT_LOG_ID, ClientLog, ControlHandlerRegistry
 
         self._handler_registry = ControlHandlerRegistry()
 
-        # Banner storage: global banners under ``None``, per-scene under the
-        # scene name.  Banner ids are unique across scopes (auto-generated).
-        self._banners: dict[str | None, dict[str, Any]] = {}
-        self._banner_counter = 0
-        self._banner_close_handlers: dict[str, Any] = {}
+        # The Transport wraps the server + (id, event) registry; hosts talk and
+        # register through it instead of reaching into the Visualizer.
+        from ._transport import WebSocketTransport
 
-        # Editor close handlers, keyed by editor id (set via ``open_editor``).
-        self._editor_close_handlers: dict[str, Any] = {}
+        self._transport = WebSocketTransport(self._server_state, self._handler_registry)
 
-        # Interaction handler registry (shared across all scenes)
-        from ._interaction import InteractionHandlerRegistry
-
-        self._interaction_registry = InteractionHandlerRegistry()
-        self._interaction_configs: dict[str, dict[str, Any]] = {}
+        # Backend-only sink for browser log events (see `on_client_log`).
+        self._client_log = ClientLog(CLIENT_LOG_ID)
+        self._client_log.register_handlers(self._transport)
 
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
-        self._scenes: dict[str, Scene] = {}
-        self._scenes[""] = Scene(
-            self._config, name="", styles=self._global_styles.copy()
+        # Layout host (view tree, overlays, serialization); the Visualizer
+        # delegates control/theme/interaction concerns to the hosts below.
+        from ._hosts import (
+            InteractionHost,
+            ThemeHost,
         )
-        # ── Split-view layouts ──
-        # Key "" is the default layout (shown at "/?view=").
-        self._layouts: dict[str, View] = {}
-        self._layouts_serialized: dict[str, dict[str, Any]] = {}
-        # Control ids registered by the currently-registered layout, so they can
-        # be unregistered cleanly when the layout is overwritten.
-        self._layout_control_ids: set[str] = set()
+        from ._layout import LayoutHostImpl
+
+        self._layout = LayoutHostImpl(
+            self._server_state,
+            scene_factory=self._create_scene,
+            transport=self._transport,
+            client_log=self._client_log,
+        )
+        self._layout.add_scene("")
+        self._theme_host = ThemeHost(self._transport, self._layout)
+        self._interaction_host = InteractionHost(
+            self._transport, self._layout, self._handler_registry
+        )
+
+        # Inbound routing: a data table on the transport.
+        self._register_routes()
 
         self._default_objects_added: set[str] = set()
+        # Per-scene (cell_id, execution_token) at creation, for re-run detection.
+        self._scene_keys: dict[str, tuple[str | None, int]] = {}
 
         # Seed default axes/grid immediately — independent of server start.
         self._add_default_scene_objects("")
@@ -224,13 +249,217 @@ class Visualizer(_JupyterDisplayMixin):
         if enable_server_stop_key:
             self.enable_server_stop_key()
 
-    # ── Scene access ─────────────────────────────────────────
+        self._initialized = True
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the Jupyter-scoped singleton so a fresh instance can be created."""
+        instance = cls._instance
+        if instance is not None:
+            try:
+                instance.stop_server()
+            except Exception:
+                pass
+            cls._instance = None
+
+    # ── Facade: layout ─────────────────────────────────────
+
+    @property
+    def layout(self) -> Any:
+        """The :class:`LayoutHost` (scenes + layouts)."""
+        return self._layout
+
+    def set_layout(self, root: Any, name: str = "") -> str:
+        """Register (or replace) a layout; register its control handlers."""
+        return self._layout.set_layout(root, name)
+
+    def add_layout(self, root: Any, name: str = "") -> str:
+        """Register a layout (raise if *name* is taken)."""
+        return self._layout.add_layout(root, name)
+
+    def remove_view(self, view_id: str, *, scene: str | None = None) -> None:
+        """Remove a mounted overlay view by its stable id (see ``viz.add``)."""
+        self._layout.remove_view(view_id, scene=scene)
+
+    def on_client_log(self, handler: Any) -> None:
+        """Replace the backend sink for browser ``sendLog`` events.
+
+        *handler* is an ``async def(value, event)`` receiving a
+        :class:`~pytanga.viz._controls.ClientLogRecord`; the default logs via
+        ``logging.getLogger("tanga.viz.client")``.
+        """
+        self._client_log.on_log = handler
+        self._client_log.register_handlers(self._transport)
+
+    # ── Facade: file chooser ───────────────────────────────
+
+    def open_file_chooser(
+        self, cid: str, *, scene_name: str = "", path: str | None = None
+    ) -> None:
+        """Open the file browser dialog for control *cid* (from the backend)."""
+        self._layout.open_file_chooser(cid, path=path)
+
+    def close_file_chooser(self, cid: str, *, scene_name: str = "") -> None:
+        """Close the file browser dialog for control *cid*."""
+        self._layout.close_file_chooser(cid)
+
+    # ── Facade: theme ──────────────────────────────────────
+
+    @property
+    def theme(self) -> str:
+        """The active theme id."""
+        return self._theme_host.theme
+
+    def set_theme(self, theme_id: str) -> None:
+        """Switch to the theme with id *theme_id*."""
+        self._theme_host.set_theme(theme_id)
+
+    async def set_theme_async(self, theme_id: str) -> None:
+        """Awaitable :meth:`set_theme`."""
+        await self._theme_host.set_theme_async(theme_id)
+
+    def refresh_theme(self) -> None:
+        """Re-resolve and push the active theme."""
+        self._theme_host.refresh_theme()
+
+    async def refresh_theme_async(self) -> None:
+        """Awaitable :meth:`refresh_theme`."""
+        await self._theme_host.refresh_theme_async()
+
+    def enable_theme_auto_reload(self, poll_interval: float = 1.0) -> None:
+        """Watch the theme files and push updates when they change."""
+        self._theme_host.enable_theme_auto_reload(poll_interval)
+
+    def disable_theme_auto_reload(self) -> None:
+        """Stop watching the theme files."""
+        self._theme_host.disable_theme_auto_reload()
+
+    # ── Facade: interaction ────────────────────────────────
+
+    def on_interaction(
+        self,
+        object_id: str,
+        event_type: Any,
+        handler: Any,
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Register an async handler for interaction events on an entity."""
+        self._interaction_host.on_interaction(
+            object_id, event_type, handler, scene_name=scene_name
+        )
+
+    def set_interaction(
+        self, object_id: str, config: Any, *, scene_name: str = ""
+    ) -> None:
+        """Set the interaction configuration for an entity."""
+        self._interaction_host.set_interaction(object_id, config, scene_name=scene_name)
+
+    # ── Internal forwarders (tests / VizSceneHandle) ───────
+
+    @property
+    def _theme(self) -> str:
+        return self._theme_host._theme
+
+    @property
+    def _scenes(self) -> dict[str, Any]:
+        return self._layout.scenes
+
+    @property
+    def _layouts(self) -> dict[str, Any]:
+        return self._layout._layouts
+
+    @property
+    def _layouts_serialized(self) -> dict[str, dict[str, Any]]:
+        return self._layout._layouts_serialized
+
+    def _resolve_control(self, cid: str) -> Any:
+        return self._layout.resolve_control(cid)
+
+    def _scene_layout_for(self, scene_name: str) -> dict[str, Any] | None:
+        return self._layout._scene_layout_for(scene_name)
+
+    def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
+        return self._layout._layout_serialized_for(layout_name)
+
+    async def _push_layout_updates(self) -> None:
+        await self._layout._push_layout_updates()
+
+    @property
+    def _act_objects(self) -> dict[str, Any]:
+        return self._interaction_host._act_objects
+
+    async def _dispatch_interaction_event(
+        self, msg_type: str, data: dict[str, Any]
+    ) -> None:
+        await self._interaction_host._dispatch_interaction_event(msg_type, data)
+
+    @property
+    def _server(self) -> Any:
+        """The current :class:`VizServer` (or ``None`` pre-boot), backed by ServerState."""
+        return self._server_state.server
+
+    @_server.setter
+    def _server(self, value: Any) -> None:
+        self._server_state.server = value
+
+    @property
+    def _loop(self) -> Any:
+        """The server event loop (or ``None`` pre-boot), backed by ServerState."""
+        return self._server_state.loop
+
+    @_loop.setter
+    def _loop(self, value: Any) -> None:
+        self._server_state.loop = value
+
+    def _create_scene(self, name: str, space_dim: int | None = None) -> Scene:
+        """Create a bare :class:`Scene` for *name* (no default objects).
+
+        *space_dim* (2 or 3) overrides the visualizer default for a named
+        scene; ``None`` inherits it.  The main scene (``""``) always uses the
+        visualizer's own config.
+        """
+        if name == "":
+            return Scene(
+                self._config, name="", styles=self._global_styles.copy(), host=self
+            )
+        dim = (
+            self._config.space_dim
+            if space_dim is None
+            else _validate_space_dim(space_dim)
+        )
+        cfg = SceneConfig(
+            background_color=self._config.background_color,
+            camera=None,
+            title=name or self._config.title,
+            name=name,
+            space_dim=dim,
+        )
+        return Scene(cfg, name=name, styles=self._global_styles.copy(), host=self)
+
+    def add_scene(
+        self,
+        name: str,
+        *,
+        space_dim: int | None = None,
+        add_axes: bool = True,
+        add_grid: bool = True,
+    ) -> VizSceneHandle:
+        """Create a scene + an auto single-``SceneView`` layout (raise if name taken)."""
+        if space_dim is not None:
+            _validate_space_dim(space_dim)
+        self._layout.add_scene(name, space_dim)
+        self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
+        return VizSceneHandle(self, name)
 
     def scene(
         self,
         name: str,
         *,
+        space_dim: int | None = None,
         enable_server_stop_key: bool = False,
+        add_axes: bool = True,
+        add_grid: bool = True,
     ) -> VizSceneHandle:
         """Get or create a named scene, returning a :class:`VizSceneHandle`.
 
@@ -241,23 +470,43 @@ class Visualizer(_JupyterDisplayMixin):
 
         Args:
             name: Scene name (URL-path-friendly).
+            space_dim: Space dimension for a newly created scene (``2`` or
+                ``3``); ``None`` (default) inherits the visualizer's dimension.
+                Applies only at creation.
             enable_server_stop_key: When ``True``, enable the
                 browser-triggered full-server stop key (Ctrl+Q) for this
                 scene, equivalent to calling
                 ``viz.scene(name).enable_server_stop_key()`` afterward.
+            add_axes: When ``False``, skip the default axes object for a
+                newly created scene.  Applies only at creation; the main scene
+                (``""``) is created in ``__init__`` and uses the
+                ``add_default_axes`` constructor flag instead.
+            add_grid: When ``False``, skip the default grid object for a
+                newly created scene.  Applies only at creation; the main scene
+                (``""``) is created in ``__init__`` and uses the
+                ``add_default_grid`` constructor flag instead.
         """
-        if name not in self._scenes:
-            cfg = SceneConfig(
-                background_color=self._config.background_color,
-                camera=None,
-                title=name or self._config.title,
-                name=name,
-                space_dim=self._config.space_dim,
-            )
-            self._scenes[name] = Scene(
-                cfg, name=name, styles=self._global_styles.copy()
-            )
-            self._add_default_scene_objects(name)
+        cid = current_cell_id()
+        token = execution_token()
+        if name not in self._layout.scenes:
+            if space_dim is not None:
+                _validate_space_dim(space_dim)
+            self._layout.add_scene(name, space_dim)
+            self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
+            self._scene_keys[name] = (cid, token)
+        else:
+            stored = self._scene_keys.get(name)
+            if (
+                stored is not None
+                and stored[0] is not None
+                and stored[0] == cid
+                and stored[1] != token
+            ):
+                # Same cell re-run: clear the scene and re-add its defaults.
+                self._layout.scenes[name].clear()
+                self._default_objects_added.discard(name)
+                self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
+                self._scene_keys[name] = (cid, token)
         if enable_server_stop_key:
             self._set_server_stop_key(
                 name, enabled=True, key="q", modifiers=[KeyModifier.CTRL]
@@ -267,54 +516,20 @@ class Visualizer(_JupyterDisplayMixin):
     @property
     def scenes(self) -> dict[str, Scene]:
         """All scenes keyed by name (``""`` is the main scene)."""
-        return self._scenes
+        return self._layout.scenes
 
     @property
     def _scene(self) -> Scene:
         """The main scene (backward-compat property)."""
-        return self._scenes[""]
+        return self._layout.scenes[""]
 
     @_scene.setter
     def _scene(self, value: Scene) -> None:
-        self._scenes[""] = value
+        self._layout.scenes[""] = value
 
     def list_scenes(self) -> list[str]:
         """Return all scene names (main scene is ``""``)."""
-        return list(self._scenes.keys())
-
-    def set_layout(self, root: View, name: str = "") -> str:
-        """Register a split-view layout and return its name.
-
-        The layout is validated, serialized once, and served (plus subscribed
-        to) as the ``view_layout`` message when a browser opens
-        ``/?view=<name>``.
-        """
-        if not isinstance(root, View):
-            raise TypeError(f"layout must be a View, got {type(root).__name__}")
-        self._layouts[name] = root
-        self._layouts_serialized[name] = serialize_layout(root, name=name)
-        self._register_control_handlers(root)
-        return name
-
-    def _register_control_handlers(self, root: View) -> None:
-        """Register control-view handlers into the control handler registry."""
-        from .views import iter_control_views
-
-        for cid in self._layout_control_ids:
-            self._handler_registry.unregister(cid)
-        self._layout_control_ids.clear()
-
-        for view in iter_control_views(root):
-            handler = getattr(view, "on_change", None) or getattr(
-                view, "on_click", None
-            )
-            if handler is not None:
-                self._handler_registry.register(view.id, handler)
-                self._layout_control_ids.add(view.id)
-
-    def _layout_serialized_for(self, layout_name: str) -> dict[str, Any] | None:
-        """Callback: return the serialized layout for *layout_name*, or None."""
-        return self._layouts_serialized.get(layout_name)
+        return list(self._layout.scenes.keys())
 
     def list_browsers(self) -> list[dict[str, str]]:
         """Return connected browser sessions as ``[{id, scene, remote_addr}]``.
@@ -332,7 +547,9 @@ class Visualizer(_JupyterDisplayMixin):
             scene_name: The target scene name (``""`` for the main scene).
             target: One of ``"all"`` (all connected browsers),
                 ``"scene:<name>"`` (only browsers currently viewing a
-                specific scene), or ``"browser:<id>"`` (a single browser).
+                specific scene), ``"viewer:<name>"`` (browsers whose ``?viewer=``
+                label matches, set via ``display``/``display_row``), or
+                ``"browser:<id>"`` (a single browser).
         """
         if self._server is None or self._loop is None:
             return
@@ -344,7 +561,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     def add(
         self,
-        obj: VizInputType | None = None,
+        obj: Any = None,
         *,
         entity_id: str | None = None,
         color: str
@@ -359,16 +576,23 @@ class Visualizer(_JupyterDisplayMixin):
         tex_label_style: "TextureLabelStyle | None" = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
-    ) -> str:
-        """Add a geometric entity, operator, multivector, or label to the main scene.
+    ) -> str | None:
+        """Add an entity to the main scene, or a :class:`View` to the overlay.
 
-        Returns the entity ID as a ``str``.  If *label* is provided the
-        label is created alongside the entity and the entity ID is returned.
+        A :class:`~pytanga.viz.views.View` argument (``GroupView`` / ``*View`` /
+        ``MenuView`` / …) is mounted in the default layout's overlay; everything
+        else (geometric entity, operator, multivector, label, or scene-graph
+        group) goes to the main scene.  Returns the entity ID as a ``str`` for
+        entities, or ``None`` for views.
 
-        See the class docstring for full parameter documentation.
+        See the class docstring for full entity parameter documentation.
         """
-        return self._add_to_scene(
-            "",
+        from .views import View
+
+        if isinstance(obj, View):
+            self._layout[""].overlay.add(obj)
+            return None
+        return self._layout.scenes[""].add_viz(
             obj=obj,
             entity_id=entity_id,
             color=color,
@@ -403,8 +627,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Like :meth:`add`, but returns a :class:`VizObjectRef` instead of a ``str``."""
         from ._object_ref import VizObjectRef
 
-        eid = self._add_to_scene(
-            "",
+        eid = self._layout.scenes[""].add_viz(
             obj=obj,
             entity_id=entity_id,
             color=color,
@@ -417,42 +640,18 @@ class Visualizer(_JupyterDisplayMixin):
             parent_id=parent_id,
             attach_to=attach_to,
         )
-        node = self._scenes[""].get_node(eid)
+        node = self._layout.scenes[""].get_node(eid)
         return VizObjectRef(VizSceneHandle(self, ""), node)
 
     def __call__(
-        self, obj: VizInputType | None = None, **kwargs: Any
-    ) -> "VizObjectRef":
-        """Shorthand for :meth:`new`: ``viz(point, color=...)``.
-
-        Adds *obj* to the main scene and returns a :class:`VizObjectRef`, just
-        like :meth:`new`.  This keeps the pre-create + update animation pattern
-        concise::
-
-            p = viz(Point(3, 0, 0), color="#ff4444")
-            for dt in viz.animate(fps=30):
-                p.entity = Point(...)
-                viz.flush()
-        """
-        return self.new(obj, **kwargs)
-
-    def add_group(
-        self, name: str | None = None, *, scene_name: str = ""
-    ) -> "VizObjectRef":
-        """Create a scene-graph group and return a :class:`VizObjectRef` for it."""
-        from ._object_ref import VizObjectRef
-
-        scene = self._scenes[scene_name]
-        group = scene.add_group(name)
-        return VizObjectRef(VizSceneHandle(self, scene_name), group)
-
-    def _add_to_scene(
         self,
-        scene_name: str,
-        *,
         obj: VizInputType | None = None,
+        *,
         entity_id: str | None = None,
-        color: Any = None,
+        color: str
+        | tuple[float, float, float]
+        | tuple[float, float, float, float]
+        | None = None,
         opacity: float | None = None,
         style: ObjVizStyle | None = None,
         label: str | None = None,
@@ -461,234 +660,41 @@ class Visualizer(_JupyterDisplayMixin):
         tex_label_style: "TextureLabelStyle | None" = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
-    ) -> str:
-        """Add an entity to a specific scene.
+    ) -> "VizObjectRef":
+        """Shorthand for :meth:`new`: ``viz(point, color=...)``.
 
-        ``parent_id`` parents the new scene node under an existing scene node;
-        ``attach_to`` sets the scene-node reference for a label created here.
+        Adds *obj* to the main scene and returns a :class:`VizObjectRef`, just
+        like :meth:`new` (and accepts exactly the same keyword arguments).  This
+        keeps the pre-create + update animation pattern concise::
+
+            p = viz(Point(3, 0, 0), color="#ff4444")
+            for dt in viz.animate(fps=30):
+                p.entity = Point(...)
+                viz.flush()
         """
-        from ._active import ActSceneObject
-        from ._label import Label
-        from ._nodes import VizGroup, VizSceneObject
-        from ._styles import TextureLabelStyle as _TLS
-
-        scene = self._scenes[scene_name]
-
-        if isinstance(obj, VizGroup):
-            from .scene import _generate_id
-
-            gid = entity_id or obj.id or _generate_id()
-            obj.id = gid
-            scene.add_node(obj, object_id=gid)
-            if parent_id is not None:
-                parent = scene.get_node(parent_id)
-                if isinstance(parent, VizSceneObject):
-                    parent.add_child(obj)
-            return gid
-
-        if isinstance(obj, ActSceneObject):
-            properties: dict[str, Any] = {}
-            if color is not None:
-                normalized = _normalize_color(color)
-                if isinstance(normalized, tuple):
-                    properties["color"] = normalized[0]
-                    if opacity is None:
-                        properties["opacity"] = normalized[1]
-                else:
-                    properties["color"] = normalized
-            if opacity is not None:
-                properties["opacity"] = float(opacity)
-            if style is not None:
-                properties["style"] = style
-            eid = scene.add(obj.entity, entity_id=entity_id, **properties)
-            obj._init(VizSceneHandle(self, scene_name), eid)
-            self._attach_to_parent(scene, eid, parent_id)
-            self._add_label_for_entity(
-                scene,
-                obj.entity,
-                eid,
-                label=label,
-                label_style=label_style,
-                attach_to=attach_to,
-                properties=properties,
-            )
-            return eid
-
-        if isinstance(obj, Label):
-            if attach_to is not None:
-                obj.parent_id = attach_to
-            return scene.add_label(obj)
-
-        properties: dict[str, Any] = {}
-
-        if color is not None:
-            normalized = _normalize_color(color)
-            if isinstance(normalized, tuple):
-                properties["color"] = normalized[0]
-                if opacity is None:
-                    properties["opacity"] = normalized[1]
-            else:
-                properties["color"] = normalized
-
-        if opacity is not None:
-            properties["opacity"] = float(opacity)
-
-        # Build texture label convenience style if tex_label is set
-        _tex_label_merged: _TLS | None = None
-        if tex_label is not None:
-            entity_for_kind = self._resolve(obj)
-            kind = type(entity_for_kind).__name__
-            _tex_label_merged = _resolve_tex_label_style(
-                scene.styles.tex_label_base,
-                scene.styles.tex_label_kind.get(kind),
-                tex_label_style,
-            )
-            _tex_label_merged.text = tex_label
-
-        # Merge texture label into style if the user didn't provide
-        # texture_label explicitly via style
-        if _tex_label_merged is not None:
-            if style is not None:
-                from ._styles import PlaneStyle, SphereStyle
-
-                style_for_check = style
-                if isinstance(style_for_check, (SphereStyle, PlaneStyle)):
-                    if style_for_check.texture_label is None:
-                        style_for_check.texture_label = _tex_label_merged
-                # Otherwise leave the user's explicit style alone
-            else:
-                kind_for_style = None
-                entity_for_style = self._resolve(obj)
-                if entity_for_style is not None:
-                    kind_for_style = type(entity_for_style).__name__
-                if kind_for_style == "Sphere":
-                    from ._styles import SphereStyle as SS
-
-                    style = SS(
-                        texture_label=_tex_label_merged,
-                        wireframe=False,
-                        # double_sided=True,
-                    )
-                elif kind_for_style == "Plane":
-                    from ._styles import PlaneStyle as PS
-
-                    style = PS(texture_label=_tex_label_merged, wireframe=False)
-
-        if style is not None:
-            properties["style"] = style
-
-        entity = self._resolve(obj)
-
-        # Viz-level drawables (PointPath, etc.) go through add_object
-        from pytanga.geometry.entities import Entity as GeoEntity
-        from pytanga.geometry.operators import Operator as GeoOperator
-
-        if not isinstance(entity, (GeoEntity, GeoOperator)):
-            kind = type(entity).__name__
-            oid = scene.add_object(
-                SceneObject(
-                    id=entity_id or "",
-                    layer="scene",
-                    kind=kind,
-                    data=entity,
-                    properties=properties,
-                    dirty=True,
-                ),
-                object_id=entity_id,
-            )
-            self._attach_to_parent(scene, oid, parent_id)
-            self._add_label_for_entity(
-                scene,
-                entity,
-                oid,
-                label=label,
-                label_style=label_style,
-                attach_to=attach_to,
-                properties=properties,
-            )
-            return oid
-
-        eid = scene.add(entity, entity_id=entity_id, **properties)
-        self._attach_to_parent(scene, eid, parent_id)
-
-        self._add_label_for_entity(
-            scene,
-            entity,
-            eid,
+        return self.new(
+            obj,
+            entity_id=entity_id,
+            color=color,
+            opacity=opacity,
+            style=style,
             label=label,
             label_style=label_style,
+            tex_label=tex_label,
+            tex_label_style=tex_label_style,
+            parent_id=parent_id,
             attach_to=attach_to,
-            properties=properties,
-        )
-        return eid
-
-    @staticmethod
-    def _attach_to_parent(scene: Any, oid: str, parent_id: str | None) -> None:
-        """Attach a scene node to a parent scene node (no-op when ``parent_id`` is ``None``)."""
-        if parent_id is None:
-            return
-        from ._nodes import VizSceneObject
-
-        child = scene.get_node(oid)
-        parent = scene.get_node(parent_id)
-        if isinstance(child, VizSceneObject) and isinstance(parent, VizSceneObject):
-            parent.add_child(child)
-
-    def _add_label_for_entity(
-        self,
-        scene: Any,
-        entity: Any,
-        eid: str,
-        *,
-        label: str | None,
-        label_style: LabelStyle | None,
-        attach_to: str | None,
-        properties: dict[str, Any],
-    ) -> None:
-        """Create a label for *entity* attached to *eid*.
-
-        No-op when *label* is ``None``.  Shared by the regular entity path and
-        the :class:`ActSceneObject` path so active objects support ``label=``.
-        """
-        if label is None:
-            return
-        from ._label import Label
-        from ._label_frame import compute_label_position
-        from .serializer import resolve_line_length
-
-        from pytanga.geometry.entities import Line
-        from pytanga.geometry.operators import ReflectionLine
-
-        kind = type(entity).__name__
-        resolved_ls = _resolve_label_style(
-            scene.styles.label_base,
-            scene.styles.label_kind.get(kind),
-            label_style,
         )
 
-        line_length = None
-        if isinstance(entity, Line):
-            line_length = resolve_line_length(
-                entity, styles_map=scene.styles.kind, props=properties
-            )
-        elif isinstance(entity, ReflectionLine):
-            line_length = resolve_line_length(
-                entity.line, styles_map=scene.styles.kind, props=properties
-            )
+    def add_group(
+        self, name: str | None = None, *, scene_name: str = ""
+    ) -> "VizObjectRef":
+        """Create a scene-graph group and return a :class:`VizObjectRef` for it."""
+        from ._object_ref import VizObjectRef
 
-        position = compute_label_position(
-            entity,
-            resolved_ls.offset_local,
-            along=resolved_ls.along,
-            line_length=line_length,
-        )
-        lbl = Label(
-            text=label,
-            position=position,
-            parent_id=attach_to if attach_to is not None else eid,
-            style=resolved_ls,
-        )
-        scene.add_label(lbl)
+        scene = self._layout.scenes[scene_name]
+        group = scene.add_group(name)
+        return VizObjectRef(VizSceneHandle(self, scene_name), group)
 
     def update(self, entity_id: str, **properties: Any) -> None:
         """Update rendering properties of an existing entity in the main scene.
@@ -706,7 +712,7 @@ class Visualizer(_JupyterDisplayMixin):
             PointPath: ``line_thickness``
             Sphere/Circle/Plane/Line: ``wireframe`` (bool)
         """
-        self._scenes[""].update(entity_id, **properties)
+        self._layout.scenes[""].update(entity_id, **properties)
 
     def update_style(self, entity_id: str, style: ObjVizStyle) -> None:
         """Update rendering style of an existing entity from a style instance.
@@ -725,12 +731,12 @@ class Visualizer(_JupyterDisplayMixin):
         from ._props import _extract_non_none
 
         props = _extract_non_none(style)
-        self._scenes[""].update(entity_id, **props)
+        self._layout.scenes[""].update(entity_id, **props)
 
     def update_entity(self, entity_id: str, obj: SceneEntity) -> None:
         """Replace the geometry for an existing entity in the main scene."""
         entity: SceneEntity = self._resolve(obj)
-        self._scenes[""].update_entity(entity_id, entity)
+        self._layout.scenes[""].update_entity(entity_id, entity)
 
     def update_sdf_group_member(
         self,
@@ -748,7 +754,7 @@ class Visualizer(_JupyterDisplayMixin):
         push the update (the member can then be animated frame-by-frame in an
         ``animate`` loop).
         """
-        self._scenes[""].update_sdf_group_member(
+        self._layout.scenes[""].update_sdf_group_member(
             group_id, member, position=position, rotation=rotation, scale=scale
         )
 
@@ -760,15 +766,15 @@ class Visualizer(_JupyterDisplayMixin):
         style: LabelStyle | None = None,
     ) -> None:
         """Update a label's text and/or style in the main scene."""
-        self._scenes[""].update_label(object_id, text=text, style=style)
+        self._layout.scenes[""].update_label(object_id, text=text, style=style)
 
     def get_label_ids(self, entity_id: str) -> list[str]:
         """Return the IDs of all labels attached to *entity_id* in the main scene."""
-        return self._scenes[""].get_label_ids(entity_id)
+        return self._layout.scenes[""].get_label_ids(entity_id)
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity from the main scene."""
-        self._scenes[""].remove(entity_id)
+        self._layout.scenes[""].remove(entity_id)
 
     def clear(self, *, add_axes: bool = False, add_grid: bool = False) -> None:
         """Remove all entities from the main scene.
@@ -778,7 +784,7 @@ class Visualizer(_JupyterDisplayMixin):
         (subject to the visualizer's ``add_default_axes`` / ``add_default_grid``
         constructor flags).
         """
-        self._scenes[""].clear()
+        self._layout.scenes[""].clear()
         if add_axes or add_grid:
             self._default_objects_added.discard("")
             self._add_default_scene_objects("", add_axes=add_axes, add_grid=add_grid)
@@ -789,7 +795,7 @@ class Visualizer(_JupyterDisplayMixin):
         Used by the context managers so ``with viz:`` / ``with viz.scene(name):``
         reset to the default scene (axes/grid present), not an empty one.
         """
-        self._scenes[scene_name].clear()
+        self._layout.scenes[scene_name].clear()
         self._default_objects_added.discard(scene_name)
         self._add_default_scene_objects(scene_name)
 
@@ -800,7 +806,7 @@ class Visualizer(_JupyterDisplayMixin):
         self._set_scene_title("", title)
 
     def _set_scene_title(self, scene_name: str, title: str) -> None:
-        scene = self._scenes[scene_name]
+        scene = self._layout.scenes[scene_name]
         scene.config.title = title
         self._push_scene_config(scene_name)
 
@@ -813,7 +819,7 @@ class Visualizer(_JupyterDisplayMixin):
     def _set_scene_annotation(
         self, scene_name: str, text: str | None, *, style: AnnotationStyle | None = None
     ) -> None:
-        scene = self._scenes[scene_name]
+        scene = self._layout.scenes[scene_name]
         scene.config.annotation = text
 
         if text is None or text == "":
@@ -834,7 +840,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Push the current SceneConfig to all connected WebSocket clients."""
         if self._server is None or self._loop is None:
             return
-        data = json.dumps(self._scenes[scene_name].config.to_dict())
+        data = json.dumps(self._layout.scenes[scene_name].config.to_dict())
         asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
 
     def set_camera(
@@ -850,8 +856,45 @@ class Visualizer(_JupyterDisplayMixin):
                 :class:`View3dConfig` input spec.
             scene_name: Target scene (default ``""`` = main scene).
         """
-        scene = self._scenes[scene_name]
+        scene = self._layout.scenes[scene_name]
         scene.config.camera = _normalize_camera_config(camera)
+        self._push_scene_config(scene_name)
+
+    def set_space_dim(
+        self,
+        space_dim: int,
+        *,
+        scene_name: str = "",
+        camera: CameraConfig | View2DConfig | View3dConfig | None = None,
+    ) -> None:
+        """Switch a scene's space dimension (2D/3D) at runtime.
+
+        Updates the scene's ``space_dim`` and re-pushes its config so the
+        browser switches camera mode and controls without a reload.
+
+        Args:
+            space_dim: ``2`` or ``3``.
+            scene_name: Target scene (default ``""`` = main scene).
+            camera: Optional camera to apply with the new dimension.  When
+                omitted and the scene's current camera conflicts with
+                ``space_dim``, the camera is cleared so the frontend auto-fits
+                with the correct camera type.
+        """
+        _validate_space_dim(space_dim)
+        scene = self._layout.scenes[scene_name]
+        scene.config.space_dim = space_dim
+        if camera is not None:
+            cam = _normalize_camera_config(camera)
+            cam_dim = _deduce_space_dim(cam)
+            if cam_dim is not None and cam_dim != space_dim:
+                raise ValueError(
+                    f"camera implies space_dim={cam_dim}, but {space_dim} was requested"
+                )
+            scene.config.camera = cam
+        else:
+            cam_dim = _deduce_space_dim(scene.config.camera)
+            if cam_dim is not None and cam_dim != space_dim:
+                scene.config.camera = None
         self._push_scene_config(scene_name)
 
     def set_view_camera(
@@ -888,17 +931,6 @@ class Visualizer(_JupyterDisplayMixin):
             return
         asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
 
-    def set_control_view_value(self, view: ControlView, value: Any) -> None:
-        """Update a layout control view's value in place and push ``control_update``.
-
-        Mirrors :meth:`set_view_camera`: the view must be a :class:`ControlView`
-        and the update is keyed by ``view.id``.
-        """
-        set_control_view_value(view, value)
-        self._push_control_update("", view.id, view.value)
-
-    # ── Default scene objects ───────────────────────────────
-
     def _add_default_scene_objects(
         self,
         scene_name: str,
@@ -918,7 +950,7 @@ class Visualizer(_JupyterDisplayMixin):
         """
         if scene_name in self._default_objects_added:
             return
-        scene = self._scenes[scene_name]
+        scene = self._layout.scenes[scene_name]
 
         want_axes = (
             self._add_default_axes
@@ -937,10 +969,10 @@ class Visualizer(_JupyterDisplayMixin):
         if scene.config.space_dim == 2:
             if want_axes:
                 axes: Axes2D | Axes3D = Axes2D(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
-                self._add_to_scene(scene_name, obj=axes)
+                self._layout.scenes[scene_name].add_viz(obj=axes)
             if want_grid:
                 grid = Grid(range_u=(-5.0, 5.0), range_v=(-5.0, 5.0))
-                self._add_to_scene(scene_name, obj=grid)
+                self._layout.scenes[scene_name].add_viz(obj=grid)
         else:
             if want_axes:
                 axes = Axes3D(
@@ -949,8 +981,7 @@ class Visualizer(_JupyterDisplayMixin):
                     range_w=(0.0, 5.0),
                     show_value_labels=False,
                 )
-                self._add_to_scene(
-                    scene_name,
+                self._layout.scenes[scene_name].add_viz(
                     obj=axes,
                     style=Axes3DStyle(
                         u=AxisStyle(color="#ff0000"),
@@ -966,7 +997,7 @@ class Visualizer(_JupyterDisplayMixin):
                     range_u=(-5.0, 5.0),
                     range_v=(-5.0, 5.0),
                 )
-                self._add_to_scene(scene_name, obj=grid)
+                self._layout.scenes[scene_name].add_viz(obj=grid)
 
         self._default_objects_added.add(scene_name)
 
@@ -975,7 +1006,7 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> tuple[list[dict[str, Any]], list[str]]:
         """Return full serialized state for a scene, adding defaults first."""
         self._add_default_scene_objects(scene_name)
-        scene = self._scenes.get(scene_name, self._scenes[""])
+        scene = self._layout.scenes.get(scene_name, self._layout.scenes[""])
         state = scene.full_state(styles_map=scene.styles.kind)
         # The full state is the authoritative snapshot the frontend just
         # received; consume the dirty flags so the next flush() doesn't re-send
@@ -1253,7 +1284,7 @@ class Visualizer(_JupyterDisplayMixin):
                 # pending removal and send "remove" without ever sending "add",
                 # so the object never appears.)
                 self._flush_scene(scene_name, wait=True)
-                scene = self._scenes[scene_name]
+                scene = self._layout.scenes[scene_name]
                 current = set(scene._objects.keys())
                 if baseline is None:
                     baseline = current
@@ -1294,43 +1325,10 @@ class Visualizer(_JupyterDisplayMixin):
     # ── MV resolution ──────────────────────────────────────
 
     def _resolve(self, obj: Any) -> SceneEntity:
-        """Resolve an MV to a :class:`SceneEntity`.
+        """Resolve an MV to a :class:`SceneEntity` (delegated to Scene)."""
+        from .scene import _resolve_scene_entity
 
-        Viz-level drawables (PointPath, …) are passed through unchanged.
-        GeoEntities and Operators are returned as-is.
-        MVs are resolved via :func:`pytanga.geometry.analyze`, reading the
-        MV's ``algebra.opns`` flag.
-        """
-        from pytanga.geometry.operators import Operator as GeoOperator
-
-        # Viz-level drawables — pass through
-        if isinstance(obj, SceneEntity):
-            return obj  # type: ignore[return-value]
-
-        # SDF drawables (SdfElement / SdfNode) — pass through unchanged; they
-        # are serialized by the SDF path (SdfElements carry their own style).
-        from .sdf._compose import SdfElement as _SdfElement
-        from .sdf.primitives import SdfNode as _SdfNode
-
-        if isinstance(obj, (_SdfElement, _SdfNode)):
-            return obj  # type: ignore[return-value]
-
-        # Geo entities and operators — pass through
-        if isinstance(obj, (GeoEntity, GeoOperator)):
-            return obj  # type: ignore[return-value]
-
-        try:
-            from pytanga.geometry import analyze
-
-            result = analyze(obj)
-            if result is None:
-                raise ValueError(f"Could not analyze object: {obj!r}")
-            return result
-        except ImportError:
-            raise TypeError(
-                f"Object of type {type(obj).__name__} is not a recognized "
-                f"geometry entity, operator, or multivector."
-            ) from None
+        return _resolve_scene_entity(obj)
 
     # ── Animation ──────────────────────────────────────────
 
@@ -1416,7 +1414,13 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Server lifecycle ───────────────────────────────────
 
-    def start_server(self, host: str = "localhost", port: int | None = None) -> None:
+    def start_server(
+        self,
+        host: str = "localhost",
+        port: int | None = None,
+        *,
+        ask: PortConflictAsk | None = None,
+    ) -> None:
         """Start serving the visualization without opening a browser.
 
         Parameters
@@ -1437,17 +1441,29 @@ class Visualizer(_JupyterDisplayMixin):
             raise ValueError(f"port must be 0 or a positive integer, got {port}")
         self._host = host
         self._port = port
-        self._ensure_server_running()
+        self._port_conflict_ask = ask
+        from .server import PortInUseError
+
+        try:
+            self._ensure_server_running()
+        except PortInUseError as e:
+            raise SystemExit(str(e))
 
     def _ensure_server_running(self) -> None:
         """Boot the server in a background thread if not already running."""
         if self._server is not None:
             return
 
+        from ._themes import external_theme_dirs
         from .server import VizServer
 
         logger.info("Starting VizServer on %s:%d", self._host, self._port)
-        self._server = VizServer(host=self._host, port=self._port)
+        self._server = VizServer(
+            host=self._host,
+            port=self._port,
+            port_conflict_mode=self._port_conflict_mode,
+            port_conflict_ask=self._port_conflict_ask or self._ask_port_conflict,
+        )
 
         _boot_done = threading.Event()
         _boot_start = time.monotonic()
@@ -1456,31 +1472,48 @@ class Visualizer(_JupyterDisplayMixin):
             await self._server.start(
                 self._full_state_for,
                 self._config.to_dict,
-                control_callback=self._dispatch_control_event,
-                interaction_callback=self._dispatch_interaction_event,
+                control_callback=self._transport.dispatch,
+                interaction_callback=self._transport.dispatch,
                 on_connect=self._on_client_connect,
                 on_disconnect=self._on_client_disconnect,
-                push_controls=self._push_controls_async,
                 animation_stop_callback=self._on_browser_animation_stop,
                 push_animation_stop=self._push_animation_stop_async,
                 scene_config_callback=self._scene_config_for,
                 scene_list_callback=self.list_scenes,
-                layout_callback=self._layout_serialized_for,
+                layout_callback=self._layout._layout_serialized_for,
+                scene_layout_callback=self._layout._scene_layout_for,
+                theme_callback=self._theme_host._theme_define_payload,
+                theme_static_dirs=external_theme_dirs(),
             )
             _boot_done.set()
 
         self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
 
-        self._loop.create_task(_boot())
+        boot_task = self._loop.create_task(_boot())
 
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
 
-        if not _boot_done.wait(timeout=5.0):
+        deadline = time.monotonic() + 5.0
+        while not _boot_done.is_set():
+            if boot_task.done():
+                error = boot_task.exception()
+                if error is not None:
+                    self._cleanup_failed_boot()
+                    raise error
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.01)
+
+        if not _boot_done.is_set():
+            self._cleanup_failed_boot()
             raise RuntimeError("Server failed to start within 5s")
 
         logger.debug("Server booted in %.1fs", time.monotonic() - _boot_start)
+
+        # An AUTO resolution may have picked a different port; reflect it back
+        # so the URL / self._port are correct.
+        self._port = self._server.port
 
         # Graceful shutdown on interpreter exit, even if the script forgets to
         # call stop_server() — otherwise the daemon server thread is killed
@@ -1508,18 +1541,85 @@ class Visualizer(_JupyterDisplayMixin):
             for event in self._interrupt_events.values():
                 event.set()
 
+        def _on_sigterm(signum: int, frame: object) -> None:
+            # SIGTERM is the OS "please terminate" signal (kill, systemd, and
+            # VSCode's kernel restart all send it).  We must not swallow it:
+            # request a graceful shutdown, tear the server down, then re-raise
+            # with the default disposition restored so the process actually
+            # exits and the OS releases the port.  An open listening socket
+            # never blocks termination — the process just has to be allowed to
+            # die.
+            logger.info("SIGTERM received - shutting down")
+            self._shutdown_requested.set()
+            for event in self._interrupt_events.values():
+                event.set()
+            try:
+                # stop_server() calls _restore_signal_handlers() first, but we
+                # force SIG_DFL here regardless so the re-raise always exits.
+                self.stop_server()
+            finally:
+                signal.signal(signal.SIGTERM, signal.SIG_DFL)
+                signal.raise_signal(signal.SIGTERM)
+
+        self._saved_signal_handlers = {
+            signal.SIGINT: signal.getsignal(signal.SIGINT),
+            signal.SIGTERM: signal.getsignal(signal.SIGTERM),
+        }
         signal.signal(signal.SIGINT, _on_sigint)
-        signal.signal(signal.SIGTERM, _on_sigint)
+        signal.signal(signal.SIGTERM, _on_sigterm)
 
         # Print URLs
         self._print_startup_urls()
 
-    def open_browser(self, *, wait_for_browser: bool | None = None) -> bool:
+    def _cleanup_failed_boot(self) -> None:
+        """Tear down a server whose boot task failed before it fully started."""
+        if self._loop is not None and self._loop.is_running():
+            if self._server is not None:
+
+                async def _cleanup() -> None:
+                    try:
+                        await self._server.stop()
+                    except Exception:
+                        pass
+
+                try:
+                    asyncio.run_coroutine_threadsafe(_cleanup(), self._loop).result(
+                        timeout=5.0
+                    )
+                except Exception:
+                    pass
+            self._loop.call_soon_threadsafe(self._loop.stop)
+        if self._thread is not None:
+            self._thread.join(timeout=3.0)
+        self._server = None
+        self._loop = None
+        self._thread = None
+
+    def _restore_signal_handlers(self) -> None:
+        """Restore the SIGINT/SIGTERM handlers saved before the server started."""
+        if self._saved_signal_handlers is None:
+            return
+        for signum, handler in self._saved_signal_handlers.items():
+            try:
+                signal.signal(signum, handler)
+            except Exception:
+                pass
+        self._saved_signal_handlers = None
+
+    def open_browser(
+        self, *, wait_for_browser: bool | None = None, timeout: float | None = None
+    ) -> bool:
         """Open/reconnect a browser tab for the main scene."""
-        return self._open_scene_browser("", wait_for_browser=wait_for_browser)
+        return self._open_scene_browser(
+            "", wait_for_browser=wait_for_browser, timeout=timeout
+        )
 
     def _open_scene_browser(
-        self, scene_name: str, *, wait_for_browser: bool | None = None
+        self,
+        scene_name: str,
+        *,
+        wait_for_browser: bool | None = None,
+        timeout: float | None = None,
     ) -> bool:
         """Open/reconnect a browser tab for *scene_name* (``""`` for main)."""
         import secrets
@@ -1530,10 +1630,16 @@ class Visualizer(_JupyterDisplayMixin):
         page_token = secrets.token_hex(4)  # 8 hex chars
         url_path = f"/{scene_name}" if scene_name else "/"
         token_url = f"{url_path}?token={page_token}"
-        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+        return self._open_browser_url(
+            token_url, wait_for_browser=wait_for_browser, timeout=timeout
+        )
 
     def _open_layout_browser(
-        self, layout_name: str, *, wait_for_browser: bool | None = None
+        self,
+        layout_name: str,
+        *,
+        wait_for_browser: bool | None = None,
+        timeout: float | None = None,
     ) -> bool:
         """Open/reconnect a browser tab for the split-view layout *layout_name*."""
         import secrets
@@ -1543,10 +1649,16 @@ class Visualizer(_JupyterDisplayMixin):
 
         page_token = secrets.token_hex(4)
         token_url = f"/?view={layout_name}&token={page_token}"
-        return self._open_browser_url(token_url, wait_for_browser=wait_for_browser)
+        return self._open_browser_url(
+            token_url, wait_for_browser=wait_for_browser, timeout=timeout
+        )
 
     def _open_browser_url(
-        self, token_url: str, *, wait_for_browser: bool | None
+        self,
+        token_url: str,
+        *,
+        wait_for_browser: bool | None,
+        timeout: float | None = None,
     ) -> bool:
         """Open *token_url* in a (possibly reused) browser tab."""
         if wait_for_browser is None:
@@ -1555,7 +1667,10 @@ class Visualizer(_JupyterDisplayMixin):
         if self._reuse_existing:
             # Interactive wait: user either clicks Reconnect or presses Enter
             if wait_for_browser:
-                connected = self.wait_for_browser(timeout=120.0)
+                connected = self.wait_for_browser(
+                    timeout=timeout if timeout is not None else 120.0,
+                    path=token_url,
+                )
                 if not connected:
                     return False
             else:
@@ -1583,7 +1698,9 @@ class Visualizer(_JupyterDisplayMixin):
                 self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
             self._server.open_browser(token_url)
             if wait_for_browser:
-                return self.wait_for_browser(timeout=30.0)
+                return self.wait_for_browser(
+                    timeout=timeout if timeout is not None else 30.0
+                )
         return True
 
     def start(
@@ -1616,12 +1733,46 @@ class Visualizer(_JupyterDisplayMixin):
         except Exception:
             print(http_url)
 
-    def _print_connect_prompt(self) -> None:
+    def _ask_port_conflict(
+        self, port: int, occupants: list[PortOccupant]
+    ) -> PortConflictMode:
+        """Prompt on the terminal to resolve a busy port (``ASK`` mode).
+
+        Returns ``CANCEL`` when stdin is not a terminal or input fails, so
+        non-interactive callers degrade to the standard error instead of
+        hanging.
+        """
+        try:
+            if not sys.stdin.isatty():
+                return PortConflictMode.CANCEL
+        except Exception:
+            return PortConflictMode.CANCEL
+
+        print(f"Port {port} is already in use.")
+        for occ in occupants:
+            cmd = " ".join(occ.cmdline) if occ.cmdline else ""
+            print(f"  pid {occ.pid}: {occ.name} {cmd}".rstrip())
+        while True:
+            try:
+                answer = input(
+                    "[k]ill the process, [a]uto-pick a free port, or [c]ancel? "
+                ).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                return PortConflictMode.CANCEL
+            if answer in ("k", "kill"):
+                return PortConflictMode.KILL
+            if answer in ("a", "auto"):
+                return PortConflictMode.AUTO
+            if answer in ("c", "cancel", ""):
+                return PortConflictMode.CANCEL
+
+    def _print_connect_prompt(self, path: str | None = None) -> None:
         """Print the interactive connect prompt including the server URL.
 
         The URL is printed on its own line so terminals (e.g. VS Code) can
         detect it as a clickable link.
         """
+        url = self.url if path is None else f"{self.url}{path}"
         try:
             from rich.console import Console
             from rich.text import Text
@@ -1629,7 +1780,7 @@ class Visualizer(_JupyterDisplayMixin):
             Console().print(
                 Text.assemble(
                     "Server: ",
-                    Text(self.url, style="bold cyan"),
+                    Text(url, style="bold cyan"),
                     "\n",
                     "Press ",
                     Text("Enter", style="bold"),
@@ -1640,14 +1791,14 @@ class Visualizer(_JupyterDisplayMixin):
             )
         except Exception:
             print(
-                f"Server: {self.url}\n"
+                f"Server: {url}\n"
                 "Press Enter to open a new browser tab, "
                 "or click 'Reconnect' in an existing tab..."
             )
 
     def _scene_config_for(self, scene_name: str) -> dict[str, Any] | None:
         """Callback: return config dict for a named scene, or None if not found."""
-        scene = self._scenes.get(scene_name)
+        scene = self._layout.scenes.get(scene_name)
         if scene is None:
             return None
         return scene.config.to_dict()
@@ -1663,6 +1814,7 @@ class Visualizer(_JupyterDisplayMixin):
 
     def stop_server(self, *, timeout: float = 5.0) -> None:
         """Stop the server and clean up."""
+        self._restore_signal_handlers()
         if self._server is None:
             logger.debug("stop_server() called but server already None")
             return
@@ -1713,7 +1865,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self.stop_server(timeout=timeout)
 
-    def wait_for_browser(self, timeout: float = 120.0) -> bool:
+    def wait_for_browser(self, timeout: float = 120.0, path: str | None = None) -> bool:
         """Block until a browser connects, or the user opens one interactively.
 
         Prints a prompt and waits for EITHER:
@@ -1736,7 +1888,7 @@ class Visualizer(_JupyterDisplayMixin):
             return True
 
         # ── Print interactive prompt ──
-        self._print_connect_prompt()
+        self._print_connect_prompt(path=path)
 
         # ── Threading.Event for Enter press ──
         enter_pressed = threading.Event()
@@ -1777,7 +1929,7 @@ class Visualizer(_JupyterDisplayMixin):
         if self._loop is not None:
             self._loop.call_soon_threadsafe(self._server._clear_ws_ready_events)
 
-        self._server.open_browser(f"/?token={page_token}")
+        self._server.open_browser(path or f"/?token={page_token}")
 
         # Now wait for the new tab to connect
         logger.info(
@@ -1839,7 +1991,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Push dirty state for a specific scene (must be called from server's event loop)."""
         if self._server is None:
             return
-        scene = self._scenes.get(scene_name)
+        scene = self._layout.scenes.get(scene_name)
         if scene is None:
             return
         patches, removed = scene.flush()
@@ -1856,7 +2008,7 @@ class Visualizer(_JupyterDisplayMixin):
         """Push dirty state for every scene (must be called from the server's event loop)."""
         if self._server is None:
             return
-        for name in self._scenes:
+        for name in self._layout.scenes:
             await self._flush_scene_async(name, fit_camera=fit_camera)
 
     def _flush_scene(
@@ -1904,7 +2056,7 @@ class Visualizer(_JupyterDisplayMixin):
         would deadlock; use :meth:`flush_async` there instead.
         """
         if self._loop is not None and self._server is not None:
-            for name in self._scenes:
+            for name in self._layout.scenes:
                 self._flush_scene(name, fit_camera=fit_camera, wait=wait)
 
     async def _on_server_loop(self, coro_factory: Any) -> Any:
@@ -1972,6 +2124,7 @@ class Visualizer(_JupyterDisplayMixin):
         host: str | None = None,
         port: int | None = None,
         wait_for_browser: bool | None = None,
+        timeout: float | None = None,
         jupyter: bool | None = None,
         viewer_name: str | None = None,
         layout: View | None = None,
@@ -1999,13 +2152,15 @@ class Visualizer(_JupyterDisplayMixin):
         if layout is not None:
             self.set_layout(layout, layout_name or "")
             return self._open_layout_browser(
-                layout_name or "", wait_for_browser=wait_for_browser
+                layout_name or "",
+                wait_for_browser=wait_for_browser,
+                timeout=timeout,
             )
 
         if use_jupyter:
             return self.display(viewer_name=viewer_name)
 
-        return self.open_browser(wait_for_browser=wait_for_browser)
+        return self.open_browser(wait_for_browser=wait_for_browser, timeout=timeout)
 
     def __enter__(self) -> "Visualizer":
         """Reset the main scene and show it immediately on entry.
@@ -2024,10 +2179,13 @@ class Visualizer(_JupyterDisplayMixin):
         return None
 
     def wait(self) -> None:
-        """Block until Ctrl+C is pressed, then stop the server.
+        """Block until Ctrl+C (or SIGTERM) requests shutdown, then return.
 
         Requires :meth:`start_server` (or :meth:`show`) to have been called so
-        the Ctrl+C handler is installed.
+        the Ctrl+C handler is installed.  The server is intentionally left
+        running so the scene can keep being updated afterwards; it stops
+        automatically at interpreter exit (via the ``atexit`` hook) or
+        explicitly with :meth:`stop_server`.
         """
         self._ensure_server_running()
         shutdown = getattr(self, "_shutdown_requested", threading.Event())
@@ -2055,818 +2213,18 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self.wait()
 
-    # ── Object Interaction ─────────────────────────────────
-
-    def set_interaction(
-        self,
-        object_id: str,
-        config: Any,
-        *,
-        scene_name: str = "",
-    ) -> None:
-        """Set the interaction configuration for an entity.
-
-        The config is sent to the frontend with the next scene flush.
-        """
-        self._interaction_configs.setdefault(scene_name, {})[object_id] = config
-        scene = self._scenes[scene_name]
-        scene.set_interaction(object_id, config)
-
-    def on_interaction(
-        self,
-        object_id: str,
-        event_type: Any,
-        handler: Any,
-        *,
-        scene_name: str = "",
-    ) -> None:
-        """Register an async handler for interaction events on an entity.
-
-        Args:
-            object_id: The entity ID.
-            event_type: An :class:`~pytanga.viz._interaction.InteractionEventType`
-                value.
-            handler: Async callable receiving a :class:`ClickEvent`,
-                :class:`DragEvent`, or :class:`ScrollEvent`.
-            scene_name: Target scene (default ``""`` = main scene).
-        """
-        self._interaction_registry.register(object_id, event_type, handler)
-
-    async def _dispatch_interaction_event(
-        self, msg_type: str, data: dict[str, Any]
-    ) -> None:
-        """Callback invoked by the server for incoming interaction events.
-
-        Parses the raw JSON dict into the appropriate event dataclass and
-        dispatches to the :class:`InteractionHandlerRegistry`.
-        """
-        from ._interaction import _parse_event
-
-        try:
-            event = _parse_event(data)
-        except (ValueError, KeyError):
-            return
-        await self._interaction_registry.dispatch(event)
-
     # ── Interactive Controls (main scene) ───────────────────
 
-    def add_slider(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.01,
-        value: float | None = None,
-        on_change: Any = None,
-        on_press: Any = None,
-        on_release: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        return self._add_scene_slider(
-            "",
-            cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            value=value,
-            on_change=on_change,
-            on_press=on_press,
-            on_release=on_release,
-            parent_id=parent_id,
-        )
+    # ── Banners (delegated to OverlayContainer) ──────────────
 
-    def _add_scene_slider(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.01,
-        value: float | None = None,
-        on_change: Any = None,
-        on_press: Any = None,
-        on_release: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import Slider
+    @property
+    def _banners(self) -> dict[str | None, dict[str, Any]]:
+        """Banner storage (global under ``None``, per-scene under the scene name)."""
+        return self._layout.overlay._banners
 
-        ctrl = Slider(
-            id=cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            value=value if value is not None else min,
-            on_change=on_change,
-            on_press=on_press,
-            on_release=on_release,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        if on_press is not None:
-            self._handler_registry.register(f"__press__{cid}", on_press)
-        if on_release is not None:
-            self._handler_registry.register(f"__release__{cid}", on_release)
-        self._push_controls(scene_name)
-        return cid
-
-    def update_control(
-        self, ctrl_id: str, *, scene_name: str = "", **fields: Any
-    ) -> None:
-        """Mutate fields of a stored control and re-push ``controls_define``.
-
-        A ``value=`` field is routed through :meth:`set_control_value` so the
-        frontend updates the control in place instead of rebuilding the panel.
-        """
-        scene = self._scenes[scene_name]
-        ctrl = scene._controls.get(ctrl_id)
-        if ctrl is None:
-            raise KeyError(f"Control {ctrl_id!r} not found")
-        if "value" in fields:
-            self.set_control_value(ctrl_id, fields.pop("value"), scene_name=scene_name)
-        for key, value in fields.items():
-            setattr(ctrl, key, value)
-        if fields:
-            self._push_controls(scene_name)
-
-    def set_control_value(self, cid: str, value: Any, *, scene_name: str = "") -> None:
-        """Update a control's value in place and push ``control_update``.
-
-        Args:
-            cid: The control id.
-            value: The new value (coerced to the control kind's type).
-            scene_name: Target scene (default ``""`` = main scene).
-        """
-        from ._controls import set_control_value as _set_control_value
-
-        scene = self._scenes[scene_name]
-        ctrl = scene._controls.get(cid)
-        if ctrl is None:
-            raise KeyError(f"Control {cid!r} not found")
-        _set_control_value(ctrl, value)
-        self._push_control_update(scene_name, cid, ctrl.value)
-
-    def add_dropdown(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        options: list[str] | None = None,
-        value: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        return self._add_scene_dropdown(
-            "",
-            cid,
-            label=label,
-            tooltip=tooltip,
-            options=options,
-            value=value,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_dropdown(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        options: list[str] | None = None,
-        value: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import Dropdown
-
-        ctrl = Dropdown(
-            id=cid,
-            label=label,
-            tooltip=tooltip,
-            options=options or [],
-            value=value,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        self._push_controls(scene_name)
-        return cid
-
-    def add_button(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        icon: Icon | None = None,
-        icon_only: bool = False,
-        tooltip: str = "",
-        on_click: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        return self._add_scene_button(
-            "",
-            cid,
-            label=label,
-            icon=icon,
-            icon_only=icon_only,
-            tooltip=tooltip,
-            on_click=on_click,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_button(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        icon: Icon | None = None,
-        icon_only: bool = False,
-        tooltip: str = "",
-        on_click: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import Button
-
-        ctrl = Button(
-            id=cid,
-            label=label,
-            icon=icon,
-            icon_only=icon_only,
-            tooltip=tooltip,
-            on_click=on_click,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_click is not None:
-            self._handler_registry.register(cid, on_click)
-        self._push_controls(scene_name)
-        return cid
-
-    def add_file_chooser(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        value: str = "",
-        placeholder: str = "",
-        root: str | None = None,
-        accept: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a file chooser control (text field + backend file browser)."""
-        return self._add_scene_file_chooser(
-            "",
-            cid,
-            label=label,
-            tooltip=tooltip,
-            value=value,
-            placeholder=placeholder,
-            root=root,
-            accept=accept,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_file_chooser(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        value: str = "",
-        placeholder: str = "",
-        root: str | None = None,
-        accept: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import FileChooser
-
-        ctrl = FileChooser(
-            id=cid,
-            label=label,
-            tooltip=tooltip,
-            value=value,
-            placeholder=placeholder,
-            root=root,
-            accept=accept,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        self._push_controls(scene_name)
-        return cid
-
-    def add_text_field(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a single-line text input control."""
-        return self._add_scene_text_field(
-            "",
-            cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_text_field(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import TextField
-
-        ctrl = TextField(
-            id=cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        self._push_controls(scene_name)
-        return cid
-
-    def add_text_area(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        rows: int = 4,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a multi-line text input control."""
-        return self._add_scene_text_area(
-            "",
-            cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            rows=rows,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_text_area(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        rows: int = 4,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import TextArea
-
-        ctrl = TextArea(
-            id=cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            rows=rows,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        self._push_controls(scene_name)
-        return cid
-
-    def add_color_picker(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "#ffffff",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a color picker control (native color input)."""
-        return self._add_scene_color_picker(
-            "",
-            cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_color_picker(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "#ffffff",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import ColorPicker
-
-        ctrl = ColorPicker(
-            id=cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        self._push_controls(scene_name)
-        return cid
-
-    def add_checkbox(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: bool = False,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a checkbox control."""
-        return self._add_scene_checkbox(
-            "",
-            cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_checkbox(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        value: bool = False,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import Checkbox
-
-        ctrl = Checkbox(
-            id=cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        self._push_controls(scene_name)
-        return cid
-
-    def add_value_edit(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.1,
-        digits: int = 2,
-        editable: bool = True,
-        value: float | None = None,
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a numeric value-edit (stepper) control."""
-        return self._add_scene_value_edit(
-            "",
-            cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            digits=digits,
-            editable=editable,
-            value=value,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def _add_scene_value_edit(
-        self,
-        scene_name: str,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.1,
-        digits: int = 2,
-        editable: bool = True,
-        value: float | None = None,
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        from ._controls import ValueEdit
-
-        ctrl = ValueEdit(
-            id=cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            digits=digits,
-            editable=editable,
-            value=value if value is not None else min,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-        self._scenes[scene_name].add_control(ctrl)
-        if on_change is not None:
-            self._handler_registry.register(cid, on_change)
-        self._push_controls(scene_name)
-        return cid
-
-    def open_file_chooser(
-        self, cid: str, *, scene_name: str = "", path: str | None = None
-    ) -> None:
-        """Open the file browser dialog for control *cid* (from the backend)."""
-        if self._server is None or self._loop is None:
-            return
-        ctrl = self._scenes[scene_name]._controls.get(cid)
-        if ctrl is None:
-            return
-        start = path if path is not None else (ctrl.value or ctrl.root or "")
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(
-                json.dumps(
-                    {
-                        "type": "file_browser_show",
-                        "scene": scene_name,
-                        "control_id": cid,
-                        "path": start,
-                    }
-                )
-            ),
-            self._loop,
-        )
-
-    def close_file_chooser(self, cid: str, *, scene_name: str = "") -> None:
-        """Close the file browser dialog for control *cid*."""
-        if self._server is None or self._loop is None:
-            return
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(
-                json.dumps({"type": "file_browser_close", "control_id": cid})
-            ),
-            self._loop,
-        )
-
-    def _find_control(self, cid: str) -> Any | None:
-        """Return the control with id *cid* from any scene, or ``None``."""
-        for scene in self._scenes.values():
-            ctrl = scene._controls.get(cid)
-            if ctrl is not None:
-                return ctrl
-        return None
-
-    async def _handle_file_browser_navigate(self, payload: dict[str, Any]) -> None:
-        from ._file_browser import list_directory
-
-        if self._server is None:
-            return
-        cid = payload.get("control_id")
-        path = payload.get("path") or ""
-        ctrl = self._find_control(cid) if cid else None
-        root = getattr(ctrl, "root", None)
-        message = list_directory(path, root=root)
-        message.update({"type": "file_browser_listing", "control_id": cid})
-        await self._server.push_raw(json.dumps(message))
-
-    async def _handle_file_browser_select(
-        self, payload: dict[str, Any], event: Any
-    ) -> None:
-        cid = payload.get("control_id")
-        path = payload.get("path") or ""
-        if cid:
-            ctrl = self._find_control(cid)
-            if ctrl is not None:
-                ctrl.value = path
-        handler = self._handler_registry.get(cid) if cid else None
-        if handler is not None:
-            try:
-                await handler(path, event)
-            except Exception:
-                import logging
-
-                logging.getLogger(__name__).exception(
-                    "Error in file chooser handler for %r", cid
-                )
-
-    def add_control_group(
-        self,
-        gid: str,
-        *,
-        title: str = "",
-        icon: Icon | None = None,
-        tooltip: str = "",
-        controls: list[str] | None = None,
-        position: str = "bottom-right",
-        collapsed: bool = False,
-        parent_id: str | None = None,
-        on_toggle: Any = None,
-    ) -> str:
-        """Create a UI control group (sliders/buttons) in the main scene."""
-        return self._add_scene_group(
-            "",
-            gid,
-            title=title,
-            icon=icon,
-            tooltip=tooltip,
-            controls=controls,
-            position=position,
-            collapsed=collapsed,
-            parent_id=parent_id,
-            on_toggle=on_toggle,
-        )
-
-    def _add_scene_group(
-        self,
-        scene_name: str,
-        gid: str,
-        *,
-        title: str = "",
-        icon: Icon | None = None,
-        tooltip: str = "",
-        controls: list[str] | None = None,
-        position: str = "bottom-right",
-        collapsed: bool = False,
-        parent_id: str | None = None,
-        on_toggle: Any = None,
-    ) -> str:
-        from ._controls import ControlGroup
-
-        group = ControlGroup(
-            id=gid,
-            title=title,
-            icon=icon,
-            tooltip=tooltip,
-            controls=controls or [],
-            position=position,
-            collapsed=collapsed,
-            parent_id=parent_id,
-            on_toggle=on_toggle,
-        )
-        self._scenes[scene_name].add_control_group(group)
-        if on_toggle is not None:
-            self._handler_registry.register(f"__group__{gid}", on_toggle)
-        self._push_controls(scene_name)
-        return gid
-
-    def remove_control(self, cid: str) -> None:
-        self._remove_scene_control("", cid)
-
-    def _remove_scene_control(self, scene_name: str, cid: str) -> None:
-        self._handler_registry.unregister(cid)
-        self._handler_registry.unregister(f"__press__{cid}")
-        self._handler_registry.unregister(f"__release__{cid}")
-        self._scenes[scene_name].remove_control(cid)
-        self._push_controls(scene_name)
-
-    def remove_control_group(self, gid: str) -> None:
-        """Remove a UI control group from the main scene."""
-        self._remove_scene_group("", gid)
-
-    def _remove_scene_group(self, scene_name: str, gid: str) -> None:
-        self._handler_registry.unregister(f"__group__{gid}")
-        self._scenes[scene_name].remove_control_group(gid)
-        self._push_controls(scene_name)
-
-    def clear_controls(self) -> None:
-        self._clear_scene_controls("")
-
-    def _clear_scene_controls(self, scene_name: str) -> None:
-        self._handler_registry.clear()
-        self._scenes[scene_name].clear_controls()
-        self._push_controls_clear(scene_name)
-
-    # ── Banners ─────────────────────────────────────────────
-
-    def _next_banner_id(self) -> str:
-        """Return a fresh, unique banner id."""
-        self._banner_counter += 1
-        return f"banner_{self._banner_counter}"
-
-    def _register_banner(
-        self,
-        text: str,
-        *,
-        id: str | None,
-        title: str,
-        align_x: float,
-        align_y: float,
-        auto_hide: bool,
-        dismissable: bool,
-        controls: list[Any] | None,
-        on_close: Any,
-        scene_name: str | None,
-    ) -> Any:
-        """Create, store, and register a banner; return it (un-pushed)."""
-        from ._banner import Banner
-
-        if id is None:
-            id = self._next_banner_id()
-        else:
-            for scoped in self._banners.values():
-                if id in scoped:
-                    raise ValueError(f"Banner id {id!r} is already in use")
-
-        ctrl_list = list(controls or [])
-        banner = Banner(
-            id=id,
-            text=text,
-            title=title,
-            align_x=align_x,
-            align_y=align_y,
-            auto_hide=auto_hide,
-            dismissable=dismissable,
-            controls=ctrl_list,
-            on_close=on_close,
-        )
-        for ctrl in ctrl_list:
-            handler = getattr(ctrl, "on_click", None) or getattr(
-                ctrl, "on_change", None
-            )
-            if handler is not None:
-                self._handler_registry.register(ctrl.id, handler)
-        if on_close is not None:
-            self._banner_close_handlers[id] = on_close
-        self._banners.setdefault(scene_name, {})[id] = banner
-        return banner
+    @property
+    def _banner_counter(self) -> int:
+        return self._layout.overlay._banner_counter
 
     def show_banner(
         self,
@@ -2882,16 +2240,8 @@ class Visualizer(_JupyterDisplayMixin):
         on_close: Any = None,
         scene_name: str | None = None,
     ) -> str:
-        """Show a banner/dialog and return its id.
-
-        A global banner (``scene_name=None``) spans the whole viewport; a
-        per-scene banner (``scene_name="<name>"``) is shown inside every pane
-        displaying that scene.  ``controls`` is a list of :class:`Button` /
-        :class:`Slider` / :class:`Dropdown` objects (the same controls usable
-        in a control group) rendered as the banner's options; their
-        ``on_click`` / ``on_change`` handlers are registered automatically.
-        """
-        banner = self._register_banner(
+        """Show a banner/dialog and return its id (see :meth:`OverlayContainer.show_banner`)."""
+        return self._layout.overlay.show_banner(
             text,
             id=id,
             title=title,
@@ -2903,8 +2253,6 @@ class Visualizer(_JupyterDisplayMixin):
             on_close=on_close,
             scene_name=scene_name,
         )
-        self._push_banner(banner, scene_name)
-        return banner.id
 
     def alert(
         self,
@@ -2919,19 +2267,14 @@ class Visualizer(_JupyterDisplayMixin):
         scene_name: str | None = None,
     ) -> str:
         """Show an acknowledge banner with a single OK button."""
-        from ._controls import Button
-
-        bid = self._next_banner_id()
-        buttons = [Button(id=f"{bid}_ok", label=ok_label, on_click=on_ok)]
-        return self.show_banner(
+        return self._layout.overlay.alert(
             text,
-            id=bid,
             title=title,
+            ok_label=ok_label,
+            on_ok=on_ok,
             align_x=align_x,
             align_y=align_y,
-            auto_hide=True,
             dismissable=dismissable,
-            controls=buttons,
             scene_name=scene_name,
         )
 
@@ -2952,111 +2295,28 @@ class Visualizer(_JupyterDisplayMixin):
         scene_name: str | None = None,
     ) -> str:
         """Show a yes/no/cancel banner."""
-        from ._controls import Button
-
-        bid = self._next_banner_id()
-        buttons = [
-            Button(id=f"{bid}_yes", label=yes_label, on_click=on_yes),
-            Button(id=f"{bid}_no", label=no_label, on_click=on_no),
-            Button(id=f"{bid}_cancel", label=cancel_label, on_click=on_cancel),
-        ]
-        return self.show_banner(
+        return self._layout.overlay.confirm(
             text,
-            id=bid,
             title=title,
+            yes_label=yes_label,
+            no_label=no_label,
+            cancel_label=cancel_label,
+            on_yes=on_yes,
+            on_no=on_no,
+            on_cancel=on_cancel,
             align_x=align_x,
             align_y=align_y,
-            auto_hide=True,
             dismissable=dismissable,
-            controls=buttons,
             scene_name=scene_name,
         )
 
-    def _unregister_banner(self, banner: Any) -> None:
-        """Unregister a banner's control handlers and ``on_close`` handler."""
-        for ctrl in banner.controls:
-            self._handler_registry.unregister(ctrl.id)
-        self._banner_close_handlers.pop(banner.id, None)
-
     def remove_banner(self, banner_id: str, *, scene_name: str | None = None) -> None:
         """Remove a banner by id (and unregister its handlers)."""
-        scoped = self._banners.get(scene_name, {})
-        banner = scoped.get(banner_id)
-        if banner is None:
-            return
-        self._unregister_banner(banner)
-        del scoped[banner_id]
-        self._push_banner_remove(banner_id, scene_name)
+        return self._layout.overlay.remove_banner(banner_id, scene_name=scene_name)
 
     def clear_banners(self, *, scene_name: str | None = None) -> None:
         """Remove all banners in a scope (or globally when ``scene_name=None``)."""
-        scoped = self._banners.pop(scene_name, {})
-        for banner in scoped.values():
-            self._unregister_banner(banner)
-        self._push_banner_clear(scene_name)
-
-    def _push_banner(self, banner: Any, scene_name: str | None) -> None:
-        from ._banner import serialize_banner
-
-        if self._server is None or self._loop is None:
-            return
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(
-                json.dumps(serialize_banner(banner, scene=scene_name))
-            ),
-            self._loop,
-        )
-
-    def _push_banner_remove(self, banner_id: str, scene_name: str | None) -> None:
-        from ._banner import serialize_banner_remove
-
-        if self._server is None or self._loop is None:
-            return
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(
-                json.dumps(serialize_banner_remove(banner_id, scene=scene_name))
-            ),
-            self._loop,
-        )
-
-    def _push_banner_clear(self, scene_name: str | None) -> None:
-        from ._banner import serialize_banner_clear
-
-        if self._server is None or self._loop is None:
-            return
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(json.dumps(serialize_banner_clear(scene=scene_name))),
-            self._loop,
-        )
-
-    async def _push_banner_async(self, banner: Any, scene_name: str | None) -> None:
-        from ._banner import serialize_banner
-
-        if self._server is None:
-            return
-        await self._server.push_raw(
-            json.dumps(serialize_banner(banner, scene=scene_name))
-        )
-
-    async def _push_banner_remove_async(
-        self, banner_id: str, scene_name: str | None
-    ) -> None:
-        from ._banner import serialize_banner_remove
-
-        if self._server is None:
-            return
-        await self._server.push_raw(
-            json.dumps(serialize_banner_remove(banner_id, scene=scene_name))
-        )
-
-    async def _push_banner_clear_async(self, scene_name: str | None) -> None:
-        from ._banner import serialize_banner_clear
-
-        if self._server is None:
-            return
-        await self._server.push_raw(
-            json.dumps(serialize_banner_clear(scene=scene_name))
-        )
+        return self._layout.overlay.clear_banners(scene_name=scene_name)
 
     async def show_banner_async(
         self,
@@ -3072,13 +2332,8 @@ class Visualizer(_JupyterDisplayMixin):
         on_close: Any = None,
         scene_name: str | None = None,
     ) -> str:
-        """Awaitable :meth:`show_banner` (see its docs).
-
-        Awaits the ``banner_define`` push so the banner is visible before the
-        caller proceeds; safe from a handler (on ``self._loop``) or from
-        ``init()`` / ``cleanup()`` (user loop).
-        """
-        banner = self._register_banner(
+        """Awaitable :meth:`show_banner` (see :meth:`OverlayContainer.show_banner_async`)."""
+        return await self._layout.overlay.show_banner_async(
             text,
             id=id,
             title=title,
@@ -3090,31 +2345,107 @@ class Visualizer(_JupyterDisplayMixin):
             on_close=on_close,
             scene_name=scene_name,
         )
-        await self._on_server_loop(lambda: self._push_banner_async(banner, scene_name))
-        return banner.id
 
     async def remove_banner_async(
         self, banner_id: str, *, scene_name: str | None = None
     ) -> None:
         """Awaitable :meth:`remove_banner`."""
-        scoped = self._banners.get(scene_name, {})
-        banner = scoped.get(banner_id)
-        if banner is None:
-            return
-        self._unregister_banner(banner)
-        del scoped[banner_id]
-        await self._on_server_loop(
-            lambda: self._push_banner_remove_async(banner_id, scene_name)
+        return await self._layout.overlay.remove_banner_async(
+            banner_id, scene_name=scene_name
         )
 
     async def clear_banners_async(self, *, scene_name: str | None = None) -> None:
         """Awaitable :meth:`clear_banners`."""
-        scoped = self._banners.pop(scene_name, {})
-        for banner in scoped.values():
-            self._unregister_banner(banner)
-        await self._on_server_loop(lambda: self._push_banner_clear_async(scene_name))
+        return await self._layout.overlay.clear_banners_async(scene_name=scene_name)
 
-    # ── Editor ─────────────────────────────────────────────
+    # ── Dialogs (delegated to OverlayContainer) ──────────────
+
+    @property
+    def _dialogs(self) -> dict[str | None, dict[str, Any]]:
+        """Dialog storage (global under ``None``, per-scene under the scene name)."""
+        return self._layout.overlay._dialogs
+
+    @property
+    def _dialog_counter(self) -> int:
+        return self._layout.overlay._dialog_counter
+
+    def show_dialog(
+        self,
+        content: Any,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
+        scene_name: str | None = None,
+    ) -> str:
+        """Show a dialog and return its id (see :meth:`OverlayContainer.show_dialog`)."""
+        return self._layout.overlay.show_dialog(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            width=width,
+            height=height,
+            scene_name=scene_name,
+        )
+
+    def remove_dialog(self, dialog_id: str, *, scene_name: str | None = None) -> None:
+        """Remove a dialog by id (and unregister its handlers)."""
+        return self._layout.overlay.remove_dialog(dialog_id, scene_name=scene_name)
+
+    def clear_dialogs(self, *, scene_name: str | None = None) -> None:
+        """Remove all dialogs in a scope (or globally when ``scene_name=None``)."""
+        return self._layout.overlay.clear_dialogs(scene_name=scene_name)
+
+    async def show_dialog_async(
+        self,
+        content: Any,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
+        scene_name: str | None = None,
+    ) -> str:
+        """Awaitable :meth:`show_dialog` (see :meth:`OverlayContainer.show_dialog_async`)."""
+        return await self._layout.overlay.show_dialog_async(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            width=width,
+            height=height,
+            scene_name=scene_name,
+        )
+
+    async def remove_dialog_async(
+        self, dialog_id: str, *, scene_name: str | None = None
+    ) -> None:
+        """Awaitable :meth:`remove_dialog`."""
+        return await self._layout.overlay.remove_dialog_async(
+            dialog_id, scene_name=scene_name
+        )
+
+    async def clear_dialogs_async(self, *, scene_name: str | None = None) -> None:
+        """Awaitable :meth:`clear_dialogs`."""
+        return await self._layout.overlay.clear_dialogs_async(scene_name=scene_name)
+
+    # ── Editor (delegated to OverlayContainer) ────────────
 
     def open_editor(
         self,
@@ -3124,158 +2455,70 @@ class Visualizer(_JupyterDisplayMixin):
         value: str = "",
         on_close: Any = None,
     ) -> str:
-        """Open a transient multi-line text editor in the viewer overlay.
-
-        When the editor is closed, *on_close* (an async ``(text, event)``
-        callable) is invoked on the server loop with the edited text, or
-        ``None`` when the edit is discarded (✕).  The editor is one-shot: the
-        handler is consumed after it runs.
-        """
-        self._editor_close_handlers[cid] = on_close
-        self._push_editor_define(cid, label=label, value=value)
-        return cid
-
-    def _push_editor_define(self, cid: str, *, label: str, value: str) -> None:
-        """Push the ``editor_define`` message that opens the editor."""
-        if self._server is None or self._loop is None:
-            return
-        message = {
-            "type": "editor_define",
-            "id": cid,
-            "label": label,
-            "value": value,
-        }
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(json.dumps(message)), self._loop
-        )
-
-    def _push_controls(self, scene_name: str = "") -> None:
-        """Serialise current controls/groups for a scene and push to the frontend."""
-        if self._server is None or self._loop is None:
-            return
-        from ._controls import serialize_controls
-
-        scene = self._scenes[scene_name]
-        groups = list(scene._groups.values())
-        message = serialize_controls(groups, scene._controls)
-        message["scene"] = scene_name
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(json.dumps(message)), self._loop
-        )
-
-    def _push_control_update(self, scene_name: str, cid: str, value: Any) -> None:
-        """Push a lightweight ``control_update`` message for one control."""
-        if self._server is None or self._loop is None:
-            return
-        message = {
-            "type": "control_update",
-            "scene": scene_name,
-            "id": cid,
-            "value": value,
-        }
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(json.dumps(message)), self._loop
-        )
-
-    async def _push_controls_async(self, scene_name: str = "") -> None:
-        """Async variant — must be called from the server's event loop."""
-        if self._server is None:
-            return
-        from ._controls import serialize_controls
-
-        scene = self._scenes.get(scene_name, self._scenes[""])
-        groups = list(scene._groups.values())
-        message = serialize_controls(groups, scene._controls)
-        message["scene"] = scene_name
-        await self._server.push_raw(json.dumps(message))
-
-    def _push_controls_clear(self, scene_name: str = "") -> None:
-        """Push a controls_clear message for a scene."""
-        if self._server is None or self._loop is None:
-            return
-        asyncio.run_coroutine_threadsafe(
-            self._server.push_raw(
-                json.dumps({"type": "controls_clear", "scene": scene_name})
-            ),
-            self._loop,
+        """Open a transient multi-line text editor (see :meth:`OverlayContainer.open_editor`)."""
+        return self._layout.overlay.open_editor(
+            cid, label=label, value=value, on_close=on_close
         )
 
     async def _dispatch_control_event(
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
-        """Handle an incoming control event from the frontend."""
+        """Route an incoming control event via the transport (back-compat shim)."""
+        await self._transport.dispatch(msg_type, payload)
+
+    # ── Inbound routes (registered on the transport) ─────────
+
+    def _event_for(self, payload: dict[str, Any]) -> Any:
         from ._controls import ControlEvent
 
-        browser_id = payload.get("browser_id")
-        event = ControlEvent(browser_id=browser_id)
-        if msg_type == "banner_closed":
-            bid = payload.get("id")
-            handler = self._banner_close_handlers.get(bid) if bid else None
-            if handler is not None:
-                try:
-                    await handler(bid, event)
-                except Exception:
-                    import logging
+        return ControlEvent(browser_id=payload.get("browser_id"))
 
-                    logging.getLogger(__name__).exception(
-                        "Error in banner on_close handler for %r", bid
-                    )
-            return
+    async def _on_banner_closed(self, msg_type: str, payload: dict[str, Any]) -> None:
+        target = payload.get("id") or payload.get("control_id")
+        await self._layout.overlay._on_banner_close(
+            target, payload.get("value"), self._event_for(payload)
+        )
 
-        if msg_type == "editor_closed":
-            eid = payload.get("id")
-            handler = self._editor_close_handlers.pop(eid, None) if eid else None
-            if handler is not None:
-                try:
-                    await handler(payload.get("text"), event)
-                except Exception:
-                    import logging
+    async def _on_editor_closed(self, msg_type: str, payload: dict[str, Any]) -> None:
+        target = payload.get("id") or payload.get("control_id")
+        await self._layout.overlay._on_editor_close(
+            target, payload.get("text"), self._event_for(payload)
+        )
 
-                    logging.getLogger(__name__).exception(
-                        "Error in editor on_close handler for %r", eid
-                    )
-            return
+    async def _on_dialog_close(self, msg_type: str, payload: dict[str, Any]) -> None:
+        target = payload.get("id") or payload.get("control_id")
+        await self._layout.overlay._on_dialog_close(
+            target, payload.get("value"), self._event_for(payload)
+        )
 
-        if msg_type == "file_browser_navigate":
-            await self._handle_file_browser_navigate(payload)
-            return
-        if msg_type == "file_browser_select":
-            await self._handle_file_browser_select(payload, event)
-            return
+    async def _on_dialog_accept(self, msg_type: str, payload: dict[str, Any]) -> None:
+        target = payload.get("id") or payload.get("control_id")
+        await self._layout.overlay._on_dialog_accept(target, self._event_for(payload))
 
-        cid = payload.get("control_id")
-        if msg_type == "control:press":
-            handler = self._handler_registry.get(f"__press__{cid}") if cid else None
-        elif msg_type == "control:release":
-            handler = self._handler_registry.get(f"__release__{cid}") if cid else None
-        else:
-            handler = self._handler_registry.get(cid) if cid else None
+    async def _on_control_event(self, msg_type: str, payload: dict[str, Any]) -> None:
+        await self._layout.dispatch_control_event(msg_type, payload)
 
-        if handler is None:
-            return
-
-        try:
-            if msg_type == "control:click":
-                await handler(None, event)
-            else:
-                await handler(payload.get("value"), event)
-        except Exception:
-            import logging
-
-            logging.getLogger(__name__).exception(
-                "Error in control handler for %r", cid
-            )
+    def _register_routes(self) -> None:
+        """Register the inbound message routes on the transport (data table)."""
+        self._transport.route("banner_closed", self._on_banner_closed)
+        self._transport.route("editor_closed", self._on_editor_closed)
+        self._transport.route("close", self._on_dialog_close)
+        self._transport.route("accept", self._on_dialog_accept)
+        self._transport.route("control:*", self._on_control_event)
+        self._transport.route("file_browser_navigate", self._on_control_event)
+        self._transport.route("file_browser_select", self._on_control_event)
+        self._transport.route(
+            "interaction:*", self._interaction_host._dispatch_interaction_event
+        )
 
     async def _on_client_connect(self, remote_addr: str) -> None:
-        """Push controls state when a new client connects.
+        """Handle a new client connection.
 
         The comprehensive connection summary (with browser_id, page_token,
         viewer_name, and IP) is printed by VizServer._print_ws_connected
         after the browser's ``ready`` WebSocket message arrives.
         """
-        # Push controls for the main scene initially (scene-specific push happens
-        # after the ready message tells us which scene the client wants)
-        await self._push_controls_async("")
+        return None
 
     async def _on_client_disconnect(self, remote_addr: str) -> None:
         """Log when a client disconnects."""
@@ -3373,15 +2616,25 @@ class Visualizer(_JupyterDisplayMixin):
         """Display multiple scenes side by side in a single flex row.
 
         Each element in *scenes* is a ``(handle, viewer_name)`` tuple where
-        *viewer_name* may be ``None``.
+        *viewer_name* is an optional friendly label for that viewer.
 
         *mode* is ``"live"`` (default — embeds the server URL) or
         ``"static"`` (embeds a serverless standalone snapshot).
+
+        The *viewer_name* is passed to the browser as a ``?viewer=`` URL
+        parameter and reported back by the frontend, so the connection can be
+        identified in :meth:`list_browsers` and targeted with :meth:`navigate_to`
+        via ``target="viewer:<name>"``.  It is optional (pass ``None`` for an
+        unlabelled viewer) and is ignored in ``"static"`` mode.
 
         Usage::
 
             viz.display_row((one, None), (two, None))            # live
             viz.display_row((one, None), (two, None), mode="static")
+
+            # Label a pane, then drive it independently later:
+            viz.display_row((one, "left"), (two, "right"))
+            viz.navigate_to("two", target="viewer:left")
 
         Args:
             *scenes: One or more ``(VizSceneHandle, viewer_name | None)`` pairs.
@@ -3435,8 +2688,12 @@ class Visualizer(_JupyterDisplayMixin):
         *,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str:
-        scene = self._scenes[scene_name]
+        theme = theme or self._theme
+        scene = self._layout.scenes[scene_name]
         if animation is not None:
             from pytanga.viz.export._animated_figure import (
                 render_export_animated_html,
@@ -3447,18 +2704,35 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
                 title=self._title,
+                theme=theme,
+                delivery=delivery,
+                delivery_ref=delivery_ref,
             )
         from pytanga.viz.export._html import render_snapshot
 
         objects = scene.full_state(styles_map=scene.styles.kind)
-        return render_snapshot(objects=objects, scene_config=scene.config.to_dict())
+        return render_snapshot(
+            objects=objects,
+            scene_config=scene.config.to_dict(),
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
+        )
 
-    def _open_scene_snapshot(self, scene_name: str) -> None:
+    def _open_scene_snapshot(
+        self,
+        scene_name: str,
+        *,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
+    ) -> None:
         import tempfile
         import webbrowser
         from pathlib import Path
 
-        html = self._render_snapshot_html(scene_name)
+        html = self._render_snapshot_html(
+            scene_name, delivery=delivery, delivery_ref=delivery_ref
+        )
         tmp = Path(tempfile.mktemp(suffix=".html"))
         tmp.write_text(html, encoding="utf-8")
         webbrowser.open(str(tmp))
@@ -3471,11 +2745,19 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> None:
         from pathlib import Path
 
         html = self._render_snapshot_html(
-            scene_name, animation=animation, anim_style=anim_style
+            scene_name,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
         p = Path(path).expanduser()
         if not p.suffix:
@@ -3493,14 +2775,27 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> None:
         """Export the current scene as a self-contained HTML file.
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
-        snapshot instead of a static one.
+        snapshot instead of a static one.  *theme* overrides the active UI theme
+        for the packed CSS (default: the active theme).  *delivery* selects how
+        the viewer runtime is delivered: ``"cdn"`` (default), ``"inline"``, or
+        ``"offline"``.
         """
         self._export_scene_snapshot(
-            "", path, overwrite=overwrite, animation=animation, anim_style=anim_style
+            "",
+            path,
+            overwrite=overwrite,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def open_snapshot(self) -> None:
@@ -3514,11 +2809,15 @@ class Visualizer(_JupyterDisplayMixin):
         style: Any = None,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str:
         from pytanga.viz._figure import FigureConfig
         from pytanga.viz._styles import FigureStyle
 
-        scene = self._scenes[scene_name]
+        theme = theme or self._theme
+        scene = self._layout.scenes[scene_name]
         resolved = style if style is not None else FigureStyle()
         fig_config = FigureConfig(
             title=self._title, annotation=self._annotation, footer=self._annotation
@@ -3534,6 +2833,9 @@ class Visualizer(_JupyterDisplayMixin):
                 figure_config=fig_config.to_dict(),
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
+                theme=theme,
+                delivery=delivery,
+                delivery_ref=delivery_ref,
             )
         from pytanga.viz.export._figure_html import render_figure
 
@@ -3543,6 +2845,9 @@ class Visualizer(_JupyterDisplayMixin):
             scene.config.to_dict(),
             resolved.to_dict(),
             fig_config.to_dict(),
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def _export_scene_figure(
@@ -3554,11 +2859,20 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str | None:
         from pathlib import Path
 
         html = self._render_figure_html(
-            scene_name, style=style, animation=animation, anim_style=anim_style
+            scene_name,
+            style=style,
+            animation=animation,
+            anim_style=anim_style,
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
         if path is None:
             return html
@@ -3580,11 +2894,17 @@ class Visualizer(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> str | None:
         """Export the current scene as an HTML snippet (or return the string).
 
         Pass *animation* (an ``AnimationRecording``) to export an animated
-        figure instead of a static one.
+        figure instead of a static one.  *theme* overrides the active UI theme
+        for the packed CSS (default: the active theme).  *delivery* selects how
+        the viewer runtime is delivered: ``"cdn"`` (default), ``"inline"``, or
+        ``"offline"``.
         """
         return self._export_scene_figure(
             "",
@@ -3593,6 +2913,9 @@ class Visualizer(_JupyterDisplayMixin):
             overwrite=overwrite,
             animation=animation,
             anim_style=anim_style,
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def _export_scene_glb(
@@ -3602,7 +2925,7 @@ class Visualizer(_JupyterDisplayMixin):
 
         from pytanga.viz.export._gltf import build_glb
 
-        scene = self._scenes[scene_name]
+        scene = self._layout.scenes[scene_name]
         all_objects = scene.full_state(styles_map=scene.styles.kind)
         entities = [o for o in all_objects if o.get("layer") != "overlay"]
         glb = build_glb(entities, scene.config)
@@ -3622,7 +2945,7 @@ class Visualizer(_JupyterDisplayMixin):
     def _start_scene_animation_recording(self, scene_name: str) -> Any:
         from pytanga.viz.export._animation_recording import AnimationRecording
 
-        scene = self._scenes[scene_name]
+        scene = self._layout.scenes[scene_name]
         return AnimationRecording(scene, styles_map=scene.styles.kind)
 
     def start_animation_recording(self) -> Any:
@@ -3635,14 +2958,19 @@ class Visualizer(_JupyterDisplayMixin):
         height: int | str = "500px",
         *,
         scene_name: str = "",
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> Any:
         """Display a scene as standalone HTML (no server required).
 
         In Jupyter, returns an ``IPython.display.IFrame`` embedding the
         standalone document via a data URL (no server, no style leakage).
-        Outside Jupyter, opens the snapshot in a browser window.
+        Outside Jupyter, opens the snapshot in a browser window.  *delivery*
+        selects how the viewer runtime is delivered (``"cdn"`` default).
         """
-        html = self._render_snapshot_html(scene_name)
+        html = self._render_snapshot_html(
+            scene_name, delivery=delivery, delivery_ref=delivery_ref
+        )
 
         if self._jupyter:
             import base64
@@ -3684,12 +3012,12 @@ class Visualizer(_JupyterDisplayMixin):
     @property
     def styles(self) -> "VizStyles":
         """The main scene's :class:`VizStyles` (what gets rendered)."""
-        return self._scenes[""].styles
+        return self._layout.scenes[""].styles
 
     @property
     def main_scene(self) -> Scene:
         """The underlying main :class:`Scene` instance (backward compat)."""
-        return self._scenes[""]
+        return self._layout.scenes[""]
 
     @property
     def url(self) -> str:

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createEntityMesh, removeEntityMesh } from './renderers/factory.js';
+import { sendLog } from './events.js';
 
 export function isIdentityTransform(transform) {
     if (!transform) return true;
@@ -81,6 +82,7 @@ export function buildOverlay(obj, scene, registry) {
             });
         } catch (e) {
             console.warn('KaTeX label rendering error:', e);
+            sendLog('warn', 'KaTeX label rendering error', { source: 'scene-builder.js', data: { error: String(e) } });
         }
     }
 

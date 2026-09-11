@@ -1,18 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Tests for the expression label allocator."""
-
-import pytest
+"""Tests for the expression label allocator (integer pool)."""
 
 from pytanga.expression._labels import (
-    BATCH_LABEL,
     MAX_DEGREE,
-    OUT_LABEL,
-    _VAR_ALPHABET,
     _reset_allocator,
     allocate_block,
     allocate_label,
+    block_for_label,
     max_variables,
 )
 
@@ -24,27 +20,31 @@ class TestLabelAllocator:
         second = allocate_block()
         assert first != second
         assert len(first) == MAX_DEGREE == len(second)
+        assert all(isinstance(x, int) for x in first + second)
 
     def test_blocks_are_contiguous(self):
         _reset_allocator()
         block = allocate_block()
-        base = _VAR_ALPHABET.index(block[0])
-        assert block == tuple(_VAR_ALPHABET[base : base + MAX_DEGREE])
+        assert block == tuple(range(block[0], block[0] + MAX_DEGREE))
 
     def test_single_label_shim(self):
         _reset_allocator()
-        assert allocate_label() == _VAR_ALPHABET[0]
+        assert allocate_label() == 0
 
-    def test_reserved_labels_never_assigned(self):
+    def test_labels_are_unique(self):
         _reset_allocator()
-        labels = [ch for _ in range(max_variables()) for ch in allocate_block()]
-        assert OUT_LABEL not in labels
-        assert BATCH_LABEL not in labels
+        labels = [ch for _ in range(100) for ch in allocate_block()]
         assert len(set(labels)) == len(labels)
 
-    def test_exhaustion(self):
+    def test_block_for_label(self):
         _reset_allocator()
-        for _ in range(max_variables()):
+        first = allocate_block()
+        second = allocate_block()
+        assert block_for_label(first[0]) == first
+        assert block_for_label(second[0]) == second
+
+    def test_no_exhaustion(self):
+        _reset_allocator()
+        for _ in range(1000):
             allocate_block()
-        with pytest.raises(RuntimeError):
-            allocate_block()
+        assert max_variables() > 1000

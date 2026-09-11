@@ -2,7 +2,8 @@
 // vertically, horizontally, or wraps.  Content-size math lives in `stack-size.js`.
 
 import { View } from './view.js';
-import { GAP, stackMinSize, stackPreferredSize } from './stack-size.js';
+import { flowFlex, flexCss } from './flow-size.js';
+import { GAP, stackMainAxis, stackMinSize, stackPreferredSize } from './stack-size.js';
 
 const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
 
@@ -12,7 +13,14 @@ const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
  * (row that wraps to a new line when out of space).
  */
 export class StackView extends View {
-    constructor({ direction = 'vertical', children = [] } = {}) {
+    constructor({
+        direction = 'vertical',
+        scrollable = false,
+        gap = null,
+        align = 'stretch',
+        justify = 'start',
+        children = [],
+    } = {}) {
         super();
         if (!DIRECTIONS.includes(direction)) {
             throw new Error(
@@ -20,12 +28,17 @@ export class StackView extends View {
             );
         }
         this.direction = direction;
+        this.scrollable = scrollable;
+        this.gap = gap;
+        this.align = align;
+        this.justify = justify;
         this.children = [];
         this._childSubs = new Map(); // view -> AbortController
         this._content = this.el; // children mount here (GroupView retargets this)
 
         this.el.classList.add('tanga-stack', `tanga-stack-${direction}`);
         this._applyFlex();
+        this._applyScroll();
 
         for (const child of children) this.addChild(child);
     }
@@ -34,14 +47,42 @@ export class StackView extends View {
         const s = this._content.style;
         s.display = 'flex';
         s.position = 'relative';
-        s.gap = `${GAP}px`;
+        s.gap = `${this.gap == null ? GAP : this.gap}px`;
+        s.alignItems = this.align;
+        s.justifyContent = this.justify;
         s.flexDirection = this.direction === 'vertical' ? 'column' : 'row';
         s.flexWrap = this.direction === 'wrap' ? 'wrap' : 'nowrap';
     }
 
+    _applyScroll() {
+        if (!this.scrollable) return;
+        this._content.classList.add('tanga-scroll');
+        Object.assign(this._content.style, {
+            overflow: 'auto',
+            minWidth: '0',
+            minHeight: '0',
+            flex: '1 1 auto',
+        });
+    }
+
     addChild(view) {
         const ac = new AbortController();
+        // Let "auto"-orientation children (e.g. SeparatorView) derive the
+        // perpendicular orientation from this container's direction.
+        if (typeof view.resolveOrientation === 'function') view.resolveOrientation(this.direction);
         view.mount(this._content);
+        const mainAxis = stackMainAxis(this.direction);
+        const pref = mainAxis === 'x' ? view.preferredWidth : view.preferredHeight;
+        view.el.style.flex = flexCss(flowFlex(pref));
+        if (pref && pref.unit === 'fr') {
+            // A growing child must be able to shrink below its content size;
+            // only clear the main-axis min when the child has no explicit one.
+            if (mainAxis === 'x' && view.minWidth === null) {
+                view.el.style.minWidth = '0';
+            } else if (mainAxis === 'y' && view.minHeight === null) {
+                view.el.style.minHeight = '0';
+            }
+        }
         view.on('preferredchange', () => this._relayout(), { signal: ac.signal });
         view.on('constraintschange', () => this._relayout(), { signal: ac.signal });
         this._childSubs.set(view, ac);
@@ -62,14 +103,22 @@ export class StackView extends View {
     }
 
     // A stack's minimum is at least what its children need (content sizing).
+    // A scrollable stack instead decouples from content along its main axis so
+    // an enclosing SplitView may shrink it and the content scrolls.
     minSizePx(axis, available) {
         const explicit = super.minSizePx(axis, available);
+        if (this.scrollable && axis === stackMainAxis(this.direction)) {
+            return explicit;
+        }
         return Math.max(explicit, stackMinSize(axis, this.direction, this.children, available));
     }
 
     preferredPx(axis, available) {
         const explicit = super.preferredPx(axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
+        if (this.scrollable && axis === stackMainAxis(this.direction)) {
+            return null;
+        }
         return stackPreferredSize(axis, this.direction, this.children, available);
     }
 

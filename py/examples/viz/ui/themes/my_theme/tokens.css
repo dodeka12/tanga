@@ -1,0 +1,32 @@
+/* Tanga viewer — example "ocean" theme tokens. */
+
+:root {
+    --tanga-bg: #0d1b26;
+    --tanga-fg: #d8e8f2;
+    --tanga-fg-muted: #93aaba;
+    --tanga-fg-strong: #f4fafd;
+    --tanga-accent: #2ec4b6;
+    --tanga-accent-soft: #3aa08f;
+    --tanga-danger: #e06c75;
+
+    --tanga-panel-bg: rgba(15, 30, 42, 0.94);
+    --tanga-panel-hover: rgba(24, 46, 62, 0.95);
+    --tanga-surface: rgba(46, 196, 182, 0.14);
+    --tanga-surface-strong: rgba(46, 196, 182, 0.28);
+    --tanga-input-bg: rgba(255, 255, 255, 0.06);
+
+    --tanga-border: rgba(46, 196, 182, 0.22);
+    --tanga-border-strong: rgba(46, 196, 182, 0.34);
+    --tanga-border-subtle: rgba(46, 196, 182, 0.12);
+
+    --tanga-scrollbar-thumb: rgba(46, 196, 182, 0.35);
+    --tanga-scrollbar-thumb-hover: rgba(46, 196, 182, 0.5);
+    --tanga-scrollbar-track: rgba(46, 196, 182, 0.08);
+
+    --tanga-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+
+    --tanga-status-ok: #7fd6a4;
+    --tanga-status-err: #e06c75;
+    --tanga-loading-bg: rgba(13, 27, 38, 0.95);
+    --tanga-spinner: #d8e8f2;
+}

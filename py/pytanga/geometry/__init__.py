@@ -34,10 +34,12 @@ from ._pointset import (
     two_conic_intersection,
 )
 from .random import (
+    Constant,
     Distribution,
     Normal,
     RndDirection,
     RndEntity,
+    RndMV,
     RndPoint,
     Uniform,
 )
@@ -158,10 +160,12 @@ __all__ = [
     "refine",
     "refine_entity",
     # Random generation
+    "Constant",
     "Distribution",
     "Normal",
     "RndDirection",
     "RndEntity",
+    "RndMV",
     "RndPoint",
     "Uniform",
     # Point-set intersection

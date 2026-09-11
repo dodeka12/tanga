@@ -29,7 +29,7 @@ from . import _transforms as _T
 from ._point_path import PointPath
 from ._scale import LogScale, Scale, make_scale
 from ._scene_objects import Axis, Grid
-from .camera import CameraConfig2d, View2DConfig
+from .camera import CameraConfig2d, StretchMode, View2DConfig, _validate_stretch
 from ._styles import AxisStyle, GridStyle, LabelStyle, PlaneStyle
 
 # Local-frame z ordering within the group.
@@ -90,6 +90,61 @@ def _as_size(value) -> tuple[float | None, float | None]:
         if s is not None and s <= 0.0:
             raise ValueError(f"size must be positive, got {s}")
     return (sx, sy)
+
+
+def fit_view2d(
+    xlim: tuple[float, float],
+    ylim: tuple[float, float],
+    *,
+    xscale: Scale | str = "linear",
+    yscale: Scale | str = "linear",
+    base: float = 10.0,
+    border_world: float = 0.0,
+    border_px: float = 60.0,
+    stretch: StretchMode = "fit",
+) -> View2DConfig:
+    """Compute a centred :class:`View2DConfig` for the given data ranges.
+
+    Mirrors the camera that :class:`CoordinateSystem` applies when it owns the
+    scene camera (2D, no explicit ``size``): the visible world rectangle is the
+    scale-mapped span of ``xlim``/``ylim`` centred at the origin.  Useful for
+    embedding an exact per-pane camera into a ``SceneView(..., camera=...)`` at
+    layout-construction time (before ``Visualizer.show``), e.g.::
+
+        SceneView("sin", camera=fit_view2d((0, 6.28), (-1.2, 1.2)))
+
+    Args:
+        xlim: Data ``(lo, hi)`` range for the x axis.
+        ylim: Data ``(lo, hi)`` range for the y axis.
+        xscale: Scale for the x axis (``"linear"``/``"log"`` or a :class:`Scale`).
+        yscale: Scale for the y axis (``"linear"``/``"log"`` or a :class:`Scale`).
+        base: Logarithm base when a scale is given as ``"log"``.
+        border_world: World-unit margin added on all sides.
+        border_px: Pixel margin added on all sides (applied by the frontend).
+            Defaults to ``60.0``, matching :class:`CoordinateSystem`'s label
+            margin, so per-pane cameras keep axis labels visible.
+        stretch: How the plot fills the view — ``"fit"`` (letterbox, default),
+            ``"fill"`` (stretch both axes), ``"fill_x"`` (x fills, y keeps
+            aspect), or ``"fill_y"`` (y fills, x keeps aspect).
+
+    Returns:
+        A :class:`View2DConfig` centred at the origin.
+    """
+    xlo, xhi = _as_range(xlim)
+    ylo, yhi = _as_range(ylim)
+    xs = make_scale(xscale, base)
+    ys = make_scale(yscale, base)
+    span_x = xs.to_world(xhi) - xs.to_world(xlo)
+    span_y = ys.to_world(yhi) - ys.to_world(ylo)
+    return View2DConfig(
+        xmin=-span_x / 2.0,
+        xmax=span_x / 2.0,
+        ymin=-span_y / 2.0,
+        ymax=span_y / 2.0,
+        border_world=border_world,
+        border_px=border_px,
+        stretch=stretch,
+    )
 
 
 def _as_align(value) -> tuple[float, float]:
@@ -213,6 +268,11 @@ class CoordinateSystem:
         (always set/update), or ``False`` (never).  Only affects 2D (and only
         when ``size`` is not given); a 3D coordinate system never sets the
         camera.
+    stretch:
+        How the 2D camera frames the plot plane: ``"fit"`` (letterbox,
+        default), ``"fill"`` (stretch both axes), ``"fill_x"`` (x fills, y
+        keeps aspect), or ``"fill_y"`` (y fills, x keeps aspect).  Only
+        affects 2D (when this coordinate system owns the camera).
     border_px, border_world:
         2D camera margins so axis labels are visible.
     position, normal, up:
@@ -240,6 +300,7 @@ class CoordinateSystem:
         axes: bool = True,
         plane: bool | None = None,
         camera: str | bool = "auto",
+        stretch: StretchMode = "fit",
         border_px: float = 60.0,
         border_world: float = 0.0,
         position=(0.0, 0.0, 0.0),
@@ -284,6 +345,7 @@ class CoordinateSystem:
         self._up = _as_vec3(up)
 
         self._camera_mode = camera
+        self._stretch = _validate_stretch(stretch)
         self._recompute_camera_ownership()
 
         cfg = self._handle.scene.config
@@ -554,18 +616,15 @@ class CoordinateSystem:
     def _apply_camera(self) -> None:
         if not self._owns_camera:
             return
-        xlo, xhi = self._xlim
-        ylo, yhi = self._ylim
-        span_x = self._xscale.to_world(xhi) - self._xscale.to_world(xlo)
-        span_y = self._yscale.to_world(yhi) - self._yscale.to_world(ylo)
-        cam = View2DConfig(
-            xmin=-span_x / 2.0,
-            xmax=span_x / 2.0,
-            ymin=-span_y / 2.0,
-            ymax=span_y / 2.0,
+        cam = fit_view2d(
+            self._xlim,
+            self._ylim,
+            xscale=self._xscale,
+            yscale=self._yscale,
+            base=self._base,
             border_world=self.border_world,
             border_px=self.border_px,
-            uniform=True,
+            stretch=self._stretch,
         )
         self._handle.set_camera(cam)
 

@@ -23,7 +23,14 @@ Usage::
 """
 
 from ._act_style import ActObjectStyle, ActPointStyle
-from ._active import ActEventHandler, ActHandler, ActPoint, ActSceneObject
+from ._active import (
+    ActClickHandler,
+    ActEventHandler,
+    ActHandler,
+    ActPoint,
+    ActSceneObject,
+)
+from ._anchor import EAnchor
 from ._app import VisualizerApp
 from ._banner import Banner
 from ._colors import Color
@@ -31,16 +38,29 @@ from ._controls import (
     Button,
     Checkbox,
     ColorPicker,
+    ColumnType,
     ControlEvent,
-    ControlGroup,
     Dropdown,
+    EControlVariant,
+    EnumOptionsHandler,
     FileChooser,
     Slider,
+    Table,
+    TableCellChange,
+    TableCellSelect,
+    TableColumnAdd,
+    TableColumnDelete,
+    TableColumnTitleChange,
+    TableColumnTypeChange,
+    TableEnumOptionsRequest,
+    TableRowAdd,
+    TableRowsDelete,
     TextArea,
     TextField,
     ValueEdit,
 )
-from ._coordinate_system import CoordinateSystem
+from ._coordinate_system import CoordinateSystem, fit_view2d
+from ._dialog import Dialog, FileChooserDialog
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
 from ._interaction import (
@@ -59,7 +79,7 @@ from ._interaction import (
 )
 from ._keys import KeyModifier
 from ._label import Label
-from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
+from ._nodes import Transform, VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
 from ._scale import LinearScale, LogScale, Scale
@@ -127,6 +147,15 @@ from ._styles import (
     VizStyle,
     WireframeDashPattern,
 )
+from ._themes import (
+    copy_theme,
+    default_theme,
+    external_theme_dirs,
+    list_themes,
+    register_theme,
+    theme_css_files,
+    theme_label,
+)
 from ._types import SceneEntity, VizInputType
 from ._viz_styles import VizStyles
 from .camera import (
@@ -141,27 +170,39 @@ from .camera import (
 )
 from .export._exporter import SceneExporter
 from .scene import SceneConfig
+from .server import PortConflictMode, PortOccupant
 from .views import (
     ButtonView,
     CheckboxView,
     ColorPickerView,
     ControlView,
     DropdownView,
+    EStackAlign,
+    EStackDirection,
+    EStackJustify,
     FileChooserView,
     GroupView,
+    LabelView,
+    LogView,
+    MarkdownView,
+    MenuView,
     SceneView,
+    SeparatorView,
     SliderView,
     SpacerView,
     SplitView,
     StackView,
+    TableView,
     TextAreaView,
     TextFieldView,
+    ToolbarView,
     ValueEditView,
     View,
 )
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
+    "ActClickHandler",
     "ActEventHandler",
     "ActHandler",
     "ActObjectStyle",
@@ -190,17 +231,20 @@ __all__ = [
     "Color",
     "ColorPicker",
     "ColorPickerView",
+    "ColumnType",
     "CoordinateSystem",
     "ClickEvent",
     "ControlEvent",
     "CircleStyle",
-    "ControlGroup",
+    "fit_view2d",
     "ControlView",
     "GroupView",
+    "MenuView",
     "CrossHairPointStyle",
     "CylinderLineStyle",
     "CylinderStyle",
     "DashedWireframe",
+    "Dialog",
     "DilatorStyle",
     "DirectionStyle",
     "DiskStyle",
@@ -209,13 +253,20 @@ __all__ = [
     "DragMode",
     "Dropdown",
     "DropdownView",
+    "EAnchor",
+    "EControlVariant",
     "EIconMaterial",
     "EIconUC",
+    "EnumOptionsHandler",
+    "EStackAlign",
+    "EStackDirection",
+    "EStackJustify",
     "EllipseStyle",
     "EllipsoidStyle",
     "FigureConfig",
     "FigureStyle",
     "FileChooser",
+    "FileChooserDialog",
     "FileChooserView",
     "GeneralRotorStyle",
     "Grid",
@@ -233,7 +284,10 @@ __all__ = [
     "KeyModifier",
     "Label",
     "LabelStyle",
+    "LabelView",
     "LineStyle",
+    "LogView",
+    "MarkdownView",
     "LinearScale",
     "LogScale",
     "ModifierKey",
@@ -246,6 +300,8 @@ __all__ = [
     "PointPathStyle",
     "PointPairStyle",
     "PointStyle",
+    "PortConflictMode",
+    "PortOccupant",
     "RayQuadricStyle",
     "RayStyle",
     "ReflectionLineStyle",
@@ -258,6 +314,7 @@ __all__ = [
     "SceneExporter",
     "SceneView",
     "ScrollEvent",
+    "SeparatorView",
     "SdfBoxStyle",
     "SdfCircleStyle",
     "SdfCylinderStyle",
@@ -281,6 +338,17 @@ __all__ = [
     "SphereStyle",
     "SplitView",
     "StackView",
+    "Table",
+    "TableCellChange",
+    "TableCellSelect",
+    "TableColumnAdd",
+    "TableColumnDelete",
+    "TableColumnTitleChange",
+    "TableColumnTypeChange",
+    "TableEnumOptionsRequest",
+    "TableRowAdd",
+    "TableRowsDelete",
+    "TableView",
     "TextArea",
     "TextAreaView",
     "TextField",
@@ -290,6 +358,8 @@ __all__ = [
     "gradient_colors",
     "multi_gradient_colors",
     "TitleStyle",
+    "ToolbarView",
+    "Transform",
     "TranslatorStyle",
     "ValueEdit",
     "ValueEditView",
@@ -307,4 +377,11 @@ __all__ = [
     "VizStyle",
     "VizStyles",
     "WireframeDashPattern",
+    "copy_theme",
+    "default_theme",
+    "external_theme_dirs",
+    "list_themes",
+    "register_theme",
+    "theme_css_files",
+    "theme_label",
 ]

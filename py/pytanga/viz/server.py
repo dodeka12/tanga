@@ -11,22 +11,169 @@ Supports multiple named scenes reachable at ``/{name}`` paths.
 from __future__ import annotations
 
 import asyncio
+import errno
 import hashlib
 import json
 import logging
+import socket
 import sys
 import threading
 import time
 import webbrowser
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import psutil
 from aiohttp import web
 
 logger = logging.getLogger("tanga.viz.server")
+
+# Unified client→server event envelope: short event name → legacy message type
+# routed to the control callback.  Interaction events (``interaction:*``) are
+# routed to the interaction callback instead (coalescing dispatcher).
+_EVENT_MSG_MAP = {
+    "change": "control:change",
+    "click": "control:click",
+    "press": "control:press",
+    "release": "control:release",
+    "cell_change": "control:cell_change",
+    "cell_select": "control:cell_select",
+    "row_add": "control:row_add",
+    "column_add": "control:column_add",
+    "row_delete": "control:row_delete",
+    "column_delete": "control:column_delete",
+    "column_title_change": "control:column_title_change",
+    "column_type_change": "control:column_type_change",
+    "enum_options": "control:enum_options",
+    "undo": "control:undo",
+    "redo": "control:redo",
+    "table_view_change": "control:table_view_change",
+    "group_toggle": "control:group_toggle",
+    "close": "close",
+    "log": "control:log",
+    "file_browser_navigate": "file_browser_navigate",
+    "file_browser_select": "file_browser_select",
+}
+
+
+class PortInUseError(RuntimeError):
+    """Raised when the viewer server cannot bind its port because it is in use."""
+
+
+# WinSock error code for "address already in use" (WSAEADDRINUSE).  Python's
+# ``errno`` module exposes ``errno.EADDRINUSE`` on POSIX (98 on Linux, 48 on
+# macOS/BSD), but on Windows socket errors carry the raw WinSock code (10048)
+# instead of the CRT value that ``errno.EADDRINUSE`` holds there (100).
+_WSAEADDRINUSE = 10048
+
+
+def _is_port_in_use_error(exc: OSError) -> bool:
+    """Return ``True`` if ``exc`` reports that the port is already in use.
+
+    The errno differs per platform: ``EADDRINUSE`` on POSIX, ``WSAEADDRINUSE``
+    (10048) on Windows.  The WinSock error also has its own message text, so
+    match that wording as a fallback for cases where the error is re-wrapped.
+    """
+    if getattr(exc, "errno", None) in (errno.EADDRINUSE, _WSAEADDRINUSE):
+        return True
+    if getattr(exc, "winerror", None) == _WSAEADDRINUSE:
+        return True
+    message = str(exc).lower()
+    return (
+        "address already in use" in message
+        or "only one usage of each socket address" in message
+    )
+
+
+class PortConflictMode(str, Enum):
+    """How to resolve a port that is already in use when the server boots."""
+
+    CANCEL = "cancel"  # raise PortInUseError (today's standard behaviour)
+    AUTO = "auto"  # silently pick a free port and bind there
+    KILL = "kill"  # terminate the blocking process and rebind
+    ASK = "ask"  # delegate to an injected interaction function
+
+
+@dataclass(frozen=True)
+class PortOccupant:
+    """A process holding the viewer port (discovered via ``psutil``)."""
+
+    pid: int
+    name: str
+    cmdline: tuple[str, ...] | None = None
+
+
+# An ASK interaction function presents the conflict (port + occupants) and
+# returns the action the user chose — one of CANCEL/AUTO/KILL (never ASK).
+PortConflictAsk = Callable[[int, list[PortOccupant]], PortConflictMode]
+
+
+def default_port_conflict_ask(
+    port: int, occupants: list[PortOccupant]
+) -> PortConflictMode:
+    """Fallback ASK handler with no interaction available: cancel."""
+    return PortConflictMode.CANCEL
+
+
+def find_port_occupants(port: int) -> list[PortOccupant]:
+    """Return the processes LISTENing on *port* (deduplicated by pid)."""
+    occupants: list[PortOccupant] = []
+    seen: set[int] = set()
+    for conn in psutil.net_connections(kind="tcp"):
+        if conn.status != "LISTEN" or not conn.laddr:
+            continue
+        if conn.laddr.port != port or conn.pid is None:
+            continue
+        if conn.pid in seen:
+            continue
+        seen.add(conn.pid)
+        name = "?"
+        cmdline: tuple[str, ...] | None = None
+        try:
+            proc = psutil.Process(conn.pid)
+            name = proc.name() or "?"
+            try:
+                cmdline = tuple(proc.cmdline())
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                cmdline = None
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+        occupants.append(PortOccupant(pid=conn.pid, name=name, cmdline=cmdline))
+    return occupants
+
+
+def _find_free_port(host: str) -> int:
+    """Return an available TCP port on *host*."""
+    bind_host = "127.0.0.1" if host in ("localhost", "127.0.0.1") else host
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((bind_host, 0))
+        return int(sock.getsockname()[1])
+
+
+def _terminate_port_occupants(occupants: list[PortOccupant]) -> None:
+    """Terminate the given PIDs (SIGTERM, escalating to SIGKILL)."""
+    for occupant in occupants:
+        try:
+            proc = psutil.Process(occupant.pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        try:
+            proc.terminate()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        try:
+            proc.wait(timeout=2.0)
+        except psutil.TimeoutExpired:
+            try:
+                proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
 
 
 def compute_frontend_version(static_dir: Path) -> str:
@@ -73,12 +220,6 @@ def _ws_msg_brief(payload: Any) -> str:
             f"removed={len(obj.get('removed', []))} "
             f"scene={obj.get('scene', '')!r} ({size}B)"
         )
-    if t == "controls_define":
-        return (
-            f"controls_define controls={len(obj.get('controls', []))} "
-            f"groups={len(obj.get('groups', []))} "
-            f"scene={obj.get('scene', '')!r} ({size}B)"
-        )
     if t == "scene_config":
         return (
             f"scene_config name={obj.get('name', '')!r} "
@@ -106,6 +247,26 @@ def _ws_msg_brief(payload: Any) -> str:
             f"control_update id={obj.get('id', '')!r} "
             f"scene={obj.get('scene', '')!r} ({size}B)"
         )
+    if t == "control:cell_change":
+        return (
+            f"control:cell_change id={obj.get('control_id', '')!r} "
+            f"row={obj.get('row', '?')} col={obj.get('col', '?')} ({size}B)"
+        )
+    if t == "control:row_add":
+        return (
+            f"control:row_add id={obj.get('control_id', '')!r} "
+            f"row={obj.get('row', '?')} ({size}B)"
+        )
+    if t == "control:column_add":
+        return (
+            f"control:column_add id={obj.get('control_id', '')!r} "
+            f"col={obj.get('col', '?')} ({size}B)"
+        )
+    if t == "control:row_delete":
+        return (
+            f"control:row_delete id={obj.get('control_id', '')!r} "
+            f"rows={obj.get('rows', '?')} ({size}B)"
+        )
     return f"type={t} ({size}B)"
 
 
@@ -131,7 +292,7 @@ ControlCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 InteractionCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 SceneListCallback = Callable[[], list[str]]
 LayoutCallback = Callable[[str], dict[str, Any] | None]
-PushControlsCallback = Callable[[str], Awaitable[None]]
+ThemeCallback = Callable[[], dict[str, Any]]
 
 
 @dataclass
@@ -144,6 +305,7 @@ class BrowserSession:
     ws: web.WebSocketResponse
     viewer_name: str | None = None  # optional friendly label from ?viewer= URL param
     scenes: list[str] = field(default_factory=list)  # all subscribed scene names
+    layout: str | None = None  # requested layout name (?view=), if any
 
 
 class VizServer:
@@ -160,9 +322,13 @@ class VizServer:
         port: int = 8765,
         static_dir: Path | None = None,
         entry_page: str = "viewer.html",
+        port_conflict_mode: PortConflictMode = PortConflictMode.CANCEL,
+        port_conflict_ask: PortConflictAsk | None = None,
     ) -> None:
         self._host = host
         self._port = port
+        self._port_conflict_mode = port_conflict_mode
+        self._port_conflict_ask = port_conflict_ask or default_port_conflict_ask
         self._static_dir = static_dir or Path(__file__).parent / "templates"
         self._entry_page = entry_page
         self._frontend_version = compute_frontend_version(self._static_dir)
@@ -176,10 +342,13 @@ class VizServer:
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
         self._layout_callback: LayoutCallback | None = None
+        self._scene_layout_callback: LayoutCallback | None = None
         self._control_callback: ControlCallback | None = None
         self._animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = (
             None
         )
+        self._theme_callback: ThemeCallback | None = None
+        self._theme_static_dirs: dict[str, Path] = {}
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -189,6 +358,11 @@ class VizServer:
         self._any_ws_ready_thread: threading.Event = threading.Event()
         self._ws_error_event: asyncio.Event = asyncio.Event()
         self._ws_error_msg: str = ""
+
+    @property
+    def port(self) -> int:
+        """The (possibly resolved) port the server is bound to."""
+        return self._port
 
     # ── Lifecycle ───────────────────────────────────────────
 
@@ -201,12 +375,14 @@ class VizServer:
         interaction_callback: InteractionCallback | None = None,
         on_connect: Callable[[str], Awaitable[None]] | None = None,
         on_disconnect: Callable[[str], Awaitable[None]] | None = None,
-        push_controls: PushControlsCallback | None = None,
         animation_stop_callback: Callable[[str, str], Awaitable[None]] | None = None,
         push_animation_stop: Callable[[str], Awaitable[None]] | None = None,
         scene_config_callback: SceneConfigCallback | None = None,
         scene_list_callback: SceneListCallback | None = None,
         layout_callback: LayoutCallback | None = None,
+        scene_layout_callback: LayoutCallback | None = None,
+        theme_callback: ThemeCallback | None = None,
+        theme_static_dirs: dict[str, Path] | None = None,
         on_ready: Callable[[], None] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
@@ -215,11 +391,13 @@ class VizServer:
         self._scene_config_callback = scene_config_callback
         self._scene_list_callback = scene_list_callback
         self._layout_callback = layout_callback
+        self._scene_layout_callback = scene_layout_callback
+        self._theme_callback = theme_callback
+        self._theme_static_dirs = theme_static_dirs or {}
         self._control_callback = control_callback
         self._interaction_callback = interaction_callback
         self._on_connect = on_connect
         self._on_disconnect = on_disconnect
-        self._push_controls_cb = push_controls
         self._animation_stop_callback = animation_stop_callback
         self._push_animation_stop = push_animation_stop
         self._on_ready = on_ready
@@ -227,49 +405,71 @@ class VizServer:
 
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
-        try:
-            # When host is "localhost", bind both IPv4 and IPv6 loopback so
-            # browsers that resolve `localhost` to `::1` can still reach the
-            # WebSocket endpoint — otherwise Firefox's WS connection can hang
-            # in CONNECTING on Windows (the server would only listen on IPv4).
-            reuse_address = sys.platform != "win32"
-            bind_hosts = (
-                ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
-            )
+        await self._bind_with_resolution()
 
-            self._sites = []
-            for bind_host in bind_hosts:
-                site = web.TCPSite(
-                    self._runner, bind_host, self._port, reuse_address=reuse_address
+    async def _bind_sites(self) -> None:
+        """Bind the server to its host; raise ``OSError`` if the primary bind fails.
+
+        When ``host`` is ``"localhost"`` this binds both IPv4 and IPv6 loopback
+        so browsers that resolve ``localhost`` to ``::1`` can still reach the
+        WebSocket endpoint — otherwise Firefox's WS connection can hang in
+        CONNECTING on Windows (the server would only listen on IPv4).
+        """
+        reuse_address = sys.platform != "win32"
+        bind_hosts = (
+            ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
+        )
+
+        self._sites = []
+        for bind_host in bind_hosts:
+            site = web.TCPSite(
+                self._runner, bind_host, self._port, reuse_address=reuse_address
+            )
+            try:
+                await site.start()
+                self._sites.append(site)
+            except OSError:
+                # The primary (IPv4) bind must succeed; the IPv6 loopback
+                # bind is best-effort (may be unavailable on some systems).
+                if not self._sites:
+                    raise
+                logger.info("Could not bind to %s (skipping)", bind_host)
+
+        logger.info(
+            "Server listening: bind=%s port=%d (http://%s:%d, ws /ws)",
+            ",".join(bind_hosts[: len(self._sites)]),
+            self._port,
+            self._host,
+            self._port,
+        )
+
+    async def _bind_with_resolution(self) -> None:
+        """Bind, resolving a busy port according to ``port_conflict_mode``."""
+        while True:
+            try:
+                await self._bind_sites()
+                return
+            except OSError as e:
+                if not _is_port_in_use_error(e):
+                    raise
+                occupants = find_port_occupants(self._port)
+                mode = self._port_conflict_mode
+                action = (
+                    self._port_conflict_ask(self._port, occupants)
+                    if mode is PortConflictMode.ASK
+                    else mode
                 )
-                try:
-                    await site.start()
-                    self._sites.append(site)
-                except OSError:
-                    # The primary (IPv4) bind must succeed; the IPv6 loopback
-                    # bind is best-effort (may be unavailable on some systems).
-                    if not self._sites:
-                        raise
-                    logger.info("Could not bind to %s (skipping)", bind_host)
-
-            logger.info(
-                "Server listening: bind=%s port=%d (http://%s:%d, ws /ws)",
-                ",".join(bind_hosts[: len(self._sites)]),
-                self._port,
-                self._host,
-                self._port,
-            )
-        except OSError as e:
-            if (
-                getattr(e, "errno", 0) == 98
-                or "address already in use" in str(e).lower()
-            ):
-                raise RuntimeError(
+                if action is PortConflictMode.KILL:
+                    _terminate_port_occupants(occupants)
+                    continue
+                if action is PortConflictMode.AUTO:
+                    self._port = _find_free_port(self._host)
+                    continue
+                raise PortInUseError(
                     f"Port {self._port} is already in use. "
-                    f"Close the other process or use Visualizer(port=...) "
+                    f"Close the other process or use start_server(port=...) "
                     f"to choose a different port."
                 ) from e
-            raise
 
     async def stop(self) -> None:
         """Gracefully shut down all connections and the server."""
@@ -344,6 +544,40 @@ class VizServer:
                 dead.append(ws)
         for ws in dead:
             self._ws_clients.discard(ws)
+
+    async def push_raw_to_browser(self, browser_id: str, data: str) -> None:
+        """Send an arbitrary JSON string to a single browser session."""
+        session = self._browser_sessions.get(browser_id)
+        if session is None:
+            return
+        logger.info(
+            "WS SEND t=%.3f %s browser=%s",
+            time.monotonic(),
+            _ws_msg_brief(data),
+            browser_id,
+        )
+        try:
+            await session.ws.send_str(data)
+        except (ConnectionError, Exception):
+            pass
+
+    async def push_layout_to_session(
+        self, browser_id: str, layout_payload: dict[str, Any]
+    ) -> None:
+        """Send a serialized ``view_layout`` to a single browser session."""
+        session = self._browser_sessions.get(browser_id)
+        if session is None:
+            return
+        logger.info(
+            "WS SEND t=%.3f %s browser=%s",
+            time.monotonic(),
+            _ws_msg_brief(json.dumps(layout_payload)),
+            browser_id,
+        )
+        try:
+            await session.ws.send_str(json.dumps(layout_payload))
+        except (ConnectionError, Exception):
+            pass
 
     async def push_navigate(self, scene_name: str, target: str = "all") -> None:
         """Send a navigate command to matching browser sessions.
@@ -500,6 +734,28 @@ class VizServer:
         if self._on_ready is not None:
             self._on_ready()
 
+    def _resolve_layout(
+        self, scene_name: str, layout_name: str | None
+    ) -> tuple[list[str], dict[str, Any] | None]:
+        """Resolve scene subscription + ``view_layout`` payload for a ``ready``.
+
+        Layout mode (``layout_name`` set) subscribes to the named layout's
+        scenes and returns its payload; single-scene mode subscribes to
+        ``[scene_name]`` and returns the auto-derived single-scene layout
+        (``None`` when no ``scene_layout_callback`` is configured).
+        """
+        layout_payload: dict[str, Any] | None = None
+        if layout_name is not None:
+            if self._layout_callback is not None:
+                layout_payload = self._layout_callback(layout_name)
+            if layout_payload is None:
+                return [""], None
+            names = layout_payload.get("scenes") or []
+            return (list(names) if names else [""]), layout_payload
+        if self._scene_layout_callback is not None:
+            layout_payload = self._scene_layout_callback(scene_name)
+        return [scene_name], layout_payload
+
     def get_browser_sessions(self) -> list[dict[str, str | None]]:
         """Return a list of active browser sessions as plain dicts."""
         return [
@@ -508,6 +764,7 @@ class VizServer:
                 "scene": s.scene,
                 "remote_addr": s.remote_addr,
                 "viewer_name": s.viewer_name,
+                "layout": s.layout,
             }
             for s in self._browser_sessions.values()
         ]
@@ -517,10 +774,30 @@ class VizServer:
     def _build_app(self) -> web.Application:
         app = web.Application()
         app.router.add_get("/ws", self._ws_handler)
+        # External themes are served under /themes/user/<id>/ (more
+        # specific than the catch-all below, so they win for those paths).
+        for prefix, directory in self._theme_static_dirs.items():
+            app.router.add_static(f"/themes/{prefix}", directory, show_index=False)
         # Catch-all route: serve static files if they exist, otherwise serve
         # viewer.html (SPA-style scene URL routing).
         app.router.add_get("/{name:.*}", self._catch_all_handler)
         return app
+
+    def _theme_links_html(self) -> str:
+        """Return the active theme's ``<link>`` tags, or an empty string.
+
+        Calls the optional ``theme_callback`` (if set) and emits one
+        ``<link rel="stylesheet" data-tanga-theme>`` per resolved CSS file.
+        The browser-side ``themes.js`` swaps these tags on ``theme_define``.
+        """
+        if self._theme_callback is None:
+            return ""
+        payload = self._theme_callback()
+        css = payload.get("css") or []
+        return "".join(
+            f'<link rel="stylesheet" data-tanga-theme href="themes/{css_path}">\n'
+            for css_path in css
+        )
 
     async def _catch_all_handler(self, request: web.Request) -> web.StreamResponse:
         """Serve a static file if it exists, otherwise serve viewer.html.
@@ -572,8 +849,9 @@ class VizServer:
         inject = (
             f'<script>window.__tanga_page_token = "{page_token}";</script>\n'
             f"<script>window.__tanga_frontend_version = "
-            f'"{self._frontend_version}";</script>'
+            f'"{self._frontend_version}";</script>\n'
         )
+        inject += self._theme_links_html()
         # Inject after <head> or at start of file
         if "</head>" in html:
             html = html.replace("</head>", f"{inject}\n</head>")
@@ -703,23 +981,24 @@ class VizServer:
                                 msg_browser_id,
                                 data.get("viewer_name"),
                             )
-                            # Resolve the set of scenes to subscribe to.
+                            # Resolve the set of scenes to subscribe to (and the
+                            # ``view_layout`` payload, which is always served).
+                            current_session.layout = layout_name
                             layout_payload: dict[str, Any] | None = None
                             if layout_name is not None:
                                 # Layout mode: subscribe to every scene in the layout.
-                                if self._layout_callback is not None:
-                                    layout_payload = self._layout_callback(layout_name)
+                                scene_names, layout_payload = self._resolve_layout(
+                                    scene_name, layout_name
+                                )
                                 if layout_payload is None:
                                     # Unknown layout — navigate to main.
                                     await ws.send_str(
                                         json.dumps({"type": "navigate", "scene": ""})
                                     )
                                     scene_names = [""]
-                                else:
-                                    names = layout_payload.get("scenes") or []
-                                    scene_names = list(names) if names else [""]
                             else:
-                                # Single-scene mode (existing behaviour).
+                                # Single-scene mode: validate the scene, then
+                                # derive its single-scene layout.
                                 if self._scene_list_callback is not None:
                                     available = self._scene_list_callback()
                                     if scene_name and scene_name not in available:
@@ -730,7 +1009,9 @@ class VizServer:
                                             )
                                         )
                                         scene_name = ""
-                                scene_names = [scene_name]
+                                scene_names, layout_payload = self._resolve_layout(
+                                    scene_name, None
+                                )
 
                             current_session.scenes = list(scene_names)
                             current_session.scene = scene_names[0]
@@ -756,11 +1037,6 @@ class VizServer:
                                 pass
                             for scene_name in scene_names:
                                 try:
-                                    if self._push_controls_cb is not None:
-                                        await self._push_controls_cb(scene_name)
-                                except Exception:
-                                    pass
-                                try:
                                     if self._push_animation_stop is not None:
                                         await self._push_animation_stop(scene_name)
                                 except Exception:
@@ -778,6 +1054,25 @@ class VizServer:
                             )
                             self._signal_ws_ready()
 
+                        elif msg_type == "scene_sync_request":
+                            # A layout re-push introduced a scene pane the
+                            # browser hasn't rendered yet; send its config +
+                            # full state on demand (mirrors `_push_full_state`).
+                            from .serializer import serialize_scene_update
+
+                            scene_name = data.get("scene", "")
+                            if self._scene_config_callback is not None:
+                                cfg = self._scene_config_callback(scene_name)
+                                if cfg is not None:
+                                    cfg.setdefault("name", scene_name)
+                                    await ws.send_str(json.dumps(cfg))
+                            if self._flush_callback is not None:
+                                entities, _ = self._flush_callback(scene_name)
+                                if entities:
+                                    message = serialize_scene_update(entities, [])
+                                    message["scene"] = scene_name
+                                    await ws.send_str(json.dumps(message))
+
                         elif msg_type == "animation_stop":
                             if self._animation_stop_callback is not None:
                                 asyncio.create_task(
@@ -793,9 +1088,38 @@ class VizServer:
                                     self._pending_screenshots[rid].set_result(
                                         data["data"]
                                     )
+                        elif msg_type == "event":
+                            # Unified envelope: { type, target, event, data }.
+                            target = data.get("target")
+                            event_name = data.get("event")
+                            event_data = data.get("data") or {}
+                            if event_name and event_name.startswith("interaction:"):
+                                if self._interaction_callback is not None:
+                                    event_data["object_id"] = target
+                                    if msg_browser_id:
+                                        event_data["browser_id"] = msg_browser_id
+                                    asyncio.create_task(
+                                        self._interaction_callback(
+                                            event_name, event_data
+                                        )
+                                    )
+                            elif self._control_callback is not None and target:
+                                event_data["control_id"] = target
+                                if msg_browser_id:
+                                    event_data["browser_id"] = msg_browser_id
+                                asyncio.create_task(
+                                    self._control_callback(
+                                        _EVENT_MSG_MAP.get(event_name, event_name),
+                                        event_data,
+                                    )
+                                )
                         elif msg_type in (
                             "control:change",
                             "control:click",
+                            "control:cell_change",
+                            "control:row_add",
+                            "control:column_add",
+                            "control:row_delete",
                             "control:group_toggle",
                             "control:press",
                             "control:release",

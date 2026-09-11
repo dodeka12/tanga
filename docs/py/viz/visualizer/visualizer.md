@@ -8,11 +8,10 @@ The `Visualizer` class is the main entry point for the 3D viewer.
 from pytanga.viz import Visualizer, CameraConfig3d
 
 Visualizer(
-    open_browser=None,  # auto: False in Jupyter, True otherwise
     reuse_existing=True,
     title="Tanga 3D Viewer",
     annotation=None,
-    background_color="#1a1a2e",
+    background_color=None,   # None = follow the active theme
     camera=None,  # None = auto-fit from entities
     space_dim=None,          # 2 or 3; deduced from camera when None
     add_default_axes=True,   # insert a default Axes3D/Axes2D per scene
@@ -22,17 +21,14 @@ Visualizer(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `port` | `int \| None` | `None` | *(deprecated)* HTTP + WebSocket server port. Prefer `start_server(port=...)`. |
-| `host` | `str \| None` | `None` | *(deprecated)* Bind address. Prefer `start_server(host=...)`. |
-| `open_browser` | `bool \| None` | auto | Open viewer URL on start |
 | `reuse_existing` | `bool` | `True` | Wait for existing browser tab to reconnect before opening a new one |
 | `title` | `str` | `"Tanga 3D Viewer"` | Overlay title and browser tab title (main scene). Defaults to `"Tanga 2D Viewer"` when `space_dim=2`. |
 | `annotation` | `str \| None` | `None` | Markdown annotation with LaTeX math (main scene) |
 | `space_dim` | `int \| None` | deduced | Spatial dimension: `3` for 3D viewer, `2` for 2D viewer. When `None` (default), it is deduced from the `camera` config (a 2D config implies `2`, a 3D config implies `3`); otherwise it defaults to `3`. See below. |
-| `background_color` | `str` | `"#1a1a2e"` | CSS background color |
+| `background_color` | `str \| None` | `None` | CSS background color for the 3D viewport. `None` (default) follows the active theme's background (`--tanga-bg`, e.g. `#1a1a2e` for dark, `#f5f5f7` for light). |
 | `camera` | `CameraConfig \| View2DConfig \| View3dConfig \| None` | `None` | Explicit camera settings. Also accepts a `View2DConfig` / `View3dConfig` input spec, which is converted via `get_camera()` (see [Camera & Controls](camera.md)). |
-| `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](../scene-objects/axes-grid.md). |
-| `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](../scene-objects/axes-grid.md). |
+| `add_default_axes` | `bool` | `True` | Whether each scene gets a default `Axes3D` (or `Axes2D` in 2D). See [Axes & Grid](../entities/axes-grid.md). |
+| `add_default_grid` | `bool` | `True` | Whether each scene gets a default `Grid`. See [Axes & Grid](../entities/axes-grid.md). |
 
 ## 2D Visualization
 
@@ -65,7 +61,7 @@ When `space_dim=2`:
     - **Pan:** left-click drag *or* right-click drag
     - **Zoom:** scroll wheel
     - No orbit rotation (rotation around the view axis is locked).
-- Grids and axes are explicit scene objects (see [Axes & Grid](../scene-objects/axes-grid.md)).
+- Grids and axes are explicit scene objects (see [Axes & Grid](../entities/axes-grid.md)).
 - **Full 3D entities render in 2D mode.** Any 3D entity (e.g. `Sphere`,
   `Plane`, `Circle` with non‑zero `z`) can be added and renders correctly
   from the orthographic top‑down perspective. This works out of the box
@@ -201,8 +197,6 @@ API as ``Visualizer``, but all operations affect only the target scene.
 | `set_annotation(text, *, style)` | Update annotation panel |
 | `animate_to(entity_id, *, ...)` | Animate an entity |
 | `timeline()` | Create a :class:`Timeline` targeting this scene |
-| `add_slider`, `add_dropdown`, `add_button` | Add interactive controls |
-| `add_control_group`, `remove_control`, `remove_control_group`, `clear_controls` | Control management |
 | `navigate_to(scene_name)` | Navigate all browsers viewing *this* scene to another |
 | `display(*, viewer_name, width, height)` | Jupyter inline display with optional viewer identity |
 | `display_static(width, height)` | Serverless static HTML display |
@@ -471,7 +465,7 @@ viz.export_glb("scene.glb")
 | Method | Purpose |
 |--------|---------|
 | `show(host=None, port=None, jupyter=None, viewer_name=None)` | Serve + show: opens a browser tab, or renders inline in Jupyter (delegates to `display()`). `viewer_name` dedupes notebook outputs. |
-| `wait()` | Block until Ctrl+C, then stop the server |
+| `wait()` | Block until Ctrl+C, then return — the server is left running and stops at interpreter exit, or via `stop_server()` |
 | `start_server(host="localhost", port=None)` | Serve only (no browser). Port: `None`→8765, `0`→auto-pick, `>0`→exact |
 | `stop_server()` | Stop the server |
 | `open_browser()` | Open/reconnect a browser tab |
@@ -491,3 +485,11 @@ viz.export_glb("scene.glb")
 | `export_animated_html()` | `export_snapshot(animation=rec)` |
 | `export_animated_figure()` | `export_figure(animation=rec)` |
 | `SceneExporter` | `viz` / `viz.scene(name)` |
+
+## Themes
+
+The UI chrome (controls, panels, banners, dialogs, menus) is themed via CSS.
+Select a theme with `viz.set_theme(id)` (default `"dark"`; also `"light"` and
+`"pastel"`), list them with `list_themes()`, and pack a specific theme into an
+export with `viz.export_snapshot("scene.html", theme=...)`.  See
+[Themes](theming.md).

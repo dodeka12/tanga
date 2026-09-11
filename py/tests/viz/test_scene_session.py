@@ -36,7 +36,7 @@ class TestCameraConfig:
     def test_camera2d_type(self):
         c = CameraConfig2d(xmin=0.0, xmax=2.0, ymin=0.0, ymax=1.0)
         assert c.type == "2d"
-        assert c.uniform is True
+        assert c.stretch == "fit"
         assert c.border_px == 0.0
 
     def test_camera3d_to_dict_omits_none(self):
@@ -74,7 +74,7 @@ class TestCameraConfig:
             "xmax": 1.0,
             "ymin": -2.0,
             "ymax": 2.0,
-            "uniform": True,
+            "stretch": "fit",
             "border_px": 0.0,
         }
 
@@ -95,7 +95,7 @@ class TestCameraBuilders:
         assert cam.ymax == 4.0
         assert cam.position == (2.0, 1.5, 20.0)
         assert cam.target == (2.0, 1.5, 0.0)
-        assert cam.uniform is True
+        assert cam.stretch == "fit"
         assert cam.border_px == 0.0
 
     def test_view3d_builder(self):
@@ -146,7 +146,7 @@ class TestCameraBuilders:
 class TestSceneConfig:
     def test_defaults(self):
         sc = SceneConfig()
-        assert sc.background_color == "#1a1a2e"
+        assert sc.background_color is None
         assert sc.camera is None
 
     def test_to_dict_includes_type(self):
@@ -154,6 +154,7 @@ class TestSceneConfig:
         d = sc.to_dict()
         assert d["type"] == "scene_config"
         assert "camera" not in d  # None camera should be omitted
+        assert "background_color" not in d  # None → follow theme
 
     def test_to_dict_includes_scene_field(self):
         # The frontend filters messages via `_forMyScene(msg)` which reads
@@ -589,12 +590,6 @@ class TestVisualizer:
         with pytest.raises(TypeError):
             Visualizer(opns=False)
 
-    def test_custom_port_and_host(self):
-        with pytest.warns(DeprecationWarning):
-            viz = Visualizer(port=9999, host="127.0.0.1")
-        assert viz._port == 9999
-        assert viz._host == "127.0.0.1"
-
     def test_start_server_defaults_to_standard_port(self, monkeypatch):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
@@ -805,6 +800,59 @@ class TestVisualizer:
         )
         assert viz._config.space_dim == 3
 
+    def test_named_scene_space_dim_override(self):
+        viz = Visualizer(space_dim=3, add_default_axes=False, add_default_grid=False)
+        sub = viz.scene("sub", space_dim=2)
+        assert sub.scene.config.space_dim == 2
+
+    def test_named_scene_inherits_space_dim(self):
+        viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
+        sub = viz.add_scene("sub")
+        assert sub.scene.config.space_dim == 2
+
+    def test_scene_space_dim_invalid(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        with pytest.raises(ValueError):
+            viz.scene("sub", space_dim=4)
+
+    def test_set_space_dim_updates_config_and_clears_conflicting_camera(self):
+        viz = Visualizer(
+            space_dim=2,
+            camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1),
+            add_default_axes=False,
+            add_default_grid=False,
+        )
+        assert isinstance(viz._config.camera, CameraConfig2d)
+        viz.set_space_dim(3)
+        assert viz._config.space_dim == 3
+        # A 2D camera conflicts with 3D, so it is cleared for auto-fit.
+        assert viz._config.camera is None
+
+    def test_set_space_dim_keeps_matching_camera(self):
+        viz = Visualizer(
+            space_dim=2,
+            camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1),
+            add_default_axes=False,
+            add_default_grid=False,
+        )
+        viz.set_space_dim(2)
+        assert isinstance(viz._config.camera, CameraConfig2d)
+
+    def test_set_space_dim_rejects_mismatched_camera(self):
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        with pytest.raises(ValueError):
+            viz.set_space_dim(
+                2, camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0)
+            )
+
+    def test_scene_handle_space_dim_accessor(self):
+        viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
+        handle = viz.scene("sub")
+        assert handle.space_dim == 2
+        handle.space_dim = 3
+        assert handle.space_dim == 3
+        assert viz._scenes["sub"].config.space_dim == 3
+
     def test_add_entity_returns_id(self):
         viz = Visualizer()
         eid = viz.add(Point(1, 2, 3))
@@ -910,7 +958,7 @@ class TestVisualizer:
 
         assert "Sphere" in viz.styles.kind
         assert viz.styles[Sphere].wireframe is True
-        assert viz.styles[Sphere].opacity == 0.4
+        assert viz.styles[Sphere].opacity == 1.0
 
     def test_set_default_color_via_styles(self):
         viz = Visualizer()
@@ -1585,3 +1633,23 @@ class TestDefaultSceneObjects:
         assert "Axis" in kinds
         assert "Axes3D" in kinds
         assert "Grid" in kinds
+
+    def test_named_scene_opt_out(self):
+        viz = Visualizer(add_default_axes=True, add_default_grid=True)
+        viz.scene("plot", add_axes=False, add_grid=False)
+        viz.scene("other")
+
+        plot_kinds = sorted(o.kind for o in viz._scenes["plot"]._objects.values())
+        other_kinds = sorted(o.kind for o in viz._scenes["other"]._objects.values())
+
+        assert "Axes3D" not in plot_kinds
+        assert "Grid" not in plot_kinds
+        assert "Axes3D" in other_kinds
+        assert "Grid" in other_kinds
+
+        # Idempotency: a later default-add pass must still add nothing to a
+        # scene that opted out at creation.
+        viz._add_default_scene_objects("plot")
+        assert (
+            sorted(o.kind for o in viz._scenes["plot"]._objects.values()) == plot_kinds
+        )

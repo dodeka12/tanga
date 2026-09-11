@@ -1,0 +1,14 @@
+/* Tanga viewer — overlay chrome (scene title overlay). */
+
+.tanga-title-overlay {
+    color: #fff;
+    font-family: var(--tanga-font);
+    font-size: 20px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 6px 20px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 5;
+}
+

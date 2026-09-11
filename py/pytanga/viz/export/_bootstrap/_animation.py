@@ -325,7 +325,6 @@ def js_controls_html(show_controls: bool = True) -> str:
 def js_animated_render_loop(
     *,
     fps: int,
-    loop_js_bool: str,
     scene_var: str,
     label_objects_map_var: str = "labelObjects",
 ) -> str:
@@ -336,8 +335,6 @@ def js_animated_render_loop(
 
     Args:
         fps: Playback frame rate.
-        loop_js_bool: JS boolean literal for looping (e.g. ``"true"`` or
-            ``"animData.loop"``).
         scene_var: JS variable name for the scene (``"figScene"``).
         label_objects_map_var: JS variable name for the label objects Map
             (``"labelObjects"``).  Kept for signature compatibility with the
@@ -353,14 +350,14 @@ async function _figAnimate(timestamp) {{
     if (isPlaying && frames.length > 0) {{
         const elapsed = (timestamp - startTime) / 1000;
         let effectiveTime = elapsed;
-        if (animData.loop || {loop_js_bool}) {{
+        if (animData.loop) {{
             effectiveTime = elapsed % totalDuration;
         }}
         const targetFrame = Math.floor(effectiveTime * {fps});
         if (targetFrame >= 0 && targetFrame < frames.length && targetFrame !== currentFrame) {{
             await _playFrame(targetFrame);
         }}
-        if (effectiveTime >= totalDuration && !animData.loop && !{loop_js_bool}) {{
+        if (effectiveTime >= totalDuration && !animData.loop) {{
             isPlaying = false;
             _updatePlayBtn();
         }}

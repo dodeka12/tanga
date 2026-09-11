@@ -14,6 +14,7 @@ from ._parse import _parse_mv_string
 
 if TYPE_CHECKING:
     from ._mv import MV
+    from pytanga.blade_mask import BladeMask
 
 
 class Algebra:
@@ -710,39 +711,21 @@ class Algebra:
             abs(v) < tol for blade_id, v in a._impl.to_dict().items() if blade_id != 0
         )
 
-    def project_to(self, a: MV, other: MV | int | list[int]) -> MV:
-        """Restrict *a* to a blade set.
+    def project_onto(self, a: MV, other: "MV | BladeMask") -> MV:
+        """Restrict *a* to a blade set, keeping only *a*'s components.
 
-        - ``MV`` — retain only blades present in *other* (existing behaviour).
-        - ``int`` — treat as a blade mask; retain only blades whose mask is
-          a subset of this mask.
-        - ``list[int]`` — treat as a list of blade IDs; retain only those
-          exact blades.
+        - ``MV`` — retain *a*'s blades that are non-zero in *other*.
+        - ``BladeMask`` — retain *a*'s blades whose id is exactly in
+          ``other.ids``.
         """
         if isinstance(other, MV):
-            return MV(self._mod.project_to(a._impl, other._impl), self)
-        if isinstance(other, int):
-            mask = other
-            result = self.multivector()
-            d = a._impl.to_dict()
-            for blade_id, v in d.items():
-                if blade_id & ~mask == 0:
-                    result = self.add(
-                        result, self.scale(self.multivector({blade_id: 1.0}), v)
-                    )
-            return result
-        if isinstance(other, list):
-            result = self.multivector()
-            d = a._impl.to_dict()
-            for blade_id in other:
-                v = d.get(blade_id, 0)
-                if abs(v) > 0:
-                    result = self.add(
-                        result, self.scale(self.multivector({blade_id: 1.0}), v)
-                    )
-            return result
+            return MV(self._mod.project_onto(a._impl, other._impl), self)
+        from pytanga.blade_mask import BladeMask
+
+        if isinstance(other, BladeMask):
+            return MV(self._mod.project_onto_mask(a._impl, other.ids), self)
         raise TypeError(
-            f"project_to expects MV, int, or list[int], got {type(other).__name__}"
+            f"project_onto expects MV or BladeMask, got {type(other).__name__}"
         )
 
     # Phase D: GP/IP/OP with reverse/conjugate flags
@@ -846,9 +829,19 @@ class Algebra:
             return a.op(b)
         return self._meet(a, b)
 
-    def blade_factorize_versor(self, versor: MV) -> tuple[MV, list[MV]]:
-        """Factorize a versor into (scale, factor_vectors)."""
-        wScale_impl, vecFactors_impl = self._mod.blade_factorize_versor(versor._impl)
+    def blade_factorize_versor(
+        self, versor: MV, eps: float = 1e-6, max_iterations: int = 64
+    ) -> tuple[MV, list[MV]]:
+        """Factorize a versor into (scale, factor_vectors).
+
+        ``eps`` is the minimum magnitude a factor must have to be considered
+        valid; a factor whose magnitude is ``<= eps`` (a degenerate versor)
+        raises ``RuntimeError``. ``max_iterations`` caps the factor-peeling loop
+        as a safety net against non-convergence.
+        """
+        wScale_impl, vecFactors_impl = self._mod.blade_factorize_versor(
+            versor._impl, eps, max_iterations
+        )
         return (MV(wScale_impl, self), [MV(impl, self) for impl in vecFactors_impl])
 
     def blade_project(self, a: MV, blade: MV) -> MV:

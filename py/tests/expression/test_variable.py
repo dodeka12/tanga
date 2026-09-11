@@ -7,7 +7,8 @@ import pytest
 
 from pytanga import BladeMask
 from pytanga.basis import BasisE3
-from pytanga.expression._labels import MAX_DEGREE, _reset_allocator, max_variables
+from pytanga.expression import Expression
+from pytanga.expression._labels import MAX_DEGREE, _reset_allocator
 from pytanga.expression._variable import Variable
 
 
@@ -20,7 +21,7 @@ class TestVariable:
         assert v.name == "V1"
         assert v.mask is mask
         assert v.algebra is alg
-        assert v.label == "a"
+        assert v.label == 0
         assert v.labels[0] == v.label
         assert len(v.labels) == MAX_DEGREE
 
@@ -33,14 +34,14 @@ class TestVariable:
         assert v.labels != w.labels
         assert not (set(v.labels) & set(w.labels))
 
-    def test_too_many_variables(self):
+    def test_many_variables(self):
         _reset_allocator()
         alg = BasisE3()
         mask = BladeMask(alg, grades=[0, 2])
-        for i in range(max_variables()):
-            Variable(f"V{i}", mask)
-        with pytest.raises(RuntimeError):
-            Variable("over", mask)
+        for i in range(200):
+            v = Variable(f"V{i}", mask)
+            assert isinstance(v.label, int)
+            assert v.label >= 0
 
     def test_repr(self):
         _reset_allocator()
@@ -59,3 +60,12 @@ class TestVariable:
         assert TopVar is Variable
         assert PkgVar is Variable
         assert PkgExpr is Expression
+
+    def test_reflected_ops_constant_left(self):
+        _reset_allocator()
+        alg = BasisE3()
+        omega = Variable("omega", BladeMask(alg, grades=[2]))
+        x_cm = alg.multivector({"e12": 1.0, "e13": 2.0})
+        for result in (x_cm ^ omega, x_cm | omega, x_cm * omega):
+            assert isinstance(result, Expression)
+            assert set(result.names) == {"omega"}

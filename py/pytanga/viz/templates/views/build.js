@@ -5,39 +5,49 @@
 import { View } from './view.js';
 import { SplitView } from './split-view.js';
 import { StackView } from './stack-view.js';
+import { ToolbarView } from './toolbar-view.js';
 import { GroupView } from './group-view.js';
+import { MenuView } from './menu-view.js';
 import { ThreeJsView } from './three-view.js';
 import { SliderView } from './slider-view.js';
 import { ButtonView } from './button-view.js';
 import { DropdownView } from './dropdown-view.js';
 import { FileChooserView } from './file-chooser-view.js';
 import { TextFieldView } from './text-field-view.js';
+import { MessageView, registerMessageView } from './message-view.js';
+import { LabelView } from './label-view.js';
+import { MarkdownView } from './markdown-view.js';
 import { TextAreaView } from './text-area-view.js';
 import { ColorPickerView } from './color-picker-view.js';
 import { CheckboxView } from './checkbox-view.js';
 import { ValueEditView } from './value-edit-view.js';
+import { TableView } from './table-view.js';
 import { SpacerView } from './spacer-view.js';
+import { SeparatorView } from './separator-view.js';
 
 function applySizeSpecs(view, node) {
-    if (node.min_width) view.minWidth = node.min_width;
-    if (node.max_width) view.maxWidth = node.max_width;
-    if (node.min_height) view.minHeight = node.min_height;
-    if (node.max_height) view.maxHeight = node.max_height;
-    if (node.preferred_width) view.preferredWidth = node.preferred_width;
-    if (node.preferred_height) view.preferredHeight = node.preferred_height;
+    // Assign unconditionally so a `null` from Python clears any JS default
+    // (e.g. the ControlView min floors set at construction time).
+    view.minWidth = node.min_width ?? null;
+    view.maxWidth = node.max_width ?? null;
+    view.minHeight = node.min_height ?? null;
+    view.maxHeight = node.max_height ?? null;
+    view.preferredWidth = node.preferred_width ?? null;
+    view.preferredHeight = node.preferred_height ?? null;
 }
 
 /** Build a `View` tree from a serialized `view_layout` node. */
-export function buildViewTree(node, ws) {
+export function buildViewTree(node, ws, reuse, newScenes) {
     if (!node) return new View();
 
     if (node.type === 'split') {
         const split = new SplitView({ orientation: node.orientation, movable: node.movable });
+        split.viewId = node.id;
         applySizeSpecs(split, node);
         const children = node.children || [];
         const sizes = node.sizes || [];
         children.forEach((childNode, i) => {
-            const child = buildViewTree(childNode, ws);
+            const child = buildViewTree(childNode, ws, reuse, newScenes);
             // Initial splitter positions (`sizes`) → the child's preferred size
             // along the split axis.
             const sizeSpec = sizes[i] || null;
@@ -51,10 +61,17 @@ export function buildViewTree(node, ws) {
     }
 
     if (node.type === 'stack') {
-        const stack = new StackView({ direction: node.direction });
+        const stack = new StackView({
+            direction: node.direction,
+            scrollable: node.scrollable,
+            gap: node.gap,
+            align: node.align,
+            justify: node.justify,
+        });
+        stack.viewId = node.id;
         applySizeSpecs(stack, node);
         for (const childNode of node.children || []) {
-            stack.addChild(buildViewTree(childNode, ws));
+            stack.addChild(buildViewTree(childNode, ws, reuse, newScenes));
         }
         return stack;
     }
@@ -65,20 +82,88 @@ export function buildViewTree(node, ws) {
             direction: node.direction,
             position: node.position,
             collapsed: node.collapsed,
+            scrollable: node.scrollable,
+            gap: node.gap,
+            align: node.align,
+            justify: node.justify,
+            icon: node.icon,
+            icon_only: node.icon_only,
+            tooltip: node.tooltip,
+            parent_id: node.parent_id,
+            id: node.id,
         });
+        group.viewId = node.id;
         applySizeSpecs(group, node);
         for (const childNode of node.children || []) {
-            group.addChild(buildViewTree(childNode, ws));
+            group.addChild(buildViewTree(childNode, ws, reuse, newScenes));
         }
         return group;
     }
 
-    if (node.type === 'scene_view') {
-        const view = new ThreeJsView(node.scene, ws, node.camera || null, node.id || null);
-        applySizeSpecs(view, node);
+    if (node.type === 'toolbar') {
+        const toolbar = new ToolbarView({
+            margin: node.margin,
+            border: node.border,
+            gap: node.gap,
+            align: node.align,
+            justify: node.justify,
+        });
+        toolbar.viewId = node.id;
+        applySizeSpecs(toolbar, node);
         for (const childNode of node.children || []) {
-            view.addOverlay(buildViewTree(childNode, ws));
+            toolbar.addChild(buildViewTree(childNode, ws, reuse, newScenes));
         }
+        return toolbar;
+    }
+
+    if (node.type === 'menu') {
+        const menu = new MenuView({
+            trigger_icon: node.trigger_icon,
+            label: node.label,
+            mode: node.mode,
+            direction: node.direction,
+            position: node.position,
+        });
+        menu.viewId = node.id;
+        applySizeSpecs(menu, node);
+        for (const childNode of node.children || []) {
+            menu.addChild(buildViewTree(childNode, ws, reuse, newScenes));
+        }
+        return menu;
+    }
+
+    if (node.type === 'scene_view') {
+        const sceneName = node.scene ?? '';
+        let view = (reuse && reuse.get(sceneName)) || null;
+        if (view) {
+            // Reuse the existing scene pane so its WebGL context, objects and
+            // camera survive a layout re-push; only the overlay chrome rebuilds.
+            reuse.delete(sceneName);
+            view.clearOverlays();
+            view.viewId = node.id || null;
+            applySizeSpecs(view, node);
+        } else {
+            view = new ThreeJsView(sceneName, ws, node.camera || null, node.id || null);
+            applySizeSpecs(view, node);
+            if (newScenes) newScenes.push(sceneName);
+        }
+        for (const childNode of node.children || []) {
+            view.addOverlay(buildViewTree(childNode, ws, reuse, newScenes));
+        }
+        return view;
+    }
+
+    if (node.type === 'log_view') {
+        const view = new MessageView({
+            id: node.id,
+            max_history: node.max_history ?? null,
+            lines: node.lines || [],
+            show_date: node.show_date ?? false,
+            show_utc_offset: node.show_utc_offset ?? false,
+        });
+        view.viewId = node.id;
+        applySizeSpecs(view, node);
+        registerMessageView(view.messageId, view);
         return view;
     }
 
@@ -87,27 +172,35 @@ export function buildViewTree(node, ws) {
         view = new SliderView({
             id: node.id, label: node.label, tooltip: node.tooltip,
             min: node.min, max: node.max, step: node.step, value: node.value,
+            variant: node.variant,
         });
     } else if (node.type === 'button_view') {
         view = new ButtonView({
             id: node.id, label: node.label, tooltip: node.tooltip,
             icon: node.icon, icon_only: node.icon_only,
+            variant: node.variant,
         });
     } else if (node.type === 'dropdown_view') {
         view = new DropdownView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            options: node.options, value: node.value,
+            options: node.options, value: node.value, variant: node.variant,
         });
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value, placeholder: node.placeholder,
-            root: node.root, accept: node.accept,
+            id: node.id, value: node.value, root: node.root, accept: node.accept,
         });
     } else if (node.type === 'text_field_view') {
         view = new TextFieldView({
             id: node.id, label: node.label, tooltip: node.tooltip,
             value: node.value, placeholder: node.placeholder,
+        });
+    } else if (node.type === 'label_view') {
+        view = new LabelView({
+            id: node.id, value: node.value, font_size: node.font_size,
+        });
+    } else if (node.type === 'markdown_view') {
+        view = new MarkdownView({
+            id: node.id, value: node.value,
         });
     } else if (node.type === 'text_area_view') {
         view = new TextAreaView({
@@ -122,7 +215,7 @@ export function buildViewTree(node, ws) {
     } else if (node.type === 'checkbox_view') {
         view = new CheckboxView({
             id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value,
+            value: node.value, variant: node.variant,
         });
     } else if (node.type === 'value_edit_view') {
         view = new ValueEditView({
@@ -130,11 +223,32 @@ export function buildViewTree(node, ws) {
             min: node.min, max: node.max, step: node.step,
             digits: node.digits, value: node.value, editable: node.editable,
         });
+    } else if (node.type === 'table_view') {
+        view = new TableView({
+            id: node.id, label: node.label, tooltip: node.tooltip,
+            columns: node.columns, rows: node.rows,
+            allow_add_rows: node.allow_add_rows, allow_add_columns: node.allow_add_columns,
+            allow_delete_rows: node.allow_delete_rows,
+            show_column_titles: node.show_column_titles,
+            show_row_numbers: node.show_row_numbers,
+            allow_delete_columns: node.allow_delete_columns,
+            sortable: node.sortable,
+            column_types: node.column_types,
+            column_widths: node.column_widths,
+            row_height: node.row_height,
+            sort: node.sort,
+        });
     } else if (node.type === 'spacer') {
         view = new SpacerView();
+    } else if (node.type === 'separator') {
+        view = new SeparatorView({
+            orientation: node.orientation,
+            spacing: node.spacing,
+        });
     } else {
         view = new View();
     }
+    view.viewId = node.id;
     applySizeSpecs(view, node);
     return view;
 }

@@ -12,6 +12,10 @@ from pytanga.viz.export._bootstrap._errors import (
     js_cdn_check_script,
     js_loading_overlay_html,
 )
+from pytanga.viz.export._bootstrap._scene import (
+    js_runtime_imports,
+    js_tanga_bridge,
+)
 from pytanga.viz.export._bootstrap._utils import _escape_html
 
 _CDN_CHECK_SCRIPT = js_cdn_check_script()
@@ -33,7 +37,14 @@ _CDN_KATEX_AUTORENDER_JS = (
     "</script>\n"
 )
 
-_CDN_SCRIPTS = _CDN_MARKED_JS + _CDN_KATEX_JS + _CDN_KATEX_AUTORENDER_JS
+_CDN_HTML2CANVAS_JS = (
+    '<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">'
+    "</script>\n"
+)
+
+_CDN_SCRIPTS = (
+    _CDN_MARKED_JS + _CDN_KATEX_JS + _CDN_KATEX_AUTORENDER_JS + _CDN_HTML2CANVAS_JS
+)
 
 _THREEJS_IMPORT_MAP = (
     '<script type="importmap">\n'
@@ -108,14 +119,63 @@ _TEMPLATES_DIR = _RENDERERS_DIR.parent
 
 # Shared (non-renderer) JS modules bundled alongside the renderer modules.
 # ``scene-builder.js`` provides the scene-graph construction shared by the
-# live viewer and the export bootstrap.
+# live viewer and the export bootstrap.  ``camera-fit.js`` is the shared,
+# pure ortho/aspect math used by ``fit_camera.js`` and ``js_apply_camera``.
 _SHARED_JS_FILES: list[Path] = [
+    _TEMPLATES_DIR / "camera-fit.js",
     _TEMPLATES_DIR / "scene-builder.js",
+    _TEMPLATES_DIR / "fit_camera.js",
     # SDF tree emitters used by the per-object SDF proxy renderer (`sdf.js`).
     _TEMPLATES_DIR / "sdf" / "objects" / "transform.js",
     _TEMPLATES_DIR / "sdf" / "objects" / "primitives.js",
     _TEMPLATES_DIR / "sdf" / "objects" / "combinators.js",
 ]
+
+_SDF_SHADER_KEYS = ("common", "primitives", "combinators", "proxy")
+
+_SDF_SHADER_FILES: list[Path] = [
+    _TEMPLATES_DIR / "sdf" / "shaders" / "sdf_common.glsl",
+    _TEMPLATES_DIR / "sdf" / "shaders" / "primitives.glsl",
+    _TEMPLATES_DIR / "sdf" / "shaders" / "combinators.glsl",
+    _RENDERERS_DIR / "sdf" / "proxy.glsl",
+]
+
+
+def third_party_scripts(delivery: str) -> str:
+    """Return the marked/KaTeX/html2canvas script block for *delivery*."""
+    if delivery == "offline":
+        from pytanga.viz.export._offline import offline_third_party_html
+
+        return offline_third_party_html()
+    return _CDN_SCRIPTS
+
+
+def offline_katex_css() -> str:
+    """Return the offline KaTeX CSS as an inlined ``<style>`` block."""
+    from pytanga.viz.export._offline import offline_katex_css as _offline_katex_css
+
+    return _offline_katex_css()
+
+
+def three_import_map(delivery: str) -> str:
+    """Return the Three.js import map (empty for the offline bundle)."""
+    return "" if delivery == "offline" else _THREEJS_IMPORT_MAP
+
+
+def katex_css_for_delivery(delivery: str, cdn_css: str) -> str:
+    """Adapt a conditional KaTeX CSS link for *delivery*."""
+    if not cdn_css:
+        return ""
+    if delivery == "offline":
+        return offline_katex_css()
+    return cdn_css
+
+
+def static_third_party(delivery: str) -> str:
+    """Return the static snapshot's full third-party block (KaTeX CSS always)."""
+    if delivery == "offline":
+        return third_party_scripts("offline") + offline_katex_css()
+    return _CDN_SCRIPTS + _KATEX_CSS_LINK
 
 
 # ── Bootstrap concatenation ────────────────────────────────────────
@@ -184,25 +244,105 @@ def _strip_imports(source: str) -> str:
     return "\n".join(cleaned)
 
 
-def generate_bootstrap_js(adapter_js: str) -> str:
-    """Concatenate stripped renderer modules + an adapter JS string.
+def library_source_files() -> list[Path]:
+    """Return the ordered list of every file that feeds :func:`generate_library_js`."""
+    return list(_RENDERER_FILES) + list(_SHARED_JS_FILES) + list(_SDF_SHADER_FILES)
 
-    This replaces the duplicated 10-line pattern that appeared in every
-    ``_generate_*_bootstrap()`` function across ``_html.py``,
-    ``_figure_html.py``, and ``_animated_figure.py``.
+
+def generate_library_js() -> str:
+    """Return the shared viewer library (runtime imports, renderer modules, bridge).
+
+    This is the scene-independent part of an export: the ``three``/addons
+    imports, the inlined SDF shaders, a no-op ``sendLog``/``sendEvent`` stub,
+    the stripped renderer + shared modules, and the ``window.__tanga`` bridge.
     """
-    parts: list[str] = []
-    parts.append("import * as THREE from 'three';")
-    parts.append(_sdf_shader_injection())
-    parts.append(_ray_shader_injection())
-
+    parts: list[str] = [
+        js_runtime_imports(),
+        _sdf_shader_injection(),
+        _ray_shader_injection(),
+        "function sendLog() {}\nfunction sendEvent() {}",
+    ]
     for path in _RENDERER_FILES + _SHARED_JS_FILES:
-        src = path.read_text(encoding="utf-8")
-        src = _strip_imports(src)
-        parts.append(src)
-
-    parts.append(adapter_js)
+        parts.append(_strip_imports(path.read_text(encoding="utf-8")))
+    parts.append(js_tanga_bridge())
     return "\n\n".join(parts)
+
+
+def generate_bootstrap_js(adapter_js: str) -> str:
+    """Concatenate the shared library with an adapter JS string.
+
+    Composes :func:`generate_library_js` (the scene-independent runtime +
+    renderer modules) with the scene-specific adapter for the inline delivery
+    path.
+    """
+    return generate_library_js() + "\n\n" + adapter_js
+
+
+def generate_theme_css(
+    theme_id: str,
+    *,
+    include_components: bool = True,
+    include_overrides: bool = True,
+) -> str:
+    """Return the active theme's CSS inlined into a single ``<style>`` block.
+
+    Symmetric to :func:`generate_bootstrap_js`: reads the resolved CSS files
+    (via the theme registry) and concatenates them in order, so standalone HTML
+    exports carry the active theme with no external ``<link>``.
+
+    *include_components* / *include_overrides* drop the UI component sheets and
+    per-theme overrides (both True by default).  Static exports that render no
+    themed controls pass both as ``False`` to pack only the base + token shell.
+    """
+    from pytanga.viz._themes import registry
+
+    parts = [
+        p.read_text(encoding="utf-8")
+        for p in registry.theme_css_paths(
+            theme_id,
+            components=include_components,
+            overrides=include_overrides,
+        )
+    ]
+    css = "\n".join(parts)
+    return f"<style>\n{css}\n</style>\n"
+
+
+def theme_css_for_delivery(
+    theme_id: str,
+    delivery: str,
+    delivery_ref: str | None = None,
+    *,
+    include_components: bool = True,
+    include_overrides: bool = True,
+) -> str:
+    """Return the theme CSS for *delivery* as ``<link>`` tags or an inline block.
+
+    ``"cdn"`` references each bundled theme CSS file from jsDelivr (pinned to the
+    same ref as the viewer bundle).  Runtime-registered external themes are not
+    published to the CDN, so they fall back to inlining.  ``"inline"`` and
+    ``"offline"`` always inline via :func:`generate_theme_css`.
+    """
+    from pytanga.viz._themes import registry
+
+    if delivery == "cdn" and registry.is_bundled(theme_id):
+        from pytanga.viz.export._cdn import build_theme_css_url
+
+        files = registry.theme_css_files(
+            theme_id,
+            components=include_components,
+            overrides=include_overrides,
+        )
+        return "".join(
+            f'<link rel="stylesheet" href="{build_theme_css_url(rel, delivery_ref)}">\n'
+            for rel in files
+        )
+
+    return generate_theme_css(
+        theme_id,
+        include_components=include_components,
+        include_overrides=include_overrides,
+    )
 
 
 def _sdf_shader_injection() -> str:
@@ -212,16 +352,8 @@ def _sdf_shader_injection() -> str:
     export has no server, so ``sdf.js`` falls back to this inlined global.
     """
     parts = {
-        "common": (_TEMPLATES_DIR / "sdf" / "shaders" / "sdf_common.glsl").read_text(
-            encoding="utf-8"
-        ),
-        "primitives": (
-            _TEMPLATES_DIR / "sdf" / "shaders" / "primitives.glsl"
-        ).read_text(encoding="utf-8"),
-        "combinators": (
-            _TEMPLATES_DIR / "sdf" / "shaders" / "combinators.glsl"
-        ).read_text(encoding="utf-8"),
-        "proxy": (_RENDERERS_DIR / "sdf" / "proxy.glsl").read_text(encoding="utf-8"),
+        key: path.read_text(encoding="utf-8")
+        for key, path in zip(_SDF_SHADER_KEYS, _SDF_SHADER_FILES, strict=True)
     }
     return "window.__tanga_sdf_shaders = " + json.dumps(parts) + ";"
 
@@ -293,7 +425,11 @@ def html_fullpage_template(
     controls_html: str = "",
     annotation_controls_reposition_js: str = "",
     body_div: str = "",
-    bootstrap_js: str = "",
+    library_script: str = "",
+    adapter_js: str = "",
+    third_party_html: str = "",
+    import_map_html: str = "",
+    theme_css: str = "",
 ) -> str:
     """Return a full-page HTML document (``<!DOCTYPE html>`` ... ``</html>``).
 
@@ -308,7 +444,11 @@ def html_fullpage_template(
         controls_html: Playback controls HTML (injected into ``<body>``).
         annotation_controls_reposition_js: Repositioning script block.
         body_div: The main container ``<div>`` for the 3D viewport.
-        bootstrap_js: The concatenated renderer modules + adapter JS.
+        library_script: The viewer library ``<script>`` tag (src or inlined).
+        adapter_js: The scene-specific adapter JS (destructures ``window.__tanga``).
+        third_party_html: Marked/KaTeX/html2canvas ``<script>``/``<style>`` block.
+        import_map_html: The Three.js import map (empty for offline).
+        theme_css: Inlined theme CSS ``<style>`` block (``generate_theme_css``).
 
     Returns:
         Full HTML document string.
@@ -327,8 +467,9 @@ def html_fullpage_template(
         "#tanga-controls { z-index: 10; }\n"
         "</style>\n"
         + katex_css
-        + _CDN_SCRIPTS
-        + _THREEJS_IMPORT_MAP
+        + third_party_html
+        + import_map_html
+        + theme_css
         + anim_embed
         + decompress_js
         + "</head>\n"
@@ -340,8 +481,9 @@ def html_fullpage_template(
         + controls_html
         + "\n"
         + annotation_controls_reposition_js
+        + library_script
         + '<script type="module">\n'
-        + bootstrap_js
+        + adapter_js
         + "\n</script>\n"
         "</body>\n"
         "</html>"
@@ -357,8 +499,12 @@ def html_snippet_template(
     decompress_js: str = "",
     responsive_style_block: str = "",
     controls_html: str = "",
-    bootstrap_js: str = "",
+    library_script: str = "",
+    adapter_js: str = "",
+    third_party_html: str = "",
+    import_map_html: str = "",
     config_data_json: str = "{}",
+    theme_css: str = "",
 ) -> str:
     """Return an HTML snippet (``<div>`` + ``<script type="module">``) for embedding.
 
@@ -371,8 +517,12 @@ def html_snippet_template(
         responsive_style_block: ``<style>`` block for responsive sizing.
         controls_html: Playback controls HTML (injected inside the container
             div for animated figures).
-        bootstrap_js: Concatenated renderer modules + adapter JS.
+        library_script: The viewer library ``<script>`` tag (src or inlined).
+        adapter_js: The scene-specific adapter JS (destructures ``window.__tanga``).
+        third_party_html: Marked/KaTeX/html2canvas ``<script>``/``<style>`` block.
+        import_map_html: The Three.js import map (empty for offline).
         config_data_json: JSON string for ``data-figure-config`` attribute.
+        theme_css: Inlined theme CSS ``<style>`` block (``generate_theme_css``).
 
     Returns:
         HTML snippet string.
@@ -386,10 +536,11 @@ def html_snippet_template(
         "<!-- Tanga 3D Figure -->\n"
         + _CDN_CHECK_SCRIPT
         + _LOADING_OVERLAY_HTML
-        + _CDN_SCRIPTS
+        + third_party_html
         + katex_css
         + responsive_style_block
-        + _THREEJS_IMPORT_MAP
+        + theme_css
+        + import_map_html
         + anim_embed
         + decompress_js
         + f'<div id="{fig_id}"'
@@ -397,7 +548,8 @@ def html_snippet_template(
         + f" data-figure-config='{escaped_config}'>"
         + controls_html
         + "</div>\n"
+        + library_script
         + '<script type="module">\n'
-        + bootstrap_js
+        + adapter_js
         + "\n</script>"
     )

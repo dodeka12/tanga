@@ -5,10 +5,12 @@
 
 from __future__ import annotations
 
+from types import NotImplementedType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._algebra import Algebra
+    from pytanga.blade_mask import BladeMask
 
 
 class MV:
@@ -90,10 +92,14 @@ class MV:
             return self._alg.scale(self._alg.inv(self), other)
         return NotImplemented
 
-    def __xor__(self, other: "MV") -> "MV":
+    def __xor__(self, other: "MV") -> "MV | NotImplementedType":
+        if not isinstance(other, MV):
+            return NotImplemented
         return self._alg.op(self, other)
 
-    def __or__(self, other: "MV") -> "MV":
+    def __or__(self, other: "MV") -> "MV | NotImplementedType":
+        if not isinstance(other, MV):
+            return NotImplemented
         return self._alg.ip(self, other)
 
     def __invert__(self) -> "MV":
@@ -266,14 +272,14 @@ class MV:
         """Scalar product (scalar part of self * other)."""
         return self._alg.sp(self, other)
 
-    def project_to(self, other: "MV | int | list[int]") -> "MV":
-        """Restrict self to blade set of *other*.
+    def project_onto(self, other: "MV | BladeMask") -> "MV":
+        """Restrict self to a blade set, keeping only self's components.
 
-        - ``MV`` — retain only blades present in *other*.
-        - ``int`` — blade mask; retain blades whose mask is a subset.
-        - ``list[int]`` — blade IDs; retain only those exact blades.
+        - ``MV`` — retain self's blades that are non-zero in *other*.
+        - ``BladeMask`` — retain self's blades whose id is exactly in
+          ``other.ids``.
         """
-        return self._alg.project_to(self, other)
+        return self._alg.project_onto(self, other)
 
     # -----------------------------------------------------------------------
     # Phase A — Grade‑based involution & conjugation
@@ -475,9 +481,17 @@ class MV:
         """
         return self._alg.meet(self, other)
 
-    def blade_factorize_versor(self) -> "tuple[MV, list[MV]]":
-        """Factorize this versor into (scale, factor_vectors)."""
-        return self._alg.blade_factorize_versor(self)
+    def blade_factorize_versor(
+        self, eps: float = 1e-6, max_iterations: int = 64
+    ) -> "tuple[MV, list[MV]]":
+        """Factorize this versor into (scale, factor_vectors).
+
+        See :meth:`pytanga.algebra.Algebra.blade_factorize_versor` for the
+        ``eps`` / ``max_iterations`` semantics.
+        """
+        return self._alg.blade_factorize_versor(
+            self, eps=eps, max_iterations=max_iterations
+        )
 
     def project(self, blade: "MV") -> "MV":
         """Project this multivector onto a non-degenerate blade: proj_N(A) = (A . N) N^-1.

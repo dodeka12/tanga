@@ -5,8 +5,9 @@
 
 import numpy as np
 import pytest
-from pytanga import Algebra, BladeMask, random_mask, random_mv
+from pytanga import Algebra, BladeMask, random_mask
 from pytanga.algebra import EProduct
+from pytanga.geometry import RndMV
 from pytanga.solver.solve import solve_lsq
 
 
@@ -30,9 +31,14 @@ def _setup_lsq_system(alg, product, rng_seed):
         )
     x_mask_ids = sorted(gen.choice(reachable_ids, size=10, replace=False).tolist())
     x_mask = BladeMask(alg, x_mask_ids)
-    x_orig = random_mv(alg, mask=x_mask, rng=int(rng_seed + 2))
+    x_orig = RndMV(x_mask, [(-1.0, 1.0)] * len(x_mask))(
+        np.random.default_rng(int(rng_seed + 2))
+    )
     a_list = [
-        random_mv(alg, mask=a_mask, rng=int(rng_seed + 100 + i)) for i in range(10)
+        RndMV(a_mask, [(-1.0, 1.0)] * len(a_mask))(
+            np.random.default_rng(int(rng_seed + 100 + i))
+        )
+        for i in range(10)
     ]
     if product == EProduct.GP:
         c_list = [a_i * x_orig for a_i in a_list]

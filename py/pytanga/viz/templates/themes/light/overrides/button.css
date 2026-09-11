@@ -1,0 +1,12 @@
+/* Tanga viewer — light theme button override. */
+
+.tanga-action-button {
+    background: var(--tanga-accent);
+    border: 1px solid var(--tanga-border-strong);
+    color: #fff;
+}
+
+.tanga-action-button:hover {
+    background: var(--tanga-accent-soft);
+}
+

@@ -63,10 +63,17 @@ ref.translate(1, 0, 0)                       # or a Point / Direction / Translat
 ref.rotate(angle=0.5, axis=(0, 0, 1))        # axis-angle, Euler "XYZ"
 ref.scale_by(2.0)                            # uniform or component-wise
 ref.set_transform(position=(1, 2, 3), rotation=(0, 0, 0), scale=(1, 1, 1))
+```
 
-# Operator-based transforms compose in local space:
+`set_transform(...)` *sets* (replaces) the transform and `apply_transform(...)`
+*composes* it in local space. Both accept the same inputs — a `Transform`, an
+`MV`, or a GA operator (`Rotor`/`GeneralRotor`/`Motor`/`Translator`/`Dilator`):
+
+```python
 from pytanga.geometry.operators import Motor, Rotor, Translator
-ref.apply_transform(Rotor(angle=0.5, axis=Direction(0, 0, 1)))
+
+ref.set_transform(Translator(vector=Direction(1, 0, 0)))        # set (replace)
+ref.apply_transform(Rotor(angle=0.5, axis=Direction(0, 0, 1)))  # compose
 ref.apply_transform(Motor(
     rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
     translator=Translator(vector=Direction(1, 0, 0)),
@@ -77,6 +84,21 @@ ref.apply_transform(Motor(
 :class:`~pytanga.viz.Transform` (with `.matrix()`, `.position`, `.rotation`,
 `.scale`, `apply_matrix`, …), and `ref.world_matrix` returns the composed world
 matrix through the parent chain.
+
+`Transform` is importable from `pytanga.viz`, and can be built directly from a
+GA operator with :meth:`~pytanga.viz.Transform.from_operator` — useful for
+baking a body's static placement into a `VizGroup` at construction time:
+
+```python
+from pytanga.geometry.operators import Motor, Rotor, Translator
+from pytanga.viz import Transform, VizGroup
+
+op = Motor(
+    rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
+    translator=Translator(vector=Direction(1, 0, 0)),
+)
+group = VizGroup(id="body", transform=Transform.from_operator(op))
+```
 
 ### Labels & overlays
 

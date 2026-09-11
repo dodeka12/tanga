@@ -58,6 +58,8 @@ class SdfNode:
             the default (``union``).
         id: Optional name, so a node (e.g. an :class:`SdfGroup` member) can be
             referenced by string instead of by index.
+        smoothness: Optional blend radius for smooth combinators (used only when
+            this node is a child folded by a ``smooth_*`` combine mode).
     """
 
     kind: str
@@ -66,6 +68,7 @@ class SdfNode:
     children: list["SdfNode"] | None = None
     combine: str | None = None
     id: str | None = None
+    smoothness: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-ready dict, omitting empty sections."""
@@ -80,6 +83,8 @@ class SdfNode:
             result["combine"] = self.combine
         if self.id:
             result["id"] = self.id
+        if self.smoothness is not None:
+            result["smoothness"] = self.smoothness
         return result
 
 
@@ -112,9 +117,18 @@ def primitive(
     return SdfNode(kind=kind, params=merged, transform=transform, id=id)
 
 
-def combine(op: str, *children: SdfNode, id: str | None = None) -> SdfNode:
-    """Build a combinator node folding the child trees."""
-    return SdfNode(kind=op, children=list(children), id=id)
+def combine(
+    op: str,
+    *children: SdfNode,
+    id: str | None = None,
+    smoothness: float | None = None,
+) -> SdfNode:
+    """Build a combinator node folding the child trees.
+
+    ``smoothness`` is the blend radius for ``smooth_*`` ops and is ignored
+    otherwise.
+    """
+    return SdfNode(kind=op, children=list(children), id=id, smoothness=smoothness)
 
 
 def group(

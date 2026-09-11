@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Validate the example notebooks shipped under ``py/examples/ga/jupyter/``.
+"""Validate the example notebooks shipped under ``py/examples/viz/jupyter/``.
 
 Jupyter executes each code cell as an independent compilation unit, so these
 tests parse cells individually (rather than concatenating them) and check that
@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_NOTEBOOKS_DIR = _REPO_ROOT / "py" / "examples" / "ga" / "jupyter"
+_NOTEBOOKS_DIR = _REPO_ROOT / "py" / "examples" / "viz" / "jupyter"
 
 _EXPECTED_NOTEBOOKS = {"interactive.ipynb", "animation.ipynb", "export.ipynb"}
 

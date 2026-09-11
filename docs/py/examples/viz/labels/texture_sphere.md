@@ -101,6 +101,7 @@ def main():
     )
 
     print("Starting viewer...")
+    viz.export_snapshot("_output/test.html")
     viz.show()
     viz.wait()
 

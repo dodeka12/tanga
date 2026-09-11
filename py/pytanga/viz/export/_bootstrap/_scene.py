@@ -18,9 +18,34 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';"""
 
 
+_TANGA_BRIDGE_SYMBOLS = (
+    "THREE, OrbitControls, CSS2DRenderer, CSS2DObject, "
+    "Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, "
+    "buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect, "
+    "updateEntityMesh, removeEntityMesh"
+)
+
+
+def js_runtime_imports() -> str:
+    """Return the full runtime import block: ``THREE`` + the used addons."""
+    return "import * as THREE from 'three';\n" + js_imports()
+
+
+def js_tanga_destructure() -> str:
+    """Return the line that destructures the runtime + API from ``window.__tanga``."""
+    return f"const {{ {_TANGA_BRIDGE_SYMBOLS} }} = window.__tanga;"
+
+
+def js_tanga_bridge() -> str:
+    """Return the ``window.__tanga = { … };`` assignment exposing the library API."""
+    return f"""window.__tanga = {{
+    {_TANGA_BRIDGE_SYMBOLS},
+}};"""
+
+
 def js_scene_setup(
     *,
-    bg_color: str,
+    bg_color: str | None,
     container_expr: str,
     append_to: str,
     renderer_var: str,
@@ -45,7 +70,9 @@ def js_scene_setup(
     Args:
         bg_color: CSS color for scene background.  When ``"transparent"``,
             the renderer uses ``alpha: true`` and a fully transparent clear
-            colour so the figure blends into its parent container.
+            colour so the figure blends into its parent container.  When
+            ``None`` (or empty), the scene background follows the active
+            theme's ``--tanga-bg`` CSS token.
         container_expr: JS expression for the container DOM element.
         append_to: JS expression for where to append renderer DOM elements.
         renderer_var: JS variable name for ``WebGLRenderer``.
@@ -89,8 +116,17 @@ def js_scene_setup(
         scene_bg = f"{scene_var}.background = null;"
         renderer_opts = "{ antialias: true, alpha: true }"
         clear_color = f"\n{renderer_var}.setClearColor(0x000000, 0);"
-    else:
+    elif bg_color:
         scene_bg = f"{scene_var}.background = new THREE.Color('{bg_color}');"
+        renderer_opts = "{ antialias: true }"
+        clear_color = ""
+    else:
+        # No explicit background → follow the active theme's `--tanga-bg` token.
+        scene_bg = (
+            f"const _tangaBg = getComputedStyle(document.documentElement)"
+            f".getPropertyValue('--tanga-bg').trim();\n"
+            f"{scene_var}.background = _tangaBg ? new THREE.Color(_tangaBg) : null;"
+        )
         renderer_opts = "{ antialias: true }"
         clear_color = ""
 
@@ -106,12 +142,20 @@ const {camera_var} = new THREE.OrthographicCamera(
     0.1, 1000
 );
 {camera_var}.position.set(0, 0, 20);
-{camera_var}.lookAt(0, 0, 0);"""
+{camera_var}.lookAt(0, 0, 0);
+{camera_var}.userData._view2d = {{
+    xmin: _frustumSize * ({width_expr} / {height_expr}) / -2,
+    xmax: _frustumSize * ({width_expr} / {height_expr}) / 2,
+    ymin: -_frustumSize / 2,
+    ymax: _frustumSize / 2,
+    stretch: 'fit',
+    border_px: 0,
+}};"""
     else:
         camera_js = f"""const {camera_var} = new THREE.PerspectiveCamera(
     50, {width_expr} / {height_expr}, 0.1, 1000
 );
-{camera_var}.position.set(8, 6, 10);"""
+{camera_var}.position.set(6, 4.5, 7.5);"""
 
     # ── Controls extras for 2D ─────────────────────────────
     controls_2d_extras = ""
@@ -194,17 +238,31 @@ def js_resize_handler(
     height_expr: str,
     conditional: bool = False,
     container_expr: str = "",
+    space_dim: int = 3,
 ) -> str:
-    """Generate JS for window resize handler."""
+    """Generate JS for window resize handler.
+
+    For 2D scenes the orthographic frustum is recomputed from the stored
+    ``camera.userData._view2d`` rect (via the bundled ``applyOrthoFrustum``)
+    before the ``aspect``/``updateProjectionMatrix``/``setSize`` calls, so a
+    resize no longer stretches the view.
+    """
+    ortho_block = ""
+    if space_dim == 2:
+        ortho_block = (
+            f"    if ({camera_var}.isOrthographicCamera) {{\n"
+            f"        applyOrthoFrustum({camera_var}, rw, rh);\n"
+            f"    }}\n"
+        )
+
     if conditional:
         if not container_expr:
             return ""
-        else:
-            return f"""// Resize handler
+        return f"""// Resize handler
 window.addEventListener('resize', () => {{
     const rw = {container_expr}.clientWidth || window.innerWidth;
     const rh = {container_expr}.clientHeight || window.innerHeight;
-    {camera_var}.aspect = rw / rh;
+{ortho_block}    {camera_var}.aspect = rw / rh;
     {camera_var}.updateProjectionMatrix();
     {renderer_var}.setSize(rw, rh);
     {label_renderer_var}.setSize(rw, rh);
@@ -212,130 +270,53 @@ window.addEventListener('resize', () => {{
 
     return f"""// Resize handler
 window.addEventListener('resize', () => {{
-    {camera_var}.aspect = {width_expr} / {height_expr};
+    const rw = {width_expr};
+    const rh = {height_expr};
+{ortho_block}    {camera_var}.aspect = rw / rh;
     {camera_var}.updateProjectionMatrix();
-    {renderer_var}.setSize({width_expr}, {height_expr});
-    {label_renderer_var}.setSize({width_expr}, {height_expr});
+    {renderer_var}.setSize(rw, rh);
+    {label_renderer_var}.setSize(rw, rh);
 }});"""
 
 
 def js_autofit_camera(
     *,
-    mesh_map_var: str,
+    registry_var: str,
     camera_var: str,
     controls_var: str,
     cam_explicit: bool,
     space_dim: int = 3,
+    width_expr: str,
+    height_expr: str,
 ) -> str:
-    """Generate JS for auto-fit camera from entity bounding box."""
+    """Generate JS that fits the camera via the shared ``fitCamera()``.
+
+    The shared function lives in ``templates/fit_camera.js``, which is bundled
+    into the export bootstrap and re-exported by the live viewer's
+    ``view_mode.js``, so every viewer runs the exact same auto-fit.  The
+    viewport size expressions are passed through so the 2D fit uses the pane's
+    size rather than ``window``.
+    """
     if cam_explicit:
         return ""
-
-    if space_dim == 2:
-        return f"""// Auto-fit 2D orthographic camera from entity XY bounds
-if ({mesh_map_var}.size > 0) {{
-    const box = new THREE.Box3();
-    {mesh_map_var}.forEach(m => box.expandByObject(m));
-    if (!box.isEmpty()) {{
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const sz = new THREE.Vector3();
-        box.getSize(sz);
-        const frustumSize = Math.max(sz.x, sz.y, 1) * 1.2;
-        const aspect = {camera_var}.right ? Math.abs({camera_var}.right - {camera_var}.left) / Math.abs({camera_var}.top - {camera_var}.bottom) : 1;
-        {camera_var}.left = frustumSize * aspect / -2;
-        {camera_var}.right = frustumSize * aspect / 2;
-        {camera_var}.top = frustumSize / 2;
-        {camera_var}.bottom = frustumSize / -2;
-        {camera_var}.position.set(center.x, center.y, 20);
-        {camera_var}.lookAt(center.x, center.y, 0);
-        {camera_var}.updateProjectionMatrix();
-        {controls_var}.target.set(center.x, center.y, 0);
-        {controls_var}.update();
-    }}
-}}"""
-
-    return f"""// Auto-fit 3D camera from entity bounds
-if ({mesh_map_var}.size > 0) {{
-    const box = new THREE.Box3();
-    {mesh_map_var}.forEach(m => box.expandByObject(m));
-    if (!box.isEmpty()) {{
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const sz = new THREE.Vector3();
-        box.getSize(sz);
-        const maxDim = Math.max(sz.x, sz.y, sz.z, 1);
-        const distance = maxDim * 1.5 + 2;
-        // Keep the orbit target at the world origin so rotation always
-        // orbits around (0,0,0) regardless of entity placement.
-        {controls_var}.target.set(0, 0, 0);
-        {camera_var}.position.set(
-            center.x + distance * 0.6,
-            center.y + distance * 0.5,
-            center.z + distance * 0.7
-        );
-        {camera_var}.lookAt({controls_var}.target);
-        {camera_var}.near = Math.max(0.01, distance * 0.001);
-        {camera_var}.far = distance * 10;
-        {camera_var}.updateProjectionMatrix();
-        {controls_var}.update();
-    }}
-}}"""
+    return (
+        f"    fitCamera({registry_var}, {camera_var}, {controls_var}, {space_dim}, "
+        f"{width_expr}, {height_expr});\n"
+    )
 
 
 def js_apply_camera() -> str:
     """Generate the shared camera-application helper for export bootstraps.
 
-    Emits ``_orthoFrustum2d(...)`` and ``applyCameraConfig(camera, controls,
-    cfg, w, h)``.  ``applyCameraConfig`` dispatches on ``cfg.type``
-    (``"2d"`` / ``"3d"``) and applies the full camera config, falling back to
-    the flat fields for legacy/partial configs and doing nothing when ``cfg``
-    is null/undefined.  The 2D ortho math mirrors ``view_mode.js`` so the
-    export matches the live viewer (uniform letterbox by default, stretch when
-    ``uniform`` is false, ``border_px`` applied in pixels).
+    Emits ``applyCameraConfig(camera, controls, cfg, w, h)``, which dispatches
+    on ``cfg.type`` (``"2d"`` / ``"3d"``) and applies the full camera config,
+    falling back to the flat fields for legacy/partial configs and doing nothing
+    when ``cfg`` is null/undefined.  The 2D ortho math is delegated to the
+    bundled ``orthoFrustum``/``finiteAspect`` from ``camera-fit.js``, so the
+    export matches the live viewer exactly (``stretch`` modes, ``border_px``
+    applied in pixels).
     """
     return """// ── Shared camera applier (mirrors view_mode.js switchToCamera) ──
-function _finiteAspectExport(w, h) {
-    const width = Number(w);
-    const height = Number(h);
-    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        return NaN;
-    }
-    return width / height;
-}
-
-function _orthoFrustum2d(xmin, xmax, ymin, ymax, uniform, borderPx, w, h) {
-    const extX = Math.abs(xmax - xmin) || 10;
-    const extY = Math.abs(ymax - ymin) || 10;
-    const bp = borderPx || 0;
-    const cw = w - 2 * bp;
-    const ch = h - 2 * bp;
-
-    if (uniform === false) {
-        const fX = cw > 0 ? w / cw : 1;
-        const fY = ch > 0 ? h / ch : 1;
-        return {
-            left: -(extX / 2) * fX,
-            right: (extX / 2) * fX,
-            top: (extY / 2) * fY,
-            bottom: -(extY / 2) * fY,
-        };
-    }
-
-    const aspect = _finiteAspectExport(w, h);
-    const safeAspect = Number.isFinite(aspect) ? aspect : 1;
-    const aspectContent = (cw > 0 && ch > 0) ? (cw / ch) : safeAspect;
-    const fit = Math.max(extX / aspectContent, extY);
-    const fitFull = (bp > 0 && cw > 0 && ch > 0) ? (fit * h / ch) : fit;
-
-    return {
-        left: -fitFull * safeAspect / 2,
-        right: fitFull * safeAspect / 2,
-        top: fitFull / 2,
-        bottom: -fitFull / 2,
-    };
-}
-
 function applyCameraConfig(camera, controls, cfg, w, h) {
     if (!cfg) return;
     const width = Number(w);
@@ -346,14 +327,18 @@ function applyCameraConfig(camera, controls, cfg, w, h) {
             typeof cfg.xmin === 'number' && typeof cfg.xmax === 'number' &&
             typeof cfg.ymin === 'number' && typeof cfg.ymax === 'number'
         ) {
-            const f = _orthoFrustum2d(
+            const f = orthoFrustum(
                 cfg.xmin, cfg.xmax, cfg.ymin, cfg.ymax,
-                cfg.uniform !== false, cfg.border_px || 0, width, height
+                cfg.stretch || 'fit', cfg.border_px || 0, width, height
             );
             camera.left = f.left;
             camera.right = f.right;
             camera.top = f.top;
             camera.bottom = f.bottom;
+            camera.userData._view2d = {
+                xmin: cfg.xmin, xmax: cfg.xmax, ymin: cfg.ymin, ymax: cfg.ymax,
+                stretch: cfg.stretch || 'fit', border_px: cfg.border_px || 0,
+            };
         }
         if (cfg.position) camera.position.set(cfg.position[0], cfg.position[1], cfg.position[2]);
         const t2 = cfg.target || [0, 0, 0];

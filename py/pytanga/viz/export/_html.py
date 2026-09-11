@@ -14,17 +14,20 @@ import json
 from pathlib import Path
 from typing import Any
 
+from pytanga.viz.export._cdn import build_library_script_tag
 from pytanga.viz.export._bootstrap import (
-    generate_bootstrap_js,
+    theme_css_for_delivery,
     js_annotation_panel,
     js_apply_camera,
     js_autofit_camera,
-    js_imports,
+    js_tanga_destructure,
     js_render_loop,
     js_resize_handler,
     js_scene_build,
     js_scene_setup,
     js_title_overlay,
+    static_third_party,
+    three_import_map,
 )
 from pytanga.viz.export._bootstrap._html import (
     _CDN_CHECK_SCRIPT,
@@ -37,24 +40,40 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates"
 def render_snapshot(
     objects: list[dict[str, Any]],
     scene_config: dict[str, Any],
+    theme: str = "dark",
+    delivery: str = "cdn",
+    delivery_ref: str | None = None,
 ) -> str:
     """Render a self-contained HTML file from the unified scene objects.
 
     *objects* is the ``Scene.full_state()`` output (scene entities and
-    overlay labels in DFS pre-order).
+    overlay labels in DFS pre-order).  *theme* selects the UI theme whose CSS
+    is inlined (default ``"dark"``).  *delivery* selects how the viewer
+    runtime is delivered: ``"cdn"`` (default), ``"inline"``, or ``"offline"``.
     """
     scene_json = json.dumps({"objects": objects}, indent=0)
     config_json = json.dumps(scene_config, indent=0)
 
     html = (_TEMPLATES_DIR / "export_viewer.html").read_text(encoding="utf-8")
-    bootstrap = generate_bootstrap_js(_build_static_fullpage_adapter(scene_config))
+    adapter = _build_static_fullpage_adapter(scene_config)
+    theme_css = theme_css_for_delivery(
+        theme,
+        delivery,
+        delivery_ref,
+        include_components=False,
+        include_overrides=False,
+    )
 
     return (
         html.replace("__CDN_CHECK_SCRIPT__", _CDN_CHECK_SCRIPT)
         .replace("__LOADING_OVERLAY__", _LOADING_OVERLAY_HTML)
+        .replace("__THEME_CSS__", theme_css)
+        .replace("__THIRD_PARTY__", static_third_party(delivery))
+        .replace("__IMPORT_MAP__", three_import_map(delivery))
         .replace("__SCENE_DATA_JSON__", scene_json)
         .replace("__SCENE_CONFIG_JSON__", config_json)
-        .replace("__BOOTSTRAP_JS__", bootstrap)
+        .replace("__LIBRARY_SCRIPT__", build_library_script_tag(delivery, delivery_ref))
+        .replace("__BOOTSTRAP_JS__", adapter)
     )
 
 
@@ -78,16 +97,19 @@ def render_export_html(
 
 def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
     """Generate the JS bootstrap adapter for static full-page HTML exports."""
-    bg_color = scene_config.get("background_color", "#1a1a2e")
+    bg_color = scene_config.get("background_color")
     space_dim = scene_config.get("space_dim", 3)
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")
+
+    cam_cfg = scene_config.get("camera") or {}
+    cam_explicit = bool(cam_cfg.get("position") or cam_cfg.get("target"))
 
     parts = [
         "window.__tanga_ready = true;",
         "// ── Bootstrap adapter for Tanga self-contained HTML exports ──",
         "",
-        js_imports(),
+        js_tanga_destructure(),
         "",
         js_apply_camera(),
         "",
@@ -147,17 +169,16 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
         "(async () => {\n"
         "    await sceneBuildDone;\n"
         "    applyCameraConfig(adapterCamera, adapterControls, sceneConfig.camera, window.innerWidth, window.innerHeight);\n"
-        "    const adapterCamConfig = sceneConfig.camera;\n"
-        "    if (!adapterCamConfig || (!adapterCamConfig.position && !adapterCamConfig.target)) {\n"
         + js_autofit_camera(
-            mesh_map_var="meshMap",
+            registry_var="sceneRegistry",
             camera_var="adapterCamera",
             controls_var="adapterControls",
-            cam_explicit=False,
+            cam_explicit=cam_explicit,
             space_dim=space_dim,
+            width_expr="window.innerWidth",
+            height_expr="window.innerHeight",
         )
-        + "    }\n"
-        "})();"
+        + "})();"
     )
 
     parts.append("")
@@ -179,6 +200,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             camera_var="adapterCamera",
             width_expr="window.innerWidth",
             height_expr="window.innerHeight",
+            space_dim=space_dim,
         )
     )
 

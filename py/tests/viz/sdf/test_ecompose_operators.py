@@ -8,7 +8,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
-from pytanga.viz.sdf._compose import Combine, ECompose, SdfElement, _coerce, _coerce_mode
+from pytanga.viz.sdf._compose import (
+    Combine,
+    ECompose,
+    SdfCompose,
+    SdfElement,
+    _coerce,
+    _coerce_mode,
+    _normalize_part,
+)
 from pytanga.viz.sdf.primitives import box, sphere
 
 
@@ -31,11 +39,20 @@ def test_ecompose_is_string_compatible() -> None:
     assert ECompose.INTERSECTION == "intersection"
     assert ECompose.UNION == "union"
     assert ECompose.XOR == "xor"
+    assert ECompose.SMOOTH_UNION == "smooth_union"
+    assert ECompose.SMOOTH_INTERSECTION == "smooth_intersection"
+    assert ECompose.SMOOTH_SUBTRACT == "smooth_subtract"
 
 
 def test_coerce_mode_roundtrip() -> None:
     assert _coerce_mode("subtract") is ECompose.SUBTRACT
     assert _coerce_mode(ECompose.INTERSECTION) is ECompose.INTERSECTION
+
+
+def test_coerce_mode_accepts_smooth_as_fold() -> None:
+    assert _coerce_mode("smooth_union") is ECompose.SMOOTH_UNION
+    assert _coerce_mode("smooth_intersection") is ECompose.SMOOTH_INTERSECTION
+    assert _coerce_mode("smooth_subtract") is ECompose.SMOOTH_SUBTRACT
 
 
 def test_coerce_mode_rejects_xor_in_fold_context() -> None:
@@ -132,8 +149,56 @@ def test_combine_to_sdf_node_shape() -> None:
         (ECompose.INTERSECTION, "intersect"),
         (ECompose.SUBTRACT, "subtract"),
         (ECompose.XOR, "xor"),
+        (ECompose.SMOOTH_UNION, "smooth_union"),
+        (ECompose.SMOOTH_INTERSECTION, "smooth_intersection"),
+        (ECompose.SMOOTH_SUBTRACT, "smooth_subtract"),
     ],
 )
 def test_combine_kind_mapping(op, kind) -> None:
     node = Combine(op, _Leaf(sphere(1.0)), _Leaf(sphere(0.5))).to_sdf_node()
     assert node.kind == kind
+
+
+def test_combine_smoothness_serializes() -> None:
+    node = Combine(
+        ECompose.SMOOTH_UNION,
+        _Leaf(sphere(1.0)),
+        _Leaf(sphere(0.5)),
+        smoothness=0.25,
+    ).to_sdf_node()
+    assert node.kind == "smooth_union"
+    assert node.smoothness == 0.25
+    assert node.to_dict()["smoothness"] == 0.25
+
+
+# ── SdfCompose member descriptor ────────────────────────────
+
+
+def test_sdfcompose_coerces_mode_and_smoothness() -> None:
+    sc = SdfCompose(sphere(1.0), "smooth_union", smoothness="0.25")
+    assert sc.mode is ECompose.SMOOTH_UNION
+    assert sc.smoothness == 0.25
+
+
+def test_sdfcompose_accepts_enum_and_default_smoothness() -> None:
+    sc = SdfCompose(sphere(1.0), ECompose.SUBTRACT)
+    assert sc.mode is ECompose.SUBTRACT
+    assert sc.smoothness is None
+
+
+def test_sdfcompose_rejects_xor() -> None:
+    with pytest.raises(ValueError):
+        SdfCompose(sphere(1.0), ECompose.XOR)
+
+
+def test_sdfcompose_rejects_unknown_mode() -> None:
+    with pytest.raises(ValueError):
+        SdfCompose(sphere(1.0), "bogus")
+
+
+def test_normalize_part_sdfcompose() -> None:
+    element, mode = _normalize_part(
+        SdfCompose(sphere(1.0), ECompose.SMOOTH_UNION, smoothness=0.3)
+    )
+    assert mode is ECompose.SMOOTH_UNION
+    assert element.smoothness == 0.3

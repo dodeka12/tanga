@@ -40,6 +40,8 @@ import math
 from pytanga.geometry import Direction, GeneralRotor, Point
 from pytanga.viz.sdf import (
     Composed,
+    ECompose,
+    SdfCompose,
     SdfVisualizer,
     box,
     capped_cylinder,
@@ -54,7 +56,10 @@ viz = SdfVisualizer(title="Tanga SDF — Composed objects")
 # constituent that carves a hole.
 bead = Composed(
     sphere(0.7, position=(0.0, 0.0, 0.0)),
-    (capped_cylinder(1.0, 0.45, position=(0.0, 0.0, 0.0)), "subtract"),
+    SdfCompose(
+        capped_cylinder(1.0, 0.45, position=(0.0, 0.0, 0.0)),
+        ECompose.SUBTRACT,
+    ),
 )
 viz.add(bead, color="#ffaa00")
 

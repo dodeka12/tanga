@@ -10,6 +10,7 @@ import numpy as np
 
 from pytanga.blade_mask import BladeMask
 from . import MVTensor
+from ._labeled import AxisName
 
 if TYPE_CHECKING:
     from ._labeled import MVLabeledTensor
@@ -29,9 +30,7 @@ def _parse_subscripts(subscripts: str, n_tensors: int) -> tuple[list[str], str]:
     return input_labels, output_str.strip()
 
 
-def _check_masks_compatible(
-    mask_a: BladeMask | None, mask_b: BladeMask | None
-) -> bool:
+def _check_masks_compatible(mask_a: BladeMask | None, mask_b: BladeMask | None) -> bool:
     """Check that two masks are compatible for the same subscript label."""
     if mask_a is None and mask_b is None:
         return True
@@ -103,9 +102,7 @@ def contract(subscripts: str, *tensors: MVTensor, **kwargs) -> MVTensor:
     out_masks: list[BladeMask | None] = []
     for ch in output_labels:
         if ch not in registry:
-            raise ValueError(
-                f"output label '{ch}' does not appear in any input"
-            )
+            raise ValueError(f"output label '{ch}' does not appear in any input")
         _, _, mask = registry[ch]
         out_masks.append(mask)
 
@@ -123,142 +120,139 @@ def contract(subscripts: str, *tensors: MVTensor, **kwargs) -> MVTensor:
 
 def _build_subscript(
     *labeled_tensors: MVLabeledTensor,
-) -> tuple[str, list[str], dict[str, str]]:
-    """Build an einsum subscript from labeled tensors.
+) -> tuple[list[list[int]], list[int], list[AxisName], dict[AxisName, str]]:
+    """Build a list-form einsum layout for labeled tensors.
 
-    Given one or more ``MVLabeledTensor`` instances, analyzes their
-    labels to determine which axes are contracted (shared, both ``*``),
-    which are element‑wise (shared, at least one ``_``), and which are
-    unique to a single tensor.  Returns the full subscript string, the
-    ordered raw names of the output axes, and a dict mapping each output
-    raw name to its mode.
+    Given one or more ``MVLabeledTensor`` instances, determines which axes
+    are contracted (shared, all ``"*"``), which are element-wise shared, and
+    which are unique, and assigns each distinct axis name a small integer
+    label.  Returns the per-tensor integer axis lists, the output integer
+    axis list, the ordered output names, and a name→mode map for the output.
 
     Parameters
     ----------
     *labeled_tensors : MVLabeledTensor
-        The labeled tensors participating in the operation.
+        The labeled tensors participating in the contraction.
 
     Returns
     -------
-    subscripts : str
-        The full einsum subscript, e.g. ``"kij,in,jn->kn"``.
-    output_raw : list[str]
-        Raw names of the output axes, in order.
-    output_modes : dict[str, str]
-        Maps each output raw name to its mode (``'*'`` or ``'_'``).
+    input_axes : list[list[int]]
+        Integer axis-label list for each input tensor.
+    output_axes : list[int]
+        Integer axis labels kept in the output.
+    output_names : list[AxisName]
+        Ordered output axis names.
+    output_modes : dict[AxisName, str]
+        Maps each output name to ``"*"`` or ``"_"``.
     """
-    from ._labeled import _raw_names, _is_elemwise
+    from ._labeled import _axis_names, _axis_modes
 
-    n_tensors = len(labeled_tensors)
-    if n_tensors == 0:
+    if not labeled_tensors:
         raise ValueError("need at least one labeled tensor")
 
-    # Gather raw names and mode maps for each tensor
-    all_raw: list[str] = []
-    all_modes: list[dict[str, str]] = []
-    all_ndim = [t.ndim for t in labeled_tensors]
-    all_labels = [t.labels for t in labeled_tensors]
+    all_names = [_axis_names(t.labels) for t in labeled_tensors]
+    all_modes = [_axis_modes(t.labels) for t in labeled_tensors]
 
-    for t in labeled_tensors:
-        raw = _raw_names(t.labels)
-        modes = {}
-        for a in range(t.ndim):
-            name = raw[a]
-            modes[name] = "_" if _is_elemwise(t.labels, a) else "*"
-        all_raw.append(raw)
-        all_modes.append(modes)
+    name_to_label: dict[AxisName, int] = {}
+    for names in all_names:
+        for name in names:
+            if name not in name_to_label:
+                name_to_label[name] = len(name_to_label)
 
-    # Count occurrences of each raw name
-    name_occurrences: dict[str, int] = {}
-    for raw in all_raw:
-        for ch in raw:
-            name_occurrences[ch] = name_occurrences.get(ch, 0) + 1
+    occurrences: dict[AxisName, int] = {}
+    any_elemwise: dict[AxisName, bool] = {}
+    unique_mode: dict[AxisName, str] = {}
+    for names, modes in zip(all_names, all_modes):
+        for name, mode in zip(names, modes):
+            occurrences[name] = occurrences.get(name, 0) + 1
+            any_elemwise[name] = any_elemwise.get(name, False) or (mode == "_")
+            unique_mode[name] = mode
 
-    # Determine contracted names:
-    # A name is contracted if it appears in ≥2 tensors AND all occurrences
-    # are contractible (mode '*').  If any occurrence is '_', it becomes
-    # an element‑wise axis and stays in the output.
-    contracted: set[str] = set()
-    elemwise_shared: set[str] = set()
-    for name, count in name_occurrences.items():
-        if count >= 2:
-            # Check if all occurrences are contractible
-            all_contractible = True
-            for modes in all_modes:
-                if name in modes and modes[name] != "*":
-                    all_contractible = False
-                    break
-            if all_contractible:
-                contracted.add(name)
-            else:
-                elemwise_shared.add(name)
+    contracted = {
+        name
+        for name, count in occurrences.items()
+        if count >= 2 and not any_elemwise[name]
+    }
+    elemwise_shared = {
+        name for name, count in occurrences.items() if count >= 2 and any_elemwise[name]
+    }
 
-    # Build output raw names:
-    # 1) Contractible (non‑shared + shared‑but‑element‑wise‑only) — '*'
-    # 2) Element‑wise ('_') names
-    #
-    # Within each group, names keep their order of first appearance
-    # across the tensors.
-    output_contractible: list[str] = []
-    output_elemwise: list[str] = []
-    output_modes: dict[str, str] = {}
-    seen_in_output: set[str] = set()
-
-    for idx, raw in enumerate(all_raw):
-        for ch in raw:
-            if ch in contracted:
+    output_contractible: list[AxisName] = []
+    output_elemwise: list[AxisName] = []
+    output_modes: dict[AxisName, str] = {}
+    seen: set[AxisName] = set()
+    for names in all_names:
+        for name in names:
+            if name in contracted or name in seen:
                 continue
-            if ch in seen_in_output:
-                continue
-            seen_in_output.add(ch)
-            if ch in elemwise_shared:
-                mode = "_"
-            else:
-                mode = all_modes[idx][ch]
-            output_modes[ch] = mode
+            seen.add(name)
+            mode = "_" if name in elemwise_shared else unique_mode[name]
+            output_modes[name] = mode
             if mode == "_":
-                output_elemwise.append(ch)
+                output_elemwise.append(name)
             else:
-                output_contractible.append(ch)
+                output_contractible.append(name)
 
-    output_raw = output_contractible + output_elemwise
+    output_names = output_contractible + output_elemwise
 
-    # Build input label strings (just raw names)
-    input_labels = ",".join(raw for raw in all_raw)
-    output_str = "".join(output_raw)
-    subscripts = f"{input_labels}->{output_str}"
+    input_axes = [[name_to_label[name] for name in names] for names in all_names]
+    output_axes = [name_to_label[name] for name in output_names]
 
-    return subscripts, output_raw, output_modes
+    return input_axes, output_axes, output_names, output_modes
 
 
 def contract_labeled(*labeled_tensors: MVLabeledTensor, **kwargs) -> MVLabeledTensor:
-    """Contract labeled tensors using their labels to build the subscript.
+    """Contract labeled tensors using their labels to build the einsum call.
+
+    Uses ``numpy.einsum``'s list form so axis names may be strings or
+    integers (no 52-letter ceiling).
 
     Parameters
     ----------
     *labeled_tensors : MVLabeledTensor
         The labeled tensors to contract.
     **kwargs
-        Passed through to :func:`contract`.
+        Passed through to ``numpy.einsum`` (e.g. ``optimize``).
 
     Returns
     -------
     MVLabeledTensor
         The contracted result with inferred labels.
     """
-    from ._labeled import _extended_from_raw
-
-    subscripts, output_raw, output_modes = _build_subscript(*labeled_tensors)
-
-    # Extract the underlying MVTensors
-    tensors = [t.tensor for t in labeled_tensors]
-    result = contract(subscripts, *tensors, **kwargs)
-
-    # Build output label string (may be empty for scalar result)
-    out_labels = _extended_from_raw("".join(output_raw), output_modes)
+    from ._labeled import _axis_names, _labels_from_names
     from ._labeled import MVLabeledTensor as _MVLabeledTensor
 
-    if out_labels == "":
-        # Scalar result — wrap in MVLabeledTensor with empty labels
-        return _MVLabeledTensor(result, "")
-    return _MVLabeledTensor(result, out_labels)
+    input_axes, output_axes, output_names, output_modes = _build_subscript(
+        *labeled_tensors
+    )
+
+    tensors = [t.tensor for t in labeled_tensors]
+    all_names = [_axis_names(t.labels) for t in labeled_tensors]
+
+    # Validate mask compatibility for shared labels and record output masks.
+    name_to_mask: dict[AxisName, BladeMask | None] = {}
+    for names, t in zip(all_names, labeled_tensors):
+        for name, mask in zip(names, t.tensor.masks):
+            if name in name_to_mask:
+                if not _check_masks_compatible(name_to_mask[name], mask):
+                    raise ValueError(
+                        f"label {name!r} appears on incompatible masks: "
+                        f"{name_to_mask[name]} vs {mask}"
+                    )
+            else:
+                name_to_mask[name] = mask
+
+    result_masks = tuple(name_to_mask[name] for name in output_names)
+
+    einsum_args: list = []
+    for data, axes in zip((t.data for t in tensors), input_axes):
+        einsum_args.append(data)
+        einsum_args.append(axes)
+    einsum_args.append(output_axes)
+
+    result_data = np.einsum(*einsum_args, **kwargs)
+
+    from ._data import MVTensor as _MVTensor
+
+    result = _MVTensor(data=result_data, masks=result_masks)
+    return _MVLabeledTensor(result, _labels_from_names(output_names, output_modes))

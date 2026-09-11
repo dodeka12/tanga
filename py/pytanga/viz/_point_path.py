@@ -11,11 +11,7 @@ and color gradient utilities.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Sequence
-
-if TYPE_CHECKING:
-    from pytanga.algebra._mv import MV
-    from pytanga.geometry.entities import Point as GeoPoint
+from typing import Sequence
 
 
 @dataclass

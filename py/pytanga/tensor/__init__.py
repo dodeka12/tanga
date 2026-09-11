@@ -4,6 +4,6 @@
 """pytanga.tensor — MVTensor and tensor operations."""
 
 from ._data import MVTensor
-from ._labeled import MVLabeledTensor
+from ._labeled import AxisLabel, MVLabeledTensor
 
-__all__ = ["MVTensor", "MVLabeledTensor"]
+__all__ = ["AxisLabel", "MVTensor", "MVLabeledTensor"]

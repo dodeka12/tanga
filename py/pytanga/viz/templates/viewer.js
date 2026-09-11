@@ -5,31 +5,35 @@
 
 window.__tanga_ready = true;
 
-import { ThreeJsView } from './views/three-view.js';
+import { applyOverlayAnchor } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
-import { setWebSocket, applyControlValue } from './controls-panel.js';
-import { setWebSocket as setInteractionWebSocket } from './interaction.js';
+import { getOverlay } from './overlay.js';
+import { applyControlValue, applyEnumOptions } from './controls-panel.js';
+import { applyMessageUpdate } from './views/message-view.js';
+import { logForwardingEnabled, sendLog, setLogForwarding, setWebSocket as setEventsWebSocket } from './events.js';
 import {
-    setWebSocket as setBannerWebSocket,
     handleBannerDefine,
     handleBannerRemove,
     handleBannerClear,
 } from './banner.js';
 import {
-    setWebSocket as setFileBrowserWebSocket,
+    handleDialogDefine,
+    handleDialogRemove,
+    handleDialogClear,
+} from './dialog.js';
+import {
     handleFileBrowserShow,
     handleFileBrowserListing,
     handleFileBrowserClose,
 } from './file-browser.js';
 import {
-    setWebSocket as setEditorWebSocket,
     handleEditorDefine,
 } from './editor.js';
+import { handleThemeDefine } from './themes.js';
 import { updateLineResolutions } from './renderers/utils.js';
 import { handleResize } from './view_mode.js';
 
 // ── State ───────────────────────────────────────────────────
-let view = null;
 let ws = null;
 let reconnectTimer = null;
 let _savedPixelRatio = null;     // saved during screenshot capture
@@ -53,9 +57,15 @@ let _layoutName = (() => {
     const params = new URLSearchParams(window.location.search);
     return params.has('view') ? (params.get('view') || '') : null;
 })();
+// Opt-in frontend trace forwarding: `?log=1` forwards the `_log(...)` init/WS
+// lines to the backend log at `info` level (default off).
+if (new URLSearchParams(window.location.search).has('log')) {
+    setLogForwarding(true);
+}
 let _layoutRoot = null;
 let _sceneRoutes = new Map();  // scene -> {sceneViews, controlViews}
 let _viewById = new Map();     // view_id -> ThreeJsView (per-pane camera)
+let _globalOverlayViews = [];  // views mounted into the global overlay singleton
 
 // Per-scene browser-side animation stop binding.
 let _animationStopConfig = { enabled: false, key: null, modifiers: [] };
@@ -78,6 +88,9 @@ function _log(phase, detail) {
     if (_myScene) parts.push('scene=' + _myScene);
     if (detail) parts.push(detail);
     console.log(parts.join(' '));
+    if (logForwardingEnabled()) {
+        sendLog('info', detail || phase, { source: 'viewer.js', data: { phase } });
+    }
 }
 
 function _shortenTitle(text, max = 40) {
@@ -195,11 +208,7 @@ function connectWebSocket() {
             || new URLSearchParams(window.location.search).get('token');
         _log('ws-open', 'attempt=' + _reconnectAttempts + ' token=' + (pageToken || 'none'));
         setStatus('connected');
-        setWebSocket(ws);
-        setInteractionWebSocket(ws);
-        setBannerWebSocket(ws);
-        setFileBrowserWebSocket(ws);
-        setEditorWebSocket(ws);
+        setEventsWebSocket(ws);
         _setWsOnAllViews(ws);
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
@@ -226,6 +235,7 @@ function connectWebSocket() {
             msg = JSON.parse(event.data);
         } catch (e) {
             console.error('Failed to parse WebSocket message:', e);
+            sendLog('error', 'Failed to parse WebSocket message', { source: 'viewer.js', data: { error: String(e) } });
             return;
         }
         handleMessage(msg);
@@ -439,7 +449,8 @@ function showVersionMismatchBanner(serverVersion, clientVersion) {
 
 // ── Screenshot ───────────────────────────────────────────────
 function handleScreenshot(msg) {
-    if (!view || !view.renderer) return;
+    const active = _activeSceneView();
+    if (!active || !active.renderer) return;
 
     const statusEl = document.getElementById('status');
     if (statusEl) {
@@ -449,21 +460,21 @@ function handleScreenshot(msg) {
 
     if (msg.width && msg.height) {
         const w = msg.width, h = msg.height;
-        _savedPixelRatio = view.renderer.getPixelRatio();
-        view.renderer.setPixelRatio(1);
-        handleResize(view.camera, view.renderer, view.labelRenderer, view.sceneConfig?.space_dim || 3, w, h);
+        _savedPixelRatio = active.renderer.getPixelRatio();
+        active.renderer.setPixelRatio(1);
+        handleResize(active.camera, active.renderer, active.labelRenderer, active.sceneConfig?.space_dim || 3, w, h);
         updateLineResolutions();
         if (window._viewerContainer) {
             window._viewerContainer.style.width = w + 'px';
             window._viewerContainer.style.height = h + 'px';
         }
     }
-    view.renderer.render(view.scene, view.camera);
-    if (view.labelRenderer) {
-        view.labelRenderer.render(view.scene, view.camera);
+    active.renderer.render(active.scene, active.camera);
+    if (active.labelRenderer) {
+        active.labelRenderer.render(active.scene, active.camera);
     }
-    const w = view.renderer.domElement.width;
-    const h = view.renderer.domElement.height;
+    const w = active.renderer.domElement.width;
+    const h = active.renderer.domElement.height;
 
     const send = (data) => {
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -487,10 +498,10 @@ function handleScreenshot(msg) {
             send(domCanvas.toDataURL('image/png'));
         }).catch((err) => {
             console.warn('html2canvas failed, falling back to webgl only:', err);
-            send(view.renderer.domElement.toDataURL('image/png'));
+            send(active.renderer.domElement.toDataURL('image/png'));
         });
     } else {
-        send(view.renderer.domElement.toDataURL('image/png'));
+        send(active.renderer.domElement.toDataURL('image/png'));
     }
 }
 
@@ -547,9 +558,10 @@ async function handleMessage(msg) {
         return;
     }
     if (msg.type === 'restore_size') {
-        if (view) {
+        const active = _activeSceneView();
+        if (active) {
             if (_savedPixelRatio !== null) {
-                view.renderer.setPixelRatio(_savedPixelRatio);
+                active.renderer.setPixelRatio(_savedPixelRatio);
                 _savedPixelRatio = null;
             }
             if (window._viewerContainer) {
@@ -562,12 +574,33 @@ async function handleMessage(msg) {
                 statusEl2.style.display = _savedStatusDisplay || 'block';
                 _savedStatusDisplay = null;
             }
-            view.resize();
+            active.resize();
         }
         return;
     }
     if (msg.type === 'view_layout') {
         _buildLayout(msg);
+        return;
+    }
+    if (msg.type === 'overlay_define') {
+        const overlayEl = getOverlay();
+        const view = buildViewTree(msg.view, ws);
+        view.el.style.position = 'absolute';
+        view.el.style.pointerEvents = 'auto';
+        applyOverlayAnchor(view.el, view.position || 'bottom-right');
+        overlayEl.addChild(view);
+        _globalOverlayViews.push(view);
+        return;
+    }
+    if (msg.type === 'overlay_remove') {
+        const overlayEl = getOverlay();
+        const idx = _globalOverlayViews.findIndex((v) => v.viewId === msg.id);
+        if (idx !== -1) {
+            const view = _globalOverlayViews[idx];
+            overlayEl.removeChild(view);
+            if (typeof view.destroy === 'function') view.destroy();
+            _globalOverlayViews.splice(idx, 1);
+        }
         return;
     }
     if (msg.type === 'view_camera') {
@@ -576,8 +609,37 @@ async function handleMessage(msg) {
         return;
     }
 
+    if (msg.type === 'theme_define') {
+        const applyThemeBackgrounds = () => {
+            for (const route of _sceneRoutes.values()) {
+                for (const v of route.sceneViews) v.applyThemeBackground();
+            }
+        };
+        const onApplied = () => {
+            applyThemeBackgrounds();
+            document.dispatchEvent(new CustomEvent('tanga:themechange'));
+        };
+        const ready = handleThemeDefine(msg);
+        if (ready && typeof ready.then === 'function') {
+            ready.then(onApplied);
+        } else {
+            onApplied();
+        }
+        return;
+    }
+
     if (msg.type === 'control_update') {
         applyControlValue(msg.id, msg.value);
+        return;
+    }
+
+    if (msg.type === 'enum_options') {
+        applyEnumOptions(msg.id, msg.request_id, msg.values);
+        return;
+    }
+
+    if (msg.type === 'log_update') {
+        applyMessageUpdate(msg);
         return;
     }
 
@@ -589,6 +651,16 @@ async function handleMessage(msg) {
             return;
         }
         // scene-scoped banner: fall through to scene routing below.
+    }
+
+    if (msg.type === 'dialog_define' || msg.type === 'dialog_remove' || msg.type === 'dialog_clear') {
+        if (msg.scene === null || msg.scene === undefined) {
+            if (msg.type === 'dialog_define') handleDialogDefine(msg, ws);
+            else if (msg.type === 'dialog_remove') handleDialogRemove(msg);
+            else handleDialogClear();
+            return;
+        }
+        // scene-scoped dialog: fall through to scene routing below.
     }
 
     if (msg.type === 'file_browser_show' || msg.type === 'file_browser_listing' || msg.type === 'file_browser_close') {
@@ -603,7 +675,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (_layoutName !== null) {
+    if (_layoutRoot !== null) {
         await _routeToScene(msg, msg.scene || '');
         return;
     }
@@ -611,40 +683,122 @@ async function handleMessage(msg) {
     if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update') {
         if (!_forMyScene(msg)) return;
     }
-    if (msg.type === 'controls_define' || msg.type === 'controls_clear') {
-        if (!_forMyScene(msg)) return;
-    }
     if (msg.type === 'banner_define' || msg.type === 'banner_remove' || msg.type === 'banner_clear') {
         if (!_forMyScene(msg)) return;
     }
+    if (msg.type === 'dialog_define' || msg.type === 'dialog_remove' || msg.type === 'dialog_clear') {
+        if (!_forMyScene(msg)) return;
+    }
 
-    if (view) await view.handleMessage(msg);
+    const active = _activeSceneView();
+    if (active) await active.handleMessage(msg);
 }
 
 // ── Layout / routing helpers ─────────────────────────────────
 
 function _setWsOnAllViews(ws) {
-    if (view) view.setWebSocket(ws);
     for (const route of _sceneRoutes.values()) {
         for (const v of route.sceneViews) v.setWebSocket(ws);
     }
 }
 
 function _setBrowserIdOnAllViews(id) {
-    if (view) view.setBrowserId(id);
     for (const route of _sceneRoutes.values()) {
         for (const v of route.sceneViews) v.setBrowserId(id);
     }
 }
 
+function _activeSceneView() {
+    const route = _sceneRoutes.get(_myScene);
+    if (route && route.sceneViews.length) return route.sceneViews[0];
+    return null;
+}
+
+function _destroyViewTree(view, skip) {
+    if (!view) return;
+    if (skip && skip.has(view)) return;
+    if (Array.isArray(view.children)) {
+        for (const child of [...view.children]) _destroyViewTree(child, skip);
+    }
+    if (typeof view.destroy === 'function') view.destroy();
+}
+
 function _buildLayout(msg) {
     _log('init', 'view_layout name=' + (msg.name || ''));
-    _layoutRoot = buildViewTree(msg.root, ws);
+
+    // A re-push (had a previous layout) may introduce scene panes the browser
+    // hasn't seen yet; those need their state requested from the server.
+    const hadLayout = _layoutRoot !== null;
+
+    // Reuse the existing scene panes (keyed by scene name) so a layout re-push
+    // only rebuilds the DOM chrome and never tears down the WebGL scenes.
+    const reuse = new Map();
+    if (_layoutRoot) {
+        for (const [scene, route] of _sceneRoutes) {
+            for (const v of route.sceneViews) {
+                if (!reuse.has(scene)) reuse.set(scene, v);
+            }
+        }
+    }
+    const skip = new Set(reuse.values());
+
+    // Teardown the previous tree (and its global overlay views) so re-pushes
+    // and reconnects don't leak ResizeObservers / DOM nodes — except the scene
+    // panes we are reusing.
+    if (_layoutRoot) {
+        _destroyViewTree(_layoutRoot, skip);
+        _layoutRoot.unmount();
+    }
+    _layoutRoot = null;
+    _sceneRoutes = new Map();
+    _viewById = new Map();
+    const overlay = getOverlay();
+    for (const view of _globalOverlayViews) {
+        overlay.removeChild(view);
+        if (typeof view.destroy === 'function') view.destroy();
+    }
+    _globalOverlayViews = [];
+
+    const newScenes = [];
+    _layoutRoot = buildViewTree(msg.root, ws, reuse, newScenes);
     _layoutRoot.el.style.width = '100%';
     _layoutRoot.el.style.height = '100%';
     _layoutRoot.mount(window._viewerContainer);
     _sceneRoutes = collectSceneRoutes(_layoutRoot);
     _viewById = collectViewByIds(_layoutRoot);
+
+    // Destroy any scene panes that are no longer present in the layout.
+    for (const view of reuse.values()) {
+        if (typeof view.destroy === 'function') view.destroy();
+        if (typeof view.unmount === 'function') view.unmount();
+    }
+
+    // Request state for scene panes newly introduced by this re-push (the
+    // `ready` handshake only sent state for scenes present at connect time).
+    if (hadLayout && ws && ws.readyState === WebSocket.OPEN) {
+        for (const scene of newScenes) {
+            ws.send(JSON.stringify({ type: 'scene_sync_request', scene }));
+        }
+    }
+
+    // Track the active scene's title for the document title.
+    const active = _activeSceneView();
+    if (active) {
+        active.on('titlechange', (e) => {
+            _savedTitle = _shortenTitle(e.detail.title) || _savedTitle;
+            document.title = _savedTitle;
+        });
+    }
+
+    // Global overlay views (e.g. menus) mount into the shared overlay singleton.
+    for (const node of msg.overlay || []) {
+        const view = buildViewTree(node, ws);
+        view.el.style.position = 'absolute';
+        view.el.style.pointerEvents = 'auto';
+        applyOverlayAnchor(view.el, view.position || 'bottom-right');
+        overlay.addChild(view);
+        _globalOverlayViews.push(view);
+    }
 }
 
 async function _routeToScene(msg, sceneName) {
@@ -663,22 +817,15 @@ async function _routeToScene(msg, sceneName) {
 function init() {
     window._viewerContainer = document.getElementById('viewer-container');
 
-    if (_layoutName === null) {
-        view = new ThreeJsView(_myScene);
-        view.mount(window._viewerContainer);
-        view.on('titlechange', (e) => {
-            _savedTitle = _shortenTitle(e.detail.title) || _savedTitle;
-            document.title = _savedTitle;
-        });
-    }
-    // Layout mode: the tree is built lazily when `view_layout` arrives.
+    // The view tree is built lazily when `view_layout` arrives (unified mode).
 
-    // Ctrl+S screenshot shortcut (single-scene mode only).
+    // Ctrl+S screenshot shortcut.
     window.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
-            if (view && view.renderer) {
-                const dataUrl = view.renderer.domElement.toDataURL('image/png');
+            const active = _activeSceneView();
+            if (active && active.renderer) {
+                const dataUrl = active.renderer.domElement.toDataURL('image/png');
                 const now = new Date();
                 const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
                 const link = document.createElement('a');
@@ -698,12 +845,8 @@ function init() {
 
 function animate() {
     requestAnimationFrame(animate);
-    if (view) {
-        view.render();
-    } else {
-        for (const route of _sceneRoutes.values()) {
-            for (const v of route.sceneViews) v.render();
-        }
+    for (const route of _sceneRoutes.values()) {
+        for (const v of route.sceneViews) v.render();
     }
 }
 

@@ -3,8 +3,10 @@
 
 """Shared fixtures for solver tests."""
 
+import numpy as np
 import pytest
-from pytanga import Algebra, BladeMask, random_mv
+from pytanga import Algebra, BladeMask
+from pytanga.geometry import RndMV
 
 
 @pytest.fixture(scope="module")
@@ -20,13 +22,15 @@ def alg_int():
 @pytest.fixture(scope="module")
 def vec_A_float(alg_float):
     """Reproducible general MV in float64."""
-    return random_mv(alg_float, rng=42)
+    mask = BladeMask.full(alg_float)
+    return RndMV(mask, [(-1.0, 1.0)] * len(mask))(np.random.default_rng(42))
 
 
 @pytest.fixture(scope="module")
 def vec_A_int(alg_int):
     """Reproducible general MV in int64 with coefficients in [-48, 48]."""
-    return random_mv(alg_int, low=-48, high=49, rng=42)
+    mask = BladeMask.full(alg_int)
+    return RndMV(mask, [(-48, 49)] * len(mask))(np.random.default_rng(42))
 
 
 @pytest.fixture(scope="module")

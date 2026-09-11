@@ -39,7 +39,9 @@ class VisualizerApp:
 
             async def init(self) -> None:
                 self.viz.add(...)
-                self.viz.add_slider("x", on_change=self.on_x)
+                self.viz.set_layout(
+                    SceneView("", overlay=[SliderView("x", on_change=self.on_x)])
+                )
 
             async def on_x(self, value: float, event: ControlEvent) -> None:
                 self.viz.update_entity("ent", ...)
@@ -52,9 +54,6 @@ class VisualizerApp:
     def __init__(
         self,
         *,
-        port: int | None = None,
-        host: str | None = None,
-        open_browser: bool | None = None,
         reuse_existing: bool = True,
         title: str = "Tanga 3D Viewer",
         annotation: str | None = None,
@@ -62,6 +61,8 @@ class VisualizerApp:
         camera: CameraConfig | View2DConfig | View3dConfig | None = None,
         space_dim: int | None = None,  # 2 or 3; None = deduce from camera
         enable_server_stop_key: bool = False,
+        add_default_axes: bool = True,
+        add_default_grid: bool = True,
     ) -> None:
         """Create the app and the underlying :class:`~pytanga.viz.Visualizer`.
 
@@ -71,9 +72,6 @@ class VisualizerApp:
         from .visualizer import Visualizer
 
         self.viz = Visualizer(
-            port=port,
-            host=host,
-            open_browser=open_browser,
             reuse_existing=reuse_existing,
             title=title,
             annotation=annotation,
@@ -81,6 +79,8 @@ class VisualizerApp:
             camera=camera,
             space_dim=space_dim,
             enable_server_stop_key=enable_server_stop_key,
+            add_default_axes=add_default_axes,
+            add_default_grid=add_default_grid,
         )
         self._stop_requested = threading.Event()
         # The user loop (the loop running ``_app_main``), captured so control
@@ -131,7 +131,14 @@ class VisualizerApp:
         shutdown = getattr(self.viz, "_shutdown_requested", None)
         return shutdown is not None and shutdown.is_set()
 
-    def run(self, *, wait_for_browser: bool = True, timeout: float = 30.0) -> None:
+    def run(
+        self,
+        *,
+        wait_for_browser: bool = True,
+        timeout: float = 30.0,
+        port: int | None = None,
+        host: str | None = None,
+    ) -> None:
         """Start the server, run :meth:`init`, block until shutdown, then
         run :meth:`cleanup` and stop the server.
 
@@ -147,8 +154,16 @@ class VisualizerApp:
         timeout:
             Seconds to wait for a browser connection.  Only used when
             ``wait_for_browser=True``.
+        port:
+            Server port, forwarded to :meth:`Visualizer.show` (``None`` →
+            default port).
+        host:
+            Bind host, forwarded to :meth:`Visualizer.show` (``None`` →
+            ``localhost``).
         """
-        ok = self.viz.show(wait_for_browser=wait_for_browser)
+        ok = self.viz.show(
+            wait_for_browser=wait_for_browser, timeout=timeout, port=port, host=host
+        )
         if not ok:
             raise RuntimeError(
                 "Server failed to start or no browser connected "

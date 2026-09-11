@@ -28,13 +28,14 @@ class SdfGroup(SdfElement):
     """A grouped SDF object with per-member combine modes + runtime transforms.
 
     Each part is a bare element (defaults to union), a unary-tagged element
-    (``-el`` / ``~el``), or a legacy ``(obj, mode)`` tuple/string. ``obj`` may be
-    a geometry entity, an ``SdfNode``, an ``SdfObject``/``Combine``, or a nested
-    ``Composed``/``SdfGroup``.
+    (``-el`` / ``~el``), an :class:`SdfCompose` descriptor, or the legacy
+    ``(obj, mode)`` tuple/string. ``obj`` may be a geometry entity, an
+    ``SdfNode``, an ``SdfObject``/``Combine``, or a nested ``Composed``/
+    ``SdfGroup``.
 
     Example::
 
-        SdfGroup(sphere(1.0), (capped_cylinder(0.6, 0.4), "subtract"))
+        SdfGroup(sphere(1.0), SdfCompose(capped_cylinder(0.6, 0.4), ECompose.SUBTRACT))
     """
 
     parts: tuple[tuple[Any, ECompose], ...]
@@ -43,11 +44,17 @@ class SdfGroup(SdfElement):
         default=None, init=False, repr=False, compare=False
     )
 
-    def __init__(self, *parts: Any, combine: ECompose = ECompose.UNION) -> None:
+    def __init__(
+        self,
+        *parts: Any,
+        combine: ECompose = ECompose.UNION,
+        smoothness: float | None = None,
+    ) -> None:
         self.parts = tuple(_normalize_part(p) for p in parts)
         self.transforms = {}
         self.on_change = None
         self.combine = combine
+        self.smoothness = smoothness
 
     # ── Member addressing ─────────────────────────────────────
 
@@ -106,6 +113,7 @@ class SdfGroup(SdfElement):
         for element, mode in self.parts:
             child = copy.copy(_member_node(element))
             child.combine = mode.value
+            child.smoothness = getattr(element, "smoothness", None)
             children.append(child)
         return group(children)
 

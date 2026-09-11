@@ -38,6 +38,9 @@ class SdfStyle(VizStyle):
         antialias: Enable the analytic ~1px silhouette edge fade in the
             ray-marcher.  Disabled by default (the fade still has silhouette
             artifacts under investigation); set ``True`` to opt in.
+        smoothness: Default blend radius for smooth CSG combinators
+            (``smooth_union``/``smooth_intersection``/``smooth_subtract``).
+            ``None`` uses the frontend default.
     """
 
     color: str | None = None
@@ -46,6 +49,7 @@ class SdfStyle(VizStyle):
     max_steps: int = 256
     bound_padding: float = 0.05
     antialias: bool = False
+    smoothness: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
@@ -59,6 +63,8 @@ class SdfStyle(VizStyle):
             result["color"] = self.color
         if self.opacity is not None:
             result["opacity"] = self.opacity
+        if self.smoothness is not None:
+            result["smoothness"] = self.smoothness
         return result
 
 

@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from ._viz_styles import VizStyles
     from .visualizer import Visualizer
 
-from ._icons import Icon
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
 from ._timeline import Timeline
@@ -51,7 +50,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
     def _scene(self) -> Scene:
         """Return the underlying Scene object."""
-        return self._viz._scenes[self._name]
+        return self._viz._layout.scene(self._name)
 
     @property
     def name(self) -> str:
@@ -102,8 +101,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
         See :meth:`Visualizer.add` for full documentation.
         """
-        return self._viz._add_to_scene(
-            self._name,
+        return self._scene().add_viz(
             obj=obj,
             entity_id=entity_id,
             color=color,
@@ -138,8 +136,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Like :meth:`add`, but returns a :class:`VizObjectRef` for the node."""
         from ._object_ref import VizObjectRef
 
-        eid = self._viz._add_to_scene(
-            self._name,
+        eid = self._scene().add_viz(
             obj=obj,
             entity_id=entity_id,
             color=color,
@@ -244,6 +241,19 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update the camera configuration for this scene at runtime."""
         self._viz.set_camera(camera, scene_name=self._name)
 
+    @property
+    def space_dim(self) -> int:
+        """The scene's current space dimension (``2`` or ``3``)."""
+        return self._scene().config.space_dim
+
+    @space_dim.setter
+    def space_dim(self, value: int) -> None:
+        self._viz.set_space_dim(value, scene_name=self._name)
+
+    def set_space_dim(self, space_dim: int, camera: Any = None) -> None:
+        """Set the space dimension (and optionally the camera) for this scene."""
+        self._viz.set_space_dim(space_dim, scene_name=self._name, camera=camera)
+
     def set_annotation(
         self, text: str | None, *, style: AnnotationStyle | None = None
     ) -> None:
@@ -327,231 +337,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
     # ── Interactive Controls ─────────────────────────────────
 
-    def add_slider(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.01,
-        value: float | None = None,
-        on_change: Any = None,
-        on_press: Any = None,
-        on_release: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a slider control to this scene."""
-        return self._viz._add_scene_slider(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            value=value,
-            on_change=on_change,
-            on_press=on_press,
-            on_release=on_release,
-            parent_id=parent_id,
-        )
-
-    def add_dropdown(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        options: list[str] | None = None,
-        value: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a dropdown control to this scene."""
-        return self._viz._add_scene_dropdown(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            options=options,
-            value=value,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_button(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        icon: Icon | None = None,
-        icon_only: bool = False,
-        tooltip: str = "",
-        on_click: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a button control to this scene."""
-        return self._viz._add_scene_button(
-            self._name,
-            cid,
-            label=label,
-            icon=icon,
-            icon_only=icon_only,
-            tooltip=tooltip,
-            on_click=on_click,
-            parent_id=parent_id,
-        )
-
-    def add_file_chooser(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        value: str = "",
-        placeholder: str = "",
-        root: str | None = None,
-        accept: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a file chooser control to this scene."""
-        return self._viz._add_scene_file_chooser(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            value=value,
-            placeholder=placeholder,
-            root=root,
-            accept=accept,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_text_field(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a single-line text input control to this scene."""
-        return self._viz._add_scene_text_field(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_text_area(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "",
-        placeholder: str = "",
-        rows: int = 4,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a multi-line text input control to this scene."""
-        return self._viz._add_scene_text_area(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            placeholder=placeholder,
-            rows=rows,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_color_picker(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: str = "#ffffff",
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a color picker control to this scene."""
-        return self._viz._add_scene_color_picker(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_checkbox(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        value: bool = False,
-        tooltip: str = "",
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a checkbox control to this scene."""
-        return self._viz._add_scene_checkbox(
-            self._name,
-            cid,
-            label=label,
-            value=value,
-            tooltip=tooltip,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
-    def add_value_edit(
-        self,
-        cid: str,
-        *,
-        label: str = "",
-        tooltip: str = "",
-        min: float = 0.0,
-        max: float = 1.0,
-        step: float = 0.1,
-        digits: int = 2,
-        editable: bool = True,
-        value: float | None = None,
-        on_change: Any = None,
-        parent_id: str | None = None,
-    ) -> str:
-        """Add a numeric value-edit (stepper) control to this scene."""
-        return self._viz._add_scene_value_edit(
-            self._name,
-            cid,
-            label=label,
-            tooltip=tooltip,
-            min=min,
-            max=max,
-            step=step,
-            digits=digits,
-            editable=editable,
-            value=value,
-            on_change=on_change,
-            parent_id=parent_id,
-        )
-
     def open_file_chooser(self, cid: str, *, path: str | None = None) -> None:
         """Open the file browser dialog for control *cid*."""
         self._viz.open_file_chooser(cid, scene_name=self._name, path=path)
@@ -559,51 +344,6 @@ class VizSceneHandle(_JupyterDisplayMixin):
     def close_file_chooser(self, cid: str) -> None:
         """Close the file browser dialog for control *cid*."""
         self._viz.close_file_chooser(cid, scene_name=self._name)
-
-    def add_control_group(
-        self,
-        gid: str,
-        *,
-        title: str = "",
-        icon: Icon | None = None,
-        tooltip: str = "",
-        controls: list[str] | None = None,
-        position: str = "bottom-right",
-        collapsed: bool = False,
-        parent_id: str | None = None,
-        on_toggle: Any = None,
-    ) -> str:
-        """Create a UI control group in this scene."""
-        return self._viz._add_scene_group(
-            self._name,
-            gid,
-            title=title,
-            icon=icon,
-            tooltip=tooltip,
-            controls=controls,
-            position=position,
-            collapsed=collapsed,
-            parent_id=parent_id,
-            on_toggle=on_toggle,
-        )
-
-    def remove_control(self, cid: str) -> None:
-        """Remove a control from this scene."""
-        self._viz._remove_scene_control(self._name, cid)
-
-    def set_control_value(self, cid: str, value: Any) -> None:
-        """Update a control's value in place (see :meth:`Visualizer.set_control_value`)."""
-        self._viz.set_control_value(cid, value, scene_name=self._name)
-
-    def remove_control_group(self, gid: str) -> None:
-        """Remove a UI control group from this scene."""
-        self._viz._remove_scene_group(self._name, gid)
-
-    def clear_controls(self) -> None:
-        """Remove all controls and groups from this scene."""
-        self._viz._clear_scene_controls(self._name)
-
-    # ── Banners ──────────────────────────────────────────────
 
     def show_banner(
         self,
@@ -629,6 +369,60 @@ class VizSceneHandle(_JupyterDisplayMixin):
             dismissable=dismissable,
             controls=controls,
             on_close=on_close,
+            scene_name=self._name,
+        )
+
+    def alert(
+        self,
+        text: str,
+        *,
+        title: str = "",
+        ok_label: str = "OK",
+        on_ok: Any = None,
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+    ) -> str:
+        """Show an acknowledge banner scoped to this scene (see :meth:`Visualizer.alert`)."""
+        return self._viz.alert(
+            text,
+            title=title,
+            ok_label=ok_label,
+            on_ok=on_ok,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            scene_name=self._name,
+        )
+
+    def confirm(
+        self,
+        text: str,
+        *,
+        title: str = "",
+        yes_label: str = "Yes",
+        no_label: str = "No",
+        cancel_label: str = "Cancel",
+        on_yes: Any = None,
+        on_no: Any = None,
+        on_cancel: Any = None,
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+    ) -> str:
+        """Show a yes/no/cancel banner scoped to this scene (see :meth:`Visualizer.confirm`)."""
+        return self._viz.confirm(
+            text,
+            title=title,
+            yes_label=yes_label,
+            no_label=no_label,
+            cancel_label=cancel_label,
+            on_yes=on_yes,
+            on_no=on_no,
+            on_cancel=on_cancel,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
             scene_name=self._name,
         )
 
@@ -674,6 +468,78 @@ class VizSceneHandle(_JupyterDisplayMixin):
     async def clear_banners_async(self) -> None:
         """Awaitable :meth:`clear_banners`."""
         await self._viz.clear_banners_async(scene_name=self._name)
+
+    # ── Dialogs ──────────────────────────────────────────────
+
+    def show_dialog(
+        self,
+        content: Any,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
+    ) -> str:
+        """Show a dialog scoped to this scene (see :meth:`Visualizer.show_dialog`)."""
+        return self._viz.show_dialog(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            width=width,
+            height=height,
+            scene_name=self._name,
+        )
+
+    async def show_dialog_async(
+        self,
+        content: Any,
+        *,
+        id: str | None = None,
+        title: str = "",
+        align_x: float = 0.5,
+        align_y: float = 0.5,
+        dismissable: bool = True,
+        on_close: Any = None,
+        width: Any = None,
+        height: Any = None,
+    ) -> str:
+        """Awaitable :meth:`show_dialog` scoped to this scene."""
+        return await self._viz.show_dialog_async(
+            content,
+            id=id,
+            title=title,
+            align_x=align_x,
+            align_y=align_y,
+            dismissable=dismissable,
+            on_close=on_close,
+            width=width,
+            height=height,
+            scene_name=self._name,
+        )
+
+    def remove_dialog(self, dialog_id: str) -> None:
+        """Remove a dialog from this scene."""
+        self._viz.remove_dialog(dialog_id, scene_name=self._name)
+
+    async def remove_dialog_async(self, dialog_id: str) -> None:
+        """Awaitable :meth:`remove_dialog`."""
+        await self._viz.remove_dialog_async(dialog_id, scene_name=self._name)
+
+    def clear_dialogs(self) -> None:
+        """Remove all dialogs from this scene."""
+        self._viz.clear_dialogs(scene_name=self._name)
+
+    async def clear_dialogs_async(self) -> None:
+        """Awaitable :meth:`clear_dialogs`."""
+        await self._viz.clear_dialogs_async(scene_name=self._name)
 
     # ── Object Interaction ───────────────────────────────────
 
@@ -774,11 +640,20 @@ class VizSceneHandle(_JupyterDisplayMixin):
         )
 
     def display_snapshot(
-        self, width: int | str = "100%", height: int | str = "500px"
+        self,
+        width: int | str = "100%",
+        height: int | str = "500px",
+        *,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> Any:
         """Display this scene as standalone HTML (no server required)."""
         return self._viz.display_snapshot(
-            width=width, height=height, scene_name=self._name
+            width=width,
+            height=height,
+            scene_name=self._name,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def display_static(
@@ -801,6 +676,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> None:
         """Export this scene as a self-contained HTML file."""
         self._viz._export_scene_snapshot(
@@ -809,6 +687,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
             overwrite=overwrite,
             animation=animation,
             anim_style=anim_style,
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def open_snapshot(self) -> None:
@@ -823,6 +704,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
         overwrite: bool = False,
         animation: Any = None,
         anim_style: Any = None,
+        theme: str | None = None,
+        delivery: str = "cdn",
+        delivery_ref: str | None = None,
     ) -> Any:
         """Export this scene as an HTML snippet (or return the string)."""
         return self._viz._export_scene_figure(
@@ -832,6 +716,9 @@ class VizSceneHandle(_JupyterDisplayMixin):
             overwrite=overwrite,
             animation=animation,
             anim_style=anim_style,
+            theme=theme,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
         )
 
     def export_glb(self, path: Any, *, overwrite: bool = False) -> None:

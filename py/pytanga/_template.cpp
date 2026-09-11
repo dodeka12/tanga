@@ -223,7 +223,12 @@ PYBIND11_MODULE({MODULE_NAME}, m)
     }
     {
         {
-            PROJECT_TO_DEF
+            PROJECT_ONTO_DEF
+        }
+    }
+    {
+        {
+            PROJECT_ONTO_MASK_DEF
         }
     }
 

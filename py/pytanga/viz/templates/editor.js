@@ -3,19 +3,9 @@
 
 import { getOverlay } from './overlay.js';
 import { EditorView } from './views/editor-view.js';
+import { sendEvent } from './events.js';
 
-let _ws = null;
 let _view = null;
-
-export function setWebSocket(ws) {
-    _ws = ws;
-}
-
-function _send(msg) {
-    if (_ws && _ws.readyState === WebSocket.OPEN) {
-        _ws.send(JSON.stringify(msg));
-    }
-}
 
 export function handleEditorDefine(msg) {
     _close();
@@ -24,7 +14,7 @@ export function handleEditorDefine(msg) {
         label: msg.label || '',
         value: msg.value || '',
         onClose: (id, text) => {
-            _send({ type: 'editor_closed', id, text });
+            sendEvent(id, 'close', { value: text });
             _close();
         },
     });

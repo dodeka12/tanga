@@ -71,7 +71,7 @@ viz4.add(Point(0, 2, 0), color="#44ff44", style=PointStyle(size=0.15), label="$P
 viz4.show()
 viz4.wait()
 
-# ── Scene 5: 2D stretch-to-fill via View2DConfig (uniform=False) ──
+# ── Scene 5: 2D stretch-to-fill via View2DConfig (stretch="fill") ──
 print("\nScene 5: View2DConfig — long, thin plot stretched to fill")
 viz5 = Visualizer(
     title="Tanga — View2DConfig (stretch-to-fill)",
@@ -82,7 +82,7 @@ viz5 = Visualizer(
         ymax=2.0,
         border_world=2.0,
         border_px=30.0,
-        uniform=False,
+        stretch="fill",
     ),
 )
 viz5.add(Point(10, 1, 0), color="#ff4444", style=PointStyle(size=0.15), label="$P_1$")

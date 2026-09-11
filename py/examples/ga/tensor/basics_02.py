@@ -21,7 +21,8 @@ Keywords: tensor, product tensor, geometric product, einsum, batched
 
 import numpy as np
 import pytanga as pt
-from pytanga.algebra import random_mask, random_mv
+from pytanga.algebra import random_mask
+from pytanga.geometry import RndMV
 from pytanga.tensor.convert import from_tensor, to_tensor
 from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
@@ -40,10 +41,12 @@ def main() -> None:
     B_mask_list = [random_mask(alg, 4) for _ in range(5)]
 
     A_list = [
-        random_mv(alg, low=-1, high=1, mask=A_mask_list[i], rng=rng) for i in range(5)
+        RndMV(A_mask_list[i], [(-1.0, 1.0)] * len(A_mask_list[i]))(rng)
+        for i in range(5)
     ]
     B_list = [
-        random_mv(alg, low=-1, high=1, mask=B_mask_list[i], rng=rng) for i in range(5)
+        RndMV(B_mask_list[i], [(-1.0, 1.0)] * len(B_mask_list[i]))(rng)
+        for i in range(5)
     ]
 
     # The BladeMask constructor can take a multivector or a list of blade ids

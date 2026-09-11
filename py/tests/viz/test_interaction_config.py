@@ -19,6 +19,7 @@ from pytanga.viz._interaction import (
     apply_delta_transform,
     extract_camera_directions,
 )
+from pytanga.geometry import Direction, Point
 
 
 class TestInteractionTrigger:
@@ -130,6 +131,30 @@ class TestParseEvent:
         assert event.delta_pixels == (5, -2)
         assert len(event.delta_transform) == 16
 
+    def test_parse_drag_move_ray_fields(self):
+        data = {
+            "type": "interaction:drag_start",
+            "event_type": "drag_start",
+            "object_id": "x",
+            "ray_origin": [1.0, 2.0, 3.0],
+            "ray_direction": [0.0, 0.0, 1.0],
+        }
+        event = _parse_event(data)
+        assert isinstance(event, DragEvent)
+        assert event.ray_origin == Point(1.0, 2.0, 3.0)
+        assert event.ray_direction == Direction(0.0, 0.0, 1.0)
+
+    def test_parse_drag_move_ray_defaults(self):
+        data = {
+            "type": "interaction:drag_move",
+            "event_type": "drag_move",
+            "object_id": "x",
+        }
+        event = _parse_event(data)
+        assert isinstance(event, DragEvent)
+        assert event.ray_origin == Point(0.0, 0.0, 0.0)
+        assert event.ray_direction == Direction(0.0, 0.0, 0.0)
+
     def test_parse_scroll(self):
         data = {
             "type": "interaction:scroll",
@@ -181,6 +206,17 @@ class TestCoalesceDragEvents:
     def test_empty_raises(self):
         with pytest.raises(ValueError):
             _coalesce_drag_events([])
+
+    def test_preserves_ray(self):
+        e1 = DragEvent(
+            delta_pixels=(1, 0),
+            ray_origin=Point(1.0, 2.0, 3.0),
+            ray_direction=Direction(0.0, 0.0, 1.0),
+        )
+        e2 = DragEvent(delta_pixels=(2, 3))
+        result = _coalesce_drag_events([e1, e2])
+        assert result.ray_origin == Point(1.0, 2.0, 3.0)
+        assert result.ray_direction == Direction(0.0, 0.0, 1.0)
 
 
 class TestHandlerRegistry:
@@ -239,6 +275,22 @@ class TestHandlerRegistry:
         await registry.dispatch(ClickEvent(object_id="obj1"))
         await asyncio.sleep(0.01)
         assert results == []
+
+    def test_delegates_to_shared_registry(self):
+        from pytanga.viz._controls import ControlHandlerRegistry
+
+        shared = ControlHandlerRegistry()
+        registry = InteractionHandlerRegistry(shared)
+
+        async def handler(event):
+            pass
+
+        registry.register("obj1", InteractionEventType.CLICK, handler)
+        assert shared.get("obj1", "click") is handler
+        assert registry.get("obj1", InteractionEventType.CLICK) is handler
+
+        registry.unregister("obj1", InteractionEventType.CLICK)
+        assert shared.get("obj1", "click") is None
 
 
 class TestUtilityFunctions:

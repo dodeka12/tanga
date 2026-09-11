@@ -5,13 +5,14 @@
 
 import pytest
 
-from pytanga import BladeMask
+from pytanga import BladeMask, DataArray, MV
 from pytanga.basis import BasisE3, BasisN3
-from pytanga.geometry import Direction
+from pytanga.geometry import Direction, Geometry, Motor, Point, Rotor, Translator
 from pytanga.geometry.create_e3 import create_rotor
 from pytanga.expression._expression import AffineExpression, Expression
 from pytanga.expression._labels import _reset_allocator
 from pytanga.expression._variable import Variable
+from pytanga.tensor._labeled import _axis_modes, _axis_names
 
 
 def _close(a, b) -> bool:
@@ -49,6 +50,63 @@ class TestExpression:
         assert _close((v | a)(V1=x), x | a)
         assert _close((v ^ a)(V1=x), x ^ a)
 
+    def test_reflected_op_constant_left_expression(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        a = self._mv({"e1": 2.0})
+        inner = v1 | v2  # Expression with both variables
+        e = a ^ inner
+        assert isinstance(e, Expression)
+        assert set(e.names) == {"V1", "V2"}
+        x = self._mv({"e1": 1.0})
+        y = self._mv({"e2": 3.0})
+        assert _close(e(V1=x, V2=y), a ^ (x | y))
+
+    def test_bind_returns_partial_expression(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        e = v1 * v2
+        x = self._mv({"e1": 2.0})
+        partial = e.bind(V1=x)
+        assert isinstance(partial, Expression)
+        assert set(partial.names) == {"V2"}
+        y = self._mv({"e2": 3.0})
+        assert _close(partial(V2=y), x * y)
+
+    def test_bind_raises_on_full_collapse(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        e = v1 * v2
+        x = self._mv({"e1": 2.0})
+        y = self._mv({"e2": 3.0})
+        with pytest.raises(ValueError):
+            e.bind(V1=x, V2=y)
+
+    def test_evaluate_returns_mv(self):
+        v = Variable("V1", self.full)
+        a = self._mv({"e1": 2.0})
+        e = v * a
+        x = self._mv({"e1": 3.0})
+        result = e.evaluate(V1=x)
+        assert isinstance(result, MV)
+        assert _close(result, x * a)
+
+    def test_evaluate_raises_on_partial(self):
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        e = v1 * v2
+        x = self._mv({"e1": 2.0})
+        with pytest.raises(ValueError):
+            e.evaluate(V1=x)
+
+    def test_evaluate_raises_on_batched(self):
+        v = Variable("V1", self.full)
+        a = self._mv({"e1": 2.0})
+        e = v * a
+        xs = [self._mv({"e1": 1.0}), self._mv({"e2": 3.0})]
+        with pytest.raises(ValueError):
+            e.evaluate(V1=DataArray(xs, masks=("n", self.full)))
+
     def test_two_variables(self):
         v1 = Variable("V1", self.full)
         v2 = Variable("V2", self.full)
@@ -77,8 +135,8 @@ class TestExpression:
         e = v * self._mv({"e1": 2.0})
         t = e.tensor
         assert t.ndim == 2
-        assert t.labels[0] == "k"
-        assert t.labels[2] == v.label
+        assert t.labels[0].name == "k"
+        assert t.labels[1].name == v.label
         assert e.names == {"V1": (v.label,)}
         assert e.masks["V1"] is v.mask
 
@@ -250,7 +308,7 @@ class TestBatched:
             self._mv({"e2": 3.0}),
             self._mv({"e3": -1.0}),
         ]
-        result = e(V1=xs)
+        result = e(V1=DataArray(xs, masks=("n", self.full)))
         assert isinstance(result, list)
         assert len(result) == 3
         for r, x in zip(result, xs):
@@ -262,17 +320,15 @@ class TestBatched:
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e2": 2.0})]
         ys = [self._mv({"e3": 3.0}), self._mv({"e1": 4.0})]
-        result = e(V1=xs, V2=ys)
+        result = e(
+            V1=DataArray(xs, masks=("n", self.full)),
+            V2=DataArray(ys, masks=("m", self.full)),
+        )
         assert isinstance(result, list) and len(result) == 2
         assert all(isinstance(row, list) and len(row) == 2 for row in result)
         for i, x in enumerate(xs):
             for j, y in enumerate(ys):
                 assert _close(result[i][j], x * y)
-
-    def test_empty_list(self):
-        v = Variable("V1", self.full)
-        e = v * self._mv({"e1": 2.0})
-        assert e(V1=[]) == []
 
 
 class TestExpressionN3:
@@ -369,7 +425,7 @@ class TestLeastSquares:
         L = geo.create_var("L", Line)
 
         pts = [geo.create(Point(t, 0.0, 0.0)) for t in (1.0, 2.0, 3.0, 4.0)]
-        constraints = (P ^ L)(P=pts)
+        constraints = (P ^ L)(P=DataArray(pts, masks=("n", P.mask)))
         L_est = constraints.lstsq()
 
         # A point on the fitted line should satisfy incidence ~ 0.
@@ -407,7 +463,7 @@ class TestLeastSquares:
         P = geo.create_var("P", Point)
         L = geo.create_var("L", Line)
         pts = [geo.create(Point(t, 0.0, 0.0)) for t in (1.0, 2.0, 3.0, 4.0)]
-        constraints = (P ^ L)(P=pts)
+        constraints = (P ^ L)(P=DataArray(pts, masks=("n", P.mask)))
 
         values, mvs = constraints.svd()
         L_svd = mvs[-1]  # smallest singular vector
@@ -467,7 +523,7 @@ class TestPartial:
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         y = self._mv({"e2": 3.0})
-        partial = e(V1=xs)
+        partial = e(V1=DataArray(xs, masks=("n", self.full)))
         assert isinstance(partial, Expression)
         assert partial._has_counting_axes()
         result = partial(V2=y)
@@ -480,8 +536,8 @@ class TestPartial:
         w = Variable("V2", self.full)
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
-        partial = e(V1=("n", xs))
-        assert "n" in partial.tensor.labels
+        partial = e(V1=DataArray(xs, masks=("n", self.full)))
+        assert "n" in _axis_names(partial.tensor.labels)
         y = self._mv({"e2": 3.0})
         result = partial(V2=y)
         for r, x in zip(result, xs):
@@ -490,13 +546,33 @@ class TestPartial:
     def test_stacked_guards(self):
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
+        z = Variable("V3", self.full)
         e = v * w
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
-        partial = e(V1=xs)
+        partial = e(V1=DataArray(xs, masks=("n", self.full)))
+        c = self._mv({"e1": 1.0})
+
+        # A single stacked operand may now be composed with a constant/variable.
+        for comp in (partial * c, c * partial, partial * z, z * partial):
+            assert isinstance(comp, Expression)
+            assert comp._has_counting_axes()
+        assert "n" in _axis_names((partial * c).tensor.labels)
+        names = _axis_names((partial * c).tensor.labels)
+        assert _axis_modes((partial * c).tensor.labels)[names.index("n")] == "_"
+
+        # Structurally identical stacked operands merge under addition.
+        merged = partial + partial
+        assert isinstance(merged, Expression)
+        assert merged._has_counting_axes()
+        y = self._mv({"e2": 3.0})
+        result = merged(V2=y)
+        assert isinstance(result, list) and len(result) == 2
+        for r, x in zip(result, xs):
+            assert _close(r, 2.0 * (x * y))
+
+        # Two stacked operands still cannot be composed.
         with pytest.raises(ValueError):
-            partial * self._mv({"e1": 1.0})
-        with pytest.raises(ValueError):
-            partial + partial
+            partial * partial
         with pytest.raises(ValueError):
             partial.inv("V3")
         assert (~partial)._has_counting_axes()
@@ -557,7 +633,78 @@ class TestRepeatedVariables:
         v = Variable("V1", self.full)
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         e = v * v
-        result = e(V1=xs)
+        result = e(V1=DataArray(xs, masks=("n", self.full)))
         assert isinstance(result, list) and len(result) == 2
         for r, x in zip(result, xs):
             assert _close(r, x * x)
+
+
+def test_batched_sandwich_merge():
+    """The note's repro: (motor * X)(X=batch) - (Y * motor)(Y=batch) merges."""
+    _reset_allocator()
+    N3 = BasisN3()
+    geo = Geometry(N3)
+    motor = geo.create_var("motor", Motor)
+    X = geo.create_var("X", Point)
+    Y = geo.create_var("Y", Point)
+
+    local_points = [geo(Point(0, 0, 0)), geo(Point(1, 0, 0)), geo(Point(0, 1, 0))]
+    world_points = [geo(Point(1, 2, 3)), geo(Point(2, 2, 3)), geo(Point(1, 3, 3))]
+
+    lm = (motor * X)(X=DataArray(local_points, masks=("n", X.mask)))
+    rm = (Y * motor)(Y=DataArray(world_points, masks=("n", Y.mask)))
+
+    eqn = lm - rm
+    assert isinstance(eqn, Expression)
+    assert eqn._has_counting_axes()
+    assert set(eqn.names) == {"motor"}
+
+    m = geo(
+        Motor(
+            rotor=Rotor(0.0, Direction(1, 0, 0)),
+            translator=Translator(Direction(0, 0, 0)),
+        )
+    )
+    result = eqn(motor=m)
+    assert isinstance(result, list) and len(result) == 3
+    for r, x, y in zip(result, local_points, world_points):
+        assert _close(r, m * x - y * m)
+
+
+def test_stacked_add_different_labels_raises():
+    _reset_allocator()
+    alg = BasisE3()
+    full = BladeMask.full(alg)
+    v = Variable("V1", full)
+    w = Variable("V2", full)
+    e = v * w
+    xs = [alg.multivector({"e1": 1.0}), alg.multivector({"e1": 2.0})]
+    p1 = e(V1=DataArray(xs, masks=("n", full)))
+    p2 = e(V1=DataArray(xs, masks=("m", full)))
+    with pytest.raises(ValueError):
+        p1 + p2
+
+
+def test_constant_expression():
+    _reset_allocator()
+    alg = BasisE3()
+    A = alg.multivector({"s": 1.0, "e1": 2.0, "e2": 3.0})
+    E = Expression(A)
+    assert E.names == {}
+    assert E.masks == {}
+    assert E.out_mask == BladeMask(A)
+    assert E.ndim == 1
+    assert _close(E(), A)
+
+
+def test_constant_expression_with_mask():
+    from pytanga.tensor.convert import from_tensor
+
+    _reset_allocator()
+    alg = BasisE3()
+    A = alg.multivector({"s": 1.0, "e1": 2.0, "e2": 3.0, "e12": 4.0})
+    mask = BladeMask(alg, [1, 3])  # e1, e12
+    E = Expression(A, mask)
+    assert E.out_mask == mask
+    result = from_tensor(E.tensor.tensor)
+    assert _close(result, A.project_onto(mask))

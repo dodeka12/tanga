@@ -17,7 +17,15 @@ from __future__ import annotations
 
 from pytanga.basis import BasisN3
 from pytanga.geometry import Geometry, Point, Sphere
-from pytanga.viz import ControlEvent, VisualizerApp
+from pytanga.viz import (
+    ButtonView,
+    ControlEvent,
+    DropdownView,
+    GroupView,
+    SceneView,
+    SliderView,
+    VisualizerApp,
+)
 
 SPHERE_A_ID = "sphere_a"
 SPHERE_B_ID = "sphere_b"
@@ -97,7 +105,6 @@ class TwoSpheresApp(VisualizerApp):
         self.x_default = 2.5
         self.mode = "Both"
         await self._update_scene(2.5, "Both")
-        self.viz.clear_controls()
         self._setup_controls()
 
     async def on_quit(self, _value: None, _event: ControlEvent) -> None:
@@ -106,29 +113,36 @@ class TwoSpheresApp(VisualizerApp):
     # ── internal helpers ────────────────────────────────────
 
     def _setup_controls(self) -> None:
-        self.viz.add_slider(
-            "sphere_b_x",
-            label="X Position",
-            min=-3.5,
-            max=3.5,
-            step=0.02,
-            value=self.x_default,
-            on_change=self.on_slider,
-        )
-        self.viz.add_dropdown(
-            "mode",
-            label="Display",
-            options=["Both", "Sphere A only", "Sphere B only", "Intersection only"],
-            value="Both",
-            on_change=self.on_mode,
-        )
-        self.viz.add_button("reset", label="Reset", on_click=self.on_reset)
-        self.viz.add_button("quit", label="Quit", on_click=self.on_quit)
-        self.viz.add_control_group(
-            "viewport_controls",
-            title="",
-            controls=["sphere_b_x", "mode", "reset", "quit"],
-            position="bottom-right",
+        self.viz.set_layout(
+            SceneView(
+                "",
+                overlay=[
+                    GroupView(
+                        "",
+                        [
+                            SliderView(
+                                "sphere_b_x",
+                                label="X Position",
+                                min=-3.5,
+                                max=3.5,
+                                step=0.02,
+                                value=self.x_default,
+                                on_change=self.on_slider,
+                            ),
+                            DropdownView(
+                                "mode",
+                                label="Display",
+                                options=["Both", "Sphere A only", "Sphere B only", "Intersection only"],
+                                value="Both",
+                                on_change=self.on_mode,
+                            ),
+                            ButtonView("reset", label="Reset", on_click=self.on_reset),
+                            ButtonView("quit", label="Quit", on_click=self.on_quit),
+                        ],
+                        position="bottom-right",
+                    )
+                ],
+            )
         )
 
     async def _update_scene(self, x: float, mode: str) -> None:

@@ -21,7 +21,7 @@ Keywords: tensor, product tensor, geometric product, einsum, MVTensor
 
 import numpy as np
 import pytanga as pt
-from pytanga.algebra import random_mv
+from pytanga.geometry import RndMV
 from pytanga.tensor.convert import from_tensor, to_tensor
 from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
@@ -34,8 +34,9 @@ def main() -> None:
 
     # --- 2. generate two random multivectors with random masks -----------------
     rng = np.random.default_rng(2025)
-    A = random_mv(alg, low=-1, high=1, rng=rng)
-    B = random_mv(alg, low=-1, high=1, rng=rng)
+    full = pt.BladeMask.full(alg)
+    A = RndMV(full, [(-1.0, 1.0)] * len(full))(rng)
+    B = RndMV(full, [(-1.0, 1.0)] * len(full))(rng)
 
     a_mask = pt.BladeMask(A)
     b_mask = pt.BladeMask(B)

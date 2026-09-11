@@ -17,20 +17,68 @@ server layers, so it is unit-testable in isolation.
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
+from enum import StrEnum
 from itertools import count
+from pathlib import Path
 from typing import Any, Iterator, Literal
 
-from ._controls import Handler
+from ._controls import (
+    Button,
+    Checkbox,
+    ColorPicker,
+    Control,
+    Dropdown,
+    EControlVariant,
+    EnumOptionsHandler,
+    FileChooser,
+    Handler,
+    Label,
+    Markdown,
+    Slider,
+    Table,
+    TextArea,
+    TextField,
+    ValueEdit,
+)
+from ._anchor import EAnchor
 from ._icons import Icon
 from ._size import Size, SizeSpec, size_from_dict
 from .camera import CameraConfig, View2DConfig, View3dConfig, _normalize_camera_config
 
 Orientation = Literal["horizontal", "vertical"]
-StackDirection = Literal["vertical", "horizontal", "wrap"]
+
+
+class EStackDirection(StrEnum):
+    VERTICAL = "vertical"
+    HORIZONTAL = "horizontal"
+    WRAP = "wrap"
+
+
+class EStackAlign(StrEnum):
+    START = "start"
+    CENTER = "center"
+    END = "end"
+    STRETCH = "stretch"
+
+
+class EStackJustify(StrEnum):
+    START = "start"
+    CENTER = "center"
+    END = "end"
+    SPACE_BETWEEN = "space-between"
+    SPACE_AROUND = "space-around"
+    SPACE_EVENLY = "space-evenly"
+
 
 #: Default minimum extent for a scene pane on both axes, so a scene can never
 #: be collapsed to nothing (override per view, or pass ``None`` to disable).
 _DEFAULT_SCENE_MIN = Size.px(120)
+
+#: Per-column horizontal floor for :class:`TableView` (px), so an N-column grid
+#: keeps every column visible inside an auto-sized overlay panel.
+_TABLE_COLUMN_MIN_PX = 60
 
 
 def _size_dict(spec: SizeSpec) -> dict | None:
@@ -48,17 +96,18 @@ def _coerce_scene_name(scene: Any) -> str:
     raise TypeError(f"Expected a scene name or handle, got {type(scene).__name__}")
 
 
-def _make_id_gen() -> Iterator[str]:
-    """Yield stable, deterministic node ids in DFS order."""
-    counter = count()
-    while True:
-        yield f"v{next(counter)}"
-
-
 #: Process-wide counter for auto-generated ``SceneView`` pane ids (``sv0``…).
 #: A scene pane needs a stable id so it can be targeted at runtime
 #: (``Visualizer.set_view_camera``) after the layout has been serialized.
 _scene_view_counter = count()
+
+#: Process-wide counter for auto-generated ``LogView`` ids (``log0``…).
+_log_view_counter = count()
+
+#: Process-wide counter for auto-generated ``View`` ids (``v0``…).  Every view
+#: gets a stable id at construction so it can be addressed at runtime (e.g.
+#: removed via ``Visualizer.remove_view``); a subclass may override it.
+_view_counter = count()
 
 
 class View:
@@ -74,6 +123,7 @@ class View:
     def __init__(
         self,
         *,
+        id: str | None = None,
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
@@ -82,6 +132,7 @@ class View:
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
+        self.id = id if id is not None else f"v{next(_view_counter)}"
         if size is not None:
             if preferred_width is None:
                 preferred_width = size
@@ -112,11 +163,11 @@ class View:
             and self.min_height == self.max_height
         )
 
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
+    def _serialize(self) -> dict[str, Any]:
         """Serialize this node (subclasses append their type-specific fields)."""
         return {
             "type": self._node_type,
-            "id": next(id_gen),
+            "id": self.id,
             "min_width": _size_dict(self.min_width),
             "max_width": _size_dict(self.max_width),
             "min_height": _size_dict(self.min_height),
@@ -167,25 +218,199 @@ class SceneView(View):
         self.camera = _normalize_camera_config(camera)
         self.overlay = list(overlay or [])
 
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
         result["id"] = self.id
         result["scene"] = self.scene
         if self.camera is not None:
             result["camera"] = self.camera.to_dict()
         if self.overlay:
-            result["children"] = [child._serialize(id_gen) for child in self.overlay]
+            result["children"] = [child._serialize() for child in self.overlay]
         return result
 
 
 class SpacerView(View):
-    """An empty, fully-flexible filler pane."""
+    """An empty, fully-flexible filler pane.
+
+    A spacer grows to fill leftover space along a flow container's main axis:
+    it defaults ``preferred_width``/``preferred_height`` to ``Size.fr(1)``,
+    which the frontend maps to ``flex: 1 1 0``.  Inside a ``SplitView`` it is
+    positioned absolutely, so the preferred size is inert there.
+    """
 
     _node_type = "spacer"
 
+    def __init__(self, **kwargs: Any) -> None:
+        kwargs.setdefault("preferred_width", Size.fr(1))
+        kwargs.setdefault("preferred_height", Size.fr(1))
+        super().__init__(**kwargs)
+
+
+#: Default gap (px) between a separator line and the adjacent content.
+_DEFAULT_SEPARATOR_SPACING = 6
+
+
+class SeparatorView(View):
+    """A thin 1px divider line with spacing, for toolbars/menus/stacks.
+
+    ``orientation`` describes the *line* (perpendicular to the container it
+    lives in): ``"vertical"`` for a horizontal container (``ToolbarView`` /
+    menu ``bar``) and ``"horizontal"`` for a vertical container
+    (``StackView`` / ``MenuView`` dropdown).  ``"auto"`` (the default) lets the
+    frontend container pick the perpendicular orientation; pin it explicitly
+    where there is no enclosing ``StackView``-derived container to resolve it
+    (e.g. a ``SplitView`` pane), in which case ``"auto"`` stays unresolved and
+    renders nothing useful — so pass an explicit orientation there.
+
+    ``spacing`` is the gap on each side of the line (default ``6`` px).
+    """
+
+    _node_type = "separator"
+
+    def __init__(
+        self,
+        orientation: Literal["auto", "horizontal", "vertical"] = "auto",
+        *,
+        spacing: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if orientation not in ("auto", "horizontal", "vertical"):
+            raise ValueError(
+                f"orientation must be 'auto', 'horizontal' or 'vertical', "
+                f"got {orientation!r}"
+            )
+        if spacing is not None and (
+            isinstance(spacing, bool) or not isinstance(spacing, int) or spacing < 0
+        ):
+            raise ValueError(
+                f"spacing must be a non-negative int or None, got {spacing!r}"
+            )
+        spacing = _DEFAULT_SEPARATOR_SPACING if spacing is None else spacing
+        # The thin main-axis extent is just the 1px line; `spacing` is applied
+        # as margin by the frontend.  For "auto" the frontend resolves
+        # orientation and sets this itself.
+        line = Size.px(1)
+        if orientation == "vertical":
+            kwargs.setdefault("preferred_width", line)
+        elif orientation == "horizontal":
+            kwargs.setdefault("preferred_height", line)
+        super().__init__(**kwargs)
+        self.orientation = orientation
+        self.spacing = spacing
+
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
+        result["orientation"] = self.orientation
+        result["spacing"] = self.spacing
+        return result
+
+
+class LogView(View):
+    """A live two-column (time | message) log rendered as a scrollable ``View``.
+
+    Lines are appended from the backend via :meth:`log` and pushed to the
+    frontend as ``log_update`` messages.  Each line is a dict with a UTC
+    ``"time"`` key; string messages are stored under ``"message"`` and dict
+    messages have their keys folded in.
+
+    ``id`` is an optional stable identifier (auto-generated as ``"logN"`` when
+    omitted); it is the key used to address this view at runtime.  ``max_history``
+    caps the retained line count (FIFO drop-oldest); ``None`` keeps everything.
+
+    The first column is formatted from the stored UTC ISO-8601 timestamp,
+    converted to the browser's local timezone.  By default only the time-of-day
+    with microseconds is shown; ``show_date`` adds the date and
+    ``show_utc_offset`` adds the local offset to UTC (e.g. ``+02:00``).
+    """
+
+    _node_type = "log_view"
+
+    def __init__(
+        self,
+        id: str | None = None,
+        *,
+        max_history: int | None = None,
+        show_date: bool = False,
+        show_utc_offset: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        kwargs.setdefault("min_width", Size.px(200))
+        kwargs.setdefault("min_height", Size.px(120))
+        super().__init__(**kwargs)
+        self.id = id if id is not None else f"log{next(_log_view_counter)}"
+        if max_history is not None and (
+            not isinstance(max_history, int) or max_history < 0
+        ):
+            raise ValueError("max_history must be None or a non-negative integer")
+        self.max_history = max_history
+        self.show_date = show_date
+        self.show_utc_offset = show_utc_offset
+        self.lines: list[dict[str, Any]] = []
+        self._push = None  # callback slot injected by the Visualizer
+
+    def log(self, message: Any) -> None:
+        """Append *message* as a new line (str → ``{"message": …}``; dict → folded)."""
+        line: dict[str, Any] = {"time": datetime.now(timezone.utc).isoformat()}
+        if isinstance(message, dict):
+            line.update(message)
+        else:
+            line["message"] = str(message)
+        self.lines.append(line)
+        if self.max_history is not None and len(self.lines) > self.max_history:
+            del self.lines[: len(self.lines) - self.max_history]
+        if self._push is not None:
+            self._push(self.id, "append", [dict(line)])
+
+    def get_log(self) -> list[dict[str, Any]]:
+        """Return a copy of the current lines."""
+        return [dict(line) for line in self.lines]
+
+    def write_file(self, path: str | Path) -> None:
+        """Write the current lines as JSON lines (one dict per line)."""
+        Path(path).write_text(
+            "".join(json.dumps(line) + "\n" for line in self.lines),
+            encoding="utf-8",
+        )
+
+    def load_file(self, path: str | Path) -> None:
+        """Replace the current lines with those read from a JSON-lines file."""
+        raw = Path(path).read_text(encoding="utf-8")
+        lines = [json.loads(line) for line in raw.splitlines() if line.strip()]
+        if self.max_history is not None:
+            lines = lines[-self.max_history :]
+        self.lines = lines
+        if self._push is not None:
+            self._push(self.id, "replace", [dict(line) for line in self.lines])
+
+    def clear(self) -> None:
+        """Drop every line."""
+        self.lines = []
+        if self._push is not None:
+            self._push(self.id, "clear")
+
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
+        result["id"] = self.id
+        result["max_history"] = self.max_history
+        result["show_date"] = self.show_date
+        result["show_utc_offset"] = self.show_utc_offset
+        result["lines"] = [dict(line) for line in self.lines]
+        return result
+
 
 class SplitView(View):
-    """A container that lays its children out along one axis."""
+    """A container that lays its children out along one axis.
+
+    A split has no intrinsic size on the axis perpendicular to its layout axis
+    (its children are positioned absolutely), so it defaults
+    ``preferred_width``/``preferred_height`` to ``Size.fr(1)``.  This makes a
+    split fill the leftover space when it is a child of a flow container
+    (``StackView`` / ``GroupView`` / ``ToolbarView``) instead of collapsing to
+    zero.  ``fr`` is inert elsewhere — a root layout is forced to fill its
+    container and an enclosing ``SplitView`` resolves ``fr`` to a natural size —
+    so the default only affects the flow case.  Pass an explicit
+    ``preferred_width`` / ``preferred_height`` (or ``size``) to override.
+    """
 
     _node_type = "split"
 
@@ -199,6 +424,10 @@ class SplitView(View):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        if self.preferred_width is None:
+            self.preferred_width = Size.fr(1)
+        if self.preferred_height is None:
+            self.preferred_height = Size.fr(1)
         if orientation not in ("horizontal", "vertical"):
             raise ValueError(
                 f"orientation must be 'horizontal' or 'vertical', got {orientation!r}"
@@ -214,8 +443,8 @@ class SplitView(View):
                 f"sizes must match children ({len(self.sizes)} != {len(self.children)})"
             )
 
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
         result["orientation"] = self.orientation
         result["movable"] = self.movable
         result["sizes"] = (
@@ -223,7 +452,7 @@ class SplitView(View):
             if self.sizes is not None
             else [None] * len(self.children)
         )
-        result["children"] = [child._serialize(id_gen) for child in self.children]
+        result["children"] = [child._serialize() for child in self.children]
         return result
 
 
@@ -238,22 +467,48 @@ class StackView(View):
 
     def __init__(
         self,
-        direction: StackDirection,
+        direction: EStackDirection,
         children: list[View] | None = None,
+        *,
+        scrollable: bool = False,
+        gap: int | None = None,
+        align: EStackAlign = EStackAlign.STRETCH,
+        justify: EStackJustify = EStackJustify.START,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        if direction not in ("vertical", "horizontal", "wrap"):
+        if direction not in EStackDirection:
             raise ValueError(
                 f"direction must be 'vertical', 'horizontal' or 'wrap', got {direction!r}"
             )
+        if align not in EStackAlign:
+            raise ValueError(
+                f"align must be 'start', 'center', 'end' or 'stretch', got {align!r}"
+            )
+        if justify not in EStackJustify:
+            raise ValueError(
+                f"justify must be one of 'start', 'center', 'end', 'space-between', "
+                f"'space-around', 'space-evenly', got {justify!r}"
+            )
+        if gap is not None and (
+            isinstance(gap, bool) or not isinstance(gap, int) or gap < 0
+        ):
+            raise ValueError(f"gap must be a non-negative int or None, got {gap!r}")
         self.direction = direction
         self.children = list(children or [])
+        self.scrollable = scrollable
+        self.gap = gap
+        self.align = align
+        self.justify = justify
 
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
         result["direction"] = self.direction
-        result["children"] = [child._serialize(id_gen) for child in self.children]
+        result["scrollable"] = self.scrollable
+        result["gap"] = self.gap
+        result["align"] = self.align
+        result["justify"] = self.justify
+        result["children"] = [child._serialize() for child in self.children]
         return result
 
 
@@ -272,21 +527,178 @@ class GroupView(StackView):
         title: str = "",
         children: list[View] | None = None,
         *,
-        direction: StackDirection = "vertical",
-        position: str | None = None,
+        direction: EStackDirection = EStackDirection.VERTICAL,
+        position: EAnchor | None = None,
         collapsed: bool = False,
+        scrollable: bool = False,
+        gap: int | None = None,
+        align: EStackAlign = EStackAlign.STRETCH,
+        justify: EStackJustify = EStackJustify.START,
+        icon: Icon | None = None,
+        icon_only: bool = False,
+        tooltip: str = "",
+        parent_id: str | None = None,
         **kwargs: Any,
     ) -> None:
-        super().__init__(direction, children, **kwargs)
+        super().__init__(
+            direction,
+            children,
+            scrollable=scrollable,
+            gap=gap,
+            align=align,
+            justify=justify,
+            **kwargs,
+        )
         self.title = title
         self.position = position
         self.collapsed = collapsed
+        self.icon = icon
+        self.icon_only = icon_only
+        self.tooltip = tooltip
+        self.parent_id = parent_id
 
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
         result["title"] = self.title
         result["position"] = self.position
         result["collapsed"] = self.collapsed
+        if self.icon is not None:
+            result["icon"] = str(self.icon)
+        result["icon_only"] = self.icon_only
+        if self.tooltip:
+            result["tooltip"] = self.tooltip
+        if self.parent_id is not None:
+            result["parent_id"] = self.parent_id
+        return result
+
+
+class ToolbarView(StackView):
+    """A horizontal control toolbar (a bordered :class:`StackView` row).
+
+    ``direction`` is fixed to ``"horizontal"``.  ``margin`` is the inner
+    spacing (padding) between the border and the controls; ``border`` toggles
+    the thin outline.  ``gap`` spaces the controls, ``align`` sets cross-axis
+    (vertical) alignment, and ``justify`` positions the controls along the row
+    (``START`` left, ``END`` right, ``CENTER`` block-centered, ``SPACE_EVENLY``
+    equally spaced).
+    """
+
+    _node_type = "toolbar"
+
+    def __init__(
+        self,
+        children: list[View] | None = None,
+        *,
+        margin: SizeSpec = Size.px(6),
+        border: bool = True,
+        gap: int | None = None,
+        align: EStackAlign = EStackAlign.CENTER,
+        justify: EStackJustify = EStackJustify.START,
+        **kwargs: Any,
+    ) -> None:
+        if margin is not None and not isinstance(margin, Size):
+            raise ValueError(f"margin must be a Size or None, got {margin!r}")
+        if not isinstance(border, bool):
+            raise ValueError(f"border must be a bool, got {border!r}")
+        super().__init__(
+            "horizontal",
+            children,
+            gap=gap,
+            align=align,
+            justify=justify,
+            **kwargs,
+        )
+        self.margin = margin
+        self.border = border
+        _apply_toolbar_variant(self)
+
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
+        result["margin"] = _size_dict(self.margin)
+        result["border"] = self.border
+        return result
+
+
+def _apply_toolbar_variant(view: View) -> None:
+    """Recursively force ``TOOLBAR`` onto eligible control views in a toolbar."""
+    for child in getattr(view, "children", None) or ():
+        if isinstance(child, MenuView):
+            continue  # a nested menu keeps its own MENU styling
+        ctrl = getattr(child, "control", None)
+        if ctrl is not None and hasattr(ctrl, "variant"):
+            ctrl.variant = EControlVariant.TOOLBAR
+        _apply_toolbar_variant(child)
+
+
+def _apply_menu_variant(view: View) -> None:
+    """Recursively force ``MENU`` onto eligible control views in a menu subtree."""
+    for child in getattr(view, "children", None) or ():
+        if isinstance(child, MenuView):
+            if child.override_variant:
+                _apply_menu_variant(child)
+            continue
+        ctrl = getattr(child, "control", None)
+        if ctrl is not None and hasattr(ctrl, "variant"):
+            ctrl.variant = EControlVariant.MENU
+        _apply_menu_variant(child)
+
+
+class MenuView(View):
+    """A menu: a hamburger dropdown or a permanent horizontal strip of options.
+
+    ``children`` are the options (usually ``*View`` control wrappers); a child
+    may itself be another :class:`MenuView`, forming a nested sub-menu.  When
+    used as an overlay (the global overlay or a :class:`SceneView` overlay
+    child), ``position`` anchors the menu.
+
+    ``override_variant`` (default ``True``) forces every eligible control in the
+    subtree to the ``MENU`` variant, so options render flat/borderless without
+    setting ``variant=`` by hand.
+    """
+
+    _node_type = "menu"
+
+    def __init__(
+        self,
+        label: str = "",
+        children: list[View] | None = None,
+        *,
+        trigger_icon: Icon | None = None,
+        mode: Literal["dropdown", "bar"] = "dropdown",
+        direction: EStackDirection | None = None,
+        position: EAnchor | None = None,
+        override_variant: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        if mode not in ("dropdown", "bar"):
+            raise ValueError(f"mode must be 'dropdown' or 'bar', got {mode!r}")
+        if direction is None:
+            direction = "horizontal" if mode == "bar" else "vertical"
+        if direction not in EStackDirection:
+            raise ValueError(
+                f"direction must be 'vertical', 'horizontal' or 'wrap', got {direction!r}"
+            )
+        self.label = label
+        self.trigger_icon = trigger_icon
+        self.mode = mode
+        self.direction = direction
+        self.position = position
+        self.override_variant = override_variant
+        self.children = list(children or [])
+        if override_variant:
+            _apply_menu_variant(self)
+
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
+        result["trigger_icon"] = (
+            str(self.trigger_icon) if self.trigger_icon is not None else None
+        )
+        result["label"] = self.label
+        result["mode"] = self.mode
+        result["direction"] = self.direction
+        result["position"] = self.position
+        result["children"] = [child._serialize() for child in self.children]
         return result
 
 
@@ -294,7 +706,10 @@ class ControlView(View):
     """Base for a single HTML control rendered as a plain ``View`` (no scene).
 
     The control ``id`` is the WebSocket event key (``control_id``) and must be
-    unique across the app.
+    unique across the app.  Each subclass wraps a
+    :class:`~pytanga.viz._controls.Control` (``self.control``) which is the
+    single source of truth for the control's fields; reads of those fields
+    delegate to it via :meth:`__getattr__`.
     """
 
     _node_type = "control"
@@ -307,16 +722,40 @@ class ControlView(View):
         tooltip: str = "",
         **kwargs: Any,
     ) -> None:
+        kwargs.setdefault("min_width", Size.px(120))
+        kwargs.setdefault("min_height", Size.px(32))
         super().__init__(**kwargs)
         self.id = cid
         self.label = label
         self.tooltip = tooltip
+        self.control: Control | None = None
+        self._push = None  # callback slot injected at mount (LogView pattern)
 
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
+    def __getattr__(self, name: str) -> Any:
+        ctrl = self.__dict__.get("control")
+        if ctrl is not None and hasattr(ctrl, name):
+            return getattr(ctrl, name)
+        raise AttributeError(f"{type(self).__name__} object has no attribute {name!r}")
+
+    def set_value(self, value: Any) -> None:
+        """Set this control's value and push ``control_update`` to the browser.
+
+        Mutates ``self.control`` and, when mounted, pushes the new value through
+        the injected ``_push`` callback (so backend-initiated changes reach the
+        rendered DOM).
+        """
+        self.control.set_value(value)
+        if self._push is not None:
+            self._push(self.id, self.control.get_value())
+
+    def _serialize(self) -> dict[str, Any]:
+        result = super()._serialize()
         result["id"] = self.id  # control id doubles as the event key
         result["label"] = self.label
         result["tooltip"] = self.tooltip
+        for key, val in self.control.serialize().items():
+            if key not in ("id", "kind", "label", "tooltip"):
+                result[key] = val
         return result
 
 
@@ -330,27 +769,30 @@ class SliderView(ControlView):
         cid: str,
         *,
         label: str = "",
+        variant: EControlVariant = EControlVariant.DEFAULT,
         min: float = 0.0,
         max: float = 1.0,
         step: float = 0.01,
         value: float | None = None,
         on_change: Handler | None = None,
+        on_press: Handler | None = None,
+        on_release: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
-        self.min = float(min)
-        self.max = float(max)
-        self.step = float(step)
-        self.value = self.min if value is None else float(value)
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["min"] = self.min
-        result["max"] = self.max
-        result["step"] = self.step
-        result["value"] = self.value
-        return result
+        self.control = Slider(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            variant=variant,
+            min=float(min),
+            max=float(max),
+            step=float(step),
+            value=float(min) if value is None else float(value),
+            on_change=on_change,
+            on_press=on_press,
+            on_release=on_release,
+        )
 
 
 class ButtonView(ControlView):
@@ -363,22 +805,28 @@ class ButtonView(ControlView):
         cid: str,
         *,
         label: str = "",
+        variant: EControlVariant = EControlVariant.DEFAULT,
         icon: Icon | None = None,
         icon_only: bool = False,
         on_click: Handler | None = None,
         **kwargs: Any,
     ) -> None:
+        if icon_only:
+            # Icon-only buttons render as a small square tile; size the view to
+            # match instead of the generic control floor (120×32) so adjacent
+            # icons don't get a large empty gap around them.
+            kwargs.setdefault("min_width", Size.px(28))
+            kwargs.setdefault("min_height", Size.px(28))
         super().__init__(cid, label=label, **kwargs)
-        self.icon = icon
-        self.icon_only = icon_only
-        self.on_click = on_click
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        if self.icon is not None:
-            result["icon"] = str(self.icon)
-        result["icon_only"] = self.icon_only
-        return result
+        self.control = Button(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            variant=variant,
+            icon=icon,
+            icon_only=icon_only,
+            on_click=on_click,
+        )
 
 
 class DropdownView(ControlView):
@@ -391,25 +839,33 @@ class DropdownView(ControlView):
         cid: str,
         *,
         label: str = "",
+        variant: EControlVariant = EControlVariant.DEFAULT,
         options: list[str] | tuple[str, ...] = (),
         value: str = "",
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
-        self.options = list(options)
-        self.value = value
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["options"] = self.options
-        result["value"] = self.value
-        return result
+        self.control = Dropdown(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            variant=variant,
+            options=list(options),
+            value=value,
+            on_change=on_change,
+        )
 
 
 class FileChooserView(ControlView):
-    """A file-path control (text field + backend file browser) as a view."""
+    """A file-selection (directory listing) view with no path field/browse button.
+
+    The view renders the backend-driven directory listing only; it is meant to be
+    embedded in any view container (or inside a :class:`FileChooserDialog`).  A
+    path display, edit field, and browse button are intentionally not part of this
+    view — compose those yourself (e.g. a :class:`TextFieldView` plus a
+    :class:`ButtonView` that calls ``open_file_chooser``).
+    """
 
     _node_type = "file_chooser_view"
 
@@ -425,20 +881,21 @@ class FileChooserView(ControlView):
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
+        kwargs.setdefault("min_width", Size.px(320))
+        kwargs.setdefault("min_height", Size.px(240))
+        kwargs.setdefault("preferred_width", Size.px(400))
+        kwargs.setdefault("preferred_height", Size.px(320))
         super().__init__(cid, label=label, **kwargs)
-        self.value = value
-        self.placeholder = placeholder
-        self.root = root
-        self.accept = accept
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        result["placeholder"] = self.placeholder
-        result["root"] = self.root
-        result["accept"] = self.accept
-        return result
+        self.control = FileChooser(
+            id=cid,
+            label=label,
+            tooltip=self.tooltip,
+            value=value,
+            placeholder=placeholder,
+            root=root,
+            accept=accept,
+            on_change=on_change,
+        )
 
 
 class TextFieldView(ControlView):
@@ -458,15 +915,14 @@ class TextFieldView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.placeholder = placeholder
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        result["placeholder"] = self.placeholder
-        return result
+        self.control = TextField(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            value=value,
+            placeholder=placeholder,
+            on_change=on_change,
+        )
 
 
 class TextAreaView(ControlView):
@@ -487,17 +943,15 @@ class TextAreaView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.placeholder = placeholder
-        self.rows = rows
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        result["placeholder"] = self.placeholder
-        result["rows"] = self.rows
-        return result
+        self.control = TextArea(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            value=value,
+            placeholder=placeholder,
+            rows=rows,
+            on_change=on_change,
+        )
 
 
 class ColorPickerView(ControlView):
@@ -516,13 +970,13 @@ class ColorPickerView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        return result
+        self.control = ColorPicker(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            value=value,
+            on_change=on_change,
+        )
 
 
 class CheckboxView(ControlView):
@@ -535,19 +989,21 @@ class CheckboxView(ControlView):
         cid: str,
         *,
         label: str = "",
+        variant: EControlVariant = EControlVariant.DEFAULT,
         value: bool = False,
         tooltip: str = "",
         on_change: Handler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.value = value
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["value"] = self.value
-        return result
+        self.control = Checkbox(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            variant=variant,
+            value=value,
+            on_change=on_change,
+        )
 
 
 class ValueEditView(ControlView):
@@ -571,33 +1027,472 @@ class ValueEditView(ControlView):
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
-        self.min = float(min)
-        self.max = float(max)
-        self.step = float(step)
-        self.digits = int(digits)
-        self.value = float(value)
-        self.editable = editable
-        self.on_change = on_change
-
-    def _serialize(self, id_gen: Iterator[str]) -> dict[str, Any]:
-        result = super()._serialize(id_gen)
-        result["min"] = self.min
-        result["max"] = self.max
-        result["step"] = self.step
-        result["digits"] = self.digits
-        result["value"] = self.value
-        result["editable"] = self.editable
-        return result
+        self.control = ValueEdit(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            min=float(min),
+            max=float(max),
+            step=float(step),
+            digits=int(digits),
+            value=float(value),
+            editable=editable,
+            on_change=on_change,
+        )
 
 
-def serialize_layout(root: View, name: str = "") -> dict[str, Any]:
-    """Serialize a view tree to the ``view_layout`` message."""
-    return {
+class LabelView(ControlView):
+    """A read-only text label control (configurable font size) as a view."""
+
+    _node_type = "label_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        value: str = "",
+        font_size: float = 14,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, **kwargs)
+        self.control = Label(
+            id=cid,
+            label="",
+            tooltip=self.tooltip,
+            value=value,
+            font_size=float(font_size),
+        )
+
+
+class MarkdownView(ControlView):
+    """A read-only rendered-markdown control (with KaTeX math) as a view."""
+
+    _node_type = "markdown_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        value: str = "",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(cid, **kwargs)
+        self.control = Markdown(
+            id=cid,
+            label="",
+            tooltip=self.tooltip,
+            value=value,
+        )
+
+
+class TableView(ControlView):
+    """An editable tabular-data control rendered as a view."""
+
+    _node_type = "table_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        label: str = "",
+        columns: list[str] | tuple[str, ...] = (),
+        rows: list[list[Any]] | tuple[tuple[Any, ...], ...] = (),
+        column_types: list[Any] | tuple[Any, ...] | None = None,
+        allow_add_rows: bool = True,
+        allow_add_columns: bool = True,
+        allow_delete_rows: bool = True,
+        show_column_titles: bool = True,
+        show_row_numbers: bool = False,
+        allow_delete_columns: bool = True,
+        sortable: bool = True,
+        editable_titles: bool = True,
+        max_history: int = 100,
+        tooltip: str = "",
+        json_path: str | None = None,
+        on_cell_change: Handler | None = None,
+        on_row_add: Handler | None = None,
+        on_column_add: Handler | None = None,
+        on_row_delete: Handler | None = None,
+        on_column_delete: Handler | None = None,
+        on_column_title_change: Handler | None = None,
+        on_column_type_change: Handler | None = None,
+        on_cell_select: Handler | None = None,
+        on_change: Handler | None = None,
+        on_enum_options: EnumOptionsHandler | None = None,
+        **kwargs: Any,
+    ) -> None:
+        # A native grid needs horizontal room for every column; default the min
+        # width to a per-column estimate so an auto-sized overlay panel doesn't
+        # clip the last column.  Default a natural preferred size so flow
+        # containers bound the grid and it scrolls internally instead of growing
+        # with content.  Explicit ``min_width=``/``preferred_*`` still win.
+        ncols = max(1, len(columns))
+        kwargs.setdefault("min_width", Size.px(max(120, ncols * _TABLE_COLUMN_MIN_PX)))
+        kwargs.setdefault("preferred_width", Size.px(480))
+        kwargs.setdefault("preferred_height", Size.px(320))
+        super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
+        self.control = Table(
+            id=cid,
+            label=label,
+            tooltip=tooltip,
+            columns=list(columns),
+            rows=[list(row) for row in rows],
+            column_types=list(column_types) if column_types is not None else None,
+            allow_add_rows=allow_add_rows,
+            allow_add_columns=allow_add_columns,
+            allow_delete_rows=allow_delete_rows,
+            show_column_titles=show_column_titles,
+            show_row_numbers=show_row_numbers,
+            allow_delete_columns=allow_delete_columns,
+            sortable=sortable,
+            editable_titles=editable_titles,
+            max_history=max_history,
+            on_cell_change=on_cell_change,
+            on_row_add=on_row_add,
+            on_column_add=on_column_add,
+            on_row_delete=on_row_delete,
+            on_column_delete=on_column_delete,
+            on_column_title_change=on_column_title_change,
+            on_column_type_change=on_column_type_change,
+            on_cell_select=on_cell_select,
+            on_change=on_change,
+            on_enum_options=on_enum_options,
+            _json_path=json_path,
+        )
+        if json_path is not None:
+            import os
+
+            if os.path.exists(json_path):
+                self.control.from_json(json_path)
+            else:
+                self.control._save()
+
+    def undo(self) -> bool:
+        """Undo the last edit of the wrapped ``Table`` and push the grid."""
+        changed = self.control.undo()
+        if changed:
+            self._push_value()
+        return changed
+
+    def redo(self) -> bool:
+        """Redo the last undone edit of the wrapped ``Table`` and push the grid."""
+        changed = self.control.redo()
+        if changed:
+            self._push_value()
+        return changed
+
+    def get_value(self) -> dict[str, Any]:
+        """Return the wrapped ``Table``'s current grid (``{columns, rows}``)."""
+        return self.control.get_value()
+
+    def get_cell(self, row: int, col: int) -> str:
+        """Return the cell at *row*/*col* from the wrapped ``Table``."""
+        return self.control.get_cell(row, col)
+
+    def set_cell(self, row: int, col: int, value: str) -> bool:
+        """Set a single cell (recording history) and push the grid."""
+        changed = self.control.set_cell(row, col, value)
+        if changed:
+            self._push_value()
+        return changed
+
+    def clear_history(self) -> None:
+        """Clear the wrapped ``Table``'s undo and redo stacks."""
+        self.control.clear_history()
+
+    def add_row(self, values: list[str] | None = None) -> bool:
+        """Append a row (blank by default) and push the grid to the browser."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_row(len(self.control.rows), vals)
+        if changed:
+            self._push_value()
+        return changed
+
+    def add_column(
+        self,
+        header: str = "",
+        values: list[Any] | None = None,
+        column_type: Any = None,
+    ) -> bool:
+        """Append a column (blank cells by default) and push the grid."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_column(
+            len(self.control.columns), header, vals, column_type
+        )
+        if changed:
+            self._push_value()
+        return changed
+
+    def delete_row(self, index: int) -> bool:
+        """Delete the row at *index* (zero-based) and push the grid."""
+        changed = self.control.delete_rows([index])
+        if changed:
+            self._push_value()
+        return changed
+
+    def delete_column(self, index: int) -> bool:
+        """Delete the column at *index* (zero-based) and push the grid."""
+        changed = self.control.delete_column(index)
+        if changed:
+            self._push_value()
+        return changed
+
+    def insert_row(self, index: int, values: list[str] | None = None) -> bool:
+        """Insert a row at *index* (zero-based) and push the grid."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_row(index, vals)
+        if changed:
+            self._push_value()
+        return changed
+
+    def insert_column(
+        self,
+        index: int,
+        header: str = "",
+        values: list[Any] | None = None,
+        column_type: Any = None,
+    ) -> bool:
+        """Insert a column at *index* (zero-based) and push the grid."""
+        vals = list(values) if values is not None else []
+        changed = self.control.insert_column(index, header, vals, column_type)
+        if changed:
+            self._push_value()
+        return changed
+
+    def set_column_format(self, col: int, fmt: str | None) -> bool:
+        """Set the ``format`` template of a ``number`` column and push the grid."""
+        changed = self.control.set_column_format(col, fmt)
+        if changed:
+            self._push_value()
+        return changed
+
+    def rename_column(self, col: int, title: str) -> bool:
+        """Rename the column at *col* (zero-based) without a full-grid push."""
+        return self.control.rename_column(col, title)
+
+    def convert_column(self, col: int, target: str) -> bool:
+        """Convert the column at *col* to *target* type and push the grid."""
+        changed = self.control.convert_column(col, target)
+        if changed:
+            self._push_value()
+        return changed
+
+    @property
+    def active_cell(self) -> tuple[int, int] | None:
+        """The currently selected cell (``(row, col)``), or ``None``."""
+        return self.control.active_cell
+
+    def _push_value(self) -> None:
+        """Push the wrapped ``Table``'s grid to the browser (if mounted)."""
+        if self._push is not None:
+            self._push(self.id, self.control.get_value())
+
+    def save(self, path: str | None = None) -> None:
+        """Write the table to JSON (defaults to the auto-save ``json_path``)."""
+        target = path if path is not None else self.control._json_path
+        if target is None:
+            raise ValueError("no path: pass path= or construct with json_path=")
+        self.control.to_json(target)
+
+    def load(self, path: str | None = None) -> None:
+        """Load the table from JSON (defaults to the auto-save ``json_path``)."""
+        target = path if path is not None else self.control._json_path
+        if target is None:
+            raise ValueError("no path: pass path= or construct with json_path=")
+        self.control.from_json(target)
+        self._push_value()
+
+    def to_csv(
+        self, path: str, delimiter: str = ",", decimal_separator: str = "."
+    ) -> None:
+        """Export the table data to CSV (no column types).
+
+        ``delimiter`` and ``decimal_separator`` control the CSV dialect; use
+        ``delimiter=";"`` / ``decimal_separator=","`` for European locales.
+        """
+        self.control.to_csv(
+            path, delimiter=delimiter, decimal_separator=decimal_separator
+        )
+
+    def from_csv(
+        self,
+        path: str,
+        delimiter: str | None = None,
+        decimal_separator: str | None = None,
+    ) -> None:
+        """Import table data from CSV and push the grid.
+
+        ``delimiter`` / ``decimal_separator`` default to ``None`` (auto-detect
+        from file content); pass explicit values to override.
+        """
+        self.control.from_csv(
+            path, delimiter=delimiter, decimal_separator=decimal_separator
+        )
+        self._push_value()
+
+    @property
+    def can_undo(self) -> bool:
+        """Whether the wrapped ``Table`` can be undone."""
+        return self.control.can_undo
+
+    @property
+    def can_redo(self) -> bool:
+        """Whether the wrapped ``Table`` can be redone."""
+        return self.control.can_redo
+
+
+def control_to_view(ctrl: Control) -> ControlView:
+    """Wrap an existing :class:`Control` in its ``*View`` counterpart.
+
+    The returned view reuses *ctrl* as its ``control`` (the single source of
+    truth), so backend updates via ``scene._controls`` and control handlers
+    registered under the control id keep working.
+    """
+    if isinstance(ctrl, Slider):
+        view = SliderView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            variant=ctrl.variant,
+            min=ctrl.min,
+            max=ctrl.max,
+            step=ctrl.step,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+            on_press=ctrl.on_press,
+            on_release=ctrl.on_release,
+        )
+    elif isinstance(ctrl, Dropdown):
+        view = DropdownView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            variant=ctrl.variant,
+            options=ctrl.options,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, Button):
+        view = ButtonView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            variant=ctrl.variant,
+            icon=ctrl.icon,
+            icon_only=ctrl.icon_only,
+            on_click=ctrl.on_click,
+        )
+    elif isinstance(ctrl, Checkbox):
+        view = CheckboxView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            variant=ctrl.variant,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, TextField):
+        view = TextFieldView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            placeholder=ctrl.placeholder,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, TextArea):
+        view = TextAreaView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            placeholder=ctrl.placeholder,
+            rows=ctrl.rows,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, ColorPicker):
+        view = ColorPickerView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, FileChooser):
+        view = FileChooserView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            value=ctrl.value,
+            placeholder=ctrl.placeholder,
+            root=ctrl.root,
+            accept=ctrl.accept,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, ValueEdit):
+        view = ValueEditView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            min=ctrl.min,
+            max=ctrl.max,
+            step=ctrl.step,
+            digits=ctrl.digits,
+            value=ctrl.value,
+            editable=ctrl.editable,
+            on_change=ctrl.on_change,
+        )
+    elif isinstance(ctrl, Table):
+        view = TableView(
+            ctrl.id,
+            label=ctrl.label,
+            tooltip=ctrl.tooltip,
+            columns=ctrl.columns,
+            rows=ctrl.rows,
+            allow_add_rows=ctrl.allow_add_rows,
+            allow_add_columns=ctrl.allow_add_columns,
+            allow_delete_rows=ctrl.allow_delete_rows,
+            show_column_titles=ctrl.show_column_titles,
+            show_row_numbers=ctrl.show_row_numbers,
+            allow_delete_columns=ctrl.allow_delete_columns,
+            sortable=ctrl.sortable,
+            editable_titles=ctrl.editable_titles,
+            max_history=ctrl.max_history,
+            on_cell_change=ctrl.on_cell_change,
+            on_row_add=ctrl.on_row_add,
+            on_column_add=ctrl.on_column_add,
+            on_row_delete=ctrl.on_row_delete,
+            on_column_delete=ctrl.on_column_delete,
+            on_column_title_change=ctrl.on_column_title_change,
+            on_column_type_change=ctrl.on_column_type_change,
+            on_cell_select=ctrl.on_cell_select,
+            on_change=ctrl.on_change,
+            on_enum_options=ctrl.on_enum_options,
+        )
+    else:
+        raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
+    view.control = ctrl  # reuse the same control object (source of truth)
+    return view
+
+
+def serialize_layout(
+    root: View, name: str = "", overlay: list[View] | None = None
+) -> dict[str, Any]:
+    """Serialize a view tree to the ``view_layout`` message.
+
+    ``overlay`` lists extra views (e.g. global menus) mounted into the global
+    overlay container; they are serialized after the root with the same id
+    generator so node ids stay unique across root and overlay.
+    """
+    result = {
         "type": "view_layout",
         "name": name,
         "scenes": iter_scene_names(root),
-        "root": root._serialize(_make_id_gen()),
+        "root": root._serialize(),
     }
+    if overlay:
+        result["overlay"] = [view._serialize() for view in overlay]
+    return result
 
 
 def iter_scene_names(root: View) -> list[str]:
@@ -619,6 +1514,20 @@ def iter_scene_names(root: View) -> list[str]:
     return names
 
 
+def iter_scene_views(root: View) -> Iterator[SceneView]:
+    """Yield every :class:`SceneView` in the tree (DFS order)."""
+
+    def _visit(view: View) -> Iterator[SceneView]:
+        if isinstance(view, SceneView):
+            yield view
+        for child in getattr(view, "children", None) or ():
+            yield from _visit(child)
+        for child in getattr(view, "overlay", None) or ():
+            yield from _visit(child)
+
+    yield from _visit(root)
+
+
 def iter_control_views(root: View) -> Iterator[ControlView]:
     """Yield every control view in the tree (DFS order)."""
 
@@ -633,27 +1542,18 @@ def iter_control_views(root: View) -> Iterator[ControlView]:
     yield from _visit(root)
 
 
-def set_control_view_value(view: ControlView, value: Any) -> None:
-    """Coerce and set *value* on a control view.
+def iter_log_views(root: View) -> Iterator[LogView]:
+    """Yield every :class:`LogView` in the tree (DFS order)."""
 
-    Mirrors :func:`pytanga.viz._controls.set_control_value`.  ``ButtonView`` has
-    no value and raises :class:`TypeError`.
-    """
-    if not isinstance(view, ControlView):
-        raise TypeError(f"view must be a ControlView, got {type(view).__name__}")
-    if isinstance(view, (SliderView, ValueEditView)):
-        view.value = float(value)
-    elif isinstance(view, CheckboxView):
-        view.value = bool(value)
-    elif isinstance(
-        view,
-        (DropdownView, ColorPickerView, TextFieldView, TextAreaView, FileChooserView),
-    ):
-        view.value = str(value)
-    elif isinstance(view, ButtonView):
-        raise TypeError("ButtonView does not carry a value")
-    else:
-        raise TypeError(f"Unknown control view kind: {type(view).__name__}")
+    def _visit(view: View) -> Iterator[LogView]:
+        if isinstance(view, LogView):
+            yield view
+        for child in getattr(view, "children", None) or ():
+            yield from _visit(child)
+        for child in getattr(view, "overlay", None) or ():
+            yield from _visit(child)
+
+    yield from _visit(root)
 
 
 __all__ = [
@@ -662,17 +1562,26 @@ __all__ = [
     "DropdownView",
     "FileChooserView",
     "GroupView",
+    "LabelView",
+    "LogView",
+    "MarkdownView",
+    "MenuView",
     "SceneView",
+    "SeparatorView",
     "SizeSpec",
     "SliderView",
     "SpacerView",
     "SplitView",
     "StackView",
+    "TableView",
+    "ToolbarView",
     "ValueEditView",
     "View",
+    "control_to_view",
     "iter_control_views",
+    "iter_log_views",
     "iter_scene_names",
+    "iter_scene_views",
     "serialize_layout",
-    "set_control_view_value",
     "size_from_dict",
 ]

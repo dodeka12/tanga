@@ -4,17 +4,20 @@ How to create and maintain changelog entries for this repository.
 
 ## Location & naming
 
-- New changelogs live in `docs/changelog/`.
+- New changelogs live in `docs/changelog/YYYY/MM/` — one subfolder per year and
+  month, e.g. `docs/changelog/2026/08/` and `docs/changelog/2026/09/`.
 - **On a feature/fix branch (any branch other than `main`)** name the file
-  `YYYY-MM-DD_<branch-name>.md`, e.g. `2026-08-19_fix-join-meet.md`.
+  `DD_<branch-name>.md` inside the year/month folder for the branch's start
+  date, e.g. `docs/changelog/2026/08/19_fix-join-meet.md`.
   - Replace `/` in the branch name with `-` (branch names commonly contain
     `/`, which would be read as a path separator in a filename).
   - Integrate **all** changes made on the branch into this single branch
     changelog — append to it as the branch evolves; do **not** create a new
     file per commit.
 - **When opening a PR**, the file is renamed to its final
-  `YYYY-MM-DD_<short-commit-hash>.md` form (the hash of the branch's last
-  commit). See `dev/workflows/pull-request.md`.
+  `DD_<short-commit-hash>.md` form (the hash of the branch's last commit) and
+  moved into the year/month folder for the date the PR is submitted. See
+  `dev/workflows/pull-request.md`.
 
 ## Title
 
@@ -24,28 +27,38 @@ How to create and maintain changelog entries for this repository.
 - Use the current-tag-relative form:
 
   ```
-  # Changes since version <last-stable-release>
+  # Changes since version <last-stable-release> (<last-release-candidate>)
   ```
 
-  Determine `<last-stable-release>` by running (prints the newest non-prerelease
-  tag reachable from the commit the branch is based on, without the leading
-  `v`):
+  Determine the value by running (prints the newest non-prerelease tag
+  reachable from the commit the branch is based on, without the leading `v`,
+  followed by the newest release candidate in parentheses when one exists —
+  e.g. `1.16.0 (1.17.0-rc3)`):
 
   ```
   uv run python tools/last-release.py
   ```
 
-  e.g. if it prints `0.10.0`, use `# Changes since version 0.10.0`.
+  - If it prints `0.10.0`, use `# Changes since version 0.10.0`.
+  - If it prints `1.16.0 (1.17.0-rc3)`, use
+    `# Changes since version 1.16.0 (1.17.0-rc3)`.
+
   Do **not** copy a version from this document or from another changelog — it
   must reflect the tag your branch actually forked from, and it changes
   frequently.
+
+  The parenthesised release candidate disambiguates the case where several PRs
+  target the same upcoming release: each PR is published as its own `-rcN`.
+  Use the value printed by the script as-is — it is the latest release
+  candidate the branch is based on (e.g. a branch based on `1.17.0-rc1` writes
+  `# Changes since version 1.16.0 (1.17.0-rc1)`).
 
 ## Structure
 
 Use these sections in this order (only include the sections that apply):
 
 ```
-# Changes since version <last-stable-release>
+# Changes since version <last-stable-release> (<last-release-candidate>)
 
 ## New Features
 - **<Headline>** — one-sentence explanation.
@@ -77,15 +90,17 @@ to the hash-based filename). When adding a changelog:
    ```
 
    where `<version>` is the same value printed by `tools/last-release.py`
-   (e.g. `## [Since 0.10.0] — 2026-08-18`). Do **not** use an `[Unreleased]`
-   tag, since the version is not yet known.
+   (e.g. `## [Since 0.10.0] — 2026-08-18`, or
+   `## [Since 1.16.0 (1.17.0-rc3)] — 2026-09-02` when a release candidate is
+   shown) and `<YYYY-MM-DD>` is the PR submission date. Do **not** use an
+   `[Unreleased]` tag, since the version is not yet known.
 3. Add a one-line summary of the main features (dot-separated, `·`), a second
    line for breaking/bug highlights if needed, and a details link:
 
    ```
    - OPNS/IPNS flag on `Algebra.opns` · typed analyzers · ...
    - Breaking: per-call `opns` removed · ...
-   → [Details](2026-08-16_7cb2db1.md)
+   → [Details](2026/08/16_7cb2db1.md)
    ```
 
 4. Leave existing (older) entries untouched.

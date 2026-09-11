@@ -8,8 +8,10 @@ import math
 import numpy as np
 
 from pytanga.geometry.entities import Direction, Line, Point
+from pytanga.geometry.operators import Motor, Rotor, Translator
 from pytanga.viz._nodes import Transform, VizGroup, VizOverlayObject, VizSceneObject
 from pytanga.viz._styles import PointStyle
+from pytanga.viz._transforms import operator_to_matrix
 from pytanga.viz.scene import Scene
 
 
@@ -70,6 +72,24 @@ class TestTransform:
         t.set(position=(1.0, 0.0, 0.0), scale=(2.0, 2.0, 2.0))
         assert t.position == (1.0, 0.0, 0.0)
         assert t.scale == (2.0, 2.0, 2.0)
+
+    def test_from_operator(self):
+        from pytanga.viz import Transform as PublicTransform
+
+        ops = [
+            Translator(vector=Direction(1, 2, 3)),
+            Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1)),
+            Motor(
+                rotor=Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1)),
+                translator=Translator(vector=Direction(1, 0, 0)),
+            ),
+        ]
+        for op in ops:
+            t = Transform.from_operator(op)
+            assert np.allclose(t.matrix(), operator_to_matrix(op), atol=1e-12)
+
+        # `Transform` is importable from the public `pytanga.viz` namespace.
+        assert PublicTransform is Transform
 
 
 # ── VizSceneObject aspects ──────────────────────────────────
@@ -213,3 +233,13 @@ class TestSceneIntegration:
         _, removed = s.flush()
         assert g.id in removed
         assert g.id not in s._nodes
+
+    def test_add_viz_entity_and_label(self):
+        s = Scene()
+        eid = s.add_viz(Line(Point(0, 0, 0), Direction(1, 0, 0)), color="#ff0000", label="axis")
+        node = s.get_node(eid)
+        assert isinstance(node, VizSceneObject)
+        assert node.style["color"] == "#ff0000"
+        label_ids = s.get_label_ids(eid)
+        assert len(label_ids) == 1
+        assert s.get_node(label_ids[0]).payload == "axis"

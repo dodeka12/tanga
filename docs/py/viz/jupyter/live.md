@@ -4,6 +4,15 @@ Live display embeds the **running** server in an inline iframe, so you can
 rotate, pan, zoom, and animate. It requires the server to be running (and the
 kernel to be on the same machine as the browser).
 
+## Re-run safety
+
+`Visualizer()` is a singleton under Jupyter: re-running a cell that re-creates
+it reuses the same instance and clears the default scene (re-adding axes/grid
+per `add_default_axes` / `add_default_grid`).  `viz.scene(name)` is created on
+first call, cleared on a same-cell re-run, and get-or-create across different
+cells.  See [Use Cases — Notebooks](../use-cases-notebooks.md#caveats) for the
+full caveats.
+
 ## Notebook workflow
 
 ```python

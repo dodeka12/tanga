@@ -1,0 +1,8 @@
+/* Tanga viewer — file chooser control. */
+
+.tanga-file-chooser .tanga-action-button {
+    width: auto;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+

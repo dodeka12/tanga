@@ -46,7 +46,7 @@ for frame in range(90):
     viz.sleep_ms(33)
 
 viz.export_snapshot(
-    "animated_orbit.html",
+    "_output/animated_orbit.html",
     overwrite=True,
     animation=recording,
     anim_style=AnimStyle(fps=30, loop=True, compress=True),

@@ -3,16 +3,9 @@
 
 """Install packaged examples for local exploration."""
 
-import shutil
 from pathlib import Path
 
-
-def _find_repo_root(start: Path) -> Path | None:
-    """Walk up from *start* looking for a repository root indicator."""
-    for candidate in [start, *start.parents]:
-        if (candidate / ".git").exists() or (candidate / "pyproject.toml").exists():
-            return candidate
-    return None
+from ._install import find_repo_root, replace_dir
 
 
 def install_examples() -> Path:
@@ -27,9 +20,14 @@ def install_examples() -> Path:
     will be copied from there.  When running from a source checkout the
     examples will be copied directly from the repository's ``py/examples/``
     directory.
+
+    Any previously installed examples are removed first, so the target is
+    always a faithful mirror of the packaged examples.  Raises
+    :class:`OSError` (after printing an error message) if the old copy cannot
+    be removed or the new one cannot be written.
     """
     cwd = Path.cwd()
-    repo = _find_repo_root(cwd)
+    repo = find_repo_root(cwd)
     target_dir = (
         (repo / ".dep-examples" / "pytanga")
         if repo
@@ -45,7 +43,7 @@ def install_examples() -> Path:
         source = packaged
     else:
         # dev / source checkout – copy the repo's py/examples/
-        dev_repo = _find_repo_root(pkg_dir)
+        dev_repo = find_repo_root(pkg_dir)
         if dev_repo is None:
             raise FileNotFoundError(
                 "Cannot locate repository root for dev-mode examples. "
@@ -55,12 +53,6 @@ def install_examples() -> Path:
         if not source.is_dir():
             raise FileNotFoundError(f"Expected examples directory not found: {source}")
 
-    # ----- copy the examples --------------------------------------------
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
-    if target_dir.is_symlink() or target_dir.is_file():
-        target_dir.unlink()
-    elif target_dir.is_dir():
-        shutil.rmtree(target_dir)
-    shutil.copytree(source, target_dir)
+    replace_dir(source, target_dir, label="examples")
 
     return target_dir

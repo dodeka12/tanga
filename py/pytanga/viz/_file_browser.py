@@ -23,9 +23,9 @@ def list_directory(
 ) -> dict[str, Any]:
     """List the directory at *path* for the file browser.
 
-    Returns ``{"path": <str>, "entries": [...], "error": <str|None>}`` where
-    each entry is ``{"name", "path", "is_dir"}`` — directories first, then
-    alphabetical, dot-files omitted unless *show_hidden*.
+    Returns ``{"path": <str>, "parent": <str|None>, "entries": [...],
+    "error": <str|None>}`` where each entry is ``{"name", "path", "is_dir"}`` —
+    directories first, then alphabetical, dot-files omitted unless *show_hidden*.
 
     When *root* is given, the resolved directory is clamped to it (the browser
     cannot navigate above the root).  Otherwise the home directory is used as
@@ -48,7 +48,12 @@ def list_directory(
             p = root_path
 
         if not p.is_dir():
-            return {"path": str(p), "entries": [], "error": "missing"}
+            return {
+                "path": str(p),
+                "parent": str(p.parent),
+                "entries": [],
+                "error": "missing",
+            }
 
         entries: list[dict[str, Any]] = []
         try:
@@ -63,11 +68,21 @@ def list_directory(
                     }
                 )
         except PermissionError:
-            return {"path": str(p), "entries": [], "error": "permission"}
+            return {
+                "path": str(p),
+                "parent": str(p.parent),
+                "entries": [],
+                "error": "permission",
+            }
 
         entries.sort(key=lambda e: (not e["is_dir"], e["name"].lower()))
-        return {"path": str(p), "entries": entries, "error": None}
+        return {
+            "path": str(p),
+            "parent": str(p.parent),
+            "entries": entries,
+            "error": None,
+        }
     except PermissionError:
-        return {"path": raw, "entries": [], "error": "permission"}
+        return {"path": raw, "parent": None, "entries": [], "error": "permission"}
     except OSError:
-        return {"path": raw, "entries": [], "error": "missing"}
+        return {"path": raw, "parent": None, "entries": [], "error": "missing"}

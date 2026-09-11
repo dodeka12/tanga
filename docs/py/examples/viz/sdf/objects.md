@@ -43,7 +43,7 @@ from pytanga.viz import (
     SdfStyle,
     Visualizer,
 )
-from pytanga.viz.sdf import Composed, capped_cylinder, sphere
+from pytanga.viz.sdf import Composed, ECompose, SdfCompose, capped_cylinder, sphere
 
 viz = Visualizer(title="Tanga — SDF objects in the standard viewer")
 viz.show()
@@ -66,7 +66,7 @@ sdf_sphere_id = viz.add(
 # (per-object CSG only — the subtract cylinder carves the sphere's interior).
 bead = Composed(
     sphere(0.7),
-    (capped_cylinder(1.0, 0.45), "subtract"),
+    SdfCompose(capped_cylinder(1.0, 0.45), ECompose.SUBTRACT),
 )
 bead_id = viz.add(bead, style=SdfStyle(color="#44ff44"), label="SDF bead")
 

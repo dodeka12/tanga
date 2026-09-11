@@ -1,0 +1,59 @@
+/* Tanga viewer — rendered-markdown view. */
+
+.tanga-markdown-body {
+    color: var(--tanga-fg);
+    font-family: var(--tanga-font);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    overflow-y: auto;
+}
+
+.tanga-markdown-body h1,
+.tanga-markdown-body h2,
+.tanga-markdown-body h3,
+.tanga-markdown-body h4,
+.tanga-markdown-body h5,
+.tanga-markdown-body h6 {
+    margin: 0.6em 0 0.3em;
+    color: var(--tanga-fg-strong);
+}
+
+.tanga-markdown-body p {
+    margin: 0.4em 0;
+}
+
+.tanga-markdown-body ul,
+.tanga-markdown-body ol {
+    margin: 0.4em 0;
+    padding-left: 1.4em;
+}
+
+.tanga-markdown-body code {
+    font-family: monospace;
+    background: var(--tanga-input-bg);
+    border-radius: 3px;
+    padding: 0.1em 0.3em;
+}
+
+.tanga-markdown-body pre {
+    background: var(--tanga-input-bg);
+    border-radius: 4px;
+    padding: 0.6em;
+    overflow-x: auto;
+}
+
+.tanga-markdown-body pre code {
+    background: none;
+    padding: 0;
+}
+
+.tanga-markdown-body a {
+    color: var(--tanga-accent);
+}
+
+.tanga-markdown-body blockquote {
+    border-left: 3px solid var(--tanga-border-strong);
+    margin: 0.4em 0;
+    padding-left: 0.8em;
+    color: var(--tanga-fg-muted);
+}

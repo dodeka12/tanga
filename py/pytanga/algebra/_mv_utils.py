@@ -58,49 +58,6 @@ def random_mask(
     return BladeMask(alg, ids)
 
 
-def random_mv(
-    alg: Algebra,
-    *,
-    low: float | int = -1,
-    high: float | int = 1,
-    mask: BladeMask | None = None,
-    rng: np.random.Generator | int | None = None,
-) -> MV:
-    """Return a random multivector with uniformly distributed coefficients.
-
-    Parameters
-    ----------
-    low, high : float | int
-        Half-open uniform range ``[low, high)`` for coefficients.
-    mask : BladeMask | None
-        When provided, only the blades in the mask receive non-zero values.
-        When None (default), all 2^dim blades are populated.
-    rng : numpy.random.Generator | int | None
-        Random number generator, integer seed, or None (fresh generator).
-        Always calls ``numpy.random.default_rng(rng)`` internally.
-    """
-    if rng is None:
-        gen = alg.rng
-    else:
-        gen = np.random.default_rng(rng)
-
-    ids = mask.ids if mask is not None else alg.all_blades()
-    n = len(ids)
-
-    if alg.dtype in ("float32", "float64"):
-        dtype = np.float32 if alg.dtype == "float32" else np.float64
-        vals = gen.uniform(float(low), float(high), n).astype(dtype)
-    else:
-        vals = gen.integers(int(low), int(high), size=n)
-
-    return alg.multivector(
-        {
-            bid: float(v) if alg.dtype.startswith("float") else int(v)
-            for bid, v in zip(ids, vals)
-        }
-    )
-
-
 def to_rotor(
     angle: float,
     *,
