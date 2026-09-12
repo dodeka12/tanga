@@ -7,11 +7,11 @@
 
 export const MAX_LIGHTS = 8;
 
-// Frontend defaults mirror the Python defaults (a white light from (10,20,10)
-// at intensity 0.8 plus a white 0.45 ambient).
+// Frontend defaults mirror the Python defaults (a white light from the
+// diagonal (1,1,1) at intensity 0.8 plus a white 0.45 ambient).
 export const DEFAULT_LIGHTING = {
     ambient: { color: '#ffffff', intensity: 0.45 },
-    lights: [{ direction: [10, 20, 10], color: '#ffffff', intensity: 0.8 }],
+    lights: [{ direction: [1, 1, 1], color: '#ffffff', intensity: 0.8 }],
 };
 
 // Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then

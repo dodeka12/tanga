@@ -164,10 +164,7 @@ class MV:
 
     def to_dict(self) -> dict[str | int, float | int]:
         """Return {blade_name: coeff} for all non-zero blades."""
-        from ._blade_names import blade_name
-
-        dim = self._alg.dim
-        return {blade_name(k, dim): v for k, v in self._impl.to_dict().items()}
+        return {self._alg.blade_name(k): v for k, v in self._impl.to_dict().items()}
 
     def prune(self, tol: float | int | None = None) -> "MV":
         """Remove coefficients with ``abs(coeff) < algebra.precision`` in-place and return self."""

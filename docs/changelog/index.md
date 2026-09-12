@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.3.0] — 2026-09-12
+- Projective quadric space (`BasisQ2`/`BasisQ3`) · conic/quadric entities with analysis/creation · quadric-space rotation rotor · plane pairs · two-quadric intersection (plane-conics + sampled curves) · conic/curve renderers
+- Bug fixes: unbounded quartic intersection curves now reach the view box via analytic asymptotes
+→ [Details](2026/09/12_b355448f.md)
+
 ## [Since 2.2.0] — 2026-09-12
 - `AffineExpression` counting-axis reduction, broadcast, and linear solve (`.lstsq()`/`.svd()`/`.inv()`) · new `affine_counting_reduction` / `affine_linear_solve` examples
 - Bug fixes: serverless inline display (`display_snapshot()`/`display_row`) defaults to `delivery="inline"` (no CDN 404 on unpublished branches) · `HDirection(x, y, z)` construction · `MV`/`Expression` operator return types

@@ -123,25 +123,14 @@ class PointPairStyle(VizStyle):
 class LineStyle(VizStyle):
     """Visual style for :class:`~pytanga.geometry.Line`.
 
-    Attributes:
-        wireframe: When ``True``, a wireframe cage is drawn over the
-            cylinder surface.
-        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
-            wireframe lines.  ``None`` defaults to solid lines.
-        wireframe_color: Optional override color for wireframe lines.
-            ``None`` uses the entity's main color.
-        wireframe_opacity: Optional opacity for wireframe lines (0..1).
-            ``None`` defaults to fully opaque.
+    Renders the line as a screen-space fat line; ``thickness`` is a pixel
+    width.  A fat line has no surface, so there are no wireframe parameters.
     """
 
     color: str | None = None
     opacity: float | None = None
     length: float | None = None
     thickness: float | None = None
-    wireframe: bool | None = None
-    wireframe_dash: WireframeDashPattern | None = None
-    wireframe_color: str | None = None
-    wireframe_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "LineStyle"}
@@ -153,14 +142,63 @@ class LineStyle(VizStyle):
             result["length"] = self.length
         if self.thickness is not None:
             result["thickness"] = self.thickness
-        if self.wireframe is not None:
-            result["wireframe"] = self.wireframe
-        if self.wireframe_dash is not None:
-            result["wireframe_dash"] = self.wireframe_dash.to_dict()
-        if self.wireframe_color is not None:
-            result["wireframe_color"] = self.wireframe_color
-        if self.wireframe_opacity is not None:
-            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class CurveStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Curve` (a sampled space curve)."""
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "CurveStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class PlaneConicStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.PlaneConic`."""
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "PlaneConicStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class PlaneConicPairStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.PlaneConicPair`."""
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "PlaneConicPairStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
         return result
 
 
@@ -171,53 +209,19 @@ class CylinderLineStyle(LineStyle):
 
     ``thickness`` is interpreted in **world units** (the cylinder radius),
     unlike the base :class:`LineStyle`, whose ``thickness`` is a screen-space
-    pixel width.
+    pixel width.  Because this renders a solid surface, it keeps the wireframe
+    parameters that the fat-line base does not have.
     """
 
     thickness: float = 0.03
-
-    def to_dict(self) -> dict[str, Any]:
-        result = super().to_dict()
-        result["style_type"] = "CylinderLineStyle"
-        return result
-
-
-@dataclass
-class PlaneStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.Plane`.
-
-    Attributes:
-        wireframe: When ``True``, a wireframe cage is drawn over the
-            plane surface.
-        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
-            wireframe lines.  ``None`` defaults to solid lines.
-        wireframe_color: Optional override color for wireframe lines.
-            ``None`` uses the entity's main color.
-        wireframe_opacity: Optional opacity for wireframe lines (0..1).
-            ``None`` defaults to fully opaque.
-        texture_label: Optional :class:`TextureLabelStyle` for a text
-            or formula label rendered onto the plane surface.  When
-            ``None``, no texture is applied.  Use ``align`` to control
-            layout (``"stretch"``, ``"fit"``, ``"repeat"``).
-    """
-
-    color: str | None = None
-    opacity: float | None = None
-    extent: float | None = None
     wireframe: bool | None = None
     wireframe_dash: WireframeDashPattern | None = None
     wireframe_color: str | None = None
     wireframe_opacity: float | None = None
-    texture_label: TextureLabelStyle | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "PlaneStyle"}
-        if self.color is not None:
-            result["color"] = self.color
-        if self.opacity is not None:
-            result["opacity"] = self.opacity
-        if self.extent is not None:
-            result["extent"] = self.extent
+        result = super().to_dict()
+        result["style_type"] = "CylinderLineStyle"
         if self.wireframe is not None:
             result["wireframe"] = self.wireframe
         if self.wireframe_dash is not None:
@@ -226,16 +230,121 @@ class PlaneStyle(VizStyle):
             result["wireframe_color"] = self.wireframe_color
         if self.wireframe_opacity is not None:
             result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+@dataclass
+class ConicStyle(VizStyle):
+    """Base class for 2D conic styles rendered as screen-space fat lines.
+
+    ``thickness`` is the line width in pixels (same parameter name as
+    :class:`LineStyle`).
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "ConicStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class Quadric3DStyle(VizStyle):
+    """Base class for 3D quadric styles (solid surfaces with a wireframe overlay)."""
+
+    color: str | None = None
+    opacity: float | None = None
+    wireframe: bool | None = None
+    wireframe_dash: WireframeDashPattern | None = None
+    wireframe_color: str | None = None
+    wireframe_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "Quadric3DStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.wireframe is not None:
+            result["wireframe"] = self.wireframe
+        if self.wireframe_dash is not None:
+            result["wireframe_dash"] = self.wireframe_dash.to_dict()
+        if self.wireframe_color is not None:
+            result["wireframe_color"] = self.wireframe_color
+        if self.wireframe_opacity is not None:
+            result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+
+
+@dataclass
+class PlaneStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.Plane`.
+
+    Attributes:
+        extent: Half-extent of the drawn plane square.
+        texture_label: Optional :class:`TextureLabelStyle` for a text
+            or formula label rendered onto the plane surface.  When
+            ``None``, no texture is applied.  Use ``align`` to control
+            layout (``"stretch"``, ``"fit"``, ``"repeat"``).
+    """
+
+    extent: float | None = None
+    texture_label: TextureLabelStyle | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "PlaneStyle"
+        if self.extent is not None:
+            result["extent"] = self.extent
         if self.texture_label is not None:
             result["texture_label"] = self.texture_label.to_dict()
         return result
 
 
 @dataclass
-class CircleStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.Circle`.
+class PlanePairStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.PlanePair`."""
+
+    extent: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "PlanePairStyle"
+        if self.extent is not None:
+            result["extent"] = self.extent
+        return result
+
+
+@dataclass
+class ParallelPlanePairStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.ParallelPlanePair`."""
+
+    extent: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "ParallelPlanePairStyle"
+        if self.extent is not None:
+            result["extent"] = self.extent
+        return result
+
+
+@dataclass
+class CylinderCircleStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Circle` rendered as a solid
+    tube (torus).
 
     Attributes:
+        tube_radius: Radius of the tube cross-section.
         wireframe: When ``True``, a wireframe cage is drawn over the
             torus surface.
         wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
@@ -255,7 +364,7 @@ class CircleStyle(VizStyle):
     wireframe_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "CircleStyle"}
+        result: dict[str, Any] = {"style_type": "CylinderCircleStyle"}
         if self.color is not None:
             result["color"] = self.color
         if self.opacity is not None:
@@ -274,47 +383,47 @@ class CircleStyle(VizStyle):
 
 
 @dataclass
-class SphereStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.Sphere`.
+class CircleStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Circle` rendered as a thick
+    (screen-space fat) line.
 
-    Attributes:
-        wireframe: When ``True``, a wireframe cage is drawn over the
-            sphere surface.
-        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
-            wireframe lines.  ``None`` defaults to solid lines.
-        wireframe_color: Optional override color for wireframe lines.
-            ``None`` uses the entity's main color.
-        wireframe_opacity: Optional opacity for wireframe lines (0..1).
-            ``None`` defaults to fully opaque.
-        texture_label: Optional :class:`TextureLabelStyle` for a text
-            or formula label rendered onto the sphere surface.  When
-            ``None``, no texture is applied.  Use ``offset_v=0.25`` to
-            center the label at the equator.
+    ``thickness`` is the line width in screen-space pixels (same parameter name
+    as :class:`LineStyle`).
     """
 
     color: str | None = None
     opacity: float | None = None
-    wireframe: bool | None = None
-    wireframe_dash: WireframeDashPattern | None = None
-    wireframe_color: str | None = None
-    wireframe_opacity: float | None = None
-    texture_label: TextureLabelStyle | None = None
-    double_sided: bool | None = None
+    thickness: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "SphereStyle"}
+        result: dict[str, Any] = {"style_type": "CircleStyle"}
         if self.color is not None:
             result["color"] = self.color
         if self.opacity is not None:
             result["opacity"] = self.opacity
-        if self.wireframe is not None:
-            result["wireframe"] = self.wireframe
-        if self.wireframe_dash is not None:
-            result["wireframe_dash"] = self.wireframe_dash.to_dict()
-        if self.wireframe_color is not None:
-            result["wireframe_color"] = self.wireframe_color
-        if self.wireframe_opacity is not None:
-            result["wireframe_opacity"] = self.wireframe_opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class SphereStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.Sphere`.
+
+    Attributes:
+        texture_label: Optional :class:`TextureLabelStyle` for a text
+            or formula label rendered onto the sphere surface.  When
+            ``None``, no texture is applied.  Use ``offset_v=0.25`` to
+            center the label at the equator.
+        double_sided: Render both faces of the sphere shell.
+    """
+
+    texture_label: TextureLabelStyle | None = None
+    double_sided: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "SphereStyle"
         if self.texture_label is not None:
             result["texture_label"] = self.texture_label.to_dict()
         if self.double_sided is not None:
@@ -323,41 +432,12 @@ class SphereStyle(VizStyle):
 
 
 @dataclass
-class CylinderStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.Cylinder`.
-
-    Attributes:
-        wireframe: When ``True``, a wireframe cage is drawn over the
-            cylinder surface.
-        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
-            wireframe lines.  ``None`` defaults to solid lines.
-        wireframe_color: Optional override color for wireframe lines.
-            ``None`` uses the entity's main color.
-        wireframe_opacity: Optional opacity for wireframe lines (0..1).
-            ``None`` defaults to fully opaque.
-    """
-
-    color: str | None = None
-    opacity: float | None = None
-    wireframe: bool | None = None
-    wireframe_dash: WireframeDashPattern | None = None
-    wireframe_color: str | None = None
-    wireframe_opacity: float | None = None
+class CylinderStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.Cylinder`."""
 
     def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "CylinderStyle"}
-        if self.color is not None:
-            result["color"] = self.color
-        if self.opacity is not None:
-            result["opacity"] = self.opacity
-        if self.wireframe is not None:
-            result["wireframe"] = self.wireframe
-        if self.wireframe_dash is not None:
-            result["wireframe_dash"] = self.wireframe_dash.to_dict()
-        if self.wireframe_color is not None:
-            result["wireframe_color"] = self.wireframe_color
-        if self.wireframe_opacity is not None:
-            result["wireframe_opacity"] = self.wireframe_opacity
+        result = super().to_dict()
+        result["style_type"] = "CylinderStyle"
         return result
 
 
@@ -683,82 +763,27 @@ class BoxStyle(VizStyle):
 
 
 @dataclass
-class EllipsoidStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.Ellipsoid`.
-
-    Attributes:
-        wireframe: When ``True``, a wireframe cage is drawn over the ellipsoid.
-        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
-            wireframe lines.  ``None`` defaults to solid lines.
-        wireframe_color: Optional override color for wireframe lines.
-            ``None`` uses the entity's main color.
-        wireframe_opacity: Optional opacity for wireframe lines (0..1).
-            ``None`` defaults to fully opaque.
-    """
-
-    color: str | None = None
-    opacity: float | None = None
-    wireframe: bool | None = None
-    wireframe_dash: WireframeDashPattern | None = None
-    wireframe_color: str | None = None
-    wireframe_opacity: float | None = None
+class EllipsoidStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.Ellipsoid`."""
 
     def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "EllipsoidStyle"}
-        if self.color is not None:
-            result["color"] = self.color
-        if self.opacity is not None:
-            result["opacity"] = self.opacity
-        if self.wireframe is not None:
-            result["wireframe"] = self.wireframe
-        if self.wireframe_dash is not None:
-            result["wireframe_dash"] = self.wireframe_dash.to_dict()
-        if self.wireframe_color is not None:
-            result["wireframe_color"] = self.wireframe_color
-        if self.wireframe_opacity is not None:
-            result["wireframe_opacity"] = self.wireframe_opacity
+        result = super().to_dict()
+        result["style_type"] = "EllipsoidStyle"
         return result
 
 
 @dataclass
-class EllipseStyle(VizStyle):
-    """Visual style for :class:`~pytanga.geometry.Ellipse`.
+class EllipseStyle(ConicStyle):
+    """Visual style for :class:`~pytanga.geometry.Ellipse` (a 2D line ellipse).
 
-    Attributes:
-        thickness: Slab thickness of the ellipse (default ``0.02``).
-        wireframe: When ``True``, a wireframe cage is drawn over the ellipse.
-        wireframe_dash: Optional :class:`WireframeDashPattern` for dashed
-            wireframe lines.  ``None`` defaults to solid lines.
-        wireframe_color: Optional override color for wireframe lines.
-            ``None`` uses the entity's main color.
-        wireframe_opacity: Optional opacity for wireframe lines (0..1).
-            ``None`` defaults to fully opaque.
+    ``thickness`` (inherited from :class:`ConicStyle`) is the line width in
+    screen-space pixels.  A line ellipse has no surface, so there are no
+    wireframe parameters.
     """
 
-    color: str | None = None
-    opacity: float | None = None
-    thickness: float | None = None
-    wireframe: bool | None = None
-    wireframe_dash: WireframeDashPattern | None = None
-    wireframe_color: str | None = None
-    wireframe_opacity: float | None = None
-
     def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"style_type": "EllipseStyle"}
-        if self.color is not None:
-            result["color"] = self.color
-        if self.opacity is not None:
-            result["opacity"] = self.opacity
-        if self.thickness is not None:
-            result["thickness"] = self.thickness
-        if self.wireframe is not None:
-            result["wireframe"] = self.wireframe
-        if self.wireframe_dash is not None:
-            result["wireframe_dash"] = self.wireframe_dash.to_dict()
-        if self.wireframe_color is not None:
-            result["wireframe_color"] = self.wireframe_color
-        if self.wireframe_opacity is not None:
-            result["wireframe_opacity"] = self.wireframe_opacity
+        result = super().to_dict()
+        result["style_type"] = "EllipseStyle"
         return result
 
 
@@ -801,5 +826,78 @@ class RegularPolygonStyle(VizStyle):
             result["wireframe_color"] = self.wireframe_color
         if self.wireframe_opacity is not None:
             result["wireframe_opacity"] = self.wireframe_opacity
+        return result
+
+@dataclass
+class ConeStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.Cone`."""
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "ConeStyle"
+        return result
+
+
+@dataclass
+class HyperbolaStyle(ConicStyle):
+    """Visual style for :class:`~pytanga.geometry.Hyperbola`.
+
+    ``extent`` is a spatial half-size (world units) bounding the drawn
+    curve's extent from its center.
+    """
+
+    extent: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "HyperbolaStyle"
+        if self.extent is not None:
+            result["extent"] = self.extent
+        return result
+
+
+@dataclass
+class ParabolaStyle(ConicStyle):
+    """Visual style for :class:`~pytanga.geometry.Parabola`.
+
+    ``extent`` is a spatial half-size (world units) bounding the drawn
+    curve's extent from its vertex.
+    """
+
+    extent: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "ParabolaStyle"
+        if self.extent is not None:
+            result["extent"] = self.extent
+        return result
+
+
+@dataclass
+class LinePairStyle(ConicStyle):
+    """Visual style for :class:`~pytanga.geometry.LinePair`."""
+
+    length: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "LinePairStyle"
+        if self.length is not None:
+            result["length"] = self.length
+        return result
+
+
+@dataclass
+class ParallelLinePairStyle(ConicStyle):
+    """Visual style for :class:`~pytanga.geometry.ParallelLinePair`."""
+
+    length: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "ParallelLinePairStyle"
+        if self.length is not None:
+            result["length"] = self.length
         return result
 

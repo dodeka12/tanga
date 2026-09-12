@@ -1,17 +1,58 @@
-// Circle renderer — rendered as a torus with optional wireframe overlay.
-// Phase 5: Per-entity module.
+// Circle renderer — a torus (tube) by default, or a thick screen-space line
+// when styled with `CircleStyle`. Phase 5: Per-entity module.
 
 import * as THREE from 'three';
 import {
     makeMaterial,
+    makeFatLine,
     rotationFromNormal,
     styleParam,
     parseColor,
     tagEntity,
     addWireframeOverlay,
+    applyStyleUpdate,
+    contentChanged,
 } from './utils.js';
 
+const CIRCLE_SEGMENTS = 96;
+
+function isLineStyle(ent) {
+    return !!(ent.style && ent.style.style_type === 'CircleStyle');
+}
+
+function createLineCircle(ent) {
+    const color = parseColor(ent, '#ff44ff');
+    const opacity = styleParam(ent, 'opacity', 0.9);
+    const thickness = styleParam(ent, 'thickness', 1.0);
+    const center = ent.center || [0, 0, 0];
+    const radius = Math.max(ent.radius || 1.0, 0.001);
+    const normal = ent.normal || [0, 0, 1];
+
+    const q = rotationFromNormal(normal[0], normal[1], normal[2]);
+    const ex = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    const ey = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+
+    const points = [];
+    for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
+        const t = (2 * Math.PI * i) / CIRCLE_SEGMENTS;
+        points.push(
+            new THREE.Vector3(center[0], center[1], center[2])
+                .addScaledVector(ex, radius * Math.cos(t))
+                .addScaledVector(ey, radius * Math.sin(t)),
+        );
+    }
+
+    const line = makeFatLine(points, color, opacity, thickness);
+    tagEntity(line, ent);
+    return line;
+}
+
+
 export function createCircle(ent) {
+    if (isLineStyle(ent)) {
+        return createLineCircle(ent);
+    }
+
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.7);
     const center = ent.center || [0, 0, 0];
@@ -50,4 +91,14 @@ export function createCircle(ent) {
 
     tagEntity(mesh, ent);
     return mesh;
+}
+
+export function updateCircle(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['radius', 'normal', 'tubeRadius'])) return false;
+    // Switching between the tube and thick-line style requires a rebuild.
+    const curLine = isLineStyle(ent);
+    const prevLine = prev ? isLineStyle(prev) : false;
+    if (curLine !== prevLine) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
 }

@@ -14,6 +14,7 @@ from pytanga.geometry.entities import (
     Arc,
     Box,
     Circle,
+    Cone,
     Cylinder,
     Direction,
     Disk,
@@ -21,11 +22,21 @@ from pytanga.geometry.entities import (
     Ellipsoid,
     Entity,
     HPoint,
+    Hyperbola,
     Line,
+    LinePair,
+    Parabola,
+    ParallelLinePair,
     PartialDisk,
     Plane,
+    PlanePair,
+    ParallelPlanePair,
+    PlaneConic,
+    PlaneConicPair,
+    Curve,
     Point,
     PointPair,
+    PointSet,
     RegularPolygon,
     Space,
     Sphere,
@@ -42,6 +53,7 @@ from ._scene_objects import (
     _scale_dir,
 )
 from ._types import _as_euler
+from ._capabilities import _supports_renderer
 from pytanga.geometry.operators import (
     Dilator,
     GeneralRotor,
@@ -100,6 +112,14 @@ def _dispatch_entity(
     :func:`serialize_entity` (backward-compat trampoline) and the scene-graph
     node serializers in ``_nodes.py``.
     """
+    # ── Ray-styled entities → analytic ray proxies ──
+    if _is_ray_styled(props, kind, styles_map):
+        if not _supports_renderer(kind, "ray"):
+            raise ValueError(
+                f"Entity kind {kind!r} does not support analytic ray rendering"
+            )
+        return _serialize_ray(entity, props, kind=kind, styles_map=styles_map)
+
     # ── SDF elements / SDF-styled entities → per-object ray-marched proxies ──
     from .sdf._compose import SdfElement
 
@@ -136,6 +156,20 @@ def _dispatch_entity(
         return _serialize_line(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Plane):
         return _serialize_plane(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ParallelPlanePair):
+        return _serialize_parallel_plane_pair(
+            entity, props, kind=kind, styles_map=styles_map
+        )
+    if isinstance(entity, PlanePair):
+        return _serialize_plane_pair(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PlaneConic):
+        return _serialize_plane_conic(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PlaneConicPair):
+        return _serialize_plane_conic_pair(
+            entity, props, kind=kind, styles_map=styles_map
+        )
+    if isinstance(entity, Curve):
+        return _serialize_curve(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Circle):
         return _serialize_circle(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Sphere):
@@ -144,6 +178,8 @@ def _dispatch_entity(
         return _serialize_space(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Cylinder):
         return _serialize_cylinder(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Cone):
+        return _serialize_cone(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Arc):
         return _serialize_arc(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Disk):
@@ -157,7 +193,21 @@ def _dispatch_entity(
     if isinstance(entity, Ellipse):
         return _serialize_ellipse(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, RegularPolygon):
-        return _serialize_regular_polygon(entity, props, kind=kind, styles_map=styles_map)
+        return _serialize_regular_polygon(
+            entity, props, kind=kind, styles_map=styles_map
+        )
+    if isinstance(entity, Hyperbola):
+        return _serialize_hyperbola(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Parabola):
+        return _serialize_parabola(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ParallelLinePair):
+        return _serialize_parallel_line_pair(
+            entity, props, kind=kind, styles_map=styles_map
+        )
+    if isinstance(entity, LinePair):
+        return _serialize_line_pair(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PointSet):
+        return _serialize_point_set(entity, props, kind=kind, styles_map=styles_map)
 
     # ── Operators ──
     if isinstance(entity, ReflectionLine):
@@ -207,6 +257,75 @@ def _is_sdf_styled(
         entry = styles_map.get(kind) if hasattr(styles_map, "get") else None
         return isinstance(entry, SdfStyle)
     return False
+
+
+def _is_ray_styled(
+    props: Dict[str, Any],
+    kind: str,
+    styles_map: Dict[str, Any] | None,
+) -> bool:
+    """Return ``True`` when *entity* should render as an analytic ray proxy.
+
+    Detects the opt-in from a per-entity :class:`~pytanga.viz.RayStyle` in
+    ``props``, a per-kind :class:`~pytanga.viz.RayStyle` in ``styles_map``, or
+    the canonical default (``RayQuadricStyle`` for ``Quadric3D``).
+    """
+    from ._styles import RayStyle, _DEFAULT_STYLE_FOR_KIND
+
+    if isinstance(props.get("style"), RayStyle):
+        return True
+    entry = None
+    if styles_map is not None and hasattr(styles_map, "get"):
+        entry = styles_map.get(kind)
+    if entry is None:
+        entry = _DEFAULT_STYLE_FOR_KIND.get(kind)
+    return isinstance(entry, RayStyle)
+
+
+def _serialize_ray(
+    entity: Any,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Serialize a ray-styled entity (currently only ``Quadric3D``)."""
+    if kind == "Quadric3D":
+        return _serialize_quadric(entity, props, kind=kind, styles_map=styles_map)
+    raise TypeError(f"ray rendering not implemented for kind {kind!r}")
+
+
+def _serialize_quadric(
+    ent: Any,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Serialize a :class:`~pytanga.geometry.Quadric3D` as an analytic ray proxy."""
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    style = result.get("style", {})
+    padding = style.get("bound_padding", 0.05)
+    if not isinstance(padding, (int, float)):
+        padding = 0.05
+    result["kind"] = "ray"
+    result["rayKind"] = "Quadric3D"
+    result["coeffs"] = [float(c) for c in ent.coeffs]
+    result["matrix"] = [float(x) for row in ent.matrix for x in row]
+    result["bound"] = _quadric_aabb(ent, float(padding))
+    return result
+
+
+def _quadric_aabb(ent: Any, padding: float) -> Dict[str, list[float]]:
+    """Fixed proxy AABB for every quadric: a ``[-5, 5]³`` cube about the origin.
+
+    All quadrics (bounded and unbounded) are clipped to the same volume, so the
+    analytic surface renders consistently across kinds; unbounded quadrics are
+    cut off at the cube faces.  ``ent`` and ``padding`` are unused (the box is
+    intentionally independent of the quadric's extent).
+    """
+    del ent, padding
+    return {"min": [-5.0, -5.0, -5.0], "max": [5.0, 5.0, 5.0]}
 
 
 def serialize_scene_update(
@@ -803,6 +922,98 @@ def _serialize_plane(
     return result
 
 
+def _plane_wire(plane: Plane, extent: float) -> Dict[str, Any]:
+    """Serialize a member plane (point + normal + extent)."""
+    return {
+        "point": [plane.point.x, plane.point.y, plane.point.z],
+        "normal": [plane.normal.x, plane.normal.y, plane.normal.z],
+        "extent": extent,
+    }
+
+
+def _serialize_plane_pair(
+    ent: PlanePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {"extent": 5.0}, styles_map=styles_map)
+    extent = float(result["extent"])
+    result["plane1"] = _plane_wire(ent.plane1, extent)
+    result["plane2"] = _plane_wire(ent.plane2, extent)
+    return result
+
+
+def _serialize_parallel_plane_pair(
+    ent: ParallelPlanePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {"extent": 5.0}, styles_map=styles_map)
+    extent = float(result["extent"])
+    result["plane1"] = _plane_wire(ent.plane1, extent)
+    result["plane2"] = _plane_wire(ent.plane2, extent)
+    return result
+
+
+def _plane_conic_paths(pc: PlaneConic) -> List[List[List[float]]]:
+    """Sample a ``PlaneConic`` into 3D polylines (one per connected component)."""
+    import numpy as np
+
+    from pytanga.quadric._intersection import _plane_frame, _sample_conic_2d
+
+    n = np.array([pc.plane.normal.x, pc.plane.normal.y, pc.plane.normal.z])
+    p = np.array([pc.plane.point.x, pc.plane.point.y, pc.plane.point.z])
+    u, v = _plane_frame(n)
+    paths: List[List[List[float]]] = []
+    for path in _sample_conic_2d(pc.conic):
+        pts: List[List[float]] = []
+        for s, t in path:
+            x = p + s * u + t * v
+            pts.append([float(x[0]), float(x[1]), float(x[2])])
+        paths.append(pts)
+    return paths
+
+
+def _serialize_plane_conic(
+    ent: PlaneConic,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["paths"] = _plane_conic_paths(ent)
+    return result
+
+
+def _serialize_plane_conic_pair(
+    ent: PlaneConicPair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["paths"] = _plane_conic_paths(ent.conic1) + _plane_conic_paths(ent.conic2)
+    return result
+
+
+def _serialize_curve(
+    ent: Curve,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["paths"] = [[[p.x, p.y, p.z] for p in path] for path in ent.paths]
+    return result
+
+
 def _serialize_circle(
     ent: Circle,
     props: Dict[str, Any],
@@ -1026,17 +1237,17 @@ def _serialize_ellipse(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    return _apply_defaults(
-        props,
-        kind,
-        {"thickness": 0.02},
-        styles_map=styles_map,
-    ) | {
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "center": [ent.center.x, ent.center.y, ent.center.z],
         "radiusU": ent.radius_u,
         "radiusV": ent.radius_v,
         "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
     }
+    if ent.dir_u is not None:
+        result["dirU"] = [ent.dir_u.x, ent.dir_u.y, ent.dir_u.z]
+    if ent.dir_v is not None:
+        result["dirV"] = [ent.dir_v.x, ent.dir_v.y, ent.dir_v.z]
+    return result
 
 
 def _serialize_regular_polygon(
@@ -1058,6 +1269,111 @@ def _serialize_regular_polygon(
         "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
         "angle": ent.angle,
     }
+
+
+def _serialize_hyperbola(
+    ent: Hyperbola,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "dir1": [ent.dir1.x, ent.dir1.y, ent.dir1.z],
+        "dir2": [ent.dir2.x, ent.dir2.y, ent.dir2.z],
+        "a": abs(ent.a),
+        "b": abs(ent.b),
+    }
+
+
+def _serialize_parabola(
+    ent: Parabola,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
+        "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
+        "p": abs(ent.p),
+    }
+
+
+def _line_wire(line: Line, length: float) -> Dict[str, Any]:
+    """Serialize a member line centered on its point.
+
+    Mirrors the infinite-``Line`` centering in :func:`_serialize_line`: the
+    frontend draws ``origin -> origin + d̂·length``, so ``origin`` is shifted
+    back by ``length/2`` along the unit direction to center the segment on the
+    line's point.
+    """
+    origin = line.origin
+    if line.direction.mag() > 0:
+        unit = line.direction.normalized()
+        origin = line.origin - unit * (length / 2.0)
+    return {
+        "origin": [origin.x, origin.y, origin.z],
+        "direction": [line.direction.x, line.direction.y, line.direction.z],
+        "length": length,
+    }
+
+
+def _serialize_line_pair(
+    ent: LinePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {"length": 20.0}, styles_map=styles_map)
+    length = float(result["length"])
+    result["line1"] = _line_wire(ent.line1, length)
+    result["line2"] = _line_wire(ent.line2, length)
+    return result
+
+
+def _serialize_point_set(
+    ent: PointSet,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["points"] = [[p.x, p.y, p.z] for p in ent.points]
+    result["pointKind"] = ent.kind
+    return result
+
+
+def _serialize_parallel_line_pair(
+    ent: ParallelLinePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {"length": 20.0}, styles_map=styles_map)
+    length = float(result["length"])
+    result["line1"] = _line_wire(ent.line1, length)
+    result["line2"] = _line_wire(ent.line2, length)
+    return result
+
+
+def _serialize_cone(
+    ent: Cone,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
+        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
+        "halfAngle": ent.half_angle,
+    }
+
 
 
 # ── Operators ──────────────────────────────────────────────

@@ -9,8 +9,8 @@ currently supports). Lights are added with :meth:`SdfVisualizer.add`; the
 ambient term is set with :meth:`SdfVisualizer.set_ambient_light`.
 
 The built-in default reproduces the historical hardcoded look: a white
-directional light from ``(10, 20, 10)`` at intensity ``0.8`` plus a white
-``0.45`` ambient term.
+directional light from the diagonal ``(1, 1, 1)`` at intensity ``0.8`` plus a
+white ``0.45`` ambient term.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ class DirectionalLight(Light):
 
     def __init__(
         self,
-        direction: tuple[float, float, float] = (10.0, 20.0, 10.0),
+        direction: tuple[float, float, float] = (1.0, 1.0, 1.0),
         color: str = "#ffffff",
         intensity: float = 0.8,
     ) -> None:

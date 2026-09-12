@@ -133,6 +133,31 @@
         ]
       },
       {
+        "Quadric": [
+          {
+            "Overview": "py/examples/ga/quadric/index.md"
+          },
+          {
+            "Conic Demo": "py/examples/ga/quadric/conic_demo.md"
+          },
+          {
+            "General Quadric": "py/examples/ga/quadric/general_quadric.md"
+          },
+          {
+            "Plane Pair Demo": "py/examples/ga/quadric/plane_pair_demo.md"
+          },
+          {
+            "Quadric3D Demo": "py/examples/ga/quadric/quadric3d_demo.md"
+          },
+          {
+            "Quadric3D Raycast": "py/examples/ga/quadric/quadric3d_raycast.md"
+          },
+          {
+            "Quadric Intersection Demo": "py/examples/ga/quadric/quadric_intersection_demo.md"
+          }
+        ]
+      },
+      {
         "Tensor": [
           {
             "Overview": "py/examples/ga/tensor/index.md"

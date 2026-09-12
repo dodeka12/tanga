@@ -11,6 +11,7 @@ from pytanga.geometry.entities import (
     Arc,
     Box,
     Circle,
+    Curve,
     Cylinder,
     Direction,
     Disk,
@@ -20,6 +21,10 @@ from pytanga.geometry.entities import (
     Line,
     PartialDisk,
     Plane,
+    PlaneConic,
+    PlaneConicPair,
+    PlanePair,
+    ParallelPlanePair,
     Point,
     PointPair,
     RegularPolygon,
@@ -139,6 +144,78 @@ class TestSerializeEntities:
         assert d["normal"] == [0, 0, 1]
         assert d["opacity"] == 0.3
         assert d["extent"] == 10.0
+
+    def test_plane_pair(self):
+        pair = PlanePair(
+            Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0)),
+            Plane(point=Point(0, 0, 0), normal=Direction(0, 1, 0)),
+        )
+        d = _serialize(pair)
+        assert d["kind"] == "PlanePair"
+        assert d["plane1"]["normal"] == [1, 0, 0]
+        assert d["plane2"]["normal"] == [0, 1, 0]
+        assert d["plane1"]["extent"] == 5.0
+        assert d["opacity"] == 0.3
+
+    def test_parallel_plane_pair(self):
+        pair = ParallelPlanePair(
+            Plane(point=Point(1, 0, 0), normal=Direction(1, 0, 0)),
+            Plane(point=Point(-1, 0, 0), normal=Direction(1, 0, 0)),
+        )
+        d = _serialize(pair)
+        assert d["kind"] == "ParallelPlanePair"
+        assert d["plane1"]["point"] == [1, 0, 0]
+        assert d["plane2"]["point"] == [-1, 0, 0]
+
+    def test_plane_conic_pair(self):
+        import numpy as np
+
+        from pytanga.quadric import Conic, to_coeffs
+
+        circle = Conic(to_coeffs(np.diag([1.0, 1.0, -1.0])))
+        pair = PlaneConicPair(
+            PlaneConic(Plane(Point(0, 0, 0), Direction(1, 0, 0)), circle),
+            PlaneConic(Plane(Point(0, 0, 0), Direction(0, 1, 0)), circle),
+        )
+        d = _serialize(pair)
+        assert d["kind"] == "PlaneConicPair"
+        assert len(d["paths"]) == 2
+        for path in d["paths"]:
+            assert len(path) > 0
+            assert all(len(p) == 3 for p in path)
+
+    def test_plane_conic(self):
+        import numpy as np
+
+        from pytanga.quadric import Conic, to_coeffs
+
+        circle = Conic(to_coeffs(np.diag([1.0, 1.0, -1.0])))
+        pc = PlaneConic(Plane(Point(0, 0, 0), Direction(0, 0, 1)), circle)
+        d = _serialize(pc)
+        assert d["kind"] == "PlaneConic"
+        assert len(d["paths"]) == 1
+        assert len(d["paths"][0]) > 0
+        assert d["style"]["thickness"] == 2.0
+
+    def test_plane_conic_line_pair_no_connecting_chord(self):
+        import numpy as np
+
+        from pytanga.quadric import Conic, to_coeffs
+
+        line_pair = Conic(to_coeffs(np.diag([1.0, -1.0, 0.0])))  # x² − y² = 0
+        pc = PlaneConic(Plane(Point(0, 0, 0), Direction(0, 0, 1)), line_pair)
+        d = _serialize(pc)
+        assert d["kind"] == "PlaneConic"
+        # A line pair is two disconnected lines → two 2-point segments, not one
+        # connected 4-point polyline (which would draw a spurious chord).
+        assert len(d["paths"]) == 2
+        assert all(len(p) == 2 for p in d["paths"])
+
+    def test_curve(self):
+        curve = Curve([[Point(0, 0, 0), Point(1, 1, 1), Point(2, 0, 2)]])
+        d = _serialize(curve)
+        assert d["kind"] == "Curve"
+        assert d["paths"] == [[[0, 0, 0], [1, 1, 1], [2, 0, 2]]]
 
     def test_circle(self):
         c = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=3.0)
@@ -522,7 +599,7 @@ class TestStyleOverrides:
         assert d["radiusV"] == 1.0
         assert d["normal"] == [0, 1, 0]
         assert d["style"]["style_type"] == "EllipseStyle"
-        assert d["style"]["thickness"] == 0.02
+        assert d["style"]["thickness"] == 1.0
 
     def test_regular_polygon(self):
         d = _serialize(RegularPolygon(radius=1.5, sides=6))

@@ -20,21 +20,27 @@ from . import (
     analysis_p3,
     analysis_pga2,
     analysis_pga3,
+    analysis_q2,
+    analysis_q3,
 )
-from .entities import Entity
+from .entities import (
+    Circle,
+    Direction,
+    Entity,
+    HDirection,
+    HPoint,
+    Line,
+    Plane,
+    Point,
+    PointPair,
+    Space,
+    Sphere,
+)
 from .operators import Operator
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
-    from pytanga.basis.e2 import BasisE2
-    from pytanga.basis.e3 import BasisE3
-    from pytanga.basis.n2 import BasisN2
-    from pytanga.basis.n3 import BasisN3
-    from pytanga.basis.p2 import BasisP2
-    from pytanga.basis.p3 import BasisP3
-    from pytanga.basis.pga2 import BasisPGA2
-    from pytanga.basis.pga3 import BasisPGA3
 
 
 def _detect(alg: Algebra) -> str:
@@ -54,6 +60,13 @@ def _detect(alg: Algebra) -> str:
     from pytanga.basis.p3 import BasisP3
     from pytanga.basis.pga2 import BasisPGA2
     from pytanga.basis.pga3 import BasisPGA3
+    from pytanga.quadric import BasisQ2, BasisQ3
+
+    # Quadric-space bases (distinct Algebra subclasses)
+    if isinstance(alg, BasisQ3):
+        return "q3"
+    if isinstance(alg, BasisQ2):
+        return "q2"
 
     # 3D algebras
     if isinstance(alg, BasisPGA3):
@@ -121,6 +134,10 @@ def analyze_entity(mv: MV) -> Entity | None:
         return analysis_pga2.analyze_entity(mv)
     elif alg_type == "n2":
         return analysis_n2.analyze_entity(mv)
+    elif alg_type == "q2":
+        return analysis_q2.analyze_entity(mv)
+    elif alg_type == "q3":
+        return analysis_q3.analyze_entity(mv)
 
 
 # ── operator analysis ───────────────────────────────────────────
@@ -147,7 +164,11 @@ def analyze_operator(mv: MV) -> Operator | None:
         If the MV is malformed (e.g., zero MV).
     """
     alg_type = _detect(mv._alg)
-    if alg_type == "e3":
+    if alg_type == "q2":
+        return analysis_q2.analyze_operator(mv)
+    elif alg_type == "q3":
+        return analysis_q3.analyze_operator(mv)
+    elif alg_type == "e3":
         return analysis_e3.analyze_operator(mv)
     elif alg_type == "p3":
         return analysis_p3.analyze_operator(mv)
@@ -261,7 +282,7 @@ def _register_entity_analyzers() -> None:
     can route an MV through the algebra-specific analyzer without
     importing ``analysis`` themselves.
     """
-    from .entities import register_analyzer
+    from pytanga.entity import register_analyzer
 
     register_analyzer("point", analyze_point)
     register_analyzer("direction", analyze_direction)

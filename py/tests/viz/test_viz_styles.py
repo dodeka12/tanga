@@ -19,16 +19,27 @@ from pytanga.geometry import (
 from pytanga.viz import (
     ArcStyle,
     BoxStyle,
+    CircleStyle,
+    ConeStyle,
+    ConicStyle,
+    CylinderCircleStyle,
     CylinderLineStyle,
     CylinderStyle,
     DiskStyle,
     EllipseStyle,
     EllipsoidStyle,
+    HyperbolaStyle,
     LabelStyle,
+    LinePairStyle,
     LineStyle,
+    ParabolaStyle,
+    ParallelLinePairStyle,
     PartialDiskStyle,
+    PlaneStyle,
     PointStyle,
+    Quadric3DStyle,
     RegularPolygonStyle,
+    SphereStyle,
     Visualizer,
 )
 from pytanga.viz._style_dict import _StyleDict
@@ -185,3 +196,54 @@ def test_new_entity_style_class_key_access() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     for entity in (Disk, PartialDisk, Box, Ellipsoid, Ellipse, RegularPolygon):
         assert viz.styles[entity] is viz.styles[entity.__name__]
+
+
+def test_line_style_omits_wireframe() -> None:
+    d = LineStyle().to_dict()
+    assert d["style_type"] == "LineStyle"
+    for key in ("wireframe", "wireframe_dash", "wireframe_color", "wireframe_opacity"):
+        assert key not in d
+
+
+def test_cylinder_line_style_keeps_wireframe() -> None:
+    d = CylinderLineStyle(wireframe=True, wireframe_color="#000000").to_dict()
+    assert d["style_type"] == "CylinderLineStyle"
+    assert d["wireframe"] is True
+    assert d["wireframe_color"] == "#000000"
+
+
+def test_circle_default_is_tube_style() -> None:
+    s = make_styles()
+    assert isinstance(s["Circle"], CylinderCircleStyle)
+
+
+def test_line_circle_style_has_no_wireframe() -> None:
+    d = CircleStyle(thickness=2.0).to_dict()
+    assert d["style_type"] == "CircleStyle"
+    assert d["thickness"] == 2.0
+    assert "wireframe" not in d
+
+
+
+def test_conic_style_hierarchy() -> None:
+    assert issubclass(EllipseStyle, ConicStyle)
+    assert issubclass(HyperbolaStyle, ConicStyle)
+    assert issubclass(ParabolaStyle, ConicStyle)
+    assert issubclass(LinePairStyle, ConicStyle)
+    assert issubclass(ParallelLinePairStyle, ConicStyle)
+
+
+def test_quadric_style_hierarchy() -> None:
+    assert issubclass(SphereStyle, Quadric3DStyle)
+    assert issubclass(EllipsoidStyle, Quadric3DStyle)
+    assert issubclass(CylinderStyle, Quadric3DStyle)
+    assert issubclass(PlaneStyle, Quadric3DStyle)
+    assert issubclass(ConeStyle, Quadric3DStyle)
+
+
+def test_conic_and_quadric_styles_registered() -> None:
+    s = make_styles()
+    for kind in ("Ellipse", "Hyperbola", "Parabola", "LinePair", "ParallelLinePair", "Cone"):
+        assert kind in s.kind
+        assert s.kind[kind].color is not None
+

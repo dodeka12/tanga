@@ -7,4 +7,5 @@
 - [Expressions](expression/index.md)
 - [Geometry](geometry/index.md)
 - [Numerics](numerics/index.md)
+- [Quadric](quadric/index.md)
 - [Tensor](tensor/index.md)

@@ -79,6 +79,7 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "plane.js",
     _RENDERERS_DIR / "arc.js",
     _RENDERERS_DIR / "circle.js",
+    _RENDERERS_DIR / "cone.js",
     _RENDERERS_DIR / "cylinder.js",
     _RENDERERS_DIR / "box.js",
     _RENDERERS_DIR / "disk.js",
@@ -86,6 +87,12 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "ellipsoid.js",
     _RENDERERS_DIR / "partial_disk.js",
     _RENDERERS_DIR / "regular_polygon.js",
+    _RENDERERS_DIR / "hyperbola.js",
+    _RENDERERS_DIR / "parabola.js",
+    _RENDERERS_DIR / "line_pair.js",
+    _RENDERERS_DIR / "plane_pair.js",
+    _RENDERERS_DIR / "curve.js",
+    _RENDERERS_DIR / "point_set.js",
     _RENDERERS_DIR / "sphere.js",
     _RENDERERS_DIR / "space.js",
     _RENDERERS_DIR / "operators" / "point_pair.js",
@@ -106,6 +113,7 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "group.js",
     _RENDERERS_DIR / "factory.js",
     _RENDERERS_DIR / "sdf.js",
+    _RENDERERS_DIR / "ray.js",
     _RENDERERS_DIR / "sdf" / "lighting.js",
     _RENDERERS_DIR / "sdf" / "glsl.js",
 ]
@@ -254,6 +262,7 @@ def generate_library_js() -> str:
     parts: list[str] = [
         js_runtime_imports(),
         _sdf_shader_injection(),
+        _ray_shader_injection(),
         "function sendLog() {}\nfunction sendEvent() {}",
     ]
     for path in _RENDERER_FILES + _SHARED_JS_FILES:
@@ -350,6 +359,23 @@ def _sdf_shader_injection() -> str:
         for key, path in zip(_SDF_SHADER_KEYS, _SDF_SHADER_FILES, strict=True)
     }
     return "window.__tanga_sdf_shaders = " + json.dumps(parts) + ";"
+
+
+def _ray_shader_injection() -> str:
+    """Inline the ray proxy GLSL as a global for standalone HTML exports.
+
+    The live viewer fetches the ``.glsl`` file from the server; a standalone
+    export has no server, so ``ray.js`` falls back to this inlined global.
+    """
+    parts = {
+        "intersect": (_RENDERERS_DIR / "ray" / "intersect.glsl").read_text(
+            encoding="utf-8"
+        ),
+        "quadric": (_RENDERERS_DIR / "ray" / "quadric.glsl").read_text(
+            encoding="utf-8"
+        ),
+    }
+    return "window.__tanga_ray_shaders = " + json.dumps(parts) + ";"
 
 
 # ── KaTeX CSS helper ──────────────────────────────────────────────

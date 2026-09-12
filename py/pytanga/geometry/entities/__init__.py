@@ -29,16 +29,24 @@ from ._util import (
 from .arc import Arc
 from .box import Box
 from .circle import Circle, ImagCircle
+from .cone import Cone
+from pytanga.quadric import Conic, EConicKind, EQuadricKind, Quadric2D, Quadric3D
 from .cylinder import Cylinder
-from .direction import Direction
+from pytanga.entity import Direction
 from .disk import Disk, PartialDisk
 from .ellipsoid import Ellipse, Ellipsoid
 from .hdirection import HDirection
 from .hpoint import HPoint
+from .hyperbola import Hyperbola
 from .line import Line
+from .line_pair import LinePair, ParallelLinePair
 from .plane import Plane
-from .point import Point
+from .plane_conic import Curve, PlaneConic, PlaneConicPair
+from .plane_pair import PlanePair, ParallelPlanePair
+from .parabola import Parabola
+from pytanga.entity import Point
 from .point_pair import ImagPointPair, PointPair
+from .point_set import PointSet
 from .polygon import RegularPolygon, regular_polygon
 from .space import Space
 from .sphere import ImagSphere, Sphere
@@ -58,28 +66,56 @@ Entity = (
     | Sphere
     | ImagSphere
     | Space
+    | Conic
+    | Quadric3D
+    | Hyperbola
+    | Parabola
+    | LinePair
+    | ParallelLinePair
+    | PlanePair
+    | ParallelPlanePair
+    | PlaneConic
+    | PlaneConicPair
+    | Curve
+    | Cone
 )
 
 __all__ = [
     "Arc",
     "Box",
     "Circle",
+    "Cone",
+    "Conic",
     "Cylinder",
     "Direction",
     "Disk",
+    "EConicKind",
+    "EQuadricKind",
     "Ellipse",
     "Ellipsoid",
     "Entity",
     "HDirection",
     "HPoint",
+    "Hyperbola",
     "ImagCircle",
     "ImagPointPair",
     "ImagSphere",
     "Line",
+    "LinePair",
+    "ParallelLinePair",
+    "Parabola",
     "PartialDisk",
     "Plane",
+    "PlanePair",
+    "ParallelPlanePair",
+    "PlaneConic",
+    "PlaneConicPair",
+    "Curve",
     "Point",
     "PointPair",
+    "PointSet",
+    "Quadric2D",
+    "Quadric3D",
     "RegularPolygon",
     "Space",
     "Sphere",

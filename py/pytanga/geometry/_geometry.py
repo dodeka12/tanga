@@ -21,9 +21,10 @@ from pytanga.expression import Variable
 from .analysis import analyze as _analyze
 from .analysis import analyze_entity, analyze_operator
 from .create import create
-from .entities import Entity, _is_mv
+from .entities import Conic, Entity, Quadric3D, _is_mv
 from .operators import Operator
 from .random import RndEntity
+from .refine import refine
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -96,6 +97,8 @@ class Geometry:
           ``RndPoint`` instances, or plain entities).
         - :class:`Entity` / :class:`Operator` → :meth:`create`.
         - :class:`MV` → :meth:`analyze`.
+        - object with an ``entity`` attribute (e.g. a viz ``ActPoint``) → recurse
+          on ``obj.entity``.
         """
         if isinstance(obj, str) and typ is not None:
             return self.create_var(obj, typ)
@@ -108,13 +111,19 @@ class Geometry:
             return self.create(result)
         if isinstance(obj, (list, tuple)):
             return [self(item) for item in obj]
+        if isinstance(obj, (Conic, Quadric3D)):
+            return self.refine(obj)
         if isinstance(obj, (Entity, Operator)):
             return self.create(obj)
         if _is_mv(obj):
             return self.analyze(obj)
+        entity = getattr(obj, "entity", None)
+        if entity is not None:
+            return self(entity)
         raise TypeError(
             f"Geometry.__call__() expects RndEntity, Entity, Operator, list, MV, "
-            f"or (name, type) tuple, got {type(obj).__name__}"
+            f"(name, type) tuple, or an object with an `entity` attribute, "
+            f"got {type(obj).__name__}"
         )
 
     def which_entity(self, mv: MV) -> Entity:
@@ -171,6 +180,15 @@ class Geometry:
         Entity, Operator, or None
         """
         return _analyze(mv)
+
+    def refine(self, entity):
+        """Refine a raw :class:`Conic` / :class:`Quadric3D` into a specific entity.
+
+        The second analysis level: ``geo(analyze(mv))`` yields the raw
+        ``Conic``/``Quadric3D``, and ``geo(that)`` refines it (e.g. to a
+        ``Circle``, ``Ellipsoid``, …).
+        """
+        return refine(entity)
 
     # ── variable / blade-mask helpers ──────────────────────────
 

@@ -2,9 +2,8 @@
 # Copyright 2021 Christian Perwass
 
 
-from ._util import _convert_mv, _is_mv, _scalar
-from .direction import Direction
-from .point import Point
+from pytanga.entity import Direction, Point
+from pytanga.entity._util import _convert_mv, _is_mv, _scalar
 
 
 def to_point(value) -> Point:

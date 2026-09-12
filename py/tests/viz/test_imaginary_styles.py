@@ -24,6 +24,7 @@ from pytanga.viz._style_dict import _kind_to_key, _make_default_styles
 from pytanga.viz._styles import (
     _DEFAULT_STYLE_FOR_KIND,
     CircleStyle,
+    CylinderCircleStyle,
     PointPairStyle,
     SphereStyle,
 )
@@ -92,7 +93,7 @@ class TestCanonicalDefaults:
     def test_imag_circle_has_style_entry(self):
         assert "ImagCircle" in _DEFAULT_STYLE_FOR_KIND
         style = _DEFAULT_STYLE_FOR_KIND["ImagCircle"]
-        assert isinstance(style, CircleStyle)
+        assert isinstance(style, CylinderCircleStyle)
 
     def test_imag_sphere_has_style_entry(self):
         assert "ImagSphere" in _DEFAULT_STYLE_FOR_KIND
@@ -138,12 +139,12 @@ class TestStyleDictClassKeys:
 
     def test_style_dict_set_by_class(self):
         styles = _make_default_styles()
-        styles[ImagCircle] = CircleStyle(color="#ff00ff")
+        styles[ImagCircle] = CylinderCircleStyle(color="#ff00ff")
         assert styles["ImagCircle"].color == "#ff00ff"
 
     def test_style_dict_set_by_string(self):
         styles = _make_default_styles()
-        styles["ImagCircle"] = CircleStyle(color="#00ffff")
+        styles["ImagCircle"] = CylinderCircleStyle(color="#00ffff")
         assert styles[ImagCircle].color == "#00ffff"
 
     def test_style_dict_class_access_imag_sphere(self):

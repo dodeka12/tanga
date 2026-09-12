@@ -1034,7 +1034,9 @@ class VizServer:
                                     browser_id=browser_id,
                                 )
                             except Exception:
-                                pass
+                                logger.exception(
+                                    "full-state push failed for %s", browser_id
+                                )
                             for scene_name in scene_names:
                                 try:
                                     if self._push_animation_stop is not None:
