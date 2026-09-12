@@ -111,8 +111,9 @@ f = (v * v) + v + c   # AffineExpression of 3 terms
 f(V1=x)               # == x*x + x + c
 ```
 
-Products distribute over the terms (`f * g`, `~f`, `2 * f`, `-f` all work), but
-`inv` requires a single linear term.
+Products distribute over the terms (`f * g`, `~f`, `2 * f`, `-f` all work).
+`lstsq`, `svd`, and `inv` also apply to an `AffineExpression` whenever its sum
+reduces to a single linear map in one remaining variable (see below).
 
 ## Repeated variables (polynomial forms)
 
@@ -153,6 +154,10 @@ x = e_inv(V2=y)
 Multi-variable, repeated-variable, non-square, or singular expressions raise
 `ValueError`.
 
+An `AffineExpression` supports the same `inv(name)` when its sum reduces to a
+single linear map: exactly one variable, appearing once per term, non-stacked
+and square.
+
 ## Least squares (`lstsq`)
 
 For a single-variable expression whose tensor is a linear map in that
@@ -171,6 +176,9 @@ incidence constraint such as `P ^ L = 0`.  With an explicit `rhs` (an `MV`
 over the output mask), `numpy.linalg.lstsq` is used, requiring a non-stacked
 expression.  See `py/examples/ga/expression/line_fitting_p3.py`.
 
+An `AffineExpression` that reduces to a single linear map (one variable, once
+per term) supports `lstsq()` the same way.
+
 ## Singular-value decomposition (`svd`)
 
 `svd()` returns `(values, mvs)` — the descending list of singular values of
@@ -184,7 +192,8 @@ smallest = mvs[-1]   # == e.lstsq()
 
 It applies to a single-variable expression (with stacked/batch axes allowed),
 and raises `ValueError` for no-variable, multi-variable, or repeated-variable
-expressions.
+expressions.  An `AffineExpression` that reduces to a single linear map (one
+variable, once per term) supports `svd()` the same way.
 
 ## The internal tensor
 

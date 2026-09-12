@@ -5,8 +5,7 @@
 
 from __future__ import annotations
 
-from types import NotImplementedType
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -108,6 +107,17 @@ class Expression:
         masks = self._tensor.tensor.masks
         return list(raw[1:]), list(masks[1:])
 
+    def _counting_axes(self) -> dict[str, int]:
+        """Return the counting-axis names → lengths (axes past the output whose
+        mask is ``None``)."""
+        raw = _axis_names(self._tensor.labels)
+        masks = self._tensor.tensor.masks
+        return {
+            raw[i]: self._tensor.tensor.shape[i]
+            for i in range(1, len(raw))
+            if masks[i] is None
+        }
+
     def __repr__(self) -> str:
         return f"Expression(names={sorted(self._names)}, out_mask={self.out_mask})"
 
@@ -141,7 +151,10 @@ class Expression:
         return self._evaluate(bindings, True)
 
     def _evaluate(
-        self, bindings: dict[str, Any], check_blades: bool
+        self,
+        bindings: dict[str, Any],
+        check_blades: bool,
+        extra_counting: dict[str, int] | None = None,
     ) -> "MV | Expression | list":
         raw = _axis_names(self._tensor.labels)
         masks = self._tensor.tensor.masks
@@ -151,7 +164,8 @@ class Expression:
             if masks[i] is None:
                 counting[raw[i]] = i
 
-        unknown = set(bindings) - set(self._names) - set(counting)
+        extra = extra_counting or {}
+        unknown = set(bindings) - set(self._names) - set(counting) - set(extra)
         if unknown:
             raise ValueError(f"unknown variable(s): {sorted(unknown)}")
 
@@ -162,6 +176,30 @@ class Expression:
 
         var_bindings = {k: v for k, v in bindings.items() if k in self._names}
         count_bindings = {k: v for k, v in bindings.items() if k in counting}
+
+        # Counting axes known to the surrounding reduction but absent from this
+        # term are broadcast as constants (sum-reduction only).
+        broadcast_scale = 1.0
+        for name, value in bindings.items():
+            if name not in extra or name in counting:
+                continue
+            if _count_binding_mode(name, value) != "*":
+                raise ValueError(
+                    f"broadcasting counting axis {name!r} on a term that does not "
+                    "carry it is only supported for sum reduction ('*')"
+                )
+            if isinstance(value, DataArray):
+                raise ValueError(
+                    f"broadcasting counting axis {name!r} requires a raw 1-D "
+                    "weight array, not a DataArray"
+                )
+            arr = np.asarray(value)
+            if arr.ndim != 1:
+                raise ValueError(
+                    f"broadcasting counting axis {name!r} requires a raw 1-D "
+                    "weight array"
+                )
+            broadcast_scale *= float(np.sum(arr))
 
         base_tensor = self._tensor
         if count_bindings:
@@ -209,9 +247,19 @@ class Expression:
         if remaining:
             new_names = {n: self._names[n] for n in remaining}
             new_masks = {n: self._masks[n] for n in remaining}
-            return Expression(result, new_names, new_masks)
+            expr = Expression(result, new_names, new_masks)
+            return (
+                expr
+                if broadcast_scale == 1.0
+                else _scale_eval_result(expr, broadcast_scale)
+            )
 
-        return from_tensor(result.tensor)
+        out = from_tensor(result.tensor)
+        return (
+            out
+            if broadcast_scale == 1.0
+            else _scale_eval_result(out, broadcast_scale)
+        )
 
     def bind(self, **bindings: Any) -> "Expression":
         """Evaluate some bindings, asserting at least one variable/axis stays free.
@@ -250,57 +298,49 @@ class Expression:
 
     def __mul__(
         self, other: "MV | Variable | Expression | int | float"
-    ) -> "Expression | NotImplementedType":
+    ) -> "Expression":
         if isinstance(other, (int, float)):
             return self._scale(float(other))
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _product(self, other, EProduct.GP)
 
     def __rmul__(
         self, other: "MV | Variable | Expression | int | float"
-    ) -> "Expression | NotImplementedType":
+    ) -> "Expression":
         if isinstance(other, (int, float)):
             return self._scale(float(other))
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _product(other, self, EProduct.GP)
 
-    def __or__(
-        self, other: "MV | Variable | Expression"
-    ) -> "Expression | NotImplementedType":
+    def __or__(self, other: "MV | Variable | Expression") -> "Expression":
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _product(self, other, EProduct.IP)
 
-    def __ror__(
-        self, other: "MV | Variable | Expression"
-    ) -> "Expression | NotImplementedType":
+    def __ror__(self, other: "MV | Variable | Expression") -> "Expression":
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _product(other, self, EProduct.IP)
 
-    def __xor__(
-        self, other: "MV | Variable | Expression"
-    ) -> "Expression | NotImplementedType":
+    def __xor__(self, other: "MV | Variable | Expression") -> "Expression":
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _product(self, other, EProduct.OP)
 
-    def __rxor__(
-        self, other: "MV | Variable | Expression"
-    ) -> "Expression | NotImplementedType":
+    def __rxor__(self, other: "MV | Variable | Expression") -> "Expression":
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _product(other, self, EProduct.OP)
 
     def __neg__(self) -> "Expression":
         return self._scale(-1.0)
 
-    def __truediv__(self, other: Any) -> "Expression | NotImplementedType":
+    def __truediv__(self, other: Any) -> "Expression":
         if isinstance(other, (int, float)):
             return self._scale(1.0 / float(other))
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
     def _scale(self, scalar: float) -> "Expression":
         return Expression(self._tensor.mul_scalar(scalar), self._names, self._masks)
@@ -311,46 +351,46 @@ class Expression:
 
     def __add__(
         self, other: "MV | Variable | Expression | int | float"
-    ) -> "Expression | AffineExpression | NotImplementedType":
+    ) -> "Expression | AffineExpression":
         if isinstance(other, (int, float)) and other == 0:
             return self
         if isinstance(other, (int, float)):
             other = self.algebra.multivector({0: float(other)})
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _add(self, other)
 
     def __radd__(
         self, other: "MV | Variable | Expression | int | float"
-    ) -> "Expression | AffineExpression | NotImplementedType":
+    ) -> "Expression | AffineExpression":
         if isinstance(other, (int, float)) and other == 0:
             return self
         if isinstance(other, (int, float)):
             other = self.algebra.multivector({0: float(other)})
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _add(other, self)
 
     def __sub__(
         self, other: "MV | Variable | Expression | int | float"
-    ) -> "Expression | AffineExpression | NotImplementedType":
+    ) -> "Expression | AffineExpression":
         if isinstance(other, (int, float)) and other == 0:
             return self
         if isinstance(other, (int, float)):
             other = self.algebra.multivector({0: float(other)})
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _add(self, other, subtract=True)
 
     def __rsub__(
         self, other: "MV | Variable | Expression | int | float"
-    ) -> "Expression | AffineExpression | NotImplementedType":
+    ) -> "Expression | AffineExpression":
         if isinstance(other, (int, float)) and other == 0:
             return self._scale(-1.0)
         if isinstance(other, (int, float)):
             other = self.algebra.multivector({0: float(other)})
         if not isinstance(other, (MV, Variable, Expression)):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return _add(other, self, subtract=True)
 
     # ------------------------------------------------------------------
@@ -564,6 +604,22 @@ class AffineExpression:
                     result[name] = mask
         return result
 
+    def _counting_axes_union(self) -> dict[str, int]:
+        """Union of each term's counting axes, with a length-consistency check."""
+        result: dict[str, int] = {}
+        for term in self._terms:
+            for name, length in term._counting_axes().items():
+                if name in result and result[name] != length:
+                    raise ValueError(
+                        f"counting axis {name!r} has inconsistent lengths across terms"
+                    )
+                result[name] = length
+        return result
+
+    def _has_counting_axes(self) -> bool:
+        """True if any term carries a batch (``None``-mask) axis."""
+        return any(t._has_counting_axes() for t in self._terms)
+
     @property
     def out_mask(self) -> BladeMask:
         """The union of the terms' output blade masks."""
@@ -592,7 +648,8 @@ class AffineExpression:
         fully bound ``DataArray`` bindings yield a (nested) ``list``; a remaining
         variable yields an ``AffineExpression`` (or a list of them).
         """
-        unknown = set(bindings) - self.names
+        counting = self._counting_axes_union()
+        unknown = set(bindings) - self.names - set(counting)
         if unknown:
             raise ValueError(f"unknown variable(s): {sorted(unknown)}")
 
@@ -600,16 +657,19 @@ class AffineExpression:
             return self
 
         union = self._union_masks()
-        for name, value in bindings.items():
+        var_bindings = {k: v for k, v in bindings.items() if k in self.names}
+        count_bindings = {k: v for k, v in bindings.items() if k in counting}
+        for name, value in var_bindings.items():
             if isinstance(value, (int, float)):
-                bindings[name] = self.algebra.multivector({0: float(value)})
+                var_bindings[name] = self.algebra.multivector({0: float(value)})
             if isinstance(value, MV):
                 _check_blades(value, union[name], name)
 
         results = []
         for term in self._terms:
-            sub = {k: v for k, v in bindings.items() if k in term.names}
-            results.append(term._evaluate(sub, False))
+            sub = {k: v for k, v in var_bindings.items() if k in term.names}
+            sub.update(count_bindings)
+            results.append(term._evaluate(sub, False, extra_counting=counting))
 
         return _combine_terms(results)
 
@@ -715,10 +775,10 @@ class AffineExpression:
     def __rxor__(self, other: Any) -> "AffineExpression":
         return AffineExpression([_product(other, t, EProduct.OP) for t in self._terms])
 
-    def __truediv__(self, other: Any) -> "AffineExpression | NotImplementedType":
+    def __truediv__(self, other: Any) -> "AffineExpression":
         if isinstance(other, (int, float)):
             return self._scale(1.0 / float(other))
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
     def _scale(self, scalar: float) -> "AffineExpression":
         return AffineExpression([t._scale(scalar) for t in self._terms])
@@ -733,10 +793,135 @@ class AffineExpression:
     def conj(self) -> "AffineExpression":
         return AffineExpression([t.conj() for t in self._terms])
 
-    def inv(self, var_name: str) -> "NoReturn":
-        raise ValueError(
-            "inv() requires a single linear Expression, not an AffineExpression"
+    def _variable_matrix(self) -> tuple[str, BladeMask, np.ndarray]:
+        """Return ``(var_name, var_mask, matrix)`` for a single-linear-map sum.
+
+        Requires exactly one variable name, appearing exactly once in every term
+        (each term linear in it; no constant or repeated-variable terms).  Builds
+        ``matrix`` by evaluating the sum at each canonical basis blade of the
+        variable mask and flattening the results over ``out_mask`` (counting axes
+        contribute extra rows).
+        """
+        names = self.names
+        if len(names) != 1:
+            raise ValueError(
+                f"requires a single-variable expression (got {sorted(names)})"
+            )
+        (var_name,) = names
+        for term in self._terms:
+            if var_name not in term.names or len(term.names[var_name]) != 1:
+                raise ValueError(
+                    f"requires {var_name!r} to appear exactly once in every term"
+                )
+
+        var_mask = self._union_masks()[var_name]
+        out_mask = self.out_mask
+
+        cols = []
+        for blade_id in var_mask.ids:
+            basis = self.algebra.multivector({blade_id: 1.0})
+            res = self(**{var_name: basis})
+            col = np.concatenate(
+                [
+                    np.asarray(to_tensor(leaf, mask=out_mask).data, dtype=np.float64)
+                    for leaf in _flatten_mvs(res)
+                ]
+            )
+            cols.append(col)
+
+        matrix = (
+            np.column_stack(cols).astype(np.float64)
+            if cols
+            else np.empty((len(out_mask), 0), dtype=np.float64)
         )
+        return var_name, var_mask, matrix
+
+    def lstsq(self, rhs: "MV | int | float | None" = None) -> "MV":
+        """Solve this single-linear-map affine expression in the least-squares sense.
+
+        Requires exactly one variable appearing once per term.  All output blades
+        (and any counting axes) are flattened into the rows of a linear system
+        whose columns are the blades of the variable mask.
+
+        - ``rhs=None`` (default): solve the homogeneous system via the smallest
+          singular vector.
+        - otherwise: solve ``M · vec(x) = rhs`` via ``numpy.linalg.lstsq``,
+          requiring a non-stacked expression and *rhs* over ``out_mask``.
+        """
+        from pytanga.tensor import MVTensor as _MVTensor
+
+        _name, var_mask, matrix = self._variable_matrix()
+
+        if rhs is None:
+            if matrix.shape[0] == 0:
+                raise ValueError("lstsq(): empty linear system")
+            _, _, vt = np.linalg.svd(matrix, full_matrices=False)
+            x = vt[-1]
+        else:
+            if self._has_counting_axes():
+                raise ValueError(
+                    "lstsq() with rhs requires a non-stacked expression "
+                    "(no counting axes); use a homogeneous fit or evaluate "
+                    "batches separately"
+                )
+            if isinstance(rhs, (int, float)):
+                rhs = self.algebra.multivector({0: float(rhs)})
+            if not isinstance(rhs, MV):
+                raise TypeError(f"lstsq() rhs must be an MV, got {type(rhs).__name__}")
+            rhs_vec = to_tensor(rhs, mask=self.out_mask).data
+            x, _, _, _ = np.linalg.lstsq(matrix, rhs_vec, rcond=None)
+
+        result = _MVTensor(data=x.astype(np.float64), masks=(var_mask,))
+        return from_tensor(result)
+
+    def svd(self) -> tuple[list[float], list["MV"]]:
+        """Return the singular values and right-singular multivectors.
+
+        Treats this single-linear-map affine expression as a linear map and
+        returns ``(values, mvs)`` — the descending singular values and the
+        corresponding right-singular vectors, each reconstructed as an ``MV``
+        over the variable's blade mask.
+        """
+        from pytanga.tensor import MVTensor as _MVTensor
+
+        _name, var_mask, matrix = self._variable_matrix()
+        if matrix.shape[0] == 0:
+            raise ValueError("svd(): empty linear system")
+        _u, s, vt = np.linalg.svd(matrix, full_matrices=False)
+        mvs = [
+            from_tensor(_MVTensor(data=vec.astype(np.float64), masks=(var_mask,)))
+            for vec in vt
+        ]
+        return s.tolist(), mvs
+
+    def inv(self, var_name: str) -> "Expression":
+        """Return the inverse linear map as a new expression.
+
+        The affine expression must reduce to a single linear map: exactly one
+        variable appearing once per term, non-stacked, and square
+        (``len(out_mask) == len(var_mask)``).  The result maps the old output
+        space back to the old variable space, keyed by *var_name*.
+        """
+        if self._has_counting_axes():
+            raise ValueError("inv() requires a plain (non-stacked) expression")
+        _name, var_mask, matrix = self._variable_matrix()
+        out_mask = self.out_mask
+        if len(out_mask) != len(var_mask):
+            raise ValueError(
+                "inv() requires a square matrix "
+                f"(output mask has {len(out_mask)} blades, "
+                f"variable mask has {len(var_mask)})"
+            )
+
+        try:
+            inv_mat = np.linalg.inv(matrix)
+        except np.linalg.LinAlgError as exc:
+            raise ValueError("inv() failed: the expression matrix is singular") from exc
+
+        new_label = allocate_block()[0]
+        result = MVTensor(data=inv_mat, masks=(var_mask, out_mask))
+        labeled = MVLabeledTensor(result, [(OUT_LABEL, "*"), (new_label, "*")])
+        return Expression(labeled, {var_name: (new_label,)}, {var_name: out_mask})
 
 
 def _variable_dataarray_binding_tensors(
@@ -925,6 +1110,23 @@ def _add_values(a: Any, b: Any) -> Any:
     if isinstance(b, list):
         return [_add_values(a, y) for y in b]
     return a + b
+
+
+def _scale_eval_result(result: Any, scale: float) -> Any:
+    """Scale an evaluation result (``MV``/``Expression``/nested list) by a scalar."""
+    if isinstance(result, list):
+        return [_scale_eval_result(x, scale) for x in result]
+    return result * scale
+
+
+def _flatten_mvs(result: Any) -> list["MV"]:
+    """Flatten an evaluation result (``MV`` or nested list) into a list of ``MV``."""
+    if isinstance(result, list):
+        out: list["MV"] = []
+        for x in result:
+            out.extend(_flatten_mvs(x))
+        return out
+    return [result]
 
 
 def _combine_terms(results: list) -> "MV | AffineExpression | list":
