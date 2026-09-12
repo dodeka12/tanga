@@ -18,6 +18,8 @@ uv run python py/examples/<path>.py
 
 - **affine** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
+- **AffineExpression** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md)
+
 - **alert** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 
 - **Algebra** — [How pytanga builds C++ backends on the fly](binding_demo.md), [Creating and configuring an Algebra](ga/algebra/algebra_demo.md), [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
@@ -156,6 +158,8 @@ uv run python py/examples/<path>.py
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
 
+- **counting axis** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
+
 - **CSG** — [per-object CSG combine modes](viz/sdf/booleans.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
 
 - **css** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md)
@@ -174,7 +178,7 @@ uv run python py/examples/<path>.py
 
 - **dark** — [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
-- **DataArray** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
+- **DataArray** — [Expressions, variables, and DataArray bindings](expression_dataarray.md), [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 
 - **defaults** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
@@ -226,7 +230,7 @@ uv run python py/examples/<path>.py
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
-- **expressions** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
+- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
@@ -318,6 +322,8 @@ uv run python py/examples/<path>.py
 
 - **interactive** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
+- **inv** — [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md)
+
 - **inverse** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_01.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
 
 - **Inversion** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
@@ -346,7 +352,7 @@ uv run python py/examples/<path>.py
 
 - **least-norm** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
-- **least-squares** — [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
+- **least-squares** — [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
 - **light** — [Animate a directional light around a sphere](viz/sdf/light_animation.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
@@ -582,7 +588,7 @@ uv run python py/examples/<path>.py
 
 - **snapshot** — [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
-- **solve** — [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md)
+- **solve** — [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md)
 
 - **solve_lsq** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
@@ -693,6 +699,8 @@ uv run python py/examples/<path>.py
 - **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **VizSceneHandle** — [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
+
+- **weighted sum** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 
 - **wireframe** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 

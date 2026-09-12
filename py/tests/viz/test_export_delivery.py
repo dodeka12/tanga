@@ -121,7 +121,20 @@ def test_resolve_ref_falls_back_to_main_for_dev(monkeypatch):
     assert cdn.resolve_delivery_ref() == "main"
 
 
-def test_display_snapshot_defaults_to_cdn():
+def test_display_snapshot_defaults_to_inline():
+    import base64
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz.add(Point(1, 2, 3))
+    viz._jupyter = True
+    frame = viz.display_snapshot()
+    html = base64.b64decode(frame.src.split(",", 1)[1]).decode("utf-8")
+    assert "function createEntityMesh(" in html
+    assert "cdn.jsdelivr.net/gh/dodeka12/tanga" not in html
+
+
+def test_render_snapshot_html_defaults_to_cdn():
+    # File exports (``export_snapshot``) keep the CDN default (smallest HTML).
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.add(Point(1, 2, 3))
     html = viz._render_snapshot_html("")

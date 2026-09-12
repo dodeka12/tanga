@@ -197,3 +197,88 @@ class TestAffineExpression:
         # a blade outside the union raises
         with pytest.raises(ValueError):
             a(V1=e1 + e2 + self._mv({"e3": 1.0}))
+
+    def test_counting_axis_reduction(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        a = (v * v * w) + (v * w)
+        xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
+        partial = a(V1=DataArray(xs, masks=("n", self.full)))
+        assert isinstance(partial, AffineExpression)
+        assert all("n" in t._counting_axes() for t in partial.terms)
+        reduced = partial(n=[1.0, 1.0])
+        y = self._mv({"e2": 3.0})
+        expected = 5.0 * y + 3.0 * (self._mv({"e1": 1.0}) * y)
+        assert _close(reduced(V2=y), expected)
+
+    def test_counting_axis_broadcast(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        c = self._mv({"e3": 2.0})
+        a = (v * w) + c
+        xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
+        partial = a(V1=DataArray(xs, masks=("n", self.full)))
+        assert isinstance(partial, AffineExpression)
+        assert "n" in partial.terms[0]._counting_axes()
+        assert "n" not in partial.terms[1]._counting_axes()
+        reduced = partial(n=[1.0, 2.0])
+        y = self._mv({"e2": 3.0})
+        expected = 5.0 * (self._mv({"e1": 1.0}) * y) + c * 3.0
+        assert _close(reduced(V2=y), expected)
+
+    def test_lstsq_and_svd(self):
+        u = Variable("U", self.full)
+        w = Variable("W", self.full)
+        a = (u * w) + (u * u * w)
+        u_val = self._mv({"e1": 0.5})
+        F = a(U=u_val)
+        assert isinstance(F, AffineExpression)
+        w0 = self._mv({"e2": 1.0})
+        rhs = F(W=w0)
+        sol = F.lstsq(rhs=rhs)
+        assert _close(F(W=sol), rhs)
+        values, mvs = F.svd()
+        assert values == sorted(values, reverse=True)
+        assert all(isinstance(mv, MV) for mv in mvs)
+
+    def test_inv_round_trip(self):
+        u = Variable("U", self.full)
+        w = Variable("W", self.full)
+        a = (u * w) + (u * u * w)
+        u_val = self._mv({"e1": 0.5})
+        F = a(U=u_val)
+        w0 = self._mv({"e2": 1.0})
+        inv_F = F.inv("W")
+        assert isinstance(inv_F, Expression)
+        assert _close(inv_F(W=F(W=w0)), w0)
+
+    def test_linear_solve_rejects_multivariable(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        a = (v * w) + (v * v * w)
+        with pytest.raises(ValueError):
+            a.lstsq()
+        with pytest.raises(ValueError):
+            a.svd()
+        with pytest.raises(ValueError):
+            a.inv("V1")
+
+    def test_inv_rejects_non_square(self):
+        u = Variable("U", self.full)
+        w = Variable("W", BladeMask(self.alg, [1]))
+        a = (u * w) + (u * u * w)
+        u_val = self._mv({"e1": 0.5, "e2": 0.3})
+        F = a(U=u_val)
+        with pytest.raises(ValueError):
+            F.inv("W")
+
+    def test_broadcast_rejects_elementwise(self):
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        c = self._mv({"e3": 2.0})
+        a = (v * w) + c
+        xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
+        partial = a(V1=DataArray(xs, masks=("n", self.full)))
+        with pytest.raises(ValueError):
+            partial(n=DataArray([1.0, 2.0], masks=("_",)))
+

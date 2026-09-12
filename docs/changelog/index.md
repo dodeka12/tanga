@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.2.0] — 2026-09-12
+- `AffineExpression` counting-axis reduction, broadcast, and linear solve (`.lstsq()`/`.svd()`/`.inv()`) · new `affine_counting_reduction` / `affine_linear_solve` examples
+- Bug fixes: serverless inline display (`display_snapshot()`/`display_row`) defaults to `delivery="inline"` (no CDN 404 on unpublished branches) · `HDirection(x, y, z)` construction · `MV`/`Expression` operator return types
+→ [Details](2026/09/12_541f8f7d.md)
+
 ## [Since 2.1.0] — 2026-09-10
 - Jupyter-scoped `Visualizer` singleton (one server + one scene host reused across cell re-runs) · named-scene re-run reset (`viz.scene(name)`) · `PortConflictMode` port-conflict resolution (`CANCEL`/`AUTO`/`KILL`/`ASK`)
 - Bug fixes: port re-bind on cell re-run · `interactive.ipynb` wireframe keyword · `SIGTERM` teardown

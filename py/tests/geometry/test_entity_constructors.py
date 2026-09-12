@@ -12,6 +12,7 @@ from pytanga.geometry.create import create_entity
 from pytanga.geometry.entities import (
     Circle,
     Direction,
+    HDirection,
     Line,
     Plane,
     Point,
@@ -77,6 +78,28 @@ def test_direction_from_p3_mv():
     mv = create_entity(alg, Direction(1, 2, 3))
     d = Direction(mv)
     assert isinstance(d, Direction)
+
+
+def test_hdirection_from_three_values():
+    hd = HDirection(1, 2, 3)
+    assert isinstance(hd, HDirection)
+    assert hd.direction == Direction(1, 2, 3)
+
+
+def test_hdirection_from_direction():
+    hd = HDirection(Direction(4, 5, 6))
+    assert hd.direction == Direction(4, 5, 6)
+
+
+def test_hdirection_from_n3_mv():
+    alg = BasisN3()
+    mv = create_entity(alg, HDirection(Direction(1, 2, 3)))
+    hd = HDirection(mv)
+    assert isinstance(hd, HDirection)
+    n = (1 / 14) ** 0.5
+    assert hd.direction.x == pytest.approx(1 * n)
+    assert hd.direction.y == pytest.approx(2 * n)
+    assert hd.direction.z == pytest.approx(3 * n)
 
 
 # ═══════════════════════════════════════════════════════════════

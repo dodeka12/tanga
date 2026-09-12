@@ -17,7 +17,11 @@ from pytanga.geometry import Point
 from pytanga.viz import Visualizer
 
 viz = Visualizer()
-viz.show()  # start the server and render inline
+# When animating it is better to open a separate browser window
+# as otherwise the animation is not rendered in the output of 
+# the cell that contains the animation loop, but in the output
+# of the cell that had the first viz.show().
+viz.show(jupyter=False)  # start the server and render inline
 
 
 p = viz(Point(3, 0, 0), color="#ff4444")  # viz(...) == viz.new(...)

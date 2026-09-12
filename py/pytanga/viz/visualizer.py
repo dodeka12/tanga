@@ -2651,7 +2651,9 @@ class Visualizer(_JupyterDisplayMixin):
             if mode == "static":
                 import base64
 
-                snapshot = handle._viz._render_snapshot_html(handle.name)
+                snapshot = handle._viz._render_snapshot_html(
+                    handle.name, delivery="inline"
+                )
                 b64 = base64.b64encode(snapshot.encode("utf-8")).decode("ascii")
                 iframe = (
                     f'<iframe src="data:text/html;charset=utf-8;base64,{b64}" '
@@ -2958,7 +2960,7 @@ class Visualizer(_JupyterDisplayMixin):
         height: int | str = "500px",
         *,
         scene_name: str = "",
-        delivery: str = "cdn",
+        delivery: str = "inline",
         delivery_ref: str | None = None,
     ) -> Any:
         """Display a scene as standalone HTML (no server required).
@@ -2966,7 +2968,11 @@ class Visualizer(_JupyterDisplayMixin):
         In Jupyter, returns an ``IPython.display.IFrame`` embedding the
         standalone document via a data URL (no server, no style leakage).
         Outside Jupyter, opens the snapshot in a browser window.  *delivery*
-        selects how the viewer runtime is delivered (``"cdn"`` default).
+        selects how the viewer runtime is delivered (``"inline"`` default):
+        the Tanga viewer library is inlined from the local templates, so the
+        snapshot matches the installed code and does not depend on a published
+        CDN bundle.  Three.js and optional libraries still load from jsDelivr;
+        pass ``delivery="offline"`` for a fully self-contained document.
         """
         html = self._render_snapshot_html(
             scene_name, delivery=delivery, delivery_ref=delivery_ref
