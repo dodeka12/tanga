@@ -21,12 +21,15 @@ def all_blades(dim: int) -> list[int]:
     return sorted(range(1 << dim), key=lambda b: (grade(b), b))
 
 
-def blade_name(blade_id: int, dim: int) -> str:
+def blade_name(blade_id: int, dim: int, comma: bool | None = None) -> str:
     """Convert a bitmask *blade_id* to its canonical TanGA-style name.
 
     - ``0`` → ``"s"`` (scalar)
     - ``(1 << dim) - 1`` → ``"I"`` (pseudoscalar)
-    - otherwise → ``"e"`` + 1-based indices of set bits in ascending order
+    - otherwise → ``"e"`` + 1-based indices of set bits in ascending order.
+      For ``dim > 9`` (or ``comma=True``) the indices are comma-separated
+      (``"e10"``, ``"e1,2,10"``) so they round-trip unambiguously through
+      :func:`blade_id`.
     """
     if blade_id < 0 or blade_id >= (1 << dim):
         raise ValueError(f"blade_id {blade_id} out of range for dim={dim}")
@@ -34,7 +37,11 @@ def blade_name(blade_id: int, dim: int) -> str:
         return "s"
     if blade_id == (1 << dim) - 1:
         return "I"
+    if comma is None:
+        comma = dim > 9
     indices = [str(k + 1) for k in range(dim) if blade_id & (1 << k)]
+    if comma:
+        return "e" + ",".join(indices)
     return "e" + "".join(indices)
 
 
@@ -53,7 +60,7 @@ def _permutation_sign(indices: list[int]) -> int:
     return sign
 
 
-def blade_id_signed(name: str, dim: int) -> tuple[int, int]:
+def blade_id_signed(name: str, dim: int, comma: bool | None = None) -> tuple[int, int]:
     """Parse a blade name to its ``(bitmask, sign)``.
 
     Returns the canonical bitmask together with the sign of the permutation
@@ -65,8 +72,11 @@ def blade_id_signed(name: str, dim: int) -> tuple[int, int]:
     - ``"e321"`` → ``(7, -1)``
 
     Accepts the same inputs as :func:`blade_id`: ``"s"``/``"0"`` → scalar,
-    ``"I"`` → pseudoscalar, or ``"e"`` + distinct 1-based indices in ``[1, dim]``
-    (comma-separated for ``dim > 9``).
+    ``"I"`` → pseudoscalar, or ``"e"`` + distinct 1-based indices in ``[1, dim]``.
+    For ``dim > 9`` (or ``comma=True``) a comma-less tail is parsed as a single
+    index (``"e10"`` → 10) and multi-index names must be comma-separated
+    (``"e1,2,10"``); for ``dim ≤ 9`` digits are read individually (``"e12"`` →
+    1, 2).
     """
     if name in ("s", "0"):
         return 0, 1
@@ -77,17 +87,19 @@ def blade_id_signed(name: str, dim: int) -> tuple[int, int]:
     tail = name[1:]
     if not tail:
         raise ValueError(f"Empty blade indices after 'e' in: {name!r}")
+    if comma is None:
+        comma = dim > 9
 
     if "," in tail:
         parts = tail.split(",")
         if not all(p.isdigit() for p in parts):
             raise ValueError(f"Non-numeric index in comma-separated name: {name!r}")
         indices = [int(p) for p in parts]
+    elif comma:
+        if not tail.isdigit():
+            raise ValueError(f"Non-digit characters after 'e' in: {name!r}")
+        indices = [int(tail)]
     else:
-        if dim > 9:
-            raise ValueError(
-                f"Use comma-separated format (e.g. 'e1,2,10') for dim > 9; got {name!r}"
-            )
         if not tail.isdigit():
             raise ValueError(f"Non-digit characters after 'e' in: {name!r}")
         indices = [int(c) for c in tail]
@@ -103,11 +115,11 @@ def blade_id_signed(name: str, dim: int) -> tuple[int, int]:
     return bitmask, _permutation_sign(indices)
 
 
-def blade_id(name: str, dim: int) -> int:
+def blade_id(name: str, dim: int, comma: bool | None = None) -> int:
     """Parse a blade name back to its canonical (unsigned) bitmask id.
 
     The returned bitmask is order-independent (``"e21"`` and ``"e12"`` give the
     same id).  Use :func:`blade_id_signed` when the permutation sign matters,
     e.g. string parsing of reversed names such as ``"e31"``.
     """
-    return blade_id_signed(name, dim)[0]
+    return blade_id_signed(name, dim, comma)[0]

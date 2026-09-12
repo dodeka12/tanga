@@ -96,6 +96,16 @@ def test_call_follows_algebra_opns():
     assert 4 in mv.grades
 
 
+def test_call_uses_entity_attribute(b):
+    geo = Geometry(b)
+
+    class _HasEntity:
+        entity = Point(1, 2, 3)
+
+    mv = geo(_HasEntity())
+    assert mv.grades == geo(Point(1, 2, 3)).grades
+
+
 # ═══ which_entity() ═══
 
 

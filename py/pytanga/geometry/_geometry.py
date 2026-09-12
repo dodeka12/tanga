@@ -97,6 +97,8 @@ class Geometry:
           ``RndPoint`` instances, or plain entities).
         - :class:`Entity` / :class:`Operator` → :meth:`create`.
         - :class:`MV` → :meth:`analyze`.
+        - object with an ``entity`` attribute (e.g. a viz ``ActPoint``) → recurse
+          on ``obj.entity``.
         """
         if isinstance(obj, str) and typ is not None:
             return self.create_var(obj, typ)
@@ -115,9 +117,13 @@ class Geometry:
             return self.create(obj)
         if _is_mv(obj):
             return self.analyze(obj)
+        entity = getattr(obj, "entity", None)
+        if entity is not None:
+            return self(entity)
         raise TypeError(
             f"Geometry.__call__() expects RndEntity, Entity, Operator, list, MV, "
-            f"or (name, type) tuple, got {type(obj).__name__}"
+            f"(name, type) tuple, or an object with an `entity` attribute, "
+            f"got {type(obj).__name__}"
         )
 
     def which_entity(self, mv: MV) -> Entity:

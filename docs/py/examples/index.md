@@ -32,7 +32,7 @@ uv run python py/examples/<path>.py
 
 - **all types** — [All geometric entity types in one scene](viz/entities/all_entities.md)
 
-- **analyze** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **analyze** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **anchor** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
@@ -138,9 +138,9 @@ uv run python py/examples/<path>.py
 
 - **conformal** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
 
-- **conic** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md)
+- **conic** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
-- **conic_from_points** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md)
+- **conic_from_points** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md)
 
 - **constraints** — [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
 
@@ -168,6 +168,8 @@ uv run python py/examples/<path>.py
 
 - **Ctrl+C** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
+- **curve** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+
 - **custom enum** — [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
 
 - **custom intervals** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
@@ -181,6 +183,8 @@ uv run python py/examples/<path>.py
 - **DataArray** — [Expressions, variables, and DataArray bindings](expression_dataarray.md), [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 
 - **defaults** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
+
+- **degenerate** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md)
 
 - **delivery** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
 
@@ -200,7 +204,7 @@ uv run python py/examples/<path>.py
 
 - **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
 
-- **dropdown** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **dropdown** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **dtype** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -213,6 +217,8 @@ uv run python py/examples/<path>.py
 - **einsum** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **Ellipse** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
+
+- **ellipsoid** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md)
 
 - **Ellipsoid** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
@@ -322,6 +328,8 @@ uv run python py/examples/<path>.py
 
 - **interactive** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
+- **intersection** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+
 - **inv** — [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md)
 
 - **inverse** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_01.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
@@ -329,6 +337,8 @@ uv run python py/examples/<path>.py
 - **Inversion** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
 
 - **IPNS** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
+
+- **join** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md)
 
 - **JSON** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
@@ -456,6 +466,8 @@ uv run python py/examples/<path>.py
 
 - **PartialDisk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
+- **pencil** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+
 - **pendulum** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
 
 - **persistence** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
@@ -465,6 +477,8 @@ uv run python py/examples/<path>.py
 - **Plane** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [All geometric entity types in one scene](viz/entities/all_entities.md)
 
 - **plane** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md)
+
+- **plane pair** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **plane-based** — [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md)
 
@@ -504,9 +518,13 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **quadric** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **Q3** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+
+- **quadric** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **Quadric3D** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+
+- **quadric3d** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md)
 
 - **quadric_from_points** — [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
@@ -516,7 +534,7 @@ uv run python py/examples/<path>.py
 
 - **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
-- **refine** — [reconstruct a conic from 5 points and draw its refined entity](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **refine** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
@@ -530,7 +548,7 @@ uv run python py/examples/<path>.py
 
 - **residual** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
 
-- **rotor** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
+- **rotor** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **Rotor** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
@@ -574,7 +592,7 @@ uv run python py/examples/<path>.py
 
 - **sizing** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
-- **slider** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+- **slider** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **SliderView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 

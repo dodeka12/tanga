@@ -80,11 +80,12 @@ vec3 shade(vec3 p, vec3 n, vec3 ro) {
         float dif = abs(dot(n, L));
         col += uColor * uLightColor[i] * dif;
     }
-    // Hemisphere ambient ("sky from above") for depth cueing, matching the SDF
-    // renderer's look.
-    col *= 0.5 + 0.5 * n.y;
+    // Two-sided hemisphere ambient for depth cueing: |n.y| keeps the upper and
+    // lower branches of an open quadric (hyperboloid, paraboloid) equally lit
+    // — using n.y directly would darken the branch whose normals point down.
+    col *= 0.5 + 0.5 * abs(n.y);
     float dist = length(p - ro);
-    float fog = 1.0 - exp(-0.05 * dist);
+    float fog = 1.0 - exp(-0.01 * dist);
     vec3 bg = vec3(0.10, 0.10, 0.18);
     return mix(col, bg, fog);
 }

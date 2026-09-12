@@ -25,8 +25,8 @@ class TestSerializeQuadric:
     def test_emits_bound(self):
         q = Quadric3D(tuple(float(i) for i in range(1, 11)))
         d = serialize_entity(q, "q1", kind="Quadric3D")
-        assert d["bound"]["min"] == [-10.05, -10.05, -10.05]
-        assert d["bound"]["max"] == [10.05, 10.05, 10.05]
+        assert d["bound"]["min"] == [-5.0, -5.0, -5.0]
+        assert d["bound"]["max"] == [5.0, 5.0, 5.0]
 
     def test_resolves_default_color_opacity(self):
         q = Quadric3D(tuple(float(i) for i in range(1, 11)))

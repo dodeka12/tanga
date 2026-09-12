@@ -29,6 +29,8 @@ from .entities import (
     ParallelLinePair,
     Parabola,
     Plane,
+    PlanePair,
+    ParallelPlanePair,
     Point,
     PointPair,
     Quadric3D,
@@ -150,6 +152,8 @@ def create_entity(basis: Algebra, entity: Entity) -> MV:
             Parabola,
             LinePair,
             ParallelLinePair,
+            PlanePair,
+            ParallelPlanePair,
             Ellipse,
             Ellipsoid,
             Cylinder,
@@ -268,6 +272,8 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
         create_p3,
         create_pga2,
         create_pga3,
+        create_q2,
+        create_q3,
     )
 
     modules = {
@@ -279,6 +285,8 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
         "p3": create_p3,
         "pga2": create_pga2,
         "pga3": create_pga3,
+        "q2": create_q2,
+        "q3": create_q3,
     }
     mod = modules[_detect(basis)]
 

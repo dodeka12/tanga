@@ -89,7 +89,7 @@ class VizObjectRef:
 
     @entity.setter
     def entity(self, value: Any) -> None:
-        self._scene_node().set_entity(value)
+        self._scene_node().set_entity(self._handle._viz._resolve(value))
 
     @property
     def style(self) -> Any:

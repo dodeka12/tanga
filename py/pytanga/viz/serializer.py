@@ -29,6 +29,11 @@ from pytanga.geometry.entities import (
     ParallelLinePair,
     PartialDisk,
     Plane,
+    PlanePair,
+    ParallelPlanePair,
+    PlaneConic,
+    PlaneConicPair,
+    Curve,
     Point,
     PointPair,
     PointSet,
@@ -151,6 +156,20 @@ def _dispatch_entity(
         return _serialize_line(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Plane):
         return _serialize_plane(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, ParallelPlanePair):
+        return _serialize_parallel_plane_pair(
+            entity, props, kind=kind, styles_map=styles_map
+        )
+    if isinstance(entity, PlanePair):
+        return _serialize_plane_pair(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PlaneConic):
+        return _serialize_plane_conic(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, PlaneConicPair):
+        return _serialize_plane_conic_pair(
+            entity, props, kind=kind, styles_map=styles_map
+        )
+    if isinstance(entity, Curve):
+        return _serialize_curve(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Circle):
         return _serialize_circle(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Sphere):
@@ -298,33 +317,15 @@ def _serialize_quadric(
 
 
 def _quadric_aabb(ent: Any, padding: float) -> Dict[str, list[float]]:
-    """Conservative proxy AABB for a quadric.
+    """Fixed proxy AABB for every quadric: a ``[-5, 5]³`` cube about the origin.
 
-    Bounded quadrics (sphere / ellipsoid) get an AABB from the center and the
-    largest semi-axis; unbounded quadrics (hyperboloids, cylinders, cones,
-    paraboloids) fall back to a fixed ±(10 + padding) cube so the analytic
-    surface still renders clipped to a finite proxy volume.
+    All quadrics (bounded and unbounded) are clipped to the same volume, so the
+    analytic surface renders consistently across kinds; unbounded quadrics are
+    cut off at the cube faces.  ``ent`` and ``padding`` are unused (the box is
+    intentionally independent of the quadric's extent).
     """
-    import numpy as np
-
-    kind = getattr(ent, "kind", None)
-    kind_value = getattr(kind, "value", None)
-    center = getattr(ent, "center", None)
-    if kind_value in ("sphere", "ellipsoid") and center is not None:
-        lam = np.asarray(ent.eigenvalues, dtype=float)
-        bvec = np.asarray(ent.matrix[:3, 3], dtype=float)
-        cvec = np.array([center.x, center.y, center.z], dtype=float)
-        fp = float(ent.matrix[3, 3] + bvec @ cvec)
-        nonzero = lam[np.abs(lam) > 1e-12]
-        radii = [float(np.sqrt(abs(fp) / abs(lam_i))) for lam_i in nonzero]
-        half = (max(radii) if radii else 1.0) + padding
-        return {
-            "min": [center.x - half, center.y - half, center.z - half],
-            "max": [center.x + half, center.y + half, center.z + half],
-        }
-
-    half = 10.0 + padding
-    return {"min": [-half, -half, -half], "max": [half, half, half]}
+    del ent, padding
+    return {"min": [-5.0, -5.0, -5.0], "max": [5.0, 5.0, 5.0]}
 
 
 def serialize_scene_update(
@@ -921,6 +922,98 @@ def _serialize_plane(
     return result
 
 
+def _plane_wire(plane: Plane, extent: float) -> Dict[str, Any]:
+    """Serialize a member plane (point + normal + extent)."""
+    return {
+        "point": [plane.point.x, plane.point.y, plane.point.z],
+        "normal": [plane.normal.x, plane.normal.y, plane.normal.z],
+        "extent": extent,
+    }
+
+
+def _serialize_plane_pair(
+    ent: PlanePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {"extent": 5.0}, styles_map=styles_map)
+    extent = float(result["extent"])
+    result["plane1"] = _plane_wire(ent.plane1, extent)
+    result["plane2"] = _plane_wire(ent.plane2, extent)
+    return result
+
+
+def _serialize_parallel_plane_pair(
+    ent: ParallelPlanePair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {"extent": 5.0}, styles_map=styles_map)
+    extent = float(result["extent"])
+    result["plane1"] = _plane_wire(ent.plane1, extent)
+    result["plane2"] = _plane_wire(ent.plane2, extent)
+    return result
+
+
+def _plane_conic_paths(pc: PlaneConic) -> List[List[List[float]]]:
+    """Sample a ``PlaneConic`` into 3D polylines (one per connected component)."""
+    import numpy as np
+
+    from pytanga.quadric._intersection import _plane_frame, _sample_conic_2d
+
+    n = np.array([pc.plane.normal.x, pc.plane.normal.y, pc.plane.normal.z])
+    p = np.array([pc.plane.point.x, pc.plane.point.y, pc.plane.point.z])
+    u, v = _plane_frame(n)
+    paths: List[List[List[float]]] = []
+    for path in _sample_conic_2d(pc.conic):
+        pts: List[List[float]] = []
+        for s, t in path:
+            x = p + s * u + t * v
+            pts.append([float(x[0]), float(x[1]), float(x[2])])
+        paths.append(pts)
+    return paths
+
+
+def _serialize_plane_conic(
+    ent: PlaneConic,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["paths"] = _plane_conic_paths(ent)
+    return result
+
+
+def _serialize_plane_conic_pair(
+    ent: PlaneConicPair,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["paths"] = _plane_conic_paths(ent.conic1) + _plane_conic_paths(ent.conic2)
+    return result
+
+
+def _serialize_curve(
+    ent: Curve,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
+    result["paths"] = [[[p.x, p.y, p.z] for p in path] for path in ent.paths]
+    return result
+
+
 def _serialize_circle(
     ent: Circle,
     props: Dict[str, Any],
@@ -1144,12 +1237,17 @@ def _serialize_ellipse(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "center": [ent.center.x, ent.center.y, ent.center.z],
         "radiusU": ent.radius_u,
         "radiusV": ent.radius_v,
         "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
     }
+    if ent.dir_u is not None:
+        result["dirU"] = [ent.dir_u.x, ent.dir_u.y, ent.dir_u.z]
+    if ent.dir_v is not None:
+        result["dirV"] = [ent.dir_v.x, ent.dir_v.y, ent.dir_v.z]
+    return result
 
 
 def _serialize_regular_polygon(
@@ -1203,10 +1301,22 @@ def _serialize_parabola(
     }
 
 
-def _line_wire(line: Line) -> Dict[str, list[float]]:
+def _line_wire(line: Line, length: float) -> Dict[str, Any]:
+    """Serialize a member line centered on its point.
+
+    Mirrors the infinite-``Line`` centering in :func:`_serialize_line`: the
+    frontend draws ``origin -> origin + d̂·length``, so ``origin`` is shifted
+    back by ``length/2`` along the unit direction to center the segment on the
+    line's point.
+    """
+    origin = line.origin
+    if line.direction.mag() > 0:
+        unit = line.direction.normalized()
+        origin = line.origin - unit * (length / 2.0)
     return {
-        "origin": [line.origin.x, line.origin.y, line.origin.z],
+        "origin": [origin.x, origin.y, origin.z],
         "direction": [line.direction.x, line.direction.y, line.direction.z],
+        "length": length,
     }
 
 
@@ -1217,9 +1327,10 @@ def _serialize_line_pair(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
-    result["line1"] = _line_wire(ent.line1)
-    result["line2"] = _line_wire(ent.line2)
+    result = _apply_defaults(props, kind, {"length": 20.0}, styles_map=styles_map)
+    length = float(result["length"])
+    result["line1"] = _line_wire(ent.line1, length)
+    result["line2"] = _line_wire(ent.line2, length)
     return result
 
 
@@ -1243,9 +1354,10 @@ def _serialize_parallel_line_pair(
     kind: str,
     styles_map: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
-    result["line1"] = _line_wire(ent.line1)
-    result["line2"] = _line_wire(ent.line2)
+    result = _apply_defaults(props, kind, {"length": 20.0}, styles_map=styles_map)
+    length = float(result["length"])
+    result["line1"] = _line_wire(ent.line1, length)
+    result["line2"] = _line_wire(ent.line2, length)
     return result
 
 

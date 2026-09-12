@@ -164,7 +164,11 @@ def analyze_operator(mv: MV) -> Operator | None:
         If the MV is malformed (e.g., zero MV).
     """
     alg_type = _detect(mv._alg)
-    if alg_type == "e3":
+    if alg_type == "q2":
+        return analysis_q2.analyze_operator(mv)
+    elif alg_type == "q3":
+        return analysis_q3.analyze_operator(mv)
+    elif alg_type == "e3":
         return analysis_e3.analyze_operator(mv)
     elif alg_type == "p3":
         return analysis_p3.analyze_operator(mv)
@@ -278,7 +282,7 @@ def _register_entity_analyzers() -> None:
     can route an MV through the algebra-specific analyzer without
     importing ``analysis`` themselves.
     """
-    from .entities import register_analyzer
+    from pytanga.entity import register_analyzer
 
     register_analyzer("point", analyze_point)
     register_analyzer("direction", analyze_direction)

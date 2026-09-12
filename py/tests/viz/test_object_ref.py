@@ -33,6 +33,20 @@ class TestEntityAndStyle:
         assert node.entity == Point(4, 5, 6)
         assert ref.entity == Point(4, 5, 6)
 
+    def test_entity_setter_resolves_mv(self):
+        from pytanga.basis import BasisN3
+        from pytanga.geometry import Geometry
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        ref = _point_ref(h)
+        node = h.scene.get_node(ref.id)
+        node.consume_dirty()
+        mv = Geometry(BasisN3())(Point(7, 8, 9))
+        ref.entity = mv
+        assert node.entity == Point(7, 8, 9)
+        assert node.dirty_for("content")
+
     def test_style_merge(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")

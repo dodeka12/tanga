@@ -10,6 +10,8 @@ import {
     parseColor,
     tagEntity,
     addWireframeOverlay,
+    applyStyleUpdate,
+    contentChanged,
 } from './utils.js';
 
 const CIRCLE_SEGMENTS = 96;
@@ -89,4 +91,14 @@ export function createCircle(ent) {
 
     tagEntity(mesh, ent);
     return mesh;
+}
+
+export function updateCircle(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['radius', 'normal', 'tubeRadius'])) return false;
+    // Switching between the tube and thick-line style requires a rebuild.
+    const curLine = isLineStyle(ent);
+    const prevLine = prev ? isLineStyle(prev) : false;
+    if (curLine !== prevLine) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
 }

@@ -91,6 +91,11 @@ inbound dispatch that resolves them.
 3. Serialize it in the node layer (`VizSceneObject`/`SceneObject` in
    `scene.py` / `_nodes.py`).
 4. Add a frontend renderer + a test (round-trip + flush).
+5. Export an `update<Kind>(mesh, ent, prev)` from the renderer module (return
+   `false` to rebuild) for kinds whose geometry derives from content fields, so
+   a live content change re-samples/re-builds the mesh instead of falling
+   through to the flat `entityRequiresRebuild` field list.  Wire it into
+   `factory.js::updateEntityMesh`.
 
 ### New control (`*View`)
 

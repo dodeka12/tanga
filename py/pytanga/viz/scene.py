@@ -864,6 +864,12 @@ def _resolve_scene_entity(obj: Any) -> SceneEntity:
         result = analyze(obj)
         if result is None:
             raise ValueError(f"Could not analyze object: {obj!r}")
+        # An MV may analyze to a raw ``Conic`` (grade-5 blade); refine it too,
+        # just like the direct-Conic branch above.
+        if isinstance(result, Conic):
+            from pytanga.geometry import refine
+
+            return refine(result)
         return result
     except ImportError:
         raise TypeError(

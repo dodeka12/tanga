@@ -9,6 +9,8 @@ import {
     parseColor,
     tagEntity,
     addWireframeOverlay,
+    applyStyleUpdate,
+    contentChanged,
 } from './utils.js';
 
 function resolveHeight(ent) {
@@ -60,4 +62,10 @@ export function createCone(ent) {
 
     tagEntity(group, ent);
     return group;
+}
+
+export function updateCone(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['vertex', 'axis', 'halfAngle'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
 }

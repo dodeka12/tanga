@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 
 from pytanga.geometry import (
+    Curve,
+    PlaneConicPair,
     PointSet,
     analyze_entity,
     two_conic_intersection,
@@ -93,10 +95,10 @@ class TestPointSetJoin:
             (4.0, 5.0, 6.0),
         }
 
-    def test_q3_ipns_intersection_deferred(self):
+    def test_q3_ipns_intersection(self):
         b = BasisQ3(opns=False)
         q1 = b.multivector({1 << i: 1.0 for i in range(10)})
         q2 = b.multivector({1 << i: float(i) for i in range(10)})
         blade = q1 ^ q2
-        with pytest.raises(NotImplementedError):
-            analyze_entity(blade)
+        result = analyze_entity(blade)
+        assert isinstance(result, (PlaneConicPair, Curve))

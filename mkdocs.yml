@@ -206,6 +206,7 @@ nav:
     - Architecture:
       - System overview: dev/architecture/system-overview.md
       - Type system & storage: dev/architecture/type-system-and-storage.md
+      - Geometry & quadric layering: dev/architecture/geometry-module-layering.md
       - Viz controls & interactions: dev/architecture/viz-controls-and-interactions.md
       - Viz theme system: dev/architecture/viz-theme-system.md
     - GA Pipeline:

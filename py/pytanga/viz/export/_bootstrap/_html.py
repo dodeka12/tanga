@@ -90,6 +90,8 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "hyperbola.js",
     _RENDERERS_DIR / "parabola.js",
     _RENDERERS_DIR / "line_pair.js",
+    _RENDERERS_DIR / "plane_pair.js",
+    _RENDERERS_DIR / "curve.js",
     _RENDERERS_DIR / "point_set.js",
     _RENDERERS_DIR / "sphere.js",
     _RENDERERS_DIR / "space.js",

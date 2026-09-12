@@ -30,9 +30,9 @@ from .arc import Arc
 from .box import Box
 from .circle import Circle, ImagCircle
 from .cone import Cone
-from .conic import Conic, EConicKind, EQuadricKind, Quadric2D, Quadric3D
+from pytanga.quadric import Conic, EConicKind, EQuadricKind, Quadric2D, Quadric3D
 from .cylinder import Cylinder
-from .direction import Direction
+from pytanga.entity import Direction
 from .disk import Disk, PartialDisk
 from .ellipsoid import Ellipse, Ellipsoid
 from .hdirection import HDirection
@@ -41,8 +41,10 @@ from .hyperbola import Hyperbola
 from .line import Line
 from .line_pair import LinePair, ParallelLinePair
 from .plane import Plane
+from .plane_conic import Curve, PlaneConic, PlaneConicPair
+from .plane_pair import PlanePair, ParallelPlanePair
 from .parabola import Parabola
-from .point import Point
+from pytanga.entity import Point
 from .point_pair import ImagPointPair, PointPair
 from .point_set import PointSet
 from .polygon import RegularPolygon, regular_polygon
@@ -70,6 +72,11 @@ Entity = (
     | Parabola
     | LinePair
     | ParallelLinePair
+    | PlanePair
+    | ParallelPlanePair
+    | PlaneConic
+    | PlaneConicPair
+    | Curve
     | Cone
 )
 
@@ -99,6 +106,11 @@ __all__ = [
     "Parabola",
     "PartialDisk",
     "Plane",
+    "PlanePair",
+    "ParallelPlanePair",
+    "PlaneConic",
+    "PlaneConicPair",
+    "Curve",
     "Point",
     "PointPair",
     "PointSet",

@@ -146,6 +146,63 @@ class LineStyle(VizStyle):
 
 
 @dataclass
+class CurveStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Curve` (a sampled space curve)."""
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "CurveStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class PlaneConicStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.PlaneConic`."""
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "PlaneConicStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class PlaneConicPairStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.PlaneConicPair`."""
+
+    color: str | None = None
+    opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "PlaneConicPairStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
 class CylinderLineStyle(LineStyle):
     """LineStyle variant that renders :class:`~pytanga.geometry.Line` as a
     solid 3D cylinder instead of a screen-space fat line.
@@ -250,6 +307,34 @@ class PlaneStyle(Quadric3DStyle):
             result["extent"] = self.extent
         if self.texture_label is not None:
             result["texture_label"] = self.texture_label.to_dict()
+        return result
+
+
+@dataclass
+class PlanePairStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.PlanePair`."""
+
+    extent: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "PlanePairStyle"
+        if self.extent is not None:
+            result["extent"] = self.extent
+        return result
+
+
+@dataclass
+class ParallelPlanePairStyle(Quadric3DStyle):
+    """Visual style for :class:`~pytanga.geometry.ParallelPlanePair`."""
+
+    extent: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "ParallelPlanePairStyle"
+        if self.extent is not None:
+            result["extent"] = self.extent
         return result
 
 
@@ -757,7 +842,8 @@ class ConeStyle(Quadric3DStyle):
 class HyperbolaStyle(ConicStyle):
     """Visual style for :class:`~pytanga.geometry.Hyperbola`.
 
-    ``extent`` bounds the sampled parameter range (a curve-specific knob).
+    ``extent`` is a spatial half-size (world units) bounding the drawn
+    curve's extent from its center.
     """
 
     extent: float | None = None
@@ -772,7 +858,11 @@ class HyperbolaStyle(ConicStyle):
 
 @dataclass
 class ParabolaStyle(ConicStyle):
-    """Visual style for :class:`~pytanga.geometry.Parabola`."""
+    """Visual style for :class:`~pytanga.geometry.Parabola`.
+
+    ``extent`` is a spatial half-size (world units) bounding the drawn
+    curve's extent from its vertex.
+    """
 
     extent: float | None = None
 

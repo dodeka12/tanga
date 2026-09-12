@@ -58,6 +58,12 @@ class TestBladeName:
         with pytest.raises(ValueError):
             blade_name(8, 3)  # 8 >= 2^3
 
+    def test_comma_separated_dim10(self):
+        assert blade_name(1, 10) == "e1"
+        assert blade_name(1 << 9, 10) == "e10"  # index 10
+        assert blade_name(3, 10) == "e1,2"
+        assert blade_name((1 << 9) | 3, 10) == "e1,2,10"
+
 
 # ---------------------------------------------------------------------------
 # blade_id
@@ -97,6 +103,17 @@ class TestBladeId:
             for b in range(1 << dim):
                 name = blade_name(b, dim)
                 assert blade_id(name, dim) == b
+
+    def test_roundtrip_dim10(self):
+        for b in range(1 << 10):
+            name = blade_name(b, 10)
+            assert blade_id(name, 10) == b
+
+    def test_comma_separated_dim10(self):
+        assert blade_id("e1", 10) == 1
+        assert blade_id("e10", 10) == 1 << 9
+        assert blade_id("e1,2", 10) == 3
+        assert blade_id("e1,2,10", 10) == (1 << 9) | 3
 
 
 # ---------------------------------------------------------------------------

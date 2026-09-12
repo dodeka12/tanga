@@ -8,20 +8,22 @@ import { createDirection, updateDirection } from './direction.js';
 import { createLine, updateLine } from './line.js';
 import { createPlane } from './plane.js';
 import { createArc, updateArc } from './arc.js';
-import { createCircle } from './circle.js';
+import { createCircle, updateCircle } from './circle.js';
 import { createCylinder, updateCylinder } from './cylinder.js';
-import { createCone } from './cone.js';
+import { createCone, updateCone } from './cone.js';
 import { createSphere } from './sphere.js';
 import { createDisk } from './disk.js';
 import { createPartialDisk } from './partial_disk.js';
 import { createBox } from './box.js';
 import { createEllipsoid } from './ellipsoid.js';
-import { createEllipse } from './ellipse.js';
+import { createEllipse, updateEllipse } from './ellipse.js';
 import { createRegularPolygon } from './regular_polygon.js';
-import { createHyperbola } from './hyperbola.js';
-import { createParabola } from './parabola.js';
-import { createLinePair } from './line_pair.js';
-import { createPointSet } from './point_set.js';
+import { createHyperbola, updateHyperbola } from './hyperbola.js';
+import { createParabola, updateParabola } from './parabola.js';
+import { createLinePair, updateLinePair } from './line_pair.js';
+import { createPlanePair, updatePlanePair } from './plane_pair.js';
+import { createCurve, updateCurve } from './curve.js';
+import { createPointSet, updatePointSet } from './point_set.js';
 import { createSpace } from './space.js';
 import { createPointPair } from './operators/point_pair.js';
 import { createInversion } from './operators/inversion.js';
@@ -180,6 +182,17 @@ export async function createEntityMesh(ent) {
             mesh = createLinePair(ent);
             break;
 
+        case 'PlanePair':
+        case 'ParallelPlanePair':
+            mesh = await createPlanePair(ent);
+            break;
+
+        case 'PlaneConic':
+        case 'PlaneConicPair':
+        case 'Curve':
+            mesh = createCurve(ent);
+            break;
+
         case 'PointSet':
             mesh = createPointSet(ent);
             break;
@@ -219,6 +232,28 @@ export function updateEntityMesh(mesh, ent, prev) {
             return updateArc(mesh, ent, prev);
         case 'Cylinder':
             return updateCylinder(mesh, ent, prev);
+        case 'Hyperbola':
+            return updateHyperbola(mesh, ent, prev);
+        case 'Parabola':
+            return updateParabola(mesh, ent, prev);
+        case 'Ellipse':
+            return updateEllipse(mesh, ent, prev);
+        case 'Circle':
+            return updateCircle(mesh, ent, prev);
+        case 'LinePair':
+        case 'ParallelLinePair':
+            return updateLinePair(mesh, ent, prev);
+        case 'PlanePair':
+        case 'ParallelPlanePair':
+            return updatePlanePair(mesh, ent, prev);
+        case 'PlaneConic':
+        case 'PlaneConicPair':
+        case 'Curve':
+            return updateCurve(mesh, ent, prev);
+        case 'PointSet':
+            return updatePointSet(mesh, ent, prev);
+        case 'Cone':
+            return updateCone(mesh, ent, prev);
         default:
             break;
     }

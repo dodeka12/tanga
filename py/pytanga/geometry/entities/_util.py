@@ -3,59 +3,30 @@
 
 """Internal helper functions for the entity data classes.
 
-These helpers keep the individual entity modules free of duplicated
-utilities and of import-time cycles between ``point``/``direction`` and
-the composite entities.
+The MV-conversion registry now lives in :mod:`pytanga.entity._util`; this
+module re-exports it for backward compatibility and keeps the geometry-specific
+``_compute_start_direction`` helper.
 """
 
 from __future__ import annotations
 
+from pytanga.entity._util import (
+    _convert_mv,
+    _fmt_v,
+    _is_mv,
+    _scalar,
+    register_analyzer,
+)
 
-def _fmt_v(x: float, y: float, z: float) -> str:
-    """Format a 3D vector with 2 decimal places."""
-    return f"({x:.2f}, {y:.2f}, {z:.2f})"
+__all__ = [
+    "_compute_start_direction",
+    "_convert_mv",
+    "_fmt_v",
+    "_is_mv",
+    "_scalar",
+    "register_analyzer",
+]
 
-
-def _is_mv(x) -> bool:
-    """True if *x* is a multivector (has the ``_alg`` slot)."""
-    return hasattr(x, "_alg")
-
-
-# Registry of ``analyze_<name>(mv)`` functions, populated by
-# ``pytanga.geometry.analysis`` once all dispatchers are defined.  This keeps
-# ``entities`` free of any import-time dependency on ``analysis`` (which in
-# turn imports ``entities``), while still letting entity constructors route
-# an MV through the full, algebra-specific analyzer.
-_ANALYZERS: dict[str, "callable"] = {}
-
-
-def register_analyzer(name: str, fn) -> None:
-    """Register an algebra-specific analyzer callable under *name*.
-
-    Called by :mod:`pytanga.geometry.analysis` during import.  *fn* must
-    accept a single MV and return the matching entity dataclass.
-    """
-    _ANALYZERS[name] = fn
-
-
-def _convert_mv(name: str, mv):
-    """Convert an MV to an entity via the registered analyzer for *name*."""
-    try:
-        analyzer = _ANALYZERS[name]
-    except KeyError:
-        raise RuntimeError(
-            f"No analyzer registered for {name!r}; import pytanga.geometry first."
-        ) from None
-    return analyzer(mv)
-
-
-def _scalar(value):
-    """Return the python scalar for a scalar MV, or *value* unchanged."""
-    if _is_mv(value):
-        if not value.is_scalar:
-            raise ValueError("Expected a scalar multivector")
-        return value.scalar
-    return value
 
 def _compute_start_direction(axis) -> "Direction":
     """Return a deterministic unit vector perpendicular to *axis*.
@@ -80,4 +51,3 @@ def _compute_start_direction(axis) -> "Direction":
             if candidate.mag() != 0.0:
                 return candidate.normalized()
     return start.normalized()
-

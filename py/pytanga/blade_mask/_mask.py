@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from pytanga.algebra._blade_names import blade_name
 from pytanga.algebra._blade_names import grade as _grade
 from pytanga.algebra._parse import _parse_mv_string
 from pytanga.algebra import Algebra
@@ -228,9 +227,8 @@ class BladeMask:
 
     def names(self) -> list[str]:
         """Return the blade name for each id in this mask, sorted by grade."""
-        dim = self._alg.dim
         sorted_ids = sorted(self._ids, key=lambda b: (_grade(b), b))
-        return [blade_name(bid, dim) for bid in sorted_ids]
+        return [self._alg.blade_name(bid) for bid in sorted_ids]
 
     # ------------------------------------------------------------------
     # Set operations

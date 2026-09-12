@@ -268,6 +268,32 @@ export function approxEqual(a, b, eps = 1e-9) {
 }
 
 /**
+ * Return true when any of the listed content keys changed between *ent* and
+ * *prev*.  Numbers compare with ``approxEqual``; arrays/objects compare with
+ * deep JSON equality.  Used by the per-kind ``update*`` functions to decide
+ * whether the mesh must be rebuilt.
+ *
+ * @param {object} ent   Merged entity dict.
+ * @param {object} prev  Previously applied entity dict.
+ * @param {string[]} keys Content-field names owned by this kind.
+ * @returns {boolean}
+ */
+export function contentChanged(ent, prev, keys) {
+    if (!prev) return false;
+    for (const key of keys) {
+        const a = ent[key];
+        const b = prev[key];
+        if (a === undefined && b === undefined) continue;
+        if (typeof a === 'number' && typeof b === 'number') {
+            if (!approxEqual(a, b)) return true;
+        } else if (JSON.stringify(a ?? null) !== JSON.stringify(b ?? null)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Apply the common, non-structural style fields (opacity, color, scale) to a
  * mesh and its children.  Used by the shared update dispatcher and by
  * per-entity updaters so the mutations are defined in one place.
@@ -327,7 +353,6 @@ export function entityRequiresRebuild(ent, prev) {
     if (ent.alignCenter !== undefined && (!prev || !approxEqual(ent.alignCenter, prev.alignCenter))) return true;
     if (ent.extent !== undefined && (!prev || !approxEqual(ent.extent, prev.extent))) return true;
     if (ent.length !== undefined && (!prev || !approxEqual(ent.length, prev.length))) return true;
-    if (ent.tubeRadius !== undefined && (!prev || !approxEqual(ent.tubeRadius, prev.tubeRadius))) return true;
     if (ent.angle !== undefined && (!prev || !approxEqual(ent.angle, prev.angle))) return true;
     if (ent.span_u !== undefined || ent.span_v !== undefined) {
         const a = JSON.stringify([ent.span_u ?? null, ent.span_v ?? null]);
@@ -345,13 +370,13 @@ export function entityRequiresRebuild(ent, prev) {
     // the mesh. (`rotation` is intentionally absent: it is applied in place by
     // updateEntityMesh for meshes that carry a top-level Euler triple, keeping
     // rotation-only animation updates rebuild-free.)
-    for (const key of ['size', 'radii', 'normal', 'axis', 'startDirection', 'point', 'pointA', 'pointB', 'origin']) {
+    for (const key of ['size', 'radii', 'normal', 'axis', 'startDirection', 'point', 'pointA', 'pointB', 'origin', 'matrix', 'coeffs', 'bound']) {
         if (ent[key] !== undefined &&
             (!prev || JSON.stringify(ent[key]) !== JSON.stringify(prev[key]))) {
             return true;
         }
     }
-    for (const key of ['radiusU', 'radiusV', 'sides', 'discRadius', 'ringCount', 'maxRadius', 'pointSize']) {
+    for (const key of ['sides', 'discRadius', 'ringCount', 'maxRadius', 'pointSize']) {
         if (ent[key] !== undefined && (!prev || !approxEqual(ent[key], prev[key]))) {
             return true;
         }

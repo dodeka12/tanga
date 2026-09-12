@@ -128,6 +128,15 @@ class Algebra:
         self._precision = float(value)
 
     @property
+    def blade_names_comma_separated(self) -> bool:
+        """Whether blade names use comma-separated indices (``dim > 9``).
+
+        Concatenated digit names (``"e12"``) are ambiguous once an index can be
+        two digits, so ``dim > 9`` algebras require ``"e1,2,10"`` style names.
+        """
+        return self._dim > 9
+
+    @property
     def print_fmt(self) -> str:
         """Python format spec for printing coefficients (default '.4g')."""
         return self._print_fmt
@@ -880,12 +889,12 @@ class Algebra:
     def blade_id(self, name: str) -> int:
         from ._blade_names import blade_id
 
-        return blade_id(name, self._dim)
+        return blade_id(name, self._dim, self.blade_names_comma_separated)
 
     def blade_name(self, blade_id: int) -> str:
         from ._blade_names import blade_name
 
-        return blade_name(blade_id, self._dim)
+        return blade_name(blade_id, self._dim, self.blade_names_comma_separated)
 
     def all_blades(self) -> list[int]:
         from ._blade_names import all_blades
@@ -936,7 +945,7 @@ class Algebra:
             return result, _permutation_sign(list(key))
         from ._blade_names import blade_id_signed
 
-        return blade_id_signed(key, self._dim)
+        return blade_id_signed(key, self._dim, self.blade_names_comma_separated)
 
     def _resolve_key(self, key: str | int | tuple) -> int:
         """Resolve a blade key to its canonical (unsigned) blade id."""

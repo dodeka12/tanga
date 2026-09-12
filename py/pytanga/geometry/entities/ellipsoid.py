@@ -59,7 +59,7 @@ class Ellipsoid:
 
 @dataclass(frozen=True)
 class Ellipse:
-    """A filled ellipse (a flat, elliptical slab) in 3D space, purely for visualization.
+    """A 2D ellipse in 3D space, drawn as a line, purely for visualization.
 
     Unlike the MV-backed entities in this package, an :class:`Ellipse` has **no**
     multivector representation — it exists only as a rendering hint for the
@@ -68,38 +68,57 @@ class Ellipse:
     The ellipse lies in the plane perpendicular to ``normal``, centered on
     ``center``, with semi-axis radii ``radius_u`` / ``radius_v``.  ``normal``
     defaults to ``Direction(0, 0, 1)`` (the positive z-axis), the natural choice
-    for 2D use cases where the ellipse lies in the xy-plane.  The slab thickness
-    is a style knob (``EllipseStyle.thickness``), not a geometric field.
+    for 2D use cases where the ellipse lies in the xy-plane.  ``dir_u`` and
+    ``dir_v`` optionally give the (orthogonal) in-plane semi-axis directions;
+    when ``None`` the ellipse is axis-aligned within its plane.
 
     Parameters
     ----------
     center:
         Center of the ellipse (default ``(0, 0, 0)``).
     radius_u:
-        First semi-axis radius (default ``1.0``).
+        Semi-axis radius along ``dir_u`` (default ``1.0``).
     radius_v:
-        Second semi-axis radius (default ``0.5``).
+        Semi-axis radius along ``dir_v`` (default ``0.5``).
     normal:
         Normal direction of the ellipse plane (default ``+z``).
+    dir_u:
+        Optional first semi-axis direction (default ``None`` = axis-aligned).
+    dir_v:
+        Optional second semi-axis direction (default ``None`` = axis-aligned).
     """
 
     center: Point
     radius_u: float
     radius_v: float
     normal: Direction | None = None
+    dir_u: Direction | None = None
+    dir_v: Direction | None = None
 
-    def __init__(self, center=None, radius_u=None, radius_v=None, normal=None):
+    def __init__(
+        self,
+        center=None,
+        radius_u=None,
+        radius_v=None,
+        normal=None,
+        dir_u=None,
+        dir_v=None,
+    ):
         center = Point(0.0, 0.0, 0.0) if center is None else to_point(center)
         radius_u = 1.0 if radius_u is None else to_float(radius_u)
         radius_v = 0.5 if radius_v is None else to_float(radius_v)
         normal = (
             Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
         )
+        dir_u = None if dir_u is None else to_direction(dir_u)
+        dir_v = None if dir_v is None else to_direction(dir_v)
 
         object.__setattr__(self, "center", center)
         object.__setattr__(self, "radius_u", radius_u)
         object.__setattr__(self, "radius_v", radius_v)
         object.__setattr__(self, "normal", normal)
+        object.__setattr__(self, "dir_u", dir_u)
+        object.__setattr__(self, "dir_v", dir_v)
 
     def __repr__(self) -> str:
         return (
