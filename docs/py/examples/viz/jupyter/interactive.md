@@ -48,6 +48,8 @@ detail.add(Sphere(Point(2, 1, 0), radius=1), opacity=0.8)
 # Label each pane so it can be addressed individually later.
 viz.display_row((overview, "left"), (detail, "right"), height=400)
 
+
+
 # Later: switch only the "left" pane to the detail scene.
 viz.navigate_to("detail", target="viewer:left")
 

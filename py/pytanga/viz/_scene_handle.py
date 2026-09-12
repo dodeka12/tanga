@@ -644,10 +644,16 @@ class VizSceneHandle(_JupyterDisplayMixin):
         width: int | str = "100%",
         height: int | str = "500px",
         *,
-        delivery: str = "cdn",
+        delivery: str = "inline",
         delivery_ref: str | None = None,
     ) -> Any:
-        """Display this scene as standalone HTML (no server required)."""
+        """Display this scene as standalone HTML (no server required).
+
+        Defaults to ``delivery="inline"`` (viewer library inlined from the
+        local templates); pass ``delivery="cdn"`` to reference the published
+        jsDelivr bundle or ``delivery="offline"`` for a fully self-contained
+        document.
+        """
         return self._viz.display_snapshot(
             width=width,
             height=height,

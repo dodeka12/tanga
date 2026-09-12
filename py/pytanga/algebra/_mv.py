@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from types import NotImplementedType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -48,58 +47,58 @@ class MV:
         if isinstance(other, (int, float)):
             other = self._alg.multivector({0: other})
         elif not isinstance(other, MV):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return self._alg.add(self, other)
 
     def __radd__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
             return self._alg.add(self._alg.multivector({0: other}), self)
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
     def __sub__(self, other: "MV | int | float") -> "MV":
         if isinstance(other, (int, float)):
             other = self._alg.multivector({0: other})
         elif not isinstance(other, MV):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return self._alg.sub(self, other)
 
     def __rsub__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
             return self._alg.sub(self._alg.multivector({0: other}), self)
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
     def __mul__(self, other: "MV | int | float") -> "MV":
         if isinstance(other, (int, float)):
             return self._alg.scale(self, other)
         if isinstance(other, MV):
             return self._alg.gp(self, other)
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
     def __rmul__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
             return self._alg.scale(self, other)
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
     def __truediv__(self, other: "MV | int | float") -> "MV":
         if isinstance(other, (int, float)):
             return self._alg.scale(self, 1.0 / other)
         if isinstance(other, MV):
             return self._alg.gp(self, self._alg.inv(other))
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
     def __rtruediv__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
             return self._alg.scale(self._alg.inv(self), other)
-        return NotImplemented
+        return NotImplemented  # type: ignore[return-value]
 
-    def __xor__(self, other: "MV") -> "MV | NotImplementedType":
+    def __xor__(self, other: "MV") -> "MV":
         if not isinstance(other, MV):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return self._alg.op(self, other)
 
-    def __or__(self, other: "MV") -> "MV | NotImplementedType":
+    def __or__(self, other: "MV") -> "MV":
         if not isinstance(other, MV):
-            return NotImplemented
+            return NotImplemented  # type: ignore[return-value]
         return self._alg.ip(self, other)
 
     def __invert__(self) -> "MV":

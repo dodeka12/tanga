@@ -60,6 +60,12 @@
             "Overview": "py/examples/ga/expression/index.md"
           },
           {
+            "Affine Counting Reduction": "py/examples/ga/expression/affine_counting_reduction.md"
+          },
+          {
+            "Affine Linear Solve": "py/examples/ga/expression/affine_linear_solve.md"
+          },
+          {
             "Equation Demo": "py/examples/ga/expression/equation_demo.md"
           },
           {
@@ -293,10 +299,16 @@
             "Animation": "py/examples/viz/jupyter/animation.md"
           },
           {
+            "Display": "py/examples/viz/jupyter/display.md"
+          },
+          {
             "Export": "py/examples/viz/jupyter/export.md"
           },
           {
             "Interactive": "py/examples/viz/jupyter/interactive.md"
+          },
+          {
+            "View": "py/examples/viz/jupyter/view.md"
           }
         ]
       },
