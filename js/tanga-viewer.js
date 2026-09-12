@@ -9,6 +9,8 @@ import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js
 
 window.__tanga_sdf_shaders = {"common": "// SDF shared constants + rotation helpers (inigo quilez reference).\n//\n// Concatenated (never compiled standalone) into the raymarch shader. It must\n// not contain a main(), nor a `#version`/`precision` directive \u2014 the host\n// assembles a single shader and three.js prepends GLSL3 `#version 300 es` and\n// `precision highp float;`.\n\n// Small surface accuracy for the sphere-tracing loop.\nconst float SDF_EPSILON = 0.0005;\n// Fallback hard clip distance for the ray march (the camera far is preferred).\nconst float MAX_DIST = 1000.0;\n\n// \u2500\u2500 IQ rotation helpers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n// Rotate around an arbitrary normalized axis.\nmat3 rotationAxisAngle(vec3 axis, float angle) {\n    float s = sin(angle);\n    float c = cos(angle);\n    float oc = 1.0 - c;\n    return mat3(\n        oc * axis.x * axis.x + c,\n        oc * axis.x * axis.y - axis.z * s,\n        oc * axis.x * axis.z + axis.y * s,\n        oc * axis.x * axis.y + axis.z * s,\n        oc * axis.y * axis.y + c,\n        oc * axis.y * axis.z - axis.x * s,\n        oc * axis.x * axis.z - axis.y * s,\n        oc * axis.y * axis.z + axis.x * s,\n        oc * axis.z * axis.z + c\n    );\n}\n\n// Rotate around the X axis.\nmat3 rotationX(float angle) {\n    float s = sin(angle);\n    float c = cos(angle);\n    return mat3(\n        1.0, 0.0, 0.0,\n        0.0, c, -s,\n        0.0, s, c\n    );\n}\n\n// Rotate around the Y axis.\nmat3 rotationY(float angle) {\n    float s = sin(angle);\n    float c = cos(angle);\n    return mat3(\n        c, 0.0, s,\n        0.0, 1.0, 0.0,\n        -s, 0.0, c\n    );\n}\n\n// Rotate around the Z axis.\nmat3 rotationZ(float angle) {\n    float s = sin(angle);\n    float c = cos(angle);\n    return mat3(\n        c, -s, 0.0,\n        s, c, 0.0,\n        0.0, 0.0, 1.0\n    );\n}", "primitives": "// SDF primitives \u2014 ported from inigo quilez's signed-distance reference.\n//\n// Each primitive takes the point p in the primitive's LOCAL space (the\n// transform is applied by the caller before invoking these functions).\n// This file is concatenated with sdf_common.glsl; it must not contain main(),\n// nor a `#version`/`precision` directive (the host shader supplies them).\n//\n// Axis conventions (IQ reference):\n//   \u00b7 cylinders/cones are aligned with the +Y axis (radius in XZ, height in Y)\n//   \u00b7 a torus lies in the XZ plane (major ring in XZ, tube in Y)\n\n// \u2500\u2500 Spheres \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n// p: local point, r: radius\nfloat sdSphere(vec3 p, float r) {\n    return length(p) - r;\n}\n\n// p: local point, r: per-axis half radii\nfloat sdEllipsoid(vec3 p, vec3 r) {\n    float k0 = length(p / r);\n    float k1 = length(p / (r * r));\n    return k0 * (k0 - 1.0) / k1;\n}\n\n// \u2500\u2500 Boxes \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n// p: local point, b: axis-aligned half extents\nfloat sdBox(vec3 p, vec3 b) {\n    vec3 q = abs(p) - b;\n    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);\n}\n\n// p: local point, b: axis-aligned half extents, r: corner rounding radius\nfloat sdRoundBox(vec3 p, vec3 b, float r) {\n    vec3 q = abs(p) - b + vec3(r);\n    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - r;\n}\n\n// \u2500\u2500 Planes / lines \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n// Plane with unit normal n. IQ form: distance = dot(p, n) + h, so the plane\n// satisfies dot(p, n) = -h.\nfloat sdPlane(vec3 p, vec3 n, float h) {\n    return dot(p, n) + h;\n}\n\n// Infinite line (zero radius) segment between a and b.\nfloat sdSegment(vec3 p, vec3 a, vec3 b) {\n    vec3 pa = p - a;\n    vec3 ba = b - a;\n    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);\n    return length(pa - ba * h);\n}\n\n// Two-point capsule with hemispherical caps (radii ra, rb).\nfloat sdCapsule(vec3 p, vec3 a, vec3 b, float ra, float rb) {\n    vec3 pa = p - a;\n    vec3 ba = b - a;\n    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);\n    return length(pa - ba * h) - mix(ra, rb, h);\n}\n\n// \u2500\u2500 Cylinders / cones \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n// Infinite cylinder along +Y, radius r.\nfloat sdCylinder(vec3 p, float r) {\n    return length(p.xz) - r;\n}\n\n// Capped cylinder along +Y with half-height h and radius r.\nfloat sdCappedCylinder(vec3 p, float h, float r) {\n    vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);\n    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));\n}\n\n// Infinite cone around +Y with opening angle a (radians), apex at the origin.\nfloat sdCone(vec3 p, float a) {\n    return length(p.xz) - p.y * tan(a);\n}\n\n// Capped cone along +Y: apex radius r1 at the bottom, base radius r2 at the\n// top, and half-height h. IQ canonical form.\nfloat sdCappedCone(vec3 p, float h, float r1, float r2) {\n    vec2 q = vec2(length(p.xz), p.y);\n    vec2 k1 = vec2(r2, h);\n    vec2 k2 = vec2(r2 - r1, 2.0 * h);\n    vec2 ca = vec2(q.x - min(q.x, (q.y < 0.0) ? r1 : r2), abs(q.y) - h);\n    vec2 cb = q - k1 + k2 * clamp(dot(k1 - q, k2) / dot(k2, k2), 0.0, 1.0);\n    float s = (cb.x < 0.0 && ca.y < 0.0) ? -1.0 : 1.0;\n    return s * sqrt(min(dot(ca, ca), dot(cb, cb)));\n}\n\n// \u2500\u2500 Torus \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n// Torus in the XZ plane: major radius t.x, minor (tube) radius t.y.\nfloat sdTorus(vec3 p, vec2 t) {\n    vec2 q = vec2(length(p.xz) - t.x, p.y);\n    return length(q) - t.y;\n}\n\n// \u2500\u2500 Partial disk / regular polygon \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nconst float SDF_PI = 3.141592653589793;\n\n// Capped sector (partial disk): a slab of half-height h and radius r, swept\n// over `angle` radians, symmetric about the local +Z axis in the XZ plane\n// (Y up).  This matches THREE.CylinderGeometry(thetaStart=-angle/2,\n// thetaLength=angle), whose theta=0 vertex sits on +Z.  Use for 0 < angle < 2\u03c0;\n// the full disk (2\u03c0) is a plain capped cylinder.\nfloat sdPartialDisk(vec3 p, float h, float r, float angle) {\n    float a = 0.5 * angle;\n    vec2 c = vec2(sin(a), cos(a));\n    vec2 q = p.xz;                       // q.x = p.x, q.y = p.z (IQ pie on +Y)\n    q.x = abs(q.x);\n    float l = length(q) - r;\n    float m = length(q - c * clamp(dot(q, c), 0.0, r));\n    float pie = max(l, sign(c.y * q.x - c.x * q.y) * m);\n    return max(abs(p.y) - h, pie);\n}\n\n// Regular n-gon slab: a slab of half-height h, circumradius r, n sides, with a\n// vertex on +Z (matching THREE.CylinderGeometry(radialSegments=n)).\nfloat sdRegularPolygon(vec3 p, float h, float r, float n) {\n    float an = SDF_PI / n;\n    vec2 acs = vec2(cos(an), sin(an));\n    // IQ's folding places the vertex on +X; rotate the XZ frame by -90\u00b0 so the\n    // vertex lands on +Z.  Only the vertex axis is reflected (valid for all n).\n    vec2 q = vec2(p.z, -p.x);\n    q.y = abs(q.y);\n    float bn = mod(atan(q.y, q.x), 2.0 * an) - an;\n    q = length(q) * vec2(cos(bn), abs(sin(bn)));\n    q -= r * acs;\n    q.y += clamp(-q.y, 0.0, r * acs.y);\n    float d = length(q) * sign(q.x);\n    return max(abs(p.y) - h, d);\n}", "combinators": "// SDF Boolean/combinator helpers \u2014 ported from inigo quilez's reference.\n//\n// Hard combinators fold two scalar distances with exact sign preservation:\n//   \u00b7 opUnion        \u2192 min(a, b)              (inside either)\n//   \u00b7 opIntersect    \u2192 max(a, b)              (inside both)\n//   \u00b7 opSubtract     \u2192 max(a, -b)             (inside a, not inside b)\n//\n// Smooth combinators return vec2(d, h) where d is the blended distance and h\n// is the blend/material factor IQ uses to drive material-ID mixing.\n//\n// This file is concatenated with sdf_common.glsl; it must not contain main(),\n// nor a `#version`/`precision` directive (the host shader supplies them).\n\n// \u2500\u2500 Hard combinators \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nfloat opUnion(float d1, float d2) {\n    return min(d1, d2);\n}\n\nfloat opSubtract(float d1, float d2) {\n    return max(d1, -d2);\n}\n\nfloat opIntersect(float d1, float d2) {\n    return max(d1, d2);\n}\n\nfloat opXor(float d1, float d2) {\n    // Symmetric difference: inside exactly one of the two, outside both.\n    return max(min(d1, d2), -max(d1, d2));\n}\n\n// \u2500\u2500 Smooth combinators (vec2: x = distance, y = blend factor) \u2500\u2500\n\nvec2 opSmoothUnion(float d1, float d2, float k) {\n    float h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);\n    return vec2(mix(d2, d1, h) - k * h * (1.0 - h), h);\n}\n\nvec2 opSmoothSubtract(float d1, float d2, float k) {\n    float h = clamp(0.5 - 0.5 * (d2 + d1) / k, 0.0, 1.0);\n    return vec2(mix(d2, -d1, h) + k * h * (1.0 - h), h);\n}\n\nvec2 opSmoothIntersect(float d1, float d2, float k) {\n    float h = clamp(0.5 - 0.5 * (d2 - d1) / k, 0.0, 1.0);\n    return vec2(mix(d2, d1, h) + k * h * (1.0 - h), h);\n}", "proxy": "// Per-object SDF proxy fragment body \u2014 the final stage concatenated after\n// `sdf_common`, `primitives`, `combinators`, the light preamble, and the\n// host-injected single-object `float map(vec3 p)`. Marches a ray through the\n// proxy box in local space, shades the surface with the shared directional\n// lighting model, and writes `gl_FragDepth` so the standard depth buffer\n// occludes it against meshes and other SDF proxies.\n//\n// Uses three.js ShaderMaterial GLSL3 conventions: a declared `out vec4`\n// fragment output (no `gl_FragColor`) and no `#version`/`precision` directive\n// (the host shader prepends them). Exactly one `main()`.\n\nuniform vec4 uMaterial[MAX_GROUP_MEMBERS];\nuniform float uOpacity;\nuniform int uMaxSteps;\nuniform float uSoftShadows;\nuniform float uAntialias;\nuniform vec3 uBoundHalf;\nuniform mat4 uModelMatrix;\nuniform mat4 uProjectionMatrix;\nuniform vec3 uHover;\n\nin vec3 vLocalPos;\nflat in vec3 vCameraLocal;\n\nout vec4 fragColor;\n\n// \u2500\u2500 Gradient normal (tetrahedral) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nvec3 calcNormal(vec3 p) {\n    const float e = 0.001;\n    vec2 k = vec2(1.0, -1.0);\n    return normalize(\n        k.xyy * map(p + k.xyy * e).x +\n        k.yyx * map(p + k.yyx * e).x +\n        k.yxy * map(p + k.yxy * e).x +\n        k.xxx * map(p + k.xxx * e).x\n    );\n}\n\n// \u2500\u2500 Soft self-shadow \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nfloat softShadow(vec3 ro, vec3 rd) {\n    float res = 1.0;\n    float t = 0.02;\n    for (int i = 0; i < 32; i++) {\n        float h = map(ro + rd * t).x;\n        res = min(res, 8.0 * h / t);\n        t += clamp(h, 0.02, 0.5);\n        if (h < 0.001 || t > 20.0) break;\n    }\n    return clamp(res, 0.0, 1.0);\n}\n\n// \u2500\u2500 IQ-style shading (single object) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nvec3 shade(vec3 p, vec3 n, vec3 ro, vec4 mat) {\n    vec3 col = mat.rgb * uAmbientColor;\n    for (int i = 0; i < MAX_LIGHTS; i++) {\n        if (i >= uLightCount) break;\n        vec3 L = normalize(uLightDir[i]);\n        float dif = max(dot(n, L), 0.0);\n        float sh = 1.0;\n        if (uSoftShadows > 0.5) {\n            sh = softShadow(p + n * 0.01, L);\n        }\n        col += mat.rgb * uLightColor[i] * dif * sh;\n    }\n    col *= (0.5 + 0.5 * n.y);\n\n    // Fog for depth cueing (matches the fullscreen viewer's look).\n    float dist = length(p - ro);\n    float fog = 1.0 - exp(-0.05 * dist);\n    vec3 bg = vec3(0.10, 0.10, 0.18);\n    col = mix(col, bg, fog);\n\n    // Emissive-style hover glow (black = none), set by the interaction layer.\n    col += uHover;\n\n    return col;\n}\n\nvoid main() {\n    vec3 ro = vCameraLocal;\n    vec3 rd = normalize(vLocalPos - ro);\n\n    // Ray-box intersection with the local-space AABB [-uBoundHalf, +uBoundHalf],\n    // so the march is bounded by the proxy volume (not the whole viewport).\n    vec3 invDir = 1.0 / rd;\n    vec3 t0 = (-uBoundHalf - ro) * invDir;\n    vec3 t1 = (uBoundHalf - ro) * invDir;\n    vec3 tmin = min(t0, t1);\n    vec3 tmax = max(t0, t1);\n    float tNear = max(max(tmin.x, tmin.y), tmin.z);\n    float tFar = min(min(tmax.x, tmax.y), tmax.z);\n    tNear = max(tNear, 0.0);\n    if (tFar <= tNear) discard;\n\n    float t = tNear;\n    float res = tFar;   // closest signed distance the ray passes the surface by\n    float tRes = tNear; // march distance at that closest approach (edge shading)\n    bool hit = false;\n    float m = 0.0;\n    for (int i = 0; i < MAX_STEPS; i++) {\n        if (i >= uMaxSteps) break;\n        vec3 p = ro + rd * t;\n        vec2 dm = map(p);\n        if (dm.x < res) {\n            res = dm.x;\n            tRes = t;\n        }\n        if (dm.x < SDF_EPSILON) {\n            hit = true;\n            m = dm.y;\n            break;\n        }\n        t += dm.x;\n        if (t > tFar) break;\n    }\n    // One-pixel silhouette edge scale: the local-space pixel footprint, taken\n    // from the smooth interpolated proxy-face position `vLocalPos`. Do NOT use\n    // `fwidth`/`dFdx` of the min-distance (`t`/`tRes`): the argmin's position\n    // jumps across feature boundaries, producing spurious diagonal/radial lines.\n    float pixelSize = max(length(dFdx(vLocalPos)), length(dFdy(vLocalPos)));\n    float aa = 1.0 - smoothstep(0.0, max(pixelSize, 1e-6), res);\n    if (!hit) {\n        if (uAntialias < 0.5 || aa < 0.001) discard;\n        // Near-miss: shade the closest-approach point so the faded edge matches\n        // the lit surface (no bright halo), then fade it out over ~1px.\n        vec3 p0 = ro + rd * tRes;\n        vec3 n0 = calcNormal(p0);\n        float m0 = map(p0).y;\n        vec4 mat0 = uMaterial[int(clamp(m0, 0.0, float(MAX_GROUP_MEMBERS - 1)))];\n        vec3 col0 = shade(p0, n0, ro, mat0);\n        fragColor = vec4(col0, mat0.a * uOpacity * aa);\n        gl_FragDepth = 1.0; // far depth: the edge never occludes anything\n        return;\n    }\n\n    vec3 p = ro + rd * t;\n    vec3 n = calcNormal(p);\n    vec4 mat = uMaterial[int(clamp(m, 0.0, float(MAX_GROUP_MEMBERS - 1)))];\n    vec3 col = shade(p, n, ro, mat);\n\n    // Write the hit's clip-space depth so occlusion against meshes and other\n    // SDF proxies is handled by the standard depth buffer. three.js's WebGL2\n    // depth range is [0, 1] (NDC z = clip.z / clip.w remapped).\n    vec4 clip = uProjectionMatrix * viewMatrix * uModelMatrix * vec4(p, 1.0);\n    float ndc = clip.z / clip.w;\n    gl_FragDepth = ndc * 0.5 + 0.5;\n\n    fragColor = vec4(col, mat.a * uOpacity);\n}\n"};
 
+window.__tanga_ray_shaders = {"intersect": "// Analytic ray-intersection entry point for the per-object ray proxy.\n//\n// The host fragment shader (in `ray.js`) calls `intersectRay` to find the\n// nearest hit distance inside the proxy box `[tMin, tMax]` and `normalAt` to\n// compute the surface normal at a hit point.  Phase 7 adds the quadric\n// intersection here; the default is a unit-sphere fallback so the framework\n// renders before that lands.\n\nfloat intersectRay(vec3 ro, vec3 rd, float tMin, float tMax) {\n    float b = dot(ro, rd);\n    float c = dot(ro, ro) - 1.0;\n    float h = b * b - c;\n    if (h < 0.0) return -1.0;\n    float s = sqrt(h);\n    float t1 = -b - s;\n    float t2 = -b + s;\n    if (t1 >= tMin && t1 <= tMax) return t1;\n    if (t2 >= tMin && t2 <= tMax) return t2;\n    return -1.0;\n}\n\nvec3 normalAt(vec3 p) {\n    return normalize(p);\n}\n", "quadric": "// Analytic ray/quadric intersection for the per-object ray proxy.\n//\n// The quadric is `x\u1d40 Q x = 0` with Q a symmetric 4\u00d74 matrix (uniform\n// `uQuadric`).  Substituting the ray `p = ro + t\u00b7rd` (homogeneous `[p, 1]`)\n// yields the quadratic `a t\u00b2 + b t + c = 0`; the nearest root inside the proxy\n// box `[tMin, tMax]` is the hit and the surface normal is `2 A p + 2 b`, where\n// `A` / `b` are the 3\u00d73 quadratic part and the linear part of Q.\n\nuniform mat4 uQuadric;\n\nfloat intersectRay(vec3 ro, vec3 rd, float tMin, float tMax) {\n    mat3 A = mat3(uQuadric);\n    vec3 b = uQuadric[3].xyz;\n    float c0 = uQuadric[3].w;\n\n    float a = dot(rd, A * rd);\n    float bq = 2.0 * (dot(rd, A * ro) + dot(rd, b));\n    float c = dot(ro, A * ro) + 2.0 * dot(b, ro) + c0;\n\n    // Degenerate (tangent / asymptotic) ray: fall back to the linear root.\n    if (abs(a) < 1e-7) {\n        if (abs(bq) < 1e-7) return -1.0;\n        float t = -c / bq;\n        return (t >= tMin && t <= tMax) ? t : -1.0;\n    }\n\n    float disc = bq * bq - 4.0 * a * c;\n    if (disc < 0.0) return -1.0;\n    float s = sqrt(disc);\n    float t1 = (-bq - s) / (2.0 * a);\n    float t2 = (-bq + s) / (2.0 * a);\n    if (t1 > t2) {\n        float tmp = t1;\n        t1 = t2;\n        t2 = tmp;\n    }\n\n    // Return the nearest root inside the proxy box, not the nearest root on the\n    // unbounded ray: the quadric extends outside the \u00b110 cube, so the closest\n    // intersection can lie in front of the box while the visible one is farther\n    // in.  Skipping to the in-range root keeps the clipped surface continuous.\n    if (t1 >= tMin && t1 <= tMax) return t1;\n    if (t2 >= tMin && t2 <= tMax) return t2;\n    return -1.0;\n}\n\nvec3 normalAt(vec3 p) {\n    mat3 A = mat3(uQuadric);\n    vec3 b = uQuadric[3].xyz;\n    return normalize(2.0 * A * p + 2.0 * b);\n}\n"};
+
 function sendLog() {}
 function sendEvent() {}
 
@@ -307,6 +309,32 @@ function approxEqual(a, b, eps = 1e-9) {
 }
 
 /**
+ * Return true when any of the listed content keys changed between *ent* and
+ * *prev*.  Numbers compare with ``approxEqual``; arrays/objects compare with
+ * deep JSON equality.  Used by the per-kind ``update*`` functions to decide
+ * whether the mesh must be rebuilt.
+ *
+ * @param {object} ent   Merged entity dict.
+ * @param {object} prev  Previously applied entity dict.
+ * @param {string[]} keys Content-field names owned by this kind.
+ * @returns {boolean}
+ */
+function contentChanged(ent, prev, keys) {
+    if (!prev) return false;
+    for (const key of keys) {
+        const a = ent[key];
+        const b = prev[key];
+        if (a === undefined && b === undefined) continue;
+        if (typeof a === 'number' && typeof b === 'number') {
+            if (!approxEqual(a, b)) return true;
+        } else if (JSON.stringify(a ?? null) !== JSON.stringify(b ?? null)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Apply the common, non-structural style fields (opacity, color, scale) to a
  * mesh and its children.  Used by the shared update dispatcher and by
  * per-entity updaters so the mutations are defined in one place.
@@ -366,7 +394,6 @@ function entityRequiresRebuild(ent, prev) {
     if (ent.alignCenter !== undefined && (!prev || !approxEqual(ent.alignCenter, prev.alignCenter))) return true;
     if (ent.extent !== undefined && (!prev || !approxEqual(ent.extent, prev.extent))) return true;
     if (ent.length !== undefined && (!prev || !approxEqual(ent.length, prev.length))) return true;
-    if (ent.tubeRadius !== undefined && (!prev || !approxEqual(ent.tubeRadius, prev.tubeRadius))) return true;
     if (ent.angle !== undefined && (!prev || !approxEqual(ent.angle, prev.angle))) return true;
     if (ent.span_u !== undefined || ent.span_v !== undefined) {
         const a = JSON.stringify([ent.span_u ?? null, ent.span_v ?? null]);
@@ -384,13 +411,13 @@ function entityRequiresRebuild(ent, prev) {
     // the mesh. (`rotation` is intentionally absent: it is applied in place by
     // updateEntityMesh for meshes that carry a top-level Euler triple, keeping
     // rotation-only animation updates rebuild-free.)
-    for (const key of ['size', 'radii', 'normal', 'axis', 'startDirection', 'point', 'pointA', 'pointB', 'origin']) {
+    for (const key of ['size', 'radii', 'normal', 'axis', 'startDirection', 'point', 'pointA', 'pointB', 'origin', 'matrix', 'coeffs', 'bound']) {
         if (ent[key] !== undefined &&
             (!prev || JSON.stringify(ent[key]) !== JSON.stringify(prev[key]))) {
             return true;
         }
     }
-    for (const key of ['radiusU', 'radiusV', 'sides', 'discRadius', 'ringCount', 'maxRadius', 'pointSize']) {
+    for (const key of ['sides', 'discRadius', 'ringCount', 'maxRadius', 'pointSize']) {
         if (ent[key] !== undefined && (!prev || !approxEqual(ent[key], prev[key]))) {
             return true;
         }
@@ -1167,10 +1194,47 @@ function updateArc(mesh, ent, prev) {
     return true;
 }
 
-// Circle renderer — rendered as a torus with optional wireframe overlay.
-// Phase 5: Per-entity module.
+// Circle renderer — a torus (tube) by default, or a thick screen-space line
+// when styled with `CircleStyle`. Phase 5: Per-entity module.
+
+const CIRCLE_SEGMENTS = 96;
+
+function isLineStyle(ent) {
+    return !!(ent.style && ent.style.style_type === 'CircleStyle');
+}
+
+function createLineCircle(ent) {
+    const color = parseColor(ent, '#ff44ff');
+    const opacity = styleParam(ent, 'opacity', 0.9);
+    const thickness = styleParam(ent, 'thickness', 1.0);
+    const center = ent.center || [0, 0, 0];
+    const radius = Math.max(ent.radius || 1.0, 0.001);
+    const normal = ent.normal || [0, 0, 1];
+
+    const q = rotationFromNormal(normal[0], normal[1], normal[2]);
+    const ex = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    const ey = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+
+    const points = [];
+    for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
+        const t = (2 * Math.PI * i) / CIRCLE_SEGMENTS;
+        points.push(
+            new THREE.Vector3(center[0], center[1], center[2])
+                .addScaledVector(ex, radius * Math.cos(t))
+                .addScaledVector(ey, radius * Math.sin(t)),
+        );
+    }
+
+    const line = makeFatLine(points, color, opacity, thickness);
+    tagEntity(line, ent);
+    return line;
+}
 
 function createCircle(ent) {
+    if (isLineStyle(ent)) {
+        return createLineCircle(ent);
+    }
+
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.7);
     const center = ent.center || [0, 0, 0];
@@ -1209,6 +1273,76 @@ function createCircle(ent) {
 
     tagEntity(mesh, ent);
     return mesh;
+}
+
+function updateCircle(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['radius', 'normal', 'tubeRadius'])) return false;
+    // Switching between the tube and thick-line style requires a rebuild.
+    const curLine = isLineStyle(ent);
+    const prevLine = prev ? isLineStyle(prev) : false;
+    if (curLine !== prevLine) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
+// Cone renderer — a double cone (two open cone halves) along `axis` at `vertex`.
+// Phase 6: Per-entity module.
+
+function resolveHeight(ent) {
+    return Math.max(styleParam(ent, 'extent', 2.0), 0.001);
+}
+
+function createCone(ent) {
+    const color = parseColor(ent, '#ffaa00');
+    const opacity = styleParam(ent, 'opacity', 0.9);
+    const vertex = ent.vertex || [0, 0, 0];
+    const axis = ent.axis || [0, 0, 1];
+    const halfAngle = Math.max(ent.halfAngle || 0.3, 0.01);
+    const height = resolveHeight(ent);
+    const radius = height * Math.tan(halfAngle);
+    const wireframe = styleParam(ent, 'wireframe', false);
+
+    const group = new THREE.Group();
+    const dir = new THREE.Vector3(axis[0], axis[1], axis[2]).normalize();
+
+    for (const sign of [1, -1]) {
+        const d = new THREE.Vector3(sign * dir.x, sign * dir.y, sign * dir.z);
+        const mesh = new THREE.Mesh(
+            new THREE.ConeGeometry(radius, height, 48, 1, true),
+            makeMaterial(color, opacity)
+        );
+        // ConeGeometry apex is at +height/2 along +y; orient +y along `d` and
+        // place the apex at `vertex`.
+        mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
+        mesh.position.set(
+            vertex[0] - d.x * height / 2,
+            vertex[1] - d.y * height / 2,
+            vertex[2] - d.z * height / 2,
+        );
+        group.add(mesh);
+
+        if (wireframe) {
+            const wfColor = styleParam(ent, 'wireframe_color', null) || color;
+            const wfOpacity = styleParam(ent, 'wireframe_opacity', 1.0);
+            const dash = styleParam(ent, 'wireframe_dash', null);
+            addWireframeOverlay(
+                mesh,
+                new THREE.ConeGeometry(radius * 1.005, height, 24, 1, true),
+                wfColor,
+                dash,
+                wfOpacity
+            );
+        }
+    }
+
+    tagEntity(group, ent);
+    return group;
+}
+
+function updateCone(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['vertex', 'axis', 'halfAngle'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
 }
 
 // Cylinder renderer — renders a solid cylinder oriented along `axis`, spanning
@@ -1363,35 +1497,49 @@ function createDisk(ent) {
     return mesh;
 }
 
-// Ellipse renderer — a flat, filled ellipse oriented along `normal`.
+// Ellipse renderer — a 2D ellipse drawn as a screen-space fat line.
 // Phase 4: Per-entity module.
+
+const ELLIPSE_SEGMENTS = 128;
 
 function createEllipse(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
+    const thickness = styleParam(ent, 'thickness', 1.0);
     const center = ent.center || [0, 0, 0];
     const radiusU = Math.max(ent.radiusU || 1.0, 0.001);
     const radiusV = Math.max(ent.radiusV || 0.5, 0.001);
     const normal = ent.normal || [0, 0, 1];
 
-    const geometry = new THREE.CircleGeometry(1, 64);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity, true));
-    mesh.position.set(center[0], center[1], center[2]);
-    mesh.scale.set(radiusU, radiusV, 1);
-    mesh.setRotationFromQuaternion(rotationFromNormal(normal[0], normal[1], normal[2]));
-
-    const wireframe = styleParam(ent, 'wireframe', false);
-    if (wireframe) {
-        const wfColor = styleParam(ent, 'wireframe_color', null) || color;
-        const wfOpacity = styleParam(ent, 'wireframe_opacity', 1.0);
-        const dash = styleParam(ent, 'wireframe_dash', null);
-        const wfGeo = new THREE.CircleGeometry(1.005, 64);
-        wfGeo.scale(radiusU, radiusV, 1);
-        addWireframeOverlay(mesh, wfGeo, wfColor, dash, wfOpacity);
+    let ex, ey;
+    if (ent.dirU || ent.dirV) {
+        ex = new THREE.Vector3(...(ent.dirU || [1, 0, 0])).normalize();
+        ey = new THREE.Vector3(...(ent.dirV || [0, 1, 0])).normalize();
+    } else {
+        const q = rotationFromNormal(normal[0], normal[1], normal[2]);
+        ex = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+        ey = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
     }
 
-    tagEntity(mesh, ent);
-    return mesh;
+    const points = [];
+    for (let i = 0; i <= ELLIPSE_SEGMENTS; i++) {
+        const t = (2 * Math.PI * i) / ELLIPSE_SEGMENTS;
+        points.push(
+            new THREE.Vector3(center[0], center[1], center[2])
+                .addScaledVector(ex, radiusU * Math.cos(t))
+                .addScaledVector(ey, radiusV * Math.sin(t)),
+        );
+    }
+
+    const line = makeFatLine(points, color, opacity, thickness);
+    tagEntity(line, ent);
+    return line;
+}
+
+function updateEllipse(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['radiusU', 'radiusV', 'dirU', 'dirV', 'normal', 'center'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
 }
 
 // Ellipsoid renderer — a unit sphere scaled by per-axis radii.
@@ -1528,6 +1676,188 @@ function createRegularPolygon(ent) {
 
     tagEntity(mesh, ent);
     return mesh;
+}
+
+// Hyperbola renderer — samples both branches as a fat-line curve.
+
+function createHyperbola(ent) {
+    const color = parseColor(ent, '#ff44ff');
+    const opacity = styleParam(ent, 'opacity', 0.9);
+    const thickness = styleParam(ent, 'thickness', 1.0);
+    const center = ent.center || [0, 0, 0];
+    const d1 = new THREE.Vector3(...(ent.dir1 || [1, 0, 0])).normalize();
+    const d2 = new THREE.Vector3(...(ent.dir2 || [0, 1, 0])).normalize();
+    const a = Math.max(ent.a || 1.0, 0.001);
+    const b = Math.max(ent.b || 1.0, 0.001);
+    // `extent` is a spatial half-size; stop sampling once a branch leaves it.
+    const extent = Math.max(styleParam(ent, 'extent', 5.0), 0.001);
+    const segments = 128;
+
+    // Bound the parameter so both branches stay within the extent box.
+    // acosh needs its argument >= 1; asinh needs it >= 0.
+    const tMax = Math.min(
+        Math.acosh(Math.max(1.0, extent / a)),
+        Math.asinh(Math.max(0.0, extent / b)),
+    );
+
+    const group = new THREE.Group();
+    for (const sign of [1, -1]) {
+        const points = [];
+        for (let i = 0; i <= segments; i++) {
+            const t = -tMax + (2 * tMax * i) / segments;
+            points.push(
+                new THREE.Vector3(center[0], center[1], center[2])
+                    .addScaledVector(d1, sign * a * Math.cosh(t))
+                    .addScaledVector(d2, b * Math.sinh(t)),
+            );
+        }
+        group.add(makeFatLine(points, color, opacity, thickness));
+    }
+
+    tagEntity(group, ent);
+    return group;
+}
+
+function updateHyperbola(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['a', 'b', 'dir1', 'dir2', 'center'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
+// Parabola renderer — samples the curve as a fat-line polyline.
+
+function createParabola(ent) {
+    const color = parseColor(ent, '#ff44ff');
+    const opacity = styleParam(ent, 'opacity', 0.9);
+    const thickness = styleParam(ent, 'thickness', 1.0);
+    const vertex = ent.vertex || [0, 0, 0];
+    const dir = new THREE.Vector3(...(ent.direction || [1, 0, 0])).normalize();
+    const p = Math.max(ent.p || 1.0, 0.001);
+    // 2D transverse direction (the parabola lies in the xy-plane).
+    const dPerp = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
+    // `extent` is a spatial half-size; bound the parameter so the curve stays
+    // within the extent box along both the axis and the transverse direction.
+    const extent = Math.max(styleParam(ent, 'extent', 5.0), 0.001);
+    const tMax = Math.min(extent, Math.sqrt(2 * p * extent));
+    const segments = 128;
+
+    const points = [];
+    for (let i = 0; i <= segments; i++) {
+        const t = -tMax + (2 * tMax * i) / segments;
+        const s = (t * t) / (2 * p);
+        points.push(
+            new THREE.Vector3(vertex[0], vertex[1], vertex[2])
+                .addScaledVector(dir, s)
+                .addScaledVector(dPerp, t),
+        );
+    }
+
+    const line = makeFatLine(points, color, opacity, thickness);
+    tagEntity(line, ent);
+    return line;
+}
+
+function updateParabola(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['vertex', 'direction', 'p'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
+// Line pair renderer — draws the two member lines as a group.
+
+function createLinePair(ent) {
+    const group = new THREE.Group();
+    for (const wire of [ent.line1, ent.line2]) {
+        if (!wire) continue;
+        group.add(
+            createLine({
+                origin: wire.origin,
+                direction: wire.direction,
+                color: ent.color,
+                style: ent.style,
+            }),
+        );
+    }
+    tagEntity(group, ent);
+    return group;
+}
+
+function updateLinePair(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['line1', 'line2'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
+// Plane pair renderer — draws the two member planes as a group.
+
+async function createPlanePair(ent) {
+    const group = new THREE.Group();
+    for (const wire of [ent.plane1, ent.plane2]) {
+        if (!wire) continue;
+        group.add(
+            await createPlane({
+                point: wire.point,
+                normal: wire.normal,
+                extent: wire.extent,
+                color: ent.color,
+                opacity: ent.opacity,
+                style: ent.style,
+            }),
+        );
+    }
+    tagEntity(group, ent);
+    return group;
+}
+
+function updatePlanePair(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['plane1', 'plane2'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
+// Curve renderer — draws each path (a list of 3D points) as a fat polyline.
+
+function createCurve(ent) {
+    const color = parseColor(ent, '#44ff44');
+    const opacity = styleParam(ent, 'opacity', 0.8);
+    const thickness = styleParam(ent, 'thickness', 2.0);
+    const group = new THREE.Group();
+    for (const path of ent.paths || []) {
+        if (!path || path.length < 2) continue;
+        const points = path.map((p) => new THREE.Vector3(p[0], p[1], p[2]));
+        group.add(makeFatLine(points, color, opacity, thickness));
+    }
+    tagEntity(group, ent);
+    return group;
+}
+
+function updateCurve(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['paths'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
+// Point set renderer — draws each point as a small sphere in a group.
+
+function createPointSet(ent) {
+    const group = new THREE.Group();
+    for (const p of ent.points || []) {
+        group.add(
+            createPoint({
+                position: p,
+                color: ent.color,
+                style: ent.style,
+            }),
+        );
+    }
+    tagEntity(group, ent);
+    return group;
+}
+
+function updatePointSet(mesh, ent, prev) {
+    if (contentChanged(ent, prev, ['points'])) return false;
+    applyStyleUpdate(mesh, ent);
+    return true;
 }
 
 // Sphere renderer — rendered as a sphere with optional wireframe overlay.
@@ -2303,6 +2633,9 @@ async function createEntityMesh(ent) {
         case 'Cylinder':
             mesh = createCylinder(ent);
             break;
+        case 'Cone':
+            mesh = createCone(ent);
+            break;
         case 'Disk':
             mesh = createDisk(ent);
             break;
@@ -2382,6 +2715,38 @@ async function createEntityMesh(ent) {
             mesh = await createSdfProxy(ent);
             break;
 
+        case 'ray':
+            mesh = await createRayProxy(ent);
+            break;
+
+        case 'Hyperbola':
+            mesh = createHyperbola(ent);
+            break;
+
+        case 'Parabola':
+            mesh = createParabola(ent);
+            break;
+
+        case 'LinePair':
+        case 'ParallelLinePair':
+            mesh = createLinePair(ent);
+            break;
+
+        case 'PlanePair':
+        case 'ParallelPlanePair':
+            mesh = await createPlanePair(ent);
+            break;
+
+        case 'PlaneConic':
+        case 'PlaneConicPair':
+        case 'Curve':
+            mesh = createCurve(ent);
+            break;
+
+        case 'PointSet':
+            mesh = createPointSet(ent);
+            break;
+
         default:
             console.warn(`Unknown entity kind: ${ent.kind}`);
             sendLog('warn', `Unknown entity kind: ${ent.kind}`, { source: 'factory.js' });
@@ -2404,6 +2769,9 @@ function updateEntityMesh(mesh, ent, prev) {
             // transform/style changes are applied in place by updateSdfProxy.
             if (entityRequiresRebuild(ent, prev)) return false;
             return updateSdfProxy(mesh, ent, prev);
+        case 'ray':
+            if (entityRequiresRebuild(ent, prev)) return false;
+            return updateRayProxy(mesh, ent);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':
@@ -2414,6 +2782,28 @@ function updateEntityMesh(mesh, ent, prev) {
             return updateArc(mesh, ent, prev);
         case 'Cylinder':
             return updateCylinder(mesh, ent, prev);
+        case 'Hyperbola':
+            return updateHyperbola(mesh, ent, prev);
+        case 'Parabola':
+            return updateParabola(mesh, ent, prev);
+        case 'Ellipse':
+            return updateEllipse(mesh, ent, prev);
+        case 'Circle':
+            return updateCircle(mesh, ent, prev);
+        case 'LinePair':
+        case 'ParallelLinePair':
+            return updateLinePair(mesh, ent, prev);
+        case 'PlanePair':
+        case 'ParallelPlanePair':
+            return updatePlanePair(mesh, ent, prev);
+        case 'PlaneConic':
+        case 'PlaneConicPair':
+        case 'Curve':
+            return updateCurve(mesh, ent, prev);
+        case 'PointSet':
+            return updatePointSet(mesh, ent, prev);
+        case 'Cone':
+            return updateCone(mesh, ent, prev);
         default:
             break;
     }
@@ -2684,6 +3074,207 @@ function disposeSdfProxy(mesh) {
     if (mesh.material) mesh.material.dispose();
 }
 
+// Per-object analytic ray renderer for the standard viewer.
+//
+// Builds a bounding-box proxy mesh (BoxGeometry) with a ShaderMaterial whose
+// fragment shader analytically intersects the view ray with the object's
+// implicit surface and writes `gl_FragDepth`, so ray objects depth-composite
+// with meshes and SDF proxies in one scene.  The per-object analytic
+// `intersectRay` / `normalAt` functions live in `ray/intersect.glsl`.
+//
+// The proxy is rasterized with `side: THREE.BackSide` so its far faces cover
+// the volume whether the camera is inside or outside the box (unbounded
+// quadrics fall back to a large ±10 cube, so the camera is often inside it).
+// Shading is two-sided (the diffuse term uses |n·L|), so open quadrics
+// (cone, paraboloid, hyperboloid) stay lit from every viewpoint instead of
+// flipping to a dark "back" side when the camera looks at their interior.
+
+let _rayShaderParts = null;
+
+async function _loadRayShaderParts() {
+    if (_rayShaderParts) return _rayShaderParts;
+    // Standalone HTML exports inline the GLSL as a global (there is no server
+    // to fetch the .glsl files from); the live viewer fetches them instead.
+    if (typeof window !== 'undefined' && window.__tanga_ray_shaders) {
+        _rayShaderParts = window.__tanga_ray_shaders;
+        return _rayShaderParts;
+    }
+    const base = new URL('./', import.meta.url);
+    const intersect = await fetch(new URL('./ray/intersect.glsl', base)).then((r) => r.text());
+    const quadric = await fetch(new URL('./ray/quadric.glsl', base)).then((r) => r.text());
+    _rayShaderParts = { intersect, quadric };
+    return _rayShaderParts;
+}
+
+const _VERTEX = `
+out vec3 vLocalPos;
+flat out vec3 vCameraLocal;
+
+void main() {
+    vLocalPos = position;
+    // Camera position in the mesh's local space (same for every vertex).
+    vCameraLocal = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const _FRAGMENT = `
+uniform vec3 uBoundHalf;
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform mat4 uModelMatrix;
+uniform mat4 uProjectionMatrix;
+
+in vec3 vLocalPos;
+flat in vec3 vCameraLocal;
+
+out vec4 fragColor;
+
+${lightPreamble}
+
+// Per-object analytic intersection (injected from ray/intersect.glsl).
+__INTERSECT__
+
+vec3 shade(vec3 p, vec3 n, vec3 ro) {
+    vec3 col = uColor * uAmbientColor;
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        if (i >= uLightCount) break;
+        vec3 L = normalize(uLightDir[i]);
+        // Two-sided diffuse: implicit surfaces have no face culling, so an open
+        // quadric (cone, paraboloid, hyperboloid) shows its "back" side from many
+        // viewpoints.  |n·L| lights both sides symmetrically instead of flipping
+        // the normal toward the camera, which avoided a hard one-sided switch.
+        float dif = abs(dot(n, L));
+        col += uColor * uLightColor[i] * dif;
+    }
+    // Two-sided hemisphere ambient for depth cueing: |n.y| keeps the upper and
+    // lower branches of an open quadric (hyperboloid, paraboloid) equally lit
+    // — using n.y directly would darken the branch whose normals point down.
+    col *= 0.5 + 0.5 * abs(n.y);
+    float dist = length(p - ro);
+    float fog = 1.0 - exp(-0.01 * dist);
+    vec3 bg = vec3(0.10, 0.10, 0.18);
+    return mix(col, bg, fog);
+}
+
+void main() {
+    vec3 ro = vCameraLocal;
+    vec3 rd = normalize(vLocalPos - ro);
+
+    // Ray-box intersection with the local-space AABB [-uBoundHalf, +uBoundHalf],
+    // so the analytic surface is only evaluated inside the proxy volume.
+    vec3 invDir = 1.0 / rd;
+    vec3 t0 = (-uBoundHalf - ro) * invDir;
+    vec3 t1 = (uBoundHalf - ro) * invDir;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+    float tNear = max(max(tmin.x, tmin.y), tmin.z);
+    float tFar = min(min(tmax.x, tmax.y), tmax.z);
+    tNear = max(tNear, 0.0);
+    if (tFar <= tNear) discard;
+
+    float t = intersectRay(ro, rd, tNear, tFar);
+    if (t < 0.0) discard;
+
+    vec3 p = ro + rd * t;
+    vec3 n = normalAt(p);
+    vec3 col = shade(p, n, ro);
+
+    // Write the hit's clip-space depth so occlusion against meshes and other
+    // proxies is handled by the standard depth buffer.
+    vec4 clip = uProjectionMatrix * viewMatrix * uModelMatrix * vec4(p, 1.0);
+    float ndc = clip.z / clip.w;
+    gl_FragDepth = ndc * 0.5 + 0.5;
+
+    fragColor = vec4(col, uOpacity);
+}
+`;
+
+function _bound(ent) {
+    const b = ent.bound || { min: [-1, -1, -1], max: [1, 1, 1] };
+    const half = [
+        (b.max[0] - b.min[0]) / 2,
+        (b.max[1] - b.min[1]) / 2,
+        (b.max[2] - b.min[2]) / 2,
+    ];
+    const center = [
+        (b.min[0] + b.max[0]) / 2,
+        (b.min[1] + b.max[1]) / 2,
+        (b.min[2] + b.max[2]) / 2,
+    ];
+    return { half, center };
+}
+
+async function createRayProxy(ent) {
+    const parts = await _loadRayShaderParts();
+    const { half, center } = _bound(ent);
+    const [r, g, b] = parseHexColor(ent.color);
+    const opacity = typeof ent.opacity === 'number' ? ent.opacity : 1.0;
+    const lighting = parseLighting(ent.lighting);
+    const isQuadric = ent.rayKind === 'Quadric3D';
+    const intersectSrc = isQuadric ? parts.quadric : parts.intersect;
+
+    const uniforms = {
+        uBoundHalf: { value: new THREE.Vector3(half[0], half[1], half[2]) },
+        uColor: { value: new THREE.Vector3(r, g, b) },
+        uOpacity: { value: opacity },
+        uModelMatrix: { value: new THREE.Matrix4() },
+        uProjectionMatrix: { value: new THREE.Matrix4() },
+        uLightCount: { value: 0 },
+        uLightDir: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uAmbientColor: { value: new THREE.Vector3() },
+    };
+    if (isQuadric) {
+        const m = ent.matrix && ent.matrix.length === 16
+            ? ent.matrix
+            : [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1];
+        uniforms.uQuadric = { value: new THREE.Matrix4().set(...m) };
+    }
+    setLightUniforms(uniforms, lighting);
+
+    const material = new THREE.ShaderMaterial({
+        vertexShader: _VERTEX,
+        fragmentShader: _FRAGMENT.replace('__INTERSECT__', intersectSrc),
+        uniforms,
+        transparent: opacity < 0.99,
+        depthWrite: true,
+        depthTest: true,
+        glslVersion: THREE.GLSL3,
+        side: THREE.BackSide,
+    });
+
+    const geometry = new THREE.BoxGeometry(half[0] * 2, half[1] * 2, half[2] * 2);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(center[0], center[1], center[2]);
+    mesh.frustumCulled = true;
+
+    mesh.onBeforeRender = (_renderer, _scene, camera) => {
+        material.uniforms.uModelMatrix.value.copy(mesh.matrixWorld);
+        material.uniforms.uProjectionMatrix.value.copy(camera.projectionMatrix);
+    };
+
+    mesh.userData.rayKind = ent.rayKind || null;
+    return mesh;
+}
+
+function updateRayProxy(mesh, ent) {
+    const mat = mesh.material;
+    if (!mat || !mat.uniforms) return true;
+    const [r, g, b] = parseHexColor(ent.color);
+    mat.uniforms.uColor.value.set(r, g, b);
+    const opacity = typeof ent.opacity === 'number' ? ent.opacity : 1.0;
+    mat.uniforms.uOpacity.value = opacity;
+    mat.transparent = opacity < 0.99;
+    return true;
+}
+
+function disposeRayProxy(mesh) {
+    if (!mesh) return;
+    if (mesh.geometry) mesh.geometry.dispose();
+    if (mesh.material) mesh.material.dispose();
+}
+
 // Shared SDF lighting model (directional lights + ambient) used by both the
 // fullscreen SDF viewer and the standard viewer's per-object SDF proxies, so
 // both share one source of truth for the light preamble and uniform uploads.
@@ -2693,11 +3284,11 @@ function disposeSdfProxy(mesh) {
 
 const MAX_LIGHTS = 8;
 
-// Frontend defaults mirror the Python defaults (a white light from (10,20,10)
-// at intensity 0.8 plus a white 0.45 ambient).
+// Frontend defaults mirror the Python defaults (a white light from the
+// diagonal (1,1,1) at intensity 0.8 plus a white 0.45 ambient).
 const DEFAULT_LIGHTING = {
     ambient: { color: '#ffffff', intensity: 0.45 },
-    lights: [{ direction: [10, 20, 10], color: '#ffffff', intensity: 0.8 }],
+    lights: [{ direction: [1, 1, 1], color: '#ffffff', intensity: 0.8 }],
 };
 
 // Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then

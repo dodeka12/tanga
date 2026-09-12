@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "8ae0158711eb13ab46b9dbc57d2dfab356ac79747c656bc957e0ca2fcf52b960",
+  "generator_sha256": "a653513b2d2ec4010ef852bb783a3eb65ef14d4b7414fd7f47778c976141a34b",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -8,7 +8,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/utils.js",
-      "sha256": "5d1fc14a6b4aee06a87ed5df308077c503c40431490feb3c5f75471a1884efb8"
+      "sha256": "e6a85f161a0b8c48dc9e393b169b26261ab5df925c17f343be5e882ab8fedfd4"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/point.js",
@@ -36,7 +36,11 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/circle.js",
-      "sha256": "3223e83b502a0fbf6fdb2a7f6bb8a49f3bb7ee6c64a45f9e6cd7d7ec0bffc61b"
+      "sha256": "aef932f31d7cd269a3a397b8600f7bf6bffc5bd0c17282ea966f6b4bd3e37cf8"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/cone.js",
+      "sha256": "426ea436fea53c5c9b943fa7fac68b479783a36f05740ab05eca6b9f929676e6"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/cylinder.js",
@@ -52,7 +56,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipse.js",
-      "sha256": "582f16717c8dc6c035ee6e3e97e71a26252e0ea0f9ebb1745f392bcf75330204"
+      "sha256": "0a43aa631ae362e82d7e82a97bc91546df3e0ce940ad7f78bf105e6eef588439"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipsoid.js",
@@ -65,6 +69,30 @@
     {
       "path": "py/pytanga/viz/templates/renderers/regular_polygon.js",
       "sha256": "24441877c1853299b3f069472adf9203b563ab79e85bbfe3faf486cc69e993d2"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/hyperbola.js",
+      "sha256": "b44764b356720b000cb3d8218a79f5d13e6070f3f8571bc176962de1ac51e9f0"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/parabola.js",
+      "sha256": "ddfe16313f7b67de844cf6b4edc201b5106aea01f8b214d311f59d635edc3dfe"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/line_pair.js",
+      "sha256": "134de330edc293ca8be5cb7ba509cf180b94eb966144aa8cda1b2e1aa25903c1"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/plane_pair.js",
+      "sha256": "8e9e9db0d215085123c924228adfb0f7965a493d244b856e8000e2ac436ece68"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/curve.js",
+      "sha256": "7f57ba3ccd17ecef4dba306ce9ed47fcaee0dfc68a8a4eaca61e880e8b32dc64"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/point_set.js",
+      "sha256": "2e54678f8119476b39483a61b36c4c1654a6d3d6c6d167f816cf5dbd74066504"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sphere.js",
@@ -140,15 +168,19 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
-      "sha256": "daaae3f8a6488bd4814d4bd77f669e84c02a8d358f36761109b776c537c121d4"
+      "sha256": "26a2a38663d3432d9cff440e6cf05418fd4e8d19efbf00a45d0a07cb5303ce40"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sdf.js",
       "sha256": "b6576a92c6c257703b527fcf6452ad1b566970d83c6131fecc6cb487eb89a00c"
     },
     {
+      "path": "py/pytanga/viz/templates/renderers/ray.js",
+      "sha256": "04404ea19dc607c4c768e3416402f502ed43609d7a9a049726bb70ce5f8a9ea8"
+    },
+    {
       "path": "py/pytanga/viz/templates/renderers/sdf/lighting.js",
-      "sha256": "69c02825438db1d26c4983400df628043bdf07545d68e7e95aae712dab3ba834"
+      "sha256": "e7517775d0becd384d1976024dbd5269c605ded5eea0b2c8650046466e8d6820"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sdf/glsl.js",
@@ -195,6 +227,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "7bcced7d933be57d8570741f461f832f732f8ddd83a54c2bf586584310353102",
-  "bundle_sha256": "aafeb5d38a76e5a1405010c09334763caa6356adbd8a0971be3ad7310c2517c7"
+  "fingerprint_sha256": "a589e656793b86f039ec3bd925cf167d7315c41f4610eeccda9e79e5f3022480",
+  "bundle_sha256": "2adbe9e64d764681bf655eee7e71bdb7b3ac62583476b9a8c5f7533f9cf522f8"
 }
