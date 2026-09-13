@@ -68,7 +68,7 @@ class _FakeSceneHandle:
         self.flushes += 1
 
 
-def _init_point(**kwargs) -> tuple[ActPoint, _FakeSceneHandle]:
+def _init_point(**kwargs) -> tuple[ActPoint, _FakeSceneHandle]:  # noqa: ANN003
     """Create and initialise an :class:`ActPoint` with a fake handle."""
     handle = _FakeSceneHandle()
     ap = ActPoint(1, 2, 3, **kwargs)
@@ -76,7 +76,7 @@ def _init_point(**kwargs) -> tuple[ActPoint, _FakeSceneHandle]:
     return ap, handle
 
 
-def _init_point_2d(**kwargs) -> tuple[ActPoint, _FakeSceneHandle]:
+def _init_point_2d(**kwargs) -> tuple[ActPoint, _FakeSceneHandle]:  # noqa: ANN003
     """Create and initialise an :class:`ActPoint` in a 2D scene."""
     handle = _FakeSceneHandle(space_dim=2)
     ap = ActPoint(1, 2, 3, **kwargs)
@@ -89,17 +89,17 @@ def _coords(p: Point) -> tuple[float, float, float]:
 
 
 class TestInteractionRegistration:
-    def test_registers_drag_move_by_default(self):
+    def test_registers_drag_move_by_default(self):  # noqa: ANN201
         ap, handle = _init_point()
         assert InteractionEventType.DRAG_MOVE in handle.handlers
         assert InteractionEventType.DRAG_START not in handle.handlers
         assert InteractionEventType.DRAG_END not in handle.handlers
 
-    def test_registers_start_and_end_when_provided(self):
-        async def on_start(event, ap):
+    def test_registers_start_and_end_when_provided(self):  # noqa: ANN201
+        async def on_start(event, ap):  # noqa: ANN001, ANN202
             pass
 
-        async def on_end(event, ap):
+        async def on_end(event, ap):  # noqa: ANN001, ANN202
             pass
 
         ap, handle = _init_point(on_drag_start=on_start, on_drag_end=on_end)
@@ -107,15 +107,15 @@ class TestInteractionRegistration:
         assert InteractionEventType.DRAG_START in handle.handlers
         assert InteractionEventType.DRAG_END in handle.handlers
 
-    def test_registers_only_start_when_only_start_provided(self):
-        async def on_start(event, ap):
+    def test_registers_only_start_when_only_start_provided(self):  # noqa: ANN201
+        async def on_start(event, ap):  # noqa: ANN001, ANN202
             pass
 
         ap, handle = _init_point(on_drag_start=on_start)
         assert InteractionEventType.DRAG_START in handle.handlers
         assert InteractionEventType.DRAG_END not in handle.handlers
 
-    def test_sets_interaction_config(self):
+    def test_sets_interaction_config(self):  # noqa: ANN201
         ap, handle = _init_point()
         assert len(handle.configs) == 1
         assert handle.configs[0][0] == "pt1"
@@ -123,10 +123,10 @@ class TestInteractionRegistration:
 
 class TestDragPhases:
     @pytest.mark.anyio
-    async def test_drag_start_handler_receives_event_and_point(self):
+    async def test_drag_start_handler_receives_event_and_point(self):  # noqa: ANN201
         calls = []
 
-        async def on_start(event, ap):
+        async def on_start(event, ap):  # noqa: ANN001, ANN202
             calls.append((event, ap))
 
         ap, handle = _init_point(on_drag_start=on_start)
@@ -137,10 +137,10 @@ class TestDragPhases:
         assert calls[0][1] is ap
 
     @pytest.mark.anyio
-    async def test_drag_end_handler_receives_event_and_point(self):
+    async def test_drag_end_handler_receives_event_and_point(self):  # noqa: ANN201
         calls = []
 
-        async def on_end(event, ap):
+        async def on_end(event, ap):  # noqa: ANN001, ANN202
             calls.append((event, ap))
 
         ap, handle = _init_point(on_drag_end=on_end)
@@ -151,8 +151,8 @@ class TestDragPhases:
         assert calls[0][1] is ap
 
     @pytest.mark.anyio
-    async def test_drag_start_does_not_move_point(self):
-        async def on_start(event, ap):
+    async def test_drag_start_does_not_move_point(self):  # noqa: ANN201
+        async def on_start(event, ap):  # noqa: ANN001, ANN202
             pass
 
         ap, handle = _init_point(on_drag_start=on_start)
@@ -168,7 +168,7 @@ class TestDragPhases:
         assert handle.flushes == 0
 
     @pytest.mark.anyio
-    async def test_drag_move_moves_point_and_flushes(self):
+    async def test_drag_move_moves_point_and_flushes(self):  # noqa: ANN201
         ap, handle = _init_point()
         event = DragEvent(
             object_id="pt1",
@@ -183,8 +183,8 @@ class TestDragPhases:
         assert handle.flushes == 1
 
     @pytest.mark.anyio
-    async def test_custom_move_handler_can_suppress_default(self):
-        async def handler(event, ap):
+    async def test_custom_move_handler_can_suppress_default(self):  # noqa: ANN201
+        async def handler(event, ap):  # noqa: ANN001, ANN202
             return True
 
         ap, handle = _init_point(handler=handler)
@@ -200,7 +200,7 @@ class TestDragPhases:
 
 
 class TestDragModeConstraint:
-    def test_drag_mode_sets_primary_trigger(self):
+    def test_drag_mode_sets_primary_trigger(self):  # noqa: ANN201
         ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
         config = handle.configs[0][1]
         assert len(config.triggers) == 1
@@ -210,14 +210,14 @@ class TestDragModeConstraint:
         assert trigger.drag_mode == DragMode.XY_PLANE
         assert trigger.modifiers == frozenset()
 
-    def test_drag_mode_omits_modifier_triggers(self):
+    def test_drag_mode_omits_modifier_triggers(self):  # noqa: ANN201
         ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
         config = handle.configs[0][1]
         modes = {t.drag_mode for t in config.triggers}
         assert modes == {DragMode.XY_PLANE}
         assert all(t.modifiers == frozenset() for t in config.triggers)
 
-    def test_drag_mode_none_keeps_four_default_triggers(self):
+    def test_drag_mode_none_keeps_four_default_triggers(self):  # noqa: ANN201
         ap, handle = _init_point()
         config = handle.configs[0][1]
         assert len(config.triggers) == 4
@@ -233,7 +233,7 @@ class TestDragModeConstraint:
         assert len(unmodified) == 1
         assert unmodified[0].drag_mode == DragMode.VIEW_PLANE
 
-    def test_drag_mode_serializes_for_frontend(self):
+    def test_drag_mode_serializes_for_frontend(self):  # noqa: ANN201
         ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
         config = handle.configs[0][1]
         d = config.to_dict()
@@ -241,14 +241,14 @@ class TestDragModeConstraint:
         assert d["triggers"][0]["drag_mode"] == "xy_plane"
         assert d["triggers"][0]["modifiers"] == []
 
-    def test_drag_mode_keeps_lifecycle_handlers(self):
-        async def on_start(event, ap):
+    def test_drag_mode_keeps_lifecycle_handlers(self):  # noqa: ANN201
+        async def on_start(event, ap):  # noqa: ANN001, ANN202
             pass
 
-        async def on_end(event, ap):
+        async def on_end(event, ap):  # noqa: ANN001, ANN202
             pass
 
-        async def handler(event, ap):
+        async def handler(event, ap):  # noqa: ANN001, ANN202
             return False
 
         ap, handle = _init_point(
@@ -261,7 +261,7 @@ class TestDragModeConstraint:
         assert InteractionEventType.DRAG_START in handle.handlers
         assert InteractionEventType.DRAG_END in handle.handlers
 
-    def test_2d_defaults_to_xy_plane(self):
+    def test_2d_defaults_to_xy_plane(self):  # noqa: ANN201
         ap, handle = _init_point_2d()
         config = handle.configs[0][1]
         assert len(config.triggers) == 1
@@ -271,13 +271,13 @@ class TestDragModeConstraint:
         assert trigger.drag_mode == DragMode.XY_PLANE
         assert trigger.modifiers == frozenset()
 
-    def test_explicit_drag_mode_overrides_2d_default(self):
+    def test_explicit_drag_mode_overrides_2d_default(self):  # noqa: ANN201
         ap, handle = _init_point_2d(drag_mode=DragMode.VIEW_PLANE)
         config = handle.configs[0][1]
         assert len(config.triggers) == 1
         assert config.triggers[0].drag_mode == DragMode.VIEW_PLANE
 
-    def test_3d_keeps_four_default_triggers(self):
+    def test_3d_keeps_four_default_triggers(self):  # noqa: ANN201
         handle = _FakeSceneHandle(space_dim=3)
         ap = ActPoint(1, 2, 3)
         ap._init(handle, "pt1")
@@ -293,7 +293,7 @@ class TestDragModeConstraint:
 
 
 class TestActPointLabel:
-    def test_add_with_label(self):
+    def test_add_with_label(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         ap = ActPoint(1, 2, 3)
         eid = viz.add(ap, label="P")
@@ -306,21 +306,21 @@ class TestActPointLabel:
 
 
 class TestDragAnchor:
-    def test_act_point_drag_anchor_returns_centre(self):
+    def test_act_point_drag_anchor_returns_centre(self):  # noqa: ANN201
         handle = _FakeSceneHandle()
         ap = ActPoint(Point(0, 2, 0))
         ap._init(handle, "pt1")
         assert ap.drag_anchor(Point(9, 9, 9), Direction(1, 0, 0)) == Point(0, 2, 0)
 
-    def test_dispatch_sends_anchor(self):
+    def test_dispatch_sends_anchor(self):  # noqa: ANN201
         class _RecordingServer:
-            def __init__(self):
+            def __init__(self):  # noqa: ANN204
                 self.sent = []
 
-            async def push_raw_to_browser(self, browser_id, data):
+            async def push_raw_to_browser(self, browser_id, data):  # noqa: ANN001, ANN202
                 self.sent.append((browser_id, data))
 
-        async def _run():
+        async def _run():  # noqa: ANN202
             viz = Visualizer(add_default_axes=False, add_default_grid=False)
             server = _RecordingServer()
             viz._server = server
@@ -353,21 +353,21 @@ class TestDragAnchor:
 
         asyncio.run(_run())
 
-    def test_drag_start_handler_receives_ideal_anchor(self):
+    def test_drag_start_handler_receives_ideal_anchor(self):  # noqa: ANN201
         class _RecordingServer:
-            def __init__(self):
+            def __init__(self):  # noqa: ANN204
                 self.sent = []
 
-            async def push_raw_to_browser(self, browser_id, data):
+            async def push_raw_to_browser(self, browser_id, data):  # noqa: ANN001, ANN202
                 self.sent.append((browser_id, data))
 
-        async def _run():
+        async def _run():  # noqa: ANN202
             viz = Visualizer(add_default_axes=False, add_default_grid=False)
             viz._server = _RecordingServer()
 
             received: list[Point] = []
 
-            async def on_drag_start(event):
+            async def on_drag_start(event):  # noqa: ANN001, ANN202
                 received.append(event.world_position)
 
             handle = _FakeSceneHandle()
@@ -420,8 +420,8 @@ class TestClickHandler:
         1.0,
     ]
 
-    def test_click_trigger_added_when_on_click(self):
-        async def on_click(event, act):
+    def test_click_trigger_added_when_on_click(self):  # noqa: ANN201
+        async def on_click(event, act):  # noqa: ANN001, ANN202
             pass
 
         ap = ActPoint(Point(0, 2, 0), on_click=on_click)
@@ -434,21 +434,21 @@ class TestClickHandler:
             t.event_type == InteractionEventType.CLICK for t in cfg_no_click.triggers
         )
 
-    def test_click_handler_receives_ideal_anchor(self):
+    def test_click_handler_receives_ideal_anchor(self):  # noqa: ANN201
         class _RecordingServer:
-            def __init__(self):
+            def __init__(self):  # noqa: ANN204
                 self.sent = []
 
-            async def push_raw_to_browser(self, browser_id, data):
+            async def push_raw_to_browser(self, browser_id, data):  # noqa: ANN001, ANN202
                 self.sent.append((browser_id, data))
 
-        async def _run():
+        async def _run():  # noqa: ANN202
             viz = Visualizer(add_default_axes=False, add_default_grid=False)
             viz._server = _RecordingServer()
 
             received: list[Point] = []
 
-            async def on_click(event, act):
+            async def on_click(event, act):  # noqa: ANN001, ANN202
                 received.append(event.world_position)
 
             handle = _FakeSceneHandle()
@@ -489,10 +489,10 @@ class TestClickHandler:
         asyncio.run(_run())
 
 
-def test_on_interaction_registers_in_unified_registry():
+def test_on_interaction_registers_in_unified_registry():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
 
-    async def handler(event):
+    async def handler(event):  # noqa: ANN001, ANN202
         pass
 
     viz.on_interaction("obj1", InteractionEventType.CLICK, handler)

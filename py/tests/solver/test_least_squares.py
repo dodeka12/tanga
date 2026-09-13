@@ -11,7 +11,7 @@ from pytanga.geometry import RndMV
 from pytanga.solver.solve import solve_lsq
 
 
-def _setup_lsq_system(alg, product, rng_seed):
+def _setup_lsq_system(alg, product, rng_seed):  # noqa: ANN001, ANN202
     gen = np.random.default_rng(rng_seed)
     all_ids = alg.all_blades()
     a_mask = random_mask(alg, 8, rng=rng_seed)
@@ -51,7 +51,7 @@ def _setup_lsq_system(alg, product, rng_seed):
     return a_list, c_list, x_orig, x_mask
 
 
-def _assert_x_recovered(x_orig, x_recovered, *, abs_tol=1e-8):
+def _assert_x_recovered(x_orig, x_recovered, *, abs_tol=1e-8):  # noqa: ANN001, ANN202
     d1 = x_orig.to_dict()
     d2 = x_recovered.to_dict()
     all_keys = set(d1) | set(d2)
@@ -61,7 +61,7 @@ def _assert_x_recovered(x_orig, x_recovered, *, abs_tol=1e-8):
 
 class TestLeastSquares:
     @pytest.fixture(scope="module")
-    def alg8(self):
+    def alg8(self):  # noqa: ANN201
         return Algebra(8, 0, "float64")
 
     @pytest.mark.parametrize(
@@ -72,7 +72,7 @@ class TestLeastSquares:
             (EProduct.OP, 1003),
         ],
     )
-    def test_lsq_exact(self, alg8, product, seed):
+    def test_lsq_exact(self, alg8, product, seed):  # noqa: ANN001, ANN201
         a_list, c_list, x_orig, x_mask = _setup_lsq_system(alg8, product, seed)
         x_rec = solve_lsq(a_list, c_list, product=product, b_mask=x_mask)
         _assert_x_recovered(x_orig, x_rec, abs_tol=1e-8)
@@ -85,7 +85,7 @@ class TestLeastSquares:
             (EProduct.OP, 2005, 2006),
         ],
     )
-    def test_lsq_noisy(self, alg8, product, seed, noise_seed):
+    def test_lsq_noisy(self, alg8, product, seed, noise_seed):  # noqa: ANN001, ANN201
         a_list, c_list, x_orig, x_mask = _setup_lsq_system(alg8, product, seed)
         union_mask = BladeMask.from_array(c_list)
         gen = np.random.default_rng(noise_seed)

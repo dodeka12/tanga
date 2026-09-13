@@ -28,28 +28,28 @@ from pytanga.viz.visualizer import DEFAULT_PORT, Visualizer
 
 
 class TestCameraConfig:
-    def test_camera3d_type(self):
+    def test_camera3d_type(self):  # noqa: ANN201
         c = CameraConfig3d()
         assert c.type == "3d"
         assert c.fov == 50.0
 
-    def test_camera2d_type(self):
+    def test_camera2d_type(self):  # noqa: ANN201
         c = CameraConfig2d(xmin=0.0, xmax=2.0, ymin=0.0, ymax=1.0)
         assert c.type == "2d"
         assert c.stretch == "fit"
         assert c.border_px == 0.0
 
-    def test_camera3d_to_dict_omits_none(self):
+    def test_camera3d_to_dict_omits_none(self):  # noqa: ANN201
         c = CameraConfig3d()
         d = c.to_dict()
         assert d == {"type": "3d", "fov": 50.0}
 
-    def test_camera3d_to_dict_partial(self):
+    def test_camera3d_to_dict_partial(self):  # noqa: ANN201
         c = CameraConfig3d(position=(1, 2, 3), fov=45)
         d = c.to_dict()
         assert d == {"type": "3d", "position": [1, 2, 3], "fov": 45}
 
-    def test_camera3d_to_dict_full(self):
+    def test_camera3d_to_dict_full(self):  # noqa: ANN201
         c = CameraConfig3d(
             position=(10, 6, 12),
             target=(0, 0, 0),
@@ -65,7 +65,7 @@ class TestCameraConfig:
         assert d["near"] == 0.1
         assert d["far"] == 200
 
-    def test_camera2d_to_dict(self):
+    def test_camera2d_to_dict(self):  # noqa: ANN201
         c = CameraConfig2d(xmin=-1.0, xmax=1.0, ymin=-2.0, ymax=2.0)
         d = c.to_dict()
         assert d == {
@@ -78,13 +78,13 @@ class TestCameraConfig:
             "border_px": 0.0,
         }
 
-    def test_json_serializable(self):
+    def test_json_serializable(self):  # noqa: ANN201
         json.dumps(CameraConfig3d(position=(1, 2, 3), fov=45).to_dict())
         json.dumps(CameraConfig2d(xmin=0, xmax=1, ymin=0, ymax=1).to_dict())
 
 
 class TestCameraBuilders:
-    def test_view2d_builder(self):
+    def test_view2d_builder(self):  # noqa: ANN201
         cam = get_camera_view2d(
             View2DConfig(xmin=0.0, xmax=4.0, ymin=0.0, ymax=3.0, border_world=1.0)
         )
@@ -98,7 +98,7 @@ class TestCameraBuilders:
         assert cam.stretch == "fit"
         assert cam.border_px == 0.0
 
-    def test_view3d_builder(self):
+    def test_view3d_builder(self):  # noqa: ANN201
         cam = get_camera_view3d(View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
         assert isinstance(cam, CameraConfig3d)
         assert cam.fov == 50.0
@@ -114,19 +114,19 @@ class TestCameraBuilders:
         assert not hasattr(cam, "extent_u")
         assert not hasattr(cam, "extent_v")
 
-    def test_view3d_explicit_has_no_extents(self):
+    def test_view3d_explicit_has_no_extents(self):  # noqa: ANN201
         cam = CameraConfig3d(position=(10, 6, 12), target=(0, 0, 0), fov=50)
         assert not hasattr(cam, "extent_u")
         assert not hasattr(cam, "extent_v")
         assert cam.position == (10, 6, 12)
 
-    def test_view3d_custom_up_passthrough(self):
+    def test_view3d_custom_up_passthrough(self):  # noqa: ANN201
         cam = get_camera_view3d(
             View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0, up=(0.2, 0.3, 1.0))
         )
         assert cam.up == (0.2, 0.3, 1.0)
 
-    def test_get_camera_dispatches(self):
+    def test_get_camera_dispatches(self):  # noqa: ANN201
         assert isinstance(
             get_camera(View2DConfig(xmin=0, xmax=1, ymin=0, ymax=1)), CameraConfig2d
         )
@@ -135,7 +135,7 @@ class TestCameraBuilders:
             CameraConfig3d,
         )
 
-    def test_get_camera_rejects_unknown(self):
+    def test_get_camera_rejects_unknown(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             get_camera(object())  # type: ignore[arg-type]
 
@@ -144,19 +144,19 @@ class TestCameraBuilders:
 
 
 class TestSceneConfig:
-    def test_defaults(self):
+    def test_defaults(self):  # noqa: ANN201
         sc = SceneConfig()
         assert sc.background_color is None
         assert sc.camera is None
 
-    def test_to_dict_includes_type(self):
+    def test_to_dict_includes_type(self):  # noqa: ANN201
         sc = SceneConfig()
         d = sc.to_dict()
         assert d["type"] == "scene_config"
         assert "camera" not in d  # None camera should be omitted
         assert "background_color" not in d  # None → follow theme
 
-    def test_to_dict_includes_scene_field(self):
+    def test_to_dict_includes_scene_field(self):  # noqa: ANN201
         # The frontend filters messages via `_forMyScene(msg)` which reads
         # `msg.scene`; scene_config must carry its scene name so a broadcast
         # title/camera update is only applied by the matching tab.
@@ -168,19 +168,19 @@ class TestSceneConfig:
         d_main = main.to_dict()
         assert d_main["scene"] == ""
 
-    def test_to_dict_omits_obsolete_keys(self):
+    def test_to_dict_omits_obsolete_keys(self):  # noqa: ANN201
         sc = SceneConfig()
         d = sc.to_dict()
         assert "space_extent" not in d
         assert "show_grid" not in d
         assert "show_axes" not in d
 
-    def test_to_dict_with_camera(self):
+    def test_to_dict_with_camera(self):  # noqa: ANN201
         sc = SceneConfig(camera=CameraConfig3d(fov=30))
         d = sc.to_dict()
         assert d["camera"] == {"type": "3d", "fov": 30}
 
-    def test_json_serializable(self):
+    def test_json_serializable(self):  # noqa: ANN201
         sc = SceneConfig(camera=CameraConfig3d(position=(1, 2, 3)))
         json.dumps(sc.to_dict())  # should not raise
 
@@ -189,7 +189,7 @@ class TestSceneConfig:
 
 
 class TestSceneObject:
-    def test_defaults(self):
+    def test_defaults(self):  # noqa: ANN201
         obj = SceneObject(id="abc", kind="Point")
         assert obj.id == "abc"
         assert obj.kind == "Point"
@@ -197,7 +197,7 @@ class TestSceneObject:
         assert obj.properties == {}
         assert obj.dirty is True
 
-    def test_custom_layer(self):
+    def test_custom_layer(self):  # noqa: ANN201
         obj = SceneObject(id="l1", layer="overlay", kind="label")
         assert obj.layer == "overlay"
 
@@ -206,20 +206,20 @@ class TestSceneObject:
 
 
 class TestScene:
-    def test_add_entity(self):
+    def test_add_entity(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(1, 2, 3))
         assert isinstance(eid, str)
         assert len(eid) == 8  # UUID8
         assert s.entity_count == 1
 
-    def test_add_generates_unique_ids(self):
+    def test_add_generates_unique_ids(self):  # noqa: ANN201
         s = Scene()
         id1 = s.add(Point(1, 2, 3))
         id2 = s.add(Point(4, 5, 6))
         assert id1 != id2
 
-    def test_flush_returns_new_entities(self):
+    def test_flush_returns_new_entities(self):  # noqa: ANN201
         s = Scene()
         s.add(Point(1, 0, 0))
         dirty, removed = s.flush()
@@ -228,14 +228,14 @@ class TestScene:
         assert dirty[0]["value"]["kind"] == "Point"
         assert removed == []
 
-    def test_flush_only_returns_dirty(self):
+    def test_flush_only_returns_dirty(self):  # noqa: ANN201
         s = Scene()
         s.add(Point(1, 0, 0))
         s.flush()
         dirty, _ = s.flush()
         assert dirty == []
 
-    def test_update_marks_dirty(self):
+    def test_update_marks_dirty(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0))
         s.flush()
@@ -243,7 +243,7 @@ class TestScene:
         dirty, _ = s.flush()
         assert len(dirty) == 1
 
-    def test_update_entity_replaces_geometry(self):
+    def test_update_entity_replaces_geometry(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(1, 0, 0))
         s.flush()  # consume the initial "full" dirty flag
@@ -252,7 +252,7 @@ class TestScene:
         assert dirty[0]["aspect"] == "content"
         assert dirty[0]["value"]["position"] == [5, 6, 7]
 
-    def test_new_node_with_transform_mutation_still_full(self):
+    def test_new_node_with_transform_mutation_still_full(self):  # noqa: ANN201
         # A node that has never reached the client must emit `full` even if a
         # sub-aspect (transform) is mutated before the first flush; otherwise
         # the client never learns about the node (regression for nested groups).
@@ -264,14 +264,14 @@ class TestScene:
         assert [p["aspect"] for p in patches] == ["full"]
         assert patches[0]["value"]["transform"]["position"] == [1, 0, 0]
 
-    def test_remove_then_flush(self):
+    def test_remove_then_flush(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0))
         s.remove(eid)
         dirty, removed = s.flush()
         assert eid in removed
 
-    def test_remove_also_removes_attached_labels(self):
+    def test_remove_also_removes_attached_labels(self):  # noqa: ANN201
         from pytanga.viz._label import Label
 
         s = Scene()
@@ -282,7 +282,7 @@ class TestScene:
         assert eid in removed
         assert lid in removed
 
-    def test_clear_then_flush(self):
+    def test_clear_then_flush(self):  # noqa: ANN201
         s = Scene()
         s.add(Point(0, 0, 0))
         s.add(Point(1, 1, 1))
@@ -290,19 +290,19 @@ class TestScene:
         _, removed = s.flush()
         assert len(removed) == 2
 
-    def test_full_state(self):
+    def test_full_state(self):  # noqa: ANN201
         s = Scene()
         s.add(Point(1, 0, 0))
         s.add(Point(0, 1, 0))
         state = s.full_state()
         assert len(state) == 2
 
-    def test_add_with_explicit_id(self):
+    def test_add_with_explicit_id(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(1, 2, 3), entity_id="custom_123")
         assert eid == "custom_123"
 
-    def test_add_label(self):
+    def test_add_label(self):  # noqa: ANN201
         from pytanga.viz._label import Label
 
         s = Scene()
@@ -318,12 +318,12 @@ class TestScene:
 
 
 class TestVisualizer:
-    def test_default_construction(self):
+    def test_default_construction(self):  # noqa: ANN201
         viz = Visualizer()
         assert viz._port == 8765
         assert viz._host == "localhost"
 
-    def test_animate_yields_frames_and_stops_on_shutdown(self, monkeypatch):
+    def test_animate_yields_frames_and_stops_on_shutdown(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         # Pretend the server is already running so animate() skips start().
         viz._server = object()
@@ -338,7 +338,7 @@ class TestVisualizer:
         with pytest.raises(StopIteration):
             next(gen)
 
-    def test_animate_starts_server_but_does_not_open_browser(self, monkeypatch):
+    def test_animate_starts_server_but_does_not_open_browser(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._open_browser = True  # simulate a script (would open a browser before)
         viz._shutdown_requested = threading.Event()
@@ -360,7 +360,7 @@ class TestVisualizer:
         assert "start_server" in calls
         assert "open_browser" not in calls
 
-    def test_call_is_new_shorthand(self):
+    def test_call_is_new_shorthand(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         ref = viz(Point(1, 2, 3), color="#ff4444")
         assert isinstance(ref, VizObjectRef)
@@ -370,7 +370,7 @@ class TestVisualizer:
         assert isinstance(ref2, VizObjectRef)
         assert ref2.id in viz._scenes[""]._objects
 
-    def test_animate_auto_clear_removes_added_objects(self, monkeypatch):
+    def test_animate_auto_clear_removes_added_objects(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._server = object()
         viz._shutdown_requested = threading.Event()
@@ -394,7 +394,7 @@ class TestVisualizer:
         # The pre-loop entity persists.
         assert baseline_id not in scene._removed_ids
 
-    def test_animate_auto_clear_empty_scene(self, monkeypatch):
+    def test_animate_auto_clear_empty_scene(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._server = object()
         viz._shutdown_requested = threading.Event()
@@ -408,7 +408,7 @@ class TestVisualizer:
         next(gen)  # frame 1: empty baseline → the addition is removed
         assert added_id in scene._removed_ids
 
-    def test_animate_auto_clear_flushes_before_removing(self, monkeypatch):
+    def test_animate_auto_clear_flushes_before_removing(self, monkeypatch):  # noqa: ANN001, ANN201
         # auto_clear must flush *before* marking objects for removal, so the
         # previous frame's additions actually reach the browser (an async,
         # fire-and-forget flush races with the synchronous remove() and the
@@ -427,18 +427,18 @@ class TestVisualizer:
 
         assert waits == [True]
 
-    def test_interrupted_false_without_server(self):
+    def test_interrupted_false_without_server(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         assert viz.interrupted() is False
 
-    def test_interrupted_tracks_shutdown_event(self):
+    def test_interrupted_tracks_shutdown_event(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._shutdown_requested = threading.Event()
         assert viz.interrupted() is False
         viz._shutdown_requested.set()
         assert viz.interrupted() is True
 
-    def test_interrupted_is_scoped_per_scene(self):
+    def test_interrupted_is_scoped_per_scene(self):  # noqa: ANN201
         import asyncio
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -449,7 +449,7 @@ class TestVisualizer:
         assert viz.interrupted("a") is True
         assert viz.interrupted("b") is False
 
-    def test_server_stop_sets_shutdown_and_all_scene_events(self):
+    def test_server_stop_sets_shutdown_and_all_scene_events(self):  # noqa: ANN201
         import asyncio
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -463,7 +463,7 @@ class TestVisualizer:
         assert viz._interrupt_events["a"].is_set()
         assert viz._interrupt_events["b"].is_set()
 
-    def test_server_stop_default_scope_is_scene(self):
+    def test_server_stop_default_scope_is_scene(self):  # noqa: ANN201
         import asyncio
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -476,7 +476,7 @@ class TestVisualizer:
         # The main scene is unaffected.
         assert viz.interrupted() is False
 
-    def test_enable_server_stop_key_stores_default_cfg(self):
+    def test_enable_server_stop_key_stores_default_cfg(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         # _server/_loop are None, so _push_animation_stop is a no-op here; we
         # verify the stored config only.
@@ -486,7 +486,7 @@ class TestVisualizer:
         assert cfg["key"] == "q"
         assert cfg["modifiers"] == ["ctrl"]
 
-    def test_enable_server_stop_key_false_disables(self):
+    def test_enable_server_stop_key_false_disables(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.enable_server_stop_key()
         viz.enable_server_stop_key(enabled=False)
@@ -496,7 +496,7 @@ class TestVisualizer:
         # Modifiers are preserved so re-enabling keeps the last config.
         assert cfg["modifiers"] == ["ctrl"]
 
-    def test_constructor_enable_server_stop_key_flag(self):
+    def test_constructor_enable_server_stop_key_flag(self):  # noqa: ANN201
         viz = Visualizer(
             add_default_axes=False, add_default_grid=False, enable_server_stop_key=True
         )
@@ -505,7 +505,7 @@ class TestVisualizer:
         assert cfg["key"] == "q"
         assert cfg["modifiers"] == ["ctrl"]
 
-    def test_scene_handle_enable_server_stop_key_scoped(self):
+    def test_scene_handle_enable_server_stop_key_scoped(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         handle = viz.scene("detail")
         handle.enable_server_stop_key()
@@ -513,7 +513,7 @@ class TestVisualizer:
         assert "" not in viz._server_stop_configs
         assert viz._server_stop_configs["detail"]["enabled"] is True
 
-    def test_scene_kwarg_enable_server_stop_key(self):
+    def test_scene_kwarg_enable_server_stop_key(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.scene("detail", enable_server_stop_key=True)
         cfg = viz._server_stop_configs["detail"]
@@ -521,12 +521,12 @@ class TestVisualizer:
         assert cfg["key"] == "q"
         assert cfg["modifiers"] == ["ctrl"]
 
-    def test_scene_kwarg_default_does_not_enable(self):
+    def test_scene_kwarg_default_does_not_enable(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.scene("detail")
         assert "detail" not in viz._server_stop_configs
 
-    def test_animate_clears_previous_scene_interrupt(self, monkeypatch):
+    def test_animate_clears_previous_scene_interrupt(self, monkeypatch):  # noqa: ANN001, ANN201
         # A browser "q" stop sets the per-scene interrupt; a fresh animate()
         # loop must clear it (but not the global shutdown event) so re-running
         # the cell restarts the animation.
@@ -544,34 +544,34 @@ class TestVisualizer:
         next(gen)  # entering the loop clears the interrupt and yields a frame
         assert viz.interrupted() is False
 
-    def test_normalize_stop_modifiers_accepts_enum_and_strings(self):
+    def test_normalize_stop_modifiers_accepts_enum_and_strings(self):  # noqa: ANN201
         from pytanga.viz import KeyModifier
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         result = viz._normalize_stop_modifiers([KeyModifier.CTRL, "shift"])
         assert result == [KeyModifier.CTRL, KeyModifier.SHIFT]
 
-    def test_normalize_stop_modifiers_rejects_unknown(self):
+    def test_normalize_stop_modifiers_rejects_unknown(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         with pytest.raises(ValueError):
             viz._normalize_stop_modifiers(["banana"])
 
-    def test_sleep_ms_completes_when_not_interrupted(self):
+    def test_sleep_ms_completes_when_not_interrupted(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._shutdown_requested = threading.Event()
         assert viz.sleep_ms(1) is True
 
-    def test_sleep_ms_completes_without_server(self):
+    def test_sleep_ms_completes_without_server(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         assert viz.sleep_ms(1) is True
 
-    def test_sleep_ms_returns_false_when_already_interrupted(self):
+    def test_sleep_ms_returns_false_when_already_interrupted(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._shutdown_requested = threading.Event()
         viz._shutdown_requested.set()
         assert viz.sleep_ms(1) is False
 
-    def test_sleep_ms_returns_false_when_interrupted_mid_wait(self):
+    def test_sleep_ms_returns_false_when_interrupted_mid_wait(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._shutdown_requested = threading.Event()
 
@@ -586,37 +586,37 @@ class TestVisualizer:
         thread.join()
         assert time.monotonic() - started < 1.0
 
-    def test_opns_kwarg_rejected(self):
+    def test_opns_kwarg_rejected(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             Visualizer(opns=False)
 
-    def test_start_server_defaults_to_standard_port(self, monkeypatch):
+    def test_start_server_defaults_to_standard_port(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
         viz.start_server()
         assert viz._port == DEFAULT_PORT
         assert viz._host == "localhost"
 
-    def test_start_server_explicit_port(self, monkeypatch):
+    def test_start_server_explicit_port(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
         viz.start_server(port=9000)
         assert viz._port == 9000
 
-    def test_start_server_zero_auto_picks_free_port(self, monkeypatch):
+    def test_start_server_zero_auto_picks_free_port(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
         viz.start_server(port=0)  # auto-pick a free port
         assert isinstance(viz._port, int)
         assert viz._port > 0
 
-    def test_start_server_negative_port_raises(self, monkeypatch):
+    def test_start_server_negative_port_raises(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
         with pytest.raises(ValueError):
             viz.start_server(port=-1)
 
-    def test_start_emits_deprecation_warning(self, monkeypatch):
+    def test_start_emits_deprecation_warning(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._open_browser = False
         calls: dict[str, bool] = {}
@@ -628,7 +628,7 @@ class TestVisualizer:
         assert result is True
         assert calls == {"start_server": True}
 
-    def test_stop_emits_deprecation_warning(self, monkeypatch):
+    def test_stop_emits_deprecation_warning(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         calls: dict[str, bool] = {}
         monkeypatch.setattr(
@@ -638,7 +638,7 @@ class TestVisualizer:
             viz.stop()
         assert calls == {"stop_server": True}
 
-    def test_show_serves_and_opens_browser(self, monkeypatch):
+    def test_show_serves_and_opens_browser(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         calls: list[str] = []
         monkeypatch.setattr(
@@ -653,7 +653,7 @@ class TestVisualizer:
         assert result is True
         assert calls == ["start_server", "open_browser"]
 
-    def test_show_forwards_host_and_port(self, monkeypatch):
+    def test_show_forwards_host_and_port(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         captured: dict[str, object] = {}
         monkeypatch.setattr(viz, "start_server", lambda **kw: captured.update(kw))
@@ -661,7 +661,7 @@ class TestVisualizer:
         viz.show(host="127.0.0.1", port=9000)
         assert captured == {"host": "127.0.0.1", "port": 9000}
 
-    def test_show_autodetects_jupyter(self, monkeypatch):
+    def test_show_autodetects_jupyter(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._jupyter = True
         calls: list[str] = []
@@ -675,7 +675,7 @@ class TestVisualizer:
         assert result is None
         assert calls == ["start_server", "display"]
 
-    def test_show_jupyter_true_delegates_to_display(self, monkeypatch):
+    def test_show_jupyter_true_delegates_to_display(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         calls: list[str] = []
         monkeypatch.setattr(
@@ -688,7 +688,7 @@ class TestVisualizer:
         assert result is None
         assert calls == ["start_server", "display"]
 
-    def test_show_jupyter_false_forces_browser(self, monkeypatch):
+    def test_show_jupyter_false_forces_browser(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._jupyter = True
         calls: list[str] = []
@@ -704,7 +704,7 @@ class TestVisualizer:
         assert result is True
         assert calls == ["start_server", "open_browser"]
 
-    def test_scene_handle_show_autodetects_jupyter(self, monkeypatch):
+    def test_scene_handle_show_autodetects_jupyter(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._jupyter = True
         handle = viz.scene("detail")
@@ -719,7 +719,7 @@ class TestVisualizer:
         assert result is None
         assert calls == ["start_server", "display"]
 
-    def test_scene_handle_show_jupyter_false_forces_browser(self, monkeypatch):
+    def test_scene_handle_show_jupyter_false_forces_browser(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._jupyter = True
         handle = viz.scene("detail")
@@ -736,14 +736,14 @@ class TestVisualizer:
         assert result is True
         assert calls == ["start_server", "open_browser"]
 
-    def test_run_emits_deprecation_warning(self, monkeypatch):
+    def test_run_emits_deprecation_warning(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "show", lambda **kw: None)
         monkeypatch.setattr(viz, "wait", lambda: None)
         with pytest.warns(DeprecationWarning):
             viz.run()
 
-    def test_wait_returns_after_shutdown_without_stopping_server(self, monkeypatch):
+    def test_wait_returns_after_shutdown_without_stopping_server(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_ensure_server_running", lambda: None)
         viz._shutdown_requested = threading.Event()
@@ -756,7 +756,7 @@ class TestVisualizer:
         # Server teardown is handled by the registered atexit hook, not wait().
         assert stopped == {}
 
-    def test_obsolete_kwargs_rejected(self):
+    def test_obsolete_kwargs_rejected(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             Visualizer(space_extent=25)
         with pytest.raises(TypeError):
@@ -764,19 +764,19 @@ class TestVisualizer:
         with pytest.raises(TypeError):
             Visualizer(show_axes=False)
 
-    def test_camera_config_forwarded(self):
+    def test_camera_config_forwarded(self):  # noqa: ANN201
         cam = CameraConfig3d(fov=35)
         viz = Visualizer(camera=cam)
         assert viz._config.camera is cam
 
-    def test_camera_accepts_view2d_config(self):
+    def test_camera_accepts_view2d_config(self):  # noqa: ANN201
         viz = Visualizer(camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1))
         cam = viz._config.camera
         assert isinstance(cam, CameraConfig2d)
         assert cam.xmin == 0.0
         assert cam.xmax == 2.0
 
-    def test_camera_accepts_view3d_config(self):
+    def test_camera_accepts_view3d_config(self):  # noqa: ANN201
         viz = Visualizer(camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
         cam = viz._config.camera
         assert isinstance(cam, CameraConfig3d)
@@ -785,37 +785,37 @@ class TestVisualizer:
         assert not hasattr(cam, "extent_u")
         assert not hasattr(cam, "extent_v")
 
-    def test_space_dim_deduced_from_view2d(self):
+    def test_space_dim_deduced_from_view2d(self):  # noqa: ANN201
         viz = Visualizer(camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1))
         assert viz._config.space_dim == 2
         assert viz._config.title == "Tanga 2D Viewer"
 
-    def test_space_dim_deduced_from_view3d(self):
+    def test_space_dim_deduced_from_view3d(self):  # noqa: ANN201
         viz = Visualizer(camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
         assert viz._config.space_dim == 3
 
-    def test_space_dim_explicit_overrides_camera(self):
+    def test_space_dim_explicit_overrides_camera(self):  # noqa: ANN201
         viz = Visualizer(
             camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1), space_dim=3
         )
         assert viz._config.space_dim == 3
 
-    def test_named_scene_space_dim_override(self):
+    def test_named_scene_space_dim_override(self):  # noqa: ANN201
         viz = Visualizer(space_dim=3, add_default_axes=False, add_default_grid=False)
         sub = viz.scene("sub", space_dim=2)
         assert sub.scene.config.space_dim == 2
 
-    def test_named_scene_inherits_space_dim(self):
+    def test_named_scene_inherits_space_dim(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
         sub = viz.add_scene("sub")
         assert sub.scene.config.space_dim == 2
 
-    def test_scene_space_dim_invalid(self):
+    def test_scene_space_dim_invalid(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         with pytest.raises(ValueError):
             viz.scene("sub", space_dim=4)
 
-    def test_set_space_dim_updates_config_and_clears_conflicting_camera(self):
+    def test_set_space_dim_updates_config_and_clears_conflicting_camera(self):  # noqa: ANN201
         viz = Visualizer(
             space_dim=2,
             camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1),
@@ -828,7 +828,7 @@ class TestVisualizer:
         # A 2D camera conflicts with 3D, so it is cleared for auto-fit.
         assert viz._config.camera is None
 
-    def test_set_space_dim_keeps_matching_camera(self):
+    def test_set_space_dim_keeps_matching_camera(self):  # noqa: ANN201
         viz = Visualizer(
             space_dim=2,
             camera=View2DConfig(xmin=0, xmax=2, ymin=0, ymax=1),
@@ -838,12 +838,12 @@ class TestVisualizer:
         viz.set_space_dim(2)
         assert isinstance(viz._config.camera, CameraConfig2d)
 
-    def test_set_space_dim_rejects_mismatched_camera(self):
+    def test_set_space_dim_rejects_mismatched_camera(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         with pytest.raises(ValueError):
             viz.set_space_dim(2, camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
 
-    def test_scene_handle_space_dim_accessor(self):
+    def test_scene_handle_space_dim_accessor(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
         handle = viz.scene("sub")
         assert handle.space_dim == 2
@@ -851,38 +851,38 @@ class TestVisualizer:
         assert handle.space_dim == 3
         assert viz._scenes["sub"].config.space_dim == 3
 
-    def test_add_entity_returns_id(self):
+    def test_add_entity_returns_id(self):  # noqa: ANN201
         viz = Visualizer()
         eid = viz.add(Point(1, 2, 3))
         assert isinstance(eid, str)
 
-    def test_add_with_color_normalizes(self):
+    def test_add_with_color_normalizes(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.5, 0.0))
         state = viz._scene.full_state()
         assert state[0]["color"] == "#ff8000"
 
-    def test_add_with_4tuple_extracts_opacity(self):
+    def test_add_with_4tuple_extracts_opacity(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3))
         state = viz._scene.full_state()
         assert state[0]["color"] == "#ff0000"
         assert state[0]["opacity"] == 0.3
 
-    def test_add_with_color_and_explicit_opacity(self):
+    def test_add_with_color_and_explicit_opacity(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3), color=(1.0, 0.0, 0.0, 0.3), opacity=0.8)
         state = viz._scene.full_state()
         assert state[0]["color"] == "#ff0000"
         assert state[0]["opacity"] == 0.8  # explicit wins
 
-    def test_add_with_hex_color_passthrough(self):
+    def test_add_with_hex_color_passthrough(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0), color="#abcdef")
         state = viz._scene.full_state()
         assert state[0]["color"] == "#abcdef"
 
-    def test_add_with_style(self):
+    def test_add_with_style(self):  # noqa: ANN201
         from pytanga.viz._styles import PointStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -891,7 +891,7 @@ class TestVisualizer:
         assert state[0]["style"]["size"] == 0.5
         assert state[0]["style"]["color"] == "#00ff00"
 
-    def test_update_with_color(self):
+    def test_update_with_color(self):  # noqa: ANN201
         viz = Visualizer()
         eid = viz.add(Point(0, 0, 0))
         viz._scene.flush()
@@ -900,7 +900,7 @@ class TestVisualizer:
         assert dirty[0]["aspect"] == "style"
         assert dirty[0]["value"]["style"]["color"] == "#00ff00"
 
-    def test_remove_delegates(self):
+    def test_remove_delegates(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         eid = viz.add(Point(0, 0, 0))
         viz.remove(eid)
@@ -908,7 +908,7 @@ class TestVisualizer:
         viz._scene.flush()
         assert viz._scene.entity_count == 0
 
-    def test_clear_delegates(self):
+    def test_clear_delegates(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(0, 0, 0))
         viz.add(Point(1, 1, 1))
@@ -917,7 +917,7 @@ class TestVisualizer:
         viz._scene.flush()
         assert viz._scene.entity_count == 0
 
-    def test_clear_readds_grid(self):
+    def test_clear_readds_grid(self):  # noqa: ANN201
         viz = Visualizer()
         viz.clear()
         viz._scene.flush()
@@ -928,7 +928,7 @@ class TestVisualizer:
         assert "Grid" in kinds
         assert "Axes3D" not in kinds
 
-    def test_clear_readds_axes_and_grid(self):
+    def test_clear_readds_axes_and_grid(self):  # noqa: ANN201
         viz = Visualizer()
         viz.clear()
         viz._scene.flush()
@@ -938,7 +938,7 @@ class TestVisualizer:
         assert "Grid" in kinds
         assert "Axes3D" in kinds
 
-    def test_server_methods_exist(self):
+    def test_server_methods_exist(self):  # noqa: ANN201
         """start/stop/flush/run are callable (server lifecycle)."""
         viz = Visualizer()
         assert callable(viz.start)
@@ -946,11 +946,11 @@ class TestVisualizer:
         assert callable(viz.flush)
         assert callable(viz.run)
 
-    def test_main_scene_property(self):
+    def test_main_scene_property(self):  # noqa: ANN201
         viz = Visualizer()
         assert isinstance(viz.main_scene, Scene)
 
-    def test_default_styles_accessible(self):
+    def test_default_styles_accessible(self):  # noqa: ANN201
         viz = Visualizer()
         from pytanga.geometry import Sphere
 
@@ -958,18 +958,18 @@ class TestVisualizer:
         assert viz.styles[Sphere].wireframe is True
         assert viz.styles[Sphere].opacity == 1.0
 
-    def test_set_default_color_via_styles(self):
+    def test_set_default_color_via_styles(self):  # noqa: ANN201
         viz = Visualizer()
         viz.set_default_color("point", "#00ff00")
         assert viz.styles["Point"].color == "#00ff00"
 
-    def test_set_default_color_rgba_sets_opacity_too(self):
+    def test_set_default_color_rgba_sets_opacity_too(self):  # noqa: ANN201
         viz = Visualizer()
         viz.set_default_color("point", (1.0, 0.0, 0.0, 0.3))
         assert viz.styles["Point"].color == "#ff0000"
         assert viz.styles["Point"].opacity == 0.3
 
-    def test_set_default_color_unknown_kind_raises(self):
+    def test_set_default_color_unknown_kind_raises(self):  # noqa: ANN201
         viz = Visualizer()
         with pytest.raises(ValueError, match="Unknown entity kind"):
             viz.set_default_color("banana", "#fff")
@@ -979,37 +979,37 @@ class TestVisualizer:
 
 
 class TestNormalizeColor:
-    def test_hex_passthrough(self):
+    def test_hex_passthrough(self):  # noqa: ANN201
         assert _normalize_color("#ff4444") == "#ff4444"
 
-    def test_rgb_tuple(self):
+    def test_rgb_tuple(self):  # noqa: ANN201
         assert _normalize_color((1.0, 0.0, 0.0)) == "#ff0000"
         assert _normalize_color((0.0, 1.0, 0.0)) == "#00ff00"
         assert _normalize_color((0.0, 0.0, 1.0)) == "#0000ff"
 
-    def test_rgba_tuple_returns_hex_and_alpha(self):
+    def test_rgba_tuple_returns_hex_and_alpha(self):  # noqa: ANN201
         result = _normalize_color((1.0, 0.0, 0.0, 0.5))
         assert isinstance(result, tuple)
         assert result[0] == "#ff0000"
         assert result[1] == 0.5
 
-    def test_clamping(self):
+    def test_clamping(self):  # noqa: ANN201
         result = _normalize_color((2.0, -1.0, 0.5))
         assert result == "#ff0080"
 
-    def test_fractional(self):
+    def test_fractional(self):  # noqa: ANN201
         result = _normalize_color((0.2, 0.4, 0.6))
         assert isinstance(result, str)
         assert result.startswith("#")
         assert len(result) == 7
 
-    def test_invalid_tuple_length_raises(self):
+    def test_invalid_tuple_length_raises(self):  # noqa: ANN201
         with pytest.raises(ValueError, match="3 or 4"):
             _normalize_color((1.0,))  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="3 or 4"):
             _normalize_color((1.0, 2.0, 3.0, 4.0, 5.0))  # type: ignore[arg-type]
 
-    def test_invalid_type_raises(self):
+    def test_invalid_type_raises(self):  # noqa: ANN201
         with pytest.raises(TypeError, match="str or tuple"):
             _normalize_color(123)  # type: ignore[arg-type]
 
@@ -1018,7 +1018,7 @@ class TestNormalizeColor:
 
 
 class TestLabelDefaults:
-    def test_label_style_defaults(self):
+    def test_label_style_defaults(self):  # noqa: ANN201
         from pytanga.viz._styles import LabelStyle
 
         ls = LabelStyle()
@@ -1030,7 +1030,7 @@ class TestLabelDefaults:
         assert ls.offset_2d is None
         assert ls.align is None
 
-    def test_point_label_aligns_top_left(self):
+    def test_point_label_aligns_top_left(self):  # noqa: ANN201
         from pytanga.geometry import Line, Point
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -1047,21 +1047,21 @@ class TestLabelDefaults:
         assert labels["L"]["align"] == [0.5, 0.5]
         assert labels["L"]["offset_2d"] == [0.0, 0.0]
 
-    def test_label_style_along_and_rotation_to_dict(self):
+    def test_label_style_along_and_rotation_to_dict(self):  # noqa: ANN201
         from pytanga.viz._styles import LabelStyle
 
         assert LabelStyle(along=0.5, rotation=45).to_dict()["along"] == 0.5
         assert LabelStyle(along=0.5, rotation=45).to_dict()["rotation"] == 45
         assert LabelStyle(along=(0.25, 0.5)).to_dict()["along"] == [0.25, 0.5]
 
-    def test_line_label_default_along(self):
+    def test_line_label_default_along(self):  # noqa: ANN201
         from pytanga.viz._style_dict import _make_default_label_styles
 
         styles = _make_default_label_styles()
         assert styles["Line"].along == 0.5
         assert styles["Sphere"].along is None
 
-    def test_label_serialization_strips_along_keeps_rotation(self):
+    def test_label_serialization_strips_along_keeps_rotation(self):  # noqa: ANN201
         from pytanga.geometry import Point
         from pytanga.viz._styles import LabelStyle
 
@@ -1074,7 +1074,7 @@ class TestLabelDefaults:
         assert "along" not in labels[0]["style"]
         assert labels[0]["style"]["rotation"] == 45
 
-    def test_default_label_styles_accepts_class_key(self):
+    def test_default_label_styles_accepts_class_key(self):  # noqa: ANN201
         from pytanga.geometry import Sphere
         from pytanga.viz._styles import LabelStyle
 
@@ -1082,14 +1082,14 @@ class TestLabelDefaults:
         viz.styles.label_kind[Sphere] = LabelStyle(font_size=18)
         assert viz.styles.label_kind["Sphere"].font_size == 18
 
-    def test_default_label_style_setter(self):
+    def test_default_label_style_setter(self):  # noqa: ANN201
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
         viz.styles.label_base = LabelStyle(font_size=22)
         assert viz.styles.label_base.font_size == 22
 
-    def test_default_label_styles_resolution(self):
+    def test_default_label_styles_resolution(self):  # noqa: ANN201
         from pytanga.geometry import Sphere
         from pytanga.viz._styles import LabelStyle
 
@@ -1103,7 +1103,7 @@ class TestLabelDefaults:
 
 
 class TestStyleDictMerge:
-    def test_merge_preserves_unset_fields(self):
+    def test_merge_preserves_unset_fields(self):  # noqa: ANN201
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
@@ -1113,7 +1113,7 @@ class TestStyleDictMerge:
         assert s.color == "#00ff00"
         assert s.opacity == original
 
-    def test_merge_accepts_class_key(self):
+    def test_merge_accepts_class_key(self):  # noqa: ANN201
         from pytanga.geometry import Sphere
         from pytanga.viz._styles import SphereStyle
 
@@ -1121,7 +1121,7 @@ class TestStyleDictMerge:
         viz.styles.kind.merge(Sphere, SphereStyle(opacity=0.9))
         assert viz.styles["Sphere"].opacity == 0.9
 
-    def test_setitem_is_full_replacement(self):
+    def test_setitem_is_full_replacement(self):  # noqa: ANN201
         from pytanga.viz._styles import SphereStyle
 
         viz = Visualizer()
@@ -1129,7 +1129,7 @@ class TestStyleDictMerge:
         s = viz.styles["Sphere"]
         assert s.opacity is None  # lost, not merged
 
-    def test_merge_shallow_replaces_nested(self):
+    def test_merge_shallow_replaces_nested(self):  # noqa: ANN201
         from pytanga.viz._styles import SphereStyle, TextureLabelStyle
 
         viz = Visualizer()
@@ -1143,7 +1143,7 @@ class TestStyleDictMerge:
         assert tl.offset_v is None
         assert tl.repeat_u is None
 
-    def test_merge_deep_preserves_nested(self):
+    def test_merge_deep_preserves_nested(self):  # noqa: ANN201
         from pytanga.viz._styles import SphereStyle, TextureLabelStyle
 
         viz = Visualizer()
@@ -1155,7 +1155,7 @@ class TestStyleDictMerge:
         tl = viz.styles["Sphere"].texture_label
         assert tl.font_size == 30
 
-    def test_label_merge_has_full_base(self):
+    def test_label_merge_has_full_base(self):  # noqa: ANN201
         from pytanga.viz._styles import LabelStyle
 
         viz = Visualizer()
@@ -1169,7 +1169,7 @@ class TestStyleDictMerge:
 
 
 class TestAxisSerialization:
-    def test_axis_serialization(self):
+    def test_axis_serialization(self):  # noqa: ANN201
         ent = Axis((0, 0, 0), (3, 0, 0), major_interval=1.0, label="X")
         d = serialize_entity(ent, "a1", kind="Axis")
         assert d["kind"] == "Axis"
@@ -1181,12 +1181,12 @@ class TestAxisSerialization:
         assert d["showValueLabels"] is True
         assert d["showTicks"] is True
 
-    def test_axis_minor_interval_omitted_when_none(self):
+    def test_axis_minor_interval_omitted_when_none(self):  # noqa: ANN201
         ent = Axis((0, 0, 0), (3, 0, 0))
         d = serialize_entity(ent, "a1", kind="Axis")
         assert "minorInterval" not in d
 
-    def test_axis_name_and_value_style_defaults(self):
+    def test_axis_name_and_value_style_defaults(self):  # noqa: ANN201
         ent = Axis((0, 0, 0), (3, 0, 0), label="X")
         d = serialize_entity(ent, "a1", kind="Axis")
         assert d["style"]["label_style"]["along"] == 0.5
@@ -1195,19 +1195,19 @@ class TestAxisSerialization:
         assert d["style"]["value_style"]["font_size"] == 12
         assert d["style"]["value_style"]["align"] == [0.5, 0.5]
 
-    def test_axis_ticks_serialization(self):
+    def test_axis_ticks_serialization(self):  # noqa: ANN201
         ent = Axis((0, 0, 0), (3, 0, 0), ticks=[(0.0, "1"), (1.0, "10")])
         d = serialize_entity(ent, "a1", kind="Axis")
         assert d["ticks"] == [[0.0, "1"], [1.0, "10"]]
 
-    def test_axis_ticks_omitted_when_none(self):
+    def test_axis_ticks_omitted_when_none(self):  # noqa: ANN201
         ent = Axis((0, 0, 0), (3, 0, 0))
         d = serialize_entity(ent, "a1", kind="Axis")
         assert "ticks" not in d
 
 
 class TestGridSerialization:
-    def test_grid_serialization(self):
+    def test_grid_serialization(self):  # noqa: ANN201
         g = Grid(range_u=(-5.0, 5.0), range_v=(-3.0, 3.0))
         d = serialize_entity(g, "g1", kind="Grid")
         assert d["kind"] == "Grid"
@@ -1217,19 +1217,19 @@ class TestGridSerialization:
         assert d["range_u"] == [-5.0, 5.0]
         assert d["range_v"] == [-3.0, 3.0]
 
-    def test_grid_asymmetric_ranges(self):
+    def test_grid_asymmetric_ranges(self):  # noqa: ANN201
         g = Grid(range_u=(-2.0, 3.0), range_v=(-1.0, 4.0))
         d = serialize_entity(g, "g2", kind="Grid")
         assert d["range_u"] == [-2.0, 3.0]
         assert d["range_v"] == [-1.0, 4.0]
 
-    def test_grid_line_positions_serialization(self):
+    def test_grid_line_positions_serialization(self):  # noqa: ANN201
         g = Grid(line_positions_u=[-2.0, 0.0, 2.0], line_positions_v=[-1.0, 1.0])
         d = serialize_entity(g, "g1", kind="Grid")
         assert d["line_positions_u"] == [-2.0, 0.0, 2.0]
         assert d["line_positions_v"] == [-1.0, 1.0]
 
-    def test_grid_line_positions_omitted_when_none(self):
+    def test_grid_line_positions_omitted_when_none(self):  # noqa: ANN201
         g = Grid(range_u=(-5.0, 5.0), range_v=(-3.0, 3.0))
         d = serialize_entity(g, "g1", kind="Grid")
         assert "line_positions_u" not in d
@@ -1237,7 +1237,7 @@ class TestGridSerialization:
 
 
 class TestAxesSerialization:
-    def test_axes2d_single_object_kind(self):
+    def test_axes2d_single_object_kind(self):  # noqa: ANN201
         from pytanga.viz import Axes2DStyle, AxisStyle
 
         a = Axes2D(range_u=(-2, 3), range_v=(-1, 2), labels=("X", "Y"))
@@ -1263,7 +1263,7 @@ class TestAxesSerialization:
         assert by_end[(0.0, 2.0, -0.5)]["color"] == "#00ff00"
         assert by_end[(0.0, -1.0, -0.5)]["color"] == "#00ff00"
 
-    def test_axes3d_per_direction_style(self):
+    def test_axes3d_per_direction_style(self):  # noqa: ANN201
         from pytanga.viz import Axes3DStyle, AxisStyle
 
         a = Axes3D(
@@ -1289,7 +1289,7 @@ class TestAxesSerialization:
         assert by_end[(0.0, 2.0, 0.0)]["color"] == "#00ff00"
         assert by_end[(0.0, 0.0, 2.0)]["color"] == "#0000ff"
 
-    def test_axes_sparse_axis_style_falls_back_to_axis_defaults(self):
+    def test_axes_sparse_axis_style_falls_back_to_axis_defaults(self):  # noqa: ANN201
         from pytanga.viz import Axes2DStyle, AxisStyle
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
@@ -1310,7 +1310,7 @@ class TestAxesSerialization:
         assert v_entry["style"]["opacity"] == 1.0
         assert v_entry["style"]["line_thickness"] == 2.0
 
-    def test_axes_without_style_uses_canonical_group(self):
+    def test_axes_without_style_uses_canonical_group(self):  # noqa: ANN201
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
         d = serialize_entity(a, "ax2", kind="Axes2D")
         entries = d["axes"]
@@ -1319,7 +1319,7 @@ class TestAxesSerialization:
             assert e["style"]["color"] == "#888888"
             assert e["style"]["opacity"] == 1.0
 
-    def test_axes_scalar_axis_style_applies_to_all_directions(self):
+    def test_axes_scalar_axis_style_applies_to_all_directions(self):  # noqa: ANN201
         from pytanga.viz import AxisStyle
 
         a = Axes3D(
@@ -1333,7 +1333,7 @@ class TestAxesSerialization:
         for e in entries:
             assert e["color"] == "#ff0000"
 
-    def test_axes_value_style_flows_into_entries(self):
+    def test_axes_value_style_flows_into_entries(self):  # noqa: ANN201
         from pytanga.viz import Axes2DStyle, AxisStyle, LabelStyle
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
@@ -1356,7 +1356,7 @@ class TestAxesSerialization:
         assert u_entry["style"]["value_style"]["align"] == [0.5, 0.0]
         assert v_entry["style"]["value_style"]["offset_2d"] == [3, 4]
 
-    def test_axes_value_style_rotation_flows_into_entries(self):
+    def test_axes_value_style_rotation_flows_into_entries(self):  # noqa: ANN201
         from pytanga.viz import Axes2DStyle, AxisStyle, LabelStyle
 
         a = Axes2D(range_u=(0, 1), range_v=(0, 1))
@@ -1375,7 +1375,7 @@ class TestAxesSerialization:
         assert entries[0]["style"]["value_style"]["rotation"] == 30
         assert entries[1]["style"]["value_style"]["rotation"] == -20
 
-    def test_axes_label_and_value_style_defaults(self):
+    def test_axes_label_and_value_style_defaults(self):  # noqa: ANN201
         a = Axes2D(range_u=(0, 1), range_v=(0, 1), labels=("X", "Y"))
         d = serialize_entity(a, "ax2", kind="Axes2D")
         for e in d["axes"]:
@@ -1385,7 +1385,7 @@ class TestAxesSerialization:
             assert e["style"]["value_style"]["font_size"] == 12
             assert e["style"]["value_style"]["align"] == [0.5, 0.5]
 
-    def test_axes_show_value_labels_passthrough(self):
+    def test_axes_show_value_labels_passthrough(self):  # noqa: ANN201
         a = Axes2D(range_u=(0, 1), range_v=(0, 1), show_value_labels=False)
         d = serialize_entity(a, "ax2", kind="Axes2D")
         for e in d["axes"]:
@@ -1393,7 +1393,7 @@ class TestAxesSerialization:
 
 
 class TestGridAxesStyles:
-    def test_grid_style_defaults(self):
+    def test_grid_style_defaults(self):  # noqa: ANN201
         from pytanga.viz import GridStyle
 
         s = GridStyle()
@@ -1402,7 +1402,7 @@ class TestGridAxesStyles:
         assert s.line_thickness is None
         assert s.to_dict() == {"style_type": "GridStyle"}
 
-    def test_axes_style_defaults(self):
+    def test_axes_style_defaults(self):  # noqa: ANN201
         from pytanga.viz import AxisStyle
 
         s = AxisStyle()
@@ -1413,7 +1413,7 @@ class TestGridAxesStyles:
         assert s.value_style is None
         assert s.to_dict() == {"style_type": "AxisStyle"}
 
-    def test_axis_style_label_fields(self):
+    def test_axis_style_label_fields(self):  # noqa: ANN201
         from pytanga.viz import AxisStyle, LabelStyle
 
         s = AxisStyle(
@@ -1433,7 +1433,7 @@ class TestGridAxesStyles:
             "align": [0.5, 0.5],
         }
 
-    def test_axes2d_style_defaults(self):
+    def test_axes2d_style_defaults(self):  # noqa: ANN201
         from pytanga.viz import Axes2DStyle, AxisStyle
 
         s = Axes2DStyle()
@@ -1444,7 +1444,7 @@ class TestGridAxesStyles:
         assert d["u"] == {"style_type": "AxisStyle"}
         assert d["v"] == {"style_type": "AxisStyle"}
 
-    def test_axes3d_style_defaults(self):
+    def test_axes3d_style_defaults(self):  # noqa: ANN201
         from pytanga.viz import Axes3DStyle, AxisStyle
 
         s = Axes3DStyle()
@@ -1453,7 +1453,7 @@ class TestGridAxesStyles:
         assert isinstance(s.w, AxisStyle)
         assert s.to_dict()["style_type"] == "Axes3DStyle"
 
-    def test_default_styles_registered(self):
+    def test_default_styles_registered(self):  # noqa: ANN201
         from pytanga.viz import Axes2DStyle, Axes3DStyle, AxisStyle, GridStyle
 
         viz = Visualizer()
@@ -1468,7 +1468,7 @@ class TestGridAxesStyles:
         assert viz.styles["Axis"].opacity == 1.0
         assert viz.styles["Axis"].line_thickness == 2.0
 
-    def test_grid_style_via_add(self):
+    def test_grid_style_via_add(self):  # noqa: ANN201
         from pytanga.viz import GridStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -1476,7 +1476,7 @@ class TestGridAxesStyles:
         state = viz._scene.full_state()
         assert state[0]["color"] == "#ff0000"
 
-    def test_axes_style_via_add(self):
+    def test_axes_style_via_add(self):  # noqa: ANN201
         from pytanga.viz import AxisStyle
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -1484,7 +1484,7 @@ class TestGridAxesStyles:
         state = viz._scene.full_state()
         assert state[0]["color"] == "#00ff00"
 
-    def test_grid_style_merge(self):
+    def test_grid_style_merge(self):  # noqa: ANN201
         from pytanga.viz import GridStyle
 
         viz = Visualizer()
@@ -1492,14 +1492,14 @@ class TestGridAxesStyles:
         assert viz.styles["Grid"].color == "#00ff00"
         assert viz.styles["Grid"].opacity == 0.8  # preserved
 
-    def test_grid_set_default_color(self):
+    def test_grid_set_default_color(self):  # noqa: ANN201
         viz = Visualizer()
         viz.set_default_color("grid", "#123456")
         assert viz.styles["Grid"].color == "#123456"
 
 
 class TestAxesExpansion:
-    def test_axes_3d_expands_to_three_axes(self):
+    def test_axes_3d_expands_to_three_axes(self):  # noqa: ANN201
         a = Axes3D(
             range_u=(0, 4), range_v=(0, 5), range_w=(0, 6), labels=("X", "Y", "Z")
         )
@@ -1510,7 +1510,7 @@ class TestAxesExpansion:
         assert axes[1].end == (0.0, 5.0, 0.0)
         assert axes[2].end == (0.0, 0.0, 6.0)
 
-    def test_axes_2d_expands_to_two_axes(self):
+    def test_axes_2d_expands_to_two_axes(self):  # noqa: ANN201
         a = Axes2D(range_u=(0, 3), range_v=(0, 4), labels=("X", "Y"))
         axes = a.expand()
         assert len(axes) == 2
@@ -1518,7 +1518,7 @@ class TestAxesExpansion:
         assert axes[0].end == (3.0, 0.0, -0.5)
         assert axes[1].end == (0.0, 4.0, -0.5)
 
-    def test_axes_2d_asymmetric_expands_to_four_axes(self):
+    def test_axes_2d_asymmetric_expands_to_four_axes(self):  # noqa: ANN201
         a = Axes2D(range_u=(-2.0, 3.0), range_v=(-1.0, 4.0), labels=("X", "Y"))
         axes = a.expand()
         assert len(axes) == 4
@@ -1536,7 +1536,7 @@ class TestAxesExpansion:
         assert axes[3].label is None
         assert axes[3].value_step == -1.0
 
-    def test_axes_3d_asymmetric_expands_correctly(self):
+    def test_axes_3d_asymmetric_expands_correctly(self):  # noqa: ANN201
         a = Axes3D(
             range_u=(-1.0, 2.0),
             range_v=(-2.0, 3.0),
@@ -1553,25 +1553,25 @@ class TestAxesExpansion:
         assert axes[4].end == (0.0, 0.0, 4.0)
         assert axes[4].label == "Z"
 
-    def test_axes_2d_origin_2d_padded_to_default_z(self):
+    def test_axes_2d_origin_2d_padded_to_default_z(self):  # noqa: ANN201
         a = Axes2D(origin=(1.0, 2.0), range_u=(0, 1), range_v=(0, 1))
         axes = a.expand()
         assert axes[0].start == (1.0, 2.0, -0.5)
 
-    def test_axes_2d_origin_3d_preserved(self):
+    def test_axes_2d_origin_3d_preserved(self):  # noqa: ANN201
         a = Axes2D(origin=(1.0, 2.0, 3.0), range_u=(0, 1), range_v=(0, 1))
         axes = a.expand()
         assert axes[0].start == (1.0, 2.0, 3.0)
 
-    def test_grid_origin_2d_padded_behind(self):
+    def test_grid_origin_2d_padded_behind(self):  # noqa: ANN201
         g = Grid(origin=(1.0, 2.0))
         assert g.origin == (1.0, 2.0, -1.0)
 
-    def test_grid_origin_3d_preserved(self):
+    def test_grid_origin_3d_preserved(self):  # noqa: ANN201
         g = Grid(origin=(1.0, 2.0, 3.0))
         assert g.origin == (1.0, 2.0, 3.0)
 
-    def test_axis_value_step_serialization(self):
+    def test_axis_value_step_serialization(self):  # noqa: ANN201
         ent = Axis((0, 0, 0), (-10, 0, 0), value_step=-1.0)
         d = serialize_entity(ent, "a1", kind="Axis")
         assert d["valueStep"] == -1.0
@@ -1582,16 +1582,16 @@ class TestAxesExpansion:
 
 
 class TestDefaultSceneObjects:
-    def _kinds(self, viz):
+    def _kinds(self, viz):  # noqa: ANN001, ANN202
         return sorted(o.kind for o in viz._scenes[""]._objects.values())
 
-    def test_defaults_added_eagerly(self):
+    def test_defaults_added_eagerly(self):  # noqa: ANN201
         viz = Visualizer()
         kinds = self._kinds(viz)
         assert "Axes3D" in kinds
         assert "Grid" in kinds
 
-    def test_full_state_sync_clears_dirty(self):
+    def test_full_state_sync_clears_dirty(self):  # noqa: ANN201
         viz = Visualizer()
         scene = viz._scenes[""]
         # A full-state sync snapshots everything and clears the dirty flags so
@@ -1602,29 +1602,29 @@ class TestDefaultSceneObjects:
         assert patches == []
         assert removed == []
 
-    def test_add_default_axes_false(self):
+    def test_add_default_axes_false(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False)
         kinds = self._kinds(viz)
         assert "Axes3D" not in kinds
         assert "Grid" in kinds
 
-    def test_add_default_grid_false(self):
+    def test_add_default_grid_false(self):  # noqa: ANN201
         viz = Visualizer(add_default_grid=False)
         kinds = self._kinds(viz)
         assert "Axes3D" in kinds
         assert "Grid" not in kinds
 
-    def test_both_defaults_disabled(self):
+    def test_both_defaults_disabled(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         assert self._kinds(viz) == []
 
-    def test_defaults_authoritative_with_custom_camera(self):
+    def test_defaults_authoritative_with_custom_camera(self):  # noqa: ANN201
         viz = Visualizer(camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
         kinds = self._kinds(viz)
         assert "Axes3D" in kinds
         assert "Grid" in kinds
 
-    def test_user_axes_in_addition_to_defaults(self):
+    def test_user_axes_in_addition_to_defaults(self):  # noqa: ANN201
         viz = Visualizer()
         viz.add(Axis((0, 0, 0), (1, 0, 0)))
         kinds = self._kinds(viz)
@@ -1632,7 +1632,7 @@ class TestDefaultSceneObjects:
         assert "Axes3D" in kinds
         assert "Grid" in kinds
 
-    def test_named_scene_opt_out(self):
+    def test_named_scene_opt_out(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=True, add_default_grid=True)
         viz.scene("plot", add_axes=False, add_grid=False)
         viz.scene("other")

@@ -9,7 +9,7 @@ import pytanga
 
 
 @pytest.fixture(scope="module")
-def alg():
+def alg():  # noqa: ANN201
     return pytanga.Algebra(dim=3, sig=0)
 
 
@@ -17,41 +17,41 @@ def alg():
 # G4 — norm2 / norm
 # ═══════════════════════════════════════════════════════════════════════════
 class TestNorm2:
-    def test_euclidean_norm2_equals_mag2(self, alg):
+    def test_euclidean_norm2_equals_mag2(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"e1": 3.0, "e2": 4.0, "e12": -1.0})
         assert mv.norm2() == pytest.approx(mv.mag2)
 
-    def test_norm2_scalar(self, alg):
+    def test_norm2_scalar(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"s": 7.0})
         assert mv.norm2() == pytest.approx(49.0)
 
-    def test_norm2_vector(self, alg):
+    def test_norm2_vector(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"e1": 1.0, "e2": 2.0, "e3": 3.0})
         assert mv.norm2() == pytest.approx(14.0)
 
-    def test_norm2_bivector(self, alg):
+    def test_norm2_bivector(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"e12": 2.0})
         assert mv.norm2() == pytest.approx(4.0)
 
-    def test_norm2_is_abs_of_qform(self, alg):
+    def test_norm2_is_abs_of_qform(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"e1": 3.0})
         assert mv.norm2() == pytest.approx(abs(mv.qform()))
 
-    def test_norm2_zero_is_zero(self, alg):
+    def test_norm2_zero_is_zero(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector()
         assert mv.norm2() == pytest.approx(0.0)
 
 
 class TestNorm:
-    def test_euclidean_norm_equals_mag(self, alg):
+    def test_euclidean_norm_equals_mag(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"e1": 3.0, "e2": 4.0})
         assert mv.norm() == pytest.approx(mv.mag)
 
-    def test_norm_scalar(self, alg):
+    def test_norm_scalar(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"s": 5.0})
         assert mv.norm() == pytest.approx(5.0)
 
-    def test_norm_is_sqrt_of_norm2(self, alg):
+    def test_norm_is_sqrt_of_norm2(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector({"e1": 1.0, "e2": 2.0, "e3": 3.0})
         assert mv.norm() == pytest.approx(math.sqrt(mv.norm2()))
 
@@ -60,12 +60,12 @@ class TestNorm:
 # G7 — exp (exponential of multivector)
 # ═══════════════════════════════════════════════════════════════════════════
 class TestExp:
-    def test_exp_zero_is_one(self, alg):
+    def test_exp_zero_is_one(self, alg):  # noqa: ANN001, ANN201
         mv = alg.multivector()
         result = mv.exp()
         assert result["s"] == pytest.approx(1.0)
 
-    def test_exp_bivector_rotor(self, alg):
+    def test_exp_bivector_rotor(self, alg):  # noqa: ANN001, ANN201
         # exp(α/2 * e12) for α=π/2 → cos(π/4) + sin(π/4)·e12 = 90° rotor
         angle = math.pi / 2
         half_angle = angle / 2
@@ -76,7 +76,7 @@ class TestExp:
         assert rotor["s"] == pytest.approx(expected_cos)
         assert rotor["e12"] == pytest.approx(expected_sin)
 
-    def test_exp_null_square_element(self, alg):
+    def test_exp_null_square_element(self, alg):  # noqa: ANN001, ANN201
         # A translator: e0 has e0² = 0 → exp(e0) = 1 + e0
         # In E3, we use e1 (which squares to 1, not 0). Let's use a test with
         # a known null square. Use a pure bivector scaled to make s=0? No…
@@ -89,20 +89,20 @@ class TestExp:
         assert result["s"] == pytest.approx(1.0, rel=1e-6)
         assert result["e12"] == pytest.approx(1e-10, rel=1e-6)
 
-    def test_exp_bivector_90deg(self, alg):
+    def test_exp_bivector_90deg(self, alg):  # noqa: ANN001, ANN201
         # exp(π/2 * e12) → cos(π/2) + sin(π/2)·e12 = e12
         bv = alg.multivector({"e12": math.pi / 2})
         result = bv.exp()
         assert result["s"] == pytest.approx(0.0, abs=1e-10)
         assert result["e12"] == pytest.approx(1.0)
 
-    def test_exp_raises_for_non_blade_like(self, alg):
+    def test_exp_raises_for_non_blade_like(self, alg):  # noqa: ANN001, ANN201
         # A = e1 + e123: e1*e123 = e23, e123*e1 = e23 → A² has non-scalar e23
         mv = alg.multivector({"e1": 1.0, "e123": 1.0})
         with pytest.raises(ValueError, match="scalar"):
             mv.exp()
 
-    def test_exp_bivector_satisfies_rotor_identity(self, alg):
+    def test_exp_bivector_satisfies_rotor_identity(self, alg):  # noqa: ANN001, ANN201
         # R = exp(B/2), verify R * ~R ≈ 1
         bv = alg.multivector({"e12": 0.5})  # arbitrary angle
         rotor = bv.exp()
@@ -113,7 +113,7 @@ class TestExp:
             if name != "s":
                 assert abs(v) < 1e-10, f"Non-scalar blade {name} = {v}"
 
-    def test_exp_positive_s_branch(self, alg):
+    def test_exp_positive_s_branch(self, alg):  # noqa: ANN001, ANN201
         # e1² = 1, so s>0 branch → exp(α·e1) = cosh(α) + sinh(α)·e1
         alpha = 0.5
         mv = alg.multivector({"e1": alpha})

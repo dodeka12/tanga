@@ -13,12 +13,12 @@ from pytanga.expression import Expression, Variable
 from pytanga.expression._labels import _reset_allocator
 
 
-def _close(a, b) -> bool:
+def _close(a, b) -> bool:  # noqa: ANN001
     return (a - b).mag < 1e-12
 
 
 class TestDataArrayBinding:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.N3 = BasisN3()
         self.bi_mask = BladeMask(self.N3, [self.N3.E12, self.N3.E13, self.N3.E23])
@@ -29,7 +29,7 @@ class TestDataArrayBinding:
         self.points = np.random.default_rng(0).random((100, 3))
         self.bi = self.N3({self.N3.E12: 1.0, self.N3.E13: 2.0, self.N3.E23: 3.0})
 
-    def _point_mv(self, coeffs):
+    def _point_mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.N3(
             {
                 self.N3.E1: float(coeffs[0]),
@@ -38,16 +38,16 @@ class TestDataArrayBinding:
             }
         )
 
-    def _expected(self, points):
+    def _expected(self, points):  # noqa: ANN001, ANN202
         return [self._point_mv(p) ^ (self.bi | self._point_mv(p)) for p in points]
 
-    def _sum_expected(self, points, scalars):
+    def _sum_expected(self, points, scalars):  # noqa: ANN001, ANN202
         total = self.N3({})
         for p, s in zip(points, scalars):
             total = total + self._expected([p])[0] * s
         return total
 
-    def test_dataarray_variable_binding(self):
+    def test_dataarray_variable_binding(self):  # noqa: ANN201
         partial = self.expr(
             x_pnt=DataArray(self.points, masks=("pnt_idx", self.point_mask))
         )
@@ -63,14 +63,14 @@ class TestDataArrayBinding:
         for r, e in zip(result, self._expected(self.points)):
             assert _close(r, e)
 
-    def test_dataarray_from_mvs(self):
+    def test_dataarray_from_mvs(self):  # noqa: ANN201
         mvs = [self._point_mv(p) for p in self.points]
         partial = self.expr(x_pnt=DataArray(mvs, masks=("pnt_idx", self.point_mask)))
         result = partial(bi_var=self.bi)
         for r, e in zip(result, self._expected(self.points)):
             assert _close(r, e)
 
-    def test_two_counting_axes(self):
+    def test_two_counting_axes(self):  # noqa: ANN201
         points = np.random.default_rng(1).random((100, 2, 3))
         partial = self.expr(
             x_pnt=DataArray(points, masks=("pnt_idx", "group_idx", self.point_mask))
@@ -86,7 +86,7 @@ class TestDataArrayBinding:
             for g, r in enumerate(row):
                 assert _close(r, self._expected(points[i, g][None, :])[0])
 
-    def test_counting_axis_sum(self):
+    def test_counting_axis_sum(self):  # noqa: ANN201
         partial = self.expr(
             x_pnt=DataArray(self.points, masks=("pnt_idx", self.point_mask))
         )
@@ -99,7 +99,7 @@ class TestDataArrayBinding:
         result = reduced(bi_var=self.bi)
         assert _close(result, self._sum_expected(self.points, scalars))
 
-    def test_counting_axis_multiply(self):
+    def test_counting_axis_multiply(self):  # noqa: ANN201
         partial = self.expr(
             x_pnt=DataArray(self.points, masks=("pnt_idx", self.point_mask))
         )
@@ -122,7 +122,7 @@ class TestDataArrayBinding:
             for r, e in zip(result, expected):
                 assert _close(r, e)
 
-    def test_counting_axis_1d_implicit_sum(self):
+    def test_counting_axis_1d_implicit_sum(self):  # noqa: ANN201
         partial = self.expr(
             x_pnt=DataArray(self.points, masks=("pnt_idx", self.point_mask))
         )
@@ -133,7 +133,7 @@ class TestDataArrayBinding:
         assert _close(a(bi_var=self.bi), b(bi_var=self.bi))
         assert _close(a(bi_var=self.bi), c(bi_var=self.bi))
 
-    def test_contract_one_keep_one(self):
+    def test_contract_one_keep_one(self):  # noqa: ANN201
         points = np.random.default_rng(1).random((100, 2, 3))
         scalars2d = np.random.default_rng(2).random((100, 2))
         partial = self.expr(
@@ -162,7 +162,7 @@ class TestDataArrayBinding:
                     )
                 assert _close(result[g], expected)
 
-    def test_contract_multiply_keep_one(self):
+    def test_contract_multiply_keep_one(self):  # noqa: ANN201
         points = np.random.default_rng(1).random((100, 2, 3))
         scalars2d = np.random.default_rng(2).random((100, 2))
         partial = self.expr(
@@ -181,7 +181,7 @@ class TestDataArrayBinding:
                 expected = self._expected([points[i, g]])[0] * scalars2d[i, g]
                 assert _close(row[g], expected)
 
-    def test_variable_binding_errors(self):
+    def test_variable_binding_errors(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             self.expr(x_pnt=DataArray(self.points, masks=("pnt_idx", "group_idx")))
 
@@ -191,7 +191,7 @@ class TestDataArrayBinding:
         with pytest.raises(ValueError):
             self.expr(x_pnt=DataArray(self.points, masks=("k", self.point_mask)))
 
-    def test_reduction_errors(self):
+    def test_reduction_errors(self):  # noqa: ANN201
         partial = self.expr(
             x_pnt=DataArray(self.points, masks=("pnt_idx", self.point_mask))
         )

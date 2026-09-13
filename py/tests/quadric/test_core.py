@@ -34,21 +34,21 @@ _NEEDS_BUILD = pytest.mark.skipif(
 )
 
 
-def _coeff_mv(basis, coeffs):
+def _coeff_mv(basis, coeffs):  # noqa: ANN001, ANN202
     """Build the grade-1 MV for a coeff tuple (b1…bN order)."""
     return basis.multivector({1 << i: c for i, c in enumerate(coeffs)})
 
 
-def _homogeneous(point):
+def _homogeneous(point):  # noqa: ANN001, ANN202
     return np.array([*point, 1.0], dtype=float)
 
 
-def _quadratic_value(matrix, point):
+def _quadratic_value(matrix, point):  # noqa: ANN001, ANN202
     p = _homogeneous(point)
     return float(p @ matrix @ p)
 
 
-def _assert_same_up_to_scale(a, b, tol=1e-8):
+def _assert_same_up_to_scale(a, b, tol=1e-8):  # noqa: ANN001, ANN202
     a = np.asarray(a, dtype=float)
     b = np.asarray(b, dtype=float)
     a = a / np.linalg.norm(a)
@@ -65,35 +65,35 @@ def _assert_same_up_to_scale(a, b, tol=1e-8):
 
 @_NEEDS_BUILD
 class TestBases:
-    def test_q2_dim_sig(self):
+    def test_q2_dim_sig(self):  # noqa: ANN201
         b = BasisQ2()
         assert b.dim == 6
         assert b.sig == 0
 
-    def test_q3_dim_sig(self):
+    def test_q3_dim_sig(self):  # noqa: ANN201
         b = BasisQ3()
         assert b.dim == 10
         assert b.sig == 0
 
-    def test_q2_named_blades(self):
+    def test_q2_named_blades(self):  # noqa: ANN201
         b = BasisQ2()
         for name in ("b1", "b2", "b3", "b4", "b5", "b6"):
             v = getattr(b, name)
             assert (v * v).scalar == pytest.approx(1.0)
 
-    def test_q3_named_blades(self):
+    def test_q3_named_blades(self):  # noqa: ANN201
         b = BasisQ3()
         names = ("b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10")
         for name in names:
             v = getattr(b, name)
             assert (v * v).scalar == pytest.approx(1.0)
 
-    def test_q2_pseudoscalar(self):
+    def test_q2_pseudoscalar(self):  # noqa: ANN201
         b = BasisQ2()
         assert b.pseudoscalar_id == 63  # 1|2|4|8|16|32
         assert b.I[63] == pytest.approx(1.0)
 
-    def test_q3_pseudoscalar(self):
+    def test_q3_pseudoscalar(self):  # noqa: ANN201
         b = BasisQ3()
         assert b.pseudoscalar_id == 1023  # 2^10 - 1
         assert b.I[1023] == pytest.approx(1.0)
@@ -106,30 +106,30 @@ class TestBases:
 
 @_NEEDS_BUILD
 class TestMapping:
-    def test_q2_round_trip(self):
+    def test_q2_round_trip(self):  # noqa: ANN201
         coeffs = (1.0, -2.0, 3.0, 4.0, -5.0, 6.0)
         assert to_coeffs(from_coeffs(coeffs)) == pytest.approx(coeffs)
 
-    def test_q3_round_trip(self):
+    def test_q3_round_trip(self):  # noqa: ANN201
         coeffs = tuple(float(i) for i in range(1, 11))
         assert to_coeffs(from_coeffs(coeffs)) == pytest.approx(coeffs)
 
-    def test_to_coeffs_accepts_nested_lists(self):
+    def test_to_coeffs_accepts_nested_lists(self):  # noqa: ANN201
         a = [[1.0, 0.0, 2.0], [0.0, 3.0, 4.0], [2.0, 4.0, 5.0]]
         c = to_coeffs(a)
         s = np.sqrt(2.0) / 2.0
         assert c == pytest.approx((2.0, 4.0, 5.0 * s, 1.0 * s, 3.0 * s, 0.0))
 
-    def test_to_coeffs_rejects_unsupported_size(self):
+    def test_to_coeffs_rejects_unsupported_size(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             to_coeffs([[1.0, 0.0], [0.0, 1.0]])
 
-    def test_to_coeffs_rejects_nonsymmetric(self):
+    def test_to_coeffs_rejects_nonsymmetric(self):  # noqa: ANN201
         a = [[1.0, 2.0, 3.0], [2.0, 4.0, 5.0], [9.0, 5.0, 6.0]]
         with pytest.raises(ValueError):
             to_coeffs(a)
 
-    def test_from_coeffs_rejects_wrong_length(self):
+    def test_from_coeffs_rejects_wrong_length(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             from_coeffs((1.0, 2.0, 3.0))
 
@@ -141,7 +141,7 @@ class TestMapping:
 
 @_NEEDS_BUILD
 class TestEmbedding:
-    def test_q2_incidence(self):
+    def test_q2_incidence(self):  # noqa: ANN201
         b = BasisQ2()
         a = np.array([[2.0, 1.0, 0.5], [1.0, 3.0, -0.5], [0.5, -0.5, 1.0]])
         coeff_mv = _coeff_mv(b, to_coeffs(a))
@@ -150,7 +150,7 @@ class TestEmbedding:
             rhs = 0.5 * _quadratic_value(a, (x, y))
             assert lhs == pytest.approx(rhs)
 
-    def test_q3_incidence(self):
+    def test_q3_incidence(self):  # noqa: ANN201
         b = BasisQ3()
         q = np.array(
             [
@@ -174,7 +174,7 @@ class TestEmbedding:
 
 @_NEEDS_BUILD
 class TestBuildFromPoints:
-    def test_conic_dual_matches_svd(self):
+    def test_conic_dual_matches_svd(self):  # noqa: ANN201
         b = BasisQ2()
         points = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (2.0, 2.0), (3.0, 1.0)]
         a_dual = conic_from_points(b, points)
@@ -183,7 +183,7 @@ class TestBuildFromPoints:
         for p in points:
             assert _quadratic_value(a_dual, p) == pytest.approx(0.0, abs=1e-8)
 
-    def test_quadric_dual_matches_svd(self):
+    def test_quadric_dual_matches_svd(self):  # noqa: ANN201
         b = BasisQ3()
         points = [
             (0.1, -0.3, 0.7),
@@ -202,7 +202,7 @@ class TestBuildFromPoints:
         for p in points:
             assert _quadratic_value(q_dual, p) == pytest.approx(0.0, abs=1e-8)
 
-    def test_line_from_points_contains_both_points(self):
+    def test_line_from_points_contains_both_points(self):  # noqa: ANN201
         b = BasisQ2()
         a = (1.0, 2.0)
         c = (-3.0, 0.5)

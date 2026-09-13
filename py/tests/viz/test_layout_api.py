@@ -21,12 +21,12 @@ from pytanga.viz import (
 from pytanga.viz.views import serialize_layout
 
 
-def _layout():
+def _layout():  # noqa: ANN202
     return SplitView("horizontal", [SceneView("a"), SceneView("b")])
 
 
 class TestSetLayout:
-    def test_register_and_serialize(self):
+    def test_register_and_serialize(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         layout = _layout()
         name = viz.set_layout(layout, name="demo")
@@ -34,11 +34,11 @@ class TestSetLayout:
         assert viz._layouts["demo"].base is layout
         assert viz._layouts_serialized["demo"] == serialize_layout(layout, name="demo")
 
-    def test_default_name(self):
+    def test_default_name(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         assert viz.set_layout(_layout()) == ""
 
-    def test_overwrite(self):
+    def test_overwrite(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         a = SceneView("a")
         b = SceneView("b")
@@ -46,22 +46,22 @@ class TestSetLayout:
         viz.set_layout(b, name="x")
         assert viz._layouts["x"].base is b
 
-    def test_rejects_non_view(self):
+    def test_rejects_non_view(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         with pytest.raises(TypeError, match="must be a View"):
             viz.set_layout("nope")
 
-    def test_layout_serialized_for_missing(self):
+    def test_layout_serialized_for_missing(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         assert viz._layout_serialized_for("missing") is None
 
 
 class TestControlHandlerRegistration:
     @staticmethod
-    async def _noop(value, event):
+    async def _noop(value, event):  # noqa: ANN001, ANN205
         return None
 
-    def test_slider_handler_registered(self):
+    def test_slider_handler_registered(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         layout = SplitView(
             "horizontal",
@@ -70,17 +70,17 @@ class TestControlHandlerRegistration:
         viz.set_layout(layout)
         assert viz._handler_registry.get("s1") is self._noop
 
-    def test_button_handler_registered(self):
+    def test_button_handler_registered(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(GroupView("g", [ButtonView("b1", on_click=self._noop)]))
         assert viz._handler_registry.get("b1", "click") is self._noop
 
-    def test_no_handler_not_registered(self):
+    def test_no_handler_not_registered(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(GroupView("g", [ButtonView("b1")]))
         assert viz._handler_registry.get("b1") is None
 
-    def test_overwrite_removes_stale_handler(self):
+    def test_overwrite_removes_stale_handler(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(GroupView("g", [ButtonView("b1", on_click=self._noop)]))
         assert viz._handler_registry.get("b1", "click") is self._noop
@@ -89,7 +89,7 @@ class TestControlHandlerRegistration:
 
 
 class TestSetValuePush:
-    def test_view_set_value_pushes_control_update(self, monkeypatch):
+    def test_view_set_value_pushes_control_update(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         view = SliderView("radius", value=1.0)
         viz.set_layout(view)
@@ -114,7 +114,7 @@ class TestSetValuePush:
             "value": 3.5,
         }
 
-    def test_view_set_value_unmounted_only_mutates(self):
+    def test_view_set_value_unmounted_only_mutates(self):  # noqa: ANN201
         view = SliderView("radius", value=1.0)
         assert view._push is None  # not yet mounted → no push callback
         view.set_value(3.5)
@@ -122,7 +122,7 @@ class TestSetValuePush:
 
 
 class TestShowLayout:
-    def test_show_layout_registers_and_opens(self, monkeypatch):
+    def test_show_layout_registers_and_opens(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         layout = _layout()
         opened = {}
@@ -140,7 +140,7 @@ class TestShowLayout:
         assert viz._layouts["demo"].base is layout
         assert opened["name"] == "demo"
 
-    def test_show_layout_default_name(self, monkeypatch):
+    def test_show_layout_default_name(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         opened = {}
         monkeypatch.setattr(viz, "_server", object())
@@ -158,7 +158,7 @@ class TestShowLayout:
 
 
 class TestOpenLayoutBrowser:
-    def test_builds_layout_url(self, monkeypatch):
+    def test_builds_layout_url(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._server = object()
         captured = {}
@@ -174,20 +174,20 @@ class TestOpenLayoutBrowser:
 
 
 class _FakeServer:
-    def __init__(self):
+    def __init__(self):  # noqa: ANN204
         self.captured = []
 
-    async def push_raw(self, data):
+    async def push_raw(self, data):  # noqa: ANN001, ANN202
         self.captured.append(data)
 
 
 class TestSetViewCamera:
-    def test_rejects_non_scene_view(self):
+    def test_rejects_non_scene_view(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         with pytest.raises(TypeError, match="must be a SceneView"):
             viz.set_view_camera(ButtonView("b"), CameraConfig3d())
 
-    def test_updates_view_and_pushes_message(self, monkeypatch):
+    def test_updates_view_and_pushes_message(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         view = SceneView("main")
         viz.set_layout(SplitView("horizontal", [view, SceneView("side")]))
@@ -211,17 +211,17 @@ class TestSetViewCamera:
 
 
 class TestMenuApi:
-    def test_serialize_layout_overlay_omitted_when_empty(self):
+    def test_serialize_layout_overlay_omitted_when_empty(self):  # noqa: ANN201
         node = serialize_layout(SceneView("a"))
         assert "overlay" not in node
 
-    def test_serialize_layout_overlay_included(self):
+    def test_serialize_layout_overlay_included(self):  # noqa: ANN201
         node = serialize_layout(SceneView("a"), overlay=[MenuView("Menu")])
         assert node["overlay"][0]["type"] == "menu"
 
 
 class TestSceneLayoutFor:
-    def test_base_scene_returns_stack_wrapping_main_scene_view(self):
+    def test_base_scene_returns_stack_wrapping_main_scene_view(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         payload = viz._scene_layout_for("")
         assert payload["type"] == "view_layout"
@@ -230,7 +230,7 @@ class TestSceneLayoutFor:
         assert scene_node["type"] == "scene_view"
         assert scene_node["scene"] == ""
 
-    def test_named_scene_wraps_its_scene_view(self):
+    def test_named_scene_wraps_its_scene_view(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.scene("detail")
         payload = viz._scene_layout_for("detail")
@@ -242,19 +242,19 @@ class TestSceneLayoutFor:
 
 
 class _FakeLayoutServer:
-    def __init__(self, sessions):
+    def __init__(self, sessions):  # noqa: ANN001, ANN204
         self._sessions = sessions
         self.pushed = []
 
-    def get_browser_sessions(self):
+    def get_browser_sessions(self):  # noqa: ANN202
         return list(self._sessions)
 
-    async def push_layout_to_session(self, browser_id, payload):
+    async def push_layout_to_session(self, browser_id, payload):  # noqa: ANN001, ANN202
         self.pushed.append((browser_id, payload))
 
 
 class TestPushLayoutUpdates:
-    def test_single_scene_session_gets_scene_layout(self):
+    def test_single_scene_session_gets_scene_layout(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.scene("detail")
         viz._server = _FakeLayoutServer(
@@ -265,7 +265,7 @@ class TestPushLayoutUpdates:
         assert browser_id == "b1"
         assert payload["root"]["children"][0]["scene"] == "detail"
 
-    def test_layout_session_gets_named_layout(self):
+    def test_layout_session_gets_named_layout(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(SceneView("a"), name="demo")
         viz._server = _FakeLayoutServer([{"id": "b1", "scene": "a", "layout": "demo"}])
@@ -275,7 +275,7 @@ class TestPushLayoutUpdates:
         assert payload["name"] == "demo"
 
 
-def test_layout_host_getitem_base_overlay():
+def test_layout_host_getitem_base_overlay():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     root = SceneView("a")
     viz.set_layout(root, name="demo")
@@ -284,7 +284,7 @@ def test_layout_host_getitem_base_overlay():
     assert viz._layout.overlay is viz._layout[""].overlay
 
 
-def test_add_layout_conflict_raises():
+def test_add_layout_conflict_raises():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.add_scene("a")
     with pytest.raises(ValueError):
@@ -293,14 +293,14 @@ def test_add_layout_conflict_raises():
     assert viz._layout["ab"].base.scene == "a"
 
 
-def test_add_polymorphic_view_goes_to_overlay():
+def test_add_polymorphic_view_goes_to_overlay():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     group = GroupView("panel", [SliderView("s")])
     assert viz.add(group) is None
     assert group in viz._layout._global_overlay
 
 
-def test_add_global_overlay_sends_granular_define(monkeypatch):
+def test_add_global_overlay_sends_granular_define(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     sent = []
     monkeypatch.setattr(viz._transport, "send", lambda msg: sent.append(msg))
@@ -312,7 +312,7 @@ def test_add_global_overlay_sends_granular_define(monkeypatch):
     assert viz._layout._layouts_serialized[""]["overlay"][0]["type"] == "group"
 
 
-def test_add_polymorphic_entity_goes_to_scene():
+def test_add_polymorphic_entity_goes_to_scene():  # noqa: ANN201
     from pytanga.geometry.entities import Point
 
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -320,14 +320,14 @@ def test_add_polymorphic_entity_goes_to_scene():
     assert eid in viz._layout.scene("")._objects
 
 
-def test_views_have_stable_unique_ids():
+def test_views_have_stable_unique_ids():  # noqa: ANN201
     a = GroupView("a")
     b = GroupView("b")
     assert a.id and b.id
     assert a.id != b.id
 
 
-def test_remove_global_overlay_sends_granular_remove(monkeypatch):
+def test_remove_global_overlay_sends_granular_remove(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     group = GroupView("panel", [SliderView("s")])
     viz.add(group)
@@ -342,7 +342,7 @@ def test_remove_global_overlay_sends_granular_remove(monkeypatch):
     assert "overlay" not in viz._layout._layouts_serialized[""]
 
 
-def test_remove_global_overlay_unknown_id_is_noop(monkeypatch):
+def test_remove_global_overlay_unknown_id_is_noop(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.add(GroupView("panel", [SliderView("s")]))
 

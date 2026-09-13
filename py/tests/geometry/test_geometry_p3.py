@@ -24,7 +24,7 @@ from pytanga.geometry.operators import (
 
 
 @pytest.fixture(scope="module")
-def basis_p3():
+def basis_p3():  # noqa: ANN201
     return BasisP3()
 
 
@@ -33,7 +33,7 @@ def basis_p3():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_point_round_trip(basis_p3):
+def test_create_point_round_trip(basis_p3):  # noqa: ANN001, ANN201
     """create_entity(Point(1,2,3)) → analyze OPNS → Point(1,2,3)."""
     mv = create_entity(basis_p3, Point(1, 2, 3))
     result = analyze_entity(mv)
@@ -48,7 +48,7 @@ def test_create_point_round_trip(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_direction_round_trip(basis_p3):
+def test_create_direction_round_trip(basis_p3):  # noqa: ANN001, ANN201
     """create_entity(Direction(1,0,0)) → analyze → Direction(1,0,0)."""
     mv = create_entity(basis_p3, Direction(1, 0, 0))
     result = analyze_entity(mv)
@@ -63,7 +63,7 @@ def test_create_direction_round_trip(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_line_through_origin(basis_p3):
+def test_create_line_through_origin(basis_p3):  # noqa: ANN001, ANN201
     """Line through origin → analyze returns correct direction."""
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
     mv = create_entity(basis_p3, line)
@@ -74,7 +74,7 @@ def test_create_line_through_origin(basis_p3):
     assert result.origin.x == pytest.approx(0, abs=1e-10)
 
 
-def test_create_line_offset(basis_p3):
+def test_create_line_offset(basis_p3):  # noqa: ANN001, ANN201
     """Line offset from origin → analyze returns correct direction.
 
     Note: blade_factorize orthogonalizes factors, so the extracted
@@ -94,7 +94,7 @@ def test_create_line_offset(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_plane_opns_round_trip_xy_plane(basis_p3):
+def test_create_plane_opns_round_trip_xy_plane(basis_p3):  # noqa: ANN001, ANN201
     """Plane z=5, normal z → OPNS round-trip."""
     plane = Plane(point=Point(0, 0, 5), normal=Direction(0, 0, 1))
     mv = create_entity(basis_p3, plane)
@@ -105,7 +105,7 @@ def test_create_plane_opns_round_trip_xy_plane(basis_p3):
     assert result.point.z == pytest.approx(5, abs=1e-6)
 
 
-def test_create_plane_opns_round_trip_diagonal(basis_p3):
+def test_create_plane_opns_round_trip_diagonal(basis_p3):  # noqa: ANN001, ANN201
     """Plane x+y+z=1 → OPNS round-trip."""
     plane = Plane(point=Point(1, 0, 0), normal=Direction(1, 0, 1))
     mv = create_entity(basis_p3, plane)
@@ -129,7 +129,7 @@ def test_create_plane_opns_round_trip_diagonal(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_plane_ipns_round_trip(basis_p3, monkeypatch):
+def test_create_plane_ipns_round_trip(basis_p3, monkeypatch):  # noqa: ANN001, ANN201
     """Plane z=4, normal z → IPNS round-trip."""
     monkeypatch.setattr(basis_p3, "opns", False)
     plane = Plane(point=Point(0, 0, 4), normal=Direction(0, 0, 1))
@@ -145,7 +145,7 @@ def test_create_plane_ipns_round_trip(basis_p3, monkeypatch):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_space_round_trip(basis_p3):
+def test_create_space_round_trip(basis_p3):  # noqa: ANN001, ANN201
     mv = create_entity(basis_p3, Space(scale=2.0))
     result = analyze_entity(mv)
     assert isinstance(result, Space)
@@ -174,7 +174,7 @@ from pytanga.geometry.operators import (
         (HPoint, (Point(0, 0, 0),)),
     ],
 )
-def test_n3_entity_raises(basis_p3, entity_cls, args):
+def test_n3_entity_raises(basis_p3, entity_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises(ValueError, match="N3"):
         create_entity(basis_p3, entity_cls(*args))
 
@@ -188,7 +188,7 @@ def test_n3_entity_raises(basis_p3, entity_cls, args):
         (Motor, (Rotor(0, Direction(1, 0, 0)), Translator(Direction(1, 0, 0)))),
     ],
 )
-def test_n3_operator_raises(basis_p3, op_cls, args):
+def test_n3_operator_raises(basis_p3, op_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises(ValueError, match="N3"):
         create_operator(basis_p3, op_cls(*args))
 
@@ -198,7 +198,7 @@ def test_n3_operator_raises(basis_p3, op_cls, args):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_reflection_line_creation_is_grade_2(basis_p3):
+def test_reflection_line_creation_is_grade_2(basis_p3):  # noqa: ANN001, ANN201
     """create_reflection_line returns grade-2 bivector with e₄ terms."""
     mv = create_operator(basis_p3, ReflectionLine(Direction(1, 0, 0)))
     grades = set(mv.grades)
@@ -209,7 +209,7 @@ def test_reflection_line_creation_is_grade_2(basis_p3):
     assert float(mv[12]) == pytest.approx(0)  # e34 = nz
 
 
-def test_reflection_line_round_trip(basis_p3):
+def test_reflection_line_round_trip(basis_p3):  # noqa: ANN001, ANN201
     """create → analyze → ReflectionLine."""
     rl = ReflectionLine(Direction(0, 0, 1))
     mv = create_operator(basis_p3, rl)
@@ -220,7 +220,7 @@ def test_reflection_line_round_trip(basis_p3):
     assert abs(result.line.direction.z) == pytest.approx(1)
 
 
-def test_reflection_line_application(basis_p3):
+def test_reflection_line_application(basis_p3):  # noqa: ANN001, ANN201
     """Line reflection on x-axis: apply N∧e₄ to Hop((1,2,3)) → projects to (1,−2,−3)."""
     rl_mv = create_operator(basis_p3, ReflectionLine(Direction(1, 0, 0)))
     a_hop = basis_p3.multivector({1: 1, 2: 2, 4: 3, 8: 1})  # Hop(1,2,3)
@@ -240,7 +240,7 @@ def test_reflection_line_application(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_reflection_plane_creation_is_grade_1_no_e4(basis_p3):
+def test_reflection_plane_creation_is_grade_1_no_e4(basis_p3):  # noqa: ANN001, ANN201
     """create_reflection_plane returns grade-1 vector with e₄=0."""
     mv = create_operator(basis_p3, ReflectionPlane(Direction(0, 0, 1)))
     grades = set(mv.grades)
@@ -248,7 +248,7 @@ def test_reflection_plane_creation_is_grade_1_no_e4(basis_p3):
     assert float(mv[8]) == pytest.approx(0)  # e4 = 0
 
 
-def test_reflection_plane_round_trip(basis_p3):
+def test_reflection_plane_round_trip(basis_p3):  # noqa: ANN001, ANN201
     """create → analyze → ReflectionPlane."""
     rp = ReflectionPlane(Direction(0, 0, 1))
     mv = create_operator(basis_p3, rp)
@@ -257,7 +257,7 @@ def test_reflection_plane_round_trip(basis_p3):
     assert result.plane.normal.z == pytest.approx(1)
 
 
-def test_reflection_plane_application(basis_p3):
+def test_reflection_plane_application(basis_p3):  # noqa: ANN001, ANN201
     """Plane normal z: apply N to Hop((1,2,3)) → (1,2,−3)."""
     rp_mv = create_operator(basis_p3, ReflectionPlane(Direction(0, 0, 1)))
     a_hop = basis_p3.multivector({1: 1, 2: 2, 4: 3, 8: 1})
@@ -276,7 +276,7 @@ def test_reflection_plane_application(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_reflection_origin_creation_is_e4(basis_p3):
+def test_reflection_origin_creation_is_e4(basis_p3):  # noqa: ANN001, ANN201
     """create_reflection_origin returns e₄ (grade 1, only at blade 8)."""
     mv = create_operator(basis_p3, ReflectionPoint(Point(0, 0, 0)))
     assert set(mv.grades) == {1}
@@ -284,14 +284,14 @@ def test_reflection_origin_creation_is_e4(basis_p3):
     assert float(mv[1]) == pytest.approx(0)
 
 
-def test_reflection_origin_round_trip(basis_p3):
+def test_reflection_origin_round_trip(basis_p3):  # noqa: ANN001, ANN201
     """create → analyze → ReflectionPoint."""
     mv = create_operator(basis_p3, ReflectionPoint(Point(0, 0, 0)))
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionPoint)
 
 
-def test_reflection_origin_application(basis_p3):
+def test_reflection_origin_application(basis_p3):  # noqa: ANN001, ANN201
     """e₄·Hop(a)·e₄ → projects to −a."""
     ro_mv = create_operator(basis_p3, ReflectionPoint(Point(0, 0, 0)))
     a_hop = basis_p3.multivector({1: 1, 2: 2, 4: 3, 8: 1})
@@ -310,7 +310,7 @@ def test_reflection_origin_application(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_line_vs_plane_complementary(basis_p3):
+def test_line_vs_plane_complementary(basis_p3):  # noqa: ANN001, ANN201
     """Line reflection on e3 + Plane reflection on e3 normal = both negate all? No — origin does."""
     a_hop = basis_p3.multivector({1: 1, 2: 2, 4: 3, 8: 1})
     rl = create_operator(basis_p3, ReflectionLine(Direction(0, 0, 1)))
@@ -333,7 +333,7 @@ def test_line_vs_plane_complementary(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_rotor_round_trip(basis_p3):
+def test_rotor_round_trip(basis_p3):  # noqa: ANN001, ANN201
     """create_rotor → analyze → Rotor."""
     r = Rotor(math.pi / 3, Direction(1, 0, 0))
     mv = create_operator(basis_p3, r)
@@ -343,7 +343,7 @@ def test_rotor_round_trip(basis_p3):
     assert abs(result.axis.x) == pytest.approx(1, abs=1e-6)
 
 
-def test_rotor_application_homogeneous(basis_p3):
+def test_rotor_application_homogeneous(basis_p3):  # noqa: ANN001, ANN201
     """Rotor applied to Hop(a) gives Hop(R(a))."""
     r = Rotor(math.pi, Direction(0, 0, 1))  # 180° about z
     rotor_mv = create_operator(basis_p3, r)
@@ -364,7 +364,7 @@ def test_rotor_application_homogeneous(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_line_non_simple_bivector_raises(basis_p3):
+def test_line_non_simple_bivector_raises(basis_p3):  # noqa: ANN001, ANN201
     """Non‑simple bivector (B∧B ≠ 0) must raise ValueError."""
     line1 = create_entity(
         basis_p3, Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
@@ -382,13 +382,13 @@ def test_line_non_simple_bivector_raises(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_direction_zero_norm_raises(basis_p3):
+def test_create_direction_zero_norm_raises(basis_p3):  # noqa: ANN001, ANN201
     """create_entity(Direction(0,0,0)) must raise ValueError."""
     with pytest.raises(ValueError, match="Zero.*norm"):
         create_entity(basis_p3, Direction(0, 0, 0))
 
 
-def test_analyze_zero_vector_raises(basis_p3):
+def test_analyze_zero_vector_raises(basis_p3):  # noqa: ANN001, ANN201
     """Zero MV passed to analyze_entity must raise ValueError."""
     zero = basis_p3.multivector({})
     with pytest.raises(ValueError):
@@ -400,7 +400,7 @@ def test_analyze_zero_vector_raises(basis_p3):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_point_ipns_round_trip(basis_p3, monkeypatch):
+def test_create_point_ipns_round_trip(basis_p3, monkeypatch):  # noqa: ANN001, ANN201
     """Point(1,2,3) → IPNS (grade‑3) → analyze IPNS → Point(1,2,3)."""
     monkeypatch.setattr(basis_p3, "opns", False)
     mv = create_entity(basis_p3, Point(1, 2, 3))
@@ -412,7 +412,7 @@ def test_create_point_ipns_round_trip(basis_p3, monkeypatch):
     assert result.z == pytest.approx(3)
 
 
-def test_create_direction_ipns_round_trip(basis_p3, monkeypatch):
+def test_create_direction_ipns_round_trip(basis_p3, monkeypatch):  # noqa: ANN001, ANN201
     """Direction(1,0,0) → IPNS (grade‑3) → analyze IPNS → Direction(1,0,0)."""
     monkeypatch.setattr(basis_p3, "opns", False)
     mv = create_entity(basis_p3, Direction(1, 0, 0))
@@ -424,7 +424,7 @@ def test_create_direction_ipns_round_trip(basis_p3, monkeypatch):
     assert result.z == pytest.approx(0)
 
 
-def test_create_line_ipns_round_trip(basis_p3, monkeypatch):
+def test_create_line_ipns_round_trip(basis_p3, monkeypatch):  # noqa: ANN001, ANN201
     """Line → IPNS → analyze IPNS → Line with correct direction."""
     monkeypatch.setattr(basis_p3, "opns", False)
     line = Line(origin=Point(1, 2, 3), direction=Direction(0, 0, 1))
@@ -436,7 +436,7 @@ def test_create_line_ipns_round_trip(basis_p3, monkeypatch):
     # origin may differ due to orthogonalization; direction is the invariant
 
 
-def test_create_space_ipns_round_trip(basis_p3, monkeypatch):
+def test_create_space_ipns_round_trip(basis_p3, monkeypatch):  # noqa: ANN001, ANN201
     """Space(scale=3) → IPNS (grade‑0 scalar) → analyze IPNS → Space(3)."""
     monkeypatch.setattr(basis_p3, "opns", False)
     mv = create_entity(basis_p3, Space(scale=3.0))

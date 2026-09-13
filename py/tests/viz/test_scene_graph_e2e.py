@@ -18,7 +18,7 @@ def _group_scene() -> Scene:
 
 
 class TestSceneGraphE2E:
-    def test_recording_captures_hierarchy(self):
+    def test_recording_captures_hierarchy(self):  # noqa: ANN201
         s = _group_scene()
         rec = AnimationRecording(s)
         rec.capture_frame()
@@ -28,7 +28,7 @@ class TestSceneGraphE2E:
         assert child["parent_id"] == group["id"]
         assert "transform" in child
 
-    def test_remove_group_removes_subtree(self):
+    def test_remove_group_removes_subtree(self):  # noqa: ANN201
         s = _group_scene()
         nodes = s._dfs_preorder()
         group = next(n for n in nodes if n.kind == "VizGroup")
@@ -39,7 +39,7 @@ class TestSceneGraphE2E:
         assert child.id in removed
         assert child.id not in s._nodes
 
-    def test_transform_patch_does_not_resend_children(self):
+    def test_transform_patch_does_not_resend_children(self):  # noqa: ANN201
         s = _group_scene()
         s.flush()  # consume initial dirty
         nodes = s._dfs_preorder()
@@ -52,7 +52,7 @@ class TestSceneGraphE2E:
         assert child.id not in ids
         assert all(p["aspect"] == "transform" for p in patches)
 
-    def test_gltf_group_hierarchy(self):
+    def test_gltf_group_hierarchy(self):  # noqa: ANN201
         s = _group_scene()
         builder = _GltfBuilder()
         builder.add_entities(s.full_state())

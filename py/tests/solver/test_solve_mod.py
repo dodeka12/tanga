@@ -8,30 +8,30 @@ from pytanga.solver.solve import solve_mod
 
 
 class TestSolveMod:
-    def test_solve_mod_matches_inv(self, alg_int):
+    def test_solve_mod_matches_inv(self, alg_int):  # noqa: ANN001, ANN201
         # single-blade versor: A * X = 1 is a square system
         a = alg_int("e12")
         x = solve_mod(a, 1, 97)
         ref = alg_int.inv(a, 97)
         assert x.to_dict() == ref.to_dict()
 
-    def test_solve_mod_verifies(self, alg_int):
+    def test_solve_mod_verifies(self, alg_int):  # noqa: ANN001, ANN201
         a = alg_int("e12")
         x = solve_mod(a, 1, 97)
         prod = alg_int.gp_mod(a, x, 97)
         assert prod.to_dict().get("s", 0) % 97 == 1
 
-    def test_solve_mod_non_square_raises(self, alg_int):
+    def test_solve_mod_non_square_raises(self, alg_int):  # noqa: ANN001, ANN201
         # multi-blade A with scalar C gives an over-determined (non-square) system
         a = alg_int({"e1": 3, "e2": 5, 0: 1})
         with pytest.raises(ValueError):
             solve_mod(a, 1, 97)
 
-    def test_solve_mod_zero_raises(self, alg_int):
+    def test_solve_mod_zero_raises(self, alg_int):  # noqa: ANN001, ANN201
         with pytest.raises(RuntimeError):
             solve_mod(alg_int({}), 1, 97)
 
-    def test_solve_mod_float_raises(self, alg_float):
+    def test_solve_mod_float_raises(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float({"e1": 1.0})
         with pytest.raises(TypeError):
             solve_mod(a, 1.0, 97)

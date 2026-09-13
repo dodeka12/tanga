@@ -15,27 +15,27 @@ from pytanga.geometry.operators import Rotor
 
 
 @pytest.fixture(scope="module")
-def b():
+def b():  # noqa: ANN201
     return BasisN3()
 
 
 # ═══ Construction ═══
 
 
-def test_geometry_algebra_is_read_only(b):
+def test_geometry_algebra_is_read_only(b):  # noqa: ANN001, ANN201
     geo = Geometry(b)
     assert geo.algebra is b
     with pytest.raises(AttributeError):
         geo.algebra = b  # type: ignore[misc]
 
 
-def test_geometry_follows_algebra_opns(b):
+def test_geometry_follows_algebra_opns(b):  # noqa: ANN001, ANN201
     assert Geometry(b).algebra.opns is True
     alg = BasisN3(opns=False)
     assert Geometry(alg).algebra.opns is False
 
 
-def test_geometry_importable():
+def test_geometry_importable():  # noqa: ANN201
     from pytanga import geometry
 
     assert hasattr(geometry, "Geometry")
@@ -44,14 +44,14 @@ def test_geometry_importable():
 # ═══ create() ═══
 
 
-def test_create_uses_default_opns(b):
+def test_create_uses_default_opns(b):  # noqa: ANN001, ANN201
     geo = Geometry(b)
     mv = geo.create(Point(1, 2, 3))
     # OPNS point is grade-1
     assert 1 in mv.grades
 
 
-def test_create_follows_algebra_opns():
+def test_create_follows_algebra_opns():  # noqa: ANN201
     alg = BasisN3()
     geo = Geometry(alg)
     alg.opns = False
@@ -60,7 +60,7 @@ def test_create_follows_algebra_opns():
     assert max(mv.grades) == 1
 
 
-def test_create_with_opns_false_default():
+def test_create_with_opns_false_default():  # noqa: ANN201
     alg = BasisN3(opns=False)
     geo = Geometry(alg)
     mv = geo.create(Point(1, 2, 3))
@@ -68,7 +68,7 @@ def test_create_with_opns_false_default():
     assert 4 in mv.grades
 
 
-def test_create_opns_can_be_changed():
+def test_create_opns_can_be_changed():  # noqa: ANN201
     alg = BasisN3()
     geo = Geometry(alg)
     alg.opns = False
@@ -79,7 +79,7 @@ def test_create_opns_can_be_changed():
 # ═══ __call__ ═══
 
 
-def test_call_aliases_create(b):
+def test_call_aliases_create(b):  # noqa: ANN001, ANN201
     geo = Geometry(b)
     mv_call = geo(Point(1, 2, 3))
     mv_create = geo.create(Point(1, 2, 3))
@@ -87,7 +87,7 @@ def test_call_aliases_create(b):
     assert 1 in mv_call.grades
 
 
-def test_call_follows_algebra_opns():
+def test_call_follows_algebra_opns():  # noqa: ANN201
     alg = BasisN3()
     geo = Geometry(alg)
     alg.opns = False
@@ -96,7 +96,7 @@ def test_call_follows_algebra_opns():
     assert 4 in mv.grades
 
 
-def test_call_uses_entity_attribute(b):
+def test_call_uses_entity_attribute(b):  # noqa: ANN001, ANN201
     geo = Geometry(b)
 
     class _HasEntity:
@@ -109,7 +109,7 @@ def test_call_uses_entity_attribute(b):
 # ═══ which_entity() ═══
 
 
-def test_which_entity_round_trip(b):
+def test_which_entity_round_trip(b):  # noqa: ANN001, ANN201
     geo = Geometry(b)
     sphere = Sphere(Point(1, 2, 3), 2.0)
     mv = geo.create(sphere)
@@ -119,7 +119,7 @@ def test_which_entity_round_trip(b):
     assert result.radius == pytest.approx(2, abs=1e-4)
 
 
-def test_which_entity_follows_algebra_opns():
+def test_which_entity_follows_algebra_opns():  # noqa: ANN201
     alg = BasisN3(opns=False)
     geo = Geometry(alg)
     mv = geo.create(Point(0, 0, 5))
@@ -131,7 +131,7 @@ def test_which_entity_follows_algebra_opns():
 # ═══ which_operator() ═══
 
 
-def test_which_operator_round_trip(b):
+def test_which_operator_round_trip(b):  # noqa: ANN001, ANN201
     geo = Geometry(b)
     rotor = Rotor(math.pi / 3, Direction(1, 0, 0))
     mv = geo.create(rotor)
@@ -140,7 +140,7 @@ def test_which_operator_round_trip(b):
     assert result.angle == pytest.approx(math.pi / 3, abs=1e-6)
 
 
-def test_which_operator_does_not_accept_opns(b):
+def test_which_operator_does_not_accept_opns(b):  # noqa: ANN001, ANN201
     geo = Geometry(b)
     rotor_mv = geo.create(Rotor(0.5, Direction(0, 0, 1)))
     # which_operator should work without opns param

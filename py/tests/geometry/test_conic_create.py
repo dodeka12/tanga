@@ -24,34 +24,34 @@ from pytanga.geometry import (
 from pytanga.quadric import BasisQ2, BasisQ3, to_coeffs
 
 
-def _coeff_mv(basis, coeffs):
+def _coeff_mv(basis, coeffs):  # noqa: ANN001, ANN202
     return basis.multivector({1 << i: c for i, c in enumerate(coeffs)})
 
 
-def _rotation_matrix(theta, axis):
+def _rotation_matrix(theta, axis):  # noqa: ANN001, ANN202
     a = np.array([axis.x, axis.y, axis.z], dtype=float)
     a = a / np.linalg.norm(a)
     k = np.array([[0.0, -a[2], a[1]], [a[2], 0.0, -a[0]], [-a[1], a[0], 0.0]])
     return np.eye(3) + math.sin(theta) * k + (1.0 - math.cos(theta)) * (k @ k)
 
 
-def _rotate(x, theta, axis):
+def _rotate(x, theta, axis):  # noqa: ANN001, ANN202
     return _rotation_matrix(theta, axis) @ np.asarray(x, dtype=float)
 
 
-def _circle_matrix():
+def _circle_matrix():  # noqa: ANN202
     return np.array([[1.0, 0.0, -1.0], [0.0, 1.0, -2.0], [-1.0, -2.0, 1.0]])
 
 
 class TestConicCreate:
-    def test_conic_round_trip_ipns(self):
+    def test_conic_round_trip_ipns(self):  # noqa: ANN201
         b = BasisQ2(opns=False)
         mv = _coeff_mv(b, to_coeffs(_circle_matrix()))
         raw = analyze(mv)
         assert isinstance(raw, Conic)
         assert (mv - create(b, raw)).is_zero
 
-    def test_conic_round_trip_opns(self):
+    def test_conic_round_trip_opns(self):  # noqa: ANN201
         b = BasisQ2(opns=True)
         coeffs = to_coeffs(_circle_matrix())
         mv = _coeff_mv(b, coeffs).undual()  # grade-5 OPNS conic
@@ -61,7 +61,7 @@ class TestConicCreate:
         created = create(b, raw)
         assert (mv + created).is_zero or (mv - created).is_zero
 
-    def test_circle_round_trip(self):
+    def test_circle_round_trip(self):  # noqa: ANN201
         b = BasisQ2(opns=False)
         circle = Circle(Point(1.0, 2.0, 0.0), 2.0)
         mv = create(b, circle)
@@ -69,7 +69,7 @@ class TestConicCreate:
 
 
 class TestQuadricCreate:
-    def test_quadric_round_trip_ipns(self):
+    def test_quadric_round_trip_ipns(self):  # noqa: ANN201
         b = BasisQ3(opns=False)
         coeffs = tuple(float(i) for i in range(1, 11))
         mv = _coeff_mv(b, coeffs)
@@ -77,7 +77,7 @@ class TestQuadricCreate:
         assert isinstance(raw, Quadric3D)
         assert (mv - create(b, raw)).is_zero
 
-    def test_ellipsoid_round_trip(self):
+    def test_ellipsoid_round_trip(self):  # noqa: ANN201
         b = BasisQ3(opns=False)
         ellipsoid = Ellipsoid(Point(1.0, 2.0, 3.0), (2.0, 3.0, 4.0))
         mv = create(b, ellipsoid)
@@ -92,22 +92,22 @@ class TestQuadricCreate:
 
 
 class TestRejectUnsupported:
-    def test_conic_not_supported_in_e3(self):
+    def test_conic_not_supported_in_e3(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             create(BasisE3(), Conic((1.0, 2.0, 3.0, 4.0, 5.0, 6.0)))
 
-    def test_quadric_not_supported_in_q2(self):
+    def test_quadric_not_supported_in_q2(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             create(BasisQ2(), Quadric3D(tuple(float(i) for i in range(1, 11))))
 
 
 class TestConicRotor:
-    def test_rotor_grades_and_norm(self):
+    def test_rotor_grades_and_norm(self):  # noqa: ANN201
         r = create(BasisQ2(opns=True), Rotor(math.radians(30), Direction(0, 0, 1)))
         assert set(r.grades) == {0, 2, 4}
         assert r.norm2() == pytest.approx(1.0)
 
-    def test_rotor_rotates_conic(self):
+    def test_rotor_rotates_conic(self):  # noqa: ANN201
         b = BasisQ2(opns=True)
         theta = math.radians(45)
         r = create(b, Rotor(theta, Direction(0, 0, 1)))
@@ -125,14 +125,14 @@ class TestConicRotor:
         scale = bmat[2, 2] / expected[2, 2]
         assert np.allclose(bmat, expected * scale, atol=1e-6)
 
-    def test_rotor_q3_grades_and_norm(self):
+    def test_rotor_q3_grades_and_norm(self):  # noqa: ANN201
         r = create(
             BasisQ3(opns=True), Rotor(math.radians(30), Direction(0.3, -0.4, 0.5))
         )
         assert set(r.grades) == {0, 2, 4, 6}
         assert r.norm2() == pytest.approx(1.0)
 
-    def test_rotor_q3_rotates_point(self):
+    def test_rotor_q3_rotates_point(self):  # noqa: ANN201
         from pytanga.quadric._embedding import embed_point
 
         b = BasisQ3(opns=True)
@@ -145,7 +145,7 @@ class TestConicRotor:
         expected = embed_point(b, *_rotate(x, theta, axis))
         assert (rotated - expected).norm2() == pytest.approx(0.0, abs=1e-10)
 
-    def test_rotor_q3_rotates_quadric(self):
+    def test_rotor_q3_rotates_quadric(self):  # noqa: ANN201
         from pytanga.quadric._mapping import from_coeffs
 
         b = BasisQ3(opns=True)
@@ -168,7 +168,7 @@ class TestConicRotor:
         r4[:3, :3] = _rotation_matrix(theta, axis)
         assert np.allclose(rotated, r4 @ q @ r4.T, atol=1e-10)
 
-    def test_quadric_create_module(self):
+    def test_quadric_create_module(self):  # noqa: ANN201
         from pytanga.quadric._create import create_entity as qcreate_entity
         from pytanga.quadric._create import create_rotor as qcreate_rotor
 

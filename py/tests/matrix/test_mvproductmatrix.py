@@ -10,7 +10,7 @@ from pytanga.algebra import EProduct
 
 
 class TestMVProductMatrix:
-    def test_validation_2d_raises(self, alg_float):
+    def test_validation_2d_raises(self, alg_float):  # noqa: ANN001, ANN201
         a_mask = BladeMask(alg_float, [1, 2])
         b_mask = BladeMask.full(alg_float)
         c_mask = BladeMask.full(alg_float)
@@ -24,7 +24,7 @@ class TestMVProductMatrix:
                 left=True,
             )
 
-    def test_validation_wrong_shape_raises(self, alg_float):
+    def test_validation_wrong_shape_raises(self, alg_float):  # noqa: ANN001, ANN201
         a_mask = BladeMask(alg_float, [1, 2])
         b_mask = BladeMask.full(alg_float)
         c_mask = BladeMask.full(alg_float)
@@ -38,7 +38,7 @@ class TestMVProductMatrix:
                 left=True,
             )
 
-    def test_validation_cross_algebra_raises(self, alg_float):
+    def test_validation_cross_algebra_raises(self, alg_float):  # noqa: ANN001, ANN201
         a_mask = BladeMask(alg_float, [1, 2])
         b_mask = BladeMask.full(alg_float)
         alg2 = Algebra(4, 0, "float64")

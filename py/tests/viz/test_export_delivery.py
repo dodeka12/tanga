@@ -36,14 +36,14 @@ requires_toolchain = pytest.mark.skipif(
 )
 
 
-def test_snapshot_cdn_references_bundle():
+def test_snapshot_cdn_references_bundle():  # noqa: ANN201
     s = _scene()
     html = render_snapshot(s.full_state(), s.config.to_dict())
     assert "cdn.jsdelivr.net/gh/dodeka12/tanga" in html
     assert "function createEntityMesh(" not in html
 
 
-def test_snapshot_inline_inlines_library():
+def test_snapshot_inline_inlines_library():  # noqa: ANN201
     s = _scene()
     html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
     assert "function createEntityMesh(" in html
@@ -52,7 +52,7 @@ def test_snapshot_inline_inlines_library():
 
 
 @requires_toolchain
-def test_snapshot_offline_inlines_everything():
+def test_snapshot_offline_inlines_everything():  # noqa: ANN201
     s = _scene()
     html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="offline")
     assert "function createEntityMesh(" in html
@@ -61,7 +61,7 @@ def test_snapshot_offline_inlines_everything():
     assert "html2canvas" in html
 
 
-def test_figure_cdn_references_bundle():
+def test_figure_cdn_references_bundle():  # noqa: ANN201
     s = _scene()
     html = render_figure(
         s.full_state(),
@@ -74,7 +74,7 @@ def test_figure_cdn_references_bundle():
     assert "function createEntityMesh(" not in html
 
 
-def test_snapshot_cdn_references_theme_css():
+def test_snapshot_cdn_references_theme_css():  # noqa: ANN201
     s = _scene()
     html = render_snapshot(s.full_state(), s.config.to_dict())
     assert "/py/pytanga/viz/templates/themes/base.css" in html
@@ -83,14 +83,14 @@ def test_snapshot_cdn_references_theme_css():
     assert "--tanga-bg: #1a1a2e" not in html
 
 
-def test_snapshot_inline_inlines_shell_without_components():
+def test_snapshot_inline_inlines_shell_without_components():  # noqa: ANN201
     s = _scene()
     html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
     assert "--tanga-bg: #1a1a2e" in html
     assert ".tanga-action-button" not in html
 
 
-def test_snapshot_external_theme_falls_back_to_inline(tmp_path):
+def test_snapshot_external_theme_falls_back_to_inline(tmp_path):  # noqa: ANN001, ANN201
     from pytanga.viz._themes import register_theme, registry
 
     theme_dir = tmp_path / "corp"
@@ -113,7 +113,7 @@ def test_snapshot_external_theme_falls_back_to_inline(tmp_path):
         registry._external.pop("corp_cdn_fallback", None)
 
 
-def test_resolve_ref_falls_back_to_main_for_dev(monkeypatch):
+def test_resolve_ref_falls_back_to_main_for_dev(monkeypatch):  # noqa: ANN001, ANN201
     import pytanga.viz.export._cdn as cdn
 
     monkeypatch.setattr(cdn, "_git_ref", lambda: None)
@@ -121,7 +121,7 @@ def test_resolve_ref_falls_back_to_main_for_dev(monkeypatch):
     assert cdn.resolve_delivery_ref() == "main"
 
 
-def test_display_snapshot_defaults_to_inline():
+def test_display_snapshot_defaults_to_inline():  # noqa: ANN201
     import base64
 
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -133,7 +133,7 @@ def test_display_snapshot_defaults_to_inline():
     assert "cdn.jsdelivr.net/gh/dodeka12/tanga" not in html
 
 
-def test_render_snapshot_html_defaults_to_cdn():
+def test_render_snapshot_html_defaults_to_cdn():  # noqa: ANN201
     # File exports (``export_snapshot``) keep the CDN default (smallest HTML).
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.add(Point(1, 2, 3))
@@ -141,7 +141,7 @@ def test_render_snapshot_html_defaults_to_cdn():
     assert "cdn.jsdelivr.net/gh/dodeka12/tanga" in html
 
 
-def test_animated_figure_honours_delivery():
+def test_animated_figure_honours_delivery():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.add(Point(1, 2, 3))
     rec = viz.start_animation_recording()
@@ -152,7 +152,7 @@ def test_animated_figure_honours_delivery():
     assert "cdn.jsdelivr.net/gh/dodeka12/tanga" in cdn
 
 
-def test_animated_export_bridge_exposes_entity_mesh_updaters():
+def test_animated_export_bridge_exposes_entity_mesh_updaters():  # noqa: ANN201
     """Regression: the animated adapter calls ``updateEntityMesh``/``removeEntityMesh``.
 
     Those two functions are imported by the live viewer (``three-view.js``), but the
@@ -179,10 +179,10 @@ def test_animated_export_bridge_exposes_entity_mesh_updaters():
     assert "removeEntityMesh" in html
 
 
-def test_offline_raises_when_toolchain_missing(monkeypatch):
+def test_offline_raises_when_toolchain_missing(monkeypatch):  # noqa: ANN001, ANN201
     offline._build_assets.cache_clear()
 
-    def _raise():
+    def _raise():  # noqa: ANN202
         raise offline.OfflineToolchainError("no esbuild")
 
     monkeypatch.setattr(offline, "find_esbuild", _raise)
@@ -191,7 +191,7 @@ def test_offline_raises_when_toolchain_missing(monkeypatch):
 
 
 @requires_toolchain
-def test_end_to_end_writes_all_three_modes(tmp_path):
+def test_end_to_end_writes_all_three_modes(tmp_path):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.add(Point(1, 2, 3))
     for delivery in ("cdn", "inline", "offline"):

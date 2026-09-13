@@ -27,7 +27,7 @@ from pytanga.viz.sdf import Composed, capped_cylinder, sphere
 from pytanga.viz.serializer import serialize_entity
 
 
-def _serialize(ent, props=None, *, styles_map=None):
+def _serialize(ent, props=None, *, styles_map=None):  # noqa: ANN001, ANN202
     """Serialize with fresh canonical defaults (mirrors ``test_serializer.py``)."""
     sm = (
         {k: copy(v) for k, v in _CANONICAL.items()}

@@ -18,7 +18,7 @@ from pytanga.viz._banner import (
 from pytanga.viz._controls import Button, Dropdown, Slider
 
 
-def test_serialize_banner_global_defaults():
+def test_serialize_banner_global_defaults():  # noqa: ANN201
     banner = Banner(id="b1", text="Hello $x$")
     msg = serialize_banner(banner)
     assert msg["type"] == "banner_define"
@@ -33,13 +33,13 @@ def test_serialize_banner_global_defaults():
     assert msg["controls"] == []
 
 
-def test_serialize_banner_scoped():
+def test_serialize_banner_scoped():  # noqa: ANN201
     banner = Banner(id="b1", text="x")
     assert serialize_banner(banner, scene="detail")["scene"] == "detail"
     assert serialize_banner(banner, scene="")["scene"] == ""
 
 
-def test_serialize_banner_controls_kind_specific():
+def test_serialize_banner_controls_kind_specific():  # noqa: ANN201
     banner = Banner(
         id="b1",
         text="x",
@@ -65,7 +65,7 @@ def test_serialize_banner_controls_kind_specific():
     assert controls[2]["kind"] == "button"
 
 
-def test_align_out_of_range_raises():
+def test_align_out_of_range_raises():  # noqa: ANN201
     with pytest.raises(ValueError):
         Banner(id="b", text="x", align_x=-0.1)
     with pytest.raises(ValueError):
@@ -74,7 +74,7 @@ def test_align_out_of_range_raises():
     Banner(id="b", text="x", align_x=0.0, align_y=1.0)
 
 
-def test_serialize_banner_remove_and_clear():
+def test_serialize_banner_remove_and_clear():  # noqa: ANN201
     assert serialize_banner_remove("b1") == {
         "type": "banner_remove",
         "scene": None,
@@ -107,14 +107,14 @@ def _viz() -> Visualizer:
     return Visualizer(add_default_axes=False, add_default_grid=False)
 
 
-def test_show_banner_stores_registers_pushes(monkeypatch):
+def test_show_banner_stores_registers_pushes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     pushed: list[tuple] = []
     monkeypatch.setattr(
         viz._layout.overlay, "_push_banner", lambda b, s: pushed.append((b.id, s))
     )
 
-    async def _on_ok(value, event):
+    async def _on_ok(value, event):  # noqa: ANN001, ANN202
         pass
 
     bid = viz.show_banner(
@@ -127,7 +127,7 @@ def test_show_banner_stores_registers_pushes(monkeypatch):
     assert pushed == [("banner_1", None)]
 
 
-def test_show_banner_auto_id_unique():
+def test_show_banner_auto_id_unique():  # noqa: ANN201
     viz = _viz()
     a = viz.show_banner("a")
     b = viz.show_banner("b")
@@ -136,7 +136,7 @@ def test_show_banner_auto_id_unique():
     assert a != b
 
 
-def test_show_banner_explicit_id_reuse_raises(monkeypatch):
+def test_show_banner_explicit_id_reuse_raises(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
     viz.show_banner("a", id="dup")
@@ -144,7 +144,7 @@ def test_show_banner_explicit_id_reuse_raises(monkeypatch):
         viz.show_banner("b", id="dup")
 
 
-def test_remove_banner_unregisters_and_pushes(monkeypatch):
+def test_remove_banner_unregisters_and_pushes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     removed: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
@@ -152,10 +152,10 @@ def test_remove_banner_unregisters_and_pushes(monkeypatch):
         viz._layout.overlay, "_push_banner_remove", lambda i, s: removed.append((i, s))
     )
 
-    async def _on_ok(value, event):
+    async def _on_ok(value, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_close(value, event):
+    async def _on_close(value, event):  # noqa: ANN001, ANN202
         pass
 
     bid = viz.show_banner(
@@ -171,7 +171,7 @@ def test_remove_banner_unregisters_and_pushes(monkeypatch):
     assert removed == [(bid, None)]
 
 
-def test_clear_banners_scoped(monkeypatch):
+def test_clear_banners_scoped(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     cleared: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
@@ -188,17 +188,17 @@ def test_clear_banners_scoped(monkeypatch):
     assert cleared == [None]
 
 
-def test_alert_confirm_buttons(monkeypatch):
+def test_alert_confirm_buttons(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     pushed: dict = {}
     monkeypatch.setattr(
         viz._layout.overlay, "_push_banner", lambda b, s: pushed.update({b.id: b})
     )
 
-    async def _ok(value, event):
+    async def _ok(value, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _yes(value, event):
+    async def _yes(value, event):  # noqa: ANN001, ANN202
         pass
 
     bid = viz.alert("ack", on_ok=_ok)
@@ -214,11 +214,11 @@ def test_alert_confirm_buttons(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_banner_closed_dispatches_on_close():
+async def test_banner_closed_dispatches_on_close():  # noqa: ANN201
     viz = _viz()
     calls: list = []
 
-    async def _on_close(value, event):
+    async def _on_close(value, event):  # noqa: ANN001, ANN202
         calls.append(value)
 
     viz._handler_registry.register("b1", _on_close, event="close")
@@ -227,11 +227,11 @@ async def test_banner_closed_dispatches_on_close():
 
 
 @pytest.mark.anyio
-async def test_dispatch_close_unified_envelope():
+async def test_dispatch_close_unified_envelope():  # noqa: ANN201
     viz = _viz()
     calls: list = []
 
-    async def _on_close(value, event):
+    async def _on_close(value, event):  # noqa: ANN001, ANN202
         calls.append(value)
 
     viz._handler_registry.register("b1", _on_close, event="close")
@@ -242,14 +242,14 @@ async def test_dispatch_close_unified_envelope():
 
 
 @pytest.mark.anyio
-async def test_show_banner_async_awaits_push(monkeypatch):
+async def test_show_banner_async_awaits_push(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     viz._server = _FakeServer()
     viz._loop = asyncio.get_running_loop()
 
     pushed: list = []
 
-    async def _push(banner, scene_name):
+    async def _push(banner, scene_name):  # noqa: ANN001, ANN202
         pushed.append((banner.id, scene_name))
 
     monkeypatch.setattr(viz._layout.overlay, "_push_banner_async", _push)
@@ -258,7 +258,7 @@ async def test_show_banner_async_awaits_push(monkeypatch):
     assert pushed == [(bid, None)]
 
 
-def test_show_banner_async_cross_loop_no_deadlock():
+def test_show_banner_async_cross_loop_no_deadlock():  # noqa: ANN201
     viz = _viz()
     viz._server = _FakeServer()
     loop = asyncio.new_event_loop()
@@ -274,7 +274,7 @@ def test_show_banner_async_cross_loop_no_deadlock():
         thread.join(timeout=2.0)
 
 
-def test_scene_handle_show_banner_scopes(monkeypatch):
+def test_scene_handle_show_banner_scopes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     handle = viz.scene("detail")
     calls: list = []
@@ -283,7 +283,7 @@ def test_scene_handle_show_banner_scopes(monkeypatch):
     assert calls[0]["scene_name"] == "detail"
 
 
-def test_scene_handle_alert_scopes(monkeypatch):
+def test_scene_handle_alert_scopes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     handle = viz.scene("detail")
     calls: list = []
@@ -294,7 +294,7 @@ def test_scene_handle_alert_scopes(monkeypatch):
     assert calls[0]["ok_label"] == "Got it"
 
 
-def test_scene_handle_confirm_scopes(monkeypatch):
+def test_scene_handle_confirm_scopes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     handle = viz.scene("detail")
     calls: list = []
@@ -309,16 +309,16 @@ def test_scene_handle_confirm_scopes(monkeypatch):
 # ── Phase 6.2 — slider press/release events ─────────────────
 
 
-def test_add_slider_press_release_registration():
+def test_add_slider_press_release_registration():  # noqa: ANN201
     viz = _viz()
 
-    async def _on_change(v, e):
+    async def _on_change(v, e):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_press(v, e):
+    async def _on_press(v, e):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_release(v, e):
+    async def _on_release(v, e):  # noqa: ANN001, ANN202
         pass
 
     viz.set_layout(
@@ -335,15 +335,15 @@ def test_add_slider_press_release_registration():
 
 
 @pytest.mark.anyio
-async def test_dispatch_press_and_release():
+async def test_dispatch_press_and_release():  # noqa: ANN201
     viz = _viz()
     press_calls = []
     release_calls = []
 
-    async def _on_press(v, e):
+    async def _on_press(v, e):  # noqa: ANN001, ANN202
         press_calls.append(v)
 
-    async def _on_release(v, e):
+    async def _on_release(v, e):  # noqa: ANN001, ANN202
         release_calls.append(v)
 
     viz._handler_registry.register("s", _on_press, event="press")
@@ -359,11 +359,11 @@ async def test_dispatch_press_and_release():
     assert release_calls == [2.0]
 
 
-def test_overlay_banner_direct_lifecycle():
+def test_overlay_banner_direct_lifecycle():  # noqa: ANN201
     viz = _viz()
     overlay = viz._layout.overlay
 
-    async def _on_ok(value, event):
+    async def _on_ok(value, event):  # noqa: ANN001, ANN202
         pass
 
     bid = overlay.show_banner("hi", controls=[Button(id="ok", on_click=_on_ok)])

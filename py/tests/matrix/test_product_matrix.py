@@ -12,7 +12,7 @@ from pytanga.matrix.product import product_matrix
 
 
 class TestProductMatrix:
-    def test_shape(self, alg_float):
+    def test_shape(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float({"e1": 1.0, "e2": -2.0})
         b_mask = BladeMask(a)
         c_mask = product_blade_mask(b_mask, b_mask, complete=True)
@@ -22,7 +22,7 @@ class TestProductMatrix:
         assert M.b_mask.ids == b_mask.ids
         assert M.c_mask.ids == c_mask.ids
 
-    def test_consistency_with_gp(self, alg_float):
+    def test_consistency_with_gp(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float({"e1": 1.0, "e2": -2.0, 0: 0.5})
         x = alg_float({"e1": 0.3, "e2": -0.7, 0: 1.0})
         b_mask = BladeMask(a)
@@ -38,7 +38,7 @@ class TestProductMatrix:
             expected = ax.to_dict().get(name, 0.0)
             assert mat_result[i, 0] == pytest.approx(expected, abs=1e-10)
 
-    def test_product_matrix_list_with_a_mask(self, alg_float):
+    def test_product_matrix_list_with_a_mask(self, alg_float):  # noqa: ANN001, ANN201
         mvs = [alg_float("e1"), alg_float("e2"), alg_float("e3")]
         b_mask = BladeMask.full(alg_float)
         c_mask = BladeMask.full(alg_float)
@@ -52,7 +52,7 @@ class TestProductMatrix:
         assert M.c_mask == c_mask
         assert M.shape == (3, len(c_mask), len(b_mask))
 
-    def test_product_matrix_list_auto_a_mask(self, alg_float):
+    def test_product_matrix_list_auto_a_mask(self, alg_float):  # noqa: ANN001, ANN201
         mvs = [alg_float("e1"), alg_float("e2"), alg_float("e12")]
         b_mask = BladeMask.full(alg_float)
         c_mask = BladeMask.full(alg_float)
@@ -61,7 +61,7 @@ class TestProductMatrix:
         assert set(M.a_mask.ids) == {1, 2, 3}
         assert M.n_mvs == 3
 
-    def test_product_blade_mask_renamed(self, alg_float):
+    def test_product_blade_mask_renamed(self, alg_float):  # noqa: ANN001, ANN201
         a_mask = BladeMask(alg_float("e1"))
         b_mask = BladeMask(alg_float, [1, 2])
         c_mask = product_blade_mask(a_mask, b_mask, product=EProduct.GP)

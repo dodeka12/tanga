@@ -52,7 +52,7 @@ from pytanga.viz.serializer import (
 # ── Helpers ────────────────────────────────────────────────
 
 
-def _serialize(ent, props=None, *, styles_map=None):
+def _serialize(ent, props=None, *, styles_map=None):  # noqa: ANN001, ANN202
     """Serialize using the canonical defaults (fresh copy each time)."""
     from copy import copy
 
@@ -73,31 +73,31 @@ def _serialize(ent, props=None, *, styles_map=None):
 
 
 class TestSerializeEntities:
-    def test_point(self):
+    def test_point(self):  # noqa: ANN201
         d = _serialize(Point(1.5, 2.5, 3.5))
         assert d["id"] == "test_id"
         assert d["kind"] == "Point"
         assert d["position"] == [1.5, 2.5, 3.5]
         assert d["color"] == "#ff4444"
 
-    def test_point_with_color_override(self):
+    def test_point_with_color_override(self):  # noqa: ANN201
         d = _serialize(Point(0, 0, 0), {"color": "#00ff00"})
         assert d["color"] == "#00ff00"
 
-    def test_direction(self):
+    def test_direction(self):  # noqa: ANN201
         d = _serialize(Direction(1, 0, 0))
         assert d["kind"] == "Direction"
         assert d["vector"] == [1, 0, 0]
         assert d["length"] == 2.0
 
-    def test_homogeneous_point(self):
+    def test_homogeneous_point(self):  # noqa: ANN201
         hp = HPoint(point=Point(1, 2, 3), weight=2.0)
         d = _serialize(hp)
         assert d["kind"] == "HPoint"
         assert d["position"] == [1, 2, 3]
         assert d["weight"] == 2.0
 
-    def test_point_pair(self):
+    def test_point_pair(self):  # noqa: ANN201
         pp = PointPair(point_a=Point(0, 0, 0), point_b=Point(1, 1, 1))
         d = _serialize(pp)
         assert d["kind"] == "PointPair"
@@ -106,7 +106,7 @@ class TestSerializeEntities:
         assert d["lineThickness"] == 0.02
         assert d["pointSize"] == 0.06
 
-    def test_line(self):
+    def test_line(self):  # noqa: ANN201
         line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
         d = _serialize(line)
         assert d["kind"] == "Line"
@@ -119,7 +119,7 @@ class TestSerializeEntities:
         assert d["length"] == 20.0
         assert d["style"]["length"] == 20.0
 
-    def test_infinite_line_centered(self):
+    def test_infinite_line_centered(self):  # noqa: ANN201
         # An offset infinite line is centered on its closest point to the origin:
         # origin = closest - d̂·length/2.
         line = Line(origin=Point(0, 1, 0), direction=Direction(1, 0, 0))
@@ -128,7 +128,7 @@ class TestSerializeEntities:
         assert d["direction"] == [1.0, 0.0, 0.0]
         assert d["length"] == 20.0
 
-    def test_line_from_points_respects_length(self):
+    def test_line_from_points_respects_length(self):  # noqa: ANN201
         line = Line.from_points(Point(0, 0, 0), Point(2, 0, 0))
         d = _serialize(line)
         # `length` is a content field carrying the explicit segment length.
@@ -136,7 +136,7 @@ class TestSerializeEntities:
         # The style `length` stays the default (used only for infinite lines).
         assert d["style"]["length"] == 20.0
 
-    def test_plane(self):
+    def test_plane(self):  # noqa: ANN201
         p = Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1))
         d = _serialize(p)
         assert d["kind"] == "Plane"
@@ -145,7 +145,7 @@ class TestSerializeEntities:
         assert d["opacity"] == 0.3
         assert d["extent"] == 10.0
 
-    def test_plane_pair(self):
+    def test_plane_pair(self):  # noqa: ANN201
         pair = PlanePair(
             Plane(point=Point(0, 0, 0), normal=Direction(1, 0, 0)),
             Plane(point=Point(0, 0, 0), normal=Direction(0, 1, 0)),
@@ -157,7 +157,7 @@ class TestSerializeEntities:
         assert d["plane1"]["extent"] == 5.0
         assert d["opacity"] == 0.3
 
-    def test_parallel_plane_pair(self):
+    def test_parallel_plane_pair(self):  # noqa: ANN201
         pair = ParallelPlanePair(
             Plane(point=Point(1, 0, 0), normal=Direction(1, 0, 0)),
             Plane(point=Point(-1, 0, 0), normal=Direction(1, 0, 0)),
@@ -167,7 +167,7 @@ class TestSerializeEntities:
         assert d["plane1"]["point"] == [1, 0, 0]
         assert d["plane2"]["point"] == [-1, 0, 0]
 
-    def test_plane_conic_pair(self):
+    def test_plane_conic_pair(self):  # noqa: ANN201
         import numpy as np
 
         from pytanga.quadric import Conic, to_coeffs
@@ -184,7 +184,7 @@ class TestSerializeEntities:
             assert len(path) > 0
             assert all(len(p) == 3 for p in path)
 
-    def test_plane_conic(self):
+    def test_plane_conic(self):  # noqa: ANN201
         import numpy as np
 
         from pytanga.quadric import Conic, to_coeffs
@@ -197,7 +197,7 @@ class TestSerializeEntities:
         assert len(d["paths"][0]) > 0
         assert d["style"]["thickness"] == 2.0
 
-    def test_plane_conic_line_pair_no_connecting_chord(self):
+    def test_plane_conic_line_pair_no_connecting_chord(self):  # noqa: ANN201
         import numpy as np
 
         from pytanga.quadric import Conic, to_coeffs
@@ -211,13 +211,13 @@ class TestSerializeEntities:
         assert len(d["paths"]) == 2
         assert all(len(p) == 2 for p in d["paths"])
 
-    def test_curve(self):
+    def test_curve(self):  # noqa: ANN201
         curve = Curve([[Point(0, 0, 0), Point(1, 1, 1), Point(2, 0, 2)]])
         d = _serialize(curve)
         assert d["kind"] == "Curve"
         assert d["paths"] == [[[0, 0, 0], [1, 1, 1], [2, 0, 2]]]
 
-    def test_circle(self):
+    def test_circle(self):  # noqa: ANN201
         c = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=3.0)
         d = _serialize(c)
         assert d["kind"] == "Circle"
@@ -226,12 +226,12 @@ class TestSerializeEntities:
         assert d["radius"] == 3.0
         assert d["tubeRadius"] == 0.03
 
-    def test_circle_radius_clamped(self):
+    def test_circle_radius_clamped(self):  # noqa: ANN201
         c = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=0.0)
         d = _serialize(c)
         assert d["radius"] == 0.001
 
-    def test_sphere(self):
+    def test_sphere(self):  # noqa: ANN201
         s = Sphere(center=Point(0, 0, 0), radius=2.5)
         d = _serialize(s)
         assert d["kind"] == "Sphere"
@@ -241,18 +241,18 @@ class TestSerializeEntities:
         assert d["style"]["opacity"] == 1.0
         assert d["style"]["color"] == "#ffaa00"
 
-    def test_sphere_radius_clamped(self):
+    def test_sphere_radius_clamped(self):  # noqa: ANN201
         d = _serialize(Sphere(Point(0, 0, 0), radius=-0.5))
         assert d["radius"] == 0.001
 
-    def test_space(self):
+    def test_space(self):  # noqa: ANN201
         d = _serialize(Space())
         assert d["kind"] == "Space"
         assert d["opacity"] == 0.1
         assert d["extent"] == 10.0
         assert d["scale"] == 1.0
 
-    def test_all_json_serializable(self):
+    def test_all_json_serializable(self):  # noqa: ANN201
         entities = [
             Point(1, 2, 3),
             Direction(0, 1, 0),
@@ -273,7 +273,7 @@ class TestSerializeEntities:
 
 
 class TestSerializeOperators:
-    def test_reflection_plane(self):
+    def test_reflection_plane(self):  # noqa: ANN201
         r = ReflectionPlane(Direction(0, 0, 1))
         d = _serialize(r)
         assert d["kind"] == "ReflectionPlane"
@@ -282,26 +282,26 @@ class TestSerializeOperators:
         assert d["opacity"] == 0.35
         assert d["extent"] == 5.0
 
-    def test_reflection_line(self):
+    def test_reflection_line(self):  # noqa: ANN201
         r = ReflectionLine(Direction(0, 0, 1))
         d = _serialize(r)
         assert d["kind"] == "ReflectionLine"
         assert d["direction"] == [0, 0, 1]
         assert d["color"] == "#aaccff"
 
-    def test_reflection_origin(self):
+    def test_reflection_origin(self):  # noqa: ANN201
         r = ReflectionPoint(Point(0, 0, 0))
         d = _serialize(r)
         assert d["center"] == [0, 0, 0]
         assert d["radius"] == 1.0
         assert d["color"] == "#ffffff"
 
-    def test_reflection_origin_displaced(self):
+    def test_reflection_origin_displaced(self):  # noqa: ANN201
         r = ReflectionPoint(Point(1, 2, 3))
         d = _serialize(r)
         assert d["center"] == [1, 2, 3]
 
-    def test_inversion(self):
+    def test_inversion(self):  # noqa: ANN201
         i = Inversion(center=Point(1, 2, 3))
         d = _serialize(i)
         assert d["kind"] == "Inversion"
@@ -309,7 +309,7 @@ class TestSerializeOperators:
         assert d["radius"] == 1.0
         assert d["color"] == "#cc88ff"
 
-    def test_rotor(self):
+    def test_rotor(self):  # noqa: ANN201
         r = Rotor(angle=1.5708, axis=Direction(0, 0, 1))
         d = _serialize(r)
         assert d["kind"] == "Rotor"
@@ -318,7 +318,7 @@ class TestSerializeOperators:
         assert d["color"] == "#ff8844"
         assert d["discRadius"] == 1.5
 
-    def test_translator(self):
+    def test_translator(self):  # noqa: ANN201
         t = Translator(vector=Direction(2, 0, 0))
         d = _serialize(t)
         assert d["kind"] == "Translator"
@@ -326,7 +326,7 @@ class TestSerializeOperators:
         assert d["color"] == "#44aaff"
         assert d["length"] == 3.0
 
-    def test_dilator(self):
+    def test_dilator(self):  # noqa: ANN201
         d_obj = Dilator(factor=2.0)
         d = _serialize(d_obj)
         assert d["kind"] == "Dilator"
@@ -335,7 +335,7 @@ class TestSerializeOperators:
         assert d["ringCount"] == 4
         assert d["maxRadius"] == 3.0
 
-    def test_motor(self):
+    def test_motor(self):  # noqa: ANN201
         m = Motor(
             rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
             translator=Translator(vector=Direction(0, 0, 2)),
@@ -348,7 +348,7 @@ class TestSerializeOperators:
         assert d["rotor"]["origin"] == [0, 0, 0]
         assert d["translator"]["vector"] == [0, 0, 2]
 
-    def test_general_rotor(self):
+    def test_general_rotor(self):  # noqa: ANN201
         gr = GeneralRotor(
             angle=0.5,
             axis=Direction(0, 1, 0),
@@ -361,21 +361,21 @@ class TestSerializeOperators:
         assert d["origin"] == [1, 0, 0]
         assert d["color"] == "#ff9966"
 
-    def test_dilator_with_offset_origin(self):
+    def test_dilator_with_offset_origin(self):  # noqa: ANN201
         gd = Dilator(factor=2.0, origin=Point(1, 2, 3))
         d = _serialize(gd)
         assert d["kind"] == "Dilator"
         assert d["factor"] == 2.0
         assert d["origin"] == [1.0, 2.0, 3.0]
 
-    def test_dilator_at_origin(self):
+    def test_dilator_at_origin(self):  # noqa: ANN201
         gd = Dilator(factor=3.0)
         d = _serialize(gd)
         assert d["kind"] == "Dilator"
         assert d["factor"] == 3.0
         assert d["origin"] == [0.0, 0.0, 0.0]
 
-    def test_all_operators_json_serializable(self):
+    def test_all_operators_json_serializable(self):  # noqa: ANN201
         ops = [
             ReflectionPlane(Direction(1, 0, 0)),
             ReflectionLine(Direction(1, 0, 0)),
@@ -404,14 +404,14 @@ class TestSerializeOperators:
 
 
 class TestStyleOverrides:
-    def test_style_override_color(self):
+    def test_style_override_color(self):  # noqa: ANN201
         """Style with explicit color overrides the canonical default."""
         from pytanga.viz._styles import PointStyle
 
         d = _serialize(Point(0, 0, 0), {"style": PointStyle(color="#0000ff")})
         assert d["color"] == "#0000ff"
 
-    def test_per_entity_overrides_style(self):
+    def test_per_entity_overrides_style(self):  # noqa: ANN201
         """Per-entity properties take priority over style."""
         from pytanga.viz._styles import PointStyle
 
@@ -421,7 +421,7 @@ class TestStyleOverrides:
         )
         assert d["color"] == "#ff0000"
 
-    def test_style_mutates_default_line_length(self):
+    def test_style_mutates_default_line_length(self):  # noqa: ANN201
         """Mutating canonical style changes the *default* length (used when
         the line carries no explicit content length)."""
         from copy import copy
@@ -439,7 +439,7 @@ class TestStyleOverrides:
         assert d["length"] == 50.0
         assert d["style"]["length"] == 50.0
 
-    def test_style_plane_extent(self):
+    def test_style_plane_extent(self):  # noqa: ANN201
         from copy import copy
 
         from pytanga.viz._styles import PlaneStyle
@@ -464,7 +464,7 @@ class TestStyleOverrides:
         assert d["extent"] == 3.0
         assert d["style"]["extent"] == 3.0
 
-    def test_plane_style_extent_via_full_state(self):
+    def test_plane_style_extent_via_full_state(self):  # noqa: ANN201
         """Per-call PlaneStyle(extent=...) survives scene-graph serialization."""
         from pytanga.geometry import Direction, Plane, Point
         from pytanga.viz import PlaneStyle, Visualizer
@@ -479,7 +479,7 @@ class TestStyleOverrides:
         assert plane["extent"] == 3.0
         assert plane["style"]["extent"] == 3.0
 
-    def test_sphere_style_opacity(self):
+    def test_sphere_style_opacity(self):  # noqa: ANN201
         """Sphere default opacity comes from canonical style."""
         from copy import copy
 
@@ -489,7 +489,7 @@ class TestStyleOverrides:
         d = _serialize(Sphere(Point(0, 0, 0), 1.0), styles_map=styles_map)
         assert d["style"]["opacity"] == 1.0
 
-    def test_cylinder(self):
+    def test_cylinder(self):  # noqa: ANN201
         d = _serialize(Cylinder(Point(1, 2, 3), Direction(0, 1, 0), 2.0, 0.2))
         assert d["kind"] == "Cylinder"
         assert d["origin"] == [1, 2, 3]
@@ -499,16 +499,16 @@ class TestStyleOverrides:
         assert d["alignCenter"] == 0.0
         assert d["style"]["style_type"] == "CylinderStyle"
 
-    def test_cylinder_align_center(self):
+    def test_cylinder_align_center(self):  # noqa: ANN201
         d = _serialize(Cylinder(align_center=0.5))
         assert d["alignCenter"] == 0.5
 
-    def test_cylinder_color_override(self):
+    def test_cylinder_color_override(self):  # noqa: ANN201
         d = _serialize(Cylinder(), {"color": "#00ff00"})
         assert d["color"] == "#00ff00"
         assert d["style"]["color"] == "#00ff00"
 
-    def test_arc(self):
+    def test_arc(self):  # noqa: ANN201
         d = _serialize(Arc(Point(0, 0, 0), Direction(0, 0, 1), 1.5, 0.05, math.pi))
         assert d["kind"] == "Arc"
         assert d["origin"] == [0, 0, 0]
@@ -522,27 +522,27 @@ class TestStyleOverrides:
         assert sum(c * c for c in start) == pytest.approx(1.0)
         assert start[2] == pytest.approx(0.0)  # perpendicular to +z
 
-    def test_arc_respects_start_direction(self):
+    def test_arc_respects_start_direction(self):  # noqa: ANN201
         d = _serialize(Arc(start_direction=Direction(1, 0, 0)))
         assert d["startDirection"] == [1.0, 0.0, 0.0]
 
-    def test_arc_arrow_defaults(self):
+    def test_arc_arrow_defaults(self):  # noqa: ANN201
         d = _serialize(Arc(show_arrow=True, tube_radius=0.1))
         assert d["arrow"] is not None
         assert d["arrow"]["length"] == pytest.approx(0.3)
         assert d["arrow"]["radius"] == pytest.approx(0.2)
 
-    def test_arc_arrow_explicit(self):
+    def test_arc_arrow_explicit(self):  # noqa: ANN201
         d = _serialize(Arc(show_arrow=True, arrow_length=0.5, arrow_radius=0.25))
         assert d["arrow"] == {"length": 0.5, "radius": 0.25}
 
-    def test_arc_style_override(self):
+    def test_arc_style_override(self):  # noqa: ANN201
         from pytanga.viz import ArcStyle
 
         d = _serialize(Arc(), {"style": ArcStyle(color="#00ff00")})
         assert d["style"]["color"] == "#00ff00"
 
-    def test_disk(self):
+    def test_disk(self):  # noqa: ANN201
         d = _serialize(Disk(Point(1, 2, 3), 2.0, Direction(0, 1, 0)))
         assert d["kind"] == "Disk"
         assert d["center"] == [1, 2, 3]
@@ -551,7 +551,7 @@ class TestStyleOverrides:
         assert d["style"]["style_type"] == "DiskStyle"
         assert d["style"]["thickness"] == 0.02
 
-    def test_partial_disk(self):
+    def test_partial_disk(self):  # noqa: ANN201
         d = _serialize(PartialDisk(angle=math.pi, start_direction=Direction(1, 0, 0)))
         assert d["kind"] == "PartialDisk"
         assert d["center"] == [0, 0, 0]
@@ -562,14 +562,14 @@ class TestStyleOverrides:
         assert d["style"]["style_type"] == "PartialDiskStyle"
         assert d["style"]["thickness"] == 0.02
 
-    def test_partial_disk_auto_start_direction(self):
+    def test_partial_disk_auto_start_direction(self):  # noqa: ANN201
         d = _serialize(PartialDisk())
         start = d["startDirection"]
         assert len(start) == 3
         assert sum(c * c for c in start) == pytest.approx(1.0)
         assert start[2] == pytest.approx(0.0)  # perpendicular to +z
 
-    def test_box(self):
+    def test_box(self):  # noqa: ANN201
         d = _serialize(Box(Point(1, 2, 3), (2, 3, 4)))
         assert d["kind"] == "Box"
         assert d["center"] == [1, 2, 3]
@@ -577,13 +577,13 @@ class TestStyleOverrides:
         assert d["rotation"] is None
         assert d["style"]["style_type"] == "BoxStyle"
 
-    def test_box_rotation_to_euler(self):
+    def test_box_rotation_to_euler(self):  # noqa: ANN201
         d = _serialize(Box(rotation=Rotor(math.pi / 2, Direction(0, 0, 1))))
         assert d["rotation"] is not None
         assert len(d["rotation"]) == 3
         assert d["rotation"][2] == pytest.approx(math.pi / 2)
 
-    def test_ellipsoid(self):
+    def test_ellipsoid(self):  # noqa: ANN201
         d = _serialize(Ellipsoid(radii=(1, 0.5, 0.75)))
         assert d["kind"] == "Ellipsoid"
         assert d["center"] == [0, 0, 0]
@@ -591,7 +591,7 @@ class TestStyleOverrides:
         assert d["rotation"] is None
         assert d["style"]["style_type"] == "EllipsoidStyle"
 
-    def test_ellipse(self):
+    def test_ellipse(self):  # noqa: ANN201
         d = _serialize(Ellipse(radius_u=2.0, radius_v=1.0, normal=Direction(0, 1, 0)))
         assert d["kind"] == "Ellipse"
         assert d["center"] == [0, 0, 0]
@@ -601,7 +601,7 @@ class TestStyleOverrides:
         assert d["style"]["style_type"] == "EllipseStyle"
         assert d["style"]["thickness"] == 1.0
 
-    def test_regular_polygon(self):
+    def test_regular_polygon(self):  # noqa: ANN201
         d = _serialize(RegularPolygon(radius=1.5, sides=6))
         assert d["kind"] == "RegularPolygon"
         assert d["center"] == [0, 0, 0]
@@ -612,7 +612,7 @@ class TestStyleOverrides:
         assert d["style"]["style_type"] == "RegularPolygonStyle"
         assert d["style"]["thickness"] == 0.02
 
-    def test_unknown_type_raises(self):
+    def test_unknown_type_raises(self):  # noqa: ANN201
         with pytest.raises(TypeError, match="Unknown entity type"):
             _serialize("not_an_entity")
 
@@ -621,7 +621,7 @@ class TestStyleOverrides:
 
 
 class TestSceneUpdate:
-    def test_wrapper_format(self):
+    def test_wrapper_format(self):  # noqa: ANN201
         msg = serialize_scene_update(
             [{"id": "a", "kind": "Point"}],
             ["b"],
@@ -630,13 +630,13 @@ class TestSceneUpdate:
         assert msg["objects"] == [{"id": "a", "kind": "Point"}]
         assert msg["removed"] == ["b"]
 
-    def test_empty(self):
+    def test_empty(self):  # noqa: ANN201
         msg = serialize_scene_update([], [])
         assert msg["type"] == "scene_update"
         assert msg["objects"] == []
         assert msg["removed"] == []
 
-    def test_with_labels(self):
+    def test_with_labels(self):  # noqa: ANN201
         msg = serialize_scene_update(
             [{"id": "a", "kind": "Point"}],
             [],
@@ -650,7 +650,7 @@ class TestSceneUpdate:
 
 
 class TestObjectUpdate:
-    def test_wrapper_format(self):
+    def test_wrapper_format(self):  # noqa: ANN201
         msg = serialize_object_update(
             [{"id": "a", "aspect": "full", "value": {"kind": "Point"}}],
             ["b"],
@@ -662,7 +662,7 @@ class TestObjectUpdate:
         ]
         assert msg["removed"] == ["b"]
 
-    def test_empty(self):
+    def test_empty(self):  # noqa: ANN201
         msg = serialize_object_update([], [])
         assert msg["type"] == "object_update"
         assert msg["patches"] == []
@@ -672,7 +672,7 @@ class TestObjectUpdate:
 # ── Viz-only entities scene-graph integration ────────────────
 
 
-def test_viz_entities_scene_graph_integration():
+def test_viz_entities_scene_graph_integration():  # noqa: ANN201
     from pytanga.geometry import Arc, Cylinder, Direction, Point
     from pytanga.viz import Visualizer
 

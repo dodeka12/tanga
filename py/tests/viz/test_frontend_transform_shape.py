@@ -10,7 +10,7 @@ from pytanga.viz.serializer import serialize_object_update
 
 
 class TestFrontendTransformShape:
-    def test_object_update_message_shape(self):
+    def test_object_update_message_shape(self):  # noqa: ANN201
         msg = serialize_object_update(
             [{"id": "a", "aspect": "full", "value": {"id": "a", "kind": "Point"}}],
             ["b"],
@@ -19,7 +19,7 @@ class TestFrontendTransformShape:
         assert "patches" in msg
         assert msg["removed"] == ["b"]
 
-    def test_full_patch_includes_parent_and_transform(self):
+    def test_full_patch_includes_parent_and_transform(self):  # noqa: ANN201
         s = Scene()
         g = s.add_group("g")
         eid = s.add(Point(1, 2, 3))
@@ -30,7 +30,7 @@ class TestFrontendTransformShape:
         assert "transform" in patch["value"]
         assert patch["value"]["transform"]["position"] == [0.0, 0.0, 0.0]
 
-    def test_style_patch_shape(self):
+    def test_style_patch_shape(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0))
         node = s.get_node(eid)
@@ -39,7 +39,7 @@ class TestFrontendTransformShape:
         assert patch["aspect"] == "style"
         assert set(patch["value"].keys()) == {"style"}
 
-    def test_transform_patch_shape(self):
+    def test_transform_patch_shape(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0))
         node = s.get_node(eid)
@@ -48,7 +48,7 @@ class TestFrontendTransformShape:
         assert patch["aspect"] == "transform"
         assert set(patch["value"].keys()) == {"position", "rotation", "scale"}
 
-    def test_content_patch_shape(self):
+    def test_content_patch_shape(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0))
         node = s.get_node(eid)
@@ -61,7 +61,7 @@ class TestFrontendTransformShape:
         assert "transform" not in patch["value"]
         assert "parent_id" not in patch["value"]
 
-    def test_overlay_patch_has_attach_to(self):
+    def test_overlay_patch_has_attach_to(self):  # noqa: ANN201
         s = Scene()
         s.add(Point(0, 0, 0))
         lid = s.add_label(Label(text="X", position=(0, 0, 0), parent_id="p"))
@@ -69,7 +69,7 @@ class TestFrontendTransformShape:
         assert patch["value"]["attach_to"] == "p"
         assert "transform" not in patch["value"]
 
-    def test_group_kind_in_state(self):
+    def test_group_kind_in_state(self):  # noqa: ANN201
         s = Scene()
         g = s.add_group("g")
         state = s.full_state()
@@ -77,7 +77,7 @@ class TestFrontendTransformShape:
         assert "VizGroup" in kinds
         assert g.id in {d["id"] for d in state}
 
-    def test_dfs_preorder(self):
+    def test_dfs_preorder(self):  # noqa: ANN201
         s = Scene()
         parent = s.add_group("parent")
         child_group = s.add_group("child_group")

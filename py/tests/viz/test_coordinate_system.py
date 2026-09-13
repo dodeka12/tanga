@@ -15,7 +15,7 @@ from pytanga.viz._scale import LinearScale, LogScale
 from pytanga.viz.camera import CameraConfig2d, View2DConfig
 
 
-def _line_endpoints(ref):
+def _line_endpoints(ref):  # noqa: ANN001, ANN202
     """Return the ``(start, end)`` of a ``Line`` entity as 3-tuples."""
     line = ref.entity
     return (
@@ -25,7 +25,7 @@ def _line_endpoints(ref):
 
 
 class TestFitView2D:
-    def test_linear_centered(self):
+    def test_linear_centered(self):  # noqa: ANN201
         cam = fit_view2d((0, 10), (0, 4))
         assert cam.xmin == -5.0
         assert cam.xmax == 5.0
@@ -33,7 +33,7 @@ class TestFitView2D:
         assert cam.ymax == 2.0
         assert cam.stretch == "fit"
 
-    def test_log_span(self):
+    def test_log_span(self):  # noqa: ANN201
         cam = fit_view2d((0.1, 100), (0.1, 100), xscale="log", yscale="log")
         # span = log10(100) - log10(0.1) = 2 - (-1) = 3
         assert cam.xmin == pytest.approx(-1.5)
@@ -41,7 +41,7 @@ class TestFitView2D:
         assert cam.ymin == pytest.approx(-1.5)
         assert cam.ymax == pytest.approx(1.5)
 
-    def test_border_and_stretch(self):
+    def test_border_and_stretch(self):  # noqa: ANN201
         cam = fit_view2d(
             (0, 2), (0, 2), border_world=0.5, border_px=10.0, stretch="fill"
         )
@@ -51,26 +51,26 @@ class TestFitView2D:
         assert cam.border_px == 10.0
         assert cam.stretch == "fill"
 
-    def test_default_stretch_is_fit(self):
+    def test_default_stretch_is_fit(self):  # noqa: ANN201
         cam = fit_view2d((0, 10), (0, 4))
         assert cam.stretch == "fit"
 
-    def test_stretch_modes_pass_through(self):
+    def test_stretch_modes_pass_through(self):  # noqa: ANN201
         assert fit_view2d((0, 10), (0, 4), stretch="fill").stretch == "fill"
         assert fit_view2d((0, 10), (0, 4), stretch="fill_x").stretch == "fill_x"
         assert fit_view2d((0, 10), (0, 4), stretch="fill_y").stretch == "fill_y"
 
-    def test_stretch_rejects_unknown_mode(self):
+    def test_stretch_rejects_unknown_mode(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             fit_view2d((0, 10), (0, 4), stretch="bogus")
 
-    def test_default_border_px_matches_coordinate_system(self):
+    def test_default_border_px_matches_coordinate_system(self):  # noqa: ANN201
         cam = fit_view2d((0, 10), (0, 4))
         assert cam.border_px == 60.0
 
 
 class TestCoordinateSystem2D:
-    def test_auto_span_from_camera(self):
+    def test_auto_span_from_camera(self):  # noqa: ANN201
         viz = Visualizer(
             add_default_axes=False,
             add_default_grid=False,
@@ -82,7 +82,7 @@ class TestCoordinateSystem2D:
         assert cs.xlim == (-2.0, 2.0)
         assert cs.ylim == (-1.0, 1.0)
 
-    def test_default_camera_with_border(self):
+    def test_default_camera_with_border(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         CoordinateSystem(
             viz, xlim=(0.1, 100.0), ylim=(0.1, 100.0), xscale="log", yscale="log"
@@ -94,12 +94,12 @@ class TestCoordinateSystem2D:
         assert cam.xmin == pytest.approx(-1.5)
         assert cam.xmax == pytest.approx(1.5)
 
-    def test_camera_false_does_not_set(self):
+    def test_camera_false_does_not_set(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         CoordinateSystem(viz, xlim=(-5, 5), ylim=(-5, 5), camera=False)
         assert viz._scenes[""].config.camera is None
 
-    def test_xlim_update_in_place(self):
+    def test_xlim_update_in_place(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(-5, 5), ylim=(-5, 5), camera=False)
         ids_before = {key: ref.id for key, ref in cs._refs.items()}
@@ -109,7 +109,7 @@ class TestCoordinateSystem2D:
         grid = cs._refs["grid"].entity
         assert grid.range_u == (0.0, 10.0)
 
-    def test_log_axes_emit_ticks(self):
+    def test_log_axes_emit_ticks(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(
             viz,
@@ -125,7 +125,7 @@ class TestCoordinateSystem2D:
         y_axis = cs._refs["y"].entity
         assert [label for _, label in y_axis.ticks] == ["1", "10", "100", "1000"]
 
-    def test_transform_and_plot(self):
+    def test_transform_and_plot(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         # centred: cx = cy = 5, so local coords are data - 5.
@@ -135,7 +135,7 @@ class TestCoordinateSystem2D:
         ref = cs.plot([1, 2], [3, 4], color="#ff0000")
         assert ref.id in viz._scenes[""]._nodes
 
-    def test_default_axis_label_styles(self):
+    def test_default_axis_label_styles(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(
             viz,
@@ -159,7 +159,7 @@ class TestCoordinateSystem2D:
         assert axes["y"]["value_style"]["offset_2d"] == [-8.0, 0.0]
         assert axes["y"]["label_style"]["rotation"] == -90.0
 
-    def test_2d_size_manual_placement_no_camera(self):
+    def test_2d_size_manual_placement_no_camera(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(
             viz, xlim=(0, 10), ylim=(0, 10), size=(2, 1), position=(1, 0, 0)
@@ -167,7 +167,7 @@ class TestCoordinateSystem2D:
         assert viz._scenes[""].config.camera is None
         assert cs.group.transform.position == (1.0, 0.0, 0.0)
 
-    def test_2d_size_up_rotates_plane(self):
+    def test_2d_size_up_rotates_plane(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(
             viz,
@@ -182,7 +182,7 @@ class TestCoordinateSystem2D:
         world_up = m[:3, :3] @ np.array([0.0, 1.0, 0.0])
         assert world_up == pytest.approx(np.array([1.0, 0.0, 0.0]))
 
-    def test_axis_origin(self):
+    def test_axis_origin(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(
             viz, xlim=(-5, 5), ylim=(-5, 5), axis_origin=(0, 0), camera=False
@@ -194,7 +194,7 @@ class TestCoordinateSystem2D:
         assert y_axis.start[0] == pytest.approx(0.0)  # y-axis crosses at x=0
         assert y_axis.end[0] == pytest.approx(0.0)
 
-    def test_axis_origin_default_spine(self):
+    def test_axis_origin_default_spine(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(-5, 5), ylim=(-5, 5), camera=False)
         x_axis = cs._refs["x"].entity
@@ -204,7 +204,7 @@ class TestCoordinateSystem2D:
 
 
 class TestCoordinateSystem3D:
-    def test_plane_and_transform(self):
+    def test_plane_and_transform(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -222,7 +222,7 @@ class TestCoordinateSystem3D:
         assert plane.span_v.y == pytest.approx(2.0)
         assert cs.group.transform.position == (1.0, 2.0, 3.0)
 
-    def test_normal_orients_group(self):
+    def test_normal_orients_group(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -236,12 +236,12 @@ class TestCoordinateSystem3D:
         world_normal = m[:3, :3] @ np.array([0.0, 0.0, 1.0])
         assert world_normal == pytest.approx(np.array([1.0, 0.0, 0.0]))
 
-    def test_3d_does_not_set_camera(self):
+    def test_3d_does_not_set_camera(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         CoordinateSystem(viz, xlim=(0, 4), ylim=(0, 2), position=(1, 2, 3))
         assert viz._scenes[""].config.camera is None
 
-    def test_external_size(self):
+    def test_external_size(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -260,7 +260,7 @@ class TestCoordinateSystem3D:
         assert lx == pytest.approx(1.0)
         assert ly == pytest.approx(4.0 / 7.0 - 0.5)
 
-    def test_to_world_applies_group_transform(self):
+    def test_to_world_applies_group_transform(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -274,7 +274,7 @@ class TestCoordinateSystem3D:
         # The data centre (0, 0) maps to the plane centre = `position`.
         assert cs.to_world(0.0, 0.0) == pytest.approx((1.0, 2.0, 3.0))
 
-    def test_align_bottom_left(self):
+    def test_align_bottom_left(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -290,7 +290,7 @@ class TestCoordinateSystem3D:
         # Top-right corner sits at position + (2, 1) in the plane.
         assert cs.to_world(4.0, 2.0) == pytest.approx((3.0, 3.0, 3.0))
 
-    def test_align_top_right(self):
+    def test_align_top_right(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -303,7 +303,7 @@ class TestCoordinateSystem3D:
         )
         assert cs.to_world(4.0, 2.0) == pytest.approx((1.0, 2.0, 3.0))
 
-    def test_position_accepts_point_and_direction(self):
+    def test_position_accepts_point_and_direction(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -321,7 +321,7 @@ class TestCoordinateSystem3D:
 
 
 class TestCoordinateSystemPlots:
-    def test_add_plot_and_update(self):
+    def test_add_plot_and_update(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz,
@@ -346,7 +346,7 @@ class TestCoordinateSystemPlots:
         assert render.points[-1][0] == pytest.approx(9.0)
         assert render.points[-1][2] == pytest.approx(0.0)
 
-    def test_add_plot_without_auto_x_keeps_xlim(self):
+    def test_add_plot_without_auto_x_keeps_xlim(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(-5, 5), ylim=(-5, 5), camera=False)
         path = PointPath()
@@ -358,7 +358,7 @@ class TestCoordinateSystemPlots:
 
 
 class TestCoordinateSystemScales:
-    def test_scale_types(self):
+    def test_scale_types(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(
             viz, xlim=(1, 100), ylim=(1, 100), xscale="log", camera=False
@@ -370,19 +370,19 @@ class TestCoordinateSystemScales:
 
 
 class TestCoordinateSystemDataGroup:
-    def test_data_group_is_child_of_group(self):
+    def test_data_group_is_child_of_group(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         assert cs.data_group.parent.id == cs.group.id
 
-    def test_data_group_transform_affine(self):
+    def test_data_group_transform_affine(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         # size defaults to the data span (10) → unit scale, centered at (-5, -5).
         assert cs.data_group.transform.scale == (1.0, 1.0, 1.0)
         assert cs.data_group.transform.position == (-5.0, -5.0, 0.0)
 
-    def test_data_group_transform_scales_to_size(self):
+    def test_data_group_transform_scales_to_size(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
         cs = CoordinateSystem(
             viz, xlim=(0, 10), ylim=(0, 10), size=(2, 1), camera=False
@@ -391,7 +391,7 @@ class TestCoordinateSystemDataGroup:
         assert cs.data_group.transform.scale == pytest.approx((0.2, 0.1, 1.0))
         assert cs.data_group.transform.position == pytest.approx((-1.0, -0.5, 0.03))
 
-    def test_plot_uses_data_coordinates(self):
+    def test_plot_uses_data_coordinates(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.plot([1, 2], [3, 4])
@@ -400,7 +400,7 @@ class TestCoordinateSystemDataGroup:
         assert pts[1] == pytest.approx((2.0, 4.0, 0.0))
         assert ref.parent.id == cs.data_group.id
 
-    def test_add_plot_is_data_group_child(self):
+    def test_add_plot_is_data_group_child(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         path = PointPath()
@@ -409,7 +409,7 @@ class TestCoordinateSystemDataGroup:
         ref = cs.add_plot(path, color="#ff0000", auto_x=False)
         assert ref.parent.id == cs.data_group.id
 
-    def test_to_data_linear_and_log(self):
+    def test_to_data_linear_and_log(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         assert cs.to_data(3, 4) == (3.0, 4.0)
@@ -423,7 +423,7 @@ class TestCoordinateSystemDataGroup:
         )
         assert log_cs.to_data(100, 1000) == pytest.approx((2.0, 3.0))
 
-    def test_degenerate_span_transform(self):
+    def test_degenerate_span_transform(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(5, 5), ylim=(0, 10), camera=False)
         assert cs.data_group.transform.scale[0] == 1.0
@@ -432,7 +432,7 @@ class TestCoordinateSystemDataGroup:
 
 
 class TestCoordinateSystemLines:
-    def test_vline_default_span_and_update(self):
+    def test_vline_default_span_and_update(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.vline(x=3.0, name="v", color="#ff0000")
@@ -445,7 +445,7 @@ class TestCoordinateSystemLines:
         assert end == pytest.approx((7.0, 10.0, 0.0))
         assert cs.vline(x=7.0, name="v").id == ref.id
 
-    def test_vline_explicit_span(self):
+    def test_vline_explicit_span(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.vline(x=2.0, name="v", y0=1.0, y1=9.0)
@@ -453,7 +453,7 @@ class TestCoordinateSystemLines:
         assert start == pytest.approx((2.0, 1.0, 0.0))
         assert end == pytest.approx((2.0, 9.0, 0.0))
 
-    def test_hline_default_span_and_update(self):
+    def test_hline_default_span_and_update(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.hline(y=4.0, name="h")
@@ -465,7 +465,7 @@ class TestCoordinateSystemLines:
         assert start == pytest.approx((0.0, 6.0, 0.0))
         assert end == pytest.approx((10.0, 6.0, 0.0))
 
-    def test_vline_hline_are_data_group_children(self):
+    def test_vline_hline_are_data_group_children(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         v = cs.vline(x=3.0, name="v")
@@ -473,7 +473,7 @@ class TestCoordinateSystemLines:
         assert v.parent.id == cs.data_group.id
         assert h.parent.id == cs.data_group.id
 
-    def test_vline_log_mapped(self):
+    def test_vline_log_mapped(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(
             viz,
@@ -488,7 +488,7 @@ class TestCoordinateSystemLines:
         assert start == pytest.approx((1.0, 0.0, 0.0))
         assert end == pytest.approx((1.0, 3.0, 0.0))
 
-    def test_remove_vline_hline(self):
+    def test_remove_vline_hline(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         v = cs.vline(x=3.0, name="v")
@@ -499,7 +499,7 @@ class TestCoordinateSystemLines:
         assert v.id not in viz._scenes[""]._nodes
         assert h.id not in viz._scenes[""]._nodes
 
-    def test_remove_unknown_is_noop(self):
+    def test_remove_unknown_is_noop(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         cs.remove_vline("does-not-exist")  # should not raise
@@ -507,7 +507,7 @@ class TestCoordinateSystemLines:
         cs.remove_line("does-not-exist")
         cs.remove_point("does-not-exist")
 
-    def test_line_tuple(self):
+    def test_line_tuple(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.line((1.0, 2.0), (3.0, 4.0), name="seg", color="#ffffff")
@@ -516,7 +516,7 @@ class TestCoordinateSystemLines:
         assert end == pytest.approx((3.0, 4.0, 0.0))
         assert ref.parent.id == cs.data_group.id
 
-    def test_line_accepts_point_instances(self):
+    def test_line_accepts_point_instances(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.line(Point(5.0, 1.0), Point(7.0, 9.0), name="seg")
@@ -524,7 +524,7 @@ class TestCoordinateSystemLines:
         assert start == pytest.approx((5.0, 1.0, 0.0))
         assert end == pytest.approx((7.0, 9.0, 0.0))
 
-    def test_line_update_by_name_and_remove(self):
+    def test_line_update_by_name_and_remove(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.line((0.0, 0.0), (1.0, 1.0), name="seg")
@@ -537,10 +537,10 @@ class TestCoordinateSystemLines:
         viz._scenes[""].flush()
         assert ref.id not in viz._scenes[""]._nodes
 
-    def _labels(self, viz):
+    def _labels(self, viz):  # noqa: ANN001, ANN202
         return [o for o in viz._scenes[""].full_state() if o.get("kind") == "label"]
 
-    def test_vline_label_anchors_at_midpoint(self):
+    def test_vline_label_anchors_at_midpoint(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.vline(x=3.0, name="v", label="x=3")
@@ -550,21 +550,21 @@ class TestCoordinateSystemLines:
         assert labels[0]["attach_to"] == ref.id
         assert labels[0]["position"] == pytest.approx([3.0, 5.0, 0.0])
 
-    def test_hline_label_anchors_at_midpoint(self):
+    def test_hline_label_anchors_at_midpoint(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         cs.hline(y=4.0, name="h", label="y=4")
         labels = self._labels(viz)
         assert labels[0]["position"] == pytest.approx([5.0, 4.0, 0.0])
 
-    def test_line_label_anchors_at_midpoint(self):
+    def test_line_label_anchors_at_midpoint(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         cs.line((1.0, 2.0), (3.0, 4.0), label="seg")
         labels = self._labels(viz)
         assert labels[0]["position"] == pytest.approx([2.0, 3.0, 0.0])
 
-    def test_point_label_anchors_at_point(self):
+    def test_point_label_anchors_at_point(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         cs.point((7.0, 8.0), name="pt", label="P")
@@ -573,14 +573,14 @@ class TestCoordinateSystemLines:
         # The point mesh sits at (2, 3, 0); the label anchor is (0, 0, 0) relative.
         assert labels[0]["position"] == pytest.approx([0.0, 0.0, 0.0])
 
-    def test_line_label_style_along(self):
+    def test_line_label_style_along(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         cs.vline(x=3.0, name="v", label="start", label_style=LabelStyle(along=0.0))
         labels = self._labels(viz)
         assert labels[0]["position"] == pytest.approx([3.0, 0.0, 0.0])
 
-    def test_label_persists_across_update(self):
+    def test_label_persists_across_update(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.vline(x=3.0, name="v", label="x=3")
@@ -590,7 +590,7 @@ class TestCoordinateSystemLines:
         assert labels[0]["text"] == "x=3"
         assert labels[0]["attach_to"] == ref.id
 
-    def test_point_tuple(self):
+    def test_point_tuple(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.point((2.0, 3.0), name="pt", color="#ffffff")
@@ -600,14 +600,14 @@ class TestCoordinateSystemLines:
         assert ref.entity.y == pytest.approx(-2.0)
         assert ref.entity.z == pytest.approx(0.0)
 
-    def test_point_accepts_point_instance(self):
+    def test_point_accepts_point_instance(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.point(Point(7.0, 8.0), name="pt")
         assert ref.entity.x == pytest.approx(2.0)
         assert ref.entity.y == pytest.approx(3.0)
 
-    def test_point_update_by_name_and_remove(self):
+    def test_point_update_by_name_and_remove(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
         cs = CoordinateSystem(viz, xlim=(0, 10), ylim=(0, 10), camera=False)
         ref = cs.point((0.0, 0.0), name="pt")

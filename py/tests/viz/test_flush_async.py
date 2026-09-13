@@ -22,20 +22,20 @@ class _FakeServer:
 
 
 @pytest.mark.anyio
-async def test_flush_async_noop_without_server():
+async def test_flush_async_noop_without_server():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     await viz.flush_async()  # no loop/server → silent no-op
 
 
 @pytest.mark.anyio
-async def test_flush_async_on_server_loop_flushes_all_scenes(monkeypatch):
+async def test_flush_async_on_server_loop_flushes_all_scenes(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz._server = _FakeServer()
     viz._loop = asyncio.get_running_loop()
 
     flushed: list[str] = []
 
-    async def _record(name, *, fit_camera=False):
+    async def _record(name, *, fit_camera=False):  # noqa: ANN001, ANN202
         flushed.append(name)
 
     monkeypatch.setattr(viz, "_flush_scene_async", _record)
@@ -46,7 +46,7 @@ async def test_flush_async_on_server_loop_flushes_all_scenes(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_flush_async_named_scene(monkeypatch):
+async def test_flush_async_named_scene(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.scene("detail")
     viz._server = _FakeServer()
@@ -54,7 +54,7 @@ async def test_flush_async_named_scene(monkeypatch):
 
     flushed: list[str] = []
 
-    async def _record(name, *, fit_camera=False):
+    async def _record(name, *, fit_camera=False):  # noqa: ANN001, ANN202
         flushed.append(name)
 
     monkeypatch.setattr(viz, "_flush_scene_async", _record)
@@ -65,14 +65,14 @@ async def test_flush_async_named_scene(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_flush_async_forwards_fit_camera(monkeypatch):
+async def test_flush_async_forwards_fit_camera(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz._server = _FakeServer()
     viz._loop = asyncio.get_running_loop()
 
     seen: list[bool] = []
 
-    async def _record(name, *, fit_camera=False):
+    async def _record(name, *, fit_camera=False):  # noqa: ANN001, ANN202
         seen.append(fit_camera)
 
     monkeypatch.setattr(viz, "_flush_scene_async", _record)
@@ -82,7 +82,7 @@ async def test_flush_async_forwards_fit_camera(monkeypatch):
     assert seen and all(seen)
 
 
-def test_flush_wait_from_other_thread_does_not_deadlock():
+def test_flush_wait_from_other_thread_does_not_deadlock():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz._server = _FakeServer()
     loop = asyncio.new_event_loop()
@@ -98,7 +98,7 @@ def test_flush_wait_from_other_thread_does_not_deadlock():
 
 
 @pytest.mark.anyio
-async def test_flush_wait_on_server_loop_raises():
+async def test_flush_wait_on_server_loop_raises():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz._server = _FakeServer()
     viz._loop = asyncio.get_running_loop()
@@ -108,7 +108,7 @@ async def test_flush_wait_on_server_loop_raises():
 
 
 @pytest.mark.anyio
-async def test_scene_handle_flush_async_delegates(monkeypatch):
+async def test_scene_handle_flush_async_delegates(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     handle = viz.scene("detail")
     viz._server = _FakeServer()
@@ -116,7 +116,7 @@ async def test_scene_handle_flush_async_delegates(monkeypatch):
 
     calls: list[dict] = []
 
-    async def _fake_flush_async(*, fit_camera=False, scene=None):
+    async def _fake_flush_async(*, fit_camera=False, scene=None):  # noqa: ANN001, ANN202
         calls.append({"fit_camera": fit_camera, "scene": scene})
 
     monkeypatch.setattr(viz, "flush_async", _fake_flush_async)

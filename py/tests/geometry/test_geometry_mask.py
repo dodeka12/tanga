@@ -44,7 +44,7 @@ ALWAYS_SUPPORTED = [
 ]
 
 
-def test_mask_for_matches_create_for_all_algebras():
+def test_mask_for_matches_create_for_all_algebras():  # noqa: ANN201
     """For every supported type, the mask is exactly the blades of create()."""
     from pytanga.geometry import create
 
@@ -70,12 +70,12 @@ def test_mask_for_matches_create_for_all_algebras():
         (BasisPGA2, {0, 3}),
     ],
 )
-def test_rotor_mask_literal(alg_cls, expected_ids):
+def test_rotor_mask_literal(alg_cls, expected_ids):  # noqa: ANN001, ANN201
     geo = Geometry(alg_cls())
     assert set(geo.mask_for(Rotor).ids) == expected_ids
 
 
-def test_opns_flips_entity_mask_but_not_operator():
+def test_opns_flips_entity_mask_but_not_operator():  # noqa: ANN201
     alg = BasisN3()
     geo = Geometry(alg)
 
@@ -91,7 +91,7 @@ def test_opns_flips_entity_mask_but_not_operator():
     assert opns_point != ipns_point
 
 
-def test_n3_point_opns_is_grade1_and_ipns_is_grade4():
+def test_n3_point_opns_is_grade1_and_ipns_is_grade4():  # noqa: ANN201
     alg = BasisN3()
     geo = Geometry(alg)
     assert {b.bit_count() for b in geo.mask_for(Point).ids} == {1}
@@ -100,14 +100,14 @@ def test_n3_point_opns_is_grade1_and_ipns_is_grade4():
     assert {b.bit_count() for b in geo.mask_for(Point).ids} == {4}
 
 
-def test_class_and_instance_give_same_mask_for_generic_instance():
+def test_class_and_instance_give_same_mask_for_generic_instance():  # noqa: ANN201
     geo = Geometry(BasisN3())
     cls_mask = geo.mask_for(Rotor)
     inst_mask = geo.mask_for(Rotor(0.7, Direction(1, 2, 3)))
     assert cls_mask == inst_mask
 
 
-def test_instance_mask_is_nonzero_blade_subset():
+def test_instance_mask_is_nonzero_blade_subset():  # noqa: ANN201
     # A rotor about the z-axis only has scalar + e12 non-zero; the class mask
     # has all three bivectors.  An instance reflects its actual blades.
     geo = Geometry(BasisE3())
@@ -117,7 +117,7 @@ def test_instance_mask_is_nonzero_blade_subset():
     assert set(cls_mask.ids) == {0, 3, 5, 6}
 
 
-def test_create_var_returns_variable_with_correct_mask():
+def test_create_var_returns_variable_with_correct_mask():  # noqa: ANN201
     geo = Geometry(BasisN3())
     v = geo.create_var("R1", Rotor)
     assert isinstance(v, Variable)
@@ -126,7 +126,7 @@ def test_create_var_returns_variable_with_correct_mask():
     assert v.mask == geo.mask_for(Rotor)
 
 
-def test_call_string_form_aliases_create_var():
+def test_call_string_form_aliases_create_var():  # noqa: ANN201
     geo = Geometry(BasisN3())
     v = geo("R1", Rotor)
     w = geo.create_var("R1", Rotor)
@@ -135,13 +135,13 @@ def test_call_string_form_aliases_create_var():
     assert v.mask == w.mask
 
 
-def test_call_plain_dispatch_unchanged():
+def test_call_plain_dispatch_unchanged():  # noqa: ANN201
     geo = Geometry(BasisN3())
     mv = geo(Point(1, 2, 3))
     assert geo.create(Point(1, 2, 3)).grades == mv.grades
 
 
-def test_module_level_helpers():
+def test_module_level_helpers():  # noqa: ANN201
     from pytanga.geometry import create_var, mask_for as public_mask_for
 
     alg = BasisN3()
@@ -161,13 +161,13 @@ def test_module_level_helpers():
         (BasisE3, Motor),
     ],
 )
-def test_unsupported_types_raise(alg_cls, typ):
+def test_unsupported_types_raise(alg_cls, typ):  # noqa: ANN001, ANN201
     geo = Geometry(alg_cls())
     with pytest.raises((TypeError, ValueError)):
         geo.mask_for(typ)
 
 
-def test_untyped_containers_raise():
+def test_untyped_containers_raise():  # noqa: ANN201
     from pytanga.geometry.entities import ImagCircle
     from pytanga.geometry.operators import TripleReflection
 

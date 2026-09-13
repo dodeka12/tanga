@@ -10,7 +10,7 @@ from pytanga.basis import BasisE3, BasisN3
 
 
 @pytest.fixture(scope="module")
-def e3():
+def e3():  # noqa: ANN201
     """E3 basis — cached for the whole test module."""
     return BasisE3()
 
@@ -18,7 +18,7 @@ def e3():
 # ---------------------------------------------------------------------------
 # InverseBlade tests
 # ---------------------------------------------------------------------------
-def test_blade_inverse_vector(e3):
+def test_blade_inverse_vector(e3):  # noqa: ANN001, ANN201
     """InverseBlade of a vector e1 should give e1 itself."""
     e1 = e3.e1
     inv = e1.blade_inverse()
@@ -27,7 +27,7 @@ def test_blade_inverse_vector(e3):
     assert abs(chk.scalar - 1.0) < 1e-8, "GP(e1, inv(e1)) scalar should be 1"
 
 
-def test_blade_inverse_bivector(e3):
+def test_blade_inverse_bivector(e3):  # noqa: ANN001, ANN201
     """InverseBlade of a bivector e1^e2."""
     e1 = e3.e1
     e2 = e3.e2
@@ -41,7 +41,7 @@ def test_blade_inverse_bivector(e3):
 # ---------------------------------------------------------------------------
 # PseudoInverseBlade tests
 # ---------------------------------------------------------------------------
-def test_blade_pseudo_inverse_vector(e3):
+def test_blade_pseudo_inverse_vector(e3):  # noqa: ANN001, ANN201
     """PseudoInverseBlade of e1 (same as inverse in Euclidean E3)."""
     e1 = e3.e1
     inv = e1.blade_pseudo_inverse()
@@ -53,7 +53,7 @@ def test_blade_pseudo_inverse_vector(e3):
 # ---------------------------------------------------------------------------
 # Project tests
 # ---------------------------------------------------------------------------
-def test_project_vector_onto_bivector(e3):
+def test_project_vector_onto_bivector(e3):  # noqa: ANN001, ANN201
     """Project e1+e2 onto bivector e1^e2 — should recover full vector."""
     e1 = e3.e1
     e2 = e3.e2
@@ -68,7 +68,7 @@ def test_project_vector_onto_bivector(e3):
 # ---------------------------------------------------------------------------
 # Reject tests
 # ---------------------------------------------------------------------------
-def test_reject_vector_from_bivector(e3):
+def test_reject_vector_from_bivector(e3):  # noqa: ANN001, ANN201
     """Reject e1+e2+e3 from e1^e2 — should give e3."""
     e1 = e3.e1
     e2 = e3.e2
@@ -82,7 +82,7 @@ def test_reject_vector_from_bivector(e3):
     assert diff.mag < 1e-8, "Reject of e1+e2+e3 from e1^e2 should be e3"
 
 
-def test_project_reject_reconstruction(e3):
+def test_project_reject_reconstruction(e3):  # noqa: ANN001, ANN201
     """Project + Reject should reconstruct the original multivector."""
     e1 = e3.e1
     e2 = e3.e2
@@ -100,7 +100,7 @@ def test_project_reject_reconstruction(e3):
 # ---------------------------------------------------------------------------
 # FactorizeBlade tests
 # ---------------------------------------------------------------------------
-def test_factorize_blade(e3):
+def test_factorize_blade(e3):  # noqa: ANN001, ANN201
     """Factorize bivector e1^e2 into two orthogonal vectors."""
     e1 = e3.e1
     e2 = e3.e2
@@ -121,7 +121,7 @@ def test_factorize_blade(e3):
 # ---------------------------------------------------------------------------
 # Join tests
 # ---------------------------------------------------------------------------
-def test_join_adjacent(e3):
+def test_join_adjacent(e3):  # noqa: ANN001, ANN201
     """Join of e1 and e2 should contain both vectors."""
     e1 = e3.e1
     e2 = e3.e2
@@ -134,7 +134,7 @@ def test_join_adjacent(e3):
     assert rej2.mag < 1e-8, "Rejection of e2 from Join(e1, e2) should be zero"
 
 
-def test_join_disjoint(e3):
+def test_join_disjoint(e3):  # noqa: ANN001, ANN201
     """Join of e1 and e3 (disjoint) should contain both."""
     e1 = e3.e1
     e3v = e3.e3
@@ -147,7 +147,7 @@ def test_join_disjoint(e3):
     assert rej3.mag < 1e-8, "Join(e1, e3) should contain e3"
 
 
-def test_join_non_orthonormal(e3):
+def test_join_non_orthonormal(e3):  # noqa: ANN001, ANN201
     """Join of a non-unit blade (e1+e2) with e3 must terminate and contain both."""
     a = e3.e1 + e3.e2
     b = e3.e3
@@ -160,7 +160,7 @@ def test_join_non_orthonormal(e3):
     assert rej_b.mag < 1e-8, "Join(e1+e2, e3) should contain e3"
 
 
-def test_meet_planes(e3):
+def test_meet_planes(e3):  # noqa: ANN001, ANN201
     """Meet of two planes e1^e2 and e1^e3 should be the e1 line."""
     plane1 = e3.e1 ^ e3.e2
     plane2 = e3.e1 ^ e3.e3
@@ -173,7 +173,7 @@ def test_meet_planes(e3):
     assert (m ^ e3.e1).mag < 1e-8, "Meet(e1^e2, e1^e3) should be the e1 line"
 
 
-def test_meet_with_pseudoscalar(e3):
+def test_meet_with_pseudoscalar(e3):  # noqa: ANN001, ANN201
     """Meet of a bivector with the pseudoscalar should be the bivector.
 
     Regression: the dual of the pseudoscalar is a scalar (grade 0), which
@@ -201,7 +201,7 @@ def test_meet_with_pseudoscalar(e3):
 # ---------------------------------------------------------------------------
 # FactorizeVersor tests
 # ---------------------------------------------------------------------------
-def test_factorize_versor(e3):
+def test_factorize_versor(e3):  # noqa: ANN001, ANN201
     """Factorize versor e1 * e2 (geometric product of two vectors)."""
     e1 = e3.e1
     e2 = e3.e2
@@ -219,7 +219,7 @@ def test_factorize_versor(e3):
     assert diff.mag < 1e-8, "Reconstructed versor should equal original V"
 
 
-def test_factorize_versor_g5():
+def test_factorize_versor_g5():  # noqa: ANN201
     """Factorize a random versor in G(5)."""
     alg = pytanga.Algebra(5, 0)
     rng = np.random.default_rng(42)
@@ -246,7 +246,7 @@ def test_factorize_versor_g5():
     assert diff.mag < 1e-4, "G(5) random versor reconstruction should match original"
 
 
-def _reconstruct_versor(scale, factors):
+def _reconstruct_versor(scale, factors):  # noqa: ANN001, ANN202
     """Reconstruct a versor from ``blade_factorize_versor``'s return value.
 
     ``FactorizeVersor`` peels factors right-to-left, so the versor equals
@@ -258,7 +258,7 @@ def _reconstruct_versor(scale, factors):
     return r
 
 
-def _versor_up_to_scale(mv):
+def _versor_up_to_scale(mv):  # noqa: ANN001, ANN202
     """Normalize a versor by its scalar part for up-to-scale comparison.
 
     In the degenerate conformal metric a versor with null factors (translator,
@@ -277,12 +277,12 @@ def _versor_up_to_scale(mv):
 
 
 @pytest.fixture(scope="module")
-def n3():
+def n3():  # noqa: ANN201
     """N3 basis (conformal model Cl(4,1)) — cached for the whole module."""
     return BasisN3()
 
 
-def test_join_ipns_spheres_n3_is_bivector(n3):
+def test_join_ipns_spheres_n3_is_bivector(n3):  # noqa: ANN001, ANN201
     """Join of two IPNS sphere vectors must be a bivector.
 
     Regression: ``ProjectUnsafe`` used the pseudo-inverse
@@ -308,7 +308,7 @@ def test_join_ipns_spheres_n3_is_bivector(n3):
     assert s2.reject(j).mag < 1e-8
 
 
-def test_factorize_point_pair_n3_clean_factors(n3):
+def test_factorize_point_pair_n3_clean_factors(n3):  # noqa: ANN001, ANN201
     """Factorizing a point pair yields two clean grade-1 factors.
 
     Regression: the basis-projection step inside ``FactorizeBlade`` also used
@@ -329,7 +329,7 @@ def test_factorize_point_pair_n3_clean_factors(n3):
     assert pp.reject(recon).mag < 1e-8
 
 
-def test_join_conformal_points_n3_is_bivector(n3):
+def test_join_conformal_points_n3_is_bivector(n3):  # noqa: ANN001, ANN201
     """Join of two conformal points (null vectors) must be a bivector.
 
     Regression: ``Join`` rejected each factor from ``J`` using projection and
@@ -356,7 +356,7 @@ def test_join_conformal_points_n3_is_bivector(n3):
     assert (p2 ^ j).mag < 1e-8
 
 
-def test_join_point_sphere_n3_is_bivector(n3):
+def test_join_point_sphere_n3_is_bivector(n3):  # noqa: ANN001, ANN201
     """Join of a null conformal point and a non-null IPNS sphere is a bivector."""
     from pytanga.geometry import Geometry, Point, Sphere
 
@@ -372,7 +372,7 @@ def test_join_point_sphere_n3_is_bivector(n3):
     assert (s ^ j).mag < 1e-8
 
 
-def test_join_equal_points_n3_is_vector(n3):
+def test_join_equal_points_n3_is_vector(n3):  # noqa: ANN001, ANN201
     """Join of a conformal point with itself stays grade-1."""
     from pytanga.geometry import Geometry, Point
 
@@ -384,7 +384,7 @@ def test_join_equal_points_n3_is_vector(n3):
     assert (p ^ j).mag < 1e-8
 
 
-def test_factorize_null_bivector_n3_clean_factors(n3):
+def test_factorize_null_bivector_n3_clean_factors(n3):  # noqa: ANN001, ANN201
     """Factorizing a null bivector yields clean grade-1 factors.
 
     Regression: the projection-based factorization used the pseudo-inverse
@@ -406,7 +406,7 @@ def test_factorize_null_bivector_n3_clean_factors(n3):
     assert (b ^ recon).mag < 1e-8
 
 
-def test_meet_conformal_points_n3(n3):
+def test_meet_conformal_points_n3(n3):  # noqa: ANN001, ANN201
     """Meet of two distinct conformal points is a scalar (empty intersection)."""
     from pytanga.geometry import Geometry, Point
 
@@ -422,7 +422,7 @@ def test_meet_conformal_points_n3(n3):
     assert m_self.grades == [1]
 
 
-def test_meet_spheres_n3_round_trip(n3):
+def test_meet_spheres_n3_round_trip(n3):  # noqa: ANN001, ANN201
     """Meet of two OPNS spheres round-trips to their intersection circle.
 
     Two spheres of radius 2, centred at (0,0,0) and (1,0,0), intersect in a
@@ -443,7 +443,7 @@ def test_meet_spheres_n3_round_trip(n3):
     assert abs(c.radius - (4 - 0.25) ** 0.5) < 1e-6
 
 
-def test_factorize_versor_motor_n3(n3):
+def test_factorize_versor_motor_n3(n3):  # noqa: ANN001, ANN201
     """A conformal Motor (grades {0,2,4}) factorizes into 4 grade-1 factors.
 
     Regression: null factors (from the degenerate conformal metric) used to
@@ -473,7 +473,7 @@ def test_factorize_versor_motor_n3(n3):
     assert diff.mag < 1e-8
 
 
-def test_factorize_versor_null_vector_scale_fallback(n3):
+def test_factorize_versor_null_vector_scale_fallback(n3):  # noqa: ANN001, ANN201
     """A null vector versor falls back to a unit scale.
 
     Regression: ``FactorizeVersor`` peeled the (null) factor via the geometric
@@ -487,7 +487,7 @@ def test_factorize_versor_null_vector_scale_fallback(n3):
     assert abs(scale.scalar - 1.0) < 1e-8
 
 
-def test_factorize_versor_translator_n3_round_trip(n3):
+def test_factorize_versor_translator_n3_round_trip(n3):  # noqa: ANN001, ANN201
     """A translator round-trips through versor factorization up to scale.
 
     A translator is the geometric product of two parallel reflection planes:
@@ -512,7 +512,7 @@ def test_factorize_versor_translator_n3_round_trip(n3):
     assert diff.mag < 1e-8
 
 
-def test_factorize_versor_dilator_n3_round_trip(n3):
+def test_factorize_versor_dilator_n3_round_trip(n3):  # noqa: ANN001, ANN201
     """A dilator round-trips through versor factorization up to scale.
 
     A dilator about the origin is ``1 + c·(e∞∧e₀)`` (grades {0,2}); like the

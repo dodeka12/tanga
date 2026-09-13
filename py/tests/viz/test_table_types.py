@@ -152,7 +152,7 @@ def test_number_format_serializes() -> None:
     assert _types(t) == [{"kind": "number", "format": "{:.2f}m"}, {"kind": "number"}]
 
 
-def test_set_column_format_mutates_and_persists(tmp_path) -> None:
+def test_set_column_format_mutates_and_persists(tmp_path) -> None:  # noqa: ANN001
     t = Table(id="t", columns=["x"], rows=[[3.5]], column_types=["number"])
     assert t.set_column_format(0, "{:.2f}m") is True
     assert t.get_value()["rows"] == [["3.50m"]]
@@ -354,7 +354,7 @@ def test_enum_options_not_serialized() -> None:
 def test_on_enum_options_registered_as_handler() -> None:
     from pytanga.viz._controls import ControlHandlerRegistry
 
-    async def handler(request, event) -> None:
+    async def handler(request, event) -> None:  # noqa: ANN001
         return None
 
     registry = ControlHandlerRegistry()
@@ -366,7 +366,7 @@ def test_on_enum_options_registered_as_handler() -> None:
 def test_table_view_forwards_enum_options() -> None:
     from pytanga.viz.views import control_to_view
 
-    def handler(request, event) -> None:
+    def handler(request, event) -> None:  # noqa: ANN001
         return None
 
     view = TableView("tv", columns=["a"], rows=[["x"]], on_enum_options=handler)
@@ -385,14 +385,14 @@ class _FakeLayoutTransport:
     async def send_to_browser(self, browser_id: str, message: dict) -> None:
         self.sent.append((browser_id, message))
 
-    def get(self, id: str, event: str = "change"):
+    def get(self, id: str, event: str = "change"):  # noqa: ANN202
         return None
 
     def unregister(self, id: str, event: str | None = None) -> None:
         return None
 
 
-def test_dispatch_enum_options_replies_to_browser(monkeypatch) -> None:
+def test_dispatch_enum_options_replies_to_browser(monkeypatch) -> None:  # noqa: ANN001
     from pytanga.viz._layout import LayoutHostImpl
 
     async def handler(request: TableEnumOptionsRequest, event: ControlEvent) -> list:
@@ -544,7 +544,7 @@ def test_from_dict_rejects_newer_minor() -> None:
         )
 
 
-def test_to_from_json_round_trip(tmp_path) -> None:
+def test_to_from_json_round_trip(tmp_path) -> None:  # noqa: ANN001
     t = Table(id="t", columns=["a"], rows=[[1]], column_types=["number"])
     path = tmp_path / "table.json"
     t.to_json(path)
@@ -553,7 +553,7 @@ def test_to_from_json_round_trip(tmp_path) -> None:
     assert t2.get_value() == t.get_value()
 
 
-def test_to_from_csv_round_trip(tmp_path) -> None:
+def test_to_from_csv_round_trip(tmp_path) -> None:  # noqa: ANN001
     t = Table(id="t", columns=["a", "b"], rows=[[1, True], [2, False]])
     path = tmp_path / "table.csv"
     t.to_csv(path)
@@ -564,7 +564,7 @@ def test_to_from_csv_round_trip(tmp_path) -> None:
     assert _types(t2) == [{"kind": "number"}, {"kind": "bool"}]
 
 
-def test_to_from_csv_european_round_trip(tmp_path) -> None:
+def test_to_from_csv_european_round_trip(tmp_path) -> None:  # noqa: ANN001
     t = Table(id="t", columns=["x", "active"], rows=[[1.5, True], [2.25, False]])
     path = tmp_path / "european.csv"
     t.to_csv(path, delimiter=";", decimal_separator=",")
@@ -575,14 +575,14 @@ def test_to_from_csv_european_round_trip(tmp_path) -> None:
     assert _types(t2) == [{"kind": "number"}, {"kind": "bool"}]
 
 
-def test_to_csv_semicolon_writes_expected_bytes(tmp_path) -> None:
+def test_to_csv_semicolon_writes_expected_bytes(tmp_path) -> None:  # noqa: ANN001
     t = Table(id="t", columns=["x", "active"], rows=[[1.5, True]])
     path = tmp_path / "t.csv"
     t.to_csv(path, delimiter=";", decimal_separator=",")
     assert path.read_bytes() == b"x;active\r\n1,5;true\r\n"
 
 
-def test_from_csv_auto_detects_semicolon_and_comma_decimal(tmp_path) -> None:
+def test_from_csv_auto_detects_semicolon_and_comma_decimal(tmp_path) -> None:  # noqa: ANN001
     path = tmp_path / "german.csv"
     path.write_text("preis;menge\n1,5;2\n3,25;4\n", encoding="utf-8")
     t = Table(id="t")
@@ -592,7 +592,7 @@ def test_from_csv_auto_detects_semicolon_and_comma_decimal(tmp_path) -> None:
     assert _types(t) == [{"kind": "number"}, {"kind": "number"}]
 
 
-def test_from_csv_auto_detects_comma_and_dot_decimal(tmp_path) -> None:
+def test_from_csv_auto_detects_comma_and_dot_decimal(tmp_path) -> None:  # noqa: ANN001
     path = tmp_path / "us.csv"
     path.write_text("x,y\n1.5,2\n3.25,4\n", encoding="utf-8")
     t = Table(id="t")
@@ -602,7 +602,7 @@ def test_from_csv_auto_detects_comma_and_dot_decimal(tmp_path) -> None:
     assert _types(t) == [{"kind": "number"}, {"kind": "number"}]
 
 
-def test_from_csv_explicit_delimiter_overrides_detection(tmp_path) -> None:
+def test_from_csv_explicit_delimiter_overrides_detection(tmp_path) -> None:  # noqa: ANN001
     path = tmp_path / "t.csv"
     path.write_text("x;y\n1;2\n", encoding="utf-8")
     t = Table(id="t")
@@ -613,7 +613,7 @@ def test_from_csv_explicit_delimiter_overrides_detection(tmp_path) -> None:
     assert t.get_value()["rows"] == [["1;2"]]
 
 
-def test_auto_save_writes_on_mutation(tmp_path) -> None:
+def test_auto_save_writes_on_mutation(tmp_path) -> None:  # noqa: ANN001
     import json
 
     path = tmp_path / "autosave.json"
@@ -622,7 +622,7 @@ def test_auto_save_writes_on_mutation(tmp_path) -> None:
     assert json.loads(path.read_text())["rows"] == [["42"]]
 
 
-def test_auto_save_undo_rewrites(tmp_path) -> None:
+def test_auto_save_undo_rewrites(tmp_path) -> None:  # noqa: ANN001
     import json
 
     path = tmp_path / "autosave.json"
@@ -632,7 +632,7 @@ def test_auto_save_undo_rewrites(tmp_path) -> None:
     assert json.loads(path.read_text())["rows"] == [["1"]]
 
 
-def test_table_view_json_path_autosave(tmp_path) -> None:
+def test_table_view_json_path_autosave(tmp_path) -> None:  # noqa: ANN001
     path = tmp_path / "tv.json"
     view = TableView("tbl", columns=["a"], rows=[[1]], json_path=str(path))
     assert path.exists()  # created with the initial data

@@ -13,7 +13,7 @@ from pytanga.expression._variable import Variable
 
 
 class TestVariable:
-    def test_construction_and_properties(self):
+    def test_construction_and_properties(self):  # noqa: ANN201
         _reset_allocator()
         alg = BasisE3()
         mask = BladeMask(alg, grades=[0, 2])
@@ -25,7 +25,7 @@ class TestVariable:
         assert v.labels[0] == v.label
         assert len(v.labels) == MAX_DEGREE
 
-    def test_label_blocks_are_distinct(self):
+    def test_label_blocks_are_distinct(self):  # noqa: ANN201
         _reset_allocator()
         alg = BasisE3()
         mask = BladeMask(alg, grades=[0, 2])
@@ -34,7 +34,7 @@ class TestVariable:
         assert v.labels != w.labels
         assert not (set(v.labels) & set(w.labels))
 
-    def test_many_variables(self):
+    def test_many_variables(self):  # noqa: ANN201
         _reset_allocator()
         alg = BasisE3()
         mask = BladeMask(alg, grades=[0, 2])
@@ -43,17 +43,17 @@ class TestVariable:
             assert isinstance(v.label, int)
             assert v.label >= 0
 
-    def test_repr(self):
+    def test_repr(self):  # noqa: ANN201
         _reset_allocator()
         alg = BasisE3()
         v = Variable("V1", BladeMask(alg, grades=[0, 2]))
         assert "V1" in repr(v)
 
-    def test_mask_type_error(self):
+    def test_mask_type_error(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             Variable("V1", "not a mask")
 
-    def test_public_imports(self):
+    def test_public_imports(self):  # noqa: ANN201
         from pytanga import Expression, Variable as TopVar
         from pytanga.expression import Expression as PkgExpr, Variable as PkgVar
 
@@ -61,7 +61,7 @@ class TestVariable:
         assert PkgVar is Variable
         assert PkgExpr is Expression
 
-    def test_reflected_ops_constant_left(self):
+    def test_reflected_ops_constant_left(self):  # noqa: ANN201
         _reset_allocator()
         alg = BasisE3()
         omega = Variable("omega", BladeMask(alg, grades=[2]))

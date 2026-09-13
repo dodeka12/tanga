@@ -42,19 +42,19 @@ ALL_ALGEBRAS = [
 
 
 @pytest.fixture(params=ALL_ALGEBRAS, ids=lambda c: c.__name__)
-def algebra(request):
+def algebra(request):  # noqa: ANN001, ANN201
     return request.param()
 
 
 # ── rng / seeding ──────────────────────────────────────────────
 
 
-def test_rng_is_generator(algebra):
+def test_rng_is_generator(algebra):  # noqa: ANN001, ANN201
     geo = Geometry(algebra)
     assert isinstance(geo.rng, np.random.Generator)
 
 
-def test_seed_determinism(algebra):
+def test_seed_determinism(algebra):  # noqa: ANN001, ANN201
     a = Geometry(algebra, seed=42)(RndPoint((-2, 2), (-2, 2), (-2, 2)))
     b = Geometry(algebra, seed=42)(RndPoint((-2, 2), (-2, 2), (-2, 2)))
     assert a.to_dict() == b.to_dict()
@@ -63,13 +63,13 @@ def test_seed_determinism(algebra):
 # ── RndPoint: direct generation ────────────────────────────────
 
 
-def test_rndpoint_returns_point_with_rng():
+def test_rndpoint_returns_point_with_rng():  # noqa: ANN201
     gen = np.random.default_rng(0)
     result = RndPoint((-1, 1), (-1, 1), (-1, 1))(gen)
     assert isinstance(result, Point)
 
 
-def test_rndpoint_count_returns_list():
+def test_rndpoint_count_returns_list():  # noqa: ANN201
     gen = np.random.default_rng(0)
     result = RndPoint((-1, 1), (-1, 1), (-1, 1), count=10)(gen)
     assert isinstance(result, list)
@@ -77,7 +77,7 @@ def test_rndpoint_count_returns_list():
     assert all(isinstance(p, Point) for p in result)
 
 
-def test_rndpoint_normal_distribution():
+def test_rndpoint_normal_distribution():  # noqa: ANN201
     gen = np.random.default_rng(0)
     rnd = RndPoint(Normal(0, 0.001), Normal(0, 0.001), (-5, 5))
     samples = [rnd(gen) for _ in range(200)]
@@ -89,7 +89,7 @@ def test_rndpoint_normal_distribution():
     assert all(-5.0 <= p.z < 5.0 for p in samples)
 
 
-def test_rndpoint_uniform_bounds():
+def test_rndpoint_uniform_bounds():  # noqa: ANN201
     gen = np.random.default_rng(0)
     rnd = RndPoint((1, 2), (-3, -2), (0, 0.1))
     for _ in range(20):
@@ -102,13 +102,13 @@ def test_rndpoint_uniform_bounds():
 # ── RndDirection ───────────────────────────────────────────────
 
 
-def test_rnddirection_returns_direction_with_rng():
+def test_rnddirection_returns_direction_with_rng():  # noqa: ANN201
     gen = np.random.default_rng(0)
     result = RndDirection((-1, 1), (-1, 1), (-1, 1))(gen)
     assert isinstance(result, Direction)
 
 
-def test_rnddirection_count_returns_list():
+def test_rnddirection_count_returns_list():  # noqa: ANN201
     gen = np.random.default_rng(0)
     result = RndDirection((-1, 1), (-1, 1), (-1, 1), count=5)(gen)
     assert isinstance(result, list)
@@ -119,19 +119,19 @@ def test_rnddirection_count_returns_list():
 # ── Geometry.__call__ integration ──────────────────────────────
 
 
-def test_geometry_call_single_rndpoint_returns_mv(algebra):
+def test_geometry_call_single_rndpoint_returns_mv(algebra):  # noqa: ANN001, ANN201
     mv = Geometry(algebra, seed=0)(RndPoint((-2, 2), (-2, 2), (-2, 2)))
     assert hasattr(mv, "to_dict")
 
 
-def test_geometry_call_count_returns_mv_list(algebra):
+def test_geometry_call_count_returns_mv_list(algebra):  # noqa: ANN001, ANN201
     mvs = Geometry(algebra, seed=0)(RndPoint((-2, 2), (-2, 2), (-2, 2), count=10))
     assert isinstance(mvs, list)
     assert len(mvs) == 10
     assert all(hasattr(mv, "to_dict") for mv in mvs)
 
 
-def test_geometry_call_list_of_rndpoint(algebra):
+def test_geometry_call_list_of_rndpoint(algebra):  # noqa: ANN001, ANN201
     mvs = Geometry(algebra, seed=0)(
         [RndPoint((-2, 2), (-2, 2), (-2, 2)) for _ in range(4)]
     )
@@ -140,7 +140,7 @@ def test_geometry_call_list_of_rndpoint(algebra):
     assert all(hasattr(mv, "to_dict") for mv in mvs)
 
 
-def test_geometry_call_normal_distribution(algebra):
+def test_geometry_call_normal_distribution(algebra):  # noqa: ANN001, ANN201
     mv = Geometry(algebra, seed=0)(RndPoint(Normal(0, 0.1), (-1, 1), (-1, 1)))
     assert hasattr(mv, "to_dict")
 
@@ -148,14 +148,14 @@ def test_geometry_call_normal_distribution(algebra):
 # ── Uniform class ──────────────────────────────────────────────
 
 
-def test_uniform_class_sampling():
+def test_uniform_class_sampling():  # noqa: ANN201
     gen = np.random.default_rng(0)
     for _ in range(10):
         v = Uniform(2.0, 3.0)(gen)
         assert 2.0 <= v < 3.0
 
 
-def test_unknown_spec_raises():
+def test_unknown_spec_raises():  # noqa: ANN201
     with pytest.raises(TypeError):
         RndPoint("not-a-spec", (-1, 1), (-1, 1))
 
@@ -163,13 +163,13 @@ def test_unknown_spec_raises():
 # ── Constant / fixed components ─────────────────────────────────
 
 
-def test_constant_sampling():
+def test_constant_sampling():  # noqa: ANN201
     gen = np.random.default_rng(0)
     assert Constant(3.45)(gen) == 3.45
     assert Constant(-2)(gen) == -2
 
 
-def test_rndpoint_fixed_components():
+def test_rndpoint_fixed_components():  # noqa: ANN201
     gen = np.random.default_rng(0)
     rnd = RndPoint((-1, 1), 3.45, Normal(1.2, 0.1))
     for _ in range(20):
@@ -179,7 +179,7 @@ def test_rndpoint_fixed_components():
         assert isinstance(p.z, float)
 
 
-def test_rnddirection_fixed_components():
+def test_rnddirection_fixed_components():  # noqa: ANN201
     gen = np.random.default_rng(0)
     rnd = RndDirection((-1, 1), 2.0, (-3, 3))
     for _ in range(20):
@@ -190,11 +190,11 @@ def test_rnddirection_fixed_components():
 # ── RndMV ───────────────────────────────────────────────────────
 
 
-def _vector_mask(algebra):
+def _vector_mask(algebra):  # noqa: ANN001, ANN202
     return BladeMask(algebra, grades=[1])
 
 
-def test_rndmv_returns_mv():
+def test_rndmv_returns_mv():  # noqa: ANN201
     from pytanga.blade_mask import BladeMask
 
     algebra = BasisE3()
@@ -204,7 +204,7 @@ def test_rndmv_returns_mv():
     assert set(mv.to_dict()) <= {"e1", "e2", "e3"}
 
 
-def test_rndmv_fixed_and_distributions():
+def test_rndmv_fixed_and_distributions():  # noqa: ANN201
     from pytanga.blade_mask import BladeMask
 
     algebra = BasisE3()
@@ -217,7 +217,7 @@ def test_rndmv_fixed_and_distributions():
         assert -1.0 <= d["e1"] < 1.0
 
 
-def test_rndmv_count():
+def test_rndmv_count():  # noqa: ANN201
     from pytanga.blade_mask import BladeMask
 
     algebra = BasisE3()
@@ -228,7 +228,7 @@ def test_rndmv_count():
     assert all(hasattr(mv, "to_dict") for mv in mvs)
 
 
-def test_rndmv_reproducible():
+def test_rndmv_reproducible():  # noqa: ANN201
     from pytanga.blade_mask import BladeMask
 
     algebra = BasisE3()
@@ -239,7 +239,7 @@ def test_rndmv_reproducible():
     assert a.to_dict() == b.to_dict()
 
 
-def test_rndmv_spec_length_mismatch_raises():
+def test_rndmv_spec_length_mismatch_raises():  # noqa: ANN201
     from pytanga.blade_mask import BladeMask
 
     algebra = BasisE3()
@@ -248,7 +248,7 @@ def test_rndmv_spec_length_mismatch_raises():
         RndMV(mask, [(-1, 1)])
 
 
-def test_geometry_call_rndmv(algebra):
+def test_geometry_call_rndmv(algebra):  # noqa: ANN001, ANN201
     from pytanga.blade_mask import BladeMask
 
     mask = BladeMask(algebra, grades=[1])
@@ -256,7 +256,7 @@ def test_geometry_call_rndmv(algebra):
     assert hasattr(mv, "to_dict")
 
 
-def test_geometry_call_rndmv_count(algebra):
+def test_geometry_call_rndmv_count(algebra):  # noqa: ANN001, ANN201
     from pytanga.blade_mask import BladeMask
 
     mask = BladeMask(algebra, grades=[1])

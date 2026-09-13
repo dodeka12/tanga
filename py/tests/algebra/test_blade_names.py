@@ -17,20 +17,20 @@ from pytanga.algebra._blade_names import (
 # grade
 # ---------------------------------------------------------------------------
 class TestGrade:
-    def test_scalar(self):
+    def test_scalar(self):  # noqa: ANN201
         assert grade(0) == 0
 
-    def test_vector(self):
+    def test_vector(self):  # noqa: ANN201
         assert grade(0b001) == 1
         assert grade(0b010) == 1
         assert grade(0b100) == 1
 
-    def test_bivector(self):
+    def test_bivector(self):  # noqa: ANN201
         assert grade(0b011) == 2
         assert grade(0b101) == 2
         assert grade(0b110) == 2
 
-    def test_pseudoscalar_3d(self):
+    def test_pseudoscalar_3d(self):  # noqa: ANN201
         assert grade(0b111) == 3
 
 
@@ -38,27 +38,27 @@ class TestGrade:
 # blade_name
 # ---------------------------------------------------------------------------
 class TestBladeName:
-    def test_scalar(self):
+    def test_scalar(self):  # noqa: ANN201
         assert blade_name(0, 3) == "s"
 
-    def test_pseudoscalar(self):
+    def test_pseudoscalar(self):  # noqa: ANN201
         assert blade_name(7, 3) == "I"
 
-    def test_vectors(self):
+    def test_vectors(self):  # noqa: ANN201
         assert blade_name(1, 3) == "e1"
         assert blade_name(2, 3) == "e2"
         assert blade_name(4, 3) == "e3"
 
-    def test_bivectors(self):
+    def test_bivectors(self):  # noqa: ANN201
         assert blade_name(3, 3) == "e12"
         assert blade_name(5, 3) == "e13"
         assert blade_name(6, 3) == "e23"
 
-    def test_out_of_range(self):
+    def test_out_of_range(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             blade_name(8, 3)  # 8 >= 2^3
 
-    def test_comma_separated_dim10(self):
+    def test_comma_separated_dim10(self):  # noqa: ANN201
         assert blade_name(1, 10) == "e1"
         assert blade_name(1 << 9, 10) == "e10"  # index 10
         assert blade_name(3, 10) == "e1,2"
@@ -69,47 +69,47 @@ class TestBladeName:
 # blade_id
 # ---------------------------------------------------------------------------
 class TestBladeId:
-    def test_scalar(self):
+    def test_scalar(self):  # noqa: ANN201
         assert blade_id("s", 3) == 0
         assert blade_id("0", 3) == 0
 
-    def test_pseudoscalar(self):
+    def test_pseudoscalar(self):  # noqa: ANN201
         assert blade_id("I", 3) == 7
 
-    def test_vectors(self):
+    def test_vectors(self):  # noqa: ANN201
         assert blade_id("e1", 3) == 1
         assert blade_id("e2", 3) == 2
         assert blade_id("e3", 3) == 4
 
-    def test_bivectors(self):
+    def test_bivectors(self):  # noqa: ANN201
         assert blade_id("e12", 3) == 3
         assert blade_id("e13", 3) == 5
         assert blade_id("e23", 3) == 6
 
-    def test_order_independent(self):
+    def test_order_independent(self):  # noqa: ANN201
         # e21 should give the same bitmask as e12
         assert blade_id("e21", 3) == blade_id("e12", 3)
 
-    def test_index_out_of_range(self):
+    def test_index_out_of_range(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             blade_id("e4", 3)  # dim=3, max index is 3
 
-    def test_repeated_index(self):
+    def test_repeated_index(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             blade_id("e11", 3)
 
-    def test_roundtrip(self):
+    def test_roundtrip(self):  # noqa: ANN201
         for dim in (3, 4, 5):
             for b in range(1 << dim):
                 name = blade_name(b, dim)
                 assert blade_id(name, dim) == b
 
-    def test_roundtrip_dim10(self):
+    def test_roundtrip_dim10(self):  # noqa: ANN201
         for b in range(1 << 10):
             name = blade_name(b, 10)
             assert blade_id(name, 10) == b
 
-    def test_comma_separated_dim10(self):
+    def test_comma_separated_dim10(self):  # noqa: ANN201
         assert blade_id("e1", 10) == 1
         assert blade_id("e10", 10) == 1 << 9
         assert blade_id("e1,2", 10) == 3
@@ -120,37 +120,37 @@ class TestBladeId:
 # blade_id_signed
 # ---------------------------------------------------------------------------
 class TestBladeIdSigned:
-    def test_scalar(self):
+    def test_scalar(self):  # noqa: ANN201
         assert blade_id_signed("s", 3) == (0, 1)
         assert blade_id_signed("0", 3) == (0, 1)
 
-    def test_pseudoscalar(self):
+    def test_pseudoscalar(self):  # noqa: ANN201
         assert blade_id_signed("I", 3) == (7, 1)
 
-    def test_canonical_order_is_positive(self):
+    def test_canonical_order_is_positive(self):  # noqa: ANN201
         assert blade_id_signed("e12", 3) == (3, 1)
         assert blade_id_signed("e13", 3) == (5, 1)
         assert blade_id_signed("e23", 3) == (6, 1)
 
-    def test_reversed_bivector_is_negative(self):
+    def test_reversed_bivector_is_negative(self):  # noqa: ANN201
         assert blade_id_signed("e21", 3) == (3, -1)
         assert blade_id_signed("e31", 3) == (5, -1)
         assert blade_id_signed("e32", 3) == (6, -1)
 
-    def test_reversed_trivector_is_negative(self):
+    def test_reversed_trivector_is_negative(self):  # noqa: ANN201
         assert blade_id_signed("e123", 3) == (7, 1)
         assert blade_id_signed("e321", 3) == (7, -1)
 
-    def test_two_transpositions_are_positive(self):
+    def test_two_transpositions_are_positive(self):  # noqa: ANN201
         # e312 → indices [3, 1, 2]; two inversions → even → +1
         assert blade_id_signed("e312", 3) == (7, 1)
 
-    def test_matches_blade_id_bitmask(self):
+    def test_matches_blade_id_bitmask(self):  # noqa: ANN201
         for name in ("e12", "e21", "e13", "e31", "e123", "e321"):
             bitmask, _sign = blade_id_signed(name, 3)
             assert bitmask == blade_id(name, 3)
 
-    def test_roundtrip_is_positive(self):
+    def test_roundtrip_is_positive(self):  # noqa: ANN201
         for dim in (3, 4, 5):
             for b in range(1 << dim):
                 name = blade_name(b, dim)
@@ -161,14 +161,14 @@ class TestBladeIdSigned:
 # all_blades
 # ---------------------------------------------------------------------------
 class TestAllBlades:
-    def test_count(self):
+    def test_count(self):  # noqa: ANN201
         assert len(all_blades(3)) == 8
         assert len(all_blades(4)) == 16
 
-    def test_sorted_by_grade(self):
+    def test_sorted_by_grade(self):  # noqa: ANN201
         blades = all_blades(3)
         grades = [grade(b) for b in blades]
         assert grades == sorted(grades)
 
-    def test_contains_all(self):
+    def test_contains_all(self):  # noqa: ANN201
         assert set(all_blades(3)) == set(range(8))

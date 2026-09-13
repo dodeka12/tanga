@@ -46,7 +46,7 @@ from pytanga.viz._style_dict import _StyleDict
 from pytanga.viz._viz_styles import VizStyles, make_styles
 
 
-def test_make_styles_has_all_members():
+def test_make_styles_has_all_members():  # noqa: ANN201
     s = make_styles()
     assert isinstance(s, VizStyles)
     assert isinstance(s.kind, _StyleDict)
@@ -61,13 +61,13 @@ def test_make_styles_has_all_members():
     assert s.kind["Point"].color is not None
 
 
-def test_getitem_delegates_to_kind():
+def test_getitem_delegates_to_kind():  # noqa: ANN201
     s = make_styles()
     assert s["Point"] is s.kind["Point"]
     assert s[Point] is s.kind[Point]
 
 
-def test_setitem_delegates_to_kind():
+def test_setitem_delegates_to_kind():  # noqa: ANN201
     s = make_styles()
     style = PointStyle(size=0.25, color="#123456")
     s["Point"] = style
@@ -76,13 +76,13 @@ def test_setitem_delegates_to_kind():
     assert s.kind[Point] is style
 
 
-def test_label_kind_class_key():
+def test_label_kind_class_key():  # noqa: ANN201
     s = make_styles()
     s.label_kind[Point] = LabelStyle(font_size=18)
     assert s.label_kind["Point"].font_size == 18
 
 
-def test_copy_is_deep():
+def test_copy_is_deep():  # noqa: ANN201
     s = make_styles()
     c = s.copy()
     c.kind["Point"].color = "#000000"
@@ -93,7 +93,7 @@ def test_copy_is_deep():
     assert s.act_point.hover_emissive != "#000000"
 
 
-def test_act_point_default():
+def test_act_point_default():  # noqa: ANN201
     s = make_styles()
     assert s.act_point.hover_emissive == "#ffff44"
     assert s.act_point.hover_scale == 1.5
@@ -102,12 +102,12 @@ def test_act_point_default():
 # ── Visualizer wiring ────────────────────────────────────────
 
 
-def test_viz_styles_is_main_scene_holder():
+def test_viz_styles_is_main_scene_holder():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     assert viz.styles is viz.main_scene.styles
 
 
-def test_viz_styles_mutation_affects_new_entity():
+def test_viz_styles_mutation_affects_new_entity():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.styles["Line"] = CylinderLineStyle(thickness=0.05)
     viz.add(Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)))
@@ -116,13 +116,13 @@ def test_viz_styles_mutation_affects_new_entity():
     assert line["style"]["thickness"] == 0.05
 
 
-def test_global_styles_independent_of_main_scene():
+def test_global_styles_independent_of_main_scene():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.styles["Line"] = CylinderLineStyle(thickness=0.05)
     assert isinstance(viz.global_styles["Line"], LineStyle)
 
 
-def test_new_scene_copies_global_styles():
+def test_new_scene_copies_global_styles():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.global_styles["Line"] = CylinderLineStyle(thickness=0.07)
     detail = viz.scene("detail")
@@ -130,7 +130,7 @@ def test_new_scene_copies_global_styles():
     assert isinstance(viz.styles["Line"], LineStyle)
 
 
-def test_named_scene_styles_independent():
+def test_named_scene_styles_independent():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     detail = viz.scene("detail")
     detail.styles["Point"].color = "#000000"
@@ -140,7 +140,7 @@ def test_named_scene_styles_independent():
 # ── Viz-only entities (Cylinder / Arc) ────────────────────────
 
 
-def test_viz_entity_style_defaults_registered():
+def test_viz_entity_style_defaults_registered():  # noqa: ANN201
     s = make_styles()
     assert "Cylinder" in s.kind
     assert "Arc" in s.kind
@@ -148,21 +148,21 @@ def test_viz_entity_style_defaults_registered():
     assert s.kind["Arc"].color is not None
 
 
-def test_cylinder_style_to_dict_omits_unset_fields():
+def test_cylinder_style_to_dict_omits_unset_fields():  # noqa: ANN201
     d = CylinderStyle(color="#123456").to_dict()
     assert d["style_type"] == "CylinderStyle"
     assert d["color"] == "#123456"
     assert "opacity" not in d
 
 
-def test_arc_style_to_dict_omits_unset_fields():
+def test_arc_style_to_dict_omits_unset_fields():  # noqa: ANN201
     d = ArcStyle(color="#123456").to_dict()
     assert d["style_type"] == "ArcStyle"
     assert d["color"] == "#123456"
     assert "opacity" not in d
 
 
-def test_viz_entity_style_class_key_access():
+def test_viz_entity_style_class_key_access():  # noqa: ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     assert viz.styles[Cylinder] is viz.styles["Cylinder"]
     assert viz.styles[Arc] is viz.styles["Arc"]

@@ -23,14 +23,14 @@ from pytanga.geometry.operators import (
 
 
 @pytest.fixture(scope="module")
-def basis_p2():
+def basis_p2():  # noqa: ANN201
     return BasisP2()
 
 
 # ═══════ Point ═══════
 
 
-def test_create_point_round_trip(basis_p2):
+def test_create_point_round_trip(basis_p2):  # noqa: ANN001, ANN201
     mv = create_entity(basis_p2, Point(1, 2, 0))
     result = analyze_entity(mv)
     assert isinstance(result, Point)
@@ -41,7 +41,7 @@ def test_create_point_round_trip(basis_p2):
 # ═══════ Direction ═══════
 
 
-def test_create_direction_round_trip(basis_p2):
+def test_create_direction_round_trip(basis_p2):  # noqa: ANN001, ANN201
     mv = create_entity(basis_p2, Direction(1, 0, 0))
     result = analyze_entity(mv)
     assert isinstance(result, Direction)
@@ -51,7 +51,7 @@ def test_create_direction_round_trip(basis_p2):
 # ═══════ Line ═══════
 
 
-def test_create_line_through_origin(basis_p2):
+def test_create_line_through_origin(basis_p2):  # noqa: ANN001, ANN201
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
     mv = create_entity(basis_p2, line)
     result = analyze_entity(mv)
@@ -59,7 +59,7 @@ def test_create_line_through_origin(basis_p2):
     assert abs(result.direction.x) == pytest.approx(1)
 
 
-def test_create_line_offset(basis_p2):
+def test_create_line_offset(basis_p2):  # noqa: ANN001, ANN201
     line = Line(origin=Point(1, 2, 0), direction=Direction(1, 0, 0))
     mv = create_entity(basis_p2, line)
     result = analyze_entity(mv)
@@ -73,7 +73,7 @@ from pytanga.geometry.entities import Plane
 from pytanga.geometry.operators import ReflectionPlane
 
 
-def test_create_plane_raises_in_p2(basis_p2):
+def test_create_plane_raises_in_p2(basis_p2):  # noqa: ANN001, ANN201
     """Plane entity is not supported in 2D (use Line instead)."""
     plane = Plane(point=Point(0, 5, 0), normal=Direction(0, 1, 0))
     with pytest.raises(AttributeError):
@@ -83,7 +83,7 @@ def test_create_plane_raises_in_p2(basis_p2):
 # ═══════ Space ═══════
 
 
-def test_create_space_round_trip(basis_p2):
+def test_create_space_round_trip(basis_p2):  # noqa: ANN001, ANN201
     mv = create_entity(basis_p2, Space(scale=2.0))
     result = analyze_entity(mv)
     assert isinstance(result, Space)
@@ -105,7 +105,7 @@ from pytanga.geometry.operators import Dilator, Inversion, Motor, Translator
         (HPoint, (Point(0, 0, 0),)),
     ],
 )
-def test_n2_entity_raises(basis_p2, entity_cls, args):
+def test_n2_entity_raises(basis_p2, entity_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises(ValueError, match="N2"):
         create_entity(basis_p2, entity_cls(*args))
 
@@ -119,7 +119,7 @@ def test_n2_entity_raises(basis_p2, entity_cls, args):
         (Motor, (Rotor(0, Direction(0, 0, 1)), Translator(Direction(1, 0, 0)))),
     ],
 )
-def test_n2_operator_raises(basis_p2, op_cls, args):
+def test_n2_operator_raises(basis_p2, op_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises(ValueError, match="N2"):
         create_operator(basis_p2, op_cls(*args))
 
@@ -127,7 +127,7 @@ def test_n2_operator_raises(basis_p2, op_cls, args):
 # ═══════ ReflectionLine ═══════
 
 
-def test_reflection_line_creation_is_grade_2(basis_p2):
+def test_reflection_line_creation_is_grade_2(basis_p2):  # noqa: ANN001, ANN201
     from pytanga.basis.p2 import BasisP2
 
     mv = create_operator(basis_p2, ReflectionLine(Direction(1, 0, 0)))
@@ -135,7 +135,7 @@ def test_reflection_line_creation_is_grade_2(basis_p2):
     assert float(mv[BasisP2.E13]) == pytest.approx(1)
 
 
-def test_reflection_line_round_trip(basis_p2):
+def test_reflection_line_round_trip(basis_p2):  # noqa: ANN001, ANN201
     rl = ReflectionLine(Direction(0, 1, 0))
     mv = create_operator(basis_p2, rl)
     result = analyze_operator(mv)
@@ -143,7 +143,7 @@ def test_reflection_line_round_trip(basis_p2):
     assert abs(result.line.direction.y) == pytest.approx(1)
 
 
-def test_reflection_line_application(basis_p2):
+def test_reflection_line_application(basis_p2):  # noqa: ANN001, ANN201
     rl_mv = create_operator(basis_p2, ReflectionLine(Direction(1, 0, 0)))
     a_hop = basis_p2.multivector({1: 1, 2: 2, 4: 1})
     result = rl_mv * a_hop * rl_mv.rev()
@@ -156,7 +156,7 @@ def test_reflection_line_application(basis_p2):
 # ═══════ ReflectionPoint ═══════
 
 
-def test_reflection_origin_creation_is_e3(basis_p2):
+def test_reflection_origin_creation_is_e3(basis_p2):  # noqa: ANN001, ANN201
     from pytanga.basis.p2 import BasisP2
 
     mv = create_operator(basis_p2, ReflectionPoint(Point(0, 0, 0)))
@@ -164,13 +164,13 @@ def test_reflection_origin_creation_is_e3(basis_p2):
     assert float(mv[BasisP2.E3]) == pytest.approx(1)
 
 
-def test_reflection_origin_round_trip(basis_p2):
+def test_reflection_origin_round_trip(basis_p2):  # noqa: ANN001, ANN201
     mv = create_operator(basis_p2, ReflectionPoint(Point(0, 0, 0)))
     result = analyze_operator(mv)
     assert isinstance(result, ReflectionPoint)
 
 
-def test_reflection_origin_application(basis_p2):
+def test_reflection_origin_application(basis_p2):  # noqa: ANN001, ANN201
     ro_mv = create_operator(basis_p2, ReflectionPoint(Point(0, 0, 0)))
     a_hop = basis_p2.multivector({1: 1, 2: 2, 4: 1})
     result = ro_mv * a_hop * ro_mv.rev()
@@ -182,7 +182,7 @@ def test_reflection_origin_application(basis_p2):
 # ═══════ Rotor ═══════
 
 
-def test_rotor_round_trip(basis_p2):
+def test_rotor_round_trip(basis_p2):  # noqa: ANN001, ANN201
     r = Rotor(math.pi / 3, Direction(1, 0, 0))
     mv = create_operator(basis_p2, r)
     result = analyze_operator(mv)
@@ -191,7 +191,7 @@ def test_rotor_round_trip(basis_p2):
     assert abs(result.axis.z) == pytest.approx(1, abs=1e-6)
 
 
-def test_rotor_application_homogeneous(basis_p2):
+def test_rotor_application_homogeneous(basis_p2):  # noqa: ANN001, ANN201
     r = Rotor(math.pi, Direction(0, 0, 1))
     rotor_mv = create_operator(basis_p2, r)
     a_hop = basis_p2.multivector({1: 1, 2: 2, 4: 1})
@@ -204,7 +204,7 @@ def test_rotor_application_homogeneous(basis_p2):
 # ═══════ IPNS round-trips ═══════
 
 
-def test_create_direction_ipns_round_trip(basis_p2, monkeypatch):
+def test_create_direction_ipns_round_trip(basis_p2, monkeypatch):  # noqa: ANN001, ANN201
     """Direction(1,0,0) → IPNS → analyze IPNS → Direction(1,0,0)."""
     monkeypatch.setattr(basis_p2, "opns", False)
     mv = create_entity(basis_p2, Direction(1, 0, 0))
@@ -212,7 +212,7 @@ def test_create_direction_ipns_round_trip(basis_p2, monkeypatch):
     assert isinstance(result, Direction)
 
 
-def test_create_space_ipns_round_trip(basis_p2, monkeypatch):
+def test_create_space_ipns_round_trip(basis_p2, monkeypatch):  # noqa: ANN001, ANN201
     monkeypatch.setattr(basis_p2, "opns", False)
     mv = create_entity(basis_p2, Space(scale=3.0))
     assert set(mv.grades) == {0}

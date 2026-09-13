@@ -10,7 +10,7 @@ from pytanga.viz.server import VizServer
 
 
 class _FakeWS:
-    def __init__(self):
+    def __init__(self):  # noqa: ANN204
         self.sent: list[dict] = []
 
     async def send_str(self, payload: str) -> None:
@@ -32,7 +32,7 @@ def _server() -> VizServer:
 
 
 class TestPushFullState:
-    def test_layout_push_orders_messages(self):
+    def test_layout_push_orders_messages(self):  # noqa: ANN201
         server = _server()
         ws = _FakeWS()
         asyncio.run(
@@ -52,14 +52,14 @@ class TestPushFullState:
         assert ws.sent[5]["type"] == "scene_update" and ws.sent[5]["scene"] == "b"
         assert types[-1] == "scene_list"
 
-    def test_single_scene_push(self):
+    def test_single_scene_push(self):  # noqa: ANN201
         server = _server()
         ws = _FakeWS()
         asyncio.run(server._push_full_state(ws, scene_names=["main"], browser_id="b1"))
         types = [m["type"] for m in ws.sent]
         assert types == ["clear_all", "scene_config", "scene_update", "scene_list"]
 
-    def test_layout_payload_omitted_when_none(self):
+    def test_layout_payload_omitted_when_none(self):  # noqa: ANN201
         server = _server()
         ws = _FakeWS()
         asyncio.run(server._push_full_state(ws, scene_names=["a"], browser_id="b1"))
@@ -84,19 +84,19 @@ class TestResolveLayout:
         }
         return server
 
-    def test_single_scene_uses_scene_layout_callback(self):
+    def test_single_scene_uses_scene_layout_callback(self):  # noqa: ANN201
         server = self._server()
         scene_names, payload = server._resolve_layout("detail", None)
         assert scene_names == ["detail"]
         assert payload == server._scene_layout_callback("detail")
 
-    def test_layout_mode_uses_layout_callback(self):
+    def test_layout_mode_uses_layout_callback(self):  # noqa: ANN201
         server = self._server()
         scene_names, payload = server._resolve_layout("", "demo")
         assert scene_names == ["a", "b"]
         assert payload["name"] == "demo"
 
-    def test_unknown_layout_falls_back_to_main_scene(self):
+    def test_unknown_layout_falls_back_to_main_scene(self):  # noqa: ANN201
         server = VizServer()
         server._layout_callback = lambda name: None
         server._scene_layout_callback = lambda name: None
@@ -104,7 +104,7 @@ class TestResolveLayout:
         assert scene_names == [""]
         assert payload is None
 
-    def test_single_scene_without_scene_layout_callback_returns_no_payload(self):
+    def test_single_scene_without_scene_layout_callback_returns_no_payload(self):  # noqa: ANN201
         server = VizServer()
         server._layout_callback = lambda name: None
         scene_names, payload = server._resolve_layout("main", None)
@@ -113,7 +113,7 @@ class TestResolveLayout:
 
 
 class TestThemeServing:
-    def test_theme_links_injected_when_callback_set(self):
+    def test_theme_links_injected_when_callback_set(self):  # noqa: ANN201
         server = VizServer()
         server._theme_callback = lambda: {
             "theme": "dark",
@@ -125,6 +125,6 @@ class TestThemeServing:
         assert 'data-tanga-theme href="themes/tokens.css"' in html
         assert 'data-tanga-theme href="themes/dark/tokens.css"' in html
 
-    def test_theme_links_omitted_when_callback_unset(self):
+    def test_theme_links_omitted_when_callback_unset(self):  # noqa: ANN201
         server = VizServer()
         assert server._theme_links_html() == ""

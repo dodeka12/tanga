@@ -31,27 +31,27 @@ ALL_BASES = [
 ]
 
 
-def test_algebra_default_opns_is_true():
+def test_algebra_default_opns_is_true():  # noqa: ANN201
     assert Algebra(2, 0).opns is True
 
 
-def test_algebra_opns_false():
+def test_algebra_opns_false():  # noqa: ANN201
     assert Algebra(2, 0, opns=False).opns is False
 
 
 @pytest.mark.parametrize("basis_cls", ALL_BASES)
-def test_basis_default_opns_is_true(basis_cls):
+def test_basis_default_opns_is_true(basis_cls):  # noqa: ANN001, ANN201
     assert basis_cls().opns is True
 
 
 @pytest.mark.parametrize("basis_cls", ALL_BASES)
-def test_basis_opns_false(basis_cls):
+def test_basis_opns_false(basis_cls):  # noqa: ANN001, ANN201
     alg = basis_cls(opns=False)
     assert alg.opns is False
 
 
 @pytest.mark.parametrize("basis_cls", ALL_BASES)
-def test_basis_opns_mutation(basis_cls):
+def test_basis_opns_mutation(basis_cls):  # noqa: ANN001, ANN201
     alg = basis_cls()
     alg.opns = False
     assert alg.opns is False
@@ -59,7 +59,7 @@ def test_basis_opns_mutation(basis_cls):
     assert alg.opns is True
 
 
-def test_mv_observes_algebra_opns():
+def test_mv_observes_algebra_opns():  # noqa: ANN201
     alg = BasisE3()
     mv = alg.multivector({1: 1})
     assert mv.opns is True
@@ -69,7 +69,7 @@ def test_mv_observes_algebra_opns():
     assert mv.algebra.opns is False
 
 
-def test_flag_is_per_algebra_not_global():
+def test_flag_is_per_algebra_not_global():  # noqa: ANN201
     a = BasisE3(opns=True)
     b = BasisE3(opns=False)
     assert a.opns is True

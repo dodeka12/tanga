@@ -30,7 +30,7 @@ from pytanga.geometry.operators import (
 
 
 @pytest.fixture(scope="module")
-def b():
+def b():  # noqa: ANN201
     return BasisPGA3()
 
 
@@ -39,7 +39,7 @@ def b():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_entity_point_opns_round_trip(b):
+def test_entity_point_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E1: create Point(3,-2,7) → analyze → assert exact."""
     mv: MV = create_entity(b, Point(3, -2, 7))
     r = analyze_entity(mv)
@@ -49,7 +49,7 @@ def test_entity_point_opns_round_trip(b):
     assert r.z == pytest.approx(7)
 
 
-def test_entity_direction_opns_round_trip(b):
+def test_entity_direction_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E2: create Direction(1,2,0) → analyze → assert exact."""
     mv: MV = create_entity(b, Direction(1, 2, 0))
     r = analyze_entity(mv)
@@ -59,7 +59,7 @@ def test_entity_direction_opns_round_trip(b):
     assert r.z == pytest.approx(0)
 
 
-def test_entity_plane_opns_round_trip(b):
+def test_entity_plane_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E3: create Plane(point=(3,-2,1), normal=(1,3,0)) → analyze → assert.
 
     The analysis returns the closest point to the origin on the plane, not
@@ -87,7 +87,7 @@ def test_entity_plane_opns_round_trip(b):
     assert d_analyzed == pytest.approx(d_scaled)
 
 
-def test_entity_line_opns_round_trip(b):
+def test_entity_line_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E4: create Line(origin=(1,2,3), dir=(1,2,0)) → analyze → assert.
 
     The analysis returns the closest point to the origin on the line, not
@@ -117,7 +117,7 @@ def test_entity_line_opns_round_trip(b):
     assert cross_z == pytest.approx(0, abs=1e-6)
 
 
-def test_entity_space_opns_round_trip(b):
+def test_entity_space_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E5: create Space(scale=2.5) → analyze → assert."""
     mv: MV = create_entity(b, Space(scale=2.5))
     r = analyze_entity(mv)
@@ -130,7 +130,7 @@ def test_entity_space_opns_round_trip(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_scale2_point_invariant(b):
+def test_scale2_point_invariant(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Point(3, -2, 7)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
@@ -139,7 +139,7 @@ def test_scale2_point_invariant(b):
     assert r.z == pytest.approx(7, abs=1e-6)
 
 
-def test_scale2_line_invariant(b):
+def test_scale2_line_invariant(b):  # noqa: ANN001, ANN201
     direction = Direction(1, 2, 0)
     unit = direction.normalized()
     pt = Point(1, 2, 3)
@@ -163,7 +163,7 @@ def test_scale2_line_invariant(b):
     assert cross_z == pytest.approx(0, abs=1e-6)
 
 
-def test_scale2_plane_invariant(b):
+def test_scale2_plane_invariant(b):  # noqa: ANN001, ANN201
     normal = Direction(1, 3, 0)
     unit = normal.normalized()
     pt = Point(3, -2, 1)
@@ -184,7 +184,7 @@ def test_scale2_plane_invariant(b):
     assert d_analyzed == pytest.approx(d_scaled, abs=1e-6)
 
 
-def test_scale2_space_doubles(b):
+def test_scale2_space_doubles(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Space(scale=2.5)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
@@ -196,7 +196,7 @@ def test_scale2_space_doubles(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_meet_join_pga3_convention(b):
+def test_meet_join_pga3_convention(b):  # noqa: ANN001, ANN201
     """PGA3 meet = intersection, join = union/span (Gunn/Dorst)."""
     p1 = create_entity(b, Point(1, 0, 0))
     p2 = create_entity(b, Point(0, 1, 0))
@@ -210,7 +210,7 @@ def test_meet_join_pga3_convention(b):
     assert pl1.meet(pl2).grades == [2]
 
 
-def test_meet_join_non_pga_unchanged():
+def test_meet_join_non_pga_unchanged():  # noqa: ANN201
     """Non-PGA algebras keep the DFM07 convention (join = span, meet = regressive)."""
     from pytanga.basis import BasisE3
 
@@ -219,7 +219,7 @@ def test_meet_join_non_pga_unchanged():
     assert (e.e1 ^ e.e2).meet(e.e1 ^ e.e3).grades == [1]
 
 
-def test_entity_line_from_two_points_join_round_trip(b):
+def test_entity_line_from_two_points_join_round_trip(b):  # noqa: ANN001, ANN201
     """Join of two points is the connecting line; analyze → closest point to origin."""
     a = create_entity(b, Point(1, 0, 0))
     c = create_entity(b, Point(0, 1, 0))
@@ -236,7 +236,7 @@ def test_entity_line_from_two_points_join_round_trip(b):
     assert r.direction.z == pytest.approx(0, abs=1e-6)
 
 
-def test_point_on_line_incidence_dual_outer(b):
+def test_point_on_line_incidence_dual_outer(b):  # noqa: ANN001, ANN201
     """Incidence in PGA3: ⋆P ∧ ⋆L == 0 iff P lies on L (P.dual() ^ L.dual())."""
     a = create_entity(b, Point(1, 0, 0))
     c = create_entity(b, Point(0, 1, 0))
@@ -249,7 +249,7 @@ def test_point_on_line_incidence_dual_outer(b):
         assert not p.dual().op(line.dual()).is_zero, f"Point({x},{y},{z}) off line"
 
 
-def test_point_on_line_join_degenerate(b):
+def test_point_on_line_join_degenerate(b):  # noqa: ANN001, ANN201
     """Gunn/Dorst join of a point on a line with that line is zero (incidence)."""
     a = create_entity(b, Point(1, 0, 0))
     c = create_entity(b, Point(0, 1, 0))
@@ -267,7 +267,7 @@ def test_point_on_line_join_degenerate(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_operator_rotor_round_trip(b):
+def test_operator_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O1: create Rotor(π/2, z-axis) → analyze → assert angle & axis."""
     mv: MV = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
     r = analyze_operator(mv)
@@ -278,7 +278,7 @@ def test_operator_rotor_round_trip(b):
     assert r.axis.z == pytest.approx(1)
 
 
-def test_operator_translator_round_trip(b):
+def test_operator_translator_round_trip(b):  # noqa: ANN001, ANN201
     """O2: create Translator(2,-1,3) → analyze → assert vector.
 
     Creation: T = 1 + 0.5·(dx·e₁∧e₀ + …)  (plus sign)
@@ -292,7 +292,7 @@ def test_operator_translator_round_trip(b):
     assert r.vector.z == pytest.approx(3)
 
 
-def test_operator_motor_round_trip(b):
+def test_operator_motor_round_trip(b):  # noqa: ANN001, ANN201
     """O3: create Motor(T(0,0,1), R(π/2, z)) → analyze → assert both parts.
 
     The translator must have a component perpendicular to the rotation
@@ -313,7 +313,7 @@ def test_operator_motor_round_trip(b):
     assert r.translator.vector.z == pytest.approx(1)
 
 
-def test_operator_reflection_plane_round_trip(b):
+def test_operator_reflection_plane_round_trip(b):  # noqa: ANN001, ANN201
     """O4: create ReflectionPlane(plane=xy-plane) -> analyze -> assert."""
     mv: MV = create_operator(
         b, ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1)))
@@ -325,7 +325,7 @@ def test_operator_reflection_plane_round_trip(b):
     assert abs(r.plane.normal.z) == pytest.approx(1)
 
 
-def test_operator_general_rotor_round_trip(b):
+def test_operator_general_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O5: create GeneralRotor(π/2, z-axis, origin=(1,0,0)) → analyze.
 
     GeneralRotor uses flat fields (angle, axis, origin).
@@ -344,7 +344,7 @@ def test_operator_general_rotor_round_trip(b):
     assert r.origin.z == pytest.approx(0)
 
 
-def test_operator_triple_reflection_round_trip(b):
+def test_operator_triple_reflection_round_trip(b):  # noqa: ANN001, ANN201
     """O6: triple reflection via three non-parallel displaced planes."""
     # Three non-orthogonal displaced planes to get multi-grade product
     p1 = b.multivector({1: 1.0, 8: -1.0, 16: -1.0})  # e1 - e0
@@ -364,7 +364,7 @@ def test_operator_triple_reflection_round_trip(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_apply_translator_point_displacement(b):
+def test_apply_translator_point_displacement(b):  # noqa: ANN001, ANN201
     """A1: Translator(3,0,0) applied to origin → Point(3,0,0)."""
     p: MV = create_entity(b, Point(0, 0, 0))
     T: MV = create_operator(b, Translator(Direction(3, 0, 0)))
@@ -376,7 +376,7 @@ def test_apply_translator_point_displacement(b):
     assert r.z == pytest.approx(0)
 
 
-def test_apply_rotor_point_rotation_z(b):
+def test_apply_rotor_point_rotation_z(b):  # noqa: ANN001, ANN201
     """A2: Rotor(90°, z) on (1,0,0) → Point(0,1,0)."""
     p: MV = create_entity(b, Point(1, 0, 0))
     R: MV = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
@@ -388,7 +388,7 @@ def test_apply_rotor_point_rotation_z(b):
     assert r.z == pytest.approx(0)
 
 
-def test_apply_rotor_point_rotation_x(b):
+def test_apply_rotor_point_rotation_x(b):  # noqa: ANN001, ANN201
     """A2b: Rotor(90°, x) on (0,1,0) → Point(0,0,1).
 
     +90° about x-axis (right‑hand rule): e₂ → e₃.
@@ -403,7 +403,7 @@ def test_apply_rotor_point_rotation_x(b):
     assert r.z == pytest.approx(1)
 
 
-def test_apply_rotor_point_rotation_y(b):
+def test_apply_rotor_point_rotation_y(b):  # noqa: ANN001, ANN201
     """A2c: Rotor(90°, y) on (0,0,1) → Point(1,0,0).
 
     +90° about y-axis (right‑hand rule): e₃ → e₁.
@@ -418,7 +418,7 @@ def test_apply_rotor_point_rotation_y(b):
     assert r.z == pytest.approx(0)
 
 
-def test_apply_motor_point_rigid_motion(b):
+def test_apply_motor_point_rigid_motion(b):  # noqa: ANN001, ANN201
     """A3: Motor(T(1,0,0), R(90°, z)) on (1,0,0) → Point(1,1,0).
 
     Motor M = T·R, applied as M·p·M̃:
@@ -441,7 +441,7 @@ def test_apply_motor_point_rigid_motion(b):
     assert r.z == pytest.approx(0)
 
 
-def test_apply_reflection_plane_point_mirror(b):
+def test_apply_reflection_plane_point_mirror(b):  # noqa: ANN001, ANN201
     """A4: ReflectionPlane(z=0) on (1,2,5) -> Point(1,2,-5)."""
     p: MV = create_entity(b, Point(1, 2, 5))
     F: MV = create_operator(
@@ -455,7 +455,7 @@ def test_apply_reflection_plane_point_mirror(b):
     assert r.z == pytest.approx(-5)
 
 
-def test_apply_general_rotor_point_displaced_rotation(b):
+def test_apply_general_rotor_point_displaced_rotation(b):  # noqa: ANN001, ANN201
     """A5: GeneralRotor(90°, z, at x=1) on (2,0,0) → Point(1,1,0).
 
     Rotate about z-axis through x=1:
@@ -477,7 +477,7 @@ def test_apply_general_rotor_point_displaced_rotation(b):
 # --- O7. ReflectionPoint ---
 
 
-def test_operator_reflection_point_round_trip(b):
+def test_operator_reflection_point_round_trip(b):  # noqa: ANN001, ANN201
     """O7: create ReflectionPoint(2,-1,3) -> analyze -> assert."""
     mv = create_operator(b, ReflectionPoint(Point(2, -1, 3)))
     r = analyze_operator(mv)
@@ -487,7 +487,7 @@ def test_operator_reflection_point_round_trip(b):
     assert r.point.z == pytest.approx(3)
 
 
-def test_operator_reflection_point_origin_round_trip(b):
+def test_operator_reflection_point_origin_round_trip(b):  # noqa: ANN001, ANN201
     """O7b: ReflectionPoint(0,0,0) -> analyze -> assert."""
     mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
@@ -498,7 +498,7 @@ def test_operator_reflection_point_origin_round_trip(b):
 # --- O8. ReflectionLine ---
 
 
-def test_operator_reflection_line_round_trip(b):
+def test_operator_reflection_line_round_trip(b):  # noqa: ANN001, ANN201
     """O8: create ReflectionLine(x-axis) -> analyze -> assert."""
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
     mv = create_operator(b, ReflectionLine(line))
@@ -511,7 +511,7 @@ def test_operator_reflection_line_round_trip(b):
 # --- A6. ReflectionPoint application ---
 
 
-def test_apply_reflection_point_origin_negation(b):
+def test_apply_reflection_point_origin_negation(b):  # noqa: ANN001, ANN201
     """A6: ReflectionPoint(0,0,0) on (5,-3,2) -> Point(-5,3,-2)."""
     p = create_entity(b, Point(5, -3, 2))
     op_mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
@@ -526,7 +526,7 @@ def test_apply_reflection_point_origin_negation(b):
 # --- A7. ReflectionLine application ---
 
 
-def test_apply_reflection_line_point_mirror_x(b):
+def test_apply_reflection_line_point_mirror_x(b):  # noqa: ANN001, ANN201
     """A7: ReflectionLine(x-axis) on (3,1,0) -> Point(3,-1,0)."""
     p = create_entity(b, Point(3, 1, 0))
     L = create_operator(b, ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0))))

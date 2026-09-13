@@ -8,32 +8,32 @@ from pytanga.viz import SliderView, Visualizer, VizObjectRef
 
 
 class TestEntryPoints:
-    def test_add_returns_str(self):
+    def test_add_returns_str(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         eid = viz.add(Point(1, 2, 3))
         assert isinstance(eid, str)
 
-    def test_new_returns_ref(self):
+    def test_new_returns_ref(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         ref = viz.new(Point(1, 2, 3))
         assert isinstance(ref, VizObjectRef)
         assert ref.id in viz._scenes[""]._nodes
 
-    def test_add_group_returns_ref(self):
+    def test_add_group_returns_ref(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         ref = viz.add_group("g")
         assert isinstance(ref, VizObjectRef)
         assert ref.id in viz._scenes[""]._nodes
         assert viz._scenes[""].get_node(ref.id).kind == "VizGroup"
 
-    def test_group_new_attaches_child(self):
+    def test_group_new_attaches_child(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         grp = viz.add_group("g")
         child = grp.new(Point(1, 2, 3))
         assert child.parent is not None
         assert child.parent.id == grp.id
 
-    def test_parent_id_add(self):
+    def test_parent_id_add(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         grp = viz.add_group("g")
         eid = viz.add(Point(1, 2, 3), parent_id=grp.id)
@@ -41,14 +41,14 @@ class TestEntryPoints:
         assert node.parent is not None
         assert node.parent.id == grp.id
 
-    def test_attach_to_label(self):
+    def test_attach_to_label(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         other = viz.add(Point(1, 1, 1))
         viz.add(Point(0, 0, 0), label="L", attach_to=other)
         label_ids = viz._scenes[""].get_label_ids(other)
         assert len(label_ids) == 1
 
-    def test_scene_handle_new(self):
+    def test_scene_handle_new(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("s")
         ref = h.new(Point(1, 2, 3))
@@ -56,7 +56,7 @@ class TestEntryPoints:
         assert ref.scene_name == "s"
         assert ref.id in viz._scenes["s"]._nodes
 
-    def test_scene_handle_add_group(self):
+    def test_scene_handle_add_group(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("s")
         ref = h.add_group("g")
@@ -64,7 +64,7 @@ class TestEntryPoints:
         assert ref.scene_name == "s"
         assert ref.id in viz._scenes["s"]._nodes
 
-    def test_add_backward_compat(self):
+    def test_add_backward_compat(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         eid = viz.add(Point(1, 2, 3), color="#ff4444")
         assert isinstance(eid, str)

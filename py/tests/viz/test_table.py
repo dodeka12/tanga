@@ -24,7 +24,7 @@ async def test_dispatch_cell_change() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_cell(change, event):
+    async def _on_cell(change, event):  # noqa: ANN001, ANN202
         calls.append(change)
 
     viz.set_layout(
@@ -43,7 +43,7 @@ async def test_dispatch_row_add() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_row(add, event):
+    async def _on_row(add, event):  # noqa: ANN001, ANN202
         calls.append(add)
 
     viz.set_layout(TableView("tbl", columns=["x", "y"], on_row_add=_on_row))
@@ -60,7 +60,7 @@ async def test_dispatch_column_add() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_col(add, event):
+    async def _on_col(add, event):  # noqa: ANN001, ANN202
         calls.append(add)
 
     viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]], on_column_add=_on_col))
@@ -78,7 +78,7 @@ async def test_dispatch_column_delete() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_del(delete, event):
+    async def _on_del(delete, event):  # noqa: ANN001, ANN202
         calls.append(delete)
 
     viz.set_layout(
@@ -114,19 +114,19 @@ def test_set_layout_registers_table_handlers() -> None:
 
     viz = _viz()
 
-    async def _on_cell(change, event):
+    async def _on_cell(change, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_row(add, event):
+    async def _on_row(add, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_col(add, event):
+    async def _on_col(add, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_del(delete, event):
+    async def _on_del(delete, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_change(value, event):
+    async def _on_change(value, event):  # noqa: ANN001, ANN202
         pass
 
     viz.set_layout(
@@ -152,7 +152,7 @@ def test_set_layout_registers_table_handlers() -> None:
 def test_add_table_on_change_registers_change_handler() -> None:
     viz = _viz()
 
-    async def _on_change(value, event):
+    async def _on_change(value, event):  # noqa: ANN001, ANN202
         pass
 
     viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]], on_change=_on_change))
@@ -181,7 +181,7 @@ async def test_dispatch_cell_change_nested_payload() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_cell(change, event):
+    async def _on_cell(change, event):  # noqa: ANN001, ANN202
         calls.append(change)
 
     viz.set_layout(
@@ -201,7 +201,7 @@ async def test_dispatch_row_add_nested_payload() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_row(add, event):
+    async def _on_row(add, event):  # noqa: ANN001, ANN202
         calls.append(add)
 
     viz.set_layout(TableView("tbl", columns=["x", "y"], on_row_add=_on_row))
@@ -219,7 +219,7 @@ async def test_dispatch_column_add_nested_payload() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_col(add, event):
+    async def _on_col(add, event):  # noqa: ANN001, ANN202
         calls.append(add)
 
     viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]], on_column_add=_on_col))
@@ -237,7 +237,7 @@ async def test_dispatch_row_delete_nested_payload() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_del(delete, event):
+    async def _on_del(delete, event):  # noqa: ANN001, ANN202
         calls.append(delete)
 
     viz.set_layout(
@@ -257,7 +257,7 @@ async def test_dispatch_column_delete_nested_payload() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_del(delete, event):
+    async def _on_del(delete, event):  # noqa: ANN001, ANN202
         calls.append(delete)
 
     viz.set_layout(
@@ -360,7 +360,7 @@ async def test_dispatch_without_control_still_calls_handler() -> None:
     viz = _viz()
     calls = []
 
-    async def _on_cell(change, event):
+    async def _on_cell(change, event):  # noqa: ANN001, ANN202
         calls.append(change)
 
     viz._handler_registry.register("noid", _on_cell, event="cell_change")
@@ -388,7 +388,7 @@ async def test_undo_after_dispatch_restores_model() -> None:
 
 
 @pytest.mark.anyio
-async def test_dispatch_undo_restores_model_and_pushes(monkeypatch) -> None:
+async def test_dispatch_undo_restores_model_and_pushes(monkeypatch) -> None:  # noqa: ANN001
     viz = _viz()
     viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
     await viz._dispatch_control_event(
@@ -414,11 +414,11 @@ async def test_dispatch_undo_restores_model_and_pushes(monkeypatch) -> None:
 
 
 @pytest.mark.anyio
-async def test_dispatch_undo_fires_on_change(monkeypatch) -> None:
+async def test_dispatch_undo_fires_on_change(monkeypatch) -> None:  # noqa: ANN001
     viz = _viz()
     calls = []
 
-    async def _on_change(value, event):
+    async def _on_change(value, event):  # noqa: ANN001, ANN202
         calls.append(value)
 
     viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
@@ -448,7 +448,7 @@ async def test_dispatch_undo_fires_on_change(monkeypatch) -> None:
 
 
 @pytest.mark.anyio
-async def test_dispatch_redo_reapplies(monkeypatch) -> None:
+async def test_dispatch_redo_reapplies(monkeypatch) -> None:  # noqa: ANN001
     viz = _viz()
     viz.set_layout(TableView("tbl", columns=["x"], rows=[["1"]]))
     await viz._dispatch_control_event(

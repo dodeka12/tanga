@@ -15,14 +15,14 @@ from pytanga.viz.views import LogView, serialize_layout
 
 
 class _FakeServer:
-    def __init__(self):
+    def __init__(self):  # noqa: ANN204
         self.pushed: list[str] = []
 
     async def push_raw(self, data: str) -> None:
         self.pushed.append(data)
 
 
-def _patch_push(viz: Visualizer, server: _FakeServer, monkeypatch) -> None:
+def _patch_push(viz: Visualizer, server: _FakeServer, monkeypatch) -> None:  # noqa: ANN001
     monkeypatch.setattr(viz, "_server", server)
     monkeypatch.setattr(viz, "_loop", object())
     monkeypatch.setattr(
@@ -88,7 +88,7 @@ def test_clear_empties() -> None:
     assert view.lines == []
 
 
-def test_write_load_round_trip(tmp_path) -> None:
+def test_write_load_round_trip(tmp_path) -> None:  # noqa: ANN001
     view = LogView()
     view.log("a")
     view.log({"message": "b", "level": "warn"})
@@ -103,7 +103,7 @@ def test_write_load_round_trip(tmp_path) -> None:
     assert other.get_log() == view.get_log()
 
 
-def test_load_file_truncates_to_max_history(tmp_path) -> None:
+def test_load_file_truncates_to_max_history(tmp_path) -> None:  # noqa: ANN001
     path = tmp_path / "log.jsonl"
     path.write_text(
         '{"time": "t", "message": "a"}\n'
@@ -159,7 +159,7 @@ def test_clear_push_callback() -> None:
     assert calls == [("log0", "clear", None)]
 
 
-def test_load_file_push_callback(tmp_path) -> None:
+def test_load_file_push_callback(tmp_path) -> None:  # noqa: ANN001
     path = tmp_path / "log.jsonl"
     path.write_text('{"time": "t", "message": "a"}\n', encoding="utf-8")
     view = LogView(id="log0")
@@ -186,7 +186,7 @@ def test_invalid_max_history_raises() -> None:
 # ── Live updates (log_update push) ───────────────────────────
 
 
-def test_set_layout_injects_push_and_log_pushes_log_update(monkeypatch) -> None:
+def test_set_layout_injects_push_and_log_pushes_log_update(monkeypatch) -> None:  # noqa: ANN001
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     log_view = LogView(id="log0")
     viz.set_layout(log_view)
@@ -204,7 +204,7 @@ def test_set_layout_injects_push_and_log_pushes_log_update(monkeypatch) -> None:
     assert "time" in msg["lines"][0]
 
 
-def test_clear_pushes_log_update(monkeypatch) -> None:
+def test_clear_pushes_log_update(monkeypatch) -> None:  # noqa: ANN001
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     log_view = LogView(id="log0")
     viz.set_layout(log_view)
@@ -217,7 +217,7 @@ def test_clear_pushes_log_update(monkeypatch) -> None:
     assert log_msgs == [{"type": "log_update", "id": "log0", "action": "clear"}]
 
 
-def test_load_file_pushes_replace(monkeypatch, tmp_path) -> None:
+def test_load_file_pushes_replace(monkeypatch, tmp_path) -> None:  # noqa: ANN001
     path = tmp_path / "log.jsonl"
     path.write_text('{"time": "t", "message": "a"}\n', encoding="utf-8")
 

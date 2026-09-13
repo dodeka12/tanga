@@ -14,7 +14,7 @@ from pytanga.geometry.entities import Direction, Point
 from pytanga.geometry.operators import GeneralRotor, Motor, Rotor, Translator
 
 
-def test_motor_decomposes_pure_axial():
+def test_motor_decomposes_pure_axial():  # noqa: ANN201
     """Translation along the axis stays axial; the axis is undisplaced."""
     m = Motor(
         rotor=Rotor(math.pi / 2, Direction(0, 0, 1)),
@@ -30,7 +30,7 @@ def test_motor_decomposes_pure_axial():
     assert m.translator.vector.z == pytest.approx(2)
 
 
-def test_motor_decomposes_pure_perpendicular():
+def test_motor_decomposes_pure_perpendicular():  # noqa: ANN201
     """A perpendicular translation displaces the axis (no axial component)."""
     m = Motor(
         rotor=Rotor(math.pi / 2, Direction(0, 0, 1)),
@@ -46,7 +46,7 @@ def test_motor_decomposes_pure_perpendicular():
     assert m.translator.vector.z == pytest.approx(0)
 
 
-def test_motor_decomposes_mixed():
+def test_motor_decomposes_mixed():  # noqa: ANN201
     """Mixed translation → displaced axis + axial translation (screw)."""
     m = Motor(
         rotor=Rotor(math.pi / 2, Direction(0, 0, 1)),
@@ -61,7 +61,7 @@ def test_motor_decomposes_mixed():
     assert m.translator.vector.z == pytest.approx(1)
 
 
-def test_motor_accepts_general_rotor():
+def test_motor_accepts_general_rotor():  # noqa: ANN201
     """A GeneralRotor + Translator input is stored verbatim (already screw form)."""
     gr = GeneralRotor(math.pi / 2, Direction(0, 0, 1), Point(0, 1, 0))
     m = Motor(gr, Translator(Direction(0, 0, 1)))
@@ -69,7 +69,7 @@ def test_motor_accepts_general_rotor():
     assert m.translator.vector.z == pytest.approx(1)
 
 
-def test_motor_screw_round_trip():
+def test_motor_screw_round_trip():  # noqa: ANN201
     """create(motor) → analyze returns the screw form and recreates the same MV."""
     b = BasisN3()
     mv = create_operator(

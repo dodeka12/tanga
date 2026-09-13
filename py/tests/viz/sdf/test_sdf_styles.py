@@ -40,7 +40,7 @@ _STYLES = [
 
 
 @pytest.mark.parametrize("cls,name,extra", _STYLES)
-def test_style_type_and_extra_fields(cls, name, extra) -> None:
+def test_style_type_and_extra_fields(cls, name, extra) -> None:  # noqa: ANN001
     d = cls().to_dict()
     assert d["style_type"] == name
     for key, value in extra.items():
@@ -48,12 +48,12 @@ def test_style_type_and_extra_fields(cls, name, extra) -> None:
 
 
 @pytest.mark.parametrize("cls,name,extra", _STYLES)
-def test_derived_styles_are_sdf_styles(cls, name, extra) -> None:
+def test_derived_styles_are_sdf_styles(cls, name, extra) -> None:  # noqa: ANN001
     assert isinstance(cls(), SdfStyle)
 
 
 @pytest.mark.parametrize("cls,name,extra", _STYLES)
-def test_derived_styles_have_no_mesh_only_members(cls, name, extra) -> None:
+def test_derived_styles_have_no_mesh_only_members(cls, name, extra) -> None:  # noqa: ANN001
     style = cls()
     for attr in ("wireframe", "texture_label", "double_sided"):
         assert not hasattr(style, attr), f"{name} must not expose {attr!r}"

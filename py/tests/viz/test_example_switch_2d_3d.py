@@ -12,7 +12,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _EXAMPLE_PATH = _REPO_ROOT / "py" / "examples" / "viz" / "camera" / "switch_2d_3d.py"
 
 
-def _load_example():
+def _load_example():  # noqa: ANN202
     spec = importlib.util.spec_from_file_location(
         "tanga_example_switch_2d_3d", _EXAMPLE_PATH
     )
@@ -22,7 +22,7 @@ def _load_example():
     return module
 
 
-def test_switch_2d_3d_example_constructs_and_switches():
+def test_switch_2d_3d_example_constructs_and_switches():  # noqa: ANN201
     module = _load_example()
     viz = module.viz
 

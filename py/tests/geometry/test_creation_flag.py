@@ -45,7 +45,7 @@ from pytanga.geometry.entities import Direction, Line, Plane, Point, Space, Sphe
         (BasisPGA3, Point(1, 2, 3), 3, 1),
     ],
 )
-def test_create_entity_respects_algebra_opns(alg_cls, entity, opns_grade, ipns_grade):
+def test_create_entity_respects_algebra_opns(alg_cls, entity, opns_grade, ipns_grade):  # noqa: ANN001, ANN201
     opns_alg = alg_cls(opns=True)
     ipns_alg = alg_cls(opns=False)
 
@@ -56,14 +56,14 @@ def test_create_entity_respects_algebra_opns(alg_cls, entity, opns_grade, ipns_g
     assert set(ipns_mv.grades) == {ipns_grade}
 
 
-def test_create_entity_no_opns_kwarg():
+def test_create_entity_no_opns_kwarg():  # noqa: ANN201
     """create_entity must not accept an ``opns`` keyword anymore."""
     alg = BasisN3()
     with pytest.raises(TypeError):
         create_entity(alg, Point(1, 2, 3), opns=True)  # type: ignore[call-arg]
 
 
-def test_line_respects_opns():
+def test_line_respects_opns():  # noqa: ANN201
     alg = BasisN3(opns=True)
     line = Line(Point(0, 0, 0), Direction(1, 0, 0))
     opns_mv = create_entity(alg, line)

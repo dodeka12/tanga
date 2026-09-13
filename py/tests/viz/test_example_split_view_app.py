@@ -13,7 +13,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _EXAMPLE_PATH = _REPO_ROOT / "py" / "examples" / "viz" / "app" / "split_view_app.py"
 
 
-def _load_example():
+def _load_example():  # noqa: ANN202
     spec = importlib.util.spec_from_file_location(
         "tanga_example_split_view_app", _EXAMPLE_PATH
     )
@@ -23,7 +23,7 @@ def _load_example():
     return module
 
 
-def test_split_view_app_constructs_and_initialises():
+def test_split_view_app_constructs_and_initialises():  # noqa: ANN201
     app_module = _load_example()
     app = app_module.SplitViewApp()
 

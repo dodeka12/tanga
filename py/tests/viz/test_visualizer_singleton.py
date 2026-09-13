@@ -11,27 +11,27 @@ from pytanga.viz.visualizer import Visualizer
 
 
 @pytest.fixture(autouse=True)
-def _reset_singleton():
+def _reset_singleton():  # noqa: ANN202
     """Clear the Jupyter-scoped singleton before and after each test."""
     Visualizer.reset()
     yield
     Visualizer.reset()
 
 
-def _set_jupyter(monkeypatch, value: bool) -> None:
+def _set_jupyter(monkeypatch, value: bool) -> None:  # noqa: ANN001
     monkeypatch.setattr(viz_module, "_is_jupyter", lambda: value)
 
 
 class TestSingleton:
-    def test_same_instance_under_jupyter(self, monkeypatch):
+    def test_same_instance_under_jupyter(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, True)
         assert Visualizer() is Visualizer()
 
-    def test_distinct_instances_outside_jupyter(self, monkeypatch):
+    def test_distinct_instances_outside_jupyter(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, False)
         assert Visualizer() is not Visualizer()
 
-    def test_reset_yields_fresh_instance(self, monkeypatch):
+    def test_reset_yields_fresh_instance(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, True)
         first = Visualizer()
         Visualizer.reset()
@@ -40,7 +40,7 @@ class TestSingleton:
 
 
 class TestConstructorRerunReset:
-    def test_rerun_clears_and_readds_axes_grid(self, monkeypatch):
+    def test_rerun_clears_and_readds_axes_grid(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, True)
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         eid = viz.add(Point(1, 2, 3))
@@ -55,7 +55,7 @@ class TestConstructorRerunReset:
         assert "Axes3D" in kinds
         assert "Grid" in kinds
 
-    def test_rerun_without_axes_grid_readds_nothing(self, monkeypatch):
+    def test_rerun_without_axes_grid_readds_nothing(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, True)
         viz = Visualizer(add_default_axes=True, add_default_grid=True)
         viz.add(Point(1, 2, 3))
@@ -68,7 +68,7 @@ class TestConstructorRerunReset:
 
 
 class TestSceneRerunClear:
-    def test_scene_rerun_clears_same_cell(self, monkeypatch):
+    def test_scene_rerun_clears_same_cell(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, True)
         monkeypatch.setattr(viz_module, "current_cell_id", lambda: "cell-a")
         token = {"t": 0}
@@ -89,7 +89,7 @@ class TestSceneRerunClear:
         scene.flush()
         assert eid not in scene._objects
 
-    def test_scene_different_cell_does_not_clear(self, monkeypatch):
+    def test_scene_different_cell_does_not_clear(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, True)
         monkeypatch.setattr(viz_module, "current_cell_id", lambda: "cell-a")
         token = {"t": 0}
@@ -107,7 +107,7 @@ class TestSceneRerunClear:
 
 
 class TestConfigScope:
-    def test_non_jupyter_distinct_configs(self, monkeypatch):
+    def test_non_jupyter_distinct_configs(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, False)
         a = Visualizer(title="A", space_dim=2)
         b = Visualizer(title="B", space_dim=3)
@@ -117,7 +117,7 @@ class TestConfigScope:
         assert a._scenes[""].config.space_dim == 2
         assert b._scenes[""].config.space_dim == 3
 
-    def test_rerun_first_call_wins_for_non_axes_config(self, monkeypatch):
+    def test_rerun_first_call_wins_for_non_axes_config(self, monkeypatch):  # noqa: ANN001, ANN201
         _set_jupyter(monkeypatch, True)
         viz = Visualizer(title="First", add_default_axes=False, add_default_grid=False)
         viz2 = Visualizer(title="Second", add_default_axes=True, add_default_grid=True)

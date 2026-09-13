@@ -25,7 +25,7 @@ def _content() -> StackView:
     )
 
 
-def test_serialize_dialog_global_defaults():
+def test_serialize_dialog_global_defaults():  # noqa: ANN201
     dialog = Dialog(id="d1", content=_content())
     msg = serialize_dialog(dialog)
     assert msg["type"] == "dialog_define"
@@ -40,18 +40,18 @@ def test_serialize_dialog_global_defaults():
     assert msg["content"]["type"] == "stack"
 
 
-def test_serialize_dialog_scoped():
+def test_serialize_dialog_scoped():  # noqa: ANN201
     dialog = Dialog(id="d1", content=_content())
     assert serialize_dialog(dialog, scene="detail")["scene"] == "detail"
     assert serialize_dialog(dialog, scene="")["scene"] == ""
 
 
-def test_serialize_dialog_modal():
+def test_serialize_dialog_modal():  # noqa: ANN201
     msg = serialize_dialog(Dialog(id="d1", content=_content(), dismissable=False))
     assert msg["dismissable"] is False
 
 
-def test_serialize_dialog_width_height():
+def test_serialize_dialog_width_height():  # noqa: ANN201
     from pytanga.viz import Size
 
     msg = serialize_dialog(
@@ -61,7 +61,7 @@ def test_serialize_dialog_width_height():
     assert msg["height"] == {"value": 80, "unit": "%"}
 
 
-def test_serialize_dialog_content_children():
+def test_serialize_dialog_content_children():  # noqa: ANN201
     msg = serialize_dialog(Dialog(id="d1", content=_content()))
     children = msg["content"]["children"]
     assert [c["type"] for c in children] == ["slider_view", "button_view"]
@@ -69,7 +69,7 @@ def test_serialize_dialog_content_children():
     assert children[1]["id"] == "b"
 
 
-def test_align_out_of_range_raises():
+def test_align_out_of_range_raises():  # noqa: ANN201
     with pytest.raises(ValueError):
         Dialog(id="d", content=_content(), align_x=-0.1)
     with pytest.raises(ValueError):
@@ -78,7 +78,7 @@ def test_align_out_of_range_raises():
     Dialog(id="d", content=_content(), align_x=0.0, align_y=1.0)
 
 
-def test_serialize_dialog_remove_and_clear():
+def test_serialize_dialog_remove_and_clear():  # noqa: ANN201
     assert serialize_dialog_remove("d1") == {
         "type": "dialog_remove",
         "scene": None,
@@ -111,14 +111,14 @@ def _viz() -> Visualizer:
     return Visualizer(add_default_axes=False, add_default_grid=False)
 
 
-def test_show_dialog_stores_registers_pushes(monkeypatch):
+def test_show_dialog_stores_registers_pushes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     pushed: list[tuple] = []
     monkeypatch.setattr(
         viz._layout.overlay, "_push_dialog", lambda d, s: pushed.append((d.id, s))
     )
 
-    async def _on_click(value, event):
+    async def _on_click(value, event):  # noqa: ANN001, ANN202
         pass
 
     did = viz.show_dialog(
@@ -132,7 +132,7 @@ def test_show_dialog_stores_registers_pushes(monkeypatch):
     assert pushed == [(did, None)]
 
 
-def test_show_dialog_explicit_id_collision_raises(monkeypatch):
+def test_show_dialog_explicit_id_collision_raises(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
     viz.show_dialog(_content(), id="dup")
@@ -140,7 +140,7 @@ def test_show_dialog_explicit_id_collision_raises(monkeypatch):
         viz.show_dialog(_content(), id="dup")
 
 
-def test_remove_dialog_unregisters_and_pushes(monkeypatch):
+def test_remove_dialog_unregisters_and_pushes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     removed: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
@@ -148,7 +148,7 @@ def test_remove_dialog_unregisters_and_pushes(monkeypatch):
         viz._layout.overlay, "_push_dialog_remove", lambda i, s: removed.append((i, s))
     )
 
-    async def _on_click(value, event):
+    async def _on_click(value, event):  # noqa: ANN001, ANN202
         pass
 
     did = viz.show_dialog(
@@ -160,7 +160,7 @@ def test_remove_dialog_unregisters_and_pushes(monkeypatch):
     assert removed == [(did, None)]
 
 
-def test_clear_dialogs_scoped(monkeypatch):
+def test_clear_dialogs_scoped(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     cleared: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
@@ -178,12 +178,12 @@ def test_clear_dialogs_scoped(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_dialog_closed_dispatches_on_close(monkeypatch):
+async def test_dialog_closed_dispatches_on_close(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
     closed: list = []
 
-    async def _on_close(value, event):
+    async def _on_close(value, event):  # noqa: ANN001, ANN202
         closed.append(value)
 
     did = viz.show_dialog(_content(), on_close=_on_close)
@@ -193,7 +193,7 @@ async def test_dialog_closed_dispatches_on_close(monkeypatch):
     assert viz._handler_registry.get(did, "close") is None
 
 
-def test_scene_handle_show_dialog_scopes(monkeypatch):
+def test_scene_handle_show_dialog_scopes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     handle = viz.scene("detail")
     calls: list = []
@@ -202,11 +202,11 @@ def test_scene_handle_show_dialog_scopes(monkeypatch):
     assert calls[0]["scene_name"] == "detail"
 
 
-def test_overlay_dialog_direct_lifecycle():
+def test_overlay_dialog_direct_lifecycle():  # noqa: ANN201
     viz = _viz()
     overlay = viz._layout.overlay
 
-    async def _on_click(value, event):
+    async def _on_click(value, event):  # noqa: ANN001, ANN202
         pass
 
     did = overlay.show_dialog(

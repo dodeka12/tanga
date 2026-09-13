@@ -220,7 +220,7 @@ def test_table_view_active_cell_delegates() -> None:
 
 
 def test_table_view_editable_titles_and_title_handler() -> None:
-    async def handler(*_args, **_kwargs) -> None:
+    async def handler(*_args, **_kwargs) -> None:  # noqa: ANN002, ANN003
         """No-op title handler."""
 
     view = TableView("tbl", columns=["a"], rows=[["1"]], on_column_title_change=handler)

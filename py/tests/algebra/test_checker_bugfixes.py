@@ -15,11 +15,11 @@ from pytanga.blade_mask import BladeMask
 
 
 @pytest.fixture(scope="module")
-def alg():
+def alg():  # noqa: ANN201
     return pytanga.Algebra(dim=3, sig=0)
 
 
-def test_mv_is_versor_returns_bool(alg):
+def test_mv_is_versor_returns_bool(alg):  # noqa: ANN001, ANN201
     """``MV.is_versor`` had a duplicated ``@property``.
 
     Previously ``mv.is_versor`` raised
@@ -28,7 +28,7 @@ def test_mv_is_versor_returns_bool(alg):
     assert isinstance(alg.multivector({"s": 1.0}).is_versor, bool)
 
 
-def test_to_rotor_without_plane_raises_value_error():
+def test_to_rotor_without_plane_raises_value_error():  # noqa: ANN201
     """``to_rotor()`` raised ``AttributeError`` with neither plane argument.
 
     Previously it raised ``AttributeError: 'NoneType' object has no attribute
@@ -38,7 +38,7 @@ def test_to_rotor_without_plane_raises_value_error():
         to_rotor(0.5)
 
 
-def test_ids_from_mv_list_returns_set(alg):
+def test_ids_from_mv_list_returns_set(alg):  # noqa: ANN001, ANN201
     """``_ids_from_mv_list`` returns a set (matching its annotation)."""
     _alg, ids = BladeMask._ids_from_mv_list([alg.multivector({"e1": 1.0})])
     assert isinstance(ids, set)

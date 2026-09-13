@@ -14,7 +14,7 @@ from pytanga.viz.export._html import render_snapshot
 from pytanga.viz.scene import Scene, SceneConfig
 
 
-def test_snapshot_honors_2d_camera_rectangle():
+def test_snapshot_honors_2d_camera_rectangle():  # noqa: ANN201
     scene = Scene(
         SceneConfig(camera=CameraConfig2d(xmin=-20, xmax=20, ymin=-5, ymax=5))
     )
@@ -25,7 +25,7 @@ def test_snapshot_honors_2d_camera_rectangle():
     assert "-5" in html
 
 
-def test_figure_honors_3d_camera_up():
+def test_figure_honors_3d_camera_up():  # noqa: ANN201
     scene = Scene(SceneConfig(camera=CameraConfig3d(position=(3, 4, 5), up=(0, 1, 0))))
     html = render_figure(
         scene.full_state(),
@@ -37,7 +37,7 @@ def test_figure_honors_3d_camera_up():
     assert '"up"' in html
 
 
-def test_animated_figure_uses_scene_config():
+def test_animated_figure_uses_scene_config():  # noqa: ANN201
     scene = Scene(
         SceneConfig(
             space_dim=2, camera=CameraConfig2d(xmin=-30, xmax=30, ymin=-10, ymax=10)
@@ -56,14 +56,14 @@ def test_animated_figure_uses_scene_config():
     assert "-30" in html
 
 
-def test_animated_html_plays_per_frame_camera():
+def test_animated_html_plays_per_frame_camera():  # noqa: ANN201
     rec = {"frames": [], "frame_count": 0, "cameras": []}
     html = render_export_animated_html(rec, scene_config={"space_dim": 2})
     assert "const cameras = animData.cameras || [];" in html
     assert "applyCameraConfig(figCamera, figControls, cameras[n]" in html
 
 
-def test_animation_recording_captures_cameras():
+def test_animation_recording_captures_cameras():  # noqa: ANN201
     scene = Scene()
     rec = AnimationRecording(scene)
     rec.capture_frame()

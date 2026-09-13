@@ -23,14 +23,14 @@ from pytanga.geometry.operators import (
 
 
 @pytest.fixture(scope="module")
-def b():
+def b():  # noqa: ANN201
     return BasisPGA2()
 
 
 # ═══════ Entity round‑trips ═══════
 
 
-def test_create_point_opns_round_trip(b):
+def test_create_point_opns_round_trip(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Point(1, 2, 0))
     r = analyze_entity(mv)
     assert isinstance(r, Point)
@@ -39,7 +39,7 @@ def test_create_point_opns_round_trip(b):
     assert abs(r.y) == pytest.approx(2)
 
 
-def test_entity_direction_opns_round_trip(b):
+def test_entity_direction_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E#: create Direction(1,2) → analyze OPNS → assert exact fields."""
     mv = create_entity(b, Direction(1, 2, 0))
     r = analyze_entity(mv)
@@ -49,7 +49,7 @@ def test_entity_direction_opns_round_trip(b):
     assert r.z == pytest.approx(0)
 
 
-def test_create_line_opns_round_trip(b):
+def test_create_line_opns_round_trip(b):  # noqa: ANN001, ANN201
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
     mv = create_entity(b, line)
     r = analyze_entity(mv)
@@ -57,7 +57,7 @@ def test_create_line_opns_round_trip(b):
     assert abs(r.direction.x) > 0.9
 
 
-def test_create_space_round_trip(b):
+def test_create_space_round_trip(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Space(1.0))
     r = analyze_entity(mv)
     assert isinstance(r, Space)
@@ -66,7 +66,7 @@ def test_create_space_round_trip(b):
 # ═══════ IPNS ═══════
 
 
-def test_create_point_ipns_round_trip(b, monkeypatch):
+def test_create_point_ipns_round_trip(b, monkeypatch):  # noqa: ANN001, ANN201
     monkeypatch.setattr(b, "opns", False)
     mv = create_entity(b, Point(1, 2, 0))
     r = analyze_entity(mv)
@@ -77,7 +77,7 @@ def test_create_point_ipns_round_trip(b, monkeypatch):
 # ═══════ Operators ═══════
 
 
-def test_rotor_round_trip(b):
+def test_rotor_round_trip(b):  # noqa: ANN001, ANN201
     r = create_operator(b, Rotor(0.3, Direction(0, 0, 1)))
     result = analyze_operator(r)
     assert isinstance(result, Rotor)
@@ -85,7 +85,7 @@ def test_rotor_round_trip(b):
     assert abs(result.axis.z) == pytest.approx(1)
 
 
-def test_translator_round_trip(b):
+def test_translator_round_trip(b):  # noqa: ANN001, ANN201
     """create Translator(2,3,0) → analyze → assert vector."""
     t = create_operator(b, Translator(Direction(2, 3, 0)))
     r = analyze_operator(t)
@@ -95,7 +95,7 @@ def test_translator_round_trip(b):
     assert r.vector.z == pytest.approx(0)
 
 
-def test_motor_round_trip(b):
+def test_motor_round_trip(b):  # noqa: ANN001, ANN201
     m = create_operator(
         b, Motor(Rotor(0.4, Direction(0, 0, 1)), Translator(Direction(1, 0, 0)))
     )
@@ -103,7 +103,7 @@ def test_motor_round_trip(b):
     assert isinstance(r, (Motor, Translator, GeneralRotor))
 
 
-def test_reflection_line_round_trip(b):
+def test_reflection_line_round_trip(b):  # noqa: ANN001, ANN201
     """create ReflectionLine(x-axis) → analyze → assert ReflectionLine."""
     mv = create_operator(b, ReflectionLine(Direction(1, 0, 0)))
     r = analyze_operator(mv)
@@ -114,13 +114,13 @@ def test_reflection_line_round_trip(b):
     assert abs(d.y) == pytest.approx(0, abs=1e-6)
 
 
-def test_reflection_origin_round_trip(b):
+def test_reflection_origin_round_trip(b):  # noqa: ANN001, ANN201
     mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
     assert isinstance(r, (ReflectionPoint, Rotor, GeneralRotor))
 
 
-def test_general_rotor_round_trip(b):
+def test_general_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """create GeneralRotor(angle=0.5, z-axis, origin=(1,0,0)) → analyze → assert."""
     mv = create_operator(b, GeneralRotor(0.5, Direction(0, 0, 1), Point(1, 0, 0)))
     r = analyze_operator(mv)
@@ -134,7 +134,7 @@ def test_general_rotor_round_trip(b):
 # ═══════ Algebra detection ═══════
 
 
-def test_pga2_is_not_n2():
+def test_pga2_is_not_n2():  # noqa: ANN201
     from pytanga.basis import BasisN2, BasisPGA2
 
     b2 = BasisPGA2()
