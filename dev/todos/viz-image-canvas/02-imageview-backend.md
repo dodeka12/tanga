@@ -30,7 +30,7 @@ the shader source, and the uniform values, and serializes to the canonical
   - `ImageChannelMode` (`GRAY=0`, `RGB=1`, `MAGNITUDE=2`, `ALPHA=3`) and a
     `default_mode(channels)` helper matching the README contract.
 
-- [ ] **2.4 — `_serialize()` → `image` entity dict**
+- [x] **2.4 — `_serialize()` → `image` entity dict**
   - Emit exactly the README `Image entity` shape: `{id, layer:"scene",
     kind:"image", frame, images[], shader{}, uniforms{}}`, with per-image
     `source`/`url` fields.

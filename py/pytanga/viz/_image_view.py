@@ -10,6 +10,8 @@ low-level :class:`ImageView` owns the images, shader, and uniform state;
 
 from __future__ import annotations
 
+from typing import Any
+
 from .image import ImageData, default_mode, default_value_range
 
 __all__ = ["ImageView"]
@@ -103,3 +105,32 @@ class ImageView:
         """Register a custom fragment (and optional vertex) shader source."""
         self._fragment = fragment
         self._vertex = vertex
+
+    # -- serialization ------------------------------------------------
+
+    def _serialize(self) -> dict[str, Any]:
+        """Serialize to the canonical ``image`` entity dict (README contract)."""
+        return {
+            "id": self.id,
+            "layer": "scene",
+            "kind": "image",
+            "frame": {"width": self.frame[0], "height": self.frame[1]},
+            "images": [self._serialize_image(img) for img in self._images],
+            "shader": {"fragment": self._fragment, "vertex": self._vertex},
+            "uniforms": dict(self._uniforms),
+        }
+
+    def _serialize_image(self, image: ImageData) -> dict[str, Any]:
+        """Serialize one image layer (metadata only — pixels travel as bytes)."""
+        assert image.dtype is not None
+        result: dict[str, Any] = {
+            "id": image.id,
+            "width": image.width,
+            "height": image.height,
+            "channels": image.channels,
+            "dtype": image.dtype.value,
+            "source": image.source,
+        }
+        if image.url is not None:
+            result["url"] = image.url
+        return result
