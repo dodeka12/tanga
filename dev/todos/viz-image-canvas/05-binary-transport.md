@@ -17,7 +17,7 @@ images never travel as JSON/base64 on the live channel.
 
 ## Steps
 
-- [ ] **5.1 — `_image_wire.py` encoder/decoder**
+- [x] **5.1 — `_image_wire.py` encoder/decoder**
   - `encode_image_frame(image_id, data: np.ndarray, dtype) -> bytes` and
     `decode_image_frame(buf: bytes) -> dict` implementing the README binary
     layout (little-endian header + raw C-contiguous bytes).
