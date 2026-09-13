@@ -10,7 +10,7 @@ low-level :class:`ImageView` owns the images, shader, and uniform state;
 
 from __future__ import annotations
 
-from .image import ImageData
+from .image import ImageData, default_mode, default_value_range
 
 __all__ = ["ImageView"]
 
@@ -62,6 +62,7 @@ class ImageView:
             self._images.append(image)
         assert image.width is not None and image.height is not None
         self._frame = (image.width, image.height)
+        self._seed_image_defaults(image)
 
     def add_image(self, image: ImageData) -> None:
         """Append *image* as the next layer (max :data:`MAX_IMAGE_LAYERS`)."""
@@ -71,6 +72,15 @@ class ImageView:
         if self._frame is None:
             assert image.width is not None and image.height is not None
             self._frame = (image.width, image.height)
+        self._seed_image_defaults(image)
+
+    def _seed_image_defaults(self, image: ImageData) -> None:
+        """Seed ``u_mode``/``u_value_min``/``u_value_max`` from the image."""
+        assert image.channels is not None and image.dtype is not None
+        self._uniforms.setdefault("u_mode", default_mode(image.channels))
+        lo, hi = default_value_range(image.dtype)
+        self._uniforms.setdefault("u_value_min", lo)
+        self._uniforms.setdefault("u_value_max", hi)
 
     # -- uniforms -----------------------------------------------------
 

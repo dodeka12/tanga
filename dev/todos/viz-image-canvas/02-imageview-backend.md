@@ -26,7 +26,7 @@ the shader source, and the uniform values, and serializes to the canonical
     and a `u_mode` default derived from channels (1→`0`, 3/4→`1`).
   - Add `u_value_min`/`u_value_max` from `default_value_range`.
 
-- [ ] **2.3 — channel-mode + normalization constants**
+- [x] **2.3 — channel-mode + normalization constants**
   - `ImageChannelMode` (`GRAY=0`, `RGB=1`, `MAGNITUDE=2`, `ALPHA=3`) and a
     `default_mode(channels)` helper matching the README contract.
 
