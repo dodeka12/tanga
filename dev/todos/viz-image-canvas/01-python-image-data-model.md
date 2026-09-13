@@ -27,7 +27,7 @@ code here.
     `data` C-contiguous (copy if not).  `to_bytes()` returns the contiguous
     buffer; `to_base64()` for export.
 
-- [ ] **1.3 — normalization helpers**
+- [x] **1.3 — normalization helpers**
   - `default_value_range(dtype, channels)` and a `normalize` description used to
     populate `u_value_min`/`u_value_max` defaults on the wire.
 

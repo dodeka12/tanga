@@ -20,6 +20,9 @@ import numpy as np
 __all__ = [
     "ImageDType",
     "ImageData",
+    "ImageChannelMode",
+    "default_mode",
+    "default_value_range",
 ]
 
 
@@ -70,6 +73,34 @@ class ImageDType(IntEnum):
                 "Unsupported numpy dtype "
                 f"{arr.dtype!r}; expected uint8, uint16, or float32"
             ) from exc
+
+
+class ImageChannelMode(IntEnum):
+    """How a 1/3/4-channel image is mapped to display colour (``u_mode``)."""
+
+    GRAY = 0
+    RGB = 1
+    MAGNITUDE = 2
+    ALPHA = 3
+
+
+def default_mode(channels: int) -> int:
+    """Default channel mode for a channel count (1 → gray, 3/4 → RGB)."""
+    if channels == 1:
+        return int(ImageChannelMode.GRAY)
+    return int(ImageChannelMode.RGB)
+
+
+def default_value_range(dtype: ImageDType) -> tuple[float, float]:
+    """Default ``[min, max]`` used to normalize the raw value into ``[0, 1]``.
+
+    ``uint8``/``float32`` default to the identity range ``[0, 1]``; ``uint16``
+    defaults to ``[0, 65535]``.  A caller with a ``float32`` array of arbitrary
+    range should override these with the data's own min/max.
+    """
+    if dtype is ImageDType.UINT16:
+        return (0.0, 65535.0)
+    return (0.0, 1.0)
 
 
 @dataclass
