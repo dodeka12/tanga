@@ -787,6 +787,42 @@ class EllipseStyle(ConicStyle):
 
 
 @dataclass
+class Rectangle2DStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Rectangle2D`.
+
+    Outline-only by default; set ``fill=True`` to draw a semi-transparent fill
+    under the outline.
+
+    Attributes:
+        fill: When ``True``, draw a semi-transparent fill quad under the outline
+            (default ``False`` = outline only).
+        fill_opacity: Opacity of the fill quad (0..1).  ``None`` uses the
+            renderer default (a light semi-transparent fill).
+        thickness: Outline width in pixels.  ``None`` uses the renderer default.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    fill: bool = False
+    fill_opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "Rectangle2DStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.fill:
+            result["fill"] = True
+        if self.fill_opacity is not None:
+            result["fill_opacity"] = self.fill_opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
 class RegularPolygonStyle(VizStyle):
     """Visual style for :class:`~pytanga.geometry.RegularPolygon`.
 

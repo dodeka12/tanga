@@ -23,7 +23,7 @@ Add the `Rectangle2D` visualization-only entity (frozen dataclass, like `Box` /
     helpers like `Box` (accept `None` defaults and MV-ish inputs via `_coerce`).
     `__repr__` like `Box`.
 
-- [ ] **2.2 — `Rectangle2DStyle(VizStyle)`**
+- [x] **2.2 — `Rectangle2DStyle(VizStyle)`**
   - `color`, `opacity`, `fill: bool = False`, `fill_opacity: float | None`,
     `thickness: float | None`; `to_dict()` emits `style_type: "Rectangle2DStyle"`.
 
