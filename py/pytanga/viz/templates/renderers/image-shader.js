@@ -46,10 +46,13 @@ vec4 sampleBilinear(vec2 px) {
 
 void main() {
     vec2 px = vUv * uImageSize;
-    vec2 df = fwidth(px);
-    // Axis-aligned (integer zoom / pan) → nearest (hard pixel borders);
-    // rotated / non-axis-aligned → bilinear (anti-aliased).
-    vec4 tex = (min(df.x, df.y) < 0.5) ? sampleNearest(px) : sampleBilinear(px);
+    // Rotation detection: the texture-coordinate screen-space derivatives are
+    // diagonal for an axis-aligned plane (pure zoom/pan); any off-diagonal term
+    // means the plane is rotated and needs anti-aliased (bilinear) sampling.
+    vec2 duvdx = dFdx(vUv);
+    vec2 duvdy = dFdy(vUv);
+    bool rotated = abs(duvdx.y) + abs(duvdy.x) > 1e-4;
+    vec4 tex = rotated ? sampleBilinear(px) : sampleNearest(px);
 
     vec3 color;
     if (uMode == 0) {

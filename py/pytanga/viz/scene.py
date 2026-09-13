@@ -246,6 +246,18 @@ class Scene:
             return image_id
         return self.add_image(image_id, payload, images=images)
 
+    def image_frames(self) -> list[tuple[str, bytes]]:
+        """Return ``(id, encoded_frame)`` for every image node with pixel data."""
+        from ._image_wire import encode_image_frame
+
+        frames: list[tuple[str, bytes]] = []
+        for node in self._dfs_preorder():
+            if isinstance(node, VizImage):
+                for img in node.images:
+                    if img.data is not None:
+                        frames.append((img.id, encode_image_frame(img.id, img.data)))
+        return frames
+
     @property
     def group_ids(self) -> list[str]:
         """IDs of all scene-graph groups."""

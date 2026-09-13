@@ -339,6 +339,7 @@ class VizServer:
         self._browser_sessions: dict[str, BrowserSession] = {}
         self._flush_callback: FlushCallback | None = None
         self._config_callback: ConfigCallback | None = None
+        self._image_frames_callback: Callable[[str], list[tuple[str, bytes]]] | None = None
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
         self._layout_callback: LayoutCallback | None = None
@@ -384,10 +385,12 @@ class VizServer:
         theme_callback: ThemeCallback | None = None,
         theme_static_dirs: dict[str, Path] | None = None,
         on_ready: Callable[[], None] | None = None,
+        image_frames_callback: Callable[[str], list[tuple[str, bytes]]] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
         self._flush_callback = flush_callback
         self._config_callback = config_callback
+        self._image_frames_callback = image_frames_callback
         self._scene_config_callback = scene_config_callback
         self._scene_list_callback = scene_list_callback
         self._layout_callback = layout_callback
@@ -687,6 +690,11 @@ class VizServer:
                     _ws_msg_brief(cfg_payload),
                 )
                 await ws.send_str(cfg_payload)
+
+            if self._image_frames_callback is not None:
+                for image_id, frame in self._image_frames_callback(scene_name):
+                    logger.info("WS SEND-BINARY t=%.3f image=%s", time.monotonic(), image_id)
+                    await ws.send_bytes(frame)
 
             if self._flush_callback is not None:
                 entities, _ = self._flush_callback(scene_name)

@@ -72,3 +72,14 @@ class TestSync:
         image_entities = [e for e in state if e.get("kind") == "image"]
         assert len(image_entities) == 1
         assert image_entities[0]["id"] == canvas.image_view.id
+
+    def test_scene_image_frames(self) -> None:
+        _, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((3, 4, 3), dtype=np.uint8)))
+        frames = canvas.handle.scene.image_frames()
+        assert len(frames) == 1
+        image_id, frame = frames[0]
+        assert image_id == "img1"
+        decoded = decode_image_frame(frame)
+        assert decoded["channels"] == 3
+        assert decoded["width"] == 4 and decoded["height"] == 3

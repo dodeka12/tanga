@@ -1055,6 +1055,13 @@ class Visualizer(_JupyterDisplayMixin):
         scene.clear_dirty()
         return state, []
 
+    def _image_frames_for(self, scene_name: str) -> list[tuple[str, bytes]]:
+        """Return encoded image frames for a scene (sent as binary on connect)."""
+        scene = self._layout.scenes.get(scene_name)
+        if scene is None:
+            return []
+        return scene.image_frames()
+
     def _interrupt_event(self, scene_name: str = "") -> threading.Event:
         """Return (creating if needed) the interrupt :class:`threading.Event`
         for *scene_name* (``""`` = main scene)."""
@@ -1525,6 +1532,7 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_layout_callback=self._layout._scene_layout_for,
                 theme_callback=self._theme_host._theme_define_payload,
                 theme_static_dirs=external_theme_dirs(),
+                image_frames_callback=self._image_frames_for,
             )
             _boot_done.set()
 
