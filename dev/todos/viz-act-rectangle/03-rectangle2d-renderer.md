@@ -30,7 +30,7 @@ with an optional semi-transparent fill, oriented in the xy-plane.
     updates center/size/angle/style in place and returns
     `!entityRequiresRebuild(ent, prev)`; rebuild when size changes (geometry).
 
-- [ ] **3.3 — bundle + smoke**
+- [x] **3.3 — bundle + smoke**
   - `uv run python tools/build-viewer-js.py` and `node --check rectangle2d.js`.
 
 ## Validation
