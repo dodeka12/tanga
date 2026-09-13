@@ -17,6 +17,7 @@ class _FakeTransport:
     def __init__(self) -> None:
         self.json_messages: list[dict] = []
         self.binary_frames: list[bytes] = []
+        self.registered: list[tuple] = []
 
     def send(self, message: dict) -> None:
         self.json_messages.append(message)
@@ -24,10 +25,15 @@ class _FakeTransport:
     def send_bytes(self, payload: bytes) -> None:
         self.binary_frames.append(payload)
 
+    def register(self, object_id: str, handler: object, *, event: str = "change", origin: object = None) -> None:  # noqa: ANN001
+        self.registered.append((object_id, event))
+
 
 def _canvas() -> tuple[Visualizer, ImageCanvas]:
     viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
-    viz._transport = _FakeTransport()  # type: ignore[attr-defined]
+    fake = _FakeTransport()
+    viz._transport = fake  # type: ignore[attr-defined]
+    viz._interaction_host._transport = fake  # type: ignore[attr-defined]
     return viz, ImageCanvas(viz)
 
 

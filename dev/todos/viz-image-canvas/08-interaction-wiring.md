@@ -14,22 +14,22 @@ uniform via `set_uniform` (JSON update, no image re-transmit).
 
 ## Steps
 
-- [ ] **8.1 — frontend raycast**
+- [x] **8.1 — frontend raycast**
   - Ensure the image plane entity, when registered via `set_interaction`, is
     raycastable and sends `interaction:*` events; `DragMode.XY_PLANE`/the
     `drag_anchor` path yields `world_position` in pixel coordinates (no new
     event field — reuse `world_position`/`world_delta`).
 
-- [ ] **8.2 — backend handlers**
+- [x] **8.2 — backend handlers**
   - `ImageCanvas` default `on_drag`/`on_click` read `event.world_position` as
     `(px, py)` and call `set_uniform`; expose the values to user handlers
     (e.g. `u_brightness` from vertical drag).
 
-- [ ] **8.3 — example binding**
+- [x] **8.3 — example binding**
   - Provide the documented default: ctrl+left drag adjusts
     `u_brightness`/`u_contrast`; plain drag reports pixel position.
 
-- [ ] **8.4 — tests**
+- [x] **8.4 — tests**
   - `py/tests/viz/test_image_canvas_handlers.py`: a `DragEvent` with a known
     `world_position` updates the expected uniform; handler registration matches
     the `(object_id, event_type)` contract.

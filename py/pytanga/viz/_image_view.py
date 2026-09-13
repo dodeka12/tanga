@@ -205,6 +205,7 @@ class ImageCanvas:
             on_drag_end=on_drag_end,
             on_click=on_click,
         )
+        self._interaction_registered = False
 
     # -- image / shader / uniform ---------------------------------
 
@@ -311,6 +312,7 @@ class ImageCanvas:
 
         payload = self._image_view._serialize()
         self._handle.scene.upsert_image(self._image_view.id, payload)
+        self._register_interaction()
 
         if self._transport is None:
             return
@@ -326,3 +328,12 @@ class ImageCanvas:
             }
         )
         self._handle.flush()
+
+    def _register_interaction(self) -> None:
+        """Register the image plane as interactive (idempotent)."""
+        if self._interaction_registered:
+            return
+        image_id = self._image_view.id
+        self._act_plane._init(self._handle, image_id)
+        self._handle._viz._act_objects[image_id] = self._act_plane
+        self._interaction_registered = True
