@@ -11,11 +11,27 @@ low-level :class:`ImageView` owns the images, shader, and uniform state;
 from __future__ import annotations
 
 from itertools import count
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .camera import StretchMode, View2DConfig, _validate_stretch
+from pytanga.geometry import Point, Rectangle2D
+
+from .camera import CameraAction, StretchMode, View2DConfig, _validate_stretch
 from .image import ImageData, default_mode, default_value_range
-from ._interaction import ModifierKey, MouseButton
+from ._interaction import InteractionEventType, MouseButton
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from ._active import (
+        ActClickHandler,
+        ActEventHandler,
+        ActHandler,
+        ActRectangle2D,
+        ActSceneObject,
+        ClickBinding,
+        DragBinding,
+    )
+    from ._interaction import ClickEvent, DragEvent
 
 __all__ = ["ImageView", "ImageCanvas"]
 
@@ -176,12 +192,14 @@ class ImageCanvas:
         image_id: str | None = None,
         stretch: StretchMode = "fit",
         border_px: float = 0.0,
-        drag_button: MouseButton = MouseButton.LEFT,
-        drag_modifiers: frozenset[ModifierKey] = frozenset(),
-        on_drag: Any = None,
-        on_drag_start: Any = None,
-        on_drag_end: Any = None,
-        on_click: Any = None,
+        on_drag: Callable[[DragEvent, ImageCanvas], Awaitable[bool]] | None = None,
+        on_drag_start: Callable[[DragEvent, ImageCanvas], Awaitable[None]]
+        | None = None,
+        on_drag_end: Callable[[DragEvent, ImageCanvas], Awaitable[None]] | None = None,
+        on_click: Callable[[ClickEvent, ImageCanvas], Awaitable[None]] | None = None,
+        drag_handlers: list[DragBinding[ImageCanvas]] | None = None,
+        click_handlers: list[ClickBinding[ImageCanvas]] | None = None,
+        controls: dict[MouseButton, CameraAction | None] | None = None,
     ) -> None:
         viz = _coerce_visualizer(target)
         self._image_id = (
@@ -195,22 +213,63 @@ class ImageCanvas:
         self._handle = viz.scene(
             self._scene_name, space_dim=2, add_axes=False, add_grid=False
         )
+        if controls is not None:
+            self._handle.scene.config.controls = controls
         self._transport = getattr(viz, "_transport", None)
         self._overlay = self._handle.add_group(f"{self._scene_name}_overlay")
         self._overlay_refs: list[Any] = []
 
-        from ._active import ActImagePlane
+        from ._active import ActImagePlane, ClickBinding, DragBinding
 
         self._act_plane = ActImagePlane(
             self._image_view,
-            drag_button=drag_button,
-            drag_modifiers=drag_modifiers,
-            handler=on_drag,
-            on_drag_start=on_drag_start,
-            on_drag_end=on_drag_end,
-            on_click=on_click,
+            handler=self._bind_drag(on_drag) if on_drag is not None else None,
+            on_drag_start=(
+                self._bind_event(on_drag_start) if on_drag_start is not None else None
+            ),
+            on_drag_end=(
+                self._bind_event(on_drag_end) if on_drag_end is not None else None
+            ),
+            on_click=self._bind_click(on_click) if on_click is not None else None,
+            drag_bindings=[
+                DragBinding(b.button, self._bind_drag(b.handler), *b.modifiers)
+                for b in (drag_handlers or [])
+            ],
+            click_bindings=[
+                ClickBinding(b.button, self._bind_click(b.handler), *b.modifiers)
+                for b in (click_handlers or [])
+            ],
         )
         self._interaction_registered = False
+
+    # -- handler wrapping -----------------------------------------
+    # Handlers are registered with the ActImagePlane, which passes its own
+    # instance as the second argument.  We wrap the user's handlers so that
+    # second argument is this ImageCanvas instead.
+
+    def _bind_drag(
+        self, handler: Callable[[DragEvent, ImageCanvas], Awaitable[bool]]
+    ) -> ActHandler:
+        async def wrapped(event: DragEvent, _plane: ActSceneObject) -> bool:
+            return await handler(event, self)
+
+        return wrapped
+
+    def _bind_click(
+        self, handler: Callable[[ClickEvent, ImageCanvas], Awaitable[None]]
+    ) -> ActClickHandler:
+        async def wrapped(event: ClickEvent, _plane: ActSceneObject) -> None:
+            await handler(event, self)
+
+        return wrapped
+
+    def _bind_event(
+        self, handler: Callable[[DragEvent, ImageCanvas], Awaitable[None]]
+    ) -> ActEventHandler:
+        async def wrapped(event: DragEvent, _plane: ActSceneObject) -> None:
+            await handler(event, self)
+
+        return wrapped
 
     # -- image / shader / uniform ---------------------------------
 
@@ -344,3 +403,92 @@ class ImageCanvas:
         self._act_plane._init(self._handle, image_id)
         self._handle._viz._act_objects[image_id] = self._act_plane
         self._interaction_registered = True
+
+    # -- draw-to-create rectangle ---------------------------------
+
+    def draw_rectangle(
+        self,
+        on_done: Callable[[ActRectangle2D], None] | None = None,
+        **act_kwargs: Any,
+    ) -> Callable[[], None]:
+        """Enter rectangle-drawing mode; the next drag draws a rectangle.
+
+        During the drag a live preview rectangle is shown; on drag end it is
+        replaced by an :class:`~pytanga.viz.ActRectangle2D` and ``on_done(rect)``
+        is called.  The image plane's own drag handlers are restored afterwards.
+        Returns a ``cancel()`` callable that aborts the mode without drawing.
+        """
+        from ._active import ActRectangle2D
+        from ._styles import Rectangle2DStyle
+
+        image_id = self._image_view.id
+        state: dict[str, Any] = {"anchor": None, "preview_id": None, "active": True}
+
+        def _rect_between(a: Point, b: Point) -> Rectangle2D:
+            x0, y0 = a.x, a.y
+            x1, y1 = b.x, b.y
+            return Rectangle2D(
+                center=Point((x0 + x1) / 2.0, (y0 + y1) / 2.0, 0.0),
+                size=(abs(x1 - x0), abs(y1 - y0)),
+            )
+
+        async def on_start(event: DragEvent) -> None:
+            state["anchor"] = event.world_position
+
+        async def on_move(event: DragEvent) -> None:
+            if state["anchor"] is None:
+                return
+            rect = _rect_between(state["anchor"], event.world_position)
+            if state["preview_id"] is None:
+                state["preview_id"] = self._handle.add(rect, style=Rectangle2DStyle())
+            else:
+                self._handle.update_entity(state["preview_id"], rect)
+
+        async def on_end(event: DragEvent) -> None:
+            if state["anchor"] is None:
+                return
+            rect = _rect_between(state["anchor"], event.world_position)
+            if state["preview_id"] is not None:
+                self._handle.remove(state["preview_id"])
+                state["preview_id"] = None
+            act = ActRectangle2D(center=rect.center, size=rect.size, **act_kwargs)
+            self._handle.add(act, style=Rectangle2DStyle())
+            state["active"] = False
+            self._restore_plane_interaction()
+            if on_done is not None:
+                on_done(act)
+
+        def cancel() -> None:
+            if not state["active"]:
+                return
+            if state["preview_id"] is not None:
+                self._handle.remove(state["preview_id"])
+                state["preview_id"] = None
+            state["active"] = False
+            self._restore_plane_interaction()
+
+        self._handle.on_interaction(image_id, InteractionEventType.DRAG_START, on_start)
+        self._handle.on_interaction(image_id, InteractionEventType.DRAG_MOVE, on_move)
+        self._handle.on_interaction(image_id, InteractionEventType.DRAG_END, on_end)
+        return cancel
+
+    def _restore_plane_interaction(self) -> None:
+        """Re-register the image plane's handlers, clearing any draw handlers."""
+        plane = self._act_plane
+
+        async def _noop(event: DragEvent) -> None:
+            pass
+
+        self._handle.on_interaction(
+            self._image_view.id, InteractionEventType.DRAG_MOVE, plane._on_drag
+        )
+        self._handle.on_interaction(
+            self._image_view.id,
+            InteractionEventType.DRAG_START,
+            plane._on_drag_start_event if plane._on_drag_start is not None else _noop,
+        )
+        self._handle.on_interaction(
+            self._image_view.id,
+            InteractionEventType.DRAG_END,
+            plane._on_drag_end_event if plane._on_drag_end is not None else _noop,
+        )

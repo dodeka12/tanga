@@ -18,6 +18,7 @@ from pytanga.geometry.entities import (
     Entity as GeoEntity,
     PartialDisk,
     Point,
+    Rectangle2D,
     RegularPolygon,
 )
 from pytanga.geometry.operators import GeneralRotor, Operator as GeoOperator, Rotor
@@ -51,6 +52,7 @@ SceneEntity: TypeAlias = Union[
     Ellipse,
     Ellipsoid,
     PartialDisk,
+    Rectangle2D,
     RegularPolygon,
 ]
 
