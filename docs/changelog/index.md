@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.3.0 (2.4.0-rc2)] — 2026-09-13
+- `py/tests` ANN coverage ratcheted (existing code frozen with per-line `# noqa: ANN…`, new tests enforced) · star imports removed repo-wide (`F403`/`F405` now enforced)
+- Bug fixes: `solver_basics_01.py` no longer fails its own `paths disagree!` check (floating-point tolerance comparison)
+→ [Details](2026/09/13_3027e8c9.md)
+
 ## [Since 2.3.0 (2.4.0-rc1)] — 2026-09-13
 - Full `ty` + ruff `ANN` type-hint coverage of `py/pytanga` and `py/examples` · both gates gating in pre-commit and CI · `typing-and-annotations.md` typing policy + handler-types docs · Q3 point tuples analyze to `PointSet` · new `point_tuples_demo.py`
 - Breaking: `pytanga.viz.Handler` removed (use `ControlHandler` / `InteractionHandler`) · one `ControlEvent` base + `InteractionEvent` hierarchy · interaction API typed instead of `Any` · Bug fixes: `ReflectionPlane` label frame · `tempfile.mktemp` · example `Reflection(normal=…)` / `wireframe` / `DataArray` bugs
