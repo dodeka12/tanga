@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ._controls import Handler
+from ._controls import ControlHandler
 from ._size import Size, SizeSpec
 from .views import FileChooserView, View
 
@@ -47,12 +47,12 @@ class Dialog:
     align_x: float = 0.5
     align_y: float = 0.5
     dismissable: bool = True
-    on_close: Handler | None = None
+    on_close: ControlHandler | None = None
     width: SizeSpec | None = None
     height: SizeSpec | None = None
     variant: str = "default"
     control_id: str | None = None
-    on_accept: Handler | None = None
+    on_accept: ControlHandler | None = None
 
     def __post_init__(self) -> None:
         for name in ("align_x", "align_y"):
@@ -79,8 +79,8 @@ class FileChooserDialog:
         value: str = "",
         root: str | None = None,
         accept: str = "",
-        on_accept: Handler | None = None,
-        on_close: Handler | None = None,
+        on_accept: ControlHandler | None = None,
+        on_close: ControlHandler | None = None,
         align_x: float = 0.5,
         align_y: float = 0.5,
         dismissable: bool = True,

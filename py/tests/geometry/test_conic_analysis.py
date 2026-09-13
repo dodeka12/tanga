@@ -29,6 +29,7 @@ from pytanga.geometry import (
     PlaneConicPair,
     Curve,
     Point,
+    PointSet,
     Quadric3D,
     Rotor,
     Sphere,
@@ -99,9 +100,7 @@ class TestRefineConic:
 
     def test_ellipse_rotation(self):
         # x² - xy + y² = 1  ->  ellipse rotated 45° about the origin.
-        matrix = np.array(
-            [[1.0, -0.5, 0.0], [-0.5, 1.0, 0.0], [0.0, 0.0, -1.0]]
-        )
+        matrix = np.array([[1.0, -0.5, 0.0], [-0.5, 1.0, 0.0], [0.0, 0.0, -1.0]])
         e = _refine_conic(matrix)
         assert isinstance(e, Ellipse)
         assert e.center == Point(0.0, 0.0, 0.0)
@@ -308,8 +307,10 @@ class TestPlanePairAnalysis:
         assert q.kind.value == "plane_pair"
         pair = refine(q)
         assert isinstance(pair, PlanePair)
-        normals = {(pair.plane1.normal.x, pair.plane1.normal.y, pair.plane1.normal.z),
-                   (pair.plane2.normal.x, pair.plane2.normal.y, pair.plane2.normal.z)}
+        normals = {
+            (pair.plane1.normal.x, pair.plane1.normal.y, pair.plane1.normal.z),
+            (pair.plane2.normal.x, pair.plane2.normal.y, pair.plane2.normal.z),
+        }
         assert normals == {(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)}
 
     def test_parallel_plane_pair(self):
@@ -456,18 +457,26 @@ class TestQuadricIntersection:
         blade = _coeff_mv(basis, to_coeffs(Q1)) ^ _coeff_mv(basis, to_coeffs(Q2))
         assert isinstance(analyze(blade), PlaneConicPair)
 
-    def test_analyze_ipns_grade3_deferred(self):
+    def test_analyze_ipns_grade3_point_tuple(self):
+        # The IPNS grade-3 blade (x²−y²) ∧ (y²−z²) ∧ (z²−1) is the net of the
+        # three quadrics; dualizing it yields the OPNS grade-7 join whose eight
+        # base points are the cube vertices (±1, ±1, ±1).
         basis = BasisQ3(opns=False)
         Q1 = np.diag([1.0, -1.0, 0.0, 0.0])
         Q2 = np.diag([0.0, 1.0, -1.0, 0.0])
-        Q3 = np.diag([0.0, 0.0, 1.0, 0.0])
+        Q3 = np.diag([0.0, 0.0, 1.0, -1.0])
         blade = (
             _coeff_mv(basis, to_coeffs(Q1))
             ^ _coeff_mv(basis, to_coeffs(Q2))
             ^ _coeff_mv(basis, to_coeffs(Q3))
         )
-        with pytest.raises(NotImplementedError):
-            analyze_entity(blade)
+        result = analyze_entity(blade)
+        assert isinstance(result, PointSet)
+        assert len(result) == 8
+        pts = {tuple(round(c) for c in (p.x, p.y, p.z)) for p in result}
+        assert pts == {
+            (sx, sy, sz) for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)
+        }
 
     def test_analyze_opns_grade8_join(self):
         # The OPNS join of the cube's 9 points is grade 8 → the degenerate
@@ -512,4 +521,3 @@ class TestQuadricIntersection:
         result = analyze_entity(blade)
         assert isinstance(result, Curve)
         assert any(len(path) > 0 for path in result.paths)
-

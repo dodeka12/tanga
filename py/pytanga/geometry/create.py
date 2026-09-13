@@ -10,7 +10,7 @@ This is the inverse of :func:`~.analysis.analyze`:
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .entities import (
     Circle,
@@ -54,8 +54,10 @@ if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
 
+    from ._create_binding import CreateModule
 
-def _detect(basis) -> str:
+
+def _detect(basis: Algebra) -> str:
     """Return ``'e2'``, ``'p2'``, ``'pga2'``, ``'n2'``, ``'e3'``, ``'p3'``, ``'pga3'``, or ``'n3'`` for a basis instance."""
     from pytanga.basis.e2 import BasisE2
     from pytanga.basis.e3 import BasisE3
@@ -141,7 +143,7 @@ def create_entity(basis: Algebra, entity: Entity) -> MV:
         "q2": create_q2,
         "q3": create_q3,
     }
-    mod = modules[_detect(basis)]
+    mod = cast("CreateModule", modules[_detect(basis)])
 
     if isinstance(
         entity,
@@ -214,14 +216,17 @@ def create_entity(basis: Algebra, entity: Entity) -> MV:
     elif isinstance(entity, Line):
         return mod.create_line(basis, entity.origin, entity.direction)
     elif isinstance(entity, Circle):
+        normal = entity.normal
+        if normal is None:  # pragma: no cover - constructor always sets a normal
+            normal = Direction(0.0, 0.0, 1.0)
         if entity.is_imaginary and _detect(basis) in ("n3", "pga3"):
             return mod.create_imag_circle(
                 basis,
                 entity.center,
-                entity.normal,
+                normal,
                 entity.radius,
             )
-        return mod.create_circle(basis, entity.center, entity.normal, entity.radius)
+        return mod.create_circle(basis, entity.center, normal, entity.radius)
     elif isinstance(entity, Plane):
         return mod.create_plane(basis, entity)
     elif isinstance(entity, Sphere):
@@ -288,7 +293,7 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
         "q2": create_q2,
         "q3": create_q3,
     }
-    mod = modules[_detect(basis)]
+    mod = cast("CreateModule", modules[_detect(basis)])
 
     if isinstance(operator, ReflectionLine):
         alg_type = _detect(basis)

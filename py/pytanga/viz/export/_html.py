@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pytanga.viz.export._cdn import build_library_script_tag
+from pytanga.viz.export._cdn import DeliveryMode, build_library_script_tag
 from pytanga.viz.export._bootstrap import (
     theme_css_for_delivery,
     js_annotation_panel,
@@ -41,7 +41,7 @@ def render_snapshot(
     objects: list[dict[str, Any]],
     scene_config: dict[str, Any],
     theme: str = "dark",
-    delivery: str = "cdn",
+    delivery: DeliveryMode = "cdn",
     delivery_ref: str | None = None,
 ) -> str:
     """Render a self-contained HTML file from the unified scene objects.

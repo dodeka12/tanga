@@ -60,9 +60,7 @@ def inverse_blade_mask(
         # k = C \ A = C ^ A.  The X support is the same for X ∧ A = C, so
         # this is computed from the un-swapped A/C masks and does not depend
         # on `left`.
-        ids = sorted(
-            {j ^ i for i in a_mask.ids for j in c_mask.ids if (i & j) == i}
-        )
+        ids = sorted({j ^ i for i in a_mask.ids for j in c_mask.ids if (i & j) == i})
     elif product == EProduct.IP:
         # Symmetric inner product: E_i | E_k is non-zero exactly when one
         # blade is contained in the other.  Solving A | X = C for X:

@@ -93,8 +93,8 @@ def primitive(
     params: dict[str, Any] | None = None,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
     **extra_params: Any,
 ) -> SdfNode:
     """Build a primitive node with an optional world transform.
@@ -149,8 +149,8 @@ def bound_box(
     half_extents: tuple[float, float, float],
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Build a finite clip box (``bound``) for an infinite entity."""
     transform = _make_transform(position=position, rotation=rotation)
@@ -164,8 +164,8 @@ def bound_box(
 
 def _make_transform(
     *,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> dict[str, Any] | None:
     """Build a transform dict, omitting identity components (returns ``None``
     when both position and rotation are absent/identity)."""
@@ -193,7 +193,7 @@ def sphere(
     radius: float,
     *,
     id: str | None = None,
-    position: Position = None,
+    position: Position | None = None,
 ) -> SdfNode:
     """Filled sphere of ``radius`` centred at ``position``."""
     return primitive("sphere", {"radius": float(radius)}, id=id, position=position)
@@ -203,8 +203,8 @@ def ellipsoid(
     radii: tuple[float, float, float],
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Ellipsoid with per-axis half radii ``radii`` = (x, y, z)."""
     return primitive(
@@ -220,8 +220,8 @@ def box(
     half_extents: tuple[float, float, float],
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Axis-aligned box with half extents ``half_extents`` = (x, y, z)."""
     return primitive(
@@ -238,8 +238,8 @@ def round_box(
     radius: float,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Rounded box with half extents ``half_extents`` and corner rounding ``radius``."""
     return primitive(
@@ -255,8 +255,8 @@ def cylinder(
     radius: float,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Infinite cylinder along +Y of ``radius`` (clip with an explicit ``bound``)."""
     return primitive(
@@ -273,8 +273,8 @@ def capped_cylinder(
     radius: float,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Capped cylinder along +Y with half height ``half_height`` and ``radius``."""
     return primitive(
@@ -290,8 +290,8 @@ def cone(
     angle: float,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Infinite cone around +Y with opening half-angle ``angle`` (radians)."""
     return primitive(
@@ -309,8 +309,8 @@ def capped_cone(
     radius2: float,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Capped cone along +Y: apex radius ``radius1``, base radius ``radius2``."""
     return primitive(
@@ -331,8 +331,8 @@ def torus(
     tube_radius: float,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Torus in the XZ plane with major radius ``main_radius`` and tube ``tube_radius``."""
     return primitive(
@@ -350,8 +350,8 @@ def partial_disk(
     *,
     half_height: float = 0.01,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Capped sector (partial disk) in the XZ plane, symmetric about +Z.
 
@@ -378,8 +378,8 @@ def regular_polygon(
     *,
     half_height: float = 0.01,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Regular polygon slab in the XZ plane with a vertex on +Z.
 
@@ -404,8 +404,8 @@ def plane(
     offset: float = 0.0,
     *,
     id: str | None = None,
-    position: Position = None,
-    rotation: Rotation = None,
+    position: Position | None = None,
+    rotation: Rotation | None = None,
 ) -> SdfNode:
     """Infinite plane with unit ``normal`` and signed ``offset`` (needs a bound).
 
@@ -555,7 +555,11 @@ def _basis_rotation(
     y = _normalize(y_dir)
     z = _normalize(z_dir)
     x = _normalize(
-        (y[1] * z[2] - y[2] * z[1], y[2] * z[0] - y[0] * z[2], y[0] * z[1] - y[1] * z[0])
+        (
+            y[1] * z[2] - y[2] * z[1],
+            y[2] * z[0] - y[0] * z[2],
+            y[0] * z[1] - y[1] * z[0],
+        )
     )
     # Re-orthonormalize z against x, y (right-handed).
     z = (

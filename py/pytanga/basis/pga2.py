@@ -27,6 +27,7 @@ Gunn/Dorst 3D PGA (2D Euclidean + 1D projective).
 from __future__ import annotations
 
 from functools import cached_property
+from typing import Any
 
 from pytanga.algebra._algebra import Algebra
 from pytanga.algebra._mv import MV
@@ -86,7 +87,7 @@ class BasisPGA2(Algebra):
         11: {0: 0.5},  # J(e₁₂∧em) = 1/2
     }
 
-    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw: Any) -> None:
         super().__init__(4, 0b1000, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
@@ -134,14 +135,14 @@ class BasisPGA2(Algebra):
     # ── display ───────────────────────────────────────────────────
 
     @cached_property
-    def _display_basis(self) -> list:
+    def _display_basis(self) -> list[tuple[str, MV, MV | None, int | None]]:
         """Explicit display basis — e₀ first, PGA4CS convention.
 
         Each entry is ``(name, blade, pinv, blade_id | None)``.
         """
         e0, e1, e2, e0i = self.e0, self.e1, self.e2, self.e0_recip
 
-        def _entry(name, blade):
+        def _entry(name: str, blade: MV) -> tuple[str, MV, MV, int | None]:
             pinv = self.blade_pseudo_inverse(blade)
             bid = None
             raw = {

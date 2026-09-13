@@ -6,9 +6,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pytanga.entity._util import _convert_mv, _fmt_v, _is_mv
 from pytanga.entity.vec3 import Vec3
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
+    from pytanga.entity.point import Point
 
 
 @dataclass(frozen=True)
@@ -29,7 +34,7 @@ class Direction(Vec3):
     to the algebra-specific analyzer.
     """
 
-    def __init__(self, x=0.0, y=0.0, z=0.0):
+    def __init__(self, x: "MV" | float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
         if _is_mv(x):
             d = _convert_mv("direction", x)
             object.__setattr__(self, "x", d.x)
@@ -43,7 +48,7 @@ class Direction(Vec3):
     def __repr__(self) -> str:
         return f"Dir{_fmt_v(self.x, self.y, self.z)}"
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Direction):
             return self.x == other.x and self.y == other.y and self.z == other.z
         if isinstance(other, (tuple, list)) and len(other) == 3:
@@ -53,7 +58,7 @@ class Direction(Vec3):
     def __neg__(self) -> "Direction":
         return Direction(-self.x, -self.y, -self.z)
 
-    def __add__(self, other) -> "Direction":
+    def __add__(self, other: "Vec3") -> "Direction | Point":
         if isinstance(other, Direction):
             return Direction(self.x + other.x, self.y + other.y, self.z + other.z)
         from pytanga.entity.point import Point
@@ -62,34 +67,34 @@ class Direction(Vec3):
             return Point(self.x + other.x, self.y + other.y, self.z + other.z)
         return NotImplemented
 
-    def __radd__(self, other) -> "Point":
+    def __radd__(self, other: "Point") -> "Point":
         from pytanga.entity.point import Point
 
         if isinstance(other, Point):
             return Point(self.x + other.x, self.y + other.y, self.z + other.z)
         return NotImplemented
 
-    def __sub__(self, other) -> "Direction":
+    def __sub__(self, other: "Vec3") -> "Direction":
         if isinstance(other, Direction):
             return Direction(self.x - other.x, self.y - other.y, self.z - other.z)
         return NotImplemented
 
-    def __mul__(self, scalar):
+    def __mul__(self, other: "Vec3" | int | float) -> "Direction":
+        if isinstance(other, (int, float)):
+            return Direction(self.x * other, self.y * other, self.z * other)
+        return NotImplemented
+
+    def __rmul__(self, scalar: int | float) -> "Direction":
         if isinstance(scalar, (int, float)):
             return Direction(self.x * scalar, self.y * scalar, self.z * scalar)
         return NotImplemented
 
-    def __rmul__(self, scalar):
-        if isinstance(scalar, (int, float)):
-            return Direction(self.x * scalar, self.y * scalar, self.z * scalar)
-        return NotImplemented
-
-    def __truediv__(self, scalar):
+    def __truediv__(self, scalar: int | float) -> "Direction":
         if isinstance(scalar, (int, float)):
             return Direction(self.x / scalar, self.y / scalar, self.z / scalar)
         return NotImplemented
 
-    def cross(self, other) -> "Direction":
+    def cross(self, other: "Vec3") -> "Direction":
         """Vector cross product.  Always returns a Direction."""
         return Direction(
             self.y * other.z - self.z * other.y,

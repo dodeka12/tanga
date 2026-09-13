@@ -226,4 +226,3 @@ SDF_STYLE_BY_KIND: dict[str, type[SdfStyle]] = {
     "Ellipse": SdfEllipseStyle,
     "RegularPolygon": SdfRegularPolygonStyle,
 }
-

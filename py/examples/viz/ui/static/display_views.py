@@ -15,7 +15,17 @@ Run with:  uv run python py/examples/viz/ui/static/display_views.py
 Keywords: split view, label, markdown, KaTeX, control update, layout
 """
 
-from pytanga.viz import ButtonView, LabelView, MarkdownView, Size, SplitView, Visualizer
+from typing import Any
+
+from pytanga.viz import (
+    ButtonView,
+    ControlEvent,
+    LabelView,
+    MarkdownView,
+    Size,
+    SplitView,
+    Visualizer,
+)
 
 viz = Visualizer(reuse_existing=False, title="Tanga — Label & Markdown Views")
 
@@ -38,7 +48,7 @@ label_view = LabelView("label", value="Hello, world!", font_size=24)
 markdown_view = MarkdownView("markdown", value=markdown_value)
 
 
-async def on_update(_value, _event):
+async def on_update(_value: Any, _event: ControlEvent) -> None:
     """Update both display views in place (pushed via ``control_update``)."""
     label_view.set_value("Updated at runtime ✓")
     markdown_view.set_value(r"**Live update** — now $\nabla^2 \phi = 0$.")

@@ -102,3 +102,76 @@ class TestPointSetJoin:
         blade = q1 ^ q2
         result = analyze_entity(blade)
         assert isinstance(result, (PlaneConicPair, Curve))
+
+
+_Q3_PTS = [
+    (0.1, 0.2, 0.3),
+    (0.9, 0.1, -0.2),
+    (-0.4, 0.7, 0.1),
+    (0.3, -0.5, 0.8),
+    (-0.6, -0.3, 0.5),
+    (0.8, 0.6, -0.7),
+    (-0.9, 0.5, -0.4),
+]
+
+
+def _join_q3(b, pts):
+    mv = embed_point(b, *pts[0])
+    for p in pts[1:]:
+        mv = mv ^ embed_point(b, *p)
+    return mv
+
+
+def _assert_recovers(ps, pts):
+    for p in pts:
+        assert any(
+            abs(round(q.x, 5) - round(p[0], 5)) < 1e-4
+            and abs(round(q.y, 5) - round(p[1], 5)) < 1e-4
+            and abs(round(q.z, 5) - round(p[2], 5)) < 1e-4
+            for q in ps
+        ), f"point {p} not recovered in {ps}"
+
+
+class TestQ3PointTuples:
+    def test_join_of_three_points(self):
+        b = BasisQ3()
+        ps = analyze_entity(_join_q3(b, _Q3_PTS[:3]))
+        assert len(ps) == 3
+        _assert_recovers(ps, _Q3_PTS[:3])
+
+    def test_join_of_four_points(self):
+        b = BasisQ3()
+        ps = analyze_entity(_join_q3(b, _Q3_PTS[:4]))
+        assert len(ps) == 4
+        _assert_recovers(ps, _Q3_PTS[:4])
+
+    def test_join_of_five_points(self):
+        b = BasisQ3()
+        ps = analyze_entity(_join_q3(b, _Q3_PTS[:5]))
+        assert len(ps) == 5
+        _assert_recovers(ps, _Q3_PTS[:5])
+
+    def test_join_of_six_points(self):
+        b = BasisQ3()
+        ps = analyze_entity(_join_q3(b, _Q3_PTS[:6]))
+        assert len(ps) == 6
+        _assert_recovers(ps, _Q3_PTS[:6])
+
+    def test_join_of_seven_points_yields_eight_base_points(self):
+        # A 7-point join in Q3 spans a P6 that meets the Veronese 3-fold in
+        # eight rank-1 points (the 7 originals + 1 Cayley-Bacharach point).
+        b = BasisQ3()
+        ps = analyze_entity(_join_q3(b, _Q3_PTS[:7]))
+        assert len(ps) == 8
+        _assert_recovers(ps, _Q3_PTS[:7])
+
+    def test_ipns_point_tuple_dualizes_to_opns(self):
+        # IPNS grade 3 is the net of quadrics through 7 points; dualizing it
+        # yields the OPNS grade-7 join, whose base points are recovered.
+        b = BasisQ3()
+        join = _join_q3(b, _Q3_PTS[:7])
+        net = join.dual()  # grade 3
+        b.opns = False
+        ps = analyze_entity(net)
+        assert len(ps) == 8
+        _assert_recovers(ps, _Q3_PTS[:7])

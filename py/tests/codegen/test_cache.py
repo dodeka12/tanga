@@ -101,12 +101,15 @@ class TestGetOrBuild:
         key = _make_key(3, 0, "float64")
         fake_so = isolated_cache / key / "cmake_build" / "binding.so"
 
-        with patch(
-            "pytanga.codegen._cache.build_and_load",
-            return_value=(fake_mod, fake_so),
-        ) as mock_build, patch(
-            "pytanga.codegen._cache._load_precompiled",
-            return_value=None,
+        with (
+            patch(
+                "pytanga.codegen._cache.build_and_load",
+                return_value=(fake_mod, fake_so),
+            ) as mock_build,
+            patch(
+                "pytanga.codegen._cache._load_precompiled",
+                return_value=None,
+            ),
         ):
             fake_so.parent.mkdir(parents=True, exist_ok=True)
             fake_so.write_bytes(b"fake")

@@ -10,35 +10,43 @@ imported lazily, mirroring :mod:`pytanga.quadric.refine`.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 
 from ._mapping import from_coeffs
 
 if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
     from pytanga.geometry.entities import Point, PointSet
+
+    class _EntitiesModule(Protocol):
+        """The lazily-imported :mod:`pytanga.geometry.entities` module."""
+
+        Point: type[Point]
+        PointSet: type[PointSet]
+
 
 _TOL = 1e-10
 
 _entities_module = None
 
 
-def _entities():
+def _entities() -> "_EntitiesModule":
     """Lazily import and cache :mod:`pytanga.geometry.entities`."""
     global _entities_module
     if _entities_module is None:
         from pytanga.geometry import entities as _entities_module
 
-    return _entities_module
+    return cast("_EntitiesModule", _entities_module)
 
 
-def _coeffs(mv, dim: int) -> tuple[float, ...]:
+def _coeffs(mv: MV, dim: int) -> tuple[float, ...]:
     """Read a grade-1 MV's coefficients in ``b1…bN`` order."""
     return tuple(float(mv[1 << i]) for i in range(dim))
 
 
-def point_from_embedding(mv, dim: int) -> Point:
+def point_from_embedding(mv: MV, dim: int) -> Point:
     """Recover a finite point from a rank-1 grade-1 embedding MV."""
     E = _entities()
     matrix = from_coeffs(_coeffs(mv, dim))
@@ -60,7 +68,7 @@ def _kind_for(n: int) -> str:
     return {1: "single", 2: "pair", 3: "triplet", 4: "quadruplet"}.get(n, "n_tuple")
 
 
-def pointset_from_blade(mv) -> PointSet:
+def pointset_from_blade(mv: MV) -> PointSet:
     """Recover the points of a simple blade (OPNS join) as a ``PointSet``."""
     E = _entities()
     factors = mv.blade_factorize()
@@ -70,6 +78,8 @@ def pointset_from_blade(mv) -> PointSet:
         points = _points_from_two_point_join(factors, dim)
     elif dim == 6 and k in (3, 4):
         points = _points_from_join_via_conics(factors)
+    elif dim == 10 and 3 <= k <= 7:
+        points = _points_from_join_via_quadrics(factors)
     else:
         raise NotImplementedError(
             f"point recovery for a {k}-point join in dim {dim} is not supported"
@@ -90,7 +100,9 @@ def _point_from_rank1_matrix(m: np.ndarray, dim: int) -> Point | None:
     return E.Point(float(v[0] / w), float(v[1] / w), float(v[2] / w))
 
 
-def _solve_binary_quadratic(a, b, c, tol=1e-10) -> list[tuple[float, float]]:
+def _solve_binary_quadratic(
+    a: float, b: float, c: float, tol: float = 1e-10
+) -> list[tuple[float, float]]:
     """Real projective roots ``(alpha, beta)`` of ``a α² + b αβ + c β² = 0``."""
     sols: list[tuple[float, float]] = []
     if abs(a) > tol:
@@ -104,7 +116,7 @@ def _solve_binary_quadratic(a, b, c, tol=1e-10) -> list[tuple[float, float]]:
     return sols
 
 
-def _points_from_two_point_join(factors, dim: int) -> list[Point]:
+def _points_from_two_point_join(factors: "list[MV]", dim: int) -> list[Point]:
     """Recover the two points of a 2D pencil (join of two points)."""
     m1 = from_coeffs(_coeffs(factors[0], dim))
     m2 = from_coeffs(_coeffs(factors[1], dim))
@@ -140,7 +152,7 @@ def _symmetric_basis_3() -> list[np.ndarray]:
     return basis
 
 
-def _points_from_join_via_conics(factors) -> list[Point]:
+def _points_from_join_via_conics(factors: "list[MV]") -> list[Point]:
     """Recover 3 or 4 join points (2D) via the orthogonal conic complement."""
     ms = [from_coeffs(_coeffs(f, 6)) for f in factors]
     k = len(ms)
@@ -158,7 +170,67 @@ def _points_from_join_via_conics(factors) -> list[Point]:
     points = list(two_conic_intersection(g1, g2))
     for conic in conics:
         points = [p for p in points if abs(_quad_value(conic, p)) < 1e-8]
-    return points
+    return cast("list[Point]", points)
+
+
+def _symmetric_basis_4() -> list[np.ndarray]:
+    basis: list[np.ndarray] = []
+    for i in range(4):
+        for j in range(i, 4):
+            e = np.zeros((4, 4))
+            e[i, j] = e[j, i] = 1.0
+            basis.append(e)
+    return basis
+
+
+def _quad_value_3d(q: np.ndarray, p: Point) -> float:
+    ph = np.array([p.x, p.y, p.z, 1.0])
+    return float(ph @ q @ ph)
+
+
+def _points_from_join_via_quadrics(factors: "list[MV]") -> list[Point]:
+    """Recover 3..7 join points (3D) via the orthogonal quadric complement.
+
+    Mirrors :func:`_points_from_join_via_conics` one dimension up: the dual of a
+    ``k``-point join is the ``(10-k)``-dim space of quadrics through the points,
+    so three generic complement quadrics intersect in up to eight base points;
+    filtering to those on *all* complement quadrics recovers the ``k`` join
+    points (or, for ``k = 7``, the eight base points of the 3-dim net — see
+    ``dev/theory/quadric-point-tuples.md``).  Several random triplets are tried
+    and unioned so a bad quartic sampling in one triplet cannot hide a point.
+    """
+    from ._intersection import intersect_three_quadrics
+
+    ms = [from_coeffs(_coeffs(f, 10)) for f in factors]
+    k = len(ms)
+    basis = _symmetric_basis_4()
+    gram = np.array([[float(np.trace(b @ m)) for m in ms] for b in basis])  # 10×k
+    _, _, vh = np.linalg.svd(gram.T)  # gram.T is k×10
+    comp = vh[k:]  # (10-k)×10 coefficient vectors in the basis
+    quadrics = [sum(c[i] * basis[i] for i in range(10)) for c in comp]
+
+    rng = np.random.default_rng(0)
+    candidates: list[Point] = []
+    for _ in range(4):
+        g = [sum(rng.normal() * q for q in quadrics) for _ in range(3)]
+        try:
+            candidates.extend(intersect_three_quadrics(*g))
+        except NotImplementedError:
+            continue
+    candidates = _dedupe_3d(candidates)
+    for q in quadrics:
+        candidates = [p for p in candidates if abs(_quad_value_3d(q, p)) < 1e-6]
+    return candidates
+
+
+def _dedupe_3d(points: list[Point], tol: float = 1e-3) -> list[Point]:
+    out: list[Point] = []
+    for p in points:
+        if not any(
+            float(np.linalg.norm([p.x - q.x, p.y - q.y, p.z - q.z])) < tol for q in out
+        ):
+            out.append(p)
+    return out
 
 
 def _quad_value(n: np.ndarray, p: Point) -> float:
@@ -209,8 +281,7 @@ def _intersect_line_conic(line: np.ndarray, a: np.ndarray) -> list[Point]:
             roots.append((-c1 + s) / (2.0 * c2))
 
     return [
-        E.Point(float(p0[0] + t * d[0]), float(p0[1] + t * d[1]), 0.0)
-        for t in roots
+        E.Point(float(p0[0] + t * d[0]), float(p0[1] + t * d[1]), 0.0) for t in roots
     ]
 
 
@@ -222,7 +293,7 @@ def _dedupe(points: list[Point], tol: float = 1e-3) -> list[Point]:
     return out
 
 
-def two_conic_intersection(A, B) -> PointSet:
+def two_conic_intersection(A: "np.ndarray", B: "np.ndarray") -> PointSet:
     """Intersect two conic matrices via the thesis pencil method.
 
     ``M = B⁻¹ A``; each real eigenvalue ``λ`` yields the degenerate conic

@@ -6,11 +6,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 from ._coerce import to_direction, to_float, to_point
 from ._util import _convert_mv
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -33,11 +37,18 @@ class Plane:
     span_v: Direction | None = None
     extent: float | None = None
 
-    def __init__(self, point=None, normal=None, span_u=None, span_v=None, extent=None):
+    def __init__(
+        self,
+        point: "Point | MV | None" = None,
+        normal: "Direction | MV | None" = None,
+        span_u: "Direction | MV | None" = None,
+        span_v: "Direction | MV | None" = None,
+        extent: "float | MV | None" = None,
+    ) -> None:
         try:
             point = to_point(point)
         except TypeError:
-            plane = _convert_mv("plane", point)
+            plane = _convert_mv("plane", cast("MV", point))
             object.__setattr__(self, "point", plane.point)
             object.__setattr__(self, "normal", plane.normal)
             object.__setattr__(self, "span_u", plane.span_u)
@@ -53,9 +64,7 @@ class Plane:
         object.__setattr__(
             self, "span_v", None if span_v is None else to_direction(span_v)
         )
-        object.__setattr__(
-            self, "extent", None if extent is None else to_float(extent)
-        )
+        object.__setattr__(self, "extent", None if extent is None else to_float(extent))
 
     def __repr__(self) -> str:
         return f"Plane(pt={self.point}, n={self.normal})"

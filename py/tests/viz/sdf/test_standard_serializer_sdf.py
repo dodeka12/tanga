@@ -174,5 +174,3 @@ def test_visualizer_add_sdf_sphere_with_label() -> None:
     assert kinds[oid] == "sdf"
     # The label is a separate overlay object attached to the SDF object.
     assert any(o["kind"] == "label" for o in objs)
-
-

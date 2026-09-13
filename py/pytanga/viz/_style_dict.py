@@ -9,11 +9,31 @@ and helpers for resolving style priorities.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import ItemsView, Iterator, KeysView, ValuesView
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from ._act_style import ActPointStyle
     from ._styles import AnnotationStyle, FigureStyle, LabelStyle, TextureLabelStyle
+
+
+class StylesMap(Protocol):
+    """Read-only view of a per-kind style mapping.
+
+    Satisfied both by a plain ``dict[str, Any]`` and by :class:`_StyleDict`,
+    the dict-like wrapper that normalises class keys to their ``__name__``.
+    The serializers only ever read from it (``get`` / ``[]`` / ``in``), so this
+    protocol keeps them agnostic about which of the two they receive.
+    """
+
+    # The parameters are positional-only so that both a plain ``dict`` and
+    # ``_StyleDict`` (whose method parameters are named differently) satisfy the
+    # protocol: only the shapes matter here, never the keyword names.
+    def get(self, key: str, default: Any = None, /) -> Any: ...
+
+    def __getitem__(self, key: str, /) -> Any: ...
+
+    def __contains__(self, key: object, /) -> bool: ...
 
 
 class _StyleDict:
@@ -48,22 +68,22 @@ class _StyleDict:
     def __delitem__(self, k: str | type) -> None:
         del self._mapping[self._key(k)]
 
-    def __contains__(self, k: str | type) -> bool:
-        return self._key(k) in self._mapping
+    def __contains__(self, k: object) -> bool:
+        return isinstance(k, (str, type)) and self._key(k) in self._mapping
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self._mapping)
 
     def __len__(self) -> int:
         return len(self._mapping)
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
         return self._mapping.keys()
 
-    def values(self):
+    def values(self) -> ValuesView[Any]:
         return self._mapping.values()
 
-    def items(self):
+    def items(self) -> ItemsView[str, Any]:
         return self._mapping.items()
 
     def get(self, k: str | type, default: Any = None) -> Any:
@@ -188,7 +208,7 @@ def _make_default_act_point_style() -> "ActPointStyle":
     return _APS(hover_emissive="#ffff44", hover_scale=1.5)
 
 
-def _make_default_label_styles() -> dict[str, "LabelStyle | None"]:
+def _make_default_label_styles() -> dict[str, "LabelStyle"]:
     """Return per-kind label style overrides, seeded with copies of the default.
 
     Every kind starts as a copy of the canonical default ``LabelStyle`` so

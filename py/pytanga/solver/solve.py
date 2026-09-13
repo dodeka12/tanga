@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -23,8 +23,8 @@ from pytanga.algebra import MVLike, _as_mv
 
 
 def _resolve_alg_from_solver_inputs(
-    a: MVLike | list[MVLike],
-    c: MVLike | list[MVLike],
+    a: MVLike | Sequence[MVLike],
+    c: MVLike | Sequence[MVLike],
     a_mask: BladeMask | None = None,
     b_mask: BladeMask | None = None,
     c_mask: BladeMask | None = None,
@@ -35,7 +35,7 @@ def _resolve_alg_from_solver_inputs(
         if mask is not None:
             return mask.algebra
 
-    def _mv_alg(xs: list):
+    def _mv_alg(xs: list[Any]) -> "Algebra | None":
         for x in xs:
             if isinstance(x, MV):
                 return x.algebra
@@ -152,15 +152,15 @@ def solve(
     M2d = M.data[0]  # (|c_mask|, |b_mask|)
     if M2d.shape[0] != M2d.shape[1]:
         b_data = np.linalg.lstsq(M2d, c_vec.data, rcond=None)[0]
-        return from_matrix(MVMatrix(b_data.reshape(-1, 1), M.b_mask))
+        return cast("MV", from_matrix(MVMatrix(b_data.reshape(-1, 1), M.b_mask)))
 
     x_arr = np.linalg.solve(M2d, c_vec.data)
-    return from_matrix(MVMatrix(x_arr, M.b_mask))
+    return cast("MV", from_matrix(MVMatrix(x_arr, M.b_mask)))
 
 
 def solve_lsq(
-    a: MVLike | list[MVLike],
-    c: MVLike | list[MVLike],
+    a: MVLike | Sequence[MVLike],
+    c: MVLike | Sequence[MVLike],
     *,
     a_mask: BladeMask | None = None,
     b_mask: BladeMask | None = None,
@@ -182,9 +182,9 @@ def solve_lsq(
 
     Parameters
     ----------
-    a : MVLike | list[MVLike]
+    a : MVLike | Sequence[MVLike]
         The fixed-coefficient operand A, or a list of operands A_i.
-    c : MVLike | list[MVLike]
+    c : MVLike | Sequence[MVLike]
         The target C, or a list of targets C_i (same length as *a*).
     a_mask : BladeMask | None
         Blade mask for A.  If None, auto-derived from A (or union of A_i).
@@ -224,13 +224,13 @@ def solve_lsq(
         raise ValueError(
             "a and c must both be single MVs or both be lists of the same length"
         )
-    if a_is_list and len(a) != len(c):
+    if isinstance(a, list) and isinstance(c, list) and len(a) != len(c):
         raise ValueError(
             f"a and c lists must have the same length, got {len(a)} and {len(c)}"
         )
 
     # Derive a_mask and c_mask from the actual MVs before computing b_mask
-    if a_is_list:
+    if isinstance(a, list) and isinstance(c, list):
         mvs_a = [_as_mv(alg, x) for x in a]
         mvs_c = [_as_mv(alg, x) for x in c]
         if a_mask is None:
@@ -259,8 +259,8 @@ def solve_lsq(
         a_arg = mvs_a
         c_arg = mvs_c
     else:
-        mv_a = _as_mv(alg, a)
-        mv_c = _as_mv(alg, c)
+        mv_a = _as_mv(alg, cast("MVLike", a))
+        mv_c = _as_mv(alg, cast("MVLike", c))
         if a_mask is None:
             a_mask = BladeMask(mv_a)
         b_mask_computed = b_mask
@@ -288,7 +288,7 @@ def solve_lsq(
         c_arg = mv_c
 
     M = build_product_matrix(
-        a_arg,
+        cast("MVLike | Sequence[MVLike]", a_arg),
         a_mask=a_mask,
         b_mask=b_mask_computed,
         c_mask=c_mask_computed,
@@ -304,10 +304,10 @@ def solve_lsq(
         b_vec = np.vstack(b_vec_parts)
     else:
         M2d = M.data[0]  # (nc, nb)
-        b_vec = to_matrix(c_arg, mask=M.c_mask).data
+        b_vec = to_matrix(cast("MVLike | Sequence[MVLike]", c_arg), mask=M.c_mask).data
 
     x_arr, _, _, _ = np.linalg.lstsq(M2d, b_vec, rcond=tol)
-    return from_matrix(MVMatrix(x_arr.reshape(-1, 1), M.b_mask))
+    return cast("MV", from_matrix(MVMatrix(x_arr.reshape(-1, 1), M.b_mask)))
 
 
 def solve_mod(

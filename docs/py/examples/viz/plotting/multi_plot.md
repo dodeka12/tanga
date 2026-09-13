@@ -140,11 +140,10 @@ layout = SplitView(
             sizes=[Size.percent(50), Size.percent(50)],
             children=[
                 SceneView(
-                    "fit", camera=fit_view2d((0, 2 * math.pi), (-1.2, 1.2), stretch="fit")
+                    "fit",
+                    camera=fit_view2d((0, 2 * math.pi), (-1.2, 1.2), stretch="fit"),
                 ),
-                SceneView(
-                    "fill", camera=fit_view2d((-5, 5), (0, 25), stretch="fill")
-                ),
+                SceneView("fill", camera=fit_view2d((-5, 5), (0, 25), stretch="fill")),
             ],
         ),
         SplitView(

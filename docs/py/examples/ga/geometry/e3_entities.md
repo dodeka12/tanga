@@ -114,7 +114,7 @@ print(f"  analyze → {result}")
 # ── 4. Reflection ────────────────────────────────────────────
 hr("4. Reflection — grade-1 versor (via geo.create)")
 
-refl = Reflection(normal=Direction(1, 0, 0))
+refl = Reflection(Direction(1, 0, 0))
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_ref = geo.create(refl)
 mv_ref.show("Reflection in plane with normal (1,0,0)")
@@ -161,7 +161,7 @@ hr("8. Plain functions — no Geometry wrapper needed")
 
 from pytanga.geometry import analyze, create  # noqa: E402
 
-mv_ref2 = create(e3, Reflection(normal=Direction(0, 1, 0)))
+mv_ref2 = create(e3, Reflection(Direction(0, 1, 0)))
 result = analyze(mv_ref2)
 print(f"  plain create + analyze → {result}")
 

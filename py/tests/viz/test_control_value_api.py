@@ -75,10 +75,18 @@ def test_table_view_undo_redo_push_grid() -> None:
     view.control.set_cell(0, 0, "9")
 
     assert view.undo() is True
-    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]})]
+    assert pushed == [
+        (
+            "tbl",
+            {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]},
+        )
+    ]
 
     assert view.redo() is True
-    assert pushed[-1] == ("tbl", {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]})
+    assert pushed[-1] == (
+        "tbl",
+        {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]},
+    )
 
 
 def test_table_view_undo_empty_history_does_not_push() -> None:
@@ -104,7 +112,9 @@ def test_table_view_default_preferred_size() -> None:
     assert view.preferred_width == Size.px(480)
     assert view.preferred_height == Size.px(320)
     # An explicit preferred still wins.
-    assert TableView("tbl", preferred_height=Size.px(200)).preferred_height == Size.px(200)
+    assert TableView("tbl", preferred_height=Size.px(200)).preferred_height == Size.px(
+        200
+    )
 
 
 def test_table_get_cell_out_of_range_raises() -> None:
@@ -130,7 +140,12 @@ def test_table_view_set_cell_pushes_grid() -> None:
     pushed: list[tuple] = []
     view._push = lambda vid, value: pushed.append((vid, value))
     assert view.set_cell(0, 0, "9") is True
-    assert pushed == [("tbl", {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]})]
+    assert pushed == [
+        (
+            "tbl",
+            {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]},
+        )
+    ]
 
 
 def test_table_view_set_cell_records_history() -> None:
@@ -173,7 +188,11 @@ def test_table_view_add_delete_row_column() -> None:
     assert len(pushed) == 4
     assert pushed[-1] == (
         "tbl",
-        {"columns": ["y", "z"], "rows": [["4", "b"]], "column_types": [{"kind": "string"}, {"kind": "string"}]},
+        {
+            "columns": ["y", "z"],
+            "rows": [["4", "b"]],
+            "column_types": [{"kind": "string"}, {"kind": "string"}],
+        },
     )
 
 

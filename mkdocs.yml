@@ -207,10 +207,13 @@ nav:
       - System overview: dev/architecture/system-overview.md
       - Type system & storage: dev/architecture/type-system-and-storage.md
       - Geometry & quadric layering: dev/architecture/geometry-module-layering.md
+      - Quadric module: dev/architecture/quadric-module.md
       - Viz controls & interactions: dev/architecture/viz-controls-and-interactions.md
       - Viz theme system: dev/architecture/viz-theme-system.md
+      - Typing & annotations: dev/architecture/typing-and-annotations.md
     - GA Pipeline:
       - Operation pipeline: dev/ga/operation-pipeline.md
+      - Conic & quadric space: dev/ga/conic-quadric-space.md
     - Guides:
       - Contributing: dev/guides/contributing.md
       - C++ coding style: dev/guides/cpp-coding-style-guide.md

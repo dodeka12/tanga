@@ -14,7 +14,7 @@ Mirrors ``analysis_p3.py`` with 2D blade IDs and entities.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from pytanga.basis.p2 import BasisP2
 
@@ -254,9 +254,6 @@ def _rotor_from_factors(n1: MV, n2: MV) -> Rotor:
     n1_dot_n2 = float(n1.sp(n2))
     angle = 2.0 * math.acos(max(-1.0, min(1.0, n1_dot_n2)))
 
-    bivector = n1.op(n2)
-    bz = float(bivector[E12])
-
     axis = Direction(0, 0, 1)
 
     return Rotor(angle=angle, axis=axis)
@@ -277,7 +274,10 @@ def _get_grades(mv: MV) -> set[int]:
 # ═══════════════════════════════════════════════════════════════
 
 
-def _expect(result, cls):
+T = TypeVar("T")
+
+
+def _expect(result: object, cls: type[T]) -> T:
     """Return *result* if it is an instance of *cls*; else raise."""
     if result is None:
         raise ValueError(f"MV does not represent a {cls.__name__}")

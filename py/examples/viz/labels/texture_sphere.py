@@ -14,7 +14,7 @@ from pytanga.geometry.entities import Point, Sphere
 from pytanga.viz import SphereStyle, TextureLabelStyle, Visualizer
 
 
-def main():
+def main() -> None:
     viz = Visualizer()
     viz.set_title("Texture Labels on Spheres")
 

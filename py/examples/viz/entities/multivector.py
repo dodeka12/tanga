@@ -104,6 +104,7 @@ viz.new(
 # geo_n3(...) creates for Entity/Operator args; analyzes for MV args
 mv_sphere = geo_n3.create(Sphere(center=Point(0, 3, 0), radius=1.0))
 result = analyze(mv_sphere)
+assert isinstance(result, Sphere), "a sphere MV analyses to Sphere"
 print(f"  MV analyzed to: {result}")
 print(f"  Type: {type(result).__name__}")
 print(f"  Center: {result.center}, Radius: {result.radius}")

@@ -6,16 +6,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 from ._util import _convert_mv, _is_mv
 from .plane import Plane
 
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
-def _to_plane(value) -> Plane:
+
+def _to_plane(value: "Plane | MV") -> Plane:
     if isinstance(value, Plane):
         return value
     if _is_mv(value):
-        return _convert_mv("plane", value)
+        return cast("Plane", _convert_mv("plane", value))
     raise TypeError(f"Expected Plane or MV, got {type(value).__name__}")
 
 
@@ -26,7 +30,7 @@ class PlanePair:
     plane1: Plane
     plane2: Plane
 
-    def __init__(self, plane1, plane2):
+    def __init__(self, plane1: "Plane | MV", plane2: "Plane | MV") -> None:
         object.__setattr__(self, "plane1", _to_plane(plane1))
         object.__setattr__(self, "plane2", _to_plane(plane2))
 

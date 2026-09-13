@@ -23,7 +23,7 @@ Keywords: expressions, solve, A X = B, multivector equation
 
 from __future__ import annotations
 
-from pytanga import BladeMask, Variable
+from pytanga import BladeMask, MV, Variable
 from pytanga.basis import BasisP3
 
 
@@ -42,6 +42,7 @@ def main() -> None:
 
     # Fit 1 — exact inverse.
     X_inv = forward.inv("X")(X=B)
+    assert isinstance(X_inv, MV)
     print("Solve A X = B via Expression.inv:")
     print("  A            =", {k: round(v, 4) for k, v in A.to_dict().items()})
     print("  B            =", {k: round(v, 4) for k, v in B.to_dict().items()})

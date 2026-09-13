@@ -39,10 +39,16 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from pytanga import Algebra, BladeMask, MVMatrix
+from pytanga import Algebra, BladeMask, MV, MVMatrix
 from pytanga.geometry import RndMV
 from pytanga.matrix.convert import from_matrix
 from pytanga.matrix.product import product_matrix
+
+
+def _single_mv(value: "MV | list[MV]") -> MV:
+    """Narrow an `MV | list[MV]` result to the single MV it holds here."""
+    assert isinstance(value, MV), "expected a single multivector"
+    return value
 
 
 def hr(title: str) -> None:
@@ -64,7 +70,7 @@ hr("Ground truth: 30° rotation in the e1∧e2 plane")
 
 angle = math.radians(30)
 # R = cos(θ/2) + sin(θ/2)·e12
-R_true = alg({0: math.cos(angle / 2), "e12": math.sin(angle / 2)})
+R_true = _single_mv(alg({0: math.cos(angle / 2), "e12": math.sin(angle / 2)}))
 print(f"R_true = {R_true}")
 print(f"R_true * ~R_true = {(R_true * ~R_true).prune()}")  # should be ~1
 
@@ -77,13 +83,13 @@ n = 10
 noise_level = 0.01
 
 vec_mask = BladeMask(alg, grades=[1])
-vectors = [
-    RndMV(vec_mask, [(-1.0, 1.0)] * len(vec_mask))(np.random.default_rng(i))
+vectors: list[MV] = [
+    _single_mv(RndMV(vec_mask, [(-1.0, 1.0)] * len(vec_mask))(np.random.default_rng(i)))
     for i in range(n)
 ]
 
 # Apply R via the normalised versor product
-rotated = [alg.nvp(R_true, v) for v in vectors]
+rotated: list[MV] = [alg.nvp(R_true, v) for v in vectors]
 
 # Add Gaussian noise to Y_i
 noisy_rotated = []
@@ -140,17 +146,22 @@ print(f"  (smallest → {singular_values[-1]:.6f}, should be near 0)")
 
 R_vec = Vt[-1]  # right singular vector for smallest σ
 R_est = from_matrix(MVMatrix(R_vec.reshape(-1, 1), rotor_mask))
+assert isinstance(R_est, MV), "a single-column matrix yields one MV"
 print(f"\nR estimated (raw): {R_est}")
 
 # ---------------------------------------------------------------------------
 # Normalise: a proper rotor satisfies R * ~R = 1
 # ---------------------------------------------------------------------------
 rev_r = alg.rev(R_est)
-rr_scalar = alg.gp(R_est, rev_r).to_dict().get("s", 0.0)
+rr = alg.gp(R_est, rev_r)
+assert isinstance(rr, MV), "the versor product R*~R is one MV"
+rr_scalar = rr.to_dict().get("s", 0.0)
 norm = math.sqrt(abs(rr_scalar))
 # Convention: keep scalar part positive (R and -R represent the same rotation)
 scalar_sign = math.copysign(1.0, R_est.to_dict().get("s", 1.0))
-R_norm = alg({k: v / norm * scalar_sign for k, v in R_est.to_dict().items()})
+R_norm = _single_mv(
+    alg({k: v / norm * scalar_sign for k, v in R_est.to_dict().items()})
+)
 R_norm.prune()
 print(f"R estimated (normalised): {R_norm}")
 print(f"R true:                   {R_true}")

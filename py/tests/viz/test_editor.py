@@ -18,7 +18,9 @@ def test_open_editor_registers_and_pushes(monkeypatch):
     viz = _viz()
     pushed: list[tuple] = []
     monkeypatch.setattr(
-        viz._layout.overlay, "_push_editor_define", lambda c, **kw: pushed.append((c, kw))
+        viz._layout.overlay,
+        "_push_editor_define",
+        lambda c, **kw: pushed.append((c, kw)),
     )
 
     async def _on_close(text, event):
@@ -67,9 +69,7 @@ async def test_dispatch_editor_closed_discard():
 @pytest.mark.anyio
 async def test_dispatch_editor_closed_unknown_id():
     viz = _viz()
-    await viz._dispatch_control_event(
-        "editor_closed", {"id": "missing", "text": "x"}
-    )
+    await viz._dispatch_control_event("editor_closed", {"id": "missing", "text": "x"})
 
 
 def test_overlay_editor_direct_lifecycle(monkeypatch):

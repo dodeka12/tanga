@@ -10,6 +10,8 @@ module re-exports it for backward compatibility and keeps the geometry-specific
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from pytanga.entity._util import (
     _convert_mv,
     _fmt_v,
@@ -17,6 +19,9 @@ from pytanga.entity._util import (
     _scalar,
     register_analyzer,
 )
+
+if TYPE_CHECKING:
+    from .direction import Direction
 
 __all__ = [
     "_compute_start_direction",
@@ -28,7 +33,7 @@ __all__ = [
 ]
 
 
-def _compute_start_direction(axis) -> "Direction":
+def _compute_start_direction(axis: "Direction") -> "Direction":
     """Return a deterministic unit vector perpendicular to *axis*.
 
     Picks the coordinate axis least aligned with *axis* so the cross product is

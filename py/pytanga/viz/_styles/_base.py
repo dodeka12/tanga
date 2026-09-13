@@ -13,6 +13,14 @@ from typing import Any
 class VizStyle:
     """Base class for all visualization styles.  Not instantiated directly."""
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return the style's wire dict.
+
+        The base style has no fields of its own; subclasses override this to
+        dump their non-``None`` fields.
+        """
+        return {}
+
 
 @dataclass
 class WireframeDashPattern:

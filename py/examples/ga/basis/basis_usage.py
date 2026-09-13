@@ -79,9 +79,9 @@ globals().update(b.blades())
 
 # The linter will flag the three lines below as "undefined name".
 # The code runs correctly at runtime; static analysis is blind.
-(e1 * e2).show("e1 * e2")  # type: ignore[name-defined]  # noqa: F821
-(e2 * e1).show("e2 * e1")  # type: ignore[name-defined]  # noqa: F821
-(I * I).show("I  * I ")  # type: ignore[name-defined]  # noqa: F821
+(e1 * e2).show("e1 * e2")  # type: ignore[name-defined]  # noqa: F821  # ty: ignore[unresolved-reference]
+(e2 * e1).show("e2 * e1")  # type: ignore[name-defined]  # noqa: F821  # ty: ignore[unresolved-reference]
+(I * I).show("I  * I ")  # type: ignore[name-defined]  # noqa: F821  # ty: ignore[unresolved-reference]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

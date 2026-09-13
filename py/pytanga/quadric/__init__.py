@@ -39,7 +39,7 @@ from ._create import (
     create_sphere,
 )
 from ._embedding import embed_point
-from ._intersection import intersect_quadrics
+from ._intersection import intersect_quadrics, intersect_three_quadrics
 from ._mapping import from_coeffs, to_coeffs
 from ._pointset import two_conic_intersection
 from .conic import Conic, EConicKind, EQuadricKind, Quadric2D, Quadric3D
@@ -78,6 +78,7 @@ __all__ = [
     "embed_point",
     "from_coeffs",
     "intersect_quadrics",
+    "intersect_three_quadrics",
     "line_from_points",
     "quadric_from_points",
     "quadric_from_points_svd",

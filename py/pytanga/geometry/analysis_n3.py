@@ -16,7 +16,7 @@ No raw EP/EM blade IDs are used.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from ._ana_versor_generic import ana_versor_generic
 from ._n3_helpers import (
@@ -497,7 +497,9 @@ def analyze_operator(
         return VersorFactors(factors=tuple(factors))
 
 
-def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
+def _classify_single_grade_versor(
+    mv: MV, einf: MV, eo: MV
+) -> Inversion | ReflectionPlane | ReflectionPoint | ReflectionLine | HDirection:
     """Pure-grade blade: dualize high grades, then classify at grade 1 or 2.
 
     Dualization principle: the dual has the same operator effect (up to sign).
@@ -525,7 +527,7 @@ def _classify_single_grade_versor(mv: MV, einf: MV, eo: MV):
 # ── Grade-1 operator classification ─────────────────────────────
 
 
-def _classify_grade1_operator(op, einf, eo):
+def _classify_grade1_operator(op: MV, einf: MV, eo: MV) -> Inversion | ReflectionPlane:
     """Classify a grade-1 blade after dualization as Inversion or ReflectionPlane."""
     ex, ey, ez = eucl_part(op, einf, eo)
     eucl_norm = math.sqrt(ex * ex + ey * ey + ez * ez)
@@ -548,7 +550,9 @@ def _classify_grade1_operator(op, einf, eo):
 # ── Grade-2 operator classification ─────────────────────────────
 
 
-def _classify_grade2_operator(op, einf, eo):
+def _classify_grade2_operator(
+    op: MV, einf: MV, eo: MV
+) -> ReflectionPoint | ReflectionLine | HDirection:
     """Classify a grade-2 blade (direct or dualized) as
     ReflectionPoint, ReflectionLine, or HDirection."""
     E = einf.op(eo)
@@ -569,7 +573,7 @@ def _classify_grade2_operator(op, einf, eo):
 # ── Helper: Inversion from IPNS sphere ──────────────────────────
 
 
-def _inversion_from_ipns(op, einf, eo):
+def _inversion_from_ipns(op: MV, einf: MV, eo: MV) -> Inversion:
     """Extract Inversion from IPNS sphere blade (grade 1)."""
     sphere = _sphere_from_ipns(op, einf, eo)
     return Inversion(center=sphere.center, radius=sphere.radius)
@@ -578,7 +582,7 @@ def _inversion_from_ipns(op, einf, eo):
 # ── Helper: ReflectionPlane from IPNS plane ─────────────────────
 
 
-def _plane_from_ipns_operator(op, einf, eo):
+def _plane_from_ipns_operator(op: MV, einf: MV, eo: MV) -> ReflectionPlane:
     """Extract ReflectionPlane from IPNS plane blade (grade 1)."""
     plane = _plane_from_ipns(op, einf, eo)
     return ReflectionPlane(plane)
@@ -587,7 +591,7 @@ def _plane_from_ipns_operator(op, einf, eo):
 # ── Helper: ReflectionPoint from HPoint blade ───────────────────
 
 
-def _reflection_point_from_hpoint(op, einf, eo):
+def _reflection_point_from_hpoint(op: MV, einf: MV, eo: MV) -> ReflectionPoint:
     """Extract ReflectionPoint from an OPNS HPoint blade (grade 2)."""
     alg = op.algebra
     point = _factor_to_point(op, alg)
@@ -597,7 +601,7 @@ def _reflection_point_from_hpoint(op, einf, eo):
 # ── Helper: ReflectionLine from IPNS bivector ───────────────────
 
 
-def _reflection_line_from_ipns(op, einf, eo):
+def _reflection_line_from_ipns(op: MV, einf: MV, eo: MV) -> ReflectionLine:
     """Extract ReflectionLine from an IPNS line bivector (grade 2).
 
     Dualizes back to OPNS and uses existing line decomposition.
@@ -612,7 +616,7 @@ def _reflection_line_from_ipns(op, einf, eo):
 # ── Helper: HDirection from blade ───────────────────────────────
 
 
-def _hdirection_from_blade(op, einf, eo):
+def _hdirection_from_blade(op: MV, einf: MV, eo: MV) -> HDirection:
     """Extract HDirection from a pure d∧e∞ blade (grade 2)."""
     inner = op.ip(eo)  # (d∧e∞)·e₀ = -d
     dx, dy, dz = -float(inner[E1]), -float(inner[E2]), -float(inner[E3])
@@ -625,16 +629,20 @@ def _hdirection_from_blade(op, einf, eo):
 # ── Helper: Has Euclidean bivector ───────────────────────────────
 
 
-def _has_euclidean_bivector(op):
+def _has_euclidean_bivector(op: MV) -> bool:
     """True if the blade has E12, E23, or E13 bivector components."""
     return abs(float(op[E12])) + abs(float(op[E23])) + abs(float(op[E13])) > 1e-15
 
 
-def _classify_single_reflector(n: MV, einf: MV, eo: MV):
+def _classify_single_reflector(
+    n: MV, einf: MV, eo: MV
+) -> Inversion | ReflectionPlane | ReflectionPoint | ReflectionLine | HDirection:
     return _classify_single_grade_versor(n, einf, eo)
 
 
-def _classify_double_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
+def _classify_double_reflector(
+    mv: MV, einf: MV, eo: MV, factors: list[MV]
+) -> Dilator | Rotor | Translator | Motor | GeneralRotor:
     """Classify 2-factor versor by blade components.
 
     - E-only (e∞∧e₀) → Dilator (possibly with origin)
@@ -656,7 +664,9 @@ def _classify_double_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
         )
 
 
-def _classify_quad_reflector(mv: MV, einf: MV, eo: MV, factors: list[MV]):
+def _classify_quad_reflector(
+    mv: MV, einf: MV, eo: MV, factors: list[MV]
+) -> Rotor | Translator | Motor | GeneralRotor:
     """Classify a 4-factor versor: Motor or GeneralRotor.
 
     Delegates to :func:`ana_versor_generic` which classifies by grade
@@ -753,7 +763,10 @@ def _get_grades(mv: MV) -> set[int]:
 # ═══════════════════════════════════════════════════════════════
 
 
-def _expect(result, cls):
+T = TypeVar("T")
+
+
+def _expect(result: object, cls: type[T]) -> T:
     """Return *result* if it is an instance of *cls*; else raise."""
     if result is None:
         raise ValueError(f"MV does not represent a {cls.__name__}")

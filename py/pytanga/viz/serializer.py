@@ -43,6 +43,7 @@ from pytanga.geometry.entities import (
 )
 
 from ._point_path import PointPath
+from ._style_dict import StylesMap
 from ._scene_objects import (
     Axes2D,
     Axes3D,
@@ -75,7 +76,7 @@ def serialize_entity(
     properties: Dict[str, Any] | None = None,
     *,
     kind: str | None = None,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     """Convert a geometry entity + rendering properties into a flat JSON-ready dict.
 
@@ -104,7 +105,7 @@ def _dispatch_entity(
     entity: Any,
     kind: str,
     props: Dict[str, Any],
-    styles_map: Dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> Dict[str, Any]:
     """Route an entity/operator to its per-kind leaf serializer.
 
@@ -241,7 +242,7 @@ def _dispatch_entity(
 def _is_sdf_styled(
     props: Dict[str, Any],
     kind: str,
-    styles_map: Dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> bool:
     """Return ``True`` when *entity* should render as a per-object SDF proxy.
 
@@ -262,7 +263,7 @@ def _is_sdf_styled(
 def _is_ray_styled(
     props: Dict[str, Any],
     kind: str,
-    styles_map: Dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> bool:
     """Return ``True`` when *entity* should render as an analytic ray proxy.
 
@@ -287,7 +288,7 @@ def _serialize_ray(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> Dict[str, Any]:
     """Serialize a ray-styled entity (currently only ``Quadric3D``)."""
     if kind == "Quadric3D":
@@ -300,7 +301,7 @@ def _serialize_quadric(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> Dict[str, Any]:
     """Serialize a :class:`~pytanga.geometry.Quadric3D` as an analytic ray proxy."""
     result = _apply_defaults(props, kind, {}, styles_map=styles_map)
@@ -370,7 +371,7 @@ def _apply_defaults(
     kind: str,
     builtin: Dict[str, Any],
     *,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     """Merge priorities: per-entity props > user style > canonical style > builtin.
 
@@ -439,7 +440,7 @@ def _serialize_point_path(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -457,7 +458,7 @@ def _serialize_axis(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(
         props,
@@ -490,7 +491,7 @@ def _serialize_axes2d(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     """Serialize an :class:`Axes2D` as a single scene object.
 
@@ -532,7 +533,7 @@ def _serialize_axes3d(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     """Serialize an :class:`Axes3D` as a single scene object."""
     origin = ent.origin if len(ent.origin) == 3 else _pad_origin(ent.origin, 0.0)
@@ -574,7 +575,7 @@ def _resolve_group_axis_styles(
     kind: str,
     n: int,
     *,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> List[Dict[str, Any]]:
     """Resolve per-direction axis styles into complete merged dicts.
 
@@ -692,7 +693,7 @@ def _serialize_grid(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -725,7 +726,7 @@ def _serialize_point(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -740,7 +741,7 @@ def _serialize_direction(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -758,7 +759,7 @@ def _serialize_hpoint(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -776,7 +777,7 @@ def _serialize_point_pair(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     effective_kind = "ImagPointPair" if ent.is_imaginary else "PointPair"
     result = _apply_defaults(
@@ -799,7 +800,7 @@ def _serialize_point_pair(
 def resolve_line_length(
     line: Line,
     *,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
     props: Dict[str, Any] | None = None,
 ) -> float:
     """Return the effective rendered length of a Line.
@@ -833,7 +834,7 @@ def _resolve_extent(
     kind: str,
     entity: Any,
     *,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
     props: Dict[str, Any] | None = None,
     fallback: float,
 ) -> float:
@@ -869,7 +870,7 @@ def _serialize_line(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     builtins = {"thickness": 1.0}
     # Resolve the length here so the frontend always receives a valid value
@@ -902,7 +903,7 @@ def _serialize_plane(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     extent = _resolve_extent(
         kind,
@@ -936,7 +937,7 @@ def _serialize_plane_pair(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {"extent": 5.0}, styles_map=styles_map)
     extent = float(result["extent"])
@@ -950,7 +951,7 @@ def _serialize_parallel_plane_pair(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {"extent": 5.0}, styles_map=styles_map)
     extent = float(result["extent"])
@@ -983,7 +984,7 @@ def _serialize_plane_conic(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {}, styles_map=styles_map)
     result["paths"] = _plane_conic_paths(ent)
@@ -995,7 +996,7 @@ def _serialize_plane_conic_pair(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {}, styles_map=styles_map)
     result["paths"] = _plane_conic_paths(ent.conic1) + _plane_conic_paths(ent.conic2)
@@ -1007,7 +1008,7 @@ def _serialize_curve(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {}, styles_map=styles_map)
     result["paths"] = [[[p.x, p.y, p.z] for p in path] for path in ent.paths]
@@ -1019,7 +1020,7 @@ def _serialize_circle(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     effective_kind = "ImagCircle" if ent.is_imaginary else "Circle"
     result = _apply_defaults(
@@ -1045,7 +1046,7 @@ def _serialize_sphere(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     effective_kind = "ImagSphere" if ent.is_imaginary else "Sphere"
     result = _apply_defaults(
@@ -1070,7 +1071,7 @@ def _serialize_space(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     extent = _resolve_extent(
         kind,
@@ -1093,7 +1094,7 @@ def _serialize_cylinder(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1114,7 +1115,7 @@ def _serialize_arc(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     arrow = None
     if ent.show_arrow:
@@ -1151,7 +1152,7 @@ def _serialize_disk(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1170,7 +1171,7 @@ def _serialize_partial_disk(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1195,7 +1196,7 @@ def _serialize_box(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     rotation = _as_euler(ent.rotation) if ent.rotation is not None else None
     return _apply_defaults(
@@ -1215,7 +1216,7 @@ def _serialize_ellipsoid(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     rotation = _as_euler(ent.rotation) if ent.rotation is not None else None
     return _apply_defaults(
@@ -1235,7 +1236,7 @@ def _serialize_ellipse(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "center": [ent.center.x, ent.center.y, ent.center.z],
@@ -1255,7 +1256,7 @@ def _serialize_regular_polygon(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1276,7 +1277,7 @@ def _serialize_hyperbola(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "center": [ent.center.x, ent.center.y, ent.center.z],
@@ -1292,7 +1293,7 @@ def _serialize_parabola(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
@@ -1325,7 +1326,7 @@ def _serialize_line_pair(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {"length": 20.0}, styles_map=styles_map)
     length = float(result["length"])
@@ -1339,7 +1340,7 @@ def _serialize_point_set(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {}, styles_map=styles_map)
     result["points"] = [[p.x, p.y, p.z] for p in ent.points]
@@ -1352,7 +1353,7 @@ def _serialize_parallel_line_pair(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {"length": 20.0}, styles_map=styles_map)
     length = float(result["length"])
@@ -1366,14 +1367,13 @@ def _serialize_cone(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
         "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
         "halfAngle": ent.half_angle,
     }
-
 
 
 # ── Operators ──────────────────────────────────────────────
@@ -1384,7 +1384,7 @@ def _serialize_reflection_line(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1402,7 +1402,7 @@ def _serialize_reflection_plane(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     extent = _resolve_extent(
         kind,
@@ -1428,7 +1428,7 @@ def _serialize_reflection_origin(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1445,7 +1445,7 @@ def _serialize_inversion(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1463,7 +1463,7 @@ def _serialize_rotor(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1482,7 +1482,7 @@ def _serialize_translator(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1500,7 +1500,7 @@ def _serialize_dilator(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1518,7 +1518,7 @@ def _serialize_motor(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,
@@ -1547,7 +1547,7 @@ def _serialize_general_rotor(
     props: Dict[str, Any],
     *,
     kind: str,
-    styles_map: Dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(
         props,

@@ -35,6 +35,29 @@ examples = [
 [tool.ruff.lint]
 # Keep reporting unused imports, but do not automatically delete them
 unfixable = ["F401"]
+# Type-hint coverage (paired with `ty` for correctness).  `ANN401` is off: the
+# dynamically-typed surfaces (algebra bindings, viz registries, notebooks) are
+# `Any` by nature.
+extend-select = ["ANN"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+# The test suite is deferred from the coverage gate and kept on the established
+# star-import style (`from pytanga.algebra import *` brings in the blade names),
+# so `F403`/`F405` and the accompanying `F401`/`E402`/`F841`/`E741` debt in
+# `py/tests` is tracked separately from this change.
+# See dev/todos/ty-type-hints/08-enforcement-docs.md.
+"py/tests/**" = ["ANN", "F401", "F403", "F405", "E402", "E741", "F841"]
+
+[tool.ty.rules]
+# Approximate mypy/pyright --strict; paired with ruff ANN for coverage.
+dynamic-function-decorator-return = "error"
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
+unsound-return-statement = "error"
+
+[tool.ty.src]
+include = ["py/pytanga", "py/examples"]
 
 [tool.hatch.version]
 source = "vcs"
@@ -64,6 +87,7 @@ dev = [
     "ruff==0.14.0",
     "tanga-py[compile,examples,galgebra]",
     "twine>=6.0",
+    "ty>=0.0.80",
 ]
 
 [tool.pytest.ini_options]

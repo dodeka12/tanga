@@ -6,12 +6,16 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from ._coerce import to_direction, to_float, to_point
 from ._util import _compute_start_direction
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 _FULL_TURN = 2.0 * math.pi
 
@@ -44,14 +48,17 @@ class Disk:
 
     center: Point
     radius: float
-    normal: Direction | None = None
+    normal: Direction = field(default_factory=lambda: Direction(0.0, 0.0, 1.0))
 
-    def __init__(self, center=None, radius=None, normal=None):
+    def __init__(
+        self,
+        center: "Point | MV | None" = None,
+        radius: "float | MV | None" = None,
+        normal: "Direction | MV | None" = None,
+    ) -> None:
         center = Point(0.0, 0.0, 0.0) if center is None else to_point(center)
         radius = 1.0 if radius is None else to_float(radius)
-        normal = (
-            Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
-        )
+        normal = Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
 
         object.__setattr__(self, "center", center)
         object.__setattr__(self, "radius", radius)
@@ -91,23 +98,25 @@ class PartialDisk:
     center: Point
     radius: float
     angle: float = _FULL_TURN
-    start_direction: Direction | None = None
-    normal: Direction | None = None
+    # __init__ derives both real defaults (from ``normal``); the factories below
+    # only keep the dataclass field order valid.
+    start_direction: Direction = field(
+        default_factory=lambda: _compute_start_direction(Direction(0.0, 0.0, 1.0))
+    )
+    normal: Direction = field(default_factory=lambda: Direction(0.0, 0.0, 1.0))
 
     def __init__(
         self,
-        center=None,
-        radius=None,
-        angle=None,
-        start_direction=None,
-        normal=None,
-    ):
+        center: "Point | MV | None" = None,
+        radius: "float | MV | None" = None,
+        angle: "float | MV | None" = None,
+        start_direction: "Direction | MV | None" = None,
+        normal: "Direction | MV | None" = None,
+    ) -> None:
         center = Point(0.0, 0.0, 0.0) if center is None else to_point(center)
         radius = 1.0 if radius is None else to_float(radius)
         angle = _FULL_TURN if angle is None else to_float(angle)
-        normal = (
-            Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
-        )
+        normal = Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
 
         if start_direction is None:
             start_direction = _compute_start_direction(normal)

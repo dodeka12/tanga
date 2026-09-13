@@ -17,7 +17,7 @@ Run
 Keywords: polynomial, expressions, repeated variables, affine
 """
 
-from pytanga import BladeMask, DataArray, Variable
+from pytanga import AffineExpression, BladeMask, DataArray, MV, Variable
 from pytanga.basis import BasisE3
 
 
@@ -30,18 +30,23 @@ def main() -> None:
 
     # f(v) = v*v + v + c  (quadratic + linear + constant -> AffineExpression)
     f = (v * v) + v + c
+    assert isinstance(f, AffineExpression)
     print("f is an", type(f).__name__, "with", len(f.terms), "terms")
 
     # single evaluation
     x = E3("e1 + 2 e2")
-    print("\nf(x)     =", f(V1=x).to_dict())
+    f_x = f(V1=x)
+    assert isinstance(f_x, MV)
+    print("\nf(x)     =", f_x.to_dict())
     print("direct   =", ((x * x) + x + c).to_dict())
 
     # batched evaluation
     xs = [E3(f"{i} e1 + {i + 1} e2") for i in range(3)]
     batch = DataArray(xs, masks=("n", full))
     print("\nf over a batch:")
-    for xi, fi in zip(xs, f(V1=batch)):
+    f_batch = f(V1=batch)
+    assert isinstance(f_batch, list), "a DataArray binding yields a batched list"
+    for xi, fi in zip(xs, f_batch):
         print("  ", xi.to_dict(), "->", fi.to_dict())
 
 

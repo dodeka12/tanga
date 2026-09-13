@@ -41,6 +41,7 @@ Keywords: expressions, Variable, rotor, points, entity
 """
 
 from pytanga.basis import BasisN3
+from pytanga import DataArray
 from pytanga.geometry import Direction, Geometry, Point, Rotor
 
 
@@ -63,8 +64,10 @@ def main() -> None:
     r = geo(Rotor(1.2, Direction(0, 0, 1)))
     points = [geo(Point(x, 0, 0)) for x in (0.0, 1.0, 2.0, 3.0)]
 
-    # Apply the rotor to each point in a single batched call.
-    rotated = E(R=r, P=points)
+    # Apply the rotor to each point in a single batched call: a list of points
+    # is bound as a ``DataArray`` whose counting axis holds the points.
+    rotated = E(R=r, P=DataArray(points, masks=("pnt_idx", P.mask)))
+    assert isinstance(rotated, list), "a bound list of points yields a batched list"
 
     print("\nrotate a list of points:")
     for src, dst in zip(points, rotated):

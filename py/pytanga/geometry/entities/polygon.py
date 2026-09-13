@@ -5,11 +5,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from ._coerce import to_direction, to_float, to_point
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -45,18 +49,23 @@ class RegularPolygon:
     center: Point
     radius: float
     sides: int
-    normal: Direction | None = None
+    normal: Direction = field(default_factory=lambda: Direction(0.0, 0.0, 1.0))
     angle: float = 0.0
 
-    def __init__(self, center=None, radius=None, sides=None, normal=None, angle=None):
+    def __init__(
+        self,
+        center: "Point | MV | None" = None,
+        radius: "float | MV | None" = None,
+        sides: int | None = None,
+        normal: "Direction | MV | None" = None,
+        angle: "float | MV | None" = None,
+    ) -> None:
         center = Point(0.0, 0.0, 0.0) if center is None else to_point(center)
         radius = 1.0 if radius is None else to_float(radius)
         sides = 6 if sides is None else int(sides)
         if sides < 3:
             raise ValueError(f"RegularPolygon requires sides >= 3, got {sides}")
-        normal = (
-            Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
-        )
+        normal = Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
         angle = 0.0 if angle is None else to_float(angle)
 
         object.__setattr__(self, "center", center)
@@ -75,8 +84,8 @@ class RegularPolygon:
 def regular_polygon(
     sides: int,
     radius: float = 1.0,
-    center=None,
-    normal=None,
+    center: "Point | MV | None" = None,
+    normal: "Direction | MV | None" = None,
     angle: float = 0.0,
 ) -> RegularPolygon:
     """Create a :class:`RegularPolygon` entity (e.g. a hexagon with ``sides=6``).

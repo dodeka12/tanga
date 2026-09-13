@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, fields
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 
 StretchMode = Literal["fit", "fill", "fill_x", "fill_y"]
@@ -28,13 +28,11 @@ StretchMode = Literal["fit", "fill", "fill_x", "fill_y"]
 _STRETCH_MODES: tuple[str, ...] = ("fit", "fill", "fill_x", "fill_y")
 
 
-def _validate_stretch(stretch: str) -> str:
+def _validate_stretch(stretch: str) -> StretchMode:
     """Validate a 2D camera stretch mode and return it unchanged."""
     if stretch not in _STRETCH_MODES:
-        raise ValueError(
-            f"stretch must be one of {_STRETCH_MODES}, got {stretch!r}"
-        )
-    return stretch
+        raise ValueError(f"stretch must be one of {_STRETCH_MODES}, got {stretch!r}")
+    return cast("StretchMode", stretch)
 
 
 def _to_json(value: Any) -> Any:
@@ -64,7 +62,7 @@ class CameraConfig:
     near: float | None = None  # near clipping plane
     far: float | None = None  # far clipping plane
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict, omitting ``None`` values.
 
         Implemented generically over the dataclass fields so subclasses do not
@@ -280,9 +278,7 @@ def get_camera(
         return get_camera_view2d(view_config)
     if isinstance(view_config, View3dConfig):
         return get_camera_view3d(view_config)
-    raise TypeError(
-        f"Unsupported view config type: {type(view_config).__name__!r}"
-    )
+    raise TypeError(f"Unsupported view config type: {type(view_config).__name__!r}")
 
 
 def _normalize_camera_config(

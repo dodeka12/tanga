@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from pytanga.geometry.entities import (
     Circle,
@@ -131,7 +131,7 @@ _LABEL_FRAME_KEY = "__label_frame__"
 
 def get_cached_label_frame(entity: EntityLike) -> LabelFrame | None:
     """Return the cached label frame from an entity's ``__dict__``, if present."""
-    return getattr(entity, _LABEL_FRAME_KEY, None)
+    return cast("LabelFrame | None", getattr(entity, _LABEL_FRAME_KEY, None))
 
 
 def set_cached_label_frame(entity: EntityLike, frame: LabelFrame) -> None:
@@ -181,7 +181,8 @@ def _compute_label_frame(entity: EntityLike) -> LabelFrame:
     # ── Translator ──
     if isinstance(entity, Translator):
         d = (entity.vector.x, entity.vector.y, entity.vector.z)
-        ln = entity.length if hasattr(entity, "length") else 3.0
+        # Translators carry no length today; a subclass that adds one is honoured.
+        ln = float(getattr(entity, "length", 3.0))
         x = _normalize(d)
         y = _perpendicular(x)
         z = _cross(x, y)
@@ -225,7 +226,7 @@ def _compute_label_frame(entity: EntityLike) -> LabelFrame:
 
     # ── ReflectionPlane ──
     if isinstance(entity, ReflectionPlane):
-        n = (entity.normal.x, entity.normal.y, entity.normal.z)
+        n = (entity.plane.normal.x, entity.plane.normal.y, entity.plane.normal.z)
         z = _normalize(n)
         x = _perpendicular(z)
         y = _cross(z, x)

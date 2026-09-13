@@ -119,9 +119,7 @@ def test_entity_plane_opns_round_trip(b):
     d_expected = normal.x * pt.x + normal.y * pt.y + normal.z * pt.z
     d_expected_scaled = d_expected / normal.mag()
     d_analyzed = (
-        r.normal.x * r.point.x
-        + r.normal.y * r.point.y
-        + r.normal.z * r.point.z
+        r.normal.x * r.point.x + r.normal.y * r.point.y + r.normal.z * r.point.z
     )
     assert d_analyzed == pytest.approx(d_expected_scaled)
 
@@ -184,9 +182,7 @@ def test_scale2_plane_invariant(b):
     assert isinstance(r, Plane), f"Got {type(r).__name__}"
 
     # Normal direction is scale-invariant (parallel, dot = ±1)
-    dot = (
-        r.normal.x * unit.x + r.normal.y * unit.y + r.normal.z * unit.z
-    )
+    dot = r.normal.x * unit.x + r.normal.y * unit.y + r.normal.z * unit.z
     assert abs(dot) == pytest.approx(1.0, abs=1e-6)
 
     # Analyzed point must lie on the plane: n·p = d
@@ -398,12 +394,8 @@ def test_apply_reflection_point_origin_negation(b):
 
 def test_analyze_non_simple_bivector_raises(b):
     """Non‑simple bivector (B∧B ≠ 0) must raise ValueError."""
-    line1 = create_entity(
-        b, Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
-    )
-    line2 = create_entity(
-        b, Line(origin=Point(0, 1, 0), direction=Direction(0, 0, 1))
-    )
+    line1 = create_entity(b, Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)))
+    line2 = create_entity(b, Line(origin=Point(0, 1, 0), direction=Direction(0, 0, 1)))
     non_simple = line1 + line2
     with pytest.raises(ValueError, match="Non.*simple"):
         analyze_entity(non_simple)
@@ -427,7 +419,13 @@ def test_analyze_zero_vector_raises(b):
 # ═══════════════════════════════════════════════════════════════
 
 from pytanga.geometry.entities import Circle, HPoint, PointPair, Sphere
-from pytanga.geometry.operators import Dilator, GeneralRotor, Inversion, Motor, Translator
+from pytanga.geometry.operators import (
+    Dilator,
+    GeneralRotor,
+    Inversion,
+    Motor,
+    Translator,
+)
 
 
 @pytest.mark.parametrize(

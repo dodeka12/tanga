@@ -41,4 +41,4 @@ def _dispatch_product_blade_mask(
         f = getattr(alg._mod, fn + "_a")
     except AttributeError:
         raise RuntimeError(f"C++ binding {fn}_a not found on algebra module")
-    return f(a_ids, b_ids, left, complete)
+    return f(a_ids, b_ids, left, complete)  # ty: ignore[unsound-return-statement]  # binding resolved by name via getattr

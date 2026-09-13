@@ -65,8 +65,10 @@ def main() -> None:
     # Evaluate for a batch of points in a single call.
     # Create a list of random points in N3.
     points = geo(RndPoint(count=4))
+    assert isinstance(points, list), "RndPoint(count=n) materialises a list of MVs"
 
     rotated = E(P=DataArray(points, masks=("pnt_idx", geo.mask_for(Point))))
+    assert isinstance(rotated, list), "a DataArray binding yields a batched list"
     print("\nrotate a batch of points:")
     for src, dst in zip(points, rotated):
         print("  ", src, "->", geo(dst))

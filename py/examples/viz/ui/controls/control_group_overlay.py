@@ -15,8 +15,18 @@ Run with:  uv run python py/examples/viz/ui/controls/control_group_overlay.py
 Keywords: control group, GroupView, overlay, anchor, parent_id, layout
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
-from pytanga.viz import ButtonView, GroupView, SceneView, SliderView, StackView, Visualizer
+from pytanga.viz import (
+    ButtonView,
+    ControlEvent,
+    GroupView,
+    SceneView,
+    SliderView,
+    StackView,
+    Visualizer,
+)
 
 viz = Visualizer(reuse_existing=False, title="Tanga — Control Groups")
 viz.add(
@@ -24,17 +34,17 @@ viz.add(
 )
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 
 
-async def _on_opacity(value, _event):
+async def _on_opacity(value: Any, _event: ControlEvent) -> None:
     viz.update("sphere", opacity=float(value))
     viz.flush()
 
 
-async def _on_reset(_value, _event):
+async def _on_reset(_value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=2))
     viz.update("sphere", opacity=0.4)
     viz.flush()
@@ -51,7 +61,11 @@ viz.show(
                         "View",
                         [
                             SliderView(
-                                "radius", label="Radius", min=0.2, max=5.0, value=2.0,
+                                "radius",
+                                label="Radius",
+                                min=0.2,
+                                max=5.0,
+                                value=2.0,
                                 on_change=_on_radius,
                             ),
                             ButtonView("reset", label="Reset", on_click=_on_reset),
@@ -62,7 +76,11 @@ viz.show(
                         "Sphere",
                         [
                             SliderView(
-                                "opacity", label="Opacity", min=0.05, max=1.0, value=0.4,
+                                "opacity",
+                                label="Opacity",
+                                min=0.05,
+                                max=1.0,
+                                value=0.4,
                                 on_change=_on_opacity,
                             ),
                         ],

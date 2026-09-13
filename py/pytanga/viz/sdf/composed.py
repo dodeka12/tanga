@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from ._compose import ECompose, SdfElement, _normalize_part
 from .primitives import SdfNode, group
@@ -67,4 +67,4 @@ def _member_node(element: Any) -> SdfNode:
     """Lower a member (``SdfNode`` or ``SdfElement``) to an ``SdfNode``."""
     if isinstance(element, SdfNode):
         return element
-    return element.to_sdf_node()
+    return cast("SdfNode", element.to_sdf_node())

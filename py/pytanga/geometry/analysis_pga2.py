@@ -22,7 +22,7 @@ References:
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar, cast
 
 from ._ana_versor_generic import ana_versor_generic
 from ._pga2_utils import (
@@ -328,7 +328,9 @@ def analyze_operator(
         return _ana_versor(mv)
 
 
-def _entity_to_operator(entity):
+def _entity_to_operator(
+    entity: "Point | Direction | Line | Space | None",
+) -> ReflectionLine | ReflectionPoint:
     """Wrap an entity as its corresponding reflection operator."""
     if isinstance(entity, Line):
         return ReflectionLine(entity)
@@ -337,24 +339,30 @@ def _entity_to_operator(entity):
     raise ValueError(f"Entity type {type(entity).__name__} has no reflection operator")
 
 
-def _triple_reflection_from_factors(factors):
+def _triple_reflection_from_factors(factors: list[MV]) -> TripleReflection:
     """Three line reflections -> TripleReflection."""
-    lines = tuple(_line_from_vector(f) for f in factors)
-    return TripleReflection(planes=lines)
+    line1, line2, line3 = (_line_from_vector(f) for f in factors)
+    return TripleReflection(planes=(line1, line2, line3))
 
 
 def _ana_versor(
     mv: MV,
-) -> Rotor | Translator | GeneralRotor:
+) -> Rotor | Translator | Motor | GeneralRotor:
     """Analyze a PGA2 versor by grade content.
 
     Delegates to the generic :func:`ana_versor_generic` with PGA2 parameters:
     ``einf_like = e0``, ``e0_recip_like = e0_recip``, ``is_2d = True``.
     """
     alg = mv._alg
-    e0 = alg.e0 if hasattr(alg, "e0") else alg.multivector({EP: 1.0, EM: 1.0})
+    # ``e0``/``e0_recip`` are attached as MVs by BasisPGA2; ``hasattr`` narrowing
+    # only yields ``object``, so the types have to be asserted here.
+    e0 = (
+        cast("MV", alg.e0)
+        if hasattr(alg, "e0")
+        else alg.multivector({EP: 1.0, EM: 1.0})
+    )
     e0_recip = (
-        alg.e0_recip
+        cast("MV", alg.e0_recip)
         if hasattr(alg, "e0_recip")
         else alg.multivector({EP: 0.5, EM: -0.5})
     )
@@ -380,7 +388,10 @@ def _get_grades(mv: MV) -> set[int]:
 # ═══════════════════════════════════════════════════════════════
 
 
-def _expect(result, cls):
+T = TypeVar("T")
+
+
+def _expect(result: object, cls: type[T]) -> T:
     """Return *result* if it is an instance of *cls*; else raise."""
     if result is None:
         raise ValueError(f"MV does not represent a {cls.__name__}")

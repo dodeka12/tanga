@@ -6,9 +6,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ._util import _convert_mv, _is_mv
 from .direction import Direction
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -27,7 +31,9 @@ class HDirection:
 
     direction: Direction
 
-    def __init__(self, direction=0.0, y=0.0, z=0.0):
+    def __init__(
+        self, direction: "Direction | MV | float" = 0.0, y: float = 0.0, z: float = 0.0
+    ) -> None:
         if _is_mv(direction):
             hd = _convert_mv("hdirection", direction)
             object.__setattr__(self, "direction", hd.direction)

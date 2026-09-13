@@ -16,10 +16,14 @@ Run with:  uv run python py/examples/viz/ui/menus/menu_demo.py
 Keywords: menu, dropdown, sub-menu, sub-sub-menu, bar, overlay, layout
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
     CheckboxView,
+    ControlEvent,
+    ControlHandler,
     EAnchor,
     MenuView,
     SceneView,
@@ -39,23 +43,23 @@ side = viz.scene("side")
 side.add(Point(1, 1, 1), color="#ff4444")
 
 
-async def _on_fit(_value, _event):
+async def _on_fit(_value: Any, _event: ControlEvent) -> None:
     viz.flush(fit_camera=True)
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 
 
-async def _on_wireframe(value, _event):
+async def _on_wireframe(value: Any, _event: ControlEvent) -> None:
     print("Wireframe:", value)
 
 
-def _menu_action(label):
+def _menu_action(label: str) -> ControlHandler:
     """Return an async handler that prints which menu item was chosen."""
 
-    async def _handler(_value, _event):
+    async def _handler(_value: Any, _event: ControlEvent) -> None:
         print(f"[menu] {label}")
 
     return _handler

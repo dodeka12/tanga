@@ -3,11 +3,12 @@
 
 """Tests for label anchor/position computation (``_label_frame.py``)."""
 
-from pytanga.geometry import Cylinder, Direction, Disk, Line, Point
+from pytanga.geometry import Cylinder, Direction, Disk, Line, Plane, Point
 from pytanga.geometry.operators import (
     GeneralRotor,
     Motor,
     ReflectionLine,
+    ReflectionPlane,
     Rotor,
     Translator,
 )
@@ -30,6 +31,21 @@ class TestLabelPosition:
     def test_reflection_line_label_at_midpoint(self):
         rl = ReflectionLine(Line.from_points(Point(0, 0, 0), Point(6, 0, 0)))
         assert compute_label_position(rl) == (3.0, 0.0, 0.0)
+
+    def test_reflection_plane_label_uses_plane_normal(self):
+        # Regression: ``ReflectionPlane`` exposes the wrapped ``plane``, not a
+        # ``normal``, so the label frame must read ``plane.normal``.
+        rp = ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1)))
+        frame = get_label_frame(rp)
+        assert frame.z_axis == (0.0, 0.0, 1.0)
+
+    def test_reflection_plane_tilted_normal(self):
+        rp = ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 1, 0)))
+        frame = get_label_frame(rp)
+        assert frame.z_axis == (0.0, 1.0, 0.0)
+        # The in-plane axes stay orthonormal and perpendicular to the normal.
+        assert frame.x_axis != (0.0, 0.0, 0.0)
+        assert sum(a * b for a, b in zip(frame.x_axis, frame.z_axis)) == 0.0
 
     def test_point_label_unchanged(self):
         # A point's local origin IS its position, so the anchor stays (0,0,0).

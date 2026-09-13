@@ -85,7 +85,7 @@ def _make_blade_name(
     named = [n for n in subset_names if not re.fullmatch(r"e\d+", n)]
     parts: list[str] = []
     if e_num:
-        nums = "".join(re.search(r"\d+", n).group() for n in e_num)
+        nums = "".join(n[1:] for n in e_num)
         parts.append(f"e{nums}")
     parts.extend(named)
     return "∧".join(parts)

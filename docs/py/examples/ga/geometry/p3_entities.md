@@ -134,7 +134,7 @@ p3.opns = True
 # ── 6. Operators ────────────────────────────────────────────
 hr("6. Operators: Reflection and Rotor")
 
-refl = Reflection(normal=Direction(0, 1, 0))
+refl = Reflection(Direction(0, 1, 0))
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.analyze(geo.create(refl))
 print(f"  Reflection → {result}")

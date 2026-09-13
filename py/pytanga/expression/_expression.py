@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -58,8 +58,8 @@ class Expression:
             self._masks = {}
             return
         self._tensor = tensor  # MVLabeledTensor
-        self._names = dict(names)  # name -> occurrence labels
-        self._masks = dict(masks)  # name -> BladeMask
+        self._names = dict(cast("dict[str, tuple[int, ...]]", names))
+        self._masks = dict(cast("dict[str, BladeMask]", masks))
 
     @property
     def tensor(self) -> MVLabeledTensor:
@@ -79,7 +79,7 @@ class Expression:
     @property
     def out_mask(self) -> BladeMask:
         """The blade mask of the output axis."""
-        return self._tensor.tensor.masks[0]
+        return cast("BladeMask", self._tensor.tensor.masks[0])
 
     @property
     def out_label(self) -> str:
@@ -101,13 +101,13 @@ class Expression:
         masks = self._tensor.tensor.masks
         return any(m is None for m in masks[1:])
 
-    def _var_axes(self) -> tuple[list, list]:
+    def _var_axes(self) -> tuple[list[Any], list[Any]]:
         """Return ``(labels, masks)`` of the variable axes, in order."""
         raw = _axis_names(self._tensor.labels)
         masks = self._tensor.tensor.masks
         return list(raw[1:]), list(masks[1:])
 
-    def _counting_axes(self) -> dict[str, int]:
+    def _counting_axes(self) -> dict[str | int, int]:
         """Return the counting-axis names → lengths (axes past the output whose
         mask is ``None``)."""
         raw = _axis_names(self._tensor.labels)
@@ -125,7 +125,7 @@ class Expression:
     # Evaluation
     # ------------------------------------------------------------------
 
-    def __call__(self, **bindings: Any) -> "MV | Expression | list":
+    def __call__(self, **bindings: Any) -> "MV | Expression | list[Any]":
         """Evaluate the expression, binding some or all variables.
 
         A variable value may be:
@@ -154,8 +154,8 @@ class Expression:
         self,
         bindings: dict[str, Any],
         check_blades: bool,
-        extra_counting: dict[str, int] | None = None,
-    ) -> "MV | Expression | list":
+        extra_counting: dict[str | int, int] | None = None,
+    ) -> "MV | Expression | list[Any]":
         raw = _axis_names(self._tensor.labels)
         masks = self._tensor.tensor.masks
 
@@ -256,9 +256,7 @@ class Expression:
 
         out = from_tensor(result.tensor)
         return (
-            out
-            if broadcast_scale == 1.0
-            else _scale_eval_result(out, broadcast_scale)
+            out if broadcast_scale == 1.0 else _scale_eval_result(out, broadcast_scale)
         )
 
     def bind(self, **bindings: Any) -> "Expression":
@@ -430,7 +428,7 @@ class Expression:
                 f"(got {len(self._names[name])} occurrences)"
             )
         out_mask = self.out_mask
-        var_mask = self._tensor.tensor.masks[1]
+        var_mask = cast("BladeMask", self._tensor.tensor.masks[1])
         if len(out_mask) != len(var_mask):
             raise ValueError(
                 "inv() requires a square matrix "
@@ -532,7 +530,7 @@ class Expression:
             x, _, _, _ = np.linalg.lstsq(matrix, rhs_vec, rcond=None)
 
         result = _MVTensor(data=x.astype(np.float64), masks=(var_mask,))
-        return from_tensor(result)
+        return cast("MV", from_tensor(result))
 
     def svd(self) -> tuple[list[float], list["MV"]]:
         """Return the singular values and right-singular multivectors.
@@ -553,10 +551,13 @@ class Expression:
             raise ValueError("svd(): empty linear system")
         _u, s, vt = np.linalg.svd(matrix, full_matrices=False)
         mvs = [
-            from_tensor(_MVTensor(data=vec.astype(np.float64), masks=(var_mask,)))
+            cast(
+                "MV",
+                from_tensor(_MVTensor(data=vec.astype(np.float64), masks=(var_mask,))),
+            )
             for vec in vt
         ]
-        return s.tolist(), mvs
+        return cast("list[float]", s.tolist()), mvs
 
 
 class AffineExpression:
@@ -604,9 +605,9 @@ class AffineExpression:
                     result[name] = mask
         return result
 
-    def _counting_axes_union(self) -> dict[str, int]:
+    def _counting_axes_union(self) -> dict[str | int, int]:
         """Union of each term's counting axes, with a length-consistency check."""
-        result: dict[str, int] = {}
+        result: dict[str | int, int] = {}
         for term in self._terms:
             for name, length in term._counting_axes().items():
                 if name in result and result[name] != length:
@@ -640,7 +641,7 @@ class AffineExpression:
     # Evaluation
     # ------------------------------------------------------------------
 
-    def __call__(self, **bindings: Any) -> "MV | AffineExpression | list":
+    def __call__(self, **bindings: Any) -> "MV | AffineExpression | list[Any]":
         """Evaluate the sum, binding some or all variables.
 
         Values are a single ``MV``/scalar or a ``DataArray``, exactly as for
@@ -872,7 +873,7 @@ class AffineExpression:
             x, _, _, _ = np.linalg.lstsq(matrix, rhs_vec, rcond=None)
 
         result = _MVTensor(data=x.astype(np.float64), masks=(var_mask,))
-        return from_tensor(result)
+        return cast("MV", from_tensor(result))
 
     def svd(self) -> tuple[list[float], list["MV"]]:
         """Return the singular values and right-singular multivectors.
@@ -889,10 +890,13 @@ class AffineExpression:
             raise ValueError("svd(): empty linear system")
         _u, s, vt = np.linalg.svd(matrix, full_matrices=False)
         mvs = [
-            from_tensor(_MVTensor(data=vec.astype(np.float64), masks=(var_mask,)))
+            cast(
+                "MV",
+                from_tensor(_MVTensor(data=vec.astype(np.float64), masks=(var_mask,))),
+            )
             for vec in vt
         ]
-        return s.tolist(), mvs
+        return cast("list[float]", s.tolist()), mvs
 
     def inv(self, var_name: str) -> "Expression":
         """Return the inverse linear map as a new expression.
@@ -925,7 +929,7 @@ class AffineExpression:
 
 
 def _variable_dataarray_binding_tensors(
-    data: DataArray, mask: BladeMask, labels: tuple[int, ...], used: set
+    data: DataArray, mask: BladeMask, labels: tuple[int, ...], used: set[str | int]
 ) -> list[MVLabeledTensor]:
     """Build one labeled tensor per occurrence for a ``DataArray`` binding."""
     array = data.array
@@ -949,6 +953,8 @@ def _variable_dataarray_binding_tensors(
 
     for i, spec in enumerate(specs):
         if i == blade_axis:
+            continue
+        if not isinstance(spec, str):
             continue
         if spec in used:
             raise ValueError(f"counting name {spec!r} is already in use")
@@ -997,10 +1003,10 @@ def _count_binding_mode(name: str, value: Any) -> str:
 def _count_array_binding_tensor(
     name: str,
     array: np.ndarray,
-    specs: tuple,
+    specs: "tuple[BladeMask | str, ...]",
     length: int,
-    used: set,
-    counting_names: set,
+    used: set[str | int],
+    counting_names: set[str | int],
 ) -> MVLabeledTensor:
     """Build the labeled tensor for a multi-axis counting-axis reduction."""
     if len(specs) != array.ndim:
@@ -1053,14 +1059,20 @@ def _count_dataarray_binding_tensor(
     name: str,
     data: DataArray,
     length: int,
-    used: set,
-    counting_names: set,
+    used: set[str | int],
+    counting_names: set[str | int],
 ) -> MVLabeledTensor:
     """Build the labeled tensor for a ``DataArray`` counting-axis reduction."""
     array = data.array
     specs = data.masks
     if array.ndim == 1:
-        n, m = _parse_count_spec(specs[0], name)
+        spec0 = specs[0]
+        if not isinstance(spec0, str):
+            raise TypeError(
+                f"counting-axis reduction spec must be a str, "
+                f"got {type(spec0).__name__}"
+            )
+        n, m = _parse_count_spec(spec0, name)
         if array.shape[0] != length:
             raise ValueError(
                 f"counting-axis binding for {name!r} has length "
@@ -1071,7 +1083,11 @@ def _count_dataarray_binding_tensor(
 
 
 def _count_binding_tensor(
-    name: str, value: Any, length: int, used: set, counting_names: set
+    name: str,
+    value: Any,
+    length: int,
+    used: set[str | int],
+    counting_names: set[str | int],
 ) -> MVLabeledTensor:
     """Build the labeled tensor for a counting-axis reduction binding."""
     if isinstance(value, DataArray):
@@ -1129,7 +1145,7 @@ def _flatten_mvs(result: Any) -> list["MV"]:
     return [result]
 
 
-def _combine_terms(results: list) -> "MV | AffineExpression | list":
+def _combine_terms(results: list[Any]) -> "MV | AffineExpression | list[Any]":
     """Combine per-term evaluation results, broadcasting single values.
 
     Each result is an ``MV``, a (nested) ``list`` of ``MV``, or a partial
@@ -1188,9 +1204,9 @@ def _operand(x: Any) -> tuple[str, Any]:
 def _value_mask(kind: str, val: Any) -> BladeMask:
     """Return the blade mask of an operand's value axis."""
     if kind == "var":
-        return val.mask
+        return cast("BladeMask", val.mask)
     if kind == "expr":
-        return val.out_mask
+        return cast("BladeMask", val.out_mask)
     if kind == "const":
         return BladeMask(val)
     raise AssertionError(f"unknown operand kind {kind!r}")
@@ -1241,9 +1257,9 @@ def _product(
     out_axes = [0]
     next_ax = 3
 
-    var_specs: list[tuple[str, str]] = []
+    var_specs: list[tuple[str | int, str]] = []
     var_masks: list[BladeMask] = []
-    names: dict[str, tuple[str, ...]] = {}
+    names: dict[str, tuple[int, ...]] = {}
     masks: dict[str, BladeMask] = {}
 
     def add(kind: str, val: Any, value_axis: int) -> None:
@@ -1271,7 +1287,7 @@ def _product(
         if kind == "expr":
             # A variable already present in the product must shift its
             # occurrences onto the next free slots of its (shared) label block.
-            rename: dict[str, str] = {}
+            rename: dict[int, int] = {}
             for nm, lbls in val.names.items():
                 if nm in names:
                     block = block_for_label(lbls[0])
@@ -1418,7 +1434,7 @@ def _check_blades(value: Any, mask: BladeMask, name: str) -> None:
         raise ValueError(f"binding for {name!r} has blades outside its mask: {outside}")
 
 
-def _validate_items(items: list, name: str) -> None:
+def _validate_items(items: list[Any], name: str) -> None:
     """Type-check every item in a batched binding.
 
     Blade-membership is deliberately *not* checked per item: ``to_tensor(list,
@@ -1437,7 +1453,7 @@ def _validate_items(items: list, name: str) -> None:
 _BATCH_POOL = "nopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
-def _next_batch_label(used: set) -> str:
+def _next_batch_label(used: set[str]) -> str:
     """Return an unused single-letter label for a batched binding."""
     for ch in _BATCH_POOL:
         if ch not in used:

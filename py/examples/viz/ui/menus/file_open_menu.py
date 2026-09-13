@@ -15,9 +15,12 @@ Keywords: menu, menu bar, submenu, file dialog, FileChooserDialog, annotation
 
 from __future__ import annotations
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
+    ControlEvent,
     FileChooserDialog,
     MenuView,
     SceneView,
@@ -33,11 +36,11 @@ viz.add(
 _dialog_id: str | None = None
 
 
-async def _on_file(path: str, _event) -> None:
+async def _on_file(path: str, _event: ControlEvent) -> None:
     viz.set_annotation(f"Selected: `{path}`")
 
 
-async def _on_open(_value, _event) -> None:
+async def _on_open(_value: Any, _event: ControlEvent) -> None:
     global _dialog_id
     if _dialog_id:
         viz.remove_dialog(_dialog_id)

@@ -120,7 +120,9 @@ def test_remove_and_clear_lights() -> None:
     lid = viz.add(DirectionalLight(direction=(0, 0, 1)))
     viz.remove(lid)
     # The built-in default light is untouched by removing the added light.
-    assert [light["kind"] for light in viz._lighting_dict()["lights"]] == ["directional"]
+    assert [light["kind"] for light in viz._lighting_dict()["lights"]] == [
+        "directional"
+    ]
     viz.remove("__default_light__")
     assert viz._lighting_dict()["lights"] == []
     viz.add(DirectionalLight())
@@ -181,7 +183,9 @@ def test_reuse_existing_flag_and_open_browser_guard() -> None:
     import pytest
 
     assert SdfVisualizer(open_browser=False)._reuse_existing is True
-    assert SdfVisualizer(open_browser=False, reuse_existing=False)._reuse_existing is False
+    assert (
+        SdfVisualizer(open_browser=False, reuse_existing=False)._reuse_existing is False
+    )
     with pytest.raises(RuntimeError):
         SdfVisualizer(open_browser=False).open_browser()
 

@@ -20,6 +20,7 @@ from pytanga.algebra import GalgebraBridge  # noqa: E402
 # Orthogonal E3
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @pytest.fixture(scope="module")
 def ga_e3():
     return Ga("e1 e2 e3", g=[1, 1, 1])
@@ -44,6 +45,7 @@ class TestOrthoE3:
 
     def test_vector_roundtrip(self, bridge_e3, ga_e3):
         import sympy
+
         mv_ga = ga_e3.mv([1.5, 2.0, -3.0], "vector")
         mv_t = bridge_e3.from_galgebra(mv_ga)
         mv_back = bridge_e3.to_galgebra(mv_t)
@@ -52,6 +54,7 @@ class TestOrthoE3:
 
     def test_bivector_roundtrip(self, bridge_e3, ga_e3):
         import sympy
+
         mv_ga = ga_e3.mv([1.0, 2.0, 3.0], "bivector")
         mv_t = bridge_e3.from_galgebra(mv_ga)
         mv_back = bridge_e3.to_galgebra(mv_t)
@@ -60,6 +63,7 @@ class TestOrthoE3:
 
     def test_full_mv_roundtrip(self, bridge_e3, ga_e3):
         import sympy
+
         coeffs = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
         expr = sum(c * b for c, b in zip(coeffs, ga_e3.blades.flat))
         mv_ga = ga_e3.mv(expr)
@@ -109,6 +113,7 @@ class TestOrthoE3:
 # Non‑orthogonal 2D
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 @pytest.fixture(scope="module")
 def ga_nonortho():
     g = [[2.0, 1.0], [1.0, 2.0]]
@@ -127,6 +132,7 @@ class TestNonOrtho:
 
     def test_vector_roundtrip(self, bridge_nonortho, ga_nonortho):
         import sympy
+
         e1 = ga_nonortho.mv([1.0, 0.0], "vector")
         e1_t = bridge_nonortho.from_galgebra(e1)
         e1_back = bridge_nonortho.to_galgebra(e1_t)
@@ -135,6 +141,7 @@ class TestNonOrtho:
 
     def test_gp_consistency(self, bridge_nonortho, ga_nonortho):
         import sympy
+
         e1 = ga_nonortho.mv([1.0, 0.0], "vector")
         e2 = ga_nonortho.mv([0.0, 1.0], "vector")
         gp_ga = e1 * e2
@@ -147,6 +154,7 @@ class TestNonOrtho:
 
     def test_inner_product_matches_metric(self, bridge_nonortho, ga_nonortho):
         import sympy
+
         e1 = ga_nonortho.mv([1.0, 0.0], "vector")
         e2 = ga_nonortho.mv([0.0, 1.0], "vector")
         ip_ga = e1 | e2
@@ -162,6 +170,7 @@ class TestNonOrtho:
         # Create bridge without ga, then try to_galgebra
         b = GalgebraBridge(np.array([[2.0, 1.0], [1.0, 2.0]]))
         from pytanga.algebra import Algebra
+
         alg = Algebra(dim=2, sig=0)
         mv = alg.multivector({"e1": 1.0})
         with pytest.raises(ValueError, match="requires a galgebra Ga"):

@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import Any, cast
+
 import numpy as np
 
 from pytanga.algebra import MV
@@ -24,7 +27,11 @@ class DataArray:
 
     __slots__ = ("_array", "_masks")
 
-    def __init__(self, array: "np.ndarray | list | tuple", masks) -> None:
+    def __init__(
+        self,
+        array: "np.ndarray | list[Any] | tuple[Any, ...]",
+        masks: "Iterable[BladeMask | str]",
+    ) -> None:
         specs = tuple(masks)
         data = self._normalize(array, specs)
         self._validate_specs(specs, data.ndim)
@@ -36,7 +43,10 @@ class DataArray:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _normalize(array, specs) -> np.ndarray:
+    def _normalize(
+        array: "np.ndarray | list[Any] | tuple[Any, ...]",
+        specs: "tuple[BladeMask | str, ...]",
+    ) -> np.ndarray:
         """Return the underlying NumPy array for *array* and *specs*."""
         if isinstance(array, np.ndarray):
             return array
@@ -52,7 +62,7 @@ class DataArray:
                         "BladeMask and one counting-axis name"
                     )
                 blade_axis = blade_axes[0]
-                blade_mask = specs[blade_axis]
+                blade_mask = cast("BladeMask", specs[blade_axis])
                 # to_tensor(list, mask) -> shape (|mask|, n), masks (blade, None).
                 tensor = to_tensor(list(array), mask=blade_mask)
                 if blade_axis == 0:
@@ -65,7 +75,7 @@ class DataArray:
         )
 
     @staticmethod
-    def _validate_specs(specs: tuple, ndim: int) -> None:
+    def _validate_specs(specs: "tuple[BladeMask | str, ...]", ndim: int) -> None:
         if len(specs) != ndim:
             raise ValueError(
                 f"DataArray has {len(specs)} axis specs but data has {ndim} axes"
@@ -99,7 +109,7 @@ class DataArray:
         return self._array
 
     @property
-    def masks(self) -> tuple:
+    def masks(self) -> "tuple[BladeMask | str, ...]":
         """The per-axis specs (``BladeMask | str``)."""
         return self._masks
 
@@ -111,7 +121,7 @@ class DataArray:
     @property
     def shape(self) -> tuple[int, ...]:
         """Shape of the underlying array."""
-        return self._array.shape
+        return cast("tuple[int, ...]", self._array.shape)
 
     def __repr__(self) -> str:
         parts = []
@@ -123,7 +133,7 @@ class DataArray:
     # Renaming
     # ------------------------------------------------------------------
 
-    def _rename_mask(self, old: str, new: str) -> tuple:
+    def _rename_mask(self, old: str, new: str) -> "tuple[BladeMask | str, ...]":
         masks = list(self._masks)
         if old != new and new in masks:
             raise ValueError(f"counting-axis name {new!r} is already in use")

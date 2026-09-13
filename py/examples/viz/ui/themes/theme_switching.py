@@ -14,10 +14,13 @@ Run with:  uv run python py/examples/viz/ui/themes/theme_switching.py
 Keywords: theme, set_theme, runtime, controls, light, dark
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
     CheckboxView,
+    ControlEvent,
     EAnchor,
     GroupView,
     SceneView,
@@ -33,16 +36,16 @@ viz.add(
 viz.add(Point(1, 1, 1), color="#ff4444")
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 
 
-async def _set_dark(_value, _event):
+async def _set_dark(_value: Any, _event: ControlEvent) -> None:
     viz.set_theme("dark")
 
 
-async def _set_light(_value, _event):
+async def _set_light(_value: Any, _event: ControlEvent) -> None:
     viz.set_theme("light")
 
 

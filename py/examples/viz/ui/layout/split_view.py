@@ -24,10 +24,13 @@ Run with:  uv run python py/examples/viz/ui/layout/split_view.py
 Keywords: split view, panes, layout
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
     CameraConfig3d,
+    ControlEvent,
     GroupView,
     SceneView,
     Size,
@@ -39,23 +42,23 @@ from pytanga.viz import (
 viz = Visualizer(reuse_existing=False, title="Tanga — Split View")
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     # Resize the main sphere.
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 
 
-async def _on_fit(_value, _event):
+async def _on_fit(_value: Any, _event: ControlEvent) -> None:
     # Auto-fit the camera to the scene contents.
     viz.flush(fit_camera=True)
 
 
-async def _on_reset(_value, _event):
+async def _on_reset(_value: Any, _event: ControlEvent) -> None:
     # Re-apply a fixed default camera.
     viz.set_camera(CameraConfig3d(position=(0.0, 0.0, 8.0), target=(0.0, 0.0, 0.0)))
 
 
-async def _on_topdown(_value, _event):
+async def _on_topdown(_value: Any, _event: ControlEvent) -> None:
     # Move the top pane's camera at runtime (per-pane, not scene-wide).
     viz.set_view_camera(
         main_view, CameraConfig3d(position=(0.0, 8.0, 0.0), target=(0.0, 0.0, 0.0))

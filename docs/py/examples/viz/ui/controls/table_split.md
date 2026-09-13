@@ -37,13 +37,19 @@ Run with:  uv run python py/examples/viz/ui/controls/table_split.py
 Keywords: split view, table, tabular data, TableView
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
+    ControlEvent,
     GroupView,
     SceneView,
     Size,
     SplitView,
+    TableCellChange,
+    TableColumnAdd,
+    TableRowAdd,
     TableView,
     Visualizer,
 )
@@ -60,31 +66,31 @@ _COLUMNS = ["x", "y", "z"]
 _ROWS = [["1", "2", "3"], ["4", "5", "6"]]
 
 
-async def _on_cell(change, _event):
+async def _on_cell(change: TableCellChange, _event: ControlEvent) -> None:
     viz.set_annotation(f"Cell ({change.row}, {change.col}) = {change.value!r}")
 
 
-async def _on_row(add, _event):
+async def _on_row(add: TableRowAdd, _event: ControlEvent) -> None:
     viz.set_annotation(f"Added row {add.row}")
 
 
-async def _on_column(add, _event):
+async def _on_column(add: TableColumnAdd, _event: ControlEvent) -> None:
     viz.set_annotation(f"Added column {add.col} ({add.header!r})")
 
 
-async def _on_reset(_value, _event):
+async def _on_reset(_value: Any, _event: ControlEvent) -> None:
     # `set_value` mutates the control *and* pushes `control_update` (injected at
     # mount), so the browser redraws the grid.
     table_view.set_value({"columns": _COLUMNS, "rows": _ROWS})
     viz.set_annotation("Table reset.")
 
 
-async def _on_add_row(_value, _event):
+async def _on_add_row(_value: Any, _event: ControlEvent) -> None:
     table_view.add_row()
     viz.set_annotation("Added a row.")
 
 
-async def _on_add_column(_value, _event):
+async def _on_add_column(_value: Any, _event: ControlEvent) -> None:
     table_view.add_column(f"C{len(table_view.columns) + 1}")
     viz.set_annotation("Added a column.")
 
@@ -111,8 +117,12 @@ layout = SplitView(
                     "Actions",
                     [
                         ButtonView("btn_add_row", label="+ Row", on_click=_on_add_row),
-                        ButtonView("btn_add_col", label="+ Column", on_click=_on_add_column),
-                        ButtonView("btn_reset", label="Reset table", on_click=_on_reset),
+                        ButtonView(
+                            "btn_add_col", label="+ Column", on_click=_on_add_column
+                        ),
+                        ButtonView(
+                            "btn_reset", label="Reset table", on_click=_on_reset
+                        ),
                     ],
                     position="top-left",
                 ),

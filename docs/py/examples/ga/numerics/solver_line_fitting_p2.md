@@ -51,7 +51,7 @@ Keywords: solver, line fitting, least-squares, P2, homogeneous
 from __future__ import annotations
 
 import numpy as np
-from pytanga import Algebra, BladeMask, MVMatrix
+from pytanga import Algebra, BladeMask, MV, MVMatrix
 from pytanga.matrix.convert import from_matrix
 from pytanga.matrix.product import product_matrix
 
@@ -128,6 +128,7 @@ print(f"  (smallest → {singular_values[-1]:.4f}, should be near 0 for a good f
 
 L_vec = Vt[-1]  # last row of Vt = right singular vector for smallest σ
 L_est = from_matrix(MVMatrix(L_vec.reshape(-1, 1), col_mask))
+assert isinstance(L_est, MV)
 
 # ---------------------------------------------------------------------------
 # Normalise by the max-magnitude coefficient (projective equivalence: L ~ c·L)

@@ -16,11 +16,12 @@ Run
 Keywords: expressions, variables, linear equations, Variable
 """
 
+from typing import Any
 from pytanga import BladeMask, Variable
 from pytanga.basis import BasisE3
 
 
-def show(label: str, mv) -> None:
+def show(label: str, mv: Any) -> None:
     print(f"  {label:<16} {mv.to_dict()}")
 
 

@@ -62,10 +62,10 @@ _SLASH_HEADER = """\
 
 # Map: file extension (lower-case, with dot) or exact filename → header string
 _HEADERS: dict[str, str] = {
-    ".py":   _HASH_HEADER,
+    ".py": _HASH_HEADER,
     ".toml": _HASH_HEADER,
-    ".h":    _SLASH_HEADER,
-    ".cpp":  _SLASH_HEADER,
+    ".h": _SLASH_HEADER,
+    ".cpp": _SLASH_HEADER,
     "CMakeLists.txt": _HASH_HEADER,
 }
 
@@ -73,6 +73,7 @@ _HEADERS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _header_for(path: Path) -> str | None:
     """Return the header string for *path*, or None if the file is not covered."""
@@ -132,6 +133,7 @@ def _prepend(path: Path, header: str, dry_run: bool) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(

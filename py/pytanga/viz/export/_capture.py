@@ -127,7 +127,10 @@ class FrameCapture:
             timeout=timeout,
         )
 
-        path = self._folder / f"frame_{self._counter:04d}.png"  # type: ignore[union-attr]
+        folder = self._folder
+        if folder is None:
+            raise RuntimeError("Capture has not been started")
+        path = folder / f"frame_{self._counter:04d}.png"
         path.write_bytes(png_bytes)
         self._counter += 1
         return path

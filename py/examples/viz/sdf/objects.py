@@ -16,6 +16,7 @@ Keywords: SDF, meshes, styled objects
 from pytanga.geometry import Direction, Plane, Point, Sphere
 from pytanga.viz import (
     InteractionConfig,
+    InteractionEvent,
     InteractionEventType,
     InteractionTrigger,
     SdfStyle,
@@ -63,7 +64,7 @@ viz.set_interaction(
 )
 
 
-async def _on_click(event) -> None:
+async def _on_click(event: InteractionEvent) -> None:
     pos = getattr(event, "world_position", None)
     print(f"SDF sphere clicked at {pos}")
 

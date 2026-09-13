@@ -32,7 +32,7 @@ uv run python py/examples/<path>.py
 
 - **all types** — [All geometric entity types in one scene](viz/entities/all_entities.md)
 
-- **analyze** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **analyze** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **anchor** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
@@ -103,6 +103,8 @@ uv run python py/examples/<path>.py
 - **camera** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
 - **capped cone** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
+
+- **Cayley-Bacharach** — [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md)
 
 - **cdn** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
 
@@ -338,7 +340,7 @@ uv run python py/examples/<path>.py
 
 - **IPNS** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **join** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md)
+- **join** — [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md)
 
 - **JSON** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
@@ -498,11 +500,15 @@ uv run python py/examples/<path>.py
 
 - **Point Pair** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
 
+- **point tuple** — [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md)
+
 - **point-line matching** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
 - **PointPath** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
 
 - **points** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
+
+- **PointSet** — [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md)
 
 - **polarity** — [per-object CSG combine modes](viz/sdf/booleans.md)
 
@@ -518,9 +524,9 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **Q3** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+- **Q3** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
-- **quadric** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+- **quadric** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **Quadric3D** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
 

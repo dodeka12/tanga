@@ -63,6 +63,7 @@ Run with:  uv run python py/examples/viz/ui/controls/toolbar.py
 Keywords: toolbar, alignment, split view, slider, dropdown, icon, separator, layout
 """
 
+from typing import Any
 from pytanga.viz import (
     ButtonView,
     DropdownView,
@@ -79,7 +80,7 @@ from pytanga.viz import (
 viz = Visualizer(reuse_existing=False, title="Tanga — Toolbar Alignments")
 
 
-def _row(tag, label, justify, **kwargs):
+def _row(tag: str, label: str, justify: EStackJustify, **kwargs: Any) -> ToolbarView:
     """A toolbar holding a label button, a slider, a dropdown, a separator, and icons."""
     return ToolbarView(
         [

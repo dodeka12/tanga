@@ -132,7 +132,12 @@ class TwoSpheresApp(VisualizerApp):
                             DropdownView(
                                 "mode",
                                 label="Display",
-                                options=["Both", "Sphere A only", "Sphere B only", "Intersection only"],
+                                options=[
+                                    "Both",
+                                    "Sphere A only",
+                                    "Sphere B only",
+                                    "Intersection only",
+                                ],
                                 value="Both",
                                 on_change=self.on_mode,
                             ),

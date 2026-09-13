@@ -61,9 +61,11 @@ CSV_FILE = Path("_output/table_export.csv")
 class TableFileApp(VisualizerApp):
     """A table bound to a JSON file (auto-save) with CSV export + reload."""
 
+    #: Created in the view-building hook, which runs before any event.
+    _table: TableView
+
     def __init__(self) -> None:
         super().__init__(title="Table Auto-Save")
-        self._table: TableView | None = None
 
     async def init(self) -> None:
         self.viz.add(

@@ -16,6 +16,8 @@ import gzip
 import json
 from typing import TYPE_CHECKING, Any
 
+from .._style_dict import StylesMap
+
 if TYPE_CHECKING:
     from pytanga.viz.scene import Scene
 
@@ -41,7 +43,7 @@ class AnimationRecording:
     def __init__(
         self,
         scene: Scene,
-        styles_map: dict[str, Any] | None = None,
+        styles_map: StylesMap | None = None,
     ) -> None:
         self._scene = scene
         self._styles_map = styles_map or {}

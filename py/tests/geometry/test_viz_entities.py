@@ -108,7 +108,6 @@ def test_cylinder_not_convertible_to_mv():
         create(alg, Cylinder())
 
 
-
 def test_disk_defaults():
     d = Disk()
     assert d.center == Point(0, 0, 0)
@@ -217,6 +216,7 @@ def test_new_viz_entities_not_convertible_to_mv(entity):
     alg = BasisN3()
     with pytest.raises(TypeError, match="Expected Entity or Operator"):
         create(alg, entity)
+
 
 def test_arc_not_convertible_to_mv():
     alg = BasisN3()

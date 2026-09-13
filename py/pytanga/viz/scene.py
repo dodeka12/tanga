@@ -12,7 +12,7 @@ generates unique IDs, and computes dirty/removal diffs for efficient updates.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Iterator, Literal, cast
 from uuid import uuid4
 
 from pytanga.geometry.entities import Entity as GeoEntity
@@ -21,10 +21,11 @@ from .camera import CameraConfig
 from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
-from ._style_dict import _resolve_label_style, _resolve_tex_label_style
+from ._style_dict import StylesMap, _resolve_label_style, _resolve_tex_label_style
 from ._viz_styles import VizStyles, make_styles
 
 if TYPE_CHECKING:
+    from ._interaction import InteractionConfig
     from ._styles import LabelStyle, ObjVizStyle, TextureLabelStyle
 
 # ── Configuration ──────────────────────────────────────────
@@ -45,7 +46,7 @@ class SceneConfig:
     name: str = ""  # scene name (empty string = main scene)
     space_dim: int = 3  # 2 or 3 — controls camera mode, controls, and rendering
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
         result: dict[str, Any] = {
             "type": "scene_config",
@@ -258,7 +259,7 @@ class Scene:
 
     def add(
         self,
-        entity: GeoEntity | None,
+        entity: "SceneEntity | None",
         *,
         entity_id: str | None = None,
         **properties: Any,
@@ -288,7 +289,6 @@ class Scene:
             dirty=True,
         )
         return self.add_object(obj, object_id=lid)
-
 
     # ── High-level entity facade (moved from Visualizer) ────
     def add_viz(
@@ -605,7 +605,7 @@ class Scene:
             if new_position is not None:
                 node.set_position(new_position)
 
-    def update_entity(self, entity_id: str, entity: GeoEntity) -> None:
+    def update_entity(self, entity_id: str, entity: "SceneEntity") -> None:
         """Replace the geometry entity for an existing scene-layer ID."""
         obj = self._get(entity_id)
         obj.data = entity
@@ -621,9 +621,9 @@ class Scene:
         object_id: str,
         member: int | str,
         *,
-        position: Vec3 = None,
-        rotation: TransformRotation = None,
-        scale: Triple = None,
+        position: Vec3 | None = None,
+        rotation: TransformRotation | None = None,
+        scale: Triple | None = None,
     ) -> None:
         """Update an ``SdfGroup`` member's runtime transform.
 
@@ -675,7 +675,7 @@ class Scene:
                         self._removed_ids.append(oid)
 
     @staticmethod
-    def _descendants(node: VizSceneObject):
+    def _descendants(node: VizSceneObject) -> "Iterator[VizSceneObject]":
         """Yield *node*'s descendants in DFS pre-order (children first)."""
         for child in node.children:
             yield child
@@ -692,7 +692,7 @@ class Scene:
 
     # -- Interaction config management -----------------------
 
-    def set_interaction(self, object_id: str, config: Any) -> None:
+    def set_interaction(self, object_id: str, config: InteractionConfig) -> None:
         """Set or update the interaction configuration for an entity.
 
         The config is a :class:`~pytanga.viz._interaction.InteractionConfig`
@@ -720,7 +720,7 @@ class Scene:
     def flush(
         self,
         *,
-        styles_map: dict[str, Any] | None = None,
+        styles_map: StylesMap | None = None,
     ) -> tuple[list[dict[str, Any]], list[str]]:
         """Return (aspect_patches, removed_ids) and reset dirty tracking.
 
@@ -760,7 +760,7 @@ class Scene:
     def full_state(
         self,
         *,
-        styles_map: dict[str, Any] | None = None,
+        styles_map: StylesMap | None = None,
     ) -> list[dict[str, Any]]:
         """Return all nodes serialized (for initial client sync / export)."""
         result: list[dict[str, Any]] = []
@@ -844,19 +844,21 @@ def _resolve_scene_entity(obj: Any) -> SceneEntity:
     if isinstance(obj, Conic):
         from pytanga.geometry import refine
 
-        return refine(obj)
+        # ``refine`` returns ``object``; the concrete entity depends on the conic.
+        return cast("SceneEntity", refine(obj))
 
     if isinstance(obj, SceneEntity):
-        return obj  # type: ignore[return-value]
+        return obj
 
     from .sdf._compose import SdfElement as _SdfElement
     from .sdf.primitives import SdfNode as _SdfNode
 
     if isinstance(obj, (_SdfElement, _SdfNode)):
-        return obj  # type: ignore[return-value]
+        # SDF objects are valid scene payloads but live outside ``SceneEntity``.
+        return cast("SceneEntity", obj)
 
     if isinstance(obj, (GeoEntity, GeoOperator)):
-        return obj  # type: ignore[return-value]
+        return cast("SceneEntity", obj)
 
     try:
         from pytanga.geometry import analyze
@@ -869,7 +871,7 @@ def _resolve_scene_entity(obj: Any) -> SceneEntity:
         if isinstance(result, Conic):
             from pytanga.geometry import refine
 
-            return refine(result)
+            return cast("SceneEntity", refine(result))
         return result
     except ImportError:
         raise TypeError(

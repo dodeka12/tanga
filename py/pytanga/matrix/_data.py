@@ -5,14 +5,14 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
 from pytanga.blade_mask import BladeMask
 
 if TYPE_CHECKING:
-    from .algebra import Algebra
+    from pytanga.algebra import Algebra
 
 
 @dataclass
@@ -51,21 +51,19 @@ class MVMatrix:
     @property
     def shape(self) -> tuple[int, ...]:
         """Shape of the underlying data array."""
-        return self.data.shape
+        return cast("tuple[int, ...]", self.data.shape)
 
     @property
     def n_cols(self) -> int:
         """Number of multivectors stored (columns)."""
-        return self.data.shape[1]
+        return int(self.data.shape[1])
 
     @property
     def is_single(self) -> bool:
         """True when exactly one multivector is stored."""
-        return self.data.shape[1] == 1
+        return int(self.data.shape[1]) == 1
 
     @property
     def algebra(self) -> "Algebra":
         """The algebra this matrix belongs to (from row_mask)."""
         return self.row_mask._alg
-
-

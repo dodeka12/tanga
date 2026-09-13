@@ -16,13 +16,15 @@ Coefficient ordering (README math, fixed up front):
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 
 _SQRT2_OVER_2 = float(np.sqrt(2.0) / 2.0)
 _SQRT2 = float(np.sqrt(2.0))
 
 
-def _as_matrix(a, n: int) -> np.ndarray:
+def _as_matrix(a: "np.ndarray | list[list[float]]", n: int) -> np.ndarray:
     """Coerce *a* to a symmetric ``n×n`` float array."""
     arr = np.asarray(a, dtype=float)
     if arr.shape != (n, n):
@@ -32,7 +34,7 @@ def _as_matrix(a, n: int) -> np.ndarray:
     return arr
 
 
-def to_coeffs(a) -> tuple[float, ...]:
+def to_coeffs(a: "np.ndarray | list[list[float]]") -> tuple[float, ...]:
     """Map a symmetric 3×3 (conic) or 4×4 (quadric) matrix to coeffs."""
     arr = np.asarray(a, dtype=float)
     if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
@@ -42,29 +44,35 @@ def to_coeffs(a) -> tuple[float, ...]:
         raise ValueError("only 3×3 (conic) and 4×4 (quadric) matrices are supported")
     arr = _as_matrix(arr, n)
     if n == 3:
-        return (
-            arr[0, 2],
-            arr[1, 2],
-            _SQRT2_OVER_2 * arr[2, 2],
+        return cast(
+            "tuple[float, ...]",
+            (
+                arr[0, 2],
+                arr[1, 2],
+                _SQRT2_OVER_2 * arr[2, 2],
+                _SQRT2_OVER_2 * arr[0, 0],
+                _SQRT2_OVER_2 * arr[1, 1],
+                arr[0, 1],
+            ),
+        )
+    return cast(
+        "tuple[float, ...]",
+        (
+            arr[0, 3],
+            arr[1, 3],
+            arr[2, 3],
+            _SQRT2_OVER_2 * arr[3, 3],
             _SQRT2_OVER_2 * arr[0, 0],
             _SQRT2_OVER_2 * arr[1, 1],
+            _SQRT2_OVER_2 * arr[2, 2],
             arr[0, 1],
-        )
-    return (
-        arr[0, 3],
-        arr[1, 3],
-        arr[2, 3],
-        _SQRT2_OVER_2 * arr[3, 3],
-        _SQRT2_OVER_2 * arr[0, 0],
-        _SQRT2_OVER_2 * arr[1, 1],
-        _SQRT2_OVER_2 * arr[2, 2],
-        arr[0, 1],
-        arr[0, 2],
-        arr[1, 2],
+            arr[0, 2],
+            arr[1, 2],
+        ),
     )
 
 
-def from_coeffs(coeffs) -> np.ndarray:
+def from_coeffs(coeffs: "tuple[float, ...] | np.ndarray | list[float]") -> np.ndarray:
     """Map a 6- or 10-tuple of coeffs back to the symmetric matrix."""
     t = np.asarray(coeffs, dtype=float)
     if t.shape == (6,):

@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
 
+    from .operators import GeneralRotor, Translator
+
 # Blade IDs are sourced from BasisE3 as the single source of truth.
 # The module-level aliases exist for backward compatibility with code
 # that imports them directly (e.g. ``from .create_e3 import E12``).
@@ -145,9 +147,7 @@ def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     )
 
 
-def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0
-) -> MV:
+def create_homogeneous_point(basis: Algebra, pt: Point, weight: float = 1.0) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N3); not available in E3."
     )
@@ -227,7 +227,7 @@ def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     )
 
 
-def create_motor(basis: Algebra, rotor, translator) -> MV:
+def create_motor(basis: Algebra, rotor: GeneralRotor, translator: Translator) -> MV:
     raise ValueError("Motors require conformal embedding (N3); not available in E3.")
 
 

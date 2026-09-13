@@ -115,7 +115,9 @@ class TestTransforms:
         node = h.scene.get_node(ref.id)
         node.consume_dirty()
         ref.set_transform(rotation=Rotor(math.pi / 2, Direction(0, 0, 1)))
-        assert node.transform.rotation == pytest.approx((0.0, 0.0, math.pi / 2), abs=1e-9)
+        assert node.transform.rotation == pytest.approx(
+            (0.0, 0.0, math.pi / 2), abs=1e-9
+        )
         assert node.dirty_for("transform")
 
     def test_set_transform_scale_is_triple(self):
@@ -126,7 +128,6 @@ class TestTransforms:
         node.consume_dirty()
         ref.set_transform(scale=(2.0, 3.0, 4.0))
         assert node.transform.scale == (2.0, 3.0, 4.0)
-
 
     def test_transform_operator(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -142,10 +143,12 @@ class TestTransforms:
         ref.apply_transform(Rotor(angle=math.pi / 2, axis=Direction(0, 0, 1)))
         assert node.dirty_for("transform")
 
-        ref.apply_transform(Motor(
-            rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
-            translator=Translator(vector=Direction(1.0, 0.0, 0.0)),
-        ))
+        ref.apply_transform(
+            Motor(
+                rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
+                translator=Translator(vector=Direction(1.0, 0.0, 0.0)),
+            )
+        )
         ref.apply_transform(Dilator(factor=2.0))
         assert node.dirty_for("transform")
 
@@ -274,4 +277,3 @@ class TestGroup:
             ref.new(Point(1, 2, 3))
         with pytest.raises(TypeError):
             ref.add_group("x")
-

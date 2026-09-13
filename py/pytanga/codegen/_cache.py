@@ -12,9 +12,14 @@ import shutil
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
+from types import ModuleType
+from typing import TYPE_CHECKING, cast
 
 from ._build import TANGA_SOURCE, build_and_load
 from ._generator import module_name as mk_module_name
+
+if TYPE_CHECKING:
+    from ._binding import AlgebraBinding
 
 __all__ = [
     "_make_key",
@@ -94,7 +99,7 @@ def lookup(dim: int, sig: int, dtype: str) -> Path | None:
         return None
 
     data = json.loads(meta.read_text(encoding="utf-8"))
-    so = cache_root() / key / data["so_path"]
+    so = cache_root() / key / str(data["so_path"])
 
     if not so.exists():
         return None
@@ -102,7 +107,9 @@ def lookup(dim: int, sig: int, dtype: str) -> Path | None:
     return so
 
 
-def _load_precompiled(dim: int, sig: int, dtype: str, key: str, entry_dir: Path):
+def _load_precompiled(
+    dim: int, sig: int, dtype: str, key: str, entry_dir: Path
+) -> ModuleType | None:
     """Try to use a precompiled extension from pytanga/precompiled/.
 
     Returns the loaded module on success, or None if no matching
@@ -181,7 +188,7 @@ def get_or_build(
     dtype: str,
     *,
     verbose: bool = False,
-):
+) -> AlgebraBinding:
     """Return a loaded Python module for (dim, sig, dtype).
 
     On a cache hit, loads and returns the cached extension immediately.
@@ -193,7 +200,7 @@ def get_or_build(
     mod_name = mk_module_name(dim, sig, dtype)
 
     if so_path is not None:
-        return _load(so_path, mod_name)
+        return cast("AlgebraBinding", _load(so_path, mod_name))
 
     # --- cache miss: try precompiled, then compile ---
     key = _make_key(dim, sig, dtype)
@@ -204,7 +211,7 @@ def get_or_build(
     try:
         module = _load_precompiled(dim, sig, dtype, key, entry)
         if module is not None:
-            return module
+            return cast("AlgebraBinding", module)
     except Exception:
         pass  # precompiled load failed → compile normally
 
@@ -231,14 +238,16 @@ def get_or_build(
     }
     (entry / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
-    return module
+    return cast("AlgebraBinding", module)
 
 
-def _load(so_path: Path, module_name: str):
+def _load(so_path: Path, module_name: str) -> ModuleType:
     """Load a previously compiled extension by path."""
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(module_name, so_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load extension {module_name!r} from {so_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -278,7 +287,7 @@ def precompile(
     """
     from . import get_or_build
 
-    def _build_one(args):
+    def _build_one(args: tuple[int, int, str]) -> tuple[int, int, str]:
         dim, sig, dtype = args
         get_or_build(dim, sig, dtype, verbose=verbose)
         return (dim, sig, dtype)

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -39,7 +39,7 @@ def _check_masks_compatible(mask_a: BladeMask | None, mask_b: BladeMask | None) 
     return (mask_a.algebra is mask_b.algebra) and (mask_a.ids == mask_b.ids)
 
 
-def contract(subscripts: str, *tensors: MVTensor, **kwargs) -> MVTensor:
+def contract(subscripts: str, *tensors: MVTensor, **kwargs: Any) -> MVTensor:
     """Contract MVTensor instances using an einsum‑like subscript.
 
     This is a wrapper around :func:`numpy.einsum` that additionally
@@ -201,7 +201,9 @@ def _build_subscript(
     return input_axes, output_axes, output_names, output_modes
 
 
-def contract_labeled(*labeled_tensors: MVLabeledTensor, **kwargs) -> MVLabeledTensor:
+def contract_labeled(
+    *labeled_tensors: MVLabeledTensor, **kwargs: Any
+) -> MVLabeledTensor:
     """Contract labeled tensors using their labels to build the einsum call.
 
     Uses ``numpy.einsum``'s list form so axis names may be strings or
@@ -244,7 +246,7 @@ def contract_labeled(*labeled_tensors: MVLabeledTensor, **kwargs) -> MVLabeledTe
 
     result_masks = tuple(name_to_mask[name] for name in output_names)
 
-    einsum_args: list = []
+    einsum_args: list[Any] = []
     for data, axes in zip((t.data for t in tensors), input_axes):
         einsum_args.append(data)
         einsum_args.append(axes)

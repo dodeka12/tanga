@@ -9,11 +9,26 @@ from typing import TYPE_CHECKING, Any
 
 from pytanga.geometry.operators import Translator
 
-from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject, _style_to_dict
+from ._nodes import (
+    Transform,
+    VizGroup,
+    VizNode,
+    VizOverlayObject,
+    VizSceneObject,
+    _style_to_dict,
+)
 from ._types import TransformInput, TransformRotation, Triple, Vec3
 
 if TYPE_CHECKING:
+    from ._interaction import (
+        InteractionConfig,
+        InteractionEventType,
+        InteractionHandler,
+    )
+    import numpy as np
+
     from ._scene_handle import VizSceneHandle
+    from .scene import Scene
 
 
 class VizObjectRef:
@@ -46,7 +61,7 @@ class VizObjectRef:
         return self._node.layer
 
     @property
-    def scene(self):
+    def scene(self) -> "Scene":
         return self._handle.scene
 
     @property
@@ -171,7 +186,9 @@ class VizObjectRef:
     @property
     def labels(self) -> list["VizObjectRef"]:
         scene = self._handle.scene
-        return [VizObjectRef(self._handle, scene.get_node(lid)) for lid in self.label_ids]
+        return [
+            VizObjectRef(self._handle, scene.get_node(lid)) for lid in self.label_ids
+        ]
 
     def update_label(self, text: str | None = None, style: Any | None = None) -> None:
         """Update this node's label text and/or style.
@@ -188,11 +205,11 @@ class VizObjectRef:
     # ── Transforms (scene nodes only) ─────────────────────────
 
     @property
-    def transform(self):
+    def transform(self) -> "Transform":
         return self._scene_node().transform
 
     @property
-    def world_matrix(self):
+    def world_matrix(self) -> "np.ndarray":
         return self._scene_node().world_matrix()
 
     def translate(self, x: Any = 0.0, y: float = 0.0, z: float = 0.0) -> None:
@@ -212,13 +229,15 @@ class VizObjectRef:
 
     def set_transform(
         self,
-        spec: TransformInput = None,
+        spec: TransformInput | None = None,
         *,
-        position: Vec3 = None,
-        rotation: TransformRotation = None,
-        scale: Triple = None,
+        position: Vec3 | None = None,
+        rotation: TransformRotation | None = None,
+        scale: Triple | None = None,
     ) -> None:
-        self._scene_node().set_transform(spec, position=position, rotation=rotation, scale=scale)
+        self._scene_node().set_transform(
+            spec, position=position, rotation=rotation, scale=scale
+        )
 
     def apply_transform(self, spec: TransformInput) -> None:
         self._scene_node().apply_transform(spec)
@@ -227,9 +246,9 @@ class VizObjectRef:
         self,
         member: int | str,
         *,
-        position: Vec3 = None,
-        rotation: TransformRotation = None,
-        scale: Triple = None,
+        position: Vec3 | None = None,
+        rotation: TransformRotation | None = None,
+        scale: Triple | None = None,
     ) -> None:
         """Update an ``SdfGroup`` member's runtime transform (by index or id).
 
@@ -279,10 +298,12 @@ class VizObjectRef:
     def animate_to(self, **kwargs: Any) -> None:
         self._handle.animate_to(self.id, **kwargs)
 
-    def set_interaction(self, config: Any) -> None:
+    def set_interaction(self, config: InteractionConfig) -> None:
         self._handle.set_interaction(self.id, config)
 
-    def on_interaction(self, event_type: Any, handler: Any) -> None:
+    def on_interaction(
+        self, event_type: InteractionEventType, handler: InteractionHandler
+    ) -> None:
         self._handle.on_interaction(self.id, event_type, handler)
 
     # ── Helpers ──────────────────────────────────────────────
@@ -290,7 +311,9 @@ class VizObjectRef:
     def _scene_node(self) -> VizSceneObject:
         if isinstance(self._node, VizSceneObject):
             return self._node
-        raise TypeError(f"Operation requires a scene-layer node, got {self._node.kind!r}")
+        raise TypeError(
+            f"Operation requires a scene-layer node, got {self._node.kind!r}"
+        )
 
     def _overlay_node(self) -> VizOverlayObject:
         if isinstance(self._node, VizOverlayObject):
@@ -301,4 +324,3 @@ class VizObjectRef:
         if isinstance(self._node, VizGroup):
             return self._node
         raise TypeError(f"Operation requires a VizGroup node, got {self._node.kind!r}")
-

@@ -80,7 +80,7 @@ class LogScale(Scale):
         return math.log(value, self.base)
 
     def from_world(self, world: float) -> float:
-        return self.base ** float(world)
+        return float(self.base ** float(world))
 
     def ticks(self, lo: float, hi: float) -> list[tuple[float, str]]:
         return log_ticks(lo, hi, self.base)

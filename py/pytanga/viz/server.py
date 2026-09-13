@@ -416,11 +416,11 @@ class VizServer:
         CONNECTING on Windows (the server would only listen on IPv4).
         """
         reuse_address = sys.platform != "win32"
-        bind_hosts = (
-            ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
-        )
+        bind_hosts = ["127.0.0.1", "::1"] if self._host == "localhost" else [self._host]
 
         self._sites = []
+        if self._runner is None:  # pragma: no cover - callers start the runner first
+            raise RuntimeError("Server runner is not started")
         for bind_host in bind_hosts:
             site = web.TCPSite(
                 self._runner, bind_host, self._port, reuse_address=reuse_address
@@ -1077,7 +1077,7 @@ class VizServer:
 
                         elif msg_type == "animation_stop":
                             if self._animation_stop_callback is not None:
-                                asyncio.create_task(
+                                asyncio.ensure_future(
                                     self._animation_stop_callback(
                                         data.get("scene", ""),
                                         data.get("scope", "scene"),
@@ -1100,7 +1100,7 @@ class VizServer:
                                     event_data["object_id"] = target
                                     if msg_browser_id:
                                         event_data["browser_id"] = msg_browser_id
-                                    asyncio.create_task(
+                                    asyncio.ensure_future(
                                         self._interaction_callback(
                                             event_name, event_data
                                         )
@@ -1109,7 +1109,7 @@ class VizServer:
                                 event_data["control_id"] = target
                                 if msg_browser_id:
                                     event_data["browser_id"] = msg_browser_id
-                                asyncio.create_task(
+                                asyncio.ensure_future(
                                     self._control_callback(
                                         _EVENT_MSG_MAP.get(event_name, event_name),
                                         event_data,
@@ -1134,14 +1134,14 @@ class VizServer:
                             if msg_browser_id:
                                 data["browser_id"] = msg_browser_id
                             if self._control_callback is not None:
-                                asyncio.create_task(
+                                asyncio.ensure_future(
                                     self._control_callback(msg_type, data)
                                 )
                         elif msg_type.startswith("interaction:"):
                             if self._interaction_callback is not None:
                                 if msg_browser_id:
                                     data["browser_id"] = msg_browser_id
-                                asyncio.create_task(
+                                asyncio.ensure_future(
                                     self._interaction_callback(msg_type, data)
                                 )
                     except json.JSONDecodeError:

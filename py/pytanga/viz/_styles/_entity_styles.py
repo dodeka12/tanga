@@ -284,7 +284,6 @@ class Quadric3DStyle(VizStyle):
         return result
 
 
-
 @dataclass
 class PlaneStyle(Quadric3DStyle):
     """Visual style for :class:`~pytanga.geometry.Plane`.
@@ -828,6 +827,7 @@ class RegularPolygonStyle(VizStyle):
             result["wireframe_opacity"] = self.wireframe_opacity
         return result
 
+
 @dataclass
 class ConeStyle(Quadric3DStyle):
     """Visual style for :class:`~pytanga.geometry.Cone`."""
@@ -900,4 +900,3 @@ class ParallelLinePairStyle(ConicStyle):
         if self.length is not None:
             result["length"] = self.length
         return result
-

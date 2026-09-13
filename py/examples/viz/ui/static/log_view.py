@@ -17,9 +17,11 @@ Run with:  uv run python py/examples/viz/ui/static/log_view.py
 Keywords: split view, log, streaming, history, layout
 """
 
+from typing import Any
+
 from itertools import count
 
-from pytanga.viz import ButtonView, LogView, Size, SplitView, Visualizer
+from pytanga.viz import ButtonView, ControlEvent, LogView, Size, SplitView, Visualizer
 
 viz = Visualizer(reuse_existing=False, title="Tanga — Live Log")
 
@@ -34,7 +36,7 @@ log.log({"message": "structured line", "level": "info"})
 _counter = count()
 
 
-async def on_append(_value, _event):
+async def on_append(_value: Any, _event: ControlEvent) -> None:
     n = next(_counter)
     log.log(f"Appended line #{n}")
     log.log({"message": "structured event", "step": n, "level": "warn"})

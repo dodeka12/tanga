@@ -15,7 +15,7 @@ def alg():
     return pytanga.Algebra(dim=3, sig=0, dtype="int64")
 
 
-MODULUS = 101   # a small prime
+MODULUS = 101  # a small prime
 
 
 class TestIntegerAlgebra:
@@ -32,7 +32,7 @@ class TestIntegerAlgebra:
     def test_inv_requires_modulus(self, alg):
         e1 = alg.multivector({"e1": 1})
         with pytest.raises((ValueError, TypeError)):
-            alg.inv(e1)   # must fail: no modulus provided
+            alg.inv(e1)  # must fail: no modulus provided
 
     def test_inv_modular(self, alg):
         """a * inv(a, p) should give scalar congruent to 1 (mod p)."""
@@ -44,6 +44,6 @@ class TestIntegerAlgebra:
         assert scalar == 1
 
     def test_not_invertible_raises(self, alg):
-        zero_mv = alg.multivector()   # zero multivector
+        zero_mv = alg.multivector()  # zero multivector
         with pytest.raises(RuntimeError):
             alg.inv(zero_mv, MODULUS)

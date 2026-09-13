@@ -8,6 +8,7 @@ from pytanga.viz._interaction import (
     ClickEvent,
     DragEvent,
     InteractionConfig,
+    InteractionEvent,
     InteractionEventType,
     InteractionHandlerRegistry,
     InteractionTrigger,
@@ -20,6 +21,7 @@ from pytanga.viz._interaction import (
     extract_camera_directions,
 )
 from pytanga.geometry import Direction, Point
+from pytanga.viz import ControlEvent
 
 
 class TestInteractionTrigger:
@@ -342,6 +344,39 @@ class TestEnums:
         assert ModifierKey.CTRL.value == "ctrl"
         assert ModifierKey.SHIFT.value == "shift"
         assert ModifierKey.ALT.value == "alt"
+
+
+class TestEventHierarchy:
+    """All events derive from the one public :class:`ControlEvent`."""
+
+    def test_interaction_events_subclass_control_event(self):
+        for cls in (InteractionEvent, ClickEvent, DragEvent, ScrollEvent):
+            assert issubclass(cls, ControlEvent)
+
+    def test_control_event_is_the_public_one(self):
+        import pytanga.viz._controls as controls
+        import pytanga.viz._interaction as interaction
+
+        assert ControlEvent is controls.ControlEvent
+        # ``_interaction`` re-exports that very class instead of declaring a
+        # second class with the same name (which is what it used to do).
+        assert interaction.ControlEvent is controls.ControlEvent
+        assert interaction.ControlEvent.__module__ == "pytanga.viz._controls"
+
+    def test_interaction_event_inherits_browser_id(self):
+        from pytanga.viz import InteractionEvent as PublicInteractionEvent
+
+        assert PublicInteractionEvent is InteractionEvent
+        ev = ClickEvent(object_id="obj1", browser_id="b1")
+        assert ev.object_id == "obj1"
+        assert ev.browser_id == "b1"  # inherited from ControlEvent
+        assert ev.camera is None
+
+    def test_control_event_fields_are_shared(self):
+        from pytanga.viz import ControlEvent as PublicControlEvent
+
+        ev = PublicControlEvent(browser_id="b1")
+        assert ev.browser_id == "b1"
 
 
 # Need asyncio for the async tests

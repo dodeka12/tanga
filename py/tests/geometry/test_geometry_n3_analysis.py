@@ -260,8 +260,12 @@ def test_operator_reflection_line_through_origin_round_trip(b):
     assert abs(d.z) == pytest.approx(0, abs=1e-6)
     # Origin must lie on the line (some point on line through origin)
     # Check origin is collinear with direction
-    cross_y = r.line.direction.z * r.line.origin.x - r.line.direction.x * r.line.origin.z
-    cross_x = r.line.direction.y * r.line.origin.z - r.line.direction.z * r.line.origin.y
+    cross_y = (
+        r.line.direction.z * r.line.origin.x - r.line.direction.x * r.line.origin.z
+    )
+    cross_x = (
+        r.line.direction.y * r.line.origin.z - r.line.direction.z * r.line.origin.y
+    )
     assert cross_x == pytest.approx(0, abs=1e-6)
     assert cross_y == pytest.approx(0, abs=1e-6)
 
@@ -276,8 +280,12 @@ def test_operator_reflection_line_offset_round_trip(b):
     d = r.line.direction
     assert abs(d.x) == pytest.approx(1, abs=1e-6)
     # Origin should be on/near the line — verify via cross product
-    cross_x = r.line.direction.y * r.line.origin.z - r.line.direction.z * r.line.origin.y
-    cross_y = r.line.direction.z * r.line.origin.x - r.line.direction.x * r.line.origin.z
+    cross_x = (
+        r.line.direction.y * r.line.origin.z - r.line.direction.z * r.line.origin.y
+    )
+    cross_y = (
+        r.line.direction.z * r.line.origin.x - r.line.direction.x * r.line.origin.z
+    )
     assert cross_x == pytest.approx(0, abs=1e-6)
     assert cross_y == pytest.approx(0, abs=1e-6)
 

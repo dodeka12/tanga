@@ -11,10 +11,8 @@ An entity is refinable when it exposes a callable ``refine()`` method (see the
 
 from __future__ import annotations
 
-from typing import Any
 
-
-def refine(entity: Any):
+def refine(entity: object) -> object:
     """Refine a refinable entity into its specific geometric entity.
 
     Probes for a callable ``entity.refine()`` method and delegates to it.
@@ -26,7 +24,7 @@ def refine(entity: Any):
     return fn()
 
 
-def refine_entity(entity: Any):
+def refine_entity(entity: object) -> object:
     """Backward-compatible alias for :func:`refine`."""
     return refine(entity)
 

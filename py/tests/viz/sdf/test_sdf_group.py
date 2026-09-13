@@ -101,9 +101,13 @@ def test_sdf_group_member_transform_override() -> None:
     group = SdfGroup(sphere(1.0), (capped_cylinder(0.6, 0.4), "subtract"))
     group.set_member_transform(0, position=(2.0, 0, 0))
     result = serialize_entity_local(group, "g", {"style": SdfStyle()})
-    assert result["members"][0]["transform"]["position"] == pytest.approx([2.0, 0.0, 0.0])
+    assert result["members"][0]["transform"]["position"] == pytest.approx(
+        [2.0, 0.0, 0.0]
+    )
     # Member 1 keeps its intrinsic placement (relative to the group origin).
-    assert result["members"][1]["transform"]["position"] == pytest.approx([0.0, 0.0, 0.0])
+    assert result["members"][1]["transform"]["position"] == pytest.approx(
+        [0.0, 0.0, 0.0]
+    )
 
 
 def test_update_sdf_group_member_flushes_content() -> None:
@@ -119,7 +123,9 @@ def test_update_sdf_group_member_flushes_content() -> None:
     content = [p for p in patches if p["aspect"] == "content"]
     assert len(content) == 1
     value = content[0]["value"]
-    assert value["members"][0]["transform"]["position"] == pytest.approx([3.0, 0.0, 0.0])
+    assert value["members"][0]["transform"]["position"] == pytest.approx(
+        [3.0, 0.0, 0.0]
+    )
     # The proxy box resizes (symmetrically) to cover the moved member.
     assert value["bound"]["max"][0] == pytest.approx(3.0 + 1.05)
 
@@ -156,9 +162,13 @@ def test_sdf_group_reference_member_by_id() -> None:
     )
     group.set_member_transform("drill", position=(2.0, 0, 0))
     result = serialize_entity_local(group, "g", {"style": SdfStyle()})
-    assert result["members"][1]["transform"]["position"] == pytest.approx([2.0, 0.0, 0.0])
+    assert result["members"][1]["transform"]["position"] == pytest.approx(
+        [2.0, 0.0, 0.0]
+    )
     # The untargeted member keeps its intrinsic placement.
-    assert result["members"][0]["transform"]["position"] == pytest.approx([0.0, 0.0, 0.0])
+    assert result["members"][0]["transform"]["position"] == pytest.approx(
+        [0.0, 0.0, 0.0]
+    )
 
 
 def test_sdf_group_unknown_member_id_raises() -> None:
@@ -192,7 +202,9 @@ def test_viz_new_sdf_group_ref_set_member_transform() -> None:
 def test_sdf_group_entity_change_hook_marks_content() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     ref = viz.new(
-        SdfGroup(sphere(1.0, id="outer"), (capped_cylinder(0.6, 0.4, id="drill"), "subtract")),
+        SdfGroup(
+            sphere(1.0, id="outer"), (capped_cylinder(0.6, 0.4, id="drill"), "subtract")
+        ),
         style=SdfStyle(),
     )
     viz._scene.flush(styles_map=viz.styles.kind)
@@ -212,7 +224,9 @@ def test_sdf_group_member_rotation_accepts_rotor() -> None:
         sphere(1.0, id="outer"),
         (capped_cylinder(0.6, 0.4, id="drill"), "subtract"),
     )
-    group.set_member_transform("drill", rotation=Rotor(math.pi / 2.0, Direction(0.0, 0.0, 1.0)))
+    group.set_member_transform(
+        "drill", rotation=Rotor(math.pi / 2.0, Direction(0.0, 0.0, 1.0))
+    )
     result = serialize_entity_local(group, "g", {"style": SdfStyle()})
     # Axis-angle (0,0,1, π/2) → Euler XYZ ≈ (0, 0, π/2).
     assert result["members"][1]["transform"]["rotation"] == pytest.approx(
@@ -221,17 +235,25 @@ def test_sdf_group_member_rotation_accepts_rotor() -> None:
 
 
 def test_sdf_group_member_position_accepts_point() -> None:
-    group = SdfGroup(sphere(1.0, id="outer"), (capped_cylinder(0.6, 0.4, id="drill"), "subtract"))
+    group = SdfGroup(
+        sphere(1.0, id="outer"), (capped_cylinder(0.6, 0.4, id="drill"), "subtract")
+    )
     group.set_member_transform("drill", position=Point(2.0, 1.0, 0.0))
     result = serialize_entity_local(group, "g", {"style": SdfStyle()})
-    assert result["members"][1]["transform"]["position"] == pytest.approx([2.0, 1.0, 0.0])
+    assert result["members"][1]["transform"]["position"] == pytest.approx(
+        [2.0, 1.0, 0.0]
+    )
 
 
 def test_sdf_group_member_euler_rotation_still_works() -> None:
-    group = SdfGroup(sphere(1.0, id="outer"), (capped_cylinder(0.6, 0.4, id="drill"), "subtract"))
+    group = SdfGroup(
+        sphere(1.0, id="outer"), (capped_cylinder(0.6, 0.4, id="drill"), "subtract")
+    )
     group.set_member_transform("drill", rotation=(0.1, 0.2, 0.3))
     result = serialize_entity_local(group, "g", {"style": SdfStyle()})
-    assert result["members"][1]["transform"]["rotation"] == pytest.approx([0.1, 0.2, 0.3])
+    assert result["members"][1]["transform"]["rotation"] == pytest.approx(
+        [0.1, 0.2, 0.3]
+    )
 
 
 def test_sdf_group_member_displaced_general_rotor_raises() -> None:
@@ -243,6 +265,3 @@ def test_sdf_group_member_displaced_general_rotor_raises() -> None:
         assert "displaced origin" in str(exc)
     else:
         raise AssertionError("expected TypeError for a displaced GeneralRotor")
-
-
-

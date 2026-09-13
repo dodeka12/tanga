@@ -21,7 +21,7 @@ treated as ``auto`` when resolving min/max bounds.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 Unit = Literal["px", "%", "fr", "auto"]
 
@@ -66,7 +66,7 @@ class Size:
     # -- (de)serialization ----------------------------------------
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Size":
+    def from_dict(cls, data: dict[str, Any]) -> "Size":
         """Build a ``Size`` from the canonical ``{"value", "unit"}`` JSON shape."""
         if not isinstance(data, dict):
             raise TypeError(f"Expected a dict, got {type(data).__name__}")
@@ -79,7 +79,7 @@ class Size:
         unit = data.get("unit", "px")
         return cls(value, unit)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to the canonical ``{"value", "unit"}`` JSON shape."""
         return {"value": self.value, "unit": self.unit}
 
@@ -110,7 +110,7 @@ class Size:
 SizeSpec = Size | None
 
 
-def size_from_dict(data: dict | None) -> SizeSpec:
+def size_from_dict(data: dict[str, Any] | None) -> SizeSpec:
     """Parse ``None`` → ``None`` and a dict → :class:`Size`."""
     if data is None:
         return None

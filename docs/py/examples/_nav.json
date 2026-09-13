@@ -147,6 +147,9 @@
             "Plane Pair Demo": "py/examples/ga/quadric/plane_pair_demo.md"
           },
           {
+            "Point Tuples Demo": "py/examples/ga/quadric/point_tuples_demo.md"
+          },
+          {
             "Quadric3D Demo": "py/examples/ga/quadric/quadric3d_demo.md"
           },
           {

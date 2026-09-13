@@ -5,8 +5,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any, TYPE_CHECKING, cast, overload
 
 import numpy as np
 
@@ -14,6 +16,8 @@ from pytanga.blade_mask import BladeMask
 
 if TYPE_CHECKING:
     from pytanga.algebra import Algebra
+
+    from ._labeled import MVLabeledTensor
 
 
 def _rebuild_mvtensor(
@@ -49,7 +53,7 @@ def _rebuild_mvtensor(
     ellipsis_seen = False
     n_ellipsis = ndim_orig - len(key) + sum(1 for k in key if k is not Ellipsis)
 
-    key_expanded: list = []
+    key_expanded: list[Any] = []
     for k in key:
         if k is Ellipsis:
             if ellipsis_seen:
@@ -120,7 +124,7 @@ class MVTensor:
     """
 
     data: np.ndarray
-    masks: tuple[BladeMask | None, ...]
+    masks: Sequence[BladeMask | None]
 
     def __post_init__(self) -> None:
         """Validate that masks length matches ndim and mask sizes match data shape."""
@@ -137,7 +141,7 @@ class MVTensor:
     @property
     def shape(self) -> tuple[int, ...]:
         """Shape of the underlying data array."""
-        return self.data.shape
+        return cast("tuple[int, ...]", self.data.shape)
 
     @property
     def algebra(self) -> "Algebra":
@@ -155,7 +159,11 @@ class MVTensor:
     # 1.1 – __getitem__
     # ------------------------------------------------------------------
 
-    def __getitem__(self, key: Any) -> "MVTensor | np.ndarray":
+    @overload
+    def __getitem__(self, key: str) -> "MVLabeledTensor": ...
+    @overload
+    def __getitem__(self, key: Any) -> "MVTensor | np.ndarray | MVLabeledTensor": ...
+    def __getitem__(self, key: Any) -> "MVTensor | np.ndarray | MVLabeledTensor":
         """Label or NumPy indexing.
 
         String keys create an ``MVLabeledTensor`` (lazy import).
@@ -224,7 +232,7 @@ class MVTensor:
             else:
                 raise TypeError(f"expected BladeMask or int, got {type(spec).__name__}")
         if dtype is None:
-            dtype = np.float64
+            dtype = "float64"
         return MVTensor(data=np.zeros(tuple(shape), dtype=dtype), masks=tuple(masks))
 
     @staticmethod

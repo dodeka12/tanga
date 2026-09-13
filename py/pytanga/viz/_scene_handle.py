@@ -13,14 +13,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Iterator, Sequence
 
 if TYPE_CHECKING:
+    from ._interaction import (
+        InteractionConfig,
+        InteractionEventType,
+        InteractionHandler,
+    )
+    from ._object_ref import VizObjectRef
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
     from ._viz_styles import VizStyles
+    from .export._cdn import DeliveryMode
     from .visualizer import Visualizer
 
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
 from ._timeline import Timeline
-from ._types import SceneEntity
+from ._types import VizInputType
 from .scene import Scene
 
 
@@ -151,7 +158,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         )
         return VizObjectRef(self, self._scene().get_node(eid))
 
-    def add_group(self, name: str | None = None) -> Any:
+    def add_group(self, name: str | None = None) -> "VizObjectRef":
         """Create a scene-graph group in this scene and return a :class:`VizObjectRef`."""
         from ._object_ref import VizObjectRef
 
@@ -166,7 +173,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update rendering properties of an existing entity."""
         self._scene().update(entity_id, **properties)
 
-    def update_entity(self, entity_id: str, obj: SceneEntity) -> None:
+    def update_entity(self, entity_id: str, obj: VizInputType) -> None:
         """Replace the geometry for an existing entity."""
         entity = self._viz._resolve(obj)
         self._scene().update_entity(entity_id, entity)
@@ -543,11 +550,16 @@ class VizSceneHandle(_JupyterDisplayMixin):
 
     # ── Object Interaction ───────────────────────────────────
 
-    def set_interaction(self, object_id: str, config: Any) -> None:
+    def set_interaction(self, object_id: str, config: InteractionConfig) -> None:
         """Set the interaction configuration for an entity in this scene."""
         self._viz.set_interaction(object_id, config, scene_name=self._name)
 
-    def on_interaction(self, object_id: str, event_type: Any, handler: Any) -> None:
+    def on_interaction(
+        self,
+        object_id: str,
+        event_type: InteractionEventType,
+        handler: InteractionHandler,
+    ) -> None:
         """Register an async handler for interaction events on an entity."""
         self._viz.on_interaction(object_id, event_type, handler, scene_name=self._name)
 
@@ -644,7 +656,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         width: int | str = "100%",
         height: int | str = "500px",
         *,
-        delivery: str = "inline",
+        delivery: DeliveryMode = "inline",
         delivery_ref: str | None = None,
     ) -> Any:
         """Display this scene as standalone HTML (no server required).
@@ -683,7 +695,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> None:
         """Export this scene as a self-contained HTML file."""
@@ -711,7 +723,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> Any:
         """Export this scene as an HTML snippet (or return the string)."""

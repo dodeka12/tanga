@@ -6,8 +6,12 @@
 from __future__ import annotations
 
 from functools import cached_property
+from typing import TYPE_CHECKING, Any
 
 from pytanga.algebra._algebra import Algebra
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 class BasisP2(Algebra):
@@ -27,7 +31,7 @@ class BasisP2(Algebra):
         dtype: str = "float64",
         seed: int | None = None,
         opns: bool = True,
-        **kw,
+        **kw: Any,
     ) -> None:
         super().__init__(3, 0, dtype, seed=seed, opns=opns, **kw)
         mv = self.multivector
@@ -38,7 +42,7 @@ class BasisP2(Algebra):
         self.I = mv({self.pseudoscalar_id: 1})
 
     @cached_property
-    def _display_basis(self) -> list:
+    def _display_basis(self) -> list[tuple[str, MV, MV | None, int | None]]:
         """Lazily built display basis for all 2^3 = 8 blades (grades 0–3)."""
         from pytanga.algebra._display_basis import build_display_basis
 

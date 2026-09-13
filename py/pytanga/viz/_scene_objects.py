@@ -353,4 +353,8 @@ def _scale_dir(origin: _Vec3, direction: _Vec3, extent: float) -> _Vec3:
     norm = math.sqrt(sum(c * c for c in direction))
     if norm == 0.0:
         raise ValueError("Axis direction must be non-zero")
-    return tuple(origin[i] + direction[i] / norm * extent for i in range(3))  # type: ignore[return-value]
+    return (
+        origin[0] + direction[0] / norm * extent,
+        origin[1] + direction[1] / norm * extent,
+        origin[2] + direction[2] / norm * extent,
+    )

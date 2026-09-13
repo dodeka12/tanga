@@ -44,7 +44,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from pytanga import BladeMask, DataArray, Variable
+from pytanga import AffineExpression, BladeMask, DataArray, MV, Variable
 from pytanga.basis import BasisE3
 
 
@@ -64,10 +64,13 @@ def main() -> None:
 
     # Bind v to a batch (counting axis "n"), then reduce "n" at the top level.
     partial = f(v=DataArray(vecs, masks=("n", full)))
+    assert isinstance(partial, AffineExpression)
     result = partial(n=weights)  # still an AffineExpression over {w}
+    assert isinstance(result, AffineExpression)
 
     w_val = E3("3 e2")
     reduced = result(w=w_val)
+    assert isinstance(reduced, MV)
     expected = sum(wt * (vec * w_val) for wt, vec in zip(weights, vecs)) + c * float(
         weights.sum()
     )

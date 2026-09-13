@@ -35,6 +35,7 @@ from pytanga.viz import Visualizer, VizObjectRef
 from pytanga.viz import (
     DragMode,
     InteractionConfig,
+    DragEvent,
     InteractionEventType,
     InteractionTrigger,
     ModifierKey,
@@ -119,7 +120,7 @@ async def main() -> None:
         ),
     )
 
-    async def on_drag(event):
+    async def on_drag(event: DragEvent) -> None:
         # event.world_position is a pytanga.geometry.Point
         p = event.world_position
         point.entity = p

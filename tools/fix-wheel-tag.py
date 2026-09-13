@@ -112,8 +112,6 @@ def _platform_tag() -> str:
 
 def _rewrite_wheel_tag(src: Path, dst: Path, tag: str) -> None:
     """Copy the wheel, rewriting the WHEEL metadata with the new tag."""
-    # The tag format is "py_version-abi_tag-platform_tag"
-    tags = tag.split("-")
     with (
         zipfile.ZipFile(src, "r") as zin,
         zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout,

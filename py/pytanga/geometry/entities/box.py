@@ -12,6 +12,7 @@ from ._coerce import to_point, to_triple
 from .point import Point
 
 if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
     from pytanga.geometry.operators import Rotor
 
 
@@ -41,7 +42,12 @@ class Box:
     size: tuple[float, float, float]
     rotation: Rotor | None = None
 
-    def __init__(self, center=None, size=None, rotation=None):
+    def __init__(
+        self,
+        center: "Point | MV | None" = None,
+        size: "tuple[float, float, float] | list[float] | None" = None,
+        rotation: "Rotor | None" = None,
+    ) -> None:
         center = Point(0.0, 0.0, 0.0) if center is None else to_point(center)
         size = (1.0, 1.0, 1.0) if size is None else to_triple(size)
 

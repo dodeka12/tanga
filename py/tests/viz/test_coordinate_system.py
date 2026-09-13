@@ -42,7 +42,9 @@ class TestFitView2D:
         assert cam.ymax == pytest.approx(1.5)
 
     def test_border_and_stretch(self):
-        cam = fit_view2d((0, 2), (0, 2), border_world=0.5, border_px=10.0, stretch="fill")
+        cam = fit_view2d(
+            (0, 2), (0, 2), border_world=0.5, border_px=10.0, stretch="fill"
+        )
         assert cam.xmin == -1.0
         assert cam.xmax == 1.0
         assert cam.border_world == 0.5

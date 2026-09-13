@@ -11,7 +11,15 @@ and color gradient utilities.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
+    from pytanga.geometry.entities import Point as GeoPoint
+
+    #: Anything :meth:`PointPath.add` accepts: a geometry point, an ``(x, y, z)``
+    #: or ``(x, y)`` tuple, or a multivector (resolved via ``analyze``).
+    _PointInput = GeoPoint | tuple[float, float, float] | tuple[float, float] | MV
 
 
 @dataclass
@@ -47,7 +55,7 @@ class PointPath:
 
     max_points: int | None = None
     pop_colors: bool = True
-    default_colors: list[str | None] | None = None
+    default_colors: Sequence[str | None] | None = None
 
     def __post_init__(self) -> None:
         if self.max_points is not None and self.max_points < 1:
@@ -185,15 +193,13 @@ class PointPath:
 
 # ── Point resolution ───────────────────────────────────────
 
-_PointInput = (
-    "GeoPoint | tuple[float, float, float] | tuple[float, float] | MV"
-)
-
 
 def _resolve_point(point: _PointInput) -> tuple[float, float, float]:
     """Convert various point representations to ``(x, y, z)``."""
-    # MV (has _alg attribute)
-    if hasattr(point, "_alg"):
+    # MV (a multivector carrying an algebra)
+    from pytanga.entity._util import _is_mv
+
+    if _is_mv(point):
         from pytanga.geometry import analyze
         from pytanga.geometry.entities import HPoint, Point as GeoPoint, Sphere
 
@@ -228,9 +234,7 @@ def _resolve_point(point: _PointInput) -> tuple[float, float, float]:
             return (coords[0], coords[1], coords[2])
         if len(coords) == 2:
             return (coords[0], coords[1], 0.0)
-        raise ValueError(
-            f"Point tuple must have 2 or 3 elements, got {len(coords)}"
-        )
+        raise ValueError(f"Point tuple must have 2 or 3 elements, got {len(coords)}")
 
     raise TypeError(f"Cannot interpret {type(point).__name__} as a point")
 
@@ -263,9 +267,7 @@ def gradient_colors(start: str, end: str, steps: int) -> list[str]:
     return multi_gradient_colors([(0.0, start), (1.0, end)], steps)
 
 
-def multi_gradient_colors(
-    stops: list[tuple[float, str]], steps: int
-) -> list[str]:
+def multi_gradient_colors(stops: list[tuple[float, str]], steps: int) -> list[str]:
     """Return a multi-stop RGB gradient as a list of CSS hex color strings.
 
     Parameters
@@ -299,7 +301,7 @@ def multi_gradient_colors(
         if stops[i][0] <= stops[i - 1][0]:
             raise ValueError(
                 f"Color stops must be in ascending order; "
-                f"stop {i} ({stops[i][0]}) <= stop {i-1} ({stops[i-1][0]})"
+                f"stop {i} ({stops[i][0]}) <= stop {i - 1} ({stops[i - 1][0]})"
             )
 
     if steps == 1:
@@ -313,9 +315,7 @@ def multi_gradient_colors(
     return colors
 
 
-def _interpolate_stops(
-    stops: list[tuple[float, str]], t: float
-) -> str:
+def _interpolate_stops(stops: list[tuple[float, str]], t: float) -> str:
     """Interpolate between the two nearest stops at position *t*."""
     # Clamp
     if t <= stops[0][0]:

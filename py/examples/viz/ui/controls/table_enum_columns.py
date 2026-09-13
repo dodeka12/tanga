@@ -37,6 +37,9 @@ from pytanga.viz import (
 class TableEnumColumnsApp(VisualizerApp):
     """A seating-plan table demonstrating ``column`` and ``custom`` enums."""
 
+    #: Created in the view-building hook, which runs before any event.
+    _table: TableView
+
     def __init__(self) -> None:
         super().__init__(title="Table Enum Columns")
         self._columns = ["pupil", "seat_buddy", "activity"]
@@ -49,7 +52,6 @@ class TableEnumColumnsApp(VisualizerApp):
         # values of column 0 ("pupil").  "activity" is a backend-only custom
         # enum, populated at edit time by `on_enum_options`.
         self._column_types = [None, {"kind": "column", "source": 0}, "custom"]
-        self._table: TableView | None = None
 
     async def init(self) -> None:
         self.viz.add(

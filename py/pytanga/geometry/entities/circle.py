@@ -5,13 +5,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, cast
 
 from pytanga.geometry.entities._util import _convert_mv
 
 from ._coerce import to_direction, to_float, to_point
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -31,20 +35,20 @@ class Circle:
 
     center: Point
     radius: float
-    normal: Direction | None = None
+    normal: Direction = field(default_factory=lambda: Direction(0.0, 0.0, 1.0))
     is_imaginary: bool = False
 
     def __init__(
         self,
-        center,
-        radius=None,
-        normal=None,
-        is_imaginary=False,
-    ):
+        center: "Point | MV",
+        radius: "float | MV | None" = None,
+        normal: "Direction | MV | None" = None,
+        is_imaginary: bool = False,
+    ) -> None:
         try:
             center = to_point(center)
         except TypeError:
-            circle = _convert_mv("circle", center)
+            circle = _convert_mv("circle", cast("MV", center))
             object.__setattr__(self, "center", circle.center)
             object.__setattr__(self, "radius", circle.radius)
             object.__setattr__(self, "normal", circle.normal)
@@ -82,9 +86,9 @@ class ImagCircle(Circle):
 
     def __init__(
         self,
-        center,
-        radius=None,
-        normal=None,
-        is_imaginary=True,
-    ):
+        center: "Point | MV",
+        radius: "float | MV | None" = None,
+        normal: "Direction | MV | None" = None,
+        is_imaginary: bool = True,
+    ) -> None:
         super().__init__(center, radius, normal, is_imaginary)

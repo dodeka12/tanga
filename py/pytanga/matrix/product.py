@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Sequence, TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -13,7 +13,7 @@ from . import MVProductMatrix
 from pytanga.algebra import EInv, EProduct
 
 if TYPE_CHECKING:
-    from pytanga.algebra import Algebra
+    from pytanga.algebra import Algebra, MV
 
 from pytanga.algebra import MVLike, _as_mv
 from ._dispatch import _dispatch_product_matrix_masked
@@ -21,7 +21,7 @@ from pytanga.blade_mask.predict import product_blade_mask
 
 
 def _resolve_alg(
-    a: MVLike | list[MVLike] | None = None,
+    a: MVLike | Sequence[MVLike] | None = None,
     a_mask: BladeMask | None = None,
     b_mask: BladeMask | None = None,
     c_mask: BladeMask | None = None,
@@ -49,17 +49,19 @@ def _resolve_alg(
 
 
 def product_matrix(
-    a: MVLike | list[MVLike],
+    a: MVLike | Sequence[MVLike],
     *,
     a_mask: BladeMask | None = None,
     b_mask: BladeMask | None = None,
     c_mask: BladeMask | None = None,
-    product: EProduct = EProduct.GP,
+    product: EProduct | str = EProduct.GP,
     left: bool = True,
     left_inv: EInv = EInv.ID,
     right_inv: EInv = EInv.ID,
     algebra: "Algebra | None" = None,
 ) -> MVProductMatrix:
+    # ``EProduct`` members are string-compatible (EProduct.OP == "op").
+    product = EProduct(product)
     """Build the product matrix M such that M · vec(B) = vec(C).
 
     Accepts either a single multivector or a list of multivectors.
@@ -74,7 +76,7 @@ def product_matrix(
 
     Parameters
     ----------
-    a : MVLike | list[MVLike]
+    a : MVLike | Sequence[MVLike]
         The fixed-coefficient operand(s).
     algebra : Algebra | None
         Needed only when *a* consists of bare strings or scalars and no
@@ -82,13 +84,15 @@ def product_matrix(
     """
     alg = _resolve_alg(a, a_mask, b_mask, c_mask, algebra=algebra)
 
-    is_list = isinstance(a, list)
+    is_list = isinstance(a, (list, tuple))
+    mvs: list[MV] = []
+    mv: MV | None = None
     if is_list:
         mvs = [_as_mv(alg, x) for x in a]
         if a_mask is None:
             a_mask = BladeMask.from_array(mvs)
     else:
-        mv = _as_mv(alg, a)
+        mv = _as_mv(alg, cast("MVLike", a))
         if a_mask is None:
             a_mask = BladeMask(mv)
 
@@ -104,6 +108,7 @@ def product_matrix(
     arr = np.zeros((n_mvs, nc, nb), dtype=dtype)
 
     if not is_list:
+        assert mv is not None
         arr[0] = _dispatch_product_matrix_masked(
             alg,
             product,

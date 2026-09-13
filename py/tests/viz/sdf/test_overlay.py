@@ -49,7 +49,13 @@ def test_serialize_overlay() -> None:
 
 
 def test_serialize_axes() -> None:
-    axes = Axes(origin=(1, 2, 3), color_x="#010203", color_y="#040506", color_z="#070809", opacity=0.5)
+    axes = Axes(
+        origin=(1, 2, 3),
+        color_x="#010203",
+        color_y="#040506",
+        color_z="#070809",
+        opacity=0.5,
+    )
     assert serialize_overlay(axes) == {
         "kind": "axes",
         "origin": [1.0, 2.0, 3.0],

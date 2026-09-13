@@ -13,14 +13,21 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from pytanga.algebra._mv import MV
 
+if TYPE_CHECKING:
+    from pytanga.algebra._algebra import Algebra
+
 _SQRT2_OVER_2 = float(np.sqrt(2.0) / 2.0)
 
 
-def embed_point(basis, x: float, y: float | None = None, z: float | None = None) -> MV:
+def embed_point(
+    basis: "Algebra", x: float, y: float | None = None, z: float | None = None
+) -> MV:
     """Embed a point into the quadric space as a rank-1 grade-1 blade.
 
     ``embed_point`` is the Euclidean-rescaled ``D_op(x) = x xᵀ``: its inner

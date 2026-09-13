@@ -38,15 +38,21 @@ geo = Geometry(P3, seed=0)
 
 
 def _rnd_point() -> MV:
-    return geo(RndPoint((-2, 2), (-2, 2), (-2, 2)))
+    mv = geo(RndPoint((-2, 2), (-2, 2), (-2, 2)))
+    assert isinstance(mv, MV), "a single RndPoint materialises one MV"
+    return mv
 
 
 def _rnd_direction() -> MV:
-    return geo(RndDirection((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)))
+    mv = geo(RndDirection((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)))
+    assert isinstance(mv, MV), "a single RndDirection materialises one MV"
+    return mv
 
 
 # Create random points
-pnt_list: list[MV] = geo(RndPoint((-2, 2), (-2, 2), (-2, 2), count=4))
+pnt_batch = geo(RndPoint((-2, 2), (-2, 2), (-2, 2), count=4))
+assert isinstance(pnt_batch, list), "RndPoint(count=n) materialises a list of MVs"
+pnt_list: list[MV] = pnt_batch
 print("3D points:")
 for pnt in pnt_list:
     pnt.show()

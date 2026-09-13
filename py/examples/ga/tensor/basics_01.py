@@ -21,10 +21,18 @@ Keywords: tensor, product tensor, geometric product, einsum, MVTensor
 
 import numpy as np
 import pytanga as pt
+from typing import Any
+
+from pytanga import MV
 from pytanga.geometry import RndMV
 from pytanga.tensor.convert import from_tensor, to_tensor
 from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
+
+
+def _blade_count(mask: Any) -> int:
+    """Number of blades on a tensor axis (counting axes carry no blade mask)."""
+    return 0 if mask is None else len(mask)
 
 
 def main() -> None:
@@ -37,6 +45,7 @@ def main() -> None:
     full = pt.BladeMask.full(alg)
     A = RndMV(full, [(-1.0, 1.0)] * len(full))(rng)
     B = RndMV(full, [(-1.0, 1.0)] * len(full))(rng)
+    assert isinstance(A, MV) and isinstance(B, MV)  # one MV per RndMV(blade mask)
 
     a_mask = pt.BladeMask(A)
     b_mask = pt.BladeMask(B)
@@ -50,8 +59,8 @@ def main() -> None:
     GP = product_tensor(a_mask, b_mask, product=pt.EProduct.GP)
     print(
         f"  shape = {GP.shape}   "
-        f"(|c_mask|={len(GP.masks[0])}, |a_mask|={len(GP.masks[1])}, "
-        f"|b_mask|={len(GP.masks[2])})"
+        f"(|c_mask|={_blade_count(GP.masks[0])}, |a_mask|={_blade_count(GP.masks[1])}, "
+        f"|b_mask|={_blade_count(GP.masks[2])})"
     )
     print(f"  entry range: {GP.data.min():.0f} … {GP.data.max():.0f}")
 
@@ -68,7 +77,7 @@ def main() -> None:
     print(f"  C_tensor = {c_t!s}")
 
     C_from_tensor = from_tensor(c_t)
-    print(f"\n  C_from_tensor ({len(GP.masks[0])} blades) = {C_from_tensor!s}")
+    print(f"\n  C_from_tensor ({_blade_count(GP.masks[0])} blades) = {C_from_tensor!s}")
 
     C = A * B
     print(f"  C = A * B ({len(pt.BladeMask(C))} blades) = {C!s}")

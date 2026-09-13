@@ -11,7 +11,7 @@ The OPNS/IPNS interpretation is read from ``geometry.algebra.opns``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 
@@ -85,7 +85,21 @@ class Geometry:
         """
         return create(self._algebra, obj)
 
-    def __call__(self, obj, typ=None):
+    @overload
+    def __call__(self, obj: "Conic | Quadric3D") -> Any: ...
+    @overload
+    def __call__(self, obj: "Entity | Operator") -> MV: ...
+    @overload
+    def __call__(self, obj: MV) -> "Entity | Operator | None": ...
+    @overload
+    def __call__(self, obj: str, typ: type[object]) -> Variable: ...
+    @overload
+    def __call__(self, obj: "list[Any] | tuple[Any, ...]") -> "list[Any]": ...
+    @overload
+    def __call__(self, obj: "RndEntity") -> "MV | list[Any]": ...
+    @overload
+    def __call__(self, obj: Any, typ: type[object] | None = None) -> Any: ...
+    def __call__(self, obj: object, typ: type | None = None) -> object:
         """Create MVs, create variables, or analyze MVs.
 
         Dispatch rules, in order:
@@ -126,7 +140,7 @@ class Geometry:
             f"got {type(obj).__name__}"
         )
 
-    def which_entity(self, mv: MV) -> Entity:
+    def which_entity(self, mv: MV) -> Entity | None:
         """Determine which geometric entity an MV represents.
 
         Parameters
@@ -142,7 +156,7 @@ class Geometry:
         """
         return analyze_entity(mv)
 
-    def which_operator(self, mv: MV) -> Operator:
+    def which_operator(self, mv: MV) -> Operator | None:
         """Determine which versor / operator an MV represents.
 
         Parameters
@@ -181,7 +195,7 @@ class Geometry:
         """
         return _analyze(mv)
 
-    def refine(self, entity):
+    def refine(self, entity: object) -> object:
         """Refine a raw :class:`Conic` / :class:`Quadric3D` into a specific entity.
 
         The second analysis level: ``geo(analyze(mv))`` yields the raw
@@ -192,7 +206,7 @@ class Geometry:
 
     # ── variable / blade-mask helpers ──────────────────────────
 
-    def mask_for(self, typ) -> BladeMask:
+    def mask_for(self, typ: "type[object] | Entity | Operator") -> BladeMask:
         """Return the :class:`BladeMask` a type or instance occupies in this algebra.
 
         A class (e.g. ``Rotor``) yields the full type blade set; an instance
@@ -203,7 +217,9 @@ class Geometry:
 
         return mask_for(self._algebra, typ)
 
-    def create_var(self, name: str, typ) -> Variable:
+    def create_var(
+        self, name: str, typ: "type[object] | Entity | Operator"
+    ) -> Variable:
         """Create a :class:`~pytanga.Variable` whose mask matches *typ*.
 
         ``geo.create_var("R1", Rotor)`` creates a variable that may hold any

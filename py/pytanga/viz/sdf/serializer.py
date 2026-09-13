@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import Any
+from typing import Any, cast
 
 from pytanga.geometry.entities import (
     Box,
@@ -66,6 +66,8 @@ from pytanga.geometry.operators import (
     Rotor,
     Translator,
 )
+from .._style_dict import StylesMap
+
 from ._compose import Combine, SdfElement
 from .composed import Composed
 from .group import SdfGroup
@@ -89,7 +91,7 @@ def serialize_entity(
     entity_id: str,
     properties: dict[str, Any] | None = None,
     *,
-    styles_map: dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> dict[str, Any]:
     """Serialize an SDF scene object (entity, :class:`SdfNode`, or :class:`Composed`).
 
@@ -136,7 +138,7 @@ def serialize_entity_local(
     entity_id: str,
     properties: dict[str, Any] | None = None,
     *,
-    styles_map: dict[str, Any] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> dict[str, Any]:
     """Serialize an entity for the standard viewer's per-object SDF renderer.
 
@@ -155,7 +157,6 @@ def serialize_entity_local(
 
     if isinstance(entity, SdfGroup):
         return _serialize_sdf_group(entity, entity_id, props, styles_map)
-
 
     tree, resolved, sdf_kind = _dispatch_object(entity, props, styles_map)
 
@@ -238,7 +239,7 @@ def _serialize_sdf_group(
     group: SdfGroup,
     entity_id: str,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> dict[str, Any]:
     """Serialize an :class:`SdfGroup` for the standard viewer's proxy renderer.
 
@@ -352,7 +353,6 @@ def _serialize_sdf_group(
     return result
 
 
-
 def _bound_padding(resolved: dict[str, Any]) -> float:
     """Extract the SDF ``bound_padding`` knob from a resolved style."""
     style = resolved.get("style")
@@ -390,7 +390,7 @@ def _translate_tree(node: SdfNode, delta: tuple[float, float, float]) -> SdfNode
 def _dispatch_object(
     entity: Any,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any], str]:
     """Route an SDF object to an SDF tree + resolved style + ``sdfKind``.
 
@@ -439,7 +439,7 @@ def _resolve_constituent(obj: Any) -> Any:
     return obj
 
 
-def _composed_tree(composed: Composed, styles_map: dict[str, Any] | None) -> SdfNode:
+def _composed_tree(composed: Composed, styles_map: StylesMap | None) -> SdfNode:
     """Build a ``group`` node from a :class:`Composed`'s members.
 
     Each member is an ``SdfElement`` (lowered via ``to_sdf_node()``) or an
@@ -458,7 +458,7 @@ def _lower_member(element: Any) -> SdfNode:
     """Lower a member (``SdfElement`` or ``SdfNode``) to an ``SdfNode``."""
     if isinstance(element, SdfElement):
         return element.to_sdf_node()
-    return element
+    return cast("SdfNode", element)
 
 
 def _member_material(element: Any) -> dict[str, Any]:
@@ -509,7 +509,7 @@ def _normalize_combine(props: dict[str, Any]) -> dict[str, str]:
 def _dispatch_tree(
     entity: Any,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     # Entities
     if isinstance(entity, Point):
@@ -569,7 +569,12 @@ def _dispatch_tree(
 # ── Style resolution ───────────────────────────────────────
 
 
-def _resolve(props: dict[str, Any], kind: str, builtin: dict[str, Any], styles_map: dict[str, Any] | None) -> dict[str, Any]:
+def _resolve(
+    props: dict[str, Any],
+    kind: str,
+    builtin: dict[str, Any],
+    styles_map: StylesMap | None,
+) -> dict[str, Any]:
     from pytanga.viz.serializer import _apply_defaults
 
     return _apply_defaults(dict(props), kind, builtin, styles_map=styles_map)
@@ -586,7 +591,7 @@ def _param(resolved: dict[str, Any], key: str, default: Any) -> Any:
 
 def _style_type(resolved: dict[str, Any]) -> str | None:
     """Return the effective draw-style type string (e.g. ``"CrossHairPointStyle"``)."""
-    return resolved.get("style", {}).get("style_type")
+    return cast("str | None", resolved.get("style", {}).get("style_type"))
 
 
 # ── Transform helpers ──────────────────────────────────────
@@ -824,7 +829,7 @@ def _rotor_glyph(
 def _point_tree(
     ent: Point,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Point", {"size": 0.08}, styles_map)
     size = float(_param(resolved, "size", 0.08))
@@ -852,7 +857,7 @@ def _crosshair_node(
 def _sphere_tree(
     ent: Sphere,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     kind_name = "ImagSphere" if ent.is_imaginary else "Sphere"
     resolved = _resolve(props, kind_name, {}, styles_map)
@@ -867,7 +872,7 @@ def _sphere_tree(
 def _line_tree(
     ent: Line,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
     *,
     infinite: bool,
 ) -> tuple[Any, dict[str, Any]]:
@@ -918,15 +923,13 @@ def _line_tree(
 def _circle_tree(
     ent: Circle,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     # The existing style key is `tube_radius`; the SDF plan calls it
     # `thickness`. Resolve via the standard key for consistency, so a
     # `CylinderCircleStyle(tube_radius=…)` keeps working.
     resolved = _resolve(props, "Circle", {"tube_radius": 0.03}, styles_map)
-    thickness = float(
-        props.get("thickness", resolved.get("tube_radius", 0.03))
-    )
+    thickness = float(props.get("thickness", resolved.get("tube_radius", 0.03)))
     normal = _normalize((ent.normal.x, ent.normal.y, ent.normal.z))
     if normal == (0.0, 0.0, 0.0):
         normal = _Z
@@ -943,7 +946,7 @@ def _circle_tree(
 def _plane_tree(
     ent: Plane,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     # Honor the entity's own extent (mirrors the standard serializer), so a
     # `Plane(..., extent=5)` wins over the canonical `PlaneStyle.extent`.
@@ -983,7 +986,7 @@ def _plane_tree(
 def _point_pair_tree(
     ent: PointPair,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(
         props,
@@ -1025,7 +1028,7 @@ def _point_pair_tree(
 def _hpoint_tree(
     ent: HPoint,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "HPoint", {"size": 0.08}, styles_map)
     size = float(_param(resolved, "size", 0.08))
@@ -1038,7 +1041,7 @@ def _hpoint_tree(
 def _direction_tree(
     ent: Direction,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Direction", {"length": 2.0}, styles_map)
     length = float(_param(resolved, "length", 2.0))
@@ -1052,7 +1055,7 @@ def _direction_tree(
 def _hdirection_tree(
     ent: HDirection,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Direction", {"length": 2.0}, styles_map)
     length = float(_param(resolved, "length", 2.0))
@@ -1066,7 +1069,7 @@ def _hdirection_tree(
 def _space_tree(
     ent: Space,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Space", {"extent": 10.0}, styles_map)
     extent = float(_param(resolved, "extent", 10.0))
@@ -1077,7 +1080,7 @@ def _space_tree(
 def _disk_tree(
     ent: Disk,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Disk", {"thickness": 0.02}, styles_map)
     thickness = float(_param(resolved, "thickness", 0.02))
@@ -1096,7 +1099,7 @@ def _disk_tree(
 def _partial_disk_tree(
     ent: PartialDisk,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "PartialDisk", {"thickness": 0.02}, styles_map)
     thickness = float(_param(resolved, "thickness", 0.02))
@@ -1131,7 +1134,7 @@ def _partial_disk_tree(
 def _box_tree(
     ent: Box,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Box", {}, styles_map)
     rotation = _as_rotation(ent.rotation) if ent.rotation is not None else None
@@ -1147,7 +1150,7 @@ def _box_tree(
 def _ellipsoid_tree(
     ent: Ellipsoid,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Ellipsoid", {}, styles_map)
     rotation = _as_rotation(ent.rotation) if ent.rotation is not None else None
@@ -1163,7 +1166,7 @@ def _ellipsoid_tree(
 def _ellipse_tree(
     ent: Ellipse,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Ellipse", {}, styles_map)
     # The SDF ellipse is a thin ellipsoid; its slab `thickness` (default 0.02)
@@ -1194,7 +1197,7 @@ def _ellipse_tree(
 def _regular_polygon_tree(
     ent: RegularPolygon,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "RegularPolygon", {"thickness": 0.02}, styles_map)
     thickness = float(_param(resolved, "thickness", 0.02))
@@ -1212,7 +1215,11 @@ def _regular_polygon_tree(
     rotation = _basis_rotation(normal, vertex_dir)
     tree = primitive(
         "regularPolygon",
-        {"halfHeight": thickness / 2.0, "radius": float(ent.radius), "sides": int(ent.sides)},
+        {
+            "halfHeight": thickness / 2.0,
+            "radius": float(ent.radius),
+            "sides": int(ent.sides),
+        },
         position=(ent.center.x, ent.center.y, ent.center.z),
         rotation=rotation,
     )
@@ -1225,7 +1232,7 @@ def _regular_polygon_tree(
 def _reflection_line_tree(
     ent: ReflectionLine,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(
         props, "ReflectionLine", {"length": 5.0, "thickness": 0.04}, styles_map
@@ -1241,7 +1248,7 @@ def _reflection_line_tree(
 def _reflection_plane_tree(
     ent: ReflectionPlane,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     plane = ent.plane
     local_props = dict(props)
@@ -1272,7 +1279,7 @@ def _reflection_plane_tree(
 def _reflection_point_tree(
     ent: ReflectionPoint,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "ReflectionPoint", {"extent": 1.0}, styles_map)
     extent = float(_param(resolved, "extent", 1.0))
@@ -1286,7 +1293,7 @@ def _reflection_point_tree(
 def _inversion_tree(
     ent: Inversion,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Inversion", {}, styles_map)
     tree = primitive(
@@ -1300,7 +1307,7 @@ def _inversion_tree(
 def _rotor_tree(
     ent: Rotor,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Rotor", {"discRadius": 1.5}, styles_map)
     radius = float(_param(resolved, "discRadius", 1.5))
@@ -1313,7 +1320,7 @@ def _rotor_tree(
 def _translator_tree(
     ent: Translator,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Translator", {"length": 3.0}, styles_map)
     length = float(_param(resolved, "length", 3.0))
@@ -1327,9 +1334,11 @@ def _translator_tree(
 def _dilator_tree(
     ent: Dilator,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
-    resolved = _resolve(props, "Dilator", {"ringCount": 4, "maxRadius": 3.0}, styles_map)
+    resolved = _resolve(
+        props, "Dilator", {"ringCount": 4, "maxRadius": 3.0}, styles_map
+    )
     ring_count = max(int(_param(resolved, "ringCount", 4)), 1)
     max_radius = float(_param(resolved, "maxRadius", 3.0))
     position = (ent.origin.x, ent.origin.y, ent.origin.z)
@@ -1349,7 +1358,7 @@ def _dilator_tree(
 def _motor_tree(
     ent: Motor,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "Motor", {}, styles_map)
     axis = _normalize((ent.rotor.axis.x, ent.rotor.axis.y, ent.rotor.axis.z))
@@ -1369,7 +1378,7 @@ def _motor_tree(
 def _general_rotor_tree(
     ent: GeneralRotor,
     props: dict[str, Any],
-    styles_map: dict[str, Any] | None,
+    styles_map: StylesMap | None,
 ) -> tuple[Any, dict[str, Any]]:
     resolved = _resolve(props, "GeneralRotor", {}, styles_map)
     tree = _rotor_glyph(

@@ -165,6 +165,8 @@ def test_n2_operator_creation_raises_origin_reflection(basis_e2):
     """E2 raises TypeError for ReflectionPoint."""
     with pytest.raises(TypeError):
         create_operator(basis_e2, ReflectionPoint(Point(0, 0, 0)))
+
+
 def test_rotor_sign_convention_90_deg_z(basis_e2):
     """Rotor of +π/2 about z-axis applied to e₁ gives e₂ (counter‑clockwise).
 

@@ -18,6 +18,6 @@ class Refinable(Protocol):
     decide whether an entity is refinable.
     """
 
-    def refine(self):
+    def refine(self) -> object:
         """Refine this raw entity into its specific geometric entity."""
         ...

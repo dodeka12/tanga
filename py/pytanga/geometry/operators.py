@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from .entities import (
     Direction,
@@ -26,6 +26,9 @@ from .entities import (
     to_float,
     to_point,
 )
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -44,7 +47,7 @@ class ReflectionLine:
 
     line: Line
 
-    def __init__(self, line_or_direction: Line | Direction):
+    def __init__(self, line_or_direction: Line | Direction) -> None:
         if isinstance(line_or_direction, Direction):
             line_or_direction = Line(Point(0, 0, 0), line_or_direction)
         elif not isinstance(line_or_direction, Line):
@@ -75,7 +78,7 @@ class ReflectionPlane:
 
     plane: Plane
 
-    def __init__(self, plane_or_normal: Plane | Direction):
+    def __init__(self, plane_or_normal: Plane | Direction) -> None:
         if isinstance(plane_or_normal, Direction):
             plane_or_normal = Plane(Point(0, 0, 0), plane_or_normal)
         elif not isinstance(plane_or_normal, Plane):
@@ -103,7 +106,7 @@ class ReflectionPoint:
 
     point: Point
 
-    def __init__(self, point: Point):
+    def __init__(self, point: "Point | MV") -> None:
         point = to_point(point)
         object.__setattr__(self, "point", point)
 
@@ -124,7 +127,7 @@ class Inversion:
     center: Point
     radius: float = 1.0
 
-    def __init__(self, center: Point, radius: float = 1.0):
+    def __init__(self, center: "Point | MV", radius: "float | MV" = 1.0) -> None:
         center = to_point(center)
         radius = to_float(radius)
         object.__setattr__(self, "center", center)
@@ -144,7 +147,7 @@ class Rotor:
     angle: float
     axis: Direction
 
-    def __init__(self, angle: float, axis: Direction):
+    def __init__(self, angle: "float | MV", axis: "Direction | MV") -> None:
         angle = to_float(angle)
         axis = to_direction(axis)
         object.__setattr__(self, "angle", angle)
@@ -164,7 +167,7 @@ class Translator:
 
     vector: Direction
 
-    def __init__(self, vector: Direction):
+    def __init__(self, vector: "Direction | MV") -> None:
         vector = to_direction(vector)
         object.__setattr__(self, "vector", vector)
 
@@ -189,7 +192,9 @@ class Dilator:
     factor: float
     origin: Point = field(default_factory=lambda: Point(0, 0, 0))
 
-    def __init__(self, factor: float, origin: Optional[Point] = None):
+    def __init__(
+        self, factor: "float | MV", origin: "Point | MV | None" = None
+    ) -> None:
         factor = to_float(factor)
         origin = to_point(origin) if origin is not None else Point(0, 0, 0)
 
@@ -251,7 +256,7 @@ class Motor:
     rotor: GeneralRotor
     translator: Translator
 
-    def __init__(self, rotor: Rotor | GeneralRotor, translator: Translator):
+    def __init__(self, rotor: Rotor | GeneralRotor, translator: Translator) -> None:
         if not isinstance(translator, Translator):
             raise TypeError(f"Expected Translator, got {type(translator).__name__}")
         if isinstance(rotor, GeneralRotor):
@@ -283,7 +288,12 @@ class GeneralRotor:
     axis: Direction
     origin: Point = field(default_factory=lambda: Point(0, 0, 0))
 
-    def __init__(self, angle: float, axis: Direction, origin: Optional[Point] = None):
+    def __init__(
+        self,
+        angle: "float | MV",
+        axis: "Direction | MV",
+        origin: "Point | MV | None" = None,
+    ) -> None:
         angle = to_float(angle)
         axis = to_direction(axis)
         origin = to_point(origin) if origin is not None else Point(0, 0, 0)
@@ -307,7 +317,9 @@ class TripleReflection:
     This class preserves the raw plane information for downstream use.
     """
 
-    planes: tuple[Plane, Plane, Plane]
+    #: The three reflection hyperplanes — a :class:`Plane` in 3D, a
+    #: :class:`Line` in the 2D PGA2 model, where the line is the mirror.
+    planes: tuple[Plane | Line, Plane | Line, Plane | Line]
 
     def __repr__(self) -> str:
         return f"TripleRefl({self.planes[0]}, {self.planes[1]}, {self.planes[2]})"
@@ -321,7 +333,7 @@ class VersorFactors:
     operator (e.g. mixed dilator+rotor combinations in N3/N2).
     """
 
-    factors: tuple = ()  # tuple of MV (grade-1 vectors)
+    factors: "tuple[MV, ...]" = ()  # tuple of MV (grade-1 vectors)
 
     def __repr__(self) -> str:
         return f"VersorFactors({len(self.factors)} factors)"

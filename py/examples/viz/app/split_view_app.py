@@ -29,8 +29,11 @@ import math
 
 from pytanga.geometry import Line, Point
 from pytanga.viz import (
+    ActHandler,
     ActPoint,
+    ActSceneObject,
     CoordinateSystem,
+    DragEvent,
     DragMode,
     PointPath,
     PointPathStyle,
@@ -57,6 +60,9 @@ _AMP_MAX = 1.5
 class SplitViewApp(VisualizerApp):
     """A split-view app: sin/cos plots on the left, a draggable polygon on the right."""
 
+    #: Built in the view-building hook, which runs before any event.
+    _sin_cs: CoordinateSystem
+
     def __init__(self) -> None:
         super().__init__(
             title="Tanga — Split-View Plot & Drag",
@@ -71,7 +77,6 @@ class SplitViewApp(VisualizerApp):
         self._xs = [0.05 * i for i in range(int(_X_MAX / 0.05) + 1)]
         self._amplitude = _AMP0
         self._sin_path = PointPath()
-        self._sin_cs: CoordinateSystem | None = None
         self._amp: ActPoint | None = None
         self._points: list[ActPoint] = []
         self._lines: list[VizObjectRef] = []
@@ -182,15 +187,16 @@ class SplitViewApp(VisualizerApp):
         for x in self._xs:
             self._sin_path.add((x, self._amplitude * math.sin(x)))
 
-    async def _on_amp_drag_end(self, _event, ap: ActPoint) -> None:
+    async def _on_amp_drag_end(self, _event: DragEvent, ap: ActSceneObject) -> None:
+        assert isinstance(ap, ActPoint), "the amplitude handle is an ActPoint"
         amp = min(max(ap.point.y, _AMP_MIN), _AMP_MAX)
         self._amplitude = amp
         self._fill_sin_path()
         self._sin_cs.update_plots()
         self._sin_scene.flush()
 
-    def _line_handler(self, i: int):
-        async def handler(event, _ap: ActPoint):
+    def _line_handler(self, i: int) -> ActHandler:
+        async def handler(event: DragEvent, _ap: ActSceneObject) -> bool:
             self._update_lines(i, event.world_position)
             return False  # let ActPoint move the point and flush
 
@@ -210,4 +216,3 @@ class SplitViewApp(VisualizerApp):
 
 if __name__ == "__main__":
     SplitViewApp().run()
-
