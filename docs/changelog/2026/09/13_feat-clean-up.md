@@ -12,5 +12,8 @@
   carries per-line `# noqa: ANN…` directives (added with
   `ruff check --add-noqa`, ~2 600 directives across 124 files), and `ANN` was
   removed from the `py/tests/**` per-file-ignores.  The current baseline passes,
-  while **new** test functions must be annotated to pass `ruff check` (the
-  star-import `F403`/`F405` debt stays blanket-ignored).
+  while **new** test functions must be annotated to pass `ruff check`.
+- **No star imports anywhere** — the last two `from pytanga.geometry.* import *`
+  lines (in the N2/N3 analysis tests) were replaced with explicit
+  entity/operator imports, and `F403`/`F405` were dropped from the
+  `py/tests/**` per-file-ignores, so star imports are now rejected repo-wide.

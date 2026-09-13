@@ -42,13 +42,14 @@ extend-select = ["ANN"]
 ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
-# The test suite's established star-import style (`from pytanga.algebra import *`
-# brings in the blade names) is suppressed wholesale, so the `F403`/`F405` and
-# accompanying `F401`/`E402`/`F841`/`E741` debt in `py/tests` is tracked
-# separately.  ANN coverage is deliberately *not* blanket-ignored here: the
-# existing unannotated tests carry per-line `# noqa: ANN…` directives as a
-# frozen baseline, so **new** tests must be annotated to pass the gate.
-"py/tests/**" = ["F401", "F403", "F405", "E402", "E741", "F841"]
+# The remaining `F401`/`E402`/`F841`/`E741` debt in `py/tests` is tracked
+# separately.  Star imports are *not* ignored anywhere: the two analysis test
+# files import their entity/operator classes explicitly, so `F403`/`F405` are
+# enforced repo-wide.  ANN coverage is deliberately *not* blanket-ignored here
+# either: the existing unannotated tests carry per-line `# noqa: ANN…`
+# directives as a frozen baseline, so **new** tests must be annotated to pass
+# the gate.
+"py/tests/**" = ["F401", "E402", "E741", "F841"]
 
 [tool.ty.rules]
 # Approximate mypy/pyright --strict; paired with ruff ANN for coverage.

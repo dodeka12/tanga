@@ -15,8 +15,30 @@ import pytest
 from pytanga.basis import BasisN3
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
-from pytanga.geometry.entities import *
-from pytanga.geometry.operators import *
+from pytanga.geometry.entities import (
+    Circle,
+    Direction,
+    HDirection,
+    HPoint,
+    Line,
+    Plane,
+    Point,
+    PointPair,
+    Space,
+    Sphere,
+)
+from pytanga.geometry.operators import (
+    Dilator,
+    GeneralRotor,
+    Inversion,
+    Motor,
+    ReflectionLine,
+    ReflectionPlane,
+    ReflectionPoint,
+    Rotor,
+    Translator,
+    VersorFactors,
+)
 
 
 @pytest.fixture(scope="module")
