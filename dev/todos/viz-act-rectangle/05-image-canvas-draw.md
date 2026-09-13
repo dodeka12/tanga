@@ -26,7 +26,7 @@ drag end it removes the preview and constructs the active rectangle.
   - Extend the image-canvas example to draw a rectangle on the image and print
     the resulting `ActRectangle2D`.
 
-- [ ] **5.3 — tests**
+- [x] **5.3 — tests**
   - `draw_rectangle` builds a preview during drag and finalizes an
     `ActRectangle2D` on drag end (fake transport/handle).
 
