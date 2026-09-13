@@ -16,30 +16,30 @@ from pytanga.viz._label_frame import compute_label_position, get_label_frame
 
 
 class TestLabelPosition:
-    def test_finite_line_label_at_midpoint(self):
+    def test_finite_line_label_at_midpoint(self):  # noqa: ANN201
         pos = compute_label_position(Line.from_points(Point(1, 0, 0), Point(5, 0, 0)))
         assert pos == (3.0, 0.0, 0.0)
 
-    def test_diagonal_line_midpoint(self):
+    def test_diagonal_line_midpoint(self):  # noqa: ANN201
         pos = compute_label_position(Line.from_points(Point(0, 0, 0), Point(2, 2, 0)))
         assert pos == (1.0, 1.0, 0.0)
 
-    def test_infinite_line_label_at_midpoint(self):
+    def test_infinite_line_label_at_midpoint(self):  # noqa: ANN201
         pos = compute_label_position(Line(Point(0, 0, 0), Direction(1, 0, 0)))
         assert pos == (10.0, 0.0, 0.0)
 
-    def test_reflection_line_label_at_midpoint(self):
+    def test_reflection_line_label_at_midpoint(self):  # noqa: ANN201
         rl = ReflectionLine(Line.from_points(Point(0, 0, 0), Point(6, 0, 0)))
         assert compute_label_position(rl) == (3.0, 0.0, 0.0)
 
-    def test_reflection_plane_label_uses_plane_normal(self):
+    def test_reflection_plane_label_uses_plane_normal(self):  # noqa: ANN201
         # Regression: ``ReflectionPlane`` exposes the wrapped ``plane``, not a
         # ``normal``, so the label frame must read ``plane.normal``.
         rp = ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 0, 1)))
         frame = get_label_frame(rp)
         assert frame.z_axis == (0.0, 0.0, 1.0)
 
-    def test_reflection_plane_tilted_normal(self):
+    def test_reflection_plane_tilted_normal(self):  # noqa: ANN201
         rp = ReflectionPlane(Plane(Point(0, 0, 0), Direction(0, 1, 0)))
         frame = get_label_frame(rp)
         assert frame.z_axis == (0.0, 1.0, 0.0)
@@ -47,11 +47,11 @@ class TestLabelPosition:
         assert frame.x_axis != (0.0, 0.0, 0.0)
         assert sum(a * b for a, b in zip(frame.x_axis, frame.z_axis)) == 0.0
 
-    def test_point_label_unchanged(self):
+    def test_point_label_unchanged(self):  # noqa: ANN201
         # A point's local origin IS its position, so the anchor stays (0,0,0).
         assert compute_label_position(Point(3, 3, 3)) == (0.0, 0.0, 0.0)
 
-    def test_viz_line_label_serialized_at_midpoint(self):
+    def test_viz_line_label_serialized_at_midpoint(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -60,7 +60,7 @@ class TestLabelPosition:
         assert len(labels) == 1
         assert labels[0]["position"] == [2.0, 0.0, 0.0]
 
-    def test_update_label_recomputes_on_along_change(self):
+    def test_update_label_recomputes_on_along_change(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
         from pytanga.viz._styles import LabelStyle
 
@@ -76,7 +76,7 @@ class TestLabelPosition:
         labels = [o for o in viz.main_scene.full_state() if o.get("kind") == "label"]
         assert labels[0]["position"] == [4.0, 0.0, 0.0]
 
-    def test_viz_only_entity_label_created(self):
+    def test_viz_only_entity_label_created(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -86,19 +86,19 @@ class TestLabelPosition:
         assert len(labels) == 1
         assert labels[0]["text"] == "D"
 
-    def test_viz_only_cylinder_label_created(self):
+    def test_viz_only_cylinder_label_created(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         eid = viz.add(Cylinder(), label="C")
         assert len(viz.main_scene.get_label_ids(eid)) == 1
 
-    def test_general_rotor_label_frame(self):
+    def test_general_rotor_label_frame(self):  # noqa: ANN201
         gr = GeneralRotor(angle=0.5, axis=Direction(0, 0, 1), origin=Point(1, 0, 0))
         frame = get_label_frame(gr)
         assert frame.z_axis == (0.0, 0.0, 1.0)
 
-    def test_motor_label_frame(self):
+    def test_motor_label_frame(self):  # noqa: ANN201
         m = Motor(
             Rotor(angle=0.5, axis=Direction(0, 0, 1)), Translator(Direction(1, 0, 0))
         )

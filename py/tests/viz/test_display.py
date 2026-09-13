@@ -15,14 +15,14 @@ def _viz() -> Visualizer:
 
 
 class TestDisplaySnapshotJupyter:
-    def test_returns_iframe_with_data_url(self):
+    def test_returns_iframe_with_data_url(self):  # noqa: ANN201
         viz = _viz()
         viz._jupyter = True
         result = viz.display_snapshot()
         assert result.src.startswith("data:text/html;charset=utf-8;base64,")
         assert "<iframe" in result._repr_html_()
 
-    def test_src_is_base64_not_raw_html(self):
+    def test_src_is_base64_not_raw_html(self):  # noqa: ANN201
         viz = _viz()
         viz._jupyter = True
         result = viz.display_snapshot()
@@ -32,14 +32,14 @@ class TestDisplaySnapshotJupyter:
         assert "<style" not in result.src
         assert "<body" not in result.src
 
-    def test_int_width_height_get_px_suffix(self):
+    def test_int_width_height_get_px_suffix(self):  # noqa: ANN201
         viz = _viz()
         viz._jupyter = True
         result = viz.display_snapshot(width=400, height=300)
         assert result.width == "400px"
         assert result.height == "300px"
 
-    def test_display_static_alias(self):
+    def test_display_static_alias(self):  # noqa: ANN201
         viz = _viz()
         viz._jupyter = True
         with pytest.warns(DeprecationWarning):
@@ -48,7 +48,7 @@ class TestDisplaySnapshotJupyter:
 
 
 class TestDisplaySnapshotNonJupyter:
-    def test_opens_browser_and_returns_none(self, monkeypatch, tmp_path):
+    def test_opens_browser_and_returns_none(self, monkeypatch, tmp_path):  # noqa: ANN001, ANN201
         viz = _viz()
         viz._jupyter = False
         opened = []
@@ -71,18 +71,18 @@ class TestDisplaySnapshotNonJupyter:
 
 
 class TestDisplayRow:
-    def _handles(self):
+    def _handles(self):  # noqa: ANN202
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         return viz, viz.scene("one"), viz.scene("two")
 
-    def test_display_live_main_scene_non_jupyter(self):
+    def test_display_live_main_scene_non_jupyter(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz._jupyter = False
         html = viz.display()
         assert "<iframe src=" in html
         assert viz.url in html
 
-    def test_display_row_live(self, monkeypatch):
+    def test_display_row_live(self, monkeypatch):  # noqa: ANN001, ANN201
         viz, one, two = self._handles()
         captured = []
         monkeypatch.setattr("IPython.display.display", lambda obj: captured.append(obj))
@@ -90,7 +90,7 @@ class TestDisplayRow:
         assert len(captured) == 1
         assert captured[0].data.count("<iframe src=") == 2
 
-    def test_display_row_static(self, monkeypatch):
+    def test_display_row_static(self, monkeypatch):  # noqa: ANN001, ANN201
         viz, one, two = self._handles()
         captured = []
         monkeypatch.setattr("IPython.display.display", lambda obj: captured.append(obj))
@@ -103,12 +103,12 @@ class TestDisplayRow:
 class TestDisplayLiveJupyter:
     """Idempotent ``display()`` for the live viewer."""
 
-    def _patch_display(self, monkeypatch, captured):
+    def _patch_display(self, monkeypatch, captured):  # noqa: ANN001, ANN202
         monkeypatch.setattr(
             "IPython.display.display", lambda obj, **kw: captured.append((obj, kw))
         )
 
-    def test_no_server_prints_hint_and_skips_iframe(self, monkeypatch, capsys):
+    def test_no_server_prints_hint_and_skips_iframe(self, monkeypatch, capsys):  # noqa: ANN001, ANN201
         viz = _viz()
         viz._jupyter = True
         captured = []
@@ -120,7 +120,7 @@ class TestDisplayLiveJupyter:
         assert captured == []
         assert "start_server()" in capsys.readouterr().out
 
-    def test_emits_iframe_once(self, monkeypatch):
+    def test_emits_iframe_once(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = _viz()
         viz._jupyter = True
         viz._server = object()  # non-None → "running"
@@ -137,7 +137,7 @@ class TestDisplayLiveJupyter:
         assert kwargs["display_id"] == "tanga-main"
         assert flushes == [True]
 
-    def test_repeat_display_flushes_without_emitting(self, monkeypatch):
+    def test_repeat_display_flushes_without_emitting(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
@@ -152,7 +152,7 @@ class TestDisplayLiveJupyter:
         assert len(captured) == 1
         assert flushes == [True, True]
 
-    def test_new_execution_emits_again(self, monkeypatch):
+    def test_new_execution_emits_again(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
@@ -171,7 +171,7 @@ class TestDisplayLiveJupyter:
 
         assert len(captured) == 2
 
-    def test_caller_viewer_name_is_used(self, monkeypatch):
+    def test_caller_viewer_name_is_used(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
@@ -185,7 +185,7 @@ class TestDisplayLiveJupyter:
         assert kwargs["display_id"] == "tanga-cell-a"
         assert iframe.src.endswith("?viewer=cell-a")
 
-    def test_scene_handle_emits_for_its_scene(self, monkeypatch):
+    def test_scene_handle_emits_for_its_scene(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = _viz()
         viz._jupyter = True
         viz._server = object()
@@ -204,7 +204,7 @@ class TestDisplayLiveJupyter:
 
 
 class TestContextManager:
-    def test_with_viz_shows_on_entry_and_flushes_on_exit(self, monkeypatch):
+    def test_with_viz_shows_on_entry_and_flushes_on_exit(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         calls = []
         monkeypatch.setattr(
@@ -220,7 +220,7 @@ class TestContextManager:
 
         assert calls == [("reset", ""), ("show",), ("flush",)]
 
-    def test_with_scene_shows_on_entry_and_flushes_on_exit(self, monkeypatch):
+    def test_with_scene_shows_on_entry_and_flushes_on_exit(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         handle = viz.scene("detail")
         calls = []
@@ -236,7 +236,7 @@ class TestContextManager:
 
         assert calls == [("reset", "detail"), ("show",), ("flush",)]
 
-    def test_exit_propagates_exception(self, monkeypatch):
+    def test_exit_propagates_exception(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         monkeypatch.setattr(viz, "_reset_scene", lambda name: None)
         monkeypatch.setattr(viz, "show", lambda: None)
@@ -246,12 +246,12 @@ class TestContextManager:
             with viz:
                 raise RuntimeError("boom")
 
-    def test_with_viz_preserves_default_axes_grid(self, monkeypatch):
+    def test_with_viz_preserves_default_axes_grid(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer()  # defaults: axes + grid enabled
         monkeypatch.setattr(viz, "show", lambda: None)
         monkeypatch.setattr(viz, "flush", lambda **kw: None)
 
-        def kinds():
+        def kinds():  # noqa: ANN202
             return sorted(o.kind for o in viz._scenes[""]._objects.values())
 
         assert "Axes3D" in kinds()

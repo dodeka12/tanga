@@ -30,7 +30,7 @@ from pytanga.geometry.operators import (
 
 
 @pytest.fixture(scope="module")
-def b():
+def b():  # noqa: ANN201
     return BasisE2()
 
 
@@ -41,7 +41,7 @@ def b():
 # --- E1. Direction (OPNS) ---
 
 
-def test_entity_direction_opns_round_trip(b):
+def test_entity_direction_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E1: create Direction(3,-4,0) → analyze OPNS → assert exact fields."""
     mv = create_entity(b, Direction(3, -4, 0))
     r = analyze_entity(mv)
@@ -55,7 +55,7 @@ def test_entity_direction_opns_round_trip(b):
 # --- E2. Space ---
 
 
-def test_entity_space_opns_round_trip(b):
+def test_entity_space_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E2: create Space(scale=3.5) → analyze → assert scale."""
     mv = create_entity(b, Space(scale=3.5))
     r = analyze_entity(mv)
@@ -66,7 +66,7 @@ def test_entity_space_opns_round_trip(b):
 # --- E3. Direction (IPNS) ---
 
 
-def test_entity_direction_ipns_round_trip(b, monkeypatch):
+def test_entity_direction_ipns_round_trip(b, monkeypatch):  # noqa: ANN001, ANN201
     """E3: create Direction(1,2,0) → analyze IPNS → assert normalized Direction.
 
     In E2 IPNS, a grade-1 blade represents a line through the origin
@@ -91,7 +91,7 @@ def test_entity_direction_ipns_round_trip(b, monkeypatch):
 # --- O1. Rotor ---
 
 
-def test_operator_rotor_round_trip(b):
+def test_operator_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O1: create Rotor(π/2, z-axis) → analyze → assert angle & axis.
 
     Analysis returns positive angle via acos(|dot|).  Axis sign is
@@ -110,7 +110,7 @@ def test_operator_rotor_round_trip(b):
 # --- O2. ReflectionLine ---
 
 
-def test_operator_reflection_line_round_trip(b):
+def test_operator_reflection_line_round_trip(b):  # noqa: ANN001, ANN201
     """O2: create ReflectionLine(y-axis) → analyze → assert ReflectionLine.
 
     E2 reflection line versor is a grade-1 vector (the line direction).
@@ -131,7 +131,7 @@ def test_operator_reflection_line_round_trip(b):
 # --- A1. Rotor ---
 
 
-def test_apply_rotor_vector_rotation_z(b):
+def test_apply_rotor_vector_rotation_z(b):  # noqa: ANN001, ANN201
     """A1: Rotor(90°, z) on e₁ → result is e₂ (counter‑clockwise).
 
     First-principles: E2 sign convention — +90° rotates
@@ -148,7 +148,7 @@ def test_apply_rotor_vector_rotation_z(b):
 # --- A2. ReflectionLine ---
 
 
-def test_apply_reflection_line_vector_mirror_y(b):
+def test_apply_reflection_line_vector_mirror_y(b):  # noqa: ANN001, ANN201
     """A2: ReflectionLine(y-axis) on (3,−2) → (−3,−2).
 
     Line reflection: d·v·d⁻¹.  Component parallel to d stays,
@@ -161,7 +161,7 @@ def test_apply_reflection_line_vector_mirror_y(b):
     assert float(result[b.E2]) == pytest.approx(-2, abs=1e-10)
 
 
-def test_apply_reflection_line_vector_mirror_x(b):
+def test_apply_reflection_line_vector_mirror_x(b):  # noqa: ANN001, ANN201
     """A2b: ReflectionLine(x-axis) on (3,−2) → (3,2).
 
     d = e₁ flips e₂, parallel e₁ stays unchanged.
@@ -178,7 +178,7 @@ def test_apply_reflection_line_vector_mirror_x(b):
 # ===============================================================
 
 
-def test_create_point_components(b):
+def test_create_point_components(b):  # noqa: ANN001, ANN201
     """Point maps to e1/e2 components independent of OPNS/IPNS."""
     mv = create_entity(b, Point(1, 2, 0))
     assert set(mv.grades) == {1}
@@ -186,14 +186,14 @@ def test_create_point_components(b):
     assert float(mv[2]) == pytest.approx(2)
 
 
-def test_create_line_not_through_origin_raises(b):
+def test_create_line_not_through_origin_raises(b):  # noqa: ANN001, ANN201
     """Line offset from origin must raise ValueError in E2."""
     line = Line(origin=Point(1, 2, 0), direction=Direction(1, 0, 0))
     with pytest.raises(ValueError, match="only lines through the origin"):
         create_entity(b, line)
 
 
-def test_create_direction_zero_norm_raises(b):
+def test_create_direction_zero_norm_raises(b):  # noqa: ANN001, ANN201
     """E2 create_direction permits zero-norm; analyze_entity rejects it.
 
     E2 create_direction doesn't validate zero-norm at creation time,
@@ -204,14 +204,14 @@ def test_create_direction_zero_norm_raises(b):
         analyze_entity(mv)
 
 
-def test_analyze_zero_vector_raises(b):
+def test_analyze_zero_vector_raises(b):  # noqa: ANN001, ANN201
     """Zero MV passed to analyze_entity must raise ValueError."""
     zero = b.multivector({})
     with pytest.raises(ValueError):
         analyze_entity(zero)
 
 
-def test_ipns_grade_2_raises(b, monkeypatch):
+def test_ipns_grade_2_raises(b, monkeypatch):  # noqa: ANN001, ANN201
     """IPNS grade-2 bivector is only the trivial origin → ValueError."""
     monkeypatch.setattr(b, "opns", False)
     # Create a grade-2 bivector = pseudoscalar
@@ -244,7 +244,7 @@ from pytanga.geometry.operators import (
         (HPoint, (Point(0, 0, 0),)),
     ],
 )
-def test_n2_entity_raises(b, entity_cls, args):
+def test_n2_entity_raises(b, entity_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises(ValueError, match="N2"):
         create_entity(b, entity_cls(*args))
 
@@ -260,6 +260,6 @@ def test_n2_entity_raises(b, entity_cls, args):
         (ReflectionPoint, (Point(0, 0, 0),)),
     ],
 )
-def test_n2_operator_raises(b, op_cls, args):
+def test_n2_operator_raises(b, op_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises((ValueError, TypeError)):
         create_operator(b, op_cls(*args))

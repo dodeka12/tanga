@@ -12,32 +12,32 @@ from pytanga.blade_mask import BladeMask
 
 
 class TestDataArray:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         self.alg = BasisE3()
         self.vec_mask = BladeMask(self.alg, [self.alg.E1, self.alg.E2, self.alg.E3])
 
-    def test_numpy_scalar_1d(self):
+    def test_numpy_scalar_1d(self):  # noqa: ANN201
         d = DataArray(np.array([1.0, 2.0, 3.0]), masks=("n",))
         assert d.ndim == 1
         assert d.shape == (3,)
         assert d.masks == ("n",)
 
-    def test_numpy_scalar_2d(self):
+    def test_numpy_scalar_2d(self):  # noqa: ANN201
         d = DataArray(np.zeros((3, 4)), masks=("n", "m"))
         assert d.ndim == 2
         assert d.masks == ("n", "m")
 
-    def test_numpy_point_data(self):
+    def test_numpy_point_data(self):  # noqa: ANN201
         d = DataArray(np.zeros((100, 3)), masks=("pnt_idx", self.vec_mask))
         assert d.ndim == 2
         assert d.masks == ("pnt_idx", self.vec_mask)
 
-    def test_list_of_scalars(self):
+    def test_list_of_scalars(self):  # noqa: ANN201
         d = DataArray([1.0, 2.0, 3.0], masks=("n",))
         assert d.ndim == 1
         np.testing.assert_allclose(d.array, [1.0, 2.0, 3.0])
 
-    def test_list_of_mvs_counting_first(self):
+    def test_list_of_mvs_counting_first(self):  # noqa: ANN201
         mvs = [self.alg.multivector({"e1": i + 1.0}) for i in range(4)]
         d = DataArray(mvs, masks=("n", self.vec_mask))
         assert d.ndim == 2
@@ -45,26 +45,26 @@ class TestDataArray:
         assert d.masks == ("n", self.vec_mask)
         np.testing.assert_allclose(d.array[:, 0], [1.0, 2.0, 3.0, 4.0])
 
-    def test_list_of_mvs_blade_first(self):
+    def test_list_of_mvs_blade_first(self):  # noqa: ANN201
         mvs = [self.alg.multivector({"e1": i + 1.0}) for i in range(4)]
         d = DataArray(mvs, masks=(self.vec_mask, "n"))
         assert d.shape == (3, 4)
         assert d.masks == (self.vec_mask, "n")
         np.testing.assert_allclose(d.array[0, :], [1.0, 2.0, 3.0, 4.0])
 
-    def test_rename_axis(self):
+    def test_rename_axis(self):  # noqa: ANN201
         d = DataArray(np.zeros((3, 4)), masks=("n", "m"))
         d2 = d.rename_axis("n", "pnt_idx")
         assert d.masks == ("n", "m")  # old unchanged
         assert d2.masks == ("pnt_idx", "m")
 
-    def test_call_rename(self):
+    def test_call_rename(self):  # noqa: ANN201
         d = DataArray(np.zeros((3, 4)), masks=("n", "m"))
         out = d(n="pnt_idx")
         assert out is d
         assert d.masks == ("pnt_idx", "m")
 
-    def test_errors(self):
+    def test_errors(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             DataArray(np.zeros((2, 2)), masks=("n", 3))
 

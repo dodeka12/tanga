@@ -29,7 +29,7 @@ from pytanga.geometry.operators import (
 
 
 @pytest.fixture(scope="module")
-def b():
+def b():  # noqa: ANN201
     return BasisPGA2()
 
 
@@ -38,7 +38,7 @@ def b():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_entity_point_opns_round_trip(b):
+def test_entity_point_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E1: create Point → analyze → assert exact Euclidean coordinates."""
     mv = create_entity(b, Point(3, -2, 0))
     r = analyze_entity(mv)
@@ -47,7 +47,7 @@ def test_entity_point_opns_round_trip(b):
     assert r.y == pytest.approx(-2)
 
 
-def test_entity_direction_opns_round_trip(b):
+def test_entity_direction_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E2: create Direction → analyze → assert exact components."""
     mv = create_entity(b, Direction(1, 2, 0))
     r = analyze_entity(mv)
@@ -56,7 +56,7 @@ def test_entity_direction_opns_round_trip(b):
     assert r.y == pytest.approx(2)
 
 
-def test_entity_line_opns_round_trip(b):
+def test_entity_line_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E3: create Line → analyze → assert origin and direction."""
     line = Line(origin=Point(1, 0, 0), direction=Direction(0, 1, 0))
     mv = create_entity(b, line)
@@ -65,7 +65,7 @@ def test_entity_line_opns_round_trip(b):
     assert abs(r.direction.y) == pytest.approx(1, abs=0.1)
 
 
-def test_entity_space_round_trip(b):
+def test_entity_space_round_trip(b):  # noqa: ANN001, ANN201
     """E4: create Space → analyze → assert Space with scale."""
     mv = create_entity(b, Space(3.0))
     r = analyze_entity(mv)
@@ -73,7 +73,7 @@ def test_entity_space_round_trip(b):
     assert r.scale == pytest.approx(3.0)
 
 
-def test_meet_join_pga2_convention(b):
+def test_meet_join_pga2_convention(b):  # noqa: ANN001, ANN201
     """PGA2 meet = intersection, join = union/span (Gunn/Dorst)."""
     p1 = create_entity(b, Point(1, 0, 0))
     p2 = create_entity(b, Point(0, 1, 0))
@@ -94,7 +94,7 @@ def test_meet_join_pga2_convention(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_scale2_point_invariant(b):
+def test_scale2_point_invariant(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Point(3, -2, 0)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
@@ -102,7 +102,7 @@ def test_scale2_point_invariant(b):
     assert r.y == pytest.approx(-2, abs=1e-6)
 
 
-def test_scale2_line_invariant(b):
+def test_scale2_line_invariant(b):  # noqa: ANN001, ANN201
     direction = Direction(1, 2, 0)
     unit = direction.normalized()
     pt = Point(1, 2, 0)
@@ -121,7 +121,7 @@ def test_scale2_line_invariant(b):
     assert cross == pytest.approx(0, abs=1e-6)
 
 
-def test_scale2_space_doubles(b):
+def test_scale2_space_doubles(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Space(2.5)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
@@ -133,7 +133,7 @@ def test_scale2_space_doubles(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_operator_rotor_round_trip(b):
+def test_operator_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O1: create Rotor → analyze → assert exact angle and axis."""
     mv = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
     r = analyze_operator(mv)
@@ -142,7 +142,7 @@ def test_operator_rotor_round_trip(b):
     assert r.axis.z == pytest.approx(1)
 
 
-def test_operator_translator_round_trip(b):
+def test_operator_translator_round_trip(b):  # noqa: ANN001, ANN201
     """O2: create Translator → analyze → assert exact vector."""
     mv = create_operator(b, Translator(Direction(2, -1, 0)))
     r = analyze_operator(mv)
@@ -151,7 +151,7 @@ def test_operator_translator_round_trip(b):
     assert r.vector.y == pytest.approx(-1)
 
 
-def test_operator_motor_round_trip(b):
+def test_operator_motor_round_trip(b):  # noqa: ANN001, ANN201
     """O3: create Motor → analyze → verify round-trip (Motor or GeneralRotor)."""
     mv = create_operator(
         b, Motor(Rotor(math.pi / 2, Direction(0, 0, 1)), Translator(Direction(1, 2, 0)))
@@ -164,7 +164,7 @@ def test_operator_motor_round_trip(b):
     )
 
 
-def test_operator_reflection_point_origin_round_trip(b):
+def test_operator_reflection_point_origin_round_trip(b):  # noqa: ANN001, ANN201
     """O5: create ReflectionPoint(0,0,0) -> analyze -> assert."""
     mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
@@ -173,7 +173,7 @@ def test_operator_reflection_point_origin_round_trip(b):
     )
 
 
-def test_operator_general_rotor_round_trip(b):
+def test_operator_general_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O6: create GeneralRotor → analyze → assert exact angle, axis, origin."""
     mv = create_operator(
         b,
@@ -196,7 +196,7 @@ def test_operator_general_rotor_round_trip(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_apply_translator_point_displacement(b):
+def test_apply_translator_point_displacement(b):  # noqa: ANN001, ANN201
     """A1: Translator applied to origin → assert displacement."""
     p = create_entity(b, Point(0, 0, 0))
     T = create_operator(b, Translator(Direction(3, -2, 0)))
@@ -207,7 +207,7 @@ def test_apply_translator_point_displacement(b):
     assert r.y == pytest.approx(-2)
 
 
-def test_apply_rotor_point_rotation(b):
+def test_apply_rotor_point_rotation(b):  # noqa: ANN001, ANN201
     """A2: Rotor (90° about z) applied to (1,0) → assert (0,1)."""
     p = create_entity(b, Point(1, 0, 0))
     R = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
@@ -218,7 +218,7 @@ def test_apply_rotor_point_rotation(b):
     assert r.y == pytest.approx(1, abs=1e-6)
 
 
-def test_apply_motor_point_motion(b):
+def test_apply_motor_point_motion(b):  # noqa: ANN001, ANN201
     """A3: Motor (translate +1x, rotate 90°) applied to origin."""
     p = create_entity(b, Point(0, 0, 0))
     M = create_operator(
@@ -231,7 +231,7 @@ def test_apply_motor_point_motion(b):
     assert r.y == pytest.approx(0, abs=1e-6)
 
 
-def test_apply_reflection_point_origin_reflection(b):
+def test_apply_reflection_point_origin_reflection(b):  # noqa: ANN001, ANN201
     """A5: ReflectionPoint(0,0,0) on (5,-3,0) -> Point(-5,3,0)."""
     p = create_entity(b, Point(5, -3, 0))
     op_mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
@@ -242,7 +242,7 @@ def test_apply_reflection_point_origin_reflection(b):
     assert r.y == pytest.approx(3)
 
 
-def test_apply_general_rotor_point_displaced_rotation(b):
+def test_apply_general_rotor_point_displaced_rotation(b):  # noqa: ANN001, ANN201
     """A6: GeneralRotor (rot 90° about center (1,0)) applied to (3,0)."""
     p = create_entity(b, Point(3, 0, 0))
     G = create_operator(
@@ -264,7 +264,7 @@ def test_apply_general_rotor_point_displaced_rotation(b):
 # --- O5b. ReflectionLine ---
 
 
-def test_operator_reflection_line_round_trip(b):
+def test_operator_reflection_line_round_trip(b):  # noqa: ANN001, ANN201
     """O5b: create ReflectionLine(x-axis) -> analyze -> assert."""
     line = Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0))
     mv = create_operator(b, ReflectionLine(line))
@@ -274,7 +274,7 @@ def test_operator_reflection_line_round_trip(b):
     assert abs(d.x) == pytest.approx(1, abs=1e-6)
 
 
-def test_apply_reflection_line_point_mirror_x(b):
+def test_apply_reflection_line_point_mirror_x(b):  # noqa: ANN001, ANN201
     """A5b: ReflectionLine(x-axis) on (3,1,0) -> Point(3,-1,0)."""
     p = create_entity(b, Point(3, 1, 0))
     L = create_operator(b, ReflectionLine(Line(Point(0, 0, 0), Direction(1, 0, 0))))

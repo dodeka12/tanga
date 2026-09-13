@@ -16,7 +16,7 @@ class TestProductTensorEInv:
     """Involution flags for product_tensor (a_inv, b_inv, c_inv, left)."""
 
     @staticmethod
-    def _random_mvs_and_tensors(alg, rng_seed=42):
+    def _random_mvs_and_tensors(alg, rng_seed=42):  # noqa: ANN001, ANN205
         """Return (full_mask, tA, tB, A, B) for a Euclidean 3D algebra."""
         full = BladeMask.full(alg)
         rng = np.random.default_rng(rng_seed)
@@ -31,7 +31,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # left_inv
     # ------------------------------------------------------------------
-    def test_default_is_identity(self, alg_float):
+    def test_default_is_identity(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, _, _ = self._random_mvs_and_tensors(alg_float)
         T_def = product_tensor(full, full, product=EProduct.GP)
         T_id = product_tensor(
@@ -44,7 +44,7 @@ class TestProductTensorEInv:
         )
         assert np.array_equal(T_def.data, T_id.data)
 
-    def test_left_rev_matches_gp_with_rev_a(self, alg_float):
+    def test_left_rev_matches_gp_with_rev_a(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T_std = product_tensor(full, full, product=EProduct.GP)
         T_rev_left = product_tensor(full, full, product=EProduct.GP, a_inv=EInv.REV)
@@ -57,7 +57,7 @@ class TestProductTensorEInv:
         C_via_inv = contract("kij,i,j->k", T_rev_left, tA, tB)
         assert np.allclose(C_via_rev_a.data, C_via_inv.data)
 
-    def test_left_conj_matches_gp_with_conj_a(self, alg_float):
+    def test_left_conj_matches_gp_with_conj_a(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T_std = product_tensor(full, full, product=EProduct.GP)
         T_conj_left = product_tensor(full, full, product=EProduct.GP, a_inv=EInv.CONJ)
@@ -73,7 +73,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # right_inv
     # ------------------------------------------------------------------
-    def test_right_rev_matches_gp_with_rev_b(self, alg_float):
+    def test_right_rev_matches_gp_with_rev_b(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T_std = product_tensor(full, full, product=EProduct.GP)
         T_rev_right = product_tensor(full, full, product=EProduct.GP, b_inv=EInv.REV)
@@ -86,7 +86,7 @@ class TestProductTensorEInv:
         C_via_inv = contract("kij,i,j->k", T_rev_right, tA, tB)
         assert np.allclose(C_via_rev_b.data, C_via_inv.data)
 
-    def test_right_conj_matches_gp_with_conj_b(self, alg_float):
+    def test_right_conj_matches_gp_with_conj_b(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T_std = product_tensor(full, full, product=EProduct.GP)
         T_conj_right = product_tensor(full, full, product=EProduct.GP, b_inv=EInv.CONJ)
@@ -102,7 +102,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # c_inv (result involution)
     # ------------------------------------------------------------------
-    def test_c_rev_matches_rev_of_gp_result(self, alg_float):
+    def test_c_rev_matches_rev_of_gp_result(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T_c_rev = product_tensor(full, full, product=EProduct.GP, c_inv=EInv.REV)
 
@@ -115,7 +115,7 @@ class TestProductTensorEInv:
         C_expected = to_tensor(AB_rev, mask=full)
         assert np.allclose(C_via_inv.data, C_expected.data)
 
-    def test_c_conj_matches_conj_of_gp_result(self, alg_float):
+    def test_c_conj_matches_conj_of_gp_result(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T_c_conj = product_tensor(full, full, product=EProduct.GP, c_inv=EInv.CONJ)
 
@@ -131,7 +131,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # left=False (operand order swap)
     # ------------------------------------------------------------------
-    def test_left_false_is_b_times_a(self, alg_float):
+    def test_left_false_is_b_times_a(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T_right = product_tensor(full, full, product=EProduct.GP, left=False)
 
@@ -142,7 +142,7 @@ class TestProductTensorEInv:
         C_expected = to_tensor(BA, mask=full)
         assert np.allclose(C_via_inv.data, C_expected.data)
 
-    def test_left_false_with_rev(self, alg_float):
+    def test_left_false_with_rev(self, alg_float):  # noqa: ANN001, ANN201
         """left=False with a_inv=REV: rev is applied to the a-mask blades (axis 1).
 
         When left=False, the product order is B ∘ A.  a_inv applies to
@@ -171,7 +171,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # combined involutions
     # ------------------------------------------------------------------
-    def test_both_rev(self, alg_float):
+    def test_both_rev(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T = product_tensor(
             full, full, product=EProduct.GP, a_inv=EInv.REV, b_inv=EInv.REV
@@ -188,7 +188,7 @@ class TestProductTensorEInv:
         C_expected = to_tensor(expected, mask=full)
         assert np.allclose(C_via_inv.data, C_expected.data)
 
-    def test_all_three_conj(self, alg_float):
+    def test_all_three_conj(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T = product_tensor(
             full,
@@ -212,7 +212,7 @@ class TestProductTensorEInv:
         C_expected = to_tensor(expected, mask=full)
         assert np.allclose(C_via_inv.data, C_expected.data)
 
-    def test_mixed_rev_and_conj(self, alg_float):
+    def test_mixed_rev_and_conj(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T = product_tensor(
             full,
@@ -239,7 +239,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # shape and entry integrity
     # ------------------------------------------------------------------
-    def test_shape_unchanged_by_involution(self, alg_float):
+    def test_shape_unchanged_by_involution(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         T_std = product_tensor(full, full, product=EProduct.GP)
         for kw in [
@@ -254,7 +254,7 @@ class TestProductTensorEInv:
             assert T.shape == T_std.shape, f"shape mismatch for {kw}"
             assert T.masks == T_std.masks, f"mask mismatch for {kw}"
 
-    def test_entries_are_pm1_or_zero_with_involution(self, alg_float):
+    def test_entries_are_pm1_or_zero_with_involution(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         for kw in [
             {"a_inv": EInv.REV},
@@ -269,7 +269,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # IP and OP with involution
     # ------------------------------------------------------------------
-    def test_ip_with_left_rev(self, alg_float):
+    def test_ip_with_left_rev(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T = product_tensor(full, full, product=EProduct.IP, a_inv=EInv.REV)
 
@@ -284,7 +284,7 @@ class TestProductTensorEInv:
             exp_val = expected.to_dict().get(name, 0.0)
             assert C_via_inv.data[i] == pytest.approx(exp_val, abs=1e-10)
 
-    def test_op_with_right_rev(self, alg_float):
+    def test_op_with_right_rev(self, alg_float):  # noqa: ANN001, ANN201
         full, tA, tB, A, B = self._random_mvs_and_tensors(alg_float)
         T = product_tensor(full, full, product=EProduct.OP, b_inv=EInv.REV)
 
@@ -302,7 +302,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # integer dtype
     # ------------------------------------------------------------------
-    def test_integer_left_rev(self, alg_int):
+    def test_integer_left_rev(self, alg_int):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_int)
         rng = np.random.default_rng(17)
         A_coeffs = rng.integers(-3, 4, len(full)).astype(np.int64)
@@ -329,7 +329,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # subspace masks with involution
     # ------------------------------------------------------------------
-    def test_subspace_with_c_inv(self, alg_float):
+    def test_subspace_with_c_inv(self, alg_float):  # noqa: ANN001, ANN201
         a_mask = BladeMask(alg_float, [1, 2, 3])  # e1, e2, e12
         b_mask = BladeMask(alg_float, [1, 2, 3])
         T = product_tensor(a_mask, b_mask, product=EProduct.GP, c_inv=EInv.REV)
@@ -352,7 +352,7 @@ class TestProductTensorEInv:
     # ------------------------------------------------------------------
     # CONJ vs REV distinguished in non-Euclidean algebra
     # ------------------------------------------------------------------
-    def test_conj_differs_from_rev_in_p3(self):
+    def test_conj_differs_from_rev_in_p3(self):  # noqa: ANN201
         """In P3 (signature mask=0b1000), the e4 basis vector has negative metric,
         so conj ≠ rev for blades containing e4."""
         alg = Algebra(4, 0b1000, "float64")
@@ -393,7 +393,7 @@ class TestProductTensorEInv:
 class TestModularTensor:
     """Modular integer tensor."""
 
-    def test_int_dtype(self, alg_int):
+    def test_int_dtype(self, alg_int):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_int)
         T = product_tensor(full, full, product=EProduct.GP)
         assert T.data.dtype == np.int64

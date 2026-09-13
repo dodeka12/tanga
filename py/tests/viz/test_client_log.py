@@ -62,7 +62,7 @@ def test_register_handlers_registers_default_on_log() -> None:
 
 
 def test_register_handlers_uses_custom_on_log() -> None:
-    async def sink(value, event):
+    async def sink(value, event):  # noqa: ANN001, ANN202
         return None
 
     ctrl = ClientLog(CLIENT_LOG_ID, on_log=sink)
@@ -81,7 +81,7 @@ def test_register_handlers_uses_custom_on_log() -> None:
         ("bogus", "WARNING"),
     ],
 )
-def test_default_sink_maps_level(caplog, level: str, expected: str) -> None:
+def test_default_sink_maps_level(caplog, level: str, expected: str) -> None:  # noqa: ANN001
     record = ClientLogRecord(level=level, message="msg", source="s")
     with caplog.at_level(logging.DEBUG, logger="tanga.viz.client"):
         asyncio.run(_default_client_log_sink(record, ControlEvent()))

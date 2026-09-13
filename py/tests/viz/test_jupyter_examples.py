@@ -28,18 +28,18 @@ def _cell_source(cell: dict) -> str:
     return "".join(source) if isinstance(source, list) else source
 
 
-def test_notebook_directory_is_present():
+def test_notebook_directory_is_present():  # noqa: ANN201
     assert _NOTEBOOKS_DIR.is_dir(), f"missing {_NOTEBOOKS_DIR}"
 
 
-def test_expected_notebooks_exist():
+def test_expected_notebooks_exist():  # noqa: ANN201
     names = {p.name for p in _notebook_paths()}
     assert _EXPECTED_NOTEBOOKS <= names, (
         f"missing notebooks: {sorted(_EXPECTED_NOTEBOOKS - names)}"
     )
 
 
-def test_notebook_code_cells_compile():
+def test_notebook_code_cells_compile():  # noqa: ANN201
     for path in _notebook_paths():
         notebook = json.loads(path.read_text(encoding="utf-8"))
         assert notebook.get("nbformat") == 4, f"{path.name} is not nbformat 4"

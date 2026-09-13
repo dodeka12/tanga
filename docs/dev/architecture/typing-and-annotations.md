@@ -152,10 +152,14 @@ Always the narrowest rule id, always a trailing reason, never a blanket
 
 ## Deferred scope
 
-- **`py/tests/**`** — the test suite is not annotated yet and is excluded from
-  the ANN rule (`[tool.ruff.lint.per-file-ignores]`, which also carries the
-  suite's pre-existing star-import lint debt).  New tests should still be
-  annotated where practical.
+- **`py/tests/**` — remaining lint debt only.**  `F401`/`E402`/`F841`/`E741`
+  are suppressed in `[tool.ruff.lint.per-file-ignores]` (tracked separately).
+  Star imports are **not** allowed anywhere: the two geometry analysis tests
+  import their entity/operator classes explicitly, so `F403`/`F405` are
+  enforced repo-wide.  ANN coverage is also **enforced**: the pre-existing
+  unannotated tests carry per-line `# noqa: ANN…` directives (a frozen baseline
+  added with `ruff check --add-noqa`), so **new** test functions must be
+  annotated to pass the gate.
 - **Notebooks** — the `docs/py/viz/**/*.ipynb` documentation notebooks *are*
   annotated (they are part of `ruff check .`), but `ty` does not read them.
 

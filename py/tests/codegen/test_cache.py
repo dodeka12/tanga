@@ -13,38 +13,38 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def isolated_cache(tmp_path, monkeypatch):
+def isolated_cache(tmp_path, monkeypatch):  # noqa: ANN001, ANN201
     """Redirect the cache to a temporary directory for each test."""
     monkeypatch.setenv("PYTANGA_CACHE_DIR", str(tmp_path / "cache"))
     yield tmp_path / "cache"
 
 
 class TestMakeKey:
-    def test_same_inputs_same_key(self):
+    def test_same_inputs_same_key(self):  # noqa: ANN201
         from pytanga.codegen._cache import _make_key
 
         k1 = _make_key(3, 0, "float64")
         k2 = _make_key(3, 0, "float64")
         assert k1 == k2
 
-    def test_different_dim(self):
+    def test_different_dim(self):  # noqa: ANN201
         from pytanga.codegen._cache import _make_key
 
         assert _make_key(3, 0, "float64") != _make_key(4, 0, "float64")
 
-    def test_different_dtype(self):
+    def test_different_dtype(self):  # noqa: ANN201
         from pytanga.codegen._cache import _make_key
 
         assert _make_key(3, 0, "float64") != _make_key(3, 0, "float32")
 
 
 class TestLookup:
-    def test_miss_on_empty_cache(self):
+    def test_miss_on_empty_cache(self):  # noqa: ANN201
         from pytanga.codegen._cache import lookup
 
         assert lookup(3, 0, "float64") is None
 
-    def test_hit_after_store(self, tmp_path, isolated_cache):
+    def test_hit_after_store(self, tmp_path, isolated_cache):  # noqa: ANN001, ANN201
         from pytanga.codegen._cache import _make_key, lookup
 
         # Manually create a fake cache entry
@@ -68,7 +68,7 @@ class TestLookup:
 
         assert lookup(3, 0, "float64") == fake_so
 
-    def test_miss_when_so_deleted(self, isolated_cache):
+    def test_miss_when_so_deleted(self, isolated_cache):  # noqa: ANN001, ANN201
         # Reproduce the entry but without the .so file — should return None
         from pytanga.codegen._cache import _make_key, lookup
 
@@ -91,7 +91,7 @@ class TestLookup:
 
 
 class TestGetOrBuild:
-    def test_calls_build_on_miss(self, isolated_cache):
+    def test_calls_build_on_miss(self, isolated_cache):  # noqa: ANN001, ANN201
         """get_or_build should call build_and_load exactly once on a miss."""
         from pytanga.codegen._cache import _make_key, get_or_build
 
@@ -119,7 +119,7 @@ class TestGetOrBuild:
         assert mock_build.call_count == 1
         assert mod is fake_mod
 
-    def test_no_rebuild_on_second_call(self, isolated_cache):
+    def test_no_rebuild_on_second_call(self, isolated_cache):  # noqa: ANN001, ANN201
         """Second call with the same params must not invoke build_and_load."""
         # Manually populate the cache
         from pytanga.codegen._cache import _make_key
@@ -155,7 +155,7 @@ class TestGetOrBuild:
 
 
 class TestInvalidateAndClear:
-    def test_invalidate_removes_entry(self, isolated_cache):
+    def test_invalidate_removes_entry(self, isolated_cache):  # noqa: ANN001, ANN201
         from pytanga.codegen._cache import _make_key, invalidate, lookup
 
         key = _make_key(3, 0, "float64")
@@ -179,7 +179,7 @@ class TestInvalidateAndClear:
         invalidate(3, 0, "float64")
         assert lookup(3, 0, "float64") is None
 
-    def test_clear_removes_all(self, isolated_cache):
+    def test_clear_removes_all(self, isolated_cache):  # noqa: ANN001, ANN201
         from pytanga.codegen._cache import cache_root, clear
 
         isolated_cache.mkdir(parents=True, exist_ok=True)

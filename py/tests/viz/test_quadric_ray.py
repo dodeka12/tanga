@@ -14,7 +14,7 @@ _RENDERS_DIR = Path(__file__).parents[2] / "pytanga" / "viz" / "templates" / "re
 
 
 class TestSerializeQuadric:
-    def test_emits_ray_kind_with_coeffs(self):
+    def test_emits_ray_kind_with_coeffs(self):  # noqa: ANN201
         q = Quadric3D(tuple(float(i) for i in range(1, 11)))
         d = serialize_entity(q, "q1", kind="Quadric3D")
         assert d["kind"] == "ray"
@@ -22,13 +22,13 @@ class TestSerializeQuadric:
         assert d["coeffs"] == [float(i) for i in range(1, 11)]
         assert len(d["matrix"]) == 16
 
-    def test_emits_bound(self):
+    def test_emits_bound(self):  # noqa: ANN201
         q = Quadric3D(tuple(float(i) for i in range(1, 11)))
         d = serialize_entity(q, "q1", kind="Quadric3D")
         assert d["bound"]["min"] == [-5.0, -5.0, -5.0]
         assert d["bound"]["max"] == [5.0, 5.0, 5.0]
 
-    def test_resolves_default_color_opacity(self):
+    def test_resolves_default_color_opacity(self):  # noqa: ANN201
         q = Quadric3D(tuple(float(i) for i in range(1, 11)))
         d = serialize_entity(q, "q1", kind="Quadric3D")
         assert d["color"] == "#ffaa00"
@@ -36,27 +36,27 @@ class TestSerializeQuadric:
 
 
 class TestRayQuadricStyle:
-    def test_is_default_for_quadric3d(self):
+    def test_is_default_for_quadric3d(self):  # noqa: ANN201
         assert isinstance(_DEFAULT_STYLE_FOR_KIND["Quadric3D"], RayQuadricStyle)
         assert isinstance(_DEFAULT_STYLE_FOR_KIND["Quadric3D"], RayStyle)
 
-    def test_to_dict(self):
+    def test_to_dict(self):  # noqa: ANN201
         d = RayQuadricStyle().to_dict()
         assert d["style_type"] == "RayQuadricStyle"
 
 
 class TestQuadricGlsl:
-    def test_no_main(self):
+    def test_no_main(self):  # noqa: ANN201
         code = (_RENDERS_DIR / "ray" / "quadric.glsl").read_text(encoding="utf-8")
         assert "void main" not in code
 
-    def test_has_intersection_functions(self):
+    def test_has_intersection_functions(self):  # noqa: ANN201
         code = (_RENDERS_DIR / "ray" / "quadric.glsl").read_text(encoding="utf-8")
         assert "float intersectRay" in code
         assert "vec3 normalAt" in code
         assert "uniform mat4 uQuadric" in code
 
-    def test_intersection_is_range_clipped(self):
+    def test_intersection_is_range_clipped(self):  # noqa: ANN201
         code = (_RENDERS_DIR / "ray" / "quadric.glsl").read_text(encoding="utf-8")
         assert "float intersectRay(vec3 ro, vec3 rd, float tMin, float tMax)" in code
         assert "t1 >= tMin && t1 <= tMax" in code

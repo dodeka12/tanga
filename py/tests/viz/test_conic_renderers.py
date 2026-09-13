@@ -18,7 +18,7 @@ from pytanga.viz.serializer import serialize_entity
 
 
 class TestConicRenderers:
-    def test_serialize_hyperbola(self):
+    def test_serialize_hyperbola(self):  # noqa: ANN201
         h = Hyperbola(
             Point(1.0, 2.0, 0.0),
             Direction(1.0, 0.0, 0.0),
@@ -34,7 +34,7 @@ class TestConicRenderers:
         assert d["a"] == 2.0
         assert d["b"] == 1.0
 
-    def test_serialize_parabola(self):
+    def test_serialize_parabola(self):  # noqa: ANN201
         p = Parabola(Point(0.0, 0.0, 0.0), Direction(1.0, 0.0, 0.0), 1.5)
         d = serialize_entity(p, "p1", kind="Parabola")
         assert d["kind"] == "Parabola"
@@ -42,7 +42,7 @@ class TestConicRenderers:
         assert d["direction"] == [1.0, 0.0, 0.0]
         assert d["p"] == 1.5
 
-    def test_serialize_line_pair(self):
+    def test_serialize_line_pair(self):  # noqa: ANN201
         l1 = Line(Point(0.0, 0.0, 0.0), Direction(1.0, 0.0, 0.0))
         l2 = Line(Point(0.0, 1.0, 0.0), Direction(0.0, 1.0, 0.0))
         lp = LinePair(l1, l2)
@@ -55,14 +55,14 @@ class TestConicRenderers:
         assert d["line2"]["origin"] == [0.0, -9.0, 0.0]
         assert d["line2"]["direction"] == [0.0, 1.0, 0.0]
 
-    def test_serialize_point_set(self):
+    def test_serialize_point_set(self):  # noqa: ANN201
         ps = PointSet([Point(1.0, 2.0, 3.0), Point(4.0, 5.0, 6.0)], kind="pair")
         d = serialize_entity(ps, "ps1", kind="PointSet")
         assert d["kind"] == "PointSet"
         assert d["points"] == [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
         assert d["pointKind"] == "pair"
 
-    def test_serialize_ellipse_line(self):
+    def test_serialize_ellipse_line(self):  # noqa: ANN201
         e = Ellipse(radius_u=2.0, radius_v=1.0)
         d = serialize_entity(e, "el1", kind="Ellipse")
         assert d["kind"] == "Ellipse"
@@ -78,7 +78,7 @@ class TestConicRenderers:
             assert key not in d
             assert key not in d["style"]
 
-    def test_serialize_ellipse_directions(self):
+    def test_serialize_ellipse_directions(self):  # noqa: ANN201
         e = Ellipse(
             radius_u=2.0,
             radius_v=1.0,
@@ -89,7 +89,7 @@ class TestConicRenderers:
         assert d["dirU"] == [1.0, 0.0, 0.0]
         assert d["dirV"] == [0.0, 1.0, 0.0]
 
-    def test_serialize_parallel_line_pair(self):
+    def test_serialize_parallel_line_pair(self):  # noqa: ANN201
         l1 = Line(Point(0.0, 0.0, 0.0), Direction(1.0, 0.0, 0.0))
         l2 = Line(Point(0.0, 1.0, 0.0), Direction(1.0, 0.0, 0.0))
         plp = ParallelLinePair(l1, l2)
@@ -99,13 +99,13 @@ class TestConicRenderers:
         assert d["line2"]["origin"] == [-10.0, 1.0, 0.0]
         assert d["line1"]["length"] == 20.0
 
-    def test_extent_defaults(self):
+    def test_extent_defaults(self):  # noqa: ANN201
         from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND
 
         assert _DEFAULT_STYLE_FOR_KIND["Hyperbola"].extent == 5.0
         assert _DEFAULT_STYLE_FOR_KIND["Parabola"].extent == 5.0
 
-    def test_serialize_cone(self):
+    def test_serialize_cone(self):  # noqa: ANN201
         c = Cone(Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0), 0.5)
         d = serialize_entity(c, "c1", kind="Cone")
         assert d["kind"] == "Cone"
@@ -124,18 +124,18 @@ from pytanga.viz.scene import _resolve_scene_entity
 
 
 class TestConicRefineInResolver:
-    def test_resolve_refines_conic_to_ellipse(self):
+    def test_resolve_refines_conic_to_ellipse(self):  # noqa: ANN201
         # x²/4 + y² = 1  ->  symmetric matrix diag(1/4, 1, -1).
         matrix = np.diag([1.0 / 4.0, 1.0, -1.0])
         conic = Conic(to_coeffs(matrix))
         resolved = _resolve_scene_entity(conic)
         assert isinstance(resolved, Ellipse)
 
-    def test_resolve_leaves_quadric3d_unchanged(self):
+    def test_resolve_leaves_quadric3d_unchanged(self):  # noqa: ANN201
         q = Quadric3D(tuple(float(i) for i in range(1, 11)))
         assert _resolve_scene_entity(q) is q
 
-    def test_resolve_refines_mv_analyzing_to_conic(self):
+    def test_resolve_refines_mv_analyzing_to_conic(self):  # noqa: ANN201
         # An MV (grade-1 IPNS conic) must also be refined via analyze().
         from pytanga.quadric import BasisQ2
 
@@ -146,7 +146,7 @@ class TestConicRefineInResolver:
         resolved = _resolve_scene_entity(mv)
         assert isinstance(resolved, Ellipse)
 
-    def test_conic_style_merges_over_refined_default(self):
+    def test_conic_style_merges_over_refined_default(self):  # noqa: ANN201
         merged = _style_to_output(ConicStyle(color="#123456"), "Ellipse")
         assert merged["color"] == "#123456"
         assert merged["thickness"] == 1.0

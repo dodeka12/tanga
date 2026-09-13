@@ -20,7 +20,7 @@ from pytanga.viz.export._figure_html import render_figure
 from pytanga.viz.export._html import render_snapshot
 
 
-def test_bootstrap_bundles_single_camera_fit_module():
+def test_bootstrap_bundles_single_camera_fit_module():  # noqa: ANN201
     b = generate_bootstrap_js("")
     assert "function finiteAspect(" in b
     assert "function orthoFrustum(" in b
@@ -31,7 +31,7 @@ def test_bootstrap_bundles_single_camera_fit_module():
     assert "_finiteAspect(" not in b
 
 
-def test_bundled_fit_camera_accepts_size():
+def test_bundled_fit_camera_accepts_size():  # noqa: ANN201
     b = generate_bootstrap_js("")
     assert (
         "function fitCamera(sceneObjects, camera, controls, spaceDim, width, height)"
@@ -39,13 +39,13 @@ def test_bundled_fit_camera_accepts_size():
     )
 
 
-def test_bundled_fit_camera_delegates_to_shared_ortho_frustum():
+def test_bundled_fit_camera_delegates_to_shared_ortho_frustum():  # noqa: ANN201
     b = generate_bootstrap_js("")
     # The 2D branch calls the shared helper rather than computing aspect inline.
     assert "orthoFrustum(xmin, xmax, ymin, ymax, 'fit', 0" in b
 
 
-def test_fit_camera_3d_branch_is_aspect_independent():
+def test_fit_camera_3d_branch_is_aspect_independent():  # noqa: ANN201
     src = Path(pytanga.viz.__file__).parent / "templates" / "fit_camera.js"
     fit3d = src.read_text(encoding="utf-8").split("// ── 3D perspective fit ──", 1)[1]
     assert "const distance = (radius / Math.sin(fov / 2)) * 1.1;" in fit3d
@@ -53,7 +53,7 @@ def test_fit_camera_3d_branch_is_aspect_independent():
     assert "innerHeight" not in fit3d
 
 
-def test_js_autofit_camera_emits_size_args():
+def test_js_autofit_camera_emits_size_args():  # noqa: ANN201
     js = js_autofit_camera(
         registry_var="reg",
         camera_var="cam",
@@ -66,7 +66,7 @@ def test_js_autofit_camera_emits_size_args():
     assert "fitCamera(reg, cam, ctl, 2, W, H);" in js
 
 
-def test_js_autofit_camera_empty_when_explicit():
+def test_js_autofit_camera_empty_when_explicit():  # noqa: ANN201
     assert (
         js_autofit_camera(
             registry_var="reg",
@@ -81,7 +81,7 @@ def test_js_autofit_camera_empty_when_explicit():
     )
 
 
-def test_snapshot_full_page_uses_window_size():
+def test_snapshot_full_page_uses_window_size():  # noqa: ANN201
     html = render_snapshot([], {"space_dim": 2})
     assert (
         "fitCamera(sceneRegistry, adapterCamera, adapterControls, 2, "
@@ -89,7 +89,7 @@ def test_snapshot_full_page_uses_window_size():
     )
 
 
-def test_responsive_figure_uses_container_size():
+def test_responsive_figure_uses_container_size():  # noqa: ANN201
     html = render_figure(
         [],
         {"space_dim": 2},
@@ -103,11 +103,11 @@ def test_responsive_figure_uses_container_size():
     )
 
 
-def test_snapshot_resize_recomputes_2d_ortho_frustum():
+def test_snapshot_resize_recomputes_2d_ortho_frustum():  # noqa: ANN201
     html = render_snapshot([], {"space_dim": 2})
     assert "applyOrthoFrustum(adapterCamera, rw, rh)" in html
 
 
-def test_responsive_figure_resize_recomputes_2d_ortho_frustum():
+def test_responsive_figure_resize_recomputes_2d_ortho_frustum():  # noqa: ANN201
     html = render_figure([], {"space_dim": 2}, {"responsive": True}, {})
     assert "applyOrthoFrustum(figCamera, rw, rh)" in html

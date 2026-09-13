@@ -23,17 +23,17 @@ class _FakeRegistry:
     def __init__(self) -> None:
         self._h: dict[tuple[str, str], object] = {}
 
-    def register(self, control_id, handler, *, event="change", origin=None) -> None:
+    def register(self, control_id, handler, *, event="change", origin=None) -> None:  # noqa: ANN001
         self._h[(control_id, event)] = handler
 
-    def unregister(self, control_id, event=None) -> None:
+    def unregister(self, control_id, event=None) -> None:  # noqa: ANN001
         if event is None:
             for key in [k for k in self._h if k[0] == control_id]:
                 del self._h[key]
         else:
             self._h.pop((control_id, event), None)
 
-    def get(self, control_id, event="change"):
+    def get(self, control_id, event="change"):  # noqa: ANN001, ANN202
         return self._h.get((control_id, event))
 
 
@@ -50,7 +50,7 @@ def test_send_noop_pre_boot() -> None:
     t.send({"type": "x"})  # must not raise
 
 
-def test_send_serializes_and_pushes(monkeypatch) -> None:
+def test_send_serializes_and_pushes(monkeypatch) -> None:  # noqa: ANN001
     server = _FakeServer()
     state = ServerState()
     state.server = server
@@ -74,7 +74,7 @@ async def test_send_async_awaits_push() -> None:
 def test_register_get_roundtrip() -> None:
     t = _transport()
 
-    async def _h(value, event):
+    async def _h(value, event):  # noqa: ANN001, ANN202
         pass
 
     t.register("s", _h, event="change")
@@ -86,7 +86,7 @@ def test_register_get_roundtrip() -> None:
 def test_unregister() -> None:
     t = _transport()
 
-    async def _h(value, event):
+    async def _h(value, event):  # noqa: ANN001, ANN202
         pass
 
     t.register("s", _h, event="change")
@@ -103,13 +103,13 @@ async def test_dispatch_exact_wildcard_unknown() -> None:
     t = _transport()
     seen: list[tuple] = []
 
-    async def _exact(msg_type, payload):
+    async def _exact(msg_type, payload):  # noqa: ANN001, ANN202
         seen.append(("exact", msg_type, payload))
 
-    async def _control(msg_type, payload):
+    async def _control(msg_type, payload):  # noqa: ANN001, ANN202
         seen.append(("control", msg_type, payload))
 
-    async def _interaction(msg_type, payload):
+    async def _interaction(msg_type, payload):  # noqa: ANN001, ANN202
         seen.append(("interaction", msg_type, payload))
 
     t.route("banner_closed", _exact)

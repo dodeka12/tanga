@@ -15,7 +15,7 @@ from pytanga.tensor.product import product_tensor
 class TestProductTensorShape:
     """Shape correctness of the product tensor."""
 
-    def test_shape_full_mask_gp(self, alg_float):
+    def test_shape_full_mask_gp(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.GP)
         assert isinstance(T, MVTensor)
@@ -25,14 +25,14 @@ class TestProductTensorShape:
         assert T.masks[2] == full  # b_mask
         assert T.masks[0] == full  # c_mask
 
-    def test_shape_subspace_masks(self, alg_float):
+    def test_shape_subspace_masks(self, alg_float):  # noqa: ANN001, ANN201
         a_mask = BladeMask(alg_float, [1, 2])  # e1, e2
         b_mask = BladeMask(alg_float, [1, 4])  # e1, e3
         c_mask = BladeMask(alg_float, [0, 3, 6])  # scalar, e12, e23
         T = product_tensor(a_mask, b_mask, c_mask, product=EProduct.GP)
         assert T.shape == (3, 2, 2)
 
-    def test_shape_ip(self, alg_float):
+    def test_shape_ip(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.IP)
         assert T.shape[1] == len(full)  # a_mask
@@ -40,12 +40,12 @@ class TestProductTensorShape:
         assert T.shape[0] == len(T.masks[0])
         assert T.shape[0] < len(full)  # fewer outputs than full algebra
 
-    def test_shape_op(self, alg_float):
+    def test_shape_op(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.OP)
         assert T.shape == (len(full), len(full), len(full))
 
-    def test_auto_c_mask(self, alg_float):
+    def test_auto_c_mask(self, alg_float):  # noqa: ANN001, ANN201
         a_mask = BladeMask(alg_float, [1])  # e1 only
         b_mask = BladeMask(alg_float, [2])  # e2 only
         T = product_tensor(a_mask, b_mask)
@@ -57,10 +57,10 @@ class TestGPTensorEntries:
     """Verify specific known entries in the GP tensor for E3."""
 
     @staticmethod
-    def _blade_index(mask, blade_id):
+    def _blade_index(mask, blade_id):  # noqa: ANN001, ANN205
         return mask.ids.index(blade_id)
 
-    def test_scalar_from_same_blade(self, alg_float):
+    def test_scalar_from_same_blade(self, alg_float):  # noqa: ANN001, ANN201
         """e1 * e1 = scalar (positive)."""
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.GP)
@@ -68,7 +68,7 @@ class TestGPTensorEntries:
         s_idx = self._blade_index(full, 0)
         assert T.data[s_idx, e1_idx, e1_idx] == 1.0
 
-    def test_bivector_from_orthogonal(self, alg_float):
+    def test_bivector_from_orthogonal(self, alg_float):  # noqa: ANN001, ANN201
         """e1 * e2 = e12 (positive)."""
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.GP)
@@ -77,7 +77,7 @@ class TestGPTensorEntries:
         e12_idx = self._blade_index(full, 3)
         assert T.data[e12_idx, e1_idx, e2_idx] == 1.0
 
-    def test_entries_are_pm1_or_zero(self, alg_float):
+    def test_entries_are_pm1_or_zero(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.GP)
         unique = set(np.unique(T.data))
@@ -87,7 +87,7 @@ class TestGPTensorEntries:
 class TestIPTensor:
     """Inner product tensor properties."""
 
-    def test_ip_zero_when_disjoint(self, alg_float):
+    def test_ip_zero_when_disjoint(self, alg_float):  # noqa: ANN001, ANN201
         """IP is zero when blades are not in containment relationship."""
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.IP)
@@ -96,7 +96,7 @@ class TestIPTensor:
         col = T.data[:, e1_idx, e2_idx]
         assert np.all(col == 0.0)
 
-    def test_ip_nonzero_for_scalar_left(self, alg_float):
+    def test_ip_nonzero_for_scalar_left(self, alg_float):  # noqa: ANN001, ANN201
         """IP with scalar gives zero (scalar contains nothing)."""
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.IP)
@@ -109,7 +109,7 @@ class TestIPTensor:
 class TestOPTensor:
     """Outer product tensor properties."""
 
-    def test_op_zero_when_overlapping(self, alg_float):
+    def test_op_zero_when_overlapping(self, alg_float):  # noqa: ANN001, ANN201
         """OP is zero when blades share basis vectors."""
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.OP)
@@ -117,7 +117,7 @@ class TestOPTensor:
         col = T.data[:, e1_idx, e1_idx]
         assert np.all(col == 0.0)
 
-    def test_op_nonzero_for_disjoint(self, alg_float):
+    def test_op_nonzero_for_disjoint(self, alg_float):  # noqa: ANN001, ANN201
         """e1 ^ e2 = e12 (positive)."""
         full = BladeMask.full(alg_float)
         T = product_tensor(full, full, product=EProduct.OP)
@@ -130,7 +130,7 @@ class TestOPTensor:
 class TestEinsumContraction:
     """Verify contraction via contract() produces the same result as algebra."""
 
-    def test_gp_contraction(self, alg_float):
+    def test_gp_contraction(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         O = product_tensor(full, full, product=EProduct.GP)
 
@@ -154,7 +154,7 @@ class TestEinsumContraction:
             expected = AB.to_dict().get(name, 0.0)
             assert C.data[i] == pytest.approx(expected, abs=1e-10)
 
-    def test_ip_contraction(self, alg_float):
+    def test_ip_contraction(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         O = product_tensor(full, full, product=EProduct.IP)
 
@@ -177,7 +177,7 @@ class TestEinsumContraction:
             expected = AB.to_dict().get(name, 0.0)
             assert C.data[i] == pytest.approx(expected, abs=1e-10)
 
-    def test_op_contraction(self, alg_float):
+    def test_op_contraction(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         O = product_tensor(full, full, product=EProduct.OP)
 
@@ -200,7 +200,7 @@ class TestEinsumContraction:
             expected = AB.to_dict().get(name, 0.0)
             assert C.data[i] == pytest.approx(expected, abs=1e-10)
 
-    def test_subspace_contraction(self, alg_float):
+    def test_subspace_contraction(self, alg_float):  # noqa: ANN001, ANN201
         """Contraction with restricted masks should match the full-tensor result."""
         a_mask = BladeMask(alg_float, [1, 2])  # e1, e2
         b_mask = BladeMask(alg_float, [1, 2])

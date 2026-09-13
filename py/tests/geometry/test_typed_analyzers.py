@@ -33,7 +33,7 @@ from pytanga.geometry.entities import (
 )
 
 
-def _point(p):
+def _point(p):  # noqa: ANN001, ANN202
     return Point(p[0], p[1], p[2])
 
 
@@ -43,7 +43,7 @@ def _point(p):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_p3_point_round_trip(opns):
+def test_p3_point_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisP3(opns=opns)
     mv = create_entity(alg, Point(1, 2, 3))
     r = analysis.analyze_point(mv)
@@ -54,7 +54,7 @@ def test_p3_point_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_p3_direction_round_trip(opns):
+def test_p3_direction_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisP3(opns=opns)
     mv = create_entity(alg, Direction(1, 2, 3))
     r = analysis.analyze_direction(mv)
@@ -62,7 +62,7 @@ def test_p3_direction_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_p3_line_round_trip(opns):
+def test_p3_line_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisP3(opns=opns)
     mv = create_entity(alg, Line(Point(1, 0, 0), Direction(0, 1, 0)))
     r = analysis.analyze_line(mv)
@@ -70,7 +70,7 @@ def test_p3_line_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_n3_point_round_trip(opns):
+def test_n3_point_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisN3(opns=opns)
     mv = create_entity(alg, Point(1, 2, 3))
     r = analysis.analyze_point(mv)
@@ -81,7 +81,7 @@ def test_n3_point_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_n3_circle_round_trip(opns):
+def test_n3_circle_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisN3(opns=opns)
     mv = create_entity(alg, Circle(Point(1, 2, 3), 2.0, Direction(0, 0, 1)))
     r = analysis.analyze_circle(mv)
@@ -90,7 +90,7 @@ def test_n3_circle_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_n3_sphere_round_trip(opns):
+def test_n3_sphere_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisN3(opns=opns)
     mv = create_entity(alg, Sphere(Point(1, 0, 0), 2.0))
     r = analysis.analyze_sphere(mv)
@@ -99,7 +99,7 @@ def test_n3_sphere_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_pga3_point_round_trip(opns):
+def test_pga3_point_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisPGA3(opns=opns)
     mv = create_entity(alg, Point(1, 2, 3))
     r = analysis.analyze_point(mv)
@@ -110,14 +110,14 @@ def test_pga3_point_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_pga3_plane_round_trip(opns):
+def test_pga3_plane_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisPGA3(opns=opns)
     mv = create_entity(alg, Plane(Point(0, 0, 0), Direction(0, 0, 1)))
     r = analysis.analyze_plane(mv)
     assert isinstance(r, Plane)
 
 
-def test_e3_direction_round_trip():
+def test_e3_direction_round_trip():  # noqa: ANN201
     alg = BasisE3()
     mv = create_entity(alg, Direction(1, 2, 3))
     r = analysis.analyze_direction(mv)
@@ -125,7 +125,7 @@ def test_e3_direction_round_trip():
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_e3_plane_round_trip(opns):
+def test_e3_plane_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisE3(opns=opns)
     mv = create_entity(alg, Plane(Point(0, 0, 0), Direction(0, 0, 1)))
     r = analysis.analyze_plane(mv)
@@ -133,7 +133,7 @@ def test_e3_plane_round_trip(opns):
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_e2_direction_round_trip(opns):
+def test_e2_direction_round_trip(opns):  # noqa: ANN001, ANN201
     alg = BasisE2(opns=opns)
     mv = create_entity(alg, Direction(1, 2, 0))
     r = analysis.analyze_direction(mv)
@@ -145,21 +145,21 @@ def test_e2_direction_round_trip(opns):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_analyze_point_rejects_line():
+def test_analyze_point_rejects_line():  # noqa: ANN201
     alg = BasisP3()
     line_mv = create_entity(alg, Line(Point(0, 0, 0), Direction(1, 0, 0)))
     with pytest.raises(TypeError, match="Expected a Point"):
         analysis.analyze_point(line_mv)
 
 
-def test_analyze_space_rejects_point():
+def test_analyze_space_rejects_point():  # noqa: ANN201
     alg = BasisP3()
     point_mv = create_entity(alg, Point(1, 2, 3))
     with pytest.raises(TypeError, match="Expected a Space"):
         analysis.analyze_space(point_mv)
 
 
-def test_analyze_point_e3_convenience():
+def test_analyze_point_e3_convenience():  # noqa: ANN201
     alg = BasisE3()
     mv = alg.multivector({1: 1.0})
     r = analysis.analyze_point(mv)
@@ -169,7 +169,7 @@ def test_analyze_point_e3_convenience():
     assert r.z == pytest.approx(0)
 
 
-def test_analyze_point_e2_convenience():
+def test_analyze_point_e2_convenience():  # noqa: ANN201
     alg = BasisE2()
     mv = alg.multivector({1: 1.0, 2: 2.0})
     r = analysis.analyze_point(mv)
@@ -179,14 +179,14 @@ def test_analyze_point_e2_convenience():
     assert r.z == pytest.approx(0)
 
 
-def test_analyze_plane_unsupported_in_e2():
+def test_analyze_plane_unsupported_in_e2():  # noqa: ANN201
     alg = BasisE2()
     mv = alg.multivector({1: 1.0})
     with pytest.raises(TypeError, match="not supported in e2"):
         analysis.analyze_plane(mv)
 
 
-def test_ipns_mode_round_trip():
+def test_ipns_mode_round_trip():  # noqa: ANN201
     alg = BasisN3()
     alg.opns = False
     mv = create_entity(alg, Point(1, 2, 3))

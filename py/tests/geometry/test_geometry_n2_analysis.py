@@ -15,12 +15,30 @@ import pytest
 from pytanga.basis import BasisN2
 from pytanga.geometry.analysis import analyze_entity, analyze_operator
 from pytanga.geometry.create import create_entity, create_operator
-from pytanga.geometry.entities import *
-from pytanga.geometry.operators import *
+from pytanga.geometry.entities import (
+    Circle,
+    Direction,
+    HPoint,
+    Line,
+    Point,
+    PointPair,
+    Space,
+    Sphere,
+)
+from pytanga.geometry.operators import (
+    Dilator,
+    GeneralRotor,
+    Inversion,
+    Motor,
+    ReflectionLine,
+    ReflectionPoint,
+    Rotor,
+    Translator,
+)
 
 
 @pytest.fixture(scope="module")
-def b():
+def b():  # noqa: ANN201
     return BasisN2()
 
 
@@ -31,7 +49,7 @@ def b():
 # --- E1. Point ---
 
 
-def test_entity_point_opns_round_trip(b):
+def test_entity_point_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E1: create Point(3,-2,0) → analyze → assert exact."""
     mv = create_entity(b, Point(3, -2, 0))
     r = analyze_entity(mv)
@@ -44,7 +62,7 @@ def test_entity_point_opns_round_trip(b):
 # --- E2. Direction ---
 
 
-def test_entity_direction_opns_round_trip(b):
+def test_entity_direction_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E2: create Direction(1,2,0) → analyze → assert exact."""
     mv = create_entity(b, Direction(1, 2, 0))
     r = analyze_entity(mv)
@@ -57,7 +75,7 @@ def test_entity_direction_opns_round_trip(b):
 # --- E3. PointPair ---
 
 
-def test_entity_point_pair_opns_round_trip(b):
+def test_entity_point_pair_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E3: create PointPair → analyze → assert midpoint, separation, direction."""
     a = Point(1, 0, 0)
     b_p = Point(3, 0, 0)
@@ -94,7 +112,7 @@ def test_entity_point_pair_opns_round_trip(b):
 # --- E4. HPoint ---
 
 
-def test_entity_hpoint_opns_round_trip(b):
+def test_entity_hpoint_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E4: create HPoint(Point(2,-1,0), weight=2.5) → analyze → assert."""
     mv = create_entity(b, HPoint(Point(2, -1, 0), weight=2.5))
     r = analyze_entity(mv)
@@ -108,7 +126,7 @@ def test_entity_hpoint_opns_round_trip(b):
 # --- E5. Line ---
 
 
-def test_entity_line_opns_round_trip(b):
+def test_entity_line_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E5: create Line(origin=(1,2,0), dir=(1,2,0)) → analyze → assert."""
     direction = Direction(1, 2, 0)
     unit = direction.normalized()
@@ -130,7 +148,7 @@ def test_entity_line_opns_round_trip(b):
 # --- E6. Circle ---
 
 
-def test_entity_circle_opns_round_trip(b):
+def test_entity_circle_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E6: create Circle(center=(1,0,0), normal=(0,0,1), radius=2.5) → analyze."""
     mv = create_entity(b, Circle(Point(1, 0, 0), 2.5, Direction(0, 0, 1)))
     r = analyze_entity(mv)
@@ -149,7 +167,7 @@ def test_entity_circle_opns_round_trip(b):
 # --- E7. Sphere ---
 
 
-def test_entity_circle_from_sphere_opns_round_trip(b):
+def test_entity_circle_from_sphere_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E7: create Sphere(center=(2,-1,0), radius=2.5) → analyze → Circle.
 
     In N2 there are no spheres — the sphere/circle distinction only exists
@@ -169,7 +187,7 @@ def test_entity_circle_from_sphere_opns_round_trip(b):
 # --- E8. Space ---
 
 
-def test_entity_space_opns_round_trip(b):
+def test_entity_space_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E8: create Space(scale=2.5) → analyze → assert."""
     mv = create_entity(b, Space(scale=2.5))
     r = analyze_entity(mv)
@@ -184,7 +202,7 @@ def test_entity_space_opns_round_trip(b):
 # --- O1. Rotor ---
 
 
-def test_operator_rotor_round_trip(b):
+def test_operator_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O1: create Rotor(π/2, z-axis) → analyze → assert angle & axis.
 
     2D rotation is always about the z-axis.
@@ -201,7 +219,7 @@ def test_operator_rotor_round_trip(b):
 # --- O2. Translator ---
 
 
-def test_operator_translator_round_trip(b):
+def test_operator_translator_round_trip(b):  # noqa: ANN001, ANN201
     """O2: create Translator(2,-1,0) → analyze → assert vector.
 
     N2 convention: T = 1 − ½·t·e∞
@@ -217,7 +235,7 @@ def test_operator_translator_round_trip(b):
 # --- O3. ReflectionLine ---
 
 
-def test_operator_reflection_line_round_trip(b):
+def test_operator_reflection_line_round_trip(b):  # noqa: ANN001, ANN201
     """O3: create ReflectionLine(direction=(1,2,0)) → analyze → assert direction.
 
     Direction must round-trip with correct sign (no abs).
@@ -235,7 +253,7 @@ def test_operator_reflection_line_round_trip(b):
 # --- O4. ReflectionPoint (origin) ---
 
 
-def test_operator_reflection_point_origin_round_trip(b):
+def test_operator_reflection_point_origin_round_trip(b):  # noqa: ANN001, ANN201
     """O4: create ReflectionPoint(Point(0,0,0)) → analyze → assert point is origin."""
     mv = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
     r = analyze_operator(mv)
@@ -248,7 +266,7 @@ def test_operator_reflection_point_origin_round_trip(b):
 # --- O5. Inversion ---
 
 
-def test_operator_inversion_round_trip(b):
+def test_operator_inversion_round_trip(b):  # noqa: ANN001, ANN201
     """O5: create Inversion(center=(2,-1,0), radius=2.5) → analyze → assert."""
     mv = create_operator(b, Inversion(Point(2, -1, 0), 2.5))
     r = analyze_operator(mv)
@@ -262,7 +280,7 @@ def test_operator_inversion_round_trip(b):
 # --- O6. Dilator (origin) ---
 
 
-def test_operator_dilator_origin_round_trip(b):
+def test_operator_dilator_origin_round_trip(b):  # noqa: ANN001, ANN201
     """O6: create Dilator(factor=2.0) → analyze → assert factor, origin=(0,0,0)."""
     mv = create_operator(b, Dilator(2.0))
     r = analyze_operator(mv)
@@ -276,7 +294,7 @@ def test_operator_dilator_origin_round_trip(b):
 # --- O7. Dilator (displaced) ---
 
 
-def test_operator_dilator_displaced_round_trip(b):
+def test_operator_dilator_displaced_round_trip(b):  # noqa: ANN001, ANN201
     """O7: create Dilator(factor=2.0, origin=(1,0,0)) → analyze → assert factor & origin."""
     mv = create_operator(b, Dilator(2.0, origin=Point(1, 0, 0)))
     r = analyze_operator(mv)
@@ -290,7 +308,7 @@ def test_operator_dilator_displaced_round_trip(b):
 # --- O8. Motor ---
 
 
-def test_operator_motor_round_trip(b):
+def test_operator_motor_round_trip(b):  # noqa: ANN001, ANN201
     """O8: create Motor(T(1,0,0), R(π/2, z)) → analyze → GeneralRotor.
 
     In N2 (dim=4), Motor = T·R factorizes to 2 blade factors with
@@ -316,7 +334,7 @@ def test_operator_motor_round_trip(b):
 # --- O9. GeneralRotor ---
 
 
-def test_operator_general_rotor_round_trip(b):
+def test_operator_general_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O9: create GeneralRotor(π/2, z-axis, origin=(1,0,0)) → analyze."""
     mv = create_operator(
         b, GeneralRotor(math.pi / 2, Direction(0, 0, 1), Point(1, 0, 0))
@@ -339,7 +357,7 @@ def test_operator_general_rotor_round_trip(b):
 # --- A1. Translator ---
 
 
-def test_apply_translator_point_displacement(b):
+def test_apply_translator_point_displacement(b):  # noqa: ANN001, ANN201
     """A1: Translator(3,0,0) applied to origin → Point(3,0,0)."""
     p = create_entity(b, Point(0, 0, 0))
     T = create_operator(b, Translator(Direction(3, 0, 0)))
@@ -354,7 +372,7 @@ def test_apply_translator_point_displacement(b):
 # --- A2. Rotor ---
 
 
-def test_apply_rotor_point_rotation_z(b):
+def test_apply_rotor_point_rotation_z(b):  # noqa: ANN001, ANN201
     """A2: Rotor(90°, z) on (1,0,0) → Point(0,1,0)."""
     p = create_entity(b, Point(1, 0, 0))
     R = create_operator(b, Rotor(math.pi / 2, Direction(0, 0, 1)))
@@ -369,7 +387,7 @@ def test_apply_rotor_point_rotation_z(b):
 # --- A3. ReflectionLine ---
 
 
-def test_apply_reflection_line_point_mirror_x(b):
+def test_apply_reflection_line_point_mirror_x(b):  # noqa: ANN001, ANN201
     """A3: ReflectionLine(x-axis) on (3,1,0) → Point(3,-1,0)."""
     p = create_entity(b, Point(3, 1, 0))
     L = create_operator(b, ReflectionLine(Direction(1, 0, 0)))
@@ -384,7 +402,7 @@ def test_apply_reflection_line_point_mirror_x(b):
 # --- A4. ReflectionPoint (origin) ---
 
 
-def test_apply_reflection_point_origin_negation(b):
+def test_apply_reflection_point_origin_negation(b):  # noqa: ANN001, ANN201
     """A4: ReflectionPoint(0,0,0) on (5,-3,0) → Point(-5,3,0)."""
     p = create_entity(b, Point(5, -3, 0))
     O = create_operator(b, ReflectionPoint(Point(0, 0, 0)))
@@ -399,7 +417,7 @@ def test_apply_reflection_point_origin_negation(b):
 # --- A5. Inversion ---
 
 
-def test_apply_inversion_point_inversion(b):
+def test_apply_inversion_point_inversion(b):  # noqa: ANN001, ANN201
     """A5: Inversion at origin r=1 on (2,0,0) → Point(0.5,0,0).
 
     Spherical inversion: p → p·r²/|p|².
@@ -417,7 +435,7 @@ def test_apply_inversion_point_inversion(b):
 # --- A6. Dilator (origin) ---
 
 
-def test_apply_dilator_origin_point_scaling(b):
+def test_apply_dilator_origin_point_scaling(b):  # noqa: ANN001, ANN201
     """A6: Dilator(2.0) on (3,0,0) → Point(6,0,0).
 
     Dilator scales about the origin by factor d.
@@ -435,7 +453,7 @@ def test_apply_dilator_origin_point_scaling(b):
 # --- A7. Dilator (displaced) ---
 
 
-def test_apply_dilator_displaced_point_scaling(b):
+def test_apply_dilator_displaced_point_scaling(b):  # noqa: ANN001, ANN201
     """A7: Dilator(2.0, origin=(1,0,0)) on (2,0,0) → Point(3,0,0).
 
     General dilator: T·D·T̃.  Relative to center (1,0,0):
@@ -454,7 +472,7 @@ def test_apply_dilator_displaced_point_scaling(b):
 # --- A8. Motor ---
 
 
-def test_apply_motor_point_rigid_motion(b):
+def test_apply_motor_point_rigid_motion(b):  # noqa: ANN001, ANN201
     """A8: Motor(T(1,0,0), R(90°, z)) on origin → Point(1,0,0).
 
     Motor = T·R.  Origin is invariant under rotation, so:
@@ -479,7 +497,7 @@ def test_apply_motor_point_rigid_motion(b):
 # --- A9. GeneralRotor ---
 
 
-def test_apply_general_rotor_point_displaced_rotation(b):
+def test_apply_general_rotor_point_displaced_rotation(b):  # noqa: ANN001, ANN201
     """A9: GeneralRotor(90°, z, at x=1) on (2,0,0) → Point(1,1,0)."""
     p = create_entity(b, Point(2, 0, 0))
     G = create_operator(
@@ -498,11 +516,11 @@ def test_apply_general_rotor_point_displaced_rotation(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def _pts(b, *coords):
+def _pts(b, *coords):  # noqa: ANN001, ANN002, ANN202
     return [create_entity(b, Point(*c)) for c in coords]
 
 
-def test_circle_from_three_points_radius_one(b):
+def test_circle_from_three_points_radius_one(b):  # noqa: ANN001, ANN201
     """Circle = outer product of three points at radius 1 from centre.
 
     Centre (2,3,0); points (3,3,0), (2,4,0), (1,3,0) all lie at
@@ -523,7 +541,7 @@ def test_circle_from_three_points_radius_one(b):
     assert r.normal.z == pytest.approx(1, abs=1e-6)
 
 
-def test_point_pair_from_two_points(b):
+def test_point_pair_from_two_points(b):  # noqa: ANN001, ANN201
     """PointPair = outer product of two conformal points.
 
     Points (1,0,0) and (3,0,0): midpoint (2,0,0), separation 2.
@@ -549,7 +567,7 @@ def test_point_pair_from_two_points(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_scale2_point_invariant(b):
+def test_scale2_point_invariant(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Point(3, -2, 0)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
@@ -558,7 +576,7 @@ def test_scale2_point_invariant(b):
     assert r.z == pytest.approx(0, abs=1e-6)
 
 
-def test_scale2_point_pair_invariant(b):
+def test_scale2_point_pair_invariant(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, PointPair(Point(1, 0, 0), Point(3, 0, 0))) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, PointPair), f"Got {type(r).__name__}"
@@ -573,7 +591,7 @@ def test_scale2_point_pair_invariant(b):
     assert sep == pytest.approx(2.0, abs=1e-6)
 
 
-def test_scale2_hpoint_weight_doubles(b):
+def test_scale2_hpoint_weight_doubles(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, HPoint(Point(2, -1, 0), weight=2.5)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, HPoint), f"Got {type(r).__name__}"
@@ -582,7 +600,7 @@ def test_scale2_hpoint_weight_doubles(b):
     assert r.weight == pytest.approx(5.0, abs=1e-6)
 
 
-def test_scale2_line_invariant(b):
+def test_scale2_line_invariant(b):  # noqa: ANN001, ANN201
     direction = Direction(1, 2, 0)
     mv = create_entity(b, Line(Point(1, 2, 0), direction)) * 2.0
     r = analyze_entity(mv)
@@ -597,7 +615,7 @@ def test_scale2_line_invariant(b):
     assert cross_z == pytest.approx(0, abs=1e-6)
 
 
-def test_scale2_circle_invariant(b):
+def test_scale2_circle_invariant(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Circle(Point(1, 0, 0), 2.5, Direction(0, 0, 1))) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Circle), f"Got {type(r).__name__}"
@@ -606,7 +624,7 @@ def test_scale2_circle_invariant(b):
     assert r.radius == pytest.approx(2.5, abs=1e-6)
 
 
-def test_scale2_sphere_circle_invariant(b):
+def test_scale2_sphere_circle_invariant(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Sphere(Point(2, -1, 0), 2.5)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Circle), f"Got {type(r).__name__}"
@@ -615,7 +633,7 @@ def test_scale2_sphere_circle_invariant(b):
     assert r.radius == pytest.approx(2.5, abs=1e-6)
 
 
-def test_scale2_space_doubles(b):
+def test_scale2_space_doubles(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Space(scale=2.5)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"

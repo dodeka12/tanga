@@ -38,7 +38,7 @@ from pytanga.viz.serializer import serialize_entity
 
 
 class TestNodeSerialization:
-    def test_point_serialize(self):
+    def test_point_serialize(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(1.5, 2.5, 3.5))
         d = s.get_node(eid).serialize()
@@ -55,7 +55,7 @@ class TestNodeSerialization:
         assert d["position"] == [1.5, 2.5, 3.5]
         assert d["style"]["style_type"] == "PointStyle"
 
-    def test_line_from_points_keeps_segment_length(self):
+    def test_line_from_points_keeps_segment_length(self):  # noqa: ANN201
         # Regression: the node's canonical style default (LineStyle.length=20.0)
         # must not clobber the explicit segment length from Line.from_points.
         s = Scene()
@@ -68,7 +68,7 @@ class TestNodeSerialization:
         assert d["thickness"] == 1.0
         assert d["style"]["thickness"] == 1.0
 
-    def test_infinite_line_resolves_default_length(self):
+    def test_infinite_line_resolves_default_length(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Line(origin=Point(0, 0, 0), direction=Direction(1, 0, 0)))
         d = s.get_node(eid).serialize()
@@ -77,7 +77,7 @@ class TestNodeSerialization:
         assert d["length"] == 20.0
         assert d["style"]["length"] == 20.0
 
-    def test_cylinder_line_style(self):
+    def test_cylinder_line_style(self):  # noqa: ANN201
         from pytanga.viz import CylinderLineStyle
 
         s = Scene()
@@ -89,7 +89,7 @@ class TestNodeSerialization:
         assert d["style"]["style_type"] == "CylinderLineStyle"
         assert d["style"]["thickness"] == 0.05
 
-    def test_representative_kinds_serialize(self):
+    def test_representative_kinds_serialize(self):  # noqa: ANN201
         path = PointPath()
         path.add((1, 2, 0), color="#ff0000")
         path.add((3, 1, 0))
@@ -149,14 +149,14 @@ class TestNodeSerialization:
             assert "transform" in d
             json.dumps(d)  # must not raise
 
-    def test_resolved_style_present(self):
+    def test_resolved_style_present(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0), color="#00ff00")
         d = s.get_node(eid).serialize()
         assert d["style"]["color"] == "#00ff00"
         assert d["color"] == "#00ff00"
 
-    def test_imaginary_variants(self):
+    def test_imaginary_variants(self):  # noqa: ANN201
         s = Scene()
         s.add(ImagPointPair(point_a=Point(0, 0, 0), point_b=Point(1, 0, 0)))
         s.add(ImagCircle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0))
@@ -165,7 +165,7 @@ class TestNodeSerialization:
         assert {d["kind"] for d in state} == {"PointPair", "Circle", "Sphere"}
         assert all(d["isImaginary"] is True for d in state)
 
-    def test_aspect_full_patch(self):
+    def test_aspect_full_patch(self):  # noqa: ANN201
         node = VizSceneObject("a", Point(0, 0, 0), {"color": "#ff0000"}, kind="Point")
         node.consume_dirty()
         node.set_entity(Point(1, 2, 3))
@@ -175,7 +175,7 @@ class TestNodeSerialization:
         assert patch["value"]["position"] == [1, 2, 3]
         assert patch["value"]["kind"] == "Point"
 
-    def test_aspect_content_patch(self):
+    def test_aspect_content_patch(self):  # noqa: ANN201
         node = VizSceneObject("a", Point(0, 0, 0), {"color": "#ff0000"}, kind="Point")
         node.consume_dirty()
         node.set_entity(Point(1, 2, 3))
@@ -190,7 +190,7 @@ class TestNodeSerialization:
         assert "layer" not in patch["value"]
         assert "id" not in patch["value"]
 
-    def test_aspect_style_patch(self):
+    def test_aspect_style_patch(self):  # noqa: ANN201
         node = VizSceneObject("a", Point(0, 0, 0), {"color": "#ff0000"}, kind="Point")
         node.consume_dirty()
         node.set_color("#00ff00")
@@ -198,7 +198,7 @@ class TestNodeSerialization:
         assert patch["aspect"] == "style"
         assert patch["value"] == {"style": {"color": "#00ff00"}}
 
-    def test_aspect_transform_patch(self):
+    def test_aspect_transform_patch(self):  # noqa: ANN201
         node = VizSceneObject("a", Point(0, 0, 0), None, kind="Point")
         node.consume_dirty()
         node.translate(1.0, 2.0, 3.0)
@@ -210,7 +210,7 @@ class TestNodeSerialization:
             "scale": [1.0, 1.0, 1.0],
         }
 
-    def test_overlay_label_patch(self):
+    def test_overlay_label_patch(self):  # noqa: ANN201
         node = VizOverlayObject("l", position=(1, 2, 3), attach_to="p", payload="X")
         node.consume_dirty()
         node.set_payload("Y")
@@ -220,7 +220,7 @@ class TestNodeSerialization:
         assert patch["value"]["text"] == "Y"
         assert "transform" not in patch["value"]
 
-    def test_full_state_equiv(self):
+    def test_full_state_equiv(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(1.5, 2.5, 3.5))
         full = s.full_state()[0]
@@ -231,7 +231,7 @@ class TestNodeSerialization:
         assert "transform" in full
         assert full["visible"] is True
 
-    def test_removed_tracking(self):
+    def test_removed_tracking(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0))
         patches, removed = s.flush()
@@ -248,7 +248,7 @@ class TestNodeSerialization:
         assert removed == [eid]
         assert eid not in s._nodes
 
-    def test_group_serialize_shape(self):
+    def test_group_serialize_shape(self):  # noqa: ANN201
         g = VizGroup("g")
         d = g.serialize()
         assert d["kind"] == "VizGroup"

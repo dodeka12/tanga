@@ -11,7 +11,7 @@ from pytanga.viz._styles import TextureLabelStyle, SphereStyle, PlaneStyle
 class TestTextureLabelStyle:
     """Tests for the TextureLabelStyle dataclass."""
 
-    def test_default_construction(self):
+    def test_default_construction(self):  # noqa: ANN201
         """A default TextureLabelStyle has all-None defaults."""
         tls = TextureLabelStyle()
         assert tls.text is None
@@ -26,7 +26,7 @@ class TestTextureLabelStyle:
         assert tls.color is None
         assert tls.font_size is None
 
-    def test_to_dict_defaults(self):
+    def test_to_dict_defaults(self):  # noqa: ANN201
         """to_dict() includes only non-None fields."""
         tls = TextureLabelStyle()
         d = tls.to_dict()
@@ -44,7 +44,7 @@ class TestTextureLabelStyle:
         assert "offset_v" not in d
         assert "align" not in d
 
-    def test_to_dict_full_math_mode(self):
+    def test_to_dict_full_math_mode(self):  # noqa: ANN201
         """Full math mode with equator offset and repeating."""
         tls = TextureLabelStyle(
             text=r"\mathcal{S}_1",
@@ -65,7 +65,7 @@ class TestTextureLabelStyle:
         assert "background" not in d  # None is omitted
         assert d["resolution"] == 1024
 
-    def test_to_dict_plain_text(self):
+    def test_to_dict_plain_text(self):  # noqa: ANN201
         """Plain text mode with custom font size."""
         tls = TextureLabelStyle(
             text="Hello World",
@@ -78,7 +78,7 @@ class TestTextureLabelStyle:
         assert d["font_size"] == 36
         assert d["color"] == "#333333"
 
-    def test_to_dict_mixed_mode(self):
+    def test_to_dict_mixed_mode(self):  # noqa: ANN201
         """Mixed text+formula mode."""
         tls = TextureLabelStyle(
             text="Radius $$r=2.5$$ cm",
@@ -91,7 +91,7 @@ class TestTextureLabelStyle:
         assert d["math_mode"] is False
         assert d["align"] == "fit"
 
-    def test_to_dict_null_text(self):
+    def test_to_dict_null_text(self):  # noqa: ANN201
         """When text is explicitly None, it is omitted."""
         tls = TextureLabelStyle(text=None, math_mode=True)
         d = tls.to_dict()
@@ -101,14 +101,14 @@ class TestTextureLabelStyle:
 class TestEntityStyleIntegration:
     """Tests for texture_label field on entity styles."""
 
-    def test_sphere_style_no_texture_label(self):
+    def test_sphere_style_no_texture_label(self):  # noqa: ANN201
         """SphereStyle without texture_label omits the key."""
         style = SphereStyle(color="#ffaa00", opacity=0.4)
         d = style.to_dict()
         assert d["style_type"] == "SphereStyle"
         assert "texture_label" not in d
 
-    def test_sphere_style_with_texture_label(self):
+    def test_sphere_style_with_texture_label(self):  # noqa: ANN201
         """SphereStyle with texture_label includes it in output."""
         tls = TextureLabelStyle(text="S₁", math_mode=True, offset_v=0.25)
         style = SphereStyle(
@@ -125,14 +125,14 @@ class TestEntityStyleIntegration:
         assert d["texture_label"]["math_mode"] is True
         assert d["texture_label"]["offset_v"] == 0.25
 
-    def test_plane_style_no_texture_label(self):
+    def test_plane_style_no_texture_label(self):  # noqa: ANN201
         """PlaneStyle without texture_label omits the key."""
         style = PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0)
         d = style.to_dict()
         assert d["style_type"] == "PlaneStyle"
         assert "texture_label" not in d
 
-    def test_plane_style_with_texture_label(self):
+    def test_plane_style_with_texture_label(self):  # noqa: ANN201
         """PlaneStyle with texture_label includes it in output."""
         tls = TextureLabelStyle(
             text="Plane $$z=3$$",

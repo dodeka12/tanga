@@ -16,13 +16,13 @@ from pytanga.viz._styles import PointStyle
 from pytanga.viz.visualizer import Visualizer
 
 
-def _point_ref(handle, point=(0, 0, 0), **kwargs):
+def _point_ref(handle, point=(0, 0, 0), **kwargs):  # noqa: ANN001, ANN003, ANN202
     eid = handle.add(Point(*point), **kwargs)
     return VizObjectRef(handle, handle.scene.get_node(eid))
 
 
 class TestEntityAndStyle:
-    def test_entity_get_set(self):
+    def test_entity_get_set(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h, (1, 2, 3))
@@ -33,7 +33,7 @@ class TestEntityAndStyle:
         assert node.entity == Point(4, 5, 6)
         assert ref.entity == Point(4, 5, 6)
 
-    def test_entity_setter_resolves_mv(self):
+    def test_entity_setter_resolves_mv(self):  # noqa: ANN201
         from pytanga.basis import BasisN3
         from pytanga.geometry import Geometry
 
@@ -47,7 +47,7 @@ class TestEntityAndStyle:
         assert node.entity == Point(7, 8, 9)
         assert node.dirty_for("content")
 
-    def test_style_merge(self):
+    def test_style_merge(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -57,7 +57,7 @@ class TestEntityAndStyle:
         assert node.dirty_for("style")
         assert node.style["size"] == 0.2
 
-    def test_color_opacity(self):
+    def test_color_opacity(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -73,7 +73,7 @@ class TestEntityAndStyle:
         assert ref.color == "#00ff00"
         assert ref.opacity == 0.5
 
-    def test_texture_label(self):
+    def test_texture_label(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -85,7 +85,7 @@ class TestEntityAndStyle:
 
 
 class TestTransforms:
-    def test_translate_marks_transform(self):
+    def test_translate_marks_transform(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -96,7 +96,7 @@ class TestTransforms:
         assert not node.dirty_for("style")
         assert node.transform.position == (1.0, 2.0, 3.0)
 
-    def test_rotate_scale_set_transform(self):
+    def test_rotate_scale_set_transform(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -108,7 +108,7 @@ class TestTransforms:
         assert node.transform.position == (1.0, 2.0, 3.0)
         assert node.dirty_for("transform")
 
-    def test_set_transform_accepts_rotor(self):
+    def test_set_transform_accepts_rotor(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -120,7 +120,7 @@ class TestTransforms:
         )
         assert node.dirty_for("transform")
 
-    def test_set_transform_scale_is_triple(self):
+    def test_set_transform_scale_is_triple(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -129,7 +129,7 @@ class TestTransforms:
         ref.set_transform(scale=(2.0, 3.0, 4.0))
         assert node.transform.scale == (2.0, 3.0, 4.0)
 
-    def test_transform_operator(self):
+    def test_transform_operator(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -152,7 +152,7 @@ class TestTransforms:
         ref.apply_transform(Dilator(factor=2.0))
         assert node.dirty_for("transform")
 
-    def test_set_transform_accepts_operator(self):
+    def test_set_transform_accepts_operator(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)
@@ -162,7 +162,7 @@ class TestTransforms:
         assert node.dirty_for("transform")
         assert node.transform.position == (1.0, 2.0, 3.0)
 
-    def test_set_transform_accepts_transform(self):
+    def test_set_transform_accepts_transform(self):  # noqa: ANN201
         from pytanga.viz import Transform
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -174,7 +174,7 @@ class TestTransforms:
         assert node.dirty_for("transform")
         assert node.transform.position == (4.0, 5.0, 6.0)
 
-    def test_apply_transform_accepts_transform(self):
+    def test_apply_transform_accepts_transform(self):  # noqa: ANN201
         from pytanga.viz import Transform
 
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -186,7 +186,7 @@ class TestTransforms:
         assert node.dirty_for("transform")
         assert node.transform.position == (1.0, 0.0, 0.0)
 
-    def test_set_and_apply_transform_accept_mv(self):
+    def test_set_and_apply_transform_accept_mv(self):  # noqa: ANN201
         from pytanga.basis import BasisN3
         from pytanga.geometry import Geometry
 
@@ -207,7 +207,7 @@ class TestTransforms:
         assert node.dirty_for("transform")
         assert node.transform.position == (2.0, 2.0, 3.0)
 
-    def test_world_matrix(self):
+    def test_world_matrix(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         g = h.scene.add_group("g")
@@ -220,7 +220,7 @@ class TestTransforms:
 
 
 class TestOverlay:
-    def test_overlay_ref_has_no_transform(self):
+    def test_overlay_ref_has_no_transform(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         lid = h.add(Label(text="X", position=(0, 0, 0)))
@@ -232,7 +232,7 @@ class TestOverlay:
         with pytest.raises(TypeError):
             ref.world_matrix
 
-    def test_labels_access(self):
+    def test_labels_access(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         eid = h.add(Point(0, 0, 0), label="L")
@@ -241,7 +241,7 @@ class TestOverlay:
         assert len(ref.labels) == 1
         assert ref.labels[0].text == "L"
 
-    def test_update_label(self):
+    def test_update_label(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         eid = h.add(Point(0, 0, 0), label="L")
@@ -250,7 +250,7 @@ class TestOverlay:
         lref.update_label(text="New")
         assert lref.text == "New"
 
-    def test_update_label_on_entity_ref(self):
+    def test_update_label_on_entity_ref(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = h.new(Point(1, 2, 3), label="P")
@@ -259,7 +259,7 @@ class TestOverlay:
 
 
 class TestGroup:
-    def test_group_add_new(self):
+    def test_group_add_new(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         g = h.scene.add_group("grp")
@@ -269,7 +269,7 @@ class TestGroup:
         assert child.parent is not None
         assert child.parent.id == g.id
 
-    def test_group_non_group_guards(self):
+    def test_group_non_group_guards(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         h = viz.scene("t")
         ref = _point_ref(h)

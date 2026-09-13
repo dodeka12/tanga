@@ -31,7 +31,7 @@ def _viz() -> Visualizer:
 # ── 6.1 — start_server must not touch the caller's event loop ──────────────
 
 
-def test_start_server_does_not_call_set_event_loop(monkeypatch):
+def test_start_server_does_not_call_set_event_loop(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     calls: list = []
     monkeypatch.setattr(asyncio, "set_event_loop", lambda loop: calls.append(loop))
@@ -45,7 +45,7 @@ def test_start_server_does_not_call_set_event_loop(monkeypatch):
 # ── 6.2 — signal handlers are restored on stop ─────────────────────────────
 
 
-def test_start_stop_restores_signal_handlers():
+def test_start_stop_restores_signal_handlers():  # noqa: ANN201
     viz = _viz()
     before_int = signal.getsignal(signal.SIGINT)
     before_term = signal.getsignal(signal.SIGTERM)
@@ -58,7 +58,7 @@ def test_start_stop_restores_signal_handlers():
 # ── 6.3 — a busy port reports a clear message (SystemExit, no traceback) ───
 
 
-def test_start_server_busy_port_reports_clear_message():
+def test_start_server_busy_port_reports_clear_message():  # noqa: ANN201
     viz = _viz()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -76,7 +76,7 @@ def test_start_server_busy_port_reports_clear_message():
     assert viz._thread is None
 
 
-def test_is_port_in_use_error_detects_posix_and_windows():
+def test_is_port_in_use_error_detects_posix_and_windows():  # noqa: ANN201
     # POSIX: EADDRINUSE (98 on Linux, 48 on macOS) with the standard message.
     assert _is_port_in_use_error(OSError(errno.EADDRINUSE, "Address already in use"))
     # Windows: the WinSock error code (10048) with its own message.
@@ -100,10 +100,10 @@ def test_is_port_in_use_error_detects_posix_and_windows():
 # ── 6.4 — _ensure_server_running surfaces the real boot error ──────────────
 
 
-def test_ensure_server_running_reraises_boot_error(monkeypatch):
+def test_ensure_server_running_reraises_boot_error(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
 
-    async def _fail(*args, **kwargs):
+    async def _fail(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
         raise PortInUseError("Port 12345 is already in use. Close the other process.")
 
     monkeypatch.setattr(VizServer, "start", _fail)
@@ -117,12 +117,12 @@ def test_ensure_server_running_reraises_boot_error(monkeypatch):
 # ── 6.5 — stop_server restores handlers even when the server is None ───────
 
 
-def test_stop_server_restores_handlers_when_server_none():
+def test_stop_server_restores_handlers_when_server_none():  # noqa: ANN201
     viz = _viz()
     orig_int = signal.getsignal(signal.SIGINT)
     orig_term = signal.getsignal(signal.SIGTERM)
 
-    def _fake(signum, frame):
+    def _fake(signum, frame):  # noqa: ANN001, ANN202
         pass
 
     viz._saved_signal_handlers = {
@@ -143,7 +143,7 @@ def test_stop_server_restores_handlers_when_server_none():
 # ── 6.6/6.7 — removed constructor params are rejected ──────────────────────
 
 
-def test_constructor_rejects_port_host_open_browser():
+def test_constructor_rejects_port_host_open_browser():  # noqa: ANN201
     with pytest.raises(TypeError):
         Visualizer(port=9000)
     with pytest.raises(TypeError):
@@ -155,7 +155,7 @@ def test_constructor_rejects_port_host_open_browser():
 # ── 6.8 — VisualizerApp forwards add_default_axes/add_default_grid ──────────
 
 
-def test_visualizerapp_forwards_add_default_axes_grid():
+def test_visualizerapp_forwards_add_default_axes_grid():  # noqa: ANN201
     app = VisualizerApp(add_default_axes=False, add_default_grid=False)
     assert app.viz._add_default_axes is False
     assert app.viz._add_default_grid is False
@@ -164,7 +164,7 @@ def test_visualizerapp_forwards_add_default_axes_grid():
 # ── 6.9 — VisualizerApp.run threads timeout into show() ────────────────────
 
 
-def test_visualizerapp_run_threads_timeout(monkeypatch):
+def test_visualizerapp_run_threads_timeout(monkeypatch):  # noqa: ANN001, ANN201
     app = VisualizerApp()
     app._stop_requested.set()
     calls: dict = {}
@@ -174,7 +174,7 @@ def test_visualizerapp_run_threads_timeout(monkeypatch):
     assert calls["timeout"] == 7.5
 
 
-def test_visualizerapp_run_forwards_port_host(monkeypatch):
+def test_visualizerapp_run_forwards_port_host(monkeypatch):  # noqa: ANN001, ANN201
     app = VisualizerApp()
     app._stop_requested.set()
     calls: dict = {}
@@ -188,7 +188,7 @@ def test_visualizerapp_run_forwards_port_host(monkeypatch):
 # ── 6.10 — the layout URL is passed through and opened ─────────────────────
 
 
-def test_open_browser_url_passes_path_to_wait_for_browser(monkeypatch):
+def test_open_browser_url_passes_path_to_wait_for_browser(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     calls: dict = {}
     monkeypatch.setattr(viz, "wait_for_browser", lambda **kw: calls.update(kw) or True)
@@ -196,22 +196,22 @@ def test_open_browser_url_passes_path_to_wait_for_browser(monkeypatch):
     assert calls["path"] == "/?view=main&token=abc"
 
 
-def test_wait_for_browser_opens_given_path(monkeypatch):
+def test_wait_for_browser_opens_given_path(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     opened: list = []
 
     class _FakeLoop:
-        def call_soon_threadsafe(self, fn, *args):
+        def call_soon_threadsafe(self, fn, *args):  # noqa: ANN001, ANN002, ANN202
             pass
 
     class _FakeServer:
-        def __init__(self):
+        def __init__(self):  # noqa: ANN204
             self._any_ws_ready_thread = threading.Event()
 
-        def _clear_ws_ready_events(self):
+        def _clear_ws_ready_events(self):  # noqa: ANN202
             pass
 
-        def open_browser(self, url):
+        def open_browser(self, url):  # noqa: ANN001, ANN202
             opened.append(url)
 
     viz._server = _FakeServer()
@@ -235,7 +235,7 @@ def _block_port() -> tuple[socket.socket, int]:
     return sock, sock.getsockname()[1]
 
 
-def test_find_port_occupants_detects_local_listener():
+def test_find_port_occupants_detects_local_listener():  # noqa: ANN201
     sock, port = _block_port()
     try:
         occupants = find_port_occupants(port)
@@ -245,7 +245,7 @@ def test_find_port_occupants_detects_local_listener():
         sock.close()
 
 
-def test_auto_mode_picks_free_port():
+def test_auto_mode_picks_free_port():  # noqa: ANN201
     sock, port = _block_port()
     viz = Visualizer(
         add_default_axes=False,
@@ -261,7 +261,7 @@ def test_auto_mode_picks_free_port():
         sock.close()
 
 
-def test_cancel_mode_reports_busy_port():
+def test_cancel_mode_reports_busy_port():  # noqa: ANN201
     sock, port = _block_port()
     viz = Visualizer(
         add_default_axes=False,
@@ -275,7 +275,7 @@ def test_cancel_mode_reports_busy_port():
         sock.close()
 
 
-def test_kill_mode_terminates_blocking_process():
+def test_kill_mode_terminates_blocking_process():  # noqa: ANN201
     code = (
         "import socket, time; "
         "s = socket.socket(); s.bind(('127.0.0.1', 0)); s.listen(1); "
@@ -301,7 +301,7 @@ def test_kill_mode_terminates_blocking_process():
             proc.wait()
 
 
-def test_ask_mode_without_handler_cancels():
+def test_ask_mode_without_handler_cancels():  # noqa: ANN201
     sock, port = _block_port()
     server = VizServer(
         host="localhost", port=port, port_conflict_mode=PortConflictMode.ASK
@@ -320,7 +320,7 @@ def test_ask_mode_without_handler_cancels():
         sock.close()
 
 
-def test_ask_mode_honours_injected_handler():
+def test_ask_mode_honours_injected_handler():  # noqa: ANN201
     sock, port = _block_port()
     viz = Visualizer(
         add_default_axes=False,
@@ -336,7 +336,7 @@ def test_ask_mode_honours_injected_handler():
         sock.close()
 
 
-def test_visualizer_default_mode_resolution(monkeypatch):
+def test_visualizer_default_mode_resolution(monkeypatch):  # noqa: ANN001, ANN201
     Visualizer.reset()
     try:
         monkeypatch.setattr(viz_module, "_is_jupyter", lambda: True)
@@ -358,7 +358,7 @@ def test_visualizer_default_mode_resolution(monkeypatch):
         Visualizer.reset()
 
 
-def test_ask_terminal_prompt_returns_action(monkeypatch):
+def test_ask_terminal_prompt_returns_action(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
 
     class _TTY:
@@ -376,7 +376,7 @@ def test_ask_terminal_prompt_returns_action(monkeypatch):
     assert viz._ask_port_conflict(8765, []) is PortConflictMode.CANCEL
 
 
-def test_ask_terminal_prompt_non_tty_cancels(monkeypatch):
+def test_ask_terminal_prompt_non_tty_cancels(monkeypatch):  # noqa: ANN001, ANN201
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
 
     class _Pipe:

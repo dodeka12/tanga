@@ -14,7 +14,7 @@ from pytanga.viz import Visualizer, VisualizerApp
 class _RecordingApp(VisualizerApp):
     """VisualizerApp subclass that records whether its lifecycle hooks ran."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:  # noqa: ANN003
         super().__init__(**kwargs)
         self.init_called = False
         self.cleanup_called = False
@@ -27,7 +27,7 @@ class _RecordingApp(VisualizerApp):
 
 
 class TestVisualizerAppShutdown:
-    def test_constructor_forwards_enable_server_stop_key(self):
+    def test_constructor_forwards_enable_server_stop_key(self):  # noqa: ANN201
         app = VisualizerApp(enable_server_stop_key=True)
         assert app.viz._server_stop_configs[""] == {
             "enabled": True,
@@ -35,45 +35,45 @@ class TestVisualizerAppShutdown:
             "modifiers": ["ctrl"],
         }
 
-    def test_constructor_default_does_not_enable_server_stop_key(self):
+    def test_constructor_default_does_not_enable_server_stop_key(self):  # noqa: ANN201
         app = VisualizerApp()
         assert "" not in app.viz._server_stop_configs
 
-    def test_request_shutdown_sets_app_flag_and_viz_event(self):
+    def test_request_shutdown_sets_app_flag_and_viz_event(self):  # noqa: ANN201
         app = VisualizerApp()
         app.viz._shutdown_requested = threading.Event()
         app.request_shutdown()
         assert app._stop_requested.is_set()
         assert app.viz._shutdown_requested.is_set()
 
-    def test_request_shutdown_is_safe_before_server_start(self):
+    def test_request_shutdown_is_safe_before_server_start(self):  # noqa: ANN201
         app = VisualizerApp()
         app.request_shutdown()  # no _shutdown_requested attribute yet
         assert app._stop_requested.is_set()
 
-    def test_is_stop_requested_false_initially(self):
+    def test_is_stop_requested_false_initially(self):  # noqa: ANN201
         app = VisualizerApp()
         assert app._is_stop_requested() is False
 
-    def test_is_stop_requested_true_after_request_shutdown(self):
+    def test_is_stop_requested_true_after_request_shutdown(self):  # noqa: ANN201
         app = VisualizerApp()
         app.request_shutdown()
         assert app._is_stop_requested() is True
 
-    def test_is_stop_requested_true_when_viz_shutdown_requested(self):
+    def test_is_stop_requested_true_when_viz_shutdown_requested(self):  # noqa: ANN201
         app = VisualizerApp()
         app.viz._shutdown_requested = threading.Event()
         app.viz._shutdown_requested.set()
         assert app._is_stop_requested() is True
 
-    def test_app_main_runs_init_and_cleanup_when_stop_requested(self):
+    def test_app_main_runs_init_and_cleanup_when_stop_requested(self):  # noqa: ANN201
         app = _RecordingApp()
         app._stop_requested.set()
         asyncio.run(app._app_main())
         assert app.init_called is True
         assert app.cleanup_called is True
 
-    def test_app_main_returns_when_viz_shutdown_requested(self):
+    def test_app_main_returns_when_viz_shutdown_requested(self):  # noqa: ANN201
         app = _RecordingApp()
         app.viz._shutdown_requested = threading.Event()
         app.viz._shutdown_requested.set()
@@ -81,7 +81,7 @@ class TestVisualizerAppShutdown:
         assert app.init_called is True
         assert app.cleanup_called is True
 
-    def test_app_main_captures_and_clears_user_loop(self):
+    def test_app_main_captures_and_clears_user_loop(self):  # noqa: ANN201
         captured = []
 
         class _App(VisualizerApp):
@@ -96,7 +96,7 @@ class TestVisualizerAppShutdown:
         assert app._user_loop is None
 
 
-def _running_loop():
+def _running_loop():  # noqa: ANN202
     loop = asyncio.new_event_loop()
     thread = threading.Thread(target=loop.run_forever, daemon=True)
     thread.start()
@@ -104,13 +104,13 @@ def _running_loop():
 
 
 class TestUserLoopOffload:
-    def test_submit_user_schedules_and_returns_future(self):
+    def test_submit_user_schedules_and_returns_future(self):  # noqa: ANN201
         app = VisualizerApp()
         loop, thread = _running_loop()
         app._user_loop = loop
         try:
 
-            async def _work():
+            async def _work():  # noqa: ANN202
                 return 42
 
             fut = app.submit_user(_work)
@@ -119,14 +119,14 @@ class TestUserLoopOffload:
             loop.call_soon_threadsafe(loop.stop)
             thread.join(timeout=2)
 
-    def test_submit_user_done_runs_once(self):
+    def test_submit_user_done_runs_once(self):  # noqa: ANN201
         app = VisualizerApp()
         loop, thread = _running_loop()
         app._user_loop = loop
         try:
             results = []
 
-            async def _work():
+            async def _work():  # noqa: ANN202
                 return 7
 
             app.submit_user(_work, done=results.append).result(timeout=5)
@@ -135,14 +135,14 @@ class TestUserLoopOffload:
             loop.call_soon_threadsafe(loop.stop)
             thread.join(timeout=2)
 
-    def test_submit_user_done_runs_on_failure(self):
+    def test_submit_user_done_runs_on_failure(self):  # noqa: ANN201
         app = VisualizerApp()
         loop, thread = _running_loop()
         app._user_loop = loop
         try:
             results = []
 
-            async def _work():
+            async def _work():  # noqa: ANN202
                 raise RuntimeError("boom")
 
             fut = app.submit_user(_work, done=results.append)
@@ -153,13 +153,13 @@ class TestUserLoopOffload:
             loop.call_soon_threadsafe(loop.stop)
             thread.join(timeout=2)
 
-    def test_run_user_returns_result(self):
+    def test_run_user_returns_result(self):  # noqa: ANN201
         app = VisualizerApp()
         loop, thread = _running_loop()
         app._user_loop = loop
         try:
 
-            async def _work():
+            async def _work():  # noqa: ANN202
                 return 99
 
             assert asyncio.run(app.run_user(_work)) == 99
@@ -167,13 +167,13 @@ class TestUserLoopOffload:
             loop.call_soon_threadsafe(loop.stop)
             thread.join(timeout=2)
 
-    def test_run_user_sync_runs_blocking_fn(self):
+    def test_run_user_sync_runs_blocking_fn(self):  # noqa: ANN201
         app = VisualizerApp()
         loop, thread = _running_loop()
         app._user_loop = loop
         try:
 
-            def _blocking(x):
+            def _blocking(x):  # noqa: ANN001, ANN202
                 return x * 2
 
             assert asyncio.run(app.run_user_sync(_blocking, 21)) == 42
@@ -181,10 +181,10 @@ class TestUserLoopOffload:
             loop.call_soon_threadsafe(loop.stop)
             thread.join(timeout=2)
 
-    def test_run_blocking_returns_result(self):
+    def test_run_blocking_returns_result(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
 
-        def _blocking(x):
+        def _blocking(x):  # noqa: ANN001, ANN202
             return x + 1
 
         assert asyncio.run(viz.run_blocking(_blocking, 41)) == 42

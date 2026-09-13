@@ -29,7 +29,7 @@ from pytanga.geometry.operators import (
 
 
 @pytest.fixture(scope="module")
-def b():
+def b():  # noqa: ANN201
     return BasisP2()
 
 
@@ -40,7 +40,7 @@ def b():
 # --- E1. Point ---
 
 
-def test_entity_point_opns_round_trip(b):
+def test_entity_point_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E1: create Point(3,-2) → analyze → assert exact fields."""
     mv = create_entity(b, Point(3, -2, 0))
     r = analyze_entity(mv)
@@ -53,7 +53,7 @@ def test_entity_point_opns_round_trip(b):
 # --- E2. Direction ---
 
 
-def test_entity_direction_opns_round_trip(b):
+def test_entity_direction_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E2: create Direction(1,2) → analyze → assert exact fields."""
     mv = create_entity(b, Direction(1, 2, 0))
     r = analyze_entity(mv)
@@ -66,7 +66,7 @@ def test_entity_direction_opns_round_trip(b):
 # --- E3. Line ---
 
 
-def test_entity_line_opns_round_trip(b):
+def test_entity_line_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E3: create Line(origin=(1,2), dir=(1,2)) → analyze → assert.
 
     Note: blade_factorize orthogonalizes factors, so the extracted
@@ -95,7 +95,7 @@ def test_entity_line_opns_round_trip(b):
 # --- E4. Space ---
 
 
-def test_entity_space_opns_round_trip(b):
+def test_entity_space_opns_round_trip(b):  # noqa: ANN001, ANN201
     """E4: create Space(scale=2.5) → analyze → assert scale."""
     mv = create_entity(b, Space(scale=2.5))
     r = analyze_entity(mv)
@@ -108,7 +108,7 @@ def test_entity_space_opns_round_trip(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_scale2_point_invariant(b):
+def test_scale2_point_invariant(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Point(3, -2, 0)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Point), f"Got {type(r).__name__}"
@@ -117,7 +117,7 @@ def test_scale2_point_invariant(b):
     assert r.z == pytest.approx(0, abs=1e-6)
 
 
-def test_scale2_line_invariant(b):
+def test_scale2_line_invariant(b):  # noqa: ANN001, ANN201
     direction = Direction(1, 2, 0)
     unit = direction.normalized()
     pt = Point(1, 2, 0)
@@ -136,7 +136,7 @@ def test_scale2_line_invariant(b):
     assert cross == pytest.approx(0, abs=1e-6)
 
 
-def test_scale2_space_doubles(b):
+def test_scale2_space_doubles(b):  # noqa: ANN001, ANN201
     mv = create_entity(b, Space(scale=2.5)) * 2.0
     r = analyze_entity(mv)
     assert isinstance(r, Space), f"Got {type(r).__name__}"
@@ -150,7 +150,7 @@ def test_scale2_space_doubles(b):
 # --- O1. Rotor ---
 
 
-def test_operator_rotor_round_trip(b):
+def test_operator_rotor_round_trip(b):  # noqa: ANN001, ANN201
     """O1: create Rotor(π/2) → analyze → assert angle.
 
     In 2D, the rotation axis is always the pseudoscalar e₁₂ (z-axis).
@@ -167,7 +167,7 @@ def test_operator_rotor_round_trip(b):
 # --- O2. ReflectionLine ---
 
 
-def test_operator_reflection_line_round_trip(b):
+def test_operator_reflection_line_round_trip(b):  # noqa: ANN001, ANN201
     """O2: create ReflectionLine(x-axis, through origin) → analyze → assert.
 
     P2 reflection line versor is N∧e₃ where N = (nx, ny).
@@ -184,7 +184,7 @@ def test_operator_reflection_line_round_trip(b):
 # --- O3. ReflectionPoint ---
 
 
-def test_operator_reflection_point_origin_round_trip(b):
+def test_operator_reflection_point_origin_round_trip(b):  # noqa: ANN001, ANN201
     """O3: create ReflectionPoint(origin) → analyze → assert origin.
 
     P2 only supports point reflection at the origin (the versor is
@@ -206,7 +206,7 @@ def test_operator_reflection_point_origin_round_trip(b):
 # --- A1. Rotor ---
 
 
-def test_apply_rotor_point_rotation(b):
+def test_apply_rotor_point_rotation(b):  # noqa: ANN001, ANN201
     """A1: Rotor(90°) on (1,0) → Point(0,1).
 
     First-principles derivation: rotating (1,0) by 90° in 2D about
@@ -221,7 +221,7 @@ def test_apply_rotor_point_rotation(b):
     assert r.y == pytest.approx(1, abs=1e-6)
 
 
-def test_apply_rotor_point_rotation_half_turn(b):
+def test_apply_rotor_point_rotation_half_turn(b):  # noqa: ANN001, ANN201
     """A1b: Rotor(180°) on (3,-2) → Point(-3,2).
 
     180° rotation about the origin negates both coordinates.
@@ -238,7 +238,7 @@ def test_apply_rotor_point_rotation_half_turn(b):
 # --- A2. ReflectionLine ---
 
 
-def test_apply_reflection_line_point_mirror_x(b):
+def test_apply_reflection_line_point_mirror_x(b):  # noqa: ANN001, ANN201
     """A2: ReflectionLine(x-axis) on (3,2) → Point(3,-2).
 
     Reflection across the x-axis (line through origin along x):
@@ -256,7 +256,7 @@ def test_apply_reflection_line_point_mirror_x(b):
 # --- A3. ReflectionPoint ---
 
 
-def test_apply_reflection_point_origin_negation(b):
+def test_apply_reflection_point_origin_negation(b):  # noqa: ANN001, ANN201
     """A3: ReflectionPoint(origin) on (5,-3) → Point(-5,3).
 
     Reflection in the origin negates both coordinates.
@@ -276,13 +276,13 @@ def test_apply_reflection_point_origin_negation(b):
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_create_direction_zero_norm_raises(b):
+def test_create_direction_zero_norm_raises(b):  # noqa: ANN001, ANN201
     """create_entity(Direction(0,0,0)) must raise ValueError."""
     with pytest.raises(ValueError, match="Zero.*norm"):
         create_entity(b, Direction(0, 0, 0))
 
 
-def test_analyze_zero_vector_raises(b):
+def test_analyze_zero_vector_raises(b):  # noqa: ANN001, ANN201
     """Zero MV passed to analyze_entity must raise ValueError."""
     zero = b.multivector({})
     with pytest.raises(ValueError):
@@ -312,7 +312,7 @@ from pytanga.geometry.operators import (
         (HPoint, (Point(0, 0, 0),)),
     ],
 )
-def test_n2_entity_raises(b, entity_cls, args):
+def test_n2_entity_raises(b, entity_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises(ValueError, match="N2"):
         create_entity(b, entity_cls(*args))
 
@@ -327,6 +327,6 @@ def test_n2_entity_raises(b, entity_cls, args):
         (GeneralRotor, (math.pi / 2, Direction(0, 0, 1), Point(1, 0, 0))),
     ],
 )
-def test_n2_operator_raises(b, op_cls, args):
+def test_n2_operator_raises(b, op_cls, args):  # noqa: ANN001, ANN201
     with pytest.raises(ValueError, match="N2"):
         create_operator(b, op_cls(*args))

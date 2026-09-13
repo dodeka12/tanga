@@ -37,7 +37,7 @@ from pytanga.viz.serializer import (
 # ── Helpers ────────────────────────────────────────────────
 
 
-def _styles_map():
+def _styles_map():  # noqa: ANN202
     """Return a fresh copy of canonical defaults."""
     return {k: copy(v) for k, v in _DEFAULT_STYLE_FOR_KIND.items()}
 
@@ -46,42 +46,42 @@ def _styles_map():
 
 
 class TestImagEntityConstruction:
-    def test_imag_circle_default_is_imaginary(self):
+    def test_imag_circle_default_is_imaginary(self):  # noqa: ANN201
         c = ImagCircle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)
         assert c.is_imaginary is True
 
-    def test_imag_sphere_default_is_imaginary(self):
+    def test_imag_sphere_default_is_imaginary(self):  # noqa: ANN201
         s = ImagSphere(center=Point(0, 0, 0), radius=1.0)
         assert s.is_imaginary is True
 
-    def test_imag_point_pair_default_is_imaginary(self):
+    def test_imag_point_pair_default_is_imaginary(self):  # noqa: ANN201
         pp = ImagPointPair(point_a=Point(0, 0, 0), point_b=Point(1, 0, 0))
         assert pp.is_imaginary is True
 
-    def test_imag_circle_isinstance_of_circle(self):
+    def test_imag_circle_isinstance_of_circle(self):  # noqa: ANN201
         c = ImagCircle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)
         assert isinstance(c, Circle)
 
-    def test_imag_sphere_isinstance_of_sphere(self):
+    def test_imag_sphere_isinstance_of_sphere(self):  # noqa: ANN201
         s = ImagSphere(center=Point(0, 0, 0), radius=1.0)
         assert isinstance(s, Sphere)
 
-    def test_imag_point_pair_isinstance_of_point_pair(self):
+    def test_imag_point_pair_isinstance_of_point_pair(self):  # noqa: ANN201
         pp = ImagPointPair(point_a=Point(0, 0, 0), point_b=Point(1, 0, 0))
         assert isinstance(pp, PointPair)
 
-    def test_imag_circle_fields_preserved(self):
+    def test_imag_circle_fields_preserved(self):  # noqa: ANN201
         c = ImagCircle(center=Point(1, 2, 3), normal=Direction(0, 0, 1), radius=5.0)
         assert c.center == Point(1, 2, 3)
         assert c.normal == Direction(0, 0, 1)
         assert c.radius == 5.0
 
-    def test_imag_sphere_fields_preserved(self):
+    def test_imag_sphere_fields_preserved(self):  # noqa: ANN201
         s = ImagSphere(center=Point(4, 5, 6), radius=3.5)
         assert s.center == Point(4, 5, 6)
         assert s.radius == 3.5
 
-    def test_base_circle_is_imaginary_false_by_default(self):
+    def test_base_circle_is_imaginary_false_by_default(self):  # noqa: ANN201
         c = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)
         assert c.is_imaginary is False
 
@@ -90,32 +90,32 @@ class TestImagEntityConstruction:
 
 
 class TestCanonicalDefaults:
-    def test_imag_circle_has_style_entry(self):
+    def test_imag_circle_has_style_entry(self):  # noqa: ANN201
         assert "ImagCircle" in _DEFAULT_STYLE_FOR_KIND
         style = _DEFAULT_STYLE_FOR_KIND["ImagCircle"]
         assert isinstance(style, CylinderCircleStyle)
 
-    def test_imag_sphere_has_style_entry(self):
+    def test_imag_sphere_has_style_entry(self):  # noqa: ANN201
         assert "ImagSphere" in _DEFAULT_STYLE_FOR_KIND
         style = _DEFAULT_STYLE_FOR_KIND["ImagSphere"]
         assert isinstance(style, SphereStyle)
 
-    def test_imag_point_pair_has_style_entry(self):
+    def test_imag_point_pair_has_style_entry(self):  # noqa: ANN201
         assert "ImagPointPair" in _DEFAULT_STYLE_FOR_KIND
         style = _DEFAULT_STYLE_FOR_KIND["ImagPointPair"]
         assert isinstance(style, PointPairStyle)
 
-    def test_real_and_imag_circle_colors_differ(self):
+    def test_real_and_imag_circle_colors_differ(self):  # noqa: ANN201
         real = _DEFAULT_STYLE_FOR_KIND["Circle"]
         imag = _DEFAULT_STYLE_FOR_KIND["ImagCircle"]
         assert real.color != imag.color
 
-    def test_real_and_imag_sphere_colors_differ(self):
+    def test_real_and_imag_sphere_colors_differ(self):  # noqa: ANN201
         real = _DEFAULT_STYLE_FOR_KIND["Sphere"]
         imag = _DEFAULT_STYLE_FOR_KIND["ImagSphere"]
         assert real.color != imag.color
 
-    def test_real_and_imag_point_pair_colors_differ(self):
+    def test_real_and_imag_point_pair_colors_differ(self):  # noqa: ANN201
         real = _DEFAULT_STYLE_FOR_KIND["PointPair"]
         imag = _DEFAULT_STYLE_FOR_KIND["ImagPointPair"]
         assert real.color != imag.color
@@ -125,33 +125,33 @@ class TestCanonicalDefaults:
 
 
 class TestStyleDictClassKeys:
-    def test_style_dict_contains_imag_circle(self):
+    def test_style_dict_contains_imag_circle(self):  # noqa: ANN201
         styles = _make_default_styles()
         assert "ImagCircle" in styles
 
-    def test_style_dict_access_by_class(self):
+    def test_style_dict_access_by_class(self):  # noqa: ANN201
         styles = _make_default_styles()
         assert styles[ImagCircle].color == _DEFAULT_STYLE_FOR_KIND["ImagCircle"].color
 
-    def test_style_dict_access_by_string(self):
+    def test_style_dict_access_by_string(self):  # noqa: ANN201
         styles = _make_default_styles()
         assert styles["ImagCircle"].color == _DEFAULT_STYLE_FOR_KIND["ImagCircle"].color
 
-    def test_style_dict_set_by_class(self):
+    def test_style_dict_set_by_class(self):  # noqa: ANN201
         styles = _make_default_styles()
         styles[ImagCircle] = CylinderCircleStyle(color="#ff00ff")
         assert styles["ImagCircle"].color == "#ff00ff"
 
-    def test_style_dict_set_by_string(self):
+    def test_style_dict_set_by_string(self):  # noqa: ANN201
         styles = _make_default_styles()
         styles["ImagCircle"] = CylinderCircleStyle(color="#00ffff")
         assert styles[ImagCircle].color == "#00ffff"
 
-    def test_style_dict_class_access_imag_sphere(self):
+    def test_style_dict_class_access_imag_sphere(self):  # noqa: ANN201
         styles = _make_default_styles()
         assert styles[ImagSphere].color == _DEFAULT_STYLE_FOR_KIND["ImagSphere"].color
 
-    def test_style_dict_class_access_imag_point_pair(self):
+    def test_style_dict_class_access_imag_point_pair(self):  # noqa: ANN201
         styles = _make_default_styles()
         assert (
             styles[ImagPointPair].color
@@ -163,21 +163,21 @@ class TestStyleDictClassKeys:
 
 
 class TestKindToKey:
-    def test_imag_circle_kind(self):
+    def test_imag_circle_kind(self):  # noqa: ANN201
         assert _kind_to_key("imagcircle") == "ImagCircle"
 
-    def test_imag_sphere_kind(self):
+    def test_imag_sphere_kind(self):  # noqa: ANN201
         assert _kind_to_key("imagsphere") == "ImagSphere"
 
-    def test_imag_point_pair_kind(self):
+    def test_imag_point_pair_kind(self):  # noqa: ANN201
         assert _kind_to_key("imagpointpair") == "ImagPointPair"
 
-    def test_real_kinds_still_work(self):
+    def test_real_kinds_still_work(self):  # noqa: ANN201
         assert _kind_to_key("circle") == "Circle"
         assert _kind_to_key("sphere") == "Sphere"
         assert _kind_to_key("point_pair") == "PointPair"
 
-    def test_unknown_kind_raises(self):
+    def test_unknown_kind_raises(self):  # noqa: ANN201
         with pytest.raises(ValueError, match="Unknown entity kind"):
             _kind_to_key("nonexistent")
 
@@ -186,13 +186,13 @@ class TestKindToKey:
 
 
 class TestSerializerRemapping:
-    def test_real_circle_kind_is_circle(self):
+    def test_real_circle_kind_is_circle(self):  # noqa: ANN201
         c = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)
         d = _serialize_circle(c, {}, kind="Circle", styles_map=_styles_map())
         assert d["kind"] == "Circle"
         assert d["isImaginary"] is False
 
-    def test_imag_circle_kind_is_overridden_to_circle(self):
+    def test_imag_circle_kind_is_overridden_to_circle(self):  # noqa: ANN201
         c = Circle(
             center=Point(0, 0, 0),
             normal=Direction(0, 0, 1),
@@ -203,12 +203,12 @@ class TestSerializerRemapping:
         assert d["kind"] == "Circle"
         assert d["isImaginary"] is True
 
-    def test_real_circle_gets_real_defaults(self):
+    def test_real_circle_gets_real_defaults(self):  # noqa: ANN201
         c = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)
         d = _serialize_circle(c, {}, kind="Circle", styles_map=_styles_map())
         assert d["style"]["color"] == _DEFAULT_STYLE_FOR_KIND["Circle"].color
 
-    def test_imag_circle_gets_imag_defaults(self):
+    def test_imag_circle_gets_imag_defaults(self):  # noqa: ANN201
         c = Circle(
             center=Point(0, 0, 0),
             normal=Direction(0, 0, 1),
@@ -218,7 +218,7 @@ class TestSerializerRemapping:
         d = _serialize_circle(c, {}, kind="Circle", styles_map=_styles_map())
         assert d["style"]["color"] == _DEFAULT_STYLE_FOR_KIND["ImagCircle"].color
 
-    def test_imag_circle_style_differs_from_real(self):
+    def test_imag_circle_style_differs_from_real(self):  # noqa: ANN201
         real = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=2.0)
         imag = Circle(
             center=Point(0, 0, 0),
@@ -230,37 +230,37 @@ class TestSerializerRemapping:
         imag_d = _serialize_circle(imag, {}, kind="Circle", styles_map=_styles_map())
         assert real_d["style"]["color"] != imag_d["style"]["color"]
 
-    def test_real_sphere_kind_is_sphere(self):
+    def test_real_sphere_kind_is_sphere(self):  # noqa: ANN201
         s = Sphere(center=Point(0, 0, 0), radius=1.0)
         d = _serialize_sphere(s, {}, kind="Sphere", styles_map=_styles_map())
         assert d["kind"] == "Sphere"
         assert d["isImaginary"] is False
 
-    def test_imag_sphere_kind_is_overridden_to_sphere(self):
+    def test_imag_sphere_kind_is_overridden_to_sphere(self):  # noqa: ANN201
         s = Sphere(center=Point(0, 0, 0), radius=1.0, is_imaginary=True)
         d = _serialize_sphere(s, {}, kind="Sphere", styles_map=_styles_map())
         assert d["kind"] == "Sphere"
         assert d["isImaginary"] is True
 
-    def test_imag_sphere_gets_imag_defaults(self):
+    def test_imag_sphere_gets_imag_defaults(self):  # noqa: ANN201
         s = Sphere(center=Point(0, 0, 0), radius=1.0, is_imaginary=True)
         d = _serialize_sphere(s, {}, kind="Sphere", styles_map=_styles_map())
         assert d["style"]["color"] == _DEFAULT_STYLE_FOR_KIND["ImagSphere"].color
 
-    def test_imag_sphere_style_differs_from_real(self):
+    def test_imag_sphere_style_differs_from_real(self):  # noqa: ANN201
         real = Sphere(center=Point(0, 0, 0), radius=1.0)
         imag = Sphere(center=Point(0, 0, 0), radius=1.0, is_imaginary=True)
         real_d = _serialize_sphere(real, {}, kind="Sphere", styles_map=_styles_map())
         imag_d = _serialize_sphere(imag, {}, kind="Sphere", styles_map=_styles_map())
         assert real_d["style"]["color"] != imag_d["style"]["color"]
 
-    def test_real_point_pair_kind_is_point_pair(self):
+    def test_real_point_pair_kind_is_point_pair(self):  # noqa: ANN201
         pp = PointPair(point_a=Point(0, 0, 0), point_b=Point(1, 0, 0))
         d = _serialize_point_pair(pp, {}, kind="PointPair", styles_map=_styles_map())
         assert d["kind"] == "PointPair"
         assert d["isImaginary"] is False
 
-    def test_imag_point_pair_kind_is_overridden_to_point_pair(self):
+    def test_imag_point_pair_kind_is_overridden_to_point_pair(self):  # noqa: ANN201
         pp = PointPair(
             point_a=Point(0, 0, 0),
             point_b=Point(1, 0, 0),
@@ -270,7 +270,7 @@ class TestSerializerRemapping:
         assert d["kind"] == "PointPair"
         assert d["isImaginary"] is True
 
-    def test_imag_point_pair_gets_imag_defaults(self):
+    def test_imag_point_pair_gets_imag_defaults(self):  # noqa: ANN201
         pp = PointPair(
             point_a=Point(0, 0, 0),
             point_b=Point(1, 0, 0),
@@ -284,28 +284,28 @@ class TestSerializerRemapping:
 
 
 class TestVisualizerIntegration:
-    def test_set_default_color_imag_circle(self):
+    def test_set_default_color_imag_circle(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
         viz.set_default_color("imagcircle", "#ff0000")
         assert viz.styles["ImagCircle"].color == "#ff0000"
 
-    def test_set_default_color_imag_sphere(self):
+    def test_set_default_color_imag_sphere(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
         viz.set_default_color("imagsphere", "#00ff00")
         assert viz.styles["ImagSphere"].color == "#00ff00"
 
-    def test_set_default_color_imag_point_pair(self):
+    def test_set_default_color_imag_point_pair(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
         viz.set_default_color("imagpointpair", "#0000ff")
         assert viz.styles["ImagPointPair"].color == "#0000ff"
 
-    def test_set_default_color_imag_circle_with_alpha(self):
+    def test_set_default_color_imag_circle_with_alpha(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
@@ -313,7 +313,7 @@ class TestVisualizerIntegration:
         assert viz.styles["ImagCircle"].color == "#ff0000"
         assert viz.styles["ImagCircle"].opacity == 0.5
 
-    def test_default_styles_contains_imag_kinds(self):
+    def test_default_styles_contains_imag_kinds(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
@@ -321,7 +321,7 @@ class TestVisualizerIntegration:
         assert "ImagSphere" in viz.styles.kind
         assert "ImagPointPair" in viz.styles.kind
 
-    def test_real_and_imag_defaults_independent(self):
+    def test_real_and_imag_defaults_independent(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
@@ -330,7 +330,7 @@ class TestVisualizerIntegration:
         assert viz.styles["Circle"].color == "#111111"
         assert viz.styles["ImagCircle"].color == "#222222"
 
-    def test_mutating_real_does_not_affect_imag(self):
+    def test_mutating_real_does_not_affect_imag(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()
@@ -338,7 +338,7 @@ class TestVisualizerIntegration:
         viz.styles["Circle"].color = "#000000"
         assert viz.styles["ImagCircle"].color == original_imag
 
-    def test_imag_sphere_wireframe_default(self):
+    def test_imag_sphere_wireframe_default(self):  # noqa: ANN201
         from pytanga.viz import Visualizer
 
         viz = Visualizer()

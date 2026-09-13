@@ -31,7 +31,7 @@ def _group_scene() -> Scene:
 
 
 class TestExportStatic:
-    def test_static_full_state_has_parent_and_transform(self):
+    def test_static_full_state_has_parent_and_transform(self):  # noqa: ANN201
         s = _group_scene()
         state = s.full_state()
         group = next(d for d in state if d["kind"] == "VizGroup")
@@ -40,12 +40,12 @@ class TestExportStatic:
         assert "transform" in child
         assert "transform" in group
 
-    def test_static_group_kind(self):
+    def test_static_group_kind(self):  # noqa: ANN201
         s = _group_scene()
         kinds = {d["kind"] for d in s.full_state()}
         assert "VizGroup" in kinds
 
-    def test_static_render_html(self):
+    def test_static_render_html(self):  # noqa: ANN201
         s = _group_scene()
         html = render_snapshot(s.full_state(), s.config.to_dict(), delivery="inline")
         assert "function createEntityMesh(" in html
@@ -53,7 +53,7 @@ class TestExportStatic:
         assert "function buildSceneObject(" in html
         assert "function buildOverlay(" in html
 
-    def test_static_render_viz_entities(self):
+    def test_static_render_viz_entities(self):  # noqa: ANN201
         s = Scene()
         s.add(Cylinder())
         s.add(Arc())
@@ -73,7 +73,7 @@ class TestExportStatic:
         assert "function createEllipse(" in html
         assert "function createRegularPolygon(" in html
 
-    def test_figure_html_generation(self):
+    def test_figure_html_generation(self):  # noqa: ANN201
         s = _group_scene()
         html = render_figure(
             s.full_state(),
@@ -85,13 +85,13 @@ class TestExportStatic:
         assert "function createVizGroup(" in html
         assert "function buildSceneObject(" in html
 
-    def test_snapshot_export_includes_html2canvas(self):
+    def test_snapshot_export_includes_html2canvas(self):  # noqa: ANN201
         """Math texture labels require html2canvas, loaded like the live viewer."""
         s = _group_scene()
         html = render_snapshot(s.full_state(), s.config.to_dict())
         assert "html2canvas@1.4.1" in html
 
-    def test_figure_export_includes_html2canvas(self):
+    def test_figure_export_includes_html2canvas(self):  # noqa: ANN201
         """Math texture labels require html2canvas, loaded like the live viewer."""
         s = _group_scene()
         html = render_figure(
@@ -102,7 +102,7 @@ class TestExportStatic:
         )
         assert "html2canvas@1.4.1" in html
 
-    def test_parent_before_child(self):
+    def test_parent_before_child(self):  # noqa: ANN201
         s = _group_scene()
         nodes = s._dfs_preorder()
         ids = [n.id for n in nodes]
@@ -110,7 +110,7 @@ class TestExportStatic:
         child = next(n for n in nodes if n.kind == "Point")
         assert ids.index(group.id) < ids.index(child.id)
 
-    def test_static_render_html_embeds_label_rotation(self, tmp_path):
+    def test_static_render_html_embeds_label_rotation(self, tmp_path):  # noqa: ANN001, ANN201
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(
             Point(1, 2, 3),
@@ -124,14 +124,14 @@ class TestExportStatic:
         assert "rotate(${rotation}deg)" in content
         assert "transformOrigin" in content
 
-    def test_export_figure_returns_string_when_no_path(self):
+    def test_export_figure_returns_string_when_no_path(self):  # noqa: ANN201
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
         snippet = viz.export_figure(delivery="inline")
         assert isinstance(snippet, str)
         assert "function createEntityMesh(" in snippet
 
-    def test_export_figure_html_alias_deprecated(self):
+    def test_export_figure_html_alias_deprecated(self):  # noqa: ANN201
         import pytest
 
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
@@ -143,7 +143,7 @@ class TestExportStatic:
 
 
 class TestAnimatedExport:
-    def test_recording_and_export_snapshot(self, tmp_path):
+    def test_recording_and_export_snapshot(self, tmp_path):  # noqa: ANN001, ANN201
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
         rec = viz.start_animation_recording()
@@ -154,7 +154,7 @@ class TestAnimatedExport:
         content = path.read_text(encoding="utf-8")
         assert "tanga-fig-" in content
 
-    def test_export_figure_animation_returns_string(self):
+    def test_export_figure_animation_returns_string(self):  # noqa: ANN201
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
         viz.add(Point(1, 2, 3))
         rec = viz.start_animation_recording()
@@ -163,7 +163,7 @@ class TestAnimatedExport:
         assert isinstance(snippet, str)
         assert "tanga-fig-" in snippet
 
-    def test_export_animated_html_alias_deprecated(self, tmp_path):
+    def test_export_animated_html_alias_deprecated(self, tmp_path):  # noqa: ANN001, ANN201
         import pytest
 
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
@@ -176,7 +176,7 @@ class TestAnimatedExport:
             exporter.export_animated_html(str(path), rec, overwrite=True)
         assert path.exists()
 
-    def test_scene_exporter_deprecated(self):
+    def test_scene_exporter_deprecated(self):  # noqa: ANN201
         import pytest
 
         viz = pytanga.viz.Visualizer(add_default_axes=False, add_default_grid=False)
@@ -185,7 +185,7 @@ class TestAnimatedExport:
 
 
 class TestCdnUnreachableDetection:
-    def test_export_cdn_probe_present(self):
+    def test_export_cdn_probe_present(self):  # noqa: ANN201
         from pytanga.viz.export._bootstrap._errors import js_cdn_check_script
 
         script = js_cdn_check_script()
@@ -196,7 +196,7 @@ class TestCdnUnreachableDetection:
         assert "RUNTIME_ERROR_MESSAGE" in script
         assert "Viewer error" in script
 
-    def test_live_viewer_cdn_probe_present(self):
+    def test_live_viewer_cdn_probe_present(self):  # noqa: ANN201
         html = (
             Path(pytanga.viz.__file__).parent / "templates" / "viewer.html"
         ).read_text(encoding="utf-8")
@@ -207,7 +207,7 @@ class TestCdnUnreachableDetection:
 
 
 class TestThemePacking:
-    def test_snapshot_cdn_references_theme_css(self):
+    def test_snapshot_cdn_references_theme_css(self):  # noqa: ANN201
         html = render_snapshot([], {})
         assert "cdn.jsdelivr.net/gh/dodeka12/tanga" in html
         assert "/py/pytanga/viz/templates/themes/base.css" in html
@@ -217,19 +217,19 @@ class TestThemePacking:
         # In cdn mode the theme shell is referenced, not inlined.
         assert "--tanga-bg: #1a1a2e" not in html
 
-    def test_snapshot_inline_inlines_shell_without_components(self):
+    def test_snapshot_inline_inlines_shell_without_components(self):  # noqa: ANN201
         html = render_snapshot([], {}, delivery="inline")
         assert "--tanga-bg: #1a1a2e" in html
         assert ".tanga-icon-button" in html  # base.css shell
         assert ".tanga-action-button" not in html  # component sheet dropped
 
-    def test_light_export_inlines_light_tokens_without_overrides(self):
+    def test_light_export_inlines_light_tokens_without_overrides(self):  # noqa: ANN201
         html = render_snapshot([], {}, theme="light", delivery="inline")
         assert "--tanga-bg: #f5f5f7" in html
         # Per-theme button/checkbox overrides are UI CSS and dropped.
         assert "accent-color: var(--tanga-accent)" not in html
 
-    def test_figure_cdn_references_theme_css(self):
+    def test_figure_cdn_references_theme_css(self):  # noqa: ANN201
         html = render_figure([], {}, {"width": 400, "height": 300}, {}, theme="dark")
         assert "/py/pytanga/viz/templates/themes/base.css" in html
         assert "controls/button.css" not in html

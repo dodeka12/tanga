@@ -27,7 +27,7 @@ from pytanga.geometry.entities import (
 
 
 @pytest.mark.parametrize("opns", [True, False])
-def test_point_from_n3_mv(opns):
+def test_point_from_n3_mv(opns):  # noqa: ANN001, ANN201
     alg = BasisN3(opns=opns)
     mv = create_entity(alg, Point(1, 2, 3))
     p = Point(mv)
@@ -36,7 +36,7 @@ def test_point_from_n3_mv(opns):
     assert p.z == pytest.approx(3)
 
 
-def test_point_from_p3_mv():
+def test_point_from_p3_mv():  # noqa: ANN201
     alg = BasisP3()
     mv = create_entity(alg, Point(4, 5, 6))
     p = Point(mv)
@@ -45,7 +45,7 @@ def test_point_from_p3_mv():
     assert p.z == pytest.approx(6)
 
 
-def test_point_from_pga3_mv():
+def test_point_from_pga3_mv():  # noqa: ANN201
     alg = BasisPGA3()
     mv = create_entity(alg, Point(7, 8, 9))
     p = Point(mv)
@@ -54,44 +54,44 @@ def test_point_from_pga3_mv():
     assert p.z == pytest.approx(9)
 
 
-def test_point_rejects_line_mv():
+def test_point_rejects_line_mv():  # noqa: ANN201
     alg = BasisN3()
     line_mv = create_entity(alg, Line(Point(0, 0, 0), Direction(1, 0, 0)))
     with pytest.raises(TypeError):
         Point(line_mv)
 
 
-def test_e3_point_convenience():
+def test_e3_point_convenience():  # noqa: ANN201
     alg = BasisE3()
     mv = alg.multivector({1: 1, 2: 2, 4: 3})
     assert Point(mv) == Point(1, 2, 3)
 
 
-def test_e3_direction_convenience():
+def test_e3_direction_convenience():  # noqa: ANN201
     alg = BasisE3()
     mv = alg.multivector({1: 1})
     assert Direction(mv) == Direction(1, 0, 0)
 
 
-def test_direction_from_p3_mv():
+def test_direction_from_p3_mv():  # noqa: ANN201
     alg = BasisP3()
     mv = create_entity(alg, Direction(1, 2, 3))
     d = Direction(mv)
     assert isinstance(d, Direction)
 
 
-def test_hdirection_from_three_values():
+def test_hdirection_from_three_values():  # noqa: ANN201
     hd = HDirection(1, 2, 3)
     assert isinstance(hd, HDirection)
     assert hd.direction == Direction(1, 2, 3)
 
 
-def test_hdirection_from_direction():
+def test_hdirection_from_direction():  # noqa: ANN201
     hd = HDirection(Direction(4, 5, 6))
     assert hd.direction == Direction(4, 5, 6)
 
 
-def test_hdirection_from_n3_mv():
+def test_hdirection_from_n3_mv():  # noqa: ANN201
     alg = BasisN3()
     mv = create_entity(alg, HDirection(Direction(1, 2, 3)))
     hd = HDirection(mv)
@@ -107,28 +107,28 @@ def test_hdirection_from_n3_mv():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_line_from_n3_mv():
+def test_line_from_n3_mv():  # noqa: ANN201
     alg = BasisN3()
     mv = create_entity(alg, Line(Point(1, 0, 0), Direction(0, 1, 0)))
     line = Line(mv)
     assert isinstance(line, Line)
 
 
-def test_line_rejects_point_mv():
+def test_line_rejects_point_mv():  # noqa: ANN201
     alg = BasisN3()
     point_mv = create_entity(alg, Point(1, 2, 3))
     with pytest.raises(TypeError):
         Line(point_mv)
 
 
-def test_plane_from_n3_mv():
+def test_plane_from_n3_mv():  # noqa: ANN201
     alg = BasisN3()
     mv = create_entity(alg, Plane(Point(0, 0, 0), Direction(0, 0, 1)))
     plane = Plane(mv)
     assert isinstance(plane, Plane)
 
 
-def test_circle_from_n3_mv():
+def test_circle_from_n3_mv():  # noqa: ANN201
     alg = BasisN3()
     mv = create_entity(alg, Circle(Point(0, 0, 0), 2.0, Direction(0, 0, 1)))
     circle = Circle(mv)
@@ -136,7 +136,7 @@ def test_circle_from_n3_mv():
     assert circle.radius == pytest.approx(2.0)
 
 
-def test_sphere_from_n3_mv():
+def test_sphere_from_n3_mv():  # noqa: ANN201
     alg = BasisN3()
     mv = create_entity(alg, Sphere(Point(0, 0, 0), 3.0))
     sphere = Sphere(mv)
@@ -144,7 +144,7 @@ def test_sphere_from_n3_mv():
     assert sphere.radius == pytest.approx(3.0)
 
 
-def test_space_from_n3_mv():
+def test_space_from_n3_mv():  # noqa: ANN201
     alg = BasisN3()
     mv = create_entity(alg, Space(scale=5.0))
     space = Space(mv)
@@ -152,7 +152,7 @@ def test_space_from_n3_mv():
     assert space.scale == pytest.approx(5.0, abs=1e-6)
 
 
-def test_space_rejects_point_mv():
+def test_space_rejects_point_mv():  # noqa: ANN201
     alg = BasisN3()
     point_mv = create_entity(alg, Point(1, 2, 3))
     with pytest.raises(TypeError):
@@ -164,7 +164,7 @@ def test_space_rejects_point_mv():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_circle_field_auto_conversion():
+def test_circle_field_auto_conversion():  # noqa: ANN201
     alg = BasisN3()
     center_mv = create_entity(alg, Point(1, 2, 3))
     normal_mv = create_entity(alg, Direction(0, 0, 1))
@@ -178,7 +178,7 @@ def test_circle_field_auto_conversion():
     assert isinstance(circle.normal, Direction)
 
 
-def test_circle_radius_rejects_non_scalar_mv():
+def test_circle_radius_rejects_non_scalar_mv():  # noqa: ANN201
     alg = BasisN3()
     center_mv = create_entity(alg, Point(1, 2, 3))
     nonscalar_mv = create_entity(alg, Direction(0, 0, 1))
@@ -186,7 +186,7 @@ def test_circle_radius_rejects_non_scalar_mv():
         Circle(center_mv, nonscalar_mv, Direction(0, 0, 1))
 
 
-def test_sphere_field_auto_conversion():
+def test_sphere_field_auto_conversion():  # noqa: ANN201
     alg = BasisN3()
     center_mv = create_entity(alg, Point(1, 2, 3))
     radius_mv = alg.multivector({0: 2.5})
@@ -200,7 +200,7 @@ def test_sphere_field_auto_conversion():
 # ═══════════════════════════════════════════════════════════════
 
 
-def test_line_from_points_n3_mvs():
+def test_line_from_points_n3_mvs():  # noqa: ANN201
     alg = BasisN3()
     a = create_entity(alg, Point(0, 0, 0))
     b = create_entity(alg, Point(3, 0, 0))
@@ -212,7 +212,7 @@ def test_line_from_points_n3_mvs():
     assert line.length == pytest.approx(3)
 
 
-def test_line_from_points_e3_convenience():
+def test_line_from_points_e3_convenience():  # noqa: ANN201
     alg = BasisE3()
     a = alg.multivector({1: 0, 2: 0, 4: 0})
     b = alg.multivector({1: 1})
@@ -221,7 +221,7 @@ def test_line_from_points_e3_convenience():
     assert abs(line.direction.x) == pytest.approx(1)
 
 
-def test_line_from_points_rejects_line_mv():
+def test_line_from_points_rejects_line_mv():  # noqa: ANN201
     alg = BasisN3()
     line_mv = create_entity(alg, Line(Point(0, 0, 0), Direction(1, 0, 0)))
     point_mv = create_entity(alg, Point(1, 2, 3))

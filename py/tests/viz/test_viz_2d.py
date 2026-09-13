@@ -18,12 +18,12 @@ from pytanga.viz.visualizer import Visualizer
 
 
 class TestSceneConfig2D:
-    def test_space_dim_in_to_dict(self):
+    def test_space_dim_in_to_dict(self):  # noqa: ANN201
         sc = SceneConfig()
         d = sc.to_dict()
         assert d["space_dim"] == 3  # default
 
-    def test_explicit_space_dim_2(self):
+    def test_explicit_space_dim_2(self):  # noqa: ANN201
         from pytanga.viz.scene import SceneConfig
 
         sc = SceneConfig()
@@ -31,56 +31,56 @@ class TestSceneConfig2D:
         d = sc.to_dict()
         assert d["space_dim"] == 2
 
-    def test_json_serializable_2d(self):
+    def test_json_serializable_2d(self):  # noqa: ANN201
         sc = SceneConfig()
         sc.space_dim = 2
         json.dumps(sc.to_dict())
 
 
 class TestVisualizer2D:
-    def test_construction_with_space_dim(self):
+    def test_construction_with_space_dim(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)
         assert viz._config.space_dim == 2
 
-    def test_default_title_2d(self):
+    def test_default_title_2d(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)
         assert viz._config.title == "Tanga 2D Viewer"
 
-    def test_custom_title_preserved(self):
+    def test_custom_title_preserved(self):  # noqa: ANN201
         viz = Visualizer(title="My 2D", space_dim=2)
         assert viz._config.title == "My 2D"
 
-    def test_add_point_returns_id(self):
+    def test_add_point_returns_id(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)
         eid = viz.add(Point(3, 4, 0))
         assert isinstance(eid, str)
 
-    def test_add_direction_returns_id(self):
+    def test_add_direction_returns_id(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)
         eid = viz.add(Direction(1, 0, 0))
         assert isinstance(eid, str)
 
-    def test_add_line_returns_id(self):
+    def test_add_line_returns_id(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)
         eid = viz.add(Line(Point(0, 0, 0), Direction(1, 0, 0)))
         assert isinstance(eid, str)
 
-    def test_entity_serializes_with_z_zero(self):
+    def test_entity_serializes_with_z_zero(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
         viz.add(Point(3, 4, 0))
         state = viz._scene.full_state()
         assert state[0]["position"] == [3, 4, 0]
 
-    def test_main_scene_has_space_dim(self):
+    def test_main_scene_has_space_dim(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)
         assert viz.main_scene.config.space_dim == 2
 
-    def test_sub_scene_inherits_space_dim(self):
+    def test_sub_scene_inherits_space_dim(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)
         sub = viz.scene("sub")
         assert sub.scene.config.space_dim == 2
 
-    def test_sub_scene_omits_space_dim_when_default(self):
+    def test_sub_scene_omits_space_dim_when_default(self):  # noqa: ANN201
         viz = Visualizer()
         sub = viz.scene("sub")
         d = sub.scene.config.to_dict()
@@ -88,19 +88,19 @@ class TestVisualizer2D:
 
 
 class TestFigureConfig2D:
-    def test_default_space_dim(self):
+    def test_default_space_dim(self):  # noqa: ANN201
         fc = FigureConfig()
         assert fc.space_dim == 3
 
-    def test_explicit_space_dim_2(self):
+    def test_explicit_space_dim_2(self):  # noqa: ANN201
         fc = FigureConfig(space_dim=2)
         assert fc.space_dim == 2
 
-    def test_to_dict_includes_space_dim(self):
+    def test_to_dict_includes_space_dim(self):  # noqa: ANN201
         fc = FigureConfig(space_dim=2)
         d = fc.to_dict()
         assert d["space_dim"] == 2
 
-    def test_json_serializable(self):
+    def test_json_serializable(self):  # noqa: ANN201
         fc = FigureConfig(space_dim=2)
         json.dumps(fc.to_dict())

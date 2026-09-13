@@ -150,7 +150,7 @@ def test_table_rename_column_bounds_and_history() -> None:
 
 
 def test_table_registers_on_column_type_change() -> None:
-    async def handler(*_args, **_kwargs) -> None:
+    async def handler(*_args, **_kwargs) -> None:  # noqa: ANN002, ANN003
         """No-op type-change handler."""
 
     registry = ControlHandlerRegistry()
@@ -316,10 +316,10 @@ def test_handler_registry_clear() -> None:
 def test_handler_registry_event_keyed_round_trip() -> None:
     registry = ControlHandlerRegistry()
 
-    async def on_change(value):
+    async def on_change(value):  # noqa: ANN001, ANN202
         pass
 
-    async def on_row(value):
+    async def on_row(value):  # noqa: ANN001, ANN202
         pass
 
     registry.register("t", on_change)
@@ -332,10 +332,10 @@ def test_handler_registry_event_keyed_round_trip() -> None:
 def test_handler_registry_unregister_all_events() -> None:
     registry = ControlHandlerRegistry()
 
-    async def h1(value):
+    async def h1(value):  # noqa: ANN001, ANN202
         pass
 
-    async def h2(value):
+    async def h2(value):  # noqa: ANN001, ANN202
         pass
 
     registry.register("t", h1)

@@ -10,20 +10,20 @@ from pytanga.basis import BasisE3
 from pytanga.expression._labels import _reset_allocator
 
 
-def _close(a, b) -> bool:
+def _close(a, b) -> bool:  # noqa: ANN001
     return (a - b).mag < 1e-12
 
 
 class TestAffineExpression:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_sum_of_different_degree(self):
+    def test_sum_of_different_degree(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -33,7 +33,7 @@ class TestAffineExpression:
         y = self._mv({"e2": 3.0})
         assert _close(a(V1=x, V2=y), (x * x) + y)
 
-    def test_sum_with_constant(self):
+    def test_sum_with_constant(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         c = self._mv({"e1": 2.0})
         a = v + c
@@ -41,14 +41,14 @@ class TestAffineExpression:
         x = self._mv({"e1": 1.0, "e2": 1.0})
         assert _close(a(V1=x), x + c)
 
-    def test_difference_with_constant(self):
+    def test_difference_with_constant(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         c = self._mv({"e1": 2.0})
         a = v - c
         x = self._mv({"e1": 1.0})
         assert _close(a(V1=x), x - c)
 
-    def test_merge_still_happens(self):
+    def test_merge_still_happens(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = v * self._mv({"e1": 2.0})
         b = v * self._mv({"e2": 3.0})
@@ -61,7 +61,7 @@ class TestAffineExpression:
             (x * self._mv({"e1": 2.0})) + (x * self._mv({"e2": 3.0})),
         )
 
-    def test_partial_single(self):
+    def test_partial_single(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -71,7 +71,7 @@ class TestAffineExpression:
         y = self._mv({"e2": 3.0})
         assert _close(partial(V2=y), (x * x) + y)
 
-    def test_partial_batch(self):
+    def test_partial_batch(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -83,7 +83,7 @@ class TestAffineExpression:
         for t, x in zip(result, xs):
             assert _close(t(V2=y), (x * x) + y)
 
-    def test_full_batch(self):
+    def test_full_batch(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -94,7 +94,7 @@ class TestAffineExpression:
         for r, x in zip(result, xs):
             assert _close(r, (x * x) + y)
 
-    def test_distribute_product(self):
+    def test_distribute_product(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -104,7 +104,7 @@ class TestAffineExpression:
         y = self._mv({"e2": 1.0})
         assert _close(b(V1=x, V2=y), ((x * x) + y) * self._mv({"e1": 2.0}))
 
-    def test_affine_times_affine(self):
+    def test_affine_times_affine(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -116,7 +116,7 @@ class TestAffineExpression:
         y = self._mv({"e2": 1.0})
         assert _close(prod(V1=x, V2=y), ((x * x) + y) * (x + y))
 
-    def test_involutions_and_scale(self):
+    def test_involutions_and_scale(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -127,7 +127,7 @@ class TestAffineExpression:
         y = self._mv({"e2": 1.0})
         assert _close((-a)(V1=x, V2=y), -((x * x) + y))
 
-    def test_bind_returns_partial_affine(self):
+    def test_bind_returns_partial_affine(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -137,7 +137,7 @@ class TestAffineExpression:
         y = self._mv({"e2": 3.0})
         assert _close(partial(V2=y), (x * x) + y)
 
-    def test_bind_raises_on_full_collapse(self):
+    def test_bind_raises_on_full_collapse(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -146,7 +146,7 @@ class TestAffineExpression:
         with pytest.raises(ValueError):
             a.bind(V1=x, V2=y)
 
-    def test_evaluate_returns_mv(self):
+    def test_evaluate_returns_mv(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -156,7 +156,7 @@ class TestAffineExpression:
         assert isinstance(result, MV)
         assert _close(result, (x * x) + y)
 
-    def test_evaluate_raises_on_partial(self):
+    def test_evaluate_raises_on_partial(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
@@ -164,27 +164,27 @@ class TestAffineExpression:
         with pytest.raises(ValueError):
             a.evaluate(V1=x)
 
-    def test_inv_raises(self):
+    def test_inv_raises(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
         with pytest.raises(ValueError):
             a.inv("V3")
 
-    def test_unknown_variable(self):
+    def test_unknown_variable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v) + w
         with pytest.raises(ValueError):
             a(V3=self._mv({"e1": 1.0}))
 
-    def test_out_mask_is_union(self):
+    def test_out_mask_is_union(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", BladeMask(self.alg, [1]))  # only e1
         a = (v * v) + w
         assert len(a.out_mask) == 8  # full E3 mask
 
-    def test_mixed_mask_union_check(self):
+    def test_mixed_mask_union_check(self):  # noqa: ANN201
         # The same variable name bound with different masks in two terms: a
         # binding is valid iff its blades lie within the union of those masks.
         v1 = Variable("V1", BladeMask(self.alg, [1]))  # e1 only
@@ -198,7 +198,7 @@ class TestAffineExpression:
         with pytest.raises(ValueError):
             a(V1=e1 + e2 + self._mv({"e3": 1.0}))
 
-    def test_counting_axis_reduction(self):
+    def test_counting_axis_reduction(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * v * w) + (v * w)
@@ -211,7 +211,7 @@ class TestAffineExpression:
         expected = 5.0 * y + 3.0 * (self._mv({"e1": 1.0}) * y)
         assert _close(reduced(V2=y), expected)
 
-    def test_counting_axis_broadcast(self):
+    def test_counting_axis_broadcast(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         c = self._mv({"e3": 2.0})
@@ -226,7 +226,7 @@ class TestAffineExpression:
         expected = 5.0 * (self._mv({"e1": 1.0}) * y) + c * 3.0
         assert _close(reduced(V2=y), expected)
 
-    def test_lstsq_and_svd(self):
+    def test_lstsq_and_svd(self):  # noqa: ANN201
         u = Variable("U", self.full)
         w = Variable("W", self.full)
         a = (u * w) + (u * u * w)
@@ -241,7 +241,7 @@ class TestAffineExpression:
         assert values == sorted(values, reverse=True)
         assert all(isinstance(mv, MV) for mv in mvs)
 
-    def test_inv_round_trip(self):
+    def test_inv_round_trip(self):  # noqa: ANN201
         u = Variable("U", self.full)
         w = Variable("W", self.full)
         a = (u * w) + (u * u * w)
@@ -252,7 +252,7 @@ class TestAffineExpression:
         assert isinstance(inv_F, Expression)
         assert _close(inv_F(W=F(W=w0)), w0)
 
-    def test_linear_solve_rejects_multivariable(self):
+    def test_linear_solve_rejects_multivariable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = (v * w) + (v * v * w)
@@ -263,7 +263,7 @@ class TestAffineExpression:
         with pytest.raises(ValueError):
             a.inv("V1")
 
-    def test_inv_rejects_non_square(self):
+    def test_inv_rejects_non_square(self):  # noqa: ANN201
         u = Variable("U", self.full)
         w = Variable("W", BladeMask(self.alg, [1]))
         a = (u * w) + (u * u * w)
@@ -272,7 +272,7 @@ class TestAffineExpression:
         with pytest.raises(ValueError):
             F.inv("W")
 
-    def test_broadcast_rejects_elementwise(self):
+    def test_broadcast_rejects_elementwise(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         c = self._mv({"e3": 2.0})

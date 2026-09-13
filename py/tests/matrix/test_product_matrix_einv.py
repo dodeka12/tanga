@@ -13,7 +13,7 @@ from pytanga.matrix.product import product_matrix
 
 
 class TestProductMatrixEInv:
-    def test_default_is_identity(self, alg_float):
+    def test_default_is_identity(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float({"e1": 2.0, "e2": -1.0})
         b_mask = BladeMask(a)
         c_mask = product_blade_mask(b_mask, b_mask, complete=True)
@@ -27,7 +27,7 @@ class TestProductMatrixEInv:
         )
         assert np.allclose(M_def.data, M_id.data)
 
-    def test_left_rev_matches_gp_rev(self, alg_float):
+    def test_left_rev_matches_gp_rev(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float({"e1": 2.0, "e2": -3.0, "e12": 1.0})
         a_rev = alg_float.rev(a)
         b_mask = BladeMask(a)
@@ -36,7 +36,7 @@ class TestProductMatrixEInv:
         M_aRev = product_matrix(a_rev, b_mask=b_mask, c_mask=c_mask)
         assert np.allclose(M_revA.data, M_aRev.data)
 
-    def test_right_rev_integrated(self, alg_float):
+    def test_right_rev_integrated(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float({"e1": 2.0, "e2": -3.0, 0: 0.5})
         x = alg_float({"e1": 0.5, "e2": 1.0, "e12": -1.0})
         x_rev = alg_float.rev(x)
@@ -51,7 +51,7 @@ class TestProductMatrixEInv:
             exp_val = expected.to_dict().get(alg_float.blade_name(bid), 0.0)
             assert pred[i, 0] == pytest.approx(exp_val, abs=1e-10)
 
-    def test_left_conj_p3(self):
+    def test_left_conj_p3(self):  # noqa: ANN201
         alg = Algebra(4, 0b1000, "float64")
         a = alg({"e1": 1.0, "e2": 2.0, "e4": 3.0, "e12": 1.0})
         a_conj = alg.conj(a)
@@ -61,7 +61,7 @@ class TestProductMatrixEInv:
         M_aConj = product_matrix(a_conj, b_mask=b_mask, c_mask=c_mask)
         assert np.allclose(M_conjA.data, M_aConj.data)
 
-    def test_both_rev(self, alg_float):
+    def test_both_rev(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float({"e1": 2.0, "e2": -3.0, 0: 0.5})
         x = alg_float({"e1": 0.5, "e2": 1.0, "e12": -1.0})
         b_mask = BladeMask(x)
@@ -83,7 +83,7 @@ class TestProductMatrixEInv:
             exp_val = expected.to_dict().get(alg_float.blade_name(bid), 0.0)
             assert pred[i, 0] == pytest.approx(exp_val, abs=1e-10)
 
-    def test_left_inv_preserved_in_mvproductmatrix(self, alg_float):
+    def test_left_inv_preserved_in_mvproductmatrix(self, alg_float):  # noqa: ANN001, ANN201
         a = alg_float("e1 + e2")
         b_mask = BladeMask(a)
         c_mask = product_blade_mask(b_mask, b_mask, complete=True)
@@ -91,7 +91,7 @@ class TestProductMatrixEInv:
         assert M.left_inv == EInv.REV
         assert M.right_inv == EInv.ID
 
-    def test_integer_left_rev(self, alg_int):
+    def test_integer_left_rev(self, alg_int):  # noqa: ANN001, ANN201
         a = alg_int({"e1": 3, "e2": 5, 0: 1})
         a_rev = alg_int.rev(a)
         b_mask = BladeMask(a)

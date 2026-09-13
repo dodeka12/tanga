@@ -36,17 +36,17 @@ _TOP_LEVEL_DECL_RE = re.compile(
 )
 
 
-def _renderer_js_files():
+def _renderer_js_files():  # noqa: ANN202
     """Return all ``*.js`` renderer modules on disk, relative to the renderers dir."""
     return {p.relative_to(_RENDERERS_DIR) for p in _RENDERERS_DIR.rglob("*.js")}
 
 
-def _bundled_js_files():
+def _bundled_js_files():  # noqa: ANN202
     """Return the renderer modules listed in the export bundle, relative to the renderers dir."""
     return {p.relative_to(_RENDERERS_DIR) for p in _RENDERER_FILES}
 
 
-def test_renderer_files_match_live_view_directory():
+def test_renderer_files_match_live_view_directory():  # noqa: ANN201
     """The export bundle must include exactly the renderer modules on disk."""
     on_disk = _renderer_js_files()
     bundled = _bundled_js_files()
@@ -64,7 +64,7 @@ def test_renderer_files_match_live_view_directory():
     )
 
 
-def test_bootstrap_defines_every_renderer_function():
+def test_bootstrap_defines_every_renderer_function():  # noqa: ANN201
     """The generated bootstrap must define each exported renderer function."""
     on_disk = _renderer_js_files()
 
@@ -90,7 +90,7 @@ def test_bootstrap_defines_every_renderer_function():
         )
 
 
-def test_scene_builder_bundled():
+def test_scene_builder_bundled():  # noqa: ANN201
     """The shared scene-builder module must be bundled in the export."""
     from pytanga.viz.export._bootstrap._html import _SHARED_JS_FILES
 
@@ -104,7 +104,7 @@ def test_scene_builder_bundled():
     assert "function removeObject(" in bootstrap
 
 
-def test_bootstrap_has_no_duplicate_top_level_declarations():
+def test_bootstrap_has_no_duplicate_top_level_declarations():  # noqa: ANN201
     """Concatenated renderer modules must not declare the same top-level name.
 
     Each renderer module is its own ES-module scope in the live viewer, but the
@@ -130,7 +130,7 @@ def test_bootstrap_has_no_duplicate_top_level_declarations():
     )
 
 
-def test_render_export_html_alias_deprecated():
+def test_render_export_html_alias_deprecated():  # noqa: ANN201
     """``render_export_html`` is a deprecated alias for ``render_snapshot``."""
     import pytest
 
@@ -141,7 +141,7 @@ def test_render_export_html_alias_deprecated():
     assert result == render_snapshot([], {})
 
 
-def test_render_export_figure_alias_deprecated():
+def test_render_export_figure_alias_deprecated():  # noqa: ANN201
     """``render_export_figure`` is a deprecated alias for ``render_figure``."""
     import pytest
 
@@ -152,7 +152,7 @@ def test_render_export_figure_alias_deprecated():
     assert isinstance(result, str)
 
 
-def test_build_gltf_scene_alias_deprecated():
+def test_build_gltf_scene_alias_deprecated():  # noqa: ANN201
     """``build_gltf_scene`` is a deprecated alias for ``build_glb``."""
     import pytest
 

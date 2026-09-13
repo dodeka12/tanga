@@ -96,7 +96,7 @@ def test_unary_invert_sets_intersection_polarity() -> None:
         ("xor", ECompose.XOR, True),
     ],
 )
-def test_binary_operators_build_combine(expr, op, left_is_self) -> None:
+def test_binary_operators_build_combine(expr, op, left_is_self) -> None:  # noqa: ANN001
     a = SdfElement()
     b = SdfElement()
     if expr == "add":
@@ -154,7 +154,7 @@ def test_combine_to_sdf_node_shape() -> None:
         (ECompose.SMOOTH_SUBTRACT, "smooth_subtract"),
     ],
 )
-def test_combine_kind_mapping(op, kind) -> None:
+def test_combine_kind_mapping(op, kind) -> None:  # noqa: ANN001
     node = Combine(op, _Leaf(sphere(1.0)), _Leaf(sphere(0.5))).to_sdf_node()
     assert node.kind == kind
 

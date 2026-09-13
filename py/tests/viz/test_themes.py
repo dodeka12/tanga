@@ -84,7 +84,7 @@ def test_unknown_theme_raises() -> None:
         theme_css_files("nope")
 
 
-def test_missing_file_raises(tmp_path) -> None:
+def test_missing_file_raises(tmp_path) -> None:  # noqa: ANN001
     registry_path = tmp_path / "registry.json"
     themes_dir = tmp_path / "themes"
     themes_dir.mkdir()
@@ -145,7 +145,7 @@ def test_visualizer_theme_default_and_set() -> None:
         viz.set_theme("nope")
 
 
-def test_set_theme_emits_theme_define(monkeypatch) -> None:
+def test_set_theme_emits_theme_define(monkeypatch) -> None:  # noqa: ANN001
     from pytanga.viz import Visualizer
     from pytanga.viz._themes import theme_css_files
 
@@ -191,7 +191,7 @@ def test_set_theme_async_pushes_once() -> None:
     assert msg["label"] == "Light"
 
 
-def _external_theme_dir(tmp_path):
+def _external_theme_dir(tmp_path):  # noqa: ANN001, ANN202
     d = tmp_path / "corp"
     (d / "overrides").mkdir(parents=True)
     (d / "tokens.css").write_text(":root { --tanga-bg: #000; }", encoding="utf-8")
@@ -204,7 +204,7 @@ def _external_theme_dir(tmp_path):
     return d
 
 
-def test_register_external_theme_resolution(tmp_path):
+def test_register_external_theme_resolution(tmp_path):  # noqa: ANN001, ANN201
     reg = ThemeRegistry()
     theme_dir = _external_theme_dir(tmp_path)
     reg.register("corp", theme_dir, label="Corporate")
@@ -233,7 +233,7 @@ def test_register_external_theme_resolution(tmp_path):
     assert not any("base.css" in p for p in watched)
 
 
-def test_register_duplicate_and_missing_tokens(tmp_path):
+def test_register_duplicate_and_missing_tokens(tmp_path):  # noqa: ANN001, ANN201
     reg = ThemeRegistry()
     theme_dir = _external_theme_dir(tmp_path)
     reg.register("corp", theme_dir)
@@ -249,7 +249,7 @@ def test_register_duplicate_and_missing_tokens(tmp_path):
         reg.register("nope", missing)
 
 
-def test_copy_theme(tmp_path):
+def test_copy_theme(tmp_path):  # noqa: ANN001, ANN201
     from pytanga.viz import copy_theme
 
     dest = copy_theme("pastel", tmp_path / "mine")
@@ -262,7 +262,7 @@ def test_copy_theme(tmp_path):
     copy_theme("pastel", tmp_path / "mine", overwrite=True)
 
 
-def test_set_theme_and_refresh_emit_version(monkeypatch):
+def test_set_theme_and_refresh_emit_version(monkeypatch):  # noqa: ANN001, ANN201
     from pytanga.viz import Visualizer
 
     viz = Visualizer(add_default_axes=False, add_default_grid=False)

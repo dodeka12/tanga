@@ -15,7 +15,7 @@ from pytanga.viz._controls import FileChooser, Table, _serialize_one_control
 from pytanga.viz._file_browser import list_directory
 
 
-def test_list_directory_dirs_first_and_hidden_omitted(tmp_path):
+def test_list_directory_dirs_first_and_hidden_omitted(tmp_path):  # noqa: ANN001, ANN201
     (tmp_path / "b.txt").write_text("x")
     (tmp_path / "a_dir").mkdir()
     (tmp_path / ".hidden").write_text("x")
@@ -32,13 +32,13 @@ def test_list_directory_dirs_first_and_hidden_omitted(tmp_path):
     assert result["entries"][0]["path"] == str(tmp_path.resolve() / "a_dir")
 
 
-def test_list_directory_missing_dir():
+def test_list_directory_missing_dir():  # noqa: ANN201
     result = list_directory("/nonexistent/definitely/missing")
     assert result["error"] == "missing"
     assert result["entries"] == []
 
 
-def test_list_directory_root_clamping(tmp_path):
+def test_list_directory_root_clamping(tmp_path):  # noqa: ANN001, ANN201
     root = tmp_path / "root"
     root.mkdir()
     outside = tmp_path / "outside"
@@ -51,7 +51,7 @@ def test_list_directory_root_clamping(tmp_path):
     assert result["error"] is None
 
 
-def test_file_chooser_serialization():
+def test_file_chooser_serialization():  # noqa: ANN201
     fc = FileChooser(
         id="fc", label="File", value="/a/b", placeholder="Path…", root="/a"
     )
@@ -81,17 +81,17 @@ def _viz() -> Visualizer:
     return Visualizer(add_default_axes=False, add_default_grid=False)
 
 
-def _running_loop():
+def _running_loop():  # noqa: ANN202
     loop = asyncio.new_event_loop()
     thread = threading.Thread(target=loop.run_forever, daemon=True)
     thread.start()
     return loop, thread
 
 
-def test_add_file_chooser_registers_handler_and_view():
+def test_add_file_chooser_registers_handler_and_view():  # noqa: ANN201
     viz = _viz()
 
-    async def _on_change(path, event):
+    async def _on_change(path, event):  # noqa: ANN001, ANN202
         pass
 
     viz.set_layout(FileChooserView("fc", value="/tmp", on_change=_on_change))
@@ -102,16 +102,16 @@ def test_add_file_chooser_registers_handler_and_view():
     assert ref.value == "/tmp"
 
 
-def test_add_table_registers_handlers():
+def test_add_table_registers_handlers():  # noqa: ANN201
     viz = _viz()
 
-    async def _on_cell(change, event):
+    async def _on_cell(change, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_row(add, event):
+    async def _on_row(add, event):  # noqa: ANN001, ANN202
         pass
 
-    async def _on_col(add, event):
+    async def _on_col(add, event):  # noqa: ANN001, ANN202
         pass
 
     viz.set_layout(
@@ -134,7 +134,7 @@ def test_add_table_registers_handlers():
     assert ref.rows == [["1", "2"]]
 
 
-def test_open_file_chooser_pushes_show():
+def test_open_file_chooser_pushes_show():  # noqa: ANN201
     viz = _viz()
     viz._server = _FakeServer()
     viz.set_layout(FileChooserView("fc", value="/tmp"))
@@ -156,12 +156,12 @@ def test_open_file_chooser_pushes_show():
 
 
 @pytest.mark.anyio
-async def test_dispatch_file_browser_select():
+async def test_dispatch_file_browser_select():  # noqa: ANN201
     viz = _viz()
     viz._server = _FakeServer()
     calls = []
 
-    async def _on_change(path, event):
+    async def _on_change(path, event):  # noqa: ANN001, ANN202
         calls.append(path)
 
     viz.set_layout(FileChooserView("fc", on_change=_on_change))
@@ -174,7 +174,7 @@ async def test_dispatch_file_browser_select():
 
 
 @pytest.mark.anyio
-async def test_dispatch_file_browser_navigate(tmp_path):
+async def test_dispatch_file_browser_navigate(tmp_path):  # noqa: ANN001, ANN201
     viz = _viz()
     viz._server = _FakeServer()
     viz.set_layout(FileChooserView("fc", root=str(tmp_path)))
@@ -198,7 +198,7 @@ async def test_dispatch_file_browser_navigate(tmp_path):
 # ── Phase 4 — FileChooserView (layout control view) ─────────
 
 
-def test_file_chooser_view_serialization():
+def test_file_chooser_view_serialization():  # noqa: ANN201
     from pytanga.viz.views import FileChooserView
 
     fc = FileChooserView("fc", label="File", value="/tmp", root="/tmp")
@@ -213,7 +213,7 @@ def test_file_chooser_view_serialization():
     assert data["accept"] == ""
 
 
-def test_file_chooser_dialog_serialization():
+def test_file_chooser_dialog_serialization():  # noqa: ANN201
     from pytanga.viz import FileChooserDialog
     from pytanga.viz._dialog import serialize_dialog
 
@@ -230,13 +230,13 @@ def test_file_chooser_dialog_serialization():
     assert content["root"] == "/data"
 
 
-def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):
+def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):  # noqa: ANN001, ANN201
     from pytanga.viz import FileChooserDialog
 
     viz = _viz()
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
 
-    async def _on_accept(path, event):
+    async def _on_accept(path, event):  # noqa: ANN001, ANN202
         pass
 
     did = viz.show_dialog(FileChooserDialog("fc", root="/data", on_accept=_on_accept))
@@ -249,7 +249,7 @@ def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch):
+async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch):  # noqa: ANN001, ANN201
     from pytanga.viz import FileChooserDialog
 
     viz = _viz()
@@ -260,7 +260,7 @@ async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch):
     )
     accepted: list = []
 
-    async def _on_accept(path, event):
+    async def _on_accept(path, event):  # noqa: ANN001, ANN202
         accepted.append(path)
 
     did = viz.show_dialog(FileChooserDialog("fc", on_accept=_on_accept))
@@ -274,12 +274,12 @@ async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch):
     assert removed == [(did, None)]
 
 
-def test_set_layout_registers_file_chooser_handler():
+def test_set_layout_registers_file_chooser_handler():  # noqa: ANN201
     from pytanga.viz.views import FileChooserView
 
     viz = _viz()
 
-    async def _on_change(path, event):
+    async def _on_change(path, event):  # noqa: ANN001, ANN202
         pass
 
     viz.set_layout(FileChooserView("fc", on_change=_on_change))
@@ -290,7 +290,7 @@ def test_set_layout_registers_file_chooser_handler():
 
 
 @pytest.mark.anyio
-async def test_dispatch_file_browser_select_panel_pushes(monkeypatch):
+async def test_dispatch_file_browser_select_panel_pushes(monkeypatch):  # noqa: ANN001, ANN201
     viz = _viz()
     updates: list = []
     monkeypatch.setattr(
@@ -299,7 +299,7 @@ async def test_dispatch_file_browser_select_panel_pushes(monkeypatch):
         lambda cid, value: updates.append((cid, value)),
     )
 
-    async def _on_change(path, event):
+    async def _on_change(path, event):  # noqa: ANN001, ANN202
         pass
 
     viz.set_layout(FileChooserView("fc", on_change=_on_change))
@@ -312,7 +312,7 @@ async def test_dispatch_file_browser_select_panel_pushes(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_dispatch_file_browser_select_view_sets_and_pushes(monkeypatch):
+async def test_dispatch_file_browser_select_view_sets_and_pushes(monkeypatch):  # noqa: ANN001, ANN201
     from pytanga.viz.views import FileChooserView
 
     viz = _viz()
@@ -323,7 +323,7 @@ async def test_dispatch_file_browser_select_view_sets_and_pushes(monkeypatch):
         lambda cid, value: updates.append((cid, value)),
     )
 
-    async def _on_change(path, event):
+    async def _on_change(path, event):  # noqa: ANN001, ANN202
         pass
 
     view = FileChooserView("fc", on_change=_on_change)
@@ -337,7 +337,7 @@ async def test_dispatch_file_browser_select_view_sets_and_pushes(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_dispatch_file_browser_navigate_view_root(tmp_path):
+async def test_dispatch_file_browser_navigate_view_root(tmp_path):  # noqa: ANN001, ANN201
     from pytanga.viz.views import FileChooserView
 
     viz = _viz()

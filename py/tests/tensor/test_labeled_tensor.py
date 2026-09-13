@@ -26,16 +26,16 @@ from pytanga.tensor.product import product_tensor
 
 
 @pytest.fixture(scope="module")
-def alg():
+def alg():  # noqa: ANN201
     return BasisE3(dtype="float64")
 
 
 @pytest.fixture(scope="module")
-def full(alg):
+def full(alg):  # noqa: ANN001, ANN201
     return BladeMask.full(alg)
 
 
-def _ls(t) -> str:
+def _ls(t) -> str:  # noqa: ANN001
     """Render a labeled tensor's labels as the legacy string (letters only)."""
     return _labels_str(t.labels)
 
@@ -46,7 +46,7 @@ def _ls(t) -> str:
 
 
 class TestLabelCanonicalisation:
-    def test_basic(self):
+    def test_basic(self):  # noqa: ANN201
         assert _canonicalise("kij") == "k*i*j*"
         assert _canonicalise("k*i*j*") == "k*i*j*"
         assert _canonicalise("in_") == "i*n_"
@@ -55,7 +55,7 @@ class TestLabelCanonicalisation:
         assert _canonicalise("ij_n") == "i*j_n*"
         assert _canonicalise("i*n_j*") == "i*n_j*"
 
-    def test_errors(self):
+    def test_errors(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             _canonicalise("_i")
         with pytest.raises(ValueError):
@@ -65,12 +65,12 @@ class TestLabelCanonicalisation:
         with pytest.raises(ValueError):
             _canonicalise("1ab")
 
-    def test_raw_names(self):
+    def test_raw_names(self):  # noqa: ANN201
         assert _raw_names("k*i*j*") == "kij"
         assert _raw_names("i*n_") == "in"
         assert _raw_names("i_") == "i"
 
-    def test_mode_at(self):
+    def test_mode_at(self):  # noqa: ANN201
         assert _mode_at("i*n_", 0) == "*"
         assert _mode_at("i*n_", 1) == "_"
         assert not _is_elemwise("i*n_", 0)
@@ -83,18 +83,18 @@ class TestLabelCanonicalisation:
 
 
 class TestMVTensorGetItem:
-    def test_string_creates_labeled(self, alg, full):
+    def test_string_creates_labeled(self, alg, full):  # noqa: ANN001, ANN201
         G = product_tensor(full, full)
         G_labeled = G["kij"]
         assert isinstance(G_labeled, MVLabeledTensor)
         assert _ls(G_labeled) == "k*i*j*"
 
-    def test_product_tensor_labeled(self, alg, full):
+    def test_product_tensor_labeled(self, alg, full):  # noqa: ANN001, ANN201
         G = product_tensor(full, full)
         G_labeled = G["kij"]
         assert G_labeled.tensor is G  # same underlying tensor
 
-    def test_single_mv_labeled(self, alg, full):
+    def test_single_mv_labeled(self, alg, full):  # noqa: ANN001, ANN201
         mv = _as_mv(alg, "1 + 2e1 + 3e2")
         A = to_tensor(mv, mask=full)
         A_labeled = A["i"]
@@ -108,7 +108,7 @@ class TestMVTensorGetItem:
 
 
 class TestMVTensorSlicing:
-    def test_slice_rank1(self, alg, full):
+    def test_slice_rank1(self, alg, full):  # noqa: ANN001, ANN201
         mv = _as_mv(alg, "1 + 2e1 + 3e2")
         A = to_tensor(mv, mask=full)
         sliced = A[0:3]
@@ -118,7 +118,7 @@ class TestMVTensorSlicing:
         expected_mask = BladeMask(full.algebra, full.ids[:3])
         assert sliced.masks == (expected_mask,)
 
-    def test_integer_index_collapses(self, alg, full):
+    def test_integer_index_collapses(self, alg, full):  # noqa: ANN001, ANN201
         mv = _as_mv(alg, "1 + 2e1 + 3e2")
         A = to_tensor(mv, mask=full)
         scalar = A[2]
@@ -126,7 +126,7 @@ class TestMVTensorSlicing:
         # forwards scalar results directly
         assert isinstance(scalar, (np.ndarray, np.number, float, int))
 
-    def test_fancy_indexing_fallback(self, alg, full):
+    def test_fancy_indexing_fallback(self, alg, full):  # noqa: ANN001, ANN201
         mv = _as_mv(alg, "1 + 2e1 + 3e2")
         A = to_tensor(mv, mask=full)
         result = A[[0, 1, 3]]
@@ -139,59 +139,59 @@ class TestMVTensorSlicing:
 
 
 class TestTranspose:
-    def test_ij_ji(self, full):
+    def test_ij_ji(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros("ij", [full, full])
         t_t = t["ij->ji"]
         assert _ls(t_t) == "j*i*"
         assert t_t.shape == (len(full), len(full))
         assert np.may_share_memory(t.tensor.data, t_t.tensor.data)
 
-    def test_kij_jki(self, full):
+    def test_kij_jki(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros("kij", [full, full, full])
         t_t = t["kij->jki"]
         assert _ls(t_t) == "j*k*i*"
         assert t_t.shape == (len(full),) * 3
 
-    def test_ijk_kji_reverse(self, full):
+    def test_ijk_kji_reverse(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros("ijk", [full, full, full])
         t_t = t["ijk->kji"]
         assert _ls(t_t) == "k*j*i*"
         assert t_t.shape == (len(full),) * 3
 
-    def test_invalid_permutation(self, full):
+    def test_invalid_permutation(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros("ij", [full, full])
         with pytest.raises(ValueError):
             _ = t["ij->jk"]  # different label sets
 
-    def test_arrow_target_only_infer_source(self, full):
+    def test_arrow_target_only_infer_source(self, full):  # noqa: ANN001, ANN201
         """t["->ji"] infers source from tensor labels."""
         t = MVLabeledTensor.zeros("ij", [full, full])
         result = t["->ji"]
         assert _ls(result) == "j*i*"
         assert result.shape == (len(full), len(full))
 
-    def test_arrow_target_only_rank3(self, full):
+    def test_arrow_target_only_rank3(self, full):  # noqa: ANN001, ANN201
         """t["->jki"] on a rank-3 labeled tensor."""
         t = MVLabeledTensor.zeros("kij", [full, full, full])
         result = t["->jki"]
         assert _ls(result) == "j*k*i*"
         assert result.shape == (len(full),) * 3
 
-    def test_arrow_target_only_with_modes(self, full):
+    def test_arrow_target_only_with_modes(self, full):  # noqa: ANN001, ANN201
         """t["->nij"] preserves element-wise modes from source."""
         t = MVLabeledTensor.zeros("i*n_", [full, 5])
         result = t["->ni"]
         assert _ls(result) == "n_i*"
         assert result.shape == (5, len(full))
 
-    def test_arrow_source_only_reverse(self, full):
+    def test_arrow_source_only_reverse(self, full):  # noqa: ANN001, ANN201
         """t["ij->"] infers destination from tensor labels (identity)."""
         t = MVLabeledTensor.zeros("ij", [full, full])
         result = t["ij->"]
         assert _ls(result) == "i*j*"
         assert result.shape == (len(full), len(full))
 
-    def test_arrow_target_only_equivalent_to_explicit(self, full):
+    def test_arrow_target_only_equivalent_to_explicit(self, full):  # noqa: ANN001, ANN201
         """t["->ji"] produces same result as t["ij->ji"]."""
         t = MVLabeledTensor.zeros("ij", [full, full])
         result1 = t["->ji"]
@@ -206,7 +206,7 @@ class TestTranspose:
 
 
 class TestMulContraction:
-    def test_basic_gp(self, alg, full):
+    def test_basic_gp(self, alg, full):  # noqa: ANN001, ANN201
         P = product_tensor(full, full)
         mvs = [_as_mv(alg, "e1"), _as_mv(alg, "e2")]
         A = to_tensor(mvs[0], mask=full)
@@ -219,26 +219,26 @@ class TestMulContraction:
         expected_id = 3
         assert result.tensor.data[expected_id] != 0
 
-    def test_outer_product(self, full):
+    def test_outer_product(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("i", [full])
         B = MVLabeledTensor.zeros("j", [full])
         result = A["i"] * B["j"]
         assert _ls(result) == "i*j*"
         assert result.shape == (len(full), len(full))
 
-    def test_scalar_mul(self, full):
+    def test_scalar_mul(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("i", [full])
         result = A["i"] * 2.0
         assert isinstance(result, MVLabeledTensor)
         assert _ls(result) == "i*"
 
-    def test_scalar_rmul(self, full):
+    def test_scalar_rmul(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("i", [full])
         result = 3.0 * A["i"]
         assert isinstance(result, MVLabeledTensor)
         assert _ls(result) == "i*"
 
-    def test_no_shared_labels(self, full):
+    def test_no_shared_labels(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, 3])
         B = MVLabeledTensor.zeros("kl", [4, 5])
         result = A["ij"] * B["kl"]
@@ -252,21 +252,21 @@ class TestMulContraction:
 
 
 class TestElementWise:
-    def test_both_elemwise(self, full):
+    def test_both_elemwise(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("in_", [full, 5])
         B = MVLabeledTensor.zeros("jn_", [full, 5])
         result = A["in_"] * B["jn_"]
         assert _ls(result) == "i*j*n_"
         assert result.shape == (len(full), len(full), 5)
 
-    def test_one_elemwise(self, full):
+    def test_one_elemwise(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("in_", [full, 5])
         B = MVLabeledTensor.zeros("jn", [full, 5])
         result = A["in_"] * B["jn"]
         assert _ls(result) == "i*j*n_"
         assert result.shape == (len(full), len(full), 5)
 
-    def test_explicit_star_format(self, full):
+    def test_explicit_star_format(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("i*n_", [full, 5])
         B = MVLabeledTensor.zeros("j*n_", [full, 5])
         result = A["i*n_"] * B["j*n_"]
@@ -279,7 +279,7 @@ class TestElementWise:
 
 
 class TestDivision:
-    def test_division(self, full):
+    def test_division(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("jk", [full, full])
         # Fill B with ones to avoid division by zero
@@ -289,7 +289,7 @@ class TestDivision:
         assert isinstance(result, MVLabeledTensor)
         assert _ls(result) == "i*k*"
 
-    def test_division_by_ones(self, full):
+    def test_division_by_ones(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("j", [full])
         A.tensor.data[:] = 6.0
@@ -298,13 +298,13 @@ class TestDivision:
         # 6 / 2 = 3 for each element; contraction on j
         assert _ls(result) == "i*"
 
-    def test_scalar_division(self, full):
+    def test_scalar_division(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("i", [full])
         result = A["i"] / 3.0
         assert isinstance(result, MVLabeledTensor)
         assert _ls(result) == "i*"
 
-    def test_scalar_rdivision(self, full):
+    def test_scalar_rdivision(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("i", [full])
         A.tensor.data[:] = 2.0
         result = 6.0 / A["i"]
@@ -319,14 +319,14 @@ class TestDivision:
 
 
 class TestAddSub:
-    def test_add_broadcast(self, full):
+    def test_add_broadcast(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("jk", [full, full])
         result = A["ij"] + B["jk"]
         assert _ls(result) == "i*j*k*"
         assert result.shape == (len(full), len(full), len(full))
 
-    def test_add_same_labels(self, full):
+    def test_add_same_labels(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("ij", [full, full])
         A.tensor.data[:] = 1.0
@@ -335,7 +335,7 @@ class TestAddSub:
         assert _ls(result) == "i*j*"
         assert np.allclose(result.tensor.data, 3.0)
 
-    def test_sub_same_labels(self, full):
+    def test_sub_same_labels(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("ij", [full, full])
         A.tensor.data[:] = 5.0
@@ -344,7 +344,7 @@ class TestAddSub:
         assert _ls(result) == "i*j*"
         assert np.allclose(result.tensor.data, 3.0)
 
-    def test_add_incompatible_masks(self, full):
+    def test_add_incompatible_masks(self, full):  # noqa: ANN001, ANN201
         sub = BladeMask(full.algebra, [1, 2])
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("kj", [sub, full])
@@ -358,19 +358,19 @@ class TestAddSub:
 
 
 class TestScalarOps:
-    def test_mul_scalar(self, full):
+    def test_mul_scalar(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros("i", [full])
         result = t.mul_scalar(2.0)
         assert isinstance(result, MVLabeledTensor)
         assert _ls(result) == "i*"
 
-    def test_div_scalar(self, full):
+    def test_div_scalar(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros("i", [full])
         result = t.div_scalar(2.0)
         assert isinstance(result, MVLabeledTensor)
         assert _ls(result) == "i*"
 
-    def test_rdiv_scalar(self, full):
+    def test_rdiv_scalar(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros("i", [full])
         t.tensor.data[:] = 2.0
         result = t.rdiv_scalar(10.0)
@@ -385,7 +385,7 @@ class TestScalarOps:
 
 
 class TestChaining:
-    def test_three_tensor_contraction(self, alg, full):
+    def test_three_tensor_contraction(self, alg, full):  # noqa: ANN001, ANN201
         P = product_tensor(full, full)
         mvs = [_as_mv(alg, "e1"), _as_mv(alg, "e2")]
         A = to_tensor(mvs[0], mask=full)
@@ -395,7 +395,7 @@ class TestChaining:
         assert isinstance(result, MVLabeledTensor)
         assert _ls(result) == "k*"
 
-    def test_mul_then_div(self, full):
+    def test_mul_then_div(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("jk", [full, full])
         A.tensor.data[:] = 6.0
@@ -410,40 +410,40 @@ class TestChaining:
 
 
 class TestFactoryConstructors:
-    def test_mvtensor_zeros(self, full):
+    def test_mvtensor_zeros(self, full):  # noqa: ANN001, ANN201
         Z = MVTensor.zeros([full, 5])
         assert Z.shape == (len(full), 5)
         assert Z.masks[0] == full
         assert Z.masks[1] is None
         assert np.all(Z.data == 0)
 
-    def test_mvtensor_zeros_bare_int(self):
+    def test_mvtensor_zeros_bare_int(self):  # noqa: ANN201
         Z = MVTensor.zeros([3])
         assert Z.shape == (3,)
         assert Z.masks == (None,)
         assert np.all(Z.data == 0)
 
-    def test_mvtensor_zeros_like(self, full):
+    def test_mvtensor_zeros_like(self, full):  # noqa: ANN001, ANN201
         Z1 = MVTensor.zeros([full, 5])
         Z2 = MVTensor.zeros_like(Z1)
         assert Z2.shape == Z1.shape
         assert Z2.masks == Z1.masks
 
-    def test_mvtensor_zeros_invalid_spec(self):
+    def test_mvtensor_zeros_invalid_spec(self):  # noqa: ANN201
         with pytest.raises(TypeError):
             MVTensor.zeros([3.5])  # type: ignore[arg-type]
 
-    def test_labeled_zeros(self, full):
+    def test_labeled_zeros(self, full):  # noqa: ANN001, ANN201
         LZ = MVLabeledTensor.zeros("kij", [full, full, full])
         assert _ls(LZ) == "k*i*j*"
         assert LZ.shape == (len(full),) * 3
 
-    def test_zeros_from_dict(self, full):
+    def test_zeros_from_dict(self, full):  # noqa: ANN001, ANN201
         LZ = MVLabeledTensor.zeros_from_dict("in", {"i": full, "n": 5})
         assert _ls(LZ) == "i*n*"
         assert LZ.shape == (len(full), 5)
 
-    def test_zeros_from_dict_missing(self, full):
+    def test_zeros_from_dict_missing(self, full):  # noqa: ANN001, ANN201
         with pytest.raises(ValueError):
             MVLabeledTensor.zeros_from_dict("in", {"i": full})
 
@@ -454,7 +454,7 @@ class TestFactoryConstructors:
 
 
 class TestSetItem:
-    def test_broadcast_assign(self, full):
+    def test_broadcast_assign(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("kij", [full, full, full])
         B = MVLabeledTensor.zeros("ji", [full, full])
         B.tensor.data[:] = np.arange(len(full) * len(full), dtype=np.float64).reshape(
@@ -470,21 +470,21 @@ class TestSetItem:
                 ),
             )
 
-    def test_direct_assign(self, full):
+    def test_direct_assign(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("ij", [full, full])
         B.tensor.data[:] = 42.0
         A["ij"] = B["ij"]
         assert np.allclose(A.tensor.data, 42.0)
 
-    def test_plain_mvtensor_assign(self, full):
+    def test_plain_mvtensor_assign(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("kij", [full, full, full])
         T = MVTensor.zeros([full, full, full])
         T.data[:] = 7.0
         A["kij"] = T
         assert np.allclose(A.tensor.data, 7.0)
 
-    def test_extra_labels_error(self, full):
+    def test_extra_labels_error(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ij", [full, full])
         B = MVLabeledTensor.zeros("jk", [full, full])
         with pytest.raises(ValueError):
@@ -497,7 +497,7 @@ class TestSetItem:
 
 
 class TestIterLabels:
-    def test_single_tensor(self, full):
+    def test_single_tensor(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("na", [5, full])
         slices = list(iter_labels("n", A))
         assert len(slices) == 5
@@ -506,7 +506,7 @@ class TestIterLabels:
             assert _ls(sl) == "a*"
             assert sl.shape == (len(full),)
 
-    def test_multiple_tensors(self, full):
+    def test_multiple_tensors(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("na", [5, full])
         B = MVLabeledTensor.zeros("nb", [5, 3])
         for idx, (a_sl, b_sl) in enumerate(iter_labels("n", A, B)):
@@ -514,13 +514,13 @@ class TestIterLabels:
             assert _ls(b_sl) == "b*"
         assert idx == 4  # 5 iterations, last idx is 4
 
-    def test_mismatched_lengths(self, full):
+    def test_mismatched_lengths(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("na", [5, full])
         B = MVLabeledTensor.zeros("nb", [3, full])
         with pytest.raises(ValueError):
             list(iter_labels("n", A, B))
 
-    def test_missing_label(self, full):
+    def test_missing_label(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("ia", [full, 5])
         with pytest.raises(ValueError):
             list(iter_labels("n", A))
@@ -532,7 +532,7 @@ class TestIterLabels:
 
 
 class TestBuildSubscript:
-    def test_gp_contraction(self, full):
+    def test_gp_contraction(self, full):  # noqa: ANN001, ANN201
         P = MVLabeledTensor.zeros("kij", [full, full, full])
         A = MVLabeledTensor.zeros("i", [full])
         B = MVLabeledTensor.zeros("j", [full])
@@ -542,7 +542,7 @@ class TestBuildSubscript:
         assert output_names == ["k"]
         assert output_modes == {"k": "*"}
 
-    def test_batch_gp(self, full):
+    def test_batch_gp(self, full):  # noqa: ANN001, ANN201
         P = MVLabeledTensor.zeros("kij", [full, full, full])
         A = MVLabeledTensor.zeros("i*n_", [full, 5])
         B = MVLabeledTensor.zeros("j*n_", [full, 5])
@@ -552,7 +552,7 @@ class TestBuildSubscript:
         assert output_names == ["k", "n"]
         assert output_modes == {"k": "*", "n": "_"}
 
-    def test_element_wise(self, full):
+    def test_element_wise(self, full):  # noqa: ANN001, ANN201
         A = MVLabeledTensor.zeros("in_", [full, 5])
         B = MVLabeledTensor.zeros("jn_", [full, 5])
         input_axes, output_axes, output_names, output_modes = _build_subscript(A, B)
@@ -568,28 +568,28 @@ class TestBuildSubscript:
 
 
 class TestIntegerLabels:
-    def test_integer_names(self, full):
+    def test_integer_names(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros([0, 1, 2], [full, full, full])
         assert _axis_names(t.labels) == (0, 1, 2)
         assert _axis_modes(t.labels) == ("*", "*", "*")
 
-    def test_mixed_names_and_modes(self, full):
+    def test_mixed_names_and_modes(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros([("k", "*"), (0, "*"), ("n", "_")], [full, full, 5])
         assert _axis_names(t.labels) == ("k", 0, "n")
         assert _axis_modes(t.labels) == ("*", "*", "_")
 
-    def test_axislabel_validation(self):
+    def test_axislabel_validation(self):  # noqa: ANN201
         with pytest.raises(ValueError):
             AxisLabel("k", "x")
         with pytest.raises(TypeError):
             AxisLabel(True)
 
-    def test_labels_str_rejects_integers(self, full):
+    def test_labels_str_rejects_integers(self, full):  # noqa: ANN001, ANN201
         t = MVLabeledTensor.zeros([0], [full])
         with pytest.raises(ValueError):
             _labels_str(t.labels)
 
-    def test_contract_integer_names(self, full):
+    def test_contract_integer_names(self, full):  # noqa: ANN001, ANN201
         P = MVLabeledTensor.zeros([("k", "*"), (0, "*"), (1, "*")], [full, full, full])
         A = MVLabeledTensor.zeros([0], [full])
         B = MVLabeledTensor.zeros([1], [full])

@@ -15,20 +15,20 @@ from pytanga.expression._variable import Variable
 from pytanga.tensor._labeled import _axis_modes, _axis_names
 
 
-def _close(a, b) -> bool:
+def _close(a, b) -> bool:  # noqa: ANN001
     return (a - b).mag < 1e-12
 
 
 class TestExpression:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_gp_variable_times_const(self):
+    def test_gp_variable_times_const(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0, "e2": 3.0})
         e = v * a
@@ -36,21 +36,21 @@ class TestExpression:
         assert isinstance(e, Expression)
         assert _close(e(V1=x), x * a)
 
-    def test_gp_const_times_variable(self):
+    def test_gp_const_times_variable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         e = a * v
         x = self._mv({"e1": 1.0, "e2": 5.0})
         assert _close(e(V1=x), a * x)
 
-    def test_ip_and_op(self):
+    def test_ip_and_op(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0, "e12": 3.0})
         x = self._mv({"e1": 1.0, "e2": 4.0})
         assert _close((v | a)(V1=x), x | a)
         assert _close((v ^ a)(V1=x), x ^ a)
 
-    def test_reflected_op_constant_left_expression(self):
+    def test_reflected_op_constant_left_expression(self):  # noqa: ANN201
         v1 = Variable("V1", self.full)
         v2 = Variable("V2", self.full)
         a = self._mv({"e1": 2.0})
@@ -62,7 +62,7 @@ class TestExpression:
         y = self._mv({"e2": 3.0})
         assert _close(e(V1=x, V2=y), a ^ (x | y))
 
-    def test_bind_returns_partial_expression(self):
+    def test_bind_returns_partial_expression(self):  # noqa: ANN201
         v1 = Variable("V1", self.full)
         v2 = Variable("V2", self.full)
         e = v1 * v2
@@ -73,7 +73,7 @@ class TestExpression:
         y = self._mv({"e2": 3.0})
         assert _close(partial(V2=y), x * y)
 
-    def test_bind_raises_on_full_collapse(self):
+    def test_bind_raises_on_full_collapse(self):  # noqa: ANN201
         v1 = Variable("V1", self.full)
         v2 = Variable("V2", self.full)
         e = v1 * v2
@@ -82,7 +82,7 @@ class TestExpression:
         with pytest.raises(ValueError):
             e.bind(V1=x, V2=y)
 
-    def test_evaluate_returns_mv(self):
+    def test_evaluate_returns_mv(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         e = v * a
@@ -91,7 +91,7 @@ class TestExpression:
         assert isinstance(result, MV)
         assert _close(result, x * a)
 
-    def test_evaluate_raises_on_partial(self):
+    def test_evaluate_raises_on_partial(self):  # noqa: ANN201
         v1 = Variable("V1", self.full)
         v2 = Variable("V2", self.full)
         e = v1 * v2
@@ -99,7 +99,7 @@ class TestExpression:
         with pytest.raises(ValueError):
             e.evaluate(V1=x)
 
-    def test_evaluate_raises_on_batched(self):
+    def test_evaluate_raises_on_batched(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         e = v * a
@@ -107,7 +107,7 @@ class TestExpression:
         with pytest.raises(ValueError):
             e.evaluate(V1=DataArray(xs, masks=("n", self.full)))
 
-    def test_two_variables(self):
+    def test_two_variables(self):  # noqa: ANN201
         v1 = Variable("V1", self.full)
         v2 = Variable("V2", self.full)
         e = v1 * v2
@@ -115,7 +115,7 @@ class TestExpression:
         y = self._mv({"e2": 3.0})
         assert _close(e(V1=x, V2=y), x * y)
 
-    def test_constant_folding(self):
+    def test_constant_folding(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         b = self._mv({"e2": 3.0})
@@ -124,13 +124,13 @@ class TestExpression:
         x = self._mv({"e3": 1.0, "e1": -2.0})
         assert _close(e1(V1=x), e2(V1=x))
 
-    def test_scalar_scale(self):
+    def test_scalar_scale(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         e = 2.0 * (v * self._mv({"e1": 3.0}))
         x = self._mv({"e1": 1.0})
         assert _close(e(V1=x), 2.0 * (x * self._mv({"e1": 3.0})))
 
-    def test_tensor_property(self):
+    def test_tensor_property(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         e = v * self._mv({"e1": 2.0})
         t = e.tensor
@@ -140,7 +140,7 @@ class TestExpression:
         assert e.names == {"V1": (v.label,)}
         assert e.masks["V1"] is v.mask
 
-    def test_unknown_binding_and_empty_call(self):
+    def test_unknown_binding_and_empty_call(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         e = v * self._mv({"e1": 2.0})
         x = self._mv({"e1": 1.0})
@@ -148,7 +148,7 @@ class TestExpression:
             e(V2=x)
         assert e() is e  # no bindings -> self (partial, no-op)
 
-    def test_value_outside_mask(self):
+    def test_value_outside_mask(self):  # noqa: ANN201
         mask = BladeMask(self.alg, [1])  # only e1
         v = Variable("V1", mask)
         e = v * self._mv({"e1": 2.0})
@@ -156,13 +156,13 @@ class TestExpression:
         with pytest.raises(ValueError):
             e(V1=x)
 
-    def test_quadratic(self):
+    def test_quadratic(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         x = self._mv({"e1": 2.0, "e2": 3.0})
         e = v * v
         assert _close(e(V1=x), x * x)
 
-    def test_no_aliasing(self):
+    def test_no_aliasing(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         e = v * self._mv({"e1": 2.0})
         x = self._mv({"e1": 1.0})
@@ -171,7 +171,7 @@ class TestExpression:
         assert r1 is not r2
         assert r1.to_dict() == r2.to_dict()
 
-    def test_mismatched_algebra(self):
+    def test_mismatched_algebra(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         other = BasisN3().multivector({1: 1.0})
         with pytest.raises(ValueError):
@@ -179,15 +179,15 @@ class TestExpression:
 
 
 class TestAddition:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_distributive_add(self):
+    def test_distributive_add(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         b = self._mv({"e2": 3.0})
@@ -196,7 +196,7 @@ class TestAddition:
         x = self._mv({"e1": 1.0, "e3": -1.0})
         assert _close(e1(V1=x), e2(V1=x))
 
-    def test_add_constant_is_affine(self):
+    def test_add_constant_is_affine(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         c = self._mv({"e2": 5.0})
@@ -205,7 +205,7 @@ class TestAddition:
         x = self._mv({"e1": 1.0})
         assert _close(e(V1=x), (x * a) + c)
 
-    def test_zero_add(self):
+    def test_zero_add(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         e = v * self._mv({"e1": 2.0})
         assert e + 0 is e
@@ -213,7 +213,7 @@ class TestAddition:
         x = self._mv({"e1": 1.0})
         assert _close((0 - e)(V1=x), (-e)(V1=x))
 
-    def test_sub(self):
+    def test_sub(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         b = self._mv({"e2": 3.0})
@@ -221,7 +221,7 @@ class TestAddition:
         x = self._mv({"e1": 1.0})
         assert _close(e(V1=x), x * a - x * b)
 
-    def test_different_variables_is_affine(self):
+    def test_different_variables_is_affine(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = self._mv({"e1": 2.0})
@@ -232,7 +232,7 @@ class TestAddition:
         y = self._mv({"e3": 1.0})
         assert _close(e(V1=x, V2=y), (x * a) + (y * b))
 
-    def test_mask_unification(self):
+    def test_mask_unification(self):  # noqa: ANN201
         mask = BladeMask(self.alg, [1])  # variable holds only e1
         v = Variable("V1", mask)
         a = self._mv({"e1": 2.0})
@@ -243,46 +243,46 @@ class TestAddition:
 
 
 class TestInvolutions:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_reverse_variable(self):
+    def test_reverse_variable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         x = self._mv({"e1": 2.0, "e12": 3.0})
         assert _close((~v)(V1=x), x.rev())
 
-    def test_conj_variable(self):
+    def test_conj_variable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         x = self._mv({"e1": 2.0, "e12": 3.0})
         assert _close(v.conj()(V1=x), x.conj())
 
-    def test_reverse_expression(self):
+    def test_reverse_expression(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0, "e2": 3.0})
         e = v * a
         x = self._mv({"e1": 1.0, "e3": -1.0})
         assert _close((~e)(V1=x), (x * a).rev())
 
-    def test_conj_expression(self):
+    def test_conj_expression(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         e = v * a
         x = self._mv({"e2": 1.0})
         assert _close(e.conj()(V1=x), (x * a).conj())
 
-    def test_constant_build_time_involution(self):
+    def test_constant_build_time_involution(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0, "e2": 3.0})
         e = v * ~a
         x = self._mv({"e1": 1.0, "e3": 2.0})
         assert _close(e(V1=x), x * a.rev())
 
-    def test_constant_times_reverse_variable(self):
+    def test_constant_times_reverse_variable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         e = a * ~v
@@ -291,15 +291,15 @@ class TestInvolutions:
 
 
 class TestBatched:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_single_list(self):
+    def test_single_list(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})
         e = v * a
@@ -314,7 +314,7 @@ class TestBatched:
         for r, x in zip(result, xs):
             assert _close(r, x * a)
 
-    def test_two_lists_cross_product(self):
+    def test_two_lists_cross_product(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         e = v * w
@@ -332,15 +332,15 @@ class TestBatched:
 
 
 class TestExpressionN3:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisN3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_gp_ip_op_roundtrip(self):
+    def test_gp_ip_op_roundtrip(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({1: 2.0, 2: 3.0})
         x = self._mv({1: 1.0, 4: -1.0})
@@ -348,7 +348,7 @@ class TestExpressionN3:
         assert _close((v | a)(V1=x), x | a)
         assert _close((v ^ a)(V1=x), x ^ a)
 
-    def test_involutions_mixed_grade(self):
+    def test_involutions_mixed_grade(self):  # noqa: ANN201
         # includes em (id 16), whose negative metric distinguishes conj from rev
         v = Variable("V1", self.full)
         a = self._mv({1: 2.0, 16: 1.0})
@@ -359,15 +359,15 @@ class TestExpressionN3:
 
 
 class TestInverse:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_inv_roundtrip(self):
+    def test_inv_roundtrip(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         R = create_rotor(self.alg, 0.5, Direction(1, 0, 0))
         e = v * R  # square 8x8: x -> x * R
@@ -376,21 +376,21 @@ class TestInverse:
         y = e(V1=x)
         assert _close(e_inv(V2=y), x)
 
-    def test_inv_multivariable_rejected(self):
+    def test_inv_multivariable_rejected(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         e = v * w
         with pytest.raises(ValueError):
             e.inv("V3")
 
-    def test_inv_nonsquare_rejected(self):
+    def test_inv_nonsquare_rejected(self):  # noqa: ANN201
         v = Variable("V1", BladeMask(self.alg, [1, 2]))
         a = self._mv({0: 1.0, 1: 1.0})  # 1 + e1
         e = v * a  # output mask has 4 blades, variable mask has 2
         with pytest.raises(ValueError):
             e.inv("V2")
 
-    def test_inv_singular_rejected(self):
+    def test_inv_singular_rejected(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({0: 1.0, 1: 1.0})  # 1 + e1 is a zero divisor -> singular map
         e = v * a
@@ -399,15 +399,15 @@ class TestInverse:
 
 
 class TestLeastSquares:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_lstsq_rhs_recovers_solution(self):
+    def test_lstsq_rhs_recovers_solution(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         R = create_rotor(self.alg, 0.5, Direction(1, 0, 0))
         e = v * R
@@ -415,7 +415,7 @@ class TestLeastSquares:
         y = e(V1=x)
         assert _close(e.lstsq(rhs=y), x)
 
-    def test_lstsq_homogeneous_recovers_line_direction(self):
+    def test_lstsq_homogeneous_recovers_line_direction(self):  # noqa: ANN201
         from pytanga.basis import BasisP3
         from pytanga.geometry import Geometry, Line, Point
 
@@ -432,18 +432,18 @@ class TestLeastSquares:
         p = geo.create(Point(2.0, 0.0, 0.0))
         assert (p ^ L_est).mag < 1e-8
 
-    def test_lstsq_rejects_multivariable(self):
+    def test_lstsq_rejects_multivariable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         with pytest.raises(ValueError):
             (v * w).lstsq()
 
-    def test_lstsq_rejects_repeated_variable(self):
+    def test_lstsq_rejects_repeated_variable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         with pytest.raises(ValueError):
             (v * v).lstsq()
 
-    def test_svd_returns_sorted_values_and_mvs(self):
+    def test_svd_returns_sorted_values_and_mvs(self):  # noqa: ANN201
         v = Variable("V1", BladeMask(self.alg, [1, 2, 4]))
         a = self._mv({0: 2.0, 1: 1.0})  # 2-scalar + e1 -> diagonal-ish map
         e = v * a
@@ -454,7 +454,7 @@ class TestLeastSquares:
         assert values == sorted(values, reverse=True)
         assert all(_is_mv(mv) for mv in mvs)
 
-    def test_svd_smallest_singular_mv_matches_lstsq(self):
+    def test_svd_smallest_singular_mv_matches_lstsq(self):  # noqa: ANN201
         from pytanga.basis import BasisP3
         from pytanga.geometry import Geometry, Line, Point
 
@@ -471,29 +471,29 @@ class TestLeastSquares:
         # Same homogeneous solution up to sign/scale.
         assert abs(L_svd.sp(L_lstsq)) > 0.99 * L_svd.mag * L_lstsq.mag
 
-    def test_svd_rejects_multivariable(self):
+    def test_svd_rejects_multivariable(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         with pytest.raises(ValueError):
             (v * w).svd()
 
 
-def _is_mv(obj) -> bool:
+def _is_mv(obj) -> bool:  # noqa: ANN001
     from pytanga.algebra import MV
 
     return isinstance(obj, MV)
 
 
 class TestPartial:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_partial_single(self):
+    def test_partial_single(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         e = v * w
@@ -505,7 +505,7 @@ class TestPartial:
         assert not partial._has_counting_axes()
         assert _close(partial(V2=y), e(V1=x, V2=y))
 
-    def test_jacobian(self):
+    def test_jacobian(self):  # noqa: ANN201
         # Jacobian of (v * w) w.r.t. w, holding v fixed, is the linear map z -> x*z.
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
@@ -517,7 +517,7 @@ class TestPartial:
         z = self._mv({"e3": 1.0, "e2": 2.0})
         assert _close(jac(V2=z), x * z)
 
-    def test_partial_batch(self):
+    def test_partial_batch(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         e = v * w
@@ -531,7 +531,7 @@ class TestPartial:
         for r, x in zip(result, xs):
             assert _close(r, x * y)
 
-    def test_partial_batch_named_label(self):
+    def test_partial_batch_named_label(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         e = v * w
@@ -543,7 +543,7 @@ class TestPartial:
         for r, x in zip(result, xs):
             assert _close(r, x * y)
 
-    def test_stacked_guards(self):
+    def test_stacked_guards(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         z = Variable("V3", self.full)
@@ -580,34 +580,34 @@ class TestPartial:
 
 
 class TestRepeatedVariables:
-    def setup_method(self):
+    def setup_method(self):  # noqa: ANN201
         _reset_allocator()
         self.alg = BasisE3()
         self.full = BladeMask.full(self.alg)
 
-    def _mv(self, coeffs):
+    def _mv(self, coeffs):  # noqa: ANN001, ANN202
         return self.alg.multivector(coeffs)
 
-    def test_cubic(self):
+    def test_cubic(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         x = self._mv({"e1": 2.0, "e2": 3.0})
         e = v * v * v
         assert _close(e(V1=x), x * x * x)
 
-    def test_square_merges(self):
+    def test_square_merges(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         x = self._mv({"e1": 2.0})
         e = (v * v) + (v * v)
         assert e.tensor.ndim == 3  # out + two occurrences, merged into one tensor
         assert _close(e(V1=x), (x * x) + (x * x))
 
-    def test_square_cancels(self):
+    def test_square_cancels(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         x = self._mv({"e1": 2.0})
         e = (v * v) - (v * v)
         assert _close(e(V1=x), self.alg.multivector({}))
 
-    def test_interleaved_order_not_merged(self):
+    def test_interleaved_order_not_merged(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         w = Variable("V2", self.full)
         a = v * w * v  # v0, w0, v1
@@ -619,17 +619,17 @@ class TestRepeatedVariables:
         y = self._mv({"e2": 1.0})
         assert _close(s(V1=x, V2=y), a(V1=x, V2=y) + b(V1=x, V2=y))
 
-    def test_inv_rejects_quadratic(self):
+    def test_inv_rejects_quadratic(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         with pytest.raises(ValueError):
             (v * v).inv("V2")
 
-    def test_degree_exceeded(self):
+    def test_degree_exceeded(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         with pytest.raises(ValueError):
             v * v * v * v * v  # 5 occurrences > MAX_DEGREE
 
-    def test_batch_quadratic(self):
+    def test_batch_quadratic(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
         e = v * v
@@ -639,7 +639,7 @@ class TestRepeatedVariables:
             assert _close(r, x * x)
 
 
-def test_batched_sandwich_merge():
+def test_batched_sandwich_merge():  # noqa: ANN201
     """The note's repro: (motor * X)(X=batch) - (Y * motor)(Y=batch) merges."""
     _reset_allocator()
     N3 = BasisN3()
@@ -671,7 +671,7 @@ def test_batched_sandwich_merge():
         assert _close(r, m * x - y * m)
 
 
-def test_stacked_add_different_labels_raises():
+def test_stacked_add_different_labels_raises():  # noqa: ANN201
     _reset_allocator()
     alg = BasisE3()
     full = BladeMask.full(alg)
@@ -685,7 +685,7 @@ def test_stacked_add_different_labels_raises():
         p1 + p2
 
 
-def test_constant_expression():
+def test_constant_expression():  # noqa: ANN201
     _reset_allocator()
     alg = BasisE3()
     A = alg.multivector({"s": 1.0, "e1": 2.0, "e2": 3.0})
@@ -697,7 +697,7 @@ def test_constant_expression():
     assert _close(E(), A)
 
 
-def test_constant_expression_with_mask():
+def test_constant_expression_with_mask():  # noqa: ANN201
     from pytanga.tensor.convert import from_tensor
 
     _reset_allocator()

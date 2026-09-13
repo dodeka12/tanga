@@ -13,7 +13,7 @@ from pytanga.tensor.product import product_tensor
 
 
 class TestToTensor:
-    def test_single_mv_rank1(self, alg_float):
+    def test_single_mv_rank1(self, alg_float):  # noqa: ANN001, ANN201
         mv = alg_float({"e1": 3.0, "e2": -5.0})
         mask = BladeMask(mv)
         t = to_tensor(mv, mask=mask)
@@ -24,7 +24,7 @@ class TestToTensor:
         assert t.data[mask.index(1)] == 3.0
         assert t.data[mask.index(2)] == -5.0
 
-    def test_list_of_mvs_rank2(self, alg_float):
+    def test_list_of_mvs_rank2(self, alg_float):  # noqa: ANN001, ANN201
         mvs = [alg_float("e1"), alg_float("e2"), alg_float("e1 + e2")]
         mask = BladeMask(alg_float, [1, 2])
         t = to_tensor(mvs, mask=mask)
@@ -40,7 +40,7 @@ class TestToTensor:
 
 
 class TestFromTensor:
-    def test_single_mv_roundtrip(self, alg_float):
+    def test_single_mv_roundtrip(self, alg_float):  # noqa: ANN001, ANN201
         mv = alg_float({"e1": 3.0, "e2": -5.0})
         t = to_tensor(mv)
         recovered = from_tensor(t)
@@ -48,7 +48,7 @@ class TestFromTensor:
         diff.prune()
         assert not diff.to_dict()
 
-    def test_list_roundtrip(self, alg_float):
+    def test_list_roundtrip(self, alg_float):  # noqa: ANN001, ANN201
         mvs = [alg_float("e1"), alg_float("2 e1 - 3 e2 + e12")]
         t = to_tensor(mvs)
         recovered = from_tensor(t)
@@ -59,7 +59,7 @@ class TestFromTensor:
             d.prune()
             assert not d.to_dict()
 
-    def test_nested_rank3(self, alg_float):
+    def test_nested_rank3(self, alg_float):  # noqa: ANN001, ANN201
         mvs = [[alg_float("e1"), alg_float("e2")], [alg_float("e3"), alg_float("e12")]]
         # manually build rank-3 tensor
         mask = BladeMask(alg_float, [1, 2, 3, 4])
@@ -82,12 +82,12 @@ class TestFromTensor:
                 d.prune()
                 assert not d.to_dict()
 
-    def test_zero_masks_error(self, alg_float):
+    def test_zero_masks_error(self, alg_float):  # noqa: ANN001, ANN201
         t = MVTensor(data=np.array([[1.0, 2.0]]), masks=(None, None))
         with pytest.raises(ValueError, match="exactly one BladeMask"):
             from_tensor(t)
 
-    def test_two_masks_error(self, alg_float):
+    def test_two_masks_error(self, alg_float):  # noqa: ANN001, ANN201
         mask = BladeMask(alg_float, [1])
         t = MVTensor(data=np.array([[1.0]]), masks=(mask, mask))
         with pytest.raises(ValueError, match="exactly one BladeMask"):
@@ -95,7 +95,7 @@ class TestFromTensor:
 
 
 class TestContract:
-    def test_gp_single(self, alg_float):
+    def test_gp_single(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         O = product_tensor(full, full, product=EProduct.GP)
         tA = to_tensor(alg_float("e1"), mask=full)
@@ -105,7 +105,7 @@ class TestContract:
         # e1 * e2 = e12 (blade id 3)
         assert C.data[full.index(3)] == pytest.approx(1.0)
 
-    def test_batch_gp(self, alg_float):
+    def test_batch_gp(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         O = product_tensor(full, full, product=EProduct.GP)
 
@@ -126,7 +126,7 @@ class TestContract:
                 exp = expected.to_dict().get(name, 0.0)
                 assert C.data[full.index(bid), n] == pytest.approx(exp, abs=1e-10)
 
-    def test_mask_incompatibility(self, alg_float):
+    def test_mask_incompatibility(self, alg_float):  # noqa: ANN001, ANN201
         mask_a = BladeMask(alg_float, [1])  # e1 only
         mask_b = BladeMask(alg_float, [1, 2])  # e1, e2
         O = product_tensor(mask_a, mask_a, product=EProduct.GP)
@@ -135,7 +135,7 @@ class TestContract:
         with pytest.raises(ValueError, match="incompatible masks"):
             contract("kij,i,j->k", O, tA, tB)
 
-    def test_subscript_axis_count_mismatch(self, alg_float):
+    def test_subscript_axis_count_mismatch(self, alg_float):  # noqa: ANN001, ANN201
         full = BladeMask.full(alg_float)
         O = product_tensor(full, full, product=EProduct.GP)
         tA = MVTensor(data=np.ones(len(full)), masks=(full,))
