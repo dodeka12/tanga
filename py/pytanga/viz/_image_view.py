@@ -311,7 +311,9 @@ class ImageCanvas:
         from ._image_wire import encode_image_frame
 
         payload = self._image_view._serialize()
-        self._handle.scene.upsert_image(self._image_view.id, payload)
+        self._handle.scene.upsert_image(
+            self._image_view.id, payload, images=self._image_view.images
+        )
         self._register_interaction()
 
         if self._transport is None:

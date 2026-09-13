@@ -17,13 +17,13 @@ and an `include_images` flag on `capture_frame`.
 
 ## Steps
 
-- [ ] **9.1 — asset store data structure**
+- [x] **9.1 — asset store data structure**
   - `AnimationRecording` gains an `assets: dict[id, asset]` populated once at
     `start_animation_recording()`/first `set_image`; `capture_frame` gains
     `include_images: bool = False` and re-registers assets only when `True`.
   - Entity snapshots reference image ids, never inline pixels.
 
-- [ ] **9.2 — `source:"url"` vs `source:"data"`**
+- [x] **9.2 — `source:"url"` vs `source:"data"`**
   - `data` → base64-embed the raw buffer; `url` → store the URL string and let
     the exported HTML load it via `THREE.TextureLoader` (document CORS + async
     load-error via the log pipeline).
@@ -37,7 +37,7 @@ and an `include_images` flag on `capture_frame`.
     `<script type="application/octet-stream">` (or equivalent) referenced by the
     scene builder; note the future glTF path reuses the same id-keyed store.
 
-- [ ] **9.5 — tests**
+- [x] **9.5 — tests**
   - `py/tests/viz/test_image_canvas_export.py`: assets stored once;
     `include_images=False` keeps frames free of pixel data; `url` source emits
     only the URL; `data` source embeds base64.
@@ -51,6 +51,10 @@ and an `include_images` flag on `capture_frame`.
 - This is the general "texture/asset store" the design calls for: id-keyed, not
   image-specific, so future 3D-object textures reuse it without a second store.
 - `capture_frame(include_images=True)` is the opt-in for per-frame image changes.
+- **Deferred:** steps 9.3 (bootstrap JS texture creation) and 9.4 (embedding
+  `assets` into the exported HTML `<script>`) are not yet implemented — the
+  asset dict is available on `AnimationRecording.to_dict()`/`.assets`, but the
+  HTML exporter does not yet consume it.
 
 ---
 

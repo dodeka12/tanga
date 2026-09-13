@@ -220,22 +220,31 @@ class Scene:
         self._order.append(gid)
         return group
 
-    def add_image(self, image_id: str, payload: dict[str, Any]) -> str:
+    def add_image(
+        self, image_id: str, payload: dict[str, Any], images: list[Any] | None = None
+    ) -> str:
         """Register an ``image`` scene node and return its id."""
-        node = VizImage(image_id, payload)
+        node = VizImage(image_id, payload, images=images)
         self._nodes[image_id] = node
         if image_id not in self._order:
             self._order.append(image_id)
         return image_id
 
-    def upsert_image(self, image_id: str, payload: dict[str, Any]) -> str:
+    def upsert_image(
+        self,
+        image_id: str,
+        payload: dict[str, Any],
+        images: list[Any] | None = None,
+    ) -> str:
         """Update an existing image node's payload, or create it."""
         node = self._nodes.get(image_id)
         if isinstance(node, VizImage):
             node.payload = payload
+            if images is not None:
+                node.images = list(images)
             node.mark("full")
             return image_id
-        return self.add_image(image_id, payload)
+        return self.add_image(image_id, payload, images=images)
 
     @property
     def group_ids(self) -> list[str]:

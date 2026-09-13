@@ -712,9 +712,10 @@ class VizImage(VizSceneObject):
     serializer.  Pixel bytes travel separately as binary frames.
     """
 
-    def __init__(self, id: str, payload: dict[str, Any], *, name: str = "image") -> None:
+    def __init__(self, id: str, payload: dict[str, Any], *, name: str = "image", images: list[Any] | None = None) -> None:
         super().__init__(id, None, None, name=name, kind="image")
         self.payload = payload
+        self.images: list[Any] = list(images) if images else []
 
     def serialize(
         self,
