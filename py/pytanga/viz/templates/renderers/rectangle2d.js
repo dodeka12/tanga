@@ -1,0 +1,52 @@
+// Rectangle2D renderer — a flat rectangle: outline (fat line) + optional fill.
+// Phase: interactive rectangles.
+
+import * as THREE from 'three';
+import {
+    makeMaterial,
+    makeFatSegmentsFromFlat,
+    rotationFromNormal,
+    styleParam,
+    parseColor,
+    tagEntity,
+} from './utils.js';
+
+export function createRectangle2D(ent) {
+    const color = parseColor(ent, '#ffffff');
+    const opacity = styleParam(ent, 'opacity', 1.0);
+    const center = ent.center || [0, 0, 0];
+    const size = ent.size || [1, 1];
+    const normal = ent.normal || [0, 0, 1];
+    const angle = ent.angle || 0.0;
+
+    const group = new THREE.Group();
+
+    // Optional semi-transparent fill under the outline.
+    if (styleParam(ent, 'fill', false)) {
+        const fillOpacity = styleParam(ent, 'fill_opacity', 0.2);
+        const fillGeo = new THREE.PlaneGeometry(size[0], size[1]);
+        const fill = new THREE.Mesh(fillGeo, makeMaterial(color, fillOpacity, true));
+        group.add(fill);
+    }
+
+    // Outline: a fat-line rectangle loop (4 segments) in the local xy-plane.
+    const hw = size[0] / 2;
+    const hh = size[1] / 2;
+    const thickness = styleParam(ent, 'thickness', 2.0);
+    const outline = makeFatSegmentsFromFlat([
+        -hw, -hh, 0,  hw, -hh, 0,
+         hw, -hh, 0,  hw,  hh, 0,
+         hw,  hh, 0, -hw,  hh, 0,
+        -hw,  hh, 0, -hw, -hh, 0,
+    ], color, opacity, thickness);
+    group.add(outline);
+
+    group.position.set(center[0], center[1], center[2]);
+    group.setRotationFromQuaternion(rotationFromNormal(normal[0], normal[1], normal[2]));
+    if (angle) {
+        group.rotateZ(angle);
+    }
+
+    tagEntity(group, ent);
+    return group;
+}
