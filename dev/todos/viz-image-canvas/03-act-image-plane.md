@@ -23,11 +23,11 @@ the plane and reports pixel-coordinate hits/drags through the existing
     (the image's own plane) and an optional `CLICK` trigger (ctrl-modifier
     variant supported via `InteractionTrigger`).
 
-- [ ] **3.2 — `drag_anchor(ray_origin, ray_direction) -> Point`**
+- [x] **3.2 — `drag_anchor(ray_origin, ray_direction) -> Point`**
   - Return the ray↔z=0 plane intersection (linear solve); the resulting
     `world_position` is already in pixel coordinates (frame from the README).
 
-- [ ] **3.3 — re-export + tests**
+- [x] **3.3 — re-export + tests**
   - Re-export `ActImagePlane`.
   - `py/tests/viz/test_act_image_plane.py`: `drag_anchor` hits the correct point
     for known ray/plane cases; `interaction_config` produces the expected

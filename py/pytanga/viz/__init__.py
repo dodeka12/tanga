@@ -27,6 +27,7 @@ from ._active import (
     ActClickHandler,
     ActEventHandler,
     ActHandler,
+    ActImagePlane,
     ActPoint,
     ActSceneObject,
 )
@@ -229,6 +230,7 @@ __all__ = [
     "ActClickHandler",
     "ActEventHandler",
     "ActHandler",
+    "ActImagePlane",
     "ActObjectStyle",
     "ActPoint",
     "ActPointStyle",
