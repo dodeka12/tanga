@@ -102,7 +102,17 @@ if M.data.shape[1] == M.data.shape[2]:
     B2 = from_matrix(MVMatrix(b_arr, M.b_mask))
     assert isinstance(B2, MV), "a single-column matrix yields one MV"
     print(f"  B = {B2}")
-    assert B1.to_dict() == B2.to_dict(), "paths disagree!"
+
+    # The two paths use different linear-algebra backends (`solve()` vs LAPACK),
+    # so their coefficients agree only to floating-point precision — compare
+    # with a tolerance rather than `==`.
+    d1 = B1.to_dict()
+    d2 = B2.to_dict()
+    keys = sorted(d1)
+    assert keys == sorted(d2), "paths disagree on the blade set"
+    assert np.allclose(
+        [d1[k] for k in keys], [d2[k] for k in keys], rtol=1e-12, atol=1e-12
+    ), "paths disagree!"
     print("  ✓ Both paths agree")
 else:
     print(
