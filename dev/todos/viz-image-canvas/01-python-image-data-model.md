@@ -20,7 +20,7 @@ code here.
     by the frontend (`UNSIGNED_BYTE` / float texture), plus the per-dtype
     default `[value_min, value_max]` (`[0,1]`, `[0,65535]`, `[None,None]`).
 
-- [ ] **1.2 — `ImageData` dataclass**
+- [x] **1.2 — `ImageData` dataclass**
   - Fields: `id`, `width`, `height`, `channels` (1/3/4), `dtype`, and either
     `data: np.ndarray` or `url: str` (mutually exclusive, validated).
   - Validation: 2-D (H×W) for 1 channel, 3-D (H×W×C) for 3/4; dtype in the enum;
