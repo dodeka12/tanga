@@ -9,6 +9,7 @@ They simplify the common case of "add a draggable X to the scene."
 | Class | Entity | Interaction | Page |
 |-------|--------|-------------|------|
 | `ActPoint` | Draggable `Point` | Left-drag on four constraint planes | [ActPoint](act-point.md) |
+| `ActRectangle2D` | `Rectangle2D` body + square `ActPoint` handles | Corner handles resize, centre handle translates | [ActRectangle2D](act-rectangle2d.md) |
 
 ## Common Behaviour
 

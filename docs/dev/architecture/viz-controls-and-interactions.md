@@ -281,6 +281,21 @@ handler)` (stored under `(object_id, event_type.value)`).  The per-pane frontend
 `InteractionController` captures/throttles pointer events and sends them under
 `interaction:*` names; the backend coalesces `drag_move`.
 
+### Active rectangles
+
+`ActRectangle2D` (`_active.py`) is an interactive axis-aligned rectangle: a
+visual-only `Rectangle2D` body plus child `ActPoint` handles (4 corners for
+resize, one centre handle for translate).  It is a **composite** — the frontend
+raycasts one mesh per entity, so each grabbable part is its own `ActPoint`
+entity and the body's `interaction_config` is disabled.  Default resize/translate
+behaviour is overridable (`on_corner_drag` / `on_translate` / `on_change`), and
+`ImageCanvas.draw_rectangle(on_done=…)` drives the drag-to-create flow (a preview
+`Rectangle2D` during the drag, replaced by an `ActRectangle2D` on drag end).
+
+`SquarePointStyle` (a `PointStyle` variant, dispatched in `factory.js` by
+`style_type` exactly like `CrossHairPointStyle`) renders a `Point` as a flat
+square marker — used for the rectangle handles.
+
 ## Image canvas
 
 `ImageCanvas` (`_image_view.py`) displays images on an interactive
@@ -292,6 +307,12 @@ Mouse handlers modify shader uniforms via `ImageCanvas.set_uniform`, which
 sends an `image_update` JSON message; the pixel data itself travels as **binary
 WebSocket frames** (`_image_wire.py`, `Transport.send_bytes`) and is never
 re-sent on uniform/overlay changes.
+
+The canvas also supports multiple specific handlers via `DragBinding` /
+`ClickBinding` (a mouse button + optional modifier set; the most specific match
+wins, falling back to the general `on_drag`/`on_click`), and lets you rebind the
+camera navigation (pan/dolly/rotate) per scene through a `controls` mapping
+(`SceneConfig.controls`, applied by `configureControls` in `view_mode.js`).
 
 ## Follow-ups
 

@@ -175,6 +175,13 @@ uniforms and overlays travel as JSON (`image_update`) and never re-send the
 image.  The export path stores images in an id-keyed **asset store**
 (`AnimationRecording.assets`, `capture_frame(include_images=False)`).
 
+The same 2D scene hosts interactive rectangles: `Rectangle2D` (a new viz-only
+entity, `kind == "Rectangle2D"`, rendered by `renderers/rectangle2d.js` as an
+outline + optional fill) and `ActRectangle2D` (a composite `ActSceneObject` that
+spawns square `ActPoint` handles for resize/translate).  `draw_rectangle()` on
+`ImageCanvas` drags out a preview `Rectangle2D` and finalizes it into an
+`ActRectangle2D`.
+
 ### Test commands
 
 ```
