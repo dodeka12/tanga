@@ -27,7 +27,7 @@ Add the `Rectangle2D` visualization-only entity (frozen dataclass, like `Box` /
   - `color`, `opacity`, `fill: bool = False`, `fill_opacity: float | None`,
     `thickness: float | None`; `to_dict()` emits `style_type: "Rectangle2DStyle"`.
 
-- [ ] **2.3 — serializer mapping**
+- [x] **2.3 — serializer mapping**
   - Map `Rectangle2D` → `{ "kind": "Rectangle2D", "center": [...], "size": [...],
     "normal": [...], "angle": 0.0 }` (+ merged style), following the `Box`
     mapping in `serializer.py`.  `normal`/`angle` use the same conventions as

@@ -37,6 +37,7 @@ from pytanga.geometry.entities import (
     Point,
     PointPair,
     PointSet,
+    Rectangle2D,
     RegularPolygon,
     Space,
     Sphere,
@@ -197,6 +198,8 @@ def _dispatch_entity(
         return _serialize_regular_polygon(
             entity, props, kind=kind, styles_map=styles_map
         )
+    if isinstance(entity, Rectangle2D):
+        return _serialize_rectangle2d(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Hyperbola):
         return _serialize_hyperbola(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Parabola):
@@ -1267,6 +1270,21 @@ def _serialize_regular_polygon(
         "center": [ent.center.x, ent.center.y, ent.center.z],
         "radius": _clamp_positive(ent.radius),
         "sides": ent.sides,
+        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
+        "angle": ent.angle,
+    }
+
+
+def _serialize_rectangle2d(
+    ent: Rectangle2D,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: StylesMap | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "center": [ent.center.x, ent.center.y, ent.center.z],
+        "size": [ent.size[0], ent.size[1]],
         "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
         "angle": ent.angle,
     }
