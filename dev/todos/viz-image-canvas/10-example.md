@@ -13,13 +13,13 @@ coordinates.
 
 ## Steps
 
-- [ ] **10.1 — `image_canvas.py`**
+- [x] **10.1 — `image_canvas.py`**
   - Build or load a `uint8` (and, in a second canvas, a `float32`) image; create
     an `ImageCanvas`, add an overlay box/point path in pixel coordinates, and
     register a ctrl+left-drag handler that maps drag → `set_uniform`
     (brightness/contrast).
 
-- [ ] **10.2 — docstring**
+- [x] **10.2 — docstring**
   - Module docstring with a `<name>.py — …` description, a `Run with:  uv run
     python py/examples/viz/image/image_canvas.py` line, and a trailing
     `Keywords:` line (per `dev/workflows/example-docs.md`).
@@ -28,7 +28,7 @@ coordinates.
   - Demonstrate `pil_to_numpy` with the lazy PIL import and a `uint16`/`float32`
     conversion.
 
-- [ ] **10.4 — smoke**
+- [x] **10.4 — smoke**
   - Run the example (`uv run python py/examples/viz/image/image_canvas.py`) and
     confirm the viewer serves the dedicated image scene and the handler fires.
 
