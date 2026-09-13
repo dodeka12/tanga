@@ -41,7 +41,7 @@ lets the coordinator reposition handles programmatically.
   - Handlers: `handler` (translate), `on_corner_drag(i, event, rect) -> bool`,
     `on_change(rect)` after any mutation; each returns `True` to fully handle.
 
-- [ ] **4.4 — export + tests**
+- [x] **4.4 — export + tests**
   - Export `ActRectangle2D`.  Test: entity model, `interaction_config` (body
     disabled), handle spawn count, corner-resize recomputes center/size, and
     translation moves center (using a fake `VizSceneHandle` like `test_active.py`).
