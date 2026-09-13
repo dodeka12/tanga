@@ -17,6 +17,13 @@ __all__ = ["ImageView"]
 #: Fixed number of image layers (the wire contract).
 MAX_IMAGE_LAYERS = 4
 
+#: Standard-shader uniform defaults (brightness / contrast / contrast mid-point).
+_STANDARD_UNIFORM_DEFAULTS: dict[str, float] = {
+    "u_brightness": 0.0,
+    "u_contrast": 1.0,
+    "u_midpoint": 0.5,
+}
+
 
 class ImageView:
     """Low-level image plane: images + shader + uniform state.
@@ -33,6 +40,7 @@ class ImageView:
         self._fragment: str | None = None
         self._vertex: str | None = None
         self._frame: tuple[int, int] | None = None
+        self._uniforms.update(_STANDARD_UNIFORM_DEFAULTS)
 
     # -- image layers -------------------------------------------------
 

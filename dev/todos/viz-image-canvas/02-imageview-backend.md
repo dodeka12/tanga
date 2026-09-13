@@ -21,7 +21,7 @@ the shader source, and the uniform values, and serializes to the canonical
   - Methods: `set_image` (replace layer 0), `add_image` (next slot), `set_uniform`,
     `register_uniform(name, default)`, `register_shader(fragment, vertex=None)`.
 
-- [ ] **2.2 — standard shader defaults**
+- [x] **2.2 — standard shader defaults**
   - Seed `uniforms` with `u_brightness=0.0`, `u_contrast=1.0`, `u_midpoint=0.5`,
     and a `u_mode` default derived from channels (1→`0`, 3/4→`1`).
   - Add `u_value_min`/`u_value_max` from `default_value_range`.
