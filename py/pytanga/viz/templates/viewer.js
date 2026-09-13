@@ -543,6 +543,16 @@ async function handleMessage(msg) {
         _availableScenes = msg.scenes || [];
         return;
     }
+    if (msg.type === 'interaction:drag_anchor') {
+        // The backend resolves the ideal drag anchor per object; broadcast to
+        // every scene view because the message carries no scene field.  Only the
+        // pane with the matching active drag consumes it (setDragAnchor checks
+        // the object id).
+        for (const route of _sceneRoutes.values()) {
+            for (const v of route.sceneViews) await v.handleMessage(msg);
+        }
+        return;
+    }
     if (msg.type === 'animation_stop_config') {
         if ((msg.scene ?? '') === _myScene) {
             _animationStopConfig = {
