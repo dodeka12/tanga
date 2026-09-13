@@ -35,7 +35,7 @@ dispatched in `factory.js`).
     geometry depends on style fields that change live (then add
     `updateSquarePoint` and the `updateEntityMesh` case).
 
-- [ ] **1.4 — export + tests**
+- [x] **1.4 — export + tests**
   - Re-export `SquarePointStyle` from `pytanga.viz`.
   - Test: `SquarePointStyle().to_dict()` → `{"style_type": "SquarePointStyle"}`;
     round-trip through a `Point` entity serialize.

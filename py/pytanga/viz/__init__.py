@@ -30,6 +30,8 @@ from ._active import (
     ActImagePlane,
     ActPoint,
     ActSceneObject,
+    ClickBinding,
+    DragBinding,
 )
 from ._anchor import EAnchor
 from ._app import VisualizerApp
@@ -158,6 +160,7 @@ from ._styles import (
     SolidWireframe,
     SpaceStyle,
     SphereStyle,
+    SquarePointStyle,
     TextureLabelStyle,
     TitleStyle,
     TranslatorStyle,
@@ -176,6 +179,7 @@ from ._themes import (
 from ._types import SceneEntity, VizInputType
 from ._viz_styles import VizStyles
 from .camera import (
+    CameraAction,
     CameraConfig,
     CameraConfig2d,
     CameraConfig3d,
@@ -249,6 +253,7 @@ __all__ = [
     "Button",
     "ButtonView",
     "Camera",
+    "CameraAction",
     "CameraConfig",
     "CameraConfig2d",
     "CameraConfig3d",
@@ -259,6 +264,7 @@ __all__ = [
     "ColorPickerView",
     "ColumnType",
     "CoordinateSystem",
+    "ClickBinding",
     "ClickEvent",
     "ControlEvent",
     "ControlHandler",
@@ -280,6 +286,7 @@ __all__ = [
     "DirectionStyle",
     "DiskStyle",
     "DottedWireframe",
+    "DragBinding",
     "DragEvent",
     "DragMode",
     "Dropdown",
@@ -384,6 +391,7 @@ __all__ = [
     "SpacerView",
     "SphereStyle",
     "SplitView",
+    "SquarePointStyle",
     "StackView",
     "Table",
     "TableCellChange",
