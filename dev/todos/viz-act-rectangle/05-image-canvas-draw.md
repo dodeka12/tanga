@@ -22,7 +22,7 @@ drag end it removes the preview and constructs the active rectangle.
     `self._handle.add(...)` it, and call `on_done(rect)`.
   - Return a handle to cancel/end the draw mode.
 
-- [ ] **5.2 — example**
+- [x] **5.2 — example**
   - Extend the image-canvas example to draw a rectangle on the image and print
     the resulting `ActRectangle2D`.
 
