@@ -114,6 +114,7 @@ from ._operator_styles import (
     ReflectionPlaneStyle,
     ReflectionPointStyle,
     RotorStyle,
+    SquarePointStyle,
     TranslatorStyle,
 )
 from ._overlay_styles import (
@@ -193,6 +194,7 @@ ObjVizStyle: TypeAlias = Union[
     MotorStyle,
     GeneralRotorStyle,
     CrossHairPointStyle,
+    SquarePointStyle,
     PointPathStyle,
     GridStyle,
     AxisStyle,
