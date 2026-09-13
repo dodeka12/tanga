@@ -40,7 +40,7 @@ and mouse handlers.
   - `scene_view()` returns a `SceneView` referencing the dedicated scene (for
     `SplitView` placement); `fit_to_image()` sets the camera to the pixel frame.
 
-- [ ] **4.6 — re-export + tests**
+- [x] **4.6 — re-export + tests**
   - Re-export `ImageCanvas`.
   - `py/tests/viz/test_image_canvas.py`: scene creation, frame camera config,
     overlay delegation, uniform forwarding, and that `scene_view()` references

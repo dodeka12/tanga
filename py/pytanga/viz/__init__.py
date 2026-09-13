@@ -66,7 +66,7 @@ from ._coordinate_system import CoordinateSystem, fit_view2d
 from ._dialog import Dialog, FileChooserDialog
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
-from ._image_view import ImageView
+from ._image_view import ImageCanvas, ImageView
 from ._interaction import (
     Camera,
     ClickEvent,
@@ -308,6 +308,7 @@ __all__ = [
     "HPointStyle",
     "HyperbolaStyle",
     "ImageChannelMode",
+    "ImageCanvas",
     "ImageData",
     "ImageDType",
     "ImageView",
