@@ -17,7 +17,7 @@ from uuid import uuid4
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
-from .camera import CameraConfig
+from .camera import CameraAction, CameraConfig
 from ._nodes import VizGroup, VizImage, VizNode, VizOverlayObject, VizSceneObject
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
@@ -25,7 +25,7 @@ from ._style_dict import StylesMap, _resolve_label_style, _resolve_tex_label_sty
 from ._viz_styles import VizStyles, make_styles
 
 if TYPE_CHECKING:
-    from ._interaction import InteractionConfig
+    from ._interaction import InteractionConfig, MouseButton
     from ._styles import LabelStyle, ObjVizStyle, TextureLabelStyle
 
 # ── Configuration ──────────────────────────────────────────
@@ -45,6 +45,9 @@ class SceneConfig:
     annotation: str | None = None  # markdown annotation text
     name: str = ""  # scene name (empty string = main scene)
     space_dim: int = 3  # 2 or 3 — controls camera mode, controls, and rendering
+    # Optional mouse-button → camera-action rebinding (overrides the frontend
+    # defaults for the scene's space dimension).  ``None`` keeps the defaults.
+    controls: dict[MouseButton, CameraAction | None] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -65,6 +68,11 @@ class SceneConfig:
                 result["camera"] = cam
         if self.annotation is not None:
             result["annotation"] = self.annotation
+        if self.controls is not None:
+            result["controls"] = {
+                button.value: (action.value if action is not None else None)
+                for button, action in self.controls.items()
+            }
         return result
 
 

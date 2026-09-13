@@ -19,10 +19,25 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, fields
+from enum import StrEnum
 from typing import Any, Literal, cast
 
 
 StretchMode = Literal["fit", "fill", "fill_x", "fill_y"]
+
+
+class CameraAction(StrEnum):
+    """Camera navigation action a mouse button can be bound to.
+
+    Mirrors Three.js ``OrbitControls`` mouse actions (``ROTATE``/``DOLLY``/
+    ``PAN``).  Used by :attr:`SceneConfig.controls` to rebind which mouse
+    button drives which camera movement.
+    """
+
+    ROTATE = "rotate"
+    DOLLY = "dolly"
+    PAN = "pan"
+
 
 #: Canonical 2D camera stretch modes.
 _STRETCH_MODES: tuple[str, ...] = ("fit", "fill", "fill_x", "fill_y")

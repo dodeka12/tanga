@@ -350,7 +350,7 @@ export class ThreeJsView extends View {
 
         this._applyCamera(cameraConfig);
 
-        configureControls(this.controls, this.renderer, spaceDim);
+        configureControls(this.controls, this.renderer, spaceDim, config.controls);
         this._interaction.setSpaceDim(spaceDim);
         this.resize();
 

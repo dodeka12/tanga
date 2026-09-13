@@ -30,6 +30,14 @@ class TestScene:
         assert isinstance(sv, SceneView)
         assert sv.scene == canvas.scene_name
 
+    def test_controls_config_set_on_scene(self) -> None:
+        from pytanga.viz import CameraAction, MouseButton
+
+        canvas = ImageCanvas(_viz(), controls={MouseButton.RIGHT: CameraAction.PAN})
+        assert canvas.handle.scene.config.controls == {
+            MouseButton.RIGHT: CameraAction.PAN
+        }
+
 
 class TestCamera:
     def test_fit_to_image(self) -> None:
@@ -43,6 +51,38 @@ class TestCamera:
         canvas = ImageCanvas(_viz())
         canvas.fit_to_image()
         assert canvas.handle.scene.config.camera is None
+
+
+class TestHandlers:
+    def test_drag_handlers_forwarded_to_plane(self) -> None:
+        from pytanga.viz import DragBinding, DragEvent, ModifierKey, MouseButton
+
+        async def on_drag(event: DragEvent, canvas: ImageCanvas) -> bool:
+            return True
+
+        canvas = ImageCanvas(
+            _viz(),
+            drag_handlers=[DragBinding(MouseButton.RIGHT, on_drag, ModifierKey.CTRL)],
+        )
+        bindings = canvas.act_plane._drag_bindings
+        assert len(bindings) == 1
+        assert bindings[0].button is MouseButton.RIGHT
+        assert bindings[0].modifiers == frozenset({ModifierKey.CTRL})
+
+    def test_click_handlers_forwarded_to_plane(self) -> None:
+        from pytanga.viz import ClickBinding, ClickEvent, MouseButton
+
+        async def on_click(event: ClickEvent, canvas: ImageCanvas) -> None:
+            pass
+
+        canvas = ImageCanvas(
+            _viz(),
+            click_handlers=[ClickBinding(MouseButton.LEFT, on_click)],
+        )
+        bindings = canvas.act_plane._click_bindings
+        assert len(bindings) == 1
+        assert bindings[0].button is MouseButton.LEFT
+        assert bindings[0].modifiers == frozenset()
 
 
 class TestApi:
