@@ -17,7 +17,13 @@ from pytanga.geometry import Point, Rectangle2D
 
 from .camera import CameraAction, StretchMode, View2DConfig, _validate_stretch
 from .image import ImageData, default_mode, default_value_range
-from ._interaction import InteractionEventType, MouseButton
+from ._interaction import (
+    DragMode,
+    InteractionConfig,
+    InteractionEventType,
+    InteractionTrigger,
+    MouseButton,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -467,18 +473,35 @@ class ImageCanvas:
             state["active"] = False
             self._restore_plane_interaction()
 
+        # Enable a catch-all drag trigger while drawing: the plane may have no
+        # drag handlers (in which case the frontend would send no drag events).
+        self._handle.set_interaction(
+            image_id,
+            InteractionConfig(
+                enabled=True,
+                triggers=[
+                    InteractionTrigger(
+                        event_type=InteractionEventType.DRAG,
+                        mouse_button=None,
+                        drag_mode=DragMode.XY_PLANE,
+                    )
+                ],
+                throttle_ms=40,
+            ),
+        )
         self._handle.on_interaction(image_id, InteractionEventType.DRAG_START, on_start)
         self._handle.on_interaction(image_id, InteractionEventType.DRAG_MOVE, on_move)
         self._handle.on_interaction(image_id, InteractionEventType.DRAG_END, on_end)
         return cancel
 
     def _restore_plane_interaction(self) -> None:
-        """Re-register the image plane's handlers, clearing any draw handlers."""
+        """Re-register the image plane's config + handlers, clearing draw handlers."""
         plane = self._act_plane
 
         async def _noop(event: DragEvent) -> None:
             pass
 
+        self._handle.set_interaction(self._image_view.id, plane.interaction_config)
         self._handle.on_interaction(
             self._image_view.id, InteractionEventType.DRAG_MOVE, plane._on_drag
         )

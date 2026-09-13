@@ -180,7 +180,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image.js",
-      "sha256": "312ac581d7fc335277bf6e8a82049487c345749eb676e2d25c750db25aa4c859"
+      "sha256": "abb529ea5ff468802cd3230c27e662cdd57fc673e593bcaecb6c360379576d79"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
@@ -247,6 +247,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "caca188a6ca937e2bdb1b4a436e618bd69b1e894766b4d150d46465365ec8944",
-  "bundle_sha256": "3e560f94ab16956c0a8219eb6e57a379f4b0fd2a2a56a706273e633811ae019e"
+  "fingerprint_sha256": "3af0acc89c3c9d2b030d09d742b681f3218000bd2f1637d17ea409e2f57056f4",
+  "bundle_sha256": "f8ee67ec57ffe7f462aa3ad346e5ac95b51e46d7536fc881165da985569bad8e"
 }

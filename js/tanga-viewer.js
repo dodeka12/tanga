@@ -2804,7 +2804,7 @@ function buildUniforms(ent) {
     const u = ent.uniforms || {};
     const images = ent.images || [];
     const primary = images[0] || {};
-    return {
+    const uniforms = {
         uImage0: { value: null },
         uImage1: { value: null },
         uImage2: { value: null },
@@ -2817,6 +2817,15 @@ function buildUniforms(ent) {
         u_midpoint: { value: u.u_midpoint ?? 0.5 },
         u_mode: { value: u.u_mode ?? 1 },
     };
+    // Custom shader uniforms — any key beyond the standard set above (e.g.
+    // a custom shader's `u_angle`).  `image_update` patches reuse the same
+    // keys via `applyImageUniforms`.
+    for (const [name, value] of Object.entries(u)) {
+        if (!(name in uniforms)) {
+            uniforms[name] = { value };
+        }
+    }
+    return uniforms;
 }
 
 async function createImage(ent) {

@@ -11,7 +11,14 @@ from typing import Any
 import numpy as np
 
 from pytanga.geometry import Point
-from pytanga.viz import ActRectangle2D, DragEvent, ImageCanvas, ImageData, Visualizer
+from pytanga.viz import (
+    ActRectangle2D,
+    DragEvent,
+    ImageCanvas,
+    ImageData,
+    InteractionEventType,
+    Visualizer,
+)
 
 
 class _FakeTransport:
@@ -70,3 +77,25 @@ class TestDrawRectangle:
         assert rect.entity.center.x == 7.0
         assert rect.entity.center.y == 5.0
         assert rect.entity.size == (10.0, 4.0)
+
+    def test_draw_rectangle_enables_drag_trigger(self) -> None:
+        viz, canvas, _ = _canvas()
+        image_id = canvas.image_view.id
+
+        # No drag handlers → the plane registers no triggers.
+        assert canvas.act_plane.interaction_config.triggers == []
+
+        canvas.draw_rectangle()
+
+        cfg = viz._interaction_host._interaction_configs[canvas.scene_name][image_id]
+        assert any(t.event_type is InteractionEventType.DRAG for t in cfg.triggers)
+
+    def test_draw_rectangle_restores_plane_config(self) -> None:
+        viz, canvas, _ = _canvas()
+        image_id = canvas.image_view.id
+
+        cancel = canvas.draw_rectangle()
+        cancel()
+
+        cfg = viz._interaction_host._interaction_configs[canvas.scene_name][image_id]
+        assert cfg.triggers == []

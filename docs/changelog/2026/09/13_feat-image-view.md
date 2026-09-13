@@ -17,3 +17,8 @@
   `ActRectangle2D` — a composite active object whose corner handles resize and
   centre handle translates, with overridable handlers.  `ImageCanvas.draw_rectangle()`
   drags out a preview and finalizes it into an `ActRectangle2D`.
+- **Custom image shaders** — `ImageCanvas.register_shader()` replaces the standard
+  brightness/contrast shader with a custom fragment shader; `register_uniform()` /
+  `set_uniform()` now drive arbitrary custom uniforms end-to-end, and
+  `draw_rectangle()` arms a drag trigger so the drag-to-create flow works without
+  a pre-registered drag handler.
