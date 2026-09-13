@@ -39,6 +39,7 @@ from ._interaction import (
 )
 
 if TYPE_CHECKING:
+    from ._image_view import ImageView
     from ._scene_handle import VizSceneHandle
 
 # ── Handler type ───────────────────────────────────────────────
@@ -456,3 +457,89 @@ class ActPoint(ActSceneObject):
     def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
         """Return the ideal anchor — the point's centre (the ray is ignored)."""
         return self._point
+
+
+# ── ActImagePlane ───────────────────────────────────────────────
+
+
+class ActImagePlane(ActSceneObject):
+    """An interactive image plane.
+
+    Captures pointer hits and drags on an image and reports them in the image's
+    pixel coordinates (the image plane is ``z = 0`` in the pixel frame).  The
+    plane itself never moves, so the default drag behaviour is a no-op and the
+    user's handlers read ``event.world_position`` as ``(px, py)``.
+    """
+
+    def __init__(
+        self,
+        image_view: ImageView,
+        *,
+        handler: ActHandler | None = None,
+        on_drag_start: ActEventHandler | None = None,
+        on_drag_end: ActEventHandler | None = None,
+        on_click: ActClickHandler | None = None,
+    ) -> None:
+        super().__init__(
+            handler=handler,
+            on_drag_start=on_drag_start,
+            on_drag_end=on_drag_end,
+            on_click=on_click,
+        )
+        self._image_view = image_view
+
+    # ── Properties ─────────────────────────────────────────
+
+    @property
+    def image_view(self) -> ImageView:
+        """The underlying :class:`~pytanga.viz.ImageView`."""
+        return self._image_view
+
+    @property
+    def entity(self) -> ImageView:
+        """The rendered image-plane entity (an ``ImageView``)."""
+        return self._image_view
+
+    @property
+    def interaction_config(self) -> InteractionConfig:
+        """A left-button drag on the image's own plane (``XY_PLANE``).
+
+        A ``CLICK`` trigger is added only when an ``on_click`` handler was
+        provided, so clicks are not reported unless requested.
+        """
+        triggers = [
+            InteractionTrigger(
+                event_type=InteractionEventType.DRAG,
+                mouse_button=MouseButton.LEFT,
+                drag_mode=DragMode.XY_PLANE,
+            )
+        ]
+        if self._on_click is not None:
+            triggers.append(
+                InteractionTrigger(
+                    event_type=InteractionEventType.CLICK,
+                    mouse_button=MouseButton.LEFT,
+                )
+            )
+        return InteractionConfig(enabled=True, triggers=triggers, throttle_ms=40)
+
+    # ── Default movement ───────────────────────────────────
+
+    def _move_to(self, pos: Point) -> None:
+        """The image plane is fixed — no movement."""
+
+    def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
+        """Return the ray ↔ ``z = 0`` (image plane) intersection.
+
+        The result is in world coordinates, which are the image's pixel
+        coordinates (``x`` right, ``y`` down) in the dedicated 2D scene.
+        """
+        denom = ray_direction.z
+        if denom == 0.0:
+            return Point(ray_origin.x, ray_origin.y, 0.0)
+        t = -ray_origin.z / denom
+        return Point(
+            ray_origin.x + t * ray_direction.x,
+            ray_origin.y + t * ray_direction.y,
+            0.0,
+        )

@@ -14,7 +14,7 @@ the plane and reports pixel-coordinate hits/drags through the existing
 
 ## Steps
 
-- [ ] **3.1 — `ActImagePlane(ActSceneObject)` in `_active.py`**
+- [x] **3.1 — `ActImagePlane(ActSceneObject)` in `_active.py`**
   - Constructor takes the `ImageView` (or its plane entity) plus
     `handler`/`on_drag_start`/`on_drag_end`/`on_click` like `ActPoint`.
   - `entity` property returns the image plane geometry (a `Plane` sized
