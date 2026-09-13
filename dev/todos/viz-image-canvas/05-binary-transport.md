@@ -28,7 +28,7 @@ images never travel as JSON/base64 on the live channel.
     `server.push_bytes(data: bytes)` mirroring `push_raw` but `send_bytes`.
   - Thread-safe `run_coroutine_threadsafe` pattern as in `send`.
 
-- [ ] **5.3 — frontend binary receive**
+- [x] **5.3 — frontend binary receive**
   - In `viewer.js`, set `ws.binaryType = 'arraybuffer'` and branch
     `onmessage`: `event.data instanceof ArrayBuffer` → decode via a `DataView`
     into `{id, width, height, channels, dtype, bytes}` and dispatch to the image

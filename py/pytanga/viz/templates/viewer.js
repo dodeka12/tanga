@@ -32,6 +32,7 @@ import {
 import { handleThemeDefine } from './themes.js';
 import { updateLineResolutions } from './renderers/utils.js';
 import { handleResize } from './view_mode.js';
+import { decodeImageFrame, storeImageFrame } from './image-frames.js';
 
 // ── State ───────────────────────────────────────────────────
 let ws = null;
@@ -188,6 +189,7 @@ function connectWebSocket() {
     _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts + ' gen=' + gen);
 
     ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
 
     const connectWatchdog = setTimeout(() => {
         if (ws && ws.readyState === WebSocket.CONNECTING && gen === _wsGeneration) {
@@ -230,6 +232,15 @@ function connectWebSocket() {
     };
 
     ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+            try {
+                storeImageFrame(decodeImageFrame(event.data));
+            } catch (e) {
+                console.error('Failed to decode image frame:', e);
+                sendLog('error', 'Failed to decode image frame', { source: 'viewer.js', data: { error: String(e) } });
+            }
+            return;
+        }
         let msg;
         try {
             msg = JSON.parse(event.data);
