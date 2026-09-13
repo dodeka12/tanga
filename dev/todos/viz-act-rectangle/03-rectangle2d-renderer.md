@@ -24,7 +24,7 @@ with an optional semi-transparent fill, oriented in the xy-plane.
     from `ent.style`.
   - Position at `ent.center`; `tagEntity` the returned group.
 
-- [ ] **3.2 — factory wiring**
+- [x] **3.2 — factory wiring**
   - `case 'Rectangle2D': createRectangle2D(ent)` in `createEntityMesh`.
   - Add an `updateRectangle2D(mesh, ent, prev)` in `updateEntityMesh` that
     updates center/size/angle/style in place and returns
@@ -41,6 +41,10 @@ with an optional semi-transparent fill, oriented in the xy-plane.
 
 - Follow the `box.js`/`regular_polygon.js` templates; `utils.js` provides
   `makeMaterial`/`styleParam`/`parseColor`/`tagEntity`/`addWireframeOverlay`.
+- No custom `updateRectangle2D` is needed: the generic `updateEntityMesh`
+  in-place path updates `center` + style, and `entityRequiresRebuild` already
+  rebuilds on `size`/`normal`/`angle` changes (same mechanism `Box` /
+  `RegularPolygon` use).
 
 ---
 

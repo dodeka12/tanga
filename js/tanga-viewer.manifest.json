@@ -176,7 +176,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
-      "sha256": "5141f69eccd5de4e02320d6cf6a03943cc67a9cca1be5bf4494146d50852cd8a"
+      "sha256": "acbd56fe93d68be9153ec86c9f1d9a59ec7cb9642fc2ec78ea59923f489910d3"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sdf.js",
@@ -239,6 +239,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "e8d7ae3fc138e096cdbb2d6072ca9bf84072b18b3aea28c7ea533b7e6abe7cc6",
-  "bundle_sha256": "d6008ef0c7fcfff1d14ef740bca8734f759c314656e57421570a2020d11c6e49"
+  "fingerprint_sha256": "a7ec944e15dd7bc97440218b5d23867d7f2e51b2b60278817b7bc0555ec70b5d",
+  "bundle_sha256": "64b684ce0891a06f08e825a4fa2f45119e52cc8ebd268cd6a467831de1a0095c"
 }

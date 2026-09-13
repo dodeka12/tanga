@@ -2886,6 +2886,9 @@ async function createEntityMesh(ent) {
         case 'RegularPolygon':
             mesh = createRegularPolygon(ent);
             break;
+        case 'Rectangle2D':
+            mesh = createRectangle2D(ent);
+            break;
         case 'Space':
             mesh = createSpace(ent);
             break;

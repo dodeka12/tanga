@@ -19,6 +19,7 @@ import { createBox } from './box.js';
 import { createEllipsoid } from './ellipsoid.js';
 import { createEllipse, updateEllipse } from './ellipse.js';
 import { createRegularPolygon } from './regular_polygon.js';
+import { createRectangle2D } from './rectangle2d.js';
 import { createHyperbola, updateHyperbola } from './hyperbola.js';
 import { createParabola, updateParabola } from './parabola.js';
 import { createLinePair, updateLinePair } from './line_pair.js';
@@ -107,6 +108,9 @@ export async function createEntityMesh(ent) {
             break;
         case 'RegularPolygon':
             mesh = createRegularPolygon(ent);
+            break;
+        case 'Rectangle2D':
+            mesh = createRectangle2D(ent);
             break;
         case 'Space':
             mesh = createSpace(ent);
