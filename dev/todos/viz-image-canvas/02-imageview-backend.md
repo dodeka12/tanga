@@ -38,7 +38,7 @@ the shader source, and the uniform values, and serializes to the canonical
 - [x] **2.5 — re-export `ImageView`**
   - Add to `py/pytanga/viz/__init__.py` + `__all__`.
 
-- [ ] **2.6 — Unit tests `py/tests/viz/test_image_view.py`**
+- [x] **2.6 — Unit tests `py/tests/viz/test_image_view.py`**
   - 4-layer cap raises; serialization matches the README contract (spot-check
     JSON); `set_uniform`/`register_uniform`; channel-mode defaults per channel
     count; uniform dict round-trips.
