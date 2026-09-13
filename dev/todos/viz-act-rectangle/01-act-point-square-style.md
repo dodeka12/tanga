@@ -22,7 +22,7 @@ dispatched in `factory.js`).
     (slab depth).  `to_dict()` emits `style_type: "SquarePointStyle"` + non-None
     fields (mirror `PointStyle.to_dict`).
 
-- [ ] **1.2 — `square_point.js` renderer**
+- [x] **1.2 — `square_point.js` renderer**
   - A thin square slab facing `+z` (`THREE.BoxGeometry(size*2, size*2, thickness)`
     or a double-sided `PlaneGeometry`), positioned at `ent.position`, tagged via
     `tagEntity(mesh, ent)`.  Reuse `makeMaterial`/`styleParam`/`parseColor` from
