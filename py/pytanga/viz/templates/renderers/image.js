@@ -9,25 +9,66 @@ import { tagEntity } from './utils.js';
 import { buildImageFragment, buildImageVertex } from './image-shader.js';
 import { hasImageFrame, takeImageFrame } from '../image-frames.js';
 
-// dtype code → THREE texture type (see py/pytanga/viz/image.py).
+// dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
 const DTYPE_TYPES = {
-    0: THREE.UnsignedByteType,   // uint8
-    1: THREE.UnsignedShortType,  // uint16 (needs WebGL2 / float texture fallback)
-    2: THREE.FloatType,          // float32 (needs WebGL2 / OES_texture_float)
+    0: { type: THREE.UnsignedByteType, bytesPerElement: 1 },   // uint8
+    1: { type: THREE.UnsignedShortType, bytesPerElement: 2 },  // uint16 (WebGL2 only)
+    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32 (WebGL2 only)
 };
 
-function channelsFormat(channels) {
-    if (channels === 1) return THREE.LuminanceFormat;
-    if (channels === 3) return THREE.RGBFormat;
-    return THREE.RGBAFormat;
+// View the raw frame bytes as the dtype's element type.
+function typedArrayFor(dtype, bytes) {
+    if (dtype === 1) return new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.length / 2);
+    if (dtype === 2) return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
+    return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length);
+}
+
+// Expand a 1/3-channel buffer to 4-channel RGBA — the only 8-bit color format
+// three.js r170 uploads to WebGL2 (RGBFormat/LuminanceFormat were removed).
+function toRgba(arr, channels) {
+    const TypedArray = arr.constructor;
+    const n = arr.length / channels;
+    const rgba = new TypedArray(n * 4);
+    const alpha = arr instanceof Float32Array ? 1.0
+        : arr instanceof Uint16Array ? 0xFFFF : 0xFF;
+    if (channels === 1) {
+        for (let i = 0; i < n; i++) {
+            const v = arr[i];
+            rgba[i * 4] = v; rgba[i * 4 + 1] = v; rgba[i * 4 + 2] = v; rgba[i * 4 + 3] = alpha;
+        }
+    } else if (channels === 3) {
+        for (let i = 0; i < n; i++) {
+            rgba[i * 4] = arr[i * 3];
+            rgba[i * 4 + 1] = arr[i * 3 + 1];
+            rgba[i * 4 + 2] = arr[i * 3 + 2];
+            rgba[i * 4 + 3] = alpha;
+        }
+    } else {
+        rgba.set(arr);
+    }
+    return rgba;
+}
+
+function emptyTypedArray(dtype, length) {
+    if (dtype === 2) return new Float32Array(length);
+    if (dtype === 1) return new Uint16Array(length);
+    return new Uint8Array(length);
 }
 
 function makeDataTexture(img) {
     const frame = takeImageFrame(img.id);
-    const type = DTYPE_TYPES[img.dtype] ?? THREE.UnsignedByteType;
-    const format = channelsFormat(img.channels);
-    const data = frame ? frame.bytes : new Uint8Array(img.width * img.height * (img.channels || 1));
-    const texture = new THREE.DataTexture(data, img.width, img.height, format, type);
+    const width = img.width;
+    const height = img.height;
+    const channels = img.channels || 1;
+    const dtype = img.dtype ?? 0;
+    const spec = DTYPE_TYPES[dtype] ?? DTYPE_TYPES[0];
+
+    const raw = frame
+        ? typedArrayFor(dtype, frame.bytes)
+        : emptyTypedArray(dtype, width * height * channels);
+    const data = toRgba(raw, channels);
+
+    const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, spec.type);
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
     texture.needsUpdate = true;
