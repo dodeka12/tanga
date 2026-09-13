@@ -38,7 +38,7 @@ code here.
     apply `np.asarray(...).astype(dtype)` with the documented rescale for
     `uint16`/`float32`; reject unmapped modes.
 
-- [ ] **1.5 — Pillow dev dependency**
+- [x] **1.5 — Pillow dev dependency**
   - Add `"pillow"` to the `[dependency-groups] dev` block in `pyproject.toml`
     (dev/test only, not a runtime extra), then `uv sync --group dev`.
 
