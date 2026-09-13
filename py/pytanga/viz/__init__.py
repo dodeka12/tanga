@@ -65,6 +65,7 @@ from ._coordinate_system import CoordinateSystem, fit_view2d
 from ._dialog import Dialog, FileChooserDialog
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
+from ._image_view import ImageView
 from ._interaction import (
     Camera,
     ClickEvent,
@@ -183,6 +184,14 @@ from .camera import (
     get_camera_view2d,
     get_camera_view3d,
 )
+from .image import (
+    ImageChannelMode,
+    ImageData,
+    ImageDType,
+    default_mode,
+    default_value_range,
+    pil_to_numpy,
+)
 from .export._exporter import SceneExporter
 from .scene import SceneConfig
 from .server import PortConflictMode, PortOccupant
@@ -296,6 +305,10 @@ __all__ = [
     "get_camera_view3d",
     "HPointStyle",
     "HyperbolaStyle",
+    "ImageChannelMode",
+    "ImageData",
+    "ImageDType",
+    "ImageView",
     "InteractionConfig",
     "InteractionEvent",
     "InteractionEventType",
@@ -325,6 +338,7 @@ __all__ = [
     "PlaneConicStyle",
     "PlanePairStyle",
     "PlaneStyle",
+    "pil_to_numpy",
     "PointPath",
     "PointPathStyle",
     "PointPairStyle",
@@ -408,6 +422,8 @@ __all__ = [
     "VizStyles",
     "WireframeDashPattern",
     "copy_theme",
+    "default_mode",
+    "default_value_range",
     "default_theme",
     "external_theme_dirs",
     "list_themes",

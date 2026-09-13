@@ -35,7 +35,7 @@ the shader source, and the uniform values, and serializes to the canonical
     kind:"image", frame, images[], shader{}, uniforms{}}`, with per-image
     `source`/`url` fields.
 
-- [ ] **2.5 — re-export `ImageView`**
+- [x] **2.5 — re-export `ImageView`**
   - Add to `py/pytanga/viz/__init__.py` + `__all__`.
 
 - [ ] **2.6 — Unit tests `py/tests/viz/test_image_view.py`**
