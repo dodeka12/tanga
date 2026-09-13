@@ -42,7 +42,7 @@ code here.
   - Add `"pillow"` to the `[dependency-groups] dev` block in `pyproject.toml`
     (dev/test only, not a runtime extra), then `uv sync --group dev`.
 
-- [ ] **1.6 — Unit tests `py/tests/viz/test_image.py`**
+- [x] **1.6 — Unit tests `py/tests/viz/test_image.py`**
   - dtype codes round-trip; channel validation errors; `to_bytes` contiguity;
     `pil_to_numpy` raises `ImportError` when PIL is mocked absent, and converts
     `L`/`RGB`/`RGBA`/`I;16`/`F` correctly when PIL is present.

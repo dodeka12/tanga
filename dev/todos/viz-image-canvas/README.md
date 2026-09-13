@@ -1,6 +1,6 @@
 # Viz Image Canvas — Overview
 
-**Created:** 2026-09-13 | **Status:** Planned | **Branch:** `feat/image-view`
+**Created:** 2026-09-13 | **Status:** In progress | **Branch:** `feat/image-view`
 
 ## Goal
 
