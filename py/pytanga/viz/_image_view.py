@@ -15,6 +15,7 @@ from typing import Any
 
 from .camera import StretchMode, View2DConfig, _validate_stretch
 from .image import ImageData, default_mode, default_value_range
+from ._interaction import ModifierKey, MouseButton
 
 __all__ = ["ImageView", "ImageCanvas"]
 
@@ -175,6 +176,8 @@ class ImageCanvas:
         image_id: str | None = None,
         stretch: StretchMode = "fit",
         border_px: float = 0.0,
+        drag_button: MouseButton = MouseButton.LEFT,
+        drag_modifiers: frozenset[ModifierKey] = frozenset(),
         on_drag: Any = None,
         on_drag_start: Any = None,
         on_drag_end: Any = None,
@@ -200,6 +203,8 @@ class ImageCanvas:
 
         self._act_plane = ActImagePlane(
             self._image_view,
+            drag_button=drag_button,
+            drag_modifiers=drag_modifiers,
             handler=on_drag,
             on_drag_start=on_drag_start,
             on_drag_end=on_drag_end,

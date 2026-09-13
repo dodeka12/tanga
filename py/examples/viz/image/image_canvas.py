@@ -8,6 +8,10 @@ dedicated 2D scene with a y-down pixel frame, 1 unit = 1 pixel), draws a
 rectangle overlay in pixel coordinates, and binds a ctrl+left-drag handler that
 maps the cursor position to the image's brightness/contrast uniforms.
 
+The drag is configured via ``drag_button`` / ``drag_modifiers`` on the canvas;
+the handler receives ``event.mouse_button`` / ``event.modifiers`` for any finer
+distinction (e.g. to react to more than one button).
+
 Run with:  uv run python py/examples/viz/image/image_canvas.py
 
 Keywords: image, ImageCanvas, shader, uniform, brightness, contrast, overlay, pixels
@@ -16,7 +20,7 @@ Keywords: image, ImageCanvas, shader, uniform, brightness, contrast, overlay, pi
 import numpy as np
 
 from pytanga.geometry import Line, Point
-from pytanga.viz import DragEvent, ImageCanvas, ImageData, ModifierKey, Visualizer
+from pytanga.viz import DragEvent, ImageCanvas, ImageData, ModifierKey, MouseButton, Visualizer
 
 
 def _gradient(width: int, height: int) -> np.ndarray:
@@ -49,14 +53,17 @@ def main() -> None:
     async def on_drag(event: DragEvent, _ap: ImageCanvas) -> bool:  # noqa: ANN001
         # ctrl+left drag: horizontal position → contrast, vertical → brightness.
         canvas = holder["canvas"]
-        if ModifierKey.CTRL not in event.modifiers:
-            return True
         px, py = event.world_position.x, event.world_position.y
         canvas.set_uniform("u_contrast", 0.5 + 1.5 * px / width)
         canvas.set_uniform("u_brightness", (py / height - 0.5) * 2.0)
         return True
 
-    canvas = ImageCanvas(viz, on_drag=on_drag)
+    canvas = ImageCanvas(
+        viz,
+        drag_button=MouseButton.LEFT,
+        drag_modifiers=frozenset({ModifierKey.CTRL}),
+        on_drag=on_drag,
+    )
     holder["canvas"] = canvas
     canvas.set_image(ImageData("gradient", data=_gradient(width, height)))
     _rectangle(canvas, 40, 30, 160, 120)

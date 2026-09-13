@@ -475,6 +475,8 @@ class ActImagePlane(ActSceneObject):
         self,
         image_view: ImageView,
         *,
+        drag_button: MouseButton = MouseButton.LEFT,
+        drag_modifiers: frozenset[ModifierKey] = frozenset(),
         handler: ActHandler | None = None,
         on_drag_start: ActEventHandler | None = None,
         on_drag_end: ActEventHandler | None = None,
@@ -487,6 +489,8 @@ class ActImagePlane(ActSceneObject):
             on_click=on_click,
         )
         self._image_view = image_view
+        self._drag_button = drag_button
+        self._drag_modifiers = frozenset(drag_modifiers)
 
     # ── Properties ─────────────────────────────────────────
 
@@ -502,15 +506,18 @@ class ActImagePlane(ActSceneObject):
 
     @property
     def interaction_config(self) -> InteractionConfig:
-        """A left-button drag on the image's own plane (``XY_PLANE``).
+        """A drag trigger on the image's own plane (``XY_PLANE``).
 
-        A ``CLICK`` trigger is added only when an ``on_click`` handler was
-        provided, so clicks are not reported unless requested.
+        The trigger fires for ``drag_button`` (default left) while every key in
+        ``drag_modifiers`` is held (empty = any modifier state).  A ``CLICK``
+        trigger is added only when an ``on_click`` handler was provided, so
+        clicks are not reported unless requested.
         """
         triggers = [
             InteractionTrigger(
                 event_type=InteractionEventType.DRAG,
-                mouse_button=MouseButton.LEFT,
+                mouse_button=self._drag_button,
+                modifiers=self._drag_modifiers,
                 drag_mode=DragMode.XY_PLANE,
             )
         ]

@@ -52,6 +52,18 @@ class TestInteractionConfig:
         assert len(cfg.triggers) == 2
         assert cfg.triggers[1].event_type is InteractionEventType.CLICK
 
+    def test_custom_drag_button(self) -> None:
+        from pytanga.viz._interaction import ModifierKey
+
+        ap = ActImagePlane(
+            _view(),
+            drag_button=MouseButton.RIGHT,
+            drag_modifiers=frozenset({ModifierKey.CTRL}),
+        )
+        trigger = ap.interaction_config.triggers[0]
+        assert trigger.mouse_button is MouseButton.RIGHT
+        assert trigger.modifiers == frozenset({ModifierKey.CTRL})
+
 
 class TestEntity:
     def test_entity_is_the_image_view(self) -> None:
