@@ -43,6 +43,7 @@ import { createGrid } from './grid.js';
 import { createVizGroup } from './group.js';
 import { createSdfProxy, updateSdfProxy } from './sdf.js';
 import { createRayProxy, updateRayProxy } from './ray.js';
+import { createImage, updateImage } from './image.js';
 import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
 
 /**
@@ -169,6 +170,10 @@ export async function createEntityMesh(ent) {
             mesh = await createRayProxy(ent);
             break;
 
+        case 'image':
+            mesh = await createImage(ent);
+            break;
+
         case 'Hyperbola':
             mesh = createHyperbola(ent);
             break;
@@ -222,6 +227,8 @@ export function updateEntityMesh(mesh, ent, prev) {
         case 'ray':
             if (entityRequiresRebuild(ent, prev)) return false;
             return updateRayProxy(mesh, ent);
+        case 'image':
+            return updateImage(mesh, ent, prev);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':

@@ -16,7 +16,7 @@ nearest-neighbour / rotation-AA sampling gate.
 
 ## Steps
 
-- [ ] **6.1 — texture upload (`image.js`)**
+- [x] **6.1 — texture upload (`image.js`)**
   - For each image: `THREE.DataTexture` with the format per dtype —
     `uint8` → `UNSIGNED_BYTE` (normalized), `uint16` → float/half-float texture,
     `float32` → `FLOAT` texture (guard with `_isWebGL2`/`OES_texture_float`).
@@ -25,25 +25,25 @@ nearest-neighbour / rotation-AA sampling gate.
   - Handle `source:"url"` via `THREE.TextureLoader` (async, log errors via the
     log pipeline).
 
-- [ ] **6.2 — standard fragment shader (`image-shader.js`)**
+- [x] **6.2 — standard fragment shader (`image-shader.js`)**
   - Build GLSL implementing channel mode (`u_mode`) then
     `out = clamp((in − mid) * contrast + mid + brightness, 0, 1)`, reading
     `u_value_min`/`u_value_max` normalization first.
   - `buildImageFragment()` returns the GLSL; a custom `shader.fragment` overrides
     it.
 
-- [ ] **6.3 — nearest/AA sampling gate**
+- [x] **6.3 — nearest/AA sampling gate**
   - In the fragment shader, compute the texel-space derivative (`fwidth` of
     `vUv * imageSize`); when axis-aligned/integer (zoom/pan), sample nearest;
     when non-axis-aligned (rotation), blend a 2×2 neighbourhood by sub-texel
     coverage.
 
-- [ ] **6.4 — `factory.js` dispatch**
+- [x] **6.4 — `factory.js` dispatch**
   - Add `case 'image'` → `buildImageObject(...)`; handle the `image_update`
     uniform patch message (merge `uniforms` into the `ShaderMaterial.uniforms`
     without rebuilding the plane).
 
-- [ ] **6.5 — syntax + smoke**
+- [x] **6.5 — syntax + smoke**
   - `node --check` the new JS; browser smoke page loads a `uint8` image and a
     `float32` image with a custom shader.
 
