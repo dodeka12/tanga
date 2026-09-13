@@ -545,6 +545,19 @@ class VizServer:
         for ws in dead:
             self._ws_clients.discard(ws)
 
+    async def push_bytes(self, data: bytes) -> None:
+        """Send raw bytes to all connected clients."""
+        if not self._ws_clients:
+            return
+        dead: list[web.WebSocketResponse] = []
+        for ws in self._ws_clients:
+            try:
+                await ws.send_bytes(data)
+            except (ConnectionError, Exception):
+                dead.append(ws)
+        for ws in dead:
+            self._ws_clients.discard(ws)
+
     async def push_raw_to_browser(self, browser_id: str, data: str) -> None:
         """Send an arbitrary JSON string to a single browser session."""
         session = self._browser_sessions.get(browser_id)

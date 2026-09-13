@@ -36,6 +36,10 @@ class Transport(Protocol):
         """Awaitable :meth:`send`."""
         ...
 
+    def send_bytes(self, payload: bytes) -> None:
+        """Broadcast raw bytes to all clients (thread-safe; no-op pre-boot)."""
+        ...
+
     def flush(self) -> None:
         """Flush pending state to connected clients."""
         ...

@@ -23,7 +23,7 @@ images never travel as JSON/base64 on the live channel.
     layout (little-endian header + raw C-contiguous bytes).
   - Validate magic/version/type and that `data_len` matches.
 
-- [ ] **5.2 — transport + server bytes path**
+- [x] **5.2 — transport + server bytes path**
   - `Transport.send_bytes(payload: bytes)`; `ServerState`/protocol extension;
     `server.push_bytes(data: bytes)` mirroring `push_raw` but `send_bytes`.
   - Thread-safe `run_coroutine_threadsafe` pattern as in `send`.
