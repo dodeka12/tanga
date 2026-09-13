@@ -16,27 +16,27 @@ and mouse handlers.
 
 ## Steps
 
-- [ ] **4.1 — `ImageCanvas.__init__`**
+- [x] **4.1 — `ImageCanvas.__init__`**
   - Build a `View2DConfig` framing the pixel frame (extent = `frame` with a
     small `border_px`), `stretch="fit"` by default, and a `Scene`/scene handle
     owned by the canvas (dedicated scene name from a counter, e.g. `imgc0`).
   - Establish the **y-down pixel frame**: the image plane and overlay group are
     placed so world `(px, py)` = pixel `(px, py)` (y increasing downward).
 
-- [ ] **4.2 — overlay group + draw API**
+- [x] **4.2 — overlay group + draw API**
   - A `VizGroup` in the pixel frame; `add`/`update`/`remove`/`clear` delegate to
     it (any drawable entity, like `CoordinateSystem`).
 
-- [ ] **4.3 — image/shader/uniform API**
+- [x] **4.3 — image/shader/uniform API**
   - `set_image`, `add_image`, `set_uniform`, `register_shader`,
     `register_uniform` forward to the `ImageView`.
 
-- [ ] **4.4 — interaction + handlers**
+- [x] **4.4 — interaction + handlers**
   - Own an `ActImagePlane`; expose `on_click`/`on_drag`/`on_drag_start`/
     `on_drag_end` plus `on_interaction(event_type, handler)`; default handlers
     read `world_position` (pixel coords) and may call `set_uniform`.
 
-- [ ] **4.5 — scene surface + framing**
+- [x] **4.5 — scene surface + framing**
   - `scene_view()` returns a `SceneView` referencing the dedicated scene (for
     `SplitView` placement); `fit_to_image()` sets the camera to the pixel frame.
 

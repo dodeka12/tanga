@@ -10,11 +10,13 @@ low-level :class:`ImageView` owns the images, shader, and uniform state;
 
 from __future__ import annotations
 
+from itertools import count
 from typing import Any
 
+from .camera import StretchMode, View2DConfig, _validate_stretch
 from .image import ImageData, default_mode, default_value_range
 
-__all__ = ["ImageView"]
+__all__ = ["ImageView", "ImageCanvas"]
 
 #: Fixed number of image layers (the wire contract).
 MAX_IMAGE_LAYERS = 4
@@ -134,3 +136,159 @@ class ImageView:
         if image.url is not None:
             result["url"] = image.url
         return result
+
+
+#: Process-wide counter for auto-generated image ids (``img0``…).
+_image_id_counter = count()
+
+#: Process-wide counter for auto-generated ``ImageCanvas`` scene names (``imgc0``…).
+_image_canvas_counter = count()
+
+
+def _coerce_visualizer(target: Any) -> Any:
+    """Return the :class:`~pytanga.viz.Visualizer` behind a target handle."""
+    from .visualizer import Visualizer
+
+    if isinstance(target, Visualizer):
+        return target
+    viz = getattr(target, "_viz", None)
+    if isinstance(viz, Visualizer):
+        return viz
+    raise TypeError(
+        f"ImageCanvas expects a Visualizer or VizSceneHandle, "
+        f"got {type(target).__name__!r}"
+    )
+
+
+class ImageCanvas:
+    """User-facing helper for displaying images (analogous to ``CoordinateSystem``).
+
+    Owns a dedicated 2D scene with a y-down pixel frame, an :class:`ImageView`
+    (plane + textures + shader/uniform state), an :class:`ActImagePlane` for
+    interaction, and an overlay group for drawing in pixel coordinates.
+    """
+
+    def __init__(
+        self,
+        target: Any,
+        *,
+        image_id: str | None = None,
+        stretch: StretchMode = "fit",
+        border_px: float = 0.0,
+        on_drag: Any = None,
+        on_drag_start: Any = None,
+        on_drag_end: Any = None,
+        on_click: Any = None,
+    ) -> None:
+        viz = _coerce_visualizer(target)
+        self._image_id = (
+            image_id if image_id is not None else f"img{next(_image_id_counter)}"
+        )
+        self._image_view = ImageView(self._image_id)
+        self._stretch = _validate_stretch(stretch)
+        self._border_px = float(border_px)
+
+        self._scene_name = f"imgc{next(_image_canvas_counter)}"
+        self._handle = viz.scene(
+            self._scene_name, space_dim=2, add_axes=False, add_grid=False
+        )
+        self._overlay = self._handle.add_group(f"{self._scene_name}_overlay")
+        self._overlay_refs: list[Any] = []
+
+        from ._active import ActImagePlane
+
+        self._act_plane = ActImagePlane(
+            self._image_view,
+            handler=on_drag,
+            on_drag_start=on_drag_start,
+            on_drag_end=on_drag_end,
+            on_click=on_click,
+        )
+
+    # -- image / shader / uniform ---------------------------------
+
+    @property
+    def image_view(self) -> ImageView:
+        """The underlying :class:`ImageView` (images + shader + uniforms)."""
+        return self._image_view
+
+    def set_image(self, image: ImageData) -> None:
+        """Replace the primary image and re-frame the camera to it."""
+        self._image_view.set_image(image)
+        self.fit_to_image()
+
+    def add_image(self, image: ImageData) -> None:
+        """Append another image layer (max 4)."""
+        self._image_view.add_image(image)
+
+    def set_uniform(self, name: str, value: float | int) -> None:
+        """Set a shader uniform value."""
+        self._image_view.set_uniform(name, value)
+
+    def register_uniform(self, name: str, default: float | int) -> None:
+        """Register a shader uniform with a default (keeps an existing value)."""
+        self._image_view.register_uniform(name, default)
+
+    def register_shader(self, fragment: str, vertex: str | None = None) -> None:
+        """Register a custom fragment (and optional vertex) shader."""
+        self._image_view.register_shader(fragment, vertex)
+
+    # -- overlay --------------------------------------------------
+
+    def add(self, obj: Any = None, **kwargs: Any) -> Any:
+        """Add a drawable entity to the overlay group, returning its ref."""
+        ref = self._overlay.new(obj, **kwargs)
+        self._overlay_refs.append(ref)
+        return ref
+
+    def remove(self, ref: Any) -> None:
+        """Remove a previously added overlay entity."""
+        ref.remove()
+        self._overlay_refs = [r for r in self._overlay_refs if r.id != ref.id]
+
+    def clear(self) -> None:
+        """Remove every overlay entity."""
+        for ref in list(self._overlay_refs):
+            ref.remove()
+        self._overlay_refs.clear()
+
+    # -- interaction ----------------------------------------------
+
+    @property
+    def act_plane(self) -> Any:
+        """The interactive image plane (:class:`~pytanga.viz.ActImagePlane`)."""
+        return self._act_plane
+
+    # -- scene ----------------------------------------------------
+
+    @property
+    def scene_name(self) -> str:
+        """The dedicated scene name (usable in a ``SceneView``)."""
+        return self._scene_name
+
+    @property
+    def handle(self) -> Any:
+        """The :class:`~pytanga.viz.VizSceneHandle` for the dedicated scene."""
+        return self._handle
+
+    def scene_view(self) -> Any:
+        """A :class:`~pytanga.viz.SceneView` pane for the dedicated scene."""
+        from .views import SceneView
+
+        return SceneView(self._scene_name)
+
+    def fit_to_image(self) -> None:
+        """Frame the 2D camera on the image's pixel extent."""
+        width, height = self._image_view.frame
+        if width <= 0 or height <= 0:
+            return
+        self._handle.set_camera(
+            View2DConfig(
+                xmin=-0.5,
+                xmax=width - 0.5,
+                ymin=-0.5,
+                ymax=height - 0.5,
+                stretch=self._stretch,
+                border_px=self._border_px,
+            )
+        )
