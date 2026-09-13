@@ -22,7 +22,8 @@ Usage::
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from pytanga.geometry import Direction, Point
 
@@ -68,6 +69,72 @@ Receives the click event and the :class:`ActSceneObject` instance.  The
 return value is ignored — click handlers observe the click and never override
 default behaviour.
 """
+
+
+# ── Handler bindings ─────────────────────────────────────────────
+
+_ContextT = TypeVar("_ContextT")
+
+
+@dataclass
+class DragBinding(Generic[_ContextT]):
+    """Bind a drag handler to a mouse button and optional modifier keys.
+
+    The most specific matching binding (greatest number of required modifiers)
+    wins over less specific bindings and over the general ``on_drag`` handler.
+
+    Args:
+        button: Mouse button that starts the drag.
+        handler: Async callback invoked for matching drags.  Signature:
+            ``async def handler(event: DragEvent, obj) -> bool`` — ``obj`` is the
+            interaction context (an ``ActSceneObject``, or the ``ImageCanvas``
+            when bound through :class:`~pytanga.viz.ImageCanvas`).
+        modifiers: Modifier keys that must all be held (varargs).  None means
+            the binding fires regardless of modifier state.
+    """
+
+    button: MouseButton
+    handler: Callable[[DragEvent, _ContextT], Awaitable[bool]]
+    modifiers: frozenset[ModifierKey]
+
+    def __init__(
+        self,
+        button: MouseButton,
+        handler: Callable[[DragEvent, _ContextT], Awaitable[bool]],
+        *modifiers: ModifierKey,
+    ) -> None:
+        self.button = button
+        self.handler = handler
+        self.modifiers = frozenset(modifiers)
+
+
+@dataclass
+class ClickBinding(Generic[_ContextT]):
+    """Bind a click handler to a mouse button and optional modifier keys.
+
+    Args:
+        button: Mouse button that triggers the click.
+        handler: Async callback invoked for matching clicks.  Signature:
+            ``async def handler(event: ClickEvent, obj) -> None`` — ``obj`` is the
+            interaction context (an ``ActSceneObject``, or the ``ImageCanvas``
+            when bound through :class:`~pytanga.viz.ImageCanvas`).
+        modifiers: Modifier keys that must all be held (varargs).  None means
+            the binding fires regardless of modifier state.
+    """
+
+    button: MouseButton
+    handler: Callable[[ClickEvent, _ContextT], Awaitable[None]]
+    modifiers: frozenset[ModifierKey]
+
+    def __init__(
+        self,
+        button: MouseButton,
+        handler: Callable[[ClickEvent, _ContextT], Awaitable[None]],
+        *modifiers: ModifierKey,
+    ) -> None:
+        self.button = button
+        self.handler = handler
+        self.modifiers = frozenset(modifiers)
 
 
 # ── Default trigger helpers ─────────────────────────────────────
@@ -144,11 +211,19 @@ class ActSceneObject:
         on_drag_start: ActEventHandler | None = None,
         on_drag_end: ActEventHandler | None = None,
         on_click: ActClickHandler | None = None,
+        drag_bindings: list[DragBinding[ActSceneObject]] | None = None,
+        click_bindings: list[ClickBinding[ActSceneObject]] | None = None,
     ) -> None:
         self._handler: ActHandler | None = handler
         self._on_drag_start: ActEventHandler | None = on_drag_start
         self._on_drag_end: ActEventHandler | None = on_drag_end
         self._on_click: ActClickHandler | None = on_click
+        self._drag_bindings: list[DragBinding[ActSceneObject]] = list(
+            drag_bindings or ()
+        )
+        self._click_bindings: list[ClickBinding[ActSceneObject]] = list(
+            click_bindings or ()
+        )
         self._viz_handle: VizSceneHandle | None = None
         self._entity_id: str = ""
 
@@ -193,7 +268,7 @@ class ActSceneObject:
                 InteractionEventType.DRAG_END,
                 self._on_drag_end_event,
             )
-        if self._on_click is not None:
+        if self._on_click is not None or self._click_bindings:
             self._viz_handle.on_interaction(
                 self._entity_id,
                 InteractionEventType.CLICK,
@@ -202,10 +277,39 @@ class ActSceneObject:
 
     # ── Default drag handler ───────────────────────────────
 
+    def _resolve_drag_handler(self, event: DragEvent) -> ActHandler | None:
+        """Return the most specific drag binding matching *event*, else the general handler."""
+        best: ActHandler | None = self._handler
+        best_mods = -1
+        for binding in self._drag_bindings:
+            if binding.button is not event.mouse_button:
+                continue
+            if not binding.modifiers <= event.modifiers:
+                continue
+            if len(binding.modifiers) > best_mods:
+                best = binding.handler
+                best_mods = len(binding.modifiers)
+        return best
+
+    def _resolve_click_handler(self, event: ClickEvent) -> ActClickHandler | None:
+        """Return the most specific click binding matching *event*, else the general handler."""
+        best: ActClickHandler | None = self._on_click
+        best_mods = -1
+        for binding in self._click_bindings:
+            if binding.button is not event.mouse_button:
+                continue
+            if not binding.modifiers <= event.modifiers:
+                continue
+            if len(binding.modifiers) > best_mods:
+                best = binding.handler
+                best_mods = len(binding.modifiers)
+        return best
+
     async def _on_drag(self, event: DragEvent) -> None:
         """Default drag handler.
 
-        1. If a custom handler is set → call it.
+        1. Resolve the most specific matching binding (or the general handler)
+           and, if one exists, call it.
            * Returns ``True`` → nothing more (handler did its own flush).
            * Returns ``False`` → continue with default behaviour.
         2. Replace the position of the geometry entity with
@@ -213,8 +317,9 @@ class ActSceneObject:
         3. Call :meth:`update` to push the change to the scene.
         4. Call :meth:`flush` to send the update to the frontend.
         """
-        if self._handler is not None:
-            handled = await self._handler(event, self)
+        handler = self._resolve_drag_handler(event)
+        if handler is not None:
+            handled = await handler(event, self)
             if handled:
                 return
 
@@ -233,9 +338,10 @@ class ActSceneObject:
             await self._on_drag_end(event, self)
 
     async def _on_click_event(self, event: ClickEvent) -> None:
-        """Dispatch a ``CLICK`` event to the user handler, if any."""
-        if self._on_click is not None:
-            await self._on_click(event, self)
+        """Dispatch a ``CLICK`` event to the matching binding or general handler."""
+        handler = self._resolve_click_handler(event)
+        if handler is not None:
+            await handler(event, self)
 
     def _move_to(self, pos: Point) -> None:
         """Update the internal position.  Override in subclasses."""
@@ -454,6 +560,15 @@ class ActPoint(ActSceneObject):
         """Set the point position to *pos*."""
         self._point = pos
 
+    def set_position(self, pos: Point) -> None:
+        """Set the point position and push the entity (without flushing).
+
+        Lets a coordinator (e.g. :class:`ActRectangle2D`) reposition several
+        handles programmatically and flush once at the end.
+        """
+        self._move_to(pos)
+        self.update()
+
     def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
         """Return the ideal anchor — the point's centre (the ray is ignored)."""
         return self._point
@@ -467,30 +582,34 @@ class ActImagePlane(ActSceneObject):
 
     Captures pointer hits and drags on an image and reports them in the image's
     pixel coordinates (the image plane is ``z = 0`` in the pixel frame).  The
-    plane itself never moves, so the default drag behaviour is a no-op and the
+    plane itself never moves, so there is no default drag behaviour and the
     user's handlers read ``event.world_position`` as ``(px, py)``.
+
+    Handlers may be supplied as a single general ``handler`` / ``on_click``
+    (firing for any button + modifier) or as a list of :class:`DragBinding` /
+    :class:`ClickBinding` entries (firing for a specific button + modifiers).
     """
 
     def __init__(
         self,
         image_view: ImageView,
         *,
-        drag_button: MouseButton = MouseButton.LEFT,
-        drag_modifiers: frozenset[ModifierKey] = frozenset(),
         handler: ActHandler | None = None,
         on_drag_start: ActEventHandler | None = None,
         on_drag_end: ActEventHandler | None = None,
         on_click: ActClickHandler | None = None,
+        drag_bindings: list[DragBinding[ActSceneObject]] | None = None,
+        click_bindings: list[ClickBinding[ActSceneObject]] | None = None,
     ) -> None:
         super().__init__(
             handler=handler,
             on_drag_start=on_drag_start,
             on_drag_end=on_drag_end,
             on_click=on_click,
+            drag_bindings=drag_bindings,
+            click_bindings=click_bindings,
         )
         self._image_view = image_view
-        self._drag_button = drag_button
-        self._drag_modifiers = frozenset(drag_modifiers)
 
     # ── Properties ─────────────────────────────────────────
 
@@ -506,29 +625,61 @@ class ActImagePlane(ActSceneObject):
 
     @property
     def interaction_config(self) -> InteractionConfig:
-        """A drag trigger on the image's own plane (``XY_PLANE``).
+        """One ``XY_PLANE`` drag trigger per drag binding, plus a catch-all.
 
-        The trigger fires for ``drag_button`` (default left) while every key in
-        ``drag_modifiers`` is held (empty = any modifier state).  A ``CLICK``
-        trigger is added only when an ``on_click`` handler was provided, so
-        clicks are not reported unless requested.
+        Each :class:`DragBinding` yields a DRAG trigger on the image's own plane
+        for its button + modifiers.  A general ``handler`` (or lifecycle
+        observers without bindings) adds a catch-all DRAG trigger (any button).
+        Click bindings and a general ``on_click`` handler similarly yield CLICK
+        triggers; clicks are not reported unless requested.
         """
-        triggers = [
-            InteractionTrigger(
-                event_type=InteractionEventType.DRAG,
-                mouse_button=self._drag_button,
-                modifiers=self._drag_modifiers,
-                drag_mode=DragMode.XY_PLANE,
+        triggers: list[InteractionTrigger] = []
+        for binding in self._drag_bindings:
+            triggers.append(
+                InteractionTrigger(
+                    event_type=InteractionEventType.DRAG,
+                    mouse_button=binding.button,
+                    modifiers=binding.modifiers,
+                    drag_mode=DragMode.XY_PLANE,
+                )
             )
-        ]
+        if self._handler is not None or (
+            (self._on_drag_start is not None or self._on_drag_end is not None)
+            and not self._drag_bindings
+        ):
+            triggers.append(
+                InteractionTrigger(
+                    event_type=InteractionEventType.DRAG,
+                    mouse_button=None,
+                    drag_mode=DragMode.XY_PLANE,
+                )
+            )
+        for binding in self._click_bindings:
+            triggers.append(
+                InteractionTrigger(
+                    event_type=InteractionEventType.CLICK,
+                    mouse_button=binding.button,
+                    modifiers=binding.modifiers,
+                )
+            )
         if self._on_click is not None:
             triggers.append(
                 InteractionTrigger(
                     event_type=InteractionEventType.CLICK,
-                    mouse_button=MouseButton.LEFT,
+                    mouse_button=None,
                 )
             )
         return InteractionConfig(enabled=True, triggers=triggers, throttle_ms=40)
+
+    async def _on_drag(self, event: DragEvent) -> None:
+        """Dispatch a drag to the matching binding or general handler.
+
+        The image plane is fixed, so there is no default movement to apply —
+        the handler's ``bool`` return is simply ignored here.
+        """
+        handler = self._resolve_drag_handler(event)
+        if handler is not None:
+            await handler(event, self)
 
     # ── Default movement ───────────────────────────────────
 
