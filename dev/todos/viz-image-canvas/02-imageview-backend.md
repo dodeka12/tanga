@@ -14,7 +14,7 @@ the shader source, and the uniform values, and serializes to the canonical
 
 ## Steps
 
-- [ ] **2.1 — `ImageView` state**
+- [x] **2.1 — `ImageView` state**
   - Holds `images: list[ImageData]` (max 4, enforced on `add_image`/`set_image`),
     `shader` (fragment source + optional vertex source), `uniforms: dict[str,
     float|int]`, and `frame: (width, height)`.
