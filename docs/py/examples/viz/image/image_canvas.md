@@ -7,6 +7,9 @@ dedicated 2D scene with a y-down pixel frame, 1 unit = 1 pixel), draws a
 rectangle overlay in pixel coordinates, and binds a ctrl+left-drag handler that
 maps the cursor position to the image's brightness/contrast uniforms.
 
+The ctrl+left-drag is registered as a `~pytanga.viz.DragBinding` (a
+mouse-button + modifier combination) via the canvas's `drag_handlers` list.
+
 ## Run
 
 ```bash
@@ -30,6 +33,9 @@ dedicated 2D scene with a y-down pixel frame, 1 unit = 1 pixel), draws a
 rectangle overlay in pixel coordinates, and binds a ctrl+left-drag handler that
 maps the cursor position to the image's brightness/contrast uniforms.
 
+The ctrl+left-drag is registered as a :class:`~pytanga.viz.DragBinding` (a
+mouse-button + modifier combination) via the canvas's ``drag_handlers`` list.
+
 Run with:  uv run python py/examples/viz/image/image_canvas.py
 
 Keywords: image, ImageCanvas, shader, uniform, brightness, contrast, overlay, pixels
@@ -38,7 +44,16 @@ Keywords: image, ImageCanvas, shader, uniform, brightness, contrast, overlay, pi
 import numpy as np
 
 from pytanga.geometry import Line, Point
-from pytanga.viz import DragEvent, ImageCanvas, ImageData, ModifierKey, Visualizer
+from pytanga.viz import (
+    ActRectangle2D,
+    DragBinding,
+    DragEvent,
+    ImageCanvas,
+    ImageData,
+    ModifierKey,
+    MouseButton,
+    Visualizer,
+)
 
 
 def _gradient(width: int, height: int) -> np.ndarray:
@@ -66,22 +81,28 @@ def main() -> None:
     width, height = 320, 200
     viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
 
-    holder: dict[str, ImageCanvas] = {}
-
-    async def on_drag(event: DragEvent, _ap: ImageCanvas) -> bool:  # noqa: ANN001
+    async def on_drag(event: DragEvent, canvas: ImageCanvas) -> bool:
         # ctrl+left drag: horizontal position → contrast, vertical → brightness.
-        canvas = holder["canvas"]
-        if ModifierKey.CTRL not in event.modifiers:
-            return True
         px, py = event.world_position.x, event.world_position.y
         canvas.set_uniform("u_contrast", 0.5 + 1.5 * px / width)
         canvas.set_uniform("u_brightness", (py / height - 0.5) * 2.0)
         return True
 
-    canvas = ImageCanvas(viz, on_drag=on_drag)
-    holder["canvas"] = canvas
+    canvas = ImageCanvas(
+        viz,
+        drag_handlers=[DragBinding(MouseButton.LEFT, on_drag, ModifierKey.CTRL)],
+    )
     canvas.set_image(ImageData("gradient", data=_gradient(width, height)))
     _rectangle(canvas, 40, 30, 160, 120)
+
+    def on_rect(rect: ActRectangle2D) -> None:
+        print(f"Rectangle drawn: {rect.rectangle}")
+
+    # Drag on the image to draw a rectangle; it becomes an interactive
+    # ActRectangle2D (drag corners to resize, the centre handle to translate).
+    # While this draw mode is active, the ctrl+left brightness drag above is
+    # paused and resumes once the rectangle is finalized.
+    canvas.draw_rectangle(on_done=on_rect)
 
     viz.show(layout=canvas.scene_view())
     viz.wait()

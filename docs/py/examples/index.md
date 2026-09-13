@@ -16,6 +16,8 @@ uv run python py/examples/<path>.py
 
 - **ActPoint** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
+- **ActRectangle2D** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
+
 - **affine** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
 - **AffineExpression** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md)
@@ -180,6 +182,8 @@ uv run python py/examples/<path>.py
 
 - **custom intervals** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
+- **custom shader** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
+
 - **custom theme** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **Cylinder** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
@@ -208,7 +212,7 @@ uv run python py/examples/<path>.py
 
 - **double pendulum** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
+- **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
 
 - **dropdown** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
@@ -292,6 +296,8 @@ uv run python py/examples/<path>.py
 
 - **geometry** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
+- **GLSL** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
+
 - **glTF** — [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
 - **gradient** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
@@ -320,13 +326,13 @@ uv run python py/examples/<path>.py
 
 - **hyperboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
 
-- **icon** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+- **icon** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
-- **image** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
+- **image** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
 
-- **ImageCanvas** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
+- **ImageCanvas** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
@@ -548,6 +554,8 @@ uv run python py/examples/<path>.py
 
 - **re-run** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
+- **rectangle** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
+
 - **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **refine** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
@@ -563,6 +571,10 @@ uv run python py/examples/<path>.py
 - **repeated variables** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
 - **residual** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md)
+
+- **RGB** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
+
+- **rotation** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
 
 - **rotor** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
@@ -638,7 +650,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -690,7 +702,7 @@ uv run python py/examples/<path>.py
 
 - **tokens** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md)
 
-- **toolbar** — [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+- **toolbar** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **trail** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
 
@@ -706,7 +718,7 @@ uv run python py/examples/<path>.py
 
 - **undo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
-- **uniform** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
+- **uniform** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **up vector** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 

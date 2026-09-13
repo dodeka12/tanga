@@ -302,7 +302,13 @@
             "Overview": "py/examples/viz/image/index.md"
           },
           {
+            "Custom Shader Rgb Rotate": "py/examples/viz/image/custom_shader_rgb_rotate.md"
+          },
+          {
             "Image Canvas": "py/examples/viz/image/image_canvas.md"
+          },
+          {
+            "Rectangle Labeling": "py/examples/viz/image/rectangle_labeling.md"
           }
         ]
       },
