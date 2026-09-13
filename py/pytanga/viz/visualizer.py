@@ -624,6 +624,12 @@ class Visualizer(_JupyterDisplayMixin):
         """
         from .views import View
 
+        from ._image_view import ImageCanvas
+
+        if isinstance(obj, ImageCanvas):
+            obj._sync_image()
+            return obj.scene_name
+
         if isinstance(obj, View):
             self._layout[""].overlay.add(obj)
             return None

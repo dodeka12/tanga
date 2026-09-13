@@ -18,7 +18,7 @@ from uuid import uuid4
 from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraConfig
-from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
+from ._nodes import VizGroup, VizImage, VizNode, VizOverlayObject, VizSceneObject
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
 from ._style_dict import StylesMap, _resolve_label_style, _resolve_tex_label_style
@@ -219,6 +219,23 @@ class Scene:
         self._nodes[gid] = group
         self._order.append(gid)
         return group
+
+    def add_image(self, image_id: str, payload: dict[str, Any]) -> str:
+        """Register an ``image`` scene node and return its id."""
+        node = VizImage(image_id, payload)
+        self._nodes[image_id] = node
+        if image_id not in self._order:
+            self._order.append(image_id)
+        return image_id
+
+    def upsert_image(self, image_id: str, payload: dict[str, Any]) -> str:
+        """Update an existing image node's payload, or create it."""
+        node = self._nodes.get(image_id)
+        if isinstance(node, VizImage):
+            node.payload = payload
+            node.mark("full")
+            return image_id
+        return self.add_image(image_id, payload)
 
     @property
     def group_ids(self) -> list[str]:

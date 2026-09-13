@@ -192,6 +192,7 @@ class ImageCanvas:
         self._handle = viz.scene(
             self._scene_name, space_dim=2, add_axes=False, add_grid=False
         )
+        self._transport = getattr(viz, "_transport", None)
         self._overlay = self._handle.add_group(f"{self._scene_name}_overlay")
         self._overlay_refs: list[Any] = []
 
@@ -213,17 +214,28 @@ class ImageCanvas:
         return self._image_view
 
     def set_image(self, image: ImageData) -> None:
-        """Replace the primary image and re-frame the camera to it."""
+        """Replace the primary image, re-frame the camera, and sync it."""
         self._image_view.set_image(image)
         self.fit_to_image()
+        self._sync_image()
 
     def add_image(self, image: ImageData) -> None:
         """Append another image layer (max 4)."""
         self._image_view.add_image(image)
+        self._sync_image()
 
     def set_uniform(self, name: str, value: float | int) -> None:
-        """Set a shader uniform value."""
+        """Set a shader uniform value (JSON ``image_update``, no image bytes)."""
         self._image_view.set_uniform(name, value)
+        if self._transport is not None:
+            self._transport.send(
+                {
+                    "type": "image_update",
+                    "scene": self._scene_name,
+                    "id": self._image_view.id,
+                    "uniforms": {name: value},
+                }
+            )
 
     def register_uniform(self, name: str, default: float | int) -> None:
         """Register a shader uniform with a default (keeps an existing value)."""
@@ -292,3 +304,25 @@ class ImageCanvas:
                 border_px=self._border_px,
             )
         )
+
+    def _sync_image(self) -> None:
+        """Register the image entity and send its pixel bytes + uniforms."""
+        from ._image_wire import encode_image_frame
+
+        payload = self._image_view._serialize()
+        self._handle.scene.upsert_image(self._image_view.id, payload)
+
+        if self._transport is None:
+            return
+        for img in self._image_view.images:
+            if img.data is not None:
+                self._transport.send_bytes(encode_image_frame(img.id, img.data))
+        self._transport.send(
+            {
+                "type": "image_update",
+                "scene": self._scene_name,
+                "id": self._image_view.id,
+                "uniforms": dict(self._image_view.uniforms),
+            }
+        )
+        self._handle.flush()
