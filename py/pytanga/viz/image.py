@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import Any
 
 import numpy as np
 
@@ -23,6 +24,7 @@ __all__ = [
     "ImageChannelMode",
     "default_mode",
     "default_value_range",
+    "pil_to_numpy",
 ]
 
 
@@ -189,3 +191,38 @@ class ImageData:
     def to_base64(self) -> str:
         """Return the pixel buffer as base64 (for HTML export embedding)."""
         return base64.b64encode(self.to_bytes()).decode("ascii")
+
+
+def pil_to_numpy(img: Any, *, dtype: str = "uint8") -> np.ndarray:
+    """Convert a PIL image to a numpy array, mapping modes to channels.
+
+    PIL is imported lazily so ``pytanga`` never requires Pillow at import time;
+    a clear :class:`ImportError` is raised when it is unavailable.
+
+    Mode mapping: ``L``→1 channel, ``RGB``→3, ``RGBA``→4, ``I;16``→uint16,
+    ``F``→float32.  *dtype* requests the output storage dtype (``"uint8"``,
+    ``"uint16"``, or ``"float32"``); pixel values are preserved (no rescale).
+    """
+    try:
+        import PIL  # noqa: F401  # availability check only
+    except ImportError as exc:
+        raise ImportError(
+            "pil_to_numpy requires Pillow; install it (e.g. `pip install pillow`)"
+        ) from exc
+
+    target = np.dtype(dtype)
+    if target not in (np.dtype("uint8"), np.dtype("uint16"), np.dtype("float32")):
+        raise ValueError(
+            f"Unsupported target dtype {dtype!r}; expected uint8/uint16/float32"
+        )
+
+    if img.mode == "I;16":
+        arr = np.asarray(img, dtype=np.uint16)
+    elif img.mode == "F":
+        arr = np.asarray(img, dtype=np.float32)
+    else:
+        arr = np.asarray(img)
+        if arr.dtype != target:
+            arr = arr.astype(target)
+
+    return arr

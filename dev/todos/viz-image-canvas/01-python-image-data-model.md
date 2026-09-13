@@ -31,7 +31,7 @@ code here.
   - `default_value_range(dtype, channels)` and a `normalize` description used to
     populate `u_value_min`/`u_value_max` defaults on the wire.
 
-- [ ] **1.4 — `pil_to_numpy(img, *, dtype="uint8") -> np.ndarray`**
+- [x] **1.4 — `pil_to_numpy(img, *, dtype="uint8") -> np.ndarray`**
   - Lazy `import PIL` inside the function; raise a clear `ImportError` when PIL
     is absent.
   - Map modes: `L`→1 channel, `RGB`→3, `RGBA`→4, `I;16`→uint16, `F`→float32;
