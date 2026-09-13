@@ -1,6 +1,6 @@
 # Viz Image Canvas — Overview
 
-**Created:** 2026-09-13 | **Status:** In progress | **Branch:** `feat/image-view`
+**Created:** 2026-09-13 | **Status:** Done | **Branch:** `feat/image-view`
 
 ## Goal
 
@@ -167,6 +167,15 @@ only when `include_images=True`.
 - 3D-object texturing is out of scope, but the export asset store is shaped to
   accommodate it later (id-keyed, not image-specific).
 - No new `DragMode`: the image plane reuses `XY_PLANE` (its own plane) in 2D.
+
+## Deferred (follow-up)
+
+- Export **HTML asset embedding** (phase 9.3/9.4): the image renderer is
+  included in the export bootstrap and `AnimationRecording.assets` /
+  `capture_frame(include_images=False)` capture the id-keyed store, but the
+  exported HTML does not yet embed the base64 assets / load `url` sources into
+  textures at runtime.
+- Optional `pil_image.py` example (phase 10.3).
 
 ## Guiding decisions / no-refactor rule
 
