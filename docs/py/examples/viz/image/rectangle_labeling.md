@@ -50,6 +50,7 @@ from pytanga.viz import (
     EIconMaterial,
     ImageCanvas,
     ImageData,
+    Rectangle2DStyle,
     Size,
     SplitView,
     ToolbarView,
@@ -77,8 +78,11 @@ def main() -> None:
         print(f"Rectangle drawn: {rect.rectangle}")
 
     async def on_add(_value: None, _event: ControlEvent) -> None:
-        # Arm the draw flow: the next drag on the image draws a rectangle.
-        canvas.draw_rectangle(on_done=on_rect)
+        # Arm the draw flow: the next left-drag on the image draws a rectangle.
+        canvas.draw_rectangle(
+            on_done=on_rect,
+            style=Rectangle2DStyle(color="#ff4444", fill=True, fill_opacity=0.15),
+        )
 
     toolbar = ToolbarView(
         [

@@ -38,6 +38,7 @@ if TYPE_CHECKING:
         DragBinding,
     )
     from ._interaction import ClickEvent, DragEvent
+    from ._styles import Rectangle2DStyle
 
 __all__ = ["ImageView", "ImageCanvas"]
 
@@ -415,19 +416,26 @@ class ImageCanvas:
     def draw_rectangle(
         self,
         on_done: Callable[[ActRectangle2D], None] | None = None,
+        *,
+        style: Rectangle2DStyle | None = None,
         **act_kwargs: Any,
     ) -> Callable[[], None]:
         """Enter rectangle-drawing mode; the next drag draws a rectangle.
 
         During the drag a live preview rectangle is shown; on drag end it is
-        replaced by an :class:`~pytanga.viz.ActRectangle2D` and ``on_done(rect)``
-        is called.  The image plane's own drag handlers are restored afterwards.
-        Returns a ``cancel()`` callable that aborts the mode without drawing.
+        replaced by an :class:`~pytanga.viz.ActRectangle2D` (its corner handles
+        resize, its centre handle translates) and ``on_done(rect)`` is called.
+        The image plane's own drag handlers are restored afterwards, so pressing
+        the button again draws the next rectangle.  Returns a ``cancel()``
+        callable that aborts the mode without drawing.
         """
         from ._active import ActRectangle2D
-        from ._styles import Rectangle2DStyle
+        from ._styles import Rectangle2DStyle, SquarePointStyle
 
         image_id = self._image_view.id
+        rect_style = style or Rectangle2DStyle()
+        # Handles live in the image's pixel frame, so default to a few pixels.
+        act_kwargs.setdefault("handle_style", SquarePointStyle(size=6.0, thickness=2.0))
         state: dict[str, Any] = {"anchor": None, "preview_id": None, "active": True}
 
         def _rect_between(a: Point, b: Point) -> Rectangle2D:
@@ -446,9 +454,10 @@ class ImageCanvas:
                 return
             rect = _rect_between(state["anchor"], event.world_position)
             if state["preview_id"] is None:
-                state["preview_id"] = self._handle.add(rect, style=Rectangle2DStyle())
+                state["preview_id"] = self._handle.add(rect, style=rect_style)
             else:
                 self._handle.update_entity(state["preview_id"], rect)
+            self._handle.flush()
 
         async def on_end(event: DragEvent) -> None:
             if state["anchor"] is None:
@@ -458,7 +467,7 @@ class ImageCanvas:
                 self._handle.remove(state["preview_id"])
                 state["preview_id"] = None
             act = ActRectangle2D(center=rect.center, size=rect.size, **act_kwargs)
-            self._handle.add(act, style=Rectangle2DStyle())
+            self._handle.add(act, style=rect_style)
             state["active"] = False
             self._restore_plane_interaction()
             if on_done is not None:
@@ -492,6 +501,7 @@ class ImageCanvas:
         self._handle.on_interaction(image_id, InteractionEventType.DRAG_START, on_start)
         self._handle.on_interaction(image_id, InteractionEventType.DRAG_MOVE, on_move)
         self._handle.on_interaction(image_id, InteractionEventType.DRAG_END, on_end)
+        self._handle.flush()
         return cancel
 
     def _restore_plane_interaction(self) -> None:
@@ -515,3 +525,4 @@ class ImageCanvas:
             InteractionEventType.DRAG_END,
             plane._on_drag_end_event if plane._on_drag_end is not None else _noop,
         )
+        self._handle.flush()
