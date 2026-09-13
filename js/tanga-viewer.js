@@ -2592,6 +2592,236 @@ function createVizGroup(ent) {
     return group;
 }
 
+// Image shader — standard vertex/fragment shaders for the image plane.
+// Pure GLSL string building (Node-testable).
+
+function buildImageVertex() {
+    return /* glsl */ `
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+}
+
+function buildImageFragment() {
+    return /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uImage0;
+uniform vec2 uImageSize;
+uniform float u_value_min;
+uniform float u_value_max;
+uniform float u_brightness;
+uniform float u_contrast;
+uniform float u_midpoint;
+uniform int u_mode;
+
+vec4 sampleNearest(vec2 px) {
+    vec2 snap = (floor(px) + 0.5) / uImageSize;
+    return texture2D(uImage0, snap);
+}
+
+// Manual 4-tap bilinear in texel space (the texture itself is nearest-filtered).
+vec4 sampleBilinear(vec2 px) {
+    vec2 texel = 1.0 / uImageSize;
+    vec2 uv = px * texel;
+    vec2 st = uv - 0.5 * texel;
+    vec2 f = fract(st * uImageSize);
+    vec2 i = floor(st * uImageSize);
+    vec2 p0 = (i + 0.5) * texel;
+    vec2 p1 = p0 + texel;
+    vec4 s00 = texture2D(uImage0, p0);
+    vec4 s10 = texture2D(uImage0, vec2(p1.x, p0.y));
+    vec4 s01 = texture2D(uImage0, vec2(p0.x, p1.y));
+    vec4 s11 = texture2D(uImage0, p1);
+    return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
+}
+
+void main() {
+    vec2 px = vUv * uImageSize;
+    // Rotation detection: the texture-coordinate screen-space derivatives are
+    // diagonal for an axis-aligned plane (pure zoom/pan); any off-diagonal term
+    // means the plane is rotated and needs anti-aliased (bilinear) sampling.
+    vec2 duvdx = dFdx(vUv);
+    vec2 duvdy = dFdy(vUv);
+    bool rotated = abs(duvdx.y) + abs(duvdy.x) > 1e-4;
+    vec4 tex = rotated ? sampleBilinear(px) : sampleNearest(px);
+
+    vec3 color;
+    if (u_mode == 0) {
+        color = vec3(tex.r);            // channel 1 as grayscale
+    } else if (u_mode == 2) {
+        color = vec3(length(tex.rgb));  // magnitude of channels 1-3
+    } else if (u_mode == 3) {
+        color = vec3(tex.a);            // channel 4 as grayscale
+    } else {
+        color = tex.rgb;                // RGB
+    }
+
+    vec3 n = (color - u_value_min) / max(u_value_max - u_value_min, 1e-6);
+    vec3 outC = clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0);
+    gl_FragColor = vec4(outC, 1.0);
+}`;
+}
+
+// Image renderer — a plane drawn by the image shader.
+//
+// The `image` entity carries `images[]` (metadata), `shader{}`, and
+// `uniforms{}`; pixel bytes arrive separately as binary frames (see
+// `../image-frames.js`).  A `source:"url"` image is loaded at runtime.
+
+// dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
+const DTYPE_TYPES = {
+    0: { type: THREE.UnsignedByteType, bytesPerElement: 1 },   // uint8
+    1: { type: THREE.UnsignedShortType, bytesPerElement: 2 },  // uint16 (WebGL2 only)
+    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32 (WebGL2 only)
+};
+
+// View the raw frame bytes as the dtype's element type.
+function typedArrayFor(dtype, bytes) {
+    if (dtype === 1) return new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.length / 2);
+    if (dtype === 2) return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
+    return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length);
+}
+
+// Expand a 1/3-channel buffer to 4-channel RGBA — the only 8-bit color format
+// three.js r170 uploads to WebGL2 (RGBFormat/LuminanceFormat were removed).
+function toRgba(arr, channels) {
+    const TypedArray = arr.constructor;
+    const n = arr.length / channels;
+    const rgba = new TypedArray(n * 4);
+    const alpha = arr instanceof Float32Array ? 1.0
+        : arr instanceof Uint16Array ? 0xFFFF : 0xFF;
+    if (channels === 1) {
+        for (let i = 0; i < n; i++) {
+            const v = arr[i];
+            rgba[i * 4] = v; rgba[i * 4 + 1] = v; rgba[i * 4 + 2] = v; rgba[i * 4 + 3] = alpha;
+        }
+    } else if (channels === 3) {
+        for (let i = 0; i < n; i++) {
+            rgba[i * 4] = arr[i * 3];
+            rgba[i * 4 + 1] = arr[i * 3 + 1];
+            rgba[i * 4 + 2] = arr[i * 3 + 2];
+            rgba[i * 4 + 3] = alpha;
+        }
+    } else {
+        rgba.set(arr);
+    }
+    return rgba;
+}
+
+function emptyTypedArray(dtype, length) {
+    if (dtype === 2) return new Float32Array(length);
+    if (dtype === 1) return new Uint16Array(length);
+    return new Uint8Array(length);
+}
+
+function makeDataTexture(img) {
+    const frame = takeImageFrame(img.id);
+    const width = img.width;
+    const height = img.height;
+    const channels = img.channels || 1;
+    const dtype = img.dtype ?? 0;
+    const spec = DTYPE_TYPES[dtype] ?? DTYPE_TYPES[0];
+
+    const raw = frame
+        ? typedArrayFor(dtype, frame.bytes)
+        : emptyTypedArray(dtype, width * height * channels);
+    const data = toRgba(raw, channels);
+
+    const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, spec.type);
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.needsUpdate = true;
+    return texture;
+}
+
+function buildUniforms(ent) {
+    const u = ent.uniforms || {};
+    const images = ent.images || [];
+    const primary = images[0] || {};
+    return {
+        uImage0: { value: null },
+        uImage1: { value: null },
+        uImage2: { value: null },
+        uImage3: { value: null },
+        uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
+        u_value_min: { value: u.u_value_min ?? 0.0 },
+        u_value_max: { value: u.u_value_max ?? 1.0 },
+        u_brightness: { value: u.u_brightness ?? 0.0 },
+        u_contrast: { value: u.u_contrast ?? 1.0 },
+        u_midpoint: { value: u.u_midpoint ?? 0.5 },
+        u_mode: { value: u.u_mode ?? 1 },
+    };
+}
+
+async function createImage(ent) {
+    const frame = ent.frame || {};
+    const width = frame.width || 1;
+    const height = frame.height || 1;
+
+    const geometry = new THREE.PlaneGeometry(width, height);
+    const uniforms = buildUniforms(ent);
+
+    const fragment = ent.shader?.fragment || buildImageFragment();
+    const vertex = ent.shader?.vertex || buildImageVertex();
+
+    const material = new THREE.ShaderMaterial({
+        vertexShader: vertex,
+        fragmentShader: fragment,
+        uniforms,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    // Centre the plane on the pixel extent [−0.5, W−0.5] × [−0.5, H−0.5].
+    mesh.position.set(width / 2 - 0.5, height / 2 - 0.5, 0);
+
+    const images = ent.images || [];
+    for (let i = 0; i < images.length && i < 4; i++) {
+        const img = images[i];
+        const key = `uImage${i}`;
+        if (img.source === 'url') {
+            uniforms[key].value = await new Promise((resolve) => {
+                new THREE.TextureLoader().load(
+                    img.url,
+                    (t) => { t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter; resolve(t); },
+                    undefined,
+                    () => resolve(null)
+                );
+            });
+        } else if (hasImageFrame(img.id)) {
+            uniforms[key].value = makeDataTexture(img);
+        }
+    }
+
+    tagEntity(mesh, ent);
+    return mesh;
+}
+
+function updateImage(mesh, ent, prev) {
+    const material = mesh.material;
+    if (!material || !material.uniforms) return false;
+    const uniforms = ent.uniforms || {};
+    if (material.uniforms.u_value_min) material.uniforms.u_value_min.value = uniforms.u_value_min ?? 0.0;
+    if (material.uniforms.u_value_max) material.uniforms.u_value_max.value = uniforms.u_value_max ?? 1.0;
+    if (material.uniforms.u_brightness) material.uniforms.u_brightness.value = uniforms.u_brightness ?? 0.0;
+    if (material.uniforms.u_contrast) material.uniforms.u_contrast.value = uniforms.u_contrast ?? 1.0;
+    if (material.uniforms.u_midpoint) material.uniforms.u_midpoint.value = uniforms.u_midpoint ?? 0.5;
+    if (material.uniforms.u_mode) material.uniforms.u_mode.value = uniforms.u_mode ?? 1;
+    return true;
+}
+
+// Merge a partial `{ uniforms: {...} }` patch (the `image_update` message).
+function applyImageUniforms(mesh, patch) {
+    const material = mesh?.material;
+    if (!material || !material.uniforms) return false;
+    for (const [name, value] of Object.entries(patch || {})) {
+        if (material.uniforms[name]) material.uniforms[name].value = value;
+    }
+    return true;
+}
+
 // Entity renderer factory — thin dispatcher importing from per-entity
 // and per-operator modules.  Phase 5+6 refactoring complete.
 
@@ -2608,6 +2838,8 @@ async function createEntityMesh(ent) {
         case 'HPoint':
             if (ent.style?.style_type === 'CrossHairPointStyle') {
                 mesh = createCrossHairPoint(ent);
+            } else if (ent.style?.style_type === 'SquarePointStyle') {
+                mesh = createSquarePoint(ent);
             } else {
                 mesh = createPoint(ent);
             }
@@ -2719,6 +2951,10 @@ async function createEntityMesh(ent) {
             mesh = await createRayProxy(ent);
             break;
 
+        case 'image':
+            mesh = await createImage(ent);
+            break;
+
         case 'Hyperbola':
             mesh = createHyperbola(ent);
             break;
@@ -2772,6 +3008,8 @@ function updateEntityMesh(mesh, ent, prev) {
         case 'ray':
             if (entityRequiresRebuild(ent, prev)) return false;
             return updateRayProxy(mesh, ent);
+        case 'image':
+            return updateImage(mesh, ent, prev);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':
@@ -3884,6 +4122,65 @@ function fitCamera(sceneObjects, camera, controls, spaceDim, width, height) {
     camera.far = distance * 10;
     camera.updateProjectionMatrix();
     controls.update();
+}
+
+// Tanga Viewer — pending binary image-frame store.
+//
+// Images arrive as raw binary WebSocket frames (see
+// `py/pytanga/viz/_image_wire.py`).  The viewer decodes them into
+// `{ id, width, height, channels, dtype, bytes }` and stores them here until
+// the matching `image` entity is built, at which point the image renderer
+// claims the frame (`takeImageFrame`) and uploads the texture.
+
+const _pending = new Map();
+
+function storeImageFrame(frame) {
+    _pending.set(frame.id, frame);
+}
+
+function hasImageFrame(id) {
+    return _pending.has(id);
+}
+
+function takeImageFrame(id) {
+    const frame = _pending.get(id);
+    if (frame !== undefined) _pending.delete(id);
+    return frame;
+}
+
+// Little-endian header after the 4-byte magic `"TGI\0"`:
+//   version u8, type u8, idLen u8, width u32, height u32,
+//   channels u8, dtype u8, dataLen u64  — then id bytes, then raw pixel bytes.
+function decodeImageFrame(buffer) {
+    const dv = new DataView(buffer);
+    const magic = String.fromCharCode(
+        dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3)
+    );
+    if (magic !== 'TGI\x00') throw new Error('bad image frame magic');
+
+    const version = dv.getUint8(4);
+    const type = dv.getUint8(5);
+    const idLen = dv.getUint8(6);
+    if (version !== 1) throw new Error('unsupported image frame version');
+    if (type !== 1) throw new Error('unexpected image frame type');
+    const width = dv.getUint32(7, true);
+    const height = dv.getUint32(11, true);
+    const channels = dv.getUint8(15);
+    const dtype = dv.getUint8(16);
+    const dataLen = Number(dv.getBigUint64(17, true));
+
+    const idStart = 25;
+    const id = new TextDecoder().decode(new Uint8Array(buffer, idStart, idLen));
+    const dataStart = idStart + idLen;
+
+    return {
+        id,
+        width,
+        height,
+        channels,
+        dtype,
+        bytes: new Uint8Array(buffer, dataStart, dataLen),
+    };
 }
 
 // Local-space transform expression for an SDF node.

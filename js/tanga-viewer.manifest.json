@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "a653513b2d2ec4010ef852bb783a3eb65ef14d4b7414fd7f47778c976141a34b",
+  "generator_sha256": "685276947360ee645308d35c5421c596332ede5d6e25da14a3d66bbce1b7d1b0",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -167,8 +167,16 @@
       "sha256": "ab63bcb06c9e536a018cc638cf835ed5847858d164abc1a9a9818a8afa2403f0"
     },
     {
+      "path": "py/pytanga/viz/templates/renderers/image-shader.js",
+      "sha256": "5c105e4c8e4bf60e3dbf45f1ed63a25885e6597d4861c05f12f50b930a7427a3"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/image.js",
+      "sha256": "312ac581d7fc335277bf6e8a82049487c345749eb676e2d25c750db25aa4c859"
+    },
+    {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
-      "sha256": "26a2a38663d3432d9cff440e6cf05418fd4e8d19efbf00a45d0a07cb5303ce40"
+      "sha256": "5141f69eccd5de4e02320d6cf6a03943cc67a9cca1be5bf4494146d50852cd8a"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sdf.js",
@@ -199,6 +207,10 @@
       "sha256": "46c53b4437a00622bdbe5a0016ccd6b4d71c1345e96e8734a5029755e03335ae"
     },
     {
+      "path": "py/pytanga/viz/templates/image-frames.js",
+      "sha256": "d9da05e573b189a25a7585bd178983b6f3cbbf52b0cd01ad0138a4ac62755fff"
+    },
+    {
       "path": "py/pytanga/viz/templates/sdf/objects/transform.js",
       "sha256": "ea9439b277c265cdc4bcbbefe08ce3c83915d682e2348801c9ebb91b91d26776"
     },
@@ -227,6 +239,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "a589e656793b86f039ec3bd925cf167d7315c41f4610eeccda9e79e5f3022480",
-  "bundle_sha256": "2adbe9e64d764681bf655eee7e71bdb7b3ac62583476b9a8c5f7533f9cf522f8"
+  "fingerprint_sha256": "e8d7ae3fc138e096cdbb2d6072ca9bf84072b18b3aea28c7ea533b7e6abe7cc6",
+  "bundle_sha256": "d6008ef0c7fcfff1d14ef740bca8734f759c314656e57421570a2020d11c6e49"
 }

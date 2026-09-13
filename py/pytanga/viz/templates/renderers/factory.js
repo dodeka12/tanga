@@ -4,6 +4,7 @@
 import { sendLog } from '../events.js';
 import { createPoint } from './point.js';
 import { createCrossHairPoint } from './crosshair_point.js';
+import { createSquarePoint } from './square_point.js';
 import { createDirection, updateDirection } from './direction.js';
 import { createLine, updateLine } from './line.js';
 import { createPlane } from './plane.js';
@@ -59,6 +60,8 @@ export async function createEntityMesh(ent) {
         case 'HPoint':
             if (ent.style?.style_type === 'CrossHairPointStyle') {
                 mesh = createCrossHairPoint(ent);
+            } else if (ent.style?.style_type === 'SquarePointStyle') {
+                mesh = createSquarePoint(ent);
             } else {
                 mesh = createPoint(ent);
             }

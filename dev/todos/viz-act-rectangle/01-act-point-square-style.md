@@ -28,7 +28,7 @@ dispatched in `factory.js`).
     `tagEntity(mesh, ent)`.  Reuse `makeMaterial`/`styleParam`/`parseColor` from
     `utils.js`.  Keep it visible in a 2D top-down view and on the xy-plane in 3D.
 
-- [ ] **1.3 — factory dispatch**
+- [x] **1.3 — factory dispatch**
   - In `factory.js::createEntityMesh` `case 'Point'`/`'HPoint'`, add
     `ent.style?.style_type === 'SquarePointStyle'` → `createSquarePoint(ent)`
     (next to the `CrossHairPointStyle` branch).  No custom `update` needed unless
