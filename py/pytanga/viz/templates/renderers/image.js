@@ -44,12 +44,12 @@ function buildUniforms(ent) {
         uImage2: { value: null },
         uImage3: { value: null },
         uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
-        uValueMin: { value: u.u_value_min ?? 0.0 },
-        uValueMax: { value: u.u_value_max ?? 1.0 },
-        uBrightness: { value: u.u_brightness ?? 0.0 },
-        uContrast: { value: u.u_contrast ?? 1.0 },
-        uMidpoint: { value: u.u_midpoint ?? 0.5 },
-        uMode: { value: u.u_mode ?? 1 },
+        u_value_min: { value: u.u_value_min ?? 0.0 },
+        u_value_max: { value: u.u_value_max ?? 1.0 },
+        u_brightness: { value: u.u_brightness ?? 0.0 },
+        u_contrast: { value: u.u_contrast ?? 1.0 },
+        u_midpoint: { value: u.u_midpoint ?? 0.5 },
+        u_mode: { value: u.u_mode ?? 1 },
     };
 }
 
@@ -100,12 +100,12 @@ export function updateImage(mesh, ent, prev) {
     const material = mesh.material;
     if (!material || !material.uniforms) return false;
     const uniforms = ent.uniforms || {};
-    if (material.uniforms.uValueMin) material.uniforms.uValueMin.value = uniforms.u_value_min ?? 0.0;
-    if (material.uniforms.uValueMax) material.uniforms.uValueMax.value = uniforms.u_value_max ?? 1.0;
-    if (material.uniforms.uBrightness) material.uniforms.uBrightness.value = uniforms.u_brightness ?? 0.0;
-    if (material.uniforms.uContrast) material.uniforms.uContrast.value = uniforms.u_contrast ?? 1.0;
-    if (material.uniforms.uMidpoint) material.uniforms.uMidpoint.value = uniforms.u_midpoint ?? 0.5;
-    if (material.uniforms.uMode) material.uniforms.uMode.value = uniforms.u_mode ?? 1;
+    if (material.uniforms.u_value_min) material.uniforms.u_value_min.value = uniforms.u_value_min ?? 0.0;
+    if (material.uniforms.u_value_max) material.uniforms.u_value_max.value = uniforms.u_value_max ?? 1.0;
+    if (material.uniforms.u_brightness) material.uniforms.u_brightness.value = uniforms.u_brightness ?? 0.0;
+    if (material.uniforms.u_contrast) material.uniforms.u_contrast.value = uniforms.u_contrast ?? 1.0;
+    if (material.uniforms.u_midpoint) material.uniforms.u_midpoint.value = uniforms.u_midpoint ?? 0.5;
+    if (material.uniforms.u_mode) material.uniforms.u_mode.value = uniforms.u_mode ?? 1;
     return true;
 }
 

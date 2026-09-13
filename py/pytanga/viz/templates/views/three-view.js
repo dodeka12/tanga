@@ -9,6 +9,7 @@ import { View } from './view.js';
 import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
+import { applyImageUniforms } from '../renderers/image.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
@@ -554,6 +555,9 @@ export class ThreeJsView extends View {
             this._clearBanners();
         } else if (msg.type === 'interaction:drag_anchor') {
             this._interaction.setDragAnchor(msg.object_id, msg.world_position);
+        } else if (msg.type === 'image_update') {
+            const entry = this.sceneObjects.get(msg.id);
+            if (entry && entry.mesh) applyImageUniforms(entry.mesh, msg.uniforms);
         }
     }
 

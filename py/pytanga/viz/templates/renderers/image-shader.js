@@ -16,12 +16,12 @@ precision highp float;
 varying vec2 vUv;
 uniform sampler2D uImage0;
 uniform vec2 uImageSize;
-uniform float uValueMin;
-uniform float uValueMax;
-uniform float uBrightness;
-uniform float uContrast;
-uniform float uMidpoint;
-uniform int uMode;
+uniform float u_value_min;
+uniform float u_value_max;
+uniform float u_brightness;
+uniform float u_contrast;
+uniform float u_midpoint;
+uniform int u_mode;
 
 vec4 sampleNearest(vec2 px) {
     vec2 snap = (floor(px) + 0.5) / uImageSize;
@@ -55,18 +55,18 @@ void main() {
     vec4 tex = rotated ? sampleBilinear(px) : sampleNearest(px);
 
     vec3 color;
-    if (uMode == 0) {
+    if (u_mode == 0) {
         color = vec3(tex.r);            // channel 1 as grayscale
-    } else if (uMode == 2) {
+    } else if (u_mode == 2) {
         color = vec3(length(tex.rgb));  // magnitude of channels 1-3
-    } else if (uMode == 3) {
+    } else if (u_mode == 3) {
         color = vec3(tex.a);            // channel 4 as grayscale
     } else {
         color = tex.rgb;                // RGB
     }
 
-    vec3 n = (color - uValueMin) / max(uValueMax - uValueMin, 1e-6);
-    vec3 outC = clamp((n - uMidpoint) * uContrast + uMidpoint + uBrightness, 0.0, 1.0);
+    vec3 n = (color - u_value_min) / max(u_value_max - u_value_min, 1e-6);
+    vec3 outC = clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0);
     gl_FragColor = vec4(outC, 1.0);
 }`;
 }
