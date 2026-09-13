@@ -6,10 +6,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ._coerce import to_direction, to_float, to_point
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -50,8 +54,13 @@ class Cylinder:
     align_center: float = 0.0
 
     def __init__(
-        self, origin=None, axis=None, length=None, radius=None, align_center=None
-    ):
+        self,
+        origin: "Point | MV | None" = None,
+        axis: "Direction | MV | None" = None,
+        length: "float | MV | None" = None,
+        radius: "float | MV | None" = None,
+        align_center: "float | MV | None" = None,
+    ) -> None:
         origin = Point(0.0, 0.0, 0.0) if origin is None else to_point(origin)
         axis = Direction(0.0, 0.0, 1.0) if axis is None else to_direction(axis)
         length = 1.0 if length is None else to_float(length)

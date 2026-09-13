@@ -33,7 +33,14 @@ import asyncio
 
 # import logging
 from pytanga.geometry import Line, Point
-from pytanga.viz import ActPoint, CylinderLineStyle, Visualizer, VizObjectRef
+from pytanga.viz import (
+    ActPoint,
+    ActSceneObject,
+    CylinderLineStyle,
+    DragEvent,
+    Visualizer,
+    VizObjectRef,
+)
 
 # logging.basicConfig(level=logging.INFO)  # everything
 # logging.getLogger("tanga.viz.server").setLevel(logging.DEBUG)  # extra HTTP/WS detail
@@ -75,16 +82,18 @@ async def main() -> None:
             line_yz.entity = yz_line
 
     # Custom handler: update projection lines, then let ActPoint move the point.
-    async def on_point_drag(event, ap):
+    async def on_point_drag(event: DragEvent, ap: ActSceneObject) -> bool:
         p = event.world_position
         _update_lines(p)
         return False  # let ActPoint do the default move + flush
 
     # Lifecycle handlers: observe the start and end of a drag.
-    async def on_point_drag_start(event, ap):
+    async def on_point_drag_start(event: DragEvent, ap: ActSceneObject) -> None:
+        assert isinstance(ap, ActPoint)
         print(f"Drag started at {ap.point}")
 
-    async def on_point_drag_end(event, ap):
+    async def on_point_drag_end(event: DragEvent, ap: ActSceneObject) -> None:
+        assert isinstance(ap, ActPoint)
         print(f"Drag ended at {ap.point}")
 
     # Create the interactive point — style is set via viz.new().

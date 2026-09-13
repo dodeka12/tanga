@@ -69,7 +69,12 @@ class TestConicRenderers:
         assert d["radiusU"] == 2.0
         assert d["radiusV"] == 1.0
         assert d["style"]["thickness"] == 1.0
-        for key in ("wireframe", "wireframe_dash", "wireframe_color", "wireframe_opacity"):
+        for key in (
+            "wireframe",
+            "wireframe_dash",
+            "wireframe_color",
+            "wireframe_opacity",
+        ):
             assert key not in d
             assert key not in d["style"]
 
@@ -145,4 +150,3 @@ class TestConicRefineInResolver:
         merged = _style_to_output(ConicStyle(color="#123456"), "Ellipse")
         assert merged["color"] == "#123456"
         assert merged["thickness"] == 1.0
-

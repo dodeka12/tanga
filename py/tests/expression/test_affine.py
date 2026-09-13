@@ -281,4 +281,3 @@ class TestAffineExpression:
         partial = a(V1=DataArray(xs, masks=("n", self.full)))
         with pytest.raises(ValueError):
             partial(n=DataArray([1.0, 2.0], masks=("_",)))
-

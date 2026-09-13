@@ -6,15 +6,22 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from ._ports import ServerState
 from .views import (
+    EStackDirection,
     SceneView,
     StackView,
     View,
     serialize_layout,
 )
+
+if TYPE_CHECKING:
+    from ._banner import Banner
+    from ._dialog import Dialog
+    from .scene import Scene
 
 
 class OverlayContainer:
@@ -123,7 +130,7 @@ class OverlayContainer:
         controls: list[Any] | None,
         on_close: Any,
         scene_name: str | None,
-    ) -> Any:
+    ) -> "Banner":
         """Create, store, and register a banner; return it (un-pushed)."""
         from ._banner import Banner
 
@@ -413,7 +420,7 @@ class OverlayContainer:
         width: Any,
         height: Any,
         scene_name: str | None,
-    ) -> Any:
+    ) -> "Dialog":
         """Create, store, and register a dialog; return it (un-pushed)."""
         from ._dialog import Dialog, FileChooserDialog
         from .views import View
@@ -631,7 +638,9 @@ class OverlayContainer:
 
     async def _on_dialog_accept(self, target: str | None, event: Any) -> None:
         """Handle an ``accept`` event: fire ``on_accept`` and remove the dialog."""
-        found = self._find_dialog(target) if target else None
+        if target is None:
+            return
+        found = self._find_dialog(target)
         if found is None:
             return
         dialog, scene_name = found
@@ -669,7 +678,7 @@ class OverlayContainer:
                     "Error in close handler for %r", target
                 )
         found = self._find_dialog(target) if target else None
-        if found is not None:
+        if found is not None and target is not None:
             self.remove_dialog(target, scene_name=found[1])
 
     # ── Editor ───────────────────────────────────────
@@ -735,7 +744,7 @@ class LayoutHostImpl:
     def __init__(
         self,
         state: ServerState,
-        scene_factory: Any,
+        scene_factory: Callable[[str, int | None], Scene],
         transport: Any = None,
         client_log: Any = None,
     ) -> None:
@@ -744,7 +753,7 @@ class LayoutHostImpl:
         self._transport = transport
         self._client_log = client_log
         self._layout_control_ids: set[str] = set()
-        self._scenes: dict[str, Any] = {}
+        self._scenes: dict[str, Scene] = {}
         self._overlay = OverlayContainer(
             sync=self._sync_overlays, transport=transport, layout=self
         )
@@ -754,25 +763,25 @@ class LayoutHostImpl:
 
     # ── LayoutHost contract ─────────────────────────────
 
-    def scene(self, name: str) -> Any:
+    def scene(self, name: str) -> "Scene":
         return self._scenes[name]
 
     def scene_names(self) -> list[str]:
         return list(self._scenes.keys())
 
-    def add_scene(self, name: str, space_dim: int | None = None) -> Any:
+    def add_scene(self, name: str, space_dim: int | None = None) -> "Scene":
         """Create a scene + an auto single-``SceneView`` layout (raise if name taken)."""
         if name in self._scenes or name in self._layouts:
             raise ValueError(f"Scene or layout {name!r} already exists")
         scene = self._scene_factory(name, space_dim)
         self._scenes[name] = scene
         self._layouts[name] = Layout(
-            StackView("vertical", [SceneView(name)]), self._overlay
+            StackView(EStackDirection.VERTICAL, [SceneView(name)]), self._overlay
         )
         return scene
 
     @property
-    def scenes(self) -> dict[str, Any]:
+    def scenes(self) -> dict[str, "Scene"]:
         return self._scenes
 
     def __getitem__(self, name: str) -> Layout:
@@ -866,7 +875,7 @@ class LayoutHostImpl:
 
         if ctrl is not None:
             d = await ctrl.handle_event_async(event_name, payload)
-            if d.push is not None:
+            if d.push is not None and cid is not None:
                 self._push_control_update(cid, d.push)
             if d.reply is not None:
                 await self._transport.send_to_browser(
@@ -947,7 +956,7 @@ class LayoutHostImpl:
         cid = payload.get("control_id")
         path = payload.get("path") or ""
         ctrl = self.resolve_control(cid) if cid else None
-        if ctrl is not None:
+        if ctrl is not None and cid is not None:
             ctrl.set_value(path)
             self._push_control_update(cid, ctrl.get_value())
         handler = self._transport.get(cid) if cid else None
@@ -994,7 +1003,7 @@ class LayoutHostImpl:
 
         if (self._global_overlay or self._scene_overlays) and not self._layouts:
             self._layouts[""] = Layout(
-                StackView("vertical", [SceneView("")]), self._overlay
+                StackView(EStackDirection.VERTICAL, [SceneView("")]), self._overlay
             )
         overlay = self._global_overlay or None
         for name, layout in self._layouts.items():
@@ -1003,7 +1012,7 @@ class LayoutHostImpl:
                 layout.base, name=name, overlay=overlay
             )
         for name in list(self._scene_layouts_serialized):
-            root = StackView("vertical", [SceneView(name)])
+            root = StackView(EStackDirection.VERTICAL, [SceneView(name)])
             self._inject_scene_overlays(root)
             self._scene_layouts_serialized[name] = serialize_layout(root, name=name)
 
@@ -1032,7 +1041,7 @@ class LayoutHostImpl:
         if scene_name == "":
             if "" not in self._layouts:
                 self._layouts[""] = Layout(
-                    StackView("vertical", [SceneView("")]), self._overlay
+                    StackView(EStackDirection.VERTICAL, [SceneView("")]), self._overlay
                 )
             if "" not in self._layouts_serialized:
                 self._inject_scene_overlays(self._layouts[""].base)
@@ -1045,7 +1054,7 @@ class LayoutHostImpl:
 
         layout = self._scene_layouts_serialized.get(scene_name)
         if layout is None:
-            root = StackView("vertical", [SceneView(scene_name)])
+            root = StackView(EStackDirection.VERTICAL, [SceneView(scene_name)])
             self._inject_scene_overlays(root)
             layout = serialize_layout(root, name=scene_name)
             self._scene_layouts_serialized[scene_name] = layout

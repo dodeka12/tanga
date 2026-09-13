@@ -13,10 +13,13 @@ Run with:  uv run python py/examples/viz/ui/controls/controls_add_and_view.py
 Keywords: controls, SliderView, CheckboxView, ButtonView, GroupView, scene
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
     CheckboxView,
+    ControlEvent,
     EAnchor,
     EIconMaterial,
     GroupView,
@@ -31,18 +34,18 @@ viz.add(
 )
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     radius = float(value)
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=radius))
     viz.flush()
 
 
-async def _on_wireframe(value, _event):
+async def _on_wireframe(value: Any, _event: ControlEvent) -> None:
     viz.update("sphere", wireframe=bool(value))
     viz.flush()
 
 
-async def _on_reset(_value, _event):
+async def _on_reset(_value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=2))
     viz.update("sphere", wireframe=False)
     viz.flush()

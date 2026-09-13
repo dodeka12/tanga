@@ -23,9 +23,14 @@ from pytanga.geometry.entities import (
     Line,
     Plane,
     PointPair,
+    PointSet,
     Sphere,
 )
 from pytanga.geometry.operators import Inversion, ReflectionLine, ReflectionPlane
+
+#: The ``(u, v, w)`` anchor fractions, or ``None`` for the entity's default
+#: anchor position.
+Uvw = tuple[float, float, float] | None
 
 EntityLike = Any
 
@@ -84,7 +89,9 @@ def _normalize_along(along: Any) -> tuple[float, float, float] | None:
 # ── Per-entity anchor functions (relative to mesh origin) ────
 
 
-def _anchor_line(line: Line, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_line(
+    line: Line, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     u = uvw[0] if uvw is not None else 0.5
     if line_length is None:
         if line.length is not None and line.length > 0:
@@ -99,17 +106,23 @@ def _anchor_line(line: Line, uvw, line_length) -> tuple[float, float, float]:
     )
 
 
-def _anchor_reflection_line(rl, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_reflection_line(
+    rl: ReflectionLine, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     return _anchor_line(rl.line, uvw, line_length)
 
 
-def _anchor_direction(direction, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_direction(
+    direction: Direction, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     u = uvw[0] if uvw is not None else 0.0
     d = _normalize((direction.x, direction.y, direction.z))
     return (d[0] * u * 2.0, d[1] * u * 2.0, d[2] * u * 2.0)
 
 
-def _anchor_point_pair(pp, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_point_pair(
+    pp: PointPair, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     u = uvw[0] if uvw is not None else 0.5
     pa, pb = pp.point_a, pp.point_b
     dx, dy, dz = pb.x - pa.x, pb.y - pa.y, pb.z - pa.z
@@ -125,7 +138,9 @@ def _plane_axes(
     return u_axis, v_axis
 
 
-def _anchor_plane(plane: Plane, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_plane(
+    plane: Plane, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     u = uvw[0] if uvw is not None else 0.5
     v = uvw[1] if uvw is not None else 0.5
     # The renderer draws a square of half-side `extent` centred on `point`,
@@ -141,17 +156,19 @@ def _anchor_plane(plane: Plane, uvw, line_length) -> tuple[float, float, float]:
     )
 
 
-def _anchor_reflection_plane(rp, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_reflection_plane(
+    rp: ReflectionPlane, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     return _anchor_plane(rp.plane, uvw, line_length)
 
 
 def _circle_normal(circle: Circle) -> tuple[float, float, float]:
-    if circle.normal is not None:
-        return (circle.normal.x, circle.normal.y, circle.normal.z)
-    return (0.0, 0.0, 1.0)
+    return (circle.normal.x, circle.normal.y, circle.normal.z)
 
 
-def _anchor_circle(circle: Circle, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_circle(
+    circle: Circle, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     radius_frac = uvw[0] if uvw is not None else 0.0
     angle_frac = uvw[1] if uvw is not None else 0.0
     n = _normalize(_circle_normal(circle))
@@ -168,7 +185,24 @@ def _anchor_circle(circle: Circle, uvw, line_length) -> tuple[float, float, floa
     )
 
 
-def _anchor_sphere(sphere: Sphere, uvw, line_length) -> tuple[float, float, float]:
+def _anchor_point_set(
+    ps: PointSet, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
+    """Label anchor at the centroid of a point set."""
+    pts = ps.points
+    if not pts:
+        return (0.0, 0.0, 0.0)
+    n = len(pts)
+    return (
+        sum(p.x for p in pts) / n,
+        sum(p.y for p in pts) / n,
+        sum(p.z for p in pts) / n,
+    )
+
+
+def _anchor_sphere(
+    sphere: Sphere, uvw: Uvw, line_length: float | None
+) -> tuple[float, float, float]:
     radius_frac = uvw[0] if uvw is not None else 0.0
     azimuth_frac = uvw[1] if uvw is not None else 0.0
     polar_frac = uvw[2] if uvw is not None else 0.0
@@ -188,7 +222,7 @@ def _anchor_sphere(sphere: Sphere, uvw, line_length) -> tuple[float, float, floa
 
 # ── Registry + dispatch ─────────────────────────────────────
 
-_ANCHOR_FUNCS: dict[type, Callable] = {
+_ANCHOR_FUNCS: dict[type, Callable[..., tuple[float, float, float]]] = {
     Line: _anchor_line,
     ReflectionLine: _anchor_reflection_line,
     Direction: _anchor_direction,
@@ -197,6 +231,7 @@ _ANCHOR_FUNCS: dict[type, Callable] = {
     ReflectionPlane: _anchor_reflection_plane,
     Circle: _anchor_circle,
     Sphere: _anchor_sphere,
+    PointSet: _anchor_point_set,
     Inversion: _anchor_sphere,
 }
 

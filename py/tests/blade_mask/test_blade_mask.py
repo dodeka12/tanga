@@ -88,7 +88,7 @@ class TestBladeMask:
             a.union(b)
 
     def test_product_blade_mask_gp(self, alg_float, mask_A_float):
-        out = product_blade_mask( mask_A_float, mask_A_float, complete=True)
+        out = product_blade_mask(mask_A_float, mask_A_float, complete=True)
         assert isinstance(out, BladeMask)
         assert len(out) >= 1
 
@@ -96,11 +96,11 @@ class TestBladeMask:
         float_mask = BladeMask(alg_float, [1])
         wrong_mask = BladeMask(alg_int, [1])
         with pytest.raises(AssertionError):
-            product_blade_mask( float_mask, wrong_mask)
+            product_blade_mask(float_mask, wrong_mask)
 
     def test_unknown_product_raises(self, alg_float, mask_A_float):
         with pytest.raises(ValueError):
-            product_blade_mask( mask_A_float, mask_A_float, product="xy")
+            product_blade_mask(mask_A_float, mask_A_float, product="xy")
 
     def test_inverse_blade_mask_ip_both_directions(self, alg_float):
         # A = e12, C = {e1, e2, e3}.  The symmetric inner product is non-zero

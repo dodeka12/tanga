@@ -14,7 +14,7 @@ from pytanga.geometry.entities import Direction, Plane, Point
 from pytanga.viz import PlaneStyle, TextureLabelStyle, Visualizer
 
 
-def main():
+def main() -> None:
     viz = Visualizer()
     viz.set_title("Texture Labels on Planes")
 

@@ -9,25 +9,60 @@ plane-conics or samples a cone member into a polyline.  Entities are imported
 lazily to preserve the ``quadric → geometry.entities`` layering.
 """
 
-from __future__ import annotations
+from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 
 from ._mapping import to_coeffs
 from .conic import Conic
 
+if TYPE_CHECKING:
+    from pytanga.geometry.entities import (
+        Circle,
+        Curve,
+        Direction,
+        Ellipse,
+        Hyperbola,
+        Line,
+        LinePair,
+        Parabola,
+        ParallelLinePair,
+        Plane,
+        PlaneConic,
+        PlaneConicPair,
+        Point,
+    )
+
+    class _EntitiesModule(Protocol):
+        """The lazily-imported :mod:`pytanga.geometry.entities` module."""
+
+        Circle: type[Circle]
+        Curve: type[Curve]
+        Direction: type[Direction]
+        Ellipse: type[Ellipse]
+        Hyperbola: type[Hyperbola]
+        Line: type[Line]
+        LinePair: type[LinePair]
+        Parabola: type[Parabola]
+        ParallelLinePair: type[ParallelLinePair]
+        Plane: type[Plane]
+        PlaneConic: type[PlaneConic]
+        PlaneConicPair: type[PlaneConicPair]
+        Point: type[Point]
+
+
 _TOL = 1e-9
 
 _entities_module = None
 
 
-def _entities():
+def _entities() -> "_EntitiesModule":
     """Lazily import and cache :mod:`pytanga.geometry.entities`."""
     global _entities_module
     if _entities_module is None:
         from pytanga.geometry import entities as _entities_module
 
-    return _entities_module
+    return cast("_EntitiesModule", _entities_module)
 
 
 def _rank(m: np.ndarray) -> int:
@@ -133,7 +168,7 @@ def _plane_frame(n: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return u, v
 
 
-def _plane_conic_from_quadric(Q, plane):
+def _plane_conic_from_quadric(Q: np.ndarray, plane: "Plane") -> "PlaneConic":
     """Restrict quadric ``Q`` to ``plane``; return the 2D conic as a ``PlaneConic``.
 
     The conic is expressed in the plane's canonical local frame ``(u, v)`` via
@@ -181,7 +216,9 @@ def _plane_vectors_from_matrix(C: np.ndarray) -> list[np.ndarray]:
     return []
 
 
-def _plane_from_homogeneous(abcd) -> object:
+def _plane_from_homogeneous(
+    abcd: "np.ndarray | list[float] | tuple[float, ...]",
+) -> "Plane":
     """Convert a homogeneous plane ``(a, b, c, d)`` to a ``Plane`` (mirror refine.py)."""
     E = _entities()
     a, b, c, d = (float(x) for x in abcd)
@@ -193,11 +230,11 @@ def _plane_from_homogeneous(abcd) -> object:
     return E.Plane(E.Point(-dn * nx, -dn * ny, -dn * nz), E.Direction(nx, ny, nz))
 
 
-def _plane_from_linear_matrix(C: np.ndarray) -> object:
+def _plane_from_linear_matrix(C: np.ndarray) -> "Plane":
     """Extract the single plane of a rank-2 ``rq = 0`` matrix ``[[0, n/2], [nᵀ/2, d]]``."""
     n = 2.0 * C[:3, 3]
     d = float(C[3, 3])
-    return _plane_from_homogeneous((n[0], n[1], n[2], d))
+    return _plane_from_homogeneous((float(n[0]), float(n[1]), float(n[2]), d))
 
 
 def _parallel_planes_from_matrix(C: np.ndarray) -> list[np.ndarray]:
@@ -221,7 +258,7 @@ def _parallel_planes_from_matrix(C: np.ndarray) -> list[np.ndarray]:
     return [np.array([v[0], v[1], v[2], -d1]), np.array([v[0], v[1], v[2], -d2])]
 
 
-def _as_quadric_matrix(x) -> np.ndarray:
+def _as_quadric_matrix(x: "np.ndarray | list[list[float]] | Conic") -> np.ndarray:
     """Coerce a ``Quadric3D`` (or raw array) to its 4×4 matrix."""
     if hasattr(x, "matrix"):
         return np.asarray(x.matrix, dtype=float)
@@ -235,13 +272,19 @@ def _is_proportional(a: np.ndarray, b: np.ndarray) -> bool:
     return min(float(np.linalg.norm(an - bn)), float(np.linalg.norm(an + bn))) < 1e-6
 
 
-def intersect_quadrics(Q1, Q2):
+def intersect_quadrics(
+    Q1: "np.ndarray | Conic",
+    Q2: "np.ndarray | Conic",
+    n: int = 200,
+    extent: float = 5.0,
+) -> "PlaneConicPair | Curve":
     """Intersect two 3D quadrics via the pencil's degenerate members.
 
     Returns a :class:`~pytanga.geometry.PlaneConicPair` when the pencil has a
     plane-pair (or plane) member, a sampled :class:`~pytanga.geometry.Curve`
     when it has a cone member, and raises ``NotImplementedError`` for the hard
-    case (no real degenerate member).
+    case (no real degenerate member).  ``n``/``extent`` control the cone-member
+    sampling density and the ``[-extent, extent]³`` box.
     """
     E = _entities()
     Q1 = _as_quadric_matrix(Q1)
@@ -252,20 +295,22 @@ def intersect_quadrics(Q1, Q2):
     for C in _degenerate_members(Q1, Q2):
         r = _rank(C)
         rq = _rank(C[:3, :3])
-        p, n, _ = _inertia(C)
+        p, n_neg, _ = _inertia(C)
         # On a plane that factors ``C`` we have ``Q1 = λQ2``; intersect the plane
         # with the quadric that is *not* ``C`` itself (so it is not identically
         # zero on that plane).  Only the ``λ = 0`` endpoint (``C ∝ Q1``) needs ``Q2``.
         companion = Q2 if _is_proportional(C, Q1) else Q1
 
-        if r == 2 and rq == 2 and p > 0 and n > 0:  # intersecting plane pair
+        if r == 2 and rq == 2 and p > 0 and n_neg > 0:  # intersecting plane pair
             planes = [_plane_from_homogeneous(h) for h in _plane_vectors_from_matrix(C)]
             return E.PlaneConicPair(
                 _plane_conic_from_quadric(companion, planes[0]),
                 _plane_conic_from_quadric(companion, planes[1]),
             )
         if r == 2 and rq == 1:  # parallel plane pair
-            planes = [_plane_from_homogeneous(h) for h in _parallel_planes_from_matrix(C)]
+            planes = [
+                _plane_from_homogeneous(h) for h in _parallel_planes_from_matrix(C)
+            ]
             return E.PlaneConicPair(
                 _plane_conic_from_quadric(companion, planes[0]),
                 _plane_conic_from_quadric(companion, planes[1]),
@@ -280,13 +325,16 @@ def intersect_quadrics(Q1, Q2):
             plane = _plane_from_homogeneous(h)
             pc = _plane_conic_from_quadric(companion, plane)
             return E.PlaneConicPair(pc, pc)
-        if r == 3 and rq == 3 and p > 0 and n > 0 and cone is None:  # cone (sampled curve)
+        if (
+            r == 3 and rq == 3 and p > 0 and n_neg > 0 and cone is None
+        ):  # cone (sampled curve)
             cone, cone_companion = C, companion
         # rank 0 / definite rank-2 / rank-3 imaginary / cylinder (rq=2) → skip
     if cone is not None:
-        return _sample_curve_from_cone(cone, cone_companion)
+        return _sample_curve_from_cone(
+            cone, cast("np.ndarray", cone_companion), n=n, extent=extent
+        )
     raise NotImplementedError("no real degenerate member (elliptic hard case)")
-
 
 
 def _quadratic_roots(a: float, b: float, c: float) -> list[float]:
@@ -321,7 +369,9 @@ def _cone_vertex(C: np.ndarray) -> np.ndarray:
     return v[:3] / w
 
 
-def _sample_conic_2d(conic, n: int = 200, extent: float = 5.0) -> list[list[tuple[float, float]]]:
+def _sample_conic_2d(
+    conic: "Conic", n: int = 200, extent: float = 5.0
+) -> list[list[tuple[float, float]]]:
     """Sample a 2D ``Conic`` into ordered ``(s, t)`` polylines (numpy-only).
 
     Returns one polyline per connected component (a closed loop for ellipse/
@@ -338,19 +388,30 @@ def _sample_conic_2d(conic, n: int = 200, extent: float = 5.0) -> list[list[tupl
         c, r = entity.center, entity.radius
         return [
             [
-                (c.x + r * np.cos(2.0 * np.pi * i / n), c.y + r * np.sin(2.0 * np.pi * i / n))
+                (
+                    c.x + r * np.cos(2.0 * np.pi * i / n),
+                    c.y + r * np.sin(2.0 * np.pi * i / n),
+                )
                 for i in range(n)
             ]
         ]
     if isinstance(entity, E.Ellipse):
         c, ru, rv = entity.center, entity.radius_u, entity.radius_v
-        ux, uy = (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
-        vx, vy = (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
+        ux, uy = (
+            (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
+        )
+        vx, vy = (
+            (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
+        )
         return [
             [
                 (
-                    c.x + ru * np.cos(2.0 * np.pi * i / n) * ux + rv * np.sin(2.0 * np.pi * i / n) * vx,
-                    c.y + ru * np.cos(2.0 * np.pi * i / n) * uy + rv * np.sin(2.0 * np.pi * i / n) * vy,
+                    c.x
+                    + ru * np.cos(2.0 * np.pi * i / n) * ux
+                    + rv * np.sin(2.0 * np.pi * i / n) * vx,
+                    c.y
+                    + ru * np.cos(2.0 * np.pi * i / n) * uy
+                    + rv * np.sin(2.0 * np.pi * i / n) * vy,
                 )
                 for i in range(n)
             ]
@@ -386,19 +447,29 @@ def _sample_conic_2d(conic, n: int = 200, extent: float = 5.0) -> list[list[tupl
         o, d = entity.origin, entity.direction
         nr = float(np.hypot(d.x, d.y)) or 1.0
         ux, uy = d.x / nr, d.y / nr
-        return [[(o.x - extent * ux, o.y - extent * uy), (o.x + extent * ux, o.y + extent * uy)]]
+        return [
+            [
+                (o.x - extent * ux, o.y - extent * uy),
+                (o.x + extent * ux, o.y + extent * uy),
+            ]
+        ]
     if isinstance(entity, (E.LinePair, E.ParallelLinePair)):
-        paths = []
+        paths: list[list[tuple[float, float]]] = []
         for line in (entity.line1, entity.line2):
             o, d = line.origin, line.direction
             nr = float(np.hypot(d.x, d.y)) or 1.0
             ux, uy = d.x / nr, d.y / nr
-            paths.append([(o.x - extent * ux, o.y - extent * uy), (o.x + extent * ux, o.y + extent * uy)])
+            paths.append(
+                [
+                    (float(o.x - extent * ux), float(o.y - extent * uy)),
+                    (float(o.x + extent * ux), float(o.y + extent * uy)),
+                ]
+            )
         return paths
     return []
 
 
-def _dedupe_points(pts, tol: float = 1e-4) -> list[np.ndarray]:
+def _dedupe_points(pts: "list[np.ndarray]", tol: float = 1e-4) -> list[np.ndarray]:
     """Drop near-duplicate points in (approximately) O(n) via a spatial hash."""
     if len(pts) < 2:
         return pts
@@ -428,12 +499,25 @@ def _dedupe_points(pts, tol: float = 1e-4) -> list[np.ndarray]:
     return out
 
 
-_TENTACLE_DELTAS: tuple[float, ...] = tuple(float(x) for x in np.geomspace(1e-7, 0.1, 30))
+_TENTACLE_DELTAS: tuple[float, ...] = tuple(
+    float(x) for x in np.geomspace(1e-7, 0.1, 30)
+)
 
 
 def _tentacle_thetas(
-    C: np.ndarray, Q: np.ndarray, axis: np.ndarray, u: np.ndarray, w: np.ndarray,
-    cx: float, cy: float, ru: float, rv: float, ux: float, uy: float, vx: float, vy: float,
+    C: np.ndarray,
+    Q: np.ndarray,
+    axis: np.ndarray,
+    u: np.ndarray,
+    w: np.ndarray,
+    cx: float,
+    cy: float,
+    ru: float,
+    rv: float,
+    ux: float,
+    uy: float,
+    vx: float,
+    vy: float,
 ) -> list[float]:
     """Extra base-ellipse θ values sampling each unbounded tentacle.
 
@@ -453,7 +537,13 @@ def _tentacle_thetas(
     d = 2.0 * float(d0 @ qQ @ du)
     e = 2.0 * float(d0 @ qQ @ dv)
     f = float(d0 @ qQ @ d0)
-    coeffs = [a - d + f, 2.0 * (e - b), -2.0 * a + 4.0 * c + 2.0 * f, 2.0 * (b + e), a + d + f]
+    coeffs = [
+        a - d + f,
+        2.0 * (e - b),
+        -2.0 * a + 4.0 * c + 2.0 * f,
+        2.0 * (b + e),
+        a + d + f,
+    ]
     while coeffs and abs(coeffs[0]) < 1e-12:
         coeffs.pop(0)
     if not coeffs:
@@ -471,7 +561,7 @@ def _tentacle_thetas(
 
 def _sample_curve_from_cone(
     C: np.ndarray, Q: np.ndarray, n: int = 200, extent: float = 5.0
-):
+) -> "Curve":
     """Sample the quartic ``C ∩ Q`` via the cone's rulings.
 
     The quartic is generally unbounded: it tends to infinity along the companion's
@@ -503,14 +593,22 @@ def _sample_curve_from_cone(
     if isinstance(entity, E.Ellipse):
         cx, cy = entity.center.x, entity.center.y
         ru, rv = entity.radius_u, entity.radius_v
-        ux, uy = (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
-        vx, vy = (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
+        ux, uy = (
+            (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
+        )
+        vx, vy = (
+            (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
+        )
         thetas = list(np.linspace(0.0, 2.0 * np.pi, n, endpoint=False))
-        thetas.extend(_tentacle_thetas(C, Q, axis, u, w, cx, cy, ru, rv, ux, uy, vx, vy))
+        thetas.extend(
+            _tentacle_thetas(C, Q, axis, u, w, cx, cy, ru, rv, ux, uy, vx, vy)
+        )
         thetas.sort()
         samples = [
-            (cx + ru * np.cos(th) * ux + rv * np.sin(th) * vx,
-             cy + ru * np.cos(th) * uy + rv * np.sin(th) * vy)
+            (
+                cx + ru * np.cos(th) * ux + rv * np.sin(th) * vx,
+                cy + ru * np.cos(th) * uy + rv * np.sin(th) * vy,
+            )
             for th in thetas
         ]
     else:
@@ -541,7 +639,7 @@ def _sample_curve_from_cone(
             sheets[0][-1].append(p0)
         if _in_box(p1, extent):
             sheets[1][-1].append(p1)
-    paths: list[list] = []
+    paths: list[list["Point"]] = []
     for sheet in sheets:
         for arc in sheet:
             arc = _dedupe_points(arc)
@@ -552,4 +650,120 @@ def _sample_curve_from_cone(
     return E.Curve(paths)
 
 
+def _unproject_to_3d(plane: "Plane", p2: "Point") -> np.ndarray:
+    """Map a 2D point (plane local coords ``(s, t)``) back into the 3D frame."""
+    n = np.array([plane.normal.x, plane.normal.y, plane.normal.z], dtype=float)
+    p0 = np.array([plane.point.x, plane.point.y, plane.point.z], dtype=float)
+    u, v = _plane_frame(n)
+    return p0 + float(p2.x) * u + float(p2.y) * v
 
+
+def _newton_refine(
+    x0: np.ndarray,
+    Q1: np.ndarray,
+    Q2: np.ndarray,
+    Q3: np.ndarray,
+    steps: int = 12,
+) -> np.ndarray:
+    """Newton-refine a seed to the common zero ``Q1 = Q2 = Q3 = 0``."""
+    x = np.asarray(x0, dtype=float)
+    for _ in range(steps):
+        h = np.append(x, 1.0)
+        f = np.array([float(h @ Q @ h) for Q in (Q1, Q2, Q3)])
+        j = np.array([2.0 * (Q[:3, :3] @ x + Q[:3, 3]) for Q in (Q1, Q2, Q3)])
+        try:
+            dx = np.linalg.solve(j, -f)
+        except np.linalg.LinAlgError:
+            break
+        x = x + dx
+        if float(np.linalg.norm(dx)) < 1e-12:
+            break
+    return x
+
+
+def _points_on_plane_pair(pair: "PlaneConicPair", C: np.ndarray) -> list[np.ndarray]:
+    """Intersect the two plane-conics of ``pair`` with ``C`` (exact)."""
+    from ._pointset import two_conic_intersection
+
+    pts: list[np.ndarray] = []
+    for pc in (pair.conic1, pair.conic2):
+        q3 = _plane_conic_from_quadric(C, pc.plane)
+        for p2 in two_conic_intersection(pc.conic.matrix, q3.conic.matrix):
+            pts.append(_unproject_to_3d(pc.plane, p2))
+    return pts
+
+
+def _residual(x: np.ndarray, Q1: np.ndarray, Q2: np.ndarray, Q3: np.ndarray) -> float:
+    """Max absolute quadric value at ``x`` (zero at a common intersection)."""
+    h = np.append(np.asarray(x, dtype=float), 1.0)
+    return max(abs(float(h @ Q @ h)) for Q in (Q1, Q2, Q3))
+
+
+def _points_on_sampled_curve(
+    curve: "Curve", Q1: np.ndarray, Q2: np.ndarray, Q3: np.ndarray
+) -> list[np.ndarray]:
+    """Newton-refine curve samples to the common ``Q1 = Q2 = Q3 = 0`` zeros.
+
+    Rather than relying on sign-change bracketing (which arc-splitting of the
+    sampled quartic can defeat), every curve sample is used as a Newton seed;
+    seeds in the basin of a base point converge to it, and the residual check
+    discards seeds that did not converge to a genuine intersection.
+    """
+    pts: list[np.ndarray] = []
+    for path in curve.paths:
+        for p in path:
+            r = _newton_refine(np.array([p.x, p.y, p.z], dtype=float), Q1, Q2, Q3)
+            if _residual(r, Q1, Q2, Q3) < 1e-6:
+                pts.append(r)
+    return pts
+
+
+def _finalize_intersection_points(
+    pts: "list[np.ndarray]",
+    Q1: np.ndarray,
+    Q2: np.ndarray,
+    Q3: np.ndarray,
+    tol: float = 1e-6,
+) -> "list[Point]":
+    """Dedupe, drop off-surface points, and return 3D ``Point`` entities."""
+    E = _entities()
+    pts = _dedupe_points(pts, tol=1e-3)
+    kept: list[np.ndarray] = []
+    for p in pts:
+        h = np.append(p, 1.0)
+        if all(abs(float(h @ Q @ h)) < tol for Q in (Q1, Q2, Q3)):
+            kept.append(p)
+    return [E.Point(float(x[0]), float(x[1]), float(x[2])) for x in kept]
+
+
+def intersect_three_quadrics(
+    Q1: np.ndarray, Q2: np.ndarray, Q3: np.ndarray
+) -> "list[Point]":
+    """Intersect three 3D quadrics → up to eight finite points.
+
+    Reduces to :func:`intersect_quadrics` on a well-chosen pair ``Qi ∩ Qj``
+    (preferring the exact plane-pair member, else a sampled cone member) and
+    then locates ``Qk = 0`` along that quartic.  Returns the distinct finite
+    points lying on all three quadrics.
+    """
+    E = _entities()
+    Q1 = _as_quadric_matrix(Q1)
+    Q2 = _as_quadric_matrix(Q2)
+    Q3 = _as_quadric_matrix(Q3)
+    fallback = None
+    for a, b, c in ((Q1, Q2, Q3), (Q1, Q3, Q2), (Q2, Q3, Q1)):
+        try:
+            curve = intersect_quadrics(a, b, n=200, extent=5.0)
+        except NotImplementedError:
+            continue
+        if isinstance(curve, E.PlaneConicPair):
+            return _finalize_intersection_points(
+                _points_on_plane_pair(curve, c), Q1, Q2, Q3
+            )
+        if fallback is None:
+            fallback = cast("Curve", curve)
+    if fallback is not None:
+        return _finalize_intersection_points(
+            _points_on_sampled_curve(fallback, Q1, Q2, Q3), Q1, Q2, Q3
+        )
+    raise NotImplementedError("no degenerate member in any quadric pairing")

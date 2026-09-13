@@ -22,9 +22,12 @@ Run with:  uv run python py/examples/viz/ui/dialogs/dialog_demo.py
 Keywords: dialog, modal, show_dialog, remove_dialog, on_close, menu bar, StackView, flex, Size
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
+    ControlEvent,
     MenuView,
     SceneView,
     Size,
@@ -42,16 +45,16 @@ viz.add(
 _settings_id: str | None = None
 
 
-async def _on_opacity(value, _event):
+async def _on_opacity(value: Any, _event: ControlEvent) -> None:
     viz.update("sphere", opacity=float(value))
     viz.flush()
 
 
-async def _on_close(_value, _event):
+async def _on_close(_value: Any, _event: ControlEvent) -> None:
     print("Dialog closed (on_close fired)")
 
 
-async def _on_close_button(_value, _event):
+async def _on_close_button(_value: Any, _event: ControlEvent) -> None:
     if _settings_id:
         viz.remove_dialog(_settings_id)
 
@@ -86,7 +89,7 @@ def _settings_content() -> StackView:
     )
 
 
-async def _on_show_dialog(_value, _event):
+async def _on_show_dialog(_value: Any, _event: ControlEvent) -> None:
     global _settings_id
     if _settings_id:
         viz.remove_dialog(_settings_id)
@@ -99,10 +102,10 @@ async def _on_show_dialog(_value, _event):
     print("Dialog re-opened from the menu bar")
 
 
-async def _on_show_modal(_value, _event):
+async def _on_show_modal(_value: Any, _event: ControlEvent) -> None:
     modal_id: str | None = None
 
-    async def _on_ok(_v, _e):
+    async def _on_ok(_v: Any, _e: ControlEvent) -> None:
         if modal_id:
             viz.remove_dialog(modal_id)
 

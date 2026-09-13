@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Sequence, TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -19,7 +19,7 @@ from pytanga.algebra import MVLike, _as_mv
 
 
 def to_matrix(
-    a: MVLike | list[MVLike],
+    a: MVLike | Sequence[MVLike],
     *,
     mask: BladeMask | None = None,
     algebra: "Algebra | None" = None,
@@ -28,7 +28,7 @@ def to_matrix(
 
     Parameters
     ----------
-    a : MVLike | list[MVLike]
+    a : MVLike | Sequence[MVLike]
         Single multivector, scalar, string expression, or list thereof.
     mask : BladeMask | None
         Row index space.  If ``None``, the full algebra mask is used.
@@ -65,13 +65,14 @@ def to_matrix(
         mask = BladeMask.full(alg)
 
     # --- build MVMatrix --------------------------------------------------
-    if isinstance(a, list):
+    if isinstance(a, (list, tuple)):
         mvs = [_as_mv(alg, x) for x in a]
         cols = [alg._mod.to_matrix(mv._impl, mask.ids) for mv in mvs]
         arr = np.hstack(cols)
         return MVMatrix(data=arr, row_mask=mask)
 
-    mv = _as_mv(alg, a)
+    # Only list/tuple inputs are batches; anything else is a single scalar/MV.
+    mv = _as_mv(alg, cast("MVLike", a))
     arr = alg._mod.to_matrix(mv._impl, mask.ids)
     return MVMatrix(data=arr, row_mask=mask)
 

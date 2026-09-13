@@ -14,9 +14,12 @@ Run with:  uv run python py/examples/viz/ui/controls/group_view_icons.py
 Keywords: group view, icon, icon_only, fold, overlay
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
+    ControlEvent,
     EAnchor,
     EIconMaterial,
     GroupView,
@@ -33,7 +36,7 @@ viz.add(
 viz.add(Point(1, 1, 1), color="#ff4444")
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 

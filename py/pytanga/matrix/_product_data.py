@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -73,11 +73,11 @@ class MVProductMatrix:
     @property
     def n_mvs(self) -> int:
         """Number of multivectors encoded in this tensor (= |a_mask|)."""
-        return self.data.shape[0]
+        return int(self.data.shape[0])
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return self.data.shape
+        return cast("tuple[int, ...]", self.data.shape)
 
     @property
     def algebra(self) -> "Algebra":

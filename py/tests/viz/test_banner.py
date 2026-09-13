@@ -110,7 +110,9 @@ def _viz() -> Visualizer:
 def test_show_banner_stores_registers_pushes(monkeypatch):
     viz = _viz()
     pushed: list[tuple] = []
-    monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: pushed.append((b.id, s)))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_banner", lambda b, s: pushed.append((b.id, s))
+    )
 
     async def _on_ok(value, event):
         pass
@@ -146,7 +148,9 @@ def test_remove_banner_unregisters_and_pushes(monkeypatch):
     viz = _viz()
     removed: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
-    monkeypatch.setattr(viz._layout.overlay, "_push_banner_remove", lambda i, s: removed.append((i, s)))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_banner_remove", lambda i, s: removed.append((i, s))
+    )
 
     async def _on_ok(value, event):
         pass
@@ -171,7 +175,9 @@ def test_clear_banners_scoped(monkeypatch):
     viz = _viz()
     cleared: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: None)
-    monkeypatch.setattr(viz._layout.overlay, "_push_banner_clear", lambda s: cleared.append(s))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_banner_clear", lambda s: cleared.append(s)
+    )
 
     viz.show_banner("a")
     viz.show_banner("b", scene_name="detail")
@@ -185,7 +191,9 @@ def test_clear_banners_scoped(monkeypatch):
 def test_alert_confirm_buttons(monkeypatch):
     viz = _viz()
     pushed: dict = {}
-    monkeypatch.setattr(viz._layout.overlay, "_push_banner", lambda b, s: pushed.update({b.id: b}))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_banner", lambda b, s: pushed.update({b.id: b})
+    )
 
     async def _ok(value, event):
         pass
@@ -298,7 +306,6 @@ def test_scene_handle_confirm_scopes(monkeypatch):
     assert calls[0]["cancel_label"] == "Abort"
 
 
-
 # ── Phase 6.2 — slider press/release events ─────────────────
 
 
@@ -314,12 +321,14 @@ def test_add_slider_press_release_registration():
     async def _on_release(v, e):
         pass
 
-    viz.set_layout(SliderView(
-        "s",
-        on_change=_on_change,
-        on_press=_on_press,
-        on_release=_on_release,
-    ))
+    viz.set_layout(
+        SliderView(
+            "s",
+            on_change=_on_change,
+            on_press=_on_press,
+            on_release=_on_release,
+        )
+    )
     assert viz._handler_registry.get("s") is _on_change
     assert viz._handler_registry.get("s", "press") is _on_press
     assert viz._handler_registry.get("s", "release") is _on_release

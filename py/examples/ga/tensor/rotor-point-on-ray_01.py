@@ -18,6 +18,8 @@ Keywords: tensor, rotor estimation, point-line matching, P3, product tensor, lea
 import math
 import numpy as np
 
+from typing import Any
+
 from pytanga import BladeMask, EInv, EProduct, MV
 from pytanga.algebra import from_rotor
 from pytanga.basis.p3 import BasisP3
@@ -38,12 +40,21 @@ P3 = BasisP3()
 geo = Geometry(P3, seed=0)
 
 
+def _blade_count(mask: Any) -> int:
+    """Number of blades on a tensor axis (counting axes carry no blade mask)."""
+    return 0 if mask is None else len(mask)
+
+
 def _rnd_point() -> MV:
-    return geo(RndPoint((-2, 2), (-2, 2), (-2, 2)))
+    mv = geo(RndPoint((-2, 2), (-2, 2), (-2, 2)))
+    assert isinstance(mv, MV)  # a single RndPoint materialises one MV
+    return mv
 
 
 def _rnd_direction() -> MV:
-    return geo(RndDirection((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)))
+    mv = geo(RndDirection((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)))
+    assert isinstance(mv, MV)  # a single RndDirection materialises one MV
+    return mv
 
 
 # Create random points
@@ -92,10 +103,10 @@ scalar_mask: BladeMask = BladeMask(P3, (0,))
 RP_t: MVTensor = product_tensor(rot_mask, pnt_mask, product=EProduct.GP)
 
 # Now the product tensor for the geometric product in (R * p_i) * ~R
+rp_left_mask = RP_t.masks[0]
+assert rp_left_mask is not None  # the rotor axis carries a blade mask
 rpR_t: MVTensor = product_tensor(
-    RP_t.masks[
-        0
-    ],  # The blade mask of the left product element is the result of the previous product.
+    rp_left_mask,  # the blade mask of the left product element
     rot_mask,
     c_mask=pnt_mask,  # We know that the versor product of a rotor with a point must be a point.
     product=EProduct.GP,
@@ -186,7 +197,9 @@ print(f"\nRotor estimation:\n{rotor_est_dict}")
 # reverse of the true rotor from above.
 rotor_exp = rotor_true.rev()
 rotor_est_t = MVTensor(rotor_est_dict["x"], masks=[rot_mask])
-rotor_est = from_tensor(rotor_est_t).normalized()
+rotor_est_mv = from_tensor(rotor_est_t)
+assert isinstance(rotor_est_mv, MV)  # single-rotor tensor -> one MV
+rotor_est = rotor_est_mv.normalized()
 
 print(f"True rotor: {rotor_exp!s}")
 print(f"Est. rotor: {rotor_est!s}")

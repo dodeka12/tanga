@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 
 def _normalize_color(
     color: str | tuple[float, float, float] | tuple[float, float, float, float],
@@ -35,7 +37,7 @@ def _normalize_color(
     raise TypeError(f"Color must be str or tuple, got {type(color).__name__}")
 
 
-def _extract_non_none(style) -> dict[str, object]:
+def _extract_non_none(style: Any) -> dict[str, object]:
     """Extract non-None fields from a style dataclass as a keyword dict.
 
     Used by :meth:`update_style` to convert a sparse style instance into

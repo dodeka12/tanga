@@ -255,7 +255,9 @@ def test_general_rotor_creation(b):
     """General rotor = T·R·T̃ with T translating to (10,0,0)."""
     gr = create_operator(
         b,
-        GeneralRotor(angle=math.pi / 2, axis=Direction(0, 0, 1), origin=Point(10, 0, 0)),
+        GeneralRotor(
+            angle=math.pi / 2, axis=Direction(0, 0, 1), origin=Point(10, 0, 0)
+        ),
     )
     p = create_entity(b, Point(0, 0, 0))
     result = gr * p * gr.rev()

@@ -44,7 +44,7 @@ Keywords: expressions, AffineExpression, solve, least-squares, inv
 
 from __future__ import annotations
 
-from pytanga import BladeMask, Variable
+from pytanga import AffineExpression, BladeMask, MV, Variable
 from pytanga.basis import BasisE3
 
 
@@ -60,18 +60,23 @@ def main() -> None:
 
     u_val = E3("0.5 e1")
     F_u = F(u=u_val)  # single linear map in w (two terms)
+    assert isinstance(F_u, AffineExpression)
 
     w0 = E3("e2")
     rhs = F_u(w=w0)
+    assert isinstance(rhs, MV)
 
     w_inv = F_u.inv("w")(w=rhs)
+    assert isinstance(w_inv, MV), "a fully bound linear map yields one MV"
     w_lstsq = F_u.lstsq(rhs=rhs)
     svalues, _mvs = F_u.svd()
+    f_w_lstsq = F_u(w=w_lstsq)
+    assert isinstance(f_w_lstsq, MV), "a fully bound linear map yields one MV"
 
     print("AffineExpression as a single linear map in 'w':")
     print("  terms        :", len(F_u.terms))
     print("  inv round-trip |w - inv(w)(F_u(w))| :", (w0 - w_inv).mag)
-    print("  lstsq        |F_u(w_lstsq) - rhs|   :", (F_u(w=w_lstsq) - rhs).mag)
+    print("  lstsq        |F_u(w_lstsq) - rhs|   :", (f_w_lstsq - rhs).mag)
     print("  singular values                       :", [f"{v:.4f}" for v in svalues])
 
 

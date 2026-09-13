@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 _HERE = Path(__file__).resolve().parent  # …/pytanga/codegen/
 
@@ -111,7 +112,7 @@ def build_and_load(
     *,
     tanga_source: Path = TANGA_SOURCE,
     verbose: bool = False,
-):
+) -> tuple[ModuleType, Path]:
     """Generate, compile, and import a binding for (dim, sig, dtype).
 
     Returns
@@ -138,6 +139,8 @@ def build_and_load(
     )
 
     spec = importlib.util.spec_from_file_location(mod_name, so_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load extension {mod_name!r} from {so_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module, so_path

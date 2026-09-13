@@ -31,15 +31,12 @@ def _coeff_mv(basis, coeffs):
 def _rotation_matrix(theta, axis):
     a = np.array([axis.x, axis.y, axis.z], dtype=float)
     a = a / np.linalg.norm(a)
-    k = np.array(
-        [[0.0, -a[2], a[1]], [a[2], 0.0, -a[0]], [-a[1], a[0], 0.0]]
-    )
+    k = np.array([[0.0, -a[2], a[1]], [a[2], 0.0, -a[0]], [-a[1], a[0], 0.0]])
     return np.eye(3) + math.sin(theta) * k + (1.0 - math.cos(theta)) * (k @ k)
 
 
 def _rotate(x, theta, axis):
     return _rotation_matrix(theta, axis) @ np.asarray(x, dtype=float)
-
 
 
 def _circle_matrix():
@@ -129,7 +126,9 @@ class TestConicRotor:
         assert np.allclose(bmat, expected * scale, atol=1e-6)
 
     def test_rotor_q3_grades_and_norm(self):
-        r = create(BasisQ3(opns=True), Rotor(math.radians(30), Direction(0.3, -0.4, 0.5)))
+        r = create(
+            BasisQ3(opns=True), Rotor(math.radians(30), Direction(0.3, -0.4, 0.5))
+        )
         assert set(r.grades) == {0, 2, 4, 6}
         assert r.norm2() == pytest.approx(1.0)
 

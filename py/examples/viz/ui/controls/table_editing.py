@@ -22,6 +22,8 @@ Keywords: controls, table, tabular data, TableView, column types, cell editing, 
 
 from __future__ import annotations
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
@@ -43,6 +45,12 @@ from pytanga.viz import (
 class TableEditingApp(VisualizerApp):
     """A table whose edits are echoed back, exercising keyboard navigation."""
 
+    #: Created in the view-building hook, which runs before any event.
+    _table: TableView
+
+    #: Created in :meth:`init`, which the app framework calls before any event.
+    _table: TableView
+
     def __init__(self) -> None:
         super().__init__(title="Table Editing")
         self._columns = ["x", "y", "name", "active", "status"]
@@ -52,7 +60,6 @@ class TableEditingApp(VisualizerApp):
             [5.5, 6.5, "gamma", True, "on"],
         ]
         self._column_types = ["number", None, "string", "bool", ["on", "off"]]
-        self._table: TableView | None = None
 
     async def init(self) -> None:
         self.viz.add(
@@ -192,7 +199,7 @@ class TableEditingApp(VisualizerApp):
     ) -> None:
         self.viz.set_annotation(f"Deleted rows {delete.rows}")
 
-    async def on_change(self, value: dict, _event: ControlEvent) -> None:
+    async def on_change(self, value: dict[str, Any], _event: ControlEvent) -> None:
         rows = value.get("rows", [])
         self.viz.set_annotation(f"Table changed ({len(rows)} row(s)) — undo/redo.")
 
@@ -201,6 +208,7 @@ class TableEditingApp(VisualizerApp):
     ) -> None:
         # `change.ok` is the base `convert_column` return value.
         if change.ok:
+            assert change.column_type is not None
             self.viz.set_annotation(
                 f"Column {change.col} converted to {change.column_type.kind!r}."
             )
@@ -267,14 +275,18 @@ class TableEditingApp(VisualizerApp):
     async def on_add_column_left(self, _value: None, _event: ControlEvent) -> None:
         header = f"C{len(self._table.columns) + 1}"
         if self._table.insert_column(self._col_index(True), header):
-            self.viz.set_annotation(f"Inserted column {header!r} left of the selected cell.")
+            self.viz.set_annotation(
+                f"Inserted column {header!r} left of the selected cell."
+            )
         else:
             self.viz.set_annotation("Could not insert a column.")
 
     async def on_add_column_right(self, _value: None, _event: ControlEvent) -> None:
         header = f"C{len(self._table.columns) + 1}"
         if self._table.insert_column(self._col_index(False), header):
-            self.viz.set_annotation(f"Inserted column {header!r} right of the selected cell.")
+            self.viz.set_annotation(
+                f"Inserted column {header!r} right of the selected cell."
+            )
         else:
             self.viz.set_annotation("Could not insert a column.")
 

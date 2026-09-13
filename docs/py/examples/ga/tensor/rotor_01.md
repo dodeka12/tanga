@@ -44,11 +44,18 @@ Keywords: tensor, product tensor, rotor, einsum, E3
 
 import numpy as np
 import pytanga as pt
+from typing import Any
+
 from pytanga.algebra import EInv, to_rotor
 from pytanga.geometry import RndMV
 from pytanga.tensor.convert import from_tensor, to_tensor
 from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
+
+
+def _blade_count(mask: Any) -> int:
+    """Number of blades on a tensor axis (counting axes carry no blade mask)."""
+    return 0 if mask is None else len(mask)
 
 
 def main() -> None:
@@ -70,8 +77,8 @@ def main() -> None:
     # The tensor shape is (8, 4, 4) because the rotor has 4 blades and the point has 4 blades.
     print(
         f"  shape = {G_RP.shape}   "
-        f"(|c_mask|={len(G_RP.masks[0])}, |a_mask|={len(G_RP.masks[1])}, "
-        f"|b_mask|={len(G_RP.masks[2])})"
+        f"(|c_mask|={_blade_count(G_RP.masks[0])}, |a_mask|={_blade_count(G_RP.masks[1])}, "
+        f"|b_mask|={_blade_count(G_RP.masks[2])})"
     )
     # We now create the product tensor for R * P * ~R.
     # The mask of the left element is the result mask of the previous product tensor,
@@ -79,8 +86,10 @@ def main() -> None:
     # We also need to set the right involution to be the reverse, because we want to compute R * P * ~R.
     # The result mask is the point mask, because we want to compute R * P * ~R,
     # which is a point.
+    g_rp_mask = G_RP.masks[0]
+    assert g_rp_mask is not None  # the rotor axis carries a blade mask
     G_rpR = product_tensor(
-        G_RP.masks[0],
+        g_rp_mask,
         rot_mask,
         c_mask=point_mask,
         product=pt.EProduct.GP,
@@ -88,8 +97,8 @@ def main() -> None:
     )
     print(
         f"  shape = {G_rpR.shape}   "
-        f"(|c_mask|={len(G_rpR.masks[0])}, |a_mask|={len(G_rpR.masks[1])}, "
-        f"|b_mask|={len(G_rpR.masks[2])})"
+        f"(|c_mask|={_blade_count(G_rpR.masks[0])}, |a_mask|={_blade_count(G_rpR.masks[1])}, "
+        f"|b_mask|={_blade_count(G_rpR.masks[2])})"
     )
 
     # Let's now contract the two product tensors with one another.
@@ -97,8 +106,8 @@ def main() -> None:
     G_RPR = contract("kij,mkl->mijl", G_RP, G_rpR)
     print(
         f"  shape = {G_RPR.shape}   "
-        f"(|c_mask|={len(G_RPR.masks[0])}, |a_mask|={len(G_RPR.masks[1])}, "
-        f"|b_mask|={len(G_RPR.masks[2])}, |d_mask|={len(G_RPR.masks[3])})"
+        f"(|c_mask|={_blade_count(G_RPR.masks[0])}, |a_mask|={_blade_count(G_RPR.masks[1])}, "
+        f"|b_mask|={_blade_count(G_RPR.masks[2])}, |d_mask|={_blade_count(G_RPR.masks[3])})"
     )
 
     # Create a random rotor and a random point.
@@ -116,7 +125,7 @@ def main() -> None:
     G_rot = contract("mijl,i,l->mj", G_RPR, rot_t, rot_t)
     print(
         f"  shape = {G_rot.shape}   "
-        f"(|c_mask|={len(G_rot.masks[0])}, |a_mask|={len(G_rot.masks[1])}, "
+        f"(|c_mask|={_blade_count(G_rot.masks[0])}, |a_mask|={_blade_count(G_rot.masks[1])}, "
     )
 
     # Now we can contract the rotation matrix with the point to obtain the rotated point.

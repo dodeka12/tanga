@@ -15,9 +15,12 @@ Keywords: dialog, file chooser, FileChooserDialog, FileChooserView, show_dialog
 
 from __future__ import annotations
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
+    ControlEvent,
     FileChooserDialog,
     FileChooserView,
     SceneView,
@@ -32,11 +35,11 @@ viz.add(Sphere(Point(0, 0, 0), radius=2), entity_id="sphere", color="#4488ff")
 _dialog_id: str | None = None
 
 
-async def _on_file(path: str, _event) -> None:
+async def _on_file(path: str, _event: ControlEvent) -> None:
     print("Selected:", path)
 
 
-async def _on_show_dialog(_value, _event) -> None:
+async def _on_show_dialog(_value: Any, _event: ControlEvent) -> None:
     global _dialog_id
     if _dialog_id:
         viz.remove_dialog(_dialog_id)

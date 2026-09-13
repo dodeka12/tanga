@@ -53,6 +53,7 @@ import asyncio
 
 from pytanga.viz import (
     ActPoint,
+    ActSceneObject,
     ClickEvent,
     DragEvent,
     View2DConfig,
@@ -60,15 +61,15 @@ from pytanga.viz import (
 )
 
 
-async def on_drag_start(ev: DragEvent, control: ActPoint) -> None:
+async def on_drag_start(ev: DragEvent, control: ActSceneObject) -> None:
     print(f"Drag started: {ev.world_position} (screen: {ev.screen_position})")
 
 
-async def on_drag_end(ev: DragEvent, control: ActPoint) -> None:
+async def on_drag_end(ev: DragEvent, control: ActSceneObject) -> None:
     print(f"Drag ended: {ev.world_position} (screen: {ev.screen_position})")
 
 
-async def on_click(ev: ClickEvent, control: ActPoint) -> None:
+async def on_click(ev: ClickEvent, control: ActSceneObject) -> None:
     print(f"Clicked: {ev.world_position} (screen: {ev.screen_position})")
 
 

@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-def main():
+
+def main() -> None:
     print("Hello from tanga!")
 
 

@@ -6,10 +6,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ._coerce import to_direction, to_float, to_point
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -24,7 +28,12 @@ class Cone:
     axis: Direction
     half_angle: float
 
-    def __init__(self, vertex, axis, half_angle):
+    def __init__(
+        self,
+        vertex: "Point | MV",
+        axis: "Direction | MV",
+        half_angle: "float | MV",
+    ) -> None:
         object.__setattr__(self, "vertex", to_point(vertex))
         object.__setattr__(self, "axis", to_direction(axis))
         object.__setattr__(self, "half_angle", to_float(half_angle))

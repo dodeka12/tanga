@@ -87,7 +87,15 @@ def test_entity_to_sdf_infinite_line_adds_bound() -> None:
 
 def test_operator_builds_combine() -> None:
     a = SdfObject(Sphere(Point(0.0, 0.0, 0.0), 1.0))
-    b = SdfObject(Cylinder(origin=Point(0, 0, 0), axis=Direction(0, 1, 0), length=1.0, radius=0.3, align_center=0.5))
+    b = SdfObject(
+        Cylinder(
+            origin=Point(0, 0, 0),
+            axis=Direction(0, 1, 0),
+            length=1.0,
+            radius=0.3,
+            align_center=0.5,
+        )
+    )
     node = a + b
     assert isinstance(node, Combine)
     assert node.op is ECompose.UNION
@@ -111,7 +119,9 @@ def test_entity_to_sdf_partial_disk() -> None:
     import math
 
     node = _entity_to_sdf(
-        PartialDisk(Point(0.0, 0.0, 0.0), 1.0, angle=math.pi, start_direction=Direction(1, 0, 0))
+        PartialDisk(
+            Point(0.0, 0.0, 0.0), 1.0, angle=math.pi, start_direction=Direction(1, 0, 0)
+        )
     )
     assert node.kind == "partialDisk"
     assert node.params["radius"] == 1.0

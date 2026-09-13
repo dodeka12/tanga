@@ -6,11 +6,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 from ._coerce import to_direction, to_float, to_point
 from ._util import _convert_mv
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -37,17 +41,17 @@ class PointPair:
 
     def __init__(
         self,
-        point_a,
-        point_b=None,
-        is_imaginary=False,
-        _center=None,
-        _direction=None,
-        _separation=None,
-    ):
+        point_a: "Point | MV",
+        point_b: "Point | MV | None" = None,
+        is_imaginary: bool = False,
+        _center: "Point | MV | None" = None,
+        _direction: "Direction | MV | None" = None,
+        _separation: "float | MV | None" = None,
+    ) -> None:
         try:
             point_a = to_point(point_a)
         except TypeError:
-            pp = _convert_mv("point_pair", point_a)
+            pp = _convert_mv("point_pair", cast("MV", point_a))
             object.__setattr__(self, "point_a", pp.point_a)
             object.__setattr__(self, "point_b", pp.point_b)
             object.__setattr__(self, "is_imaginary", pp.is_imaginary)

@@ -9,6 +9,8 @@ right after "Home" so every generated page is built and indexed by search.
 
 import json
 import logging
+from typing import Any
+
 from pathlib import Path
 
 log = logging.getLogger("mkdocs")
@@ -16,7 +18,7 @@ log = logging.getLogger("mkdocs")
 _NAV_JSON = Path(__file__).resolve().parent.parent / "py" / "examples" / "_nav.json"
 
 
-def on_config(config, **kwargs) -> None:
+def on_config(config: Any, **kwargs: Any) -> None:
     if not _NAV_JSON.exists():
         log.warning("Examples nav missing (%s); skipping Examples section", _NAV_JSON)
         return

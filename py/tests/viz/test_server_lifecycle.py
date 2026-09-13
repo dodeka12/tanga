@@ -191,9 +191,7 @@ def test_visualizerapp_run_forwards_port_host(monkeypatch):
 def test_open_browser_url_passes_path_to_wait_for_browser(monkeypatch):
     viz = _viz()
     calls: dict = {}
-    monkeypatch.setattr(
-        viz, "wait_for_browser", lambda **kw: calls.update(kw) or True
-    )
+    monkeypatch.setattr(viz, "wait_for_browser", lambda **kw: calls.update(kw) or True)
     viz._open_browser_url("/?view=main&token=abc", wait_for_browser=True)
     assert calls["path"] == "/?view=main&token=abc"
 

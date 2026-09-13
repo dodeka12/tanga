@@ -21,11 +21,19 @@ Keywords: tensor, product tensor, geometric product, einsum, batched
 
 import numpy as np
 import pytanga as pt
+from typing import Any
+
+from pytanga import MV
 from pytanga.algebra import random_mask
 from pytanga.geometry import RndMV
 from pytanga.tensor.convert import from_tensor, to_tensor
 from pytanga.tensor.ops import contract
 from pytanga.tensor.product import product_tensor
+
+
+def _blade_count(mask: Any) -> int:
+    """Number of blades on a tensor axis (counting axes carry no blade mask)."""
+    return 0 if mask is None else len(mask)
 
 
 def main() -> None:
@@ -40,14 +48,15 @@ def main() -> None:
     A_mask_list = [random_mask(alg, 4) for _ in range(5)]
     B_mask_list = [random_mask(alg, 4) for _ in range(5)]
 
-    A_list = [
-        RndMV(A_mask_list[i], [(-1.0, 1.0)] * len(A_mask_list[i]))(rng)
-        for i in range(5)
-    ]
-    B_list = [
-        RndMV(B_mask_list[i], [(-1.0, 1.0)] * len(B_mask_list[i]))(rng)
-        for i in range(5)
-    ]
+    A_list: list[MV] = []
+    B_list: list[MV] = []
+    for i in range(5):
+        a_mv = RndMV(A_mask_list[i], [(-1.0, 1.0)] * len(A_mask_list[i]))(rng)
+        b_mv = RndMV(B_mask_list[i], [(-1.0, 1.0)] * len(B_mask_list[i]))(rng)
+        assert isinstance(a_mv, MV), "RndMV(blade mask) materialises a single MV"
+        assert isinstance(b_mv, MV), "RndMV(blade mask) materialises a single MV"
+        A_list.append(a_mv)
+        B_list.append(b_mv)
 
     # The BladeMask constructor can take a multivector or a list of blade ids
     # The union of the blade ids of each list is used to create the masks for the product tensor
@@ -63,8 +72,8 @@ def main() -> None:
     GP = product_tensor(a_mask, b_mask, product=pt.EProduct.GP)
     print(
         f"  shape = {GP.shape}   "
-        f"(|c_mask|={len(GP.masks[0])}, |a_mask|={len(GP.masks[1])}, "
-        f"|b_mask|={len(GP.masks[2])})"
+        f"(|c_mask|={_blade_count(GP.masks[0])}, |a_mask|={_blade_count(GP.masks[1])}, "
+        f"|b_mask|={_blade_count(GP.masks[2])})"
     )
     print(f"  entry range: {GP.data.min():.0f} … {GP.data.max():.0f}")
 
@@ -90,6 +99,7 @@ def main() -> None:
     )
     print(f">> C_from_tensor = {C_from_tensor!s}")
 
+    assert isinstance(C_from_tensor, list)  # contracted result: one MV per row
     C_list = [A_list[i] * B_list[i] for i in range(len(A_list))]
     C_delta = [C_from_tensor[i] - C_list[i] for i in range(len(C_list))]
     C_mag = [C_delta[i].mag for i in range(len(C_delta))]

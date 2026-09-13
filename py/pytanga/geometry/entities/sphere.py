@@ -6,10 +6,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 from ._coerce import to_float, to_point
 from ._util import _convert_mv
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -28,11 +32,16 @@ class Sphere:
     radius: float
     is_imaginary: bool = False
 
-    def __init__(self, center, radius=None, is_imaginary=False):
+    def __init__(
+        self,
+        center: "Point | MV",
+        radius: "float | MV | None" = None,
+        is_imaginary: bool = False,
+    ) -> None:
         try:
             center = to_point(center)
         except TypeError:
-            sphere = _convert_mv("sphere", center)
+            sphere = _convert_mv("sphere", cast("MV", center))
             object.__setattr__(self, "center", sphere.center)
             object.__setattr__(self, "radius", sphere.radius)
             object.__setattr__(self, "is_imaginary", sphere.is_imaginary)

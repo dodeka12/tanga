@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cached_property
+from typing import Any
 
 import numpy as np
 
@@ -199,7 +200,7 @@ class Conic:
 
     coeffs: tuple[float, ...]
 
-    def __init__(self, coeffs) -> None:
+    def __init__(self, coeffs: "tuple[float, ...] | np.ndarray") -> None:
         c = tuple(float(x) for x in coeffs)
         if len(c) != 6:
             raise ValueError(f"Conic coeffs must be a 6-tuple, got length {len(c)}")
@@ -230,7 +231,7 @@ class Conic:
     @cached_property
     def eigenvalues(self) -> tuple[float, ...]:
         """Eigenvalues of the 2×2 quadratic part (ascending)."""
-        return tuple(np.linalg.eigvalsh(self._quadratic))
+        return tuple(float(x) for x in np.linalg.eigvalsh(self._quadratic))
 
     @cached_property
     def principal_directions(self) -> tuple[Direction, ...]:
@@ -257,7 +258,7 @@ class Conic:
         lam = self.eigenvalues[0]
         return float(np.sqrt(max(0.0, -fprime / lam)))
 
-    def refine(self):
+    def refine(self) -> Any:
         """Refine this conic into its specific 2D entity."""
         return refine_conic(self)
 
@@ -271,7 +272,7 @@ class Quadric3D:
 
     coeffs: tuple[float, ...]
 
-    def __init__(self, coeffs) -> None:
+    def __init__(self, coeffs: "tuple[float, ...] | np.ndarray") -> None:
         c = tuple(float(x) for x in coeffs)
         if len(c) != 10:
             raise ValueError(
@@ -304,7 +305,7 @@ class Quadric3D:
     @cached_property
     def eigenvalues(self) -> tuple[float, ...]:
         """Eigenvalues of the 3×3 quadratic part (ascending)."""
-        return tuple(np.linalg.eigvalsh(self._quadratic))
+        return tuple(float(x) for x in np.linalg.eigvalsh(self._quadratic))
 
     @cached_property
     def principal_directions(self) -> tuple[Direction, ...]:
@@ -331,7 +332,7 @@ class Quadric3D:
         lam = self.eigenvalues[0]
         return float(np.sqrt(max(0.0, -fprime / lam)))
 
-    def refine(self):
+    def refine(self) -> Any:
         """Refine this quadric into its specific 3D entity."""
         return refine_quadric(self)
 

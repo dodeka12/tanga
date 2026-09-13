@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ._algebra import Algebra
     from pytanga.blade_mask import BladeMask
+    from pytanga.codegen._binding import DynMVBinding
 
 
 class MV:
@@ -22,7 +23,7 @@ class MV:
 
     __slots__ = ("_impl", "_alg")
 
-    def __init__(self, impl, alg: "Algebra") -> None:
+    def __init__(self, impl: DynMVBinding, alg: "Algebra") -> None:
         self._impl = impl  # C++ DynMV
         self._alg = alg  # parent Algebra — keeps algebra metadata close
 
@@ -162,7 +163,7 @@ class MV:
         """True if this multivector is a pure grade-k element."""
         return self._alg.is_grade(self, k)
 
-    def to_dict(self) -> dict[str | int, float | int]:
+    def to_dict(self) -> dict[str, float | int]:
         """Return {blade_name: coeff} for all non-zero blades."""
         return {self._alg.blade_name(k): v for k, v in self._impl.to_dict().items()}
 
@@ -417,7 +418,6 @@ class MV:
         """True if this is a simple r‑vector (blade)."""
         return self._alg.is_blade(self)
 
-    @property
     @property
     def is_versor(self) -> bool:
         """True if this is a versor (product of invertible vectors)."""

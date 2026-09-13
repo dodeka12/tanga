@@ -6,10 +6,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ._coerce import to_direction, to_float, to_point
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -24,7 +28,9 @@ class Parabola:
     direction: Direction
     p: float
 
-    def __init__(self, vertex, direction, p):
+    def __init__(
+        self, vertex: "Point | MV", direction: "Direction | MV", p: "float | MV"
+    ) -> None:
         object.__setattr__(self, "vertex", to_point(vertex))
         object.__setattr__(self, "direction", to_direction(direction))
         object.__setattr__(self, "p", to_float(p))

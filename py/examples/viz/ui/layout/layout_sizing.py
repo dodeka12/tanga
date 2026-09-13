@@ -32,11 +32,14 @@ Run with:  uv run python py/examples/viz/ui/layout/layout_sizing.py
 Keywords: layout, sizing, stack view, split view, gap, align, justify, flex, fr, Size
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
     CameraConfig3d,
     CheckboxView,
+    ControlEvent,
     DropdownView,
     GroupView,
     SceneView,
@@ -67,25 +70,25 @@ detail.add(Sphere(Point(-2, 1, 0), radius=1), color="#ffcc00", opacity=0.8)
 
 
 # -- Control handlers --------------------------------------------------------
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 
 
-async def _on_enable(value, _event):
+async def _on_enable(value: Any, _event: ControlEvent) -> None:
     viz.update("sphere", opacity=0.3 if bool(value) else 0.05)
     viz.flush()
 
 
-async def _on_mode(value, _event):
+async def _on_mode(value: Any, _event: ControlEvent) -> None:
     viz.set_annotation(f"Mode: {value}")
 
 
-async def _on_fit(_value, _event):
+async def _on_fit(_value: Any, _event: ControlEvent) -> None:
     viz.flush(fit_camera=True)
 
 
-async def _on_reset(_value, _event):
+async def _on_reset(_value: Any, _event: ControlEvent) -> None:
     viz.set_camera(CameraConfig3d(position=(0.0, 0.0, 8.0), target=(0.0, 0.0, 0.0)))
 
 

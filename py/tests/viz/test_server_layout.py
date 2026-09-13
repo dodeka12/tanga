@@ -128,4 +128,3 @@ class TestThemeServing:
     def test_theme_links_omitted_when_callback_unset(self):
         server = VizServer()
         assert server._theme_links_html() == ""
-

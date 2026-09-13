@@ -21,12 +21,12 @@ Node hierarchy:
 from __future__ import annotations
 
 from copy import copy
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
 from . import _transforms as _T
-from ._style_dict import _merge_style
+from ._style_dict import StylesMap, _merge_style
 from ._types import (
     TransformInput,
     TransformOperator,
@@ -214,9 +214,9 @@ class Transform:
 
     def set(
         self,
-        position: Vec3 = None,
-        rotation: TransformRotation = None,
-        scale: Triple = None,
+        position: Vec3 | None = None,
+        rotation: TransformRotation | None = None,
+        scale: Triple | None = None,
     ) -> "Transform":
         """Set position / rotation / scale (only the provided components)."""
         if position is not None:
@@ -253,8 +253,10 @@ def _coerce_transform_matrix(obj: Any) -> np.ndarray:
         op = analyze_operator(obj)
         if op is None:
             raise TypeError(f"Could not analyze multivector as an operator: {obj!r}")
-        return _T.operator_to_matrix(op)
-    return _T.operator_to_matrix(obj)
+        return _T.operator_to_matrix(cast("_T.TransformOperator", op))
+    # Anything left is expected to be one of the transform operator dataclasses;
+    # ``operator_to_matrix`` raises for anything else.
+    return _T.operator_to_matrix(cast("_T.TransformOperator", obj))
 
 
 class VizNode:
@@ -309,6 +311,38 @@ class VizNode:
             "visible": self.visible,
         }
 
+    def patch(self, aspect: str) -> dict[str, Any]:
+        """Return an aspect-scoped patch dict for this node.
+
+        Implemented by the concrete node kinds: :class:`VizSceneObject` serves
+        the scene aspects (``full`` / ``style`` / ``transform`` / ``content``),
+        :class:`VizOverlayObject` the overlay ones.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement aspect patches"
+        )
+
+    # ── Resolved style (shared by scene and overlay nodes) ──
+
+    #: Resolved style — a ``VizStyle`` instance or a plain dict, or ``None``
+    #: when the node is rendered with the client-side defaults.
+    style: Any
+
+    def set_style(self, style: Any) -> None:
+        """Merge non-``None`` style fields (marks ``style``)."""
+        self.style = _merge_style_into(self.style, style)
+        self.mark("style")
+
+    def set_color(self, color: Any) -> None:
+        """Set the resolved style color (marks ``style``)."""
+        self.style = _assign_style_field(self.style, "color", color)
+        self.mark("style")
+
+    def set_opacity(self, opacity: float) -> None:
+        """Set the resolved style opacity (marks ``style``)."""
+        self.style = _assign_style_field(self.style, "opacity", opacity)
+        self.mark("style")
+
 
 class VizSceneObject(VizNode):
     """Scene-layer node: entity + resolved style + transform + parent/child."""
@@ -325,7 +359,7 @@ class VizSceneObject(VizNode):
         parent: "VizSceneObject | None" = None,
         visible: bool = True,
         props: dict[str, Any] | None = None,
-        styles_map: dict[str, Any] | None = None,
+        styles_map: StylesMap | None = None,
     ) -> None:
         super().__init__(
             id,
@@ -342,7 +376,7 @@ class VizSceneObject(VizNode):
         self.parent: VizSceneObject | None = None
         self.children: list[VizSceneObject] = []
         self._props: dict[str, Any] = dict(props) if props else {}
-        self._styles_map: dict[str, Any] | None = styles_map
+        self._styles_map: StylesMap | None = styles_map
         if parent is not None:
             parent.add_child(self)
 
@@ -374,7 +408,7 @@ class VizSceneObject(VizNode):
     def _serialize_content(
         self,
         *,
-        styles_map: dict[str, Any] | None = None,
+        styles_map: StylesMap | None = None,
         props: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Return the "leaf" dict: ``kind`` + geometry + resolved style.
@@ -411,7 +445,7 @@ class VizSceneObject(VizNode):
     def serialize(
         self,
         *,
-        styles_map: dict[str, Any] | None = None,
+        styles_map: StylesMap | None = None,
         props: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Serialize the full node (geometry + resolved style + transform)."""
@@ -462,21 +496,6 @@ class VizSceneObject(VizNode):
         self.kind = type(entity).__name__
         self.mark("content" if self.kind == old_kind else "full")
 
-    def set_style(self, style: Any) -> None:
-        """Merge non-``None`` style fields (marks ``style``)."""
-        self.style = _merge_style_into(self.style, style)
-        self.mark("style")
-
-    def set_color(self, color: Any) -> None:
-        """Set the resolved style color (marks ``style``)."""
-        self.style = _assign_style_field(self.style, "color", color)
-        self.mark("style")
-
-    def set_opacity(self, opacity: float) -> None:
-        """Set the resolved style opacity (marks ``style``)."""
-        self.style = _assign_style_field(self.style, "opacity", opacity)
-        self.mark("style")
-
     def set_texture_label(self, texture_label: Any) -> None:
         """Set/merge the resolved style texture label (marks ``style``)."""
         if self.style is not None and hasattr(self.style, "texture_label"):
@@ -511,11 +530,11 @@ class VizSceneObject(VizNode):
 
     def set_transform(
         self,
-        spec: TransformInput = None,
+        spec: TransformInput | None = None,
         *,
-        position: Vec3 = None,
-        rotation: TransformRotation = None,
-        scale: Triple = None,
+        position: Vec3 | None = None,
+        rotation: TransformRotation | None = None,
+        scale: Triple | None = None,
     ) -> None:
         """Set the transform (marks ``transform``).
 
@@ -597,21 +616,6 @@ class VizOverlayObject(VizNode):
         self.attach_to = attach_to
         self.mark("full")
 
-    def set_color(self, color: Any) -> None:
-        """Set the resolved style color (marks ``style``)."""
-        self.style = _assign_style_field(self.style, "color", color)
-        self.mark("style")
-
-    def set_opacity(self, opacity: float) -> None:
-        """Set the resolved style opacity (marks ``style``)."""
-        self.style = _assign_style_field(self.style, "opacity", opacity)
-        self.mark("style")
-
-    def set_style(self, style: Any) -> None:
-        """Merge non-``None`` style fields (marks ``style``)."""
-        self.style = _merge_style_into(self.style, style)
-        self.mark("style")
-
     # ── Serialization / patches ─────────────────────────────
 
     def serialize(self) -> dict[str, Any]:
@@ -685,7 +689,7 @@ class VizGroup(VizSceneObject):
     def serialize(
         self,
         *,
-        styles_map: dict[str, Any] | None = None,
+        styles_map: StylesMap | None = None,
         props: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Serialize a group node (no entity/style, only transform + parenting)."""

@@ -18,8 +18,12 @@ def test_combine_serialized_analytic() -> None:
 
 
 def test_polarity_maps_to_combine() -> None:
-    pos = serialize_entity(Sphere(Point(0.0, 0.0, 0.0), 1.0), "a", {"polarity": "positive"})
-    neg = serialize_entity(Sphere(Point(0.0, 0.0, 0.0), 1.0), "b", {"polarity": "negative"})
+    pos = serialize_entity(
+        Sphere(Point(0.0, 0.0, 0.0), 1.0), "a", {"polarity": "positive"}
+    )
+    neg = serialize_entity(
+        Sphere(Point(0.0, 0.0, 0.0), 1.0), "b", {"polarity": "negative"}
+    )
     assert pos["combine"] == "union"
     assert neg["combine"] == "subtract"
 
@@ -46,4 +50,3 @@ def test_smooth_subtract_polarity_negative() -> None:
     )
     assert result["combine"] == "smooth_subtract"
     assert result["polarity"] == "negative"
-

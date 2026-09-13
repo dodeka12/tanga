@@ -18,15 +18,19 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import singledispatchmethod
-from typing import Any
+from typing import Any, Never, cast
 
 from pytanga.geometry import Direction, Point
 
-from ._controls import ControlHandlerRegistry, HandlerOrigin
+from ._controls import (
+    ControlEvent,
+    ControlHandlerRegistry,
+    HandlerOrigin,
+    InteractionHandler,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -376,7 +380,7 @@ class Camera:
     # ── Project ─────────────────────────────────────────────
 
     @singledispatchmethod
-    def project(self, obj) -> tuple[float, float]:
+    def project(self, obj: "Point | Direction") -> tuple[float, float]:
         """Project a world-space :class:`Point` or :class:`Direction` to
         screen pixel coordinates.
 
@@ -421,7 +425,9 @@ class Camera:
     # ── Unproject ───────────────────────────────────────────
 
     @singledispatchmethod
-    def unproject(self, obj, depth: float = 0.0) -> Point | Direction:
+    def unproject(
+        self, obj: "Point | Direction | None", depth: float = 0.0
+    ) -> "Point | Direction":
         """Unproject screen-space coordinates to world space.
 
         When *obj* is a :class:`Point` (the first two components are
@@ -505,10 +511,12 @@ class Camera:
         cy = self.viewport_height * 0.5
         p0 = self.unproject(Point(cx, cy), depth)
         p1 = self.unproject(Point(cx + dx, cy + dy), depth)
-        return p1 - p0
+        # A difference of two points is a direction (the Vec3 ``__sub__`` return
+        # type is the ``Direction | Point`` union, so it has to be narrowed).
+        return cast("Direction", p1 - p0)
 
     @unproject.register(type(None))
-    def _(self, _obj: None, depth: float = 0.0) -> None:
+    def _(self, _obj: None, depth: float = 0.0) -> Never:
         """Handle None gracefully (e.g., default event fields)."""
         raise TypeError("unproject() expects Point or Direction, got None")
 
@@ -561,33 +569,37 @@ class Camera:
 
 
 @dataclass
-class ControlEvent:
-    """Base class for all interaction events.
+class InteractionEvent(ControlEvent):
+    """Base for pointer-interaction events on an interactive object.
 
-    All events carry a :class:`Camera` so handlers can transform
-    between screen space and world space without additional round-trips.
+    Derives from the shared :class:`ControlEvent` and adds the fields every
+    interaction carries: the target ``object_id``, the interaction
+    ``event_type`` and the :class:`Camera` state.
 
-    The *camera* may be ``None`` on drag-move/drag-end events coming
-    from the frontend (the camera is only sent on drag-start).
-    The :class:`InteractionHandlerRegistry` injects the cached camera
-    before the handler sees it, so handlers always receive a populated
-    ``camera``.
+    All events carry a camera so handlers can transform between screen space
+    and world space without additional round-trips.  The *camera* may be
+    ``None`` on drag-move/drag-end events coming from the frontend (the camera
+    is only sent on drag-start); the :class:`InteractionHandlerRegistry`
+    injects the cached camera before the handler sees it, so handlers always
+    receive a populated ``camera``.
+
+    ``event_type`` is re-declared with its own default by each concrete event
+    type; the default here only exists so the base stays constructible.
     """
 
-    browser_id: str | None = None
+    object_id: str = ""
+    event_type: InteractionEventType = InteractionEventType.CLICK
     camera: Camera | None = None
 
 
 @dataclass
-class ClickEvent(ControlEvent):
+class ClickEvent(InteractionEvent):
     """Fired when the user clicks or double-clicks an interactive object.
 
     ``event_type`` will be :attr:`~InteractionEventType.CLICK` or
     :attr:`~InteractionEventType.DBLCLICK`.
     """
 
-    object_id: str = ""
-    event_type: InteractionEventType = InteractionEventType.CLICK
     mouse_button: MouseButton = MouseButton.LEFT
     modifiers: frozenset[ModifierKey] = frozenset()
     screen_position: tuple[float, float] = (0.0, 0.0)
@@ -596,7 +608,7 @@ class ClickEvent(ControlEvent):
 
 
 @dataclass
-class DragEvent(ControlEvent):
+class DragEvent(InteractionEvent):
     """Fired during pointer drags on an interactive object.
 
     ``event_type`` will be :attr:`~InteractionEventType.DRAG_START`,
@@ -608,7 +620,6 @@ class DragEvent(ControlEvent):
     is the change since the previous drag event.
     """
 
-    object_id: str = ""
     event_type: InteractionEventType = InteractionEventType.DRAG_MOVE
     mouse_button: MouseButton = MouseButton.LEFT
     modifiers: frozenset[ModifierKey] = frozenset()
@@ -623,10 +634,9 @@ class DragEvent(ControlEvent):
 
 
 @dataclass
-class ScrollEvent(ControlEvent):
+class ScrollEvent(InteractionEvent):
     """Fired when the user scrolls while hovering an interactive object."""
 
-    object_id: str = ""
     event_type: InteractionEventType = InteractionEventType.SCROLL
     modifiers: frozenset[ModifierKey] = frozenset()
     screen_position: tuple[float, float] = (0.0, 0.0)
@@ -657,7 +667,7 @@ def _parse_camera(data: dict[str, Any]) -> Camera | None:
     )
 
 
-def _parse_event(data: dict[str, Any]) -> ControlEvent:
+def _parse_event(data: dict[str, Any]) -> InteractionEvent:
     """Parse a JSON dict into the appropriate event dataclass.
 
     Dispatches on ``data["event_type"]``.
@@ -761,7 +771,8 @@ def _coalesce_drag_events(events: list[DragEvent]) -> DragEvent:
     total_delta_y = sum(e.delta_pixels[1] for e in events)
     total_world_delta = first.world_delta
     for e in events[1:]:
-        total_world_delta = total_world_delta + e.world_delta
+        # Sum of world deltas — narrowed from the ``Direction | Point`` union.
+        total_world_delta = cast("Direction", total_world_delta + e.world_delta)
     last = events[-1]
 
     return DragEvent(
@@ -779,13 +790,6 @@ def _coalesce_drag_events(events: list[DragEvent]) -> DragEvent:
         ray_origin=first.ray_origin,
         ray_direction=first.ray_direction,
     )
-
-
-# ── Handler type alias ─────────────────────────────────────────
-
-Handler = Callable[[Any], Awaitable[None]]
-"""Async callback receiving a :class:`ClickEvent`, :class:`DragEvent`, or
-:class:`ScrollEvent`."""
 
 
 # ── Handler registry ───────────────────────────────────────────
@@ -809,7 +813,9 @@ class InteractionHandlerRegistry:
         # registration delegates to it so interactions and controls share one
         # namespace; otherwise a private dict is used (unit tests / standalone).
         self._handlers_registry = handlers
-        self._own_handlers: dict[tuple[str, InteractionEventType], Handler] = {}
+        self._own_handlers: dict[
+            tuple[str, InteractionEventType], InteractionHandler
+        ] = {}
         # Per-object state for coalescing
         self._pending: dict[str, list[DragEvent]] = {}
         self._running: dict[str, bool] = {}
@@ -823,7 +829,7 @@ class InteractionHandlerRegistry:
         self,
         object_id: str,
         event_type: InteractionEventType,
-        handler: Handler,
+        handler: InteractionHandler,
     ) -> None:
         """Register an async handler for a specific object + event type."""
         if self._handlers_registry is not None:
@@ -856,10 +862,12 @@ class InteractionHandlerRegistry:
         else:
             self._own_handlers.pop((object_id, event_type), None)
 
-    def get(self, object_id: str, event_type: InteractionEventType) -> Handler | None:
-        """Look up a handler, or ``None``."""
+    def get(
+        self, object_id: str, event_type: InteractionEventType
+    ) -> InteractionHandler | None:
+        """Look up the interaction handler for *object_id*/*event_type*, or ``None``."""
         if self._handlers_registry is not None:
-            return self._handlers_registry.get(object_id, event_type.value)
+            return self._handlers_registry.get_interaction(object_id, event_type.value)
         return self._own_handlers.get((object_id, event_type))
 
     def clear(self) -> None:
@@ -876,7 +884,7 @@ class InteractionHandlerRegistry:
 
     # ── Dispatch ───────────────────────────────────────────────
 
-    async def dispatch(self, event: ControlEvent) -> None:
+    async def dispatch(self, event: InteractionEvent) -> None:
         """Fire-and-forget dispatch with drag_move coalescing.
 
         * ``DRAG_START``: cache camera, flush pending queue, dispatch
@@ -932,7 +940,7 @@ class InteractionHandlerRegistry:
                         event.camera = cached
                 asyncio.create_task(handler(event))
 
-    async def _run_handler(self, handler: Handler, event: DragEvent) -> None:
+    async def _run_handler(self, handler: InteractionHandler, event: DragEvent) -> None:
         """Run a drag handler and process any coalesced pending events."""
         try:
             await handler(event)

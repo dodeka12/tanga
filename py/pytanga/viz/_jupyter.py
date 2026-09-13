@@ -9,6 +9,8 @@ renders an inline iframe when displayed in a Jupyter notebook cell.
 
 from __future__ import annotations
 
+from typing import Any
+
 
 class _JupyterDisplayMixin:
     """Mixin providing Jupyter notebook inline display via ``_repr_html_``.
@@ -25,17 +27,23 @@ class _JupyterDisplayMixin:
     _viewer_name: str | None = None
     _name: str = ""
 
+    # ── Host contract (see the class docstring) ──────────────
+    #: The current ``VizServer``, or ``None`` before ``start()``.
+    _server: Any
+    #: HTTP URL of the scene; supplied by the host as a property.
+    url: str
+
     # ── Jupyter support ──────────────────────────────────────
 
     def _repr_html_(self) -> str:
         """Return an HTML iframe embedding this scene."""
-        if self._server is None:  # type: ignore[has-type]
+        if self._server is None:
             return (
                 "<p style='color:#888'>Visualizer not started. "
                 "Call <code>.start()</code> first.</p>"
             )
         height = 500
-        src = self.url  # type: ignore[has-type]
+        src = self.url
         if self._viewer_name:
             src += f"?viewer={self._viewer_name}"
         title = "Tanga 3D Viewer"

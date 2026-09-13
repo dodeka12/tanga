@@ -98,7 +98,9 @@ def test_serialize_partial_disk() -> None:
     import math
 
     result = serialize_entity(
-        PartialDisk(Point(0, 0, 0), 1.0, angle=math.pi, start_direction=Direction(1, 0, 0)),
+        PartialDisk(
+            Point(0, 0, 0), 1.0, angle=math.pi, start_direction=Direction(1, 0, 0)
+        ),
         "pd",
     )
     assert result["sdfKind"] == "PartialDisk"
@@ -180,9 +182,7 @@ def test_unsupported_kind_raises() -> None:
 
 
 def test_style_scope_ignores_wireframe() -> None:
-    result = serialize_entity(
-        Point(0, 0, 0), "p", {"size": 0.1, "wireframe": True}
-    )
+    result = serialize_entity(Point(0, 0, 0), "p", {"size": 0.1, "wireframe": True})
     tree = _tree_of(result)
     # wireframe is not forwarded into the SDF tree.
     assert "wireframe" not in result
@@ -190,9 +190,7 @@ def test_style_scope_ignores_wireframe() -> None:
 
 
 def test_serialize_combine_and_polarity() -> None:
-    result = serialize_entity(
-        Sphere(Point(0, 0, 0), 1.0), "s", {"combine": "subtract"}
-    )
+    result = serialize_entity(Sphere(Point(0, 0, 0), 1.0), "s", {"combine": "subtract"})
     assert result["combine"] == "subtract"
     assert result["polarity"] == "negative"
 

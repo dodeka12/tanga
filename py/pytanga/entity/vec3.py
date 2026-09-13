@@ -12,7 +12,13 @@ the typed operations.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pytanga.entity.direction import Direction
+    from pytanga.entity.point import Point
 
 
 @dataclass(frozen=True)
@@ -26,7 +32,7 @@ class Vec3:
     def __repr__(self) -> str:
         return f"Vec3({self.x:.2f}, {self.y:.2f}, {self.z:.2f})"
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Vec3):
             return self.x == other.x and self.y == other.y and self.z == other.z
         return NotImplemented
@@ -44,19 +50,19 @@ class Vec3:
             return Vec3(self.x - other.x, self.y - other.y, self.z - other.z)
         return NotImplemented
 
-    def __mul__(self, other):
+    def __mul__(self, other: "Vec3" | int | float) -> "Vec3":
         if isinstance(other, (int, float)):
             return Vec3(self.x * other, self.y * other, self.z * other)
         if isinstance(other, Vec3):
             return Vec3(self.x * other.x, self.y * other.y, self.z * other.z)
         return NotImplemented
 
-    def __rmul__(self, scalar):
+    def __rmul__(self, scalar: int | float) -> "Vec3":
         if isinstance(scalar, (int, float)):
             return Vec3(self.x * scalar, self.y * scalar, self.z * scalar)
         return NotImplemented
 
-    def __truediv__(self, scalar):
+    def __truediv__(self, scalar: int | float) -> "Vec3":
         if isinstance(scalar, (int, float)):
             return Vec3(self.x / scalar, self.y / scalar, self.z / scalar)
         return NotImplemented
@@ -79,7 +85,7 @@ class Vec3:
 
     def mag(self) -> float:
         """Euclidean magnitude sqrt(x² + y² + z²)."""
-        return (self.x**2 + self.y**2 + self.z**2) ** 0.5
+        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
 
     def normalized(self) -> "Vec3":
         """Return a normalised copy (magnitude 1)."""
@@ -88,24 +94,24 @@ class Vec3:
             raise ValueError("Cannot normalise zero-length Vec3")
         return Vec3(self.x / m, self.y / m, self.z / m)
 
-    def to_point(self):
+    def to_point(self) -> "Point":
         """Convert to a :class:`~pytanga.entity.point.Point`."""
         from pytanga.entity.point import Point
 
         return Point(self.x, self.y, self.z)
 
-    def to_direction(self):
+    def to_direction(self) -> "Direction":
         """Convert to a :class:`~pytanga.entity.direction.Direction`."""
         from pytanga.entity.direction import Direction
 
         return Direction(self.x, self.y, self.z)
 
     @classmethod
-    def from_point(cls, p) -> "Vec3":
+    def from_point(cls, p: "Point") -> "Vec3":
         """Convert from a :class:`~pytanga.entity.point.Point`."""
         return cls(p.x, p.y, p.z)
 
     @classmethod
-    def from_direction(cls, d) -> "Vec3":
+    def from_direction(cls, d: "Direction") -> "Vec3":
         """Convert from a :class:`~pytanga.entity.direction.Direction`."""
         return cls(d.x, d.y, d.z)

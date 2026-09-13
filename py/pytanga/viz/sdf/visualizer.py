@@ -343,7 +343,9 @@ class SdfVisualizer:
 
     # ── Server callbacks ────────────────────────────────────
 
-    def _full_state_for(self, scene_name: str) -> tuple[list[dict[str, Any]], list[str]]:
+    def _full_state_for(
+        self, scene_name: str
+    ) -> tuple[list[dict[str, Any]], list[str]]:
         out: list[dict[str, Any]] = []
         for oid, entity in self._objects.items():
             try:
@@ -394,14 +396,15 @@ class SdfVisualizer:
             return
 
         logger.info("Starting SDF VizServer on %s:%d", self._host, self._port)
-        self._server = VizServer(
+        server = VizServer(
             host=self._host, port=self._port, entry_page="sdf_viewer.html"
         )
+        self._server = server
 
         _boot_done = threading.Event()
 
         async def _boot() -> None:
-            await self._server.start(
+            await server.start(
                 self._full_state_for,
                 lambda: self._scene_config_for(""),
                 scene_config_callback=self._scene_config_for,
@@ -471,17 +474,18 @@ class SdfVisualizer:
         """Tear down a server whose boot task failed before it fully started."""
         if self._loop is not None and self._loop.is_running():
             if self._server is not None:
+                server = self._server
 
                 async def _cleanup() -> None:
                     try:
-                        await self._server.stop()
+                        await server.stop()
                     except Exception:
                         pass
 
                 try:
-                    asyncio.run_coroutine_threadsafe(
-                        _cleanup(), self._loop
-                    ).result(timeout=5.0)
+                    asyncio.run_coroutine_threadsafe(_cleanup(), self._loop).result(
+                        timeout=5.0
+                    )
                 except Exception:
                     pass
             self._loop.call_soon_threadsafe(self._loop.stop)
@@ -532,8 +536,12 @@ class SdfVisualizer:
             else:
                 # wait_for_browser is False (e.g. Jupyter): just check if one is
                 # already there, otherwise open a tab and don't wait.
+                server = self._server
+                loop = self._loop
+                if server is None or loop is None:
+                    return False
                 fut = asyncio.run_coroutine_threadsafe(
-                    self._server.wait_for_ws_ready(timeout=3.0), self._loop
+                    server.wait_for_ws_ready(timeout=3.0), loop
                 )
                 try:
                     reconnected = fut.result(timeout=3.5)
@@ -727,9 +735,10 @@ class SdfVisualizer:
         self._restore_signal_handlers()
         if self._server is None:
             return
+        server = self._server
 
         async def _stop() -> None:
-            await self._server.stop()
+            await server.stop()
 
         if self._loop is not None and self._loop.is_running():
             fut = asyncio.run_coroutine_threadsafe(_stop(), self._loop)
@@ -750,7 +759,7 @@ class SdfVisualizer:
         return f"http://{self._host}:{self._port}"
 
     @property
-    def browser_sessions(self) -> list[dict[str, str]]:
+    def browser_sessions(self) -> list[dict[str, str | None]]:
         if self._server is None:
             return []
         return self._server.get_browser_sessions()
@@ -776,7 +785,10 @@ class SdfVisualizer:
             try:
                 objects.append(
                     serialize_entity(
-                        entity, oid, self._props.get(oid, {}), styles_map=self._styles.kind
+                        entity,
+                        oid,
+                        self._props.get(oid, {}),
+                        styles_map=self._styles.kind,
                     )
                 )
             except TypeError as e:

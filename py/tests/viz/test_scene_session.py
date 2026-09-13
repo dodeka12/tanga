@@ -841,9 +841,7 @@ class TestVisualizer:
     def test_set_space_dim_rejects_mismatched_camera(self):
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         with pytest.raises(ValueError):
-            viz.set_space_dim(
-                2, camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0)
-            )
+            viz.set_space_dim(2, camera=View3dConfig((0, 0, 0), (0, 0, 1), 6.0, 5.0))
 
     def test_scene_handle_space_dim_accessor(self):
         viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)

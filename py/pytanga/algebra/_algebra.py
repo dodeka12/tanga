@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -15,6 +15,8 @@ from ._parse import _parse_mv_string
 if TYPE_CHECKING:
     from ._mv import MV
     from pytanga.blade_mask import BladeMask
+    from pytanga.codegen._binding import AlgebraBinding
+    from rich.text import Text
 
 
 class Algebra:
@@ -80,7 +82,7 @@ class Algebra:
         self._modulus = modulus
         self._print_fmt = print_fmt
         self._precision = precision
-        self._mod = get_or_build(dim, sig, dtype, verbose=verbose)
+        self._mod: AlgebraBinding = get_or_build(dim, sig, dtype, verbose=verbose)
         self._rng = np.random.default_rng(seed)
         self._opns = bool(opns)
 
@@ -166,7 +168,7 @@ class Algebra:
     # -----------------------------------------------------------------------
     def multivector(
         self,
-        coeffs: dict | str | None = None,
+        coeffs: dict[Any, Any] | str | None = None,
     ) -> MV:
         """
         Create a multivector.
@@ -915,7 +917,7 @@ class Algebra:
         """
         return {k: v for k, v in self.__dict__.items() if isinstance(v, MV)}
 
-    def _resolve_key_signed(self, key: str | int | tuple) -> tuple[int, int]:
+    def _resolve_key_signed(self, key: str | int | tuple[int, ...]) -> tuple[int, int]:
         """Resolve a blade key to ``(blade_id, sign)``.
 
         ``sign`` is the parity of the permutation needed to sort the indices
@@ -928,7 +930,7 @@ class Algebra:
             # (0,) or () → scalar; (i, j, ...) → bitmask with bits i-1, j-1, ...
             if not key or key == (0,):
                 return 0, 1
-            result = 0
+            result: int = 0
             for i in key:
                 if i < 1:
                     raise ValueError(
@@ -947,18 +949,21 @@ class Algebra:
 
         return blade_id_signed(key, self._dim, self.blade_names_comma_separated)
 
-    def _resolve_key(self, key: str | int | tuple) -> int:
+    def _resolve_key(self, key: str | int | tuple[int, ...]) -> int:
         """Resolve a blade key to its canonical (unsigned) blade id."""
         return self._resolve_key_signed(key)[0]
 
-    def _get_display_basis(self) -> list | None:
+    def _get_display_basis(self) -> list[tuple[str, MV, MV | None, int | None]] | None:
         """Return the display basis to use, or None for the default primitive basis.
 
         Subclasses with a ``_display_basis`` attribute return it here.
         The base class returns None, which makes ``show_str`` fall back to
         primitive blade names via ``mv.to_dict()``.
         """
-        return getattr(self, "_display_basis", None)
+        return cast(
+            "list[tuple[str, MV, MV | None, int | None]] | None",
+            getattr(self, "_display_basis", None),
+        )
 
     @staticmethod
     def _format_coeffs_to_body(terms: list[tuple[float, str]], fmt: str) -> str:
@@ -986,7 +991,7 @@ class Algebra:
         label: str = "",
         fmt: str | None = None,
         align_col: int = 30,
-        display_basis: list | None = None,
+        display_basis: list[tuple[str, MV, MV | None, int | None]] | None = None,
     ) -> str:
         """Return *mv* as a human-readable string.
 
@@ -1019,8 +1024,10 @@ class Algebra:
             for name, _blade, pinv, blade_id in display_basis:
                 if blade_id is not None:
                     coeff = mv[blade_id]
-                else:
+                elif pinv is not None:
                     coeff = self.ip(mv, pinv)[0]
+                else:
+                    continue
                 if abs(coeff) < tol:
                     continue
                 if abs(coeff - round(coeff)) < tol:
@@ -1087,7 +1094,7 @@ class Algebra:
             print(self.show_str(mv, label=label, fmt=fmt, align_col=align_col))
 
     def _extract_terms(
-        self, mv: MV, display_basis: list | None
+        self, mv: MV, display_basis: list[tuple[str, MV, MV | None, int | None]] | None
     ) -> list[tuple[float, str]]:
         """Extract non-zero (coefficient, blade_name) pairs from *mv*."""
         tol = self._precision
@@ -1096,8 +1103,10 @@ class Algebra:
             for name, _blade, pinv, blade_id in display_basis:
                 if blade_id is not None:
                     coeff = mv[blade_id]
-                else:
+                elif pinv is not None:
                     coeff = self.ip(mv, pinv)[0]
+                else:
+                    continue
                 if abs(coeff) < tol:
                     continue
                 if abs(coeff - round(coeff)) < tol:
@@ -1122,7 +1131,7 @@ class Algebra:
             return terms
 
     @staticmethod
-    def _format_rich_body(terms: list[tuple[float, str]], fmt: str):
+    def _format_rich_body(terms: list[tuple[float, str]], fmt: str) -> "Text":
         """Build a colour-coded rich Text from (coefficient, blade_name) pairs."""
         from rich.text import Text
 

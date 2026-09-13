@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Iterator
+from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
 
 import numpy as np
 
@@ -109,7 +109,7 @@ def _axis_names(labels: Any) -> tuple[AxisName, ...]:
     """
     if isinstance(labels, str):
         return tuple(_raw_names(labels))
-    return tuple(ax.name for ax in labels)
+    return tuple(ax.name for ax in cast("tuple[AxisLabel, ...]", labels))
 
 
 def _mode_at(extended_labels: str, axis: int) -> str:
@@ -223,7 +223,7 @@ def _axis_modes(labels: Any) -> tuple[str, ...]:
     """Return the ordered ``"*"``/``"_"`` sequence for *labels*."""
     if isinstance(labels, str):
         return tuple(labels[i] for i in range(1, len(labels), 2))
-    return tuple(ax.mode for ax in labels)
+    return tuple(ax.mode for ax in cast("tuple[AxisLabel, ...]", labels))
 
 
 def _labels_str(labels: Any) -> str:
@@ -266,7 +266,10 @@ class MVLabeledTensor:
     """
 
     tensor: MVTensor
-    labels: tuple[AxisLabel, ...]
+    #: Any form accepted by :func:`_parse_labels` (legacy string, single label,
+    #: or an iterable of names/labels/pairs); normalised to
+    #: ``tuple[AxisLabel, ...]`` by :meth:`__post_init__`.
+    labels: Any
 
     def __post_init__(self) -> None:
         parsed = _parse_labels(self.labels)
@@ -485,8 +488,8 @@ class MVLabeledTensor:
 
         # Determine which axes to keep and which to sum over
         sum_axes: list[int] = []
-        keep_names: list[str] = []
-        keep_modes: dict[str, str] = {}
+        keep_names: list[str | int] = []
+        keep_modes: dict[str | int, str] = {}
 
         for ax, name in enumerate(self_raw):
             mode = _axis_modes(self.labels)[ax]
@@ -549,8 +552,8 @@ class MVLabeledTensor:
             )
 
         sum_axes: list[int] = []
-        keep_names: list[str] = []
-        keep_modes: dict[str, str] = {}
+        keep_names: list[str | int] = []
+        keep_modes: dict[str | int, str] = {}
 
         for ax, name in enumerate(self_raw):
             mode = _axis_modes(self.labels)[ax]
@@ -584,7 +587,7 @@ class MVLabeledTensor:
     # Phase 4 – __mul__ (contraction)
     # ------------------------------------------------------------------
 
-    def __mul__(self, other) -> MVLabeledTensor:
+    def __mul__(self, other: Any) -> MVLabeledTensor:
         """Label‑driven tensor contraction (like Einsum).
 
         ``G[\"kij\"] * A[\"i\"]`` contracts on shared label ``i``,
@@ -602,7 +605,7 @@ class MVLabeledTensor:
 
         return contract_labeled(self, other)
 
-    def __rmul__(self, other) -> MVLabeledTensor:
+    def __rmul__(self, other: Any) -> MVLabeledTensor:
         """Right‑multiplication: scalar * tensor."""
         if isinstance(other, (int, float)):
             return self.mul_scalar(float(other))
@@ -612,7 +615,7 @@ class MVLabeledTensor:
     # Phase 5 – __truediv__ / __rtruediv__
     # ------------------------------------------------------------------
 
-    def __truediv__(self, other) -> MVLabeledTensor:
+    def __truediv__(self, other: Any) -> MVLabeledTensor:
         """Division contraction: ``A[\"ij\"] / B[\"jk\"]``.
 
         Computes element‑wise reciprocal of *other* then multiplies.
@@ -625,14 +628,14 @@ class MVLabeledTensor:
             return NotImplemented
 
         # Element‑wise reciprocal
-        inv_data = 1.0 / other.tensor.data
+        inv_data = np.asarray(1.0 / other.tensor.data)
         from ._data import MVTensor as _MVTensor
 
         inv_tensor = _MVTensor(data=inv_data, masks=other.tensor.masks)
         inv_labeled = MVLabeledTensor(inv_tensor, other.labels)
         return self.__mul__(inv_labeled)
 
-    def __rtruediv__(self, other) -> MVLabeledTensor:
+    def __rtruediv__(self, other: Any) -> MVLabeledTensor:
         """Right‑division: scalar / tensor."""
         if isinstance(other, (int, float)):
             return self.rdiv_scalar(float(other))
@@ -642,7 +645,7 @@ class MVLabeledTensor:
     # Phase 6 – __add__ / __sub__
     # ------------------------------------------------------------------
 
-    def __add__(self, other) -> MVLabeledTensor:
+    def __add__(self, other: Any) -> MVLabeledTensor:
         """Broadcast‑add two labeled tensors, aligning on shared labels.
 
         ``A[\"ij\"] + B[\"jk\"]`` → output ``\"ijk\"``.
@@ -651,18 +654,18 @@ class MVLabeledTensor:
             return NotImplemented
         return _add_or_sub(self, other, np.add)
 
-    def __radd__(self, other) -> MVLabeledTensor:
+    def __radd__(self, other: Any) -> MVLabeledTensor:
         if isinstance(other, (int, float)) and other == 0:
             return self
         return NotImplemented
 
-    def __sub__(self, other) -> MVLabeledTensor:
+    def __sub__(self, other: Any) -> MVLabeledTensor:
         """Broadcast‑subtract two labeled tensors."""
         if not isinstance(other, MVLabeledTensor):
             return NotImplemented
         return _add_or_sub(self, other, np.subtract)
 
-    def __rsub__(self, other) -> MVLabeledTensor:
+    def __rsub__(self, other: Any) -> MVLabeledTensor:
         if isinstance(other, (int, float)) and other == 0:
             return self.mul_scalar(-1.0)
         return NotImplemented
@@ -716,7 +719,7 @@ def _add_or_sub(
             output_raw.append(ch)
 
     # Determine modes for output
-    output_modes: dict[str, str] = {}
+    output_modes: dict[str | int, str] = {}
     for idx, ch in enumerate(raw_a):
         output_modes[ch] = _axis_modes(a.labels)[idx]
     for idx, ch in enumerate(raw_b):
@@ -826,7 +829,7 @@ def _transpose(tensor: MVLabeledTensor, key: str) -> MVLabeledTensor:
 
     # Build new extended labels by permuting the modes
     src_modes = {self_raw[i]: _axis_modes(tensor.labels)[i] for i in range(tensor.ndim)}
-    new_labels = _labels_from_names(dst_raw, src_modes)
+    new_labels = _labels_from_names(list(dst_raw), src_modes)
 
     from ._data import MVTensor as _MVTensor
 
@@ -868,7 +871,7 @@ def iter_labels(
         for t, ax in zip(tensors, axes):
             sliced_data = t.tensor.data.take(i, axis=ax)
             # Drop the iterated axis from masks
-            sliced_masks = t.tensor.masks[:ax] + t.tensor.masks[ax + 1 :]
+            sliced_masks = tuple(t.tensor.masks[:ax]) + tuple(t.tensor.masks[ax + 1 :])
             # Drop the iterated axis from the structured labels
             sliced_labels = t.labels[:ax] + t.labels[ax + 1 :]
             slices.append(

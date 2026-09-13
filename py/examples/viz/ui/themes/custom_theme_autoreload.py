@@ -12,12 +12,15 @@ Run with:  uv run python py/examples/viz/ui/themes/custom_theme_autoreload.py
 Keywords: themes, theme, custom theme, register_theme, auto reload, tokens, override
 """
 
+from typing import Any
+
 from pathlib import Path
 
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
     CheckboxView,
+    ControlEvent,
     EAnchor,
     GroupView,
     SceneView,
@@ -39,7 +42,7 @@ viz.add(
 viz.add(Point(1, 1, 1), color="#ff4444")
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 

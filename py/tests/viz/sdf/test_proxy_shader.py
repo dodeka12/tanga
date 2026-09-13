@@ -15,17 +15,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-RENDERS_DIR = (
-    Path(__file__).parents[3] / "pytanga" / "viz" / "templates" / "renderers"
-)
+RENDERS_DIR = Path(__file__).parents[3] / "pytanga" / "viz" / "templates" / "renderers"
 PROXY_FILE = RENDERS_DIR / "sdf" / "proxy.glsl"
 GLSL_LIB = (
-    Path(__file__).parents[3]
-    / "pytanga"
-    / "viz"
-    / "templates"
-    / "sdf"
-    / "shaders"
+    Path(__file__).parents[3] / "pytanga" / "viz" / "templates" / "sdf" / "shaders"
 )
 
 
@@ -46,9 +39,7 @@ def _brace_balance(src: str) -> int:
 
 
 def _code(src: str) -> str:
-    return "\n".join(
-        ln for ln in src.splitlines() if not ln.strip().startswith("//")
-    )
+    return "\n".join(ln for ln in src.splitlines() if not ln.strip().startswith("//"))
 
 
 def test_proxy_glsl_exists() -> None:

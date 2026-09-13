@@ -15,8 +15,11 @@ Keywords: camera, 2D, 3D, checkbox, space_dim, switch view, plot
 
 import math
 
+from typing import Any
+
 from pytanga.viz import (
     CheckboxView,
+    ControlEvent,
     CoordinateSystem,
     EAnchor,
     GroupView,
@@ -45,7 +48,12 @@ cs = CoordinateSystem(
     labels=("x", "sin(x)"),
 )
 xs = [0.05 * i for i in range(int(_XHI / 0.05) + 1)]
-cs.plot(xs, [math.sin(x) for x in xs], color="#ffcc00", style=PointPathStyle(line_thickness=3))
+cs.plot(
+    xs,
+    [math.sin(x) for x in xs],
+    color="#ffcc00",
+    style=PointPathStyle(line_thickness=3),
+)
 
 # The 2D camera the CoordinateSystem fitted (with label margins), and a tilted
 # 3D perspective view of the same flat plot plane.
@@ -59,7 +67,7 @@ cam_3d = View3dConfig(
 )
 
 
-async def _on_3d(value, _event):
+async def _on_3d(value: Any, _event: ControlEvent) -> None:
     if value:
         viz.set_space_dim(3, scene_name="plot", camera=cam_3d)
     else:
@@ -79,5 +87,7 @@ layout = SceneView(
 
 if __name__ == "__main__":
     viz.show(layout=layout)
-    print("Toggle the '3D' checkbox to switch the plot between 2D and 3D. Ctrl+C to exit.")
+    print(
+        "Toggle the '3D' checkbox to switch the plot between 2D and 3D. Ctrl+C to exit."
+    )
     viz.wait()

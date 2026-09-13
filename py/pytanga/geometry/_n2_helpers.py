@@ -12,13 +12,15 @@ Reference: Perwass, "Geometric Algebra with Applications in Engineering",
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from pytanga.basis.n2 import BasisN2
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
+
+    from ._basis_views import ConformalBasis
 
 # Blade IDs from BasisN2 as the single source of truth.
 E1 = BasisN2.E1
@@ -29,13 +31,13 @@ E12 = BasisN2.E12
 
 
 def get_einf(basis: Algebra) -> MV:
-    """Return the point-at-infinity null vector e∞."""
-    return basis.einf
+    """Return the point-at-infinity null vector e∞ (attached by BasisN2)."""
+    return cast("ConformalBasis", basis).einf
 
 
 def get_eo(basis: Algebra) -> MV:
-    """Return the origin null vector e₀."""
-    return basis.eo
+    """Return the origin null vector e₀ (attached by BasisN2)."""
+    return cast("ConformalBasis", basis).eo
 
 
 def einf_coeff(mv: MV, eo: MV) -> float:
@@ -76,8 +78,8 @@ def translator_coeffs(mv: MV, basis: Algebra) -> tuple[float, float]:
     if abs(scal) < 1e-15:
         raise ValueError("Translator has zero scalar component")
 
-    e1_e0 = basis.e1.op(eo)  # e₁∧e₀
-    e2_e0 = basis.e2.op(eo)  # e₂∧e₀
+    e1_e0 = cast("ConformalBasis", basis).e1.op(eo)  # e₁∧e₀
+    e2_e0 = cast("ConformalBasis", basis).e2.op(eo)  # e₂∧e₀
 
     return (
         -2.0 * float(mv.sp(e1_e0)) / scal,

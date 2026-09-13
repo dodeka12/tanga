@@ -3,6 +3,8 @@
 
 """Tests for Jupyter display helpers (``display_snapshot`` / ``display_static``)."""
 
+import os
+
 import pytest
 
 from pytanga.viz.visualizer import Visualizer
@@ -55,9 +57,13 @@ class TestDisplaySnapshotNonJupyter:
             opened.append(url)
 
         monkeypatch.setattr("webbrowser.open", _open)
-        monkeypatch.setattr(
-            "tempfile.mktemp", lambda suffix: str(tmp_path / ("snapshot" + suffix))
-        )
+
+        def _fake_mkstemp(suffix: str = "") -> tuple[int, str]:
+            path = tmp_path / ("snapshot" + suffix)
+            fd = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+            return fd, str(path)
+
+        monkeypatch.setattr("tempfile.mkstemp", _fake_mkstemp)
 
         assert viz.display_snapshot() is None
         assert len(opened) == 1

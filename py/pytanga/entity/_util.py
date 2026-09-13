@@ -12,13 +12,20 @@ constructor can route an MV through the full analyzer without importing
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
+    from typing_extensions import TypeIs
+
 
 def _fmt_v(x: float, y: float, z: float) -> str:
     """Format a 3D vector with 2 decimal places."""
     return f"({x:.2f}, {y:.2f}, {z:.2f})"
 
 
-def _is_mv(x) -> bool:
+def _is_mv(x: object) -> "TypeIs[MV]":
     """True if *x* is a multivector (has the ``_alg`` slot)."""
     return hasattr(x, "_alg")
 
@@ -26,10 +33,10 @@ def _is_mv(x) -> bool:
 # Registry of ``analyze_<name>(mv)`` functions, populated by
 # ``pytanga.geometry.analysis`` once all dispatchers are defined.  This keeps
 # the entity constructors free of any import-time dependency on ``analysis``.
-_ANALYZERS: dict[str, "callable"] = {}
+_ANALYZERS: dict[str, "Callable[[MV], Any]"] = {}
 
 
-def register_analyzer(name: str, fn) -> None:
+def register_analyzer(name: str, fn: "Callable[[MV], Any]") -> None:
     """Register an algebra-specific analyzer callable under *name*.
 
     Called by :mod:`pytanga.geometry.analysis` during import.  *fn* must
@@ -38,7 +45,7 @@ def register_analyzer(name: str, fn) -> None:
     _ANALYZERS[name] = fn
 
 
-def _convert_mv(name: str, mv):
+def _convert_mv(name: str, mv: "MV") -> Any:
     """Convert an MV to an entity via the registered analyzer for *name*."""
     try:
         analyzer = _ANALYZERS[name]
@@ -49,7 +56,7 @@ def _convert_mv(name: str, mv):
     return analyzer(mv)
 
 
-def _scalar(value):
+def _scalar(value: "MV" | float) -> float:
     """Return the python scalar for a scalar MV, or *value* unchanged."""
     if _is_mv(value):
         if not value.is_scalar:

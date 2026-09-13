@@ -65,6 +65,21 @@ def build_gltf_scene(
 
 
 # ═══════════════════════════════════════════════════════════════
+# Helpers
+# ═══════════════════════════════════════════════════════════════
+
+
+def _vec3(value: Any) -> tuple[float, float, float]:
+    """Return the first three components of a serialized vector as floats."""
+    return (float(value[0]), float(value[1]), float(value[2]))
+
+
+def _quad(a: float, b: float, c: float, d: float) -> tuple[float, float, float, float]:
+    """Return four values as plain Python floats (normalises numpy scalars)."""
+    return (float(a), float(b), float(c), float(d))
+
+
+# ═══════════════════════════════════════════════════════════════
 # Builder
 # ═══════════════════════════════════════════════════════════════
 
@@ -73,15 +88,15 @@ class _GltfBuilder:
     """Assembles a glTF 2.0 scene from entity data."""
 
     def __init__(self) -> None:
-        self._nodes: List[dict] = []
-        self._meshes: List[dict] = []
-        self._materials: List[dict] = []
+        self._nodes: List[dict[str, Any]] = []
+        self._meshes: List[dict[str, Any]] = []
+        self._materials: List[dict[str, Any]] = []
         self._scene_nodes: List[int] = []
         self._buf_parts: List[bytes] = []
         self._buf_offset = 0
-        self._accessors: List[dict] = []
-        self._buffer_views: List[dict] = []
-        self._cameras: List[dict] = []
+        self._accessors: List[dict[str, Any]] = []
+        self._buffer_views: List[dict[str, Any]] = []
+        self._cameras: List[dict[str, Any]] = []
         self._camera_node: int | None = None
         self._node_by_id: Dict[str, int] = {}
 
@@ -123,7 +138,7 @@ class _GltfBuilder:
 
     def _add_view(self, offset: int, length: int, target: int | None = None) -> int:
         idx = len(self._buffer_views)
-        view: dict = {"buffer": 0, "byteOffset": offset, "byteLength": length}
+        view: dict[str, Any] = {"buffer": 0, "byteOffset": offset, "byteLength": length}
         if target is not None:
             view["target"] = target
         self._buffer_views.append(view)
@@ -147,7 +162,7 @@ class _GltfBuilder:
     # ── Style helper ────────────────────────────────────
 
     @staticmethod
-    def _style_val(ent: dict, key: str, fallback: float) -> float:
+    def _style_val(ent: dict[str, Any], key: str, fallback: float) -> float:
         style = ent.get("style", {})
         if isinstance(style, dict) and key in style:
             return float(style[key])
@@ -163,7 +178,7 @@ class _GltfBuilder:
 
     def _add_entity(self, ent: Dict[str, Any]) -> None:
         kind = ent.get("kind", "")
-        node: dict = {}
+        node: dict[str, Any] = {}
 
         if kind == "VizGroup":
             # Empty group node — children parent under it below.
@@ -389,9 +404,9 @@ class _GltfBuilder:
     def _get_position(ent: Dict[str, Any]) -> tuple[float, float, float] | None:
         kind = ent.get("kind", "")
         if kind in ("Point", "HPoint"):
-            return tuple(ent.get("position", [0, 0, 0]))  # type: ignore[return-value]
+            return _vec3(ent.get("position", [0.0, 0.0, 0.0]))
         if kind in ("Direction", "Translator"):
-            return tuple(ent.get("origin", [0, 0, 0]))  # type: ignore[return-value]
+            return _vec3(ent.get("origin", [0.0, 0.0, 0.0]))
         if kind in ("Line",):
             # The cylinder primitive is centered on its Y axis; position it at
             # the segment midpoint so it spans origin -> origin + d̂·length.
@@ -406,16 +421,16 @@ class _GltfBuilder:
             mid = origin + direction * (length / 2.0)
             return (float(mid[0]), float(mid[1]), float(mid[2]))
         if kind in ("Plane", "ReflectionPlane"):
-            return tuple(ent.get("point", ent.get("origin", [0, 0, 0])))  # type: ignore[return-value]
+            return _vec3(ent.get("point", ent.get("origin", [0.0, 0.0, 0.0])))
         if kind in ("Circle", "Sphere", "Inversion"):
-            return tuple(ent.get("center", [0, 0, 0]))  # type: ignore[return-value]
+            return _vec3(ent.get("center", [0.0, 0.0, 0.0]))
         if kind in (
             "Rotor",
             "Motor",
             "GeneralRotor",
             "Dilator",
         ):
-            return tuple(ent.get("origin", [0, 0, 0]))  # type: ignore[return-value]
+            return _vec3(ent.get("origin", [0.0, 0.0, 0.0]))
         return (0.0, 0.0, 0.0)
 
     @staticmethod
@@ -445,7 +460,7 @@ class _GltfBuilder:
                 w = 1.0 + np.dot(source, n)
                 q_len = math.sqrt(w * w + v.dot(v))
                 if q_len > 1e-10:
-                    return (v[0] / q_len, v[1] / q_len, v[2] / q_len, w / q_len)
+                    return _quad(v[0] / q_len, v[1] / q_len, v[2] / q_len, w / q_len)
                 # Anti-parallel: 180° about an axis perpendicular to `source`.
                 aux = (
                     np.array([1.0, 0.0, 0.0])
@@ -470,7 +485,7 @@ class _GltfBuilder:
         t = float(np.trace(r))
         if t > 0.0:
             s = math.sqrt(t + 1.0) * 2.0
-            return (
+            return _quad(
                 (r[2, 1] - r[1, 2]) / s,
                 (r[0, 2] - r[2, 0]) / s,
                 (r[1, 0] - r[0, 1]) / s,
@@ -478,7 +493,7 @@ class _GltfBuilder:
             )
         if r[0, 0] > r[1, 1] and r[0, 0] > r[2, 2]:
             s = math.sqrt(1.0 + r[0, 0] - r[1, 1] - r[2, 2]) * 2.0
-            return (
+            return _quad(
                 0.25 * s,
                 (r[0, 1] + r[1, 0]) / s,
                 (r[0, 2] + r[2, 0]) / s,
@@ -486,21 +501,21 @@ class _GltfBuilder:
             )
         if r[1, 1] > r[2, 2]:
             s = math.sqrt(1.0 + r[1, 1] - r[0, 0] - r[2, 2]) * 2.0
-            return (
+            return _quad(
                 (r[0, 1] + r[1, 0]) / s,
                 0.25 * s,
                 (r[1, 2] + r[2, 1]) / s,
                 (r[0, 2] - r[2, 0]) / s,
             )
         s = math.sqrt(1.0 + r[2, 2] - r[0, 0] - r[1, 1]) * 2.0
-        return (
+        return _quad(
             (r[0, 2] + r[2, 0]) / s,
             (r[1, 2] + r[2, 1]) / s,
             0.25 * s,
             (r[1, 0] - r[0, 1]) / s,
         )
 
-    def _prim_to_gltf(self, prim: _Primitive, mat_idx: int) -> dict:
+    def _prim_to_gltf(self, prim: _Primitive, mat_idx: int) -> dict[str, Any]:
         po, pl = self._write_buffer(prim.positions)
         no, nl = self._write_buffer(prim.normals)
         io, il = self._write_buffer(prim.indices)
@@ -545,7 +560,7 @@ class _GltfBuilder:
                     },
                 }
             )
-            node: dict = {"camera": cam_idx}
+            node: dict[str, Any] = {"camera": cam_idx}
             if cam_config.position:
                 node["translation"] = list(cam_config.position)
             node_idx = len(self._nodes)
@@ -607,7 +622,9 @@ class _GltfBuilder:
     # ── Finalize ────────────────────────────────────────
 
     def finalize(self) -> bytes:
-        gltf: dict = {"asset": {"version": "2.0", "generator": "Tanga viz _gltf.py"}}
+        gltf: dict[str, Any] = {
+            "asset": {"version": "2.0", "generator": "Tanga viz _gltf.py"}
+        }
         if self._scene_nodes:
             sn = list(self._scene_nodes)
             if self._camera_node is not None:
@@ -663,7 +680,7 @@ def _hex_to_rgba(hex_color: str) -> List[float]:
 
 
 def _srgb_to_linear(c: float) -> float:
-    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    return c / 12.92 if c <= 0.04045 else float(((c + 0.055) / 1.055) ** 2.4)
 
 
 def _mat3_to_quat(m: np.ndarray) -> tuple[float, float, float, float]:

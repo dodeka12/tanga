@@ -18,7 +18,7 @@ import json
 from typing import Any
 from uuid import uuid4
 
-from pytanga.viz.export._cdn import build_library_script_tag
+from pytanga.viz.export._cdn import DeliveryMode, build_library_script_tag
 from pytanga.viz.export._bootstrap import (
     embed_animation_data,
     theme_css_for_delivery,
@@ -57,7 +57,7 @@ def render_export_animated_figure(
     scene_config: dict[str, Any] | None = None,
     anim_style: dict[str, Any] | None = None,
     theme: str = "dark",
-    delivery: str = "cdn",
+    delivery: DeliveryMode = "cdn",
     delivery_ref: str | None = None,
 ) -> str:
     """Render an animated figure HTML snippet for embedding.
@@ -170,7 +170,7 @@ def render_export_animated_html(
     anim_style: dict[str, Any] | None = None,
     title: str = "Tanga 3D Viewer",
     theme: str = "dark",
-    delivery: str = "cdn",
+    delivery: DeliveryMode = "cdn",
     delivery_ref: str | None = None,
 ) -> str:
     """Render a full-page animated HTML document for standalone viewing.

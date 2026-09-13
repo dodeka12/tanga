@@ -13,6 +13,8 @@ The 4D PGA complement dual (J‑map / Hodge star) is defined in
 
 from __future__ import annotations
 
+from typing import cast
+
 from pytanga.algebra._algebra import Algebra
 from pytanga.algebra._mv import MV
 from pytanga.basis.pga3 import BasisPGA3
@@ -37,7 +39,9 @@ def _get_e0(alg: Algebra) -> MV:
     Algebra instances).
     """
     if hasattr(alg, "e0"):
-        return alg.e0
+        # ``e0`` is attached as an MV by BasisPGA3; ``hasattr`` narrowing only
+        # yields ``object``, so the type has to be asserted here.
+        return cast("MV", alg.e0)
     return alg.multivector({EP: 1.0, EM: 1.0})
 
 
@@ -57,7 +61,7 @@ def _get_e0_coeff(mv: MV) -> float:
     """
     alg = mv.algebra
     if hasattr(alg, "e0_recip"):
-        e0_recip = alg.e0_recip
+        e0_recip = cast("MV", alg.e0_recip)  # attached as an MV by BasisPGA3
     else:
         e0_recip = alg.multivector({EP: 0.5, EM: -0.5})
     return float(mv.sp(e0_recip))

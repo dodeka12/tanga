@@ -13,12 +13,17 @@ coefficient maps).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
+
+if TYPE_CHECKING:
+    from .conic import Conic, Quadric3D
 
 _entities = None
 
 
-def _E():
+def _E() -> Any:
     """Lazily import and cache :mod:`pytanga.geometry.entities`."""
     global _entities
     if _entities is None:
@@ -27,7 +32,7 @@ def _E():
     return _entities
 
 
-def _fprime(matrix, center_xyz) -> float:
+def _fprime(matrix: "np.ndarray", center_xyz: "tuple[float, ...]") -> float:
     """Centered constant ``f' = c + bᵀ·center`` of the affine block form."""
     n = matrix.shape[0] - 1
     b = matrix[:n, n]
@@ -35,7 +40,7 @@ def _fprime(matrix, center_xyz) -> float:
     return float(matrix[n, n] + b @ c)
 
 
-def _line_from_homogeneous(abc):
+def _line_from_homogeneous(abc: "tuple[float, ...] | np.ndarray") -> Any:
     """Convert a homogeneous line ``(a, b, c)`` (``a x + b y + c = 0``) to a Line."""
     E = _E()
     a, b, c = (float(x) for x in abc)
@@ -47,7 +52,7 @@ def _line_from_homogeneous(abc):
     return E.Line(E.Point(-cn * nx, -cn * ny, 0.0), E.Direction(ny, -nx, 0.0))
 
 
-def _plane_from_homogeneous(abcd):
+def _plane_from_homogeneous(abcd: "tuple[float, ...] | np.ndarray") -> Any:
     """Convert a homogeneous plane ``(a, b, c, d)`` (``a x + b y + c z + d = 0``)
     to a Plane."""
     E = _E()
@@ -57,12 +62,10 @@ def _plane_from_homogeneous(abcd):
         raise ValueError("degenerate plane (zero normal)")
     nx, ny, nz = a / norm, b / norm, c / norm
     dn = d / norm
-    return E.Plane(
-        E.Point(-dn * nx, -dn * ny, -dn * nz), E.Direction(nx, ny, nz)
-    )
+    return E.Plane(E.Point(-dn * nx, -dn * ny, -dn * nz), E.Direction(nx, ny, nz))
 
 
-def refine_conic(conic):
+def refine_conic(conic: "Conic") -> Any:
     E = _E()
     kind = conic.kind
     if kind is E.EConicKind.circle:
@@ -82,7 +85,7 @@ def refine_conic(conic):
     raise ValueError(f"conic of kind {kind.value!r} has no real entity")
 
 
-def _ellipse_from_conic(conic):
+def _ellipse_from_conic(conic: "Conic") -> Any:
     # Perwass's conic analysis: the principal directions are the eigenvectors
     # of the quadratic part and the semi-axis along each direction is
     # sqrt(-f'/lambda_i) — keep the eigenvalue/eigenvector pairing so the
@@ -90,16 +93,20 @@ def _ellipse_from_conic(conic):
     E = _E()
     lam = np.asarray(conic.eigenvalues, dtype=float)  # ascending
     dirs = conic.principal_directions  # paired with lam (ascending)
-    fp = _fprime(conic.matrix, (conic.center.x, conic.center.y))
+    center = conic.center
+    assert center is not None
+    fp = _fprime(conic.matrix, (center.x, center.y))
     ru = float(np.sqrt(abs(fp) / abs(lam[0])))
     rv = float(np.sqrt(abs(fp) / abs(lam[1])))
     return E.Ellipse(conic.center, ru, rv, dir_u=dirs[0], dir_v=dirs[1])
 
 
-def _hyperbola_from_conic(conic):
+def _hyperbola_from_conic(conic: "Conic") -> Any:
     E = _E()
     lam = np.asarray(conic.eigenvalues, dtype=float)  # ascending: [neg, pos]
-    fp = _fprime(conic.matrix, (conic.center.x, conic.center.y))
+    center = conic.center
+    assert center is not None
+    fp = _fprime(conic.matrix, (center.x, center.y))
     lam_neg, lam_pos = lam[0], lam[1]
     d_neg, d_pos = conic.principal_directions
     r_pos = float(np.sqrt(abs(fp) / abs(lam_pos)))
@@ -109,7 +116,7 @@ def _hyperbola_from_conic(conic):
     return E.Hyperbola(conic.center, d_neg, d_pos, r_neg, r_pos)
 
 
-def _parabola_from_conic(conic):
+def _parabola_from_conic(conic: "Conic") -> Any:
     E = _E()
     q = conic._quadratic
     b = conic.matrix[:2, 2]
@@ -141,14 +148,13 @@ def _parabola_from_conic(conic):
     )
 
 
-def _double_line_from_conic(conic):
-    E = _E()
+def _double_line_from_conic(conic: "Conic") -> Any:
     evals, evecs = np.linalg.eigh(conic.matrix)
     abc = evecs[:, -1]  # eigenvector of the largest (non-zero) eigenvalue
     return _line_from_homogeneous(abc)
 
 
-def _line_pair_from_conic(conic):
+def _line_pair_from_conic(conic: "Conic") -> Any:
     E = _E()
     evals, evecs = np.linalg.eigh(conic.matrix)  # ascending: [neg, 0, pos]
     v_pos = evecs[:, -1]
@@ -158,7 +164,7 @@ def _line_pair_from_conic(conic):
     return E.LinePair(_line_from_homogeneous(a + b), _line_from_homogeneous(a - b))
 
 
-def _parallel_line_pair_from_conic(conic):
+def _parallel_line_pair_from_conic(conic: "Conic") -> Any:
     E = _E()
     q = conic._quadratic
     b = conic.matrix[:2, 2]
@@ -177,8 +183,7 @@ def _parallel_line_pair_from_conic(conic):
     )
 
 
-
-def refine_quadric(quadric):
+def refine_quadric(quadric: "Quadric3D") -> Any:
     E = _E()
     kind = quadric.kind
     if kind is E.EQuadricKind.sphere:
@@ -198,12 +203,12 @@ def refine_quadric(quadric):
     raise ValueError(f"quadric of kind {kind.value!r} has no specific entity")
 
 
-def _ellipsoid_from_quadric(quadric):
+def _ellipsoid_from_quadric(quadric: "Quadric3D") -> Any:
     E = _E()
     lam = np.asarray(quadric.eigenvalues, dtype=float)  # ascending
-    fp = _fprime(
-        quadric.matrix, (quadric.center.x, quadric.center.y, quadric.center.z)
-    )
+    center = quadric.center
+    assert center is not None
+    fp = _fprime(quadric.matrix, (center.x, center.y, center.z))
     # Semi-axes in descending order; rotation is left as None (axis-aligned
     # principal frame — a rotated ellipsoid keeps the same radii magnitudes).
     radii = tuple(
@@ -212,7 +217,7 @@ def _ellipsoid_from_quadric(quadric):
     return E.Ellipsoid(quadric.center, radii)
 
 
-def _cylinder_from_quadric(quadric):
+def _cylinder_from_quadric(quadric: "Quadric3D") -> Any:
     E = _E()
     q = quadric._quadratic
     b = quadric.matrix[:3, 3]
@@ -233,7 +238,7 @@ def _cylinder_from_quadric(quadric):
     )
 
 
-def _cone_from_quadric(quadric):
+def _cone_from_quadric(quadric: "Quadric3D") -> Any:
     E = _E()
     matrix = quadric.matrix
     q = quadric._quadratic
@@ -259,7 +264,7 @@ def _cone_from_quadric(quadric):
     )
 
 
-def _plane_from_quadric(quadric):
+def _plane_from_quadric(quadric: "Quadric3D") -> Any:
     E = _E()
     matrix = quadric.matrix
     a = 2.0 * float(matrix[0, 3])
@@ -277,7 +282,7 @@ def _plane_from_quadric(quadric):
     )
 
 
-def _plane_pair_from_quadric(quadric):
+def _plane_pair_from_quadric(quadric: "Quadric3D") -> Any:
     # Perwass's degenerate-quadric analysis (ConicIntersect.tex §"Analysis of
     # Conics", extended to 3D): a rank-2 quadric is a plane pair, and its two
     # homogeneous plane vectors are √λ₊·v₊ ± √(−λ₋)·v₋ from the eigen-decomposition
@@ -294,7 +299,7 @@ def _plane_pair_from_quadric(quadric):
     )
 
 
-def _parallel_plane_pair_from_quadric(quadric):
+def _parallel_plane_pair_from_quadric(quadric: "Quadric3D") -> Any:
     # Two parallel planes: the 3×3 quadratic part has rank 1 (a single non-zero
     # eigenvalue), mirroring _parallel_line_pair_from_conic.
     E = _E()
@@ -314,4 +319,3 @@ def _parallel_plane_pair_from_quadric(quadric):
         _plane_from_homogeneous((v[0], v[1], v[2], -d1)),
         _plane_from_homogeneous((v[0], v[1], v[2], -d2)),
     )
-

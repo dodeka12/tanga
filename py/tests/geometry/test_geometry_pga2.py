@@ -122,9 +122,7 @@ def test_reflection_origin_round_trip(b):
 
 def test_general_rotor_round_trip(b):
     """create GeneralRotor(angle=0.5, z-axis, origin=(1,0,0)) → analyze → assert."""
-    mv = create_operator(
-        b, GeneralRotor(0.5, Direction(0, 0, 1), Point(1, 0, 0))
-    )
+    mv = create_operator(b, GeneralRotor(0.5, Direction(0, 0, 1), Point(1, 0, 0)))
     r = analyze_operator(mv)
     assert isinstance(r, (GeneralRotor, Motor)), f"Got {type(r).__name__}"
     if isinstance(r, GeneralRotor):

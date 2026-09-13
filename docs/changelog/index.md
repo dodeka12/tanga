@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.3.0 (2.4.0-rc1)] — 2026-09-13
+- Full `ty` + ruff `ANN` type-hint coverage of `py/pytanga` and `py/examples` · both gates gating in pre-commit and CI · `typing-and-annotations.md` typing policy + handler-types docs · Q3 point tuples analyze to `PointSet` · new `point_tuples_demo.py`
+- Breaking: `pytanga.viz.Handler` removed (use `ControlHandler` / `InteractionHandler`) · one `ControlEvent` base + `InteractionEvent` hierarchy · interaction API typed instead of `Any` · Bug fixes: `ReflectionPlane` label frame · `tempfile.mktemp` · example `Reflection(normal=…)` / `wireframe` / `DataArray` bugs
+→ [Details](2026/09/13_a4402df9.md)
+
 ## [Since 2.3.0] — 2026-09-12
 - Projective quadric space (`BasisQ2`/`BasisQ3`) · conic/quadric entities with analysis/creation · quadric-space rotation rotor · plane pairs · two-quadric intersection (plane-conics + sampled curves) · conic/curve renderers
 - Bug fixes: unbounded quartic intersection curves now reach the view box via analytic asymptotes

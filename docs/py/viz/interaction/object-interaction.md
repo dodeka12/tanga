@@ -73,8 +73,10 @@ raycaster.
 
 ## Event Dataclasses
 
-All events inherit from `ControlEvent` and carry a `camera: Camera` field
-for world↔screen coordinate conversion (see [Camera](#camera) below).
+All events inherit from `ControlEvent` (which carries `browser_id`); the
+interaction events derive from `InteractionEvent`, adding the target
+`object_id`, the `event_type` and a `camera: Camera` field for world↔screen
+coordinate conversion (see [Camera](#camera) below).
 
 ### ClickEvent
 

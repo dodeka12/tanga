@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
 
+    from .operators import GeneralRotor, Translator
+
 # Blade IDs — sourced from BasisE2 as single source of truth.
 from pytanga.basis.e2 import BasisE2
 
@@ -105,9 +107,7 @@ def create_point_pair(basis: Algebra, a: Point, b: Point) -> MV:
     )
 
 
-def create_homogeneous_point(
-    basis: Algebra, pt: Point, weight: float = 1.0
-) -> MV:
+def create_homogeneous_point(basis: Algebra, pt: Point, weight: float = 1.0) -> MV:
     raise ValueError(
         "Homogeneous points require conformal embedding (N2); not available in E2."
     )
@@ -164,7 +164,7 @@ def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     )
 
 
-def create_motor(basis: Algebra, rotor, translator) -> MV:
+def create_motor(basis: Algebra, rotor: GeneralRotor, translator: Translator) -> MV:
     raise ValueError("Motors require conformal embedding (N2); not available in E2.")
 
 

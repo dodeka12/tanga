@@ -27,6 +27,7 @@ Gunn/Dorst 4D PGA.
 from __future__ import annotations
 
 from functools import cached_property
+from typing import Any
 
 from pytanga.algebra._algebra import Algebra
 from pytanga.algebra._mv import MV
@@ -113,7 +114,7 @@ class BasisPGA3(Algebra):
         23: {0: -0.5},  # J(e₁₂₃∧em) = -1/2
     }
 
-    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw: Any) -> None:
         super().__init__(5, 0b10000, dtype, opns=opns, **kw)
         mv = self.multivector
         self.e1 = mv({1: 1})
@@ -172,7 +173,7 @@ class BasisPGA3(Algebra):
     # ── display ───────────────────────────────────────────────────
 
     @cached_property
-    def _display_basis(self) -> list:
+    def _display_basis(self) -> list[tuple[str, MV, MV | None, int | None]]:
         """Explicit display basis — PGA4CS Table 4 naming convention.
 
         Blades are named with e₀ first so that the dual map signs are
@@ -182,7 +183,7 @@ class BasisPGA3(Algebra):
         """
         e0, e1, e2, e3, e0i = self.e0, self.e1, self.e2, self.e3, self.e0_recip
 
-        def _entry(name, blade):
+        def _entry(name: str, blade: MV) -> tuple[str, MV, MV, int | None]:
             pinv = self.blade_pseudo_inverse(blade)
             bid = None
             raw = {

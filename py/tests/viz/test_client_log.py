@@ -86,8 +86,7 @@ def test_default_sink_maps_level(caplog, level: str, expected: str) -> None:
     with caplog.at_level(logging.DEBUG, logger="tanga.viz.client"):
         asyncio.run(_default_client_log_sink(record, ControlEvent()))
     assert any(
-        r.name == "tanga.viz.client" and r.levelname == expected
-        for r in caplog.records
+        r.name == "tanga.viz.client" and r.levelname == expected for r in caplog.records
     )
 
 

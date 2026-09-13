@@ -16,12 +16,17 @@ Keywords: quadric, ray, Quadric3D, hyperboloid, cone, paraboloid
 
 import numpy as np
 
+from collections.abc import Sequence
 from pytanga.geometry import Quadric3D
 from pytanga.quadric import to_coeffs
 from pytanga.viz import Visualizer
 
 
-def _translated_quadric(q, center, const):
+def _translated_quadric(
+    q: "np.ndarray | Sequence[float]",
+    center: "np.ndarray | Sequence[float]",
+    const: float,
+) -> "np.ndarray":
     """Symmetric 4×4 matrix of ``(x - center)ᵀ q (x - center) + const = 0``."""
     q = np.asarray(q, dtype=float)
     c = np.asarray(center, dtype=float)
@@ -30,7 +35,7 @@ def _translated_quadric(q, center, const):
     return np.block([[q, b[:, None]], [b[None, :], np.array([[f]])]])
 
 
-def _paraboloid_matrix(vertex):
+def _paraboloid_matrix(vertex: "Sequence[float]") -> "np.ndarray":
     """Symmetric 4×4 matrix of ``(x - vx)² + (y - vy)² - (z - vz) = 0``."""
     vx, vy, vz = vertex
     return np.array(

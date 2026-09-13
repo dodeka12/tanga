@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ._controls import Control, Handler, serialize_control_defs
+from ._controls import Control, ControlHandler, serialize_control_defs
 
 
 @dataclass
@@ -47,7 +47,7 @@ class Banner:
     auto_hide: bool = True
     dismissable: bool = True
     controls: list[Control] = field(default_factory=list)
-    on_close: Handler | None = None
+    on_close: ControlHandler | None = None
 
     def __post_init__(self) -> None:
         for name in ("align_x", "align_y"):
@@ -76,9 +76,7 @@ def serialize_banner(banner: Banner, scene: str | None = None) -> dict[str, Any]
     }
 
 
-def serialize_banner_remove(
-    banner_id: str, scene: str | None = None
-) -> dict[str, Any]:
+def serialize_banner_remove(banner_id: str, scene: str | None = None) -> dict[str, Any]:
     """Build the ``banner_remove`` message."""
     return {"type": "banner_remove", "scene": scene, "id": banner_id}
 

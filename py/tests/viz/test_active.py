@@ -489,7 +489,6 @@ class TestClickHandler:
         asyncio.run(_run())
 
 
-
 def test_on_interaction_registers_in_unified_registry():
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
 

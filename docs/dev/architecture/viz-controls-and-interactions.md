@@ -35,7 +35,14 @@ Three orthogonal concerns, one model:
    `Control.serialize` (`_fields()` per kind).  `ControlView.__getattr__`
    forwards attribute reads *and* `set_value`/`get_value`/`undo`/`redo`/
    `can_undo`/`can_redo` to the control, so value and history live on the
-   control, not on a host.
+   control, not on a host.  Two handler shapes share that one registry,
+   distinguished by the stored `HandlerOrigin`: `ControlHandler`
+   (`async def h(value, event: ControlEvent)`) for controls, and
+   `InteractionHandler` (`async def h(event)`) for interactive objects.  Every
+   event derives from the single `ControlEvent`; the interaction events
+   (`InteractionEvent` → `ClickEvent`/`DragEvent`/`ScrollEvent`) add the target
+   `object_id`, the `event_type` and the camera.  See
+   [Handler types](#handler-types) below for the full set of aliases.
 4. **One client→server envelope.** The frontend sends every user action through
    `sendEvent(target, event, data)` in `templates/events.js`:
    `{ type: "event", target: "<id>", event: "<name>", data: {…} }`.
@@ -54,6 +61,83 @@ Three orthogonal concerns, one model:
    the requesting browser via `Transport.send_to_browser`.  Request/response
    events (e.g. a `custom` enum column's `enum_options`) use `reply` instead of
    a broadcast `control_update`.
+
+## Handler types
+
+Handlers are **async** callables.  Their *arity* and event type say which family
+they belong to; all aliases are public (exported from `pytanga.viz`).
+
+| Alias | Signature | Attached through |
+| --- | --- | --- |
+| `ControlHandler` | `async def h(value, event: ControlEvent)` | a control's `on_*` fields (`on_change`, `on_click`, `on_press`, `on_release`, `on_cell_change`, `on_row_add`, …) |
+| `EnumOptionsHandler` | `async def h(request: TableEnumOptionsRequest, event: ControlEvent) -> list[str] \| tuple[str, ...] \| None` | `Table.on_enum_options` (custom enum columns; reply-only) |
+| `InteractionHandler` | `async def h(event: InteractionEvent)` | `Visualizer.on_interaction(object_id, event_type, h)`, `VizSceneHandle.on_interaction`, `VizObjectRef.on_interaction` |
+| `ActHandler` · `ActEventHandler` · `ActClickHandler` | `async def h(event: DragEvent \| ClickEvent, obj: ActSceneObject)` | an `ActSceneObject` subclass' own `handler=` / `on_drag_start=` / `on_drag_end=` / `on_click=` constructor kwargs |
+
+Both `ControlHandler` and `InteractionHandler` are `Awaitable`-returning, but
+the interaction one is declared as `Coroutine` because the interaction
+dispatcher schedules it with `asyncio.create_task` — a custom awaitable that is
+not a coroutine is not accepted there.
+
+The control `value` argument depends on the kind (float for sliders, str for
+dropdowns / text / textarea / colour pickers, bool for checkboxes, `None` for
+buttons and group toggles, a change/selection dataclass for tables) and is
+annotated `Any` in `ControlHandler`; see `ControlHandler`'s docstring for the
+per-kind table.  `ActHandler` returns `bool`: `True` means "I handled it
+completely (including the flush)", `False` lets the default behaviour run
+(move the object and flush).
+
+### Event hierarchy
+
+```
+ControlEvent                      # shared base: browser_id (+ future fields)
+└── InteractionEvent              # + object_id, event_type, camera
+    ├── ClickEvent                # + mouse_button, modifiers, screen_position,
+    │                               world_position, world_normal
+    ├── DragEvent                 # + screen_position, delta_pixels, world_position,
+    │                               world_delta, drag_mode, ray_origin,
+    │                               ray_direction, delta_transform
+    └── ScrollEvent               # + screen_position, scroll_delta
+```
+
+Two consequences worth knowing when writing a handler:
+
+- **Annotate the concrete event.**  `world_position` lives on `ClickEvent` /
+  `DragEvent`, *not* on `InteractionEvent`, so `async def h(event:
+  InteractionEvent)` cannot read it — use `DragEvent` for drag handlers.
+- **Events may grow.**  `ControlEvent` is extensible: the event is always the
+  last argument, after the value, so extra fields can be added without breaking
+  existing handler signatures.
+
+### Registration
+
+- **Controls.**  Handlers are dataclass fields named `on_<event>` on the
+  `Control`; `Control.register_handlers` (called by `LayoutHost.register` when a
+  view tree is mounted) maps `on_change` → `"change"`, `on_cell_change` →
+  `"cell_change"`, … and registers each under `(control_id, event)` with
+  `HandlerOrigin.CONTROL`.
+- **Interactive objects.**  `on_interaction(object_id,
+  InteractionEventType.DRAG_MOVE, handler)` registers under
+  `(object_id, "drag_move")` with `HandlerOrigin.INTERACTION`.  `ActSceneObject`
+  does this for you in `_init`, mapping its constructor kwargs onto
+  `DRAG_MOVE` (the per-frame handler), `DRAG_START`, `DRAG_END` and `CLICK`.
+- **One registry, one key space.**  `ControlHandlerRegistry` stores both
+  families side by side, tagged with `HandlerOrigin`; read control entries with
+  `get()` and interaction entries with `get_interaction()`, and use
+  `clear_controls()` to drop only the control family.  Registration is
+  last-writer-wins per `(id, event)`, and the family is *not* checked — a
+  control and an interactive object sharing an id **and** an event name shadow
+  each other.
+- **Request/reply.**  `EnumOptionsHandler` is registered like any other `on_*`
+  field, but its `Dispatch.reply` is sent only to the requesting browser
+  instead of broadcasting a `control_update`.
+
+`Handler` (the ambiguous old single alias) no longer exists — use the explicit
+aliases above.  Typing guidance for the handlers *you* write is in
+[`typing-and-annotations.md`](typing-and-annotations.md): annotate
+`value: Any, event: ControlEvent` for controls and `event: DragEvent, obj:
+ActSceneObject` for act objects, and narrow (`isinstance`) before touching a
+subclass-only attribute such as `ActPoint.point`.
 
 ## Host layer
 

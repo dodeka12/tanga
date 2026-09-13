@@ -100,7 +100,9 @@ OMEGA1_0 = 0.0
 OMEGA2_0 = 0.0
 
 
-def _accel(theta1, theta2, omega1, omega2):
+def _accel(
+    theta1: float, theta2: float, omega1: float, omega2: float
+) -> tuple[float, float]:
     """Angular accelerations of the two links (standard double-pendulum EOM).
 
     ``theta1`` / ``theta2`` are measured from the downward vertical (positive

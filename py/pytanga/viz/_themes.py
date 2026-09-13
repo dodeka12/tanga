@@ -161,7 +161,8 @@ class ThemeRegistry:
             return paths
         entry = self._entry(theme_id)
         paths = [self._path(str(entry["tokens"]))]
-        overrides = entry.get("overrides") or {}
+        raw_overrides = entry.get("overrides")
+        overrides = raw_overrides if isinstance(raw_overrides, dict) else {}
         paths.extend(self._path(str(rel)) for rel in overrides.values())
         return paths
 

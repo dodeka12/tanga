@@ -27,7 +27,14 @@ Keywords: interaction, ActPoint, drag, two points
 import asyncio
 
 from pytanga.geometry import Line, Point
-from pytanga.viz import ActPoint, CylinderLineStyle, Visualizer, VizObjectRef
+from pytanga.viz import (
+    ActPoint,
+    ActSceneObject,
+    CylinderLineStyle,
+    DragEvent,
+    Visualizer,
+    VizObjectRef,
+)
 
 
 class _ProjectionLines:
@@ -71,11 +78,11 @@ async def main() -> None:
     lines_b = _ProjectionLines(viz)
 
     # Custom handlers: update projection lines, then let ActPoint move the point.
-    async def on_drag_a(event, ap):
+    async def on_drag_a(event: DragEvent, ap: ActSceneObject) -> bool:
         lines_a.update(event.world_position)
         return False  # let ActPoint do the default move + flush
 
-    async def on_drag_b(event, ap):
+    async def on_drag_b(event: DragEvent, ap: ActSceneObject) -> bool:
         lines_b.update(event.world_position)
         return False  # let ActPoint do the default move + flush
 

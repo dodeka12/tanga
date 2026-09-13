@@ -159,7 +159,9 @@ def test_rotation_accepts_axis_angle_tuple() -> None:
 
 def test_rotation_accepts_general_rotor_at_origin() -> None:
     node = capped_cylinder(
-        1.0, 0.3, rotation=GeneralRotor(0.5, Direction(0.0, 0.0, 1.0), Point(0.0, 0.0, 0.0))
+        1.0,
+        0.3,
+        rotation=GeneralRotor(0.5, Direction(0.0, 0.0, 1.0), Point(0.0, 0.0, 0.0)),
     )
     assert node.transform == {"rotation": {"axis": [0.0, 0.0, 1.0], "angle": 0.5}}
 

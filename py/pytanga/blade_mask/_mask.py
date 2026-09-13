@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Iterator
 
 from pytanga.algebra._blade_names import grade as _grade
 from pytanga.algebra._parse import _parse_mv_string
@@ -85,7 +85,8 @@ class BladeMask:
                 if ids_list and isinstance(ids_list[0], str):
                     # list of expression strings
                     for s in ids_list:
-                        raw.update(_parse_mv_string(s, alg.dim).keys())
+                        if isinstance(s, str):
+                            raw.update(_parse_mv_string(s, alg.dim).keys())
                 else:
                     # iterable of int blade ids
                     raw.update(int(b) for b in ids_list)
@@ -103,7 +104,7 @@ class BladeMask:
                         raw.add(bid)
 
         elif isinstance(ctx, MV):
-            raw = self._ids_from_mv(ctx, only_nonzero=True)
+            raw = set(self._ids_from_mv(ctx, only_nonzero=True))
             alg = ctx.algebra
 
         elif isinstance(ctx, list) and ctx and isinstance(ctx[0], MV):
@@ -144,7 +145,7 @@ class BladeMask:
         return cls(a.algebra, raw_ids)
 
     @classmethod
-    def _ids_from_mv_list(cls, mvs: list[MV]) -> tuple[Algebra, list[int]]:
+    def _ids_from_mv_list(cls, mvs: list[MV]) -> tuple[Algebra, set[int]]:
         """Build a mask that is the union of the non-zero blades of each MV in *mvs*.
 
         All MVs must belong to the same algebra.
@@ -156,7 +157,7 @@ class BladeMask:
 
         Returns
         -------
-        tuple[Algebra, list[int]]
+        tuple[Algebra, set[int]]
             The algebra and the union of the individual blade masks.
         """
         from pytanga.algebra import MV as _MV
@@ -255,7 +256,7 @@ class BladeMask:
     def __len__(self) -> int:
         return len(self._ids)
 
-    def __iter__(self):
+    def __iter__(self) -> "Iterator[int]":
         return iter(self._ids)
 
     def __contains__(self, item: int) -> bool:

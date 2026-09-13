@@ -45,9 +45,7 @@ from pytanga.geometry.entities import Direction, Line, Plane, Point, Space, Sphe
         (BasisPGA3, Point(1, 2, 3), 3, 1),
     ],
 )
-def test_create_entity_respects_algebra_opns(
-    alg_cls, entity, opns_grade, ipns_grade
-):
+def test_create_entity_respects_algebra_opns(alg_cls, entity, opns_grade, ipns_grade):
     opns_alg = alg_cls(opns=True)
     ipns_alg = alg_cls(opns=False)
 

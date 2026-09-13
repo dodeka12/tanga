@@ -6,8 +6,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ._util import _convert_mv, _is_mv
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -24,7 +28,7 @@ class Space:
 
     scale: float = 1.0
 
-    def __init__(self, scale=1.0):
+    def __init__(self, scale: "float | MV" = 1.0) -> None:
         if _is_mv(scale):
             if scale.is_scalar:
                 object.__setattr__(self, "scale", float(scale.scalar))

@@ -67,6 +67,7 @@ Keywords: expressions, line fitting, least-squares, P3, visualization
 from __future__ import annotations
 
 import numpy as np
+from pytanga import Expression
 from pytanga.basis import BasisP3
 from pytanga.expression import DataArray
 from pytanga.geometry import Direction, Geometry, Line, Normal, Point, RndPoint
@@ -88,14 +89,17 @@ def main() -> None:
     # Noisy sample points scattered near the x-axis.
     n = 20
     points = geo(RndPoint((-3.0, 3.0), Normal(0.0, 0.2), Normal(0.0, 0.2), count=n))
+    assert isinstance(points, list), "RndPoint(count=n) materialises a list of MVs"
 
     # Partially evaluate P over all sample points: a linear map in L whose
     # counting axis stacks the per-point incidence constraints.
     constraints = incidence(P=DataArray(points, masks=("n", geo.mask_for(Point))))
+    assert isinstance(constraints, Expression)
 
     # Singular-value decomposition: the singular vectors are candidate lines,
     # and the smallest singular value is the homogeneous least-squares fit.
     svalues, smvs = constraints.svd()
+    assert isinstance(svalues, list) and isinstance(smvs, list)
     L_est = smvs[-1]
 
     residuals = [(p ^ L_est).mag for p in points]

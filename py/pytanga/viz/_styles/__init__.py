@@ -16,7 +16,7 @@ values with the canonical default.
 
 from __future__ import annotations
 
-from typing import Any, TypeAlias, Union
+from typing import Any, TypeAlias, Union, cast
 
 from pytanga.geometry.entities import (
     Arc,
@@ -52,6 +52,7 @@ from pytanga.geometry.operators import (
     Translator,
 )
 
+from .._style_dict import StylesMap
 from ._base import (
     DashedWireframe as DashedWireframe,
 )
@@ -238,14 +239,18 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "Ellipsoid": EllipsoidStyle(color="#ffaa00", opacity=0.9),
     "Quadric3D": RayQuadricStyle(color="#ffaa00", opacity=0.7),
     "Ellipse": EllipseStyle(color="#ff44ff", opacity=0.9, thickness=1.0),
-    "Hyperbola": HyperbolaStyle(color="#ff44ff", opacity=0.9, thickness=1.0, extent=5.0),
+    "Hyperbola": HyperbolaStyle(
+        color="#ff44ff", opacity=0.9, thickness=1.0, extent=5.0
+    ),
     "Parabola": ParabolaStyle(color="#ff44ff", opacity=0.9, thickness=1.0, extent=5.0),
     "LinePair": LinePairStyle(color="#44ff44", opacity=0.8, thickness=1.0, length=20.0),
     "ParallelLinePair": ParallelLinePairStyle(
         color="#44ff44", opacity=0.8, thickness=1.0, length=20.0
     ),
     "PlanePair": PlanePairStyle(color="#44ff44", opacity=0.3, extent=5.0),
-    "ParallelPlanePair": ParallelPlanePairStyle(color="#44ff44", opacity=0.3, extent=5.0),
+    "ParallelPlanePair": ParallelPlanePairStyle(
+        color="#44ff44", opacity=0.3, extent=5.0
+    ),
     "PlaneConic": PlaneConicStyle(color="#44ff44", opacity=0.8, thickness=2.0),
     "PlaneConicPair": PlaneConicPairStyle(color="#44ff44", opacity=0.8, thickness=2.0),
     "Curve": CurveStyle(color="#44ff44", opacity=0.8, thickness=2.0),
@@ -346,17 +351,17 @@ def _default_style_for(
 
 def _style_for_kind(
     kind: str,
-    styles_map: dict[str, VizStyle] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> VizStyle:
     """Return the default style for a kind string (e.g. ``"Point"``)."""
     source = styles_map if styles_map is not None else _DEFAULT_STYLE_FOR_KIND
-    return source.get(kind, VizStyle())
+    return cast("VizStyle", source.get(kind, VizStyle()))
 
 
 def _style_to_output(
     style: VizStyle | dict[str, Any] | None,
     kind: str,
-    styles_map: dict[str, VizStyle] | None = None,
+    styles_map: StylesMap | None = None,
 ) -> dict[str, Any]:
     """Resolve a (possibly partial) style to a complete merged dict.
 
@@ -366,11 +371,11 @@ def _style_to_output(
     canonical = _style_for_kind(kind, styles_map=styles_map)
 
     if style is None:
-        return canonical.to_dict() if hasattr(canonical, "to_dict") else {}
+        return canonical.to_dict()
 
     if isinstance(style, VizStyle):
         user_dict = style.to_dict()
-        canonical_dict = canonical.to_dict() if hasattr(canonical, "to_dict") else {}
+        canonical_dict = canonical.to_dict()
         merged = dict(canonical_dict)
         for k, v in user_dict.items():
             if v is not None:

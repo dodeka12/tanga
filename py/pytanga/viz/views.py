@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from itertools import count
 from pathlib import Path
-from typing import Any, Iterator, Literal
+from typing import Any, Generic, Iterator, Literal, TypeVar, cast
 
 from ._controls import (
     Button,
@@ -33,7 +33,7 @@ from ._controls import (
     EControlVariant,
     EnumOptionsHandler,
     FileChooser,
-    Handler,
+    ControlHandler,
     Label,
     Markdown,
     Slider,
@@ -81,7 +81,7 @@ _DEFAULT_SCENE_MIN = Size.px(120)
 _TABLE_COLUMN_MIN_PX = 60
 
 
-def _size_dict(spec: SizeSpec) -> dict | None:
+def _size_dict(spec: SizeSpec) -> dict[str, Any] | None:
     """Serialize a ``SizeSpec`` to the canonical JSON shape (``None`` → ``null``)."""
     return None if spec is None else spec.to_dict()
 
@@ -467,13 +467,13 @@ class StackView(View):
 
     def __init__(
         self,
-        direction: EStackDirection,
+        direction: EStackDirection | str,
         children: list[View] | None = None,
         *,
         scrollable: bool = False,
         gap: int | None = None,
-        align: EStackAlign = EStackAlign.STRETCH,
-        justify: EStackJustify = EStackJustify.START,
+        align: EStackAlign | str = EStackAlign.STRETCH,
+        justify: EStackJustify | str = EStackJustify.START,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -527,13 +527,13 @@ class GroupView(StackView):
         title: str = "",
         children: list[View] | None = None,
         *,
-        direction: EStackDirection = EStackDirection.VERTICAL,
-        position: EAnchor | None = None,
+        direction: EStackDirection | str = EStackDirection.VERTICAL,
+        position: EAnchor | str | None = None,
         collapsed: bool = False,
         scrollable: bool = False,
         gap: int | None = None,
-        align: EStackAlign = EStackAlign.STRETCH,
-        justify: EStackJustify = EStackJustify.START,
+        align: EStackAlign | str = EStackAlign.STRETCH,
+        justify: EStackJustify | str = EStackJustify.START,
         icon: Icon | None = None,
         icon_only: bool = False,
         tooltip: str = "",
@@ -592,8 +592,8 @@ class ToolbarView(StackView):
         margin: SizeSpec = Size.px(6),
         border: bool = True,
         gap: int | None = None,
-        align: EStackAlign = EStackAlign.CENTER,
-        justify: EStackJustify = EStackJustify.START,
+        align: EStackAlign | str = EStackAlign.CENTER,
+        justify: EStackJustify | str = EStackJustify.START,
         **kwargs: Any,
     ) -> None:
         if margin is not None and not isinstance(margin, Size):
@@ -601,7 +601,7 @@ class ToolbarView(StackView):
         if not isinstance(border, bool):
             raise ValueError(f"border must be a bool, got {border!r}")
         super().__init__(
-            "horizontal",
+            EStackDirection.HORIZONTAL,
             children,
             gap=gap,
             align=align,
@@ -665,8 +665,8 @@ class MenuView(View):
         *,
         trigger_icon: Icon | None = None,
         mode: Literal["dropdown", "bar"] = "dropdown",
-        direction: EStackDirection | None = None,
-        position: EAnchor | None = None,
+        direction: EStackDirection | str | None = None,
+        position: EAnchor | str | None = None,
         override_variant: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -674,7 +674,11 @@ class MenuView(View):
         if mode not in ("dropdown", "bar"):
             raise ValueError(f"mode must be 'dropdown' or 'bar', got {mode!r}")
         if direction is None:
-            direction = "horizontal" if mode == "bar" else "vertical"
+            direction = (
+                EStackDirection.HORIZONTAL
+                if mode == "bar"
+                else EStackDirection.VERTICAL
+            )
         if direction not in EStackDirection:
             raise ValueError(
                 f"direction must be 'vertical', 'horizontal' or 'wrap', got {direction!r}"
@@ -702,7 +706,10 @@ class MenuView(View):
         return result
 
 
-class ControlView(View):
+C = TypeVar("C", bound=Control)
+
+
+class ControlView(View, Generic[C]):
     """Base for a single HTML control rendered as a plain ``View`` (no scene).
 
     The control ``id`` is the WebSocket event key (``control_id``) and must be
@@ -710,7 +717,15 @@ class ControlView(View):
     :class:`~pytanga.viz._controls.Control` (``self.control``) which is the
     single source of truth for the control's fields; reads of those fields
     delegate to it via :meth:`__getattr__`.
+
+    Parameterised by the concrete control kind, so a subclass declares
+    ``class SliderView(ControlView[Slider])`` and ``self.control`` is a
+    :class:`Slider`.  ``control`` is assigned by each concrete view's
+    ``__init__``; the base leaves it unset, so reading it before then falls
+    through to :meth:`__getattr__`'s ``AttributeError``.
     """
+
+    control: C
 
     _node_type = "control"
 
@@ -728,7 +743,6 @@ class ControlView(View):
         self.id = cid
         self.label = label
         self.tooltip = tooltip
-        self.control: Control | None = None
         self._push = None  # callback slot injected at mount (LogView pattern)
 
     def __getattr__(self, name: str) -> Any:
@@ -759,7 +773,7 @@ class ControlView(View):
         return result
 
 
-class SliderView(ControlView):
+class SliderView(ControlView[Slider]):
     """A numeric slider control as a view."""
 
     _node_type = "slider_view"
@@ -774,9 +788,9 @@ class SliderView(ControlView):
         max: float = 1.0,
         step: float = 0.01,
         value: float | None = None,
-        on_change: Handler | None = None,
-        on_press: Handler | None = None,
-        on_release: Handler | None = None,
+        on_change: ControlHandler | None = None,
+        on_press: ControlHandler | None = None,
+        on_release: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
@@ -795,7 +809,7 @@ class SliderView(ControlView):
         )
 
 
-class ButtonView(ControlView):
+class ButtonView(ControlView[Button]):
     """A clickable button control (with optional icon) as a view."""
 
     _node_type = "button_view"
@@ -808,7 +822,7 @@ class ButtonView(ControlView):
         variant: EControlVariant = EControlVariant.DEFAULT,
         icon: Icon | None = None,
         icon_only: bool = False,
-        on_click: Handler | None = None,
+        on_click: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         if icon_only:
@@ -829,7 +843,7 @@ class ButtonView(ControlView):
         )
 
 
-class DropdownView(ControlView):
+class DropdownView(ControlView[Dropdown]):
     """A dropdown/select control as a view."""
 
     _node_type = "dropdown_view"
@@ -842,7 +856,7 @@ class DropdownView(ControlView):
         variant: EControlVariant = EControlVariant.DEFAULT,
         options: list[str] | tuple[str, ...] = (),
         value: str = "",
-        on_change: Handler | None = None,
+        on_change: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, **kwargs)
@@ -857,7 +871,7 @@ class DropdownView(ControlView):
         )
 
 
-class FileChooserView(ControlView):
+class FileChooserView(ControlView[FileChooser]):
     """A file-selection (directory listing) view with no path field/browse button.
 
     The view renders the backend-driven directory listing only; it is meant to be
@@ -878,7 +892,7 @@ class FileChooserView(ControlView):
         placeholder: str = "",
         root: str | None = None,
         accept: str = "",
-        on_change: Handler | None = None,
+        on_change: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         kwargs.setdefault("min_width", Size.px(320))
@@ -898,7 +912,7 @@ class FileChooserView(ControlView):
         )
 
 
-class TextFieldView(ControlView):
+class TextFieldView(ControlView[TextField]):
     """A single-line text input control as a view."""
 
     _node_type = "text_field_view"
@@ -911,7 +925,7 @@ class TextFieldView(ControlView):
         value: str = "",
         placeholder: str = "",
         tooltip: str = "",
-        on_change: Handler | None = None,
+        on_change: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
@@ -925,7 +939,7 @@ class TextFieldView(ControlView):
         )
 
 
-class TextAreaView(ControlView):
+class TextAreaView(ControlView[TextArea]):
     """A multi-line text input control as a view."""
 
     _node_type = "text_area_view"
@@ -939,7 +953,7 @@ class TextAreaView(ControlView):
         placeholder: str = "",
         rows: int = 4,
         tooltip: str = "",
-        on_change: Handler | None = None,
+        on_change: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
@@ -954,7 +968,7 @@ class TextAreaView(ControlView):
         )
 
 
-class ColorPickerView(ControlView):
+class ColorPickerView(ControlView[ColorPicker]):
     """A color picker control as a view."""
 
     _node_type = "color_picker_view"
@@ -966,7 +980,7 @@ class ColorPickerView(ControlView):
         label: str = "",
         value: str = "#ffffff",
         tooltip: str = "",
-        on_change: Handler | None = None,
+        on_change: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
@@ -979,7 +993,7 @@ class ColorPickerView(ControlView):
         )
 
 
-class CheckboxView(ControlView):
+class CheckboxView(ControlView[Checkbox]):
     """A boolean checkbox control as a view."""
 
     _node_type = "checkbox_view"
@@ -992,7 +1006,7 @@ class CheckboxView(ControlView):
         variant: EControlVariant = EControlVariant.DEFAULT,
         value: bool = False,
         tooltip: str = "",
-        on_change: Handler | None = None,
+        on_change: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
@@ -1006,7 +1020,7 @@ class CheckboxView(ControlView):
         )
 
 
-class ValueEditView(ControlView):
+class ValueEditView(ControlView[ValueEdit]):
     """A numeric stepper control as a view."""
 
     _node_type = "value_edit_view"
@@ -1023,7 +1037,7 @@ class ValueEditView(ControlView):
         value: float = 0.0,
         editable: bool = True,
         tooltip: str = "",
-        on_change: Handler | None = None,
+        on_change: ControlHandler | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(cid, label=label, tooltip=tooltip, **kwargs)
@@ -1041,7 +1055,7 @@ class ValueEditView(ControlView):
         )
 
 
-class LabelView(ControlView):
+class LabelView(ControlView[Label]):
     """A read-only text label control (configurable font size) as a view."""
 
     _node_type = "label_view"
@@ -1064,7 +1078,7 @@ class LabelView(ControlView):
         )
 
 
-class MarkdownView(ControlView):
+class MarkdownView(ControlView[Markdown]):
     """A read-only rendered-markdown control (with KaTeX math) as a view."""
 
     _node_type = "markdown_view"
@@ -1085,7 +1099,7 @@ class MarkdownView(ControlView):
         )
 
 
-class TableView(ControlView):
+class TableView(ControlView[Table]):
     """An editable tabular-data control rendered as a view."""
 
     _node_type = "table_view"
@@ -1109,15 +1123,15 @@ class TableView(ControlView):
         max_history: int = 100,
         tooltip: str = "",
         json_path: str | None = None,
-        on_cell_change: Handler | None = None,
-        on_row_add: Handler | None = None,
-        on_column_add: Handler | None = None,
-        on_row_delete: Handler | None = None,
-        on_column_delete: Handler | None = None,
-        on_column_title_change: Handler | None = None,
-        on_column_type_change: Handler | None = None,
-        on_cell_select: Handler | None = None,
-        on_change: Handler | None = None,
+        on_cell_change: ControlHandler | None = None,
+        on_row_add: ControlHandler | None = None,
+        on_column_add: ControlHandler | None = None,
+        on_row_delete: ControlHandler | None = None,
+        on_column_delete: ControlHandler | None = None,
+        on_column_title_change: ControlHandler | None = None,
+        on_column_type_change: ControlHandler | None = None,
+        on_cell_select: ControlHandler | None = None,
+        on_change: ControlHandler | None = None,
         on_enum_options: EnumOptionsHandler | None = None,
         **kwargs: Any,
     ) -> None:
@@ -1341,7 +1355,7 @@ class TableView(ControlView):
         return self.control.can_redo
 
 
-def control_to_view(ctrl: Control) -> ControlView:
+def control_to_view(ctrl: Control) -> ControlView[Any]:
     """Wrap an existing :class:`Control` in its ``*View`` counterpart.
 
     The returned view reuses *ctrl* as its ``control`` (the single source of
@@ -1471,7 +1485,10 @@ def control_to_view(ctrl: Control) -> ControlView:
         )
     else:
         raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")
-    view.control = ctrl  # reuse the same control object (source of truth)
+    # Each branch above builds the view whose control kind matches ``ctrl``, so
+    # the base-typed ``ctrl`` is the right concrete control for ``view`` (which
+    # the checker only sees as a union of view types).
+    cast("Any", view).control = ctrl  # reuse the same control object
     return view
 
 
@@ -1528,10 +1545,10 @@ def iter_scene_views(root: View) -> Iterator[SceneView]:
     yield from _visit(root)
 
 
-def iter_control_views(root: View) -> Iterator[ControlView]:
+def iter_control_views(root: View) -> Iterator[ControlView[Any]]:
     """Yield every control view in the tree (DFS order)."""
 
-    def _visit(view: View) -> Iterator[ControlView]:
+    def _visit(view: View) -> Iterator[ControlView[Any]]:
         if isinstance(view, ControlView):
             yield view
         for child in getattr(view, "children", None) or ():

@@ -121,4 +121,3 @@ def _as_euler(value: Any) -> tuple[float, float, float]:
         _, euler, _ = _T.to_trs(_T.rotation_matrix(axis, float(angle)))
         return euler
     return _as_vec3(value)
-

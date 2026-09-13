@@ -65,13 +65,13 @@ def _bounds_of(node: SdfNode) -> tuple[list[float], list[float]] | None:
             cb = _bounds_of(child)
             if cb is None:
                 continue  # unbounded child does not constrain the intersection
-            if lo is None:
+            if lo is None or hi is None:
                 lo, hi = list(cb[0]), list(cb[1])
             else:
                 for i in range(3):
                     lo[i] = max(lo[i], cb[0][i])
                     hi[i] = min(hi[i], cb[1][i])
-        if lo is None:
+        if lo is None or hi is None:
             return None
         return (lo, hi)
 
@@ -175,8 +175,7 @@ def _transform_box(
         angle = float(rotation["angle"])
         corners = [_rotate(axis, angle, c) for c in corners]
     shifted = [
-        (c[0] + position[0], c[1] + position[1], c[2] + position[2])
-        for c in corners
+        (c[0] + position[0], c[1] + position[1], c[2] + position[2]) for c in corners
     ]
     return (
         [min(c[i] for c in shifted) for i in range(3)],
@@ -202,4 +201,3 @@ def _rotate(
         (y * x * c1 + z * s) * px + (c + y * y * c1) * py + (y * z * c1 - x * s) * pz,
         (z * x * c1 - y * s) * px + (z * y * c1 + x * s) * py + (c + z * z * c1) * pz,
     )
-

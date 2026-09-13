@@ -84,9 +84,9 @@ class SdfGroup(SdfElement):
         self,
         member: int | str,
         *,
-        position: Vec3 = None,
-        rotation: TransformRotation = None,
-        scale: Triple = None,
+        position: Vec3 | None = None,
+        rotation: TransformRotation | None = None,
+        scale: Triple | None = None,
     ) -> None:
         """Override a member's runtime transform (absolute, group-local).
 
@@ -116,5 +116,3 @@ class SdfGroup(SdfElement):
             child.smoothness = getattr(element, "smoothness", None)
             children.append(child)
         return group(children)
-
-

@@ -6,11 +6,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 from ._coerce import to_direction, to_float, to_point
 from ._util import _convert_mv
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -31,11 +35,16 @@ class Line:
     direction: Direction
     length: float | None = None
 
-    def __init__(self, origin=None, direction=None, length=None):
+    def __init__(
+        self,
+        origin: "Point | MV | None" = None,
+        direction: "Direction | MV | None" = None,
+        length: "float | MV | None" = None,
+    ) -> None:
         try:
             origin = to_point(origin)
         except TypeError:
-            line = _convert_mv("line", origin)
+            line = _convert_mv("line", cast("MV", origin))
             object.__setattr__(self, "origin", line.origin)
             object.__setattr__(self, "direction", line.direction)
             object.__setattr__(self, "length", line.length)
@@ -43,15 +52,13 @@ class Line:
 
         object.__setattr__(self, "origin", origin)
         object.__setattr__(self, "direction", to_direction(direction))
-        object.__setattr__(
-            self, "length", None if length is None else to_float(length)
-        )
+        object.__setattr__(self, "length", None if length is None else to_float(length))
 
     def __repr__(self) -> str:
         return f"Line(org={self.origin}, dir={self.direction})"
 
     @classmethod
-    def from_points(cls, start, end) -> "Line":
+    def from_points(cls, start: "Point | MV", end: "Point | MV") -> "Line":
         """Construct a line segment from *start* to *end*.
 
         The direction is ``end - start`` and *length* is set to
@@ -60,7 +67,7 @@ class Line:
         """
         start = to_point(start)
         end = to_point(end)
-        direction = end - start
+        direction = cast("Direction", end - start)
         return cls(origin=start, direction=direction, length=direction.mag())
 
     @property

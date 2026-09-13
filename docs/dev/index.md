@@ -14,13 +14,17 @@ The docs are organized by decision-making surface instead of by header name.
 
 1. [architecture/system-overview.md](architecture/system-overview.md)
 2. [architecture/type-system-and-storage.md](architecture/type-system-and-storage.md)
-3. [architecture/viz-architecture.md](architecture/viz-architecture.md) — the Python visualization scene/layout/overlay ownership model + extension recipes
-4. [architecture/viz-controls-and-interactions.md](architecture/viz-controls-and-interactions.md) — the Python visualization frontend/backend event model
-5. [architecture/viz-theme-system.md](architecture/viz-theme-system.md) — the CSS theme system (registry, layers, runtime switching, export packing)
-6. [ga/operation-pipeline.md](ga/operation-pipeline.md)
-7. [workflows/build-test-and-navigation.md](workflows/build-test-and-navigation.md)
-8. [workflows/use-case-examples.md](workflows/use-case-examples.md)
-9. [workflows/precompiled-wheels.md](workflows/precompiled-wheels.md) — building, cleaning, and uploading platform-specific wheels
+3. [architecture/geometry-module-layering.md](architecture/geometry-module-layering.md) — the geometry/quadric import DAG
+4. [architecture/quadric-module.md](architecture/quadric-module.md) — the quadric submodule's modules, data flow, and intersection path
+5. [architecture/viz-architecture.md](architecture/viz-architecture.md) — the Python visualization scene/layout/overlay ownership model + extension recipes
+6. [architecture/viz-controls-and-interactions.md](architecture/viz-controls-and-interactions.md) — the Python visualization frontend/backend event model
+7. [architecture/viz-theme-system.md](architecture/viz-theme-system.md) — the CSS theme system (registry, layers, runtime switching, export packing)
+8. [architecture/typing-and-annotations.md](architecture/typing-and-annotations.md) — the typing policy: annotate everything, avoid `Any`, and the `ty` + ruff `ANN` gates
+9. [ga/operation-pipeline.md](ga/operation-pipeline.md)
+10. [ga/conic-quadric-space.md](ga/conic-quadric-space.md) — the conic/quadric math behind analysis and visualization
+11. [workflows/build-test-and-navigation.md](workflows/build-test-and-navigation.md)
+12. [workflows/use-case-examples.md](workflows/use-case-examples.md)
+13. [workflows/precompiled-wheels.md](workflows/precompiled-wheels.md) — building, cleaning, and uploading platform-specific wheels
 
 ## What This Library Is
 

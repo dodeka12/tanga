@@ -115,6 +115,7 @@ hp = HPoint(point=Point(1, 2, 3), weight=1.5)
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_hp = geo.create(hp)
 result = geo.analyze(mv_hp)
+assert isinstance(result, HPoint), "an HPoint MV analyses to HPoint"
 print(f"  create+analyze → {result}")
 print(
     f"    position: ({result.point.x:.1f}, {result.point.y:.1f}, {result.point.z:.1f})"
@@ -146,6 +147,7 @@ print(f"  Plane:  {geo.analyze(geo.create(plane))}")
 sphere = Sphere(center=Point(1, 0, 0), radius=3.0)
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.analyze(geo.create(sphere))
+assert isinstance(result, Sphere), "a sphere MV analyses to Sphere"
 print(
     f"  Sphere: center=({result.center.x:.1f}, "
     f"{result.center.y:.1f}, "

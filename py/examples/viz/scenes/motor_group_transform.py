@@ -16,6 +16,7 @@ Keywords: BasisN3, Motor, VizGroup, Transform, scene graph, animation
 
 import math
 
+from pytanga import MV
 from pytanga.basis import BasisN3
 from pytanga.geometry import Direction, Geometry, Line, Motor, Point, Rotor, Translator
 from pytanga.viz import LineStyle, PointStyle, Visualizer, VizGroup
@@ -24,7 +25,7 @@ N3 = BasisN3()
 geo = Geometry(N3)
 
 
-def motor_mv(angle: float):
+def motor_mv(angle: float) -> MV:
     """A BasisN3 (N3) motor as a multivector.
 
     Rotate about +Z while translating in the XY plane, built through the

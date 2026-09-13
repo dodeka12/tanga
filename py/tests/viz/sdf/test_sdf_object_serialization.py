@@ -7,7 +7,15 @@ from __future__ import annotations
 
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import SdfSphereStyle, Visualizer
-from pytanga.viz.sdf import Combine, Composed, ECompose, SdfGroup, SdfObject, capped_cylinder, sphere
+from pytanga.viz.sdf import (
+    Combine,
+    Composed,
+    ECompose,
+    SdfGroup,
+    SdfObject,
+    capped_cylinder,
+    sphere,
+)
 from pytanga.viz.sdf.serializer import serialize_entity, serialize_entity_local
 
 
@@ -19,7 +27,9 @@ def _obj(color: str | None = None) -> SdfObject:
 def test_sdf_object_via_viz_add() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     oid = viz.add(_obj("#ff0000"))
-    obj = [o for o in viz._scene.full_state(styles_map=viz.styles.kind) if o["id"] == oid][0]
+    obj = [
+        o for o in viz._scene.full_state(styles_map=viz.styles.kind) if o["id"] == oid
+    ][0]
     assert obj["kind"] == "sdf"
     assert obj["sdfKind"] == "SdfObject"
     assert obj["color"] == "#ff0000"
@@ -28,7 +38,9 @@ def test_sdf_object_via_viz_add() -> None:
 def test_combine_via_viz_add() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     oid = viz.add(_obj("#00ff00") + _obj("#0000ff"))
-    obj = [o for o in viz._scene.full_state(styles_map=viz.styles.kind) if o["id"] == oid][0]
+    obj = [
+        o for o in viz._scene.full_state(styles_map=viz.styles.kind) if o["id"] == oid
+    ][0]
     assert obj["kind"] == "sdf"
     assert obj["sdfKind"] == "Combine"
     assert obj["tree"]["kind"] == "union"  # binary combine lowers to a combinator
@@ -74,7 +86,10 @@ def test_fullscreen_composed_still_works() -> None:
     composed = Composed(sphere(1.0), (capped_cylinder(0.5, 0.3), "subtract"))
     result = serialize_entity(composed, "c")
     assert result["tree"]["kind"] == "group"
-    assert [c["kind"] for c in result["tree"]["children"]] == ["sphere", "cappedCylinder"]
+    assert [c["kind"] for c in result["tree"]["children"]] == [
+        "sphere",
+        "cappedCylinder",
+    ]
 
 
 def test_composed_invalid_mode_still_raises() -> None:

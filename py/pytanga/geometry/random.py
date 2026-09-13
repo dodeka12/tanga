@@ -30,6 +30,8 @@ from pytanga.blade_mask import BladeMask
 from .entities import Direction, Point
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from pytanga.algebra._mv import MV
 
 
@@ -90,7 +92,9 @@ class Constant(Distribution):
         return f"Constant({self.value})"
 
 
-def _as_distribution(spec) -> Distribution:
+def _as_distribution(
+    spec: "Distribution | tuple[float, float] | float | int",
+) -> Distribution:
     """Coerce a coordinate spec into a :class:`Distribution`.
 
     - ``Distribution`` → passed through.
@@ -119,7 +123,9 @@ class RndEntity:
     or a list of entities depending on their ``count`` setting.
     """
 
-    def __call__(self, rng: np.random.Generator) -> "Point | Direction | list":
+    def __call__(
+        self, rng: np.random.Generator
+    ) -> "Point | Direction | MV | list[Point] | list[Direction] | list[MV]":
         raise NotImplementedError
 
 
@@ -202,7 +208,13 @@ class RndMV(RndEntity):
         returns a list of ``count`` multivectors.
     """
 
-    def __init__(self, mask: BladeMask, spec, *, count: int | None = None) -> None:
+    def __init__(
+        self,
+        mask: BladeMask,
+        spec: "Sequence[Distribution | tuple[float, float] | float | int]",
+        *,
+        count: int | None = None,
+    ) -> None:
         self._mask = mask
         specs = list(spec)
         if len(specs) != len(mask):

@@ -67,6 +67,7 @@ print(f"A = {A}")
 
 # Path 1: high-level one-liner — scalar 1.0 is coerced to MV automatically
 B1 = solve(A, 1.0)
+assert isinstance(B1, MV), "a scalar right-hand side solves to one MV"
 print("\nPath 1 — solve(A, 1.0):")
 print(f"  B = {B1}")
 check = A * B1
@@ -99,6 +100,7 @@ if M.data.shape[1] == M.data.shape[2]:
     b_arr = np.linalg.solve(M.data[0, :, :], C.data)
     # Convert the solution back to a multivector using the blade mask of B.
     B2 = from_matrix(MVMatrix(b_arr, M.b_mask))
+    assert isinstance(B2, MV), "a single-column matrix yields one MV"
     print(f"  B = {B2}")
     assert B1.to_dict() == B2.to_dict(), "paths disagree!"
     print("  ✓ Both paths agree")

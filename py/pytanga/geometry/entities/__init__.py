@@ -78,6 +78,7 @@ Entity = (
     | PlaneConicPair
     | Curve
     | Cone
+    | PointSet
 )
 
 __all__ = [

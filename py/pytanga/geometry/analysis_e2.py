@@ -14,7 +14,7 @@ Mirrors ``analysis_e3.py`` with 2D blade IDs and entities.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from .entities import Direction, Line, Point, Space
 from .operators import ReflectionLine, Rotor
@@ -258,7 +258,10 @@ def _get_grades(mv: MV) -> set[int]:
 # ═══════════════════════════════════════════════════════════════
 
 
-def _expect(result, cls):
+T = TypeVar("T")
+
+
+def _expect(result: object, cls: type[T]) -> T:
     """Return *result* if it is an instance of *cls*; else raise."""
     if result is None:
         raise ValueError(f"MV does not represent a {cls.__name__}")

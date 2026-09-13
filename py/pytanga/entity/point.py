@@ -6,9 +6,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pytanga.entity._util import _convert_mv, _fmt_v, _is_mv
 from pytanga.entity.vec3 import Vec3
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
+    from pytanga.entity.direction import Direction
 
 
 @dataclass(frozen=True)
@@ -29,7 +34,7 @@ class Point(Vec3):
     convenience.
     """
 
-    def __init__(self, x=0.0, y=0.0, z=0.0):
+    def __init__(self, x: "MV" | float = 0.0, y: float = 0.0, z: float = 0.0) -> None:
         if _is_mv(x):
             p = _convert_mv("point", x)
             object.__setattr__(self, "x", p.x)
@@ -43,7 +48,7 @@ class Point(Vec3):
     def __repr__(self) -> str:
         return f"Point{_fmt_v(self.x, self.y, self.z)}"
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Point):
             return self.x == other.x and self.y == other.y and self.z == other.z
         if isinstance(other, (tuple, list)) and len(other) == 3:
@@ -53,7 +58,7 @@ class Point(Vec3):
     def __neg__(self) -> "Point":
         return Point(-self.x, -self.y, -self.z)
 
-    def __add__(self, other) -> "Point":
+    def __add__(self, other: "Vec3") -> "Point":
         if isinstance(other, Point):
             return Point(self.x + other.x, self.y + other.y, self.z + other.z)
         from pytanga.entity.direction import Direction
@@ -62,14 +67,14 @@ class Point(Vec3):
             return Point(self.x + other.x, self.y + other.y, self.z + other.z)
         return NotImplemented
 
-    def __radd__(self, other) -> "Point":
+    def __radd__(self, other: "Direction") -> "Point":
         from pytanga.entity.direction import Direction
 
         if isinstance(other, Direction):
             return Point(self.x + other.x, self.y + other.y, self.z + other.z)
         return NotImplemented
 
-    def __sub__(self, other):
+    def __sub__(self, other: "Vec3") -> "Direction | Point":
         from pytanga.entity.direction import Direction
 
         if isinstance(other, Point):
@@ -78,22 +83,22 @@ class Point(Vec3):
             return Point(self.x - other.x, self.y - other.y, self.z - other.z)
         return NotImplemented
 
-    def __mul__(self, scalar):
+    def __mul__(self, other: "Vec3" | int | float) -> "Point":
+        if isinstance(other, (int, float)):
+            return Point(self.x * other, self.y * other, self.z * other)
+        return NotImplemented
+
+    def __rmul__(self, scalar: int | float) -> "Point":
         if isinstance(scalar, (int, float)):
             return Point(self.x * scalar, self.y * scalar, self.z * scalar)
         return NotImplemented
 
-    def __rmul__(self, scalar):
-        if isinstance(scalar, (int, float)):
-            return Point(self.x * scalar, self.y * scalar, self.z * scalar)
-        return NotImplemented
-
-    def __truediv__(self, scalar):
+    def __truediv__(self, scalar: int | float) -> "Point":
         if isinstance(scalar, (int, float)):
             return Point(self.x / scalar, self.y / scalar, self.z / scalar)
         return NotImplemented
 
-    def cross(self, other) -> "Direction":
+    def cross(self, other: "Vec3") -> "Direction":
         """Vector cross product.  Always returns a Direction."""
         from pytanga.entity.direction import Direction
 

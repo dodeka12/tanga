@@ -6,16 +6,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 from ._util import _convert_mv, _is_mv
 from .line import Line
 
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
-def _to_line(value) -> Line:
+
+def _to_line(value: "Line | MV") -> Line:
     if isinstance(value, Line):
         return value
     if _is_mv(value):
-        return _convert_mv("line", value)
+        return cast("Line", _convert_mv("line", value))
     raise TypeError(f"Expected Line or MV, got {type(value).__name__}")
 
 
@@ -26,7 +30,7 @@ class LinePair:
     line1: Line
     line2: Line
 
-    def __init__(self, line1, line2):
+    def __init__(self, line1: "Line | MV", line2: "Line | MV") -> None:
         object.__setattr__(self, "line1", _to_line(line1))
         object.__setattr__(self, "line2", _to_line(line2))
 

@@ -6,10 +6,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ._coerce import to_direction, to_float, to_point
 from .direction import Direction
 from .point import Point
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 @dataclass(frozen=True)
@@ -28,7 +32,14 @@ class Hyperbola:
     a: float
     b: float
 
-    def __init__(self, center, dir1, dir2, a, b):
+    def __init__(
+        self,
+        center: "Point | MV",
+        dir1: "Direction | MV",
+        dir2: "Direction | MV",
+        a: "float | MV",
+        b: "float | MV",
+    ) -> None:
         object.__setattr__(self, "center", to_point(center))
         object.__setattr__(self, "dir1", to_direction(dir1))
         object.__setattr__(self, "dir2", to_direction(dir2))

@@ -16,10 +16,13 @@ Keywords: quadric, conic, rotor, conic_from_points, refine, analyze, slider
 
 import math
 
+from typing import Any
+from pytanga.algebra import MV
 from pytanga.geometry import Direction, Geometry, Point, Rotor, analyze_operator
 from pytanga.quadric import BasisQ2
 from pytanga.viz import (
     ActPoint,
+    ActSceneObject,
     Color,
     ControlEvent,
     DragEvent,
@@ -46,16 +49,19 @@ conic_viz = None
 rotor_viz = None
 
 
-def _rotated_conic():
+def _rotated_conic() -> Any:
     """Return the base conic rotated by the current angle (R · conic · R̃)."""
     rotor = geo(Rotor(angle, Direction(0, 0, 1)))
+    assert isinstance(rotor, MV), "a Rotor entity materialises one MV"
+    assert base_conic is not None, "the base conic exists before the first render"
     return rotor.vp(base_conic)
 
 
-async def on_drag_a(event: DragEvent, ap: ActPoint) -> bool:
+async def on_drag_a(event: DragEvent, ap: ActSceneObject) -> bool:
     global base_conic
     # The point is dragged: rebuild the base conic and re-apply the rotor.
     base_conic = p1 ^ p2 ^ p3 ^ p4 ^ geo(ap)
+    assert conic_viz is not None and rotor_viz is not None
     conic_viz.entity = _rotated_conic()
     # We did not move the point ourselves, so let the default behaviour run.
     return False
@@ -64,7 +70,10 @@ async def on_drag_a(event: DragEvent, ap: ActPoint) -> bool:
 async def on_rotation(value: float, _event: ControlEvent) -> None:
     global angle
     angle = math.radians(float(value))
+    assert base_conic is not None, "the base conic exists before the first render"
     rotor = geo(Rotor(angle, Direction(0, 0, 1)))
+    assert isinstance(rotor, MV), "a Rotor entity materialises one MV"
+    assert conic_viz is not None and rotor_viz is not None
     conic_viz.entity = rotor.vp(base_conic)
     rotor_viz.entity = analyze_operator(rotor)  # effective rotor (angle, axis)
     viz.flush()

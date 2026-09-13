@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from pytanga.viz.server import VizServer
@@ -69,4 +69,4 @@ def _request_screenshot_bytes(
     if "error" in error_container:
         raise error_container["error"]
 
-    return result_container["data"]  # type: ignore[return-value]
+    return cast("bytes", result_container["data"])

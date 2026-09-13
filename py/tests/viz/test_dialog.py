@@ -114,7 +114,9 @@ def _viz() -> Visualizer:
 def test_show_dialog_stores_registers_pushes(monkeypatch):
     viz = _viz()
     pushed: list[tuple] = []
-    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: pushed.append((d.id, s)))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_dialog", lambda d, s: pushed.append((d.id, s))
+    )
 
     async def _on_click(value, event):
         pass
@@ -142,7 +144,9 @@ def test_remove_dialog_unregisters_and_pushes(monkeypatch):
     viz = _viz()
     removed: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
-    monkeypatch.setattr(viz._layout.overlay, "_push_dialog_remove", lambda i, s: removed.append((i, s)))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_dialog_remove", lambda i, s: removed.append((i, s))
+    )
 
     async def _on_click(value, event):
         pass
@@ -160,7 +164,9 @@ def test_clear_dialogs_scoped(monkeypatch):
     viz = _viz()
     cleared: list = []
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
-    monkeypatch.setattr(viz._layout.overlay, "_push_dialog_clear", lambda s: cleared.append(s))
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_dialog_clear", lambda s: cleared.append(s)
+    )
 
     viz.show_dialog(_content(), id="g")
     viz.show_dialog(_content(), id="s", scene_name="detail")

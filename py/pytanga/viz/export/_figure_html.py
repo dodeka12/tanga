@@ -13,7 +13,7 @@ import json
 from typing import Any, Dict, List
 from uuid import uuid4
 
-from pytanga.viz.export._cdn import build_library_script_tag
+from pytanga.viz.export._cdn import DeliveryMode, build_library_script_tag
 from pytanga.viz.export._bootstrap import (
     contains_math,
     theme_css_for_delivery,
@@ -41,7 +41,7 @@ def render_figure(
     figure_style: Dict[str, Any],
     figure_config: Dict[str, Any],
     theme: str = "dark",
-    delivery: str = "cdn",
+    delivery: DeliveryMode = "cdn",
     delivery_ref: str | None = None,
 ) -> str:
     """Render a figure HTML snippet from the unified scene objects."""

@@ -15,8 +15,12 @@ Perwass's projective conic space ``CA{6}`` (and its 3D quadric generalisation
 from __future__ import annotations
 
 from functools import cached_property
+from typing import TYPE_CHECKING, Any
 
 from pytanga.algebra._algebra import Algebra
+
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
 
 
 class BasisQ2(Algebra):
@@ -32,7 +36,7 @@ class BasisQ2(Algebra):
     B5: int = 16
     B6: int = 32
 
-    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw: Any) -> None:
         super().__init__(6, 0, dtype, opns=opns, **kw)
         mv = self.multivector
         self.b1 = mv({1: 1})
@@ -44,7 +48,7 @@ class BasisQ2(Algebra):
         self.I = mv({self.pseudoscalar_id: 1})
 
     @cached_property
-    def _display_basis(self) -> list:
+    def _display_basis(self) -> list[tuple[str, MV, MV | None, int | None]]:
         from pytanga.algebra._display_basis import build_display_basis
 
         return build_display_basis(
@@ -78,7 +82,7 @@ class BasisQ3(Algebra):
     B9: int = 256
     B10: int = 512
 
-    def __init__(self, dtype: str = "float64", opns: bool = True, **kw) -> None:
+    def __init__(self, dtype: str = "float64", opns: bool = True, **kw: Any) -> None:
         super().__init__(10, 0, dtype, opns=opns, **kw)
         mv = self.multivector
         self.b1 = mv({1: 1})
@@ -94,7 +98,7 @@ class BasisQ3(Algebra):
         self.I = mv({self.pseudoscalar_id: 1})
 
     @cached_property
-    def _display_basis(self) -> list:
+    def _display_basis(self) -> list[tuple[str, MV, MV | None, int | None]]:
         from pytanga.algebra._display_basis import build_display_basis
 
         return build_display_basis(

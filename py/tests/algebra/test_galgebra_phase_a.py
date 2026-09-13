@@ -137,9 +137,7 @@ class TestQForm:
 # ═══════════════════════════════════════════════════════════════════════════
 class TestEvenOdd:
     def test_even_extracts_scalar_and_bivector(self, alg):
-        mv = alg.multivector(
-            {"s": 1.0, "e1": 2.0, "e2": 3.0, "e12": 4.0, "e123": 5.0}
-        )
+        mv = alg.multivector({"s": 1.0, "e1": 2.0, "e2": 3.0, "e12": 4.0, "e123": 5.0})
         e = mv.even()
         assert e["s"] == pytest.approx(1.0)
         assert e["e12"] == pytest.approx(4.0)
@@ -147,9 +145,7 @@ class TestEvenOdd:
         assert e["e2"] == pytest.approx(0.0, abs=1e-14)
 
     def test_odd_extracts_vector_and_trivector(self, alg):
-        mv = alg.multivector(
-            {"s": 1.0, "e1": 2.0, "e2": 3.0, "e12": 4.0, "e123": 5.0}
-        )
+        mv = alg.multivector({"s": 1.0, "e1": 2.0, "e2": 3.0, "e12": 4.0, "e123": 5.0})
         o = mv.odd()
         assert o["e1"] == pytest.approx(2.0)
         assert o["e2"] == pytest.approx(3.0)

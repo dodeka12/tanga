@@ -10,6 +10,7 @@ Pure quadric math: grade dispatch to ``Conic`` / ``Quadric3D`` / ``Point`` /
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -18,13 +19,18 @@ from ._mapping import from_coeffs
 from ._pointset import point_from_embedding, pointset_from_blade
 from .conic import Conic, Quadric3D
 
+if TYPE_CHECKING:
+    from pytanga.algebra._mv import MV
+    from pytanga.geometry.entities import Curve, Entity, PlaneConicPair
+    from pytanga.geometry.operators import Rotor
 
-def _coeffs(mv, dim: int) -> tuple[float, ...]:
+
+def _coeffs(mv: MV, dim: int) -> tuple[float, ...]:
     """Read a grade-1 MV's coefficients in ``b1…bN`` order."""
     return tuple(float(mv[1 << i]) for i in range(dim))
 
 
-def _quadric_intersection_from_blade(mv):
+def _quadric_intersection_from_blade(mv: MV) -> "PlaneConicPair | Curve":
     """Analyze an IPNS grade-2 blade as the intersection of two quadrics.
 
     The bivector is the pencil ``span{Q1, Q2}``; factor it into two (arbitrary)
@@ -39,7 +45,7 @@ def _quadric_intersection_from_blade(mv):
     return intersect_quadrics(q1, q2)
 
 
-def analyze_entity(mv):
+def analyze_entity(mv: MV) -> "Entity":
     """Analyze an MV in the 2D (Q2) or 3D (Q3) quadric space.
 
     Q2: IPNS is dualized to OPNS first; grade 1 → ``Point``, grades 2/3/4 →
@@ -60,13 +66,13 @@ def analyze_entity(mv):
     return _analyze_q3(mv)
 
 
-def _analyze_q2(mv):
+def _analyze_q2(mv: MV) -> "Entity":
     if not mv.algebra.opns:
         mv = mv.dual()
     return _analyze_q2_opns(mv)
 
 
-def _analyze_q2_opns(mv):
+def _analyze_q2_opns(mv: MV) -> "Entity":
     if mv.is_zero:
         raise ValueError("Zero MV does not represent a geometric entity")
     if mv.is_scalar:
@@ -84,29 +90,13 @@ def _analyze_q2_opns(mv):
     raise NotImplementedError(f"grade {k} analysis in Q2 is not supported")
 
 
-def _analyze_q3(mv):
-    if mv.algebra.opns:
-        return _analyze_q3_opns(mv)
-    if mv.is_zero:
-        raise ValueError("Zero MV does not represent a geometric entity")
-    if mv.is_scalar:
-        raise ValueError("Scalar MV does not represent a geometric entity")
-    grades = mv.grades
-    if len(grades) > 1:
-        raise ValueError(f"Mixed-grade MV in Q3: grades={grades}")
-    k = grades[0]
-    if k == 1:
-        return _quadric_from_blade(mv.dual())
-    if k == 2:
-        return _quadric_intersection_from_blade(mv)
-    if k == 9:
-        return point_from_embedding(mv.dual(), mv.algebra.dim)
-    raise NotImplementedError(
-        f"q3 IPNS grade {k} (quadric intersection) analysis is deferred"
-    )
+def _analyze_q3(mv: MV) -> "Entity":
+    if not mv.algebra.opns:
+        mv = mv.dual()
+    return _analyze_q3_opns(mv)
 
 
-def _analyze_q3_opns(mv):
+def _analyze_q3_opns(mv: MV) -> "Entity":
     if mv.is_zero:
         raise ValueError("Zero MV does not represent a geometric entity")
     if mv.is_scalar:
@@ -128,15 +118,15 @@ def _analyze_q3_opns(mv):
     raise NotImplementedError(f"grade {k} analysis in Q3 is not supported")
 
 
-def _conic_from_blade(mv) -> Conic:
+def _conic_from_blade(mv: MV) -> Conic:
     return Conic(_coeffs(mv.undual(), mv.algebra.dim))
 
 
-def _quadric_from_blade(mv) -> Quadric3D:
+def _quadric_from_blade(mv: MV) -> Quadric3D:
     return Quadric3D(_coeffs(mv.undual(), mv.algebra.dim))
 
 
-def analyze_rotor(mv):
+def analyze_rotor(mv: MV) -> "Rotor":
     """Extract the rotation ``Rotor(angle, axis)`` encoded by a rotor MV.
 
     The rotation is recovered by sandwiching the **linear** basis blades
@@ -187,7 +177,7 @@ def analyze_rotor(mv):
     raise ValueError(f"unsupported quadric basis dimension: {dim}")
 
 
-def analyze_operator(mv):
+def analyze_operator(mv: MV) -> "Rotor":
     """Analyze a quadric-space MV as a versor/operator.
 
     The quadric spaces support only the rotation rotor; returns a

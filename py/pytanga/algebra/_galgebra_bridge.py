@@ -9,7 +9,7 @@ All conversion logic lives in :class:`GalgebraBridge`.  The ``Algebra`` and
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -50,7 +50,7 @@ class GalgebraBridge:
 
     def __init__(
         self,
-        metric,
+        metric: np.ndarray,
         *,
         ga: _Ga | None = None,
         dtype: str = "float64",
@@ -66,7 +66,7 @@ class GalgebraBridge:
         n = g.shape[0]
         if n < 1 or n > 32:
             raise ValueError(f"dimension {n} out of range [1, 32]")
-        self._dim = n
+        self._dim: int = n
         self._g = g
 
         # ── 2. Eigendecompose ─────────────────────────────────────
@@ -291,7 +291,7 @@ class GalgebraBridge:
                 continue
             expr = expr + sympy.Float(coeff) * blade_sym
 
-        return ga_obj.mv(expr)
+        return cast("_Mv", ga_obj.mv(expr))
 
     # ── Display ─────────────────────────────────────────────────────
 

@@ -16,7 +16,10 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .primitives import SdfNode
 
 __all__ = ["Combine", "ECompose", "SdfCompose", "SdfElement"]
 
@@ -152,7 +155,7 @@ class SdfElement:
 
     # ── Lowering ───────────────────────────────────────────
 
-    def to_sdf_node(self) -> Any:
+    def to_sdf_node(self) -> "SdfNode":
         """Lower to a low-level ``SdfNode`` tree (subclasses implement)."""
         raise NotImplementedError(
             f"{type(self).__name__}.to_sdf_node() is not implemented"
@@ -182,7 +185,7 @@ class Combine(SdfElement):
         object.__setattr__(self, "combine", combine)
         object.__setattr__(self, "smoothness", smoothness)
 
-    def to_sdf_node(self) -> Any:
+    def to_sdf_node(self) -> "SdfNode":
         from .primitives import combine
 
         return combine(
@@ -229,8 +232,7 @@ def _coerce(obj: Any) -> Any:
     if isinstance(obj, GeoEntity) or isinstance(obj, Cylinder):
         return SdfObject(obj)
     raise TypeError(
-        f"Cannot use {type(obj).__name__} as an SDF element; "
-        "wrap it in SdfObject first"
+        f"Cannot use {type(obj).__name__} as an SDF element; wrap it in SdfObject first"
     )
 
 

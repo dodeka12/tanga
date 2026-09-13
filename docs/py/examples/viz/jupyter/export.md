@@ -12,12 +12,16 @@ Exports read directly from the in-memory scene — no server required. They work
 
 ````python
 from pytanga.geometry import Direction, Plane, Point, Sphere
-from pytanga.viz import Visualizer
+from pytanga.viz import SphereStyle, Visualizer
 
 viz = Visualizer()
 viz(Point(2, 0, 0), color="#ff4444")
 viz(Point(0, 2, 0), color="#44ff44")
-viz(Sphere(Point(0, 0, 0), radius=2.5), wireframe=True, opacity=0.3)
+viz(
+    Sphere(Point(0, 0, 0), radius=2.5),
+    style=SphereStyle(wireframe=True),
+    opacity=0.3,
+)
 viz(Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1)), opacity=0.25)
 
 

@@ -33,10 +33,12 @@ Keywords: quadric, quadric3d, rotor, slider, dropdown, ellipsoid, join, analyze
 import functools
 import math
 
+from typing import Any
 from pytanga.geometry import Direction, Geometry, Point, Rotor, analyze_operator
 from pytanga.quadric import BasisQ3
 from pytanga.viz import (
     ActPoint,
+    ActSceneObject,
     Color,
     ControlEvent,
     DragEvent,
@@ -100,22 +102,22 @@ quadric_viz = None
 rotor_viz = None
 
 
-def _axis():
+def _axis() -> Direction:
     """Rotation axis from the current azimuth/polar angles."""
     sp = math.sin(polar)
     return Direction(sp * math.cos(azimuth), sp * math.sin(azimuth), math.cos(polar))
 
 
-def _rotor():
+def _rotor() -> Any:
     return geo(Rotor(angle, _axis()))
 
 
-def _points():
+def _points() -> list[Any]:
     """The nine point MVs: six fixed points plus the three action points."""
     return [*fixed, geo(ap1), geo(ap2), geo(ap3)]
 
 
-def _join_blade():
+def _join_blade() -> Any:
     """The join (smallest containing blade) of the nine point embeddings.
 
     Generic points give a grade-9 blade (the quadric); a degenerate set such as
@@ -126,7 +128,7 @@ def _join_blade():
     return functools.reduce(lambda a, c: a.join(c), _points())
 
 
-def _rebuild():
+def _rebuild() -> None:
     """Rebuild the quadric through the six fixed + three action points."""
     global base_quadric
     base_quadric = _join_blade()
@@ -134,6 +136,9 @@ def _rebuild():
 
 def _apply_rotation(*, flush: bool = True) -> None:
     rotor = _rotor()
+    assert (
+        quadric_viz is not None and rotor_viz is not None
+    )  # set before the handlers run
     quadric_viz.entity = rotor.vp(base_quadric)
     rotor_viz.entity = analyze_operator(rotor)  # effective rotor (angle, axis)
     if flush:
@@ -154,7 +159,7 @@ def _set_distribution(name: str, *, flush: bool = True) -> None:
     _apply_rotation(flush=flush)
 
 
-async def on_drag(event: DragEvent, ap: ActPoint) -> bool:
+async def on_drag(event: DragEvent, ap: ActSceneObject) -> bool:
     _rebuild()
     _apply_rotation(flush=False)
     # We did not move the point ourselves, so let the default behaviour run.

@@ -370,8 +370,13 @@ class MyClass extends ViewBase {
 - Run: `uv run ruff format src/` (format)
 
 **Type Checking:**
-- Not currently enforced but encouraged for new code
-- Consider adding type hints for complex functions
+- **Required.** `uv run ty check` (correctness) and `uv run ruff check .`
+  (which carries the `ANN` coverage rules) must both pass; they run in
+  pre-commit and in the CI `lint` job.
+- Annotate every function, method and dataclass field. `Any` is a deliberate,
+  reviewed exception — not a default.
+- See [Typing & annotations](../architecture/typing-and-annotations.md) for the
+  policy, the patterns to reach for, and the suppression rules.
 
 ### TypeScript
 
@@ -395,6 +400,7 @@ Reviewers must verify:
 
 - [ ] **No private member access** from external classes
 - [ ] **PEP 8 compliance** (Python)
+- [ ] **Type annotations present** (`ty check` and ruff `ANN` clean)
 - [ ] **Consistent naming conventions** (both languages)
 - [ ] **Public API documented** with TSDoc/docstrings
 - [ ] **ESLint/Ruff** passes without warnings

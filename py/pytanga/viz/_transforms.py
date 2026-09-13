@@ -99,6 +99,8 @@ def scale_matrix(
     if sy is None and sz is None:
         sy = sz = float(sx)
         sx = float(sx)
+    elif sy is None or sz is None:
+        raise ValueError("scale_matrix() requires both sy and sz, or neither")
     else:
         sx = float(sx)
         sy = float(sy)
@@ -280,7 +282,7 @@ def operator_to_trs(
     raise TypeError(f"Unsupported operator type: {type(op).__name__}")
 
 
-def to_matrix(obj) -> np.ndarray:
+def to_matrix(obj: "Point | Direction | TransformOperator") -> np.ndarray:
     """Return the 4×4 matrix for a supported entity or operator.
 
     - :class:`Point` → translation matrix.
@@ -295,7 +297,7 @@ def to_matrix(obj) -> np.ndarray:
 
 
 def to_trs_tuple(
-    obj,
+    obj: "Point | Direction | TransformOperator",
 ) -> tuple[
     tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
 ]:

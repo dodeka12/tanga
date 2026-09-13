@@ -9,11 +9,13 @@ Priority:
   3. "dev" fallback
 """
 
+from typing import Any
+
 import importlib.metadata
 import os
 
 
-def on_config(config):
+def on_config(config: Any) -> None:
     version = os.environ.get("TANGA_VERSION") or _resolve_version()
     # Preserve existing version config (e.g. provider: mike) and only set the version string
     if isinstance(config.extra.get("version"), dict):

@@ -12,12 +12,15 @@ from __future__ import annotations
 
 import logging
 import numbers
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass, field, fields
 from enum import Enum, StrEnum
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from ._icons import Icon
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeIs
 
 
 # ── Control variants ─────────────────────────────────────────
@@ -41,10 +44,16 @@ class EControlVariant(StrEnum):
 
 @dataclass
 class ControlEvent:
-    """Metadata passed to every control handler alongside the value.
+    """Base for every event handed to a viz handler.
 
-    Only *browser_id* is populated for now; additional fields may be added
-    without breaking existing handler signatures.
+    Carries the fields shared by all events — today only *browser_id* — and is
+    the base of the interaction events
+    (:class:`~pytanga.viz.InteractionEvent` and its subclasses ``ClickEvent`` /
+    ``DragEvent`` / ``ScrollEvent``), which add the object, event-type and
+    camera fields.
+
+    Extra fields may be added here without breaking existing handler
+    signatures: the event is always the last argument, after the value.
     """
 
     browser_id: str | None = None
@@ -185,7 +194,8 @@ class TableEnumOptionsRequest:
 
 
 EnumOptionsHandler = Callable[
-    [TableEnumOptionsRequest, ControlEvent], Awaitable[list[str] | tuple | None]
+    [TableEnumOptionsRequest, ControlEvent],
+    Awaitable[list[str] | tuple[str, ...] | None],
 ]
 """Async provider for a ``custom`` enum column's available values.
 
@@ -195,14 +205,24 @@ treated as no options).
 """
 
 
-# ── Handler type alias ──────────────────────────────────────
+# ── Handler type aliases ──────────────────────────────────────
 
-Handler = Callable[[Any, ControlEvent], Awaitable[None]]
+ControlHandler = Callable[[Any, ControlEvent], Awaitable[None]]
 """Async callback type for control interaction handlers.
 
 Takes a ``value`` argument (float for sliders, str for dropdowns / text /
 textarea / color pickers, bool for checkboxes, ``None`` for buttons / group
 toggles) and a :class:`ControlEvent`, and returns an awaitable.
+"""
+
+InteractionHandler = Callable[[Any], Coroutine[Any, Any, None]]
+"""Async callback type for pointer-interaction handlers.
+
+Receives the interaction event (:class:`~pytanga.viz.ClickEvent`,
+:class:`~pytanga.viz.DragEvent` or :class:`~pytanga.viz.ScrollEvent`) as its
+only argument — the event itself carries the payload.  Declared as
+``Coroutine`` rather than ``Awaitable`` because the interaction dispatcher
+schedules it with :func:`asyncio.create_task`.
 """
 
 
@@ -248,6 +268,10 @@ class Control:
     parent_id: str | None = None
     """If set, attach this control (via CSS2DRenderer) to the 3D entity
     with this ID.  ``None`` means the control lives in a fixed DOM panel."""
+
+    kind: str = ""
+    """The control kind string (``"slider"``, ``"button"``, …).  Declared on the
+    base so :meth:`serialize` can read it; every concrete control overrides it."""
 
     def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
         """Apply an incoming frontend *event* and return the dispatch to run.
@@ -347,9 +371,9 @@ class Slider(Control):
     max: float = 1.0
     step: float = 0.01
     value: float = 0.5
-    on_change: Handler | None = None
-    on_press: Handler | None = None
-    on_release: Handler | None = None
+    on_change: ControlHandler | None = None
+    on_press: ControlHandler | None = None
+    on_release: ControlHandler | None = None
 
 
 @dataclass
@@ -369,7 +393,7 @@ class Dropdown(Control):
     variant: EControlVariant = EControlVariant.DEFAULT
     options: list[str] = field(default_factory=list)
     value: str = ""
-    on_change: Handler | None = None
+    on_change: ControlHandler | None = None
 
 
 @dataclass
@@ -391,7 +415,7 @@ class Button(Control):
     icon_only: bool = False
     """If ``True``, render only the icon as a small square button."""
 
-    on_click: Handler | None = None
+    on_click: ControlHandler | None = None
 
 
 @dataclass
@@ -413,7 +437,7 @@ class FileChooser(Control):
     placeholder: str = ""
     root: str | None = None
     accept: str = ""
-    on_change: Handler | None = None
+    on_change: ControlHandler | None = None
 
 
 @dataclass
@@ -428,7 +452,7 @@ class TextField(Control):
 
     value: str = ""
     placeholder: str = ""
-    on_change: Handler | None = None
+    on_change: ControlHandler | None = None
 
 
 @dataclass
@@ -444,7 +468,7 @@ class TextArea(Control):
     value: str = ""
     placeholder: str = ""
     rows: int = 4
-    on_change: Handler | None = None
+    on_change: ControlHandler | None = None
 
 
 @dataclass
@@ -458,7 +482,7 @@ class ColorPicker(Control):
         return {"value": self.value}
 
     value: str = "#ffffff"
-    on_change: Handler | None = None
+    on_change: ControlHandler | None = None
 
 
 @dataclass
@@ -473,7 +497,7 @@ class Checkbox(Control):
 
     variant: EControlVariant = EControlVariant.DEFAULT
     value: bool = False
-    on_change: Handler | None = None
+    on_change: ControlHandler | None = None
 
 
 @dataclass
@@ -499,7 +523,7 @@ class ValueEdit(Control):
     digits: int = 2
     value: float = 0.0
     editable: bool = True
-    on_change: Handler | None = None
+    on_change: ControlHandler | None = None
 
 
 async def _default_client_log_sink(
@@ -533,7 +557,7 @@ class ClientLog(Control):
     """Backend-only sink for browser log events (never serialized)."""
 
     kind: str = "client_log"
-    on_log: Handler = _default_client_log_sink
+    on_log: ControlHandler = _default_client_log_sink
 
     def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
         record = ClientLogRecord(
@@ -720,7 +744,7 @@ def _is_bool_value(value: Any) -> bool:
     return isinstance(value, bool)
 
 
-def _is_number_value(value: Any) -> bool:
+def _is_number_value(value: Any) -> "TypeIs[int | float]":
     """Return whether *value* counts as a number cell for type deduction."""
     return isinstance(value, numbers.Number) and not isinstance(value, bool)
 
@@ -1050,15 +1074,15 @@ class Table(Control):
     sort: dict[str, Any] | None = field(default=None)
     _json_path: str | None = field(default=None, repr=False, compare=False)
     max_history: int = 100
-    on_cell_change: Handler | None = None
-    on_row_add: Handler | None = None
-    on_column_add: Handler | None = None
-    on_row_delete: Handler | None = None
-    on_column_delete: Handler | None = None
-    on_column_title_change: Handler | None = None
-    on_column_type_change: Handler | None = None
-    on_cell_select: Handler | None = None
-    on_change: Handler | None = None
+    on_cell_change: ControlHandler | None = None
+    on_row_add: ControlHandler | None = None
+    on_column_add: ControlHandler | None = None
+    on_row_delete: ControlHandler | None = None
+    on_column_delete: ControlHandler | None = None
+    on_column_title_change: ControlHandler | None = None
+    on_column_type_change: ControlHandler | None = None
+    on_cell_select: ControlHandler | None = None
+    on_change: ControlHandler | None = None
     on_enum_options: EnumOptionsHandler | None = field(
         default=None, repr=False, compare=False
     )
@@ -1078,9 +1102,10 @@ class Table(Control):
         if event == "enum_options":
             nested = payload.get("value")
             data = nested if isinstance(nested, dict) else {}
+            row_value = data.get("row")
             request = TableEnumOptionsRequest(
                 col=int(data.get("col", 0)),
-                row=None if data.get("row") is None else int(data.get("row")),
+                row=None if row_value is None else int(row_value),
                 current=str(data.get("current", "")),
             )
             event_obj = ControlEvent(browser_id=payload.get("browser_id"))
@@ -1429,14 +1454,17 @@ class Table(Control):
         return True
 
     def get_cell(self, row: int, col: int) -> str:
-        """Return the cell at *row*/*col* (zero-based).
+        """Return the cell at *row*/*col* (zero-based), as the wire string form.
 
         Raises ``IndexError`` when *row* or *col* is out of range (matching
         :meth:`set_cell`, which rejects the same out-of-range positions).
         """
         if not (0 <= row < len(self.rows)) or not (0 <= col < len(self.columns)):
             raise IndexError(f"cell ({row}, {col}) out of range")
-        return self.rows[row][col]
+        types = self._column_types
+        return _cell_to_str(
+            self.rows[row][col], types[col] if col < len(types) else None
+        )
 
     def insert_row(self, row: int, values: list[str]) -> bool:
         """Record history and insert a row at *row* (zero-based)."""
@@ -1579,6 +1607,7 @@ class Table(Control):
             return True
 
         values = [row[col] if col < len(row) else "" for row in self.rows]
+        distinct: list[str] = []
         if target == "string":
             converted = [str(v) for v in values]
         elif target == "number":
@@ -1688,7 +1717,7 @@ class Markdown(Control):
     value: str = ""
 
 
-# ── Handler registry ─────────────────────────────────────────
+# ── ControlHandler registry ─────────────────────────────────────────
 
 
 class HandlerOrigin(str, Enum):
@@ -1713,27 +1742,38 @@ class ControlHandlerRegistry:
     ``"toggle"``).  ``register(control_id, handler)`` is a convenience that
     registers under ``"change"`` for the common single-handler case.
 
-    Each entry is tagged with a :class:`HandlerOrigin` so callers can clear
-    only one class of handler (see :meth:`clear`).
+    One registry holds **both** handler families — control handlers
+    (:data:`ControlHandler`, value + event) and interaction handlers
+    (:data:`InteractionHandler`, interaction event only) — distinguished by
+    the :class:`HandlerOrigin` tag stored alongside each entry.  Fetch control
+    entries with :meth:`get` and interaction entries with
+    :meth:`get_interaction`.
+
+    Registration is last-writer-wins per ``(id, event)`` key and the registry
+    does not check the family, so a control and an interactive object sharing
+    one id *and* one event name would shadow each other.
     """
 
     def __init__(self) -> None:
-        self._handlers: dict[tuple[str, str], tuple[HandlerOrigin, Handler]] = {}
+        self._handlers: dict[
+            tuple[str, str], tuple[HandlerOrigin, ControlHandler | InteractionHandler]
+        ] = {}
 
     def register(
         self,
         control_id: str,
-        handler: Handler,
+        handler: ControlHandler | InteractionHandler,
         *,
         event: str = "change",
         origin: HandlerOrigin = HandlerOrigin.CONTROL,
     ) -> None:
-        """Register an async handler for a control event.
+        """Register an async handler for a control or interaction event.
 
         Args:
             control_id: The ``id`` of the :class:`Control` (or entity).
-            handler: An ``async def`` callable that receives the control's
-                value (float for sliders, str for dropdowns).
+            handler: An ``async def`` callable — either a :data:`ControlHandler`
+                (receives the value and the event) or an
+                :data:`InteractionHandler` (receives the interaction event).
             event: The event name (default ``"change"``).
             origin: Which class of handler this entry belongs to.
         """
@@ -1751,10 +1791,32 @@ class ControlHandlerRegistry:
         else:
             self._handlers.pop((control_id, event), None)
 
-    def get(self, control_id: str, event: str = "change") -> Handler | None:
-        """Look up the handler for ``(control_id, event)``, or ``None``."""
+    def get(self, control_id: str, event: str = "change") -> ControlHandler | None:
+        """Look up the control handler for ``(control_id, event)``, or ``None``.
+
+        Returns the entries registered as :data:`ControlHandler` (the default
+        ``HandlerOrigin.CONTROL`` family); interaction entries are fetched with
+        :meth:`get_interaction`.
+        """
         entry = self._handlers.get((control_id, event))
-        return entry[1] if entry is not None else None
+        if entry is None:
+            return None
+        # The stored shape is tagged by ``HandlerOrigin``; each accessor
+        # asserts the family its callers register (see the class docstring).
+        return cast("ControlHandler", entry[1])
+
+    def get_interaction(
+        self, control_id: str, event: str = "change"
+    ) -> InteractionHandler | None:
+        """Look up the interaction handler for ``(control_id, event)``, or ``None``.
+
+        Mirrors :meth:`get` for entries registered with
+        ``origin=HandlerOrigin.INTERACTION``.
+        """
+        entry = self._handlers.get((control_id, event))
+        if entry is None:
+            return None
+        return cast("InteractionHandler", entry[1])
 
     def clear(self, origin: HandlerOrigin | None = None) -> None:
         """Remove registered handlers.

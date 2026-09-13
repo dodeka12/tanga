@@ -82,7 +82,9 @@ async def test_dispatch_column_delete() -> None:
         calls.append(delete)
 
     viz.set_layout(
-        TableView("tbl", columns=["x", "y"], rows=[["1", "2"]], on_column_delete=_on_del)
+        TableView(
+            "tbl", columns=["x", "y"], rows=[["1", "2"]], on_column_delete=_on_del
+        )
     )
     await viz._dispatch_control_event(
         "control:column_delete", {"control_id": "tbl", "col": 1}
@@ -259,7 +261,9 @@ async def test_dispatch_column_delete_nested_payload() -> None:
         calls.append(delete)
 
     viz.set_layout(
-        TableView("tbl", columns=["x", "y"], rows=[["1", "2"]], on_column_delete=_on_del)
+        TableView(
+            "tbl", columns=["x", "y"], rows=[["1", "2"]], on_column_delete=_on_del
+        )
     )
     await viz._dispatch_control_event(
         "control:column_delete", {"control_id": "tbl", "value": {"col": 0}}
@@ -401,7 +405,12 @@ async def test_dispatch_undo_restores_model_and_pushes(monkeypatch) -> None:
     await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
 
     assert viz._resolve_control("tbl").get_value()["rows"] == [["1"]]
-    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]})]
+    assert pushed == [
+        (
+            "tbl",
+            {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]},
+        )
+    ]
 
 
 @pytest.mark.anyio
@@ -427,8 +436,15 @@ async def test_dispatch_undo_fires_on_change(monkeypatch) -> None:
 
     await viz._dispatch_control_event("control:undo", {"control_id": "tbl"})
 
-    assert calls == [{"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]}]
-    assert pushed == [("tbl", {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]})]
+    assert calls == [
+        {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]}
+    ]
+    assert pushed == [
+        (
+            "tbl",
+            {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]},
+        )
+    ]
 
 
 @pytest.mark.anyio

@@ -19,7 +19,7 @@ the 3D camera is never set — it is left to the caller.
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -29,8 +29,31 @@ from . import _transforms as _T
 from ._point_path import PointPath
 from ._scale import LogScale, Scale, make_scale
 from ._scene_objects import Axis, Grid
-from .camera import CameraConfig2d, StretchMode, View2DConfig, _validate_stretch
-from ._styles import AxisStyle, GridStyle, LabelStyle, PlaneStyle
+from .camera import (
+    CameraConfig,
+    CameraConfig2d,
+    StretchMode,
+    View2DConfig,
+    _validate_stretch,
+)
+from ._styles import (
+    AxisStyle,
+    GridStyle,
+    LabelStyle,
+    ObjVizStyle,
+    PlaneStyle,
+    PointPathStyle,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from ._object_ref import VizObjectRef
+    from ._scene_handle import VizSceneHandle
+    from .visualizer import Visualizer
+
+#: A 3-vector accepted by the placement helpers: a geometry vector or a triple.
+Vec3Like = "Point | Direction | tuple[float, float, float]"
 
 # Local-frame z ordering within the group.
 _PLANE_Z = 0.0
@@ -42,7 +65,7 @@ _AXES_Z_2D = -0.5
 _PLOT_Z_2D = 0.0
 
 
-def _coerce_handle(target):
+def _coerce_handle(target: "Visualizer | VizSceneHandle") -> "VizSceneHandle":
     """Normalize a ``Visualizer`` or ``VizSceneHandle`` to a handle."""
     from ._scene_handle import VizSceneHandle
     from .visualizer import Visualizer
@@ -56,25 +79,30 @@ def _coerce_handle(target):
     )
 
 
-def _as_range(value) -> tuple[float, float]:
+def _as_range(value: "Sequence[float] | None") -> tuple[float, float]:
     """Normalize a ``(lo, hi)`` pair to an ascending float tuple."""
     if value is None:
         raise ValueError("range must be a (lo, hi) pair, not None")
-    if len(value) != 2:  # type: ignore[arg-type]
+    if len(value) != 2:
         raise ValueError(f"range must be a (lo, hi) pair, got {value!r}")
-    lo, hi = float(value[0]), float(value[1])  # type: ignore[index]
+    lo, hi = float(value[0]), float(value[1])
     return (min(lo, hi), max(lo, hi))
 
 
-def _as_vec3(value) -> tuple[float, float, float]:
+def _as_vec3(
+    value: "Point | Direction | tuple[float, float, float]",
+) -> tuple[float, float, float]:
     if hasattr(value, "x") and hasattr(value, "y") and hasattr(value, "z"):
-        return (float(value.x), float(value.y), float(value.z))
-    if len(value) != 3:  # type: ignore[arg-type]
+        vec = cast("Any", value)
+        return (float(vec.x), float(vec.y), float(vec.z))
+    if len(value) != 3:
         raise ValueError(f"expected a 3-vector, got {value!r}")
-    return (float(value[0]), float(value[1]), float(value[2]))  # type: ignore[index]
+    return (float(value[0]), float(value[1]), float(value[2]))
 
 
-def _as_size(value) -> tuple[float | None, float | None]:
+def _as_size(
+    value: "Sequence[float | None] | None",
+) -> tuple[float | None, float | None]:
     """Normalize a ``size`` spec to an optional ``(size_x, size_y)`` pair.
 
     ``None`` (either the whole spec or one element) means "derive from the data
@@ -82,10 +110,10 @@ def _as_size(value) -> tuple[float | None, float | None]:
     """
     if value is None:
         return (None, None)
-    if len(value) != 2:  # type: ignore[arg-type]
+    if len(value) != 2:
         raise ValueError(f"size must be a (size_x, size_y) pair, got {value!r}")
-    sx = None if value[0] is None else float(value[0])  # type: ignore[index]
-    sy = None if value[1] is None else float(value[1])  # type: ignore[index]
+    sx = None if value[0] is None else float(value[0])
+    sy = None if value[1] is None else float(value[1])
     for s in (sx, sy):
         if s is not None and s <= 0.0:
             raise ValueError(f"size must be positive, got {s}")
@@ -147,31 +175,35 @@ def fit_view2d(
     )
 
 
-def _as_align(value) -> tuple[float, float]:
+def _as_align(value: "Sequence[float] | None") -> tuple[float, float]:
     """Normalize an ``align`` spec to a ``(ax, ay)`` fraction pair."""
     if value is None:
         return (0.5, 0.5)
-    if len(value) != 2:  # type: ignore[arg-type]
+    if len(value) != 2:
         raise ValueError(f"align must be an (ax, ay) pair, got {value!r}")
-    return (float(value[0]), float(value[1]))  # type: ignore[index]
+    return (float(value[0]), float(value[1]))
 
 
-def _as_axis_origin(value) -> tuple[float | None, float | None]:
+def _as_axis_origin(
+    value: "Sequence[float | None] | None",
+) -> tuple[float | None, float | None]:
     """Normalize an ``axis_origin`` spec to an optional ``(x, y)`` data pair.
 
     ``None`` (the spec or one element) means "that axis' min edge".
     """
     if value is None:
         return (None, None)
-    if len(value) != 2:  # type: ignore[arg-type]
+    if len(value) != 2:
         raise ValueError(f"axis_origin must be an (x, y) pair, got {value!r}")
     return (
-        None if value[0] is None else float(value[0]),  # type: ignore[index]
-        None if value[1] is None else float(value[1]),  # type: ignore[index]
+        None if value[0] is None else float(value[0]),
+        None if value[1] is None else float(value[1]),
     )
 
 
-def _cross(a, b) -> tuple[float, float, float]:
+def _cross(
+    a: tuple[float, float, float], b: tuple[float, float, float]
+) -> tuple[float, float, float]:
     return (
         a[1] * b[2] - a[2] * b[1],
         a[2] * b[0] - a[0] * b[2],
@@ -179,7 +211,9 @@ def _cross(a, b) -> tuple[float, float, float]:
     )
 
 
-def _normalize(v):
+def _normalize(
+    v: "tuple[float, float, float]",
+) -> "tuple[float, float, float] | None":
     n = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
     if n < 1e-12:
         return None
@@ -187,10 +221,10 @@ def _normalize(v):
 
 
 def _resolve_limit(
-    limit,
+    limit: "Sequence[float] | None",
     scale: Scale,
     space_dim: int,
-    camera,
+    camera: "CameraConfig | View2DConfig | None",
     axis: str = "x",
 ) -> tuple[float, float]:
     """Resolve an axis range, falling back to the camera rect or a default."""
@@ -283,19 +317,19 @@ class CoordinateSystem:
 
     def __init__(
         self,
-        target,
+        target: "Visualizer | VizSceneHandle",
         *,
-        xlim=None,
-        ylim=None,
-        xscale="linear",
-        yscale="linear",
-        size=None,
-        align=(0.5, 0.5),
-        axis_origin=None,
+        xlim: "Sequence[float] | None" = None,
+        ylim: "Sequence[float] | None" = None,
+        xscale: Scale | str = "linear",
+        yscale: Scale | str = "linear",
+        size: "Sequence[float | None] | None" = None,
+        align: "Sequence[float] | None" = (0.5, 0.5),
+        axis_origin: "Sequence[float | None] | None" = None,
         min_x_span: float = 5.0,
         base: float = 10.0,
         value_format: str = ".4g",
-        labels=("x", "y"),
+        labels: "Sequence[str]" = ("x", "y"),
         grid: bool = True,
         axes: bool = True,
         plane: bool | None = None,
@@ -303,13 +337,13 @@ class CoordinateSystem:
         stretch: StretchMode = "fit",
         border_px: float = 60.0,
         border_world: float = 0.0,
-        position=(0.0, 0.0, 0.0),
-        normal=(0.0, 0.0, 1.0),
-        up=(0.0, 1.0, 0.0),
-        x_style=None,
-        y_style=None,
-        grid_style=None,
-        plane_style=None,
+        position: "Point | Direction | tuple[float, float, float]" = (0.0, 0.0, 0.0),
+        normal: "Point | Direction | tuple[float, float, float]" = (0.0, 0.0, 1.0),
+        up: "Point | Direction | tuple[float, float, float]" = (0.0, 1.0, 0.0),
+        x_style: AxisStyle | None = None,
+        y_style: AxisStyle | None = None,
+        grid_style: GridStyle | None = None,
+        plane_style: PlaneStyle | None = None,
         group_name: str = "coordsys",
     ) -> None:
         self._handle = _coerce_handle(target)
@@ -366,7 +400,7 @@ class CoordinateSystem:
 
         self._group = self._handle.add_group(group_name)
         self._data_group = self._group.add_group(f"{group_name}_data")
-        self._refs: dict[str, object] = {}
+        self._refs: dict[str, Any] = {}
         self._plots: list[dict[str, Any]] = []
         self._vlines: dict[str, dict[str, Any]] = {}
         self._hlines: dict[str, dict[str, Any]] = {}
@@ -380,12 +414,12 @@ class CoordinateSystem:
     # ── Accessors ─────────────────────────────────────────────
 
     @property
-    def group(self):
+    def group(self) -> "VizObjectRef":
         """The :class:`~pytanga.viz.VizObjectRef` of the underlying group."""
         return self._group
 
     @property
-    def data_group(self):
+    def data_group(self) -> "VizObjectRef":
         """The inner data group (child of :attr:`group`) for data-space drawing.
 
         Children added here live in data coordinates (linear axes) or log-mapped
@@ -395,7 +429,7 @@ class CoordinateSystem:
         return self._data_group
 
     @property
-    def handle(self):
+    def handle(self) -> "VizSceneHandle":
         """The scene handle this coordinate system targets."""
         return self._handle
 
@@ -489,16 +523,27 @@ class CoordinateSystem:
         self._sync_lines()
         self._sync_points()
 
-    def _upsert(self, key: str, obj, style) -> None:
+    def _upsert(
+        self,
+        key: str,
+        obj: "Axis | Grid | Plane | Line | Point",
+        style: "AxisStyle | GridStyle | PlaneStyle | None",
+    ) -> None:
         ref = self._refs.get(key)
         if ref is None:
             ref = self._group.new(obj, style=style)
             self._refs[key] = ref
         else:
-            ref.entity = obj  # type: ignore[attr-defined]
+            ref.entity = obj
 
     def _axis_ticks(
-        self, scale: Scale, lo, hi, size, raw_lo, raw_span
+        self,
+        scale: Scale,
+        lo: float,
+        hi: float,
+        size: float,
+        raw_lo: float,
+        raw_span: float,
     ) -> list[tuple[float, str]]:
         ticks: list[tuple[float, str]] = []
         for value, _ in scale.ticks(lo, hi):
@@ -534,7 +579,9 @@ class CoordinateSystem:
             (self._align[1] - 0.5) * self._size_y,
         )
 
-    def _rotation_matrix(self, normal, up) -> np.ndarray:
+    def _rotation_matrix(
+        self, normal: "tuple[float, float, float]", up: "tuple[float, float, float]"
+    ) -> np.ndarray:
         n = _normalize(normal)
         if n is None:
             raise ValueError("normal must be a non-zero vector")
@@ -653,7 +700,9 @@ class CoordinateSystem:
         """
         return self._data_xy(x, y)
 
-    def transform(self, xs, ys) -> list[tuple[float, float, float]]:
+    def transform(
+        self, xs: "Sequence[float]", ys: "Sequence[float]"
+    ) -> list[tuple[float, float, float]]:
         """Map ``(x, y)`` data series to group-local 3D points."""
         out: list[tuple[float, float, float]] = []
         for x, y in zip(xs, ys):
@@ -661,7 +710,14 @@ class CoordinateSystem:
             out.append((lx, ly, self._plot_z))
         return out
 
-    def plot(self, xs, ys, *, color=None, style=None):
+    def plot(
+        self,
+        xs: "Sequence[float]",
+        ys: "Sequence[float]",
+        *,
+        color: str | None = None,
+        style: PointPathStyle | None = None,
+    ) -> "VizObjectRef":
         """Plot an ``(x, y)`` data series as a :class:`~pytanga.viz.PointPath`.
 
         Data is mapped through the scales and added as a child of the data
@@ -677,7 +733,14 @@ class CoordinateSystem:
 
     # ── Registered (live) plots ───────────────────────────────
 
-    def add_plot(self, path, *, color=None, style=None, auto_x: bool = False):
+    def add_plot(
+        self,
+        path: PointPath,
+        *,
+        color: str | None = None,
+        style: PointPathStyle | None = None,
+        auto_x: bool = False,
+    ) -> "VizObjectRef":
         """Register a live :class:`~pytanga.viz.PointPath` and add it to the data group.
 
         The path's points are in **data** coordinates; the coordinate system
@@ -743,16 +806,16 @@ class CoordinateSystem:
 
     def vline(
         self,
-        x,
+        x: float,
         *,
-        name=None,
-        y0=None,
-        y1=None,
-        color=None,
-        style=None,
+        name: str | None = None,
+        y0: float | None = None,
+        y1: float | None = None,
+        color: str | None = None,
+        style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ):
+    ) -> "VizObjectRef":
         """Create or update a vertical line at data ``x``.
 
         The line spans ``y0..y1`` in data coordinates; ``None`` (the default)
@@ -768,16 +831,16 @@ class CoordinateSystem:
 
     def hline(
         self,
-        y,
+        y: float,
         *,
-        name=None,
-        x0=None,
-        x1=None,
-        color=None,
-        style=None,
+        name: str | None = None,
+        x0: float | None = None,
+        x1: float | None = None,
+        color: str | None = None,
+        style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ):
+    ) -> "VizObjectRef":
         """Create or update a horizontal line at data ``y``.
 
         The line spans ``x0..x1`` in data coordinates; ``None`` (the default)
@@ -793,15 +856,15 @@ class CoordinateSystem:
 
     def line(
         self,
-        start,
-        end,
+        start: "tuple[float, float] | Point",
+        end: "tuple[float, float] | Point",
         *,
-        name=None,
-        color=None,
-        style=None,
+        name: str | None = None,
+        color: str | None = None,
+        style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ):
+    ) -> "VizObjectRef":
         """Draw a line between two data points.
 
         ``start`` and ``end`` are data coordinates, each given as an ``(x, y)``
@@ -817,14 +880,14 @@ class CoordinateSystem:
 
     def point(
         self,
-        p,
+        p: "tuple[float, float] | Point",
         *,
-        name=None,
-        color=None,
-        style=None,
+        name: str | None = None,
+        color: str | None = None,
+        style: ObjVizStyle | None = None,
         label: str | None = None,
         label_style: LabelStyle | None = None,
-    ):
+    ) -> "VizObjectRef":
         """Create or update a point marker at a data location.
 
         ``p`` is a data coordinate, given as an ``(x, y)`` 2-tuple or a
@@ -864,7 +927,18 @@ class CoordinateSystem:
         if entry is not None:
             entry["ref"].remove()
 
-    def _upsert_line(self, kind, value, name, c0, c1, color, style, label, label_style):
+    def _upsert_line(
+        self,
+        kind: str,
+        value: float,
+        name: str | None,
+        c0: float | None,
+        c1: float | None,
+        color: str | None,
+        style: ObjVizStyle | None,
+        label: str | None,
+        label_style: LabelStyle | None,
+    ) -> "VizObjectRef":
         store = self._vlines if kind == "v" else self._hlines
         if name is None:
             prefix = "vline" if kind == "v" else "hline"
@@ -873,7 +947,7 @@ class CoordinateSystem:
             while name in store:
                 index += 1
                 name = f"{prefix}_{index}"
-        entry = store.get(name)
+        entry: dict[str, Any] | None = store.get(name)
         if entry is None:
             entry = {
                 "name": name,
@@ -896,20 +970,26 @@ class CoordinateSystem:
             if c1 is not None:
                 entry["c1"] = float(c1)
             self._sync_line(entry, kind)
-        return entry["ref"]
+        ref: "VizObjectRef" = entry["ref"]
+        return ref
 
     @staticmethod
-    def _normalize_point(value) -> tuple[float, float]:
+    def _normalize_point(value: "tuple[float, float] | Point") -> tuple[float, float]:
         """Normalize a data point given as an ``(x, y)`` pair or a ``Point``."""
         if hasattr(value, "x") and hasattr(value, "y"):
-            return (float(value.x), float(value.y))
+            pt = cast("Any", value)
+            return (float(pt.x), float(pt.y))
         seq = tuple(value)
         if len(seq) != 2:
             raise ValueError(f"expected an (x, y) pair or a Point, got {value!r}")
         return (float(seq[0]), float(seq[1]))
 
     @staticmethod
-    def _annotation_kwargs(style, label, label_style) -> dict[str, Any]:
+    def _annotation_kwargs(
+        style: ObjVizStyle | None,
+        label: str | None,
+        label_style: LabelStyle | None,
+    ) -> dict[str, Any]:
         """Collect the non-``None`` creation kwargs for an annotation."""
         kwargs: dict[str, Any] = {}
         if style is not None:
@@ -920,7 +1000,16 @@ class CoordinateSystem:
             kwargs["label_style"] = label_style
         return kwargs
 
-    def _upsert_segment(self, p0, p1, name, color, style, label, label_style):
+    def _upsert_segment(
+        self,
+        p0: tuple[float, float],
+        p1: tuple[float, float],
+        name: str | None,
+        color: str | None,
+        style: ObjVizStyle | None,
+        label: str | None,
+        label_style: LabelStyle | None,
+    ) -> "VizObjectRef":
         if name is None:
             prefix = "line"
             index = len(self._lines)
@@ -928,7 +1017,7 @@ class CoordinateSystem:
             while name in self._lines:
                 index += 1
                 name = f"{prefix}_{index}"
-        entry = self._lines.get(name)
+        entry: dict[str, Any] | None = self._lines.get(name)
         if entry is None:
             entry = {
                 "name": name,
@@ -947,9 +1036,18 @@ class CoordinateSystem:
             entry["p0"] = p0
             entry["p1"] = p1
             self._sync_line(entry, "l")
-        return entry["ref"]
+        ref: "VizObjectRef" = entry["ref"]
+        return ref
 
-    def _upsert_point(self, p, name, color, style, label, label_style):
+    def _upsert_point(
+        self,
+        p: tuple[float, float],
+        name: str | None,
+        color: str | None,
+        style: ObjVizStyle | None,
+        label: str | None,
+        label_style: LabelStyle | None,
+    ) -> "VizObjectRef":
         if name is None:
             prefix = "point"
             index = len(self._points)
@@ -957,7 +1055,7 @@ class CoordinateSystem:
             while name in self._points:
                 index += 1
                 name = f"{prefix}_{index}"
-        entry = self._points.get(name)
+        entry: dict[str, Any] | None = self._points.get(name)
         if entry is None:
             entry = {
                 "name": name,
@@ -974,7 +1072,8 @@ class CoordinateSystem:
         else:
             entry["p"] = p
             self._sync_point(entry)
-        return entry["ref"]
+        ref: "VizObjectRef" = entry["ref"]
+        return ref
 
     def _sync_points(self) -> None:
         for entry in self._points.values():
@@ -1027,7 +1126,7 @@ class CoordinateSystem:
         return self._xlim
 
     @xlim.setter
-    def xlim(self, value) -> None:
+    def xlim(self, value: "Sequence[float] | None") -> None:
         self._xlim = _as_range(value)
         self._rebuild()
         self._apply_camera()
@@ -1037,7 +1136,7 @@ class CoordinateSystem:
         return self._ylim
 
     @ylim.setter
-    def ylim(self, value) -> None:
+    def ylim(self, value: "Sequence[float] | None") -> None:
         self._ylim = _as_range(value)
         self._rebuild()
         self._apply_camera()
@@ -1047,7 +1146,7 @@ class CoordinateSystem:
         return self._xscale
 
     @xscale.setter
-    def xscale(self, value) -> None:
+    def xscale(self, value: Scale | str) -> None:
         self._xscale = make_scale(value, self._base)
         self._rebuild()
         self._apply_camera()
@@ -1057,7 +1156,7 @@ class CoordinateSystem:
         return self._yscale
 
     @yscale.setter
-    def yscale(self, value) -> None:
+    def yscale(self, value: Scale | str) -> None:
         self._yscale = make_scale(value, self._base)
         self._rebuild()
         self._apply_camera()
@@ -1067,7 +1166,7 @@ class CoordinateSystem:
         return self._size
 
     @size.setter
-    def size(self, value) -> None:
+    def size(self, value: "Sequence[float | None] | None") -> None:
         self._size = _as_size(value)
         self._size_given = value is not None
         self._rebuild()
@@ -1079,7 +1178,7 @@ class CoordinateSystem:
         return self._align
 
     @align.setter
-    def align(self, value) -> None:
+    def align(self, value: "Sequence[float] | None") -> None:
         self._align = _as_align(value)
         self._apply_transform()
 
@@ -1088,7 +1187,7 @@ class CoordinateSystem:
         return self._axis_origin
 
     @axis_origin.setter
-    def axis_origin(self, value) -> None:
+    def axis_origin(self, value: "Sequence[float | None] | None") -> None:
         self._axis_origin = _as_axis_origin(value)
         self._build()
 
@@ -1097,7 +1196,7 @@ class CoordinateSystem:
         return self._base
 
     @base.setter
-    def base(self, value) -> None:
+    def base(self, value: float) -> None:
         self._base = float(value)
         if isinstance(self._xscale, LogScale):
             self._xscale = LogScale(self._base)
@@ -1111,7 +1210,7 @@ class CoordinateSystem:
         return self._position
 
     @position.setter
-    def position(self, value) -> None:
+    def position(self, value: "Point | Direction | tuple[float, float, float]") -> None:
         self._position = _as_vec3(value)
         self._apply_transform()
         self._apply_camera()
@@ -1121,7 +1220,7 @@ class CoordinateSystem:
         return self._normal
 
     @normal.setter
-    def normal(self, value) -> None:
+    def normal(self, value: "Point | Direction | tuple[float, float, float]") -> None:
         self._normal = _as_vec3(value)
         self._apply_transform()
         self._apply_camera()
@@ -1131,7 +1230,7 @@ class CoordinateSystem:
         return self._up
 
     @up.setter
-    def up(self, value) -> None:
+    def up(self, value: "Point | Direction | tuple[float, float, float]") -> None:
         self._up = _as_vec3(value)
         self._apply_transform()
         self._apply_camera()

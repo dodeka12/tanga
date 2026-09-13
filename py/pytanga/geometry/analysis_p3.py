@@ -13,7 +13,7 @@ Uses :meth:`~pytanga.MV.blade_factorize` and
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from pytanga.basis.p3 import BasisP3
 
@@ -326,7 +326,10 @@ def _get_grades(mv: MV) -> set[int]:
 # ═══════════════════════════════════════════════════════════════
 
 
-def _expect(result, cls):
+T = TypeVar("T")
+
+
+def _expect(result: object, cls: type[T]) -> T:
     """Return *result* if it is an instance of *cls*; else raise."""
     if result is None:
         raise ValueError(f"MV does not represent a {cls.__name__}")

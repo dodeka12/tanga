@@ -81,7 +81,7 @@ def hr(title: str) -> None:
 # ── 1. Reflection ──────────────────────────────────────────
 hr("1. Reflection — grade-1 versor, no null components")
 
-refl = Reflection(normal=Direction(0, 0, 1))
+refl = Reflection(Direction(0, 0, 1))
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_ref = geo.create(refl)
 mv_ref.show("Reflection in plane with normal (0,0,1)")
@@ -98,6 +98,7 @@ mv_inv = geo.create(inv)
 mv_inv.show("Inversion at origin (2,0,0)")
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_inv)
+assert isinstance(result, Inversion), "an inversion MV analyses to Inversion"
 print(f"  analyze → {result}")
 print(
     f"  center: ({result.center.x:.1f}, {result.center.y:.1f}, {result.center.z:.1f})"
@@ -123,6 +124,7 @@ mv_t = geo.create(t)
 mv_t.show("Translator by (3, 1, 0)")
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_t)
+assert isinstance(result, Translator), "a translation MV analyses to Translator"
 print(f"  analyze → {result}")
 print(
     f"  vector = ({result.vector.x:.3f}, {result.vector.y:.3f}, {result.vector.z:.3f})"

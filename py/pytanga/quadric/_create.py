@@ -13,6 +13,7 @@ on ``pytanga.geometry``.
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 
@@ -20,30 +21,71 @@ from ._embedding import embed_point
 from ._mapping import to_coeffs
 from .conic import Conic, Quadric3D
 
+if TYPE_CHECKING:
+    from pytanga.algebra._algebra import Algebra
+    from pytanga.algebra._mv import MV
+    from pytanga.entity import Direction, Point
+    from pytanga.geometry.entities import (
+        Circle,
+        Cone,
+        Cylinder,
+        Ellipse,
+        Ellipsoid,
+        Entity,
+        Hyperbola,
+        Line,
+        LinePair,
+        Parabola,
+        ParallelLinePair,
+        ParallelPlanePair,
+        Plane,
+        PlanePair,
+        Sphere,
+    )
+
+    class _EntitiesModule(Protocol):
+        """The lazily-imported :mod:`pytanga.geometry.entities` module."""
+
+        Circle: type[Circle]
+        Cone: type[Cone]
+        Cylinder: type[Cylinder]
+        Ellipse: type[Ellipse]
+        Ellipsoid: type[Ellipsoid]
+        Hyperbola: type[Hyperbola]
+        Line: type[Line]
+        LinePair: type[LinePair]
+        Parabola: type[Parabola]
+        ParallelLinePair: type[ParallelLinePair]
+        ParallelPlanePair: type[ParallelPlanePair]
+        Plane: type[Plane]
+        PlanePair: type[PlanePair]
+        Sphere: type[Sphere]
+
+
 _entities_module = None
 
 
-def _entities():
+def _entities() -> "_EntitiesModule":
     """Lazily import and cache :mod:`pytanga.geometry.entities`."""
     global _entities_module
     if _entities_module is None:
         from pytanga.geometry import entities as _entities_module
 
-    return _entities_module
+    return cast("_EntitiesModule", _entities_module)
 
 
-def _coeffs_to_mv(basis, coeffs):
+def _coeffs_to_mv(basis: "Algebra", coeffs: "tuple[float, ...]") -> MV:
     mv = basis.multivector({1 << i: float(coeffs[i]) for i in range(basis.dim)})
     if basis.opns:
         mv = mv.undual()
     return mv
 
 
-def _matrix_to_mv(basis, matrix):
+def _matrix_to_mv(basis: "Algebra", matrix: np.ndarray) -> MV:
     return _coeffs_to_mv(basis, to_coeffs(matrix))
 
 
-def create_point(basis, x, y, z=0.0):
+def create_point(basis: "Algebra", x: float, y: float, z: float = 0.0) -> MV:
     if basis.dim == 6:
         mv = embed_point(basis, x, y)
     else:
@@ -53,11 +95,13 @@ def create_point(basis, x, y, z=0.0):
     return mv
 
 
-def create_conic(basis, conic):
+def create_conic(basis: "Algebra", conic: Conic) -> MV:
     return _coeffs_to_mv(basis, conic.coeffs)
 
 
-def create_circle(basis, center, normal, radius):
+def create_circle(
+    basis: "Algebra", center: "Point", normal: "Direction | None", radius: float
+) -> MV:
     del normal  # 2D conic space: the circle lies in the xy-plane
     cx, cy = center.x, center.y
     matrix = np.array(
@@ -70,7 +114,7 @@ def create_circle(basis, center, normal, radius):
     return _matrix_to_mv(basis, matrix)
 
 
-def create_ellipse(basis, ellipse):
+def create_ellipse(basis: "Algebra", ellipse: "Ellipse") -> MV:
     cx, cy = ellipse.center.x, ellipse.center.y
     a2 = ellipse.radius_u**2
     b2 = ellipse.radius_v**2
@@ -84,7 +128,7 @@ def create_ellipse(basis, ellipse):
     return _matrix_to_mv(basis, matrix)
 
 
-def create_hyperbola(basis, hyperbola):
+def create_hyperbola(basis: "Algebra", hyperbola: "Hyperbola") -> MV:
     d1 = np.array([hyperbola.dir1.x, hyperbola.dir1.y])
     d2 = np.array([hyperbola.dir2.x, hyperbola.dir2.y])
     q = np.outer(d1, d1) / hyperbola.a**2 - np.outer(d2, d2) / hyperbola.b**2
@@ -97,7 +141,7 @@ def create_hyperbola(basis, hyperbola):
     return _matrix_to_mv(basis, matrix)
 
 
-def create_parabola(basis, parabola):
+def create_parabola(basis: "Algebra", parabola: "Parabola") -> MV:
     d = np.array([parabola.direction.x, parabola.direction.y])
     d = d / np.linalg.norm(d)
     u = np.array([-d[1], d[0]])  # transverse direction
@@ -112,7 +156,9 @@ def create_parabola(basis, parabola):
     return _matrix_to_mv(basis, matrix)
 
 
-def _normalized_line(origin, direction):
+def _normalized_line(
+    origin: "Point", direction: "Direction"
+) -> tuple[float, float, float]:
     nx, ny = direction.y, -direction.x
     norm = float(np.hypot(nx, ny))
     nx, ny = nx / norm, ny / norm
@@ -120,19 +166,19 @@ def _normalized_line(origin, direction):
     return nx, ny, c
 
 
-def create_line(basis, origin, direction):
+def create_line(basis: "Algebra", origin: "Point", direction: "Direction") -> MV:
     a, b, c = _normalized_line(origin, direction)
     lv = np.array([a, b, c])
     return _matrix_to_mv(basis, np.outer(lv, lv))
 
 
-def create_line_pair(basis, pair):
+def create_line_pair(basis: "Algebra", pair: "LinePair") -> MV:
     l1 = np.array(_normalized_line(pair.line1.origin, pair.line1.direction))
     l2 = np.array(_normalized_line(pair.line2.origin, pair.line2.direction))
     return _matrix_to_mv(basis, np.outer(l1, l2) + np.outer(l2, l1))
 
 
-def create_parallel_line_pair(basis, pair):
+def create_parallel_line_pair(basis: "Algebra", pair: "ParallelLinePair") -> MV:
     a, b, c1 = _normalized_line(pair.line1.origin, pair.line1.direction)
     _, _, c2 = _normalized_line(pair.line2.origin, pair.line2.direction)
     mid = (c1 + c2) / 2.0
@@ -146,30 +192,30 @@ def create_parallel_line_pair(basis, pair):
     return _matrix_to_mv(basis, matrix)
 
 
-def create_quadric(basis, quadric):
+def create_quadric(basis: "Algebra", quadric: Quadric3D) -> MV:
     return _coeffs_to_mv(basis, quadric.coeffs)
 
 
-def _centered_matrix(q, c, const):
+def _centered_matrix(q: np.ndarray, c: np.ndarray, const: float) -> np.ndarray:
     b = -q @ c
     f = float(c @ q @ c) + const
     return np.block([[q, b[:, None]], [b[None, :], np.array([[f]])]])
 
 
-def create_sphere(basis, center, radius):
+def create_sphere(basis: "Algebra", center: "Point", radius: float) -> MV:
     q = np.eye(3)
     c = np.array([center.x, center.y, center.z])
     return _matrix_to_mv(basis, _centered_matrix(q, c, -radius * radius))
 
 
-def create_ellipsoid(basis, ellipsoid):
+def create_ellipsoid(basis: "Algebra", ellipsoid: "Ellipsoid") -> MV:
     rx, ry, rz = (float(r) for r in ellipsoid.radii)
     q = np.diag([1.0 / rx**2, 1.0 / ry**2, 1.0 / rz**2])
     c = np.array([ellipsoid.center.x, ellipsoid.center.y, ellipsoid.center.z])
     return _matrix_to_mv(basis, _centered_matrix(q, c, -1.0))
 
 
-def create_cylinder(basis, cylinder):
+def create_cylinder(basis: "Algebra", cylinder: "Cylinder") -> MV:
     axis = np.array([cylinder.axis.x, cylinder.axis.y, cylinder.axis.z])
     axis = axis / np.linalg.norm(axis)
     q = np.eye(3) - np.outer(axis, axis)
@@ -177,7 +223,7 @@ def create_cylinder(basis, cylinder):
     return _matrix_to_mv(basis, _centered_matrix(q, c, -(cylinder.radius**2)))
 
 
-def create_cone(basis, cone):
+def create_cone(basis: "Algebra", cone: "Cone") -> MV:
     axis = np.array([cone.axis.x, cone.axis.y, cone.axis.z])
     axis = axis / np.linalg.norm(axis)
     sec2 = 1.0 / (np.cos(cone.half_angle) ** 2)
@@ -186,7 +232,7 @@ def create_cone(basis, cone):
     return _matrix_to_mv(basis, _centered_matrix(q, c, 0.0))
 
 
-def create_plane(basis, plane):
+def create_plane(basis: "Algebra", plane: "Plane") -> MV:
     n = np.array([plane.normal.x, plane.normal.y, plane.normal.z])
     n = n / np.linalg.norm(n)
     d = -float(n @ np.array([plane.point.x, plane.point.y, plane.point.z]))
@@ -197,20 +243,20 @@ def create_plane(basis, plane):
     return _matrix_to_mv(basis, matrix)
 
 
-def _normalized_plane(plane):
+def _normalized_plane(plane: "Plane") -> np.ndarray:
     n = np.array([plane.normal.x, plane.normal.y, plane.normal.z])
     n = n / np.linalg.norm(n)
     d = -float(n @ np.array([plane.point.x, plane.point.y, plane.point.z]))
     return np.array([n[0], n[1], n[2], d])
 
 
-def create_plane_pair(basis, pair):
+def create_plane_pair(basis: "Algebra", pair: "PlanePair") -> MV:
     p1 = _normalized_plane(pair.plane1)
     p2 = _normalized_plane(pair.plane2)
     return _matrix_to_mv(basis, np.outer(p1, p2) + np.outer(p2, p1))
 
 
-def create_parallel_plane_pair(basis, pair):
+def create_parallel_plane_pair(basis: "Algebra", pair: "ParallelPlanePair") -> MV:
     a, b, c, d1 = _normalized_plane(pair.plane1)
     _, _, _, d2 = _normalized_plane(pair.plane2)
     mid = (d1 + d2) / 2.0
@@ -224,7 +270,9 @@ def create_parallel_plane_pair(basis, pair):
     return _matrix_to_mv(basis, matrix)
 
 
-def create_entity(basis, entity):
+def create_entity(
+    basis: "Algebra", entity: "Entity | Ellipse | Ellipsoid | Cylinder"
+) -> MV:
     E = _entities()
     if basis.dim == 6:
         if isinstance(entity, Conic):
@@ -263,7 +311,7 @@ def create_entity(basis, entity):
     raise TypeError(f"Entity type {type(entity).__name__} not supported in Q3")
 
 
-def _q3_rotor(basis, theta, axis):
+def _q3_rotor(basis: "Algebra", theta: float, axis: "Direction") -> MV:
     """Rotation about an arbitrary axis in the 3D quadric space (``CA{10}``).
 
     Built as ``R_lin · R_mixed · R_quad`` — three commuting factors acting on the
@@ -286,10 +334,10 @@ def _q3_rotor(basis, theta, axis):
     c2 = math.cos(theta / 2.0)
     s2 = math.sin(theta / 2.0)
 
-    def _lin(v):
+    def _lin(v: np.ndarray) -> MV:
         return basis.multivector({1: v[0], 2: v[1], 4: v[2]})
 
-    def _quad(v):
+    def _quad(v: np.ndarray) -> MV:
         # D_u = M(u uᵀ) — the u² monomial blade.
         x, y, z = v
         return basis.multivector(
@@ -303,7 +351,7 @@ def _q3_rotor(basis, theta, axis):
             }
         )
 
-    def _cross(u, v):
+    def _cross(u: np.ndarray, v: np.ndarray) -> MV:
         # X_uv = M(u vᵀ + v uᵀ) — the uv monomial blade.
         return basis.multivector(
             {
@@ -324,7 +372,7 @@ def _q3_rotor(basis, theta, axis):
     return r_lin * r_mixed * r_quad
 
 
-def create_rotor(basis, angle, axis):
+def create_rotor(basis: "Algebra", angle: float, axis: "Direction") -> MV:
     """Quadric-space rotation rotor (Perwass, GAConicSpc eqn. GAGeo:C2:RotorDef1).
 
     Q2 (2D conic space, ``dim == 6``) — applied as ``R A R̃``, with
@@ -361,5 +409,3 @@ def create_rotor(basis, angle, axis):
     if basis.dim == 10:
         return _q3_rotor(basis, float(angle), axis)
     raise ValueError(f"unsupported quadric basis dimension: {basis.dim}")
-
-

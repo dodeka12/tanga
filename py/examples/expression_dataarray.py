@@ -15,7 +15,7 @@ Keywords: expression, variable, DataArray, geometric algebra, contraction
 
 import numpy as np
 
-from pytanga import DataArray, Variable
+from pytanga import DataArray, Expression, Variable
 from pytanga.basis import BasisN3
 from pytanga.blade_mask import BladeMask
 
@@ -84,6 +84,7 @@ hr("3. Variable binding with DataArray")
 
 expr = x_pnt ^ (bi_var | x_pnt)
 contract = expr(x_pnt=points_data)
+assert isinstance(contract, Expression)
 print("contract:", contract)
 print("names:", contract.names, "ndim:", contract.ndim)
 
@@ -91,19 +92,29 @@ bi_test = N3({N3.E12: 1.0, N3.E13: 2.0, N3.E23: 3.0})
 
 # Sum the counting axis with a raw 1-D array (sum sugar), or a 1-D DataArray.
 scalar_contract = contract(pnt_idx=scalars)
+assert isinstance(scalar_contract, Expression)
 print("\nsum via raw array:", scalar_contract(bi_var=bi_test))
-print("sum via 1-D DataArray:", contract(pnt_idx=scalar_data)(bi_var=bi_test))
+via_data_array = contract(pnt_idx=scalar_data)
+assert isinstance(via_data_array, Expression)
+print("\nsum via 1-D DataArray:", via_data_array(bi_var=bi_test))
 
 # Multiply element-wise and keep the axis with the `_` marker.
 kept = contract(pnt_idx=DataArray(scalars, masks=("_",)))
-print("multiply/keep ndim:", kept.ndim, "->", len(kept(bi_var=bi_test)), "results")
+assert isinstance(kept, Expression)
+kept_mv = kept(bi_var=bi_test)
+assert isinstance(kept_mv, list)
+print("multiply/keep ndim:", kept.ndim, "->", len(kept_mv), "results")
 
 # Sum one counting axis and keep another with a 2-D DataArray.
 points2d = np.random.default_rng(3).random((100, 2, 3))
 two_axes = expr(x_pnt=DataArray(points2d, masks=("pnt_idx", "group_idx", point_mask)))
+assert isinstance(two_axes, Expression)
 reduced = two_axes(pnt_idx=DataArray(scalars2d, masks=("pnt_idx", "group_idx")))
+assert isinstance(reduced, Expression)
 print("\ncontract one / keep one:", reduced)
-print("per-group results:", len(reduced(bi_var=bi_test)))
+reduced_mv = reduced(bi_var=bi_test)
+assert isinstance(reduced_mv, list)
+print("per-group results:", len(reduced_mv))
 
 # ----------------------------------------------------------------------
 # 4. Renaming counting axes

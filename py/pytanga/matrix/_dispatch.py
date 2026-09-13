@@ -7,7 +7,7 @@ These are **implementation details**, not part of the public API.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 def _dispatch_product_matrix(
     alg: "Algebra",
     product: EProduct,
-    mv_impl,
+    mv_impl: Any,
     b_ids: list[int],
     c_ids: list[int],
     left: bool,
@@ -54,7 +54,7 @@ def _dispatch_product_matrix(
 def _dispatch_product_matrix_masked(
     alg: "Algebra",
     product: EProduct,
-    mv_impl,
+    mv_impl: Any,
     a_ids: list[int],
     b_ids: list[int],
     c_ids: list[int],
@@ -91,7 +91,7 @@ def _dispatch_product_matrix_masked(
 def _dispatch_product_matrix_array(
     alg: "Algebra",
     product: EProduct,
-    mv_impls: list,
+    mv_impls: list[Any],
     b_ids: list[int],
     c_ids: list[int],
     left: bool,

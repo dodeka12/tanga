@@ -130,7 +130,9 @@ def test_table_handle_event_cell_select_clear() -> None:
 
 def test_table_handle_event_column_title_change_mutates_model() -> None:
     ctrl = Table(id="tbl", columns=["x", "y"], rows=[["1", "2"]])
-    d = ctrl.handle_event("column_title_change", {"value": {"col": 1, "title": "renamed"}})
+    d = ctrl.handle_event(
+        "column_title_change", {"value": {"col": 1, "title": "renamed"}}
+    )
     assert d.event == "column_title_change"
     assert isinstance(d.value, TableColumnTitleChange)
     assert (d.value.col, d.value.title) == (1, "renamed")
@@ -162,7 +164,11 @@ def test_table_handle_event_undo_fires_change() -> None:
     ctrl.set_cell(0, 0, "9")
     d = ctrl.handle_event("undo", {})
     assert d.event == "change"
-    assert d.value == {"columns": ["x"], "rows": [["1"]], "column_types": [{"kind": "string"}]}
+    assert d.value == {
+        "columns": ["x"],
+        "rows": [["1"]],
+        "column_types": [{"kind": "string"}],
+    }
     assert d.push == d.value
     assert ctrl.rows == [["1"]]
 
@@ -173,7 +179,11 @@ def test_table_handle_event_redo_fires_change() -> None:
     ctrl.undo()
     d = ctrl.handle_event("redo", {})
     assert d.event == "change"
-    assert d.value == {"columns": ["x"], "rows": [["9"]], "column_types": [{"kind": "string"}]}
+    assert d.value == {
+        "columns": ["x"],
+        "rows": [["9"]],
+        "column_types": [{"kind": "string"}],
+    }
     assert ctrl.rows == [["9"]]
 
 

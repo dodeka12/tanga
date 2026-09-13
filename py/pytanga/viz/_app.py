@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import threading
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -129,7 +129,7 @@ class VisualizerApp:
         if self._stop_requested.is_set():
             return True
         shutdown = getattr(self.viz, "_shutdown_requested", None)
-        return shutdown is not None and shutdown.is_set()
+        return bool(shutdown is not None and shutdown.is_set())
 
     def run(
         self,
@@ -216,11 +216,11 @@ class VisualizerApp:
 
     def submit_user(
         self,
-        coro_factory: Callable[..., Awaitable[Any]],
+        coro_factory: Callable[..., Coroutine[Any, Any, Any]],
         *args: Any,
         done: Callable[[Any], None] | None = None,
         **kwargs: Any,
-    ) -> concurrent.futures.Future:
+    ) -> concurrent.futures.Future[Any]:
         """Schedule ``coro_factory(*args, **kwargs)`` on the user loop.
 
         Thread-safe; returns a :class:`concurrent.futures.Future` so a control
@@ -236,7 +236,7 @@ class VisualizerApp:
         )
         if done is not None:
 
-            def _on_done(f: concurrent.futures.Future) -> None:
+            def _on_done(f: concurrent.futures.Future[Any]) -> None:
                 try:
                     result = f.result()
                 except Exception:
@@ -248,7 +248,7 @@ class VisualizerApp:
 
     async def run_user(
         self,
-        coro_factory: Callable[..., Awaitable[Any]],
+        coro_factory: Callable[..., Coroutine[Any, Any, Any]],
         *args: Any,
         **kwargs: Any,
     ) -> Any:

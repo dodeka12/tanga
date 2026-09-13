@@ -28,7 +28,7 @@ The 4D dual is computed as ``mv.ip(I_4d_pinv)`` where
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar, cast
 
 from ._ana_versor_generic import ana_versor_generic
 from ._pga3_utils import (
@@ -365,7 +365,9 @@ def analyze_operator(
         return _ana_versor(mv)
 
 
-def _entity_to_operator(entity):
+def _entity_to_operator(
+    entity: "Point | Direction | Line | Plane | Space | None",
+) -> ReflectionPlane | ReflectionLine | ReflectionPoint:
     """Wrap an entity as its corresponding reflection operator."""
     if isinstance(entity, Plane):
         return ReflectionPlane(entity)
@@ -376,10 +378,10 @@ def _entity_to_operator(entity):
     raise ValueError(f"Entity type {type(entity).__name__} has no reflection operator")
 
 
-def _triple_reflection_from_factors(factors):
+def _triple_reflection_from_factors(factors: list[MV]) -> TripleReflection:
     """Three plane reflections -> TripleReflection."""
-    planes = tuple(_plane_from_vector(f) for f in factors)
-    return TripleReflection(planes=planes)
+    plane1, plane2, plane3 = (_plane_from_vector(f) for f in factors)
+    return TripleReflection(planes=(plane1, plane2, plane3))
 
 
 def _ana_versor(
@@ -391,9 +393,15 @@ def _ana_versor(
     ``einf_like = e0``, ``e0_recip_like = e0_recip``.
     """
     alg = mv._alg
-    e0 = alg.e0 if hasattr(alg, "e0") else alg.multivector({EP: 1.0, EM: 1.0})
+    # ``e0``/``e0_recip`` are attached as MVs by BasisPGA3; ``hasattr`` narrowing
+    # only yields ``object``, so the types have to be asserted here.
+    e0 = (
+        cast("MV", alg.e0)
+        if hasattr(alg, "e0")
+        else alg.multivector({EP: 1.0, EM: 1.0})
+    )
     e0_recip = (
-        alg.e0_recip
+        cast("MV", alg.e0_recip)
         if hasattr(alg, "e0_recip")
         else alg.multivector({EP: 0.5, EM: -0.5})
     )
@@ -419,7 +427,10 @@ def _get_grades(mv: MV) -> set[int]:
 # ═══════════════════════════════════════════════════════════════
 
 
-def _expect(result, cls):
+T = TypeVar("T")
+
+
+def _expect(result: object, cls: type[T]) -> T:
     """Return *result* if it is an instance of *cls*; else raise."""
     if result is None:
         raise ValueError(f"MV does not represent a {cls.__name__}")

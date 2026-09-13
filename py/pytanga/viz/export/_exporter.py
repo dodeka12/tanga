@@ -460,7 +460,7 @@ class SceneExporter:
     def export_animated_figure(
         self,
         path: str | Path,
-        recording,
+        recording: AnimationRecording,
         *,
         style: _FS | None = None,
         anim_style: _AS | None = None,
@@ -487,7 +487,7 @@ class SceneExporter:
     def export_animated_html(
         self,
         path: str | Path,
-        recording,
+        recording: AnimationRecording,
         *,
         anim_style: _AS | None = None,
         overwrite: bool = False,

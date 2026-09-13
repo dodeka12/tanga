@@ -36,6 +36,7 @@ from .operators import GeneralRotor, Translator
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
     from pytanga.algebra._mv import MV
+    from pytanga.basis.pga3 import BasisPGA3
 
 
 # ── Entities ──────────────────────────────────────────────────
@@ -147,7 +148,7 @@ def create_plane(basis: Algebra, plane: Plane) -> MV:
     return mv
 
 
-def create_space(basis: Algebra, *, scale: float = 1.0) -> MV:
+def create_space(basis: "BasisPGA3", *, scale: float = 1.0) -> MV:
     """PGA3 Space: ``scale · e₁ ∧ e₂ ∧ e₃ ∧ e₀``."""
     if hasattr(basis, "e1"):
         mv = basis.e1.op(basis.e2).op(basis.e3).op(_get_e0(basis)) * scale

@@ -101,19 +101,26 @@ viz.flush()
 
 print("Simulating two-body gravity until Ctrl+C...")
 
+
+def _as_direction(value: "Direction | Point") -> Direction:
+    """Narrow a point/direction expression back to a direction."""
+    assert isinstance(value, Direction), "expected a direction"
+    return value
+
+
 for _ in viz.animate(fps=50):
     # ── Gravitational force ──────────────────────────────────
     # Vector from body 1 to body 2:  r = pos_2 - pos_1
-    r_12: Direction = pos_2 - pos_1
+    r_12: "Direction | Point" = pos_2 - pos_1
     dist_12 = r_12.mag()
     # Unit direction from 1 toward 2
-    r_hat_12: Direction = r_12.normalized()
+    r_hat_12 = _as_direction(r_12.normalized())
 
     # Force magnitude: F = G * m1 * m2 / r²
     force_mag = G * mass_1 * mass_2 / (dist_12 * dist_12)
 
     # Force on body 1: toward body 2 (+r_hat direction)
-    f_1: Direction = r_hat_12 * force_mag
+    f_1 = _as_direction(r_hat_12 * force_mag)
     # Force on body 2: toward body 1 (−r_hat direction)
     f_2: Direction = -f_1
 

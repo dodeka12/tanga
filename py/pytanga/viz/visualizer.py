@@ -17,12 +17,19 @@ import sys
 import threading
 import time
 import warnings
-from typing import TYPE_CHECKING, Any, Iterator, Sequence
+from typing import TYPE_CHECKING, Any, Iterator, Sequence, overload
 
 if TYPE_CHECKING:
+    from ._interaction import (
+        InteractionConfig,
+        InteractionEventType,
+        InteractionHandler,
+    )
     from ._object_ref import VizObjectRef
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
     from ._viz_styles import VizStyles
+    from .views import View
+    from .export._cdn import DeliveryMode
 
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
@@ -339,8 +346,8 @@ class Visualizer(_JupyterDisplayMixin):
     def on_interaction(
         self,
         object_id: str,
-        event_type: Any,
-        handler: Any,
+        event_type: InteractionEventType,
+        handler: InteractionHandler,
         *,
         scene_name: str = "",
     ) -> None:
@@ -350,7 +357,11 @@ class Visualizer(_JupyterDisplayMixin):
         )
 
     def set_interaction(
-        self, object_id: str, config: Any, *, scene_name: str = ""
+        self,
+        object_id: str,
+        config: InteractionConfig,
+        *,
+        scene_name: str = "",
     ) -> None:
         """Set the interaction configuration for an entity."""
         self._interaction_host.set_interaction(object_id, config, scene_name=scene_name)
@@ -505,7 +516,9 @@ class Visualizer(_JupyterDisplayMixin):
                 # Same cell re-run: clear the scene and re-add its defaults.
                 self._layout.scenes[name].clear()
                 self._default_objects_added.discard(name)
-                self._add_default_scene_objects(name, add_axes=add_axes, add_grid=add_grid)
+                self._add_default_scene_objects(
+                    name, add_axes=add_axes, add_grid=add_grid
+                )
                 self._scene_keys[name] = (cid, token)
         if enable_server_stop_key:
             self._set_server_stop_key(
@@ -531,14 +544,15 @@ class Visualizer(_JupyterDisplayMixin):
         """Return all scene names (main scene is ``""``)."""
         return list(self._layout.scenes.keys())
 
-    def list_browsers(self) -> list[dict[str, str]]:
+    def list_browsers(self) -> list[dict[str, str | None]]:
         """Return connected browser sessions as ``[{id, scene, remote_addr}]``.
 
         Returns an empty list if the server is not running.
         """
         if self._server is None:
             return []
-        return self._server.get_browser_sessions()
+        sessions: list[dict[str, str | None]] = self._server.get_browser_sessions()
+        return sessions
 
     def navigate_to(self, scene_name: str, *, target: str = "all") -> None:
         """Send a navigate command to matching browser sessions.
@@ -559,6 +573,27 @@ class Visualizer(_JupyterDisplayMixin):
 
     # ── Entity management (main scene) ───────────────────────
 
+    @overload
+    def add(self, obj: "View") -> None: ...
+    @overload
+    def add(
+        self,
+        obj: Any = None,
+        *,
+        entity_id: str | None = None,
+        color: str
+        | tuple[float, float, float]
+        | tuple[float, float, float, float]
+        | None = None,
+        opacity: float | None = None,
+        style: ObjVizStyle | None = None,
+        label: str | None = None,
+        label_style: LabelStyle | None = None,
+        tex_label: str | None = None,
+        tex_label_style: "TextureLabelStyle | None" = None,
+        parent_id: str | None = None,
+        attach_to: str | None = None,
+    ) -> str: ...
     def add(
         self,
         obj: Any = None,
@@ -733,7 +768,7 @@ class Visualizer(_JupyterDisplayMixin):
         props = _extract_non_none(style)
         self._layout.scenes[""].update(entity_id, **props)
 
-    def update_entity(self, entity_id: str, obj: SceneEntity) -> None:
+    def update_entity(self, entity_id: str, obj: VizInputType) -> None:
         """Replace the geometry for an existing entity in the main scene."""
         entity: SceneEntity = self._resolve(obj)
         self._layout.scenes[""].update_entity(entity_id, entity)
@@ -743,9 +778,9 @@ class Visualizer(_JupyterDisplayMixin):
         group_id: str,
         member: int | str,
         *,
-        position: Vec3 = None,
-        rotation: TransformRotation = None,
-        scale: Triple = None,
+        position: Vec3 | None = None,
+        rotation: TransformRotation | None = None,
+        scale: Triple | None = None,
     ) -> None:
         """Update an :class:`~pytanga.viz.sdf.SdfGroup` member's runtime transform.
 
@@ -1754,9 +1789,11 @@ class Visualizer(_JupyterDisplayMixin):
             print(f"  pid {occ.pid}: {occ.name} {cmd}".rstrip())
         while True:
             try:
-                answer = input(
-                    "[k]ill the process, [a]uto-pick a free port, or [c]ancel? "
-                ).strip().lower()
+                answer = (
+                    input("[k]ill the process, [a]uto-pick a free port, or [c]ancel? ")
+                    .strip()
+                    .lower()
+                )
             except (EOFError, KeyboardInterrupt):
                 return PortConflictMode.CANCEL
             if answer in ("k", "kill"):
@@ -2691,7 +2728,7 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> str:
         theme = theme or self._theme
@@ -2725,19 +2762,20 @@ class Visualizer(_JupyterDisplayMixin):
         self,
         scene_name: str,
         *,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> None:
+        import os
         import tempfile
         import webbrowser
-        from pathlib import Path
 
         html = self._render_snapshot_html(
             scene_name, delivery=delivery, delivery_ref=delivery_ref
         )
-        tmp = Path(tempfile.mktemp(suffix=".html"))
-        tmp.write_text(html, encoding="utf-8")
-        webbrowser.open(str(tmp))
+        fd, name = tempfile.mkstemp(suffix=".html")
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(html)
+        webbrowser.open(name)
 
     def _export_scene_snapshot(
         self,
@@ -2748,7 +2786,7 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> None:
         from pathlib import Path
@@ -2778,7 +2816,7 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> None:
         """Export the current scene as a self-contained HTML file.
@@ -2812,7 +2850,7 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> str:
         from pytanga.viz._figure import FigureConfig
@@ -2862,7 +2900,7 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> str | None:
         from pathlib import Path
@@ -2897,7 +2935,7 @@ class Visualizer(_JupyterDisplayMixin):
         animation: Any = None,
         anim_style: Any = None,
         theme: str | None = None,
-        delivery: str = "cdn",
+        delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
     ) -> str | None:
         """Export the current scene as an HTML snippet (or return the string).
@@ -2960,7 +2998,7 @@ class Visualizer(_JupyterDisplayMixin):
         height: int | str = "500px",
         *,
         scene_name: str = "",
-        delivery: str = "inline",
+        delivery: DeliveryMode = "inline",
         delivery_ref: str | None = None,
     ) -> Any:
         """Display a scene as standalone HTML (no server required).

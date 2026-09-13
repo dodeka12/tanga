@@ -13,7 +13,16 @@ concrete visualizer.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ._interaction import (
+        InteractionConfig,
+        InteractionEventType,
+        InteractionHandler,
+    )
+    from collections.abc import Sequence
+    from pathlib import Path
 
 
 class OverlayHost:
@@ -116,7 +125,7 @@ class ThemeHost(OverlayHost):
 
         logger = logging.getLogger("tanga.viz")
 
-        def _signature(files):
+        def _signature(files: "Sequence[Path]") -> "tuple[tuple[str, int, int], ...]":
             sig = []
             for p in files:
                 try:
@@ -172,7 +181,11 @@ class InteractionHost(OverlayHost):
         self._act_objects: dict[str, Any] = {}
 
     def set_interaction(
-        self, object_id: str, config: Any, *, scene_name: str = ""
+        self,
+        object_id: str,
+        config: InteractionConfig,
+        *,
+        scene_name: str = "",
     ) -> None:
         """Set the interaction configuration for an entity."""
         self._interaction_configs.setdefault(scene_name, {})[object_id] = config
@@ -182,8 +195,8 @@ class InteractionHost(OverlayHost):
     def on_interaction(
         self,
         object_id: str,
-        event_type: Any,
-        handler: Any,
+        event_type: InteractionEventType,
+        handler: InteractionHandler,
         *,
         scene_name: str = "",
     ) -> None:

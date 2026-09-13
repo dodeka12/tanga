@@ -145,7 +145,11 @@ def _style_for(style: SdfStyle | None, kind: str) -> SdfStyle | None:
 
 def _style_attr(style: SdfStyle | None, kind: str, attr: str, default: float) -> float:
     resolved = _style_for(style, kind)
-    return float(getattr(resolved, attr, default)) if resolved is not None else float(default)
+    return (
+        float(getattr(resolved, attr, default))
+        if resolved is not None
+        else float(default)
+    )
 
 
 def _cylinder_node(entity: Cylinder) -> SdfNode:
@@ -158,7 +162,9 @@ def _cylinder_node(entity: Cylinder) -> SdfNode:
         entity.origin.z + axis[2] * offset,
     )
     rotation = _rotation_align((0.0, 1.0, 0.0), axis)
-    return capped_cylinder(half, float(entity.radius), position=midpoint, rotation=rotation)
+    return capped_cylinder(
+        half, float(entity.radius), position=midpoint, rotation=rotation
+    )
 
 
 def _line_node(entity: Line, style: SdfStyle | None) -> SdfNode:
@@ -187,7 +193,9 @@ def _circle_node(entity: Circle, style: SdfStyle | None) -> SdfNode:
     if normal == (0.0, 0.0, 0.0):
         normal = (0.0, 0.0, 1.0)
     rotation = _rotation_align((0.0, 1.0, 0.0), normal)
-    return torus(float(entity.radius), tube, position=_xyz(entity.center), rotation=rotation)
+    return torus(
+        float(entity.radius), tube, position=_xyz(entity.center), rotation=rotation
+    )
 
 
 def _plane_node(entity: Plane) -> SdfNode:
@@ -195,7 +203,9 @@ def _plane_node(entity: Plane) -> SdfNode:
         hu = float(entity.span_u.mag()) / 2.0
         hv = float(entity.span_v.mag()) / 2.0
     else:
-        extent = float(entity.extent) if entity.extent is not None else _DEFAULT_PLANE_EXTENT
+        extent = (
+            float(entity.extent) if entity.extent is not None else _DEFAULT_PLANE_EXTENT
+        )
         hu = extent
         hv = extent
     eps = max(0.02, min(hu, hv) * 0.01)
@@ -232,12 +242,19 @@ def _partial_disk_node(entity: PartialDisk, style: SdfStyle | None) -> SdfNode:
 
     # A full disk (angle >= 2π) is a plain capped cylinder.
     if angle >= 2.0 * math.pi - 1e-9:
-        return capped_cylinder(half, radius, position=center, rotation=_rotation_align((0.0, 1.0, 0.0), normal))
+        return capped_cylinder(
+            half,
+            radius,
+            position=center,
+            rotation=_rotation_align((0.0, 1.0, 0.0), normal),
+        )
 
     start = _xyz(entity.start_direction)
     bisector = _rotate_about(start, normal, angle / 2.0)
     rotation = _basis_rotation(normal, bisector)
-    return partial_disk(radius, angle, half_height=half, position=center, rotation=rotation)
+    return partial_disk(
+        radius, angle, half_height=half, position=center, rotation=rotation
+    )
 
 
 def _box_node(entity: Box) -> SdfNode:

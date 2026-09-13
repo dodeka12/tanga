@@ -18,7 +18,7 @@ from pytanga.viz import Visualizer
 
 viz = Visualizer()
 # When animating it is better to open a separate browser window
-# as otherwise the animation is not rendered in the output of 
+# as otherwise the animation is not rendered in the output of
 # the cell that contains the animation loop, but in the output
 # of the cell that had the first viz.show().
 viz.show(jupyter=False)  # start the server and render inline

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, cast
 
 import numpy as np
 
@@ -117,6 +117,9 @@ def to_rotor(
 
         bivec = _as_mv(algebra, bivec)
 
+    if bivec is None:
+        raise ValueError("Either vec_pair or bivec must be provided.")
+
     # Ensure that the bivector only contains elements of grade 2
     if not bivec.is_grade(2):
         raise ValueError("The provided bivector must be of grade 2.")
@@ -127,7 +130,7 @@ def to_rotor(
     # Compute the rotor using the exponential map
     rotor = np.cos(angle / 2) + np.sin(angle / 2) * bivec_normalized
 
-    return rotor
+    return cast("MV", rotor)
 
 
 def from_rotor(rotor: MV) -> tuple[float, float, MV]:
@@ -159,6 +162,6 @@ def from_rotor(rotor: MV) -> tuple[float, float, MV]:
     scalar_part = rotor.scalar
     bivector_part = rotor.grade(2)  # Project to grade 2 to get the bivector part
 
-    angle = 2 * np.arctan2(bivector_part.mag, scalar_part)
+    angle = float(2 * np.arctan2(bivector_part.mag, scalar_part))
 
     return scale, angle, bivector_part  # already unit-magnitude from normalized rotor

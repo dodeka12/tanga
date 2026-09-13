@@ -16,12 +16,14 @@ def product_tensor(
     b_mask: BladeMask,
     c_mask: BladeMask | None = None,
     *,
-    product: EProduct = EProduct.GP,
+    product: EProduct | str = EProduct.GP,
     left: bool = True,
     a_inv: EInv = EInv.ID,
     b_inv: EInv = EInv.ID,
     c_inv: EInv = EInv.ID,
 ) -> MVTensor:
+    # ``EProduct`` members are string-compatible (EProduct.OP == "op").
+    product = EProduct(product)
     """Build the 3-D product tensor O from blade masks as an MVTensor.
 
     The algebra is obtained from *a_mask*; both masks must belong to the

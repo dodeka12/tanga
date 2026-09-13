@@ -39,10 +39,13 @@ Run with:  uv run python py/examples/viz/ui/themes/custom_theme_override.py
 Keywords: theme, custom theme, override, theme switching, button, checkbox, wireframe, light
 """
 
+from typing import Any
+
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonView,
     CheckboxView,
+    ControlEvent,
     EAnchor,
     GroupView,
     SceneView,
@@ -58,25 +61,25 @@ viz.add(
 viz.add(Point(1, 1, 1), color="#ff4444")
 
 
-async def _on_radius(value, _event):
+async def _on_radius(value: Any, _event: ControlEvent) -> None:
     viz.update_entity("sphere", Sphere(Point(0, 0, 0), radius=float(value)))
     viz.flush()
 
 
-async def _on_wireframe(value, _event):
+async def _on_wireframe(value: Any, _event: ControlEvent) -> None:
     viz.update("sphere", wireframe=bool(value))
     viz.flush()
 
 
-async def _apply_pastel(_value, _event):
+async def _apply_pastel(_value: Any, _event: ControlEvent) -> None:
     viz.set_theme("pastel")
 
 
-async def _apply_light(_value, _event):
+async def _apply_light(_value: Any, _event: ControlEvent) -> None:
     viz.set_theme("light")
 
 
-async def _apply_standard(_value, _event):
+async def _apply_standard(_value: Any, _event: ControlEvent) -> None:
     viz.set_theme("dark")
 
 

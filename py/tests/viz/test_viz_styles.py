@@ -170,7 +170,14 @@ def test_viz_entity_style_class_key_access():
 
 def test_new_entity_style_defaults_registered() -> None:
     s = make_styles()
-    for kind in ("Disk", "PartialDisk", "Box", "Ellipsoid", "Ellipse", "RegularPolygon"):
+    for kind in (
+        "Disk",
+        "PartialDisk",
+        "Box",
+        "Ellipsoid",
+        "Ellipse",
+        "RegularPolygon",
+    ):
         assert kind in s.kind
         assert s.kind[kind].color is not None
 
@@ -224,7 +231,6 @@ def test_line_circle_style_has_no_wireframe() -> None:
     assert "wireframe" not in d
 
 
-
 def test_conic_style_hierarchy() -> None:
     assert issubclass(EllipseStyle, ConicStyle)
     assert issubclass(HyperbolaStyle, ConicStyle)
@@ -243,7 +249,13 @@ def test_quadric_style_hierarchy() -> None:
 
 def test_conic_and_quadric_styles_registered() -> None:
     s = make_styles()
-    for kind in ("Ellipse", "Hyperbola", "Parabola", "LinePair", "ParallelLinePair", "Cone"):
+    for kind in (
+        "Ellipse",
+        "Hyperbola",
+        "Parabola",
+        "LinePair",
+        "ParallelLinePair",
+        "Cone",
+    ):
         assert kind in s.kind
         assert s.kind[kind].color is not None
-

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -20,7 +20,7 @@ from pytanga.matrix.convert import to_matrix
 
 
 def to_tensor(
-    a: MVLike | list[MVLike],
+    a: MVLike | Sequence[MVLike],
     *,
     mask: BladeMask | None = None,
     algebra: "Algebra | None" = None,
@@ -33,7 +33,7 @@ def to_tensor(
 
     Parameters
     ----------
-    a : MVLike | list[MVLike]
+    a : MVLike | Sequence[MVLike]
         Single multivector or list thereof.
     mask : BladeMask | None
         Row index space.  If None, auto‑derived from the MV(s).
@@ -66,7 +66,7 @@ def to_tensor(
     if mask is None:
         mask = BladeMask.full(alg)
 
-    if isinstance(a, list):
+    if isinstance(a, (list, tuple)):
         mvs = [_as_mv(alg, x) for x in a]
         if mvs:
             arr = alg._mod.to_matrix_batch([mv._impl for mv in mvs], mask.ids)
@@ -76,12 +76,13 @@ def to_tensor(
         return MVTensor(data=arr, masks=(mask, None))
 
     # Single MV
-    mv = _as_mv(alg, a)
+    # Only list/tuple inputs are batches; anything else is a single scalar/MV.
+    mv = _as_mv(alg, cast("MVLike", a))
     arr = to_matrix(mv, mask=mask).data.ravel()
     return MVTensor(data=arr, masks=(mask,))
 
 
-def from_tensor(t: MVTensor) -> "MV | list":
+def from_tensor(t: MVTensor) -> "MV | list[Any]":
     """Reconstruct multivector(s) from an MVTensor.
 
     Accepts any MVTensor that has **exactly one** axis with a ``BladeMask``
@@ -103,7 +104,7 @@ def from_tensor(t: MVTensor) -> "MV | list":
             f"from_tensor expects exactly one BladeMask axis, got {len(mask_axes)}"
         )
     baxis = mask_axes[0]
-    mask = t.masks[baxis]  # type: ignore[assignment]
+    mask = cast("BladeMask", t.masks[baxis])
     alg = mask.algebra
 
     # Move the blade‑mask axis to position 0 for easy slicing
@@ -130,7 +131,7 @@ def from_tensor(t: MVTensor) -> "MV | list":
         return _build(())
 
     # Rank ≥ 2 — build nested list recursively
-    def _recurse(dims: tuple[int, ...], prefix: tuple[int, ...]) -> list:
+    def _recurse(dims: tuple[int, ...], prefix: tuple[int, ...]) -> Any:
         if len(dims) == 0:
             return _build(prefix)
         result = []
@@ -138,4 +139,4 @@ def from_tensor(t: MVTensor) -> "MV | list":
             result.append(_recurse(dims[1:], prefix + (k,)))
         return result
 
-    return _recurse(other_shape, ())
+    return cast("MV | list[Any]", _recurse(other_shape, ()))

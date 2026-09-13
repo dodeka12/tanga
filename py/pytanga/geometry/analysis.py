@@ -9,7 +9,7 @@ appropriate algebra-specific analysis module.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from . import (
     analysis_e2,
@@ -214,8 +214,24 @@ _MODULES = {
 }
 
 
-def _typed(mv: MV, name: str, display: str) -> Entity:
-    """Dispatch a typed analyzer ``analyze_<name>(mv)`` to the right module."""
+T = TypeVar("T")
+
+
+def _expect(result: object, cls: type[T]) -> T:
+    """Return *result* if it is an instance of *cls*; else raise."""
+    if result is None:
+        raise ValueError(f"MV does not represent a {cls.__name__}")
+    if not isinstance(result, cls):
+        raise TypeError(f"Expected a {cls.__name__}, got {type(result).__name__}")
+    return result
+
+
+def _typed(mv: MV, name: str, display: str) -> Any:
+    """Dispatch a typed analyzer ``analyze_<name>(mv)`` to the right module.
+
+    The analyzer name is built at runtime, so its result cannot be typed here;
+    each ``analyze_<name>`` wrapper below narrows it with :func:`_expect`.
+    """
     alg_type = _detect(mv._alg)
     if alg_type not in _ENTITY_ALG_SUPPORT[name]:
         raise TypeError(f"{display} is not supported in {alg_type}")
@@ -224,52 +240,52 @@ def _typed(mv: MV, name: str, display: str) -> Entity:
 
 def analyze_point(mv: MV) -> "Point":
     """Interpret *mv* as a :class:`Point` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "point", "Point")
+    return _expect(_typed(mv, "point", "Point"), Point)
 
 
 def analyze_direction(mv: MV) -> "Direction":
     """Interpret *mv* as a :class:`Direction` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "direction", "Direction")
+    return _expect(_typed(mv, "direction", "Direction"), Direction)
 
 
 def analyze_line(mv: MV) -> "Line":
     """Interpret *mv* as a :class:`Line` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "line", "Line")
+    return _expect(_typed(mv, "line", "Line"), Line)
 
 
 def analyze_plane(mv: MV) -> "Plane":
     """Interpret *mv* as a :class:`Plane` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "plane", "Plane")
+    return _expect(_typed(mv, "plane", "Plane"), Plane)
 
 
 def analyze_circle(mv: MV) -> "Circle":
     """Interpret *mv* as a :class:`Circle` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "circle", "Circle")
+    return _expect(_typed(mv, "circle", "Circle"), Circle)
 
 
 def analyze_sphere(mv: MV) -> "Sphere":
     """Interpret *mv* as a :class:`Sphere` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "sphere", "Sphere")
+    return _expect(_typed(mv, "sphere", "Sphere"), Sphere)
 
 
 def analyze_point_pair(mv: MV) -> "PointPair":
     """Interpret *mv* as a :class:`PointPair` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "point_pair", "PointPair")
+    return _expect(_typed(mv, "point_pair", "PointPair"), PointPair)
 
 
 def analyze_hpoint(mv: MV) -> "HPoint":
     """Interpret *mv* as an :class:`HPoint` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "hpoint", "HPoint")
+    return _expect(_typed(mv, "hpoint", "HPoint"), HPoint)
 
 
 def analyze_hdirection(mv: MV) -> "HDirection":
     """Interpret *mv* as an :class:`HDirection` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "hdirection", "HDirection")
+    return _expect(_typed(mv, "hdirection", "HDirection"), HDirection)
 
 
 def analyze_space(mv: MV) -> "Space":
     """Interpret *mv* as :class:`Space` in its algebra's OPNS/IPNS mode."""
-    return _typed(mv, "space", "Space")
+    return _expect(_typed(mv, "space", "Space"), Space)
 
 
 # ── combined fallback ───────────────────────────────────────────

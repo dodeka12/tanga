@@ -236,7 +236,9 @@ class TestSceneIntegration:
 
     def test_add_viz_entity_and_label(self):
         s = Scene()
-        eid = s.add_viz(Line(Point(0, 0, 0), Direction(1, 0, 0)), color="#ff0000", label="axis")
+        eid = s.add_viz(
+            Line(Point(0, 0, 0), Direction(1, 0, 0)), color="#ff0000", label="axis"
+        )
         node = s.get_node(eid)
         assert isinstance(node, VizSceneObject)
         assert node.style["color"] == "#ff0000"

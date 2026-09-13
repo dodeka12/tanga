@@ -42,10 +42,11 @@ Keywords: quadric, plane pair, degenerate, refine, analyze, Q3
 from pytanga.geometry import (
     Direction,
     Geometry,
+    ParallelPlanePair,
     Plane,
     PlanePair,
-    ParallelPlanePair,
     Point,
+    PointSet,
     refine,
 )
 from pytanga.quadric import BasisQ3
@@ -71,6 +72,7 @@ viz.new(parallel)
 # Round-trip: entity → MV → analyze → refine recovers the same pair.
 for pair in (pair, parallel):
     quadric = geo.analyze(geo(pair))
+    assert isinstance(quadric, PointSet), "a plane-pair MV analyses to a point set"
     recovered = refine(quadric)
     print(f"kind={quadric.kind}  refine -> {type(recovered).__name__}")
 

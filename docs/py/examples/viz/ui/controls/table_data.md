@@ -58,11 +58,13 @@ from pytanga.viz import (
 class TableDataApp(VisualizerApp):
     """A sphere annotated by an editable data table."""
 
+    #: Created in the view-building hook, which runs before any event.
+    _table: TableView
+
     def __init__(self) -> None:
         super().__init__(title="Table Data")
         self._columns = ["x", "y", "active", "status"]
         self._rows = [[1.5, 2.5, True, "on"], [3.5, 4.5, False, "off"]]
-        self._table: TableView | None = None
 
     async def init(self) -> None:
         self.viz.add(
@@ -119,7 +121,9 @@ class TableDataApp(VisualizerApp):
 
     # ── handlers ────────────────────────────────────────────
 
-    async def on_cell_change(self, change: TableCellChange, _event: ControlEvent) -> None:
+    async def on_cell_change(
+        self, change: TableCellChange, _event: ControlEvent
+    ) -> None:
         self.viz.set_annotation(f"Cell ({change.row}, {change.col}) = {change.value!r}")
 
     async def on_row_add(self, add: TableRowAdd, _event: ControlEvent) -> None:

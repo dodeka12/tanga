@@ -60,8 +60,11 @@ from .operators import (
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
 
+    from .entities import Entity
+    from .operators import Operator
 
-def _template(typ: type) -> object:
+
+def _template(typ: "type[object]") -> "Entity | Operator":
     """Return a generic instance of *typ* spanning all blades of that type.
 
     Values are chosen so that ``create(algebra, instance)`` produces every
@@ -119,7 +122,7 @@ def _template(typ: type) -> object:
     raise TypeError(f"Unsupported type for mask derivation: {typ.__name__}")
 
 
-def mask_for(basis: Algebra, typ) -> BladeMask:
+def mask_for(basis: Algebra, typ: "type[object] | Entity | Operator") -> BladeMask:
     """Return the :class:`BladeMask` a type or instance occupies in *basis*.
 
     Parameters
@@ -141,7 +144,9 @@ def mask_for(basis: Algebra, typ) -> BladeMask:
     return BladeMask(mv)
 
 
-def create_var(basis: Algebra, name: str, typ) -> Variable:
+def create_var(
+    basis: Algebra, name: str, typ: "type[object] | Entity | Operator"
+) -> Variable:
     """Create a :class:`Variable` whose mask matches *typ* in *basis*.
 
     ``create_var(alg, "R1", Rotor)`` is equivalent to
