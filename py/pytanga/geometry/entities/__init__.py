@@ -48,6 +48,7 @@ from pytanga.entity import Point
 from .point_pair import ImagPointPair, PointPair
 from .point_set import PointSet
 from .polygon import RegularPolygon, regular_polygon
+from .rectangle import Rectangle2D
 from .space import Space
 from .sphere import ImagSphere, Sphere
 
@@ -117,6 +118,7 @@ __all__ = [
     "PointSet",
     "Quadric2D",
     "Quadric3D",
+    "Rectangle2D",
     "RegularPolygon",
     "Space",
     "Sphere",
