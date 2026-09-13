@@ -20,7 +20,7 @@ lets the coordinator reposition handles programmatically.
     coordinator can reposition many handles and flush once.  Closes the
     desync footgun in `_input/pytanga-actpoint-entity-setter-does-not-sync-drag-anchor.md`.
 
-- [ ] **4.2 — `ActRectangle2D(ActSceneObject)` model**
+- [x] **4.2 — `ActRectangle2D(ActSceneObject)` model**
   - Constructor `(center, size=(w,h), *, show_translate_handle=True,
     handle_style=..., on_change=None, **act_kwargs)`.
   - `entity` → the `Rectangle2D`; `interaction_config` → `enabled=False` (the

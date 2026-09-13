@@ -25,7 +25,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from pytanga.geometry import Direction, Point
+from pytanga.geometry import Direction, Point, Rectangle2D
 
 from ._act_style import ActPointStyle
 from ._interaction import (
@@ -42,6 +42,7 @@ from ._interaction import (
 if TYPE_CHECKING:
     from ._image_view import ImageView
     from ._scene_handle import VizSceneHandle
+    from ._styles._operator_styles import SquarePointStyle
 
 # ── Handler type ───────────────────────────────────────────────
 
@@ -701,3 +702,207 @@ class ActImagePlane(ActSceneObject):
             ray_origin.y + t * ray_direction.y,
             0.0,
         )
+
+
+# ── ActRectangle2D ───────────────────────────────────────────────
+
+
+class ActRectangle2D(ActSceneObject):
+    """An interactive axis-aligned rectangle with corner + translation handles.
+
+    The body is a visual-only :class:`~pytanga.geometry.Rectangle2D`; all
+    interaction happens through child :class:`ActPoint` handles (4 corners for
+    resizing, one centre handle for translating).  Default behaviour is
+    implemented but overridable, mirroring :class:`ActPoint`.
+
+    Args:
+        center: Center of the rectangle (default ``(0, 0, 0)``).
+        size: Full ``(width, height)`` (default ``(1, 1)``).
+        show_translate_handle: Add a centre translation handle (default ``True``).
+        handle_style: Marker style for the handles (default a square marker).
+        act_style: Hover style for the handles.
+        on_corner_drag: Optional async callback overriding corner resize.
+            Signature ``async def h(i, event: DragEvent, rect) -> bool``.
+        on_translate: Optional async callback overriding translation.
+            Signature ``async def h(event: DragEvent, rect) -> bool``.
+        on_change: Optional sync callback fired after any geometry change.
+            Signature ``def h(rect: Rectangle2D) -> None``.
+    """
+
+    def __init__(
+        self,
+        center: Point | None = None,
+        size: tuple[float, float] | None = None,
+        *,
+        show_translate_handle: bool = True,
+        handle_style: SquarePointStyle | None = None,
+        act_style: ActPointStyle | None = None,
+        on_corner_drag: Callable[
+            [int, DragEvent, "ActRectangle2D"], Awaitable[bool]
+        ] | None = None,
+        on_translate: Callable[
+            [DragEvent, "ActRectangle2D"], Awaitable[bool]
+        ] | None = None,
+        on_change: Callable[[Rectangle2D], None] | None = None,
+    ) -> None:
+        super().__init__()
+        self._rect = Rectangle2D(center=center, size=size)
+        self._show_translate_handle = show_translate_handle
+        self._handle_style = handle_style
+        self._act_style = act_style
+        self._on_corner_drag = on_corner_drag
+        self._on_translate = on_translate
+        self._on_change = on_change
+        self._corner_handles: list[ActPoint] = []
+        self._translate_handle: ActPoint | None = None
+        self._handle_ids: list[str] = []
+
+    # ── Init (called by Visualizer) ────────────────────────
+
+    def _init(self, viz_handle: VizSceneHandle, entity_id: str) -> None:
+        super()._init(viz_handle, entity_id)
+        self._spawn_handles()
+
+    # ── Properties ─────────────────────────────────────────
+
+    @property
+    def rectangle(self) -> Rectangle2D:
+        """The current :class:`~pytanga.geometry.Rectangle2D`."""
+        return self._rect
+
+    @property
+    def entity(self) -> Rectangle2D:
+        """The rendered body entity (a ``Rectangle2D``)."""
+        return self._rect
+
+    @property
+    def interaction_config(self) -> InteractionConfig:
+        """The body is visual-only — no interaction triggers."""
+        return InteractionConfig(enabled=False, triggers=[])
+
+    # ── Geometry helpers ───────────────────────────────────
+
+    def _corners(self) -> list[Point]:
+        cx, cy = self._rect.center.x, self._rect.center.y
+        hw, hh = self._rect.size[0] / 2.0, self._rect.size[1] / 2.0
+        return [
+            Point(cx - hw, cy - hh, 0.0),
+            Point(cx + hw, cy - hh, 0.0),
+            Point(cx + hw, cy + hh, 0.0),
+            Point(cx - hw, cy + hh, 0.0),
+        ]
+
+    def _spawn_handles(self) -> None:
+        if self._viz_handle is None:
+            return
+        from ._styles._operator_styles import SquarePointStyle
+
+        style = self._handle_style or SquarePointStyle()
+        for i, pos in enumerate(self._corners()):
+            handle = ActPoint(
+                pos,
+                handler=self._make_corner_handler(i),
+                drag_mode=DragMode.XY_PLANE,
+                act_style=self._act_style,
+            )
+            eid = self._viz_handle.add(handle, style=style)
+            self._corner_handles.append(handle)
+            self._handle_ids.append(eid)
+        if self._show_translate_handle:
+            handle = ActPoint(
+                self._rect.center,
+                handler=self._make_translate_handler(),
+                drag_mode=DragMode.XY_PLANE,
+                act_style=self._act_style,
+            )
+            eid = self._viz_handle.add(handle, style=style)
+            self._translate_handle = handle
+            self._handle_ids.append(eid)
+
+    # ── Handler closures ───────────────────────────────────
+
+    def _make_corner_handler(self, index: int) -> ActHandler:
+        async def handler(event: DragEvent, _handle: ActSceneObject) -> bool:
+            return await self._dispatch_corner_drag(index, event)
+
+        return handler
+
+    def _make_translate_handler(self) -> ActHandler:
+        async def handler(event: DragEvent, _handle: ActSceneObject) -> bool:
+            return await self._dispatch_translate(event)
+
+        return handler
+
+    # ── Dispatch (overridable) ─────────────────────────────
+
+    async def _dispatch_corner_drag(self, index: int, event: DragEvent) -> bool:
+        if self._on_corner_drag is not None:
+            return await self._on_corner_drag(index, event, self)
+        self._resize_corner(index, event.world_position)
+        return True
+
+    async def _dispatch_translate(self, event: DragEvent) -> bool:
+        if self._on_translate is not None:
+            return await self._on_translate(event, self)
+        self._translate_by(event.world_delta)
+        return True
+
+    # ── Default geometry mutations ─────────────────────────
+
+    def _resize_corner(self, index: int, pos: Point) -> None:
+        corners = self._corners()
+        opposite = corners[(index + 2) % 4]
+        center = Point((pos.x + opposite.x) / 2.0, (pos.y + opposite.y) / 2.0, 0.0)
+        size = (abs(pos.x - opposite.x), abs(pos.y - opposite.y))
+        self._rect = Rectangle2D(center=center, size=size)
+        self._commit()
+
+    def _translate_by(self, delta: Direction) -> None:
+        center = Point(
+            self._rect.center.x + delta.x,
+            self._rect.center.y + delta.y,
+            0.0,
+        )
+        self._rect = Rectangle2D(center=center, size=self._rect.size)
+        self._commit()
+
+    def _commit(self) -> None:
+        self.update()
+        self._refresh_handles()
+        self.flush()
+        if self._on_change is not None:
+            self._on_change(self._rect)
+
+    def _refresh_handles(self) -> None:
+        corners = self._corners()
+        for i, handle in enumerate(self._corner_handles):
+            handle.set_position(corners[i])
+        if self._translate_handle is not None:
+            self._translate_handle.set_position(self._rect.center)
+
+    # ── Default movement (body never moves) ────────────────
+
+    def _move_to(self, pos: Point) -> None:
+        """The body is fixed; movement happens via the handles."""
+
+    def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
+        """Not used — the body has no interaction triggers."""
+        return self._rect.center
+
+    # ── Removal ────────────────────────────────────────────
+
+    def remove(self) -> None:
+        """Remove the body and all handle entities."""
+        if self._viz_handle is None:
+            return
+        for eid in self._handle_ids:
+            self._viz_handle.remove(eid)
+        self._handle_ids.clear()
+        self._corner_handles.clear()
+        self._translate_handle = None
+        self._viz_handle.remove(self._entity_id)
+
+    def clear(self) -> None:
+        """Alias for :meth:`remove`."""
+        self.remove()
+
