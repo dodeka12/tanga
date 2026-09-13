@@ -33,7 +33,7 @@ Add the `Rectangle2D` visualization-only entity (frozen dataclass, like `Box` /
     mapping in `serializer.py`.  `normal`/`angle` use the same conventions as
     `RegularPolygon`.
 
-- [ ] **2.4 — export + tests**
+- [x] **2.4 — export + tests**
   - Export `Rectangle2D` (from `pytanga.geometry`) and `Rectangle2DStyle` (from
     `pytanga.viz`).
   - Test entity coercion + `to_dict`/serialize round-trip + style `to_dict`.
