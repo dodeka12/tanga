@@ -32,7 +32,7 @@ lets the coordinator reposition handles programmatically.
   - Track handle entity ids for removal; provide `remove()`/`clear()` that
     removes the body + handles.
 
-- [ ] **4.3 — default behaviour + overridable handlers**
+- [x] **4.3 — default behaviour + overridable handlers**
   - Corner drag: move corner `i` to `event.world_position` (opposite corner
     fixed), recompute `center`/`size` (axis-aligned), `update()` the body,
     reposition handles, `flush()`, return `True`.
@@ -56,6 +56,9 @@ lets the coordinator reposition handles programmatically.
   grabbable part is its own `ActPoint` entity.  The `ActSceneObject` 1-entity
   contract is unchanged — `ActRectangle2D` composes it.
 - Import `ActPoint`/styles lazily where needed to avoid circular imports.
+- Steps 4.2 and 4.3 were implemented together (a class naturally bundles its
+  model and its default/overridable behaviour); the behaviour is exercised by
+  the 4.4 tests.
 
 ---
 
