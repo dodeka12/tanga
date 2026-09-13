@@ -14,7 +14,7 @@ code here.
 
 ## Steps
 
-- [ ] **1.1 — `ImageDType` enum + codes + internal-format map in `image.py`**
+- [x] **1.1 — `ImageDType` enum + codes + internal-format map in `image.py`**
   - `ImageDType` (`uint8`, `uint16`, `float32`) with `.code` (0/1/2), a
     `from_code()` classmethod, and a `to_internal_format()` mapping used later
     by the frontend (`UNSIGNED_BYTE` / float texture), plus the per-dtype
