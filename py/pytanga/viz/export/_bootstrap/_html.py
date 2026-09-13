@@ -111,6 +111,8 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "axes3d.js",
     _RENDERERS_DIR / "grid.js",
     _RENDERERS_DIR / "group.js",
+    _RENDERERS_DIR / "image-shader.js",
+    _RENDERERS_DIR / "image.js",
     _RENDERERS_DIR / "factory.js",
     _RENDERERS_DIR / "sdf.js",
     _RENDERERS_DIR / "ray.js",
@@ -128,6 +130,7 @@ _SHARED_JS_FILES: list[Path] = [
     _TEMPLATES_DIR / "camera-fit.js",
     _TEMPLATES_DIR / "scene-builder.js",
     _TEMPLATES_DIR / "fit_camera.js",
+    _TEMPLATES_DIR / "image-frames.js",
     # SDF tree emitters used by the per-object SDF proxy renderer (`sdf.js`).
     _TEMPLATES_DIR / "sdf" / "objects" / "transform.js",
     _TEMPLATES_DIR / "sdf" / "objects" / "primitives.js",

@@ -158,6 +158,22 @@ Follow the `OverlayContainer` pattern exactly:
 | `_ports.py` | `Transport`/`LayoutHost` protocols + `ServerState` |
 | `_transport.py` | `WebSocketTransport` |
 | `_scene_handle.py` | `VizSceneHandle` (per-scene proxy) |
+| `image.py` | `ImageData`/`ImageDType`/`ImageChannelMode` value model + `pil_to_numpy` |
+| `_image_view.py` | `ImageView` (plane + textures + shader/uniform state) + `ImageCanvas` (dedicated 2D scene) |
+| `_image_wire.py` | binary image-frame codec (server → client) |
+
+### Image canvas (extension recipe)
+
+`ImageCanvas` (in `_image_view.py`) is a user-facing helper analogous to
+`CoordinateSystem`: it owns a **dedicated 2D scene** with a **y-down pixel
+frame** (1 world unit = 1 pixel), an `ImageView` (the plane + textures +
+shader/uniform state), an `ActImagePlane` (interactive plane), and an overlay
+`VizGroup`.  The image is a **new scene-object kind** (`kind == "image"`,
+`VizImage` node in `_nodes.py`), whose pixel bytes travel as **binary WebSocket
+frames** (`_image_wire.py`, `Transport.send_bytes` / `server.push_bytes`);
+uniforms and overlays travel as JSON (`image_update`) and never re-send the
+image.  The export path stores images in an id-keyed **asset store**
+(`AnimationRecording.assets`, `capture_frame(include_images=False)`).
 
 ### Test commands
 

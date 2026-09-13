@@ -10,12 +10,12 @@ change in the branch changelog.
 
 - Edit: `docs/dev/architecture/viz-architecture.md`
 - Edit: `docs/dev/architecture/viz-controls-and-interactions.md`
-- New: `docs/changelog/2026/09/13_image-view.md` (branch changelog)
+- New: `docs/changelog/2026/09/13_feat-image-view.md` (branch changelog)
 - (optional) Edit: public docs under `docs/py/viz/`
 
 ## Steps
 
-- [ ] **11.1 — architecture docs**
+- [x] **11.1 — architecture docs**
   - `viz-architecture.md`: add `ImageView`/`ImageCanvas`/`ActImagePlane` to the
     file map and an "image canvas" extension recipe (dedicated 2D scene, y-down
     pixel frame, overlay group).
@@ -23,18 +23,18 @@ change in the branch changelog.
     and the image-plane interaction pattern (plane raycast → pixel coords →
     uniform), noting the JSON-only uniform/overlay update rule.
 
-- [ ] **11.2 — public API docs**
+- [x] **11.2 — public API docs**
   - If `docs/py/viz/` has a plotting/coordinate-system page, add an `ImageCanvas`
     page or section; otherwise note it in `viz-architecture.md` only.
 
-- [ ] **11.3 — changelog + index**
+- [x] **11.3 — changelog + index**
   - Per `dev/workflows/changelog.md`: create the branch changelog with the
     since-relative title from `uv run python tools/last-release.py`, a `## New
     Features` bullet (image display via `ImageCanvas`), and any `## Breaking
     Changes`/`## Refactor` that apply; leave `docs/changelog/index.md` for PR
     time.
 
-- [ ] **11.4 — full validation**
+- [x] **11.4 — full validation**
   - `uv run pytest -q` and `uv run mkdocs build --strict`.
 
 ## Validation
@@ -43,7 +43,7 @@ change in the branch changelog.
 
 ## Notes
 
-- The changelog filename uses the branch name (`image-view`) and is renamed to
+- The changelog filename uses the branch name (`feat-image-view`) and is renamed to
   the hash form at PR time per `dev/workflows/pull-request.md` — do not predict
   the version number.
 

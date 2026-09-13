@@ -297,6 +297,16 @@
         ]
       },
       {
+        "Image": [
+          {
+            "Overview": "py/examples/viz/image/index.md"
+          },
+          {
+            "Image Canvas": "py/examples/viz/image/image_canvas.md"
+          }
+        ]
+      },
+      {
         "Interaction": [
           {
             "Overview": "py/examples/viz/interaction/index.md"

@@ -92,6 +92,8 @@ uv run python py/examples/<path>.py
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
+- **brightness** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
+
 - **button** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **ButtonView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
@@ -151,6 +153,8 @@ uv run python py/examples/<path>.py
 - **context manager** — [Interactive Visualizer](viz/jupyter/interactive.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
 - **contraction** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
+
+- **contrast** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **control group** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
@@ -320,6 +324,10 @@ uv run python py/examples/<path>.py
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
+- **image** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
+
+- **ImageCanvas** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
+
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
 - **inline** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
@@ -450,7 +458,7 @@ uv run python py/examples/<path>.py
 
 - **orthographic** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md)
 
-- **overlay** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **overlay** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **override** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
@@ -475,6 +483,8 @@ uv run python py/examples/<path>.py
 - **persistence** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
 - **PGA3** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md), [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md)
+
+- **pixels** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **Plane** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [All geometric entity types in one scene](viz/entities/all_entities.md)
 
@@ -579,6 +589,8 @@ uv run python py/examples/<path>.py
 - **set_default_color** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
 - **set_theme** — [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+
+- **shader** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **show** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
@@ -693,6 +705,8 @@ uv run python py/examples/<path>.py
 - **two-body** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
 
 - **undo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
+
+- **uniform** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **up vector** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 

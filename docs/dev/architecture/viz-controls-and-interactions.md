@@ -281,6 +281,18 @@ handler)` (stored under `(object_id, event_type.value)`).  The per-pane frontend
 `InteractionController` captures/throttles pointer events and sends them under
 `interaction:*` names; the backend coalesces `drag_move`.
 
+## Image canvas
+
+`ImageCanvas` (`_image_view.py`) displays images on an interactive
+`ActImagePlane` (`_active.py`).  The plane reuses the standard
+`ActSceneObject` contract — `set_interaction` + `on_interaction` + a
+`drag_anchor` that returns the ray↔plane hit, so `world_position` *is* the
+pixel coordinate (the canvas scene uses a y-down frame with 1 unit = 1 pixel).
+Mouse handlers modify shader uniforms via `ImageCanvas.set_uniform`, which
+sends an `image_update` JSON message; the pixel data itself travels as **binary
+WebSocket frames** (`_image_wire.py`, `Transport.send_bytes`) and is never
+re-sent on uniform/overlay changes.
+
 ## Follow-ups
 
 - **Fold `interaction.js` onto `sendEvent`** — the interactive-object frontend
