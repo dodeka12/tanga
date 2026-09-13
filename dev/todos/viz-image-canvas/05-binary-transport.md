@@ -36,7 +36,7 @@ images never travel as JSON/base64 on the live channel.
   - Route the decoded frame to the image view by image id (store pending until
     the entity is built — see Phase 6/7).
 
-- [ ] **5.4 — unit tests**
+- [x] **5.4 — unit tests**
   - `py/tests/viz/test_image_wire.py`: round-trip for `uint8`/`uint16`/`float32`
     and 1/3/4 channels; header field correctness; bad magic raises.
 
