@@ -162,6 +162,7 @@ const {camera_var} = new THREE.OrthographicCamera(
     if is_2d:
         controls_2d_extras = f"""
 {controls_var}.enableRotate = false;
+{controls_var}.zoomToCursor = true;
 """
 
     return f"""// Scene

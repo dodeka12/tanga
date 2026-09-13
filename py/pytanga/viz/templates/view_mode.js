@@ -180,6 +180,7 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
 export function configureControls(controls, renderer, spaceDim) {
     if (spaceDim === 2) {
         controls.enableRotate = false;
+        controls.zoomToCursor = true;
         controls.mouseButtons = {
             LEFT: THREE.MOUSE.PAN,
             MIDDLE: THREE.MOUSE.DOLLY,
