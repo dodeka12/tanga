@@ -1,23 +1,18 @@
-# Interaction & Controls
+# Object Interaction
 
-Interactivity in `pytanga.viz` has two surfaces, from the quickest to the
-most custom:
-
-| Surface | API | Where it appears |
-|---------|-----|------------------|
-| Controls | `SliderView` / `ButtonView` / `DropdownView` / `GroupView` / … | A pane in a layout, or a `GroupView`/`MenuView` overlay on a scene |
-| Object interaction | `InteractionConfig` / `on_interaction` | Directly on scene entities |
+Pointer-based interaction with scene entities — clicking, dragging, and
+scrolling on objects — lives in this section.  For the UI surface (panel
+controls, layout views, menus, dialogs, banners, themes), see the
+[UI & Controls](../ui/index.md) section.
 
 ## Topics
 
 | Guide | What you will learn |
 |-------|---------------------|
-| [Controls](controls.md) | The control kinds (`SliderView`, `DropdownView`, `ButtonView`, `TableView`, …) and their handler payloads |
-| [Control Views (xxxView)](control-views.md) | The declarative `xxxView` layout/control classes and their constructor signatures |
-| [Object Interaction](object-interaction.md) | Click/drag/scroll handlers on scene entities |
+| [Object Interaction](object-interaction.md) | Click/drag/scroll handlers on scene entities, `InteractionTrigger`/`InteractionConfig`, `Camera` projection |
 
-!!! note "Control views"
-    The declarative `xxxView` layout/control classes (`SliderView`,
-    `ButtonView`, `GroupView`, `SplitView`, …) are introduced in
-    [Layouts](../app/layouts.md) and documented in full on the
-    [Control Views (xxxView)](control-views.md) page.
+## Related
+
+- [Active Elements](../entities/active-elements/index.md) — simplified high-level API (`ActPoint`)
+- [Image Interaction](../image/interaction.md) — drag/click on an `ImageCanvas`
+- [UI & Controls](../ui/index.md) — `SliderView`/`ButtonView`/… controls and layouts

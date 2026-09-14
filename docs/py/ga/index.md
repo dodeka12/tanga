@@ -21,6 +21,7 @@ visualizer, see the [Visualization](../viz/index.md) section.
 | [Equation Solving](solver/index.md) | `solve`, `solve_lsq`, `solve_mod` — automatic blade‑mask derivation and linear system solving via free functions |
 | [Tensor Operations](tensors/index.md) | `MVTensor`, `MVLabeledTensor`, `product_tensor()` — label‑driven tensor contractions, broadcasts, and slicing |
 | [Geometry Submodule](geometry/index.md) | `Point`, `Line`, `Plane`, `Rotor`, `Motor` — algebra-independent entity/operator types usable in 2D and 3D, `analyze()` and `create()` pipelines |
+| [Quadrics](quadric/index.md) | `BasisQ2`/`BasisQ3` conic & quadric spaces, point reconstruction, the 7→8 point effect |
 
 ## Quick Start
 

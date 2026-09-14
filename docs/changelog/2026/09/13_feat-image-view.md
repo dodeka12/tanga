@@ -24,3 +24,15 @@
   runtime (`set_handler_enabled`/`set_click_enabled`/`refresh_interaction`), with
   optional hover (`ActSceneObject(cursor=…)`) and during-interaction
   (`InteractionConfig.cursor`) cursors plus a per-scene `set_cursor()` override.
+
+## Doc Changes
+
+- Reorganised the visualization docs to mirror `py/examples/viz`: a new
+  `docs/py/viz/ui/` section consolidates controls, control views, layouts, split
+  views, menus, dialogs, display views, banners, the file chooser, and themes
+  (moved out of `app/`, `interaction/`, and `visualizer/`); `interaction/` now
+  covers object interaction only, and `visualizer/` keeps the core viewer API.
+- Added `docs/py/viz/image/` — `ImageCanvas` (`image-canvas.md`), custom shaders
+  (`custom-shaders.md`), and drag/click interaction (`interaction.md`).
+- Added `docs/py/ga/quadric/` — `BasisQ2`/`BasisQ3` bases, conic-space usage and
+  visualization, and the point-tuple 7→8 Cayley–Bacharach effect.

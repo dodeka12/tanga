@@ -128,6 +128,11 @@ nav:
       - Variables & blade masks: py/ga/geometry/variables.md
       - Random generation: py/ga/geometry/random.md
       - Round-trip examples: py/ga/geometry/round-trip.md
+    - Quadrics:
+      - Overview: py/ga/quadric/index.md
+      - Bases (Q2/Q3): py/ga/quadric/bases.md
+      - Conic space & visualization: py/ga/quadric/conic-space.md
+      - Point tuples (7→8): py/ga/quadric/point-tuples.md
 
   - Visualization:
     - Overview: py/viz/index.md
@@ -139,17 +144,29 @@ nav:
       - Camera & Controls: py/viz/visualizer/camera.md
       - Animation: py/viz/visualizer/animation.md
       - Multi-Scene: py/viz/visualizer/multi-scene.md
-      - Split Views: py/viz/visualizer/split-views.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
-      - Themes: py/viz/visualizer/theming.md
-      - Custom Themes: py/viz/visualizer/custom-themes.md
     - Visualizer App:
       - Overview: py/viz/app/index.md
       - Quickstart: py/viz/app/app.md
-      - Layouts (Split Views & Controls): py/viz/app/layouts.md
       - Handlers & Lifecycle: py/viz/app/handlers.md
-      - Banners & Dialogs: py/viz/app/banners.md
-      - File Chooser: py/viz/app/file-chooser.md
+    - UI & Controls:
+      - Overview: py/viz/ui/index.md
+      - Controls: py/viz/ui/controls.md
+      - Control Views (xxxView): py/viz/ui/control-views.md
+      - Layouts (Split Views & Controls): py/viz/ui/layouts.md
+      - Split Views: py/viz/ui/split-views.md
+      - Menus: py/viz/ui/menus.md
+      - Dialogs: py/viz/ui/dialogs.md
+      - Display Views: py/viz/ui/display-views.md
+      - Banners: py/viz/ui/banners.md
+      - File Chooser: py/viz/ui/file-chooser.md
+      - Themes: py/viz/ui/themes.md
+      - Custom Themes: py/viz/ui/custom-themes.md
+    - Image:
+      - Overview: py/viz/image/index.md
+      - Image Canvas: py/viz/image/image-canvas.md
+      - Custom Shaders: py/viz/image/custom-shaders.md
+      - Interaction: py/viz/image/interaction.md
     - Entities & Operators:
       - Overview: py/viz/entities/index.md
       - Entities: py/viz/entities/entities.ipynb
@@ -164,10 +181,8 @@ nav:
       - Overview: py/viz/plotting/index.md
       - Coordinate System: py/viz/plotting/coordinate-system.md
       - Coordinate System (examples): py/viz/plotting/coordinate-system.ipynb
-    - Interaction & Controls:
+    - Interaction:
       - Overview: py/viz/interaction/index.md
-      - Panel Controls: py/viz/interaction/controls.md
-      - Control Views (xxxView): py/viz/interaction/control-views.md
       - Object Interaction: py/viz/interaction/object-interaction.md
     - Labels & Annotation:
       - Overview: py/viz/labels/index.md

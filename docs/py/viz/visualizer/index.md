@@ -14,5 +14,7 @@ pointer-interaction API. (`VisualizerApp` builds on top of it — see the
 | [Scene Graph & Transforms](scene-graph.md) | `VizGroup`/`VizObjectRef` hierarchy, transforms, compound animation |
 | [Camera & Controls](camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`/`View3dConfig` |
 | [Animation](animation.md) | Frame-by-frame `animate()` and keyframe `animate_to()`/`Timeline` |
-| [Themes](theming.md) | `set_theme()` runtime switching, `list_themes()`, themed exports |
-| [Object Interaction](../interaction/object-interaction.md) | Click/drag/scroll handlers on scene entities |
+
+The viewer's UI chrome (split views, controls, menus, dialogs, banners, themes)
+lives in the [UI & Controls](../ui/index.md) section; pointer interaction on
+scene entities is in [Object Interaction](../interaction/object-interaction.md).

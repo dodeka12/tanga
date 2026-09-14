@@ -42,7 +42,7 @@ one roof.
 - **Interactivity** — Interactive controls (sliders, dropdowns, buttons),
   pointer-based object interaction (click, drag, scroll), and a simplified
   `ActPoint` API.  Jupyter notebook support with inline iframes.
-  → [Controls](py/viz/interaction/controls.md)
+  → [Controls](py/viz/ui/controls.md)
   · [Object Interaction](py/viz/interaction/object-interaction.md)
   · [Jupyter Notebooks](py/viz/jupyter/index.md)
 
