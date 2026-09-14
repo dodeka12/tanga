@@ -84,6 +84,7 @@ dev = [
     "mike>=2.0",
     "mkdocs-material>=9.7.7",
     "mkdocs-jupyter>=0.25",
+    "pillow",
     "pre-commit>=4.3",
     "pytest>=9.1.1",
     "ruff==0.14.0",

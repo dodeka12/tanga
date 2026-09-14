@@ -166,6 +166,11 @@ class InteractionConfig:
             (e.g. ``1.5``).  ``None`` = no hover scaling.
         hover_opacity: Opacity override on hover (0..1).  ``None`` = no
             opacity change on hover.
+        hover_cursor: CSS cursor shown while the pointer hovers the entity
+            (e.g. ``"crosshair"``).  ``None`` = the default ``"pointer"``.
+        cursor: CSS cursor shown while an interaction (drag/click) is in
+            progress on this entity (e.g. ``"grabbing"``).  ``None`` = no
+            override during the gesture.
     """
 
     enabled: bool = False
@@ -174,6 +179,8 @@ class InteractionConfig:
     hover_emissive: str | None = None
     hover_scale: float | None = None
     hover_opacity: float | None = None
+    hover_cursor: str | None = None
+    cursor: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to JSON-ready dict."""
@@ -188,6 +195,10 @@ class InteractionConfig:
             result["hover_scale"] = self.hover_scale
         if self.hover_opacity is not None:
             result["hover_opacity"] = self.hover_opacity
+        if self.hover_cursor is not None:
+            result["hover_cursor"] = self.hover_cursor
+        if self.cursor is not None:
+            result["cursor"] = self.cursor
         return result
 
 
@@ -617,7 +628,10 @@ class DragEvent(InteractionEvent):
 
     The frontend computes ``world_position`` by intersecting the
     pixel-position ray with the constraint plane.  ``world_delta``
-    is the change since the previous drag event.
+    is the change since the previous *sent* drag event (frames dropped
+    by the throttle are accumulated), so applying it incrementally
+    tracks the pointer exactly.  ``delta_pixels`` is the corresponding
+    screen-space change, accumulated the same way.
     """
 
     event_type: InteractionEventType = InteractionEventType.DRAG_MOVE

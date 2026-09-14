@@ -52,6 +52,9 @@ export class InteractionController {
         this._hoveredObjectId = null;
         this._hoverState = new Map();  // objectId → { originalEmissive, originalScale }
 
+        // Scene-level cursor override (mode switches); null = none.
+        this._sceneCursor = null;
+
         rendererDomElement.addEventListener('pointerdown', (e) => this._onPointerDown(e));
         rendererDomElement.addEventListener('pointermove', (e) => this._onPointerMove(e));
         rendererDomElement.addEventListener('pointerup', (e) => this._onPointerUp(e));
@@ -70,6 +73,11 @@ export class InteractionController {
 
     setWebSocket(websocket) {
         this.ws = websocket;
+    }
+
+    setSceneCursor(cursor) {
+        this._sceneCursor = cursor || null;
+        this.rendererDomElement.style.cursor = this._sceneCursor || '';
     }
 
     registerInteractive(objectId, mesh, config) {
@@ -226,7 +234,11 @@ export class InteractionController {
             mesh.scale.multiplyScalar(scale);
         }
 
-        this.rendererDomElement.style.cursor = 'pointer';
+        if (config.hover_cursor) {
+            this.rendererDomElement.style.cursor = config.hover_cursor;
+        } else if (!this._sceneCursor) {
+            this.rendererDomElement.style.cursor = 'pointer';
+        }
     }
 
     _resetHover(mesh) {
@@ -254,7 +266,7 @@ export class InteractionController {
         mesh.scale.copy(state._originalScale);
 
         this._hoverState.delete(mesh.uuid);
-        this.rendererDomElement.style.cursor = '';
+        this.rendererDomElement.style.cursor = this._sceneCursor || '';
     }
 
     // ── Camera payload helper ───────────────────────────────────────
@@ -503,8 +515,14 @@ export class InteractionController {
                 ],
                 anchorPending: true,
                 pendingPixelDelta: new THREE.Vector2(),
+                unsentWorldDelta: new THREE.Vector3(),
+                unsentPixelDelta: new THREE.Vector2(),
             };
             this._dragStarted = false;
+            const hitObj = this.interactiveObjects.get(hit.objectId);
+            if (hitObj && hitObj.config && hitObj.config.cursor) {
+                this.rendererDomElement.style.cursor = hitObj.config.cursor;
+            }
             this.rendererDomElement.setPointerCapture(event.pointerId);
             if (this.controls) this.controls.enabled = false;
             event.preventDefault();
@@ -539,7 +557,6 @@ export class InteractionController {
 
             const eventType = this._dragStarted ? 'drag_move' : 'drag_start';
 
-            let worldDelta = [0, 0, 0];
             if (this._activeDrag.anchorPending) {
                 // Buffer raw pixel deltas; convert to world space once the
                 // ideal anchor arrives (setDragAnchor).  No drag_move is sent
@@ -557,7 +574,12 @@ export class InteractionController {
                 // on screen produces pure world-axis movement.
                 const worldDeltaVec = this._pixelToWorldDelta(dx, dy, screenDx, screenDy, dragMode);
                 accWorldPos.add(worldDeltaVec);
-                worldDelta = [worldDeltaVec.x, worldDeltaVec.y, worldDeltaVec.z];
+                // Accumulate the world delta so throttled drag_moves don't lose
+                // intermediate movement: world_delta is the change since the last
+                // *sent* event, not since the last pointer-move frame.
+                this._activeDrag.unsentWorldDelta.add(worldDeltaVec);
+                this._activeDrag.unsentPixelDelta.x += dx;
+                this._activeDrag.unsentPixelDelta.y += dy;
             }
 
             const worldPos = accWorldPos;
@@ -570,9 +592,7 @@ export class InteractionController {
                 mouse_button: this._activeDrag.button,
                 modifiers: Array.from(this._activeDrag.modifiers),
                 screen_position: [event.clientX, event.clientY],
-                delta_pixels: [dx, dy],
                 world_position: [worldPos.x, worldPos.y, worldPos.z],
-                world_delta: worldDelta,
                 drag_mode: dragMode,
             };
             if (eventType === 'drag_start') {
@@ -581,8 +601,26 @@ export class InteractionController {
             }
 
             const payload = this._dragStarted
-                ? () => ({ ...basePayload })  // drag_move: no camera
-                : { ...basePayload, ...this._getCameraPayload(worldPos) };  // drag_start: include camera
+                ? () => {
+                    // drag_move: no camera.  world_delta / delta_pixels are the
+                    // accumulated movement since the last sent event.
+                    const ud = this._activeDrag.unsentWorldDelta;
+                    const pd = this._activeDrag.unsentPixelDelta;
+                    const out = {
+                        ...basePayload,
+                        delta_pixels: [pd.x, pd.y],
+                        world_delta: [ud.x, ud.y, ud.z],
+                    };
+                    ud.set(0, 0, 0);
+                    pd.set(0, 0);
+                    return out;
+                }
+                : {
+                    ...basePayload,
+                    delta_pixels: [0, 0],
+                    world_delta: [0, 0, 0],
+                    ...this._getCameraPayload(worldPos),  // drag_start: include camera
+                };
 
             if (this._dragStarted) {
                 this._throttledSend(this._activeDrag.objectId, 'drag_move', payload);
@@ -621,6 +659,10 @@ export class InteractionController {
             const wasDrag = this._dragStarted;
 
             if (wasDrag) {
+                // Flush any throttled drag_move so the final accumulated delta
+                // is applied before the drag_end event.
+                this._flushThrottle(this._activeDrag.objectId + ':drag_move');
+
                 const { dragMode, accWorldPos } = this._activeDrag;
 
                 // drag_end: no camera payload (backend cached it from drag_start)
@@ -646,6 +688,7 @@ export class InteractionController {
             if (this.controls) this.controls.enabled = true;
             this._activeDrag = null;
             this._dragStarted = false;
+            this.rendererDomElement.style.cursor = this._sceneCursor || '';
 
             // A stationary press never started a drag — fall through to click
             // detection below instead of emitting a drag_end that didn't happen.
@@ -761,6 +804,7 @@ export class InteractionController {
             if (this.controls) this.controls.enabled = true;
             this._activeDrag = null;
             this._dragStarted = false;
+            this.rendererDomElement.style.cursor = this._sceneCursor || '';
         }
     }
 }

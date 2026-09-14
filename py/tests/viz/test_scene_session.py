@@ -180,6 +180,19 @@ class TestSceneConfig:
         d = sc.to_dict()
         assert d["camera"] == {"type": "3d", "fov": 30}
 
+    def test_to_dict_with_controls(self):  # noqa: ANN201
+        from pytanga.viz import CameraAction, MouseButton
+
+        sc = SceneConfig(
+            controls={MouseButton.RIGHT: CameraAction.DOLLY, MouseButton.LEFT: None}
+        )
+        d = sc.to_dict()
+        assert d["controls"] == {"right": "dolly", "left": None}
+
+    def test_to_dict_omits_controls_when_none(self):  # noqa: ANN201
+        sc = SceneConfig()
+        assert "controls" not in sc.to_dict()
+
     def test_json_serializable(self):  # noqa: ANN201
         sc = SceneConfig(camera=CameraConfig3d(position=(1, 2, 3)))
         json.dumps(sc.to_dict())  # should not raise
@@ -251,6 +264,19 @@ class TestScene:
         dirty, _ = s.flush()
         assert dirty[0]["aspect"] == "content"
         assert dirty[0]["value"]["position"] == [5, 6, 7]
+
+    def test_set_interaction_marks_interaction_aspect(self):  # noqa: ANN201
+        from pytanga.viz._interaction import InteractionConfig
+
+        s = Scene()
+        eid = s.add(Point(1, 0, 0))
+        s.flush()  # consume the initial "full" dirty flag
+
+        s.set_interaction(eid, InteractionConfig(enabled=True))
+        dirty, _ = s.flush()
+        assert len(dirty) == 1
+        assert dirty[0]["aspect"] == "interaction"
+        assert dirty[0]["value"]["interaction"]["enabled"] is True
 
     def test_new_node_with_transform_mutation_still_full(self):  # noqa: ANN201
         # A node that has never reached the client must emit `full` even if a

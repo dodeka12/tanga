@@ -27,8 +27,12 @@ from ._active import (
     ActClickHandler,
     ActEventHandler,
     ActHandler,
+    ActImagePlane,
     ActPoint,
+    ActRectangle2D,
     ActSceneObject,
+    ClickBinding,
+    DragBinding,
 )
 from ._anchor import EAnchor
 from ._app import VisualizerApp
@@ -65,6 +69,7 @@ from ._coordinate_system import CoordinateSystem, fit_view2d
 from ._dialog import Dialog, FileChooserDialog
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
+from ._image_view import ImageCanvas, ImageView
 from ._interaction import (
     Camera,
     ClickEvent,
@@ -136,6 +141,7 @@ from ._styles import (
     Quadric3DStyle,
     RayQuadricStyle,
     RayStyle,
+    Rectangle2DStyle,
     ReflectionLineStyle,
     ReflectionPlaneStyle,
     RegularPolygonStyle,
@@ -156,6 +162,7 @@ from ._styles import (
     SolidWireframe,
     SpaceStyle,
     SphereStyle,
+    SquarePointStyle,
     TextureLabelStyle,
     TitleStyle,
     TranslatorStyle,
@@ -174,6 +181,7 @@ from ._themes import (
 from ._types import SceneEntity, VizInputType
 from ._viz_styles import VizStyles
 from .camera import (
+    CameraAction,
     CameraConfig,
     CameraConfig2d,
     CameraConfig3d,
@@ -182,6 +190,14 @@ from .camera import (
     get_camera,
     get_camera_view2d,
     get_camera_view3d,
+)
+from .image import (
+    ImageChannelMode,
+    ImageData,
+    ImageDType,
+    default_mode,
+    default_value_range,
+    pil_to_numpy,
 )
 from .export._exporter import SceneExporter
 from .scene import SceneConfig
@@ -220,9 +236,11 @@ __all__ = [
     "ActClickHandler",
     "ActEventHandler",
     "ActHandler",
+    "ActImagePlane",
     "ActObjectStyle",
     "ActPoint",
     "ActPointStyle",
+    "ActRectangle2D",
     "ActSceneObject",
     "AnimStyle",
     "AnnotationStyle",
@@ -238,6 +256,7 @@ __all__ = [
     "Button",
     "ButtonView",
     "Camera",
+    "CameraAction",
     "CameraConfig",
     "CameraConfig2d",
     "CameraConfig3d",
@@ -248,6 +267,7 @@ __all__ = [
     "ColorPickerView",
     "ColumnType",
     "CoordinateSystem",
+    "ClickBinding",
     "ClickEvent",
     "ControlEvent",
     "ControlHandler",
@@ -269,6 +289,7 @@ __all__ = [
     "DirectionStyle",
     "DiskStyle",
     "DottedWireframe",
+    "DragBinding",
     "DragEvent",
     "DragMode",
     "Dropdown",
@@ -296,6 +317,11 @@ __all__ = [
     "get_camera_view3d",
     "HPointStyle",
     "HyperbolaStyle",
+    "ImageChannelMode",
+    "ImageCanvas",
+    "ImageData",
+    "ImageDType",
+    "ImageView",
     "InteractionConfig",
     "InteractionEvent",
     "InteractionEventType",
@@ -325,6 +351,7 @@ __all__ = [
     "PlaneConicStyle",
     "PlanePairStyle",
     "PlaneStyle",
+    "pil_to_numpy",
     "PointPath",
     "PointPathStyle",
     "PointPairStyle",
@@ -334,6 +361,7 @@ __all__ = [
     "PortOccupant",
     "RayQuadricStyle",
     "RayStyle",
+    "Rectangle2DStyle",
     "ReflectionLineStyle",
     "ReflectionPlaneStyle",
     "RegularPolygonStyle",
@@ -367,6 +395,7 @@ __all__ = [
     "SpacerView",
     "SphereStyle",
     "SplitView",
+    "SquarePointStyle",
     "StackView",
     "Table",
     "TableCellChange",
@@ -408,6 +437,8 @@ __all__ = [
     "VizStyles",
     "WireframeDashPattern",
     "copy_theme",
+    "default_mode",
+    "default_value_range",
     "default_theme",
     "external_theme_dirs",
     "list_themes",

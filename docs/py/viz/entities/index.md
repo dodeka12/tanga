@@ -19,7 +19,7 @@ operators, axes/grid, point paths, and the active (interactive) elements.
 
 | Entity / Operator | Style class | Documented in |
 |-------------------|-------------|---------------|
-| Point | PointStyle / CrossHairPointStyle | [Entities](entities.ipynb) |
+| Point | PointStyle / CrossHairPointStyle / SquarePointStyle | [Entities](entities.ipynb) |
 | Direction | DirectionStyle | [Entities](entities.ipynb) |
 | HPoint | HPointStyle | [Entities](entities.ipynb) |
 | PointPair / ImagPointPair | PointPairStyle | [Entities](entities.ipynb) |
@@ -38,6 +38,7 @@ operators, axes/grid, point paths, and the active (interactive) elements.
 | GeneralRotor | GeneralRotorStyle | [Operators](operators.ipynb) |
 | Axes2D / Axes3D / Axis / Grid | Axes2DStyle / Axes3DStyle / AxisStyle / GridStyle | [Axes & Grid](axes-grid.md) |
 | PointPath | PointPathStyle | [PointPath](point-path.md) |
+| Rectangle2D | Rectangle2DStyle | [ActRectangle2D](active-elements/act-rectangle2d.md) |
 
 For the underlying geometry data classes, see
 [Entity Data Classes](../../ga/geometry/entities.md) and

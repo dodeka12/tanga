@@ -413,7 +413,7 @@ Ctrl+Shift+Z / Ctrl+Y), instead of one `on_cell_change` per cell.
 
 A backend-driven directory-listing view (no path field or "Browse…" button —
 compose those yourself, or use `FileChooserDialog`).  See
-[File Chooser](../app/file-chooser.md).
+[File Chooser](file-chooser.md).
 
 ## `LabelView` / `MarkdownView`
 

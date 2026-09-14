@@ -281,6 +281,50 @@ handler)` (stored under `(object_id, event_type.value)`).  The per-pane frontend
 `InteractionController` captures/throttles pointer events and sends them under
 `interaction:*` names; the backend coalesces `drag_move`.
 
+### Active rectangles
+
+`ActRectangle2D` (`_active.py`) is an interactive axis-aligned rectangle: a
+visual-only `Rectangle2D` body plus child `ActPoint` handles (4 corners for
+resize, one centre handle for translate).  It is a **composite** — the frontend
+raycasts one mesh per entity, so each grabbable part is its own `ActPoint`
+entity and the body's `interaction_config` is disabled.  Default resize/translate
+behaviour is overridable (`on_corner_drag` / `on_translate` / `on_change`); the
+`rectangle_labeling.py` example composes a disabled left-drag `DragBinding` plus a
+mode flag to drag out a preview `Rectangle2D` and finalize an `ActRectangle2D`.
+
+`SquarePointStyle` (a `PointStyle` variant, dispatched in `factory.js` by
+`style_type` exactly like `CrossHairPointStyle`) renders a `Point` as a flat
+square marker — used for the rectangle handles.
+
+### Per-handler enable/disable + cursors
+
+Every active element (`ActSceneObject`) can toggle its handlers individually:
+`DragBinding`/`ClickBinding` carry a mutable ``enabled`` flag, and the general
+`handler`/`on_click` are toggled via `set_handler_enabled`/`set_click_enabled`.
+`refresh_interaction()` re-registers the trigger set after a change.  A cursor can
+be attached to an element (`ActSceneObject(cursor=…)` → ``hover_cursor``, shown on
+hover) or to the gesture (`InteractionConfig.cursor`, shown during the drag);
+`Visualizer.set_cursor()`/`VizSceneHandle.set_cursor()` set a per-scene override
+(via the ``scene_config`` message) for mode switches.
+
+## Image canvas
+
+`ImageCanvas` (`_image_view.py`) displays images on an interactive
+`ActImagePlane` (`_active.py`).  The plane reuses the standard
+`ActSceneObject` contract — `set_interaction` + `on_interaction` + a
+`drag_anchor` that returns the ray↔plane hit, so `world_position` *is* the
+pixel coordinate (the canvas scene uses a y-down frame with 1 unit = 1 pixel).
+Mouse handlers modify shader uniforms via `ImageCanvas.set_uniform`, which
+sends an `image_update` JSON message; the pixel data itself travels as **binary
+WebSocket frames** (`_image_wire.py`, `Transport.send_bytes`) and is never
+re-sent on uniform/overlay changes.
+
+The canvas also supports multiple specific handlers via `DragBinding` /
+`ClickBinding` (a mouse button + optional modifier set; the most specific match
+wins, falling back to the general `on_drag`/`on_click`), and lets you rebind the
+camera navigation (pan/dolly/rotate) per scene through a `controls` mapping
+(`SceneConfig.controls`, applied by `configureControls` in `view_mode.js`).
+
 ## Follow-ups
 
 - **Fold `interaction.js` onto `sendEvent`** — the interactive-object frontend

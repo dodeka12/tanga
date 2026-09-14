@@ -100,11 +100,11 @@ self.viz.add(
 Handlers receive the new value plus a `ControlEvent`; use
 `self.viz.update_entity(...)` / `self.viz.update(...)` then `flush()` to apply
 changes. For the full control reference (all control kinds + parameters), see
-[Controls](../interaction/controls.md).
+[Controls](../ui/controls.md).
 
 ## Complete example
 
 See [`two_spheres_interact.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/interaction/two_spheres_interact.py)
 for a full working app — two IPNS spheres with a moving slider, a visibility
 dropdown, and a reset button. The full control reference is in
-[Controls](../interaction/controls.md).
+[Controls](../ui/controls.md).

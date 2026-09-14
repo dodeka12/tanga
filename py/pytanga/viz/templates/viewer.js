@@ -32,6 +32,7 @@ import {
 import { handleThemeDefine } from './themes.js';
 import { updateLineResolutions } from './renderers/utils.js';
 import { handleResize } from './view_mode.js';
+import { decodeImageFrame, storeImageFrame } from './image-frames.js';
 
 // ── State ───────────────────────────────────────────────────
 let ws = null;
@@ -188,6 +189,7 @@ function connectWebSocket() {
     _log('ws-connect', 'url=' + url + ' attempt=' + _reconnectAttempts + ' gen=' + gen);
 
     ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
 
     const connectWatchdog = setTimeout(() => {
         if (ws && ws.readyState === WebSocket.CONNECTING && gen === _wsGeneration) {
@@ -230,6 +232,15 @@ function connectWebSocket() {
     };
 
     ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+            try {
+                storeImageFrame(decodeImageFrame(event.data));
+            } catch (e) {
+                console.error('Failed to decode image frame:', e);
+                sendLog('error', 'Failed to decode image frame', { source: 'viewer.js', data: { error: String(e) } });
+            }
+            return;
+        }
         let msg;
         try {
             msg = JSON.parse(event.data);
@@ -532,6 +543,16 @@ async function handleMessage(msg) {
         _availableScenes = msg.scenes || [];
         return;
     }
+    if (msg.type === 'interaction:drag_anchor') {
+        // The backend resolves the ideal drag anchor per object; broadcast to
+        // every scene view because the message carries no scene field.  Only the
+        // pane with the matching active drag consumes it (setDragAnchor checks
+        // the object id).
+        for (const route of _sceneRoutes.values()) {
+            for (const v of route.sceneViews) await v.handleMessage(msg);
+        }
+        return;
+    }
     if (msg.type === 'animation_stop_config') {
         if ((msg.scene ?? '') === _myScene) {
             _animationStopConfig = {
@@ -680,7 +701,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update') {
+    if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update' || msg.type === 'image_update') {
         if (!_forMyScene(msg)) return;
     }
     if (msg.type === 'banner_define' || msg.type === 'banner_remove' || msg.type === 'banner_clear') {

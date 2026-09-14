@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.3.0 (2.4.0-rc3)] — 2026-09-14
+- `ImageCanvas` display (numpy/PIL) with custom shaders + uniforms · `DragBinding`/`ClickBinding` handlers · rebindable camera controls · `ActRectangle2D` resize/translate · per-handler enable/disable + cursors
+- Docs: viz restructured into `ui/` + `image/` sections · new `py/ga/quadric/` guide
+→ [Details](2026/09/14_a8b41335.md)
+
 ## [Since 2.3.0 (2.4.0-rc2)] — 2026-09-13
 - `py/tests` ANN coverage ratcheted (existing code frozen with per-line `# noqa: ANN…`, new tests enforced) · star imports removed repo-wide (`F403`/`F405` now enforced)
 - Bug fixes: `solver_basics_01.py` no longer fails its own `paths disagree!` check (floating-point tolerance comparison)

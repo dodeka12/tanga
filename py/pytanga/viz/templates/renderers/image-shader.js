@@ -1,0 +1,72 @@
+// Image shader — standard vertex/fragment shaders for the image plane.
+// Pure GLSL string building (Node-testable).
+
+export function buildImageVertex() {
+    return /* glsl */ `
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+}
+
+export function buildImageFragment() {
+    return /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uImage0;
+uniform vec2 uImageSize;
+uniform float u_value_min;
+uniform float u_value_max;
+uniform float u_brightness;
+uniform float u_contrast;
+uniform float u_midpoint;
+uniform int u_mode;
+
+vec4 sampleNearest(vec2 px) {
+    vec2 snap = (floor(px) + 0.5) / uImageSize;
+    return texture2D(uImage0, snap);
+}
+
+// Manual 4-tap bilinear in texel space (the texture itself is nearest-filtered).
+vec4 sampleBilinear(vec2 px) {
+    vec2 texel = 1.0 / uImageSize;
+    vec2 uv = px * texel;
+    vec2 st = uv - 0.5 * texel;
+    vec2 f = fract(st * uImageSize);
+    vec2 i = floor(st * uImageSize);
+    vec2 p0 = (i + 0.5) * texel;
+    vec2 p1 = p0 + texel;
+    vec4 s00 = texture2D(uImage0, p0);
+    vec4 s10 = texture2D(uImage0, vec2(p1.x, p0.y));
+    vec4 s01 = texture2D(uImage0, vec2(p0.x, p1.y));
+    vec4 s11 = texture2D(uImage0, p1);
+    return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
+}
+
+void main() {
+    vec2 px = vUv * uImageSize;
+    // Rotation detection: the texture-coordinate screen-space derivatives are
+    // diagonal for an axis-aligned plane (pure zoom/pan); any off-diagonal term
+    // means the plane is rotated and needs anti-aliased (bilinear) sampling.
+    vec2 duvdx = dFdx(vUv);
+    vec2 duvdy = dFdy(vUv);
+    bool rotated = abs(duvdx.y) + abs(duvdy.x) > 1e-4;
+    vec4 tex = rotated ? sampleBilinear(px) : sampleNearest(px);
+
+    vec3 color;
+    if (u_mode == 0) {
+        color = vec3(tex.r);            // channel 1 as grayscale
+    } else if (u_mode == 2) {
+        color = vec3(length(tex.rgb));  // magnitude of channels 1-3
+    } else if (u_mode == 3) {
+        color = vec3(tex.a);            // channel 4 as grayscale
+    } else {
+        color = tex.rgb;                // RGB
+    }
+
+    vec3 n = (color - u_value_min) / max(u_value_max - u_value_min, 1e-6);
+    vec3 outC = clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0);
+    gl_FragColor = vec4(outC, 1.0);
+}`;
+}

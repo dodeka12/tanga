@@ -17,15 +17,15 @@ from uuid import uuid4
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
-from .camera import CameraConfig
-from ._nodes import VizGroup, VizNode, VizOverlayObject, VizSceneObject
+from .camera import CameraAction, CameraConfig
+from ._nodes import VizGroup, VizImage, VizNode, VizOverlayObject, VizSceneObject
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
 from ._style_dict import StylesMap, _resolve_label_style, _resolve_tex_label_style
 from ._viz_styles import VizStyles, make_styles
 
 if TYPE_CHECKING:
-    from ._interaction import InteractionConfig
+    from ._interaction import InteractionConfig, MouseButton
     from ._styles import LabelStyle, ObjVizStyle, TextureLabelStyle
 
 # ── Configuration ──────────────────────────────────────────
@@ -45,6 +45,12 @@ class SceneConfig:
     annotation: str | None = None  # markdown annotation text
     name: str = ""  # scene name (empty string = main scene)
     space_dim: int = 3  # 2 or 3 — controls camera mode, controls, and rendering
+    # Optional mouse-button → camera-action rebinding (overrides the frontend
+    # defaults for the scene's space dimension).  ``None`` keeps the defaults.
+    controls: dict[MouseButton, CameraAction | None] | None = None
+    # Optional CSS cursor override for the whole scene (e.g. ``"crosshair"``
+    # while drawing).  ``None`` = use the default cursor.
+    cursor: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -65,6 +71,13 @@ class SceneConfig:
                 result["camera"] = cam
         if self.annotation is not None:
             result["annotation"] = self.annotation
+        if self.controls is not None:
+            result["controls"] = {
+                button.value: (action.value if action is not None else None)
+                for button, action in self.controls.items()
+            }
+        if self.cursor is not None:
+            result["cursor"] = self.cursor
         return result
 
 
@@ -219,6 +232,44 @@ class Scene:
         self._nodes[gid] = group
         self._order.append(gid)
         return group
+
+    def add_image(
+        self, image_id: str, payload: dict[str, Any], images: list[Any] | None = None
+    ) -> str:
+        """Register an ``image`` scene node and return its id."""
+        node = VizImage(image_id, payload, images=images)
+        self._nodes[image_id] = node
+        if image_id not in self._order:
+            self._order.append(image_id)
+        return image_id
+
+    def upsert_image(
+        self,
+        image_id: str,
+        payload: dict[str, Any],
+        images: list[Any] | None = None,
+    ) -> str:
+        """Update an existing image node's payload, or create it."""
+        node = self._nodes.get(image_id)
+        if isinstance(node, VizImage):
+            node.payload = payload
+            if images is not None:
+                node.images = list(images)
+            node.mark("full")
+            return image_id
+        return self.add_image(image_id, payload, images=images)
+
+    def image_frames(self) -> list[tuple[str, bytes]]:
+        """Return ``(id, encoded_frame)`` for every image node with pixel data."""
+        from ._image_wire import encode_image_frame
+
+        frames: list[tuple[str, bytes]] = []
+        for node in self._dfs_preorder():
+            if isinstance(node, VizImage):
+                for img in node.images:
+                    if img.data is not None:
+                        frames.append((img.id, encode_image_frame(img.id, img.data)))
+        return frames
 
     @property
     def group_ids(self) -> list[str]:
@@ -699,13 +750,14 @@ class Scene:
         instance.  It is included in the entity JSON on the next flush.
         """
         self._interaction_configs[object_id] = config
-        # Mark entity dirty so the interaction field is re-sent
+        # Mark the interaction aspect dirty so the config is re-sent without a
+        # full entity rebuild (a full rebuild would re-upload image pixels).
         obj = self._objects.get(object_id)
         if obj is not None:
             obj.dirty = True
         node = self._nodes.get(object_id)
         if node is not None:
-            node.mark("full")
+            node.mark("interaction")
 
     def get_interaction(self, object_id: str) -> Any | None:
         """Get the interaction config for an entity, or ``None``."""
@@ -745,8 +797,19 @@ class Scene:
             dirty_aspects = node.consume_dirty()
             if not dirty_aspects:
                 continue
-            for aspect in ("full", "style", "transform", "content"):
+            for aspect in ("full", "style", "transform", "content", "interaction"):
                 if aspect not in dirty_aspects:
+                    continue
+                if aspect == "interaction":
+                    ic = self._interaction_configs.get(node.id)
+                    if ic is not None:
+                        patches.append(
+                            {
+                                "id": node.id,
+                                "aspect": "interaction",
+                                "value": {"interaction": ic.to_dict()},
+                            }
+                        )
                     continue
                 patch = node.patch(aspect)
                 if aspect == "full" and node.layer == "scene":

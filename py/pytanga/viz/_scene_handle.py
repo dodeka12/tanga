@@ -248,6 +248,10 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update the camera configuration for this scene at runtime."""
         self._viz.set_camera(camera, scene_name=self._name)
 
+    def set_cursor(self, cursor: str | None) -> None:
+        """Set the mouse cursor shown over this scene (``None`` clears it)."""
+        self._viz.set_cursor(cursor, scene_name=self._name)
+
     @property
     def space_dim(self) -> int:
         """The scene's current space dimension (``2`` or ``3``)."""

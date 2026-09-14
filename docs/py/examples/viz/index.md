@@ -7,6 +7,7 @@
 - [Camera](camera/index.md)
 - [Entities](entities/index.md)
 - [Export](export/index.md)
+- [Image](image/index.md)
 - [Interaction](interaction/index.md)
 - [Jupyter Notebooks](jupyter/index.md)
 - [Labels](labels/index.md)

@@ -205,3 +205,22 @@ class CrossHairPointStyle(PointStyle):
         if self.arm_thickness is not None:
             result["arm_thickness"] = self.arm_thickness
         return result
+
+
+@dataclass
+class SquarePointStyle(PointStyle):
+    """Extended point style — renders a flat square marker instead of a sphere.
+
+    Inherits ``color``, ``opacity``, and ``size`` from ``PointStyle``.  ``size``
+    is the square's half-extent (world units); ``thickness`` is the slab depth
+    along ``+z`` (≈0 for a flat marker facing the xy-plane).
+    """
+
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "SquarePointStyle"
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result

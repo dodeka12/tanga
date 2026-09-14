@@ -176,26 +176,38 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
  * @param {THREE.OrbitControls} controls
  * @param {THREE.WebGLRenderer} renderer
  * @param {number} spaceDim  2 or 3
+ * @param {object|null} controlsConfig  optional per-button overrides, e.g.
+ *   { left: "pan", right: "dolly" } (a ``null`` value disables a button)
  */
-export function configureControls(controls, renderer, spaceDim) {
-    if (spaceDim === 2) {
-        controls.enableRotate = false;
-        controls.mouseButtons = {
-            LEFT: THREE.MOUSE.PAN,
-            MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.PAN
-        };
-        return;
-    }
-    // 3D: explicit orbit mapping — left-drag rotates, right/middle pans.
-    controls.enableRotate = true;
-    controls.enablePan = true;
-    controls.screenSpacePanning = true;
-    controls.mouseButtons = {
-        LEFT: THREE.MOUSE.ROTATE,
-        MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: THREE.MOUSE.PAN
+export function configureControls(controls, renderer, spaceDim, controlsConfig) {
+    // Action string → THREE.MOUSE code.
+    const ACTION = {
+        rotate: THREE.MOUSE.ROTATE,
+        dolly: THREE.MOUSE.DOLLY,
+        pan: THREE.MOUSE.PAN
     };
+    // Per-dimension defaults; a scene-level `controls` config overrides
+    // individual buttons (a `null` value disables that button).
+    const defaults = spaceDim === 2
+        ? { left: 'pan', middle: 'dolly', right: 'pan' }
+        : { left: 'rotate', middle: 'dolly', right: 'pan' };
+    const mapping = { ...defaults, ...(controlsConfig || {}) };
+
+    controls.mouseButtons = {
+        LEFT: ACTION[mapping.left] || null,
+        MIDDLE: ACTION[mapping.middle] || null,
+        RIGHT: ACTION[mapping.right] || null
+    };
+
+    const actions = Object.values(mapping);
+    controls.enableRotate = actions.includes('rotate');
+    controls.enablePan = actions.includes('pan');
+
+    if (spaceDim === 2) {
+        controls.zoomToCursor = true;
+    } else {
+        controls.screenSpacePanning = true;
+    }
 }
 
 export { fitCamera } from './fit_camera.js';

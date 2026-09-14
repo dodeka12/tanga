@@ -300,13 +300,21 @@ export function contentChanged(ent, prev, keys) {
  */
 export function applyStyleUpdate(mesh, ent) {
     const opacity = styleParam(ent, 'opacity', undefined);
-    if (opacity !== undefined) {
+    const fillOpacity = styleParam(ent, 'fill_opacity', undefined);
+    if (opacity !== undefined || fillOpacity !== undefined) {
         mesh.traverse((child) => {
             if (child.material && child.material.opacity !== undefined) {
-                child.material.opacity = opacity;
-                child.material.transparent = opacity < 1.0;
-                child.material.depthWrite = opacity >= 0.99;
-                child.material.needsUpdate = true;
+                // A fill quad (Rectangle2D) has its own opacity key: the
+                // top-level `opacity` drives the outline only.
+                const isFill = !!(child.userData && child.userData.isFillQuad);
+                if (isFill && fillOpacity === undefined) return;
+                const target = isFill ? fillOpacity : opacity;
+                if (target !== undefined) {
+                    child.material.opacity = target;
+                    child.material.transparent = target < 1.0;
+                    child.material.depthWrite = target >= 0.99;
+                    child.material.needsUpdate = true;
+                }
             }
         });
     }

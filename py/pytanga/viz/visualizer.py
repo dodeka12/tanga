@@ -624,6 +624,12 @@ class Visualizer(_JupyterDisplayMixin):
         """
         from .views import View
 
+        from ._image_view import ImageCanvas
+
+        if isinstance(obj, ImageCanvas):
+            obj._sync_image()
+            return obj.scene_name
+
         if isinstance(obj, View):
             self._layout[""].overlay.add(obj)
             return None
@@ -895,6 +901,21 @@ class Visualizer(_JupyterDisplayMixin):
         scene.config.camera = _normalize_camera_config(camera)
         self._push_scene_config(scene_name)
 
+    def set_cursor(
+        self,
+        cursor: str | None,
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Set the mouse cursor shown over a scene (for mode switches).
+
+        ``None`` clears the override so the default cursor returns.  The cursor
+        is pushed via the established ``scene_config`` message.
+        """
+        scene = self._layout.scenes[scene_name]
+        scene.config.cursor = cursor
+        self._push_scene_config(scene_name)
+
     def set_space_dim(
         self,
         space_dim: int,
@@ -1048,6 +1069,13 @@ class Visualizer(_JupyterDisplayMixin):
         # the whole scene (which would force a rebuild and orphan CSS2D labels).
         scene.clear_dirty()
         return state, []
+
+    def _image_frames_for(self, scene_name: str) -> list[tuple[str, bytes]]:
+        """Return encoded image frames for a scene (sent as binary on connect)."""
+        scene = self._layout.scenes.get(scene_name)
+        if scene is None:
+            return []
+        return scene.image_frames()
 
     def _interrupt_event(self, scene_name: str = "") -> threading.Event:
         """Return (creating if needed) the interrupt :class:`threading.Event`
@@ -1519,6 +1547,7 @@ class Visualizer(_JupyterDisplayMixin):
                 scene_layout_callback=self._layout._scene_layout_for,
                 theme_callback=self._theme_host._theme_define_payload,
                 theme_static_dirs=external_theme_dirs(),
+                image_frames_callback=self._image_frames_for,
             )
             _boot_done.set()
 

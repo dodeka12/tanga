@@ -42,6 +42,14 @@ class WebSocketTransport:
             return
         await server.push_raw(json.dumps(message))
 
+    def send_bytes(self, payload: bytes) -> None:
+        """Broadcast raw *payload* to all clients (thread-safe; no-op pre-boot)."""
+        server = self._state.server
+        loop = self._state.loop
+        if server is None or loop is None:
+            return
+        asyncio.run_coroutine_threadsafe(server.push_bytes(payload), loop)
+
     def flush(self) -> None:
         """Flush pending state to connected clients (wired in phase 5)."""
         ...

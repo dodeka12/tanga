@@ -11,7 +11,7 @@ when the layout is set).
 There are no `add_*` facade methods — every control kind is declared as a view.
 For the per-kind parameter tables and handler payloads, see
 [Controls](controls.md); for placing views in layouts, see
-[Layouts](../app/layouts.md).
+[Layouts](layouts.md).
 
 Every control view is a plain `View` (no scene) that renders a single HTML
 control. A handler written for one control kind works unchanged for the others
@@ -32,7 +32,7 @@ by hand.
 
 Every view is a `View`. Containers arrange their children; the leaves render
 content. For the full view model — `Size` units, splitters, per-pane cameras —
-see [Split Views](../visualizer/split-views.md).
+see [Split Views](split-views.md).
 
 Every control view is a `ControlView`. By default it sets a size floor of
 `min_width=Size.px(120)` and `min_height=Size.px(32)` so a `StackView`/`GroupView`
@@ -57,7 +57,7 @@ View(
 ```
 
 All sizes are `SizeSpec` values (see `Size.px` / `Size.percent` / `Size.fr` /
-`auto` in [Split Views](../visualizer/split-views.md)). The computed
+`auto` in [Split Views](split-views.md)). The computed
 properties `fixed_x` / `fixed_y` are `True` when `min == max` along that axis,
 which is how a container decides whether a splitter next to this view is
 draggable. `_node_type` is `"view"`.
@@ -197,49 +197,9 @@ Every eligible control child is forced to the `TOOLBAR` variant (a nested
 
 ### MenuView
 
-A menu — a hamburger `dropdown` or a permanent horizontal `bar` of options.
-`children` are the options (control views); a child may be another `MenuView`
-to form a nested sub-menu. `_node_type` is `"menu"`.
-
-```python
-MenuView(
-    label="",           # str
-    children=None,      # list[View] | None — options (control views / sub-menus)
-    *,
-    trigger_icon=None,  # Icon | None — optional leading icon (e.g. EIconMaterial.MENU)
-    mode="dropdown",    # "dropdown" | "bar"
-    direction=None,      # StackDirection | None — "horizontal" for bars, else "vertical"
-    position=None,      # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
-    override_variant=True,  # bool — auto-set the MENU variant on control children
-    **kwargs,           # forwarded to View (sizes)
-)
-```
-
-- `mode="dropdown"` renders a click-to-toggle trigger with the options in a
-  hidden panel (outside-click or `Escape` closes it); a nested `MenuView` opens
-  beside its parent as a sub-menu.
-- `mode="bar"` renders the options always-visible in a horizontal strip; a
-  nested `MenuView` renders as a plain menu-bar label and opens its panel
-  downwards (flipping upwards near the bottom of the viewport).
-- `override_variant=True` (default) forces every eligible control in the subtree
-  to the `MENU` variant, so options render flat without setting `variant=` by
-  hand.
-
-Global menus are declared as a `MenuView` in the default layout's overlay (via
-`viz.add(menu)` or `viz.set_layout`); per-pane menus are declared with
-`SceneView(overlay=[MenuView(...)])`:
-
-```python
-menu = MenuView(
-    label="Settings",
-    trigger_icon=EIconMaterial.MENU,
-    children=[
-        ButtonView("fit", label="Fit camera", on_click=on_fit),
-        SliderView("radius", label="Radius", on_change=on_radius),
-    ],
-)
-viz.add(menu)  # mounts in the default layout's overlay
-```
+The menu container (`MenuView`) — a hamburger `dropdown` or a permanent
+horizontal `bar` of options, with nestable sub-menus — is documented on its own
+page: [Menus](menus.md).
 
 ## Control views
 
@@ -593,6 +553,6 @@ viz.wait()
 
 Handlers are registered automatically when the layout is set, so a
 `SliderView`/`ButtonView` behaves exactly like a panel control. For a complete
-app, see the [Layouts](../app/layouts.md) guide and
+app, see the [Layouts](layouts.md) guide and
 [`all_controls.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/ui/controls/all_controls.py)
 (one of every control kind in a single app).

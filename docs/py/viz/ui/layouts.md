@@ -6,8 +6,8 @@ layout with embedded controls and drive it from async handlers — all within th
 managed lifecycle (`init` → block → `cleanup`).
 
 For the underlying view model (sizes, splitters, panes), see
-[Split Views](../visualizer/split-views.md); for the panel-control methods, see
-[Controls](../interaction/controls.md).
+[Split Views](split-views.md); for the panel-control methods, see
+[Controls](controls.md).
 
 The plain scene URL that `VisualizerApp.run()` opens is itself a one-`SceneView`
 layout, so a `GroupView` overlay (or any control view mounted via `viz.add`)
@@ -16,7 +16,7 @@ share one render path.
 
 Flow containers (`StackView`/`GroupView`) accept `gap`/`align`/`justify`, and a
 child's `preferred_*` maps to CSS flex (e.g. `Size.fr(1)` fills the leftover
-space beside a button). See [Split Views](../visualizer/split-views.md) for the
+space beside a button). See [Split Views](split-views.md) for the
 sizing model and the flex mapping table.
 
 ## Controls in a layout
@@ -30,7 +30,7 @@ pane (or mounted in the overlay via `viz.add(view)`):
 | `viz.add(view)` | The default layout's overlay | Quick controls over a scene without a custom layout |
 
 The **async** handler contract is `(value, event)`. The declarative view classes
-are documented in full in [Control Views (xxxView)](../interaction/control-views.md).
+are documented in full in [Control Views (xxxView)](control-views.md).
 
 ## A split-view app
 
@@ -174,8 +174,8 @@ Controls live in layouts, not scenes: place them in whichever pane's
 
 ## See Also
 
-- [Split Views](../visualizer/split-views.md) — the view hierarchy, `Size` units,
+- [Split Views](split-views.md) — the view hierarchy, `Size` units,
   splitters, overlays, and per-pane cameras
-- [Controls](../interaction/controls.md) — `SliderView`/`DropdownView`/`ButtonView`/`GroupView`
-- [Handlers & Lifecycle](handlers.md) — the handler contract and the app lifecycle
+- [Controls](controls.md) — `SliderView`/`DropdownView`/`ButtonView`/`GroupView`
+- [Handlers & Lifecycle](../app/handlers.md) — the handler contract and the app lifecycle
 

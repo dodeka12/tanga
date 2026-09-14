@@ -92,6 +92,18 @@ class TestInteractionConfig:
         assert "hover_scale" not in d
         assert "hover_opacity" not in d
 
+    def test_to_dict_cursor_fields(self):  # noqa: ANN201
+        ic = InteractionConfig(enabled=True, hover_cursor="crosshair", cursor="grabbing")
+        d = ic.to_dict()
+        assert d["hover_cursor"] == "crosshair"
+        assert d["cursor"] == "grabbing"
+
+    def test_to_dict_cursor_fields_omitted_when_none(self):  # noqa: ANN201
+        ic = InteractionConfig(enabled=True)
+        d = ic.to_dict()
+        assert "hover_cursor" not in d
+        assert "cursor" not in d
+
 
 class TestParseEvent:
     def test_parse_click(self):  # noqa: ANN201

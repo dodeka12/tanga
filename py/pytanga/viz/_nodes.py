@@ -701,3 +701,33 @@ class VizGroup(VizSceneObject):
             "transform": self.transform.to_dict(),
             "visible": self.visible,
         }
+
+
+class VizImage(VizSceneObject):
+    """A scene-layer image entity (``kind == "image"``).
+
+    Unlike other scene nodes, an image's content is a pre-serialized payload
+    (``frame``/``images``/``shader``/``uniforms``) produced by ``ImageView``, so
+    ``serialize`` returns it verbatim rather than dispatching through the entity
+    serializer.  Pixel bytes travel separately as binary frames.
+    """
+
+    def __init__(self, id: str, payload: dict[str, Any], *, name: str = "image", images: list[Any] | None = None) -> None:
+        super().__init__(id, None, None, name=name, kind="image")
+        self.payload = payload
+        self.images: list[Any] = list(images) if images else []
+
+    def serialize(
+        self,
+        *,
+        styles_map: StylesMap | None = None,
+        props: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Return the stored image payload verbatim."""
+        return dict(self.payload)
+
+    def patch(self, aspect: str) -> dict[str, Any]:
+        """Return a full patch for the image node (no sub-aspect patches)."""
+        if aspect == "full":
+            return {"id": self.id, "aspect": "full", "value": self.serialize()}
+        raise ValueError(f"Unsupported aspect {aspect!r} for image node")

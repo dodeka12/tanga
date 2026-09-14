@@ -4,6 +4,7 @@
 import { sendLog } from '../events.js';
 import { createPoint } from './point.js';
 import { createCrossHairPoint } from './crosshair_point.js';
+import { createSquarePoint } from './square_point.js';
 import { createDirection, updateDirection } from './direction.js';
 import { createLine, updateLine } from './line.js';
 import { createPlane } from './plane.js';
@@ -18,6 +19,7 @@ import { createBox } from './box.js';
 import { createEllipsoid } from './ellipsoid.js';
 import { createEllipse, updateEllipse } from './ellipse.js';
 import { createRegularPolygon } from './regular_polygon.js';
+import { createRectangle2D } from './rectangle2d.js';
 import { createHyperbola, updateHyperbola } from './hyperbola.js';
 import { createParabola, updateParabola } from './parabola.js';
 import { createLinePair, updateLinePair } from './line_pair.js';
@@ -43,6 +45,7 @@ import { createGrid } from './grid.js';
 import { createVizGroup } from './group.js';
 import { createSdfProxy, updateSdfProxy } from './sdf.js';
 import { createRayProxy, updateRayProxy } from './ray.js';
+import { createImage, updateImage } from './image.js';
 import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
 
 /**
@@ -58,6 +61,8 @@ export async function createEntityMesh(ent) {
         case 'HPoint':
             if (ent.style?.style_type === 'CrossHairPointStyle') {
                 mesh = createCrossHairPoint(ent);
+            } else if (ent.style?.style_type === 'SquarePointStyle') {
+                mesh = createSquarePoint(ent);
             } else {
                 mesh = createPoint(ent);
             }
@@ -103,6 +108,9 @@ export async function createEntityMesh(ent) {
             break;
         case 'RegularPolygon':
             mesh = createRegularPolygon(ent);
+            break;
+        case 'Rectangle2D':
+            mesh = createRectangle2D(ent);
             break;
         case 'Space':
             mesh = createSpace(ent);
@@ -169,6 +177,10 @@ export async function createEntityMesh(ent) {
             mesh = await createRayProxy(ent);
             break;
 
+        case 'image':
+            mesh = await createImage(ent);
+            break;
+
         case 'Hyperbola':
             mesh = createHyperbola(ent);
             break;
@@ -222,6 +234,8 @@ export function updateEntityMesh(mesh, ent, prev) {
         case 'ray':
             if (entityRequiresRebuild(ent, prev)) return false;
             return updateRayProxy(mesh, ent);
+        case 'image':
+            return updateImage(mesh, ent, prev);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':

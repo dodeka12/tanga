@@ -118,7 +118,8 @@ Runnable example: [`multi_scene.py`](https://github.com/dodeka12/tanga/blob/main
 | [Jupyter Notebooks](jupyter/index.md) | Auto-detection, inline iframe, multi-scene `display_row()`, `start()`/`flush()`/`stop()` pattern |
 | [Object Interaction](interaction/object-interaction.md) | Pointer-based 3D object interaction: click, drag, scroll; `Camera` projection; event dispatch |
 | [Active Elements](entities/active-elements/index.md) | Simplified high-level API: `ActPoint` and future self-registering interactive entities |
-| [Controls](interaction/controls.md) | Sliders, dropdowns, buttons, groups; scene-scoped controls |
+| [UI & Controls](ui/index.md) | Control views, layouts & split views, menus, dialogs, banners, themes |
+| [Image Canvas](image/index.md) | Display images in a pixel-frame canvas, custom shaders, drag/click interaction |
 | [SDF Viewer](sdf/sdf-viewer.md) | Ray-marched signed-distance-function viewer: analytic + algebra paths, distance/opacity functions, boolean combine modes |
 
 ## Example Scripts

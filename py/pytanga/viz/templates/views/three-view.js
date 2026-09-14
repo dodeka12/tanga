@@ -9,6 +9,7 @@ import { View } from './view.js';
 import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
+import { applyImageUniforms } from '../renderers/image.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
@@ -349,7 +350,7 @@ export class ThreeJsView extends View {
 
         this._applyCamera(cameraConfig);
 
-        configureControls(this.controls, this.renderer, spaceDim);
+        configureControls(this.controls, this.renderer, spaceDim, config.controls);
         this._interaction.setSpaceDim(spaceDim);
         this.resize();
 
@@ -363,6 +364,8 @@ export class ThreeJsView extends View {
         } else if (config.annotation === '') {
             this._removeAnnotation();
         }
+
+        this._interaction.setSceneCursor(config.cursor);
     }
 
     /**
@@ -554,6 +557,9 @@ export class ThreeJsView extends View {
             this._clearBanners();
         } else if (msg.type === 'interaction:drag_anchor') {
             this._interaction.setDragAnchor(msg.object_id, msg.world_position);
+        } else if (msg.type === 'image_update') {
+            const entry = this.sceneObjects.get(msg.id);
+            if (entry && entry.mesh) applyImageUniforms(entry.mesh, msg.uniforms);
         }
     }
 
@@ -648,6 +654,14 @@ export class ThreeJsView extends View {
 
         if (aspect === 'full') {
             await this._upsertObject(value);
+            return;
+        }
+        if (aspect === 'interaction') {
+            this._interaction.unregisterInteractive(id);
+            const intEntry = this.sceneObjects.get(id);
+            if (intEntry && intEntry.obj && value.interaction) {
+                this._interaction.registerInteractive(id, intEntry.obj, value.interaction);
+            }
             return;
         }
         const entry = this.sceneObjects.get(id);

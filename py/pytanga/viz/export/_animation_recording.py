@@ -49,8 +49,10 @@ class AnimationRecording:
         self._styles_map = styles_map or {}
         self._frames: list[list[dict[str, Any]]] = []
         self._cameras: list[dict[str, Any] | None] = []
+        self._assets: dict[str, dict[str, Any]] = {}
+        self._assets_captured = False
 
-    def capture_frame(self) -> None:
+    def capture_frame(self, include_images: bool = False) -> None:
         """Snapshot the current entity state.
 
         Uses ``Scene.full_state()`` to capture the complete state of every
@@ -59,11 +61,48 @@ class AnimationRecording:
         independent of the live viewer's dirty-tracked flush cycle.
 
         Each captured frame is a full, id-keyed snapshot of every object.
+        Image pixel data is captured **once** (into ``assets``); pass
+        ``include_images=True`` to re-capture it (e.g. when the image changes
+        per frame).
         """
         entities = self._scene.full_state(styles_map=self._styles_map)
         self._frames.append(list(entities))
         camera = self._scene.config.camera
         self._cameras.append(camera.to_dict() if camera is not None else None)
+        if include_images or not self._assets_captured:
+            self.capture_assets()
+            self._assets_captured = True
+
+    def capture_assets(self) -> None:
+        """Collect image pixel data once (data → base64, url → url)."""
+        from .._nodes import VizImage
+
+        for node in self._scene._dfs_preorder():
+            if isinstance(node, VizImage):
+                for img in node.images:
+                    self._assets[img.id] = self._image_asset(img)
+
+    @staticmethod
+    def _image_asset(img: Any) -> dict[str, Any]:
+        """Serialize one image layer into the asset store."""
+        asset: dict[str, Any] = {
+            "kind": "image",
+            "source": img.source,
+            "width": img.width,
+            "height": img.height,
+            "channels": img.channels,
+            "dtype": img.dtype.value if img.dtype is not None else 0,
+        }
+        if img.url is not None:
+            asset["url"] = img.url
+        else:
+            asset["data"] = img.to_base64()
+        return asset
+
+    @property
+    def assets(self) -> dict[str, dict[str, Any]]:
+        """The id-keyed asset store (images, and future textures)."""
+        return dict(self._assets)
 
     @property
     def frames(self) -> list[list[dict[str, Any]]]:
@@ -86,6 +125,7 @@ class AnimationRecording:
             "frames": self._frames,
             "frame_count": len(self._frames),
             "cameras": self._cameras,
+            "assets": self._assets,
         }
 
     def to_json(self, *, compress: bool = False) -> str:
