@@ -288,13 +288,24 @@ visual-only `Rectangle2D` body plus child `ActPoint` handles (4 corners for
 resize, one centre handle for translate).  It is a **composite** — the frontend
 raycasts one mesh per entity, so each grabbable part is its own `ActPoint`
 entity and the body's `interaction_config` is disabled.  Default resize/translate
-behaviour is overridable (`on_corner_drag` / `on_translate` / `on_change`), and
-`ImageCanvas.draw_rectangle(on_done=…)` drives the drag-to-create flow (a preview
-`Rectangle2D` during the drag, replaced by an `ActRectangle2D` on drag end).
+behaviour is overridable (`on_corner_drag` / `on_translate` / `on_change`); the
+`rectangle_labeling.py` example composes a disabled left-drag `DragBinding` plus a
+mode flag to drag out a preview `Rectangle2D` and finalize an `ActRectangle2D`.
 
 `SquarePointStyle` (a `PointStyle` variant, dispatched in `factory.js` by
 `style_type` exactly like `CrossHairPointStyle`) renders a `Point` as a flat
 square marker — used for the rectangle handles.
+
+### Per-handler enable/disable + cursors
+
+Every active element (`ActSceneObject`) can toggle its handlers individually:
+`DragBinding`/`ClickBinding` carry a mutable ``enabled`` flag, and the general
+`handler`/`on_click` are toggled via `set_handler_enabled`/`set_click_enabled`.
+`refresh_interaction()` re-registers the trigger set after a change.  A cursor can
+be attached to an element (`ActSceneObject(cursor=…)` → ``hover_cursor``, shown on
+hover) or to the gesture (`InteractionConfig.cursor`, shown during the drag);
+`Visualizer.set_cursor()`/`VizSceneHandle.set_cursor()` set a per-scene override
+(via the ``scene_config`` message) for mode switches.
 
 ## Image canvas
 

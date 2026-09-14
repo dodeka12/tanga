@@ -106,17 +106,18 @@ rect = ActRectangle2D(
 
 ## Drawing on an ImageCanvas
 
-`ImageCanvas.draw_rectangle(on_done=…)` enters a drag-to-create mode: the next
-drag on the image draws a preview `Rectangle2D`, and on drag end it is replaced
-by an `ActRectangle2D` and `on_done(rect)` is called. It returns a `cancel()`
-callable that aborts the mode.
+Drag-to-create is composed from the general handler machinery rather than a
+bespoke helper: register a left-drag `DragBinding` **disabled**, then toggle its
+``enabled`` flag (and the scene cursor) from a mode flag.  On drag end, wrap the
+dragged `Rectangle2D` into an `ActRectangle2D` and store it:
 
 ```python
-def on_rect(rect):
+def on_rect(rect):  # called with the ActRectangle2D after the drag
     print(f"drawn: {rect.rectangle}")
-
-canvas.draw_rectangle(on_done=on_rect)
 ```
+
+See [`rectangle_labeling.py`](../../../examples/viz/image/rectangle_labeling.md)
+for the full flow.
 
 ## See Also
 

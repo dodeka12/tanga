@@ -15,10 +15,12 @@
 - **Interactive rectangles** — a `Rectangle2D` entity (outline + optional fill,
   `Rectangle2DStyle`), square point markers (`SquarePointStyle`), and
   `ActRectangle2D` — a composite active object whose corner handles resize and
-  centre handle translates, with overridable handlers.  `ImageCanvas.draw_rectangle()`
-  drags out a preview and finalizes it into an `ActRectangle2D`.
+  centre handle translates, with overridable handlers.
 - **Custom image shaders** — `ImageCanvas.register_shader()` replaces the standard
   brightness/contrast shader with a custom fragment shader; `register_uniform()` /
-  `set_uniform()` now drive arbitrary custom uniforms end-to-end, and
-  `draw_rectangle()` arms a drag trigger so the drag-to-create flow works without
-  a pre-registered drag handler.
+  `set_uniform()` drive arbitrary custom uniforms end-to-end.
+- **Per-handler enable/disable + cursors** — active elements can register drag/click
+  handlers disabled (`DragBinding`/`ClickBinding` ``enabled=``) and toggle them at
+  runtime (`set_handler_enabled`/`set_click_enabled`/`refresh_interaction`), with
+  optional hover (`ActSceneObject(cursor=…)`) and during-interaction
+  (`InteractionConfig.cursor`) cursors plus a per-scene `set_cursor()` override.

@@ -178,9 +178,9 @@ image.  The export path stores images in an id-keyed **asset store**
 The same 2D scene hosts interactive rectangles: `Rectangle2D` (a new viz-only
 entity, `kind == "Rectangle2D"`, rendered by `renderers/rectangle2d.js` as an
 outline + optional fill) and `ActRectangle2D` (a composite `ActSceneObject` that
-spawns square `ActPoint` handles for resize/translate).  `draw_rectangle()` on
-`ImageCanvas` drags out a preview `Rectangle2D` and finalizes it into an
-`ActRectangle2D`.
+spawns square `ActPoint` handles for resize/translate).  Drag-to-create is shown
+in the `rectangle_labeling.py` example by composing a disabled left-drag binding
+plus a mode flag (no bespoke `draw_rectangle()` helper).
 
 ### Test commands
 

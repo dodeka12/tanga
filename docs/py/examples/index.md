@@ -176,6 +176,8 @@ uv run python py/examples/<path>.py
 
 - **Ctrl+C** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
+- **cursor** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
+
 - **curve** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **custom enum** — [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)

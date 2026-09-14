@@ -20,7 +20,6 @@ import numpy as np
 
 from pytanga.geometry import Line, Point
 from pytanga.viz import (
-    ActRectangle2D,
     DragBinding,
     DragEvent,
     ImageCanvas,
@@ -69,15 +68,6 @@ def main() -> None:
     )
     canvas.set_image(ImageData("gradient", data=_gradient(width, height)))
     _rectangle(canvas, 40, 30, 160, 120)
-
-    def on_rect(rect: ActRectangle2D) -> None:
-        print(f"Rectangle drawn: {rect.rectangle}")
-
-    # Drag on the image to draw a rectangle; it becomes an interactive
-    # ActRectangle2D (drag corners to resize, the centre handle to translate).
-    # While this draw mode is active, the ctrl+left brightness drag above is
-    # paused and resumes once the rectangle is finalized.
-    canvas.draw_rectangle(on_done=on_rect)
 
     viz.show(layout=canvas.scene_view())
     viz.wait()
