@@ -26,6 +26,9 @@ export function createRectangle2D(ent) {
         const fillOpacity = styleParam(ent, 'fill_opacity', 0.2);
         const fillGeo = new THREE.PlaneGeometry(size[0], size[1]);
         const fill = new THREE.Mesh(fillGeo, makeMaterial(color, fillOpacity, true));
+        // Mark the fill so style updates apply `fill_opacity` (not the
+        // top-level outline `opacity`) to it.
+        fill.userData.isFillQuad = true;
         group.add(fill);
     }
 
