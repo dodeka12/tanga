@@ -193,10 +193,12 @@ export function configureControls(controls, renderer, spaceDim, controlsConfig) 
         : { left: 'rotate', middle: 'dolly', right: 'pan' };
     const mapping = { ...defaults, ...(controlsConfig || {}) };
 
+    // Note: use `??` (not `||`) — THREE.MOUSE.ROTATE is 0, which is falsy, so
+    // `|| null` would silently disable the left-mouse rotation in 3D scenes.
     controls.mouseButtons = {
-        LEFT: ACTION[mapping.left] || null,
-        MIDDLE: ACTION[mapping.middle] || null,
-        RIGHT: ACTION[mapping.right] || null
+        LEFT: ACTION[mapping.left] ?? null,
+        MIDDLE: ACTION[mapping.middle] ?? null,
+        RIGHT: ACTION[mapping.right] ?? null
     };
 
     const actions = Object.values(mapping);
