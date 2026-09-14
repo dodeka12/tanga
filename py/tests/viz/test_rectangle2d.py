@@ -61,3 +61,13 @@ def test_rectangle2d_style_round_trips_through_entity() -> None:
     assert result["style"]["style_type"] == "Rectangle2DStyle"
     assert result["style"]["fill"] is True
     assert result["style"]["fill_opacity"] == 0.25
+
+
+def test_rectangle2d_between() -> None:
+    a = Point(10.0, 20.0, 0.0)
+    b = Point(2.0, 8.0, 0.0)
+    rect = Rectangle2D.between(a, b)
+    assert rect.center == Point(6.0, 14.0, 0.0)
+    assert rect.size == (8.0, 12.0)
+    # Corner order does not matter.
+    assert Rectangle2D.between(b, a) == rect

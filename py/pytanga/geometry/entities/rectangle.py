@@ -77,3 +77,22 @@ class Rectangle2D:
             f"Rectangle2D(c={self.center}, size=({self.size[0]:.2f}, "
             f"{self.size[1]:.2f}), n={self.normal}, angle={self.angle:.3f})"
         )
+
+    @classmethod
+    def between(cls, a: "Point | MV", b: "Point | MV") -> "Rectangle2D":
+        """Construct the axis-aligned rectangle with *a* and *b* as opposite corners.
+
+        ``center`` is the midpoint of the two points and ``size`` is the
+        absolute x/y difference, so the corner order does not matter.  The
+        rectangle lies in the default ``normal`` plane (+z) with ``angle = 0``.
+        """
+        a = to_point(a)
+        b = to_point(b)
+        return cls(
+            center=Point(
+                (a.x + b.x) / 2.0,
+                (a.y + b.y) / 2.0,
+                (a.z + b.z) / 2.0,
+            ),
+            size=(abs(b.x - a.x), abs(b.y - a.y)),
+        )

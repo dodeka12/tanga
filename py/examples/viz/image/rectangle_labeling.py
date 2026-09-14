@@ -18,7 +18,6 @@ Keywords: image, rectangle, ActRectangle2D, split view, toolbar, icon, drag, cur
 """
 
 import numpy as np
-
 from pytanga.geometry import Point, Rectangle2D
 from pytanga.viz import (
     ActRectangle2D,
@@ -79,22 +78,13 @@ class RectangleLabeler:
         if not adding:
             self._discard_preview()
 
-    @staticmethod
-    def _rect_between(a: Point, b: Point) -> Rectangle2D:
-        x0, y0 = a.x, a.y
-        x1, y1 = b.x, b.y
-        return Rectangle2D(
-            center=Point((x0 + x1) / 2.0, (y0 + y1) / 2.0, 0.0),
-            size=(abs(x1 - x0), abs(y1 - y0)),
-        )
-
     async def _on_drag_start(self, event: DragEvent, _canvas: ImageCanvas) -> None:
         self._anchor = event.world_position
 
     async def _on_drag(self, event: DragEvent, _canvas: ImageCanvas) -> bool:
         if self._anchor is None:
             self._anchor = event.world_position
-        rect = self._rect_between(self._anchor, event.world_position)
+        rect = Rectangle2D.between(self._anchor, event.world_position)
         if self._preview_id is None:
             self._preview_id = self.canvas.handle.add(rect, style=self._style)
         else:
@@ -105,13 +95,13 @@ class RectangleLabeler:
     async def _on_drag_end(self, event: DragEvent, _canvas: ImageCanvas) -> None:
         if self._anchor is None:
             return
-        rect = self._rect_between(self._anchor, event.world_position)
+        rect = Rectangle2D.between(self._anchor, event.world_position)
         self._anchor = None
         self._discard_preview()
         act = ActRectangle2D(
             center=rect.center,
             size=rect.size,
-            handle_style=SquarePointStyle(size=6.0, thickness=2.0),
+            handle_style=SquarePointStyle(size=1.0, thickness=2.0),
         )
         self.canvas.handle.add(act, style=self._style)
         self.rectangles.append(act)

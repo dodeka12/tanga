@@ -5,20 +5,22 @@
 
 Shows a synthetic RGB gradient in an :class:`~pytanga.viz.ImageCanvas` (a
 dedicated 2D scene with a y-down pixel frame, 1 unit = 1 pixel), draws a
-rectangle overlay in pixel coordinates, and binds a ctrl+left-drag handler that
-maps the cursor position to the image's brightness/contrast uniforms.
+:class:`~pytanga.geometry.Rectangle2D` overlay (via
+:meth:`~pytanga.geometry.Rectangle2D.between`) in pixel coordinates, and binds
+a ctrl+left-drag handler that maps the cursor position to the image's
+brightness/contrast uniforms.
 
 The ctrl+left-drag is registered as a :class:`~pytanga.viz.DragBinding` (a
 mouse-button + modifier combination) via the canvas's ``drag_handlers`` list.
 
 Run with:  uv run python py/examples/viz/image/image_canvas.py
 
-Keywords: image, ImageCanvas, shader, uniform, brightness, contrast, overlay, pixels
+Keywords: image, ImageCanvas, rectangle, Rectangle2D, shader, uniform, overlay, pixels
 """
 
 import numpy as np
 
-from pytanga.geometry import Line, Point
+from pytanga.geometry import Point, Rectangle2D
 from pytanga.viz import (
     DragBinding,
     DragEvent,
@@ -41,14 +43,13 @@ def _gradient(width: int, height: int) -> np.ndarray:
 
 def _rectangle(canvas: ImageCanvas, x0: int, y0: int, x1: int, y1: int) -> None:
     """Draw a rectangle outline in pixel coordinates (y down)."""
-    corners = [
-        Point(float(x0), float(y0), 0.0),
-        Point(float(x1), float(y0), 0.0),
-        Point(float(x1), float(y1), 0.0),
-        Point(float(x0), float(y1), 0.0),
-    ]
-    for a, b in zip(corners, corners[1:] + corners[:1]):
-        canvas.add(Line.from_points(a, b), color="#ff4444")
+    canvas.add(
+        Rectangle2D.between(
+            Point(float(x0), float(y0), 0.0),
+            Point(float(x1), float(y1), 0.0),
+        ),
+        color="#ff4444",
+    )
 
 
 def main() -> None:

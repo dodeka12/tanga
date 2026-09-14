@@ -94,8 +94,6 @@ uv run python py/examples/<path>.py
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
-- **brightness** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
-
 - **button** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **ButtonView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
@@ -155,8 +153,6 @@ uv run python py/examples/<path>.py
 - **context manager** — [Interactive Visualizer](viz/jupyter/interactive.md), [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
 - **contraction** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
-
-- **contrast** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **control group** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
@@ -556,7 +552,9 @@ uv run python py/examples/<path>.py
 
 - **re-run** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
-- **rectangle** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
+- **rectangle** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
+
+- **Rectangle2D** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
