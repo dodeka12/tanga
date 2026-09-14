@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.4.0] — 2026-09-14
+- Bug fixes: left-mouse 3D orbit rotation restored (`THREE.MOUSE.ROTATE` is `0`, which `|| null` coerced to `null`, silently disabling left-drag rotation)
+→ [Details](2026/09/14_f28ced24.md)
+
 ## [Since 2.3.0 (2.4.0-rc3)] — 2026-09-14
 - `ImageCanvas` display (numpy/PIL) with custom shaders + uniforms · `DragBinding`/`ClickBinding` handlers · rebindable camera controls · `ActRectangle2D` resize/translate · per-handler enable/disable + cursors
 - Docs: viz restructured into `ui/` + `image/` sections · new `py/ga/quadric/` guide
