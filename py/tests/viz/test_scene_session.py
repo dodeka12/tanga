@@ -265,6 +265,19 @@ class TestScene:
         assert dirty[0]["aspect"] == "content"
         assert dirty[0]["value"]["position"] == [5, 6, 7]
 
+    def test_set_interaction_marks_interaction_aspect(self):  # noqa: ANN201
+        from pytanga.viz._interaction import InteractionConfig
+
+        s = Scene()
+        eid = s.add(Point(1, 0, 0))
+        s.flush()  # consume the initial "full" dirty flag
+
+        s.set_interaction(eid, InteractionConfig(enabled=True))
+        dirty, _ = s.flush()
+        assert len(dirty) == 1
+        assert dirty[0]["aspect"] == "interaction"
+        assert dirty[0]["value"]["interaction"]["enabled"] is True
+
     def test_new_node_with_transform_mutation_still_full(self):  # noqa: ANN201
         # A node that has never reached the client must emit `full` even if a
         # sub-aspect (transform) is mutated before the first flush; otherwise

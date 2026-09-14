@@ -750,13 +750,14 @@ class Scene:
         instance.  It is included in the entity JSON on the next flush.
         """
         self._interaction_configs[object_id] = config
-        # Mark entity dirty so the interaction field is re-sent
+        # Mark the interaction aspect dirty so the config is re-sent without a
+        # full entity rebuild (a full rebuild would re-upload image pixels).
         obj = self._objects.get(object_id)
         if obj is not None:
             obj.dirty = True
         node = self._nodes.get(object_id)
         if node is not None:
-            node.mark("full")
+            node.mark("interaction")
 
     def get_interaction(self, object_id: str) -> Any | None:
         """Get the interaction config for an entity, or ``None``."""
@@ -796,8 +797,19 @@ class Scene:
             dirty_aspects = node.consume_dirty()
             if not dirty_aspects:
                 continue
-            for aspect in ("full", "style", "transform", "content"):
+            for aspect in ("full", "style", "transform", "content", "interaction"):
                 if aspect not in dirty_aspects:
+                    continue
+                if aspect == "interaction":
+                    ic = self._interaction_configs.get(node.id)
+                    if ic is not None:
+                        patches.append(
+                            {
+                                "id": node.id,
+                                "aspect": "interaction",
+                                "value": {"interaction": ic.to_dict()},
+                            }
+                        )
                     continue
                 patch = node.patch(aspect)
                 if aspect == "full" and node.layer == "scene":

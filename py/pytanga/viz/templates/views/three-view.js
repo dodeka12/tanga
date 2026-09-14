@@ -656,6 +656,14 @@ export class ThreeJsView extends View {
             await this._upsertObject(value);
             return;
         }
+        if (aspect === 'interaction') {
+            this._interaction.unregisterInteractive(id);
+            const intEntry = this.sceneObjects.get(id);
+            if (intEntry && intEntry.obj && value.interaction) {
+                this._interaction.registerInteractive(id, intEntry.obj, value.interaction);
+            }
+            return;
+        }
         const entry = this.sceneObjects.get(id);
         if (!entry) return;
 
