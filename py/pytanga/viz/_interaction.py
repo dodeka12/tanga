@@ -628,7 +628,9 @@ class DragEvent(InteractionEvent):
 
     The frontend computes ``world_position`` by intersecting the
     pixel-position ray with the constraint plane.  ``world_delta``
-    is the change since the previous drag event.
+    is the change since the previous *sent* drag event (frames dropped
+    by the throttle are accumulated), so applying it incrementally
+    tracks the pointer exactly.
     """
 
     event_type: InteractionEventType = InteractionEventType.DRAG_MOVE

@@ -515,6 +515,7 @@ export class InteractionController {
                 ],
                 anchorPending: true,
                 pendingPixelDelta: new THREE.Vector2(),
+                unsentWorldDelta: new THREE.Vector3(),
             };
             this._dragStarted = false;
             const hitObj = this.interactiveObjects.get(hit.objectId);
@@ -555,7 +556,6 @@ export class InteractionController {
 
             const eventType = this._dragStarted ? 'drag_move' : 'drag_start';
 
-            let worldDelta = [0, 0, 0];
             if (this._activeDrag.anchorPending) {
                 // Buffer raw pixel deltas; convert to world space once the
                 // ideal anchor arrives (setDragAnchor).  No drag_move is sent
@@ -573,7 +573,10 @@ export class InteractionController {
                 // on screen produces pure world-axis movement.
                 const worldDeltaVec = this._pixelToWorldDelta(dx, dy, screenDx, screenDy, dragMode);
                 accWorldPos.add(worldDeltaVec);
-                worldDelta = [worldDeltaVec.x, worldDeltaVec.y, worldDeltaVec.z];
+                // Accumulate the world delta so throttled drag_moves don't lose
+                // intermediate movement: world_delta is the change since the last
+                // *sent* event, not since the last pointer-move frame.
+                this._activeDrag.unsentWorldDelta.add(worldDeltaVec);
             }
 
             const worldPos = accWorldPos;
@@ -588,7 +591,6 @@ export class InteractionController {
                 screen_position: [event.clientX, event.clientY],
                 delta_pixels: [dx, dy],
                 world_position: [worldPos.x, worldPos.y, worldPos.z],
-                world_delta: worldDelta,
                 drag_mode: dragMode,
             };
             if (eventType === 'drag_start') {
@@ -597,8 +599,15 @@ export class InteractionController {
             }
 
             const payload = this._dragStarted
-                ? () => ({ ...basePayload })  // drag_move: no camera
-                : { ...basePayload, ...this._getCameraPayload(worldPos) };  // drag_start: include camera
+                ? () => {
+                    // drag_move: no camera.  world_delta is the accumulated
+                    // movement since the last sent event (see _onPointerMove).
+                    const ud = this._activeDrag.unsentWorldDelta;
+                    const out = { ...basePayload, world_delta: [ud.x, ud.y, ud.z] };
+                    ud.set(0, 0, 0);
+                    return out;
+                }
+                : { ...basePayload, world_delta: [0, 0, 0], ...this._getCameraPayload(worldPos) };  // drag_start: include camera
 
             if (this._dragStarted) {
                 this._throttledSend(this._activeDrag.objectId, 'drag_move', payload);
@@ -637,6 +646,10 @@ export class InteractionController {
             const wasDrag = this._dragStarted;
 
             if (wasDrag) {
+                // Flush any throttled drag_move so the final accumulated delta
+                // is applied before the drag_end event.
+                this._flushThrottle(this._activeDrag.objectId + ':drag_move');
+
                 const { dragMode, accWorldPos } = this._activeDrag;
 
                 // drag_end: no camera payload (backend cached it from drag_start)
