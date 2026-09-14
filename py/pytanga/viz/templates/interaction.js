@@ -516,6 +516,7 @@ export class InteractionController {
                 anchorPending: true,
                 pendingPixelDelta: new THREE.Vector2(),
                 unsentWorldDelta: new THREE.Vector3(),
+                unsentPixelDelta: new THREE.Vector2(),
             };
             this._dragStarted = false;
             const hitObj = this.interactiveObjects.get(hit.objectId);
@@ -577,6 +578,8 @@ export class InteractionController {
                 // intermediate movement: world_delta is the change since the last
                 // *sent* event, not since the last pointer-move frame.
                 this._activeDrag.unsentWorldDelta.add(worldDeltaVec);
+                this._activeDrag.unsentPixelDelta.x += dx;
+                this._activeDrag.unsentPixelDelta.y += dy;
             }
 
             const worldPos = accWorldPos;
@@ -589,7 +592,6 @@ export class InteractionController {
                 mouse_button: this._activeDrag.button,
                 modifiers: Array.from(this._activeDrag.modifiers),
                 screen_position: [event.clientX, event.clientY],
-                delta_pixels: [dx, dy],
                 world_position: [worldPos.x, worldPos.y, worldPos.z],
                 drag_mode: dragMode,
             };
@@ -600,14 +602,25 @@ export class InteractionController {
 
             const payload = this._dragStarted
                 ? () => {
-                    // drag_move: no camera.  world_delta is the accumulated
-                    // movement since the last sent event (see _onPointerMove).
+                    // drag_move: no camera.  world_delta / delta_pixels are the
+                    // accumulated movement since the last sent event.
                     const ud = this._activeDrag.unsentWorldDelta;
-                    const out = { ...basePayload, world_delta: [ud.x, ud.y, ud.z] };
+                    const pd = this._activeDrag.unsentPixelDelta;
+                    const out = {
+                        ...basePayload,
+                        delta_pixels: [pd.x, pd.y],
+                        world_delta: [ud.x, ud.y, ud.z],
+                    };
                     ud.set(0, 0, 0);
+                    pd.set(0, 0);
                     return out;
                 }
-                : { ...basePayload, world_delta: [0, 0, 0], ...this._getCameraPayload(worldPos) };  // drag_start: include camera
+                : {
+                    ...basePayload,
+                    delta_pixels: [0, 0],
+                    world_delta: [0, 0, 0],
+                    ...this._getCameraPayload(worldPos),  // drag_start: include camera
+                };
 
             if (this._dragStarted) {
                 this._throttledSend(this._activeDrag.objectId, 'drag_move', payload);

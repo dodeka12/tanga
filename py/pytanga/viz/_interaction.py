@@ -630,7 +630,8 @@ class DragEvent(InteractionEvent):
     pixel-position ray with the constraint plane.  ``world_delta``
     is the change since the previous *sent* drag event (frames dropped
     by the throttle are accumulated), so applying it incrementally
-    tracks the pointer exactly.
+    tracks the pointer exactly.  ``delta_pixels`` is the corresponding
+    screen-space change, accumulated the same way.
     """
 
     event_type: InteractionEventType = InteractionEventType.DRAG_MOVE
