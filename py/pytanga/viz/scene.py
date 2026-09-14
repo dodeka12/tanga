@@ -48,6 +48,9 @@ class SceneConfig:
     # Optional mouse-button → camera-action rebinding (overrides the frontend
     # defaults for the scene's space dimension).  ``None`` keeps the defaults.
     controls: dict[MouseButton, CameraAction | None] | None = None
+    # Optional CSS cursor override for the whole scene (e.g. ``"crosshair"``
+    # while drawing).  ``None`` = use the default cursor.
+    cursor: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -73,6 +76,8 @@ class SceneConfig:
                 button.value: (action.value if action is not None else None)
                 for button, action in self.controls.items()
             }
+        if self.cursor is not None:
+            result["cursor"] = self.cursor
         return result
 
 

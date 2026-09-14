@@ -97,16 +97,19 @@ class DragBinding(Generic[_ContextT]):
     button: MouseButton
     handler: Callable[[DragEvent, _ContextT], Awaitable[bool]]
     modifiers: frozenset[ModifierKey]
+    enabled: bool = True
 
     def __init__(
         self,
         button: MouseButton,
         handler: Callable[[DragEvent, _ContextT], Awaitable[bool]],
         *modifiers: ModifierKey,
+        enabled: bool = True,
     ) -> None:
         self.button = button
         self.handler = handler
         self.modifiers = frozenset(modifiers)
+        self.enabled = enabled
 
 
 @dataclass
@@ -126,16 +129,19 @@ class ClickBinding(Generic[_ContextT]):
     button: MouseButton
     handler: Callable[[ClickEvent, _ContextT], Awaitable[None]]
     modifiers: frozenset[ModifierKey]
+    enabled: bool = True
 
     def __init__(
         self,
         button: MouseButton,
         handler: Callable[[ClickEvent, _ContextT], Awaitable[None]],
         *modifiers: ModifierKey,
+        enabled: bool = True,
     ) -> None:
         self.button = button
         self.handler = handler
         self.modifiers = frozenset(modifiers)
+        self.enabled = enabled
 
 
 # ── Default trigger helpers ─────────────────────────────────────
@@ -214,6 +220,7 @@ class ActSceneObject:
         on_click: ActClickHandler | None = None,
         drag_bindings: list[DragBinding[ActSceneObject]] | None = None,
         click_bindings: list[ClickBinding[ActSceneObject]] | None = None,
+        cursor: str | None = None,
     ) -> None:
         self._handler: ActHandler | None = handler
         self._on_drag_start: ActEventHandler | None = on_drag_start
@@ -225,6 +232,9 @@ class ActSceneObject:
         self._click_bindings: list[ClickBinding[ActSceneObject]] = list(
             click_bindings or ()
         )
+        self._handler_enabled = True
+        self._click_enabled = True
+        self._cursor: str | None = cursor
         self._viz_handle: VizSceneHandle | None = None
         self._entity_id: str = ""
 
@@ -280,9 +290,11 @@ class ActSceneObject:
 
     def _resolve_drag_handler(self, event: DragEvent) -> ActHandler | None:
         """Return the most specific drag binding matching *event*, else the general handler."""
-        best: ActHandler | None = self._handler
+        best: ActHandler | None = self._handler if self._handler_enabled else None
         best_mods = -1
         for binding in self._drag_bindings:
+            if not binding.enabled:
+                continue
             if binding.button is not event.mouse_button:
                 continue
             if not binding.modifiers <= event.modifiers:
@@ -294,9 +306,11 @@ class ActSceneObject:
 
     def _resolve_click_handler(self, event: ClickEvent) -> ActClickHandler | None:
         """Return the most specific click binding matching *event*, else the general handler."""
-        best: ActClickHandler | None = self._on_click
+        best: ActClickHandler | None = self._on_click if self._click_enabled else None
         best_mods = -1
         for binding in self._click_bindings:
+            if not binding.enabled:
+                continue
             if binding.button is not event.mouse_button:
                 continue
             if not binding.modifiers <= event.modifiers:
@@ -374,6 +388,29 @@ class ActSceneObject:
         if self._viz_handle is not None:
             self._viz_handle.flush()
 
+    # ── Enable / disable individual handlers ───────────────
+
+    def set_handler_enabled(self, enabled: bool) -> None:
+        """Enable or disable the general drag handler (re-registers triggers)."""
+        self._handler_enabled = enabled
+        self.refresh_interaction()
+
+    def set_click_enabled(self, enabled: bool) -> None:
+        """Enable or disable the general click handler (re-registers triggers)."""
+        self._click_enabled = enabled
+        self.refresh_interaction()
+
+    def refresh_interaction(self) -> None:
+        """Re-register this object's interaction config and flush it.
+
+        Call after mutating a :class:`DragBinding` / :class:`ClickBinding`
+        ``enabled`` flag so the new trigger set reaches the frontend.
+        """
+        if self._viz_handle is None:
+            return
+        self._register_interaction()
+        self.flush()
+
 
 # ── ActPoint ───────────────────────────────────────────────────
 
@@ -445,12 +482,14 @@ class ActPoint(ActSceneObject):
         on_drag_start: ActEventHandler | None = None,
         on_drag_end: ActEventHandler | None = None,
         on_click: ActClickHandler | None = None,
+        cursor: str | None = None,
     ) -> None:
         super().__init__(
             handler=handler,
             on_drag_start=on_drag_start,
             on_drag_end=on_drag_end,
             on_click=on_click,
+            cursor=cursor,
         )
         if isinstance(x, Point):
             self._point = x
@@ -512,7 +551,7 @@ class ActPoint(ActSceneObject):
                     drag_mode=mode,
                 )
             ]
-        if self._on_click is not None:
+        if self._click_enabled and self._on_click is not None:
             triggers.append(
                 InteractionTrigger(
                     event_type=InteractionEventType.CLICK,
@@ -525,6 +564,7 @@ class ActPoint(ActSceneObject):
             throttle_ms=40,
             hover_emissive=s.hover_emissive,
             hover_scale=s.hover_scale,
+            hover_cursor=self._cursor,
         )
 
     # ── Drag-mode resolution ────────────────────────────────
@@ -601,6 +641,7 @@ class ActImagePlane(ActSceneObject):
         on_click: ActClickHandler | None = None,
         drag_bindings: list[DragBinding[ActSceneObject]] | None = None,
         click_bindings: list[ClickBinding[ActSceneObject]] | None = None,
+        cursor: str | None = None,
     ) -> None:
         super().__init__(
             handler=handler,
@@ -609,6 +650,7 @@ class ActImagePlane(ActSceneObject):
             on_click=on_click,
             drag_bindings=drag_bindings,
             click_bindings=click_bindings,
+            cursor=cursor,
         )
         self._image_view = image_view
 
@@ -636,6 +678,8 @@ class ActImagePlane(ActSceneObject):
         """
         triggers: list[InteractionTrigger] = []
         for binding in self._drag_bindings:
+            if not binding.enabled:
+                continue
             triggers.append(
                 InteractionTrigger(
                     event_type=InteractionEventType.DRAG,
@@ -644,9 +688,12 @@ class ActImagePlane(ActSceneObject):
                     drag_mode=DragMode.XY_PLANE,
                 )
             )
-        if self._handler is not None or (
-            (self._on_drag_start is not None or self._on_drag_end is not None)
-            and not self._drag_bindings
+        if self._handler_enabled and (
+            self._handler is not None
+            or (
+                (self._on_drag_start is not None or self._on_drag_end is not None)
+                and not self._drag_bindings
+            )
         ):
             triggers.append(
                 InteractionTrigger(
@@ -656,6 +703,8 @@ class ActImagePlane(ActSceneObject):
                 )
             )
         for binding in self._click_bindings:
+            if not binding.enabled:
+                continue
             triggers.append(
                 InteractionTrigger(
                     event_type=InteractionEventType.CLICK,
@@ -663,14 +712,19 @@ class ActImagePlane(ActSceneObject):
                     modifiers=binding.modifiers,
                 )
             )
-        if self._on_click is not None:
+        if self._click_enabled and self._on_click is not None:
             triggers.append(
                 InteractionTrigger(
                     event_type=InteractionEventType.CLICK,
                     mouse_button=None,
                 )
             )
-        return InteractionConfig(enabled=True, triggers=triggers, throttle_ms=40)
+        return InteractionConfig(
+            enabled=True,
+            triggers=triggers,
+            throttle_ms=40,
+            hover_cursor=self._cursor,
+        )
 
     async def _on_drag(self, event: DragEvent) -> None:
         """Dispatch a drag to the matching binding or general handler.
@@ -737,12 +791,10 @@ class ActRectangle2D(ActSceneObject):
         show_translate_handle: bool = True,
         handle_style: SquarePointStyle | None = None,
         act_style: ActPointStyle | None = None,
-        on_corner_drag: Callable[
-            [int, DragEvent, "ActRectangle2D"], Awaitable[bool]
-        ] | None = None,
-        on_translate: Callable[
-            [DragEvent, "ActRectangle2D"], Awaitable[bool]
-        ] | None = None,
+        on_corner_drag: Callable[[int, DragEvent, "ActRectangle2D"], Awaitable[bool]]
+        | None = None,
+        on_translate: Callable[[DragEvent, "ActRectangle2D"], Awaitable[bool]]
+        | None = None,
         on_change: Callable[[Rectangle2D], None] | None = None,
     ) -> None:
         super().__init__()
@@ -905,4 +957,3 @@ class ActRectangle2D(ActSceneObject):
     def clear(self) -> None:
         """Alias for :meth:`remove`."""
         self.remove()
-

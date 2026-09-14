@@ -52,6 +52,9 @@ export class InteractionController {
         this._hoveredObjectId = null;
         this._hoverState = new Map();  // objectId → { originalEmissive, originalScale }
 
+        // Scene-level cursor override (mode switches); null = none.
+        this._sceneCursor = null;
+
         rendererDomElement.addEventListener('pointerdown', (e) => this._onPointerDown(e));
         rendererDomElement.addEventListener('pointermove', (e) => this._onPointerMove(e));
         rendererDomElement.addEventListener('pointerup', (e) => this._onPointerUp(e));
@@ -70,6 +73,11 @@ export class InteractionController {
 
     setWebSocket(websocket) {
         this.ws = websocket;
+    }
+
+    setSceneCursor(cursor) {
+        this._sceneCursor = cursor || null;
+        this.rendererDomElement.style.cursor = this._sceneCursor || '';
     }
 
     registerInteractive(objectId, mesh, config) {
@@ -226,7 +234,11 @@ export class InteractionController {
             mesh.scale.multiplyScalar(scale);
         }
 
-        this.rendererDomElement.style.cursor = 'pointer';
+        if (config.hover_cursor) {
+            this.rendererDomElement.style.cursor = config.hover_cursor;
+        } else if (!this._sceneCursor) {
+            this.rendererDomElement.style.cursor = 'pointer';
+        }
     }
 
     _resetHover(mesh) {
@@ -254,7 +266,7 @@ export class InteractionController {
         mesh.scale.copy(state._originalScale);
 
         this._hoverState.delete(mesh.uuid);
-        this.rendererDomElement.style.cursor = '';
+        this.rendererDomElement.style.cursor = this._sceneCursor || '';
     }
 
     // ── Camera payload helper ───────────────────────────────────────
@@ -505,6 +517,10 @@ export class InteractionController {
                 pendingPixelDelta: new THREE.Vector2(),
             };
             this._dragStarted = false;
+            const hitObj = this.interactiveObjects.get(hit.objectId);
+            if (hitObj && hitObj.config && hitObj.config.cursor) {
+                this.rendererDomElement.style.cursor = hitObj.config.cursor;
+            }
             this.rendererDomElement.setPointerCapture(event.pointerId);
             if (this.controls) this.controls.enabled = false;
             event.preventDefault();
@@ -646,6 +662,7 @@ export class InteractionController {
             if (this.controls) this.controls.enabled = true;
             this._activeDrag = null;
             this._dragStarted = false;
+            this.rendererDomElement.style.cursor = this._sceneCursor || '';
 
             // A stationary press never started a drag — fall through to click
             // detection below instead of emitting a drag_end that didn't happen.
@@ -761,6 +778,7 @@ export class InteractionController {
             if (this.controls) this.controls.enabled = true;
             this._activeDrag = null;
             this._dragStarted = false;
+            this.rendererDomElement.style.cursor = this._sceneCursor || '';
         }
     }
 }

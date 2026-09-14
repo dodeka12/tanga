@@ -1,22 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Tests for `ImageCanvas.draw_rectangle` (drag-to-create rectangle)."""
+"""Tests for per-handler enable/disable and cursor on `ImageCanvas`."""
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import numpy as np
 
-from pytanga.geometry import Point
 from pytanga.viz import (
-    ActRectangle2D,
+    DragBinding,
     DragEvent,
     ImageCanvas,
     ImageData,
     InteractionEventType,
+    MouseButton,
     Visualizer,
 )
 
@@ -42,60 +41,82 @@ class _FakeTransport:
         pass
 
 
-def _canvas() -> tuple[Visualizer, ImageCanvas, _FakeTransport]:
+def _canvas(**kwargs: Any) -> tuple[Visualizer, ImageCanvas, _FakeTransport]:
     viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
     fake = _FakeTransport()
     viz._transport = fake  # type: ignore[attr-defined]
     viz._interaction_host._transport = fake  # type: ignore[attr-defined]
-    canvas = ImageCanvas(viz)
+    canvas = ImageCanvas(viz, **kwargs)
     canvas.set_image(ImageData("img1", data=np.zeros((10, 20), dtype=np.uint8)))
     return viz, canvas, fake
 
 
-class TestDrawRectangle:
-    def test_draw_rectangle_flow(self) -> None:
-        _, canvas, fake = _canvas()
-        image_id = canvas.image_view.id
-        done: list[ActRectangle2D] = []
+def _drag_triggers(viz: Visualizer, canvas: ImageCanvas) -> list[Any]:
+    cfg = viz._interaction_host._interaction_configs[canvas.scene_name][
+        canvas.image_view.id
+    ]
+    return [t for t in cfg.triggers if t.event_type is InteractionEventType.DRAG]
 
-        canvas.draw_rectangle(on_done=done.append)
 
-        assert (image_id, "drag_start") in fake.handlers
-        assert (image_id, "drag_move") in fake.handlers
-        assert (image_id, "drag_end") in fake.handlers
+class TestBindingEnabled:
+    async def _on_drag(self, _event: DragEvent, _canvas: ImageCanvas) -> bool:
+        return True
 
-        on_start = fake.handlers[(image_id, "drag_start")]
-        on_move = fake.handlers[(image_id, "drag_move")]
-        on_end = fake.handlers[(image_id, "drag_end")]
+    def test_binding_registered_disabled_has_no_trigger(self) -> None:
+        binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
+        viz, canvas, _ = _canvas(drag_handlers=[binding])
+        assert _drag_triggers(viz, canvas) == []
 
-        asyncio.run(on_start(DragEvent(world_position=Point(2.0, 3.0, 0.0))))
-        asyncio.run(on_move(DragEvent(world_position=Point(12.0, 7.0, 0.0))))
-        asyncio.run(on_end(DragEvent(world_position=Point(12.0, 7.0, 0.0))))
+    def test_binding_enable_adds_trigger(self) -> None:
+        binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
+        viz, canvas, _ = _canvas(drag_handlers=[binding])
 
-        assert len(done) == 1
-        rect = done[0]
-        assert rect.entity.center.x == 7.0
-        assert rect.entity.center.y == 5.0
-        assert rect.entity.size == (10.0, 4.0)
+        binding.enabled = True
+        canvas.refresh_interaction()
 
-    def test_draw_rectangle_enables_drag_trigger(self) -> None:
-        viz, canvas, _ = _canvas()
-        image_id = canvas.image_view.id
+        triggers = _drag_triggers(viz, canvas)
+        assert len(triggers) == 1
+        assert triggers[0].mouse_button is MouseButton.LEFT
 
-        # No drag handlers → the plane registers no triggers.
-        assert canvas.act_plane.interaction_config.triggers == []
+    def test_binding_disable_removes_trigger(self) -> None:
+        binding = DragBinding(MouseButton.LEFT, self._on_drag)
+        viz, canvas, _ = _canvas(drag_handlers=[binding])
+        assert len(_drag_triggers(viz, canvas)) == 1
 
-        canvas.draw_rectangle()
+        binding.enabled = False
+        canvas.refresh_interaction()
+        assert _drag_triggers(viz, canvas) == []
 
-        cfg = viz._interaction_host._interaction_configs[canvas.scene_name][image_id]
-        assert any(t.event_type is InteractionEventType.DRAG for t in cfg.triggers)
 
-    def test_draw_rectangle_restores_plane_config(self) -> None:
-        viz, canvas, _ = _canvas()
-        image_id = canvas.image_view.id
+class TestHandlerEnabled:
+    async def _on_drag(self, _event: DragEvent, _canvas: ImageCanvas) -> bool:
+        return True
 
-        cancel = canvas.draw_rectangle()
-        cancel()
+    def test_general_handler_toggle(self) -> None:
+        viz, canvas, _ = _canvas(on_drag=self._on_drag)
+        assert len(_drag_triggers(viz, canvas)) == 1
 
-        cfg = viz._interaction_host._interaction_configs[canvas.scene_name][image_id]
-        assert cfg.triggers == []
+        canvas.set_handler_enabled(False)
+        assert _drag_triggers(viz, canvas) == []
+
+        canvas.set_handler_enabled(True)
+        assert len(_drag_triggers(viz, canvas)) == 1
+
+
+class TestCursor:
+    def test_set_cursor_updates_scene_config(self) -> None:
+        _, canvas, _ = _canvas()
+        canvas.set_cursor("crosshair")
+        assert canvas.handle.scene.config.cursor == "crosshair"
+        canvas.set_cursor(None)
+        assert canvas.handle.scene.config.cursor is None
+
+    def test_cursor_serializes_in_scene_config(self) -> None:
+        _, canvas, _ = _canvas()
+        canvas.set_cursor("crosshair")
+        assert canvas.handle.scene.config.to_dict()["cursor"] == "crosshair"
+
+    def test_canvas_cursor_forwarded_to_plane_hover(self) -> None:
+        cursor = "crosshair"
+        _, canvas, _ = _canvas(cursor=cursor)
+        assert canvas.act_plane.interaction_config.hover_cursor == "crosshair"

@@ -901,6 +901,21 @@ class Visualizer(_JupyterDisplayMixin):
         scene.config.camera = _normalize_camera_config(camera)
         self._push_scene_config(scene_name)
 
+    def set_cursor(
+        self,
+        cursor: str | None,
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Set the mouse cursor shown over a scene (for mode switches).
+
+        ``None`` clears the override so the default cursor returns.  The cursor
+        is pushed via the established ``scene_config`` message.
+        """
+        scene = self._layout.scenes[scene_name]
+        scene.config.cursor = cursor
+        self._push_scene_config(scene_name)
+
     def set_space_dim(
         self,
         space_dim: int,

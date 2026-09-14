@@ -364,6 +364,8 @@ export class ThreeJsView extends View {
         } else if (config.annotation === '') {
             this._removeAnnotation();
         }
+
+        this._interaction.setSceneCursor(config.cursor);
     }
 
     /**
