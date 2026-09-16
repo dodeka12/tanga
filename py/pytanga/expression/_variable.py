@@ -192,12 +192,10 @@ class Variable:
 
         return cast("Expression | AffineExpression", nvp(self, b))
 
-    def sp(
-        self, other: "MV | Variable | Expression"
-    ) -> "float | int | ScalarExpression":
+    def sp(self, other: "MV | Variable | Expression") -> "ScalarExpression":
         from ._expression import sp
 
-        return sp(self, other)
+        return cast("ScalarExpression", sp(self, other))
 
     def cp(self, other: "MV | Variable | Expression") -> "Expression | AffineExpression":
         from ._expression import cp

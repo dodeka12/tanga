@@ -537,9 +537,9 @@ class Expression:
         """Normalized versor product ``self * b * inverse(self)``."""
         return cast("Expression | AffineExpression", nvp(self, b))
 
-    def sp(self, other: Any) -> "float | int | ScalarExpression":
+    def sp(self, other: Any) -> "ScalarExpression":
         """Scalar product: the scalar part of ``self * other``."""
-        return sp(self, other)
+        return cast("ScalarExpression", sp(self, other))
 
     def cp(self, other: Any) -> "Expression | AffineExpression":
         """Commutator: ``(self * other - other * self) / 2``."""

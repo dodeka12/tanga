@@ -235,7 +235,7 @@ def _coerce_operator(
     return result
 
 
-def _is_origin(point: Any) -> bool:
+def _is_origin(point: Point) -> bool:
     """Return whether *point* is (approximately) the origin."""
     return (
         abs(point.x) < 1e-12

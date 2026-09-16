@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 if TYPE_CHECKING:
     from ._algebra import Algebra
@@ -198,18 +198,30 @@ class MV:
     # Named GA operations — delegate to the parent algebra so callers never
     # need to pass the algebra object explicitly.
     # -----------------------------------------------------------------------
+    @overload
+    def gp(self, other: "MV") -> "MV": ...
+    @overload
+    def gp(self, other: Any) -> Any: ...
     def gp(self, other: Any) -> Any:
         """Geometric product self * other  (same as ``self * other``)."""
         if not isinstance(other, MV):
             return _expression_dispatch("gp", self, other)
         return self._alg.gp(self, other)
 
+    @overload
+    def op(self, other: "MV") -> "MV": ...
+    @overload
+    def op(self, other: Any) -> Any: ...
     def op(self, other: Any) -> Any:
         """Outer (wedge) product self ∧ other  (same as ``self ^ other``)."""
         if not isinstance(other, MV):
             return _expression_dispatch("op", self, other)
         return self._alg.op(self, other)
 
+    @overload
+    def ip(self, other: "MV") -> "MV": ...
+    @overload
+    def ip(self, other: Any) -> Any: ...
     def ip(self, other: Any) -> Any:
         """Inner product (symmetric)  (same as ``self | other``)."""
         if not isinstance(other, MV):
@@ -244,12 +256,20 @@ class MV:
         """Clifford conjugate: rev(self) * (-1)^r per blade."""
         return self._alg.conj(self)
 
+    @overload
+    def vp(self, b: "MV") -> "MV": ...
+    @overload
+    def vp(self, b: Any) -> Any: ...
     def vp(self, b: Any) -> Any:
         """Versor product: self * b * reverse(self)."""
         if not isinstance(b, MV):
             return _expression_dispatch("vp", self, b)
         return self._alg.vp(self, b)
 
+    @overload
+    def nvp(self, b: "MV") -> "MV": ...
+    @overload
+    def nvp(self, b: Any) -> Any: ...
     def nvp(self, b: Any) -> Any:
         """Normalized versor product: self * b * inverse(self)."""
         if not isinstance(b, MV):
@@ -287,6 +307,10 @@ class MV:
         directly with no pseudoinverse."""
         return self._alg.ldual(self)
 
+    @overload
+    def sp(self, other: "MV") -> "float | int": ...
+    @overload
+    def sp(self, other: Any) -> Any: ...
     def sp(self, other: Any) -> Any:
         """Scalar product (scalar part of self * other)."""
         if not isinstance(other, MV):
@@ -355,18 +379,30 @@ class MV:
         """Inverse of the signed dual: ``A * I``."""
         return self._alg.undual(self)
 
+    @overload
+    def cp(self, other: "MV") -> "MV": ...
+    @overload
+    def cp(self, other: Any) -> Any: ...
     def cp(self, other: Any) -> Any:
         """Commutator: ``(A * B − B * A) / 2``."""
         if not isinstance(other, MV):
             return _expression_dispatch("cp", self, other)
         return self._alg.cp(self, other)
 
+    @overload
+    def acp(self, other: "MV") -> "MV": ...
+    @overload
+    def acp(self, other: Any) -> Any: ...
     def acp(self, other: Any) -> Any:
         """Anti‑commutator: ``(A * B + B * A) / 2``."""
         if not isinstance(other, MV):
             return _expression_dispatch("acp", self, other)
         return self._alg.acp(self, other)
 
+    @overload
+    def rc(self, other: "MV") -> "MV": ...
+    @overload
+    def rc(self, other: Any) -> Any: ...
     def rc(self, other: Any) -> Any:
         """Right contraction ``A ⌊ B``."""
         if not isinstance(other, MV):

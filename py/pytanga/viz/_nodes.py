@@ -725,7 +725,7 @@ class VizImage(VizSceneObject):
         props: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Return the stored image payload verbatim."""
-        return dict(self.payload)
+        return dict(self.payload or {})
 
     def patch(self, aspect: str) -> dict[str, Any]:
         """Return a full patch for the image node (no sub-aspect patches)."""
