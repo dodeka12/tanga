@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.4.1] — 2026-09-16
+- Detached scene-subtree insertion (`viz.add(group)` / `viz.new(group)` + `Scene.add_subtree`) · `analyze_operator(expect=…)` half-turn reflection coercion · named GA product functions (`gp`/`ip`/`op`/`vp`/`nvp`/`sp`/`cp`/`acp`/`rc`) on the expression system · expression variable renaming/unifying (`bind(X=X)` / `rename_var` / `unify`)
+→ [Details](2026/09/16_a19312c14.md)
+
 ## [Since 2.4.0] — 2026-09-14
 - Bug fixes: left-mouse 3D orbit rotation restored (`THREE.MOUSE.ROTATE` is `0`, which `|| null` coerced to `null`, silently disabling left-drag rotation)
 → [Details](2026/09/14_f28ced24.md)
