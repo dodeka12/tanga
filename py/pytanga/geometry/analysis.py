@@ -9,6 +9,7 @@ appropriate algebra-specific analysis module.
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from . import (
@@ -143,13 +144,24 @@ def analyze_entity(mv: MV) -> Entity | None:
 # ── operator analysis ───────────────────────────────────────────
 
 
-def analyze_operator(mv: MV) -> Operator | None:
+def analyze_operator(
+    mv: MV,
+    *,
+    expect: type[Operator] | tuple[type[Operator], ...] | None = None,
+) -> Operator | None:
     """Determine which versor / operator an MV represents.
 
     Parameters
     ----------
     mv : MV
         A multivector to analyze.
+    expect : type[Operator] | tuple[type[Operator], ...] | None, optional
+        An optional expected operator type.  When the natural classification
+        is a half-turn reflection that can be reinterpreted losslessly as the
+        requested rotation type, that rotation is returned instead (a 3D
+        ``ReflectionLine`` → ``GeneralRotor``/``Rotor``; a 2D
+        ``ReflectionPoint`` → ``GeneralRotor``/``Rotor``).  ``expect`` only
+        widens acceptance — it never suppresses a different classification.
 
     Returns
     -------
@@ -165,25 +177,71 @@ def analyze_operator(mv: MV) -> Operator | None:
     """
     alg_type = _detect(mv._alg)
     if alg_type == "q2":
-        return analysis_q2.analyze_operator(mv)
+        result = analysis_q2.analyze_operator(mv)
     elif alg_type == "q3":
-        return analysis_q3.analyze_operator(mv)
+        result = analysis_q3.analyze_operator(mv)
     elif alg_type == "e3":
-        return analysis_e3.analyze_operator(mv)
+        result = analysis_e3.analyze_operator(mv)
     elif alg_type == "p3":
-        return analysis_p3.analyze_operator(mv)
+        result = analysis_p3.analyze_operator(mv)
     elif alg_type == "pga3":
-        return analysis_pga3.analyze_operator(mv)
+        result = analysis_pga3.analyze_operator(mv)
     elif alg_type == "n3":
-        return analysis_n3.analyze_operator(mv)
+        result = analysis_n3.analyze_operator(mv)
     elif alg_type == "e2":
-        return analysis_e2.analyze_operator(mv)
+        result = analysis_e2.analyze_operator(mv)
     elif alg_type == "p2":
-        return analysis_p2.analyze_operator(mv)
+        result = analysis_p2.analyze_operator(mv)
     elif alg_type == "pga2":
-        return analysis_pga2.analyze_operator(mv)
-    elif alg_type == "n2":
-        return analysis_n2.analyze_operator(mv)
+        result = analysis_pga2.analyze_operator(mv)
+    else:
+        result = analysis_n2.analyze_operator(mv)
+
+    if expect is not None and result is not None:
+        return _coerce_operator(result, expect, alg_type)
+    return result
+
+
+def _coerce_operator(
+    result: Operator,
+    expect: type[Operator] | tuple[type[Operator], ...],
+    alg_type: str,
+) -> Operator:
+    """Reinterpret a half-turn reflection as the requested rotation type.
+
+    A reflection in a codimension-2 subspace is exactly a 180° rotation: a
+    ``ReflectionLine`` in 3D, a ``ReflectionPoint`` in 2D.  ``expect`` only
+    widens acceptance — when no lossless reinterpretation matches, the natural
+    result is returned unchanged.
+    """
+    from .operators import GeneralRotor, ReflectionLine, ReflectionPoint, Rotor
+
+    expected = expect if isinstance(expect, tuple) else (expect,)
+
+    if alg_type in ("e3", "p3", "pga3", "n3") and isinstance(result, ReflectionLine):
+        line = result.line
+        if GeneralRotor in expected:
+            return GeneralRotor(math.pi, line.direction, line.origin)
+        if Rotor in expected and _is_origin(line.origin):
+            return Rotor(math.pi, line.direction)
+
+    if alg_type in ("p2", "pga2", "n2") and isinstance(result, ReflectionPoint):
+        point = result.point
+        if GeneralRotor in expected:
+            return GeneralRotor(math.pi, Direction(0, 0, 1), point)
+        if Rotor in expected and _is_origin(point):
+            return Rotor(math.pi, Direction(0, 0, 1))
+
+    return result
+
+
+def _is_origin(point: Any) -> bool:
+    """Return whether *point* is (approximately) the origin."""
+    return (
+        abs(point.x) < 1e-12
+        and abs(point.y) < 1e-12
+        and abs(point.z) < 1e-12
+    )
 
 
 # ── typed dispatchers ──────────────────────────────────────────
@@ -315,7 +373,11 @@ def _register_entity_analyzers() -> None:
 _register_entity_analyzers()
 
 
-def analyze(mv: MV) -> Entity | Operator | None:
+def analyze(
+    mv: MV,
+    *,
+    expect: type[Operator] | tuple[type[Operator], ...] | None = None,
+) -> Entity | Operator | None:
     """Try to analyze an MV as either an entity or an operator.
 
     Tries entity analysis first, then operator analysis.
@@ -327,6 +389,9 @@ def analyze(mv: MV) -> Entity | Operator | None:
         A multivector to analyze.  The MV's ``algebra.opns`` flag
         determines the OPNS/IPNS interpretation for entity analysis;
         operators are unaffected.
+    expect : type[Operator] | tuple[type[Operator], ...] | None, optional
+        An optional expected operator type, forwarded to
+        :func:`analyze_operator` for the operator fallback (see its docstring).
 
     Returns
     -------
@@ -350,7 +415,7 @@ def analyze(mv: MV) -> Entity | Operator | None:
 
     result = None
     try:
-        result = analyze_operator(mv)
+        result = analyze_operator(mv, expect=expect)
     except (ValueError, NotImplementedError):
         pass
     return result

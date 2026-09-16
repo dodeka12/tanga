@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from pytanga.blade_mask import BladeMask
 
@@ -14,7 +14,7 @@ from ._labels import allocate_block
 if TYPE_CHECKING:
     from pytanga.algebra import Algebra, MV
 
-    from ._expression import AffineExpression, Expression
+    from ._expression import AffineExpression, Expression, ScalarExpression
 
 
 class Variable:
@@ -162,3 +162,54 @@ class Variable:
         from ._expression import _involution
 
         return _involution(self, EInv.CONJ)
+
+    # ------------------------------------------------------------------
+    # Named GA product methods
+    # ------------------------------------------------------------------
+
+    def gp(self, other: "MV | Variable | Expression | int | float") -> "Expression":
+        from ._expression import gp
+
+        return cast("Expression", gp(self, other))
+
+    def ip(self, other: "MV | Variable | Expression") -> "Expression":
+        from ._expression import ip
+
+        return cast("Expression", ip(self, other))
+
+    def op(self, other: "MV | Variable | Expression") -> "Expression":
+        from ._expression import op
+
+        return cast("Expression", op(self, other))
+
+    def vp(self, b: "MV | Variable | Expression") -> "Expression | AffineExpression":
+        from ._expression import vp
+
+        return cast("Expression | AffineExpression", vp(self, b))
+
+    def nvp(self, b: "MV | Variable | Expression") -> "Expression | AffineExpression":
+        from ._expression import nvp
+
+        return cast("Expression | AffineExpression", nvp(self, b))
+
+    def sp(
+        self, other: "MV | Variable | Expression"
+    ) -> "float | int | ScalarExpression":
+        from ._expression import sp
+
+        return sp(self, other)
+
+    def cp(self, other: "MV | Variable | Expression") -> "Expression | AffineExpression":
+        from ._expression import cp
+
+        return cast("Expression | AffineExpression", cp(self, other))
+
+    def acp(self, other: "MV | Variable | Expression") -> "Expression | AffineExpression":
+        from ._expression import acp
+
+        return cast("Expression | AffineExpression", acp(self, other))
+
+    def rc(self, other: "MV | Variable | Expression") -> "Expression | AffineExpression":
+        from ._expression import rc
+
+        return cast("Expression | AffineExpression", rc(self, other))

@@ -42,6 +42,10 @@ viz.run()
 :class:`~pytanga.viz.VizObjectRef` instead of a raw `str` id. The existing
 `viz.add(...)` keeps its `str` return for backward compatibility.
 
+To build a `VizGroup` subtree **before** you have a `Visualizer` — a reusable
+"composed object" assembled from parts, then inserted in one step — see
+[Composing Scene Subtrees](composing-scenes.md).
+
 ## The `VizObjectRef` convenience wrapper
 
 A :class:`~pytanga.viz.VizObjectRef` wraps a node and lets you mutate it without

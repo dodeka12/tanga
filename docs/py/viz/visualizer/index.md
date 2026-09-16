@@ -12,6 +12,7 @@ pointer-interaction API. (`VisualizerApp` builds on top of it — see the
 | [Visualizer](visualizer.md) | Creating a visualizer, `add()`/`new()`/`viz(...)`, scenes, styles, labels |
 | [Multi-Scene](multi-scene.md) | Named scenes, `viz.scene()`/`VizSceneHandle`, navigation, browser targeting |
 | [Scene Graph & Transforms](scene-graph.md) | `VizGroup`/`VizObjectRef` hierarchy, transforms, compound animation |
+| [Composing Scene Subtrees](composing-scenes.md) | Build a detached `VizGroup` tree, then insert it in one step |
 | [Camera & Controls](camera.md) | `CameraConfig2d`/`CameraConfig3d`, `View2DConfig`/`View3dConfig` |
 | [Animation](animation.md) | Frame-by-frame `animate()` and keyframe `animate_to()`/`Timeline` |
 

@@ -156,13 +156,22 @@ class Geometry:
         """
         return analyze_entity(mv)
 
-    def which_operator(self, mv: MV) -> Operator | None:
+    def which_operator(
+        self,
+        mv: MV,
+        *,
+        expect: type[Operator] | tuple[type[Operator], ...] | None = None,
+    ) -> Operator | None:
         """Determine which versor / operator an MV represents.
 
         Parameters
         ----------
         mv : MV
             A multivector to analyze.
+        expect : type[Operator] | tuple[type[Operator], ...] | None, optional
+            An optional expected operator type, forwarded to
+            :func:`~pytanga.geometry.analysis.analyze_operator` (see its
+            docstring).
 
         Returns
         -------
@@ -174,9 +183,14 @@ class Geometry:
         Operators (versors) are independent of the OPNS/IPNS flag;
         this method does not accept an *opns* argument.
         """
-        return analyze_operator(mv)
+        return analyze_operator(mv, expect=expect)
 
-    def analyze(self, mv: MV) -> Entity | Operator | None:
+    def analyze(
+        self,
+        mv: MV,
+        *,
+        expect: type[Operator] | tuple[type[Operator], ...] | None = None,
+    ) -> Entity | Operator | None:
         """Try to analyze an MV as either an entity or an operator.
 
         Tries entity analysis first, then operator analysis.
@@ -188,12 +202,15 @@ class Geometry:
             A multivector to analyze.  The MV's ``algebra.opns`` flag
             determines the OPNS/IPNS interpretation for entity analysis;
             operators are unaffected.
+        expect : type[Operator] | tuple[type[Operator], ...] | None, optional
+            An optional expected operator type, forwarded to the operator
+            fallback (see :func:`~pytanga.geometry.analysis.analyze_operator`).
 
         Returns
         -------
         Entity, Operator, or None
         """
-        return _analyze(mv)
+        return _analyze(mv, expect=expect)
 
     def refine(self, entity: object) -> object:
         """Refine a raw :class:`Conic` / :class:`Quadric3D` into a specific entity.

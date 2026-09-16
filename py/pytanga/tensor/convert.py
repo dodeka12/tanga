@@ -123,7 +123,7 @@ def from_tensor(t: MVTensor) -> "MV | list[Any]":
     def _build(idx: tuple[int, ...]) -> MV:
         """Construct a single MV from a sub‑array indexed by *idx*."""
         coeffs = data[(slice(None),) + idx]
-        mv_dict = {int(bid): float(coeffs[j]) for j, bid in enumerate(mask.ids)}
+        mv_dict = {int(bid): coeffs[j].item() for j, bid in enumerate(mask.ids)}
         return alg.multivector(mv_dict)
 
     if len(other_shape) == 0:

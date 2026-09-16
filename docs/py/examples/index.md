@@ -88,6 +88,8 @@ uv run python py/examples/<path>.py
 
 - **batched** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md)
 
+- **bind** — [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md)
+
 - **binding** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
 - **BladeMask** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md)
@@ -134,6 +136,8 @@ uv run python py/examples/<path>.py
 
 - **compilation** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
+- **compose** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
+
 - **Composed** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md)
 
 - **cone** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
@@ -164,6 +168,8 @@ uv run python py/examples/<path>.py
 
 - **counting axis** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 
+- **cp** — [Named GA product functions over variables](ga/expression/named_products.md)
+
 - **CSG** — [per-object CSG combine modes](viz/sdf/booleans.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
 
 - **css** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md)
@@ -186,6 +192,8 @@ uv run python py/examples/<path>.py
 
 - **Cylinder** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
+- **cylinder** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
+
 - **dark** — [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **DataArray** — [Expressions, variables, and DataArray bindings](expression_dataarray.md), [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
@@ -195,6 +203,8 @@ uv run python py/examples/<path>.py
 - **degenerate** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md)
 
 - **delivery** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
+
+- **detached** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
 
 - **dialog** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md)
 
@@ -244,7 +254,7 @@ uv run python py/examples/<path>.py
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
-- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
+- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
@@ -297,6 +307,8 @@ uv run python py/examples/<path>.py
 - **GLSL** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
 
 - **glTF** — [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
+
+- **gp** — [Named GA product functions over variables](ga/expression/named_products.md)
 
 - **gradient** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
 
@@ -404,7 +416,7 @@ uv run python py/examples/<path>.py
 
 - **menu bar** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
-- **merge** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
+- **merge** — [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
 
 - **mesh** — [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
 
@@ -550,6 +562,8 @@ uv run python py/examples/<path>.py
 
 - **ray** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
+- **rc** — [Named GA product functions over variables](ga/expression/named_products.md)
+
 - **re-run** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **rectangle** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
@@ -567,6 +581,8 @@ uv run python py/examples/<path>.py
 - **remove** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
 - **remove_dialog** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md)
+
+- **rename_var** — [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md)
 
 - **repeated variables** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
@@ -586,7 +602,7 @@ uv run python py/examples/<path>.py
 
 - **scene** — [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
-- **scene graph** — [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
+- **scene graph** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
@@ -641,6 +657,8 @@ uv run python py/examples/<path>.py
 - **solve_lsq** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
 - **solver** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_01.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_02.md), [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md)
+
+- **sp** — [Named GA product functions over variables](ga/expression/named_products.md)
 
 - **space_dim** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
 
@@ -720,6 +738,8 @@ uv run python py/examples/<path>.py
 
 - **uniform** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
+- **unify** — [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md)
+
 - **up vector** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 
 - **update** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
@@ -728,7 +748,7 @@ uv run python py/examples/<path>.py
 
 - **variable** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
-- **Variable** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
+- **Variable** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Named GA product functions over variables](ga/expression/named_products.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **variables** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md)
 
@@ -746,9 +766,13 @@ uv run python py/examples/<path>.py
 
 - **VisualizerApp** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md)
 
-- **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
+- **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **VizSceneHandle** — [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
+
+- **VizSceneObject** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
+
+- **vp** — [Named GA product functions over variables](ga/expression/named_products.md)
 
 - **weighted sum** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 

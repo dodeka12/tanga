@@ -72,7 +72,13 @@
             "Line Fitting P3": "py/examples/ga/expression/line_fitting_p3.md"
           },
           {
+            "Named Products": "py/examples/ga/expression/named_products.md"
+          },
+          {
             "Polynomial Demo": "py/examples/ga/expression/polynomial_demo.md"
+          },
+          {
+            "Rename Unify Variables": "py/examples/ga/expression/rename_unify_variables.md"
           },
           {
             "Solve Ax B": "py/examples/ga/expression/solve_ax_b.md"
@@ -404,6 +410,9 @@
         "Scenes": [
           {
             "Overview": "py/examples/viz/scenes/index.md"
+          },
+          {
+            "Compose Detached": "py/examples/viz/scenes/compose_detached.md"
           },
           {
             "Motor Group Transform": "py/examples/viz/scenes/motor_group_transform.md"

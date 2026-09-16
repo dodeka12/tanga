@@ -49,7 +49,37 @@ multiplied element-wise and kept::
 """
 
 from ._data_array import DataArray
-from ._expression import AffineExpression, Expression
+from ._expression import (
+    AffineExpression,
+    Expression,
+    ScalarExpression,
+    acp,
+    cp,
+    gp,
+    ip,
+    nvp,
+    op,
+    rc,
+    sp,
+    unify,
+    vp,
+)
 from ._variable import Variable
 
-__all__ = ["AffineExpression", "DataArray", "Expression", "Variable"]
+__all__ = [
+    "AffineExpression",
+    "DataArray",
+    "Expression",
+    "ScalarExpression",
+    "Variable",
+    "acp",
+    "cp",
+    "gp",
+    "ip",
+    "nvp",
+    "op",
+    "rc",
+    "sp",
+    "unify",
+    "vp",
+]

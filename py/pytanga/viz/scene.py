@@ -13,11 +13,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterator, Literal, cast
-from uuid import uuid4
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraAction, CameraConfig
+from ._ids import generate_id
 from ._nodes import VizGroup, VizImage, VizNode, VizOverlayObject, VizSceneObject
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
@@ -225,6 +225,57 @@ class Scene:
             self._order.append(oid)
         return oid
 
+    def add_subtree(self, root: VizSceneObject, *, object_id: str | None = None) -> str:
+        """Register *root* and every scene-layer descendant; return the root id.
+
+        Descendants are registered in ``_nodes`` so they are individually
+        addressable, but only the root is appended to ``_order``
+        (``_dfs_preorder`` reaches descendants through ``parent.children``).
+        """
+        if object_id is not None:
+            root.id = object_id
+
+        visited: set[int] = set()
+
+        def _register(node: VizSceneObject) -> None:
+            if id(node) in visited:
+                return
+            visited.add(id(node))
+            node.id = node.id or generate_id()
+            existing = self._nodes.get(node.id)
+            if existing is not None and existing is not node:
+                raise ValueError(f"Node id {node.id!r} is already registered")
+            self._nodes[node.id] = node
+            if node.entity is not None:
+                self._backfill_node_style(node)
+            for child in node.children:
+                if isinstance(child, VizSceneObject):
+                    _register(child)
+
+        _register(root)
+        if root.id not in self._order:
+            self._order.append(root.id)
+        return root.id
+
+    def _backfill_node_style(self, node: VizSceneObject) -> None:
+        """Resolve *node*'s partial style against the scene's per-kind defaults.
+
+        Mirrors ``_make_scene_node``'s merge (canonical defaults + the node's
+        partial style, then top-level ``color``/``opacity``), and stores the
+        result back on the node so it serializes like a node added via ``add``.
+        """
+        from ._styles import _style_to_output
+
+        props = dict(node._props) if node._props else {}
+        partial = props.get("style") if props.get("style") is not None else node.style
+        merged = dict(_style_to_output(partial, node.kind, styles_map=self.styles.kind))
+        if props.get("color") is not None:
+            merged["color"] = props["color"]
+        if props.get("opacity") is not None:
+            merged["opacity"] = props["opacity"]
+        node.style = merged
+        node._styles_map = self.styles.kind
+
     def add_group(self, name: str | None = None) -> VizGroup:
         """Create and register a scene-graph group (``kind == "VizGroup"``)."""
         gid = _generate_id()
@@ -373,7 +424,7 @@ class Scene:
 
             gid = entity_id or obj.id or _generate_id()
             obj.id = gid
-            self.add_node(obj, object_id=gid)
+            self.add_subtree(obj, object_id=gid)
             if parent_id is not None:
                 parent = self.get_node(parent_id)
                 if isinstance(parent, VizSceneObject):
@@ -581,14 +632,21 @@ class Scene:
         self.add_label(lbl)
 
     def update(self, object_id: str, **properties: Any) -> None:
-        """Update rendering properties of an existing object."""
-        obj = self._get(object_id)
-        obj.properties.update(properties)
-        obj.dirty = True
+        """Update rendering properties of an existing object.
+
+        Node-only entries (e.g. descendants of a detached subtree) are updated
+        directly; ids present in ``_objects`` keep the legacy bookkeeping too.
+        """
+        obj = self._objects.get(object_id)
+        if obj is not None:
+            obj.properties.update(properties)
+            obj.dirty = True
 
         node = self._nodes.get(object_id)
         if isinstance(node, VizSceneObject):
             node.apply_props(dict(properties))
+        elif obj is None:
+            raise KeyError(f"Object {object_id!r} not found")
 
     def update_label(
         self,
@@ -657,15 +715,22 @@ class Scene:
                 node.set_position(new_position)
 
     def update_entity(self, entity_id: str, entity: "SceneEntity") -> None:
-        """Replace the geometry entity for an existing scene-layer ID."""
-        obj = self._get(entity_id)
-        obj.data = entity
-        obj.kind = type(entity).__name__
-        obj.dirty = True
+        """Replace the geometry entity for an existing scene-layer ID.
+
+        Node-only entries (e.g. descendants of a detached subtree) are updated
+        directly; ids present in ``_objects`` keep the legacy bookkeeping too.
+        """
+        obj = self._objects.get(entity_id)
+        if obj is not None:
+            obj.data = entity
+            obj.kind = type(entity).__name__
+            obj.dirty = True
 
         node = self._nodes.get(entity_id)
         if isinstance(node, VizSceneObject):
             node.set_entity(entity)
+        elif obj is None:
+            raise KeyError(f"Object {entity_id!r} not found")
 
     def update_sdf_group_member(
         self,
@@ -944,7 +1009,7 @@ def _resolve_scene_entity(obj: Any) -> SceneEntity:
 
 
 def _generate_id() -> str:
-    return uuid4().hex[:8]
+    return generate_id()
 
 
 def _inject_interaction(
