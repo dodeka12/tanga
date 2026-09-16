@@ -140,6 +140,74 @@ e.conj()    # Clifford conjugate
 ~v          # reverse of a variable (composes in products)
 ```
 
+## Named product functions
+
+The usual GA products are available as named methods and module-level
+functions: `gp`, `ip`, `op`, `vp`, `nvp`, `sp`, `cp`, `acp`, and `rc`.  Every
+one accepts a constant multivector, a `Variable`, or an expression as *either*
+operand (mixed and reflected forms included):
+
+```python
+from pytanga.expression import vp, sp, cp, rc
+
+E_rot = R.vp(X)     # R * X * ~R        (versor product)
+E_ip  = v.ip(a)     # v | a             (inner product)
+E_op  = v.op(a)     # v ^ a             (outer product)
+E_cp  = v.cp(a)     # (v*a - a*v) / 2   (commutator)
+E_acp = v.acp(a)    # (v*a + a*v) / 2   (anti-commutator)
+E_rc  = v.rc(a)     # v ⌊ a             (right contraction)
+E_gp  = v.gp(a)     # v * a             (geometric product)
+
+E_rot2 = vp(R, X)   # module-level function form
+```
+
+`vp` composes `*` with `~` (reverse), so a variable versor appears twice in the
+sandwich and is subject to the `MAX_DEGREE` limit.  `nvp` uses the true
+inverse instead of the reverse and therefore requires a *constant* versor (a
+symbolic versor's inverse is not representable); `nvp(variable, X)` raises
+`ValueError`.
+
+`sp` is scalar-valued: with two concrete multivectors it returns a Python
+`float`/`int` directly, and with symbolic operands it returns a
+`ScalarExpression` whose fully-bound value is a `float`/`int` (matching the
+multivector dtype):
+
+```python
+sp(a, b)          # float/int
+s = v.sp(a)       # ScalarExpression
+s(V1=x)           # float/int (scalar part of x * a)
+```
+
+## Renaming and unifying variables
+
+Variables are keyed internally by a label block, not by name, so two
+`Variable("X", mask)` instances created independently are distinct and their
+expressions do not merge under `+`/`-`.  Re-key them onto one canonical variable
+with `bind(...)` (passing a `Variable` as the value), rename them in place with
+`rename_var`, or re-key a whole list in one call with `unify`:
+
+```python
+X = Variable("X", mask)          # one canonical variable
+
+e1 = Variable("X", mask) * a     # created elsewhere, distinct block
+e2 = Variable("Y", mask) * b     # same mask, different name
+
+e1 = e1.bind(X=X)                # replace "X" with the canonical X
+e2 = e2.bind(Y=X)                # replace "Y" with the canonical X (rename)
+
+E = e1 + e2                      # now a single merged expression in X
+
+[e1, e2] = unify([e1, e2], X=X, Y=X)   # same, for a whole list at once
+
+e1.rename_var("X", "P")          # name-only rename (keeps the label block)
+```
+
+`bind` with a `Variable` value substitutes that variable (a `MV`/`DataArray`
+value still binds to data, unchanged).  `unify` is lenient — names absent from a
+given expression are skipped — and returns a list of re-keyed expressions that
+you combine with `+`.  The target variable's blade mask must equal the source's
+mask, otherwise `ValueError` is raised.
+
 ## Inverse
 
 For a single-variable, single-occurrence expression whose tensor is a square,

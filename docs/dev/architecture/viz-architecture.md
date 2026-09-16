@@ -60,6 +60,11 @@ inbound dispatch that resolves them.
   messages.  `_resolve_scene_entity` turns MVs into `SceneEntity` (and refines
   a raw `Conic` to its specific 2D entity so the viewer can serialize it;
   `Quadric3D` is left alone and renders via the analytic ray path).
+- **Insert a detached subtree** — a `VizGroup`/`VizSceneObject` tree composed
+  *before* any scene exists is added via `viz.add(group)`/`viz.new(group)` →
+  `Scene.add_viz` → `Scene.add_subtree`, which registers every descendant in
+  `_nodes` (auto-assigning ids where omitted) and backfills each node's partial
+  style from the scene's per-kind defaults.
 - **Add a control** — build a `*View`, mount it via `set_layout` (or declaratively
   in `SceneView(overlay=[...])`); `LayoutHost.register` walks the tree and calls
   each `Control.register_handlers` (registers `(id, event)` handlers).
@@ -153,6 +158,8 @@ Follow the `OverlayContainer` pattern exactly:
 | `_layout.py` | `Layout`, `OverlayContainer`, `LayoutHostImpl` |
 | `scene.py` | `Scene`, `SceneObject`, `SceneConfig`, `_resolve_scene_entity` |
 | `_hosts.py` | `ThemeHost`, `InteractionHost`, `OverlayHost` |
+| `_ids.py` | `generate_id()` — the single id convention shared by `_nodes.py` and `scene.py` |
+| `_nodes.py` | `VizNode`/`VizSceneObject`/`VizOverlayObject`/`VizGroup`/`VizImage` scene-graph nodes |
 | `_controls.py` | `Control` + subclasses (value/serialize/handle_event/register_handlers), registry |
 | `views.py` | `View` + `SceneView`/`StackView`/`GroupView`/`MenuView` + `*View` |
 | `_ports.py` | `Transport`/`LayoutHost` protocols + `ServerState` |

@@ -26,6 +26,7 @@ from typing import Any, cast
 import numpy as np
 
 from . import _transforms as _T
+from ._ids import generate_id
 from ._style_dict import StylesMap, _merge_style
 from ._types import (
     TransformInput,
@@ -349,8 +350,8 @@ class VizSceneObject(VizNode):
 
     def __init__(
         self,
-        id: str,
-        entity: Any,
+        id: str | None = None,
+        entity: Any = None,
         style: Any = None,
         *,
         name: str = "",
@@ -362,7 +363,7 @@ class VizSceneObject(VizNode):
         styles_map: StylesMap | None = None,
     ) -> None:
         super().__init__(
-            id,
+            id or generate_id(),
             name=name,
             layer="scene",
             kind=kind
@@ -585,7 +586,7 @@ class VizOverlayObject(VizNode):
 
     def __init__(
         self,
-        id: str,
+        id: str | None = None,
         *,
         kind: str = "label",
         name: str = "",
@@ -595,7 +596,7 @@ class VizOverlayObject(VizNode):
         payload: Any = None,
         visible: bool = True,
     ) -> None:
-        super().__init__(id, name=name, layer="overlay", kind=kind, visible=visible)
+        super().__init__(id or generate_id(), name=name, layer="overlay", kind=kind, visible=visible)
         self.position: tuple[float, float, float] = _as_vec3(position)
         self.attach_to: str | None = attach_to
         self.style: Any = style
@@ -670,14 +671,14 @@ class VizGroup(VizSceneObject):
 
     def __init__(
         self,
-        id: str,
+        id: str | None = None,
         *,
         name: str = "",
         transform: Transform | None = None,
         visible: bool = True,
     ) -> None:
         super().__init__(
-            id,
+            id or generate_id(),
             None,
             None,
             name=name,
@@ -712,8 +713,8 @@ class VizImage(VizSceneObject):
     serializer.  Pixel bytes travel separately as binary frames.
     """
 
-    def __init__(self, id: str, payload: dict[str, Any], *, name: str = "image", images: list[Any] | None = None) -> None:
-        super().__init__(id, None, None, name=name, kind="image")
+    def __init__(self, id: str | None = None, payload: dict[str, Any] | None = None, *, name: str = "image", images: list[Any] | None = None) -> None:
+        super().__init__(id or generate_id(), None, None, name=name, kind="image")
         self.payload = payload
         self.images: list[Any] = list(images) if images else []
 
@@ -724,7 +725,7 @@ class VizImage(VizSceneObject):
         props: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Return the stored image payload verbatim."""
-        return dict(self.payload)
+        return dict(self.payload or {})
 
     def patch(self, aspect: str) -> dict[str, Any]:
         """Return a full patch for the image node (no sub-aspect patches)."""

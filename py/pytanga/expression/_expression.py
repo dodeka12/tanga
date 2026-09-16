@@ -18,6 +18,7 @@ from pytanga.tensor.ops import contract_labeled
 from pytanga.tensor.product import (
     product_tensor,
     product_tensor_conj,
+    product_tensor_rc,
     product_tensor_rev,
 )
 
@@ -260,14 +261,31 @@ class Expression:
         )
 
     def bind(self, **bindings: Any) -> "Expression":
-        """Evaluate some bindings, asserting at least one variable/axis stays free.
+        """Bind variables to values, or substitute them with other ``Variable``s.
 
-        Returns a new :class:`Expression` over the remaining variables. Raises
-        :class:`ValueError` if the binding would fully collapse the expression to
-        a plain ``MV`` or a batched ``list`` (use :meth:`evaluate` or
-        :meth:`__call__` for that instead).
+        A binding value that is a :class:`Variable` substitutes that variable
+        (relabeling it onto the new variable's block) instead of evaluating it;
+        every other value binds as before.  Returns a new :class:`Expression`
+        over the remaining variables.  Raises :class:`ValueError` if the binding
+        would fully collapse the expression to a plain ``MV`` or a batched
+        ``list`` (use :meth:`evaluate` or :meth:`__call__` for that instead).
         """
-        result = self._evaluate(bindings, True)
+        subs = {k: v for k, v in bindings.items() if isinstance(v, Variable)}
+        if subs:
+            unknown = set(subs) - set(self._names)
+            if unknown:
+                raise ValueError(f"unknown variable(s): {sorted(unknown)}")
+            expr = self._substitute(subs)
+            values = {
+                k: v for k, v in bindings.items() if not isinstance(v, Variable)
+            }
+            if not values:
+                return expr
+        else:
+            expr = self
+            values = bindings
+
+        result = expr._evaluate(values, True)
         if not isinstance(result, Expression):
             raise ValueError(
                 "bind() expected a partially-evaluated Expression, but the "
@@ -289,6 +307,100 @@ class Expression:
                 "result (list)."
             )
         return result
+
+    def _substitute(self, mapping: dict[str, Variable]) -> "Expression":
+        """Re-key named variables onto target ``Variable``s (internal).
+
+        ``mapping`` maps variable names to target ``Variable`` instances.  Names
+        absent from this expression are skipped.  Each mapped variable's
+        occurrence labels are moved onto the target's label block — merging
+        several names that map to one target — so independently-created
+        variables unify into one.  The tensor data is unchanged; the target mask
+        must equal the source mask.
+        """
+        sources: list[tuple[str, Variable]] = []
+        for name, target in mapping.items():
+            if name not in self._names:
+                continue
+            if target.mask != self._masks[name]:
+                raise ValueError(
+                    f"cannot substitute variable {name!r} with "
+                    f"{target.name!r}: blade masks differ"
+                )
+            sources.append((name, target))
+
+        if not sources:
+            return self
+
+        source_names = {n for n, _ in sources}
+        target_names = {t.name for _, t in sources}
+        clash = target_names & {n for n in self._names if n not in source_names}
+        if clash:
+            raise ValueError(
+                f"cannot substitute into {sorted(clash)[0]!r}: that name is "
+                "already a distinct variable in the expression (map it too, or "
+                "rename it first)"
+            )
+
+        rename: dict[int, int] = {}
+        final_names: dict[str, tuple[int, ...]] = {
+            n: lbls for n, lbls in self._names.items() if n not in source_names
+        }
+        final_masks: dict[str, BladeMask] = {
+            n: m for n, m in self._masks.items() if n not in source_names
+        }
+
+        by_target: dict[int, tuple[Variable, list[str]]] = {}
+        for name, target in sources:
+            by_target.setdefault(id(target), (target, []))[1].append(name)
+
+        for target, names in by_target.values():
+            block = target.labels
+            merged: list[int] = []
+            for name in names:
+                old_labels = self._names[name]
+                if len(merged) + len(old_labels) > len(block):
+                    raise ValueError(
+                        f"variable {target.name!r} would appear more than "
+                        f"{len(block)} times in a product term"
+                    )
+                new_labels = block[len(merged) : len(merged) + len(old_labels)]
+                for old, new in zip(old_labels, new_labels):
+                    rename[old] = new
+                merged.extend(new_labels)
+            final_names[target.name] = tuple(merged)
+            final_masks[target.name] = target.mask
+
+        new_labels = []
+        for ax in self._tensor.labels:
+            name = ax.name
+            if isinstance(name, int):
+                name = rename.get(name, name)
+            new_labels.append((name, ax.mode))
+        labeled = MVLabeledTensor(self._tensor.tensor, new_labels)
+        return Expression(labeled, final_names, final_masks)
+
+    def rename_var(self, old: "str | Variable", new_name: str) -> "Expression":
+        """Rename a variable, keeping its label block (name-only).
+
+        ``old`` is the variable's current name (or a ``Variable`` whose ``.name``
+        is used).  ``new_name`` must not collide with a different existing name.
+        The label block is unchanged, so the result still merges with
+        expressions built from the same original ``Variable``.
+        """
+        name = old.name if isinstance(old, Variable) else str(old)
+        if name not in self._names:
+            raise ValueError(f"cannot rename unknown variable {name!r}")
+        new_name = str(new_name)
+        if new_name != name and new_name in self._names:
+            raise ValueError(
+                f"cannot rename {name!r} to {new_name!r}: name already in use"
+            )
+        new_names = dict(self._names)
+        new_masks = dict(self._masks)
+        new_names[new_name] = new_names.pop(name)
+        new_masks[new_name] = new_masks.pop(name)
+        return Expression(self._tensor, new_names, new_masks)
 
     # ------------------------------------------------------------------
     # Products — chain into the tensor builder
@@ -400,6 +512,46 @@ class Expression:
 
     def conj(self) -> "Expression":
         return _apply_involution(self, EInv.CONJ)
+
+    # ------------------------------------------------------------------
+    # Named GA product methods
+    # ------------------------------------------------------------------
+
+    def gp(self, other: Any) -> "Expression | AffineExpression":
+        """Geometric product ``self * other``."""
+        return cast("Expression | AffineExpression", gp(self, other))
+
+    def ip(self, other: Any) -> "Expression | AffineExpression":
+        """Inner product ``self | other``."""
+        return cast("Expression | AffineExpression", ip(self, other))
+
+    def op(self, other: Any) -> "Expression | AffineExpression":
+        """Outer (wedge) product ``self ^ other``."""
+        return cast("Expression | AffineExpression", op(self, other))
+
+    def vp(self, b: Any) -> "Expression | AffineExpression":
+        """Versor product ``self * b * ~self``."""
+        return cast("Expression | AffineExpression", vp(self, b))
+
+    def nvp(self, b: Any) -> "Expression | AffineExpression":
+        """Normalized versor product ``self * b * inverse(self)``."""
+        return cast("Expression | AffineExpression", nvp(self, b))
+
+    def sp(self, other: Any) -> "ScalarExpression":
+        """Scalar product: the scalar part of ``self * other``."""
+        return cast("ScalarExpression", sp(self, other))
+
+    def cp(self, other: Any) -> "Expression | AffineExpression":
+        """Commutator: ``(self * other - other * self) / 2``."""
+        return cast("Expression | AffineExpression", cp(self, other))
+
+    def acp(self, other: Any) -> "Expression | AffineExpression":
+        """Anti-commutator: ``(self * other + other * self) / 2``."""
+        return cast("Expression | AffineExpression", acp(self, other))
+
+    def rc(self, other: Any) -> "Expression | AffineExpression":
+        """Right contraction ``self ⌊ other``."""
+        return cast("Expression | AffineExpression", rc(self, other))
 
     # ------------------------------------------------------------------
     # Inverse
@@ -675,12 +827,30 @@ class AffineExpression:
         return _combine_terms(results)
 
     def bind(self, **bindings: Any) -> "AffineExpression":
-        """Evaluate some bindings, asserting at least one variable stays free.
+        """Bind variables to values, or substitute them with other ``Variable``s.
 
-        Raises :class:`ValueError` if the sum fully collapses to an ``MV`` or a
-        batched ``list`` (use :meth:`evaluate` or :meth:`__call__` instead).
+        A binding value that is a :class:`Variable` substitutes that variable in
+        every term (see :meth:`Expression._substitute`) instead of evaluating it;
+        every other value binds as before.  Raises :class:`ValueError` if the sum
+        fully collapses to an ``MV`` or a batched ``list`` (use :meth:`evaluate`
+        or :meth:`__call__` instead).
         """
-        result = self(**bindings)
+        subs = {k: v for k, v in bindings.items() if isinstance(v, Variable)}
+        if subs:
+            unknown = set(subs) - self.names
+            if unknown:
+                raise ValueError(f"unknown variable(s): {sorted(unknown)}")
+            expr = self._substitute(subs)
+            values = {
+                k: v for k, v in bindings.items() if not isinstance(v, Variable)
+            }
+            if not values:
+                return expr
+        else:
+            expr = self
+            values = bindings
+
+        result = expr(**values)
         if not isinstance(result, AffineExpression):
             raise ValueError(
                 "bind() expected a partially-evaluated AffineExpression, but "
@@ -793,6 +963,71 @@ class AffineExpression:
 
     def conj(self) -> "AffineExpression":
         return AffineExpression([t.conj() for t in self._terms])
+
+    # ------------------------------------------------------------------
+    # Variable substitution / renaming
+    # ------------------------------------------------------------------
+
+    def _substitute(self, mapping: dict[str, Variable]) -> "AffineExpression":
+        """Re-key named variables across every term.
+
+        See :meth:`Expression._substitute` for the per-term semantics.
+        """
+        return AffineExpression([t._substitute(mapping) for t in self._terms])
+
+    def rename_var(self, old: "str | Variable", new_name: str) -> "AffineExpression":
+        """Rename a variable in every term (name-only)."""
+        return AffineExpression([t.rename_var(old, new_name) for t in self._terms])
+
+    # ------------------------------------------------------------------
+    # Named GA product methods — distribute over the terms
+    # ------------------------------------------------------------------
+
+    def _distribute(self, fn: Any, other: Any) -> "AffineExpression":
+        """Apply a binary product ``fn`` over every term pair."""
+        if isinstance(other, AffineExpression):
+            return AffineExpression(
+                [fn(a, b) for a in self._terms for b in other._terms]
+            )
+        return AffineExpression([fn(t, other) for t in self._terms])
+
+    def gp(self, other: Any) -> "AffineExpression":
+        """Geometric product ``self * other``."""
+        if isinstance(other, (int, float)):
+            return self._scale(float(other))
+        return self._distribute(lambda a, b: _product(a, b, EProduct.GP), other)
+
+    def ip(self, other: Any) -> "AffineExpression":
+        """Inner product ``self | other``."""
+        return self._distribute(lambda a, b: _product(a, b, EProduct.IP), other)
+
+    def op(self, other: Any) -> "AffineExpression":
+        """Outer (wedge) product ``self ^ other``."""
+        return self._distribute(lambda a, b: _product(a, b, EProduct.OP), other)
+
+    def vp(self, b: Any) -> "AffineExpression":
+        """Versor product ``self * b * ~self``."""
+        return self._distribute(vp, b)
+
+    def nvp(self, b: Any) -> "AffineExpression":
+        """Normalized versor product ``self * b * inverse(self)``."""
+        return self._distribute(nvp, b)
+
+    def sp(self, other: Any) -> "AffineExpression":
+        """Scalar product: the scalar part of ``self * other``."""
+        return self._distribute(sp, other)
+
+    def cp(self, other: Any) -> "AffineExpression":
+        """Commutator: ``(self * other - other * self) / 2``."""
+        return self._distribute(cp, other)
+
+    def acp(self, other: Any) -> "AffineExpression":
+        """Anti-commutator: ``(self * other + other * self) / 2``."""
+        return self._distribute(acp, other)
+
+    def rc(self, other: Any) -> "AffineExpression":
+        """Right contraction ``self ⌊ other``."""
+        return self._distribute(rc, other)
 
     def _variable_matrix(self) -> tuple[str, BladeMask, np.ndarray]:
         """Return ``(var_name, var_mask, matrix)`` for a single-linear-map sum.
@@ -1217,17 +1452,13 @@ def _value_mask(kind: str, val: Any) -> BladeMask:
 # ---------------------------------------------------------------------------
 
 
-def _product(
-    left: Any,
-    right: Any,
-    product: EProduct,
-    a_inv: EInv = EInv.ID,
-    b_inv: EInv = EInv.ID,
-) -> Expression:
-    """Build the reduced expression for ``left ∘ right``.
+def _resolve_product_operands(
+    left: Any, right: Any
+) -> tuple[str, Any, str, Any, BladeMask, BladeMask]:
+    """Classify two product operands and return ``(Lkind, Lval, Rkind, Rval, m_L, m_R)``.
 
-    Builds the 3-D product tensor and contracts every constant/expression
-    operand, leaving one axis per remaining variable plus the output axis.
+    Rejects the case where both operands are stacked (batched) expressions, and
+    verifies both operands belong to the same algebra.
     """
     Lkind, Lval = _operand(left)
     Rkind, Rval = _operand(right)
@@ -1249,7 +1480,19 @@ def _product(
     if m_L.algebra is not m_R.algebra:
         raise ValueError("expression operands belong to different algebras")
 
-    prod = product_tensor(m_L, m_R, None, product=product, a_inv=a_inv, b_inv=b_inv)
+    return Lkind, Lval, Rkind, Rval, m_L, m_R
+
+
+def _contract_product(
+    info: tuple[str, Any, str, Any, BladeMask, BladeMask],
+    prod: MVTensor,
+) -> Expression:
+    """Contract a pre-built 3-D product tensor against two operands.
+
+    *prod* must carry masks ``(c_mask, a_mask, b_mask)`` and data shape
+    ``(c, a, b)``.  Operands are classified by :func:`_resolve_product_operands`.
+    """
+    Lkind, Lval, Rkind, Rval, m_L, m_R = info
     m_C = prod.masks[0]
 
     operands = [prod.data]
@@ -1333,6 +1576,25 @@ def _product(
     result = MVTensor(data=result_data, masks=(m_C, *var_masks))
     labeled = MVLabeledTensor(result, labels)
     return Expression(labeled, names, masks)
+
+
+def _product(
+    left: Any,
+    right: Any,
+    product: EProduct,
+    a_inv: EInv = EInv.ID,
+    b_inv: EInv = EInv.ID,
+    c_mask: BladeMask | None = None,
+) -> Expression:
+    """Build the reduced expression for ``left ∘ right``.
+
+    Builds the 3-D product tensor and contracts every constant/expression
+    operand, leaving one axis per remaining variable plus the output axis.
+    """
+    info = _resolve_product_operands(left, right)
+    _, _, _, _, m_L, m_R = info
+    prod = product_tensor(m_L, m_R, c_mask, product=product, a_inv=a_inv, b_inv=b_inv)
+    return _contract_product(info, prod)
 
 
 def _to_expression(x: Any) -> Expression:
@@ -1459,3 +1721,175 @@ def _next_batch_label(used: set[str]) -> str:
         if ch not in used:
             return ch
     raise RuntimeError("too many batched variables in one evaluation")
+
+
+class ScalarExpression(Expression):
+    """An :class:`Expression` whose fully-bound value is a scalar.
+
+    Produced by :func:`sp`.  Identical to a plain ``Expression`` with a
+    scalar-only output mask, except that a full evaluation unwraps to a Python
+    ``float``/``int`` (the scalar coefficient) instead of a scalar-grade ``MV``.
+    """
+
+    __slots__ = ()
+
+    def __call__(self, **bindings: Any) -> Any:
+        return _unwrap_scalar(super().__call__(**bindings))
+
+    def evaluate(self, **bindings: Any) -> Any:
+        result = super().evaluate(**bindings)
+        if not isinstance(result, MV):
+            raise ValueError(
+                "evaluate() expected a fully-bound scalar, but the binding left "
+                "variables unbound or produced a batched result"
+            )
+        return result.scalar
+
+    def bind(self, **bindings: Any) -> Any:
+        return _unwrap_scalar(super().bind(**bindings))
+
+    def _scale(self, scalar: float) -> "ScalarExpression":
+        return ScalarExpression(
+            self._tensor.mul_scalar(scalar), self._names, self._masks
+        )
+
+
+def _unwrap_scalar(result: Any) -> Any:
+    """Recursively unwrap scalar-expression results to ``float``/``int``."""
+    if isinstance(result, MV):
+        return result.scalar
+    if isinstance(result, list):
+        return [_unwrap_scalar(x) for x in result]
+    if isinstance(result, Expression) and not isinstance(result, ScalarExpression):
+        # A partial evaluation dropped the ScalarExpression wrapper; restore it.
+        return ScalarExpression(result.tensor, result.names, result.masks)
+    return result
+
+
+def _scalar_mask(left: Any, right: Any) -> BladeMask:
+    """Return the scalar blade mask for the algebra of *left* or *right*."""
+    for value in (left, right):
+        if isinstance(value, (MV, Variable, Expression)):
+            return BladeMask(value.algebra, [0])
+    raise TypeError("sp() requires at least one multivector-valued operand")
+
+
+# ---------------------------------------------------------------------------
+# Named GA product functions
+# ---------------------------------------------------------------------------
+
+
+def gp(left: Any, right: Any) -> "MV | Expression | AffineExpression":
+    """Geometric product ``left * right``.
+
+    Operands may be constant multivectors, variables, or expressions.
+    """
+    return cast("MV | Expression | AffineExpression", left * right)
+
+
+def ip(left: Any, right: Any) -> "MV | Expression | AffineExpression":
+    """Inner product ``left | right``."""
+    return cast("MV | Expression | AffineExpression", left | right)
+
+
+def op(left: Any, right: Any) -> "MV | Expression | AffineExpression":
+    """Outer (wedge) product ``left ^ right``."""
+    return cast("MV | Expression | AffineExpression", left ^ right)
+
+
+def vp(versor: Any, b: Any) -> "MV | Expression | AffineExpression":
+    """Versor product ``versor * b * ~versor``."""
+    return cast("MV | Expression | AffineExpression", versor * b * ~versor)
+
+
+def nvp(versor: Any, b: Any) -> "MV | Expression | AffineExpression":
+    """Normalized versor product ``versor * b * inverse(versor)``.
+
+    The versor must be a concrete multivector (or a constant expression); a
+    symbolic versor's inverse is not representable in the expression system.
+    """
+    if isinstance(versor, MV):
+        inv = versor.inv()
+    elif (
+        isinstance(versor, Expression)
+        and not versor.names
+        and not versor._has_counting_axes()
+    ):
+        inv = versor().inv()
+    else:
+        raise ValueError(
+            "nvp() requires a constant versor; a symbolic versor's inverse is "
+            "not representable in the expression system"
+        )
+    return cast("MV | Expression | AffineExpression", versor * b * inv)
+
+
+def sp(left: Any, right: Any) -> "float | int | ScalarExpression":
+    """Scalar product: the scalar part of ``left * right``.
+
+    Fully concrete operands produce a ``float``/``int`` directly; symbolic
+    operands produce a :class:`ScalarExpression` that unwraps to a scalar when
+    fully evaluated.
+    """
+    if isinstance(left, MV) and isinstance(right, MV):
+        return cast("float | int", left.sp(right))
+    expr = _product(left, right, EProduct.GP, c_mask=_scalar_mask(left, right))
+    return ScalarExpression(expr.tensor, expr.names, expr.masks)
+
+
+def cp(left: Any, right: Any) -> "MV | Expression | AffineExpression":
+    """Commutator: ``(left * right - right * left) / 2``."""
+    return cast("MV | Expression | AffineExpression", 0.5 * (left * right - right * left))
+
+
+def acp(left: Any, right: Any) -> "MV | Expression | AffineExpression":
+    """Anti-commutator: ``(left * right + right * left) / 2``."""
+    return cast("MV | Expression | AffineExpression", 0.5 * (left * right + right * left))
+
+
+def rc(left: Any, right: Any) -> "MV | Expression | AffineExpression":
+    """Right contraction ``left ⌊ right``."""
+    if isinstance(left, MV) and isinstance(right, MV):
+        return cast("MV", left.rc(right))
+    info = _resolve_product_operands(left, right)
+    _, _, _, _, m_L, m_R = info
+    prod = product_tensor_rc(m_L, m_R)
+    return _contract_product(info, prod)
+
+
+def unify(
+    expressions: "list[Expression | AffineExpression]",
+    **mapping: Variable,
+) -> "list[Expression | AffineExpression]":
+    """Re-key variables across a list of expressions onto canonical ``Variable``s.
+
+    ``mapping`` maps variable names to target ``Variable`` instances (the same
+    form as :meth:`Expression.bind`).  Each expression is re-keyed via
+    :meth:`Expression._substitute`, which is lenient — names absent from a given
+    expression are skipped, so one mapping can unify a heterogeneous list, e.g.
+    ``unify([e1, e2], X=X, Y=X)``.
+
+    Returns a new list of re-keyed expressions (same order); combine them with
+    ``+`` / ``sum`` afterwards.
+    """
+    if not mapping:
+        raise ValueError("unify() requires at least one name=Variable mapping")
+    for name, target in mapping.items():
+        if not isinstance(target, Variable):
+            raise TypeError(
+                f"unify() mapping value for {name!r} must be a Variable, "
+                f"got {type(target).__name__}"
+            )
+
+    out: list[Expression | AffineExpression] = []
+    for expr in expressions:
+        if isinstance(expr, AffineExpression):
+            out.append(expr._substitute(mapping))
+        elif isinstance(expr, Expression):
+            out.append(expr._substitute(mapping))
+        else:
+            raise TypeError(
+                f"unify() expects Expression or AffineExpression, got "
+                f"{type(expr).__name__}"
+            )
+    return out

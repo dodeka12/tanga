@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import numpy as np
+
 from pytanga.blade_mask import BladeMask
 from pytanga.blade_mask.predict import product_blade_mask
 from pytanga.algebra import EInv, EProduct
@@ -101,6 +103,52 @@ def product_tensor(
         data=arr,
         masks=(c_mask, a_mask, b_mask),
     )
+
+
+def product_tensor_rc(
+    a_mask: BladeMask,
+    b_mask: BladeMask,
+    c_mask: BladeMask | None = None,
+) -> MVTensor:
+    """Build the 3-D tensor for the right contraction ``A ⌊ B``.
+
+    ``rc(A, B)`` decomposes into grade pairs ``grade(A) ≥ grade(B)`` of
+    ``ip(B, A) · (−1)^{k·(j−k)}`` (k = grade of A, j = grade of B), matching
+    the blade-by-blade definition in :meth:`pytanga.Algebra.rc`.  The returned
+    tensor has masks ``(c_mask, a_mask, b_mask)`` and ±1/0 entries, exactly like
+    :func:`product_tensor`.
+
+    When *c_mask* is ``None`` it is computed from the full inner-product support,
+    which is a superset of the right contraction's own support (some output rows
+    may therefore be identically zero).
+    """
+    assert b_mask.algebra is a_mask.algebra, (
+        "b_mask belongs to a different algebra than a_mask"
+    )
+    alg = a_mask.algebra
+
+    if c_mask is None:
+        c_mask = product_blade_mask(a_mask, b_mask, product=EProduct.IP)
+
+    assert c_mask.algebra is alg
+
+    # IP tensor with reversed operand order: masks (c_mask, b_mask, a_mask).
+    ip_ba = product_tensor(b_mask, a_mask, c_mask, product=EProduct.IP)
+    data = np.transpose(ip_ba.data, (0, 2, 1))  # -> (c_mask, a_mask, b_mask)
+
+    a_ids = a_mask.ids
+    b_ids = b_mask.ids
+    result = np.zeros_like(data)
+    for i, bid_a in enumerate(a_ids):
+        ga = bin(bid_a).count("1")
+        for j, bid_b in enumerate(b_ids):
+            gb = bin(bid_b).count("1")
+            if ga < gb:
+                continue
+            sign = 1 if (ga * (gb - ga)) % 2 == 0 else -1
+            result[:, i, j] = sign * data[:, i, j]
+
+    return MVTensor(data=result, masks=(c_mask, a_mask, b_mask))
 
 
 def product_tensor_rev(mask: BladeMask) -> MVTensor:

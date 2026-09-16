@@ -47,7 +47,8 @@ e_data = e(v=DataArray(v_data, masks=("v_idx", vec_mask)))  # Evaluate
 print(e_data)
 ```
 
-See [usage](usage.md) for the full API, [DataArray](data-array.md) for the data
-container and its use cases, [weighted sum example](example-weighted-sum.ipynb) for
-a worked NumPy grid example, and the `py/examples/ga/expression/` scripts for
-runnable examples.
+See [usage](usage.md) for the full API (including re-keying variables with
+`bind(X=X)`, `rename_var`, and `unify` so independently-created expressions
+merge), [DataArray](data-array.md) for the data container and its use cases,
+[weighted sum example](example-weighted-sum.ipynb) for a worked NumPy grid
+example, and the `py/examples/ga/expression/` scripts for runnable examples.

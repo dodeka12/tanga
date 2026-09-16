@@ -145,6 +145,7 @@ nav:
       - Animation: py/viz/visualizer/animation.md
       - Multi-Scene: py/viz/visualizer/multi-scene.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
+      - Composing Scene Subtrees: py/viz/visualizer/composing-scenes.md
     - Visualizer App:
       - Overview: py/viz/app/index.md
       - Quickstart: py/viz/app/app.md

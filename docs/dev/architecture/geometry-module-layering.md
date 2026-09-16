@@ -79,3 +79,14 @@ re-export shims:
 - `analyze_operator` also routes `q2`/`q3` MVs to `quadric._analysis.analyze_operator`,
   which returns a `pytanga.geometry.operators.Rotor` (imported lazily inside the
   function to keep the `quadric → geometry` edge lazy).
+
+## Operator analysis `expect=` hint
+
+`analyze_operator` / `analyze` (and the `Geometry.which_operator` /
+`Geometry.analyze` facade) accept an optional `expect=` operator type.  When the
+natural classification is a half-turn reflection with a lossless reinterpretation
+as the requested rotation, the rotation is returned instead — a 3D
+`ReflectionLine` → `GeneralRotor`/`Rotor`, a 2D `ReflectionPoint` →
+`GeneralRotor`/`Rotor`.  This is an extension of the analysis layer only (no
+layering change); the reinterpretation lives in `analysis._coerce_operator`,
+gated on the algebra dimension.

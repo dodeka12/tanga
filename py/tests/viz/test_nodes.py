@@ -6,6 +6,7 @@
 import math
 
 import numpy as np
+import pytest
 
 from pytanga.geometry.entities import Direction, Line, Point
 from pytanga.geometry.operators import Motor, Rotor, Translator
@@ -90,6 +91,27 @@ class TestTransform:
 
         # `Transform` is importable from the public `pytanga.viz` namespace.
         assert PublicTransform is Transform
+
+
+# ── Auto-generated ids ──────────────────────────────────────
+
+
+class TestAutoId:
+    def test_viz_group_default_id(self):  # noqa: ANN201
+        g = VizGroup()
+        assert g.id
+        assert g.kind == "VizGroup"
+
+    def test_viz_scene_object_default_id(self):  # noqa: ANN201
+        n = VizSceneObject(None, Point(0, 0, 0), kind="Point")
+        assert n.id
+
+    def test_distinct_default_ids(self):  # noqa: ANN201
+        assert VizGroup().id != VizGroup().id
+
+    def test_explicit_id_preserved(self):  # noqa: ANN201
+        assert VizGroup("my-id").id == "my-id"
+        assert VizSceneObject("node-id", Point(0, 0, 0), kind="Point").id == "node-id"
 
 
 # ── VizSceneObject aspects ──────────────────────────────────
@@ -245,3 +267,73 @@ class TestSceneIntegration:
         label_ids = s.get_label_ids(eid)
         assert len(label_ids) == 1
         assert s.get_node(label_ids[0]).payload == "axis"
+
+
+# ── Detached subtree insertion ──────────────────────────────
+
+
+class TestSubtreeInsertion:
+    def _make_subtree(self) -> tuple:
+        s = Scene()
+        g = VizGroup("g")
+        c1 = VizSceneObject("c1", Point(0, 0, 0), kind="Point")
+        c2 = VizSceneObject("c2", Point(1, 0, 0), kind="Point")
+        g.add_child(c1)
+        g.add_child(c2)
+        s.add_subtree(g)
+        return s, g, c1, c2
+
+    def test_remove_node_only_child(self):  # noqa: ANN201
+        s, _, c1, c2 = self._make_subtree()
+        s.remove("c1")
+        _, removed = s.flush()
+        assert "c1" in removed
+        assert "c2" not in removed
+        assert "c1" not in s._nodes
+
+    def test_set_interaction_node_only_child(self):  # noqa: ANN201
+        from pytanga.viz._interaction import InteractionConfig
+
+        s, _, c1, _ = self._make_subtree()
+        c1.consume_dirty()
+        s.set_interaction("c1", InteractionConfig(enabled=True))
+        assert c1.dirty_for("interaction")
+        assert s.get_interaction("c1") is not None
+
+    def test_add_subtree_registers_descendants(self):  # noqa: ANN201
+        s, g, c1, c2 = self._make_subtree()
+        assert s.get_node("g") is g
+        assert s.get_node("c1") is c1
+        assert s.get_node("c2") is c2
+        assert s._order == ["g"]
+
+    def test_add_subtree_backfills_partial_style(self):  # noqa: ANN201
+        s = Scene()
+        g = VizGroup("g")
+        c = VizSceneObject("c", Point(0, 0, 0), PointStyle(color="#ff0000"), kind="Point")
+        g.add_child(c)
+        s.add_subtree(g)
+        style = s.get_node("c").style
+        assert style["color"] == "#ff0000"
+        assert style["style_type"] == "PointStyle"
+        assert "size" in style  # canonical default backfilled
+
+    def test_update_node_only_child(self):  # noqa: ANN201
+        s, _, c1, _ = self._make_subtree()
+        s.update("c1", opacity=0.5)
+        assert s.get_node("c1").style["opacity"] == 0.5
+
+    def test_update_entity_node_only_child(self):  # noqa: ANN201
+        s, _, c1, _ = self._make_subtree()
+        s.update_entity("c1", Point(9, 9, 9))
+        node = s.get_node("c1")
+        assert (node.entity.x, node.entity.y, node.entity.z) == (9, 9, 9)
+
+    def test_add_subtree_id_collision_raises(self):  # noqa: ANN201
+        s = Scene()
+        s.add_node(VizGroup("dup"))
+        g = VizGroup("g")
+        c = VizSceneObject("dup", Point(1, 0, 0), kind="Point")
+        g.add_child(c)
+        with pytest.raises(ValueError):
+            s.add_subtree(g)
