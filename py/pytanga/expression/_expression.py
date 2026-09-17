@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
 
@@ -513,6 +513,29 @@ class Expression:
     def conj(self) -> "Expression":
         return _apply_involution(self, EInv.CONJ)
 
+    def project_onto(self, other: "MV | BladeMask") -> "Expression":
+        """Restrict self to a blade set, keeping only self's components.
+
+        - ``MV`` — retain self's output blades that are non-zero in *other*.
+        - ``BladeMask`` — retain self's output blades whose id is exactly in
+          ``other.ids``.
+
+        The result's output mask is the corresponding subspace; variable axes
+        and occurrences are unchanged.  A disjoint projection collapses to a
+        zero constant expression.
+        """
+        if isinstance(other, MV):
+            target = BladeMask(other)
+        elif isinstance(other, BladeMask):
+            target = other
+        else:
+            raise TypeError(
+                f"project_onto expects MV or BladeMask, got {type(other).__name__}"
+            )
+        if target.algebra is not self.algebra:
+            raise ValueError("project_onto: blade set belongs to a different algebra")
+        return _restrict_output(self, target)
+
     # ------------------------------------------------------------------
     # Named GA product methods
     # ------------------------------------------------------------------
@@ -976,8 +999,35 @@ class AffineExpression:
         return AffineExpression([t._substitute(mapping) for t in self._terms])
 
     def rename_var(self, old: "str | Variable", new_name: str) -> "AffineExpression":
-        """Rename a variable in every term (name-only)."""
-        return AffineExpression([t.rename_var(old, new_name) for t in self._terms])
+        """Rename a variable in every term that contains it (name-only).
+
+        Terms that do not contain ``old`` are passed through unchanged, mirroring
+        the leniency of :meth:`_substitute`.  Raises ``ValueError`` if ``old`` is
+        absent from every term, or if ``new_name`` already denotes a different
+        variable in any term.
+        """
+        name = old.name if isinstance(old, Variable) else str(old)
+        if name not in self.names:
+            raise ValueError(f"cannot rename unknown variable {name!r}")
+        new_name = str(new_name)
+        if new_name != name and new_name in self.names:
+            raise ValueError(
+                f"cannot rename {name!r} to {new_name!r}: name already in use"
+            )
+        return AffineExpression([
+            t.rename_var(old, new_name) if name in t.names else t
+            for t in self._terms
+        ])
+
+    def project_onto(self, other: "MV | BladeMask") -> "AffineExpression":
+        """Restrict every term to a blade set (see :meth:`Expression.project_onto`).
+
+        Terms whose entire output is dropped collapse to zero and are removed;
+        if every term is dropped the result is a single zero constant term.
+        """
+        terms = [t.project_onto(other) for t in self._terms]
+        kept = [t for t in terms if len(t.out_mask)]
+        return AffineExpression(kept or [Expression(self.algebra.multivector({}))])
 
     # ------------------------------------------------------------------
     # Named GA product methods — distribute over the terms
@@ -1624,6 +1674,30 @@ def _reindex_output(expr: Expression, union: BladeMask) -> MVLabeledTensor:
     return MVLabeledTensor(MVTensor(data=new_data, masks=new_masks), expr.tensor.labels)
 
 
+def _restrict_output(expr: Expression, keep: BladeMask) -> Expression:
+    """Restrict an expression's output axis to the blades in *keep*.
+
+    Returns a new :class:`Expression` whose output mask is the intersection of
+    ``expr.out_mask`` and *keep*; a disjoint intersection collapses to a zero
+    constant expression.
+    """
+    old_mask = expr.out_mask
+    keep_ids = [bid for bid in old_mask.ids if bid in keep]
+    if not keep_ids:
+        return Expression(expr.algebra.multivector({}))
+    new_mask = BladeMask(expr.algebra, keep_ids)
+    data = expr.tensor.data
+    new_data = np.zeros((len(new_mask), *data.shape[1:]), dtype=data.dtype)
+    for k, bid in enumerate(new_mask.ids):
+        new_data[k] = data[old_mask.index(bid)]
+    new_masks = (new_mask, *expr.tensor.tensor.masks[1:])
+    return Expression(
+        MVLabeledTensor(MVTensor(data=new_data, masks=new_masks), expr.tensor.labels),
+        expr.names,
+        expr.masks,
+    )
+
+
 def _add(
     left: Any, right: Any, subtract: bool = False
 ) -> "Expression | AffineExpression":
@@ -1777,6 +1851,23 @@ def _scalar_mask(left: Any, right: Any) -> BladeMask:
 # ---------------------------------------------------------------------------
 # Named GA product functions
 # ---------------------------------------------------------------------------
+
+
+@overload
+def project_onto(x: MV, other: "MV | BladeMask") -> MV: ...
+@overload
+def project_onto(x: Expression, other: "MV | BladeMask") -> Expression: ...
+@overload
+def project_onto(x: AffineExpression, other: "MV | BladeMask") -> AffineExpression: ...
+def project_onto(
+    x: "MV | Expression | AffineExpression", other: "MV | BladeMask"
+) -> "MV | Expression | AffineExpression":
+    """Restrict *x* (MV / Expression / AffineExpression) to a blade set.
+
+    ``other`` is an ``MV`` (its non-zero blades) or a ``BladeMask`` (exact id
+    membership).  The return type matches *x*.
+    """
+    return x.project_onto(other)
 
 
 def gp(left: Any, right: Any) -> "MV | Expression | AffineExpression":

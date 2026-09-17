@@ -48,7 +48,8 @@ class BladeMask:
     unioned.
 
     If ``ctx`` is an Algebra instance, but neither ids, nor grades are given,
-    the mask is the whole algebra.
+    the mask is the whole algebra.  Passing an explicit empty ``ids`` iterable
+    (``[]`` / ``set()``) yields an **empty** mask instead.
 
     Examples::
 
@@ -66,7 +67,7 @@ class BladeMask:
     def __init__(
         self,
         ctx: Algebra | MV | list[MV],
-        ids: Iterable[int] | str | Iterable[str] = (),
+        ids: Iterable[int] | str | Iterable[str] | None = None,
         *,
         grades: list[int] | None = None,
     ) -> None:
@@ -77,7 +78,12 @@ class BladeMask:
             alg = ctx
 
             # --- resolve ids ---
-            if isinstance(ids, str):
+            if ids is None:
+                # No ids supplied; the full-mask default is applied below when
+                # grades is also omitted.  An explicit empty iterable is kept
+                # empty.
+                pass
+            elif isinstance(ids, str):
                 # single expression string
                 raw.update(_parse_mv_string(ids, alg.dim).keys())
             else:
@@ -95,7 +101,7 @@ class BladeMask:
             grade_set = set()
             if grades is not None:
                 grade_set = set(grades)
-            elif len(raw) == 0:
+            elif ids is None:
                 grade_set = set(range(alg.dim + 1))
 
             if len(grade_set) > 0:

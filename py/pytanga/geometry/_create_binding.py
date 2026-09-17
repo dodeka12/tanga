@@ -133,6 +133,10 @@ class CreateModule(Protocol):
 
     def create_motor(self, basis: Algebra, rotor: Any, translator: Any) -> MV: ...
 
+    def create_twist_bivector(
+        self, basis: Algebra, rotor: Any, translator: Any
+    ) -> MV: ...
+
     def create_inversion(
         self, basis: Algebra, center: Point, radius: float = 1.0
     ) -> MV: ...

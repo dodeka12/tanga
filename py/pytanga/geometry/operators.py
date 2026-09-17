@@ -275,6 +275,38 @@ class Motor:
 
 
 @dataclass(frozen=True)
+class TwistBivector:
+    """The grade-2 twist bivector of a motor (rotation + translation).
+
+    Built from a ``Rotor`` and a ``Translator`` by forming the motor and
+    projecting it onto the motor's grade-2 blade mask (the twist-bivector
+    subspace).  N3-only and not visualizable.
+
+    Supported algebras: N3 only.
+    """
+
+    rotor: GeneralRotor
+    translator: Translator
+
+    def __init__(self, rotor: Rotor | GeneralRotor, translator: Translator) -> None:
+        if not isinstance(translator, Translator):
+            raise TypeError(f"Expected Translator, got {type(translator).__name__}")
+        if isinstance(rotor, GeneralRotor):
+            gen, trans = rotor, translator
+        elif isinstance(rotor, Rotor):
+            gen, trans = _motor_screw(rotor.angle, rotor.axis, translator.vector)
+        else:
+            raise TypeError(
+                f"Expected Rotor or GeneralRotor, got {type(rotor).__name__}"
+            )
+        object.__setattr__(self, "rotor", gen)
+        object.__setattr__(self, "translator", trans)
+
+    def __repr__(self) -> str:
+        return f"TwistBivector({self.rotor}, {self.translator})"
+
+
+@dataclass(frozen=True)
 class GeneralRotor:
     """A rotation about an arbitrary origin point.
 
@@ -353,6 +385,7 @@ Operator = (
     | Translator
     | Dilator
     | Motor
+    | TwistBivector
     | GeneralRotor
     | TripleReflection
     | VersorFactors

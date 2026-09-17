@@ -54,6 +54,7 @@ from .operators import (
     Rotor,
     Translator,
     TripleReflection,
+    TwistBivector,
     VersorFactors,
 )
 
@@ -107,6 +108,10 @@ def _template(typ: "type[object]") -> "Entity | Operator":
         return Inversion(Point(1, 2, 3), 2.0)
     if issubclass(typ, Motor):
         return Motor(Rotor(0.7, Direction(1, 2, 3)), Translator(Direction(4, 5, 6)))
+    if issubclass(typ, TwistBivector):
+        return TwistBivector(
+            Rotor(0.7, Direction(1, 2, 3)), Translator(Direction(4, 5, 6))
+        )
     if issubclass(typ, GeneralRotor):
         return GeneralRotor(0.7, Direction(1, 2, 3), Point(1, 2, 3))
     if issubclass(typ, ReflectionLine):

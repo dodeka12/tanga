@@ -70,6 +70,26 @@ class TestBladeMask:
     def test_full(self, alg_float):  # noqa: ANN001, ANN201
         assert BladeMask.full(alg_float).ids == list(range(8))
 
+    def test_no_ids_is_full(self, alg_float):  # noqa: ANN001, ANN201
+        assert BladeMask(alg_float).ids == list(range(8))
+
+    def test_empty_ids_is_empty(self, alg_float):  # noqa: ANN001, ANN201
+        assert BladeMask(alg_float, []).ids == []
+        assert BladeMask(alg_float, set()).ids == []
+
+    def test_empty_intersection(self, alg_float):  # noqa: ANN001, ANN201
+        a = BladeMask(alg_float, [1])
+        b = BladeMask(alg_float, [2])
+        assert a.intersection(b).ids == []
+
+    def test_empty_union(self, alg_float):  # noqa: ANN001, ANN201
+        assert BladeMask(alg_float, []).union(BladeMask(alg_float, [])).ids == []
+
+    def test_zero_mv_mask_is_empty(self, alg_float):  # noqa: ANN001, ANN201
+        zero = alg_float.multivector({})
+        assert BladeMask(zero).ids == []
+        assert BladeMask.from_mv(zero).ids == []
+
     def test_union(self, alg_float):  # noqa: ANN001, ANN201
         a = BladeMask(alg_float, [1, 2, 4])
         b = BladeMask(alg_float, grades=[0])

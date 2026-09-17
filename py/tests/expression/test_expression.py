@@ -115,6 +115,51 @@ class TestExpression:
         y = self._mv({"e2": 3.0})
         assert _close(e(V1=x, V2=y), x * y)
 
+    def test_project_onto_blade_mask(self):  # noqa: ANN201
+        v = Variable("V1", self.full)
+        a = self._mv({"e1": 2.0, "e12": 3.0})
+        e = v * a
+        mask = BladeMask(self.alg, [1, 3])  # e1, e12
+        p = e.project_onto(mask)
+        assert p.out_mask == mask
+        x = self._mv({"e1": 1.0, "e2": 4.0})
+        assert _close(p(V1=x), (x * a).project_onto(mask))
+
+    def test_project_onto_mv(self):  # noqa: ANN201
+        v = Variable("V1", self.full)
+        a = self._mv({"e1": 2.0, "e12": 3.0})
+        e = v * a
+        b = self._mv({"e1": 1.0, "e12": 4.0})
+        p = e.project_onto(b)
+        x = self._mv({"e1": 1.0, "e2": 4.0})
+        assert _close(p(V1=x), (x * a).project_onto(b))
+
+    def test_project_onto_disjoint_is_zero(self):  # noqa: ANN201
+        e = Expression(self._mv({"e1": 2.0}))
+        p = e.project_onto(BladeMask(self.alg, [3]))  # e12 only
+        assert p.out_mask.ids == []
+        assert _close(p(), self._mv({}))
+
+    def test_project_onto_preserves_variables(self):  # noqa: ANN201
+        v1 = Variable("V1", self.full)
+        v2 = Variable("V2", self.full)
+        e = v1 * v2
+        p = e.project_onto(BladeMask(self.alg, [3]))  # e12 only
+        assert set(p.names) == {"V1", "V2"}
+        x = self._mv({"e1": 2.0})
+        y = self._mv({"e2": 3.0})
+        assert _close(p(V1=x, V2=y), (x * y).project_onto(BladeMask(self.alg, [3])))
+
+    def test_project_onto_wrong_type_raises(self):  # noqa: ANN201
+        e = Variable("V1", self.full) * self._mv({"e1": 2.0})
+        with pytest.raises(TypeError):
+            e.project_onto("e1")
+
+    def test_project_onto_wrong_algebra_raises(self):  # noqa: ANN201
+        e = Variable("V1", self.full) * self._mv({"e1": 2.0})
+        with pytest.raises(ValueError):
+            e.project_onto(BladeMask(BasisE3(), [1]))
+
     def test_constant_folding(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0})

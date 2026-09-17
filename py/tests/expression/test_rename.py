@@ -187,6 +187,32 @@ class TestAffineSubstitution:
         v = self._mv({"e1": 1.0, "e2": 4.0})
         assert _close(r(Y=v), v * a + v * b)
 
+    def test_rename_var_skips_terms_missing_var(self):  # noqa: ANN201
+        a = Variable("A", self.full)
+        b = Variable("B", self.full)
+        e1 = self._mv({"e1": 2.0})
+        e2 = self._mv({"e2": 3.0})
+        aff = a * e1 + b * e2
+        r = aff.rename_var("A", "A2")
+        assert r.names == {"A2", "B"}
+        va = self._mv({"e1": 1.0})
+        vb = self._mv({"e2": 4.0})
+        assert _close(r(A2=va, B=vb), va * e1 + vb * e2)
+
+    def test_rename_var_unknown_across_all_terms(self):  # noqa: ANN201
+        a = Variable("A", self.full)
+        b = Variable("B", self.full)
+        aff = a * self._mv({"e1": 2.0}) + b * self._mv({"e2": 3.0})
+        with pytest.raises(ValueError):
+            aff.rename_var("Z", "Y")
+
+    def test_rename_var_collision_across_terms(self):  # noqa: ANN201
+        a = Variable("A", self.full)
+        b = Variable("B", self.full)
+        aff = a * self._mv({"e1": 2.0}) + b * self._mv({"e2": 3.0})
+        with pytest.raises(ValueError):
+            aff.rename_var("A", "B")
+
 
 class TestUnify:
     def setup_method(self):  # noqa: ANN201

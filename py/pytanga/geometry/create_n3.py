@@ -359,3 +359,22 @@ def create_general_rotor(
     t = create_translator(basis, origin.x, origin.y, origin.z)
     r = create_rotor(basis, angle, axis)
     return t.gp(r).gp(t.rev())
+
+
+def create_twist_bivector(
+    basis: Algebra, rotor: GeneralRotor, translator: Translator
+) -> MV:
+    """The grade-2 twist bivector of ``rotor`` + ``translator``.
+
+    Builds the motor ``M = T·G`` and projects it onto the twist-bivector mask
+    (the motor blade mask intersected with the grade-2 blade mask of CGA).
+    N3-only.
+    """
+    from pytanga.blade_mask import BladeMask
+
+    from .mask import mask_for
+    from .operators import Motor
+
+    motor = create_motor(basis, rotor, translator)
+    twist_mask = mask_for(basis, Motor).intersection(BladeMask(basis, grades=[2]))
+    return motor.project_onto(twist_mask)
