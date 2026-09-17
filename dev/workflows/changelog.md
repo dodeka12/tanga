@@ -15,8 +15,10 @@ How to create and maintain changelog entries for this repository.
     changelog — append to it as the branch evolves; do **not** create a new
     file per commit.
 - **When opening a PR**, the file is renamed to its final
-  `DD_<short-commit-hash>.md` form (the hash of the branch's last commit) and
-  moved into the year/month folder for the date the PR is submitted. See
+  `DD_<short-commit-hash>.md` form — the hash of the branch's **squashed**
+  commit (the branch is first collapsed to one commit, then the rename is a
+  separate commit, so the hash is not the branch's final HEAD) — and moved into
+  the year/month folder for the date the PR is submitted. See
   `dev/workflows/pull-request.md`.
 
 ## Title
