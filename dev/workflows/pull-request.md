@@ -4,7 +4,7 @@ How to open a pull request for a feature/fix branch.
 
 ## Overview
 
-1. Run the full test suite — it must pass.
+1. Run the full test suite, linter, and type checker — all must pass.
 2. Create a local backup branch (never published).
 3. Squash all commits on the branch into one.
 4. Rename the changelog to the squashed commit's hash + update `docs/changelog/index.md`.
@@ -19,16 +19,22 @@ How to open a pull request for a feature/fix branch.
 
 ## Steps
 
-### 1. Run the full test suite
+### 1. Run the full validation gate
 
-Run the full pytest suite and require it to succeed before doing anything else:
+Run the full test suite, the linter, and the type checker, and require all three
+to succeed before doing anything else:
 
 ```powershell
 uv run pytest -rs
+uv run ruff check .
+uv run ty check
 ```
 
-- If any test fails, fix it and re-run. Do **not** open the PR with failing
-  tests.
+- If any check fails, fix it and re-run. Do **not** open the PR with failing
+  tests, lint errors, or type errors.
+- `uv run ruff check .` carries the ANN (type-hint coverage) rules; `uv run ty
+  check` is the correctness gate (unresolved/unsound types, bad calls, bad
+  attributes). Both run over the whole repository, including `py/examples`.
 - `-rs` prints the reason for every skipped test. **Do not silently ignore
   skipped tests** — confirm each skip is expected. The only expected skips are
   the offline-export tests in `py/tests/viz/test_export_delivery.py` (see the

@@ -208,6 +208,36 @@ given expression are skipped — and returns a list of re-keyed expressions that
 you combine with `+`.  The target variable's blade mask must equal the source's
 mask, otherwise `ValueError` is raised.
 
+## Binding a variable to a sub-expression (composition)
+
+`bind` (and `__call__`) also accepts an `Expression` as a binding value.  This
+*substitutes* the variable with the sub-expression's tensor instead of
+evaluating it numerically: wherever the variable appears, it is replaced by the
+sub-expression, and the sub-expression's own free variables become the result's
+new axes.  This is function composition — the sandwich pattern used to turn a
+placement-independent local operator into its world-frame form:
+
+```python
+v_b   = Variable("v_b", mask)      # body/local-frame symbol
+local = v_b ^ (v_b | B)           # built once; v_b appears twice
+
+V = Variable("V", mask)           # world-frame symbol
+R = create_rotor(alg, 0.5, Direction(1, 0, 0))
+
+# Replace v_b with the world->local sandwich (an Expression, not an MV).
+world = local.bind(v_b=R * V * ~R)   # free variable V (two occurrences)
+```
+
+The sub-expression's output mask must equal the bound variable's mask (else
+`ValueError`), and it must not carry counting/batch axes.  A variable that
+occurs several times in the host is substituted consistently: the
+sub-expression's free variables become one shared block, so binding them later
+feeds the same value to every occurrence (the same rule as for repeated
+`DataArray` bindings).  If a sub-expression introduces a variable name that is
+already present in the host — or that is being bound in the same call — a
+`ValueError` is raised.  See
+`py/examples/ga/expression/bind_subexpression.py` for a runnable example.
+
 ## Projecting onto a subspace
 
 Restrict an expression (or an affine sum of expressions) to a blade subspace

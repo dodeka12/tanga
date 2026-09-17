@@ -49,6 +49,6 @@ print(e_data)
 
 See [usage](usage.md) for the full API (including re-keying variables with
 `bind(X=X)`, `rename_var`, and `unify` so independently-created expressions
-merge), [DataArray](data-array.md) for the data container and its use cases,
+merge, and binding a variable to a sub-expression for composition), [DataArray](data-array.md) for the data container and its use cases,
 [weighted sum example](example-weighted-sum.ipynb) for a worked NumPy grid
 example, and the `py/examples/ga/expression/` scripts for runnable examples.
