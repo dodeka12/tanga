@@ -8,6 +8,7 @@
 | [Line Fitting P3](line_fitting_p3.md) | expressions, line fitting, least-squares, P3, visualization | Least-squares line fitting in P3 with visualization |
 | [Named Products](named_products.md) | expressions, Variable, gp, vp, sp, cp, rc | Named GA product functions over variables |
 | [Polynomial Demo](polynomial_demo.md) | polynomial, expressions, repeated variables, affine | Polynomial (repeated-variable) expressions and affine sums |
+| [Project Onto Euclidean N3](project_onto_euclidean_n3.md) | expressions, Variable, project_onto, BladeMask, N3, Euclidean | Project an N3 expression onto the Euclidean basis |
 | [Rename Unify Variables](rename_unify_variables.md) | expressions, Variable, bind, rename_var, unify, merge | Re-key variables so independent expressions merge |
 | [Solve Ax B](solve_ax_b.md) | expressions, solve, A X = B, multivector equation | Solve the general multivector equation A X = B with expressions |
 | [Variable Rotor](variable_rotor.md) | expressions, Variable, rotor, points | Apply a fixed rotor to points with a Variable-backed expression |
@@ -15,4 +16,4 @@
 
 ## Keywords
 
-A X = B · AffineExpression · DataArray · P3 · Variable · affine · bind · counting axis · cp · entity · expressions · gp · inv · least-squares · line fitting · linear equations · merge · multivector equation · points · polynomial · rc · rename_var · repeated variables · rotor · solve · sp · unify · variables · visualization · vp · weighted sum
+A X = B · AffineExpression · BladeMask · DataArray · Euclidean · N3 · P3 · Variable · affine · bind · counting axis · cp · entity · expressions · gp · inv · least-squares · line fitting · linear equations · merge · multivector equation · points · polynomial · project_onto · rc · rename_var · repeated variables · rotor · solve · sp · unify · variables · visualization · vp · weighted sum

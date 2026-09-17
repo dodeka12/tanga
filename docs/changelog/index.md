@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.5.0] — 2026-09-17
+- Expression / AffineExpression `project_onto` (restrict an expression to a blade subspace) · module-level `project_onto` dispatcher · N3-only `TwistBivector` geometry operator · N3 Euclidean projection example
+- Bug fixes: `AffineExpression.rename_var` skips terms missing the variable · `BladeMask(alg, [])` now returns an empty mask
+→ [Details](2026/09/17_7dad095fa.md)
+
 ## [Since 2.4.1] — 2026-09-16
 - Detached scene-subtree insertion (`viz.add(group)` / `viz.new(group)` + `Scene.add_subtree`) · `analyze_operator(expect=…)` half-turn reflection coercion · named GA product functions (`gp`/`ip`/`op`/`vp`/`nvp`/`sp`/`cp`/`acp`/`rc`) on the expression system · expression variable renaming/unifying (`bind(X=X)` / `rename_var` / `unify`)
 → [Details](2026/09/16_a19312c14.md)

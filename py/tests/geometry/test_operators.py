@@ -11,7 +11,13 @@ from pytanga.basis import BasisN3
 from pytanga.geometry.analysis import analyze_operator
 from pytanga.geometry.create import create_operator
 from pytanga.geometry.entities import Direction, Point
-from pytanga.geometry.operators import GeneralRotor, Motor, Rotor, Translator
+from pytanga.geometry.operators import (
+    GeneralRotor,
+    Motor,
+    Rotor,
+    Translator,
+    TwistBivector,
+)
 
 
 def test_motor_decomposes_pure_axial():  # noqa: ANN201
@@ -67,6 +73,18 @@ def test_motor_accepts_general_rotor():  # noqa: ANN201
     m = Motor(gr, Translator(Direction(0, 0, 1)))
     assert m.rotor is gr
     assert m.translator.vector.z == pytest.approx(1)
+
+
+def test_twist_bivector_constructor():  # noqa: ANN201
+    """TwistBivector normalizes a Rotor+Translator to the screw form like Motor."""
+    tw = TwistBivector(
+        Rotor(math.pi / 2, Direction(0, 0, 1)),
+        Translator(Direction(1, 1, 1)),
+    )
+    assert isinstance(tw.rotor, GeneralRotor)
+    assert tw.rotor.angle == pytest.approx(math.pi / 2)
+    assert tw.translator.vector.z == pytest.approx(1)
+    assert "TwistBivector" in repr(tw)
 
 
 def test_motor_screw_round_trip():  # noqa: ANN201

@@ -82,6 +82,15 @@ def product_tensor(
 
     assert c_mask.algebra is alg
 
+    if not a_mask or not b_mask or not c_mask:
+        # The C++ tensor builders assume non-empty masks; a genuinely empty
+        # operand/result mask (e.g. ``bivector ^ bivector`` in E3) is a zero
+        # product, so build the empty tensor directly.
+        return MVTensor(
+            data=np.zeros((len(c_mask), len(a_mask), len(b_mask))),
+            masks=(c_mask, a_mask, b_mask),
+        )
+
     _fn_map = {
         EProduct.GP: "product_tensor_gp",
         EProduct.IP: "product_tensor_ip",

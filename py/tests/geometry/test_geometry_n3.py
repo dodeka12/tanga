@@ -26,11 +26,13 @@ from pytanga.geometry.operators import (
     Dilator,
     GeneralRotor,
     Inversion,
+    Motor,
     ReflectionLine,
     ReflectionPlane,
     ReflectionPoint,
     Rotor,
     Translator,
+    TwistBivector,
 )
 
 
@@ -297,3 +299,39 @@ def test_dilator_at_origin_round_trip(b):  # noqa: ANN001, ANN201
     mv = create_operator(b, gd_op)
     r = analyze_operator(mv)
     assert isinstance(r, Dilator)
+
+
+# ═══════ TwistBivector ═══════
+
+
+def test_twist_bivector_creation(b):  # noqa: ANN001, ANN201
+    """TwistBivector = motor projected onto the motor's grade-2 blade mask."""
+    from pytanga import BladeMask
+    from pytanga.geometry.mask import mask_for
+
+    tw = TwistBivector(
+        Rotor(math.pi / 2, Direction(0, 0, 1)),
+        Translator(Direction(1, 1, 1)),
+    )
+    mv = create_operator(b, tw)
+    assert mv.grades == [2]
+    motor = create_operator(
+        b,
+        Motor(Rotor(math.pi / 2, Direction(0, 0, 1)), Translator(Direction(1, 1, 1))),
+    )
+    expected = motor.project_onto(
+        mask_for(b, Motor).intersection(BladeMask(b, grades=[2]))
+    )
+    assert (mv - expected).mag < 1e-8
+
+
+def test_twist_bivector_requires_n3(b):  # noqa: ANN001, ANN201
+    """TwistBivector is N3-only; other bases raise TypeError."""
+    from pytanga.basis import BasisE3
+
+    tw = TwistBivector(
+        Rotor(math.pi / 2, Direction(0, 0, 1)),
+        Translator(Direction(1, 0, 0)),
+    )
+    with pytest.raises(TypeError):
+        create_operator(BasisE3(), tw)

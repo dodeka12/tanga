@@ -16,6 +16,7 @@ from pytanga.expression import (
     ip,
     nvp,
     op,
+    project_onto,
     rc,
     sp,
     vp,
@@ -73,6 +74,25 @@ class TestNamedProducts:
         assert _close(cp(a, b), a.cp(b))
         assert _close(acp(a, b), a.acp(b))
         assert _close(rc(a, b), a.rc(b))
+
+    def test_project_onto_dispatcher(self):  # noqa: ANN201
+        a = self._mv({"e1": 2.0, "e12": 3.0})
+        mask = BladeMask(self.alg, [1, 3])
+        # MV path
+        assert _close(project_onto(a, mask), a.project_onto(mask))
+        # Expression path
+        v = Variable("V1", self.full)
+        e = v * a
+        x = self._mv({"e1": 1.0, "e2": 4.0})
+        assert _close(project_onto(e, mask)(V1=x), (x * a).project_onto(mask))
+        # AffineExpression path
+        w = Variable("V2", self.full)
+        aff = v * a + w * a
+        y = self._mv({"e2": 3.0})
+        assert _close(
+            project_onto(aff, mask)(V1=x, V2=y),
+            ((x * a) + (y * a)).project_onto(mask),
+        )
 
     def test_vp_variable_versor(self):  # noqa: ANN201
         r = Variable("R", self.full)

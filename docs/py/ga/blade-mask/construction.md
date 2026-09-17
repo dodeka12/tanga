@@ -66,9 +66,17 @@ BladeMask(alg, "e1", grades=[2])         # e1 plus all bivectors
 
 ```python
 BladeMask.full(alg)                      # all 2^dim blades
+BladeMask(alg)                           # same: no ids/grades -> full mask
 ```
 
 For E3 this produces 8 blades, for Conformal GA (5D) it produces 32.
+
+An explicit empty id list produces an **empty** mask instead:
+
+```python
+BladeMask(alg, [])                       # empty mask (no blades)
+BladeMask(alg, set())                    # empty mask
+```
 
 ## From an existing multivector
 

@@ -146,6 +146,27 @@ m = Motor(
 |---------|-----------|
 | PGA3, N3 | ✓ |
 
+## TwistBivector (N3 only)
+
+The grade-2 twist bivector of a motor: the rotation bivectors plus the
+translation bivectors, obtained by building the motor and projecting it onto
+the motor's grade-2 blade mask.  It is not visualizable, but `Geometry.create_var`
+and `Geometry.mask_for` work.
+
+```python
+from pytanga.geometry import TwistBivector, Rotor, Translator, Direction
+import math
+
+twist = TwistBivector(
+    rotor=Rotor(angle=0.5, axis=Direction(0, 0, 1)),
+    translator=Translator(vector=Direction(1, 0, 0)),
+)
+```
+
+| Algebra | Supported |
+|---------|-----------|
+| N3 | ✓ (N3 only; other algebras raise `TypeError`) |
+
 ## GeneralRotor
 
 A rotation about an axis that does **not** pass through the origin. Takes
@@ -178,4 +199,5 @@ gr = GeneralRotor(
 | Translator | — | — | ✓ | ✓ | — | — | — | ✓ |
 | Dilator | — | — | — | ✓ | — | — | — | ✓ |
 | Motor | — | — | ✓ | ✓ | — | — | — | ✓ |
+| TwistBivector | — | — | — | ✓ | — | — | — | — |
 | GeneralRotor | — | — | ✓ | ✓ | — | — | — | ✓ |

@@ -208,6 +208,27 @@ given expression are skipped — and returns a list of re-keyed expressions that
 you combine with `+`.  The target variable's blade mask must equal the source's
 mask, otherwise `ValueError` is raised.
 
+## Projecting onto a subspace
+
+Restrict an expression (or an affine sum of expressions) to a blade subspace
+with `project_onto`, mirroring `MV.project_onto`:
+
+```python
+from pytanga import BladeMask
+
+euclid = BladeMask(alg, [alg.E1, alg.E2, alg.E3, alg.E12, alg.E13, alg.E23])
+
+p = expr.project_onto(euclid)        # Expression — output restricted to euclid
+p = aff.project_onto(euclid)         # AffineExpression — terms dropped if empty
+p = expr.project_onto(some_mv)       # keep output blades non-zero in some_mv
+```
+
+`other` is either a `BladeMask` (exact blade-id membership) or an `MV` (its
+non-zero blades).  The result's output mask is the intersection; a disjoint
+projection collapses to a zero constant expression.  A module-level
+`project_onto(x, other)` dispatches over `MV` / `Expression` /
+`AffineExpression`.
+
 ## Inverse
 
 For a single-variable, single-occurrence expression whose tensor is a square,

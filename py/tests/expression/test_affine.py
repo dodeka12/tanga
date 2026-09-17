@@ -48,6 +48,29 @@ class TestAffineExpression:
         x = self._mv({"e1": 1.0})
         assert _close(a(V1=x), x - c)
 
+    def test_project_onto_drops_annihilated_terms(self):  # noqa: ANN201
+        vec_mask = BladeMask(self.alg, grades=[1])
+        bivec_mask = BladeMask(self.alg, grades=[2])
+        v = Variable("V1", vec_mask)
+        b = Variable("B1", bivec_mask)
+        a = v + b
+        p = a.project_onto(vec_mask)
+        assert isinstance(p, AffineExpression)
+        assert len(p.terms) == 1
+        assert set(p.names) == {"V1"}
+        x = self._mv({"e1": 1.0})
+        assert _close(p(V1=x), x)
+
+    def test_project_onto_all_terms_dropped(self):  # noqa: ANN201
+        vec_mask = BladeMask(self.alg, grades=[1])
+        v = Variable("V1", vec_mask)
+        w = Variable("V2", vec_mask)
+        a = v + w
+        p = a.project_onto(BladeMask(self.alg, grades=[2]))
+        assert isinstance(p, AffineExpression)
+        assert len(p.terms) == 1
+        assert p.terms[0].out_mask.ids == []
+
     def test_merge_still_happens(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = v * self._mv({"e1": 2.0})

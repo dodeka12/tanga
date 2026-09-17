@@ -98,6 +98,7 @@ from .operators import (
     Rotor,
     Translator,
     TripleReflection,
+    TwistBivector,
 )
 
 __all__ = [
@@ -155,6 +156,7 @@ __all__ = [
     "Rotor",
     "Translator",
     "TripleReflection",
+    "TwistBivector",
     # Geometry facade
     "Geometry",
     # Analysis

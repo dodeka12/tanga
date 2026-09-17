@@ -78,6 +78,9 @@
             "Polynomial Demo": "py/examples/ga/expression/polynomial_demo.md"
           },
           {
+            "Project Onto Euclidean N3": "py/examples/ga/expression/project_onto_euclidean_n3.md"
+          },
+          {
             "Rename Unify Variables": "py/examples/ga/expression/rename_unify_variables.md"
           },
           {

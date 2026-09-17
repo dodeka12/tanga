@@ -29,6 +29,7 @@ from pytanga.geometry.operators import (
     Motor,
     Rotor,
     Translator,
+    TwistBivector,
 )
 from pytanga.geometry.mask import _template, mask_for
 
@@ -176,3 +177,31 @@ def test_untyped_containers_raise():  # noqa: ANN201
         geo.mask_for(ImagCircle)
     with pytest.raises(TypeError):
         geo.mask_for(TripleReflection)
+
+
+def test_twist_bivector_mask_is_motor_intersect_grade2():  # noqa: ANN201
+    geo = Geometry(BasisN3())
+    twist = geo.mask_for(TwistBivector)
+    expected = geo.mask_for(Motor).intersection(
+        BladeMask(geo.algebra, grades=[2])
+    )
+    assert twist == expected
+    assert twist.ids == [3, 5, 6, 9, 10, 12, 17, 18, 20]
+
+
+def test_twist_bivector_create_var():  # noqa: ANN201
+    geo = Geometry(BasisN3())
+    v = geo.create_var("T", TwistBivector)
+    assert isinstance(v, Variable)
+    assert v.name == "T"
+    assert v.mask == geo.mask_for(TwistBivector)
+
+
+@pytest.mark.parametrize(
+    "alg_cls",
+    [BasisE3, BasisP3, BasisPGA3, BasisN2, BasisE2, BasisP2, BasisPGA2],
+)
+def test_twist_bivector_unsupported_algebras_raise(alg_cls):  # noqa: ANN001, ANN201
+    geo = Geometry(alg_cls())
+    with pytest.raises(TypeError):
+        geo.mask_for(TwistBivector)

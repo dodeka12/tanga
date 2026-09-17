@@ -48,6 +48,7 @@ from .operators import (
     ReflectionPoint,
     Rotor,
     Translator,
+    TwistBivector,
 )
 
 if TYPE_CHECKING:
@@ -340,6 +341,15 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
         return mod.create_dilator(basis, operator.factor)
     elif isinstance(operator, Motor):
         return mod.create_motor(basis, operator.rotor, operator.translator)
+    elif isinstance(operator, TwistBivector):
+        if _detect(basis) != "n3":
+            raise TypeError(
+                f"TwistBivector requires BasisN3; not supported in "
+                f"{_detect(basis).upper()}."
+            )
+        return mod.create_twist_bivector(
+            basis, operator.rotor, operator.translator
+        )
     elif isinstance(operator, GeneralRotor):
         return mod.create_general_rotor(
             basis, operator.angle, operator.axis, operator.origin
