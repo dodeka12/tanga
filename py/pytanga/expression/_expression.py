@@ -134,7 +134,11 @@ class Expression:
         - a single ``MV`` (or scalar) — contract that variable;
         - a ``DataArray`` — contract its blade axis (matched to the variable
           mask) against every occurrence of the variable, keeping its counting
-          axes element-wise.
+          axes element-wise;
+        - an ``Expression`` — substitute that variable with the sub-expression
+          (composition): its output mask must equal the variable's mask and it
+          must not carry counting axes; its free variables become the result's
+          new variables.
 
         A binding key may also name a ``None``-mask counting axis already present
         in the expression, which reduces that axis:
@@ -220,6 +224,9 @@ class Expression:
                 _count_binding_tensor(name, value, length, used, set(counting))
             )
 
+        extra_names: dict[str, tuple[int, ...]] = {}
+        extra_masks: dict[str, BladeMask] = {}
+
         for name, value in var_bindings.items():
             labels = self._names[name]
             mask = self._masks[name]
@@ -228,6 +235,21 @@ class Expression:
                 labeled.extend(
                     _variable_dataarray_binding_tensors(value, mask, labels, used)
                 )
+                continue
+
+            if isinstance(value, Expression):
+                tensors, fnames, fmasks = _expression_binding_tensors(
+                    value, mask, labels, name
+                )
+                labeled.extend(tensors)
+                for fname in fnames:
+                    if fname in extra_names:
+                        raise ValueError(
+                            "multiple bound sub-expressions introduce the same "
+                            f"free variable {fname!r}"
+                        )
+                extra_names.update(fnames)
+                extra_masks.update(fmasks)
                 continue
 
             if isinstance(value, (int, float)):
@@ -245,9 +267,19 @@ class Expression:
         result = contract_labeled(*labeled)
 
         remaining = set(self._names) - set(var_bindings)
-        if remaining:
+        collision = (remaining | set(var_bindings)) & set(extra_names)
+        if collision:
+            raise ValueError(
+                "bound sub-expression(s) introduce variable name(s) "
+                f"{sorted(collision)} that are already present in the host "
+                "expression or being bound in the same call"
+            )
+
+        if remaining or extra_names:
             new_names = {n: self._names[n] for n in remaining}
             new_masks = {n: self._masks[n] for n in remaining}
+            new_names.update(extra_names)
+            new_masks.update(extra_masks)
             expr = Expression(result, new_names, new_masks)
             return (
                 expr
@@ -265,10 +297,17 @@ class Expression:
 
         A binding value that is a :class:`Variable` substitutes that variable
         (relabeling it onto the new variable's block) instead of evaluating it;
-        every other value binds as before.  Returns a new :class:`Expression`
-        over the remaining variables.  Raises :class:`ValueError` if the binding
-        would fully collapse the expression to a plain ``MV`` or a batched
-        ``list`` (use :meth:`evaluate` or :meth:`__call__` for that instead).
+        every other value binds as before.  A binding value that is an
+        :class:`Expression` composes it into this expression: the bound variable
+        is replaced by the sub-expression's tensor (its output mask must equal
+        the variable's mask, and it must not carry counting axes), and the
+        sub-expression's free variables join the result.
+
+        Returns a new :class:`Expression` over the remaining variables.  Raises
+        :class:`ValueError` if the binding would fully collapse the expression to
+        a plain ``MV`` or a batched ``list`` (use :meth:`evaluate` or
+        :meth:`__call__` for that instead), or if a bound sub-expression
+        introduces a variable name that collides with the host expression.
         """
         subs = {k: v for k, v in bindings.items() if isinstance(v, Variable)}
         if subs:
@@ -819,10 +858,11 @@ class AffineExpression:
     def __call__(self, **bindings: Any) -> "MV | AffineExpression | list[Any]":
         """Evaluate the sum, binding some or all variables.
 
-        Values are a single ``MV``/scalar or a ``DataArray``, exactly as for
-        :meth:`Expression.__call__`.  Fully bound single values yield an ``MV``;
-        fully bound ``DataArray`` bindings yield a (nested) ``list``; a remaining
-        variable yields an ``AffineExpression`` (or a list of them).
+        Values are a single ``MV``/scalar, a ``DataArray``, or an ``Expression``
+        (composition — see :meth:`Expression.__call__`).  Fully bound single
+        values yield an ``MV``; fully bound ``DataArray`` bindings yield a
+        (nested) ``list``; a remaining variable yields an ``AffineExpression``
+        (or a list of them).
         """
         counting = self._counting_axes_union()
         unknown = set(bindings) - self.names - set(counting)
@@ -854,9 +894,10 @@ class AffineExpression:
 
         A binding value that is a :class:`Variable` substitutes that variable in
         every term (see :meth:`Expression._substitute`) instead of evaluating it;
-        every other value binds as before.  Raises :class:`ValueError` if the sum
-        fully collapses to an ``MV`` or a batched ``list`` (use :meth:`evaluate`
-        or :meth:`__call__` instead).
+        every other value binds as before (an :class:`Expression` value composes
+        the sub-expression into each term).  Raises :class:`ValueError` if the
+        sum fully collapses to an ``MV`` or a batched ``list`` (use
+        :meth:`evaluate` or :meth:`__call__` instead).
         """
         subs = {k: v for k, v in bindings.items() if isinstance(v, Variable)}
         if subs:
@@ -1257,6 +1298,62 @@ def _variable_dataarray_binding_tensors(
                 lab_list.append((spec, "_"))
         out.append(MVLabeledTensor(tensor, lab_list))
     return out
+
+
+def _expression_binding_tensors(
+    inner: "Expression",
+    mask: BladeMask,
+    labels: tuple[int, ...],
+    name: str,
+) -> tuple[list[MVLabeledTensor], dict[str, tuple[int, ...]], dict[str, BladeMask]]:
+    """Build labelled tensors for binding *name* to a sub-expression *inner*.
+
+    The inner expression's output axis (``"k"``) is relabelled onto each of the
+    host variable's occurrence *labels*; the inner expression's free variables
+    are re-keyed onto fresh blocks of size ``len(inner.names[v]) * len(labels)``
+    so a repeated host variable substitutes the sub-expression consistently (its
+    free variables stay one shared variable, not independent copies).
+    """
+    if inner.out_mask != mask:
+        raise ValueError(
+            f"cannot bind variable {name!r} to an expression whose output mask "
+            f"{inner.out_mask.names()} differs from the variable mask {mask.names()}"
+        )
+    if inner._has_counting_axes():
+        raise ValueError(
+            f"cannot bind variable {name!r} to an expression that carries "
+            "counting/batch axes"
+        )
+
+    k = len(labels)
+
+    # Map each inner free-variable occurrence label -> (var, occurrence index).
+    label_index: dict[int, tuple[str, int]] = {}
+    for vname, vlbls in inner.names.items():
+        for occ, lab in enumerate(vlbls):
+            label_index[lab] = (vname, occ)
+
+    # One fresh, contiguous block per inner free variable (size m_v * k).
+    free_names: dict[str, tuple[int, ...]] = {}
+    for vname, vlbls in inner.names.items():
+        free_names[vname] = allocate_block(len(vlbls) * k)
+
+    inner_axes = inner.tensor.labels
+    out: list[MVLabeledTensor] = []
+    for j, label in enumerate(labels):
+        new_labels: list[tuple[int, str]] = []
+        for ax_i, ax in enumerate(inner_axes):
+            if ax_i == 0:
+                new_labels.append((label, "*"))
+            else:
+                vname, occ = label_index[cast(int, ax.name)]
+                new_labels.append(
+                    (free_names[vname][j * len(inner.names[vname]) + occ], "*")
+                )
+        out.append(MVLabeledTensor(inner.tensor.tensor, new_labels))
+
+    free_masks = {vname: inner.masks[vname] for vname in free_names}
+    return out, free_names, free_masks
 
 
 def _parse_count_spec(spec: str, key: str) -> tuple[str, str]:

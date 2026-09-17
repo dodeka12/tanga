@@ -66,6 +66,9 @@
             "Affine Linear Solve": "py/examples/ga/expression/affine_linear_solve.md"
           },
           {
+            "Bind Subexpression": "py/examples/ga/expression/bind_subexpression.md"
+          },
+          {
             "Equation Demo": "py/examples/ga/expression/equation_demo.md"
           },
           {

@@ -88,7 +88,7 @@ uv run python py/examples/<path>.py
 
 - **batched** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md)
 
-- **bind** — [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md)
+- **bind** — [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md)
 
 - **binding** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
@@ -139,6 +139,8 @@ uv run python py/examples/<path>.py
 - **compose** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
 
 - **Composed** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md)
+
+- **composition** — [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md)
 
 - **cone** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
 
@@ -254,7 +256,7 @@ uv run python py/examples/<path>.py
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
-- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
+- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
@@ -594,7 +596,7 @@ uv run python py/examples/<path>.py
 
 - **rotation** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
 
-- **rotor** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
+- **rotor** — [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **Rotor** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
@@ -685,6 +687,8 @@ uv run python py/examples/<path>.py
 - **styled objects** — [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
 
 - **styling** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
+
+- **sub-expression** — [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md)
 
 - **sub-menu** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
