@@ -16,7 +16,9 @@ Run with:  uv run python py/examples/ga/expression/bind_subexpression.py
 Keywords: expressions, bind, composition, sub-expression, rotor
 """
 
-from pytanga import BladeMask, Variable
+from typing import cast
+
+from pytanga import BladeMask, MV, Variable
 from pytanga.basis import BasisE3
 from pytanga.geometry import Direction
 from pytanga.geometry.create_e3 import create_rotor
@@ -47,9 +49,10 @@ def main() -> None:
 
     w = alg.multivector({"e1": 1.0, "e2": 2.0, "e3": 0.5})
     expected = (R * w * ~R) ^ ((R * w * ~R) | B)
-    print("world(V=w)  =", world(V=w))
+    result = cast(MV, world(V=w))
+    print("world(V=w)  =", result)
     print("expected    =", expected)
-    print("match:", (world(V=w) - expected).mag < 1e-12)
+    print("match:", (result - expected).mag < 1e-12)
 
 
 if __name__ == "__main__":
