@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.6.0] — 2026-09-17
+- Expression / AffineExpression bind-to-subexpression composition (`bind`/`__call__` accept an `Expression` binding value) · repeated occurrences substitute consistently · `bind_subexpression.py` example
+→ [Details](2026/09/17_131377c00.md)
+
 ## [Since 2.5.0] — 2026-09-17
 - Expression / AffineExpression `project_onto` (restrict an expression to a blade subspace) · module-level `project_onto` dispatcher · N3-only `TwistBivector` geometry operator · N3 Euclidean projection example
 - Bug fixes: `AffineExpression.rename_var` skips terms missing the variable · `BladeMask(alg, [])` now returns an empty mask
