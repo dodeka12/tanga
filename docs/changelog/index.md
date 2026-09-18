@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.8.0] — 2026-09-18
+- `Expression.compile()` / `AffineExpression.compile()` fast repeated evaluation · automatic compiled fast path for fully-bound `MV`/scalar `__call__` · multilinear `AffineExpression.get_tensor()` (rank `1+k`, quadratic operators) · `BladeMask.ids_outside` · `compile_fastpath.py` + `quadratic_get_tensor.py` examples
+→ [Details](2026/09/18_e77ed7992.md)
+
 ## [Since 2.7.0] — 2026-09-18
 - `BladeMask` named bases (`basis_vectors`/`basis_names`/`with_basis`/`basis_matrix`, auto display basis, composed-name parsing, basis-aware `union`/`intersection`) · `Expression.get_tensor()` / `AffineExpression.get_tensor()` + `MVTensor.get_array()` (recombine tensors into named bases) · `TwistBivector` 6-DOF basis · per-algebra `mask_for` named bases
 - Bug fixes: `mask_for` now returns hard-coded full type masks (fixes partial-mask derivation, e.g. N2 `Sphere`/`Circle`/`Inversion`)
