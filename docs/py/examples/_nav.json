@@ -55,6 +55,16 @@
         ]
       },
       {
+        "Blade_Mask": [
+          {
+            "Overview": "py/examples/ga/blade_mask/index.md"
+          },
+          {
+            "Named Basis": "py/examples/ga/blade_mask/named_basis.md"
+          }
+        ]
+      },
+      {
         "Expressions": [
           {
             "Overview": "py/examples/ga/expression/index.md"
@@ -88,6 +98,9 @@
           },
           {
             "Solve Ax B": "py/examples/ga/expression/solve_ax_b.md"
+          },
+          {
+            "Tensor Named Basis": "py/examples/ga/expression/tensor_named_basis.md"
           },
           {
             "Variable Rotor": "py/examples/ga/expression/variable_rotor.md"

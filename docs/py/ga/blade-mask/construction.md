@@ -104,6 +104,38 @@ This is used by `product_matrix_array` when no explicit `a_mask` is provided.
 It computes the union of all blades occupied by any MV in the list, ensuring
 the product matrix covers all basis elements.
 
+## Named basis
+
+Every `BladeMask` also carries an optional *named basis* — an ordered list of
+``(name, MV)`` directions.  It is attached automatically where the algebra has a
+display basis (e.g. `BasisN3`'s `einf`/`eo` convention) and it covers the mask's
+raw ids; otherwise `basis_names` falls back to the raw blade names.  Composed
+names also work in string expressions, expanding to their raw blades:
+
+```python
+mask = BladeMask(alg, grades=[1])        # N3 -> e1, e2, e3, einf, eo
+mask.basis_names                          # ['e1', 'e2', 'e3', 'einf', 'eo']
+mask.basis_vectors                        # the MVs for those directions
+
+BladeMask(alg, "e1 + einf").ids           # [1, 8, 16]  (einf expands to ep + em)
+```
+
+Attach a reduced physical-DOF basis with `with_basis` and read the raw→named
+change-of-basis matrix with `basis_matrix`:
+
+```python
+twist = BladeMask(alg, [3, 5, 6, 9, 10, 12, 17, 18, 20])
+twist = twist.with_basis([
+    ("e12", alg.e12),
+    ("e13", alg.e13),
+    ("e23", alg.e23),
+    ("e1∧einf", alg.e1 ^ alg.einf),
+    ("e2∧einf", alg.e2 ^ alg.einf),
+    ("e3∧einf", alg.e3 ^ alg.einf),
+])
+twist.basis_matrix().shape                 # (9, 6) — raw blades × directions
+```
+
 ## Constructor parameters
 
 ```python

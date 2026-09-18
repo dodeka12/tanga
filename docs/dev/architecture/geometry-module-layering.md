@@ -90,3 +90,16 @@ as the requested rotation, the rotation is returned instead — a 3D
 `GeneralRotor`/`Rotor`.  This is an extension of the analysis layer only (no
 layering change); the reinterpretation lives in `analysis._coerce_operator`,
 gated on the algebra dimension.
+
+## Hard-coded type masks (`mask_for_<type>`)
+
+`pytanga.geometry.mask.mask_for(basis, typ)` dispatches a **class** to the
+per-algebra `create_*` module's hard-coded `mask_for_<key>(basis) -> BladeMask`
+function (the full blade set the type occupies, respecting `basis.opns`), and an
+**instance** to `BladeMask(create(basis, instance))` (its non-zero blades).
+There is no instance template — masks are explicit, so they never depend on
+sample values.  A type may attach a reduced named basis inline
+(`create_n3.mask_for_twist_bivector` returns the 9 raw twist blades with the
+6-DOF directions `e12, e13, e23, e1∧e∞, e2∧e∞, e3∧e∞` via `with_basis`); all
+other types use the algebra's auto display basis.  Full masks are pinned by
+`py/tests/geometry/test_geometry_mask.py`.

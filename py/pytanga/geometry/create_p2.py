@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING
+from pytanga.blade_mask import BladeMask
 
 from pytanga.basis.p2 import BasisP2
 
@@ -201,3 +202,38 @@ def create_general_rotor(
     raise ValueError(
         "General rotors require conformal embedding (N2); not available in P2."
     )
+
+
+def mask_for_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for Point in P2."""
+    return BladeMask(basis, [1, 2, 4] if basis.opns else [3, 5, 6])
+
+
+def mask_for_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for Direction in P2."""
+    return BladeMask(basis, [1, 2] if basis.opns else [5, 6])
+
+
+def mask_for_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for Line in P2."""
+    return BladeMask(basis, [3, 5, 6] if basis.opns else [1, 2, 4])
+
+
+def mask_for_space(basis: Algebra) -> BladeMask:
+    """Full blade mask for Space in P2."""
+    return BladeMask(basis, [7] if basis.opns else [0])
+
+
+def mask_for_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Rotor in P2."""
+    return BladeMask(basis, [0, 3])
+
+
+def mask_for_reflection_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionLine in P2."""
+    return BladeMask(basis, [5, 6])
+
+
+def mask_for_reflection_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPoint in P2."""
+    return BladeMask(basis, [1, 2, 4])

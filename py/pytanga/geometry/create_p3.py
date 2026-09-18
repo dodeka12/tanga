@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING
+from pytanga.blade_mask import BladeMask
 
 from pytanga.basis.p3 import BasisP3
 
@@ -268,3 +269,48 @@ def create_general_rotor(
     raise ValueError(
         "General rotors require conformal embedding (N3); not available in P3."
     )
+
+
+def mask_for_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for Point in P3."""
+    return BladeMask(basis, [1, 2, 4, 8] if basis.opns else [7, 11, 13, 14])
+
+
+def mask_for_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for Direction in P3."""
+    return BladeMask(basis, [1, 2, 4] if basis.opns else [11, 13, 14])
+
+
+def mask_for_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for Line in P3."""
+    return BladeMask(basis, [3, 5, 6, 9, 10, 12])
+
+
+def mask_for_plane(basis: Algebra) -> BladeMask:
+    """Full blade mask for Plane in P3."""
+    return BladeMask(basis, [7, 11, 13, 14] if basis.opns else [1, 2, 4, 8])
+
+
+def mask_for_space(basis: Algebra) -> BladeMask:
+    """Full blade mask for Space in P3."""
+    return BladeMask(basis, [15] if basis.opns else [0])
+
+
+def mask_for_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Rotor in P3."""
+    return BladeMask(basis, [0, 3, 5, 6])
+
+
+def mask_for_reflection_plane(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPlane in P3."""
+    return BladeMask(basis, [1, 2, 4])
+
+
+def mask_for_reflection_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionLine in P3."""
+    return BladeMask(basis, [9, 10, 12])
+
+
+def mask_for_reflection_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPoint in P3."""
+    return BladeMask(basis, [1, 2, 4, 8])

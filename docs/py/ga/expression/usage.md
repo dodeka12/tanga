@@ -314,6 +314,27 @@ and raises `ValueError` for no-variable, multi-variable, or repeated-variable
 expressions.  An `AffineExpression` that reduces to a single linear map (one
 variable, once per term) supports `svd()` the same way.
 
+## Named bases and `get_tensor()` / `get_array()`
+
+`Expression.get_tensor()` (and `AffineExpression.get_tensor()`) return the raw
+`MVTensor` — one raw `BladeMask` per dimension, each carrying its named basis as
+metadata.  `MVTensor.get_array()` recombines those axes into their named bases
+and returns a plain `np.ndarray`:
+
+```python
+t = expr.get_tensor()                    # MVTensor, raw BladeMask axes
+A = t.get_array()                        # np.ndarray, shape (n_out, n_var₁, …)
+A = t.get_array(out_basis=euclid)        # output directions override
+A = t.get_array(axis_bases={1: twist})   # per-axis directions override
+```
+
+This is the tensor-native replacement for evaluating once per canonical basis
+blade: for a `TwistBivector` variable, `get_tensor().get_array()` returns the
+6-column physical-DOF operator matrix directly.  `AffineExpression.get_tensor()`
+supports the single-linear-map case (one variable, once per term), summing each
+term's tensor into the union output mask.  `lstsq` / `svd` / `inv` still operate
+on the raw blades via the internal `_variable_matrix()`.
+
 ## The internal tensor
 
 `Expression.tensor` exposes the reduced `MVLabeledTensor` (one output axis, one

@@ -74,7 +74,7 @@ uv run python py/examples/<path>.py
 
 - **bar** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
-- **basis** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
+- **basis** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md), [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
 
 - **basis blades** — [Three ways to work with named basis blades](ga/basis/basis_usage.md)
 
@@ -92,7 +92,7 @@ uv run python py/examples/<path>.py
 
 - **binding** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
-- **BladeMask** — [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md)
+- **BladeMask** — [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md)
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
@@ -146,7 +146,7 @@ uv run python py/examples/<path>.py
 
 - **confirm** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 
-- **conformal** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
+- **conformal** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
 
 - **conic** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
@@ -256,7 +256,7 @@ uv run python py/examples/<path>.py
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
-- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
+- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
@@ -305,6 +305,10 @@ uv run python py/examples/<path>.py
 - **geometric product** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md)
 
 - **geometry** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
+
+- **get_array** — [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
+
+- **get_tensor** — [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
 
 - **GLSL** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
 
@@ -444,7 +448,7 @@ uv run python py/examples/<path>.py
 
 - **MVTensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md)
 
-- **N3** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md)
+- **N3** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md)
 
 - **named blades** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md), [Three ways to work with named basis blades](ga/basis/basis_usage.md)
 
@@ -736,6 +740,10 @@ uv run python py/examples/<path>.py
 
 - **Translator** — [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
+- **twist** — [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md)
+
+- **TwistBivector** — [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
+
 - **two points** — [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
 - **two-body** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
@@ -783,6 +791,8 @@ uv run python py/examples/<path>.py
 - **weighted sum** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 
 - **wireframe** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+
+- **with_basis** — [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md)
 
 ## Topics
 

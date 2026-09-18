@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING
+from pytanga.blade_mask import BladeMask
 
 from ._pga3_utils import (
     E1,
@@ -244,3 +245,63 @@ def create_general_rotor(
     t_mv = create_translator(basis, origin.x, origin.y, origin.z)
     r_mv = create_rotor(basis, angle, axis)
     return t_mv.gp(r_mv).gp(t_mv.rev())
+
+
+def mask_for_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for Point in PGA3."""
+    return BladeMask(basis, [7, 11, 13, 14, 19, 21, 22] if basis.opns else [1, 2, 4, 8, 16])
+
+
+def mask_for_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for Direction in PGA3."""
+    return BladeMask(basis, [11, 13, 14, 19, 21, 22] if basis.opns else [1, 2, 4])
+
+
+def mask_for_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for Line in PGA3."""
+    return BladeMask(basis, [3, 5, 6, 9, 10, 12, 17, 18, 20])
+
+
+def mask_for_plane(basis: Algebra) -> BladeMask:
+    """Full blade mask for Plane in PGA3."""
+    return BladeMask(basis, [1, 2, 4, 8, 16] if basis.opns else [7, 11, 13, 14, 19, 21, 22])
+
+
+def mask_for_space(basis: Algebra) -> BladeMask:
+    """Full blade mask for Space in PGA3."""
+    return BladeMask(basis, [15, 23] if basis.opns else [0])
+
+
+def mask_for_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Rotor in PGA3."""
+    return BladeMask(basis, [0, 3, 5, 6])
+
+
+def mask_for_translator(basis: Algebra) -> BladeMask:
+    """Full blade mask for Translator in PGA3."""
+    return BladeMask(basis, [0, 9, 10, 12, 17, 18, 20])
+
+
+def mask_for_motor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Motor in PGA3."""
+    return BladeMask(basis, [0, 3, 5, 6, 9, 10, 12, 15, 17, 18, 20, 23])
+
+
+def mask_for_reflection_plane(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPlane in PGA3."""
+    return BladeMask(basis, [1, 2, 4, 8, 16])
+
+
+def mask_for_reflection_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionLine in PGA3."""
+    return BladeMask(basis, [3, 5, 6, 9, 10, 12, 17, 18, 20])
+
+
+def mask_for_reflection_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPoint in PGA3."""
+    return BladeMask(basis, [7, 11, 13, 14, 19, 21, 22])
+
+
+def mask_for_general_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for GeneralRotor in PGA3."""
+    return BladeMask(basis, [0, 3, 5, 6])

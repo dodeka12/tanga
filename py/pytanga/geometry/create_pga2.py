@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING
+from pytanga.blade_mask import BladeMask
 
 from ._pga2_utils import (
     E1,
@@ -239,3 +240,53 @@ def create_inversion(basis: Algebra, center: Point, radius: float = 1.0) -> MV:
     raise ValueError(
         "Inversions require conformal embedding (N2); not available in PGA2."
     )
+
+
+def mask_for_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for Point in PGA2."""
+    return BladeMask(basis, [3, 5, 6, 9, 10] if basis.opns else [1, 2, 4, 8])
+
+
+def mask_for_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for Direction in PGA2."""
+    return BladeMask(basis, [5, 6, 9, 10] if basis.opns else [1, 2])
+
+
+def mask_for_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for Line in PGA2."""
+    return BladeMask(basis, [1, 2, 4, 8] if basis.opns else [3, 5, 6, 9, 10])
+
+
+def mask_for_space(basis: Algebra) -> BladeMask:
+    """Full blade mask for Space in PGA2."""
+    return BladeMask(basis, [7, 11] if basis.opns else [0])
+
+
+def mask_for_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Rotor in PGA2."""
+    return BladeMask(basis, [0, 3])
+
+
+def mask_for_translator(basis: Algebra) -> BladeMask:
+    """Full blade mask for Translator in PGA2."""
+    return BladeMask(basis, [0, 5, 6, 9, 10])
+
+
+def mask_for_motor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Motor in PGA2."""
+    return BladeMask(basis, [0, 3, 5, 6, 9, 10])
+
+
+def mask_for_reflection_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionLine in PGA2."""
+    return BladeMask(basis, [1, 2, 4, 8])
+
+
+def mask_for_reflection_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPoint in PGA2."""
+    return BladeMask(basis, [3, 5, 6, 9, 10])
+
+
+def mask_for_general_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for GeneralRotor in PGA2."""
+    return BladeMask(basis, [0, 3, 5, 6, 9, 10])

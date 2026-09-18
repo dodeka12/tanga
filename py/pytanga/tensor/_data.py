@@ -5,13 +5,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING, cast, overload
 
 import numpy as np
 
+from pytanga.algebra import MV
 from pytanga.blade_mask import BladeMask
 
 if TYPE_CHECKING:
@@ -105,6 +106,37 @@ def _rebuild_mvtensor(
         return result
 
     return MVTensor(data=result, masks=tuple(new_masks))
+
+
+def _resolve_basis_directions(
+    mask: BladeMask, spec: Any
+) -> tuple[list[str], list[MV]]:
+    """Resolve a basis spec into ``(names, vectors)`` over *mask*."""
+    if spec is None:
+        return mask.basis_names, mask.basis_vectors
+    if isinstance(spec, BladeMask):
+        return spec.basis_names, spec.basis_vectors
+    if isinstance(spec, Mapping):
+        names = [str(name) for name in spec.keys()]
+        return names, [cast(MV, spec[name]) for name in names]
+    if isinstance(spec, Sequence) and not isinstance(spec, (str, bytes)):
+        vecs = [cast(MV, v) for v in spec]
+        return [f"d{i}" for i in range(len(vecs))], vecs
+    raise TypeError(f"unsupported basis spec: {type(spec).__name__}")
+
+
+def _basis_right_matrix(mask: BladeMask, vecs: Sequence[MV]) -> np.ndarray:
+    """Raw→named change-of-basis matrix, shape ``(len(mask), n_directions)``."""
+    from pytanga.matrix.convert import to_matrix
+
+    if not vecs:
+        return np.empty((len(mask), 0), dtype=np.float64)
+    return to_matrix(list(vecs), mask=mask).data
+
+
+def _basis_left_matrix(mask: BladeMask, vecs: Sequence[MV]) -> np.ndarray:
+    """Named→raw coefficient matrix, shape ``(n_directions, len(mask))``."""
+    return np.linalg.pinv(_basis_right_matrix(mask, vecs))
 
 
 @dataclass
@@ -241,3 +273,42 @@ class MVTensor:
         if dtype is None:
             dtype = other.data.dtype
         return MVTensor(data=np.zeros(other.data.shape, dtype=dtype), masks=other.masks)
+
+    def get_array(
+        self,
+        *,
+        out_basis: Any = None,
+        axis_bases: Mapping[int, Any] | None = None,
+    ) -> np.ndarray:
+        """Return the tensor recombined into named bases as a raw numpy array.
+
+        Each ``BladeMask`` axis is expressed in its named directions (the mask's
+        ``basis_vectors`` by default).  Axis 0 (the output axis) uses the dual
+        mapping ``pinv(B_out) @ data``; every other blade axis uses the direct
+        mapping ``data @ B_axis``.  ``None`` (batch/counting) axes are left
+        unchanged.  ``out_basis`` overrides axis 0's directions; ``axis_bases``
+        maps axis index → directions for the remaining axes.
+        """
+        data = np.asarray(self.data, dtype=np.float64)
+        masks = self.masks
+        axis_bases = axis_bases or {}
+
+        # Output axis (axis 0) — dual mapping (express the result in the basis).
+        out_mask = masks[0]
+        if isinstance(out_mask, BladeMask):
+            out_vecs = _resolve_basis_directions(out_mask, out_basis)[1]
+            c_out = _basis_left_matrix(out_mask, out_vecs)
+            data = np.tensordot(c_out, data, axes=([1], [0]))
+
+        # Remaining blade axes — direct mapping, in descending axis order.
+        pairs: list[tuple[int, np.ndarray]] = []
+        for i in range(1, len(masks)):
+            mask = masks[i]
+            if isinstance(mask, BladeMask):
+                vecs = _resolve_basis_directions(mask, axis_bases.get(i))[1]
+                pairs.append((i, _basis_right_matrix(mask, vecs)))
+        for i, b_var in sorted(pairs, key=lambda p: -p[0]):
+            data = np.moveaxis(data, i, -1)
+            data = np.tensordot(data, b_var, axes=([-1], [0]))
+            data = np.moveaxis(data, -1, i)
+        return data

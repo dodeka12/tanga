@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING
+from pytanga.blade_mask import BladeMask
 
 from ._n3_helpers import (
     E1,
@@ -378,3 +379,132 @@ def create_twist_bivector(
     motor = create_motor(basis, rotor, translator)
     twist_mask = mask_for(basis, Motor).intersection(BladeMask(basis, grades=[2]))
     return motor.project_onto(twist_mask)
+
+
+def mask_for_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for Point in N3."""
+    return BladeMask(basis, [1, 2, 4, 8, 16] if basis.opns else [15, 23, 27, 29, 30])
+
+
+def mask_for_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for Direction in N3."""
+    return BladeMask(basis, [1, 2, 4] if basis.opns else [27, 29, 30])
+
+
+def mask_for_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for Line in N3."""
+    return BladeMask(
+        basis,
+        [11, 13, 14, 19, 21, 22, 25, 26, 28]
+        if basis.opns
+        else [3, 5, 6, 9, 10, 12, 17, 18, 20],
+    )
+
+
+def mask_for_plane(basis: Algebra) -> BladeMask:
+    """Full blade mask for Plane in N3."""
+    return BladeMask(basis, [15, 23, 27, 29, 30] if basis.opns else [1, 2, 4, 8, 16])
+
+
+def mask_for_sphere(basis: Algebra) -> BladeMask:
+    """Full blade mask for Sphere in N3."""
+    return BladeMask(basis, [15, 23, 27, 29, 30] if basis.opns else [1, 2, 4, 8, 16])
+
+
+def mask_for_circle(basis: Algebra) -> BladeMask:
+    """Full blade mask for Circle in N3."""
+    return BladeMask(
+        basis,
+        [7, 11, 13, 14, 19, 21, 22, 25, 26, 28]
+        if basis.opns
+        else [3, 5, 6, 9, 10, 12, 17, 18, 20, 24],
+    )
+
+
+def mask_for_point_pair(basis: Algebra) -> BladeMask:
+    """Full blade mask for PointPair in N3."""
+    return BladeMask(
+        basis,
+        [3, 5, 6, 9, 10, 12, 17, 18, 20, 24]
+        if basis.opns
+        else [7, 11, 13, 14, 19, 21, 22, 25, 26, 28],
+    )
+
+
+def mask_for_homogeneous_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for HPoint in N3."""
+    return BladeMask(basis, [9, 10, 12, 17, 18, 20, 24] if basis.opns else [7, 11, 13, 14, 19, 21, 22])
+
+
+def mask_for_homogeneous_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for HDirection in N3."""
+    return BladeMask(basis, [9, 10, 12, 17, 18, 20] if basis.opns else [11, 13, 14, 19, 21, 22])
+
+
+def mask_for_space(basis: Algebra) -> BladeMask:
+    """Full blade mask for Space in N3."""
+    return BladeMask(basis, [31] if basis.opns else [0])
+
+
+def mask_for_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Rotor in N3."""
+    return BladeMask(basis, [0, 3, 5, 6])
+
+
+def mask_for_translator(basis: Algebra) -> BladeMask:
+    """Full blade mask for Translator in N3."""
+    return BladeMask(basis, [0, 9, 10, 12, 17, 18, 20])
+
+
+def mask_for_motor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Motor in N3."""
+    return BladeMask(basis, [0, 3, 5, 6, 9, 10, 12, 15, 17, 18, 20, 23])
+
+
+def mask_for_twist_bivector(basis: Algebra) -> BladeMask:
+    """Full blade mask for TwistBivector in N3 with its 6 physical DOF basis."""
+    mask = BladeMask(basis, [3, 5, 6, 9, 10, 12, 17, 18, 20])
+    einf = get_einf(basis)
+    e1 = basis.multivector({E1: 1.0})
+    e2 = basis.multivector({E2: 1.0})
+    e3 = basis.multivector({E3: 1.0})
+    return mask.with_basis(
+        [
+            ("e12", basis.multivector({E12: 1.0})),
+            ("e13", basis.multivector({E13: 1.0})),
+            ("e23", basis.multivector({E23: 1.0})),
+            ("e1∧einf", basis.op(e1, einf)),
+            ("e2∧einf", basis.op(e2, einf)),
+            ("e3∧einf", basis.op(e3, einf)),
+        ]
+    )
+
+
+def mask_for_dilator(basis: Algebra) -> BladeMask:
+    """Full blade mask for Dilator in N3."""
+    return BladeMask(basis, [0, 9, 10, 12, 17, 18, 20, 24])
+
+
+def mask_for_inversion(basis: Algebra) -> BladeMask:
+    """Full blade mask for Inversion in N3."""
+    return BladeMask(basis, [1, 2, 4, 8, 16])
+
+
+def mask_for_reflection_plane(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPlane in N3."""
+    return BladeMask(basis, [15, 23, 27, 29, 30])
+
+
+def mask_for_reflection_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionLine in N3."""
+    return BladeMask(basis, [11, 13, 14, 19, 21, 22, 25, 26, 28])
+
+
+def mask_for_reflection_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPoint in N3."""
+    return BladeMask(basis, [9, 10, 12, 17, 18, 20, 24])
+
+
+def mask_for_general_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for GeneralRotor in N3."""
+    return BladeMask(basis, [0, 3, 5, 6])
