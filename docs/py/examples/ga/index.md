@@ -4,6 +4,7 @@
 
 - [Algebra](algebra/index.md)
 - [Basis](basis/index.md)
+- [Blade_Mask](blade_mask/index.md)
 - [Expressions](expression/index.md)
 - [Geometry](geometry/index.md)
 - [Numerics](numerics/index.md)

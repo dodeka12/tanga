@@ -12,9 +12,10 @@
 | [Project Onto Euclidean N3](project_onto_euclidean_n3.md) | expressions, Variable, project_onto, BladeMask, N3, Euclidean | Project an N3 expression onto the Euclidean basis |
 | [Rename Unify Variables](rename_unify_variables.md) | expressions, Variable, bind, rename_var, unify, merge | Re-key variables so independent expressions merge |
 | [Solve Ax B](solve_ax_b.md) | expressions, solve, A X = B, multivector equation | Solve the general multivector equation A X = B with expressions |
+| [Tensor Named Basis](tensor_named_basis.md) | expressions, get_tensor, get_array, TwistBivector, BladeMask, N3, basis | get_tensor() (raw MVTensor) + get_array() (named bases) |
 | [Variable Rotor](variable_rotor.md) | expressions, Variable, rotor, points | Apply a fixed rotor to points with a Variable-backed expression |
 | [Variable Rotor Entity](variable_rotor_entity.md) | expressions, Variable, rotor, points, entity | Rotate a list of points with a variable rotor and variable points |
 
 ## Keywords
 
-A X = B · AffineExpression · BladeMask · DataArray · Euclidean · N3 · P3 · Variable · affine · bind · composition · counting axis · cp · entity · expressions · gp · inv · least-squares · line fitting · linear equations · merge · multivector equation · points · polynomial · project_onto · rc · rename_var · repeated variables · rotor · solve · sp · sub-expression · unify · variables · visualization · vp · weighted sum
+A X = B · AffineExpression · BladeMask · DataArray · Euclidean · N3 · P3 · TwistBivector · Variable · affine · basis · bind · composition · counting axis · cp · entity · expressions · get_array · get_tensor · gp · inv · least-squares · line fitting · linear equations · merge · multivector equation · points · polynomial · project_onto · rc · rename_var · repeated variables · rotor · solve · sp · sub-expression · unify · variables · visualization · vp · weighted sum

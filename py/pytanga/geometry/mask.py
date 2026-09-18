@@ -1,62 +1,28 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""Blade-mask derivation for entities and operators.
+"""Blade-mask lookup for entities and operators.
 
-Turns a geometric :class:`~pytanga.geometry.entities.Entity` or
-:class:`~pytanga.geometry.operators.Operator` type into the
-:class:`~pytanga.BladeMask` of the blades that type occupies in a given
-algebra.
+Maps a geometric :class:`~pytanga.geometry.entities.Entity` or
+:class:`~pytanga.geometry.operators.Operator` type to the
+:class:`~pytanga.BladeMask` of the blades that type occupies in a given algebra.
 
-The mask is derived by constructing a generic instance of the type and
-delegating to :func:`~pytanga.geometry.create.create`.  This keeps
-``create`` as the single source of truth: the OPNS/IPNS interpretation, the
-per-algebra support matrix, and the "raise on unsupported type" behaviour
-all come along for free.  The generic instance uses well-chosen values so
-that every blade the type can ever occupy is non-zero and therefore
-captured by :meth:`BladeMask.from_mv`.
+Each ``create_*`` module hard-codes the full type mask via
+``mask_for_<key>(basis)`` functions, so masks are deterministic and never depend
+on a sample instance.
 
-``mask_for`` accepts either a **class** (full type blade mask) or an
-**instance** (mask of that instance's non-zero blades).
+``mask_for`` accepts either a **class** (the hard-coded full type mask) or an
+**instance** (the non-zero blades of that instance's MV).
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, cast
 
 from pytanga.blade_mask import BladeMask
 from pytanga.expression import Variable
 
 from .create import create as _create
-from .entities import (
-    Circle,
-    Direction,
-    HDirection,
-    HPoint,
-    ImagCircle,
-    ImagPointPair,
-    ImagSphere,
-    Line,
-    Plane,
-    Point,
-    PointPair,
-    Space,
-    Sphere,
-)
-from .operators import (
-    Dilator,
-    GeneralRotor,
-    Inversion,
-    Motor,
-    ReflectionLine,
-    ReflectionPlane,
-    ReflectionPoint,
-    Rotor,
-    Translator,
-    TripleReflection,
-    TwistBivector,
-    VersorFactors,
-)
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
@@ -65,88 +31,135 @@ if TYPE_CHECKING:
     from .operators import Operator
 
 
-def _template(typ: "type[object]") -> "Entity | Operator":
-    """Return a generic instance of *typ* spanning all blades of that type.
+def _create_module(alg_type: str) -> Any:
+    """Return the per-algebra ``create_*`` module for an algebra type key."""
+    from . import (
+        create_e2,
+        create_e3,
+        create_n2,
+        create_n3,
+        create_p2,
+        create_p3,
+        create_pga2,
+        create_pga3,
+    )
 
-    Values are chosen so that ``create(algebra, instance)`` produces every
-    blade that the type can ever occupy (guarded by tests).  Types without a
-    concrete ``create`` implementation raise ``TypeError``.
-    """
-    if issubclass(typ, ImagPointPair):
-        raise TypeError("ImagPointPair has no concrete MV and no blade mask yet.")
-    if issubclass(typ, PointPair):
-        return PointPair(Point(1, 2, 3), Point(4, 5, 7))
-    if issubclass(typ, ImagCircle):
-        raise TypeError("ImagCircle has no concrete MV and no blade mask yet.")
-    if issubclass(typ, Circle):
-        return Circle(Point(1, 2, 3), 2.0, Direction(4, 5, 6))
-    if issubclass(typ, ImagSphere):
-        raise TypeError("ImagSphere has no concrete MV and no blade mask yet.")
-    if issubclass(typ, Sphere):
-        return Sphere(Point(1, 2, 3), 2.0)
-    if issubclass(typ, Point):
-        return Point(1, 2, 3)
-    if issubclass(typ, Direction):
-        return Direction(1, 2, 3)
-    if issubclass(typ, HPoint):
-        return HPoint(Point(1, 2, 3), 2.0)
-    if issubclass(typ, HDirection):
-        return HDirection(Direction(1, 2, 3))
-    if issubclass(typ, Line):
-        return Line(Point(1, 2, 3), Direction(4, 5, 6))
-    if issubclass(typ, Plane):
-        return Plane(Point(1, 2, 3), Direction(4, 5, 6))
-    if issubclass(typ, Space):
-        return Space()
-    if issubclass(typ, Rotor):
-        return Rotor(0.7, Direction(1, 2, 3))
-    if issubclass(typ, Translator):
-        return Translator(Direction(4, 5, 6))
-    if issubclass(typ, Dilator):
-        return Dilator(1.7, Point(1, 2, 3))
-    if issubclass(typ, Inversion):
-        return Inversion(Point(1, 2, 3), 2.0)
-    if issubclass(typ, Motor):
-        return Motor(Rotor(0.7, Direction(1, 2, 3)), Translator(Direction(4, 5, 6)))
+    return {
+        "e2": create_e2,
+        "e3": create_e3,
+        "n2": create_n2,
+        "n3": create_n3,
+        "p2": create_p2,
+        "p3": create_p3,
+        "pga2": create_pga2,
+        "pga3": create_pga3,
+    }[alg_type]
+
+
+def _basis_type_key(typ: "type[object]") -> "str | None":
+    """Return the canonical type key used to find ``mask_for_<key>``."""
+    from .entities import (
+        Circle,
+        Direction,
+        HDirection,
+        HPoint,
+        ImagCircle,
+        ImagPointPair,
+        ImagSphere,
+        Line,
+        Plane,
+        Point,
+        PointPair,
+        Space,
+        Sphere,
+    )
+    from .operators import (
+        Dilator,
+        GeneralRotor,
+        Inversion,
+        Motor,
+        ReflectionLine,
+        ReflectionPlane,
+        ReflectionPoint,
+        Rotor,
+        Translator,
+        TripleReflection,
+        TwistBivector,
+        VersorFactors,
+    )
+
+    if issubclass(
+        typ, (ImagCircle, ImagPointPair, ImagSphere, TripleReflection, VersorFactors)
+    ):
+        return None
     if issubclass(typ, TwistBivector):
-        return TwistBivector(
-            Rotor(0.7, Direction(1, 2, 3)), Translator(Direction(4, 5, 6))
-        )
+        return "twist_bivector"
     if issubclass(typ, GeneralRotor):
-        return GeneralRotor(0.7, Direction(1, 2, 3), Point(1, 2, 3))
+        return "general_rotor"
     if issubclass(typ, ReflectionLine):
-        return ReflectionLine(Line(Point(1, 2, 3), Direction(4, 5, 6)))
+        return "reflection_line"
     if issubclass(typ, ReflectionPlane):
-        return ReflectionPlane(Plane(Point(1, 2, 3), Direction(4, 5, 6)))
+        return "reflection_plane"
     if issubclass(typ, ReflectionPoint):
-        return ReflectionPoint(Point(1, 2, 3))
-    if issubclass(typ, (TripleReflection, VersorFactors)):
-        raise TypeError(
-            f"{typ.__name__} has no fixed blade mask; it is an analysis container."
-        )
-    raise TypeError(f"Unsupported type for mask derivation: {typ.__name__}")
+        return "reflection_point"
+    if issubclass(typ, Inversion):
+        return "inversion"
+    if issubclass(typ, Motor):
+        return "motor"
+    if issubclass(typ, Rotor):
+        return "rotor"
+    if issubclass(typ, Translator):
+        return "translator"
+    if issubclass(typ, Dilator):
+        return "dilator"
+    if issubclass(typ, HDirection):
+        return "homogeneous_direction"
+    if issubclass(typ, HPoint):
+        return "homogeneous_point"
+    if issubclass(typ, PointPair):
+        return "point_pair"
+    if issubclass(typ, Circle):
+        return "circle"
+    if issubclass(typ, Sphere):
+        return "sphere"
+    if issubclass(typ, Line):
+        return "line"
+    if issubclass(typ, Plane):
+        return "plane"
+    if issubclass(typ, Point):
+        return "point"
+    if issubclass(typ, Direction):
+        return "direction"
+    if issubclass(typ, Space):
+        return "space"
+    return None
 
 
 def mask_for(basis: Algebra, typ: "type[object] | Entity | Operator") -> BladeMask:
     """Return the :class:`BladeMask` a type or instance occupies in *basis*.
 
-    Parameters
-    ----------
-    basis : Algebra
-        The algebra instance.  Its ``opns`` flag determines the entity's
-        OPNS/IPNS representation (operators are unaffected).
-    typ : type or Entity/Operator instance
-        A geometric type (e.g. :class:`Rotor`, :class:`Point`), or an
-        instance thereof.  A class yields the full type blade set; an
-        instance yields the mask of that instance's non-zero blades.
+    - **class** → the hard-coded full type mask from the per-algebra
+      ``create_*.mask_for_<key>(basis)`` function.
+    - **instance** → the non-zero blades of that instance's MV.
+
+    The ``opns`` flag on *basis* determines the OPNS/IPNS representation for
+    entities (operators are unaffected).
     """
+    from .create import _detect
+
     if isinstance(typ, type):
-        cls = typ
-        inst = _template(cls)
-    else:
-        inst = typ
-    mv = _create(basis, inst)
-    return BladeMask(mv)
+        alg_type = _detect(basis)
+        if alg_type in ("q2", "q3"):
+            raise TypeError(f"mask_for does not support quadric entities ({alg_type})")
+        mod = _create_module(alg_type)
+        key = _basis_type_key(typ)
+        if key is None:
+            raise TypeError(f"Unsupported type for mask derivation: {typ.__name__}")
+        fn = getattr(mod, f"mask_for_{key}", None)
+        if fn is None:
+            raise TypeError(f"{typ.__name__} is not supported in {alg_type.upper()}")
+        return cast("BladeMask", fn(basis))
+    return BladeMask(_create(basis, typ))
 
 
 def create_var(

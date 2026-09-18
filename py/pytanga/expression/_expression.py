@@ -692,6 +692,15 @@ class Expression:
         matrix = flat.reshape(-1, n_var)
         return var_mask, matrix
 
+    def get_tensor(self) -> MVTensor:
+        """Return the raw expression tensor as an ``MVTensor``.
+
+        Axes are labelled by the raw ``BladeMask``s (the output axis, one axis
+        per variable occurrence, plus optional ``None`` counting axes).  To
+        recombine the axes into named bases, call :meth:`MVTensor.get_array`.
+        """
+        return self._tensor.tensor
+
     def lstsq(self, rhs: "MV | int | float | None" = None) -> "MV":
         """Solve this single-variable expression in the least-squares sense.
 
@@ -1162,6 +1171,41 @@ class AffineExpression:
             else np.empty((len(out_mask), 0), dtype=np.float64)
         )
         return var_name, var_mask, matrix
+
+    def get_tensor(self) -> MVTensor:
+        """Return the raw affine tensor as an ``MVTensor``.
+
+        Supports the single-linear-map case: exactly one variable, appearing
+        once in every term (no counting axes).  Each term's raw tensor is summed
+        into the union output mask and union variable mask.  Recombine the axes
+        into named bases with :meth:`MVTensor.get_array`.
+        """
+        names = self.names
+        if len(names) != 1:
+            raise ValueError(
+                f"get_tensor() requires a single-variable expression (got {sorted(names)})"
+            )
+        (var_name,) = names
+        for term in self._terms:
+            if var_name not in term.names or len(term.names[var_name]) != 1:
+                raise ValueError(
+                    f"requires {var_name!r} to appear exactly once in every term"
+                )
+            if term._has_counting_axes():
+                raise ValueError("get_tensor() does not support counting axes on terms yet")
+
+        var_union = self._union_masks()[var_name]
+        out_union = self.out_mask
+
+        raw = np.zeros((len(out_union), len(var_union)), dtype=np.float64)
+        for term in self._terms:
+            var_mask_t, mat_t = term._variable_matrix()
+            out_t = term.out_mask
+            out_pos = [out_union.index(oid) for oid in out_t.ids]
+            var_pos = [var_union.index(vid) for vid in var_mask_t.ids]
+            raw[np.ix_(out_pos, var_pos)] += mat_t
+
+        return MVTensor(data=raw, masks=(out_union, var_union))
 
     def lstsq(self, rhs: "MV | int | float | None" = None) -> "MV":
         """Solve this single-linear-map affine expression in the least-squares sense.

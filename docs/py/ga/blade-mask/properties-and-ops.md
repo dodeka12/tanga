@@ -64,6 +64,23 @@ mask.index(99)                           # KeyError
 `ids` list.  This is the row/column position in matrices labelled by this
 mask.
 
+## Named basis
+
+A mask's *named basis* is the ordered set of directions it is labelled by:
+`basis_names` (the names) and `basis_vectors` (the `MV` directions).  When no
+named basis is attached, these fall back to the raw blades in `ids` order.
+
+```python
+mask.basis_names       # names of the directions (raw blade names by default)
+mask.basis_vectors     # the direction MVs
+mask.basis_matrix()    # raw→named change-of-basis matrix, shape (len(mask), n)
+```
+
+`with_basis(directions)` returns a new mask over the same raw ids but labelled by
+`directions` (a sequence of `MV`s or `(name, MV)` pairs).  The directions need
+not be a full basis — a reduced set is allowed, which is what `MVTensor.get_array`
+uses to collapse a mask's raw axes into its physical degrees of freedom.
+
 ## Set operations
 
 ### Union

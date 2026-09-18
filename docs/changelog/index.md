@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.7.0] — 2026-09-18
+- `BladeMask` named bases (`basis_vectors`/`basis_names`/`with_basis`/`basis_matrix`, auto display basis, composed-name parsing, basis-aware `union`/`intersection`) · `Expression.get_tensor()` / `AffineExpression.get_tensor()` + `MVTensor.get_array()` (recombine tensors into named bases) · `TwistBivector` 6-DOF basis · per-algebra `mask_for` named bases
+- Bug fixes: `mask_for` now returns hard-coded full type masks (fixes partial-mask derivation, e.g. N2 `Sphere`/`Circle`/`Inversion`)
+→ [Details](2026/09/18_896fd7282.md)
+
 ## [Since 2.6.0] — 2026-09-17
 - Expression / AffineExpression bind-to-subexpression composition (`bind`/`__call__` accept an `Expression` binding value) · repeated occurrences substitute consistently · `bind_subexpression.py` example
 → [Details](2026/09/17_131377c00.md)

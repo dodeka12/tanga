@@ -151,7 +151,10 @@ m = Motor(
 The grade-2 twist bivector of a motor: the rotation bivectors plus the
 translation bivectors, obtained by building the motor and projecting it onto
 the motor's grade-2 blade mask.  It is not visualizable, but `Geometry.create_var`
-and `Geometry.mask_for` work.
+and `Geometry.mask_for` work.  `mask_for(TwistBivector)` returns the 9 raw twist
+blades with a **6-direction named basis**
+(`e12, e13, e23, e1∧e∞, e2∧e∞, e3∧e∞`), so a variable built from it collapses
+via `get_tensor().get_array()` to the 6 physical degrees of freedom.
 
 ```python
 from pytanga.geometry import TwistBivector, Rotor, Translator, Direction

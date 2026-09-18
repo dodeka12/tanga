@@ -192,16 +192,8 @@ class Algebra:
         if coeffs is None:
             pass
         elif isinstance(coeffs, str):
-            # Build a named-basis dict for composite blades (e.g. e0 = ep + em in PGA3)
-            # that cannot be resolved via the primitive blade_id() function.
-            named_basis: dict[str, dict[int, float]] = {}
-            for name, mv in self.blades().items():
-                raw = mv._impl.to_dict()
-                # A composite blade has more than one non-zero primitive blade
-                if len(raw) > 1:
-                    named_basis[name] = raw
             for bid, val in _parse_mv_string(
-                coeffs, self._dim, named_basis or None
+                coeffs, self._dim, self._composite_basis()
             ).items():
                 impl.set(bid, val)
         else:
@@ -916,6 +908,20 @@ class Algebra:
             print(e1 * e2)                 # works without the 'b.' prefix
         """
         return {k: v for k, v in self.__dict__.items() if isinstance(v, MV)}
+
+    def _composite_basis(self) -> dict[str, dict[int, float]] | None:
+        """Return named composite blades → their raw-blade expansion.
+
+        Composite blades are named MV attributes with more than one non-zero
+        primitive blade (e.g. ``einf``/``eo`` in N3).  Used by the string parser
+        so ``"einf"`` resolves to its raw blades instead of being dropped.
+        """
+        named_basis: dict[str, dict[int, float]] = {}
+        for name, mv in self.blades().items():
+            raw = mv._impl.to_dict()
+            if len(raw) > 1:
+                named_basis[name] = raw
+        return named_basis or None
 
     def _resolve_key_signed(self, key: str | int | tuple[int, ...]) -> tuple[int, int]:
         """Resolve a blade key to ``(blade_id, sign)``.

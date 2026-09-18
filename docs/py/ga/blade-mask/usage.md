@@ -73,6 +73,17 @@ c_mask = BladeMask(Y)                           # blades of result
 b_mask = inverse_blade_mask(a_mask, c_mask)      # blades of unknown
 ```
 
+## Named bases on geometry masks
+
+`Geometry.mask_for(typ)` (and the module-level `mask_for`) return a `BladeMask`
+whose `basis_names` / `basis_vectors` describe the canonical directions of that
+type in that algebra.  The algebra display basis (e.g. `einf`/`eo` for N3,
+`e0`/`e0i` for PGA3) is attached automatically, and types with a reduced
+physical-DOF basis (e.g. `TwistBivector`'s 6 directions over 9 raw blades)
+declare it inline in the per-algebra `mask_for_<type>` function.  The mask ids
+themselves are hard-coded per type (never derived from a sample instance).  See
+[`MVTensor.get_array`](../expression/usage.md) for consuming these bases.
+
 ## Compatibility enforcement
 
 Every operation that aligns two axes checks that both masks:

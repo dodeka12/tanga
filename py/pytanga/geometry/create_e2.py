@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING
+from pytanga.blade_mask import BladeMask
 
 from .entities import Direction, Point
 
@@ -181,3 +182,28 @@ def create_reflection_origin(basis: Algebra) -> MV:
         "Reflection about the origin requires projective (P2) embedding; "
         "not available in E2 (no e₃ dimension)."
     )
+
+
+def mask_for_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for Point in E2 (e1, e2)."""
+    return BladeMask(basis, [1, 2])
+
+
+def mask_for_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for Direction in E2 (e1, e2)."""
+    return BladeMask(basis, [1, 2])
+
+
+def mask_for_space(basis: Algebra) -> BladeMask:
+    """Full blade mask for Space in E2 (pseudoscalar, scalar in IPNS)."""
+    return BladeMask(basis, [3] if basis.opns else [0])
+
+
+def mask_for_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Rotor in E2 (scalar + e12)."""
+    return BladeMask(basis, [0, 3])
+
+
+def mask_for_reflection_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionLine in E2 (e1, e2)."""
+    return BladeMask(basis, [1, 2])

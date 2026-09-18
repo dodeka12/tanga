@@ -24,7 +24,7 @@ _TERM_RE = re.compile(
     r"([+-]?)\s*"  # group 1 — sign (optional)
     r"(\d+(?:\.\d*)?|\.\d+)?\s*"  # group 2 — coefficient (optional)
     r"(?:[*]\s*)?"  # optional '*' between coeff and blade
-    r"(e[0-9]+(?:,[0-9]+)*|I)?"  # group 3 — blade name or pseudoscalar 'I'
+    r"(e[0-9]+(?:,[0-9]+)*|e[A-Za-z][A-Za-z0-9]*|I)?"  # group 3 — blade name or pseudoscalar 'I'
     r"\s*"  # trailing whitespace
 )
 

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING
+from pytanga.blade_mask import BladeMask
 
 from ._n2_helpers import (
     E1,
@@ -290,3 +291,88 @@ def create_general_rotor(
     t = create_translator(basis, origin.x, origin.y, 0.0)
     r = create_rotor(basis, angle, axis)
     return t.gp(r).gp(t.rev())
+
+
+def mask_for_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for Point in N2."""
+    return BladeMask(basis, [1, 2, 4, 8] if basis.opns else [7, 11, 13, 14])
+
+
+def mask_for_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for Direction in N2."""
+    return BladeMask(basis, [1, 2] if basis.opns else [13, 14])
+
+
+def mask_for_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for Line in N2."""
+    return BladeMask(basis, [7, 11, 13, 14] if basis.opns else [1, 2, 4, 8])
+
+
+def mask_for_sphere(basis: Algebra) -> BladeMask:
+    """Full blade mask for Sphere (circle) in N2."""
+    return BladeMask(basis, [7, 11, 13, 14] if basis.opns else [1, 2, 4, 8])
+
+
+def mask_for_circle(basis: Algebra) -> BladeMask:
+    """Full blade mask for Circle in N2."""
+    return BladeMask(basis, [7, 11, 13, 14] if basis.opns else [1, 2, 4, 8])
+
+
+def mask_for_point_pair(basis: Algebra) -> BladeMask:
+    """Full blade mask for PointPair in N2."""
+    return BladeMask(basis, [3, 5, 6, 9, 10, 12])
+
+
+def mask_for_homogeneous_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for HPoint in N2."""
+    return BladeMask(basis, [5, 6, 9, 10, 12] if basis.opns else [3, 5, 6, 9, 10])
+
+
+def mask_for_homogeneous_direction(basis: Algebra) -> BladeMask:
+    """Full blade mask for HDirection in N2."""
+    return BladeMask(basis, [5, 6, 9, 10])
+
+
+def mask_for_space(basis: Algebra) -> BladeMask:
+    """Full blade mask for Space in N2."""
+    return BladeMask(basis, [15] if basis.opns else [0])
+
+
+def mask_for_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Rotor in N2."""
+    return BladeMask(basis, [0, 3])
+
+
+def mask_for_translator(basis: Algebra) -> BladeMask:
+    """Full blade mask for Translator in N2."""
+    return BladeMask(basis, [0, 5, 6, 9, 10])
+
+
+def mask_for_motor(basis: Algebra) -> BladeMask:
+    """Full blade mask for Motor in N2."""
+    return BladeMask(basis, [0, 3, 5, 6, 9, 10])
+
+
+def mask_for_dilator(basis: Algebra) -> BladeMask:
+    """Full blade mask for Dilator in N2."""
+    return BladeMask(basis, [0, 5, 6, 9, 10, 12])
+
+
+def mask_for_inversion(basis: Algebra) -> BladeMask:
+    """Full blade mask for Inversion in N2 (full grade-1)."""
+    return BladeMask(basis, [1, 2, 4, 8])
+
+
+def mask_for_reflection_line(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionLine in N2."""
+    return BladeMask(basis, [7, 11, 13, 14])
+
+
+def mask_for_reflection_point(basis: Algebra) -> BladeMask:
+    """Full blade mask for ReflectionPoint in N2."""
+    return BladeMask(basis, [5, 6, 9, 10, 12])
+
+
+def mask_for_general_rotor(basis: Algebra) -> BladeMask:
+    """Full blade mask for GeneralRotor in N2."""
+    return BladeMask(basis, [0, 3, 5, 6, 9, 10])

@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Sequence
+
+import numpy as np
 
 from pytanga.algebra._blade_names import grade as _grade
 from pytanga.algebra._parse import _parse_mv_string
@@ -62,7 +64,7 @@ class BladeMask:
         BladeMask([mv1, mv2])                  # union of mv1 and mv2 blades
     """
 
-    __slots__ = ("_ids", "_index", "_alg")
+    __slots__ = ("_ids", "_index", "_alg", "_basis")
 
     def __init__(
         self,
@@ -85,14 +87,14 @@ class BladeMask:
                 pass
             elif isinstance(ids, str):
                 # single expression string
-                raw.update(_parse_mv_string(ids, alg.dim).keys())
+                raw.update(_parse_mv_string(ids, alg.dim, alg._composite_basis()).keys())
             else:
                 ids_list = list(ids)
                 if ids_list and isinstance(ids_list[0], str):
                     # list of expression strings
                     for s in ids_list:
                         if isinstance(s, str):
-                            raw.update(_parse_mv_string(s, alg.dim).keys())
+                            raw.update(_parse_mv_string(s, alg.dim, alg._composite_basis()).keys())
                 else:
                     # iterable of int blade ids
                     raw.update(int(b) for b in ids_list)
@@ -124,6 +126,8 @@ class BladeMask:
         self._ids: tuple[int, ...] = tuple(sorted(raw))
         self._index: dict[int, int] = {bid: i for i, bid in enumerate(self._ids)}
         self._alg = alg
+        self._basis: tuple[tuple[str, MV], ...] | None = None
+        self._attach_display_basis(raw)
 
     # ------------------------------------------------------------------
     # Classmethods
@@ -221,6 +225,24 @@ class BladeMask:
         """Sorted list of blade ids (copy)."""
         return list(self._ids)
 
+    @property
+    def basis_vectors(self) -> list[MV]:
+        """The basis direction multivectors, in order.
+
+        The named directions when a basis is attached, otherwise one primitive
+        blade per id (in ``ids`` order).
+        """
+        if self._basis is not None:
+            return [mv for _, mv in self._basis]
+        return [self._alg.multivector({bid: 1.0}) for bid in self._ids]
+
+    @property
+    def basis_names(self) -> list[str]:
+        """The basis direction names, in order (see :attr:`basis_vectors`)."""
+        if self._basis is not None:
+            return [name for name, _ in self._basis]
+        return [self._alg.blade_name(bid) for bid in self._ids]
+
     # ------------------------------------------------------------------
     # Lookup
     # ------------------------------------------------------------------
@@ -238,22 +260,129 @@ class BladeMask:
         return [self._alg.blade_name(bid) for bid in sorted_ids]
 
     # ------------------------------------------------------------------
+    # Named basis
+    # ------------------------------------------------------------------
+
+    def with_basis(
+        self,
+        directions: Sequence[MV | tuple[str, MV]],
+        *,
+        names: Sequence[str] | None = None,
+    ) -> "BladeMask":
+        """Return a new mask over the same raw ids, labelled by *directions*.
+
+        *directions* is either a sequence of ``MV`` (with optional parallel
+        *names*) or a sequence of ``(name, MV)`` pairs.  Each direction must lie
+        within this mask's span (its non-zero raw blades ⊆ ``ids``); a reduced
+        set is allowed.
+        """
+        if names is not None and len(names) != len(directions):
+            raise ValueError("names must have one entry per basis direction")
+
+        entries: list[tuple[str, MV]] = []
+        for i, item in enumerate(directions):
+            if isinstance(item, MV):
+                mv = item
+                name = names[i] if names is not None else f"d{i}"
+            else:
+                name, mv = item
+            support = set(self._ids_from_mv(mv, only_nonzero=True))
+            extra = sorted(support - set(self._ids))
+            if extra:
+                raise ValueError(
+                    f"basis direction {name!r} contains blades outside the mask: {extra}"
+                )
+            entries.append((str(name), mv))
+
+        result = BladeMask(self._alg, list(self._ids))
+        result._basis = tuple(entries)
+        return result
+
+    def basis_matrix(self, directions: Sequence[MV] | None = None) -> np.ndarray:
+        """Return the raw→named change-of-basis matrix (shape ``(len(self), n)``).
+
+        Column ``k`` holds the raw-blade coefficients of direction ``k`` over
+        ``self.ids`` order.  Defaults to :attr:`basis_vectors`.
+        """
+        from pytanga.matrix.convert import to_matrix
+
+        vecs: Sequence[MV] = self.basis_vectors if directions is None else directions
+        return to_matrix(list(vecs), mask=self).data
+
+    def _attach_display_basis(self, raw: set[int]) -> None:
+        """Attach the algebra display basis to *raw* iff it fully covers it."""
+        display = self._alg._get_display_basis()
+        if display is None:
+            return
+        entries: list[tuple[str, MV]] = []
+        covered: set[int] = set()
+        for name, blade, _pinv, _blade_id in display:
+            support = set(self._ids_from_mv(blade, only_nonzero=True))
+            if support and support <= raw:
+                entries.append((name, blade))
+                covered |= support
+        if covered == raw:
+            self._basis = tuple(entries)
+
+    # ------------------------------------------------------------------
     # Set operations
     # ------------------------------------------------------------------
 
     def union(self, other: "BladeMask") -> "BladeMask":
-        """Return a new mask containing the ids of both masks."""
+        """Return a new mask containing the ids of both masks.
+
+        When both masks carry a named basis, the returned mask's basis is the
+        deduplicated union of the two direction sets (by name).  Otherwise the
+        result is a plain raw-id union with the default display basis (if any).
+        """
         assert other._alg is self._alg, (
             "Cannot union BladeMasks from different algebras"
         )
+        if self._basis is not None and other._basis is not None:
+            merged: list[tuple[str, MV]] = []
+            seen: set[str] = set()
+            for entry in list(self._basis) + list(other._basis):
+                if entry[0] not in seen:
+                    seen.add(entry[0])
+                    merged.append(entry)
+            result = BladeMask(self._alg, set(self._ids) | set(other._ids))
+            result._basis = tuple(merged)
+            return result
         return BladeMask(self._alg, set(self._ids) | set(other._ids))
 
-    def intersection(self, other: "BladeMask") -> "BladeMask":
-        """Return a new mask containing only ids present in both masks."""
+    def intersection(
+        self, other: "BladeMask", *, discard_basis: bool = False
+    ) -> "BladeMask":
+        """Return a new mask containing only ids present in both masks.
+
+        When both masks carry a named basis, the intersection is computed at the
+        named-direction level: only directions present (by name) in both are
+        kept, and the raw ids are the union of those directions' supports.  When
+        both masks are raw-only, the raw-id intersection is returned unchanged.
+        When only one mask carries a named basis the intersection cannot be
+        aligned: ``discard_basis=True`` falls back to the raw-id intersection,
+        otherwise a ``ValueError`` is raised.
+        """
         assert other._alg is self._alg, (
             "Cannot intersect BladeMasks from different algebras"
         )
-        return BladeMask(self._alg, set(self._ids) & set(other._ids))
+        if self._basis is not None and other._basis is not None:
+            other_names = {name for name, _ in other._basis}
+            shared = [entry for entry in self._basis if entry[0] in other_names]
+            support: set[int] = set()
+            for _, mv in shared:
+                support.update(self._ids_from_mv(mv, only_nonzero=True))
+            result = BladeMask(self._alg, support)
+            result._basis = tuple(shared)
+            return result
+        if self._basis is None and other._basis is None:
+            return BladeMask(self._alg, set(self._ids) & set(other._ids))
+        if discard_basis:
+            return BladeMask(self._alg, set(self._ids) & set(other._ids))
+        raise ValueError(
+            "cannot align the named basis of the two masks for intersection; "
+            "pass discard_basis=True to fall back to the raw-id intersection"
+        )
 
     # ------------------------------------------------------------------
     # Dunder methods
