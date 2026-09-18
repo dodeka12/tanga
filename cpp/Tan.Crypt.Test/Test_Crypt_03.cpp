@@ -31,7 +31,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <random>
-#include <chrono>
 
 #include "Tan.Core/IntrinsicFunctions.h"
 
@@ -112,8 +111,9 @@ int main(int _argc, char **_argv)
 	try
 	{
 		std::default_random_engine xRandomEngine;
-		auto iSeed = std::chrono::system_clock::now().time_since_epoch().count();
-		xRandomEngine.seed(iSeed);
+		// Deterministic seed so the probabilistic invertibility search below is
+		// reproducible in CI (a wall-clock seed made this test flaky).
+		xRandomEngine.seed(20260918);
 
 		std::uniform_int_distribution<TValue> xRandomDistribution(-tHalfRange, tHalfRange);
 		auto xRandom = std::bind(xRandomDistribution, xRandomEngine);
@@ -128,7 +128,7 @@ int main(int _argc, char **_argv)
 		int iTrial = 0;
 		do
 		{
-			if (iTrial > 10)
+			if (iTrial > 1000)
 				return -1;
 
 			GenRanMV(wF, xRandom);

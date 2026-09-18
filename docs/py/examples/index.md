@@ -136,6 +136,8 @@ uv run python py/examples/<path>.py
 
 - **compilation** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
+- **compile** — [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md)
+
 - **compose** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
 
 - **Composed** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md)
@@ -234,7 +236,7 @@ uv run python py/examples/<path>.py
 
 - **easing** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
-- **einsum** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
+- **einsum** — [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **Ellipse** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
@@ -256,7 +258,7 @@ uv run python py/examples/<path>.py
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
-- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
+- **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
@@ -306,9 +308,9 @@ uv run python py/examples/<path>.py
 
 - **geometry** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
-- **get_array** — [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
+- **get_array** — [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
 
-- **get_tensor** — [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
+- **get_tensor** — [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
 
 - **GLSL** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
 
@@ -440,6 +442,8 @@ uv run python py/examples/<path>.py
 
 - **multi-scene** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md)
 
+- **multilinear** — [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md)
+
 - **multivector** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
 - **multivector equation** — [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md)
@@ -448,7 +452,7 @@ uv run python py/examples/<path>.py
 
 - **MVTensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md)
 
-- **N3** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md)
+- **N3** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md)
 
 - **named blades** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md), [Three ways to work with named basis blades](ga/basis/basis_usage.md)
 
@@ -501,6 +505,8 @@ uv run python py/examples/<path>.py
 - **pencil** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **pendulum** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
+
+- **performance** — [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md)
 
 - **persistence** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
@@ -560,6 +566,8 @@ uv run python py/examples/<path>.py
 
 - **Q3** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
+- **quadratic** — [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md)
+
 - **quadric** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **Quadric3D** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
@@ -600,13 +608,15 @@ uv run python py/examples/<path>.py
 
 - **rotation** — [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md)
 
-- **rotor** — [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
+- **rotor** — [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **Rotor** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
 - **rotor estimation** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
 - **runtime** — [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+
+- **sandwich** — [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md)
 
 - **scene** — [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 

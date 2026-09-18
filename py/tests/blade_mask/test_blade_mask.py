@@ -23,6 +23,22 @@ class TestBladeMask:
         assert 4 in m
         assert 7 not in m
 
+    def test_ids_outside_in_mask(self, alg_float):  # noqa: ANN001, ANN201
+        m = BladeMask(alg_float, [1, 2, 3])
+        mv = alg_float.multivector({1: 1.0, 3: 2.0})
+        assert m.ids_outside(mv) == []
+
+    def test_ids_outside_ascending(self, alg_float):  # noqa: ANN001, ANN201
+        m = BladeMask(alg_float, [1, 2, 3])
+        mv = alg_float.multivector({6: 1.0, 1: 2.0, 4: 3.0})
+        assert m.ids_outside(mv) == [4, 6]
+
+    def test_ids_outside_cross_algebra_raises(self, alg_float, alg_int):  # noqa: ANN001, ANN201
+        m = BladeMask(alg_float, [1])
+        mv = alg_int.multivector({1: 1})
+        with pytest.raises(AssertionError):
+            m.ids_outside(mv)
+
     def test_from_mv(self, alg_float, vec_A_float, mask_A_float):  # noqa: ANN001, ANN201
         assert mask_A_float.algebra is alg_float
         expected_ids = {alg_float.blade_id(name) for name in vec_A_float.to_dict()}

@@ -88,6 +88,31 @@ single stacked expression composes with a constant or variable under `*`.
 Composing two stacked expressions, or calling `inv` on a stacked expression,
 still requires full evaluation.
 
+## Compiling for fast repeated evaluation
+
+`Expression` (and `AffineExpression`) can be *compiled* into a plain callable
+that skips the per-call structural setup (label parsing, mask unions, einsum
+layout, contraction-path search) and reduces each call to the numeric
+contraction:
+
+```python
+compiled = expr.compile()        # Callable[..., MV]
+result = compiled(V1=x, V2=y)    # == expr(V1=x, V2=y)
+result = aff.compile()(V1=x)     # AffineExpression sums its compiled terms
+```
+
+`compile()` requires **every** free variable to be bound to an `MV` or scalar
+(a `DataArray` or `Expression` binding raises `TypeError`), and validates blade
+membership exactly like `__call__`.  A constant expression compiles to a
+zero-argument callable.
+
+You usually do not need `compile()` explicitly: `__call__` and `evaluate`
+already route fully-bound `MV`/scalar bindings through the same compiled path
+automatically.  `compile()` is for the case where you want to hold the
+evaluator as a value (e.g. pass it to an integrator, or keep it in a hot loop)
+and make the one-time setup vs. per-call split explicit.  See
+`py/examples/ga/expression/compile_fastpath.py`.
+
 ## Addition, subtraction, and affine sums
 
 `+`/`-` merge two expressions that share the same variables **in the same
@@ -331,9 +356,13 @@ A = t.get_array(axis_bases={1: twist})   # per-axis directions override
 This is the tensor-native replacement for evaluating once per canonical basis
 blade: for a `TwistBivector` variable, `get_tensor().get_array()` returns the
 6-column physical-DOF operator matrix directly.  `AffineExpression.get_tensor()`
-supports the single-linear-map case (one variable, once per term), summing each
-term's tensor into the union output mask.  `lstsq` / `svd` / `inv` still operate
-on the raw blades via the internal `_variable_matrix()`.
+supports a single variable appearing `k >= 1` times in every term, returning a
+rank-`(1 + k)` tensor (the `k == 1` case is the single-linear-map matrix).  A
+quadratic operator (`Omega` twice) therefore extracts as a rank-3 tensor that
+reproduces `aff(Omega=ω)` via `np.einsum("ijk,j,k->i", Q, c, c)` — see
+`py/examples/ga/expression/quadratic_get_tensor.py`.  `lstsq` / `svd` / `inv`
+still operate on the raw blades via the internal `_variable_matrix()` and keep
+their single-occurrence requirement.
 
 ## The internal tensor
 

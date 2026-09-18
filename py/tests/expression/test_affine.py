@@ -41,6 +41,31 @@ class TestAffineExpression:
         x = self._mv({"e1": 1.0, "e2": 1.0})
         assert _close(a(V1=x), x + c)
 
+    def test_union_masks_cached(self):  # noqa: ANN201
+        v = Variable("V1", self.full)
+        a = (v * v) + v
+        first = a._union_masks()
+        assert a._union_cache is first
+        assert a._union_masks() is first
+
+    def test_out_mask_cached(self):  # noqa: ANN201
+        v = Variable("V1", self.full)
+        a = (v * v) + v
+        first = a.out_mask
+        assert a._out_mask_cache is first
+        assert a.out_mask is first
+
+    def test_counting_axes_union_cached(self):  # noqa: ANN201
+        v = Variable("V1", self.full)
+        w = Variable("V2", self.full)
+        c = self._mv({"e3": 2.0})
+        a = (v * w) + c
+        xs = [self._mv({"e1": 1.0}), self._mv({"e1": 2.0})]
+        partial = a(V1=DataArray(xs, masks=("n", self.full)))
+        first = partial._counting_axes_union()
+        assert partial._counting_cache is first
+        assert partial._counting_axes_union() is first
+
     def test_difference_with_constant(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         c = self._mv({"e1": 2.0})

@@ -5,7 +5,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast, overload
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, cast, overload
 
 import numpy as np
 
@@ -30,6 +31,40 @@ if TYPE_CHECKING:
     from pytanga.algebra import Algebra
 
 
+@dataclass(frozen=True, slots=True)
+class _CompiledPlan:
+    """Precomputed evaluation plan for a fully-bound, MV/scalar ``Expression``.
+
+    Captures everything that is invariant between repeated calls: the base
+    tensor, the integer einsum layout, the variable→occurrence-axis map, the
+    variable/output masks, the fixed binding order, and a precomputed greedy
+    contraction path.
+    """
+
+    base: np.ndarray
+    base_axes: list[int]
+    var_axes: dict[str, list[int]]
+    out_axes: list[int]
+    masks: dict[str, BladeMask]
+    out_mask: BladeMask
+    order: tuple[str, ...]
+    path: Any
+
+
+def _run_compiled_plan(
+    plan: _CompiledPlan, alg: "Algebra", values: dict[str, np.ndarray]
+) -> np.ndarray:
+    """Contract *plan* against pre-extracted per-variable coefficient arrays."""
+    args: list[Any] = [plan.base, plan.base_axes]
+    for name in plan.order:
+        coeffs = values[name]
+        for axis in plan.var_axes[name]:
+            args.append(coeffs)
+            args.append([axis])
+    args.append(plan.out_axes)
+    return np.einsum(*args, optimize=plan.path)
+
+
 class Expression:
     """A reduced tensor expression over named variables.
 
@@ -43,7 +78,7 @@ class Expression:
     to ``MAX_DEGREE`` times per term (e.g. ``v * v``).
     """
 
-    __slots__ = ("_tensor", "_names", "_masks")
+    __slots__ = ("_tensor", "_names", "_masks", "_compiled")
 
     def __init__(
         self,
@@ -57,10 +92,12 @@ class Expression:
             self._tensor = MVLabeledTensor(to_tensor(tensor, mask=mask), OUT_LABEL)
             self._names = {}
             self._masks = {}
+            self._compiled: _CompiledPlan | None = None
             return
         self._tensor = tensor  # MVLabeledTensor
         self._names = dict(cast("dict[str, tuple[int, ...]]", names))
         self._masks = dict(cast("dict[str, BladeMask]", masks))
+        self._compiled = None
 
     @property
     def tensor(self) -> MVLabeledTensor:
@@ -155,6 +192,120 @@ class Expression:
         """
         return self._evaluate(bindings, True)
 
+    def compile(self) -> Callable[..., MV]:
+        """Return a fast compiled evaluator for fully-bound ``MV``/scalar values.
+
+        ``compiled = expr.compile()``; then ``compiled(V1=x, V2=y) ==
+        expr(V1=x, V2=y)`` for any concrete ``MV``/scalar binding, but the
+        per-call cost is reduced to the numeric contraction only (the einsum
+        layout, masks, and contraction path are computed once).
+
+        The callable requires **every** free variable to be bound to an
+        ``MV``/``int``/``float`` (a ``DataArray`` or ``Expression`` binding
+        raises ``TypeError``), and validates that each value's blades lie within
+        the variable's mask (raising ``ValueError`` otherwise, exactly like
+        ``__call__``).  A constant expression returns a zero-argument callable.
+        """
+        if not self._names:
+            const = from_tensor(self._tensor.tensor)
+
+            def compiled() -> MV:
+                return cast("MV", const)
+
+            return compiled
+        return self._compile(True)
+
+    def _build_plan(self) -> _CompiledPlan:
+        """Build the cached ``_CompiledPlan`` for this expression's structure."""
+        raw = _axis_names(self._tensor.labels)
+        name_to_int: dict[str | int, int] = {}
+        for name in raw:
+            if name not in name_to_int:
+                name_to_int[name] = len(name_to_int)
+
+        base_axes = [name_to_int[name] for name in raw]
+        out_axes = [name_to_int[raw[0]]]
+        var_axes = {
+            name: [name_to_int[occ] for occ in occs]
+            for name, occs in self._names.items()
+        }
+        order = tuple(self._names)
+        out_mask = self.out_mask
+        base = np.asarray(self._tensor.tensor.data, dtype=np.float64)
+
+        # Precompute a greedy contraction path once, using placeholder arrays.
+        path_args: list[Any] = [base, base_axes]
+        for name in order:
+            dummy = np.empty(len(self._masks[name]), dtype=np.float64)
+            for axis in var_axes[name]:
+                path_args.append(dummy)
+                path_args.append([axis])
+        path_args.append(out_axes)
+        path = np.einsum_path(*path_args, optimize="greedy")[0]
+
+        return _CompiledPlan(
+            base=base,
+            base_axes=base_axes,
+            var_axes=var_axes,
+            out_axes=out_axes,
+            masks=dict(self._masks),
+            out_mask=out_mask,
+            order=order,
+            path=path,
+        )
+
+    def _get_plan(self) -> _CompiledPlan:
+        """Return the cached compiled plan, building it on first use."""
+        if self._compiled is None:
+            self._compiled = self._build_plan()
+        return self._compiled
+
+    def _compile(self, check_blades: bool) -> Callable[..., MV]:
+        """Return the compiled evaluator closure over the cached plan."""
+        plan = self._get_plan()
+        alg = plan.out_mask.algebra
+
+        def compiled(**bindings: Any) -> MV:
+            missing = [name for name in plan.order if name not in bindings]
+            extra = [name for name in bindings if name not in plan.masks]
+            if missing or extra:
+                raise ValueError(
+                    "compiled evaluation requires exactly the free variable(s) "
+                    f"{sorted(plan.order)}; got missing={sorted(missing)}, "
+                    f"extra={sorted(extra)}"
+                )
+
+            values: dict[str, np.ndarray] = {}
+            for name in plan.order:
+                value = bindings[name]
+                mask = plan.masks[name]
+                if isinstance(value, (int, float)):
+                    value = alg.multivector({0: float(value)})
+                if not isinstance(value, MV):
+                    raise TypeError(
+                        f"binding for {name!r} must be a single MV or scalar, "
+                        f"got {type(value).__name__}"
+                    )
+                if check_blades:
+                    outside = mask.ids_outside(value)
+                    if outside:
+                        raise ValueError(
+                            f"binding for {name!r} has blades outside its mask: "
+                            f"{outside}"
+                        )
+                values[name] = np.asarray(
+                    alg._mod.to_matrix(value._impl, mask.ids), dtype=np.float64
+                ).ravel()
+
+            result = _run_compiled_plan(plan, alg, values)
+            impl = alg._mod.from_matrix(
+                np.asarray(result, dtype=np.float64).reshape(-1, 1),
+                plan.out_mask.ids,
+            )
+            return MV(impl, alg)
+
+        return compiled
+
     def _evaluate(
         self,
         bindings: dict[str, Any],
@@ -181,6 +332,17 @@ class Expression:
 
         var_bindings = {k: v for k, v in bindings.items() if k in self._names}
         count_bindings = {k: v for k, v in bindings.items() if k in counting}
+
+        # Fast path: every variable bound to a concrete MV/scalar with no
+        # counting-axis reduction — skip the general labelled contraction.
+        if (
+            not count_bindings
+            and self._names
+            and not self._has_counting_axes()
+            and set(var_bindings) == set(self._names)
+            and all(isinstance(v, (MV, int, float)) for v in var_bindings.values())
+        ):
+            return self._compile(check_blades)(**var_bindings)
 
         # Counting axes known to the surrounding reduction but absent from this
         # term are broadcast as constants (sum-reduction only).
@@ -791,10 +953,13 @@ class AffineExpression:
     the terms, and ``__call__`` evaluates each term and sums the results.
     """
 
-    __slots__ = ("_terms",)
+    __slots__ = ("_terms", "_union_cache", "_out_mask_cache", "_counting_cache")
 
     def __init__(self, terms: "list[Expression]") -> None:
         self._terms = list(terms)
+        self._union_cache: dict[str, BladeMask] | None = None
+        self._out_mask_cache: BladeMask | None = None
+        self._counting_cache: dict[str | int, int] | None = None
 
     @property
     def terms(self) -> list["Expression"]:
@@ -818,7 +983,9 @@ class AffineExpression:
         return result
 
     def _union_masks(self) -> dict[str, BladeMask]:
-        """Union of each variable's masks across all terms."""
+        """Union of each variable's masks across all terms (cached)."""
+        if self._union_cache is not None:
+            return self._union_cache
         result: dict[str, BladeMask] = {}
         for term in self._terms:
             for name, mask in term.masks.items():
@@ -826,10 +993,13 @@ class AffineExpression:
                     result[name] = result[name].union(mask)
                 else:
                     result[name] = mask
+        self._union_cache = result
         return result
 
     def _counting_axes_union(self) -> dict[str | int, int]:
         """Union of each term's counting axes, with a length-consistency check."""
+        if self._counting_cache is not None:
+            return self._counting_cache
         result: dict[str | int, int] = {}
         for term in self._terms:
             for name, length in term._counting_axes().items():
@@ -838,6 +1008,7 @@ class AffineExpression:
                         f"counting axis {name!r} has inconsistent lengths across terms"
                     )
                 result[name] = length
+        self._counting_cache = result
         return result
 
     def _has_counting_axes(self) -> bool:
@@ -846,10 +1017,13 @@ class AffineExpression:
 
     @property
     def out_mask(self) -> BladeMask:
-        """The union of the terms' output blade masks."""
+        """The union of the terms' output blade masks (cached)."""
+        if self._out_mask_cache is not None:
+            return self._out_mask_cache
         result = self._terms[0].out_mask
         for term in self._terms[1:]:
             result = result.union(term.out_mask)
+        self._out_mask_cache = result
         return result
 
     @property
@@ -897,6 +1071,67 @@ class AffineExpression:
             results.append(term._evaluate(sub, False, extra_counting=counting))
 
         return _combine_terms(results)
+
+    def compile(self) -> Callable[..., MV]:
+        """Return a fast compiled evaluator summing each term's compiled plan.
+
+        ``compiled = aff.compile()``; then ``compiled(V1=x, V2=y) ==
+        aff(V1=x, V2=y)`` for concrete ``MV``/scalar bindings.  Every free
+        variable must be bound (a ``DataArray``/``Expression`` binding raises
+        ``TypeError``).  Values are validated against the union mask once, then
+        each term contracts over its own mask and the coefficient vectors are
+        summed into the union output mask.
+        """
+        names = set(self.names)
+        union = self._union_masks()
+        out_union = self.out_mask
+        alg = out_union.algebra
+        term_plans = [(term._get_plan(), term.out_mask) for term in self._terms]
+
+        def compiled(**bindings: Any) -> MV:
+            missing = [name for name in names if name not in bindings]
+            extra = [name for name in bindings if name not in names]
+            if missing or extra:
+                raise ValueError(
+                    "compiled evaluation requires exactly the free variable(s) "
+                    f"{sorted(names)}; got missing={sorted(missing)}, "
+                    f"extra={sorted(extra)}"
+                )
+
+            coerced: dict[str, MV] = {}
+            for name, value in bindings.items():
+                if isinstance(value, (int, float)):
+                    value = alg.multivector({0: float(value)})
+                if not isinstance(value, MV):
+                    raise TypeError(
+                        f"binding for {name!r} must be a single MV or scalar, "
+                        f"got {type(value).__name__}"
+                    )
+                outside = union[name].ids_outside(value)
+                if outside:
+                    raise ValueError(
+                        f"binding for {name!r} has blades outside its mask: "
+                        f"{outside}"
+                    )
+                coerced[name] = value
+
+            acc = np.zeros(len(out_union), dtype=np.float64)
+            for plan, term_out in term_plans:
+                values: dict[str, np.ndarray] = {}
+                for name in plan.order:
+                    mask = plan.masks[name]
+                    values[name] = np.asarray(
+                        alg._mod.to_matrix(coerced[name]._impl, mask.ids),
+                        dtype=np.float64,
+                    ).ravel()
+                term_res = _run_compiled_plan(plan, alg, values)
+                out_pos = [out_union.index(oid) for oid in term_out.ids]
+                acc[out_pos] += term_res
+
+            impl = alg._mod.from_matrix(acc.reshape(-1, 1), out_union.ids)
+            return MV(impl, alg)
+
+        return compiled
 
     def bind(self, **bindings: Any) -> "AffineExpression":
         """Bind variables to values, or substitute them with other ``Variable``s.
@@ -1175,9 +1410,10 @@ class AffineExpression:
     def get_tensor(self) -> MVTensor:
         """Return the raw affine tensor as an ``MVTensor``.
 
-        Supports the single-linear-map case: exactly one variable, appearing
-        once in every term (no counting axes).  Each term's raw tensor is summed
-        into the union output mask and union variable mask.  Recombine the axes
+        Supports a single variable appearing ``k >= 1`` times in every term (no
+        counting axes).  Returns a rank-``(1 + k)`` tensor whose axis 0 is the
+        union output mask and axes ``1..k`` are the union variable mask.  For
+        ``k == 1`` this is the single-linear-map matrix.  Recombine the axes
         into named bases with :meth:`MVTensor.get_array`.
         """
         names = self.names
@@ -1186,26 +1422,38 @@ class AffineExpression:
                 f"get_tensor() requires a single-variable expression (got {sorted(names)})"
             )
         (var_name,) = names
+
+        k: int | None = None
         for term in self._terms:
-            if var_name not in term.names or len(term.names[var_name]) != 1:
+            if var_name not in term.names:
+                raise ValueError(f"requires {var_name!r} to appear in every term")
+            occ = len(term.names[var_name])
+            if k is None:
+                k = occ
+            elif occ != k:
                 raise ValueError(
-                    f"requires {var_name!r} to appear exactly once in every term"
+                    f"requires {var_name!r} to appear the same number of times "
+                    f"in every term (got {k} and {occ})"
                 )
             if term._has_counting_axes():
                 raise ValueError("get_tensor() does not support counting axes on terms yet")
 
+        assert k is not None
         var_union = self._union_masks()[var_name]
         out_union = self.out_mask
 
-        raw = np.zeros((len(out_union), len(var_union)), dtype=np.float64)
+        raw = np.zeros((len(out_union),) + (len(var_union),) * k, dtype=np.float64)
         for term in self._terms:
-            var_mask_t, mat_t = term._variable_matrix()
+            t = term.tensor.tensor
             out_t = term.out_mask
+            var_t = term.masks[var_name]
             out_pos = [out_union.index(oid) for oid in out_t.ids]
-            var_pos = [var_union.index(vid) for vid in var_mask_t.ids]
-            raw[np.ix_(out_pos, var_pos)] += mat_t
+            var_pos = [var_union.index(vid) for vid in var_t.ids]
+            raw[np.ix_(out_pos, *([var_pos] * k))] += np.asarray(
+                t.data, dtype=np.float64
+            )
 
-        return MVTensor(data=raw, masks=(out_union, var_union))
+        return MVTensor(data=raw, masks=(out_union,) + (var_union,) * k)
 
     def lstsq(self, rhs: "MV | int | float | None" = None) -> "MV":
         """Solve this single-linear-map affine expression in the least-squares sense.
@@ -1906,7 +2154,7 @@ def _involution(x: Any, inv: EInv) -> Expression:
 
 def _check_blades(value: Any, mask: BladeMask, name: str) -> None:
     """Raise if *value* has non-zero blades outside *mask*."""
-    outside = [bid for bid in BladeMask(value).ids if bid not in mask]
+    outside = mask.ids_outside(value)
     if outside:
         raise ValueError(f"binding for {name!r} has blades outside its mask: {outside}")
 
