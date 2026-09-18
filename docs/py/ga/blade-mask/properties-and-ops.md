@@ -64,6 +64,17 @@ mask.index(99)                           # KeyError
 `ids` list.  This is the row/column position in matrices labelled by this
 mask.
 
+A cheap membership diff is available for validating a multivector against a
+mask without building a new `BladeMask`:
+
+```python
+mask.ids_outside(mv)                     # non-zero blade ids of mv not in mask
+```
+
+It performs a single `blade_mask` C++ call (no display-basis attachment) and
+returns the out-of-mask ids in ascending order; the expression evaluator uses
+it to validate variable bindings.
+
 ## Named basis
 
 A mask's *named basis* is the ordered set of directions it is labelled by:

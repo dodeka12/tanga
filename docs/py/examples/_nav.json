@@ -79,6 +79,9 @@
             "Bind Subexpression": "py/examples/ga/expression/bind_subexpression.md"
           },
           {
+            "Compile Fastpath": "py/examples/ga/expression/compile_fastpath.md"
+          },
+          {
             "Equation Demo": "py/examples/ga/expression/equation_demo.md"
           },
           {
@@ -92,6 +95,9 @@
           },
           {
             "Project Onto Euclidean N3": "py/examples/ga/expression/project_onto_euclidean_n3.md"
+          },
+          {
+            "Quadratic Get Tensor": "py/examples/ga/expression/quadratic_get_tensor.md"
           },
           {
             "Rename Unify Variables": "py/examples/ga/expression/rename_unify_variables.md"

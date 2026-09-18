@@ -43,6 +43,13 @@ class TestExpression:
         x = self._mv({"e1": 1.0, "e2": 5.0})
         assert _close(e(V1=x), a * x)
 
+    def test_binding_out_of_mask_raises(self):  # noqa: ANN201
+        v = Variable("V1", BladeMask(self.alg, [1]))
+        e = v * 1.0
+        x = self._mv({"e2": 1.0})
+        with pytest.raises(ValueError, match="blades outside its mask"):
+            e(V1=x)
+
     def test_ip_and_op(self):  # noqa: ANN201
         v = Variable("V1", self.full)
         a = self._mv({"e1": 2.0, "e12": 3.0})

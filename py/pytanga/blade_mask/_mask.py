@@ -259,6 +259,20 @@ class BladeMask:
         sorted_ids = sorted(self._ids, key=lambda b: (_grade(b), b))
         return [self._alg.blade_name(bid) for bid in sorted_ids]
 
+    def ids_outside(self, mv: MV) -> list[int]:
+        """Return the non-zero blade ids of *mv* that are not in this mask.
+
+        A cheap membership diff used by the expression evaluator: one
+        ``blade_mask`` C++ call, without constructing a ``BladeMask`` or
+        attaching the display basis.  The result is in ascending blade-id
+        order (matching ``BladeMask(mv).ids``).
+        """
+        assert mv.algebra is self._alg, (
+            "Cannot diff a BladeMask and an MV from different algebras"
+        )
+        raw = self._ids_from_mv(mv, only_nonzero=True)
+        return [bid for bid in sorted(raw) if bid not in self._index]
+
     # ------------------------------------------------------------------
     # Named basis
     # ------------------------------------------------------------------
