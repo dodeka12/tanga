@@ -3182,6 +3182,211 @@ function removeEntityMesh(mesh) {
     });
 }
 
+// Shared SDF lighting model (directional lights + ambient) used by both the
+// fullscreen SDF viewer and the standard viewer's per-object SDF proxies, so
+// both share one source of truth for the light preamble and uniform uploads.
+//
+// Pure module (no three.js / DOM): the light preamble is a GLSL string and the
+// uniform setters operate on whatever uniform objects the caller supplies.
+
+const MAX_LIGHTS = 8;
+
+// Frontend defaults mirror the Python defaults (a white light from the
+// diagonal (1,1,1) at intensity 0.8 plus a white 0.45 ambient).
+const DEFAULT_LIGHTING = {
+    ambient: { color: '#ffffff', intensity: 0.45 },
+    lights: [{ direction: [1, 1, 1], color: '#ffffff', intensity: 0.8 }],
+};
+
+// Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then
+// injected into the assembled fragment before the raymarch body.
+const lightPreamble = `
+const int MAX_LIGHTS = ${MAX_LIGHTS};
+uniform int uLightCount;
+uniform vec3 uLightDir[MAX_LIGHTS];
+uniform vec3 uLightColor[MAX_LIGHTS];
+uniform vec3 uAmbientColor;
+`;
+
+function parseHexColor(hex, fallback = [0.7, 0.6, 0.5]) {
+    if (typeof hex !== 'string') return fallback;
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+    if (!m) return fallback;
+    const n = parseInt(m[1], 16);
+    return [
+        ((n >> 16) & 255) / 255,
+        ((n >> 8) & 255) / 255,
+        (n & 255) / 255,
+    ];
+}
+
+function parseAmbient(a) {
+    const [r, g, b] = parseHexColor(a && a.color);
+    const i = a && typeof a.intensity === 'number' ? a.intensity : 1.0;
+    return [r * i, g * i, b * i];
+}
+
+function parseLight(l) {
+    const [r, g, b] = parseHexColor(l && l.color);
+    const i = l && typeof l.intensity === 'number' ? l.intensity : 1.0;
+    let d = (l && l.direction) || [0, 0, 1];
+    const len = Math.hypot(d[0], d[1], d[2]);
+    d = len > 1e-9 ? [d[0] / len, d[1] / len, d[2] / len] : [0, 0, 1];
+    return { direction: d, color: [r * i, g * i, b * i] };
+}
+
+function parseLighting(wire) {
+    return {
+        ambient: parseAmbient((wire && wire.ambient) || DEFAULT_LIGHTING.ambient),
+        lights: ((wire && wire.lights) || DEFAULT_LIGHTING.lights).map(parseLight),
+    };
+}
+
+function setLightUniforms(u, lighting) {
+    if (!u) return;
+    u.uLightCount.value = lighting.lights.length;
+    for (let i = 0; i < MAX_LIGHTS; i++) {
+        const l = lighting.lights[i];
+        if (l) {
+            u.uLightDir.value[i].set(l.direction[0], l.direction[1], l.direction[2]);
+            u.uLightColor.value[i].set(l.color[0], l.color[1], l.color[2]);
+        } else {
+            u.uLightDir.value[i].set(0, 0, 0);
+            u.uLightColor.value[i].set(0, 0, 0);
+        }
+    }
+    u.uAmbientColor.value.set(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2]);
+}
+
+// Pure GLSL assembly for the per-object SDF proxy shader (no three.js / DOM).
+//
+// The proxy marches a *single* object's local-space SDF inside a bounding-box
+// proxy mesh. `map()` returns `vec2(distance, materialIndex)` so grouped
+// objects can shade each member with its own material; single objects use
+// material slot 0 (index is always 0.0).
+
+// Compile-time march cap. `uMaxSteps` clamps the loop at runtime so lowering
+// the budget does not require a shader recompile.
+const MAX_STEPS = 256;
+
+// Compile-time cap on the number of members in an `SdfGroup`. The fold is
+// unrolled per group, so this only sizes the uniform array (padded slots are
+// identity and never read).
+const MAX_GROUP_MEMBERS = 16;
+
+// Smooth-blend radius default for the `smooth_*` fold modes (matches
+// `sdf/composer.js`). A member with no explicit `smoothness` uses this.
+const GROUP_SMOOTHNESS_DEFAULT = 0.1;
+
+function _groupSmoothness(child) {
+    const k = Number(
+        child.smoothness != null ? child.smoothness : GROUP_SMOOTHNESS_DEFAULT,
+    );
+    return Number.isFinite(k) ? k : GROUP_SMOOTHNESS_DEFAULT;
+}
+
+function buildProxyVertex() {
+    return `
+out vec3 vLocalPos;
+flat out vec3 vCameraLocal;
+
+void main() {
+    vLocalPos = position;
+    // Camera position in the mesh's local space (same for every vertex).
+    vCameraLocal = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+}
+
+// Fold an `SdfGroup`'s members into a single `float map(vec3 p)`. Each member
+// is wrapped as `float memberI(vec3 p)` (its local-space tree) and folded with
+// its combine mode; the member's runtime transform is applied via the
+// `uMemberInvTransform[i]` uniform (inverse transform: point → member local).
+function buildGroupMap(ent) {
+    const children = (ent.tree && ent.tree.children) || [];
+    const hasTransforms = !!ent.members;
+    const lines = [];
+    children.forEach((child, i) => {
+        lines.push(`float member${i}(vec3 p) {`);
+        lines.push(`    return ${emitTree(child)};`);
+        lines.push('}');
+    });
+    lines.push('vec2 map(vec3 p) {');
+    lines.push('    float d = MAX_DIST;');
+    lines.push('    float m = 0.0;');
+    children.forEach((child, i) => {
+        const combine = (child.combine || 'union').toLowerCase();
+        const k = _groupSmoothness(child);
+        const local = hasTransforms
+            ? `(uMemberInvTransform[${i}] * vec4(p, 1.0)).xyz`
+            : 'p';
+        lines.push(`    float d${i} = member${i}(${local});`);
+        if (combine === 'subtract') {
+            // The cut contributes no material; the material stays with `d`.
+            lines.push(`    d = opSubtract(d, d${i});`);
+        } else if (combine === 'intersection') {
+            lines.push(`    if (d${i} > d) m = ${i}.0;`);
+            lines.push(`    d = opIntersect(d, d${i});`);
+        } else if (combine === 'xor') {
+            lines.push(`    if (d${i} < d) m = ${i}.0;`);
+            lines.push(`    d = opXor(d, d${i});`);
+        } else if (combine === 'smooth_subtract') {
+            // The cut contributes no material; the material stays with `d`.
+            lines.push(`    vec2 sm${i} = opSmoothSubtract(d, d${i}, ${k});`);
+            lines.push(`    d = sm${i}.x;`);
+        } else if (combine === 'smooth_intersection') {
+            lines.push(`    vec2 sm${i} = opSmoothIntersect(d, d${i}, ${k});`);
+            lines.push(`    d = sm${i}.x;`);
+            lines.push(`    m = mix(${i}.0, m, sm${i}.y);`);
+        } else if (combine === 'smooth_union') {
+            lines.push(`    vec2 sm${i} = opSmoothUnion(d, d${i}, ${k});`);
+            lines.push(`    d = sm${i}.x;`);
+            lines.push(`    m = mix(${i}.0, m, sm${i}.y);`);
+        } else {
+            lines.push(`    if (d${i} < d) m = ${i}.0;`);
+            lines.push(`    d = opUnion(d, d${i});`);
+        }
+    });
+    lines.push('    return vec2(d, m);');
+    lines.push('}');
+    return lines.join('\n');
+}
+
+// Assemble the proxy fragment from the fetched shader parts + the entity's
+// single-object tree. `shaderParts` = { common, primitives, combinators, proxy }.
+function buildProxyFragment(ent, shaderParts) {
+    const { common, primitives, combinators, proxy } = shaderParts;
+    const isGroup = !!(ent.tree && ent.tree.kind === 'group');
+
+    const mapSrc = isGroup
+        ? buildGroupMap(ent)
+        : `vec2 map(vec3 p) {
+    return vec2(${emitTree(ent.tree)}, 0.0);
+}`;
+
+    // `MAX_GROUP_MEMBERS` is sized once here; the `uMaterial` uniform itself is
+    // declared in `proxy.glsl` (single source, no redefinition).
+    const materialPreamble = `const int MAX_GROUP_MEMBERS = ${MAX_GROUP_MEMBERS};`;
+
+    const transformPreamble = isGroup
+        ? `uniform mat4 uMemberInvTransform[MAX_GROUP_MEMBERS];`
+        : '';
+
+    const parts = [
+        common,
+        primitives,
+        combinators,
+        lightPreamble,
+        `const int MAX_STEPS = ${MAX_STEPS};`,
+        materialPreamble,
+        transformPreamble,
+        mapSrc,
+        proxy,
+    ];
+    return parts.filter((s) => s !== '').join('\n');
+}
+
 // Per-object SDF renderer for the standard viewer (Phase 3).
 //
 // Builds a bounding-volume proxy mesh: a BoxGeometry sized to the object's
@@ -3599,209 +3804,551 @@ function disposeRayProxy(mesh) {
     if (mesh.material) mesh.material.dispose();
 }
 
-// Shared SDF lighting model (directional lights + ambient) used by both the
-// fullscreen SDF viewer and the standard viewer's per-object SDF proxies, so
-// both share one source of truth for the light preamble and uniform uploads.
-//
-// Pure module (no three.js / DOM): the light preamble is a GLSL string and the
-// uniform setters operate on whatever uniform objects the caller supplies.
+// Tanga Viewer — nice tick computation (port of py/pytanga/viz/_scale.py).
+// Pure ES module: no `three`/DOM dependencies, so it is Node-testable and is
+// shared by the live viewer and the HTML-export bundle.
 
-const MAX_LIGHTS = 8;
+const DEFAULT_TICK_FORMAT = '.4g';
 
-// Frontend defaults mirror the Python defaults (a white light from the
-// diagonal (1,1,1) at intensity 0.8 plus a white 0.45 ambient).
-const DEFAULT_LIGHTING = {
-    ambient: { color: '#ffffff', intensity: 0.45 },
-    lights: [{ direction: [1, 1, 1], color: '#ffffff', intensity: 0.8 }],
-};
-
-// Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then
-// injected into the assembled fragment before the raymarch body.
-const lightPreamble = `
-const int MAX_LIGHTS = ${MAX_LIGHTS};
-uniform int uLightCount;
-uniform vec3 uLightDir[MAX_LIGHTS];
-uniform vec3 uLightColor[MAX_LIGHTS];
-uniform vec3 uAmbientColor;
-`;
-
-function parseHexColor(hex, fallback = [0.7, 0.6, 0.5]) {
-    if (typeof hex !== 'string') return fallback;
-    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-    if (!m) return fallback;
-    const n = parseInt(m[1], 16);
-    return [
-        ((n >> 16) & 255) / 255,
-        ((n >> 8) & 255) / 255,
-        (n & 255) / 255,
-    ];
+/**
+ * Format a number using a Python-style format specifier (`.Nf` or `.Ng`).
+ * Matches Python's `format(value, fmt)` for the common tick-label cases
+ * (integers, simple decimals, and powers of 10).
+ *
+ * @param {string} fmt  e.g. ".4g" or ".2f"
+ * @param {number} value
+ * @returns {string}
+ */
+function formatValue(fmt, value) {
+    const v = Number(value);
+    if (!Number.isFinite(v)) return String(value);
+    const m = /^\.(\d+)([fFgG])$/.exec(fmt || '');
+    if (!m) return String(v);
+    const digits = parseInt(m[1], 10);
+    const kind = m[2].toLowerCase();
+    if (kind === 'f') return v.toFixed(digits);
+    return _pyFormatG(v, digits);
 }
 
-function parseAmbient(a) {
-    const [r, g, b] = parseHexColor(a && a.color);
-    const i = a && typeof a.intensity === 'number' ? a.intensity : 1.0;
-    return [r * i, g * i, b * i];
+/**
+ * Python `format(v, '.Ng')` — significant digits, fixed vs scientific per the
+ * same `-4 <= exp < precision` threshold Python's 'g' uses.
+ */
+function _pyFormatG(value, precision) {
+    if (value === 0) return '0';
+    const exp = Math.floor(Math.log10(Math.abs(value)));
+    if (exp >= -4 && exp < precision) {
+        const decimals = Math.max(0, precision - 1 - exp);
+        const s = value.toFixed(decimals);
+        if (s.indexOf('.') === -1) return s;
+        return s.replace(/\.?0+$/, '');
+    }
+    const [mantissa, e] = value.toExponential(precision - 1).split('e');
+    const ei = Number(e);
+    const sign = ei < 0 ? '-' : '+';
+    const trimmed = mantissa.replace(/\.?0+$/, '');
+    return `${trimmed}e${sign}${String(Math.abs(ei)).padStart(2, '0')}`;
 }
 
-function parseLight(l) {
-    const [r, g, b] = parseHexColor(l && l.color);
-    const i = l && typeof l.intensity === 'number' ? l.intensity : 1.0;
-    let d = (l && l.direction) || [0, 0, 1];
-    const len = Math.hypot(d[0], d[1], d[2]);
-    d = len > 1e-9 ? [d[0] / len, d[1] / len, d[2] / len] : [0, 0, 1];
-    return { direction: d, color: [r * i, g * i, b * i] };
+/**
+ * Normalize an explicit interval list to sorted, positive, de-duplicated
+ * values.  Returns `null` for empty/`null` input so callers fall back to the
+ * auto-generated 1/2/5 steps.
+ *
+ * @param {Array<number>|null|undefined} intervals
+ * @returns {Array<number>|null}
+ */
+function normalizeIntervals(intervals) {
+    if (!Array.isArray(intervals) || intervals.length === 0) return null;
+    const vals = [...new Set(
+        intervals.map(Number).filter((v) => Number.isFinite(v) && v > 0)
+    )];
+    vals.sort((a, b) => a - b);
+    return vals.length ? vals : null;
 }
 
-function parseLighting(wire) {
+/**
+ * Return nice ticks covering `[lo, hi]` (port of `nice_linear_ticks`).
+ *
+ * Picks the smallest allowed step that is at least `span / maxTicks`.  When
+ * `intervals` is given it is the list of allowed absolute step values; when
+ * omitted it falls back to the classic 1/2/5 × 10^k steps.
+ *
+ * @param {number} lo
+ * @param {number} hi
+ * @param {number} [maxTicks=8]
+ * @param {string} [fmt=DEFAULT_TICK_FORMAT]
+ * @param {Array<number>|null} [intervals=null]
+ * @returns {Array<[number, string]>}
+ */
+function niceLinearTicks(lo, hi, maxTicks = 8, fmt = DEFAULT_TICK_FORMAT, intervals = null) {
+    let a = Number(lo);
+    let b = Number(hi);
+    if (a > b) [a, b] = [b, a];
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return [];
+    const span = b - a;
+    if (span === 0) return [[a, formatValue(fmt, a)]];
+    if (span < 0) return [];
+
+    const rawStep = span / Math.max(1, Math.floor(Number(maxTicks) || 1));
+    const steps = normalizeIntervals(intervals);
+    let step;
+    if (steps) {
+        step = steps.find((s) => s >= rawStep);
+        if (step === undefined) step = steps[steps.length - 1];
+    } else {
+        const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+        step = 10 * magnitude;
+        for (const candidate of [1, 2, 5, 10]) {
+            if (candidate * magnitude >= rawStep) {
+                step = candidate * magnitude;
+                break;
+            }
+        }
+    }
+
+    const ticks = [];
+    const start = Math.ceil(a / step);
+    const epsilon = step * 1e-9;
+    let i = 0;
+    let value = start * step;
+    while (value <= b + epsilon && ticks.length < 1000) {
+        // Multiply by an integer index each step (rather than accumulating
+        // `t += step`) so the tick at zero lands on exactly 0 instead of a
+        // tiny float residue like 3.4e-18.
+        ticks.push([value, formatValue(fmt, value)]);
+        i += 1;
+        value = (start + i) * step;
+    }
+    return ticks;
+}
+
+/**
+ * Return integer-power-of-`base` ticks covering `[lo, hi]` (port of
+ * `log_ticks`). The range must be strictly positive.
+ *
+ * @param {number} lo
+ * @param {number} hi
+ * @param {number} [base=10]
+ * @param {string} [fmt=DEFAULT_TICK_FORMAT]
+ * @returns {Array<[number, string]>}
+ */
+function logTicks(lo, hi, base = 10, fmt = DEFAULT_TICK_FORMAT) {
+    let a = Number(lo);
+    let b = Number(hi);
+    if (a > b) [a, b] = [b, a];
+    if (a <= 0) throw new Error(`log scale range must be strictly positive, got ${a}`);
+    const bse = Number(base);
+    if (!(bse > 1)) throw new Error(`log scale base must be > 1, got ${bse}`);
+
+    const eps = 1e-12;
+    const kStart = Math.ceil(Math.log(a) / Math.log(bse) - eps);
+    const kEnd = Math.floor(Math.log(b) / Math.log(bse) + eps);
+
+    const ticks = [];
+    for (let k = kStart; k <= kEnd; k++) {
+        const value = Math.pow(bse, k);
+        ticks.push([value, formatValue(fmt, value)]);
+    }
+    return ticks;
+}
+
+// Tanga Viewer — pure math for the screen-space coordinate frame (axes overlay
+// + grid underlay).  No `three`/DOM dependency; Node-testable.  The camera is
+// passed as a plain `{left, right, top, bottom, zoom, x, y}` object.
+
+/**
+ * Compute the visible world rectangle of a 2D orthographic camera.
+ *
+ * @param {{left:number, right:number, top:number, bottom:number,
+ *          zoom:number, x:number, y:number}} camera
+ * @returns {{xmin:number, xmax:number, ymin:number, ymax:number}}
+ */
+function visibleWorldRect(camera) {
+    const zoom = Number(camera.zoom) || 1;
+    const halfW = (Number(camera.right) - Number(camera.left)) / 2 / zoom;
+    const halfH = (Number(camera.top) - Number(camera.bottom)) / 2 / zoom;
+    const cx = Number(camera.x) || 0;
+    const cy = Number(camera.y) || 0;
     return {
-        ambient: parseAmbient((wire && wire.ambient) || DEFAULT_LIGHTING.ambient),
-        lights: ((wire && wire.lights) || DEFAULT_LIGHTING.lights).map(parseLight),
+        xmin: cx - halfW,
+        xmax: cx + halfW,
+        ymin: cy - halfH,
+        ymax: cy + halfH,
     };
 }
 
-function setLightUniforms(u, lighting) {
-    if (!u) return;
-    u.uLightCount.value = lighting.lights.length;
-    for (let i = 0; i < MAX_LIGHTS; i++) {
-        const l = lighting.lights[i];
-        if (l) {
-            u.uLightDir.value[i].set(l.direction[0], l.direction[1], l.direction[2]);
-            u.uLightColor.value[i].set(l.color[0], l.color[1], l.color[2]);
-        } else {
-            u.uLightDir.value[i].set(0, 0, 0);
-            u.uLightColor.value[i].set(0, 0, 0);
+function _worldToData(value, scale, base) {
+    return scale === 'log' ? Math.pow(Number(base), value) : value;
+}
+
+function _dataToWorld(value, scale, base) {
+    return scale === 'log' ? Math.log(value) / Math.log(Number(base)) : value;
+}
+
+/**
+ * Convert a visible world rect to data bounds via the axis scales.
+ *
+ * @param {{xmin:number, xmax:number, ymin:number, ymax:number}} rect
+ * @param {{xscale:string, yscale:string, base:number}} spec
+ * @returns {{xlo:number, xhi:number, ylo:number, yhi:number}}
+ */
+function worldToData(rect, spec) {
+    return {
+        xlo: _worldToData(rect.xmin, spec.xscale, spec.base),
+        xhi: _worldToData(rect.xmax, spec.xscale, spec.base),
+        ylo: _worldToData(rect.ymin, spec.yscale, spec.base),
+        yhi: _worldToData(rect.ymax, spec.yscale, spec.base),
+    };
+}
+
+function _axisTicks(lo, hi, scale, base, fmt, intervals, maxTicks) {
+    return scale === 'log'
+        ? logTicks(lo, hi, base, fmt)
+        : niceLinearTicks(lo, hi, maxTicks, fmt, intervals);
+}
+
+/**
+ * Map a world point to full-viewport screen pixels (top-down y).  This is the
+ * same affine mapping the orthographic WebGL camera applies, so data, grid, and
+ * frame stay aligned at every pan/zoom level.
+ *
+ * @param {{xmin:number, xmax:number, ymin:number, ymax:number}} rect
+ * @param {number} wx  world x
+ * @param {number} wy  world y
+ * @param {number} width  viewport width in px
+ * @param {number} height viewport height in px
+ * @returns {{x:number, y:number}}
+ */
+function worldToScreen(rect, wx, wy, width, height) {
+    const w = Number(width) || 0;
+    const h = Number(height) || 0;
+    const xSpan = rect.xmax - rect.xmin;
+    const ySpan = rect.ymax - rect.ymin;
+    const x = xSpan === 0 ? w / 2 : ((wx - rect.xmin) / xSpan) * w;
+    const y = ySpan === 0 ? h / 2 : ((rect.ymax - wy) / ySpan) * h;
+    return { x, y };
+}
+
+/**
+ * Compute the tick values + labels + full-viewport screen px for both axes.
+ *
+ * The per-axis tick count is derived from the live viewport: the number of
+ * `min_tick_spacing_px`-wide slots that fit in the axis' content extent.  So
+ * resizing or zooming re-densifies the grid.
+ *
+ * @param {{xmin:number, xmax:number, ymin:number, ymax:number}} rect
+ * @param {{xscale:string, yscale:string, base:number, value_format:string,
+ *          border_px:number, min_tick_spacing_px:number,
+ *          intervals_x:Array<number>, intervals_y:Array<number>}} spec
+ * @param {{width:number, height:number}} sizePx  full viewport size in px
+ * @returns {{xTicks:Array<[number,string,number]>, yTicks:Array<[number,string,number]>}}
+ */
+function ticksAndGrid(rect, spec, sizePx) {
+    const data = worldToData(rect, spec);
+
+    const width = Number(sizePx.width) || 0;
+    const height = Number(sizePx.height) || 0;
+    const border = Number(spec.border_px) || 0;
+    const spacing = Math.max(1, Number(spec.min_tick_spacing_px) || 60);
+    const maxTicksX = Math.max(2, Math.floor(Math.max(1, width - 2 * border) / spacing));
+    const maxTicksY = Math.max(2, Math.floor(Math.max(1, height - 2 * border) / spacing));
+
+    const xTicks = _axisTicks(data.xlo, data.xhi, spec.xscale, spec.base, spec.value_format, spec.intervals_x, maxTicksX);
+    const yTicks = _axisTicks(data.ylo, data.yhi, spec.yscale, spec.base, spec.value_format, spec.intervals_y, maxTicksY);
+
+    return {
+        xTicks: xTicks.map(([value, label]) => {
+            const world = _dataToWorld(value, spec.xscale, spec.base);
+            return [value, label, worldToScreen(rect, world, 0, width, height).x];
+        }),
+        yTicks: yTicks.map(([value, label]) => {
+            const world = _dataToWorld(value, spec.yscale, spec.base);
+            return [value, label, worldToScreen(rect, 0, world, width, height).y];
+        }),
+    };
+}
+
+// Tanga Viewer — screen-space coordinate axes frame renderer (overlay layer).
+// Draws the plot rectangle, tick marks, value labels, and axis name labels as
+// SVG into the per-pane overlay region.  DOM + the shared pure math; no `three`.
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function _num(value, fallback) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+}
+
+function _color(style, fallback) {
+    return style && style.color ? style.color : fallback;
+}
+
+function _off2d(style, fallback) {
+    const o = style && style.offset_2d;
+    return [o ? _num(o[0], 0) : fallback[0], o ? _num(o[1], 0) : fallback[1]];
+}
+
+class AxesOverlay {
+    constructor(spec) {
+        this.spec = spec || {};
+        this.svg = null;
+        this._root = null;
+    }
+
+    mount(container) {
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('class', 'tanga-axes-overlay');
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.pointerEvents = 'none';
+        svg.style.zIndex = '6';
+        container.appendChild(svg);
+        this.svg = svg;
+        this._root = document.createElementNS(SVG_NS, 'g');
+        svg.appendChild(this._root);
+    }
+
+    setSpec(spec) {
+        this.spec = spec || {};
+        this._clear();
+    }
+
+    dispose() {
+        if (this.svg && this.svg.parentNode) this.svg.parentNode.removeChild(this.svg);
+        this.svg = null;
+        this._root = null;
+    }
+
+    _clear() {
+        if (this._root) {
+            while (this._root.firstChild) this._root.removeChild(this._root.firstChild);
         }
     }
-    u.uAmbientColor.value.set(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2]);
-}
 
-// Pure GLSL assembly for the per-object SDF proxy shader (no three.js / DOM).
-//
-// The proxy marches a *single* object's local-space SDF inside a bounding-box
-// proxy mesh. `map()` returns `vec2(distance, materialIndex)` so grouped
-// objects can shade each member with its own material; single objects use
-// material slot 0 (index is always 0.0).
+    /**
+     * @param {{left:number,right:number,top:number,bottom:number,zoom:number,x:number,y:number}} cameraParams
+     * @param {number} width  pane CSS width
+     * @param {number} height pane CSS height
+     * @param {number} [bottomInset=0]  reserved space at the pane bottom (e.g. annotation)
+     */
+    update(cameraParams, width, height, bottomInset) {
+        if (!this.svg || !this._root) return;
+        const spec = this.spec;
+        const border = _num(spec.border_px, 0);
+        const w = _num(width, 0);
+        const h = _num(height, 0);
+        const plotH = Math.max(0, h - _num(bottomInset, 0));
+        const left = border;
+        const top = border;
+        const right = w - border;
+        const bottom = plotH - border;
+        const frameW = Math.max(0, right - left);
+        const frameH = Math.max(0, bottom - top);
 
-// Compile-time march cap. `uMaxSteps` clamps the loop at runtime so lowering
-// the budget does not require a shader recompile.
-const MAX_STEPS = 256;
+        this._clear();
 
-// Compile-time cap on the number of members in an `SdfGroup`. The fold is
-// unrolled per group, so this only sizes the uniform array (padded slots are
-// identity and never read).
-const MAX_GROUP_MEMBERS = 16;
+        const rect = visibleWorldRect(cameraParams);
+        const layout = ticksAndGrid(rect, spec, { width: w, height: plotH });
 
-// Smooth-blend radius default for the `smooth_*` fold modes (matches
-// `sdf/composer.js`). A member with no explicit `smoothness` uses this.
-const GROUP_SMOOTHNESS_DEFAULT = 0.1;
+        const axis = spec.axis || {};
+        const xAxis = axis.x || {};
+        const yAxis = axis.y || {};
+        const xColor = _color(xAxis, '#cccccc');
+        const yColor = _color(yAxis, '#cccccc');
 
-function _groupSmoothness(child) {
-    const k = Number(
-        child.smoothness != null ? child.smoothness : GROUP_SMOOTHNESS_DEFAULT,
-    );
-    return Number.isFinite(k) ? k : GROUP_SMOOTHNESS_DEFAULT;
-}
+        const frameEl = document.createElementNS(SVG_NS, 'rect');
+        frameEl.setAttribute('x', left);
+        frameEl.setAttribute('y', top);
+        frameEl.setAttribute('width', frameW);
+        frameEl.setAttribute('height', frameH);
+        frameEl.setAttribute('fill', 'none');
+        frameEl.setAttribute('stroke', xColor);
+        frameEl.setAttribute('stroke-opacity', _num(xAxis.opacity, 0.9));
+        frameEl.setAttribute('stroke-width', _num(xAxis.line_thickness, 1));
+        this._root.appendChild(frameEl);
 
-function buildProxyVertex() {
-    return `
-out vec3 vLocalPos;
-flat out vec3 vCameraLocal;
-
-void main() {
-    vLocalPos = position;
-    // Camera position in the mesh's local space (same for every vertex).
-    vCameraLocal = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-}
-
-// Fold an `SdfGroup`'s members into a single `float map(vec3 p)`. Each member
-// is wrapped as `float memberI(vec3 p)` (its local-space tree) and folded with
-// its combine mode; the member's runtime transform is applied via the
-// `uMemberInvTransform[i]` uniform (inverse transform: point → member local).
-function buildGroupMap(ent) {
-    const children = (ent.tree && ent.tree.children) || [];
-    const hasTransforms = !!ent.members;
-    const lines = [];
-    children.forEach((child, i) => {
-        lines.push(`float member${i}(vec3 p) {`);
-        lines.push(`    return ${emitTree(child)};`);
-        lines.push('}');
-    });
-    lines.push('vec2 map(vec3 p) {');
-    lines.push('    float d = MAX_DIST;');
-    lines.push('    float m = 0.0;');
-    children.forEach((child, i) => {
-        const combine = (child.combine || 'union').toLowerCase();
-        const k = _groupSmoothness(child);
-        const local = hasTransforms
-            ? `(uMemberInvTransform[${i}] * vec4(p, 1.0)).xyz`
-            : 'p';
-        lines.push(`    float d${i} = member${i}(${local});`);
-        if (combine === 'subtract') {
-            // The cut contributes no material; the material stays with `d`.
-            lines.push(`    d = opSubtract(d, d${i});`);
-        } else if (combine === 'intersection') {
-            lines.push(`    if (d${i} > d) m = ${i}.0;`);
-            lines.push(`    d = opIntersect(d, d${i});`);
-        } else if (combine === 'xor') {
-            lines.push(`    if (d${i} < d) m = ${i}.0;`);
-            lines.push(`    d = opXor(d, d${i});`);
-        } else if (combine === 'smooth_subtract') {
-            // The cut contributes no material; the material stays with `d`.
-            lines.push(`    vec2 sm${i} = opSmoothSubtract(d, d${i}, ${k});`);
-            lines.push(`    d = sm${i}.x;`);
-        } else if (combine === 'smooth_intersection') {
-            lines.push(`    vec2 sm${i} = opSmoothIntersect(d, d${i}, ${k});`);
-            lines.push(`    d = sm${i}.x;`);
-            lines.push(`    m = mix(${i}.0, m, sm${i}.y);`);
-        } else if (combine === 'smooth_union') {
-            lines.push(`    vec2 sm${i} = opSmoothUnion(d, d${i}, ${k});`);
-            lines.push(`    d = sm${i}.x;`);
-            lines.push(`    m = mix(${i}.0, m, sm${i}.y);`);
-        } else {
-            lines.push(`    if (d${i} < d) m = ${i}.0;`);
-            lines.push(`    d = opUnion(d, d${i});`);
+        const xValue = xAxis.value_style || {};
+        const xOff = _off2d(xValue, [0, 6]);
+        for (const [, label, px] of layout.xTicks) {
+            this._line(px, bottom, px, bottom + 4, xColor, _num(xAxis.line_thickness, 1));
+            this._text(
+                label, px + xOff[0], bottom + xOff[1],
+                _num(xValue.font_size, 12), _color(xValue, xColor),
+                'middle', 'hanging', _num(xValue.rotation, 0),
+            );
         }
-    });
-    lines.push('    return vec2(d, m);');
-    lines.push('}');
-    return lines.join('\n');
+
+        const yValue = yAxis.value_style || {};
+        const yOff = _off2d(yValue, [-8, 0]);
+        for (const [, label, py] of layout.yTicks) {
+            this._line(left, py, left - 4, py, yColor, _num(yAxis.line_thickness, 1));
+            this._text(
+                label, left + yOff[0], py + yOff[1],
+                _num(yValue.font_size, 12), _color(yValue, yColor),
+                'end', 'middle', _num(yValue.rotation, 0),
+            );
+        }
+
+        const xLabel = xAxis.label_style || {};
+        const yLabel = yAxis.label_style || {};
+        const labels = spec.labels || [];
+        if (labels[0]) {
+            const off = _off2d(xLabel, [0, 28]);
+            this._text(
+                labels[0], left + frameW / 2 + off[0], bottom + off[1],
+                _num(xLabel.font_size, 12), _color(xLabel, xColor),
+                'middle', 'hanging', _num(xLabel.rotation, 0), true,
+            );
+        }
+        if (labels[1]) {
+            const off = _off2d(yLabel, [-50, 0]);
+            this._text(
+                labels[1], left + off[0], top + frameH / 2 + off[1],
+                _num(yLabel.font_size, 12), _color(yLabel, yColor),
+                'middle', 'middle', _num(yLabel.rotation, -90), true,
+            );
+        }
+    }
+
+    _line(x1, y1, x2, y2, color, width) {
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', width);
+        this._root.appendChild(line);
+    }
+
+    _text(text, x, y, size, color, anchor, baseline, rotation, bold) {
+        const t = document.createElementNS(SVG_NS, 'text');
+        t.setAttribute('x', x);
+        t.setAttribute('y', y);
+        t.setAttribute('font-size', size);
+        t.setAttribute('fill', color);
+        t.setAttribute('text-anchor', anchor);
+        t.setAttribute('dominant-baseline', baseline);
+        if (bold) t.setAttribute('font-weight', 'bold');
+        if (rotation) t.setAttribute('transform', `rotate(${rotation} ${x} ${y})`);
+        t.textContent = text;
+        this._root.appendChild(t);
+    }
 }
 
-// Assemble the proxy fragment from the fetched shader parts + the entity's
-// single-object tree. `shaderParts` = { common, primitives, combinators, proxy }.
-function buildProxyFragment(ent, shaderParts) {
-    const { common, primitives, combinators, proxy } = shaderParts;
-    const isGroup = !!(ent.tree && ent.tree.kind === 'group');
+// Tanga Viewer — screen-space coordinate grid renderer (underlay layer).
+// Draws grid lines behind the (transparent) scene, filled with the theme
+// background colour.  DOM + the shared pure math; no `three`.
 
-    const mapSrc = isGroup
-        ? buildGroupMap(ent)
-        : `vec2 map(vec3 p) {
-    return vec2(${emitTree(ent.tree)}, 0.0);
-}`;
+const UNDERLAY_NS = 'http://www.w3.org/2000/svg';
 
-    // `MAX_GROUP_MEMBERS` is sized once here; the `uMaterial` uniform itself is
-    // declared in `proxy.glsl` (single source, no redefinition).
-    const materialPreamble = `const int MAX_GROUP_MEMBERS = ${MAX_GROUP_MEMBERS};`;
+function _underlayNum(value, fallback) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+}
 
-    const transformPreamble = isGroup
-        ? `uniform mat4 uMemberInvTransform[MAX_GROUP_MEMBERS];`
-        : '';
+class GridUnderlay {
+    constructor(spec) {
+        this.spec = spec || {};
+        this.svg = null;
+        this._root = null;
+    }
 
-    const parts = [
-        common,
-        primitives,
-        combinators,
-        lightPreamble,
-        `const int MAX_STEPS = ${MAX_STEPS};`,
-        materialPreamble,
-        transformPreamble,
-        mapSrc,
-        proxy,
-    ];
-    return parts.filter((s) => s !== '').join('\n');
+    mount(container) {
+        const svg = document.createElementNS(UNDERLAY_NS, 'svg');
+        svg.setAttribute('class', 'tanga-grid-underlay');
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.pointerEvents = 'none';
+        svg.style.zIndex = '0';
+        container.appendChild(svg);
+        this.svg = svg;
+        this._root = document.createElementNS(UNDERLAY_NS, 'g');
+        svg.appendChild(this._root);
+    }
+
+    setSpec(spec) {
+        this.spec = spec || {};
+        this._clear();
+    }
+
+    dispose() {
+        if (this.svg && this.svg.parentNode) this.svg.parentNode.removeChild(this.svg);
+        this.svg = null;
+        this._root = null;
+    }
+
+    _clear() {
+        if (this._root) {
+            while (this._root.firstChild) this._root.removeChild(this._root.firstChild);
+        }
+    }
+
+    /**
+     * @param {{left:number,right:number,top:number,bottom:number,zoom:number,x:number,y:number}} cameraParams
+     * @param {number} width  pane CSS width
+     * @param {number} height pane CSS height
+     * @param {number} [bottomInset=0]  reserved space at the pane bottom (e.g. annotation)
+     */
+    update(cameraParams, width, height, bottomInset) {
+        if (!this.svg || !this._root) return;
+        const spec = this.spec;
+        const grid = spec.grid || {};
+        const w = _underlayNum(width, 0);
+        const h = _underlayNum(height, 0);
+        const plotH = Math.max(0, h - _underlayNum(bottomInset, 0));
+
+        this._clear();
+
+        const bg = getComputedStyle(document.documentElement)
+            .getPropertyValue('--tanga-bg').trim() || 'rgba(0,0,0,0)';
+        const bgRect = document.createElementNS(UNDERLAY_NS, 'rect');
+        bgRect.setAttribute('x', 0);
+        bgRect.setAttribute('y', 0);
+        bgRect.setAttribute('width', w);
+        bgRect.setAttribute('height', h);
+        bgRect.setAttribute('fill', bg);
+        this._root.appendChild(bgRect);
+
+        const rect = visibleWorldRect(cameraParams);
+        const border = _underlayNum(spec.border_px, 0);
+        const left = border;
+        const top = border;
+        const right = w - border;
+        const bottom = plotH - border;
+
+        const layout = ticksAndGrid(rect, spec, { width: w, height: plotH });
+
+        const color = grid.color || '#555555';
+        const opacity = _underlayNum(grid.opacity, 0.5);
+        const thickness = _underlayNum(grid.line_thickness, 1);
+
+        for (const [, , px] of layout.xTicks) {
+            this._line(px, top, px, bottom, color, opacity, thickness);
+        }
+        for (const [, , py] of layout.yTicks) {
+            this._line(left, py, right, py, color, opacity, thickness);
+        }
+    }
+
+    _line(x1, y1, x2, y2, color, opacity, width) {
+        const line = document.createElementNS(UNDERLAY_NS, 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-opacity', opacity);
+        line.setAttribute('stroke-width', width);
+        this._root.appendChild(line);
+    }
 }
 
 // SPDX-License-Identifier: Apache-2.0
@@ -3962,6 +4509,73 @@ function applyOrthoFrustum(camera, width, height) {
     camera.right = fit * aspect / 2;
     camera.top = fit / 2;
     camera.bottom = -fit / 2;
+}
+
+/**
+ * Clamp an interactive 2D ortho camera to the pan/zoom limits stored in
+ * ``camera.userData._view2d``.  Pan bounds default to the data rectangle
+ * (``xmin``/``xmax``/``ymin``/``ymax``) when the ``pan_*`` fields are absent;
+ * zoom is clamped to ``[min_zoom, max_zoom]``.
+ *
+ * When ``min_zoom`` is absent it is derived so the full data rectangle stays
+ * contained (never below ``1.0``): for ``fill_x``/``fill_y`` this lets you zoom
+ * out until an overflowing axis is fully visible.
+ *
+ * No `three`/DOM dependency — operates on the passed camera/controls objects.
+ *
+ * @param {{position:{x:number,y:number}, zoom:number, left:number, right:number,
+ *          top:number, bottom:number, userData:{_view2d:object},
+ *          updateProjectionMatrix:Function}} camera
+ * @param {{target:{x:number,y:number}}|null} controls
+ */
+function clampOrthoView(camera, controls) {
+    const v2d = camera.userData && camera.userData._view2d;
+    if (!v2d) return;
+
+    const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+    const finiteOr = (v, fallback) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    };
+
+    const pxmin = finiteOr(v2d.pan_xmin, v2d.xmin);
+    const pxmax = finiteOr(v2d.pan_xmax, v2d.xmax);
+    if (Number.isFinite(pxmin) && Number.isFinite(pxmax) && pxmin < pxmax) {
+        const cx = clamp(camera.position.x, pxmin, pxmax);
+        camera.position.x = cx;
+        if (controls && controls.target) controls.target.x = cx;
+    }
+
+    const pymin = finiteOr(v2d.pan_ymin, v2d.ymin);
+    const pymax = finiteOr(v2d.pan_ymax, v2d.ymax);
+    if (Number.isFinite(pymin) && Number.isFinite(pymax) && pymin < pymax) {
+        const cy = clamp(camera.position.y, pymin, pymax);
+        camera.position.y = cy;
+        if (controls && controls.target) controls.target.y = cy;
+    }
+
+    const minZoom = Number.isFinite(Number(v2d.min_zoom))
+        ? Number(v2d.min_zoom)
+        : _containMinZoom(camera, v2d);
+    const maxZoom = finiteOr(v2d.max_zoom, Infinity);
+    camera.zoom = clamp(Number(camera.zoom) || 1, minZoom, maxZoom);
+    if (typeof camera.updateProjectionMatrix === 'function') {
+        camera.updateProjectionMatrix();
+    }
+}
+
+/**
+ * Derive the default max zoom-out: the zoom at which the full data rectangle
+ * just fits the base frustum, capped at ``1.0`` (the initial view).  Returns
+ * ``1.0`` for degenerate data/frustum spans.
+ */
+function _containMinZoom(camera, v2d) {
+    const extX = Number(v2d.xmax) - Number(v2d.xmin);
+    const extY = Number(v2d.ymax) - Number(v2d.ymin);
+    const spanX = Number(camera.right) - Number(camera.left);
+    const spanY = Number(camera.top) - Number(camera.bottom);
+    if (!(extX > 0) || !(extY > 0) || !(spanX > 0) || !(spanY > 0)) return 1.0;
+    return Math.min(1.0, Math.min(spanX / extX, spanY / extY));
 }
 
 // Tanga 3D Viewer — Shared scene-graph construction (live viewer + HTML export).
@@ -4435,5 +5049,5 @@ function emitTree(tree) {
 }
 
 window.__tanga = {
-    THREE, OrbitControls, CSS2DRenderer, CSS2DObject, Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect, updateEntityMesh, removeEntityMesh,
+    THREE, OrbitControls, CSS2DRenderer, CSS2DObject, Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, buildSceneObject, buildOverlay, fitCamera, orthoFrustum, finiteAspect, updateEntityMesh, removeEntityMesh, AxesOverlay, GridUnderlay,
 };

@@ -1,9 +1,10 @@
-# A 2×2 grid of 2D plots, one stretch mode per pane
+# 2D plots across a split view, one stretch mode per pane
 
-**Keywords:** split view · panes · plotting · CoordinateSystem · fit_view2d · stretch · 2D
+**Keywords:** split view · panes · plotting · CoordinateSystem · fit_view2d · stretch · overlay · 2D
 
 Four named scenes, each rendered by its own `CoordinateSystem` in a 2×2
-`SplitView`.  Every pane embeds its camera via
+`SplitView`, plus a fifth scene spanning both columns that uses the fixed
+screen-space overlay axes.  Every 2×2 pane embeds its camera via
 `fit_view2d(..., stretch=...)` with a different mode, so the four framing
 behaviours are visible side by side:
 
@@ -13,8 +14,11 @@ behaviours are visible side by side:
 - `"fill_x"` — x fills the pane, y keeps aspect (may overflow).
 - `"fill_y"` — y fills the pane, x keeps aspect (may overflow).
 
-The `CoordinateSystem` uses `camera=False` so it does not re-own the
-camera — the per-pane `fit_view2d` camera is authoritative.
+The bottom row is a single `CoordinateSystem(display_mode="overlay")` pane
+spanning both columns: its axes are a fixed screen-space frame with a grid
+underlay behind the data.  It owns its own camera (`stretch="fill"`); the
+2×2 `CoordinateSystem`s use `camera=False` so their per-pane
+`fit_view2d` camera stays authoritative.
 
 ## Run
 
@@ -32,10 +36,11 @@ uv run python py/examples/viz/plotting/multi_plot.py
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""multi_plot.py — A 2×2 grid of 2D plots, one stretch mode per pane.
+"""multi_plot.py — 2D plots across a split view, one stretch mode per pane.
 
 Four named scenes, each rendered by its own ``CoordinateSystem`` in a 2×2
-``SplitView``.  Every pane embeds its camera via
+``SplitView``, plus a fifth scene spanning both columns that uses the fixed
+screen-space overlay axes.  Every 2×2 pane embeds its camera via
 ``fit_view2d(..., stretch=...)`` with a different mode, so the four framing
 behaviours are visible side by side:
 
@@ -45,12 +50,15 @@ behaviours are visible side by side:
 - ``"fill_x"`` — x fills the pane, y keeps aspect (may overflow).
 - ``"fill_y"`` — y fills the pane, x keeps aspect (may overflow).
 
-The ``CoordinateSystem`` uses ``camera=False`` so it does not re-own the
-camera — the per-pane ``fit_view2d`` camera is authoritative.
+The bottom row is a single ``CoordinateSystem(display_mode="overlay")`` pane
+spanning both columns: its axes are a fixed screen-space frame with a grid
+underlay behind the data.  It owns its own camera (``stretch="fill"``); the
+2×2 ``CoordinateSystem``s use ``camera=False`` so their per-pane
+``fit_view2d`` camera stays authoritative.
 
 Run with:  uv run python py/examples/viz/plotting/multi_plot.py
 
-Keywords: split view, panes, plotting, CoordinateSystem, fit_view2d, stretch, 2D
+Keywords: split view, panes, plotting, CoordinateSystem, fit_view2d, stretch, overlay, 2D
 """
 
 import math
@@ -130,10 +138,27 @@ filly_cs.plot(
     style=PointPathStyle(line_thickness=2),
 )
 
-# A 2×2 grid: two rows, each a horizontal split of two panes.
+# ── Bottom row: overlay axes (fixed frame + underlay grid) ───
+overlay = viz.scene("overlay", space_dim=2, add_axes=False, add_grid=False)
+overlay_cs = CoordinateSystem(
+    overlay,
+    display_mode="overlay",
+    xlim=(0, 4 * math.pi),
+    ylim=(-1.5, 1.5),
+    labels=("x", "sin(x) * e^(-x/12)"),
+)
+overlay_xs = [0.05 * i for i in range(int(4 * math.pi / 0.05) + 1)]
+overlay_cs.plot(
+    overlay_xs,
+    [math.sin(x) * math.exp(-x / 12) for x in overlay_xs],
+    color="#44ffff",
+    style=PointPathStyle(line_thickness=2),
+)
+
+# Two 2×2 rows, then a full-width overlay-axes row spanning both columns.
 layout = SplitView(
     orientation="vertical",
-    sizes=[Size.percent(50), Size.percent(50)],
+    sizes=[Size.percent(33), Size.percent(34), Size.percent(33)],
     children=[
         SplitView(
             orientation="horizontal",
@@ -161,10 +186,11 @@ layout = SplitView(
                 ),
             ],
         ),
+        SceneView("overlay"),
     ],
 )
 
 viz.show(layout=layout)
-print("2×2 plots, one stretch mode per pane. Press Ctrl+C to exit.")
+print("2×2 stretch-mode plots plus a full-width overlay-axes plot. Press Ctrl+C to exit.")
 viz.wait()
 ````

@@ -325,6 +325,15 @@ wins, falling back to the general `on_drag`/`on_click`), and lets you rebind the
 camera navigation (pan/dolly/rotate) per scene through a `controls` mapping
 (`SceneConfig.controls`, applied by `configureControls` in `view_mode.js`).
 
+## Coordinate frame overlay/underlay
+
+`CoordinateSystem(display_mode="overlay")` (see
+[`viz-architecture.md`](viz-architecture.md)) emits two payload-style scene
+objects — `axes_overlay` (overlay) and `grid_underlay` (underlay) — each carrying
+a static `spec`.  They register **no** `(id, event)` handlers and send no
+interaction/control events: the frontend renderers read the live camera every
+frame and recompute ticks/grid locally, so pan/zoom needs no backend round-trip.
+
 ## Follow-ups
 
 - **Fold `interaction.js` onto `sendEvent`** — the interactive-object frontend

@@ -185,3 +185,59 @@ footerDiv.style.fontSize = '12px';
 footerDiv.style.color = '#aaa';
 footerDiv.style.lineHeight = '1.5';
 {container_expr}.appendChild(footerDiv);"""
+
+
+def js_coordinate_overlay_setup(
+    *,
+    objects_expr: str,
+    container_expr: str,
+    camera_var: str,
+    renderer_var: str,
+    label_renderer_var: str,
+    width_expr: str,
+    height_expr: str,
+) -> str:
+    """Generate JS that builds the ``axes_overlay`` + ``grid_underlay`` renderers.
+
+    Creates the underlay container (behind the WebGL canvas) and the axes frame
+    overlay, and exposes ``updateCoordinateOverlays()`` for the render loop.
+    """
+    return f"""// Coordinate frame (axes overlay + grid underlay)
+const _axesSpec = {objects_expr}.find(o => o.kind === 'axes_overlay');
+const _gridSpec = {objects_expr}.find(o => o.kind === 'grid_underlay');
+let _gridUnderlay = null;
+let _axesOverlay = null;
+
+if (_gridSpec) {{
+    const _underlayEl = document.createElement('div');
+    _underlayEl.style.position = 'absolute';
+    _underlayEl.style.top = '0';
+    _underlayEl.style.left = '0';
+    _underlayEl.style.width = '100%';
+    _underlayEl.style.height = '100%';
+    _underlayEl.style.pointerEvents = 'none';
+    _underlayEl.style.zIndex = '0';
+    {container_expr}.insertBefore(_underlayEl, {renderer_var}.domElement);
+    {renderer_var}.domElement.style.position = 'relative';
+    {renderer_var}.domElement.style.zIndex = '1';
+    {label_renderer_var}.domElement.style.zIndex = '2';
+    _gridUnderlay = new GridUnderlay(_gridSpec.spec);
+    _gridUnderlay.mount(_underlayEl);
+}}
+
+if (_axesSpec) {{
+    _axesOverlay = new AxesOverlay(_axesSpec.spec);
+    _axesOverlay.mount({container_expr});
+}}
+
+function updateCoordinateOverlays() {{
+    const cam = {camera_var};
+    const params = {{
+        left: cam.left, right: cam.right, top: cam.top, bottom: cam.bottom,
+        zoom: cam.zoom || 1, x: cam.position.x, y: cam.position.y,
+    }};
+    if (_gridUnderlay) _gridUnderlay.update(params, {width_expr}, {height_expr});
+    if (_axesOverlay) _axesOverlay.update(params, {width_expr}, {height_expr});
+}}
+"""
+

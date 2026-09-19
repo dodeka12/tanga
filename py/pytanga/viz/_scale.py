@@ -15,6 +15,7 @@ used directly (e.g. ``Axis(..., ticks=LogScale().ticks(0.1, 100))``).
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 
 DEFAULT_TICK_FORMAT = ".4g"
 
@@ -36,8 +37,18 @@ class Scale:
         """Map a linear world coordinate back to a data value."""
         raise NotImplementedError
 
-    def ticks(self, lo: float, hi: float) -> list[tuple[float, str]]:
-        """Return ``(value, label)`` tick pairs covering ``[lo, hi]``, ascending."""
+    def ticks(
+        self,
+        lo: float,
+        hi: float,
+        max_ticks: int = 8,
+        intervals: list[float] | None = None,
+    ) -> list[tuple[float, str]]:
+        """Return ``(value, label)`` tick pairs covering ``[lo, hi]``, ascending.
+
+        ``max_ticks`` and ``intervals`` tune linear subdivision; log scales
+        ignore them (their subdivision is fixed by the base).
+        """
         raise NotImplementedError
 
 
@@ -55,8 +66,14 @@ class LinearScale(Scale):
     def from_world(self, world: float) -> float:
         return float(world)
 
-    def ticks(self, lo: float, hi: float) -> list[tuple[float, str]]:
-        return nice_linear_ticks(lo, hi)
+    def ticks(
+        self,
+        lo: float,
+        hi: float,
+        max_ticks: int = 8,
+        intervals: list[float] | None = None,
+    ) -> list[tuple[float, str]]:
+        return nice_linear_ticks(lo, hi, max_ticks, DEFAULT_TICK_FORMAT, intervals)
 
 
 class LogScale(Scale):
@@ -82,7 +99,13 @@ class LogScale(Scale):
     def from_world(self, world: float) -> float:
         return float(self.base ** float(world))
 
-    def ticks(self, lo: float, hi: float) -> list[tuple[float, str]]:
+    def ticks(
+        self,
+        lo: float,
+        hi: float,
+        max_ticks: int = 8,
+        intervals: list[float] | None = None,
+    ) -> list[tuple[float, str]]:
         return log_ticks(lo, hi, self.base)
 
 
@@ -102,16 +125,62 @@ def make_scale(scale: "Scale | str" = "linear", base: float = 10.0) -> Scale:
     )
 
 
+def normalize_intervals(intervals: Sequence[float] | None) -> list[float] | None:
+    """Normalize an explicit interval list to sorted, positive, de-duplicated floats.
+
+    Returns ``None`` for an empty/``None`` input so callers can fall back to the
+    auto-generated 1/2/5 intervals.
+    """
+    if intervals is None:
+        return None
+    vals = sorted({float(s) for s in intervals if float(s) > 0.0})
+    return vals or None
+
+
+def generate_linear_intervals(
+    lo: float,
+    hi: float,
+    mantissas: "tuple[float, ...] | list[float]" = (1.0, 2.0, 5.0),
+    decades_below: int = 2,
+) -> list[float]:
+    """Generate the allowed absolute tick step values spanning ``[lo, hi]``.
+
+    Produces ``m × 10^k`` for each mantissa ``m``, over ``decades_below``
+    decades below the data span (finest step → default max zoom-in) up to one
+    decade above it (coarsest step).  The smallest returned value is the finest
+    subdivision, which also bounds the default zoom-in limit.
+    """
+    lo, hi = sorted((float(lo), float(hi)))
+    span = hi - lo
+    if span <= 0.0 or not math.isfinite(span):
+        return []
+    mant = sorted({float(m) for m in mantissas if float(m) > 0.0})
+    if not mant:
+        return []
+    mag_lo = 10.0 ** math.floor(math.log10(span) - max(0, int(decades_below)))
+    mag_hi = 10.0 ** math.ceil(math.log10(span))
+    steps: set[float] = set()
+    mag = mag_lo
+    while mag <= mag_hi * (1.0 + 1e-12):
+        for m in mant:
+            steps.add(m * mag)
+        mag *= 10.0
+    return sorted(steps)
+
+
 def nice_linear_ticks(
     lo: float,
     hi: float,
     max_ticks: int = 8,
     fmt: str = DEFAULT_TICK_FORMAT,
+    intervals: "list[float] | tuple[float, ...] | None" = None,
 ) -> list[tuple[float, str]]:
-    """Return nice 1/2/5 × 10^k ticks covering ``[lo, hi]``.
+    """Return nice ticks covering ``[lo, hi]``.
 
-    Chooses a step so that roughly ``max_ticks`` intervals (or fewer) span the
-    range, snapping to the closest "nice" step of the form {1, 2, 5} × 10^k.
+    Picks the smallest allowed step that is at least ``span / max_ticks`` so
+    roughly ``max_ticks`` intervals (or fewer) span the range.  ``intervals``
+    is the list of allowed absolute step values; when ``None`` it is
+    auto-generated from the 1/2/5 mantissas over the range.
     """
     lo, hi = sorted((float(lo), float(hi)))
     if not math.isfinite(lo) or not math.isfinite(hi):
@@ -123,19 +192,33 @@ def nice_linear_ticks(
         return []
 
     raw_step = span / max(1, int(max_ticks))
-    magnitude = 10.0 ** math.floor(math.log10(raw_step))
-    step = 10.0 * magnitude
-    for candidate in (1.0, 2.0, 5.0, 10.0):
-        if candidate * magnitude >= raw_step:
-            step = candidate * magnitude
-            break
+    steps = normalize_intervals(intervals)
+    if steps is None:
+        steps = generate_linear_intervals(lo, hi)
+
+    if steps:
+        step = next((s for s in steps if s >= raw_step), steps[-1])
+    else:
+        # Defensive fallback — unreachable when intervals auto-generate.
+        magnitude = 10.0 ** math.floor(math.log10(raw_step))
+        step = 10.0 * magnitude
+        for candidate in (1.0, 2.0, 5.0, 10.0):
+            if candidate * magnitude >= raw_step:
+                step = candidate * magnitude
+                break
 
     ticks: list[tuple[float, str]] = []
-    t = math.ceil(lo / step) * step
+    start = math.ceil(lo / step)
     epsilon = step * 1e-9
-    while t <= hi + epsilon and len(ticks) < 1000:
-        ticks.append((t, format(t, fmt)))
-        t += step
+    i = 0
+    value = start * step
+    while value <= hi + epsilon and len(ticks) < 1000:
+        # Multiply by an integer index each step (rather than accumulating
+        # `t += step`) so the tick at zero lands on exactly ``0.0`` instead of
+        # a tiny float residue like ``3.4e-18``.
+        ticks.append((value, format(value, fmt)))
+        i += 1
+        value = (start + i) * step
     return ticks
 
 

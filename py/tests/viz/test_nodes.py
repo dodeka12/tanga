@@ -13,7 +13,7 @@ from pytanga.geometry.operators import Motor, Rotor, Translator
 from pytanga.viz._nodes import Transform, VizGroup, VizOverlayObject, VizSceneObject
 from pytanga.viz._styles import PointStyle
 from pytanga.viz._transforms import operator_to_matrix
-from pytanga.viz.scene import Scene
+from pytanga.viz.scene import Scene, SceneObject
 
 
 # ── Transform ───────────────────────────────────────────────
@@ -267,6 +267,41 @@ class TestSceneIntegration:
         label_ids = s.get_label_ids(eid)
         assert len(label_ids) == 1
         assert s.get_node(label_ids[0]).payload == "axis"
+
+
+class TestUnderlayLayer:
+    def _add_underlay(self) -> tuple[Scene, str]:
+        s = Scene()
+        oid = s.add_object(
+            SceneObject(
+                "u",
+                layer="underlay",
+                kind="grid_underlay",
+                data={"spec": {"xscale": "linear"}},
+            ),
+            object_id="u",
+        )
+        return s, oid
+
+    def test_underlay_node_layer(self):  # noqa: ANN201
+        s, oid = self._add_underlay()
+        node = s.get_node(oid)
+        assert isinstance(node, VizOverlayObject)
+        assert node.layer == "underlay"
+
+    def test_underlay_serializes_spec(self):  # noqa: ANN201
+        s, oid = self._add_underlay()
+        obj = next(o for o in s.full_state() if o["id"] == oid)
+        assert obj["layer"] == "underlay"
+        assert obj["kind"] == "grid_underlay"
+        assert obj["spec"] == {"xscale": "linear"}
+
+    def test_underlay_remove(self):  # noqa: ANN201
+        s, oid = self._add_underlay()
+        s.remove(oid)
+        _, removed = s.flush()
+        assert oid in removed
+        assert oid not in s._nodes
 
 
 # ── Detached subtree insertion ──────────────────────────────

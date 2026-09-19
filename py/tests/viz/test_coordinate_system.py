@@ -203,6 +203,131 @@ class TestCoordinateSystem2D:
         assert y_axis.start[0] == pytest.approx(-5.0)  # left spine
 
 
+class TestCoordinateSystemOverlay:
+    def _overlay_objects(self, viz):  # noqa: ANN001, ANN202
+        state = viz._scenes[""].full_state()
+        return {
+            o["kind"]: o for o in state if o.get("layer") in ("overlay", "underlay")
+        }
+
+    def test_overlay_requires_2d(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
+        with pytest.raises(ValueError):
+            CoordinateSystem(viz, display_mode="overlay")
+
+    def test_overlay_requires_no_size(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        with pytest.raises(ValueError):
+            CoordinateSystem(viz, display_mode="overlay", size=(2, 2))
+
+    def test_overlay_emits_objects_not_world_axes(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        CoordinateSystem(viz, display_mode="overlay", xlim=(0, 10), ylim=(0, 4))
+        kinds = [o["kind"] for o in viz._scenes[""].full_state()]
+        assert "Axis" not in kinds
+        assert "Grid" not in kinds
+        overlay = self._overlay_objects(viz)
+        assert set(overlay) == {"axes_overlay", "grid_underlay"}
+        assert overlay["axes_overlay"]["layer"] == "overlay"
+        assert overlay["grid_underlay"]["layer"] == "underlay"
+
+    def test_overlay_spec_linear(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        CoordinateSystem(
+            viz,
+            display_mode="overlay",
+            xlim=(0, 10),
+            ylim=(0, 4),
+            labels=("X", "Y"),
+        )
+        spec = self._overlay_objects(viz)["axes_overlay"]["spec"]
+        assert spec["xscale"] == "linear"
+        assert spec["yscale"] == "linear"
+        assert spec["value_format"] == ".4g"
+        assert spec["labels"] == ["X", "Y"]
+        assert spec["border_px"] == 60.0
+        assert spec["axis"]["x"]["style_type"] == "AxisStyle"
+
+    def test_overlay_spec_log(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        CoordinateSystem(
+            viz,
+            display_mode="overlay",
+            xlim=(0.1, 100),
+            ylim=(1, 1000),
+            xscale="log",
+            yscale="log",
+        )
+        spec = self._overlay_objects(viz)["axes_overlay"]["spec"]
+        assert spec["xscale"] == "log"
+        assert spec["yscale"] == "log"
+        assert spec["base"] == 10.0
+        assert spec["border_px"] == 60.0
+
+    def test_overlay_xlim_update_keeps_ids(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        cs = CoordinateSystem(viz, display_mode="overlay", xlim=(0, 10), ylim=(0, 4))
+        ids_before = list(viz._scenes[""]._nodes)
+        cs.xlim = (0, 5)
+        assert list(viz._scenes[""]._nodes) == ids_before
+
+    def test_overlay_camera_is_orthographic(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        CoordinateSystem(viz, display_mode="overlay", xlim=(0, 10), ylim=(0, 4))
+        cam = viz._scenes[""].config.camera
+        assert cam is not None
+        assert cam.type == "2d"
+        # Overlay axes need a fixed frame with the data filling it (no letterbox),
+        # so the camera must stretch-to-fill rather than letterbox-fit.
+        assert cam.stretch == "fill"
+
+    def test_overlay_spec_carries_intervals_and_spacing(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        CoordinateSystem(
+            viz,
+            display_mode="overlay",
+            xlim=(0, 10),
+            ylim=(0, 4),
+            x_intervals=[0.5, 1, 2, 5],
+            y_intervals=[0.2, 0.5, 1, 2],
+            min_tick_spacing_px=40.0,
+        )
+        spec = self._overlay_objects(viz)["axes_overlay"]["spec"]
+        assert spec["intervals_x"] == [0.5, 1, 2, 5]
+        assert spec["intervals_y"] == [0.2, 0.5, 1, 2]
+        assert spec["min_tick_spacing_px"] == 40.0
+
+    def test_overlay_camera_pan_and_zoom_limits(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        CoordinateSystem(
+            viz,
+            display_mode="overlay",
+            xlim=(0, 10),
+            ylim=(0, 4),
+            pan_xlim=(-2, 12),
+            min_zoom=0.5,
+            max_zoom=50.0,
+        )
+        cam = viz._scenes[""].config.camera
+        assert cam.min_zoom == 0.5
+        assert cam.max_zoom == 50.0
+        # Pan bounds converted to centred world coords (data centre is (5, 2)).
+        assert cam.pan_xmin == pytest.approx(-7.0)
+        assert cam.pan_xmax == pytest.approx(7.0)
+        assert cam.pan_ymin == pytest.approx(-2.0)
+        assert cam.pan_ymax == pytest.approx(2.0)
+
+    def test_overlay_derives_max_zoom_from_finest_interval(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        CoordinateSystem(viz, display_mode="overlay", xlim=(0, 10), ylim=(0, 4))
+        cam = viz._scenes[""].config.camera
+        # x: span 10 / 0.1 → 100; y: span 4 / 0.01 → 400 → min is 100.
+        assert cam.max_zoom == pytest.approx(100.0)
+        # min_zoom defaults to None → the frontend derives it so the full data
+        # rectangle stays contained.
+        assert cam.min_zoom is None
+
+
 class TestCoordinateSystem3D:
     def test_plane_and_transform(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)

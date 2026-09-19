@@ -40,6 +40,7 @@ from pytanga.viz.export._bootstrap._html import (  # noqa: F401
 )
 from pytanga.viz.export._bootstrap._overlays import (  # noqa: F401
     js_annotation_panel,
+    js_coordinate_overlay_setup,
     js_footer,
     js_title_overlay,
 )

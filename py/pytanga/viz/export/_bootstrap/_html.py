@@ -116,10 +116,10 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "image-shader.js",
     _RENDERERS_DIR / "image.js",
     _RENDERERS_DIR / "factory.js",
-    _RENDERERS_DIR / "sdf.js",
-    _RENDERERS_DIR / "ray.js",
     _RENDERERS_DIR / "sdf" / "lighting.js",
     _RENDERERS_DIR / "sdf" / "glsl.js",
+    _RENDERERS_DIR / "sdf.js",
+    _RENDERERS_DIR / "ray.js",
 ]
 
 _TEMPLATES_DIR = _RENDERERS_DIR.parent
@@ -129,6 +129,10 @@ _TEMPLATES_DIR = _RENDERERS_DIR.parent
 # live viewer and the export bootstrap.  ``camera-fit.js`` is the shared,
 # pure ortho/aspect math used by ``fit_camera.js`` and ``js_apply_camera``.
 _SHARED_JS_FILES: list[Path] = [
+    _TEMPLATES_DIR / "nice-ticks.js",
+    _TEMPLATES_DIR / "axes-overlay-math.js",
+    _TEMPLATES_DIR / "axes-overlay.js",
+    _TEMPLATES_DIR / "grid-underlay.js",
     _TEMPLATES_DIR / "camera-fit.js",
     _TEMPLATES_DIR / "scene-builder.js",
     _TEMPLATES_DIR / "fit_camera.js",

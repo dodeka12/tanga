@@ -20,6 +20,7 @@ from pytanga.viz.export._bootstrap import (
     js_annotation_panel,
     js_apply_camera,
     js_autofit_camera,
+    js_coordinate_overlay_setup,
     js_tanga_destructure,
     js_render_loop,
     js_resize_handler,
@@ -55,7 +56,7 @@ def render_snapshot(
     config_json = json.dumps(scene_config, indent=0)
 
     html = (_TEMPLATES_DIR / "export_viewer.html").read_text(encoding="utf-8")
-    adapter = _build_static_fullpage_adapter(scene_config)
+    adapter = _build_static_fullpage_adapter(objects, scene_config)
     theme_css = theme_css_for_delivery(
         theme,
         delivery,
@@ -95,9 +96,18 @@ def render_export_html(
 # ── Bootstrap adapter (composed from shared JS generators) ──
 
 
-def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
+def _build_static_fullpage_adapter(
+    objects: list[dict[str, Any]], scene_config: dict[str, Any]
+) -> str:
     """Generate the JS bootstrap adapter for static full-page HTML exports."""
+    has_underlay = any(o.get("layer") == "underlay" for o in objects)
+    has_coord_overlay = has_underlay or any(
+        o.get("kind") == "axes_overlay" for o in objects
+    )
+
     bg_color = scene_config.get("background_color")
+    if has_underlay:
+        bg_color = "transparent"
     space_dim = scene_config.get("space_dim", 3)
     title_raw = scene_config.get("title", "")
     annotation_raw = scene_config.get("annotation", "")
@@ -164,6 +174,20 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
         )
     )
 
+    if has_coord_overlay:
+        parts.append("")
+        parts.append(
+            js_coordinate_overlay_setup(
+                objects_expr="objects",
+                container_expr="document.body",
+                camera_var="adapterCamera",
+                renderer_var="adapterRenderer",
+                label_renderer_var="adapterLabelRenderer",
+                width_expr="window.innerWidth",
+                height_expr="window.innerHeight",
+            )
+        )
+
     parts.append("")
     parts.append(
         "(async () => {\n"
@@ -189,6 +213,7 @@ def _build_static_fullpage_adapter(scene_config: dict[str, Any]) -> str:
             scene_var="adapterScene",
             camera_var="adapterCamera",
             controls_var="adapterControls",
+            extra_per_frame="updateCoordinateOverlays();" if has_coord_overlay else "",
         )
     )
 

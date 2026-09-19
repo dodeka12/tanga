@@ -87,25 +87,28 @@ viz = Visualizer(
 | `ymin` / `ymax` | `float` | Visible world Y range |
 | `border_world` | `float` | World-unit margin added on all four sides (applied in Python) |
 | `border_px` | `float` | Pixel margin added on all four sides (applied by the frontend) |
-| `uniform` | `bool` | `True` = letterbox (uniform scale), `False` = stretch-to-fill |
+| `stretch` | `"fit"` \| `"fill"` \| `"fill_x"` \| `"fill_y"` | Framing mode: `"fit"` letterboxes to preserve aspect (default), `"fill"` stretches both axes, `"fill_x"`/`"fill_y"` fill one axis while the other keeps its aspect. |
 
-### Scaling Policy (`uniform`)
+### Scaling policy (`stretch`)
 
-`uniform=True` (default) preserves the aspect ratio via letterboxing: a single
-world-units-per-pixel scale is used so geometry is never distorted, and the
-requested rectangle is fully contained. The frontend computes the final
-frustum from the live browser viewport so the result is independent of the
-window size.
+`stretch` selects how the rectangle is framed into the viewport:
 
-`uniform=False` stretches the rectangle's width and height to fill the
-viewport, scaling X and Y independently. A long, thin plot therefore fills the
-whole window (axes intentionally non-uniform). This is the right choice for
-graph-style plots where the data bounds may be very wide or tall.
+- `"fit"` (default) letterboxes — a single world-units-per-pixel scale keeps
+  geometry undistorted; the requested rectangle is fully contained (one axis
+  fills, the other is letterboxed).
+- `"fill"` stretches the rectangle's width and height to fill the viewport,
+  scaling X and Y independently (non-uniform). Good for graph-style plots
+  whose data bounds are very wide or tall.
+- `"fill_x"` / `"fill_y"` fill one axis at a uniform scale while the other
+  keeps its aspect (and may over- or under-fill).
+
+The frontend computes the final frustum from the live browser viewport so the
+result is independent of the window size.
 
 `border_world` and `border_px` provide margins for clean graph rendering:
 `border_world` is applied deterministically in Python; `border_px` is applied
 by the frontend because converting pixels to world units requires the live
-viewport size. Both apply in **both** scaling modes: letterboxing shrinks the
+viewport size. Both apply in **all** scaling modes: letterboxing shrinks the
 effective content area before the fit, and stretch-to-fill maps the rectangle
 onto the inset content area (viewport minus the border).
 

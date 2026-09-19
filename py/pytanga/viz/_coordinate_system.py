@@ -19,7 +19,7 @@ the 3D camera is never set — it is left to the caller.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
@@ -27,7 +27,13 @@ from pytanga.geometry.entities import Direction, Line, Plane, Point
 
 from . import _transforms as _T
 from ._point_path import PointPath
-from ._scale import LogScale, Scale, make_scale
+from ._scale import (
+    LogScale,
+    Scale,
+    generate_linear_intervals,
+    make_scale,
+    normalize_intervals,
+)
 from ._scene_objects import Axis, Grid
 from .camera import (
     CameraConfig,
@@ -130,6 +136,12 @@ def fit_view2d(
     border_world: float = 0.0,
     border_px: float = 60.0,
     stretch: StretchMode = "fit",
+    x_intervals: "Sequence[float] | None" = None,
+    y_intervals: "Sequence[float] | None" = None,
+    pan_xlim: "Sequence[float] | None" = None,
+    pan_ylim: "Sequence[float] | None" = None,
+    min_zoom: float | None = None,
+    max_zoom: float | None = None,
 ) -> View2DConfig:
     """Compute a centred :class:`View2DConfig` for the given data ranges.
 
@@ -154,16 +166,56 @@ def fit_view2d(
         stretch: How the plot fills the view — ``"fit"`` (letterbox, default),
             ``"fill"`` (stretch both axes), ``"fill_x"`` (x fills, y keeps
             aspect), or ``"fill_y"`` (y fills, x keeps aspect).
+        x_intervals: Allowed tick step values for the x axis (absolute data
+            units).  ``None`` auto-generates 1/2/5 steps over the range.  Only
+            used to derive the default ``max_zoom``.
+        y_intervals: Allowed tick step values for the y axis.
+        pan_xlim: Pan bounds for the x axis in data units; defaults to ``xlim``.
+        pan_ylim: Pan bounds for the y axis in data units; defaults to ``ylim``.
+        min_zoom: Max zoom-out; ``None`` derives it on the frontend so the full
+            data rectangle stays contained (``fill_x``/``fill_y`` can zoom out
+            until an overflowing axis is fully visible).
+        max_zoom: Max zoom-in; ``None`` derives it from the finest interval.
 
     Returns:
         A :class:`View2DConfig` centred at the origin.
     """
+    from ._scale import generate_linear_intervals, normalize_intervals
+
     xlo, xhi = _as_range(xlim)
     ylo, yhi = _as_range(ylim)
     xs = make_scale(xscale, base)
     ys = make_scale(yscale, base)
     span_x = xs.to_world(xhi) - xs.to_world(xlo)
     span_y = ys.to_world(yhi) - ys.to_world(ylo)
+
+    # Pan bounds (world, centred) — default to the data rectangle.
+    cx = (xs.to_world(xlo) + xs.to_world(xhi)) / 2.0
+    cy = (ys.to_world(ylo) + ys.to_world(yhi)) / 2.0
+    if pan_xlim is not None:
+        plo, phi = _as_range(pan_xlim)
+        pan_xmin, pan_xmax = sorted((xs.to_world(plo) - cx, xs.to_world(phi) - cx))
+    else:
+        pan_xmin, pan_xmax = -span_x / 2.0, span_x / 2.0
+    if pan_ylim is not None:
+        plo, phi = _as_range(pan_ylim)
+        pan_ymin, pan_ymax = sorted((ys.to_world(plo) - cy, ys.to_world(phi) - cy))
+    else:
+        pan_ymin, pan_ymax = -span_y / 2.0, span_y / 2.0
+
+    # Derive the default max zoom-in from the finest allowed interval.
+    if max_zoom is None:
+        spans: list[float] = []
+        if not xs.is_log:
+            xi = normalize_intervals(x_intervals) or generate_linear_intervals(xlo, xhi)
+            if xi:
+                spans.append(span_x / xi[0])
+        if not ys.is_log:
+            yi = normalize_intervals(y_intervals) or generate_linear_intervals(ylo, yhi)
+            if yi:
+                spans.append(span_y / yi[0])
+        max_zoom = min(spans) if spans else None
+
     return View2DConfig(
         xmin=-span_x / 2.0,
         xmax=span_x / 2.0,
@@ -172,6 +224,12 @@ def fit_view2d(
         border_world=border_world,
         border_px=border_px,
         stretch=stretch,
+        pan_xmin=pan_xmin,
+        pan_xmax=pan_xmax,
+        pan_ymin=pan_ymin,
+        pan_ymax=pan_ymax,
+        min_zoom=min_zoom,
+        max_zoom=max_zoom,
     )
 
 
@@ -287,6 +345,25 @@ class CoordinateSystem:
     min_x_span:
         Minimum x-range span used when auto-fitting the x axis from registered
         plots (see :meth:`add_plot`); default ``5.0``.
+    x_intervals, y_intervals:
+        Allowed tick step values for the x / y axis (absolute data units,
+        ascending).  ``None`` auto-generates ``1/2/5 × 10^k`` steps spanning the
+        data range.  The smallest value is the finest subdivision and bounds the
+        default zoom-in; linear scales only.
+    min_tick_spacing_px:
+        Minimum pixel spacing between adjacent ticks (overlay mode only).  The
+        frontend derives the tick count per axis from the live viewport, so
+        resizing or zooming re-densifies the grid.  Default ``60.0``.
+    pan_xlim, pan_ylim:
+        Pan bounds for the x / y axis in data units; the view centre stays
+        within this rectangle (its edges can reach the view centre, never
+        cross).  Defaults to ``xlim`` / ``ylim``.
+    min_zoom, max_zoom:
+        Interactive zoom range.  ``min_zoom`` is the max zoom-out; ``None`` (the
+        default) derives it on the frontend so the full data rectangle stays
+        contained — for ``fill_x``/``fill_y`` this lets you zoom out until the
+        overflowing axis is fully visible.  ``max_zoom`` is the max zoom-in and
+        defaults to the zoom where the finest allowed interval fills the view.
     base:
         Log base used when a scale is given as ``"log"``.
     value_format:
@@ -295,6 +372,12 @@ class CoordinateSystem:
         ``(x, y)`` axis name labels.
     grid, axes:
         Whether to draw the grid / axes.
+    display_mode:
+        ``"world"`` (default) draws axes/grid as world-space scene objects that
+        pan/zoom with the data.  ``"overlay"`` (2D only, no explicit ``size``)
+        draws the axes as a fixed screen-space overlay frame and the grid as a
+        screen-space underlay behind the data, with ranges tracked from the live
+        camera.
     plane:
         Whether to draw a background plane.  ``None`` auto-enables in 3D.
     camera:
@@ -306,7 +389,10 @@ class CoordinateSystem:
         How the 2D camera frames the plot plane: ``"fit"`` (letterbox,
         default), ``"fill"`` (stretch both axes), ``"fill_x"`` (x fills, y
         keeps aspect), or ``"fill_y"`` (y fills, x keeps aspect).  Only
-        affects 2D (when this coordinate system owns the camera).
+        affects 2D (when this coordinate system owns the camera).  In
+        ``display_mode="overlay"`` this is forced to ``"fill"`` so the data
+        fills the fixed frame (letterboxing would leave grid lines outside the
+        frame).
     border_px, border_world:
         2D camera margins so axis labels are visible.
     position, normal, up:
@@ -327,11 +413,19 @@ class CoordinateSystem:
         align: "Sequence[float] | None" = (0.5, 0.5),
         axis_origin: "Sequence[float | None] | None" = None,
         min_x_span: float = 5.0,
+        x_intervals: "Sequence[float] | None" = None,
+        y_intervals: "Sequence[float] | None" = None,
+        min_tick_spacing_px: float = 60.0,
+        pan_xlim: "Sequence[float] | None" = None,
+        pan_ylim: "Sequence[float] | None" = None,
+        min_zoom: float | None = None,
+        max_zoom: float | None = None,
         base: float = 10.0,
         value_format: str = ".4g",
         labels: "Sequence[str]" = ("x", "y"),
         grid: bool = True,
         axes: bool = True,
+        display_mode: Literal["world", "overlay"] = "world",
         plane: bool | None = None,
         camera: str | bool = "auto",
         stretch: StretchMode = "fit",
@@ -354,6 +448,16 @@ class CoordinateSystem:
         self._yscale = make_scale(yscale, self._base)
         self._size = _as_size(size)
         self._size_given = size is not None
+        self._display_mode = display_mode
+        if display_mode not in ("world", "overlay"):
+            raise ValueError(
+                f"display_mode must be 'world' or 'overlay', got {display_mode!r}"
+            )
+        if display_mode == "overlay" and (self._space_dim != 2 or self._size_given):
+            raise ValueError(
+                "display_mode='overlay' requires a 2D coordinate system "
+                "without an explicit size"
+            )
         self._align = _as_align(align)
         self._axis_origin = _as_axis_origin(axis_origin)
         self.min_x_span = float(min_x_span)
@@ -379,7 +483,9 @@ class CoordinateSystem:
         self._up = _as_vec3(up)
 
         self._camera_mode = camera
-        self._stretch = _validate_stretch(stretch)
+        # Overlay axes need the data to fill the fixed frame (no letterbox), so
+        # `stretch="fit"` would leave grid lines outside the letterboxed data.
+        self._stretch = "fill" if display_mode == "overlay" else _validate_stretch(stretch)
         self._recompute_camera_ownership()
 
         cfg = self._handle.scene.config
@@ -390,6 +496,14 @@ class CoordinateSystem:
             ylim, self._yscale, self._space_dim, cfg.camera, "y"
         )
 
+        self._x_intervals = self._resolve_intervals(x_intervals, self._xlim, self._xscale)
+        self._y_intervals = self._resolve_intervals(y_intervals, self._ylim, self._yscale)
+        self.min_tick_spacing_px = max(1.0, float(min_tick_spacing_px))
+        self._pan_xlim = pan_xlim
+        self._pan_ylim = pan_ylim
+        self._min_zoom = None if min_zoom is None else float(min_zoom)
+        self._max_zoom = None if max_zoom is None else float(max_zoom)
+
         self._size_x = 0.0
         self._size_y = 0.0
         self._raw_xlo = 0.0
@@ -398,6 +512,7 @@ class CoordinateSystem:
         self._raw_span_y = 0.0
         self._plot_z = 0.0
 
+        self._group_name = group_name
         self._group = self._handle.add_group(group_name)
         self._data_group = self._group.add_group(f"{group_name}_data")
         self._refs: dict[str, Any] = {}
@@ -459,10 +574,10 @@ class CoordinateSystem:
         self._size_y = size_y
 
         xticks = self._axis_ticks(
-            self._xscale, xlo, xhi, size_x, raw_xlo, self._raw_span_x
+            self._xscale, xlo, xhi, size_x, raw_xlo, self._raw_span_x, self._x_intervals
         )
         yticks = self._axis_ticks(
-            self._yscale, ylo, yhi, size_y, raw_ylo, self._raw_span_y
+            self._yscale, ylo, yhi, size_y, raw_ylo, self._raw_span_y, self._y_intervals
         )
 
         x0 = self._axis_origin[0] if self._axis_origin[0] is not None else xlo
@@ -480,35 +595,41 @@ class CoordinateSystem:
             grid_z, axes_z, plot_z = _GRID_Z_2D, _AXES_Z_2D, _PLOT_Z_2D
         self._plot_z = plot_z
 
-        if self.show_grid:
-            grid = Grid(
-                origin=(-size_x / 2.0, -size_y / 2.0, grid_z),
-                dir_u=(1.0, 0.0, 0.0),
-                dir_v=(0.0, 1.0, 0.0),
-                range_u=(0.0, size_x),
-                range_v=(0.0, size_y),
-                line_positions_u=[w for w, _ in xticks],
-                line_positions_v=[w for w, _ in yticks],
-            )
-            self._upsert("grid", grid, self.grid_style)
+        if self._display_mode == "overlay":
+            if self.show_axes:
+                self._upsert_axes_overlay()
+            if self.show_grid:
+                self._upsert_grid_underlay()
+        else:
+            if self.show_grid:
+                grid = Grid(
+                    origin=(-size_x / 2.0, -size_y / 2.0, grid_z),
+                    dir_u=(1.0, 0.0, 0.0),
+                    dir_v=(0.0, 1.0, 0.0),
+                    range_u=(0.0, size_x),
+                    range_v=(0.0, size_y),
+                    line_positions_u=[w for w, _ in xticks],
+                    line_positions_v=[w for w, _ in yticks],
+                )
+                self._upsert("grid", grid, self.grid_style)
 
-        if self.show_axes:
-            x_axis = Axis(
-                start=(-size_x / 2.0, y0_local, axes_z),
-                end=(size_x / 2.0, y0_local, axes_z),
-                label=self.labels[0] if self.labels else None,
-                value_format=self.value_format,
-                ticks=xticks,
-            )
-            y_axis = Axis(
-                start=(x0_local, -size_y / 2.0, axes_z),
-                end=(x0_local, size_y / 2.0, axes_z),
-                label=self.labels[1] if len(self.labels) > 1 else None,
-                value_format=self.value_format,
-                ticks=yticks,
-            )
-            self._upsert("x", x_axis, self.x_style)
-            self._upsert("y", y_axis, self.y_style)
+            if self.show_axes:
+                x_axis = Axis(
+                    start=(-size_x / 2.0, y0_local, axes_z),
+                    end=(size_x / 2.0, y0_local, axes_z),
+                    label=self.labels[0] if self.labels else None,
+                    value_format=self.value_format,
+                    ticks=xticks,
+                )
+                y_axis = Axis(
+                    start=(x0_local, -size_y / 2.0, axes_z),
+                    end=(x0_local, size_y / 2.0, axes_z),
+                    label=self.labels[1] if len(self.labels) > 1 else None,
+                    value_format=self.value_format,
+                    ticks=yticks,
+                )
+                self._upsert("x", x_axis, self.x_style)
+                self._upsert("y", y_axis, self.y_style)
 
         if self._show_plane:
             plane = Plane(
@@ -522,6 +643,76 @@ class CoordinateSystem:
         self._apply_data_transform()
         self._sync_lines()
         self._sync_points()
+
+    def _build_axes_overlay_spec(self) -> dict[str, Any]:
+        """Return the ``axes_overlay`` spec (overlay layer, screen-space frame)."""
+        return {
+            "xscale": "log" if self._xscale.is_log else "linear",
+            "yscale": "log" if self._yscale.is_log else "linear",
+            "base": self._base,
+            "value_format": self.value_format,
+            "labels": list(self.labels),
+            "border_px": self.border_px,
+            "min_tick_spacing_px": self.min_tick_spacing_px,
+            "intervals_x": self._x_intervals,
+            "intervals_y": self._y_intervals,
+            "axis": {"x": self.x_style.to_dict(), "y": self.y_style.to_dict()},
+        }
+
+    def _build_grid_underlay_spec(self) -> dict[str, Any]:
+        """Return the ``grid_underlay`` spec (underlay layer, screen-space grid)."""
+        return {
+            "xscale": "log" if self._xscale.is_log else "linear",
+            "yscale": "log" if self._yscale.is_log else "linear",
+            "base": self._base,
+            "border_px": self.border_px,
+            "min_tick_spacing_px": self.min_tick_spacing_px,
+            "intervals_x": self._x_intervals,
+            "intervals_y": self._y_intervals,
+            "grid": self.grid_style.to_dict(),
+        }
+
+    def _upsert_payload_object(
+        self,
+        kind: str,
+        oid: str,
+        spec: dict[str, Any],
+        layer: Literal["overlay", "underlay"],
+    ) -> None:
+        """Create or update a payload-style overlay/underlay node by stable id."""
+        from ._nodes import VizOverlayObject
+        from .scene import SceneObject
+
+        scene = self._handle.scene
+        try:
+            node = scene.get_node(oid)
+        except KeyError:
+            node = None
+        if node is None:
+            scene.add_object(
+                SceneObject(oid, layer=layer, kind=kind, data={"spec": spec}),
+                object_id=oid,
+            )
+        else:
+            cast(VizOverlayObject, node).set_payload(spec)
+
+    def _upsert_axes_overlay(self) -> None:
+        """Emit/refresh the ``axes_overlay`` (overlay) object for this plot."""
+        self._upsert_payload_object(
+            "axes_overlay",
+            f"{self._group_name}_axes_overlay",
+            self._build_axes_overlay_spec(),
+            "overlay",
+        )
+
+    def _upsert_grid_underlay(self) -> None:
+        """Emit/refresh the ``grid_underlay`` (underlay) object for this plot."""
+        self._upsert_payload_object(
+            "grid_underlay",
+            f"{self._group_name}_grid_underlay",
+            self._build_grid_underlay_spec(),
+            "underlay",
+        )
 
     def _upsert(
         self,
@@ -544,9 +735,10 @@ class CoordinateSystem:
         size: float,
         raw_lo: float,
         raw_span: float,
+        intervals: list[float] | None = None,
     ) -> list[tuple[float, str]]:
         ticks: list[tuple[float, str]] = []
-        for value, _ in scale.ticks(lo, hi):
+        for value, _ in scale.ticks(lo, hi, intervals=intervals):
             norm = self._norm(raw_lo, raw_span, scale.to_world(value))
             ticks.append((norm * size, format(value, self.value_format)))
         return ticks
@@ -660,6 +852,21 @@ class CoordinateSystem:
             )
         )
 
+    @staticmethod
+    def _resolve_intervals(
+        intervals: "Sequence[float] | None",
+        limit: tuple[float, float],
+        scale: Scale,
+    ) -> list[float] | None:
+        """Normalize explicit intervals, or auto-generate 1/2/5 steps.
+
+        Returns ``None`` for log scales (their subdivision is fixed by the
+        base) and for an empty/``None`` explicit list.
+        """
+        if scale.is_log:
+            return None
+        return normalize_intervals(intervals) or generate_linear_intervals(*limit)
+
     def _apply_camera(self) -> None:
         if not self._owns_camera:
             return
@@ -672,6 +879,12 @@ class CoordinateSystem:
             border_world=self.border_world,
             border_px=self.border_px,
             stretch=self._stretch,
+            x_intervals=self._x_intervals,
+            y_intervals=self._y_intervals,
+            pan_xlim=self._pan_xlim,
+            pan_ylim=self._pan_ylim,
+            min_zoom=self._min_zoom,
+            max_zoom=self._max_zoom,
         )
         self._handle.set_camera(cam)
 

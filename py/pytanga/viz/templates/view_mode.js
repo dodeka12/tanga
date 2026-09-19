@@ -95,7 +95,12 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
             cc.target ? cc.target[2] : 0
         );
         cam.updateProjectionMatrix();
-        cam.userData._view2d = { xmin, xmax, ymin, ymax, stretch, border_px: borderPx };
+        cam.userData._view2d = {
+            xmin, xmax, ymin, ymax, stretch, border_px: borderPx,
+            pan_xmin: cc.pan_xmin, pan_xmax: cc.pan_xmax,
+            pan_ymin: cc.pan_ymin, pan_ymax: cc.pan_ymax,
+            min_zoom: cc.min_zoom, max_zoom: cc.max_zoom,
+        };
         controls.target.set(
             cc.target ? cc.target[0] : cx,
             cc.target ? cc.target[1] : cy,

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "5fb6c0f2d48935d1bb45310d3cb86df04557544d289a7fb7430f71af0bfe71cd",
+  "generator_sha256": "aa99109b68afd134d6e0d42a10ee1432275dfd9356afcc58dc038d9604259fbe",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -187,14 +187,6 @@
       "sha256": "acbd56fe93d68be9153ec86c9f1d9a59ec7cb9642fc2ec78ea59923f489910d3"
     },
     {
-      "path": "py/pytanga/viz/templates/renderers/sdf.js",
-      "sha256": "b6576a92c6c257703b527fcf6452ad1b566970d83c6131fecc6cb487eb89a00c"
-    },
-    {
-      "path": "py/pytanga/viz/templates/renderers/ray.js",
-      "sha256": "04404ea19dc607c4c768e3416402f502ed43609d7a9a049726bb70ce5f8a9ea8"
-    },
-    {
       "path": "py/pytanga/viz/templates/renderers/sdf/lighting.js",
       "sha256": "e7517775d0becd384d1976024dbd5269c605ded5eea0b2c8650046466e8d6820"
     },
@@ -203,8 +195,32 @@
       "sha256": "15104b365a4c605edbc66062887682ba5b24c9c03ea3042e75f74384d15a014b"
     },
     {
+      "path": "py/pytanga/viz/templates/renderers/sdf.js",
+      "sha256": "b6576a92c6c257703b527fcf6452ad1b566970d83c6131fecc6cb487eb89a00c"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/ray.js",
+      "sha256": "04404ea19dc607c4c768e3416402f502ed43609d7a9a049726bb70ce5f8a9ea8"
+    },
+    {
+      "path": "py/pytanga/viz/templates/nice-ticks.js",
+      "sha256": "91872f8e86cb4b0f05a6b8617825f8fc1555565ebe9968151eea19277b0d89b1"
+    },
+    {
+      "path": "py/pytanga/viz/templates/axes-overlay-math.js",
+      "sha256": "4fe61993b23502c8dea6994af20b8aa5dd58fb6eceb59976582ae8f19dc4f10e"
+    },
+    {
+      "path": "py/pytanga/viz/templates/axes-overlay.js",
+      "sha256": "b593a8e2d948c10b23e7f2e2f0acbc4a80069b89f4cbde11fb506b9f8ac22f0c"
+    },
+    {
+      "path": "py/pytanga/viz/templates/grid-underlay.js",
+      "sha256": "1f1fe713068a215beef5028b5c295e4c8d3c3ee7f16242ea69a3714fb560c6ec"
+    },
+    {
       "path": "py/pytanga/viz/templates/camera-fit.js",
-      "sha256": "b5e0a1bcda07085eb3283a3e837a0eb863f39946ba5edf1f51d2766f4ae81d33"
+      "sha256": "2fb609460c37c882b8cddcb1a1252041b831cf6ec3a21a477dffc33be00a422e"
     },
     {
       "path": "py/pytanga/viz/templates/scene-builder.js",
@@ -247,6 +263,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "6a779ddf8c62454441dcded5f7576351613d95d869f5724122a433a786004296",
-  "bundle_sha256": "99b265d52f6e429b16ab97d9039833331e329f1909f4aa6f86a6be2a434b1177"
+  "fingerprint_sha256": "f82a1e75133b3914e40ebb0a6b2289db06af9c2c93b89c8bf69d480eaa8a8878",
+  "bundle_sha256": "20f94610aefcbc862f616d68ed90e48cdc2e830b5aef8933a7f1604c86c9464d"
 }

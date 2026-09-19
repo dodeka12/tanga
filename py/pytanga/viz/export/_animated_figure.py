@@ -34,6 +34,7 @@ from pytanga.viz.export._bootstrap import (
     js_autofit_camera,
     js_controls_html,
     js_controls_ui,
+    js_coordinate_overlay_setup,
     js_footer,
     js_tanga_destructure,
     js_reconcile_frame,
@@ -265,10 +266,18 @@ def _build_animated_figure_adapter(
     scene_config: dict[str, Any],
 ) -> str:
     """Generate the JS bootstrap adapter for an animated figure snippet."""
+    frames0 = (recording_data.get("frames") or [[]])[0]
+    has_underlay = any(o.get("layer") == "underlay" for o in frames0)
+    has_coord_overlay = has_underlay or any(
+        o.get("kind") == "axes_overlay" for o in frames0
+    )
+
     w = figure_style.get("width", 800)
     h = figure_style.get("height", 600)
     responsive = figure_style.get("responsive", False)
     bg = figure_style.get("background", "#1a1a2e")
+    if has_underlay:
+        bg = "transparent"
     auto_rotate = figure_style.get("auto_rotate", False)
     space_dim = scene_config.get("space_dim", 3)
     show_title = figure_style.get("show_title", True)
@@ -358,6 +367,16 @@ def _build_animated_figure_adapter(
             camera_size_h_expr=dim_h,
         ),
         "",
+        js_coordinate_overlay_setup(
+            objects_expr="(frames[0] || [])",
+            container_expr="figContainer",
+            camera_var="figCamera",
+            renderer_var="figRenderer",
+            label_renderer_var="figLabelRenderer",
+            width_expr=dim_w,
+            height_expr=dim_h,
+        ) if has_coord_overlay else "",
+        "",
         _js_frame0_bootstrap(
             autofit_js,
             camera_apply_js=(
@@ -387,6 +406,7 @@ def _build_animated_figure_adapter(
             fps=fps,
             scene_var="figScene",
             label_objects_map_var="labelObjects",
+            extra_per_frame="updateCoordinateOverlays();" if has_coord_overlay else "",
         ),
     ]
 
@@ -401,7 +421,15 @@ def _build_animated_fullpage_adapter(
     show_controls: bool,
 ) -> str:
     """Generate the JS bootstrap adapter for a full-page animated document."""
+    frames0 = (recording_data.get("frames") or [[]])[0]
+    has_underlay = any(o.get("layer") == "underlay" for o in frames0)
+    has_coord_overlay = has_underlay or any(
+        o.get("kind") == "axes_overlay" for o in frames0
+    )
+
     bg = scene_config.get("background_color")
+    if has_underlay:
+        bg = "transparent"
     space_dim = scene_config.get("space_dim", 3)
 
     title_raw = scene_config.get("title", "")
@@ -478,6 +506,16 @@ def _build_animated_fullpage_adapter(
             camera_size_h_expr="window.innerHeight",
         ),
         "",
+        js_coordinate_overlay_setup(
+            objects_expr="(frames[0] || [])",
+            container_expr="figContainer",
+            camera_var="figCamera",
+            renderer_var="figRenderer",
+            label_renderer_var="figLabelRenderer",
+            width_expr="window.innerWidth",
+            height_expr="window.innerHeight",
+        ) if has_coord_overlay else "",
+        "",
         _js_frame0_bootstrap(
             autofit_js,
             camera_apply_js=(
@@ -499,6 +537,7 @@ def _build_animated_fullpage_adapter(
             fps=fps,
             scene_var="figScene",
             label_objects_map_var="labelObjects",
+            extra_per_frame="updateCoordinateOverlays();" if has_coord_overlay else "",
         ),
     ]
 

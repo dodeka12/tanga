@@ -327,6 +327,7 @@ def js_animated_render_loop(
     fps: int,
     scene_var: str,
     label_objects_map_var: str = "labelObjects",
+    extra_per_frame: str = "",
 ) -> str:
     """Generate the animated render loop.
 
@@ -339,6 +340,7 @@ def js_animated_render_loop(
         label_objects_map_var: JS variable name for the label objects Map
             (``"labelObjects"``).  Kept for signature compatibility with the
             previous API; the loop itself delegates to ``_playFrame``.
+        extra_per_frame: JS snippet run every frame before the render calls.
 
     Returns:
         JS code string with the ``_figAnimate`` render loop.
@@ -364,7 +366,7 @@ async function _figAnimate(timestamp) {{
         _updateScrubBar();
     }}
 
-    figControls.update();
+    {extra_per_frame}    figControls.update();
     figRenderer.render(figScene, figCamera);
     figLabelRenderer.render(figScene, figCamera);
 }}

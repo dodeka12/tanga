@@ -267,6 +267,9 @@
             "Axes Grid 2D": "py/examples/viz/camera/axes_grid_2d.md"
           },
           {
+            "Axes Overlay 2D": "py/examples/viz/camera/axes_overlay_2d.md"
+          },
+          {
             "Fit 2D": "py/examples/viz/camera/fit_2d.md"
           },
           {
