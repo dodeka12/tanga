@@ -97,3 +97,114 @@ def test_ortho_frustum_unknown_mode_falls_back_to_fit() -> None:
     assert proc.returncode == 0, proc.stderr
     result = json.loads(proc.stdout)
     assert result == {"left": -5.0, "right": 5.0, "top": 3.5, "bottom": -3.5}
+
+
+def test_clamp_ortho_view() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available")
+    program = r"""
+    import { clampOrthoView } from './py/pytanga/viz/templates/camera-fit.js';
+    const camera = {
+        position: { x: 100, y: -50 },
+        zoom: 0.25,
+        userData: { _view2d: {
+            xmin: -5, xmax: 5, ymin: -2, ymax: 2,
+            pan_xmin: -8, pan_xmax: 8, pan_ymin: -4, pan_ymax: 4,
+            min_zoom: 1, max_zoom: 10,
+        } },
+        updateProjectionMatrix() { this._updated = true; },
+    };
+    const controls = { target: { x: 100, y: -50 } };
+    clampOrthoView(camera, controls);
+    console.log(JSON.stringify({ camera, controls }));
+    """
+    proc = subprocess.run(
+        [node, "--input-type=module", "-e", program],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    # Position clamped to pan bounds; zoom clamped to [min, max]; controls synced.
+    assert out["camera"]["position"] == {"x": 8, "y": -4}
+    assert out["camera"]["zoom"] == 1
+    assert out["camera"]["_updated"] is True
+    assert out["controls"]["target"] == {"x": 8, "y": -4}
+
+
+def test_clamp_ortho_view_defaults_pan_to_data_bounds() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available")
+    program = r"""
+    import { clampOrthoView } from './py/pytanga/viz/templates/camera-fit.js';
+    const camera = {
+        position: { x: 99, y: 0 },
+        zoom: 5,
+        userData: { _view2d: { xmin: -5, xmax: 5, ymin: -2, ymax: 2 } },
+        updateProjectionMatrix() {},
+    };
+    clampOrthoView(camera, null);
+    console.log(JSON.stringify(camera));
+    """
+    proc = subprocess.run(
+        [node, "--input-type=module", "-e", program],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    # Pan defaults to data bounds; zoom defaults to min 1 (max Infinity).
+    assert out["position"]["x"] == 5
+    assert out["zoom"] == 5
+
+
+def test_clamp_ortho_view_derives_min_zoom_for_overflow() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available")
+    program = r"""
+    import { clampOrthoView } from './py/pytanga/viz/templates/camera-fit.js';
+    const results = [];
+    const run = (camera) => { clampOrthoView(camera, null); return camera.zoom; };
+
+    // fill_x-style: x fills, y overflows (spanY/extY < 1) → min zoom < 1.
+    const overflow = {
+        position: { x: 0, y: 0 }, zoom: 0.5,
+        left: -6, right: 6, top: 6, bottom: -6,
+        userData: { _view2d: { xmin: -5, xmax: 5, ymin: -25, ymax: 25 } },
+        updateProjectionMatrix() {},
+    };
+    // spanX = 12, extX = 10 → 1.2; spanY = 12, extY = 50 → 0.24 → min 0.24.
+    results.push(run(overflow));  // 0.5 is within [0.24, Inf] → unchanged
+    overflow.zoom = 0.1;
+    results.push(run(overflow));  // 0.1 < 0.24 → clamped up to 0.24
+
+    // fit/fill-style: data contained (spans >= extents) → min zoom capped at 1.
+    const contained = {
+        position: { x: 0, y: 0 }, zoom: 0.5,
+        left: -10, right: 10, top: 10, bottom: -10,
+        userData: { _view2d: { xmin: -5, xmax: 5, ymin: -2, ymax: 2 } },
+        updateProjectionMatrix() {},
+    };
+    results.push(run(contained));  // 0.5 < 1 → clamped up to 1
+
+    console.log(JSON.stringify(results));
+    """
+    proc = subprocess.run(
+        [node, "--input-type=module", "-e", program],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out[0] == pytest.approx(0.5)
+    assert out[1] == pytest.approx(0.24)
+    assert out[2] == pytest.approx(1.0)

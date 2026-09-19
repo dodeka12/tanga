@@ -582,7 +582,7 @@ class VizSceneObject(VizNode):
 
 
 class VizOverlayObject(VizNode):
-    """Overlay-layer node (label/annotation/title): position + attach_to."""
+    """Overlay/underlay-layer node (label/annotation/title/…): position + attach_to."""
 
     def __init__(
         self,
@@ -590,13 +590,14 @@ class VizOverlayObject(VizNode):
         *,
         kind: str = "label",
         name: str = "",
+        layer: str = "overlay",
         style: Any = None,
         position: Any = (0.0, 0.0, 0.0),
         attach_to: str | None = None,
         payload: Any = None,
         visible: bool = True,
     ) -> None:
-        super().__init__(id or generate_id(), name=name, layer="overlay", kind=kind, visible=visible)
+        super().__init__(id or generate_id(), name=name, layer=layer, kind=kind, visible=visible)
         self.position: tuple[float, float, float] = _as_vec3(position)
         self.attach_to: str | None = attach_to
         self.style: Any = style
@@ -623,7 +624,7 @@ class VizOverlayObject(VizNode):
         """Serialize the full overlay node (position/attach_to + payload + style)."""
         result: dict[str, Any] = {
             "id": self.id,
-            "layer": "overlay",
+            "layer": self.layer,
             "kind": self.kind,
             "visible": self.visible,
         }
@@ -639,6 +640,8 @@ class VizOverlayObject(VizNode):
             result["positioning"] = "fixed"
             result["anchor"] = "top"
             result["text"] = self.payload
+        elif self.kind in ("axes_overlay", "grid_underlay"):
+            result["spec"] = self.payload
         else:
             result["position"] = list(self.position)
             if self.attach_to is not None:

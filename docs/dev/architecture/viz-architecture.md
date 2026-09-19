@@ -168,6 +168,12 @@ Follow the `OverlayContainer` pattern exactly:
 | `image.py` | `ImageData`/`ImageDType`/`ImageChannelMode` value model + `pil_to_numpy` |
 | `_image_view.py` | `ImageView` (plane + textures + shader/uniform state) + `ImageCanvas` (dedicated 2D scene) |
 | `_image_wire.py` | binary image-frame codec (server → client) |
+| `_scale.py` | `Scale`/`nice_linear_ticks`/`log_ticks` — data↔world + tick math |
+| `_coordinate_system.py` | `CoordinateSystem` plotting helper (axes/grid/overlay/underlay specs) |
+| `templates/nice-ticks.js` | pure tick math port of `_scale.py` (Node-testable) |
+| `templates/axes-overlay-math.js` | pure world↔data + tick/px layout math (Node-testable) |
+| `templates/axes-overlay.js` | SVG axes-frame renderer (overlay layer) |
+| `templates/grid-underlay.js` | SVG grid renderer (underlay layer) |
 
 ### Image canvas (extension recipe)
 
@@ -188,6 +194,28 @@ outline + optional fill) and `ActRectangle2D` (a composite `ActSceneObject` that
 spawns square `ActPoint` handles for resize/translate).  Drag-to-create is shown
 in the `rectangle_labeling.py` example by composing a disabled left-drag binding
 plus a mode flag (no bespoke `draw_rectangle()` helper).
+
+### Overlay coordinate system (extension recipe)
+
+`CoordinateSystem(display_mode="overlay")` (2D only, no explicit `size`) draws the
+axes as a fixed screen-space **overlay** frame and the grid as a **scene-level
+underlay** behind the data.  The backend emits two payload-style scene objects —
+`layer="overlay", kind="axes_overlay"` and `layer="underlay", kind="grid_underlay"`
+(a generalized `VizOverlayObject` carrying a static `spec` of scales, formats,
+labels, and styles) — instead of world-space `Axis`/`Grid` entities.  The data
+group, transform, and `fit_view2d` camera ownership are unchanged.
+
+The frontend layers each pane as `underlay container (z:0) → WebGL canvas (z:1,
+transparent) → CSS2D labels (z:2) → overlay DOM (z:3)`.  `axes-overlay.js` (SVG
+frame) and `grid-underlay.js` (SVG grid) recompute their ticks every frame from
+the live ortho camera via the pure `nice-ticks.js` / `axes-overlay-math.js`
+modules (ports of `_scale.py`).  Zoom/pan happens entirely in the browser
+(`OrbitControls`), so the overlay reads the camera rather than round-tripping.
+
+Export bundles those modules into `js/tanga-viewer.js` (CDN + `inline`/`offline`)
+and the export adapters run the same renderers in their render loops; a
+`grid_underlay` present makes the scene background transparent so the grid shows
+through.
 
 ### Test commands
 

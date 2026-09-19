@@ -44,13 +44,19 @@ viz.wait()
 | `align` | `(ax, ay)` | Fractional point of the plot plane that coincides with `position`: `(0, 0)` = bottom-left corner, `(1, 1)` = top-right. Default `(0.5, 0.5)` (centre). |
 | `axis_origin` | `(x, y)` | Data point where the two axes cross. `None` (or a `None` element) uses that axis' min edge (the spine layout). |
 | `min_x_span` | `float` | Minimum x-range span used when auto-fitting the x axis from registered plots (default `5.0`). |
+| `x_intervals` / `y_intervals` | `Sequence[float]` | Allowed tick step values (absolute data units, ascending). `None` auto-generates `1/2/5 × 10^k` steps over the data range. Linear scales only. |
+| `min_tick_spacing_px` | `float` | Minimum pixel spacing between adjacent ticks (overlay mode only); the tick count is derived from the live viewport. Default `60.0`. |
+| `pan_xlim` / `pan_ylim` | `(lo, hi)` | Pan bounds in data units; the view centre stays inside this rectangle. Defaults to `xlim` / `ylim`. |
+| `min_zoom` / `max_zoom` | `float` | Interactive zoom range. `min_zoom` is the max zoom-out; `None` (default) derives it so the full data rectangle stays contained (for `fill_x`/`fill_y` this lets you zoom out until the overflowing axis is visible). `max_zoom` defaults to the zoom where the finest allowed interval fills the view. |
 | `base` | `float` | Log base when a scale is given as `"log"` (default `10`). |
 | `value_format` | `str` | Python format specifier for tick labels (default `".4g"`). |
 | `labels` | `(str, str)` | Axis name labels (default `("x", "y")`). |
 | `grid` | `bool` | Whether to draw the grid (default `True`). |
 | `axes` | `bool` | Whether to draw the axes with tick/value labels (default `True`). |
+| `display_mode` | `"world"` \| `"overlay"` | `"world"` (default) draws axes/grid as world-space scene objects that pan/zoom with the data; `"overlay"` (2D only, no `size`) draws the axes as a fixed screen-space frame and the grid as a screen-space underlay behind the data, with tick ranges tracked from the live camera. |
 | `plane` | `bool \| None` | Whether to draw the background plane. `None` auto-enables in 3D and disables in 2D (see *3D: background plane placement*). |
 | `camera` | `"auto" \| bool` | 2D framing-camera control, only when `size` is not given (see *2D: auto span & camera*). |
+| `stretch` | `"fit"` \| `"fill"` \| `"fill_x"` \| `"fill_y"` | How the 2D camera frames the plot plane: `"fit"` (letterbox, default), `"fill"` (stretch both axes), `"fill_x"` (x fills, y keeps aspect), or `"fill_y"`. Only affects 2D when this coordinate system owns the camera; forced to `"fill"` in `display_mode="overlay"`. |
 | `border_px` | `float` | 2D camera pixel margin so axis labels stay visible (default `60`). |
 | `border_world` | `float` | Additional world-unit margin for the 2D camera (default `0`). |
 | `group_name` | `str` | Group name used when creating the coordinate-system group (default `"coordsys"`). |
@@ -119,6 +125,45 @@ Control this with:
 | `camera` | `"auto"` | `"auto"` sets a framing camera only if none is configured; `True` always sets/updates it; `False` never touches it. |
 | `border_px` | `60.0` | Pixel margin on all sides (applied by the frontend). |
 | `border_world` | `0.0` | Additional world-unit margin. |
+
+### Overlay mode
+
+`display_mode="overlay"` (2D only, no explicit `size`) renders the coordinate
+axes as a **fixed screen-space frame** at the image borders and the grid as a
+screen-space **underlay** behind the data. The frame stays put while the data
+pans/zooms underneath; only its tick values and grid lines update to the
+current visible range. This works in the live viewer and in standalone HTML
+export — see the [axes overlay example](../../examples/viz/camera/axes_overlay_2d.md).
+
+### Pan, zoom & tick subdivision
+
+The interactive 2D view (overlay and world modes) is bounded by the data range
+unless you override it:
+
+- **Pan** is limited so the view centre stays within `pan_xlim` / `pan_ylim`
+  (defaulting to `xlim` / `ylim`) — the data edge can reach the centre of the
+  view, never cross it.
+- **Zoom** is limited to `[min_zoom, max_zoom]`.  `min_zoom` defaults to the
+  zoom where the full data rectangle just fits the view (never below `1.0`, so
+  `fill_x`/`fill_y` can zoom out to reveal an overflowing axis); `max_zoom`
+  defaults to the zoom where the finest allowed tick interval fills the view.
+- **Ticks** use the allowed `x_intervals` / `y_intervals` step values (absolute
+  data units), chosen so adjacent ticks never fall closer than
+  `min_tick_spacing_px` pixels (overlay mode) — so resizing or zooming
+  re-densifies the grid.  World mode keeps the same `intervals` but a fixed tick
+  count, since its labels are generated on the backend without a viewport.
+
+```python
+cs = CoordinateSystem(
+    viz, display_mode="overlay",
+    xlim=(0, 1000), ylim=(0, 0.1),          # independent data ranges
+    x_intervals=[50, 100, 200, 500],        # allowed x steps
+    y_intervals=[0.01, 0.02, 0.05],         # allowed y steps
+    min_tick_spacing_px=60.0,               # overlay tick density
+    pan_xlim=(-200, 1200), pan_ylim=(-0.05, 0.15),  # pan bounds
+    min_zoom=0.5, max_zoom=40.0,            # zoom range
+)
+```
 
 The default `AxisStyle`s place the **x** value labels below the axis (with the
 name label further down) and the **y** value labels to the left (right-aligned,

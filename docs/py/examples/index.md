@@ -8,7 +8,7 @@ uv run python py/examples/<path>.py
 
 ## Keyword index
 
-- **2D** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
+- **2D** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
 - **3D** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
@@ -66,6 +66,8 @@ uv run python py/examples/<path>.py
 
 - **auto_clear** — [Animation](viz/jupyter/animation.md)
 
+- **axes** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md)
+
 - **Axes2D** — [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md)
 
 - **Axis** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
@@ -104,7 +106,7 @@ uv run python py/examples/<path>.py
 
 - **cache** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
-- **camera** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
+- **camera** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
 - **capped cone** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
 
@@ -168,7 +170,7 @@ uv run python py/examples/<path>.py
 
 - **controls** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
-- **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
+- **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
 - **counting axis** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 
@@ -278,7 +280,7 @@ uv run python py/examples/<path>.py
 
 - **fit camera** — [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md)
 
-- **fit_view2d** — [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
+- **fit_view2d** — [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
 - **fixed modulus** — [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
@@ -323,6 +325,8 @@ uv run python py/examples/<path>.py
 - **gravity** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
 
 - **Grid** — [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
+
+- **grid** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md)
 
 - **group** — [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
 
@@ -484,7 +488,7 @@ uv run python py/examples/<path>.py
 
 - **orthographic** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md)
 
-- **overlay** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **overlay** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **override** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
@@ -494,7 +498,7 @@ uv run python py/examples/<path>.py
 
 - **P3** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **panes** — [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md)
+- **panes** — [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md)
 
 - **paraboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
 
@@ -526,7 +530,7 @@ uv run python py/examples/<path>.py
 
 - **plot** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
 
-- **plotting** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
+- **plotting** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md), [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
 - **PNG** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
@@ -686,7 +690,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -696,7 +700,7 @@ uv run python py/examples/<path>.py
 
 - **streaming** — [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
-- **stretch** — [A 2×2 grid of 2D plots, one stretch mode per pane](viz/plotting/multi_plot.md)
+- **stretch** — [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
 - **styled objects** — [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
 
@@ -757,6 +761,8 @@ uv run python py/examples/<path>.py
 - **two points** — [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
 - **two-body** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
+
+- **underlay** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md)
 
 - **undo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 

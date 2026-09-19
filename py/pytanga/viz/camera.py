@@ -122,6 +122,15 @@ class CameraConfig2d(CameraConfig):
     # Additional fixed border in pixels, applied by the frontend
     border_px: float = 0.0
 
+    # Interactive pan/zoom limits (world coordinates, centred like xmin/xmax).
+    # ``pan_*`` default to the data rectangle (xmin/xmax/ymin/ymax) when None.
+    pan_xmin: float | None = None
+    pan_xmax: float | None = None
+    pan_ymin: float | None = None
+    pan_ymax: float | None = None
+    min_zoom: float | None = None  # max zoom-out (None = contain the full data)
+    max_zoom: float | None = None  # max zoom-in (None = no limit)
+
     def __post_init__(self) -> None:
         _validate_stretch(self.stretch)
 
@@ -171,6 +180,12 @@ class View2DConfig:
     border_world: float = 0.0
     border_px: float = 0.0
     stretch: StretchMode = "fit"
+    pan_xmin: float | None = None
+    pan_xmax: float | None = None
+    pan_ymin: float | None = None
+    pan_ymax: float | None = None
+    min_zoom: float | None = None
+    max_zoom: float | None = None
 
     def __post_init__(self) -> None:
         _validate_stretch(self.stretch)
@@ -241,6 +256,12 @@ def get_camera_view2d(config: View2DConfig) -> CameraConfig2d:
         ymax=ymax,
         stretch=config.stretch,
         border_px=config.border_px,
+        pan_xmin=config.pan_xmin,
+        pan_xmax=config.pan_xmax,
+        pan_ymin=config.pan_ymin,
+        pan_ymax=config.pan_ymax,
+        min_zoom=config.min_zoom,
+        max_zoom=config.max_zoom,
         position=(cx, cy, 20.0),
         target=(cx, cy, 0.0),
         near=0.1,

@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.8.1] — 2026-09-19
+- 2D overlay coordinate system (`CoordinateSystem(display_mode="overlay")`: fixed screen-space axes frame + grid underlay, live viewer + HTML export) · configurable pan/zoom limits (`pan_xlim`/`pan_ylim`, `min_zoom`/`max_zoom`) · per-axis tick subdivision (`x_intervals`/`y_intervals`) with pixel-based density (`min_tick_spacing_px`)
+→ [Details](2026/09/19_c01c4e2f2.md)
+
 ## [Since 2.8.0] — 2026-09-18
 - `Expression.compile()` / `AffineExpression.compile()` fast repeated evaluation · automatic compiled fast path for fully-bound `MV`/scalar `__call__` · multilinear `AffineExpression.get_tensor()` (rank `1+k`, quadratic operators) · `BladeMask.ids_outside` · `compile_fastpath.py` + `quadratic_get_tensor.py` examples
 → [Details](2026/09/18_e77ed7992.md)

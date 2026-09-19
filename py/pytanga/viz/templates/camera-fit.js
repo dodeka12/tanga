@@ -157,3 +157,70 @@ export function applyOrthoFrustum(camera, width, height) {
     camera.top = fit / 2;
     camera.bottom = -fit / 2;
 }
+
+/**
+ * Clamp an interactive 2D ortho camera to the pan/zoom limits stored in
+ * ``camera.userData._view2d``.  Pan bounds default to the data rectangle
+ * (``xmin``/``xmax``/``ymin``/``ymax``) when the ``pan_*`` fields are absent;
+ * zoom is clamped to ``[min_zoom, max_zoom]``.
+ *
+ * When ``min_zoom`` is absent it is derived so the full data rectangle stays
+ * contained (never below ``1.0``): for ``fill_x``/``fill_y`` this lets you zoom
+ * out until an overflowing axis is fully visible.
+ *
+ * No `three`/DOM dependency — operates on the passed camera/controls objects.
+ *
+ * @param {{position:{x:number,y:number}, zoom:number, left:number, right:number,
+ *          top:number, bottom:number, userData:{_view2d:object},
+ *          updateProjectionMatrix:Function}} camera
+ * @param {{target:{x:number,y:number}}|null} controls
+ */
+export function clampOrthoView(camera, controls) {
+    const v2d = camera.userData && camera.userData._view2d;
+    if (!v2d) return;
+
+    const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+    const finiteOr = (v, fallback) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    };
+
+    const pxmin = finiteOr(v2d.pan_xmin, v2d.xmin);
+    const pxmax = finiteOr(v2d.pan_xmax, v2d.xmax);
+    if (Number.isFinite(pxmin) && Number.isFinite(pxmax) && pxmin < pxmax) {
+        const cx = clamp(camera.position.x, pxmin, pxmax);
+        camera.position.x = cx;
+        if (controls && controls.target) controls.target.x = cx;
+    }
+
+    const pymin = finiteOr(v2d.pan_ymin, v2d.ymin);
+    const pymax = finiteOr(v2d.pan_ymax, v2d.ymax);
+    if (Number.isFinite(pymin) && Number.isFinite(pymax) && pymin < pymax) {
+        const cy = clamp(camera.position.y, pymin, pymax);
+        camera.position.y = cy;
+        if (controls && controls.target) controls.target.y = cy;
+    }
+
+    const minZoom = Number.isFinite(Number(v2d.min_zoom))
+        ? Number(v2d.min_zoom)
+        : _containMinZoom(camera, v2d);
+    const maxZoom = finiteOr(v2d.max_zoom, Infinity);
+    camera.zoom = clamp(Number(camera.zoom) || 1, minZoom, maxZoom);
+    if (typeof camera.updateProjectionMatrix === 'function') {
+        camera.updateProjectionMatrix();
+    }
+}
+
+/**
+ * Derive the default max zoom-out: the zoom at which the full data rectangle
+ * just fits the base frustum, capped at ``1.0`` (the initial view).  Returns
+ * ``1.0`` for degenerate data/frustum spans.
+ */
+function _containMinZoom(camera, v2d) {
+    const extX = Number(v2d.xmax) - Number(v2d.xmin);
+    const extY = Number(v2d.ymax) - Number(v2d.ymin);
+    const spanX = Number(camera.right) - Number(camera.left);
+    const spanY = Number(camera.top) - Number(camera.bottom);
+    if (!(extX > 0) || !(extY > 0) || !(spanX > 0) || !(spanY > 0)) return 1.0;
+    return Math.min(1.0, Math.min(spanX / extX, spanY / extY));
+}

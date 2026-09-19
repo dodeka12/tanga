@@ -17,6 +17,9 @@ import { attachGroupView, detachGroup, detachAll, releaseAttachedGroups } from '
 import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
 import { InteractionController } from '../interaction.js';
+import { AxesOverlay } from '../axes-overlay.js';
+import { GridUnderlay } from '../grid-underlay.js';
+import { clampOrthoView } from '../camera-fit.js';
 
 // ── WebGL1 SDF fallback warning banner ──────────────────────
 // SDF proxies need GLSL3 + `gl_FragDepth` (WebGL2). On WebGL1 those objects
@@ -120,6 +123,12 @@ export class ThreeJsView extends View {
         this._pendingAttachedGroups = new Map(); // parent_id → [GroupView, …]
         this._banners = new Map();
         this._isWebGL2 = false;
+        this._underlayEl = null;
+        this._gridUnderlay = null;
+        this._gridUnderlayId = null;
+        this._axesOverlay = null;
+        this._axesOverlayId = null;
+        this._appliedInset = null;      // inset last applied to the camera/canvas
 
         this.el.classList.add('tanga-three-view');
         this.el.style.position = 'relative';
@@ -207,6 +216,7 @@ export class ThreeJsView extends View {
             }
         }
         this._pendingAttachedGroups.clear();
+        this._disposeCoordinateFrame();
     }
 
     _log(phase, detail) {
@@ -223,12 +233,27 @@ export class ThreeJsView extends View {
     // ── scene setup ────────────────────────────────────────────
 
     _initScene() {
+        this._underlayEl = document.createElement('div');
+        this._underlayEl.className = 'tanga-underlay';
+        this._underlayEl.style.position = 'absolute';
+        this._underlayEl.style.top = '0';
+        this._underlayEl.style.left = '0';
+        this._underlayEl.style.width = '100%';
+        this._underlayEl.style.height = '100%';
+        this._underlayEl.style.pointerEvents = 'none';
+        this._underlayEl.style.zIndex = '0';
+        this.el.appendChild(this._underlayEl);
+
         let webglOk = true;
         try {
             this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
             this.renderer.setPixelRatio(window.devicePixelRatio);
             this.renderer.setSize(this.width || window.innerWidth, this.height || window.innerHeight);
             this.renderer.shadowMap.enabled = false;
+            this.renderer.domElement.style.position = 'absolute';
+            this.renderer.domElement.style.top = '0';
+            this.renderer.domElement.style.left = '0';
+            this.renderer.domElement.style.zIndex = '1';
             this.el.appendChild(this.renderer.domElement);
             this._isWebGL2 = !!this.renderer.capabilities.isWebGL2;
         } catch (e) {
@@ -244,6 +269,7 @@ export class ThreeJsView extends View {
             this.labelRenderer.domElement.style.position = 'absolute';
             this.labelRenderer.domElement.style.top = '0px';
             this.labelRenderer.domElement.style.pointerEvents = 'none';
+            this.labelRenderer.domElement.style.zIndex = '2';
             this.el.appendChild(this.labelRenderer.domElement);
         } catch (e) {
             this.labelRenderer = null;
@@ -276,12 +302,34 @@ export class ThreeJsView extends View {
 
     _onExtentChanged() { this.resize(); }
 
+    /**
+     * Height of the annotation panel, if any, in CSS pixels.
+     */
+    _annotationInset() {
+        if (!this._annotationPanel) return 0;
+        return Math.max(0, this._annotationPanel.offsetHeight || 0);
+    }
+
+    /**
+     * Space reserved at the bottom of the pane so the coordinate frame + grid
+     * (and the data they frame) sit above the annotation panel.  Only applies
+     * when a coordinate frame overlay is mounted; a plain 3D annotation stays
+     * a translucent overlay as before.
+     */
+    _frameInset() {
+        if (!this._axesOverlay && !this._gridUnderlay) return 0;
+        return this._annotationInset();
+    }
+
     resize() {
         const width = this.width || window.innerWidth;
         const height = this.height || window.innerHeight;
+        const inset = this._frameInset();
+        const plotHeight = Math.max(1, height - inset);
         if (this.camera) {
-            handleResize(this.camera, this.renderer, this.labelRenderer, this.sceneConfig?.space_dim || 3, width, height);
+            handleResize(this.camera, this.renderer, this.labelRenderer, this.sceneConfig?.space_dim || 3, width, plotHeight);
         }
+        this._appliedInset = inset;
         updateLineResolutions();
     }
 
@@ -295,9 +343,32 @@ export class ThreeJsView extends View {
     render() {
         if (!this.renderer || !this.camera) return;
         if (this.controls) this.controls.update();
+        clampOrthoView(this.camera, this.controls);
         updateTweens(this.sceneObjects);
+        const width = this.width || window.innerWidth;
+        const height = this.height || window.innerHeight;
+        const inset = this._frameInset();
+        // The annotation height can change (added/removed/KaTeX reflow), so
+        // reframe the camera + canvas whenever it drifts from what we applied.
+        if (inset !== this._appliedInset) this.resize();
+        const cam = this._cameraParams();
+        if (this._gridUnderlay) this._gridUnderlay.update(cam, width, height, inset);
         this.renderer.render(this.scene, this.camera);
+        if (this._axesOverlay) this._axesOverlay.update(cam, width, height, inset);
         if (this.labelRenderer) this.labelRenderer.render(this.scene, this.camera);
+    }
+
+    _cameraParams() {
+        const c = this.camera;
+        return {
+            left: c.left,
+            right: c.right,
+            top: c.top,
+            bottom: c.bottom,
+            zoom: c.zoom || 1,
+            x: c.position.x,
+            y: c.position.y,
+        };
     }
 
     clearAll() {
@@ -327,6 +398,7 @@ export class ThreeJsView extends View {
         detachAll();
         this._pendingAttachedGroups.clear();
         this._clearBanners();
+        this._disposeCoordinateFrame();
         this.cameraPositioned = false;
         this._addDefaultLights();
     }
@@ -464,10 +536,10 @@ export class ThreeJsView extends View {
 
         container.style.position = 'absolute';
         container.style.bottom = '0px';
-        container.style.left = '50%';
-        container.style.transform = 'translateX(-50%)';
+        container.style.left = '0px';
+        container.style.right = '0px';
         container.style.width = s.width || '100%';
-        container.style.maxWidth = s.max_width || '800px';
+        container.style.maxWidth = s.max_width || 'none';
         container.style.maxHeight = s.max_height || '250px';
         container.style.overflowY = 'auto';
         container.style.fontFamily = s.font_family || 'sans-serif';
@@ -631,8 +703,54 @@ export class ThreeJsView extends View {
                 }
                 return;
             }
+            if (msg.kind === 'axes_overlay') {
+                if (this._axesOverlay) {
+                    this._axesOverlay.setSpec(msg.spec);
+                } else {
+                    this._axesOverlay = new AxesOverlay(msg.spec);
+                    this._axesOverlay.mount(this.el);
+                }
+                this._axesOverlayId = msg.id;
+                this.sceneObjects.set(msg.id, { obj: null, mesh: null, data: { ...msg }, layer: 'overlay' });
+                return;
+            }
             buildOverlay(msg, this.scene, this.sceneObjects);
+        } else if (msg.layer === 'underlay') {
+            if (msg.kind === 'grid_underlay') {
+                if (this._gridUnderlay) {
+                    this._gridUnderlay.setSpec(msg.spec);
+                } else {
+                    this._gridUnderlay = new GridUnderlay(msg.spec);
+                    this._gridUnderlay.mount(this._underlayEl);
+                }
+                this._gridUnderlayId = msg.id;
+                this.sceneObjects.set(msg.id, { obj: null, mesh: null, data: { ...msg }, layer: 'underlay' });
+                this._updateOverlayTransparency();
+                return;
+            }
         }
+    }
+
+    _updateOverlayTransparency() {
+        if (this._gridUnderlay) {
+            this.scene.background = null;
+        } else {
+            this.applyThemeBackground();
+        }
+    }
+
+    _disposeCoordinateFrame() {
+        if (this._axesOverlay) {
+            this._axesOverlay.dispose();
+            this._axesOverlay = null;
+            this._axesOverlayId = null;
+        }
+        if (this._gridUnderlay) {
+            this._gridUnderlay.dispose();
+            this._gridUnderlay = null;
+            this._gridUnderlayId = null;
+        }
+        this._updateOverlayTransparency();
     }
 
     _removeSceneObject(id) {
@@ -642,6 +760,17 @@ export class ThreeJsView extends View {
             for (const groupId of entry.obj.userData._attachedGroups) {
                 detachGroup(groupId);
             }
+        }
+        if (id === this._axesOverlayId) {
+            if (this._axesOverlay) this._axesOverlay.dispose();
+            this._axesOverlay = null;
+            this._axesOverlayId = null;
+        }
+        if (id === this._gridUnderlayId) {
+            if (this._gridUnderlay) this._gridUnderlay.dispose();
+            this._gridUnderlay = null;
+            this._gridUnderlayId = null;
+            this._updateOverlayTransparency();
         }
         removeObject(id, this.sceneObjects);
         cancelTween(id);

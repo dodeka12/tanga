@@ -41,6 +41,8 @@ const {build_done_var} = (async () => {{
             await buildSceneObject(obj, {scene_var}, {registry_var});
         }} else if (obj.layer === 'overlay') {{
             buildOverlay(obj, {scene_var}, {registry_var});
+        }} else if (obj.layer === 'underlay') {{
+            // Skip — handled by the coordinate-frame setup (`grid_underlay`).
         }}
     }}
     for (const [id, entry] of {registry_var}) {{

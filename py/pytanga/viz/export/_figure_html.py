@@ -21,6 +21,7 @@ from pytanga.viz.export._bootstrap import (
     js_annotation_panel,
     js_apply_camera,
     js_autofit_camera,
+    js_coordinate_overlay_setup,
     js_footer,
     js_tanga_destructure,
     js_render_loop,
@@ -48,8 +49,18 @@ def render_figure(
     fig_id = "tanga-fig-" + uuid4().hex[:8]
     scene_json = json.dumps({"objects": objects}, indent=0)
 
+    has_underlay = any(o.get("layer") == "underlay" for o in objects)
+    has_coord_overlay = has_underlay or any(
+        o.get("kind") == "axes_overlay" for o in objects
+    )
     adapter = _build_static_figure_adapter(
-        fig_id, scene_json, scene_config, figure_style, figure_config
+        fig_id,
+        scene_json,
+        scene_config,
+        figure_style,
+        figure_config,
+        has_underlay=has_underlay,
+        has_coord_overlay=has_coord_overlay,
     )
 
     w = figure_style.get("width", 800)
@@ -157,12 +168,17 @@ def _build_static_figure_adapter(
     scene_config: Dict[str, Any],
     figure_style: Dict[str, Any],
     figure_config: Dict[str, Any],
+    *,
+    has_underlay: bool = False,
+    has_coord_overlay: bool = False,
 ) -> str:
     """Generate the JS bootstrap adapter for a figure export."""
     w = figure_style.get("width", 800)
     h = figure_style.get("height", 600)
     responsive = figure_style.get("responsive", False)
     bg = figure_config.get("background", "#1a1a2e")
+    if has_underlay:
+        bg = "transparent"
     title_raw = figure_config.get("title", "")
     annotation_raw = figure_config.get("annotation", "")
     footer_raw = figure_config.get("footer", "")
@@ -236,7 +252,24 @@ def _build_static_figure_adapter(
             mesh_map_var="figMeshMap",
             build_done_var="figBuildDone",
         ),
-        "",
+    ]
+
+    if has_coord_overlay:
+        parts.append("")
+        parts.append(
+            js_coordinate_overlay_setup(
+                objects_expr="figObjects",
+                container_expr="figContainer",
+                camera_var="figCamera",
+                renderer_var="figRenderer",
+                label_renderer_var="figLabelRenderer",
+                width_expr=dim_w,
+                height_expr=dim_h,
+            )
+        )
+
+    parts.append("")
+    parts.append(
         "(async () => {\n"
         "    await figBuildDone;\n"
         "    applyCameraConfig(figCamera, figControls, sceneConfig.camera, "
@@ -253,26 +286,35 @@ def _build_static_figure_adapter(
             width_expr=dim_w,
             height_expr=dim_h,
         )
-        + "\n})();",
-        "",
+        + "\n})();"
+    )
+
+    parts.append("")
+    parts.append(
         js_annotation_panel(
             annotation_md=annotation_raw,
             container_expr="figContainer",
             positioning="absolute",
             show_annotation=show_annotation,
-        ),
+        )
+    )
+    parts.append(
         js_footer(
             footer_md=footer_raw,
             container_expr="figContainer",
-        ),
-        "",
+        )
+    )
+
+    parts.append("")
+    parts.append(
         js_render_loop(
             renderer_var="figRenderer",
             label_renderer_var="figLabelRenderer",
             scene_var="figScene",
             camera_var="figCamera",
             controls_var="figControls",
-        ),
-    ]
+            extra_per_frame="updateCoordinateOverlays();" if has_coord_overlay else "",
+        )
+    )
 
     return "\n\n".join(parts)

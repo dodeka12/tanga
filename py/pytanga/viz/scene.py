@@ -86,15 +86,16 @@ class SceneConfig:
 
 @dataclass
 class SceneObject:
-    """A drawable element in the 3D scene or overlay layer.
+    """A drawable element in the scene, overlay, or underlay layer.
 
     Replaces the old ``SceneEntity`` / label split.  Every piece of content
     — geometric entity, operator, label, slider, button — is a ``SceneObject``
-    with a ``layer`` that tells the frontend how to render it.
+    with a ``layer`` that tells the frontend how to render it.  ``"underlay"``
+    objects render behind the scene (e.g. the coordinate-system grid).
     """
 
     id: str  # unique ID (UUID8)
-    layer: Literal["scene", "overlay"] = "scene"
+    layer: Literal["scene", "overlay", "underlay"] = "scene"
     kind: str = ""  # "Point", "Sphere", "label", "slider", "button", ...
     data: Any = None  # GeoEntity, Label, dict, ...
     properties: dict[str, Any] = field(default_factory=dict)
@@ -157,7 +158,7 @@ class Scene:
 
     def _make_node(self, obj: SceneObject) -> VizNode:
         """Build the scene-graph node for *obj*, resolving its style."""
-        if obj.layer == "overlay":
+        if obj.layer in ("overlay", "underlay"):
             return self._make_overlay_node(obj)
         return self._make_scene_node(obj)
 
@@ -190,23 +191,26 @@ class Scene:
         return node
 
     def _make_overlay_node(self, obj: SceneObject) -> VizOverlayObject:
-        """Build an overlay-layer node from a label/annotation/title object."""
+        """Build an overlay/underlay-layer node from a payload-style object."""
         if obj.kind == "label":
             label = obj.data
             return VizOverlayObject(
                 obj.id,
                 kind="label",
+                layer=obj.layer,
                 style=getattr(label, "style", None) or self.styles.label_base,
                 position=getattr(label, "position", (0.0, 0.0, 0.0)),
                 attach_to=getattr(label, "parent_id", None),
                 payload=getattr(label, "text", None),
             )
         data = obj.data if isinstance(obj.data, dict) else {}
+        payload = data.get("spec") if "spec" in data else data.get("text", "")
         return VizOverlayObject(
             obj.id,
             kind=obj.kind,
+            layer=obj.layer,
             style=data.get("style", {}),
-            payload=data.get("text", ""),
+            payload=payload,
         )
 
     def get_node(self, object_id: str) -> VizNode:
