@@ -26,11 +26,12 @@ function rotationFromAxes(normal, inPlane) {
 export function createPartialDisk(ent) {
     const color = parseColor(ent, '#ffcc44');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
-    const normal = ent.normal || [0, 0, 1];
-    const startDirection = ent.startDirection || [1, 0, 0];
+    // Canonical plane is XY (normal +Z), sector start is +X; placement rides on
+    // the node transform.
+    const normal = [0, 0, 1];
+    const startDirection = [1, 0, 0];
     const angle = Math.min(Math.max(ent.angle ?? 2 * Math.PI, 0.0), 2 * Math.PI);
 
     // The sector is symmetric about its bisector (matching the SDF primitive,
@@ -46,7 +47,6 @@ export function createPartialDisk(ent) {
         radius, radius, thickness, 48, 1, false, -angle / 2, angle
     );
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
     mesh.setRotationFromQuaternion(rotationFromAxes(normal, bisector));
 
     const wireframe = styleParam(ent, 'wireframe', false);

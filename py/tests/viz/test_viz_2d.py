@@ -69,7 +69,7 @@ class TestVisualizer2D:
         viz = Visualizer(space_dim=2, add_default_axes=False, add_default_grid=False)
         viz.add(Point(3, 4, 0))
         state = viz._scene.full_state()
-        assert state[0]["position"] == [3, 4, 0]
+        assert state[0]["transform"]["position"] == [3.0, 4.0, 0.0]
 
     def test_main_scene_has_space_dim(self):  # noqa: ANN201
         viz = Visualizer(space_dim=2)

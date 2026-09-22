@@ -629,6 +629,11 @@ async function handleMessage(msg) {
         if (target) target.setCamera(msg.camera);
         return;
     }
+    if (msg.type === 'view_viewport') {
+        const target = _viewById.get(msg.view_id);
+        if (target) target.setViewport(msg.viewport);
+        return;
+    }
 
     if (msg.type === 'theme_define') {
         const applyThemeBackgrounds = () => {

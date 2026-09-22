@@ -20,6 +20,7 @@ import { createEllipsoid } from './ellipsoid.js';
 import { createEllipse, updateEllipse } from './ellipse.js';
 import { createRegularPolygon } from './regular_polygon.js';
 import { createRectangle2D } from './rectangle2d.js';
+import { createFrustum } from './frustum.js';
 import { createHyperbola, updateHyperbola } from './hyperbola.js';
 import { createParabola, updateParabola } from './parabola.js';
 import { createLinePair, updateLinePair } from './line_pair.js';
@@ -111,6 +112,10 @@ export async function createEntityMesh(ent) {
             break;
         case 'Rectangle2D':
             mesh = createRectangle2D(ent);
+            break;
+
+        case 'Frustum':
+            mesh = createFrustum(ent);
             break;
         case 'Space':
             mesh = createSpace(ent);
@@ -268,34 +273,16 @@ export function updateEntityMesh(mesh, ent, prev) {
             return updatePointSet(mesh, ent, prev);
         case 'Cone':
             return updateCone(mesh, ent, prev);
+        case 'Frustum':
+            // Corners/apex are structural; always rebuild (a one-shot entity).
+            return false;
         default:
             break;
     }
 
-    // Generic in-place update: position/orientation + common style fields.
-    if (ent.position) {
-        mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
-    }
-    if (ent.center) {
-        mesh.position.set(ent.center[0], ent.center[1], ent.center[2]);
-    }
-    if (ent.vector || ent.direction) {
-        const vec = ent.vector || ent.direction;
-        const origin = ent.origin || [0, 0, 0];
-        mesh.position.set(origin[0], origin[1], origin[2]);
-        const dir = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
-        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-        mesh.setRotationFromQuaternion(quat);
-    }
-    if (ent.rotation) {
-        // Top-level Euler triple (Box / Ellipsoid). Applied in place so a
-        // rotation-only content update doesn't require a mesh rebuild.
-        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
-    } else if (ent.rotation === null) {
-        // Explicitly cleared rotation (e.g. `Box(rotation=None)`) → identity,
-        // i.e. back to axis-aligned.
-        mesh.rotation.set(0, 0, 0);
-    }
+    // Placement now rides on the node transform (the `transform` aspect), so the
+    // generic in-place path only applies the cheap style fields; anything
+    // structural (content fields, non-color/opacity style) triggers a rebuild.
     applyStyleUpdate(mesh, ent);
 
     return !entityRequiresRebuild(ent, prev);

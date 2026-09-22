@@ -8,12 +8,12 @@ export function createPoint(ent) {
     const color = parseColor(ent, '#ff4444');
     const opacity = styleParam(ent, 'opacity', 1.0);
     const size = styleParam(ent, 'size', 0.08);
-    const pos = ent.position || [0, 0, 0];
 
+    // Canonical: a point marker at the origin; placement rides on the node
+    // transform (position = the point).
     const geometry = new THREE.SphereGeometry(size, 16, 16);
     const material = makeMaterial(color, opacity);
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(pos[0], pos[1], pos[2]);
     tagEntity(mesh, ent);
     return mesh;
 }

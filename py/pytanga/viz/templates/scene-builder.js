@@ -11,17 +11,17 @@ import { sendLog } from './events.js';
 export function isIdentityTransform(transform) {
     if (!transform) return true;
     const p = transform.position || [0, 0, 0];
-    const r = transform.rotation || [0, 0, 0];
+    const r = transform.rotation || [0, 0, 0, 1];
     const s = transform.scale || [1, 1, 1];
     return p[0] === 0 && p[1] === 0 && p[2] === 0
-        && r[0] === 0 && r[1] === 0 && r[2] === 0
+        && r[0] === 0 && r[1] === 0 && r[2] === 0 && r[3] === 1
         && s[0] === 1 && s[1] === 1 && s[2] === 1;
 }
 
 export function applyTransformToObject(obj, transform) {
     if (!transform) return;
     if (transform.position) obj.position.set(transform.position[0], transform.position[1], transform.position[2]);
-    if (transform.rotation) obj.rotation.set(transform.rotation[0], transform.rotation[1], transform.rotation[2]);
+    if (transform.rotation) obj.quaternion.set(transform.rotation[0], transform.rotation[1], transform.rotation[2], transform.rotation[3]);
     if (transform.scale) obj.scale.set(transform.scale[0], transform.scale[1], transform.scale[2]);
 }
 

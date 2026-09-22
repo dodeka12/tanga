@@ -203,11 +203,103 @@ class TestSetViewCamera:
 
         viz.set_view_camera(view, CameraConfig3d(position=(1, 2, 3), target=(0, 0, 0)))
 
-        assert view.camera is not None
+        assert view.camera_view.camera is not None
         msg = json.loads(server.captured[0])
         assert msg["type"] == "view_camera"
         assert msg["view_id"] == view.id
         assert msg["camera"]["position"] == [1.0, 2.0, 3.0]
+
+
+class TestSetViewport:
+    def test_rejects_non_scene_view(self) -> None:
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        with pytest.raises(TypeError, match="must be a SceneView"):
+            viz.set_viewport(ButtonView("b"), zoom=2.0)
+
+    def test_per_pane_pushes_view_viewport(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        view = SceneView("main")
+        viz.set_layout(SplitView("horizontal", [view, SceneView("side")]))
+
+        server = _FakeServer()
+        monkeypatch.setattr(viz, "_server", server)
+        monkeypatch.setattr(viz, "_loop", object())
+        monkeypatch.setattr(
+            asyncio,
+            "run_coroutine_threadsafe",
+            lambda coro, loop: asyncio.run(coro),
+        )
+
+        viz.set_viewport(view, zoom=2.0, pan=(0.1, 0.0))
+
+        msg = json.loads(server.captured[0])
+        assert msg == {
+            "type": "view_viewport",
+            "view_id": view.id,
+            "viewport": {"zoom": 2.0, "pan": [0.1, 0.0]},
+        }
+
+    def test_per_pane_partial_update(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        view = SceneView("main")
+        viz.set_layout(view)
+
+        server = _FakeServer()
+        monkeypatch.setattr(viz, "_server", server)
+        monkeypatch.setattr(viz, "_loop", object())
+        monkeypatch.setattr(
+            asyncio,
+            "run_coroutine_threadsafe",
+            lambda coro, loop: asyncio.run(coro),
+        )
+
+        viz.set_viewport(view, zoom=2.0)
+
+        msg = json.loads(server.captured[0])
+        assert msg["viewport"] == {"zoom": 2.0}
+
+    def test_scene_default_updates_config_and_pushes(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.add_scene("s")
+
+        server = _FakeServer()
+        monkeypatch.setattr(viz, "_server", server)
+        monkeypatch.setattr(viz, "_loop", object())
+        monkeypatch.setattr(
+            asyncio,
+            "run_coroutine_threadsafe",
+            lambda coro, loop: asyncio.run(coro),
+        )
+
+        viz.set_viewport(scene_name="s", zoom=2.0)
+
+        assert viz._layout.scenes["s"].config.viewport.zoom == 2.0
+        msg = json.loads(server.captured[-1])
+        assert msg["type"] == "scene_config"
+        assert msg["viewport"] == {"zoom": 2.0, "pan": [0.0, 0.0]}
+
+    def test_handle_delegates_to_scene_level(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        handle = viz.add_scene("s")
+
+        server = _FakeServer()
+        monkeypatch.setattr(viz, "_server", server)
+        monkeypatch.setattr(viz, "_loop", object())
+        monkeypatch.setattr(
+            asyncio,
+            "run_coroutine_threadsafe",
+            lambda coro, loop: asyncio.run(coro),
+        )
+
+        handle.set_viewport(zoom=3.0)
+
+        assert viz._layout.scenes["s"].config.viewport.zoom == 3.0
 
 
 class TestMenuApi:

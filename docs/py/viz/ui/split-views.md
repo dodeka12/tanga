@@ -291,6 +291,31 @@ layout = SplitView("vertical", [
 it is the stable key used to route the runtime camera message to the matching
 pane.
 
+### Per-pane camera view, lock, and background image
+
+A `SceneView` accepts a single `camera_view` (a `CameraView`) that bundles the
+camera, lock, and background image, plus per-pane visibility (`hide`/`show`):
+
+```python
+left = SceneView(
+    "world",
+    camera_view=CameraView(
+        pinhole_camera(K, R, t, image_size=(640, 480)),
+        lock={"rotate", "pan", "zoom"},          # fix this pane's camera actions
+        background_image=ImageData("cam", data=img),  # NDC background behind the scene
+    ),
+    hide={frustum_ref.id},                        # hide this entity in this pane only
+)
+right = SceneView("world")                        # default camera, shows the frustum
+```
+
+- `camera_view.lock` is a `set` of `CameraLock` strings (`"rotate"`, `"pan"`,
+  `"zoom"`) that disables those OrbitControls actions for **this pane only**.
+- `camera_view.background_image` renders the image as a full-viewport NDC quad
+  behind the 3D scene (letterboxed to match the camera's `fit` policy).
+- `hide` / `show` filter which scene entities the pane renders, so e.g. a
+  `Frustum` can appear in the overview pane but not the camera pane.
+
 ## Per-Pane Interaction
 
 Pointer interaction (draggable `ActPoint`s, hover, click, scroll) is independent

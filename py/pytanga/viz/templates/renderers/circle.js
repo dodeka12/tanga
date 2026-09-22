@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import {
     makeMaterial,
     makeFatLine,
-    rotationFromNormal,
     styleParam,
     parseColor,
     tagEntity,
@@ -13,6 +12,7 @@ import {
     applyStyleUpdate,
     contentChanged,
 } from './utils.js';
+import { styleNeedsRebuild } from './style-diff.js';
 
 const CIRCLE_SEGMENTS = 96;
 
@@ -24,22 +24,13 @@ function createLineCircle(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
-    const normal = ent.normal || [0, 0, 1];
 
-    const q = rotationFromNormal(normal[0], normal[1], normal[2]);
-    const ex = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
-    const ey = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-
+    // Canonical: a circle in the XY plane centered at the origin.
     const points = [];
     for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
         const t = (2 * Math.PI * i) / CIRCLE_SEGMENTS;
-        points.push(
-            new THREE.Vector3(center[0], center[1], center[2])
-                .addScaledVector(ex, radius * Math.cos(t))
-                .addScaledVector(ey, radius * Math.sin(t)),
-        );
+        points.push(new THREE.Vector3(radius * Math.cos(t), radius * Math.sin(t), 0));
     }
 
     const line = makeFatLine(points, color, opacity, thickness);
@@ -55,25 +46,17 @@ export function createCircle(ent) {
 
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.7);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const tubeRadius = styleParam(ent, 'tubeRadius', 0.03);
     const wireframe = styleParam(ent, 'wireframe', false);
 
     const wireframeOnly = wireframe && opacity === 0;
 
+    // Canonical: a torus (circle) in the XY plane (normal +Z) at the origin.
     const geometry = new THREE.TorusGeometry(radius, tubeRadius, 16, 64);
     const mesh = wireframeOnly
         ? new THREE.Group()
         : new THREE.Mesh(geometry, makeMaterial(color, opacity));
-
-    mesh.position.set(center[0], center[1], center[2]);
-
-    if (ent.normal) {
-        mesh.setRotationFromQuaternion(
-            rotationFromNormal(ent.normal[0], ent.normal[1], ent.normal[2])
-        );
-    }
 
     // Wireframe overlay
     if (wireframe) {
@@ -94,7 +77,8 @@ export function createCircle(ent) {
 }
 
 export function updateCircle(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['radius', 'normal', 'tubeRadius'])) return false;
+    if (contentChanged(ent, prev, ['radius', 'tubeRadius'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     // Switching between the tube and thick-line style requires a rebuild.
     const curLine = isLineStyle(ent);
     const prevLine = prev ? isLineStyle(prev) : false;

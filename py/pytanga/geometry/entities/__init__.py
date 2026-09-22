@@ -35,6 +35,7 @@ from .cylinder import Cylinder
 from pytanga.entity import Direction
 from .disk import Disk, PartialDisk
 from .ellipsoid import Ellipse, Ellipsoid
+from .frustum import Frustum
 from .hdirection import HDirection
 from .hpoint import HPoint
 from .hyperbola import Hyperbola
@@ -96,6 +97,7 @@ __all__ = [
     "Ellipse",
     "Ellipsoid",
     "Entity",
+    "Frustum",
     "HDirection",
     "HPoint",
     "Hyperbola",

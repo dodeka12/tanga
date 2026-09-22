@@ -86,7 +86,8 @@ from ._interaction import (
 )
 from ._keys import KeyModifier
 from ._label import Label
-from ._nodes import Transform, VizGroup, VizOverlayObject, VizSceneObject
+from pytanga.geometry.transform import Transform
+from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
 from ._point_path import PointPath, gradient_colors, multi_gradient_colors
 from ._scale import LinearScale, LogScale, Scale
@@ -117,6 +118,7 @@ from ._styles import (
     EllipseStyle,
     EllipsoidStyle,
     FigureStyle,
+    FrustumStyle,
     GeneralRotorStyle,
     GridStyle,
     HPointStyle,
@@ -182,14 +184,20 @@ from ._types import SceneEntity, VizInputType
 from ._viz_styles import VizStyles
 from .camera import (
     CameraAction,
+    CameraCalibration,
     CameraConfig,
     CameraConfig2d,
     CameraConfig3d,
+    CameraLock,
+    Navigation,
+    PinholeCamera,
     View2DConfig,
     View3dConfig,
+    ViewportConfig,
     get_camera,
     get_camera_view2d,
     get_camera_view3d,
+    pinhole_camera,
 )
 from .image import (
     ImageChannelMode,
@@ -204,6 +212,7 @@ from .scene import SceneConfig
 from .server import PortConflictMode, PortOccupant
 from .views import (
     ButtonView,
+    CameraView,
     CheckboxView,
     ColorPickerView,
     ControlView,
@@ -257,9 +266,12 @@ __all__ = [
     "ButtonView",
     "Camera",
     "CameraAction",
+    "CameraCalibration",
     "CameraConfig",
     "CameraConfig2d",
     "CameraConfig3d",
+    "CameraLock",
+    "CameraView",
     "Checkbox",
     "CheckboxView",
     "Color",
@@ -306,6 +318,7 @@ __all__ = [
     "EllipsoidStyle",
     "FigureConfig",
     "FigureStyle",
+    "FrustumStyle",
     "FileChooser",
     "FileChooserDialog",
     "FileChooserView",
@@ -342,11 +355,14 @@ __all__ = [
     "ModifierKey",
     "MouseButton",
     "MotorStyle",
+    "Navigation",
     "ObjVizStyle",
     "ParabolaStyle",
     "ParallelLinePairStyle",
     "ParallelPlanePairStyle",
     "PartialDiskStyle",
+    "PinholeCamera",
+    "pinhole_camera",
     "PlaneConicPairStyle",
     "PlaneConicStyle",
     "PlanePairStyle",
@@ -425,6 +441,7 @@ __all__ = [
     "View",
     "View2DConfig",
     "View3dConfig",
+    "ViewportConfig",
     "Visualizer",
     "VisualizerApp",
     "VizGroup",

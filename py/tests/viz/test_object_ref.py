@@ -29,7 +29,8 @@ class TestEntityAndStyle:
         node = h.scene.get_node(ref.id)
         node.consume_dirty()
         ref.entity = Point(4, 5, 6)
-        assert node.dirty_for("content")
+        # A point's placement is its position → a move marks ``transform``.
+        assert node.dirty_for("transform")
         assert node.entity == Point(4, 5, 6)
         assert ref.entity == Point(4, 5, 6)
 
@@ -45,7 +46,7 @@ class TestEntityAndStyle:
         mv = Geometry(BasisN3())(Point(7, 8, 9))
         ref.entity = mv
         assert node.entity == Point(7, 8, 9)
-        assert node.dirty_for("content")
+        assert node.dirty_for("transform")
 
     def test_style_merge(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -115,8 +116,10 @@ class TestTransforms:
         node = h.scene.get_node(ref.id)
         node.consume_dirty()
         ref.set_transform(rotation=Rotor(math.pi / 2, Direction(0, 0, 1)))
+        # A +Z rotation by π/2 is the quaternion (0, 0, sin(π/4), cos(π/4)).
+        half = math.pi / 4
         assert node.transform.rotation == pytest.approx(
-            (0.0, 0.0, math.pi / 2), abs=1e-9
+            (0.0, 0.0, math.sin(half), math.cos(half)), abs=1e-9
         )
         assert node.dirty_for("transform")
 

@@ -142,9 +142,11 @@ nav:
       - Overview: py/viz/visualizer/index.md
       - Visualizer: py/viz/visualizer/visualizer.md
       - Camera & Controls: py/viz/visualizer/camera.md
+      - Camera Calibration: py/viz/visualizer/camera-calibration.md
       - Animation: py/viz/visualizer/animation.md
       - Multi-Scene: py/viz/visualizer/multi-scene.md
       - Scene Graph & Transforms: py/viz/visualizer/scene-graph.md
+      - Matrices & Coordinate Frames: py/viz/visualizer/coordinate-frames.md
       - Composing Scene Subtrees: py/viz/visualizer/composing-scenes.md
     - Visualizer App:
       - Overview: py/viz/app/index.md

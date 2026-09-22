@@ -55,7 +55,7 @@ function emptyTypedArray(dtype, length) {
     return new Uint8Array(length);
 }
 
-function makeDataTexture(img) {
+export function makeDataTexture(img) {
     const frame = takeImageFrame(img.id);
     const width = img.width;
     const height = img.height;

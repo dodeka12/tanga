@@ -22,6 +22,11 @@ from dataclasses import dataclass, fields
 from enum import StrEnum
 from typing import Any, Literal, cast
 
+import numpy as np
+
+from pytanga.geometry.frame import CoordinateFrame, OpenCVFrame
+from pytanga.geometry.matrix import Matrix
+
 
 StretchMode = Literal["fit", "fill", "fill_x", "fill_y"]
 
@@ -37,6 +42,30 @@ class CameraAction(StrEnum):
     ROTATE = "rotate"
     DOLLY = "dolly"
     PAN = "pan"
+
+
+class CameraLock(StrEnum):
+    """Parts of a pane's camera that can be fixed via ``SceneView.lock``.
+
+    Used by :attr:`SceneView.lock` (a ``set`` of these string values) to disable
+    the matching OrbitControls action for a single pane.
+    """
+
+    ROTATE = "rotate"
+    PAN = "pan"
+    ZOOM = "zoom"
+
+
+class Navigation(StrEnum):
+    """Per-pane camera navigation mode.
+
+    ``ORBIT`` is the default free-orbit camera (rotate + pan + zoom).  ``VIEW2D``
+    switches a pane to 2D-style viewport navigation: cursor-anchored dolly zoom
+    plus screen-space pan, with no orbit.
+    """
+
+    ORBIT = "orbit"
+    VIEW2D = "2d"
 
 
 #: Canonical 2D camera stretch modes.
@@ -57,6 +86,70 @@ def _to_json(value: Any) -> Any:
     if isinstance(value, list):
         return value
     return value
+
+
+def _as_pair(value: Any, name: str) -> tuple[float, float]:
+    """Validate a 2-sequence of numbers and return it as a float pair."""
+    if not (isinstance(value, (tuple, list)) and len(value) == 2):
+        raise ValueError(f"{name} must be a (x, y) pair, got {value!r}")
+    a, b = value
+    if not (isinstance(a, (int, float)) and isinstance(b, (int, float))):
+        raise ValueError(f"{name} must be two numbers, got {value!r}")
+    return (float(a), float(b))
+
+
+def _as_limits(value: Any, name: str) -> tuple[float, float] | None:
+    """Validate an optional (min, max) pair, or pass through ``None``."""
+    if value is None:
+        return None
+    lo, hi = _as_pair(value, name)
+    if lo > hi:
+        raise ValueError(f"{name} must be ordered (min <= max), got {value!r}")
+    return (lo, hi)
+
+
+@dataclass
+class ViewportConfig:
+    """A pane's 2D viewport transform (zoom + pan) and its limits.
+
+    ``zoom`` is a scale factor (``1.0`` = full/fit framing, ``>1`` zooms in);
+    ``pan`` is the view-centre offset in normalized (NDC) units, ``(0, 0)`` =
+    centred.  ``min_zoom``/``max_zoom``/``pan_xlim``/``pan_ylim`` bound the
+    interactive navigation (mirroring the 2D view's limits).
+    """
+
+    zoom: float = 1.0
+    pan: tuple[float, float] = (0.0, 0.0)
+    min_zoom: float | None = None
+    max_zoom: float | None = None
+    pan_xlim: tuple[float, float] | None = None
+    pan_ylim: tuple[float, float] | None = None
+
+    def __post_init__(self) -> None:
+        if not (isinstance(self.zoom, (int, float)) and self.zoom > 0):
+            raise ValueError(f"zoom must be a positive number, got {self.zoom!r}")
+        self.zoom = float(self.zoom)
+        self.pan = _as_pair(self.pan, "pan")
+        self.pan_xlim = _as_limits(self.pan_xlim, "pan_xlim")
+        self.pan_ylim = _as_limits(self.pan_ylim, "pan_ylim")
+        if (
+            self.min_zoom is not None
+            and self.max_zoom is not None
+            and self.min_zoom > self.max_zoom
+        ):
+            raise ValueError(
+                f"min_zoom must be <= max_zoom, "
+                f"got {self.min_zoom!r} > {self.max_zoom!r}"
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict, omitting ``None`` limits."""
+        result: dict[str, Any] = {"zoom": self.zoom, "pan": _to_json(self.pan)}
+        for name in ("min_zoom", "max_zoom", "pan_xlim", "pan_ylim"):
+            value = getattr(self, name)
+            if value is not None:
+                result[name] = _to_json(value)
+        return result
 
 
 @dataclass(kw_only=True)
@@ -149,6 +242,40 @@ class CameraConfig3d(CameraConfig):
 
     fov: float = 50.0  # vertical field of view in degrees
     up: tuple[float, float, float] | None = None  # camera up / orbit axis
+
+
+#: Valid ``PinholeCamera.fit`` values.
+_FIT_MODES: tuple[str, ...] = ("fit", "fill")
+
+
+@dataclass(kw_only=True)
+class PinholeCamera(CameraConfig):
+    """Calibrated pinhole camera (off-center perspective projection).
+
+    Carries distortion-free intrinsics (``fx`` / ``fy`` / ``cx`` / ``cy`` plus
+    the image ``width`` / ``height``), the pose (``position`` / ``target`` /
+    ``up``), clipping (``near`` / ``far``), and a ``fit`` aspect policy.  The
+    frontend renders with an off-center projection so the principal point
+    ``(cx, cy)`` is honored.
+
+    ``fit`` controls how the image is framed into the pane: ``"fit"`` (default)
+    letterboxes to preserve the image aspect, ``"fill"`` stretches to the pane.
+    """
+
+    type: Literal["pinhole"] = "pinhole"
+
+    fx: float
+    fy: float
+    cx: float
+    cy: float
+    width: int
+    height: int
+
+    fit: Literal["fit", "fill"] = "fit"
+
+    def __post_init__(self) -> None:
+        if self.fit not in _FIT_MODES:
+            raise ValueError(f"fit must be one of {_FIT_MODES}, got {self.fit!r}")
 
 
 # ── Input specs ────────────────────────────────────────────
@@ -306,6 +433,74 @@ def get_camera_view3d(config: View3dConfig) -> CameraConfig3d:
     )
 
 
+def _to_vec3(values: Any) -> tuple[float, float, float]:
+    """Convert a 3-sequence to a plain Python ``float`` tuple."""
+    return (float(values[0]), float(values[1]), float(values[2]))
+
+
+def pinhole_camera(
+    K: Any,
+    R: Any,
+    t: Any,
+    *,
+    image_size: tuple[int, int] | list[int],
+    near: float | None = None,
+    far: float | None = None,
+    fit: Literal["fit", "fill"] = "fit",
+) -> PinholeCamera:
+    """Build a :class:`PinholeCamera` from a pinhole calibration (OpenCV).
+
+    ``K`` is the 3×3 intrinsic matrix, ``R`` the world→camera rotation, ``t``
+    the world→camera translation, so a world point ``X`` projects to pixel
+    ``u = fx·(Xc/Zc)+cx``, ``v = fy·(Yc/Zc)+cy`` for ``[Xc,Yc,Zc]ᵀ = R·X + t``.
+
+    ``image_size`` is ``(width, height)`` in pixels.  The returned camera
+    carries the intrinsics, the pose (``position``/``target``/``up``), clipping
+    (``near``/``far``), and a ``fit`` aspect policy.
+    """
+    import numpy as np
+
+    K = np.asarray(K, dtype=float)
+    R = np.asarray(R, dtype=float)
+    t = np.asarray(t, dtype=float)
+    if K.shape != (3, 3):
+        raise ValueError(f"K must be a 3x3 matrix, got shape {K.shape}")
+    if R.shape != (3, 3):
+        raise ValueError(f"R must be a 3x3 matrix, got shape {R.shape}")
+    if t.shape != (3,):
+        raise ValueError(f"t must be a length-3 vector, got shape {t.shape}")
+    if not isinstance(image_size, (tuple, list)) or len(image_size) != 2:
+        raise ValueError("image_size must be a (width, height) pair")
+
+    width, height = int(image_size[0]), int(image_size[1])
+    if width <= 0 or height <= 0:
+        raise ValueError("image_size must be positive")
+
+    fx, fy = float(K[0, 0]), float(K[1, 1])
+    cx, cy = float(K[0, 2]), float(K[1, 2])
+
+    R_t = R.T
+    position = _to_vec3(-R_t @ t)
+    forward = R_t @ np.array([0.0, 0.0, 1.0])
+    up = _to_vec3(R_t @ np.array([0.0, -1.0, 0.0]))
+    target = _to_vec3(np.asarray(position) + forward)
+
+    return PinholeCamera(
+        fx=fx,
+        fy=fy,
+        cx=cx,
+        cy=cy,
+        width=width,
+        height=height,
+        position=position,
+        target=target,
+        up=up,
+        near=near,
+        far=far,
+        fit=fit,
+    )
+
+
 def get_camera(
     view_config: View2DConfig | View3dConfig,
 ) -> CameraConfig:
@@ -345,3 +540,77 @@ def _deduce_space_dim(
     if isinstance(camera, (CameraConfig3d, View3dConfig)):
         return 3
     return None
+
+
+@dataclass
+class CameraCalibration:
+    """A pinhole camera's intrinsics + extrinsics, with a frame and units.
+
+    ``K`` is the 3×3 intrinsic matrix (pixels); ``R``/``t`` are the world→camera
+    rotation/translation expressed in ``frame``; ``image_size`` is the
+    ``(width, height)`` in pixels; and ``units`` is a scale applied to ``t`` (so
+    millimetre data can pass ``units=0.001`` to obtain metres).
+    """
+
+    K: Matrix
+    R: Matrix
+    t: Any
+    image_size: tuple[int, int]
+    frame: CoordinateFrame = OpenCVFrame()
+    units: float = 1.0
+
+    def __post_init__(self) -> None:
+        if self.K.shape != (3, 3):
+            raise ValueError(f"K must be 3×3, got shape {self.K.shape}")
+        if self.R.shape != (3, 3):
+            raise ValueError(f"R must be 3×3, got shape {self.R.shape}")
+        if len(self.image_size) != 2:
+            raise ValueError(
+                f"image_size must be a (width, height) pair, got {self.image_size!r}"
+            )
+        self.t = _to_vec3(self.t)
+        self.image_size = (int(self.image_size[0]), int(self.image_size[1]))
+        self.units = float(self.units)
+
+    def _standard_rotation(self) -> np.ndarray:
+        """The world→camera rotation in the standard (right-handed) frame."""
+        m = np.asarray(self.frame.to_matrix(), dtype=float)
+        return self.R.data @ m[:3, :3].T  # R @ Mᵀ
+
+    def _standard_translation(self) -> np.ndarray:
+        """The world→camera translation in the standard frame, scaled by ``units``."""
+        return np.asarray(self.t, dtype=float) * self.units
+
+    def world_to_camera(self) -> Matrix:
+        """Return the 4×4 world→camera matrix (standard frame, metres)."""
+        m = np.eye(4)
+        m[:3, :3] = self._standard_rotation()
+        m[:3, 3] = self._standard_translation()
+        return Matrix(m)
+
+    def camera_to_world(self) -> Matrix:
+        """Return the 4×4 camera→world matrix (standard frame, metres)."""
+        return self.world_to_camera().inverse()
+
+    def camera_center(self) -> tuple[float, float, float]:
+        """Return the camera's world position (standard frame)."""
+        c = self.camera_to_world().data[:3, 3]
+        return (float(c[0]), float(c[1]), float(c[2]))
+
+    def to_pinhole_camera(
+        self,
+        *,
+        near: float | None = None,
+        far: float | None = None,
+        fit: Literal["fit", "fill"] = "fit",
+    ) -> PinholeCamera:
+        """Build a :class:`PinholeCamera` placed in the standard (right-handed) frame."""
+        return pinhole_camera(
+            self.K.data,
+            self._standard_rotation(),
+            self._standard_translation(),
+            image_size=self.image_size,
+            near=near,
+            far=far,
+            fit=fit,
+        )

@@ -14,14 +14,13 @@ import {
 export async function createSphere(ent) {
     const color = parseColor(ent, '#ffaa00');
     const opacity = styleParam(ent, 'opacity', 0.4);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
 
+    // Canonical: a sphere at the origin; placement rides on the node transform.
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const doubleSided = styleParam(ent, 'double_sided', false);
     const material = makeMaterial(color, opacity, doubleSided);
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(center[0], center[1], center[2]);
 
     // ── Texture label ──
     const texLabel = ent.style?.texture_label;

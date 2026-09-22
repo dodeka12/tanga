@@ -10,11 +10,12 @@ import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { applyImageUniforms } from '../renderers/image.js';
+import { createImageBackground, setBackgroundAspect, setBackgroundCrop } from '../renderers/image-background.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
 import { attachGroupView, detachGroup, detachAll, releaseAttachedGroups } from '../controls-attached.js';
-import { createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
+import { applyCameraLock, applyPinhole, createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
 import { InteractionController } from '../interaction.js';
 import { AxesOverlay } from '../axes-overlay.js';
@@ -98,12 +99,17 @@ export function applyOverlayAnchor(el, anchor) {
 
 /** Renders a single named scene; `View` supplies extent + resize observation. */
 export class ThreeJsView extends View {
-    constructor(sceneName, ws = null, cameraOverride = null, viewId = null) {
+    constructor(sceneName, ws = null, cameraOverride = null, viewId = null, lock = null, navigation = null, controls = null, viewport = null) {
         super();
         this.sceneName = sceneName || '';
         this._ws = ws;
         this._cameraOverride = cameraOverride || null;
         this.viewId = viewId || null;
+        this._lock = lock || null;
+        this._navigation = navigation || null;
+        this._controls = controls || null;
+        this._viewport = viewport || null;
+        this._viewportDrag = null;
         this._browserId = null;
         this._interaction = null;
 
@@ -129,6 +135,10 @@ export class ThreeJsView extends View {
         this._axesOverlay = null;
         this._axesOverlayId = null;
         this._appliedInset = null;      // inset last applied to the camera/canvas
+        this._backgroundImage = null;
+        this._backgroundMesh = null;
+        this._hide = new Set();
+        this._show = null;
 
         this.el.classList.add('tanga-three-view');
         this.el.style.position = 'relative';
@@ -284,6 +294,8 @@ export class ThreeJsView extends View {
 
         if (webglOk && this.renderer) {
             this.controls = setupControls(this.camera, this.renderer);
+            this.controls.addEventListener('change', () => this._syncViewportFromControls());
+            this._bindViewportInput();
             this._interaction = new InteractionController(this.camera, this.renderer.domElement, this.controls, this._ws);
         }
     }
@@ -328,6 +340,10 @@ export class ThreeJsView extends View {
         const plotHeight = Math.max(1, height - inset);
         if (this.camera) {
             handleResize(this.camera, this.renderer, this.labelRenderer, this.sceneConfig?.space_dim || 3, width, plotHeight);
+            this._applyViewport();
+        }
+        if (this._backgroundMesh && width > 0 && height > 0) {
+            setBackgroundAspect(this._backgroundMesh, width / height);
         }
         this._appliedInset = inset;
         updateLineResolutions();
@@ -422,7 +438,7 @@ export class ThreeJsView extends View {
 
         this._applyCamera(cameraConfig);
 
-        configureControls(this.controls, this.renderer, spaceDim, config.controls);
+        this._reconfigureControls();
         this._interaction.setSpaceDim(spaceDim);
         this.resize();
 
@@ -462,13 +478,6 @@ export class ThreeJsView extends View {
 
         this.camera = switchToCamera(this.camera, this.controls, spaceDim, cameraConfig || null, viewWidth, viewHeight);
         this._interaction.setCamera(this.camera);
-
-        const cc = cameraConfig || {};
-        if (cc.position) this.camera.position.set(cc.position[0], cc.position[1], cc.position[2]);
-        if (cc.target) this.controls.target.set(cc.target[0], cc.target[1], cc.target[2]);
-        if (cc.fov) { this.camera.fov = cc.fov; this.camera.updateProjectionMatrix(); }
-        if (cc.near) { this.camera.near = cc.near; this.camera.updateProjectionMatrix(); }
-        if (cc.far) { this.camera.far = cc.far; this.camera.updateProjectionMatrix(); }
         this.controls.update();
     }
 
@@ -481,6 +490,227 @@ export class ThreeJsView extends View {
         const effective = this._cameraOverride || (this.sceneConfig && this.sceneConfig.camera);
         this._applyCamera(effective);
         this.resize();
+    }
+
+    /** Update this pane's camera lock and re-apply it to the controls. */
+    setLock(lock) {
+        this._lock = lock || null;
+        if (this.controls) {
+            applyCameraLock(this.controls, this._lock);
+        }
+    }
+
+    /** Update this pane's navigation mode and re-apply the controls. */
+    setNavigation(navigation) {
+        this._navigation = navigation || null;
+        this._reconfigureControls();
+    }
+
+    /** Update this pane's per-pane controls mapping and re-apply it. */
+    setControls(controls) {
+        this._controls = controls || null;
+        this._reconfigureControls();
+    }
+
+    /** (Re)apply the navigation mode + button mapping + lock to the controls. */
+    _reconfigureControls() {
+        if (!this.controls || !this.renderer) return;
+        const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
+        const sceneControls = (this.sceneConfig && this.sceneConfig.controls) || null;
+        configureControls(
+            this.controls, this.renderer, spaceDim,
+            this._controls || sceneControls, this._navigation,
+        );
+        applyCameraLock(this.controls, this._lock);
+        const pinhole2d = this._navigation === '2d' && this.camera && this.camera.userData._pinhole;
+        if (pinhole2d) {
+            // A calibrated camera pane is fixed in 3D; the viewport crop is
+            // driven by the custom pointer handlers, so OrbitControls must not
+            // move the camera.
+            this.controls.enableRotate = false;
+            this.controls.enablePan = false;
+            this.controls.enableZoom = false;
+        }
+    }
+
+    /**
+     * Merge a partial `{zoom?, pan?}` viewport into this pane's viewport state
+     * and re-apply it (per-pane `view_viewport` message).
+     */
+    setViewport(viewport) {
+        const v = viewport || {};
+        const cur = this._viewport || { zoom: 1, pan: [0, 0] };
+        this._viewport = {
+            zoom: v.zoom !== undefined ? Number(v.zoom) : cur.zoom,
+            pan: v.pan !== undefined ? [Number(v.pan[0]), Number(v.pan[1])] : cur.pan,
+        };
+        this._applyViewport();
+    }
+
+    /** Apply this pane's viewport (zoom + pan) to the camera. */
+    _applyViewport() {
+        if (!this.camera) return;
+        const vp = this._viewport;
+        if (this.camera.userData._pinhole) {
+            // Pinhole framing is the single source for projection + background;
+            // the crop window is folded in by `_applyPinholeFraming` (Phase 6).
+            this._applyPinholeFraming(vp);
+            return;
+        }
+        if (!vp) {
+            this.camera.zoom = 1;
+            this.camera.clearViewOffset();
+            this.camera.updateProjectionMatrix();
+            return;
+        }
+        this.camera.zoom = vp.zoom;
+        const w = this.width || 1;
+        const h = this.height || 1;
+        // Pan shifts the rendered window opposite the drag (screen-space).
+        this.camera.setViewOffset(
+            w, h,
+            -(vp.pan[0] || 0) * w / 2,
+            -(vp.pan[1] || 0) * h / 2,
+            w, h,
+        );
+        this.camera.updateProjectionMatrix();
+    }
+
+    /** Fold the viewport crop into the pinhole framing + background image. */
+    _applyPinholeFraming(vp) {
+        const p = this.camera && this.camera.userData._pinhole;
+        if (!p) return;
+        const crop = vp ? { zoom: vp.zoom, pan: vp.pan } : null;
+        const aspect = (this.width || 1) / Math.max(1, this.height || 1);
+        applyPinhole(this.camera, p, aspect, crop);
+        if (this._backgroundMesh) {
+            setBackgroundCrop(this._backgroundMesh, this.camera.userData._pinholeCrop || null);
+        }
+    }
+
+    /**
+     * OrbitControls-driven gesture → keep the viewport state in sync for the
+     * non-pinhole `"2d"` case (the calibrated-camera crop is handled by the
+     * custom pointer handlers below).
+     */
+    _syncViewportFromControls() {
+        if (this._navigation !== '2d' || !this.camera) return;
+        if (this.camera.userData._pinhole) return;
+        const cur = this._viewport || { zoom: 1, pan: [0, 0] };
+        this._viewport = { zoom: this.camera.zoom || 1, pan: cur.pan };
+    }
+
+    // ── 2D viewport crop input (calibrated camera panes) ────────────────
+
+    /** Install wheel + drag handlers that drive the pinhole crop window. */
+    _bindViewportInput() {
+        const el = this.renderer && this.renderer.domElement;
+        if (!el) return;
+        el.addEventListener('wheel', (e) => this._onViewportWheel(e), { passive: false });
+        el.addEventListener('pointerdown', (e) => this._onViewportPointerDown(e));
+        el.addEventListener('pointermove', (e) => this._onViewportPointerMove(e));
+        el.addEventListener('pointerup', (e) => this._onViewportPointerUp(e));
+        el.addEventListener('pointercancel', (e) => this._onViewportPointerUp(e));
+    }
+
+    /** The crop input only applies to a fixed calibrated camera pane. */
+    _viewportInputEnabled() {
+        return this._navigation === '2d' && !!this.camera && !!this.camera.userData._pinhole;
+    }
+
+    /** Pointer position in pane-NDC: x right=+1, y bottom=+1 (image v-down). */
+    _screenNdc(e) {
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ny = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+        return [nx, ny];
+    }
+
+    _onViewportWheel(e) {
+        if (!this._viewportInputEnabled()) return;
+        e.preventDefault();
+        const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        const [nx, ny] = this._screenNdc(e);
+        this._zoomViewport(nx, ny, Math.exp(-delta * 0.0015));
+    }
+
+    _onViewportPointerDown(e) {
+        if (!this._viewportInputEnabled()) return;
+        const [nx, ny] = this._screenNdc(e);
+        this._viewportDrag = { nx, ny, pointerId: e.pointerId };
+        this.renderer.domElement.setPointerCapture(e.pointerId);
+    }
+
+    _onViewportPointerMove(e) {
+        if (!this._viewportDrag || e.pointerId !== this._viewportDrag.pointerId) return;
+        const [nx, ny] = this._screenNdc(e);
+        const dnx = nx - this._viewportDrag.nx;
+        const dny = ny - this._viewportDrag.ny;
+        this._viewportDrag = { nx, ny, pointerId: e.pointerId };
+        this._panViewport(dnx, dny);
+    }
+
+    _onViewportPointerUp(e) {
+        if (this._viewportDrag && e.pointerId === this._viewportDrag.pointerId) {
+            this._viewportDrag = null;
+        }
+    }
+
+    /** Clamp `pan` so the crop window stays inside the image extent. */
+    _clampPan(pan, zoom) {
+        const lim = 1 - 1 / zoom;
+        return [
+            Math.min(lim, Math.max(-lim, pan[0])),
+            Math.min(lim, Math.max(-lim, pan[1])),
+        ];
+    }
+
+    /** Cursor-anchored zoom: keep the image point under `(nx, ny)` fixed. */
+    _zoomViewport(nx, ny, factor) {
+        const vp = this._viewport || { zoom: 1, pan: [0, 0] };
+        const newZoom = Math.min(1000, Math.max(1, vp.zoom * factor));
+        if (newZoom === vp.zoom) return;
+        const k = 1 / vp.zoom - 1 / newZoom;
+        this._viewport = {
+            zoom: newZoom,
+            pan: this._clampPan([vp.pan[0] + nx * k, vp.pan[1] + ny * k], newZoom),
+        };
+        this._applyViewport();
+    }
+
+    /** Drag pan: shift the crop opposite the pointer (grab-and-pan). */
+    _panViewport(dnx, dny) {
+        const vp = this._viewport || { zoom: 1, pan: [0, 0] };
+        const z = vp.zoom || 1;
+        this._viewport = {
+            zoom: vp.zoom,
+            pan: this._clampPan([vp.pan[0] - dnx / z, vp.pan[1] - dny / z], z),
+        };
+        this._applyViewport();
+    }
+
+    /** Mount (or clear) this pane's full-viewport background image. */
+    setBackgroundImage(imageMeta) {
+        this._backgroundImage = imageMeta || null;
+        if (this._backgroundMesh) {
+            this.scene.remove(this._backgroundMesh);
+            this._backgroundMesh = null;
+        }
+        if (this._backgroundImage) {
+            this._backgroundMesh = createImageBackground(this._backgroundImage);
+            this.scene.add(this._backgroundMesh);
+        }
+    }
+
+    /** Set this pane's entity visibility filter (per-pane ``hide``/``show``). */
+    setVisibilityFilter(hide, show) {
+        this._hide = new Set(hide || []);
+        this._show = show && show.length ? new Set(show) : null;
+    }
+
+    _isFilteredOut(id) {
+        if (this._hide.has(id)) return true;
+        return this._show !== null && !this._show.has(id);
     }
 
     _renderTitle(titleText) {
@@ -681,6 +911,10 @@ export class ThreeJsView extends View {
             this.sceneObjects.delete(msg.id);
         }
         if (msg.layer === 'scene') {
+            // Per-pane visibility filter (SceneView.hide / SceneView.show).
+            if (this._isFilteredOut(msg.id)) {
+                return;
+            }
             // SDF proxies require WebGL2 (GLSL3 + gl_FragDepth); on WebGL1 they
             // are skipped and a single yellow warning banner is shown.
             if (msg.kind === 'sdf' && !this._isWebGL2) {

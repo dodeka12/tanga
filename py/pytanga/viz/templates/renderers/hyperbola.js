@@ -1,14 +1,13 @@
-// Hyperbola renderer — samples both branches as a fat-line curve.
+// Hyperbola renderer — samples both branches as a fat-line curve, in the
+// canonical XY plane (transverse dir1 → +X, conjugate dir2 → +Y).
 import * as THREE from 'three';
 import { makeFatLine, styleParam, parseColor, tagEntity, applyStyleUpdate, contentChanged } from './utils.js';
+import { styleNeedsRebuild } from './style-diff.js';
 
 export function createHyperbola(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const center = ent.center || [0, 0, 0];
-    const d1 = new THREE.Vector3(...(ent.dir1 || [1, 0, 0])).normalize();
-    const d2 = new THREE.Vector3(...(ent.dir2 || [0, 1, 0])).normalize();
     const a = Math.max(ent.a || 1.0, 0.001);
     const b = Math.max(ent.b || 1.0, 0.001);
     // `extent` is a spatial half-size; stop sampling once a branch leaves it.
@@ -28,9 +27,7 @@ export function createHyperbola(ent) {
         for (let i = 0; i <= segments; i++) {
             const t = -tMax + (2 * tMax * i) / segments;
             points.push(
-                new THREE.Vector3(center[0], center[1], center[2])
-                    .addScaledVector(d1, sign * a * Math.cosh(t))
-                    .addScaledVector(d2, b * Math.sinh(t)),
+                new THREE.Vector3(sign * a * Math.cosh(t), b * Math.sinh(t), 0),
             );
         }
         group.add(makeFatLine(points, color, opacity, thickness));
@@ -41,7 +38,8 @@ export function createHyperbola(ent) {
 }
 
 export function updateHyperbola(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['a', 'b', 'dir1', 'dir2', 'center'])) return false;
+    if (contentChanged(ent, prev, ['a', 'b'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;
 }

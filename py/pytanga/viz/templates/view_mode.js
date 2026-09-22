@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 
 import { finiteAspect, orthoFrustum, applyOrthoFrustum } from './camera-fit.js';
+import { pinholeFraming } from './pinhole-framing.js';
 
 /**
  * Create a camera appropriate for the given space dimension.
@@ -28,6 +29,18 @@ function _newOrthographic() {
 
 function _newPerspective(aspect, fov = 50) {
     return new THREE.PerspectiveCamera(fov, aspect, 0.1, 1000);
+}
+
+// Set an off-center perspective projection from stored pinhole intrinsics, and
+// keep `projectionMatrixInverse` in sync so interaction raycasts stay correct.
+// This is the single rebuild path used by both `switchToCamera` and `handleResize`.
+export function applyPinhole(camera, p, aspect, crop) {
+    const f = pinholeFraming(
+        p.fx, p.fy, p.cx, p.cy, p.width, p.height, p.near, p.far, aspect, p.fit || 'fit', crop || null
+    );
+    camera.projectionMatrix.makePerspective(f.left, f.right, f.top, f.bottom, f.near, f.far);
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+    camera.userData._pinholeCrop = f.crop;
 }
 
 /**
@@ -137,6 +150,35 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
         return cam;
     }
 
+    // ── Calibrated pinhole (off-center projection) ──
+    if (cc.type === 'pinhole') {
+        let cam = camera;
+        if (cam.isOrthographicCamera) {
+            cam = _newPerspective(aspect, 50);
+            controls.object = cam;
+        }
+
+        const pinhole = {
+            fx: cc.fx, fy: cc.fy, cx: cc.cx, cy: cc.cy,
+            width: cc.width, height: cc.height,
+            near: cc.near || 0.1, far: cc.far || 1000,
+            fit: cc.fit || 'fit',
+        };
+        cam.userData._pinhole = pinhole;
+        cam.aspect = aspect;
+        cam.near = pinhole.near;
+        cam.far = pinhole.far;
+        if (cc.up) cam.up.set(cc.up[0], cc.up[1], cc.up[2]);
+        if (cc.position) cam.position.set(cc.position[0], cc.position[1], cc.position[2]);
+        if (cc.target) {
+            cam.lookAt(cc.target[0], cc.target[1], cc.target[2]);
+            controls.target.set(cc.target[0], cc.target[1], cc.target[2]);
+        }
+        applyPinhole(cam, pinhole, aspect);
+        controls.update();
+        return cam;
+    }
+
     // ── Default 2D (no explicit view config) ──
     if (spaceDim === 2 && !camera.isOrthographicCamera) {
         const frustumSize = 20;  // sensible default full height
@@ -184,16 +226,19 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
  * @param {object|null} controlsConfig  optional per-button overrides, e.g.
  *   { left: "pan", right: "dolly" } (a ``null`` value disables a button)
  */
-export function configureControls(controls, renderer, spaceDim, controlsConfig) {
+export function configureControls(controls, renderer, spaceDim, controlsConfig, navigation) {
     // Action string → THREE.MOUSE code.
     const ACTION = {
         rotate: THREE.MOUSE.ROTATE,
         dolly: THREE.MOUSE.DOLLY,
         pan: THREE.MOUSE.PAN
     };
+    const nav2d = navigation === '2d';
     // Per-dimension defaults; a scene-level `controls` config overrides
-    // individual buttons (a `null` value disables that button).
-    const defaults = spaceDim === 2
+    // individual buttons (a `null` value disables that button).  A pane in
+    // `"2d"` navigation swaps rotate for pan (dolly + screen-space pan, no
+    // orbit).
+    const defaults = (spaceDim === 2 || nav2d)
         ? { left: 'pan', middle: 'dolly', right: 'pan' }
         : { left: 'rotate', middle: 'dolly', right: 'pan' };
     const mapping = { ...defaults, ...(controlsConfig || {}) };
@@ -215,6 +260,25 @@ export function configureControls(controls, renderer, spaceDim, controlsConfig) 
     } else {
         controls.screenSpacePanning = true;
     }
+    if (nav2d) {
+        controls.enableRotate = false;
+        controls.zoomToCursor = true;
+        controls.screenSpacePanning = true;
+    }
+}
+
+/**
+ * Fix parts of a pane's camera by disabling the matching OrbitControls action.
+ * Called after ``configureControls`` for panes that carry a ``SceneView.lock``.
+ *
+ * @param {THREE.OrbitControls} controls
+ * @param {string[]|null} lock  e.g. `["rotate", "pan", "zoom"]`
+ */
+export function applyCameraLock(controls, lock) {
+    const locked = new Set(lock || []);
+    if (locked.has('rotate')) controls.enableRotate = false;
+    if (locked.has('pan')) controls.enablePan = false;
+    controls.enableZoom = !locked.has('zoom');
 }
 
 export { fitCamera } from './fit_camera.js';
@@ -242,7 +306,11 @@ export function handleResize(camera, renderer, labelRenderer, spaceDim, width, h
     }
 
     camera.aspect = aspect;
-    camera.updateProjectionMatrix();
+    if (camera.userData._pinhole) {
+        applyPinhole(camera, camera.userData._pinhole, aspect);
+    } else {
+        camera.updateProjectionMatrix();
+    }
     renderer.setSize(width, height);
 
     if (labelRenderer) {

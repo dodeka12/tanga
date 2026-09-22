@@ -13,16 +13,13 @@ import {
 export function createEllipsoid(ent) {
     const color = parseColor(ent, '#ffaa00');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const radii = ent.radii || [1, 1, 1];
 
+    // Canonical: a unit sphere scaled by per-axis radii at the origin;
+    // placement (center + rotation quaternion) rides on the node transform.
     const geometry = new THREE.SphereGeometry(1, 32, 32);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
     mesh.scale.set(radii[0], radii[1], radii[2]);
-    if (ent.rotation) {
-        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
-    }
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {

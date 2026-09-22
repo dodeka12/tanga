@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import {
     makeMaterial,
     makeFatSegmentsFromFlat,
-    rotationFromNormal,
     styleParam,
     parseColor,
     tagEntity,
@@ -14,9 +13,8 @@ import {
 export function createRectangle2D(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 1.0);
-    const center = ent.center || [0, 0, 0];
     const size = ent.size || [1, 1];
-    const normal = ent.normal || [0, 0, 1];
+    // Canonical plane is XY (normal +Z); placement rides on the node transform.
     const angle = ent.angle || 0.0;
 
     const group = new THREE.Group();
@@ -44,8 +42,6 @@ export function createRectangle2D(ent) {
     ], color, opacity, thickness);
     group.add(outline);
 
-    group.position.set(center[0], center[1], center[2]);
-    group.setRotationFromQuaternion(rotationFromNormal(normal[0], normal[1], normal[2]));
     if (angle) {
         group.rotateZ(angle);
     }

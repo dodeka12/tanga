@@ -28,7 +28,7 @@ class TestFrontendTransformShape:
         patch = node.patch("full")
         assert patch["value"]["parent_id"] == g.id
         assert "transform" in patch["value"]
-        assert patch["value"]["transform"]["position"] == [0.0, 0.0, 0.0]
+        assert patch["value"]["transform"]["position"] == [1.0, 2.0, 3.0]
 
     def test_style_patch_shape(self):  # noqa: ANN201
         s = Scene()
@@ -57,7 +57,7 @@ class TestFrontendTransformShape:
         patch = node.patch("content")
         assert patch["aspect"] == "content"
         assert patch["value"]["kind"] == "Point"
-        assert "position" in patch["value"]
+        assert "position" not in patch["value"]
         assert "transform" not in patch["value"]
         assert "parent_id" not in patch["value"]
 

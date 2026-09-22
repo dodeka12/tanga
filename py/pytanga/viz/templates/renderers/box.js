@@ -13,15 +13,12 @@ import {
 export function createBox(ent) {
     const color = parseColor(ent, '#88ccff');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const size = ent.size || [1, 1, 1];
 
+    // Canonical: an axis-aligned box centered at the origin; placement (center
+    // + rotation quaternion) rides on the node transform.
     const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
-    if (ent.rotation) {
-        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
-    }
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {

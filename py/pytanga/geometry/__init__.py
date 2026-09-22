@@ -57,6 +57,7 @@ from .entities import (
     Ellipse,
     Ellipsoid,
     Entity,
+    Frustum,
     HDirection,
     HPoint,
     Hyperbola,
@@ -100,6 +101,15 @@ from .operators import (
     TripleReflection,
     TwistBivector,
 )
+from .matrix import (
+    Matrix,
+    MatrixProvider,
+)
+from .frame import (
+    CoordinateFrame,
+    OpenCVFrame,
+)
+from .transform import Transform
 
 __all__ = [
     # Entities
@@ -116,6 +126,7 @@ __all__ = [
     "Ellipse",
     "Ellipsoid",
     "Entity",
+    "Frustum",
     "HDirection",
     "HPoint",
     "Hyperbola",
@@ -157,6 +168,14 @@ __all__ = [
     "Translator",
     "TripleReflection",
     "TwistBivector",
+    # Matrix + matrix provider protocol
+    "Matrix",
+    "MatrixProvider",
+    # Coordinate frames
+    "CoordinateFrame",
+    "OpenCVFrame",
+    # Transform (canonical TRS placement node)
+    "Transform",
     # Geometry facade
     "Geometry",
     # Analysis

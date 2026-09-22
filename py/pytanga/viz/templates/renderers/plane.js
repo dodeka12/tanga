@@ -5,7 +5,6 @@
 import * as THREE from 'three';
 import {
     makeMaterial,
-    rotationFromNormal,
     styleParam,
     parseColor,
     tagEntity,
@@ -17,11 +16,11 @@ import {
  * Build the quad geometry for a plane entity.
  *
  * When ``ent.span_u`` / ``ent.span_v`` are present, returns a parallelogram
- * quad (two triangles) whose corners are ``point``, ``point + span_u``,
- * ``point + span_u + span_v`` and ``point + span_v`` — already in world space,
- * so the mesh must not be repositioned/reoriented.  Otherwise returns ``null``
- * and the caller falls back to the default square of half-side ``extent``
- * centred at the origin (positioned/oriented from ``point``/``normal``).
+ * quad (two triangles) whose corners are ``±span_u/2 ± span_v/2`` around the
+ * origin (the span vectors are world-space edge vectors; the node transform
+ * positions the quad).  Otherwise returns ``null`` and the caller falls back to
+ * the default square of half-side ``extent`` centred at the origin (the
+ * canonical XY plane).
  */
 function _planeGeometry(ent) {
     const spanU = ent.span_u;
@@ -29,12 +28,9 @@ function _planeGeometry(ent) {
     if (!Array.isArray(spanU) || !Array.isArray(spanV)) {
         return null;
     }
-    const p = new THREE.Vector3(...(ent.point || [0, 0, 0]));
     const u = new THREE.Vector3(...spanU);
     const v = new THREE.Vector3(...spanV);
-    // `point` is the plane *centre* (consistent with the non-span renderer
-    // path and the label anchor), so the corners sit ±u/2 ±v/2 around it.
-    const a = p.clone().addScaledVector(u, -0.5).addScaledVector(v, -0.5);
+    const a = u.clone().multiplyScalar(-0.5).addScaledVector(v, -0.5);
     const b = a.clone().add(u);
     const c = a.clone().add(u).add(v);
     const d = a.clone().add(v);
@@ -54,20 +50,11 @@ export async function createPlane(ent) {
     const color = parseColor(ent, '#4488ff');
     const opacity = styleParam(ent, 'opacity', 0.3);
     const extent = ent.extent ?? styleParam(ent, 'extent', 10.0);
-    const point = ent.point || [0, 0, 0];
-    const normal = ent.normal || [0, 0, 1];
 
     const spanGeometry = _planeGeometry(ent);
     const geometry = spanGeometry || new THREE.PlaneGeometry(extent * 2, extent * 2);
     const material = makeMaterial(color, opacity, true);
     const mesh = new THREE.Mesh(geometry, material);
-
-    if (spanGeometry) {
-        // Vertices are already in world space (from point + span_u/span_v).
-    } else {
-        mesh.position.set(point[0], point[1], point[2]);
-        mesh.setRotationFromQuaternion(rotationFromNormal(normal[0], normal[1], normal[2]));
-    }
 
     // ── Texture label ──
     const texLabel = ent.style?.texture_label;

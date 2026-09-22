@@ -196,6 +196,8 @@ class _GltfBuilder:
             self._meshes.append({"primitives": gltf_prims})
             node["mesh"] = mesh_idx
 
+        # Operator kinds (out of scope for placement decomposition) still carry
+        # their placement in content; read it via `_get_position`/`_get_rotation`.
         pos = self._get_position(ent)
         if pos and any(p != 0 for p in pos):
             node["translation"] = list(pos)
@@ -203,7 +205,8 @@ class _GltfBuilder:
         if rot and not (rot[0] == 0 and rot[1] == 0 and rot[2] == 0 and rot[3] == 1):
             node["rotation"] = list(rot)
 
-        # Apply the scene-graph node transform (Euler ``"XYZ"`` → quaternion).
+        # Placement entities carry their placement on the node transform
+        # (position + quaternion + scale).
         transform = ent.get("transform")
         if transform:
             tp = transform.get("position")
@@ -211,8 +214,8 @@ class _GltfBuilder:
             ts = transform.get("scale")
             if tp and any(v != 0 for v in tp):
                 node["translation"] = list(tp)
-            if tr and any(v != 0 for v in tr):
-                node["rotation"] = list(self._euler_xyz_to_quat(tr))
+            if tr and not (tr[0] == 0 and tr[1] == 0 and tr[2] == 0 and tr[3] == 1):
+                node["rotation"] = list(tr)
             if ts and not (ts[0] == 1 and ts[1] == 1 and ts[2] == 1):
                 node["scale"] = list(ts)
 
@@ -471,49 +474,6 @@ class _GltfBuilder:
                 v = v / np.linalg.norm(v)
                 return (float(v[0]), float(v[1]), float(v[2]), 0.0)
         return None
-
-    @staticmethod
-    def _euler_xyz_to_quat(euler: list[float]) -> tuple[float, float, float, float]:
-        """Convert Euler angles (order ``"XYZ"``, ``R = Rx @ Ry @ Rz``) to a quaternion."""
-        from pytanga.viz import _transforms as _T
-
-        rx = _T.rotation_matrix((1.0, 0.0, 0.0), float(euler[0]))
-        ry = _T.rotation_matrix((0.0, 1.0, 0.0), float(euler[1]))
-        rz = _T.rotation_matrix((0.0, 0.0, 1.0), float(euler[2]))
-        r = (rx @ ry @ rz)[:3, :3]
-
-        t = float(np.trace(r))
-        if t > 0.0:
-            s = math.sqrt(t + 1.0) * 2.0
-            return _quad(
-                (r[2, 1] - r[1, 2]) / s,
-                (r[0, 2] - r[2, 0]) / s,
-                (r[1, 0] - r[0, 1]) / s,
-                0.25 * s,
-            )
-        if r[0, 0] > r[1, 1] and r[0, 0] > r[2, 2]:
-            s = math.sqrt(1.0 + r[0, 0] - r[1, 1] - r[2, 2]) * 2.0
-            return _quad(
-                0.25 * s,
-                (r[0, 1] + r[1, 0]) / s,
-                (r[0, 2] + r[2, 0]) / s,
-                (r[2, 1] - r[1, 2]) / s,
-            )
-        if r[1, 1] > r[2, 2]:
-            s = math.sqrt(1.0 + r[1, 1] - r[0, 0] - r[2, 2]) * 2.0
-            return _quad(
-                (r[0, 1] + r[1, 0]) / s,
-                0.25 * s,
-                (r[1, 2] + r[2, 1]) / s,
-                (r[0, 2] - r[2, 0]) / s,
-            )
-        s = math.sqrt(1.0 + r[2, 2] - r[0, 0] - r[1, 1]) * 2.0
-        return _quad(
-            (r[0, 2] + r[2, 0]) / s,
-            (r[1, 2] + r[2, 1]) / s,
-            0.25 * s,
-            (r[1, 0] - r[0, 1]) / s,
-        )
 
     def _prim_to_gltf(self, prim: _Primitive, mat_idx: int) -> dict[str, Any]:
         po, pl = self._write_buffer(prim.positions)

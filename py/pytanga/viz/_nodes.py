@@ -6,7 +6,8 @@
 Node hierarchy:
 
 - :class:`Transform` — canonical TRS (translation + Euler-``"XYZ"`` rotation +
-  scale) with a derived 4×4 matrix and mutators.
+  scale) with a derived 4×4 matrix and mutators; defined in
+  :mod:`pytanga.geometry.transform` and re-exported here.
 - :class:`VizNode` — base node (id/name/layer/kind/visible) with aspect-dirty
   tracking.
 - :class:`VizSceneObject` — scene-layer node carrying an entity, a resolved
@@ -25,27 +26,26 @@ from typing import Any, cast
 
 import numpy as np
 
+from pytanga.geometry.transform import Transform
+
+from ._decompose import (
+    DEFAULT_DIFF_EPSILON,
+    _entity_decompose,
+    is_placement_entity,
+    shapes_differ,
+    transforms_differ,
+)
 from . import _transforms as _T
 from ._ids import generate_id
 from ._style_dict import StylesMap, _merge_style
 from ._types import (
     TransformInput,
-    TransformOperator,
     TransformRotation,
     Triple,
     Vec3,
-    _as_euler,
     _as_vec3,
 )
-
-
-def _is_vector_like(value: Any) -> bool:
-    """Return ``True`` for non-scalar 3-vectors (tuples/lists/entity-like)."""
-    if isinstance(value, (int, float, np.integer, np.floating)):
-        return False
-    return hasattr(value, "__len__") or (
-        hasattr(value, "x") and hasattr(value, "y") and hasattr(value, "z")
-    )
+from pytanga.geometry.matrix import MatrixProvider
 
 
 def _assign_style_field(style: Any, key: str, value: Any) -> Any:
@@ -113,139 +113,16 @@ def _style_to_dict(style: Any) -> dict[str, Any]:
     return dict(getattr(style, "__dict__", {}))
 
 
-class Transform:
-    """Canonical TRS transform (translation, Euler-``"XYZ"`` rotation, scale).
-
-    Position and rotation are stored as Euler triples; the rotation order is
-    ``"XYZ"`` (three.js default), i.e. ``R = Rx @ Ry @ Rz``.  The 4×4 matrix
-    is derived on demand and used for composition/decomposition only.
-    """
-
-    def __init__(
-        self,
-        position: Vec3 = (0.0, 0.0, 0.0),
-        rotation: TransformRotation = (0.0, 0.0, 0.0),
-        scale: Triple = (1.0, 1.0, 1.0),
-    ) -> None:
-        self.position: tuple[float, float, float] = _as_vec3(position)
-        self.rotation: tuple[float, float, float] = _as_euler(rotation)
-        self.scale: tuple[float, float, float] = _as_vec3(scale)
-
-    def matrix(self) -> np.ndarray:
-        """Return the derived 4×4 transform matrix ``T @ R @ S``."""
-        rx = _T.rotation_matrix((1.0, 0.0, 0.0), self.rotation[0])
-        ry = _T.rotation_matrix((0.0, 1.0, 0.0), self.rotation[1])
-        rz = _T.rotation_matrix((0.0, 0.0, 1.0), self.rotation[2])
-        r = rx @ ry @ rz
-        return _T.translation_matrix(*self.position) @ r @ _T.scale_matrix(*self.scale)
-
-    def set_matrix(self, m: Any) -> "Transform":
-        """Set position/rotation/scale from a 4×4 matrix (decompose)."""
-        pos, euler, scale = _T.to_trs(np.asarray(m, dtype=np.float64))
-        self.position = pos
-        self.rotation = euler
-        self.scale = scale
-        return self
-
-    def from_matrix(self, m: Any) -> "Transform":
-        """Alias for :meth:`set_matrix`."""
-        return self.set_matrix(m)
-
-    @classmethod
-    def from_operator(cls, op: TransformOperator) -> "Transform":
-        """Build a ``Transform`` from a GA operator (``Translator``/``Rotor``/
-        ``GeneralRotor``/``Motor``/``Dilator``).
-
-        Uses the same ``operator_to_matrix`` conversion that
-        :meth:`VizSceneObject.apply_transform` relies on.
-        """
-        return cls().set_matrix(_T.operator_to_matrix(op))
-
-    def apply_matrix(self, m: Any, space: str = "local") -> "Transform":
-        """Compose with *m* in local or world space.
-
-        ``"local"`` post-multiplies (``M_new = M @ m``); ``"world"``
-        pre-multiplies (``M_new = m @ M``).  The result is decomposed back to
-        TRS.
-        """
-        m = np.asarray(m, dtype=np.float64)
-        if space == "local":
-            return self.set_matrix(self.matrix() @ m)
-        if space == "world":
-            return self.set_matrix(m @ self.matrix())
-        raise ValueError(f"Unknown space {space!r}; expected 'local' or 'world'")
-
-    def translate(self, x: Any = 0.0, y: float = 0.0, z: float = 0.0) -> "Transform":
-        """Translate by ``(x, y, z)``, or by a 3-vector supplied as *x*."""
-        if _is_vector_like(x):
-            dx, dy, dz = _as_vec3(x)
-        else:
-            dx, dy, dz = float(x), float(y), float(z)
-        self.position = (
-            self.position[0] + dx,
-            self.position[1] + dy,
-            self.position[2] + dz,
-        )
-        return self
-
-    def rotate(self, axis: Any, angle: float) -> "Transform":
-        """Rotate in local space by *angle* about *axis* (axis-angle)."""
-        self.apply_matrix(_T.rotation_matrix(axis, angle), space="local")
-        return self
-
-    def scale_by(
-        self,
-        x: float = 1.0,
-        y: float | None = None,
-        z: float | None = None,
-    ) -> "Transform":
-        """Scale component-wise (or uniformly when only *x* is given)."""
-        if y is None and z is None:
-            sx = sy = sz = float(x)
-        else:
-            sx = float(x)
-            sy = float(y if y is not None else 1.0)
-            sz = float(z if z is not None else 1.0)
-        self.scale = (
-            self.scale[0] * sx,
-            self.scale[1] * sy,
-            self.scale[2] * sz,
-        )
-        return self
-
-    def set(
-        self,
-        position: Vec3 | None = None,
-        rotation: TransformRotation | None = None,
-        scale: Triple | None = None,
-    ) -> "Transform":
-        """Set position / rotation / scale (only the provided components)."""
-        if position is not None:
-            self.position = _as_vec3(position)
-        if rotation is not None:
-            self.rotation = _as_euler(rotation)
-        if scale is not None:
-            self.scale = _as_vec3(scale)
-        return self
-
-    def to_dict(self) -> dict[str, Any]:
-        """Return the JSON-ready TRS dict."""
-        return {
-            "position": list(self.position),
-            "rotation": list(self.rotation),
-            "scale": list(self.scale),
-        }
-
-
 def _coerce_transform_matrix(obj: Any) -> np.ndarray:
-    """Return the 4×4 matrix for a ``Transform``, an ``MV``, or a GA operator.
+    """Return the 4×4 matrix for a transform argument.
 
-    Accepts a :class:`Transform` node, a raw multivector (analyzed to a
-    ``Rotor``/``GeneralRotor``/``Motor``/``Translator``/``Dilator``), or one of
-    those operator dataclasses directly.
+    Accepts anything satisfying :class:`MatrixProvider` (a ``Transform``,
+    ``Matrix``, or ``CoordinateFrame``), a raw multivector (analyzed to an
+    operator), or a GA operator dataclass (``Rotor``/``GeneralRotor``/``Motor``/
+    ``Translator``/``Dilator``).
     """
-    if isinstance(obj, Transform):
-        return obj.matrix()
+    if isinstance(obj, MatrixProvider):
+        return obj.to_matrix()
     from pytanga.algebra import MV
 
     if isinstance(obj, MV):
@@ -361,6 +238,7 @@ class VizSceneObject(VizNode):
         visible: bool = True,
         props: dict[str, Any] | None = None,
         styles_map: StylesMap | None = None,
+        epsilon: float = DEFAULT_DIFF_EPSILON,
     ) -> None:
         super().__init__(
             id or generate_id(),
@@ -373,7 +251,20 @@ class VizSceneObject(VizNode):
         )
         self.entity: Any = entity
         self.style: Any = style
-        self.transform: Transform = transform if transform is not None else Transform()
+        # Derive the per-entity placement transform from the entity (unless an
+        # explicit transform was supplied); shape params are cached for the
+        # shape-vs-placement diff in ``set_entity``.
+        if transform is not None:
+            self.transform: Transform = transform
+            self._entity_shape: dict[str, Any] = {}
+        elif entity is not None:
+            derived, shape = _entity_decompose(entity)
+            self.transform = derived
+            self._entity_shape = shape
+        else:
+            self.transform = Transform()
+            self._entity_shape = {}
+        self.entity_epsilon: float = epsilon
         self.parent: VizSceneObject | None = None
         self.children: list[VizSceneObject] = []
         self._props: dict[str, Any] = dict(props) if props else {}
@@ -487,15 +378,50 @@ class VizSceneObject(VizNode):
 
     # ── Entity / style setters (aspect-correct) ─────────────
 
-    def set_entity(self, entity: Any) -> None:
-        """Replace the geometry entity.
+    def set_entity(self, entity: Any, *, epsilon: float | None = None) -> None:
+        """Replace the geometry entity, diffing placement vs shape.
 
-        Marks ``content`` when the kind is unchanged, else ``full``.
+        Re-derives the per-entity placement transform and diffs it against the
+        previous placement/shape (within a settable epsilon): marks ``transform``
+        when placement moved, ``content`` when shape changed, ``full`` on a kind
+        change, and both aspects when both changed.  Out-of-scope kinds (no
+        placement) rebuild content on any change.
         """
+        eps = self.entity_epsilon if epsilon is None else epsilon
         old_kind = self.kind
+        new_kind = type(entity).__name__
+        new_transform, new_shape = _entity_decompose(entity)
+
         self.entity = entity
-        self.kind = type(entity).__name__
-        self.mark("content" if self.kind == old_kind else "full")
+        self.kind = new_kind
+
+        if new_kind != old_kind:
+            self.transform = new_transform
+            self._entity_shape = new_shape
+            self.mark("full")
+            return
+
+        if not is_placement_entity(entity):
+            # Out of scope: no placement to diff — always rebuild content.
+            self._entity_shape = {}
+            self.mark("content")
+            return
+
+        placement_changed = transforms_differ(
+            self.transform, new_transform, eps
+        )
+        shape_changed = shapes_differ(
+            getattr(self, "_entity_shape", {}), new_shape, eps
+        )
+
+        if placement_changed:
+            self.transform = new_transform
+        self._entity_shape = new_shape
+
+        if placement_changed:
+            self.mark("transform")
+        if shape_changed:
+            self.mark("content")
 
     def set_texture_label(self, texture_label: Any) -> None:
         """Set/merge the resolved style texture label (marks ``style``)."""

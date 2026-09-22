@@ -36,10 +36,11 @@ def test_rectangle2d_serializes() -> None:
         Rectangle2D(center=Point(3.0, 5.0, 0.0), size=(8.0, 6.0)), "r1"
     )
     assert result["kind"] == "Rectangle2D"
-    assert result["center"] == [3.0, 5.0, 0.0]
+    assert "center" not in result
     assert result["size"] == [8.0, 6.0]
-    assert result["normal"] == [0.0, 0.0, 1.0]
+    assert "normal" not in result
     assert result["angle"] == 0.0
+    assert result["transform"]["position"] == [3.0, 5.0, 0.0]
 
 
 def test_rectangle2d_style_to_dict() -> None:

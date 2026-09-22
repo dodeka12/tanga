@@ -4,21 +4,21 @@
 import * as THREE from 'three';
 import {
     makeMaterial,
-    rotationFromDirection,
     styleParam,
     parseColor,
     tagEntity,
     applyStyleUpdate,
     approxEqual,
 } from './utils.js';
+import { styleNeedsRebuild } from './style-diff.js';
 
 export function createDirection(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const vec = ent.vector || [0, 0, 1];
     const length = styleParam(ent, 'length', 2.0);
-    const origin = ent.origin || [0, 0, 0];
 
+    // Canonical: an arrow along +Y from the origin; placement (the direction
+    // vector) rides on the node transform.
     const group = new THREE.Group();
 
     // Arrow shaft
@@ -39,20 +39,12 @@ export function createDirection(ent) {
     head.position.y = shaftLength + headLength / 2;
     group.add(head);
 
-    group.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
-    group.position.set(origin[0], origin[1], origin[2]);
-
     tagEntity(group, ent);
     return group;
 }
 
 export function updateDirection(mesh, ent, prev) {
-    const vec = ent.vector || prev?.vector || [0, 0, 1];
-    const origin = ent.origin || prev?.origin || [0, 0, 0];
-
-    mesh.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
-    mesh.position.set(origin[0], origin[1], origin[2]);
-
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
 
     if (ent.length !== undefined && prev && !approxEqual(ent.length, prev.length)) return false;

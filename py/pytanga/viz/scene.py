@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Iterator, Literal, cast
 
 from pytanga.geometry.entities import Entity as GeoEntity
 
-from .camera import CameraAction, CameraConfig
+from .camera import CameraAction, CameraConfig, ViewportConfig
 from ._ids import generate_id
 from ._nodes import VizGroup, VizImage, VizNode, VizOverlayObject, VizSceneObject
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
@@ -51,6 +51,9 @@ class SceneConfig:
     # Optional CSS cursor override for the whole scene (e.g. ``"crosshair"``
     # while drawing).  ``None`` = use the default cursor.
     cursor: str | None = None
+    # Scene-wide default viewport (zoom + pan) for panes that do not set their
+    # own per-pane ``CameraView.viewport``.
+    viewport: ViewportConfig | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -78,6 +81,8 @@ class SceneConfig:
             }
         if self.cursor is not None:
             result["cursor"] = self.cursor
+        if self.viewport is not None:
+            result["viewport"] = self.viewport.to_dict()
         return result
 
 
