@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.9.0] — 2026-09-22
+- Calibrated pinhole camera views (`PinholeCamera`/`CameraView`, image background, 2D viewport navigation, per-pane visibility, `Frustum`) · `Matrix`/`MatrixProvider`/`CoordinateFrame`/`OpenCVFrame`/`CameraCalibration` coordinate-frame + calibration types · canonical-frame transform placement (quaternion `Transform` in `pytanga.geometry`, shape-only serialization, re-parameterized `Frustum`) · BOP T-LESS calibrated example
+- Bug fixes: data background image orientation · `Circle` center update
+→ [Details](2026/09/22_10d3b45a0.md)
+
 ## [Since 2.8.1] — 2026-09-19
 - 2D overlay coordinate system (`CoordinateSystem(display_mode="overlay")`: fixed screen-space axes frame + grid underlay, live viewer + HTML export) · configurable pan/zoom limits (`pan_xlim`/`pan_ylim`, `min_zoom`/`max_zoom`) · per-axis tick subdivision (`x_intervals`/`y_intervals`) with pixel-based density (`min_tick_spacing_px`)
 → [Details](2026/09/19_c01c4e2f2.md)
