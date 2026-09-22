@@ -85,6 +85,52 @@ inbound dispatch that resolves them.
   pane newly introduced by a re-push fetches its state with a
   `scene_sync_request` round-trip.
 
+## Canonical frame + transform placement
+
+Every scene entity renders in a **canonical frame** and its placement rides on a
+single per-entity `Transform` (quaternion TRS) applied to the per-entity
+`THREE.Group` that already wraps each mesh (`wrapWithNodeTransform` /
+`applyTransformToObject` in `scene-builder.js`).  There is no second, baked
+placement in the renderers or the content serialization — this is what makes a
+`Circle`-center change a cheap `transform` patch rather than a content
+re-serialization.
+
+- **Canonical frames** (three.js defaults): linear primitives (`Line`,
+  `Cylinder`, `Cone`, `Direction`, `Parabola`, `Hyperbola`) along **+Y** with
+  their origin at the node position; planar primitives (`Circle`, `Arc`, `Disk`,
+  `PartialDisk`, `Ellipse`, `RegularPolygon`, `Rectangle2D`, `Plane`) in the
+  **XY** plane (normal **+Z**) centred at the node position; volumes (`Sphere`,
+  `Box`, `Ellipsoid`) centred at the node position, axis-aligned (`Box`/
+  `Ellipsoid` `rotation` → quaternion); `Point`/`HPoint` at the node position.
+- **Decomposition** — `_decompose.py::_entity_decompose(entity)` maps an
+  entity's placement into a `(Transform, shape)` pair: `center`/`origin`/
+  `vertex`/`point` → position; `normal`/`axis`/`direction` (+ `startDirection`/
+  `dirU`/`dirV`/`horizontal` where a second axis fixes the frame) → quaternion;
+  `rotation` (Box/Ellipsoid) → quaternion; everything else → shape params.  The
+  scene-graph node (`VizSceneObject.__init__`) derives its `transform` from this
+  decomposition, and `set_entity` re-derives it and diffs shape vs placement
+  with a configurable epsilon (default `1e-9`): `transform` on placement change,
+  `content` on shape change, `full` on kind change.  Out-of-scope kinds
+  (`PointPath`/`Curve`/`PointSet`, point/plane pairs, operators, axes/grid,
+  SDF/ray/image) return `(Transform(), {})` and rebuild on any change.
+- **Wire contract** — the serializer emits **shape-only** content (no
+  `center`/`normal`/`axis`/`origin`/`direction`/`vertex`/`rotation`/
+  `startDirection`); placement rides on the node `transform`, whose `rotation`
+  is a quaternion `[x, y, z, w]` (`Transform.to_dict()`).  `serialize_entity()`
+  emits the same `transform` for direct callers.  The glTF exporter reads the
+  node `transform` (position + quaternion) rather than re-deriving it from
+  geometry.
+- **`Transform` location** — `Transform` and the argument-coercion helpers live
+  in `geometry/transform.py`; the pure matrix/quaternion math in
+  `geometry/transforms.py`; `viz` keeps thin re-export shims
+  (`viz/_transforms.py`, `viz/_types.py`) and re-exports `Transform` publicly.
+  `Transform.rotation` is a quaternion (single source of truth), the `matrix()`
+  is computed lazily, and `Transform` overloads `@`/`*` to apply to `Point`
+  (`R·S·p + t`) and `Direction` (`R·S·d`, no translation).
+- **`Frustum`** is re-parameterized intrinsically (`origin`, `axis`,
+  `horizontal`, `near`, `far`, `far_half_width`, `far_half_height`) so it
+  participates in transform placement and diffing like the other entities.
+
 ## Extension recipes
 
 ### New entity kind
@@ -216,6 +262,52 @@ Export bundles those modules into `js/tanga-viewer.js` (CDN + `inline`/`offline`
 and the export adapters run the same renderers in their render loops; a
 `grid_underlay` present makes the scene background transparent so the grid shows
 through.
+
+### Calibrated camera view (extension recipe)
+
+A real camera's internal (`K`) + external (`R`, `t`) calibration drives a scene
+pane through a clean three-layer model — camera data → camera view → pane:
+
+- **`PinholeCamera`** (camera data, `type: "pinhole"`) — a sibling of
+  `CameraConfig2d`/`CameraConfig3d` carrying intrinsics (`fx/fy/cx/cy/width/
+  height`), pose, clipping, and a `fit` policy (`"fit"` letterbox / `"fill"`
+  stretch).  `pinhole_camera(K, R, t, image_size=…)` builds it.
+- **Coordinate frames + calibration types** (`pytanga.geometry` /
+  `pytanga.viz.camera`) — a plain numeric `Matrix` (with a runtime-checkable
+  `MatrixProvider` protocol), `CoordinateFrame`/`OpenCVFrame` axis conventions
+  (OpenCV x-right/y-down/z-forward is a 180° rotation about +x, preserving the
+  right-handed internal world), and `CameraCalibration(K, R, t, image_size,
+  frame=OpenCVFrame(), units=…)` which converts read-in calibration to the
+  standard frame + units and builds a `PinholeCamera`.  Frames satisfy
+  `MatrixProvider`, so `set_transform(frame)` remaps OpenCV-frame data through
+  the scene graph.
+- **`pinhole-framing.js`** — a single pure module that maps the intrinsics +
+  pane aspect + `fit` to both the off-center frustum bounds and the background
+  quad's letterbox half-extents (`{hx, hy}`).  One source of truth for aspect,
+  used by `applyPinhole(camera, aspect)` in `view_mode.js` on switch and resize.
+- **`CameraView`** (presentation) — bundles the camera, a `lock` set (validated
+  against `CameraLock`), a `navigation` mode (`"orbit"` default / `"2d"` dolly
+  zoom + screen-space pan, no orbit), a per-pane `controls` button mapping, an
+  optional `viewport` (`ViewportConfig`: `zoom`/`pan` + limits), and an optional
+  `background_image`; serialized in the `scene_view` node as one `camera_view`
+  field.
+- **Viewport navigation** — a pane's 2D viewport (`{zoom, pan}`) is a
+  presentation-layer transform folded into the pinhole crop window by
+  `pinhole-framing.js` (returning both the sub-frustum and the background crop
+  `{u0,v0,u1,v1}`), so projection and image never diverge.  Set at runtime via
+  `Visualizer.set_viewport(view, …)` (per-pane `view_viewport` message, mirroring
+  `view_camera`) or `set_viewport(scene_name=…)` / `VizSceneHandle.set_viewport`
+  (scene-wide `SceneConfig.viewport` default).
+- **Image background** — `CameraView.background_image` mounts a full-viewport
+  NDC quad (`renderers/image-background.js`) that letterboxes to match the
+  projection (and crops to the viewport window).  Pixel bytes travel on the
+  existing binary frame transport (`_image_wire.py` →
+  `LayoutHost.background_image_frames` → re-sent on connect).
+- **Per-pane visibility** — `SceneView(hide=…, show=…)` filters which entities a
+  pane builds (each pane has its own object registry, so no scene duplication).
+- **Frustum** — `pytanga.geometry.Frustum` (a viz-only entity, no MV) with
+  `Frustum.from_camera(camera)` and `FrustumStyle`; serialized to explicit
+  corners and rendered by `renderers/frustum.js`.
 
 ### Test commands
 

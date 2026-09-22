@@ -11,6 +11,7 @@ from pytanga.viz._size import Size
 from pytanga.viz.views import (
     ButtonView,
     CheckboxView,
+    CameraView,
     ColorPickerView,
     DropdownView,
     EStackAlign,
@@ -74,6 +75,11 @@ class TestSceneView:
     def test_scene_from_handle(self):  # noqa: ANN201
         assert SceneView(_Handle()).scene == "xyz"
 
+    def test_scene_from_scene_object(self):  # noqa: ANN201
+        from pytanga.viz.scene import Scene
+
+        assert SceneView(Scene(name="main")).scene == "main"
+
     def test_scene_rejects_bare_object(self):  # noqa: ANN201
         with pytest.raises(TypeError, match="scene name or handle"):
             SceneView(object())
@@ -112,9 +118,9 @@ class TestSceneView:
                 "main", camera=CameraConfig3d(position=(1, 2, 3), target=(0, 0, 0))
             )
         )["root"]
-        assert node["camera"]["type"] == "3d"
-        assert node["camera"]["position"] == [1.0, 2.0, 3.0]
-        assert node["camera"]["target"] == [0.0, 0.0, 0.0]
+        assert node["camera_view"]["camera"]["type"] == "3d"
+        assert node["camera_view"]["camera"]["position"] == [1.0, 2.0, 3.0]
+        assert node["camera_view"]["camera"]["target"] == [0.0, 0.0, 0.0]
 
     def test_camera_normalizes_view_config(self):  # noqa: ANN201
         from pytanga.viz.camera import View3dConfig
@@ -125,13 +131,13 @@ class TestSceneView:
                 point=(0, 0, 0), normal=(0, 0, 1), extent_u=2, extent_v=2
             ),
         )
-        assert v.camera.type == "3d"
-        assert v.camera.position is not None
-        assert v.camera.target == (0.0, 0.0, 0.0)
+        assert v.camera_view.camera.type == "3d"
+        assert v.camera_view.camera.position is not None
+        assert v.camera_view.camera.target == (0.0, 0.0, 0.0)
 
     def test_no_camera_omits_key(self):  # noqa: ANN201
         node = serialize_layout(SceneView("main"))["root"]
-        assert "camera" not in node
+        assert "camera_view" not in node
 
     def test_auto_id_assigned_and_serialized(self):  # noqa: ANN201
         v = SceneView("main")
@@ -145,6 +151,34 @@ class TestSceneView:
 
     def test_auto_ids_unique(self):  # noqa: ANN201
         assert SceneView("a").id != SceneView("b").id
+
+    def test_lock_serialize(self):  # noqa: ANN201
+        node = serialize_layout(
+            SceneView("main", camera_view=CameraView(lock={"rotate", "pan"}))
+        )["root"]
+        assert node["camera_view"]["lock"] == ["pan", "rotate"]
+
+    def test_no_lock_omits_key(self):  # noqa: ANN201
+        d = CameraView().to_dict()
+        assert "lock" not in d
+
+    def test_lock_rejects_bogus_value(self):  # noqa: ANN201
+        with pytest.raises(ValueError):
+            CameraView(lock={"bogus"})
+
+    def test_hide_show_serialize(self):  # noqa: ANN201
+        node = serialize_layout(SceneView("main", hide={"a", "b"}, show={"c"}))["root"]
+        assert node["hide"] == ["a", "b"]
+        assert node["show"] == ["c"]
+
+    def test_hide_show_omitted_when_empty(self):  # noqa: ANN201
+        node = serialize_layout(SceneView("main"))["root"]
+        assert "hide" not in node
+        assert "show" not in node
+
+    def test_hide_rejects_non_string(self):  # noqa: ANN201
+        with pytest.raises(ValueError):
+            SceneView("main", hide={1})
 
 
 class TestGroupView:
@@ -688,7 +722,7 @@ class TestSplitView:
             SplitView("horizontal", [SceneView("a")])
 
     def test_bad_orientation(self):  # noqa: ANN201
-        with pytest.raises(ValueError, match="orientation"):
+        with pytest.raises(ValueError, match="EOrientation"):
             SplitView("diagonal", [SceneView("a"), SceneView("b")])
 
     def test_sizes_length_mismatch(self):  # noqa: ANN201

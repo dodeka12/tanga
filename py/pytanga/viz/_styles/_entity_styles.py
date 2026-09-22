@@ -823,6 +823,45 @@ class Rectangle2DStyle(VizStyle):
 
 
 @dataclass
+class FrustumStyle(VizStyle):
+    """Visual style for :class:`~pytanga.geometry.Frustum`.
+
+    Wireframe by default (end-plane outlines + the four corner lines); set
+    ``fill=True`` to draw translucent end/side faces instead of just the
+    outlines.
+
+    Attributes:
+        fill: When ``True``, fill the frustum faces (end planes and, when both
+            ends are rectangles, the side faces) instead of drawing only the
+            plane outlines and corner lines.
+        fill_opacity: Opacity of the filled planes/faces (0..1).  ``None`` uses
+            the renderer default (a light semi-transparent fill).
+        thickness: Line thickness for the outlines / corner lines.  ``None``
+            uses the renderer default.
+    """
+
+    color: str | None = None
+    opacity: float | None = None
+    fill: bool = False
+    fill_opacity: float | None = None
+    thickness: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "FrustumStyle"}
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.fill:
+            result["fill"] = True
+        if self.fill_opacity is not None:
+            result["fill_opacity"] = self.fill_opacity
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
 class RegularPolygonStyle(VizStyle):
     """Visual style for :class:`~pytanga.geometry.RegularPolygon`.
 

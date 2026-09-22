@@ -340,6 +340,9 @@ class VizServer:
         self._flush_callback: FlushCallback | None = None
         self._config_callback: ConfigCallback | None = None
         self._image_frames_callback: Callable[[str], list[tuple[str, bytes]]] | None = None
+        self._layout_image_frames_callback: Callable[[], list[tuple[str, bytes]]] | None = (
+            None
+        )
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
         self._layout_callback: LayoutCallback | None = None
@@ -386,11 +389,13 @@ class VizServer:
         theme_static_dirs: dict[str, Path] | None = None,
         on_ready: Callable[[], None] | None = None,
         image_frames_callback: Callable[[str], list[tuple[str, bytes]]] | None = None,
+        layout_image_frames_callback: Callable[[], list[tuple[str, bytes]]] | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
         self._flush_callback = flush_callback
         self._config_callback = config_callback
         self._image_frames_callback = image_frames_callback
+        self._layout_image_frames_callback = layout_image_frames_callback
         self._scene_config_callback = scene_config_callback
         self._scene_list_callback = scene_list_callback
         self._layout_callback = layout_callback
@@ -660,6 +665,15 @@ class VizServer:
         await ws.send_str(clear_payload)
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
+
+        # 0b. Background image frames (layout-level) — sent before the layout so
+        # the pending-frame store has them when the background quad builds.
+        if self._layout_image_frames_callback is not None:
+            for image_id, frame in self._layout_image_frames_callback():
+                logger.info(
+                    "WS SEND-BINARY t=%.3f image=%s", time.monotonic(), image_id
+                )
+                await ws.send_bytes(frame)
 
         # 1. Layout (if any) — sent before any scene data
         if layout_payload is not None:

@@ -39,6 +39,7 @@ operators, axes/grid, point paths, and the active (interactive) elements.
 | Axes2D / Axes3D / Axis / Grid | Axes2DStyle / Axes3DStyle / AxisStyle / GridStyle | [Axes & Grid](axes-grid.md) |
 | PointPath | PointPathStyle | [PointPath](point-path.md) |
 | Rectangle2D | Rectangle2DStyle | [ActRectangle2D](active-elements/act-rectangle2d.md) |
+| Frustum | FrustumStyle | [Camera & Controls](../visualizer/camera.md) (viz-only, no MV) |
 
 For the underlying geometry data classes, see
 [Entity Data Classes](../../ga/geometry/entities.md) and

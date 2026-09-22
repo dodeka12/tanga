@@ -248,6 +248,18 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Update the camera configuration for this scene at runtime."""
         self._viz.set_camera(camera, scene_name=self._name)
 
+    def set_viewport(
+        self,
+        *,
+        zoom: float | None = None,
+        pan: tuple[float, float] | None = None,
+    ) -> None:
+        """Set this scene's default viewport (zoom + pan) at runtime.
+
+        ``None`` leaves the current value unchanged (partial update).
+        """
+        self._viz.set_viewport(scene_name=self._name, zoom=zoom, pan=pan)
+
     def set_cursor(self, cursor: str | None) -> None:
         """Set the mouse cursor shown over this scene (``None`` clears it)."""
         self._viz.set_cursor(cursor, scene_name=self._name)

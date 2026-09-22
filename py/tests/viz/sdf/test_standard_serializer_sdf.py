@@ -77,7 +77,8 @@ def test_non_sdf_entity_serializes_unchanged() -> None:
     assert result["kind"] == "Sphere"
     assert "sdfKind" not in result
     assert "tree" not in result
-    assert result["center"] == [1.0, 2.0, 3.0]
+    assert "center" not in result
+    assert result["transform"]["position"] == [1.0, 2.0, 3.0]
 
 
 def test_sdf_visualizer_output_unchanged() -> None:

@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 import warnings
-from typing import TYPE_CHECKING, Any, Iterator, Sequence, overload
+from typing import TYPE_CHECKING, Any, Iterator, Sequence, cast, overload
 
 if TYPE_CHECKING:
     from ._interaction import (
@@ -47,12 +47,14 @@ from .camera import (
     CameraConfig,
     View2DConfig,
     View3dConfig,
+    ViewportConfig,
     _deduce_space_dim,
     _normalize_camera_config,
 )
 from .scene import Scene, SceneConfig, SceneObject
 from .server import PortConflictAsk, PortConflictMode, PortOccupant
 from .views import (
+    CameraView,
     SceneView,
     View,
 )
@@ -973,19 +975,84 @@ class Visualizer(_JupyterDisplayMixin):
         """
         if not isinstance(view, SceneView):
             raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
-        view.camera = _normalize_camera_config(camera)
-        if view.camera is None:
+        cam = _normalize_camera_config(camera)
+        if view.camera_view is None:
+            view.camera_view = CameraView(camera=cam)
+        else:
+            view.camera_view.camera = cam
+        if view.camera_view.camera is None:
             return
         data = json.dumps(
             {
                 "type": "view_camera",
                 "view_id": view.id,
-                "camera": view.camera.to_dict(),
+                "camera": cast(CameraConfig, view.camera_view.camera).to_dict(),
             }
         )
         if self._server is None or self._loop is None:
             return
         asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
+
+    def set_viewport(
+        self,
+        view: SceneView | None = None,
+        *,
+        scene_name: str = "",
+        zoom: float | None = None,
+        pan: tuple[float, float] | None = None,
+    ) -> None:
+        """Set a pane's (or a scene's default) viewport zoom + pan at runtime.
+
+        Two forms, distinguished by the first argument:
+
+        - ``view`` (a :class:`SceneView`) — set that pane's viewport via the
+          per-pane ``view_viewport`` message (mirrors :meth:`set_view_camera`).
+        - ``scene_name`` (a string) — set the scene-wide default viewport via
+          ``scene_config`` (mirrors :meth:`set_camera`).
+
+        ``zoom``/``pan`` default to ``None`` = leave the current value unchanged
+        (partial update); pass both to reset the view.
+        """
+        if view is not None:
+            if scene_name:
+                raise ValueError("pass either `view` or `scene_name`, not both")
+            if not isinstance(view, SceneView):
+                raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
+            viewport: dict[str, Any] = {}
+            if zoom is not None:
+                viewport["zoom"] = zoom
+            if pan is not None:
+                viewport["pan"] = list(pan)
+            if not viewport:
+                return
+            data = json.dumps(
+                {"type": "view_viewport", "view_id": view.id, "viewport": viewport}
+            )
+            if self._server is None or self._loop is None:
+                return
+            asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
+            return
+        self._set_scene_viewport(scene_name, zoom=zoom, pan=pan)
+
+    def _set_scene_viewport(
+        self,
+        scene_name: str,
+        *,
+        zoom: float | None = None,
+        pan: tuple[float, float] | None = None,
+    ) -> None:
+        """Merge ``zoom``/``pan`` into a scene's default viewport and re-push."""
+        scene = self._layout.scenes[scene_name]
+        current = scene.config.viewport or ViewportConfig()
+        scene.config.viewport = ViewportConfig(
+            zoom=zoom if zoom is not None else current.zoom,
+            pan=tuple(pan) if pan is not None else current.pan,
+            min_zoom=current.min_zoom,
+            max_zoom=current.max_zoom,
+            pan_xlim=current.pan_xlim,
+            pan_ylim=current.pan_ylim,
+        )
+        self._push_scene_config(scene_name)
 
     def _add_default_scene_objects(
         self,
@@ -1548,6 +1615,7 @@ class Visualizer(_JupyterDisplayMixin):
                 theme_callback=self._theme_host._theme_define_payload,
                 theme_static_dirs=external_theme_dirs(),
                 image_frames_callback=self._image_frames_for,
+                layout_image_frames_callback=self._layout.background_image_frames,
             )
             _boot_done.set()
 

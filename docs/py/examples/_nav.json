@@ -276,6 +276,15 @@
             "Modes": "py/examples/viz/camera/modes.md"
           },
           {
+            "Pinhole Calibrated": "py/examples/viz/camera/pinhole_calibrated.md"
+          },
+          {
+            "Pinhole Camera": "py/examples/viz/camera/pinhole_camera.md"
+          },
+          {
+            "Pinhole Overlay": "py/examples/viz/camera/pinhole_overlay.md"
+          },
+          {
             "Switch 2D 3D": "py/examples/viz/camera/switch_2d_3d.md"
           }
         ]

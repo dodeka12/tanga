@@ -28,9 +28,9 @@ class TestConicRenderers:
         )
         d = serialize_entity(h, "h1", kind="Hyperbola")
         assert d["kind"] == "Hyperbola"
-        assert d["center"] == [1.0, 2.0, 0.0]
-        assert d["dir1"] == [1.0, 0.0, 0.0]
-        assert d["dir2"] == [0.0, 1.0, 0.0]
+        assert "center" not in d
+        assert "dir1" not in d
+        assert "dir2" not in d
         assert d["a"] == 2.0
         assert d["b"] == 1.0
 
@@ -38,8 +38,8 @@ class TestConicRenderers:
         p = Parabola(Point(0.0, 0.0, 0.0), Direction(1.0, 0.0, 0.0), 1.5)
         d = serialize_entity(p, "p1", kind="Parabola")
         assert d["kind"] == "Parabola"
-        assert d["vertex"] == [0.0, 0.0, 0.0]
-        assert d["direction"] == [1.0, 0.0, 0.0]
+        assert "vertex" not in d
+        assert "direction" not in d
         assert d["p"] == 1.5
 
     def test_serialize_line_pair(self):  # noqa: ANN201
@@ -86,8 +86,8 @@ class TestConicRenderers:
             dir_v=Direction(0.0, 1.0, 0.0),
         )
         d = serialize_entity(e, "el2", kind="Ellipse")
-        assert d["dirU"] == [1.0, 0.0, 0.0]
-        assert d["dirV"] == [0.0, 1.0, 0.0]
+        assert "dirU" not in d
+        assert "dirV" not in d
 
     def test_serialize_parallel_line_pair(self):  # noqa: ANN201
         l1 = Line(Point(0.0, 0.0, 0.0), Direction(1.0, 0.0, 0.0))
@@ -109,8 +109,8 @@ class TestConicRenderers:
         c = Cone(Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0), 0.5)
         d = serialize_entity(c, "c1", kind="Cone")
         assert d["kind"] == "Cone"
-        assert d["vertex"] == [0.0, 0.0, 0.0]
-        assert d["axis"] == [0.0, 0.0, 1.0]
+        assert "vertex" not in d
+        assert "axis" not in d
         assert d["halfAngle"] == 0.5
 
 

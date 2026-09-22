@@ -262,7 +262,8 @@ class TestScene:
         s.flush()  # consume the initial "full" dirty flag
         s.update_entity(eid, Point(5, 6, 7))
         dirty, _ = s.flush()
-        assert dirty[0]["aspect"] == "content"
+        # A point's placement is its position → the patch rides on ``transform``.
+        assert dirty[0]["aspect"] == "transform"
         assert dirty[0]["value"]["position"] == [5, 6, 7]
 
     def test_set_interaction_marks_interaction_aspect(self):  # noqa: ANN201

@@ -787,12 +787,12 @@ function createPoint(ent) {
     const color = parseColor(ent, '#ff4444');
     const opacity = styleParam(ent, 'opacity', 1.0);
     const size = styleParam(ent, 'size', 0.08);
-    const pos = ent.position || [0, 0, 0];
 
+    // Canonical: a point marker at the origin; placement rides on the node
+    // transform (position = the point).
     const geometry = new THREE.SphereGeometry(size, 16, 16);
     const material = makeMaterial(color, opacity);
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(pos[0], pos[1], pos[2]);
     tagEntity(mesh, ent);
     return mesh;
 }
@@ -863,10 +863,10 @@ function createSquarePoint(ent) {
 function createDirection(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const vec = ent.vector || [0, 0, 1];
     const length = styleParam(ent, 'length', 2.0);
-    const origin = ent.origin || [0, 0, 0];
 
+    // Canonical: an arrow along +Y from the origin; placement (the direction
+    // vector) rides on the node transform.
     const group = new THREE.Group();
 
     // Arrow shaft
@@ -887,28 +887,20 @@ function createDirection(ent) {
     head.position.y = shaftLength + headLength / 2;
     group.add(head);
 
-    group.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
-    group.position.set(origin[0], origin[1], origin[2]);
-
     tagEntity(group, ent);
     return group;
 }
 
 function updateDirection(mesh, ent, prev) {
-    const vec = ent.vector || prev?.vector || [0, 0, 1];
-    const origin = ent.origin || prev?.origin || [0, 0, 0];
-
-    mesh.setRotationFromQuaternion(rotationFromDirection(vec[0], vec[1], vec[2]));
-    mesh.position.set(origin[0], origin[1], origin[2]);
-
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
 
     if (ent.length !== undefined && prev && !approxEqual(ent.length, prev.length)) return false;
     return true;
 }
 
-// Line renderer — draws a straight segment from `origin` to
-// `origin + normalize(direction) * length`.
+// Line renderer — draws a canonical straight segment along +Y from the origin
+// to `+Y * length`.  Placement (origin + direction) rides on the node transform.
 //
 // `length` is a content field: `0` means "infinite line → use the style's
 // default length".  Rendering dispatches on the style type:
@@ -931,23 +923,15 @@ function createLine(ent) {
     const color = parseColor(ent, '#44ff44');
     const opacity = styleParam(ent, 'opacity', 0.8);
     const length = resolveLineLength(ent);
-    const origin = ent.origin || [0, 0, 0];
-    const dir = ent.direction || [1, 0, 0];
 
-    const d = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize();
-    const start = new THREE.Vector3(origin[0], origin[1], origin[2]);
-    const end = start.clone().addScaledVector(d, length);
+    const start = new THREE.Vector3(0, 0, 0);
+    const end = new THREE.Vector3(0, length, 0);
 
     if (isCylinderStyle(ent)) {
         const thickness = styleParam(ent, 'thickness', 0.03);
         const geometry = new THREE.CylinderGeometry(thickness, thickness, length, 8, 1);
         const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-        mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
-        mesh.position.set(
-            origin[0] + d.x * length / 2,
-            origin[1] + d.y * length / 2,
-            origin[2] + d.z * length / 2
-        );
+        mesh.position.set(0, length / 2, 0);
         tagEntity(mesh, ent);
         return mesh;
     }
@@ -961,26 +945,16 @@ function createLine(ent) {
 function updateLine(mesh, ent, prev) {
     // Switching between fat-line and cylinder rendering requires a rebuild.
     if (prev && isCylinderStyle(ent) !== isCylinderStyle(prev)) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
 
     const length = resolveLineLength(ent);
     // A length change alters the segment geometry; cheaper to rebuild.
     if (prev && !approxEqual(length, resolveLineLength(prev))) return false;
 
-    const origin = ent.origin || prev?.origin || [0, 0, 0];
-    const dir = ent.direction || prev?.direction || [1, 0, 0];
-    const d = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize();
-
     if (isCylinderStyle(ent)) {
-        mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
-        mesh.position.set(
-            origin[0] + d.x * length / 2,
-            origin[1] + d.y * length / 2,
-            origin[2] + d.z * length / 2
-        );
+        mesh.position.set(0, length / 2, 0);
     } else {
-        const start = new THREE.Vector3(origin[0], origin[1], origin[2]);
-        const end = start.clone().addScaledVector(d, length);
-        mesh.geometry.setPositions([start.x, start.y, start.z, end.x, end.y, end.z]);
+        mesh.geometry.setPositions([0, 0, 0, 0, length, 0]);
         const thickness = styleParam(ent, 'thickness', 1.0);
         if (mesh.material && mesh.material.linewidth !== undefined) {
             mesh.material.linewidth = Math.max(0.1, thickness);
@@ -998,11 +972,11 @@ function updateLine(mesh, ent, prev) {
  * Build the quad geometry for a plane entity.
  *
  * When ``ent.span_u`` / ``ent.span_v`` are present, returns a parallelogram
- * quad (two triangles) whose corners are ``point``, ``point + span_u``,
- * ``point + span_u + span_v`` and ``point + span_v`` — already in world space,
- * so the mesh must not be repositioned/reoriented.  Otherwise returns ``null``
- * and the caller falls back to the default square of half-side ``extent``
- * centred at the origin (positioned/oriented from ``point``/``normal``).
+ * quad (two triangles) whose corners are ``±span_u/2 ± span_v/2`` around the
+ * origin (the span vectors are world-space edge vectors; the node transform
+ * positions the quad).  Otherwise returns ``null`` and the caller falls back to
+ * the default square of half-side ``extent`` centred at the origin (the
+ * canonical XY plane).
  */
 function _planeGeometry(ent) {
     const spanU = ent.span_u;
@@ -1010,12 +984,9 @@ function _planeGeometry(ent) {
     if (!Array.isArray(spanU) || !Array.isArray(spanV)) {
         return null;
     }
-    const p = new THREE.Vector3(...(ent.point || [0, 0, 0]));
     const u = new THREE.Vector3(...spanU);
     const v = new THREE.Vector3(...spanV);
-    // `point` is the plane *centre* (consistent with the non-span renderer
-    // path and the label anchor), so the corners sit ±u/2 ±v/2 around it.
-    const a = p.clone().addScaledVector(u, -0.5).addScaledVector(v, -0.5);
+    const a = u.clone().multiplyScalar(-0.5).addScaledVector(v, -0.5);
     const b = a.clone().add(u);
     const c = a.clone().add(u).add(v);
     const d = a.clone().add(v);
@@ -1035,20 +1006,11 @@ async function createPlane(ent) {
     const color = parseColor(ent, '#4488ff');
     const opacity = styleParam(ent, 'opacity', 0.3);
     const extent = ent.extent ?? styleParam(ent, 'extent', 10.0);
-    const point = ent.point || [0, 0, 0];
-    const normal = ent.normal || [0, 0, 1];
 
     const spanGeometry = _planeGeometry(ent);
     const geometry = spanGeometry || new THREE.PlaneGeometry(extent * 2, extent * 2);
     const material = makeMaterial(color, opacity, true);
     const mesh = new THREE.Mesh(geometry, material);
-
-    if (spanGeometry) {
-        // Vertices are already in world space (from point + span_u/span_v).
-    } else {
-        mesh.position.set(point[0], point[1], point[2]);
-        mesh.setRotationFromQuaternion(rotationFromNormal(normal[0], normal[1], normal[2]));
-    }
 
     // ── Texture label ──
     const texLabel = ent.style?.texture_label;
@@ -1110,10 +1072,11 @@ async function createPlane(ent) {
     return mesh;
 }
 
-// Arc renderer — renders an arcing cylinder (partial torus) centered on
-// `origin`, in the plane perpendicular to `axis`, sweeping `angle` radians
-// from `startDirection`.  When `ent.arrow` is set (and the arc is not a full
-// turn), a cone arrow tip is drawn at the arc's end.
+// Arc renderer — renders an arcing cylinder (partial torus) in the canonical
+// XY plane (normal +Z), starting at +X and sweeping `angle` radians.  Placement
+// (origin + axis + startDirection) rides on the node transform.  When
+// `ent.arrow` is set (and the arc is not a full turn), a cone arrow tip is
+// drawn at the arc's end.
 // Phase 5: Per-entity module.
 
 const TWO_PI = 2 * Math.PI;
@@ -1130,24 +1093,6 @@ function resolveAngle(ent) {
     return THREE.MathUtils.clamp(ent.angle ?? TWO_PI, 0, TWO_PI);
 }
 
-function orientArc(group, ent) {
-    const axis = ent.axis || [0, 0, 1];
-    const startDirection = ent.startDirection || [1, 0, 0];
-    const origin = ent.origin || [0, 0, 0];
-
-    // Rotate the torus so its plane normal (+Z) aligns with `axis`, then
-    // rotate around the axis so the torus's local +X (arc angle 0) lands on
-    // `startDirection`.
-    const qAxis = rotationFromNormal(axis[0], axis[1], axis[2]);
-    const xPrime = new THREE.Vector3(1, 0, 0).applyQuaternion(qAxis);
-    const qStart = new THREE.Quaternion().setFromUnitVectors(
-        xPrime,
-        new THREE.Vector3(startDirection[0], startDirection[1], startDirection[2]).normalize()
-    );
-    group.quaternion.copy(qStart.multiply(qAxis));
-    group.position.set(origin[0], origin[1], origin[2]);
-}
-
 function createArc(ent) {
     const color = parseColor(ent, '#ffcc44');
     const opacity = styleParam(ent, 'opacity', 0.9);
@@ -1161,8 +1106,6 @@ function createArc(ent) {
         makeMaterial(color, opacity)
     );
     group.add(torus);
-
-    orientArc(group, ent);
 
     // Wireframe overlay
     const wireframe = styleParam(ent, 'wireframe', false);
@@ -1208,6 +1151,7 @@ function updateArc(mesh, ent, prev) {
     if (prev && !approxEqual(resolveArcRadius(ent), resolveArcRadius(prev))) return false;
     if (prev && !approxEqual(resolveTubeRadius(ent), resolveTubeRadius(prev))) return false;
     if (prev && !approxEqual(resolveAngle(ent), resolveAngle(prev))) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
 
     const a = ent.arrow || null;
     const b = prev?.arrow || null;
@@ -1217,7 +1161,6 @@ function updateArc(mesh, ent, prev) {
         (!approxEqual(a.length, b.length) || !approxEqual(a.radius, b.radius))
     ) return false;
 
-    orientArc(mesh, ent);
     applyStyleUpdate(mesh, ent);
     return true;
 }
@@ -1235,22 +1178,13 @@ function createLineCircle(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
-    const normal = ent.normal || [0, 0, 1];
 
-    const q = rotationFromNormal(normal[0], normal[1], normal[2]);
-    const ex = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
-    const ey = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-
+    // Canonical: a circle in the XY plane centered at the origin.
     const points = [];
     for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
         const t = (2 * Math.PI * i) / CIRCLE_SEGMENTS;
-        points.push(
-            new THREE.Vector3(center[0], center[1], center[2])
-                .addScaledVector(ex, radius * Math.cos(t))
-                .addScaledVector(ey, radius * Math.sin(t)),
-        );
+        points.push(new THREE.Vector3(radius * Math.cos(t), radius * Math.sin(t), 0));
     }
 
     const line = makeFatLine(points, color, opacity, thickness);
@@ -1265,25 +1199,17 @@ function createCircle(ent) {
 
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.7);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const tubeRadius = styleParam(ent, 'tubeRadius', 0.03);
     const wireframe = styleParam(ent, 'wireframe', false);
 
     const wireframeOnly = wireframe && opacity === 0;
 
+    // Canonical: a torus (circle) in the XY plane (normal +Z) at the origin.
     const geometry = new THREE.TorusGeometry(radius, tubeRadius, 16, 64);
     const mesh = wireframeOnly
         ? new THREE.Group()
         : new THREE.Mesh(geometry, makeMaterial(color, opacity));
-
-    mesh.position.set(center[0], center[1], center[2]);
-
-    if (ent.normal) {
-        mesh.setRotationFromQuaternion(
-            rotationFromNormal(ent.normal[0], ent.normal[1], ent.normal[2])
-        );
-    }
 
     // Wireframe overlay
     if (wireframe) {
@@ -1304,7 +1230,8 @@ function createCircle(ent) {
 }
 
 function updateCircle(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['radius', 'normal', 'tubeRadius'])) return false;
+    if (contentChanged(ent, prev, ['radius', 'tubeRadius'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     // Switching between the tube and thick-line style requires a rebuild.
     const curLine = isLineStyle(ent);
     const prevLine = prev ? isLineStyle(prev) : false;
@@ -1313,7 +1240,9 @@ function updateCircle(mesh, ent, prev) {
     return true;
 }
 
-// Cone renderer — a double cone (two open cone halves) along `axis` at `vertex`.
+// Cone renderer — a double cone (two open cone halves) along the canonical +Y
+// axis with its apex at the origin.  Placement (vertex + axis) rides on the
+// node transform.
 // Phase 6: Per-entity module.
 
 function resolveHeight(ent) {
@@ -1323,29 +1252,26 @@ function resolveHeight(ent) {
 function createCone(ent) {
     const color = parseColor(ent, '#ffaa00');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const vertex = ent.vertex || [0, 0, 0];
-    const axis = ent.axis || [0, 0, 1];
     const halfAngle = Math.max(ent.halfAngle || 0.3, 0.01);
     const height = resolveHeight(ent);
     const radius = height * Math.tan(halfAngle);
     const wireframe = styleParam(ent, 'wireframe', false);
 
     const group = new THREE.Group();
-    const dir = new THREE.Vector3(axis[0], axis[1], axis[2]).normalize();
 
     for (const sign of [1, -1]) {
-        const d = new THREE.Vector3(sign * dir.x, sign * dir.y, sign * dir.z);
+        const d = new THREE.Vector3(0, sign, 0);
         const mesh = new THREE.Mesh(
             new THREE.ConeGeometry(radius, height, 48, 1, true),
             makeMaterial(color, opacity)
         );
         // ConeGeometry apex is at +height/2 along +y; orient +y along `d` and
-        // place the apex at `vertex`.
+        // place the apex at the origin.
         mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
         mesh.position.set(
-            vertex[0] - d.x * height / 2,
-            vertex[1] - d.y * height / 2,
-            vertex[2] - d.z * height / 2,
+            -d.x * height / 2,
+            -d.y * height / 2,
+            -d.z * height / 2,
         );
         group.add(mesh);
 
@@ -1368,14 +1294,15 @@ function createCone(ent) {
 }
 
 function updateCone(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['vertex', 'axis', 'halfAngle'])) return false;
+    if (contentChanged(ent, prev, ['halfAngle'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;
 }
 
-// Cylinder renderer — renders a solid cylinder oriented along `axis`, spanning
-// `length` with cross-section `radius`.  `alignCenter` positions `origin` along
-// the length (0 = start/base point, 0.5 = center).
+// Cylinder renderer — renders a solid cylinder along the canonical +Y axis,
+// spanning `length` with cross-section `radius`.  Placement (origin + axis +
+// `alignCenter` offset) rides on the node transform.
 // Phase 4: Per-entity module.
 
 function resolveCylinderLength(ent) {
@@ -1386,33 +1313,15 @@ function resolveCylinderRadius(ent) {
     return Math.max(ent.radius || 0.1, 0.001);
 }
 
-function resolveAlignCenter(ent) {
-    return ent.alignCenter ?? 0.0;
-}
-
 function createCylinder(ent) {
     const color = parseColor(ent, '#44aaff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const radius = resolveCylinderRadius(ent);
     const length = resolveCylinderLength(ent);
-    const origin = ent.origin || [0, 0, 0];
-    const axis = ent.axis || [0, 0, 1];
-    const alignCenter = resolveAlignCenter(ent);
 
+    // CylinderGeometry is centered at its own origin along +Y.
     const geometry = new THREE.CylinderGeometry(radius, radius, length, 24, 1);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-
-    const d = new THREE.Vector3(axis[0], axis[1], axis[2]).normalize();
-    mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
-    // CylinderGeometry is centered at its own origin.  `alignCenter` is the
-    // fraction of `length` where `origin` sits (0 = start, 0.5 = center), so
-    // the center is offset by (0.5 - alignCenter) * length along the axis.
-    const offset = length * (0.5 - alignCenter);
-    mesh.position.set(
-        origin[0] + d.x * offset,
-        origin[1] + d.y * offset,
-        origin[2] + d.z * offset
-    );
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {
@@ -1433,23 +1342,10 @@ function createCylinder(ent) {
 }
 
 function updateCylinder(mesh, ent, prev) {
-    // A radius/length/align change alters the geometry; cheaper to rebuild.
+    // A radius/length change alters the geometry; cheaper to rebuild.
     if (prev && !approxEqual(resolveCylinderLength(ent), resolveCylinderLength(prev))) return false;
     if (prev && !approxEqual(resolveCylinderRadius(ent), resolveCylinderRadius(prev))) return false;
-    if (prev && !approxEqual(resolveAlignCenter(ent), resolveAlignCenter(prev))) return false;
-
-    const origin = ent.origin || prev?.origin || [0, 0, 0];
-    const axis = ent.axis || prev?.axis || [0, 0, 1];
-    const length = resolveCylinderLength(ent);
-    const offset = length * (0.5 - resolveAlignCenter(ent));
-
-    const d = new THREE.Vector3(axis[0], axis[1], axis[2]).normalize();
-    mesh.setRotationFromQuaternion(rotationFromDirection(d.x, d.y, d.z));
-    mesh.position.set(
-        origin[0] + d.x * offset,
-        origin[1] + d.y * offset,
-        origin[2] + d.z * offset
-    );
+    if (styleNeedsRebuild(ent, prev)) return false;
 
     applyStyleUpdate(mesh, ent);
     return true;
@@ -1461,15 +1357,12 @@ function updateCylinder(mesh, ent, prev) {
 function createBox(ent) {
     const color = parseColor(ent, '#88ccff');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const size = ent.size || [1, 1, 1];
 
+    // Canonical: an axis-aligned box centered at the origin; placement (center
+    // + rotation quaternion) rides on the node transform.
     const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
-    if (ent.rotation) {
-        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
-    }
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {
@@ -1495,14 +1388,14 @@ function createBox(ent) {
 function createDisk(ent) {
     const color = parseColor(ent, '#ff8844');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
-    const normal = ent.normal || [0, 0, 1];
+    // Canonical plane is XY (normal +Z): the disk slab's cylinder axis (+Y) is
+    // rotated to +Z once.  Placement rides on the node transform.
+    const normal = [0, 0, 1];
 
     const geometry = new THREE.CylinderGeometry(radius, radius, thickness, 48, 1);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
     mesh.setRotationFromQuaternion(
         rotationFromDirection(normal[0], normal[1], normal[2])
     );
@@ -1534,29 +1427,16 @@ function createEllipse(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const center = ent.center || [0, 0, 0];
     const radiusU = Math.max(ent.radiusU || 1.0, 0.001);
     const radiusV = Math.max(ent.radiusV || 0.5, 0.001);
-    const normal = ent.normal || [0, 0, 1];
 
-    let ex, ey;
-    if (ent.dirU || ent.dirV) {
-        ex = new THREE.Vector3(...(ent.dirU || [1, 0, 0])).normalize();
-        ey = new THREE.Vector3(...(ent.dirV || [0, 1, 0])).normalize();
-    } else {
-        const q = rotationFromNormal(normal[0], normal[1], normal[2]);
-        ex = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
-        ey = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-    }
-
+    // Canonical: an ellipse in the XY plane at the origin, `radiusU` along +X
+    // and `radiusV` along +Y.  Placement (center + normal + dirU/dirV) rides on
+    // the node transform.
     const points = [];
     for (let i = 0; i <= ELLIPSE_SEGMENTS; i++) {
         const t = (2 * Math.PI * i) / ELLIPSE_SEGMENTS;
-        points.push(
-            new THREE.Vector3(center[0], center[1], center[2])
-                .addScaledVector(ex, radiusU * Math.cos(t))
-                .addScaledVector(ey, radiusV * Math.sin(t)),
-        );
+        points.push(new THREE.Vector3(radiusU * Math.cos(t), radiusV * Math.sin(t), 0));
     }
 
     const line = makeFatLine(points, color, opacity, thickness);
@@ -1565,7 +1445,8 @@ function createEllipse(ent) {
 }
 
 function updateEllipse(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['radiusU', 'radiusV', 'dirU', 'dirV', 'normal', 'center'])) return false;
+    if (contentChanged(ent, prev, ['radiusU', 'radiusV'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;
 }
@@ -1576,16 +1457,13 @@ function updateEllipse(mesh, ent, prev) {
 function createEllipsoid(ent) {
     const color = parseColor(ent, '#ffaa00');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const radii = ent.radii || [1, 1, 1];
 
+    // Canonical: a unit sphere scaled by per-axis radii at the origin;
+    // placement (center + rotation quaternion) rides on the node transform.
     const geometry = new THREE.SphereGeometry(1, 32, 32);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
     mesh.scale.set(radii[0], radii[1], radii[2]);
-    if (ent.rotation) {
-        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
-    }
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {
@@ -1620,11 +1498,12 @@ function rotationFromAxes(normal, inPlane) {
 function createPartialDisk(ent) {
     const color = parseColor(ent, '#ffcc44');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
-    const normal = ent.normal || [0, 0, 1];
-    const startDirection = ent.startDirection || [1, 0, 0];
+    // Canonical plane is XY (normal +Z), sector start is +X; placement rides on
+    // the node transform.
+    const normal = [0, 0, 1];
+    const startDirection = [1, 0, 0];
     const angle = Math.min(Math.max(ent.angle ?? 2 * Math.PI, 0.0), 2 * Math.PI);
 
     // The sector is symmetric about its bisector (matching the SDF primitive,
@@ -1640,7 +1519,6 @@ function createPartialDisk(ent) {
         radius, radius, thickness, 48, 1, false, -angle / 2, angle
     );
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
     mesh.setRotationFromQuaternion(rotationFromAxes(normal, bisector));
 
     const wireframe = styleParam(ent, 'wireframe', false);
@@ -1670,17 +1548,17 @@ function createPartialDisk(ent) {
 function createRegularPolygon(ent) {
     const color = parseColor(ent, '#44ffaa');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const sides = Math.max(Math.floor(ent.sides || 6), 3);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
-    const normal = ent.normal || [0, 0, 1];
+    // Canonical plane is XY (normal +Z); the in-plane `angle` rotates about the
+    // cylinder axis (+Y, now mapped to +Z).  Placement rides on the node transform.
+    const normal = [0, 0, 1];
     const angle = ent.angle || 0.0;
 
     // CylinderGeometry with `radialSegments = sides` yields a regular n-gon.
     const geometry = new THREE.CylinderGeometry(radius, radius, thickness, sides, 1);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
     mesh.setRotationFromQuaternion(
         rotationFromDirection(normal[0], normal[1], normal[2])
     );
@@ -1712,9 +1590,8 @@ function createRegularPolygon(ent) {
 function createRectangle2D(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 1.0);
-    const center = ent.center || [0, 0, 0];
     const size = ent.size || [1, 1];
-    const normal = ent.normal || [0, 0, 1];
+    // Canonical plane is XY (normal +Z); placement rides on the node transform.
     const angle = ent.angle || 0.0;
 
     const group = new THREE.Group();
@@ -1742,8 +1619,6 @@ function createRectangle2D(ent) {
     ], color, opacity, thickness);
     group.add(outline);
 
-    group.position.set(center[0], center[1], center[2]);
-    group.setRotationFromQuaternion(rotationFromNormal(normal[0], normal[1], normal[2]));
     if (angle) {
         group.rotateZ(angle);
     }
@@ -1752,15 +1627,107 @@ function createRectangle2D(ent) {
     return group;
 }
 
-// Hyperbola renderer — samples both branches as a fat-line curve.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2021 Christian Perwass
+//
+// Frustum renderer — four corner lines from the near end (or apex) to the far
+// end, end-plane outlines, and optional translucent faces.
+
+function _quadGeometry(a, b, c, d) {
+    const positions = new Float32Array([
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2],
+        a[0], a[1], a[2], c[0], c[1], c[2], d[0], d[1], d[2],
+    ]);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.computeVertexNormals();
+    return geo;
+}
+
+function _fillFace(group, a, b, c, d, color, opacity) {
+    const mesh = new THREE.Mesh(_quadGeometry(a, b, c, d), makeMaterial(color, opacity, true));
+    mesh.userData.isFillQuad = true;
+    group.add(mesh);
+}
+
+function _corners(y, hw, hh) {
+    return [
+        [-hw, y, -hh],
+        [hw, y, -hh],
+        [hw, y, hh],
+        [-hw, y, hh],
+    ];
+}
+
+function createFrustum(ent) {
+    const color = parseColor(ent, '#88ccff');
+    const opacity = styleParam(ent, 'opacity', 0.9);
+    const thickness = styleParam(ent, 'thickness', 1.0);
+    const near = ent.near ?? 0.0;
+    const far = Math.max(ent.far ?? 1.0, 0.001);
+    const halfWidth = Math.max(ent.halfWidth ?? 1.0, 0.001);
+    const halfHeight = Math.max(ent.halfHeight ?? 1.0, 0.001);
+    const apex = near <= 0.0;
+
+    // Canonical: apex at the origin (or the near plane at +Y `near`), the far
+    // plane at +Y `far`, half-extents along +X / +Z.  The near half-extents
+    // follow by similar triangles.  Placement rides on the node transform.
+    const farCorners = _corners(far, halfWidth, halfHeight);
+    const nearHalfWidth = halfWidth * (near / far);
+    const nearHalfHeight = halfHeight * (near / far);
+    const nearCorners = apex
+        ? [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        : _corners(near, nearHalfWidth, nearHalfHeight);
+
+    const group = new THREE.Group();
+
+    // Corner lines: near[i] -> far[i] (from the apex when collapsed).
+    const cornerLines = [];
+    for (let i = 0; i < 4; i++) {
+        cornerLines.push(...nearCorners[i], ...farCorners[i]);
+    }
+    group.add(makeFatSegmentsFromFlat(cornerLines, color, opacity, thickness));
+
+    // End-plane outlines.
+    const nearLoop = [];
+    const farLoop = [];
+    for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        if (!apex) nearLoop.push(...nearCorners[i], ...nearCorners[j]);
+        farLoop.push(...farCorners[i], ...farCorners[j]);
+    }
+    if (!apex) group.add(makeFatSegmentsFromFlat(nearLoop, color, opacity, thickness));
+    group.add(makeFatSegmentsFromFlat(farLoop, color, opacity, thickness));
+
+    // Optional translucent faces.
+    if (styleParam(ent, 'fill', false)) {
+        const fillOpacity = styleParam(ent, 'fill_opacity', 0.2);
+        _fillFace(group, farCorners[0], farCorners[1], farCorners[2], farCorners[3], color, fillOpacity);
+        if (!apex) {
+            _fillFace(group, nearCorners[0], nearCorners[1], nearCorners[2], nearCorners[3], color, fillOpacity);
+            for (let i = 0; i < 4; i++) {
+                const j = (i + 1) % 4;
+                _fillFace(group, nearCorners[i], nearCorners[j], farCorners[j], farCorners[i], color, fillOpacity);
+            }
+        } else {
+            for (let i = 0; i < 4; i++) {
+                const j = (i + 1) % 4;
+                _fillFace(group, nearCorners[0], farCorners[i], farCorners[j], nearCorners[0], color, fillOpacity);
+            }
+        }
+    }
+
+    tagEntity(group, ent);
+    return group;
+}
+
+// Hyperbola renderer — samples both branches as a fat-line curve, in the
+// canonical XY plane (transverse dir1 → +X, conjugate dir2 → +Y).
 
 function createHyperbola(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const center = ent.center || [0, 0, 0];
-    const d1 = new THREE.Vector3(...(ent.dir1 || [1, 0, 0])).normalize();
-    const d2 = new THREE.Vector3(...(ent.dir2 || [0, 1, 0])).normalize();
     const a = Math.max(ent.a || 1.0, 0.001);
     const b = Math.max(ent.b || 1.0, 0.001);
     // `extent` is a spatial half-size; stop sampling once a branch leaves it.
@@ -1780,9 +1747,7 @@ function createHyperbola(ent) {
         for (let i = 0; i <= segments; i++) {
             const t = -tMax + (2 * tMax * i) / segments;
             points.push(
-                new THREE.Vector3(center[0], center[1], center[2])
-                    .addScaledVector(d1, sign * a * Math.cosh(t))
-                    .addScaledVector(d2, b * Math.sinh(t)),
+                new THREE.Vector3(sign * a * Math.cosh(t), b * Math.sinh(t), 0),
             );
         }
         group.add(makeFatLine(points, color, opacity, thickness));
@@ -1793,22 +1758,20 @@ function createHyperbola(ent) {
 }
 
 function updateHyperbola(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['a', 'b', 'dir1', 'dir2', 'center'])) return false;
+    if (contentChanged(ent, prev, ['a', 'b'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;
 }
 
-// Parabola renderer — samples the curve as a fat-line polyline.
+// Parabola renderer — samples the curve as a fat-line polyline, in the
+// canonical frame (opens along +Y, transverse along +X, vertex at the origin).
 
 function createParabola(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const vertex = ent.vertex || [0, 0, 0];
-    const dir = new THREE.Vector3(...(ent.direction || [1, 0, 0])).normalize();
     const p = Math.max(ent.p || 1.0, 0.001);
-    // 2D transverse direction (the parabola lies in the xy-plane).
-    const dPerp = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
     // `extent` is a spatial half-size; bound the parameter so the curve stays
     // within the extent box along both the axis and the transverse direction.
     const extent = Math.max(styleParam(ent, 'extent', 5.0), 0.001);
@@ -1819,11 +1782,7 @@ function createParabola(ent) {
     for (let i = 0; i <= segments; i++) {
         const t = -tMax + (2 * tMax * i) / segments;
         const s = (t * t) / (2 * p);
-        points.push(
-            new THREE.Vector3(vertex[0], vertex[1], vertex[2])
-                .addScaledVector(dir, s)
-                .addScaledVector(dPerp, t),
-        );
+        points.push(new THREE.Vector3(t, s, 0));
     }
 
     const line = makeFatLine(points, color, opacity, thickness);
@@ -1832,25 +1791,32 @@ function createParabola(ent) {
 }
 
 function updateParabola(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['vertex', 'direction', 'p'])) return false;
+    if (contentChanged(ent, prev, ['p'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;
 }
 
-// Line pair renderer — draws the two member lines as a group.
+// Line pair renderer — draws the two member lines (world-space, baked) as a
+// group.  Member lines carry their own origin/direction, so they are rendered
+// inline rather than through the canonical `createLine`.
+
+function _bakedLine(wire, ent) {
+    const color = parseColor(ent, '#44ff44');
+    const opacity = styleParam(ent, 'opacity', 0.8);
+    const thickness = styleParam(ent, 'thickness', 1.0);
+    const origin = new THREE.Vector3(...(wire.origin || [0, 0, 0]));
+    const dir = new THREE.Vector3(...(wire.direction || [1, 0, 0])).normalize();
+    const length = wire.length ?? styleParam(ent, 'length', 20.0);
+    const end = origin.clone().addScaledVector(dir, length);
+    return makeFatLine([origin, end], color, opacity, thickness);
+}
 
 function createLinePair(ent) {
     const group = new THREE.Group();
     for (const wire of [ent.line1, ent.line2]) {
         if (!wire) continue;
-        group.add(
-            createLine({
-                origin: wire.origin,
-                direction: wire.direction,
-                color: ent.color,
-                style: ent.style,
-            }),
-        );
+        group.add(_bakedLine(wire, ent));
     }
     tagEntity(group, ent);
     return group;
@@ -1858,26 +1824,38 @@ function createLinePair(ent) {
 
 function updateLinePair(mesh, ent, prev) {
     if (contentChanged(ent, prev, ['line1', 'line2'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;
 }
 
-// Plane pair renderer — draws the two member planes as a group.
+// Plane pair renderer — draws the two member planes (world-space, baked) as a
+// group.  Member planes carry their own point/normal, so they are rendered
+// inline rather than through the canonical `createPlane`.
+
+function _bakedPlane(wire, ent) {
+    const color = parseColor(ent, '#4488ff');
+    const opacity = styleParam(ent, 'opacity', 0.3);
+    const extent = wire.extent ?? styleParam(ent, 'extent', 10.0);
+    const geometry = new THREE.PlaneGeometry(extent * 2, extent * 2);
+    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity, true));
+    const point = wire.point || [0, 0, 0];
+    const normal = wire.normal || [0, 0, 1];
+    mesh.position.set(point[0], point[1], point[2]);
+    mesh.setRotationFromQuaternion(
+        new THREE.Quaternion().setFromUnitVectors(
+            new THREE.Vector3(0, 0, 1),
+            new THREE.Vector3(...normal).normalize(),
+        ),
+    );
+    return mesh;
+}
 
 async function createPlanePair(ent) {
     const group = new THREE.Group();
     for (const wire of [ent.plane1, ent.plane2]) {
         if (!wire) continue;
-        group.add(
-            await createPlane({
-                point: wire.point,
-                normal: wire.normal,
-                extent: wire.extent,
-                color: ent.color,
-                opacity: ent.opacity,
-                style: ent.style,
-            }),
-        );
+        group.add(_bakedPlane(wire, ent));
     }
     tagEntity(group, ent);
     return group;
@@ -1885,6 +1863,7 @@ async function createPlanePair(ent) {
 
 function updatePlanePair(mesh, ent, prev) {
     if (contentChanged(ent, prev, ['plane1', 'plane2'])) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;
 }
@@ -1940,14 +1919,13 @@ function updatePointSet(mesh, ent, prev) {
 async function createSphere(ent) {
     const color = parseColor(ent, '#ffaa00');
     const opacity = styleParam(ent, 'opacity', 0.4);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
 
+    // Canonical: a sphere at the origin; placement rides on the node transform.
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const doubleSided = styleParam(ent, 'double_sided', false);
     const material = makeMaterial(color, opacity, doubleSided);
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(center[0], center[1], center[2]);
 
     // ── Texture label ──
     const texLabel = ent.style?.texture_label;
@@ -2905,6 +2883,127 @@ function applyImageUniforms(mesh, patch) {
     return true;
 }
 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2021 Christian Perwass
+//
+// Image background renderer — a full-viewport NDC quad drawn *behind* the 3D
+// scene.  The vertex shader writes clip-space coordinates directly (so the quad
+// ignores the scene camera and always fills the pane), and the fragment shader
+// samples the image texture.  Used by `ThreeJsView` for a
+// `SceneView.background_image`.
+
+const _BG_VERTEX = /* glsl */ `
+varying vec2 vNdc;
+void main() {
+    vNdc = position.xy;
+    gl_Position = vec4(position.xy, 0.999999, 1.0);
+}`;
+
+const _BG_FRAGMENT = /* glsl */ `
+precision highp float;
+varying vec2 vNdc;
+uniform sampler2D uImage;
+uniform float uImageAspect;   // image width / height
+uniform float uPaneAspect;    // pane width / height
+uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
+uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
+
+void main() {
+    float hx = uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect);
+    float hy = uFit > 0.5 ? 1.0 : min(1.0, uPaneAspect / uImageAspect);
+    vec2 q = vNdc / vec2(hx, hy);
+    if (abs(q.x) > 1.0 || abs(q.y) > 1.0) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    } else {
+        vec2 p = q * 0.5 + 0.5;
+        vec2 uv;
+        uv.x = uCrop.x + p.x * (uCrop.z - uCrop.x);
+        uv.y = 1.0 - uCrop.w + p.y * (uCrop.w - uCrop.y);
+        gl_FragColor = texture2D(uImage, uv);
+    }
+}`;
+
+/**
+ * Build a screen-space image background quad.
+ *
+ * @param {object} imageMeta  the serialized `background_image` metadata dict
+ * @returns {THREE.Mesh}
+ */
+function createImageBackground(imageMeta) {
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const img = imageMeta || {};
+    const width = Number(img.width) || 1;
+    const height = Number(img.height) || 1;
+
+    const material = new THREE.ShaderMaterial({
+        vertexShader: _BG_VERTEX,
+        fragmentShader: _BG_FRAGMENT,
+        uniforms: {
+            uImage: { value: null },
+            uImageAspect: { value: width / height },
+            uPaneAspect: { value: 1.0 },
+            uFit: { value: 0.0 },
+            uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
+        },
+        depthTest: false,
+        depthWrite: false,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = -1;
+
+    if (img.source === 'url' && img.url) {
+        new THREE.TextureLoader().load(img.url, (tex) => {
+            tex.minFilter = THREE.NearestFilter;
+            tex.magFilter = THREE.NearestFilter;
+            material.uniforms.uImage.value = tex;
+        });
+    } else {
+        const tex = makeDataTexture(img);
+        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 -> bottom
+        // texel), but this NDC background samples with the image's row 0 at the
+        // *top* of the pane (matching the URL path above and the 3D projection).
+        // Flip so data and url backgrounds line up with the rendered overlay.
+        tex.flipY = true;
+        tex.needsUpdate = true;
+        material.uniforms.uImage.value = tex;
+    }
+
+    return mesh;
+}
+
+/**
+ * Update a background quad's pane aspect (call on resize).
+ *
+ * @param {THREE.Mesh} mesh
+ * @param {number} paneAspect  pane width / height
+ */
+function setBackgroundAspect(mesh, paneAspect) {
+    const mat = mesh && mesh.material;
+    if (mat && mat.uniforms && mat.uniforms.uPaneAspect) {
+        mat.uniforms.uPaneAspect.value = Number(paneAspect) || 1.0;
+    }
+}
+
+/**
+ * Update a background quad's crop window `{u0, v0, u1, v1}` (normalized image
+ * coordinates, v=0 at the top).  Pass `null`/`undefined` to reset to the full
+ * image.
+ */
+function setBackgroundCrop(mesh, crop) {
+    const mat = mesh && mesh.material;
+    if (mat && mat.uniforms && mat.uniforms.uCrop) {
+        const c = crop || { u0: 0, v0: 0, u1: 1, v1: 1 };
+        mat.uniforms.uCrop.value.set(
+            c.u0 !== undefined ? c.u0 : 0,
+            c.v0 !== undefined ? c.v0 : 0,
+            c.u1 !== undefined ? c.u1 : 1,
+            c.v1 !== undefined ? c.v1 : 1,
+        );
+    }
+}
+
 // Entity renderer factory — thin dispatcher importing from per-entity
 // and per-operator modules.  Phase 5+6 refactoring complete.
 
@@ -2971,6 +3070,10 @@ async function createEntityMesh(ent) {
             break;
         case 'Rectangle2D':
             mesh = createRectangle2D(ent);
+            break;
+
+        case 'Frustum':
+            mesh = createFrustum(ent);
             break;
         case 'Space':
             mesh = createSpace(ent);
@@ -3128,34 +3231,16 @@ function updateEntityMesh(mesh, ent, prev) {
             return updatePointSet(mesh, ent, prev);
         case 'Cone':
             return updateCone(mesh, ent, prev);
+        case 'Frustum':
+            // Corners/apex are structural; always rebuild (a one-shot entity).
+            return false;
         default:
             break;
     }
 
-    // Generic in-place update: position/orientation + common style fields.
-    if (ent.position) {
-        mesh.position.set(ent.position[0], ent.position[1], ent.position[2]);
-    }
-    if (ent.center) {
-        mesh.position.set(ent.center[0], ent.center[1], ent.center[2]);
-    }
-    if (ent.vector || ent.direction) {
-        const vec = ent.vector || ent.direction;
-        const origin = ent.origin || [0, 0, 0];
-        mesh.position.set(origin[0], origin[1], origin[2]);
-        const dir = new THREE.Vector3(vec[0], vec[1], vec[2]).normalize();
-        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-        mesh.setRotationFromQuaternion(quat);
-    }
-    if (ent.rotation) {
-        // Top-level Euler triple (Box / Ellipsoid). Applied in place so a
-        // rotation-only content update doesn't require a mesh rebuild.
-        mesh.rotation.set(ent.rotation[0], ent.rotation[1], ent.rotation[2]);
-    } else if (ent.rotation === null) {
-        // Explicitly cleared rotation (e.g. `Box(rotation=None)`) → identity,
-        // i.e. back to axis-aligned.
-        mesh.rotation.set(0, 0, 0);
-    }
+    // Placement now rides on the node transform (the `transform` aspect), so the
+    // generic in-place path only applies the cheap style fields; anything
+    // structural (content fields, non-color/opacity style) triggers a rebuild.
     applyStyleUpdate(mesh, ent);
 
     return !entityRequiresRebuild(ent, prev);
@@ -4586,17 +4671,17 @@ function _containMinZoom(camera, v2d) {
 function isIdentityTransform(transform) {
     if (!transform) return true;
     const p = transform.position || [0, 0, 0];
-    const r = transform.rotation || [0, 0, 0];
+    const r = transform.rotation || [0, 0, 0, 1];
     const s = transform.scale || [1, 1, 1];
     return p[0] === 0 && p[1] === 0 && p[2] === 0
-        && r[0] === 0 && r[1] === 0 && r[2] === 0
+        && r[0] === 0 && r[1] === 0 && r[2] === 0 && r[3] === 1
         && s[0] === 1 && s[1] === 1 && s[2] === 1;
 }
 
 function applyTransformToObject(obj, transform) {
     if (!transform) return;
     if (transform.position) obj.position.set(transform.position[0], transform.position[1], transform.position[2]);
-    if (transform.rotation) obj.rotation.set(transform.rotation[0], transform.rotation[1], transform.rotation[2]);
+    if (transform.rotation) obj.quaternion.set(transform.rotation[0], transform.rotation[1], transform.rotation[2], transform.rotation[3]);
     if (transform.scale) obj.scale.set(transform.scale[0], transform.scale[1], transform.scale[2]);
 }
 

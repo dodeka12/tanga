@@ -77,7 +77,8 @@ class TestSerializeEntities:
         d = _serialize(Point(1.5, 2.5, 3.5))
         assert d["id"] == "test_id"
         assert d["kind"] == "Point"
-        assert d["position"] == [1.5, 2.5, 3.5]
+        assert "position" not in d
+        assert d["transform"]["position"] == [1.5, 2.5, 3.5]
         assert d["color"] == "#ff4444"
 
     def test_point_with_color_override(self):  # noqa: ANN201
@@ -87,14 +88,16 @@ class TestSerializeEntities:
     def test_direction(self):  # noqa: ANN201
         d = _serialize(Direction(1, 0, 0))
         assert d["kind"] == "Direction"
-        assert d["vector"] == [1, 0, 0]
+        assert "vector" not in d
+        assert len(d["transform"]["rotation"]) == 4
         assert d["length"] == 2.0
 
     def test_homogeneous_point(self):  # noqa: ANN201
         hp = HPoint(point=Point(1, 2, 3), weight=2.0)
         d = _serialize(hp)
         assert d["kind"] == "HPoint"
-        assert d["position"] == [1, 2, 3]
+        assert "position" not in d
+        assert d["transform"]["position"] == [1.0, 2.0, 3.0]
         assert d["weight"] == 2.0
 
     def test_point_pair(self):  # noqa: ANN201
@@ -112,8 +115,9 @@ class TestSerializeEntities:
         assert d["kind"] == "Line"
         # Infinite line → centered on the closest point to the origin, so the
         # serialized `origin` is the start point (closest - d̂·length/2).
-        assert d["origin"] == [-10.0, 0.0, 0.0]
-        assert d["direction"] == [1, 0, 0]
+        assert "origin" not in d
+        assert "direction" not in d
+        assert d["transform"]["position"] == [0.0, 0.0, 0.0]
         assert d["thickness"] == 1.0
         # Infinite line → the content `length` resolves to the style default.
         assert d["length"] == 20.0
@@ -124,8 +128,9 @@ class TestSerializeEntities:
         # origin = closest - d̂·length/2.
         line = Line(origin=Point(0, 1, 0), direction=Direction(1, 0, 0))
         d = _serialize(line)
-        assert d["origin"] == [-10.0, 1.0, 0.0]
-        assert d["direction"] == [1.0, 0.0, 0.0]
+        assert "origin" not in d
+        assert "direction" not in d
+        assert d["transform"]["position"] == [0.0, 1.0, 0.0]
         assert d["length"] == 20.0
 
     def test_line_from_points_respects_length(self):  # noqa: ANN201
@@ -140,8 +145,9 @@ class TestSerializeEntities:
         p = Plane(point=Point(0, 0, 3), normal=Direction(0, 0, 1))
         d = _serialize(p)
         assert d["kind"] == "Plane"
-        assert d["point"] == [0, 0, 3]
-        assert d["normal"] == [0, 0, 1]
+        assert "point" not in d
+        assert "normal" not in d
+        assert d["transform"]["position"] == [0.0, 0.0, 3.0]
         assert d["opacity"] == 0.3
         assert d["extent"] == 10.0
 
@@ -221,8 +227,8 @@ class TestSerializeEntities:
         c = Circle(center=Point(0, 0, 0), normal=Direction(0, 0, 1), radius=3.0)
         d = _serialize(c)
         assert d["kind"] == "Circle"
-        assert d["center"] == [0, 0, 0]
-        assert d["normal"] == [0, 0, 1]
+        assert "center" not in d
+        assert "normal" not in d
         assert d["radius"] == 3.0
         assert d["tubeRadius"] == 0.03
 
@@ -235,7 +241,7 @@ class TestSerializeEntities:
         s = Sphere(center=Point(0, 0, 0), radius=2.5)
         d = _serialize(s)
         assert d["kind"] == "Sphere"
-        assert d["center"] == [0, 0, 0]
+        assert "center" not in d
         assert d["radius"] == 2.5
         assert d["style"]["wireframe"] is True
         assert d["style"]["opacity"] == 1.0
@@ -492,16 +498,17 @@ class TestStyleOverrides:
     def test_cylinder(self):  # noqa: ANN201
         d = _serialize(Cylinder(Point(1, 2, 3), Direction(0, 1, 0), 2.0, 0.2))
         assert d["kind"] == "Cylinder"
-        assert d["origin"] == [1, 2, 3]
-        assert d["axis"] == [0, 1, 0]
+        assert "origin" not in d
+        assert "axis" not in d
         assert d["length"] == 2.0
         assert d["radius"] == 0.2
-        assert d["alignCenter"] == 0.0
+        assert "alignCenter" not in d
+        assert d["transform"]["position"] == [1.0, 3.0, 3.0]
         assert d["style"]["style_type"] == "CylinderStyle"
 
     def test_cylinder_align_center(self):  # noqa: ANN201
         d = _serialize(Cylinder(align_center=0.5))
-        assert d["alignCenter"] == 0.5
+        assert "alignCenter" not in d
 
     def test_cylinder_color_override(self):  # noqa: ANN201
         d = _serialize(Cylinder(), {"color": "#00ff00"})
@@ -511,20 +518,18 @@ class TestStyleOverrides:
     def test_arc(self):  # noqa: ANN201
         d = _serialize(Arc(Point(0, 0, 0), Direction(0, 0, 1), 1.5, 0.05, math.pi))
         assert d["kind"] == "Arc"
-        assert d["origin"] == [0, 0, 0]
-        assert d["axis"] == [0, 0, 1]
+        assert "origin" not in d
+        assert "axis" not in d
         assert d["radius"] == 1.5
         assert d["tubeRadius"] == 0.05
         assert d["angle"] == pytest.approx(math.pi)
         assert d["arrow"] is None
-        start = d["startDirection"]
-        assert len(start) == 3
-        assert sum(c * c for c in start) == pytest.approx(1.0)
-        assert start[2] == pytest.approx(0.0)  # perpendicular to +z
+        assert "startDirection" not in d
 
     def test_arc_respects_start_direction(self):  # noqa: ANN201
         d = _serialize(Arc(start_direction=Direction(1, 0, 0)))
-        assert d["startDirection"] == [1.0, 0.0, 0.0]
+        assert "startDirection" not in d
+        assert len(d["transform"]["rotation"]) == 4
 
     def test_arc_arrow_defaults(self):  # noqa: ANN201
         d = _serialize(Arc(show_arrow=True, tube_radius=0.1))
@@ -545,69 +550,68 @@ class TestStyleOverrides:
     def test_disk(self):  # noqa: ANN201
         d = _serialize(Disk(Point(1, 2, 3), 2.0, Direction(0, 1, 0)))
         assert d["kind"] == "Disk"
-        assert d["center"] == [1, 2, 3]
+        assert "center" not in d
         assert d["radius"] == 2.0
-        assert d["normal"] == [0, 1, 0]
+        assert "normal" not in d
+        assert d["transform"]["position"] == [1.0, 2.0, 3.0]
         assert d["style"]["style_type"] == "DiskStyle"
         assert d["style"]["thickness"] == 0.02
 
     def test_partial_disk(self):  # noqa: ANN201
         d = _serialize(PartialDisk(angle=math.pi, start_direction=Direction(1, 0, 0)))
         assert d["kind"] == "PartialDisk"
-        assert d["center"] == [0, 0, 0]
+        assert "center" not in d
         assert d["radius"] == 1.0
         assert d["angle"] == pytest.approx(math.pi)
-        assert d["startDirection"] == [1.0, 0.0, 0.0]
-        assert d["normal"] == [0, 0, 1]
+        assert "startDirection" not in d
+        assert "normal" not in d
         assert d["style"]["style_type"] == "PartialDiskStyle"
         assert d["style"]["thickness"] == 0.02
 
     def test_partial_disk_auto_start_direction(self):  # noqa: ANN201
         d = _serialize(PartialDisk())
-        start = d["startDirection"]
-        assert len(start) == 3
-        assert sum(c * c for c in start) == pytest.approx(1.0)
-        assert start[2] == pytest.approx(0.0)  # perpendicular to +z
+        assert "startDirection" not in d
+        assert len(d["transform"]["rotation"]) == 4
 
     def test_box(self):  # noqa: ANN201
         d = _serialize(Box(Point(1, 2, 3), (2, 3, 4)))
         assert d["kind"] == "Box"
-        assert d["center"] == [1, 2, 3]
+        assert "center" not in d
         assert d["size"] == [2, 3, 4]
-        assert d["rotation"] is None
+        assert "rotation" not in d
+        assert d["transform"]["position"] == [1.0, 2.0, 3.0]
         assert d["style"]["style_type"] == "BoxStyle"
 
     def test_box_rotation_to_euler(self):  # noqa: ANN201
         d = _serialize(Box(rotation=Rotor(math.pi / 2, Direction(0, 0, 1))))
-        assert d["rotation"] is not None
-        assert len(d["rotation"]) == 3
-        assert d["rotation"][2] == pytest.approx(math.pi / 2)
+        assert "rotation" not in d
+        assert len(d["transform"]["rotation"]) == 4
 
     def test_ellipsoid(self):  # noqa: ANN201
         d = _serialize(Ellipsoid(radii=(1, 0.5, 0.75)))
         assert d["kind"] == "Ellipsoid"
-        assert d["center"] == [0, 0, 0]
+        assert "center" not in d
         assert d["radii"] == [1, 0.5, 0.75]
-        assert d["rotation"] is None
+        assert "rotation" not in d
         assert d["style"]["style_type"] == "EllipsoidStyle"
 
     def test_ellipse(self):  # noqa: ANN201
         d = _serialize(Ellipse(radius_u=2.0, radius_v=1.0, normal=Direction(0, 1, 0)))
         assert d["kind"] == "Ellipse"
-        assert d["center"] == [0, 0, 0]
+        assert "center" not in d
         assert d["radiusU"] == 2.0
         assert d["radiusV"] == 1.0
-        assert d["normal"] == [0, 1, 0]
+        assert "normal" not in d
         assert d["style"]["style_type"] == "EllipseStyle"
         assert d["style"]["thickness"] == 1.0
 
     def test_regular_polygon(self):  # noqa: ANN201
         d = _serialize(RegularPolygon(radius=1.5, sides=6))
         assert d["kind"] == "RegularPolygon"
-        assert d["center"] == [0, 0, 0]
+        assert "center" not in d
         assert d["radius"] == 1.5
         assert d["sides"] == 6
-        assert d["normal"] == [0, 0, 1]
+        assert "normal" not in d
         assert d["angle"] == 0.0
         assert d["style"]["style_type"] == "RegularPolygonStyle"
         assert d["style"]["thickness"] == 0.02
@@ -695,8 +699,8 @@ def test_viz_entities_scene_graph_integration():  # noqa: ANN201
     objs = viz.main_scene.full_state(styles_map=viz.styles.kind)
 
     cylinder = next(o for o in objs if o["kind"] == "Cylinder")
-    assert cylinder["origin"] == [0, 0, 0]
-    assert cylinder["axis"] == [0, 0, 1]
+    assert "origin" not in cylinder
+    assert "axis" not in cylinder
     assert cylinder["length"] == 2.0
     assert cylinder["radius"] == 0.2
 
@@ -705,8 +709,7 @@ def test_viz_entities_scene_graph_integration():  # noqa: ANN201
     partial = next(o for o in arcs if o["arrow"] is not None)
     full = next(o for o in arcs if o["arrow"] is None)
 
-    start = partial["startDirection"]
-    assert sum(c * c for c in start) == pytest.approx(1.0)
+    assert "startDirection" not in partial
     assert partial["arrow"]["length"] == pytest.approx(0.15)
     assert partial["arrow"]["radius"] == pytest.approx(0.1)
     assert full["arrow"] is None

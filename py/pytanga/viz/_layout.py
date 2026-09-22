@@ -760,6 +760,7 @@ class LayoutHostImpl:
         self._layouts: dict[str, Layout] = {}
         self._layouts_serialized: dict[str, dict[str, Any]] = {}
         self._scene_layouts_serialized: dict[str, dict[str, Any]] = {}
+        self._background_frames: dict[str, bytes] = {}
 
     # ── LayoutHost contract ─────────────────────────────
 
@@ -808,7 +809,27 @@ class LayoutHostImpl:
         self._layouts[name] = Layout(root, self._overlay)
         self._layout_control_ids = self.register(root)
         self._sync_overlays()
+        self._collect_background_frames(root)
+        for frame in self._background_frames.values():
+            self._transport.send_bytes(frame)
         return name
+
+    def _collect_background_frames(self, root: View) -> None:
+        """Encode and store (then send) any ``CameraView.background_image`` bytes."""
+        from ._image_wire import encode_image_frame
+        from .views import iter_scene_views
+
+        for scene_view in iter_scene_views(root):
+            camera_view = scene_view.camera_view
+            if camera_view is None:
+                continue
+            image = camera_view.background_image
+            if image is not None and image.data is not None:
+                self._background_frames[image.id] = encode_image_frame(image.id, image.data)
+
+    def background_image_frames(self) -> list[tuple[str, bytes]]:
+        """Return ``(id, encoded_frame)`` for every background image (re-sent on connect)."""
+        return list(self._background_frames.items())
 
     def add_layout(self, root: View, name: str = "") -> str:
         """Register a layout (raise if *name* is already a scene or layout)."""

@@ -47,12 +47,12 @@ class TestNodeSerialization:
         assert d["kind"] == "Point"
         assert d["parent_id"] is None
         assert d["transform"] == {
-            "position": [0.0, 0.0, 0.0],
-            "rotation": [0.0, 0.0, 0.0],
+            "position": [1.5, 2.5, 3.5],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
             "scale": [1.0, 1.0, 1.0],
         }
         assert d["visible"] is True
-        assert d["position"] == [1.5, 2.5, 3.5]
+        assert "position" not in d
         assert d["style"]["style_type"] == "PointStyle"
 
     def test_line_from_points_keeps_segment_length(self):  # noqa: ANN201
@@ -172,7 +172,7 @@ class TestNodeSerialization:
         patch = node.patch("full")
         assert patch["id"] == "a"
         assert patch["aspect"] == "full"
-        assert patch["value"]["position"] == [1, 2, 3]
+        assert patch["value"]["transform"]["position"] == [1.0, 2.0, 3.0]
         assert patch["value"]["kind"] == "Point"
 
     def test_aspect_content_patch(self):  # noqa: ANN201
@@ -183,7 +183,7 @@ class TestNodeSerialization:
         assert patch["id"] == "a"
         assert patch["aspect"] == "content"
         assert patch["value"]["kind"] == "Point"
-        assert patch["value"]["position"] == [1, 2, 3]
+        assert "position" not in patch["value"]
         assert "parent_id" not in patch["value"]
         assert "transform" not in patch["value"]
         assert "visible" not in patch["value"]
@@ -206,7 +206,7 @@ class TestNodeSerialization:
         assert patch["aspect"] == "transform"
         assert patch["value"] == {
             "position": [1.0, 2.0, 3.0],
-            "rotation": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
             "scale": [1.0, 1.0, 1.0],
         }
 

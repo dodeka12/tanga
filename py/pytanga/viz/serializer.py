@@ -21,6 +21,7 @@ from pytanga.geometry.entities import (
     Ellipse,
     Ellipsoid,
     Entity,
+    Frustum,
     HPoint,
     Hyperbola,
     Line,
@@ -54,7 +55,6 @@ from ._scene_objects import (
     _pad_origin,
     _scale_dir,
 )
-from ._types import _as_euler
 from ._capabilities import _supports_renderer
 from pytanga.geometry.operators import (
     Dilator,
@@ -99,6 +99,12 @@ def serialize_entity(
 
     result: Dict[str, Any] = {"id": entity_id, "layer": "scene"}
     result.update(_dispatch_entity(entity, kind, props, styles_map))
+    # Placement rides on the node transform (content is shape-only); emit it so
+    # direct callers of this standalone trampoline see the full placement too.
+    from ._decompose import _entity_decompose
+
+    transform, _ = _entity_decompose(entity)
+    result["transform"] = transform.to_dict()
     return result
 
 
@@ -200,6 +206,8 @@ def _dispatch_entity(
         )
     if isinstance(entity, Rectangle2D):
         return _serialize_rectangle2d(entity, props, kind=kind, styles_map=styles_map)
+    if isinstance(entity, Frustum):
+        return _serialize_frustum(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Hyperbola):
         return _serialize_hyperbola(entity, props, kind=kind, styles_map=styles_map)
     if isinstance(entity, Parabola):
@@ -736,7 +744,7 @@ def _serialize_point(
         kind,
         {"size": 0.08},
         styles_map=styles_map,
-    ) | {"position": [ent.x, ent.y, ent.z]}
+    )
 
 
 def _serialize_direction(
@@ -749,12 +757,9 @@ def _serialize_direction(
     return _apply_defaults(
         props,
         kind,
-        {
-            "length": 2.0,
-            "origin": [0.0, 0.0, 0.0],
-        },
+        {"length": 2.0},
         styles_map=styles_map,
-    ) | {"vector": [ent.x, ent.y, ent.z]}
+    )
 
 
 def _serialize_hpoint(
@@ -769,10 +774,7 @@ def _serialize_hpoint(
         kind,
         {"size": 0.08},
         styles_map=styles_map,
-    ) | {
-        "position": [ent.point.x, ent.point.y, ent.point.z],
-        "weight": ent.weight,
-    }
+    ) | {"weight": ent.weight}
 
 
 def _serialize_point_pair(
@@ -881,24 +883,12 @@ def _serialize_line(
     length = resolve_line_length(ent, styles_map=styles_map, props=props)
     props["length"] = length
 
-    # The frontend draws `origin -> origin + normalize(direction) * length`.
-    # For an infinite line (no explicit length) `origin` is the closest point to
-    # the origin, so shift it back by half the length to draw the line centered
-    # on that point.  Segments (Line.from_points) keep `origin` as their start.
-    origin = ent.origin
-    if ent.length is None and ent.direction.mag() > 0:
-        unit = ent.direction.normalized()
-        origin = ent.origin - unit * (length / 2.0)
-
     return _apply_defaults(
         props,
         kind,
         builtins,
         styles_map=styles_map,
-    ) | {
-        "origin": [origin.x, origin.y, origin.z],
-        "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
-    }
+    )
 
 
 def _serialize_plane(
@@ -916,10 +906,7 @@ def _serialize_plane(
         fallback=10.0,
     )
     props["extent"] = extent
-    result = _apply_defaults(props, kind, {}, styles_map=styles_map) | {
-        "point": [ent.point.x, ent.point.y, ent.point.z],
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
-    }
+    result = _apply_defaults(props, kind, {}, styles_map=styles_map)
     if ent.span_u is not None and ent.span_v is not None:
         result["span_u"] = [ent.span_u.x, ent.span_u.y, ent.span_u.z]
         result["span_v"] = [ent.span_v.x, ent.span_v.y, ent.span_v.z]
@@ -1035,8 +1022,6 @@ def _serialize_circle(
     result["kind"] = "Circle"  # frontend dispatch uses base kind
     result.update(
         {
-            "center": [ent.center.x, ent.center.y, ent.center.z],
-            "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
             "radius": _clamp_positive(ent.radius),
             "isImaginary": ent.is_imaginary,
         }
@@ -1061,7 +1046,6 @@ def _serialize_sphere(
     result["kind"] = "Sphere"  # frontend dispatch uses base kind
     result.update(
         {
-            "center": [ent.center.x, ent.center.y, ent.center.z],
             "radius": _clamp_positive(ent.radius),
             "isImaginary": ent.is_imaginary,
         }
@@ -1105,11 +1089,8 @@ def _serialize_cylinder(
         {},
         styles_map=styles_map,
     ) | {
-        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
-        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
         "length": ent.length,
         "radius": _clamp_positive(ent.radius),
-        "alignCenter": ent.align_center,
     }
 
 
@@ -1136,16 +1117,9 @@ def _serialize_arc(
         {},
         styles_map=styles_map,
     ) | {
-        "origin": [ent.origin.x, ent.origin.y, ent.origin.z],
-        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
         "radius": _clamp_positive(ent.radius),
         "tubeRadius": _clamp_positive(ent.tube_radius),
         "angle": ent.angle,
-        "startDirection": [
-            ent.start_direction.x,
-            ent.start_direction.y,
-            ent.start_direction.z,
-        ],
         "arrow": arrow,
     }
 
@@ -1163,9 +1137,7 @@ def _serialize_disk(
         {"thickness": 0.02},
         styles_map=styles_map,
     ) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
         "radius": _clamp_positive(ent.radius),
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
     }
 
 
@@ -1182,15 +1154,8 @@ def _serialize_partial_disk(
         {"thickness": 0.02},
         styles_map=styles_map,
     ) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
         "radius": _clamp_positive(ent.radius),
         "angle": ent.angle,
-        "startDirection": [
-            ent.start_direction.x,
-            ent.start_direction.y,
-            ent.start_direction.z,
-        ],
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
     }
 
 
@@ -1201,16 +1166,13 @@ def _serialize_box(
     kind: str,
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
-    rotation = _as_euler(ent.rotation) if ent.rotation is not None else None
     return _apply_defaults(
         props,
         kind,
         {},
         styles_map=styles_map,
     ) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
         "size": [ent.size[0], ent.size[1], ent.size[2]],
-        "rotation": list(rotation) if rotation is not None else None,
     }
 
 
@@ -1221,16 +1183,13 @@ def _serialize_ellipsoid(
     kind: str,
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
-    rotation = _as_euler(ent.rotation) if ent.rotation is not None else None
     return _apply_defaults(
         props,
         kind,
         {},
         styles_map=styles_map,
     ) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
         "radii": [ent.radii[0], ent.radii[1], ent.radii[2]],
-        "rotation": list(rotation) if rotation is not None else None,
     }
 
 
@@ -1242,15 +1201,9 @@ def _serialize_ellipse(
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     result = _apply_defaults(props, kind, {}, styles_map=styles_map) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
         "radiusU": ent.radius_u,
         "radiusV": ent.radius_v,
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
     }
-    if ent.dir_u is not None:
-        result["dirU"] = [ent.dir_u.x, ent.dir_u.y, ent.dir_u.z]
-    if ent.dir_v is not None:
-        result["dirV"] = [ent.dir_v.x, ent.dir_v.y, ent.dir_v.z]
     return result
 
 
@@ -1267,10 +1220,8 @@ def _serialize_regular_polygon(
         {"thickness": 0.02},
         styles_map=styles_map,
     ) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
         "radius": _clamp_positive(ent.radius),
         "sides": ent.sides,
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
         "angle": ent.angle,
     }
 
@@ -1283,10 +1234,23 @@ def _serialize_rectangle2d(
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
         "size": [ent.size[0], ent.size[1]],
-        "normal": [ent.normal.x, ent.normal.y, ent.normal.z],
         "angle": ent.angle,
+    }
+
+
+def _serialize_frustum(
+    ent: Frustum,
+    props: Dict[str, Any],
+    *,
+    kind: str,
+    styles_map: StylesMap | None = None,
+) -> Dict[str, Any]:
+    return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
+        "near": ent.near,
+        "far": ent.far,
+        "halfWidth": ent.far_half_width,
+        "halfHeight": ent.far_half_height,
     }
 
 
@@ -1298,9 +1262,6 @@ def _serialize_hyperbola(
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
-        "center": [ent.center.x, ent.center.y, ent.center.z],
-        "dir1": [ent.dir1.x, ent.dir1.y, ent.dir1.z],
-        "dir2": [ent.dir2.x, ent.dir2.y, ent.dir2.z],
         "a": abs(ent.a),
         "b": abs(ent.b),
     }
@@ -1314,8 +1275,6 @@ def _serialize_parabola(
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
-        "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
-        "direction": [ent.direction.x, ent.direction.y, ent.direction.z],
         "p": abs(ent.p),
     }
 
@@ -1388,8 +1347,6 @@ def _serialize_cone(
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
     return _apply_defaults(props, kind, {}, styles_map=styles_map) | {
-        "vertex": [ent.vertex.x, ent.vertex.y, ent.vertex.z],
-        "axis": [ent.axis.x, ent.axis.y, ent.axis.z],
         "halfAngle": ent.half_angle,
     }
 

@@ -14,14 +14,14 @@ import {
 export function createDisk(ent) {
     const color = parseColor(ent, '#ff8844');
     const opacity = styleParam(ent, 'opacity', 0.9);
-    const center = ent.center || [0, 0, 0];
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
-    const normal = ent.normal || [0, 0, 1];
+    // Canonical plane is XY (normal +Z): the disk slab's cylinder axis (+Y) is
+    // rotated to +Z once.  Placement rides on the node transform.
+    const normal = [0, 0, 1];
 
     const geometry = new THREE.CylinderGeometry(radius, radius, thickness, 48, 1);
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
-    mesh.position.set(center[0], center[1], center[2]);
     mesh.setRotationFromQuaternion(
         rotationFromDirection(normal[0], normal[1], normal[2])
     );

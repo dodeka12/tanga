@@ -169,8 +169,36 @@ zoom (scroll wheel) about the framed plane.
 | `get_camera_view2d(config)` | `View2DConfig` | `CameraConfig2d` |
 | `get_camera_view3d(config)` | `View3dConfig` | `CameraConfig3d` |
 | `get_camera(view_config)` | `View2DConfig \| View3dConfig` | `CameraConfig` (dispatches) |
+| `pinhole_camera(K, R, t, image_size=…)` | intrinsics + extrinsics | `PinholeCamera` |
 
 `get_camera()` is a convenience dispatcher over the two specific builders.
+
+## Pinhole camera from calibration
+
+`pinhole_camera(K, R, t, *, image_size, near=None, far=None, fit="fit")` turns an
+OpenCV-style calibration into a `PinholeCamera` (`type: "pinhole"`):
+
+```python
+import numpy as np
+from pytanga.viz import pinhole_camera
+
+K = np.array([[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]])
+R = np.eye(3)                      # world → camera
+t = np.array([0.0, 0.0, 6.0])      # world → camera
+cam = pinhole_camera(K, R, t, image_size=(640, 480))
+```
+
+`PinholeCamera` carries the intrinsics (`fx`, `fy`, `cx`, `cy`, `width`,
+`height`), the pose (`position`/`target`/`up`), clipping, and a `fit` policy.
+The viewer renders it with an **off-center** projection so the principal point
+is honored; `fit="fit"` (default) letterboxes to preserve the image aspect,
+`fit="fill"` stretches.  Bundle the camera with a `lock` and `background_image`
+in a `CameraView` and pass it to `SceneView(camera_view=…)` — see
+[Split Views](../ui/split-views.md).
+
+For a higher-level wrapper that bundles `K`/`R`/`t` with a coordinate-frame
+convention (`OpenCVFrame`) and a unit scale (`units=…`), see
+[Camera Calibration](camera-calibration.md).
 
 ## Runtime Camera Updates
 

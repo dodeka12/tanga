@@ -23,7 +23,7 @@ class TestTransform:
     def test_defaults(self):  # noqa: ANN201
         t = Transform()
         assert t.position == (0.0, 0.0, 0.0)
-        assert t.rotation == (0.0, 0.0, 0.0)
+        assert t.rotation == (0.0, 0.0, 0.0, 1.0)
         assert t.scale == (1.0, 1.0, 1.0)
 
     def test_matrix_identity(self):  # noqa: ANN201
@@ -118,13 +118,13 @@ class TestAutoId:
 
 
 class TestSceneObjectAspects:
-    def test_set_entity_marks_content(self):  # noqa: ANN201
+    def test_set_entity_marks_transform_on_position_change(self):  # noqa: ANN201
         node = VizSceneObject("a", Point(0, 0, 0), kind="Point")
         node.consume_dirty()
         node.set_entity(Point(1, 2, 3))
-        assert node.dirty_for("content")
+        assert node.dirty_for("transform")
+        assert not node.dirty_for("content")
         assert not node.dirty_for("style")
-        assert not node.dirty_for("transform")
         assert not node.dirty_for("full")
 
     def test_set_entity_marks_full_on_kind_change(self):  # noqa: ANN201

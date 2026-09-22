@@ -134,6 +134,13 @@ export function buildViewTree(node, ws, reuse, newScenes) {
 
     if (node.type === 'scene_view') {
         const sceneName = node.scene ?? '';
+        const camView = node.camera_view || {};
+        const camera = camView.camera || null;
+        const lock = camView.lock || null;
+        const navigation = camView.navigation || null;
+        const controls = camView.controls || null;
+        const viewport = camView.viewport || null;
+        const backgroundImage = camView.background_image || null;
         let view = (reuse && reuse.get(sceneName)) || null;
         if (view) {
             // Reuse the existing scene pane so its WebGL context, objects and
@@ -141,9 +148,17 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             reuse.delete(sceneName);
             view.clearOverlays();
             view.viewId = node.id || null;
+            view.setLock(lock);
+            view.setNavigation(navigation);
+            view.setControls(controls);
+            view.setViewport(viewport);
+            view.setBackgroundImage(backgroundImage);
+            view.setVisibilityFilter(node.hide || null, node.show || null);
             applySizeSpecs(view, node);
         } else {
-            view = new ThreeJsView(sceneName, ws, node.camera || null, node.id || null);
+            view = new ThreeJsView(sceneName, ws, camera, node.id || null, lock, navigation, controls, viewport);
+            view.setBackgroundImage(backgroundImage);
+            view.setVisibilityFilter(node.hide || null, node.show || null);
             applySizeSpecs(view, node);
             if (newScenes) newScenes.push(sceneName);
         }
