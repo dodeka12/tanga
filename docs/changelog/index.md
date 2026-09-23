@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.9.0 (2.10.0-rc1)] — 2026-09-24
+- GA-only conic/quadric API (`geo(...)` + `op`/`join`/`meet`/`gp`, `dual`, `sp`) · `op`/`join`/`meet`/`gp` sequence products · matrix-accepting `Conic`/`Quadric3D` (`to_matrix()`) · cone lift + `geo(Translator)` linear map · `Hyperboloid`/`Paraboloid` entities · conic/quadric intersection via `analyze` · `@` operator applies a single-variable expression
+- Bug fixes: `Expression.lstsq`/`svd` null-space (`full_matrices=True`)
+→ [Details](2026/09/24_780f13db4.md)
+
 ## [Since 2.9.0] — 2026-09-22
 - Calibrated pinhole camera views (`PinholeCamera`/`CameraView`, image background, 2D viewport navigation, per-pane visibility, `Frustum`) · `Matrix`/`MatrixProvider`/`CoordinateFrame`/`OpenCVFrame`/`CameraCalibration` coordinate-frame + calibration types · canonical-frame transform placement (quaternion `Transform` in `pytanga.geometry`, shape-only serialization, re-parameterized `Frustum`) · BOP T-LESS calibrated example
 - Bug fixes: data background image orientation · `Circle` center update

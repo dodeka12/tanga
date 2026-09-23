@@ -204,6 +204,23 @@ class Algebra:
 
     __call__ = multivector
 
+    def embed(self, mv: MV, blade_map: dict[int, int]) -> MV:
+        """Relabel *mv*'s blades into this algebra via ``blade_map`` (id → id).
+
+        Coefficients are carried over unchanged.  Every non-zero source blade id
+        must be present in *blade_map*, otherwise :class:`ValueError` is raised.
+        """
+        from pytanga.blade_mask import BladeMask
+
+        if mv.algebra is self:
+            raise ValueError("embed() requires a different target algebra")
+        coeffs: dict[int, float] = {}
+        for blade_id in BladeMask(mv).ids:
+            if blade_id not in blade_map:
+                raise ValueError(f"no mapping for source blade id {blade_id}")
+            coeffs[blade_map[blade_id]] = float(mv[blade_id])
+        return self.multivector(coeffs)
+
     # -----------------------------------------------------------------------
     # GA operations
     # -----------------------------------------------------------------------

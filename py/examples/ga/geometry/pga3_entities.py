@@ -26,6 +26,9 @@ Keywords: PGA3, Gunn/Dorst, Translator, Motor, plane-based
 
 import math
 
+from typing import cast
+
+from pytanga.algebra import MV
 from pytanga.basis import BasisPGA3
 from pytanga.geometry import (
     Direction,
@@ -124,7 +127,7 @@ print(f"  Rotor: {type(result_op).__name__} ✓")
 t = Translator(vector=Direction(2, 0, 0))
 try:
     # geo(...) creates for Entity/Operator args; analyzes for MV args
-    result_op = geo.which_operator(geo.create(t))
+    result_op = geo.which_operator(cast(MV, geo.create(t)))
     print(f"  Translator: {type(result_op).__name__} ✓")
 except (ValueError, NotImplementedError):
     print("  Translator: (analysis not yet available for this blade)")

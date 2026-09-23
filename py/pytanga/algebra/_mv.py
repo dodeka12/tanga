@@ -179,6 +179,20 @@ class MV:
         """Return {blade_name: coeff} for all non-zero blades."""
         return {self._alg.blade_name(k): v for k, v in self._impl.to_dict().items()}
 
+    def to_algebra(self, alg: "Algebra", blade_map: dict[int, int] | None = None) -> "MV":
+        """Map this MV into another algebra by relabeling its blades.
+
+        *blade_map* maps this MV's blade ids to *alg*'s blade ids.  When omitted,
+        :class:`ValueError` is raised directing callers to a known map (e.g.
+        ``pytanga.quadric.CONE_BLADE_MAP`` for a Q2→Q3 cone lift).
+        """
+        if blade_map is None:
+            raise ValueError(
+                "to_algebra() requires a blade_map "
+                "(e.g. pytanga.quadric.CONE_BLADE_MAP for a Q2→Q3 cone lift)"
+            )
+        return alg.embed(self, blade_map)
+
     def prune(self, tol: float | int | None = None) -> "MV":
         """Remove coefficients with ``abs(coeff) < algebra.precision`` in-place and return self."""
         if tol is None:

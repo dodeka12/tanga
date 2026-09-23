@@ -12,11 +12,14 @@ from pytanga.quadric._create import (
     create_cylinder,
     create_ellipsoid,
     create_entity,
+    create_hyperboloid,
+    create_paraboloid,
     create_plane,
     create_point,
     create_quadric,
     create_rotor,
     create_sphere,
+    create_translator,
 )
 
 __all__ = [
@@ -24,9 +27,12 @@ __all__ = [
     "create_cylinder",
     "create_ellipsoid",
     "create_entity",
+    "create_hyperboloid",
+    "create_paraboloid",
     "create_plane",
     "create_point",
     "create_quadric",
     "create_rotor",
     "create_sphere",
+    "create_translator",
 ]

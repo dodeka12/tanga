@@ -10,7 +10,6 @@ module keeps the ``geometry`` import path working.
 from pytanga.quadric._pointset import (
     point_from_embedding,
     pointset_from_blade,
-    two_conic_intersection,
 )
 
-__all__ = ["point_from_embedding", "pointset_from_blade", "two_conic_intersection"]
+__all__ = ["point_from_embedding", "pointset_from_blade"]

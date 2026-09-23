@@ -6,18 +6,9 @@
 import numpy as np
 import pytest
 
-from pytanga.quadric import (
-    BasisQ2,
-    BasisQ3,
-    conic_from_points,
-    conic_from_points_svd,
-    embed_point,
-    from_coeffs,
-    line_from_points,
-    quadric_from_points,
-    quadric_from_points_svd,
-    to_coeffs,
-)
+from pytanga.quadric import BasisQ2, BasisQ3
+from pytanga.quadric._embedding import _embed_point
+from pytanga.quadric._mapping import _from_coeffs, _to_coeffs
 
 
 def _build_ok() -> bool:
@@ -46,16 +37,6 @@ def _homogeneous(point):  # noqa: ANN001, ANN202
 def _quadratic_value(matrix, point):  # noqa: ANN001, ANN202
     p = _homogeneous(point)
     return float(p @ matrix @ p)
-
-
-def _assert_same_up_to_scale(a, b, tol=1e-8):  # noqa: ANN001, ANN202
-    a = np.asarray(a, dtype=float)
-    b = np.asarray(b, dtype=float)
-    a = a / np.linalg.norm(a)
-    b = b / np.linalg.norm(b)
-    if np.dot(a.ravel(), b.ravel()) < 0:
-        b = -b
-    assert np.allclose(a, b, atol=tol)
 
 
 # ---------------------------------------------------------------------------
@@ -108,30 +89,30 @@ class TestBases:
 class TestMapping:
     def test_q2_round_trip(self):  # noqa: ANN201
         coeffs = (1.0, -2.0, 3.0, 4.0, -5.0, 6.0)
-        assert to_coeffs(from_coeffs(coeffs)) == pytest.approx(coeffs)
+        assert _to_coeffs(_from_coeffs(coeffs)) == pytest.approx(coeffs)
 
     def test_q3_round_trip(self):  # noqa: ANN201
         coeffs = tuple(float(i) for i in range(1, 11))
-        assert to_coeffs(from_coeffs(coeffs)) == pytest.approx(coeffs)
+        assert _to_coeffs(_from_coeffs(coeffs)) == pytest.approx(coeffs)
 
     def test_to_coeffs_accepts_nested_lists(self):  # noqa: ANN201
         a = [[1.0, 0.0, 2.0], [0.0, 3.0, 4.0], [2.0, 4.0, 5.0]]
-        c = to_coeffs(a)
+        c = _to_coeffs(a)
         s = np.sqrt(2.0) / 2.0
         assert c == pytest.approx((2.0, 4.0, 5.0 * s, 1.0 * s, 3.0 * s, 0.0))
 
     def test_to_coeffs_rejects_unsupported_size(self):  # noqa: ANN201
         with pytest.raises(ValueError):
-            to_coeffs([[1.0, 0.0], [0.0, 1.0]])
+            _to_coeffs([[1.0, 0.0], [0.0, 1.0]])
 
     def test_to_coeffs_rejects_nonsymmetric(self):  # noqa: ANN201
         a = [[1.0, 2.0, 3.0], [2.0, 4.0, 5.0], [9.0, 5.0, 6.0]]
         with pytest.raises(ValueError):
-            to_coeffs(a)
+            _to_coeffs(a)
 
     def test_from_coeffs_rejects_wrong_length(self):  # noqa: ANN201
         with pytest.raises(ValueError):
-            from_coeffs((1.0, 2.0, 3.0))
+            _from_coeffs((1.0, 2.0, 3.0))
 
 
 # ---------------------------------------------------------------------------
@@ -144,9 +125,9 @@ class TestEmbedding:
     def test_q2_incidence(self):  # noqa: ANN201
         b = BasisQ2()
         a = np.array([[2.0, 1.0, 0.5], [1.0, 3.0, -0.5], [0.5, -0.5, 1.0]])
-        coeff_mv = _coeff_mv(b, to_coeffs(a))
+        coeff_mv = _coeff_mv(b, _to_coeffs(a))
         for x, y in [(0.0, 0.0), (1.0, 2.0), (-3.0, 1.5), (2.5, -0.5)]:
-            lhs = embed_point(b, x, y).sp(coeff_mv)
+            lhs = _embed_point(b, x, y).sp(coeff_mv)
             rhs = 0.5 * _quadratic_value(a, (x, y))
             assert lhs == pytest.approx(rhs)
 
@@ -160,52 +141,10 @@ class TestEmbedding:
                 [0.1, -0.2, 0.3, 4.0],
             ]
         )
-        coeff_mv = _coeff_mv(b, to_coeffs(q))
+        coeff_mv = _coeff_mv(b, _to_coeffs(q))
         for x, y, z in [(0.0, 0.0, 0.0), (1.0, 2.0, 3.0), (-1.0, 0.5, 2.5)]:
-            lhs = embed_point(b, x, y, z).sp(coeff_mv)
+            lhs = _embed_point(b, x, y, z).sp(coeff_mv)
             rhs = 0.5 * _quadratic_value(q, (x, y, z))
             assert lhs == pytest.approx(rhs)
 
 
-# ---------------------------------------------------------------------------
-# 1.4 — Build from points
-# ---------------------------------------------------------------------------
-
-
-@_NEEDS_BUILD
-class TestBuildFromPoints:
-    def test_conic_dual_matches_svd(self):  # noqa: ANN201
-        b = BasisQ2()
-        points = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (2.0, 2.0), (3.0, 1.0)]
-        a_dual = conic_from_points(b, points)
-        a_svd = conic_from_points_svd(b, points)
-        _assert_same_up_to_scale(a_dual, a_svd)
-        for p in points:
-            assert _quadratic_value(a_dual, p) == pytest.approx(0.0, abs=1e-8)
-
-    def test_quadric_dual_matches_svd(self):  # noqa: ANN201
-        b = BasisQ3()
-        points = [
-            (0.1, -0.3, 0.7),
-            (1.1, 0.2, -0.5),
-            (-0.4, 1.0, 0.3),
-            (0.8, -0.9, 1.2),
-            (-1.0, -0.7, 0.6),
-            (0.5, 1.3, -0.2),
-            (2.0, 0.1, 0.9),
-            (-0.6, 0.4, 1.5),
-            (1.5, -1.1, -0.8),
-        ]
-        q_dual = quadric_from_points(b, points)
-        q_svd = quadric_from_points_svd(b, points)
-        _assert_same_up_to_scale(q_dual, q_svd)
-        for p in points:
-            assert _quadratic_value(q_dual, p) == pytest.approx(0.0, abs=1e-8)
-
-    def test_line_from_points_contains_both_points(self):  # noqa: ANN201
-        b = BasisQ2()
-        a = (1.0, 2.0)
-        c = (-3.0, 0.5)
-        line = line_from_points(b, a, c)
-        assert (embed_point(b, *a) ^ line).is_zero
-        assert (embed_point(b, *c) ^ line).is_zero

@@ -169,7 +169,16 @@
             "Overview": "py/examples/ga/quadric/index.md"
           },
           {
+            "Cone From Conic": "py/examples/ga/quadric/cone_from_conic.md"
+          },
+          {
             "Conic Demo": "py/examples/ga/quadric/conic_demo.md"
+          },
+          {
+            "Conic Intersection Demo": "py/examples/ga/quadric/conic_intersection_demo.md"
+          },
+          {
+            "Fit Conic Quadric": "py/examples/ga/quadric/fit_conic_quadric.md"
           },
           {
             "General Quadric": "py/examples/ga/quadric/general_quadric.md"
@@ -188,6 +197,9 @@
           },
           {
             "Quadric Intersection Demo": "py/examples/ga/quadric/quadric_intersection_demo.md"
+          },
+          {
+            "Tolerant Classification": "py/examples/ga/quadric/tolerant_classification.md"
           }
         ]
       },

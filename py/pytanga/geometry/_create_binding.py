@@ -41,9 +41,11 @@ if TYPE_CHECKING:
         Ellipse,
         Ellipsoid,
         Hyperbola,
+        Hyperboloid,
         Line,
         LinePair,
         Parabola,
+        Paraboloid,
         Plane,
         PlanePair,
         Point,
@@ -69,6 +71,8 @@ class CreateModule(Protocol):
             | Ellipsoid
             | Cylinder
             | Cone
+            | Hyperboloid
+            | Paraboloid
         ),
     ) -> MV: ...
 

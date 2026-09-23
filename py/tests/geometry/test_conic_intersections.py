@@ -11,9 +11,10 @@ from pytanga.geometry import (
     PlaneConicPair,
     PointSet,
     analyze_entity,
-    two_conic_intersection,
 )
-from pytanga.quadric import BasisQ2, BasisQ3, embed_point
+from pytanga.quadric import BasisQ2, BasisQ3
+from pytanga.quadric._embedding import _embed_point
+from pytanga.quadric._pointset import _two_conic_intersection
 
 _SQRT3_2 = np.sqrt(3.0) / 2.0
 
@@ -26,7 +27,7 @@ class TestTwoConicIntersection:
     def test_two_circles(self):  # noqa: ANN201
         a = np.diag([1.0, 1.0, -1.0])
         b = np.array([[1.0, 0.0, -1.0], [0.0, 1.0, 0.0], [-1.0, 0.0, 0.0]])
-        ps = two_conic_intersection(a, b)
+        ps = _two_conic_intersection(a, b)
         assert len(ps) == 2
         pts = _sorted_pts(ps)
         assert pts[0].x == pytest.approx(0.5)
@@ -37,13 +38,13 @@ class TestTwoConicIntersection:
     def test_two_ellipses_four_points(self):  # noqa: ANN201
         a = np.diag([0.25, 1.0, -1.0])
         b = np.diag([1.0, 0.25, -1.0])
-        ps = two_conic_intersection(a, b)
+        ps = _two_conic_intersection(a, b)
         assert len(ps) == 4
 
     def test_tangency_single_point(self):  # noqa: ANN201
         a = np.diag([1.0, 1.0, -1.0])
         b = np.array([[1.0, 0.0, -2.0], [0.0, 1.0, 0.0], [-2.0, 0.0, 3.0]])
-        ps = two_conic_intersection(a, b)
+        ps = _two_conic_intersection(a, b)
         assert len(ps) == 1
         assert ps[0].x == pytest.approx(1.0, abs=1e-3)
         assert abs(ps[0].y) < 1e-3
@@ -51,14 +52,14 @@ class TestTwoConicIntersection:
     def test_disjoint_empty(self):  # noqa: ANN201
         a = np.diag([1.0, 1.0, -1.0])
         b = np.array([[1.0, 0.0, -10.0], [0.0, 1.0, 0.0], [-10.0, 0.0, 99.0]])
-        ps = two_conic_intersection(a, b)
+        ps = _two_conic_intersection(a, b)
         assert len(ps) == 0
 
 
 class TestPointSetJoin:
     def test_q2_join_of_two_points(self):  # noqa: ANN201
         b = BasisQ2()
-        blade = embed_point(b, 1.0, 2.0) ^ embed_point(b, 3.0, 4.0)
+        blade = _embed_point(b, 1.0, 2.0) ^ _embed_point(b, 3.0, 4.0)
         ps = analyze_entity(blade)
         assert isinstance(ps, PointSet)
         assert len(ps) == 2
@@ -69,24 +70,24 @@ class TestPointSetJoin:
 
     def test_q2_join_of_three_points(self):  # noqa: ANN201
         b = BasisQ2()
-        p1 = embed_point(b, 0.0, 0.0)
-        p2 = embed_point(b, 1.0, 0.0)
-        p3 = embed_point(b, 0.0, 1.0)
+        p1 = _embed_point(b, 0.0, 0.0)
+        p2 = _embed_point(b, 1.0, 0.0)
+        p3 = _embed_point(b, 0.0, 1.0)
         ps = analyze_entity(p1 ^ p2 ^ p3)
         assert len(ps) == 3
 
     def test_q2_join_of_four_points(self):  # noqa: ANN201
         b = BasisQ2()
-        p1 = embed_point(b, 0.0, 0.0)
-        p2 = embed_point(b, 1.0, 0.0)
-        p3 = embed_point(b, 0.0, 1.0)
-        p4 = embed_point(b, 1.0, 1.0)
+        p1 = _embed_point(b, 0.0, 0.0)
+        p2 = _embed_point(b, 1.0, 0.0)
+        p3 = _embed_point(b, 0.0, 1.0)
+        p4 = _embed_point(b, 1.0, 1.0)
         ps = analyze_entity(p1 ^ p2 ^ p3 ^ p4)
         assert len(ps) == 4
 
     def test_q3_join_of_two_points(self):  # noqa: ANN201
         b = BasisQ3()
-        blade = embed_point(b, 1.0, 2.0, 3.0) ^ embed_point(b, 4.0, 5.0, 6.0)
+        blade = _embed_point(b, 1.0, 2.0, 3.0) ^ _embed_point(b, 4.0, 5.0, 6.0)
         ps = analyze_entity(blade)
         assert isinstance(ps, PointSet)
         assert len(ps) == 2
@@ -116,9 +117,9 @@ _Q3_PTS = [
 
 
 def _join_q3(b, pts):  # noqa: ANN001, ANN202
-    mv = embed_point(b, *pts[0])
+    mv = _embed_point(b, *pts[0])
     for p in pts[1:]:
-        mv = mv ^ embed_point(b, *p)
+        mv = mv ^ _embed_point(b, *p)
     return mv
 
 

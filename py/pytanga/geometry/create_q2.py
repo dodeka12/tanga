@@ -19,6 +19,7 @@ from pytanga.quadric._create import (
     create_parallel_line_pair,
     create_point,
     create_rotor,
+    create_translator,
 )
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "create_parallel_line_pair",
     "create_point",
     "create_rotor",
+    "create_translator",
 ]

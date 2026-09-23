@@ -65,11 +65,31 @@ def _plane_from_homogeneous(abcd: "tuple[float, ...] | np.ndarray") -> Any:
     return E.Plane(E.Point(-dn * nx, -dn * ny, -dn * nz), E.Direction(nx, ny, nz))
 
 
-def refine_conic(conic: "Conic") -> Any:
+def _circle_radius(conic: "Conic") -> float:
+    """Radius of a circle (isotropic quadratic part), read off the matrix."""
+    b = conic.matrix[:2, 2]
+    c = np.linalg.solve(conic._quadratic, -b)
+    fprime = conic.matrix[2, 2] + float(b @ c)
+    lam = conic.eigenvalues[0]
+    return float(np.sqrt(max(0.0, -fprime / lam)))
+
+
+def _sphere_radius(quadric: "Quadric3D") -> float:
+    """Radius of a sphere (isotropic quadratic part), read off the matrix."""
+    b = quadric.matrix[:3, 3]
+    c = np.linalg.solve(quadric._quadratic, -b)
+    fprime = quadric.matrix[3, 3] + float(b @ c)
+    lam = quadric.eigenvalues[0]
+    return float(np.sqrt(max(0.0, -fprime / lam)))
+
+
+def refine_conic(conic: "Conic", *, tol: float | None = None) -> Any:
+    from .conic import _classify_conic
+
     E = _E()
-    kind = conic.kind
+    kind = _classify_conic(conic.matrix, tol)
     if kind is E.EConicKind.circle:
-        return E.Circle(conic.center, conic.rho)
+        return E.Circle(conic.center, _circle_radius(conic))
     if kind is E.EConicKind.ellipse:
         return _ellipse_from_conic(conic)
     if kind is E.EConicKind.hyperbola:
@@ -183,11 +203,13 @@ def _parallel_line_pair_from_conic(conic: "Conic") -> Any:
     )
 
 
-def refine_quadric(quadric: "Quadric3D") -> Any:
+def refine_quadric(quadric: "Quadric3D", *, tol: float | None = None) -> Any:
+    from .conic import _classify_quadric
+
     E = _E()
-    kind = quadric.kind
+    kind = _classify_quadric(quadric.matrix, tol)
     if kind is E.EQuadricKind.sphere:
-        return E.Sphere(quadric.center, quadric.rho)
+        return E.Sphere(quadric.center, _sphere_radius(quadric))
     if kind is E.EQuadricKind.ellipsoid:
         return _ellipsoid_from_quadric(quadric)
     if kind in (E.EQuadricKind.elliptic_cylinder, E.EQuadricKind.hyperbolic_cylinder):

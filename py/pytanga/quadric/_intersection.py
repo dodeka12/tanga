@@ -3,7 +3,7 @@
 
 """Intersection of two 3D quadrics via the pencil's degenerate members.
 
-Pure numpy (no scipy).  ``intersect_quadrics`` finds the degenerate members of
+Pure numpy (no scipy).  ``_intersect_quadrics`` finds the degenerate members of
 the pencil ``span{Q1, Q2}`` and either factors a plane-pair member into two
 plane-conics or samples a cone member into a polyline.  Entities are imported
 lazily to preserve the ``quadric → geometry.entities`` layering.
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 
-from ._mapping import to_coeffs
+from ._mapping import _to_coeffs
 from .conic import Conic
 
 if TYPE_CHECKING:
@@ -184,7 +184,7 @@ def _plane_conic_from_quadric(Q: np.ndarray, plane: "Plane") -> "PlaneConic":
     M[:3, 2] = p
     M[3, 2] = 1.0
     a = M.T @ np.asarray(Q, dtype=float) @ M
-    return E.PlaneConic(plane, Conic(to_coeffs(a)))
+    return E.PlaneConic(plane, Conic(_to_coeffs(a)))
 
 
 def _inertia(m: np.ndarray) -> tuple[int, int, int]:
@@ -272,7 +272,7 @@ def _is_proportional(a: np.ndarray, b: np.ndarray) -> bool:
     return min(float(np.linalg.norm(an - bn)), float(np.linalg.norm(an + bn))) < 1e-6
 
 
-def intersect_quadrics(
+def _intersect_quadrics(
     Q1: "np.ndarray | Conic",
     Q2: "np.ndarray | Conic",
     n: int = 200,
@@ -683,12 +683,12 @@ def _newton_refine(
 
 def _points_on_plane_pair(pair: "PlaneConicPair", C: np.ndarray) -> list[np.ndarray]:
     """Intersect the two plane-conics of ``pair`` with ``C`` (exact)."""
-    from ._pointset import two_conic_intersection
+    from ._pointset import _two_conic_intersection
 
     pts: list[np.ndarray] = []
     for pc in (pair.conic1, pair.conic2):
         q3 = _plane_conic_from_quadric(C, pc.plane)
-        for p2 in two_conic_intersection(pc.conic.matrix, q3.conic.matrix):
+        for p2 in _two_conic_intersection(pc.conic.matrix, q3.conic.matrix):
             pts.append(_unproject_to_3d(pc.plane, p2))
     return pts
 
@@ -736,12 +736,12 @@ def _finalize_intersection_points(
     return [E.Point(float(x[0]), float(x[1]), float(x[2])) for x in kept]
 
 
-def intersect_three_quadrics(
+def _intersect_three_quadrics(
     Q1: np.ndarray, Q2: np.ndarray, Q3: np.ndarray
 ) -> "list[Point]":
     """Intersect three 3D quadrics → up to eight finite points.
 
-    Reduces to :func:`intersect_quadrics` on a well-chosen pair ``Qi ∩ Qj``
+    Reduces to :func:`_intersect_quadrics` on a well-chosen pair ``Qi ∩ Qj``
     (preferring the exact plane-pair member, else a sampled cone member) and
     then locates ``Qk = 0`` along that quartic.  Returns the distinct finite
     points lying on all three quadrics.
@@ -753,7 +753,7 @@ def intersect_three_quadrics(
     fallback = None
     for a, b, c in ((Q1, Q2, Q3), (Q1, Q3, Q2), (Q2, Q3, Q1)):
         try:
-            curve = intersect_quadrics(a, b, n=200, extent=5.0)
+            curve = _intersect_quadrics(a, b, n=200, extent=5.0)
         except NotImplementedError:
             continue
         if isinstance(curve, E.PlaneConicPair):

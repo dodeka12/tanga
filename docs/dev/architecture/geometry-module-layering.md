@@ -9,7 +9,7 @@ into a cyclic dependency.
 ```
 pytanga.entity           ← leaf: Vec3, Point(Vec3), Direction(Vec3), Refinable,
                            MV-conversion registry (register_analyzer/_convert_mv)
-pytanga.quadric          ← from_coeffs/to_coeffs, Conic, Quadric3D (+ enums),
+pytanga.quadric          ← Conic, Quadric3D (+ enums), refine_conic/refine_quadric,
                            refine_conic/refine_quadric, entity→MV creation
                            incl. the Q2/Q3 rotation rotor (_create.py),
                            MV→entity analysis incl. rotor analysis
@@ -90,6 +90,16 @@ as the requested rotation, the rotation is returned instead — a 3D
 `GeneralRotor`/`Rotor`.  This is an extension of the analysis layer only (no
 layering change); the reinterpretation lives in `analysis._coerce_operator`,
 gated on the algebra dimension.
+
+## Tolerance-aware refinement
+
+`Geometry` carries an optional analysis tolerance (`Geometry(algebra, tol=…)` /
+settable `Geometry.tol`).  `Geometry.refine(entity, tol=…)` threads it through
+the duck-typed `pytanga.geometry.refine` into `Conic.refine(tol=…)` /
+`Quadric3D.refine(tol=…)` → `pytanga.quadric.refine_conic` / `refine_quadric` →
+the tolerance-aware `_classify_conic` / `_classify_quadric`.  This lets a noisy
+degenerate quadric be classified "within a tolerance" (e.g. a near-cone as a
+`Cone`) without changing the exact `.kind` / `.rank` / `.signature` defaults.
 
 ## Hard-coded type masks (`mask_for_<type>`)
 

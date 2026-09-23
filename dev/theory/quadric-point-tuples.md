@@ -105,6 +105,19 @@ points).  Consequently `pointset_from_blade` returns **eight** points for a
 grade-7 join, not seven; the IPNS dualize step handles this identically (the
 grade-3 IPNS net dualizes to the grade-7 OPNS join).
 
+## 5b. Coplanar points impose far fewer constraints
+
+The counts above assume *general position*.  Points confined to a common
+lower-dimensional algebraic subset impose far fewer independent constraints than
+their count suggests: if every sample lies on one planar conic (a constant-`z`
+cross-section, say), the point embeddings collapse into a lower-dimensional
+subspace (with `z², xz, yz` linear in `x, y` once `z` is fixed), and the fit is
+underdetermined.  `quadric_from_points` / `quadric_from_points_svd` then return
+an *arbitrary* member of the solution family — possibly the wrong kind — rather
+than signaling the degeneracy.  The singular spectrum
+(`fit_singular_values` / `fit_nullity`) exposes this: a well-posed quadric fit
+has nullity `1`, whereas an apex + one planar circle has nullity `≥ 2`.
+
 ## 6. Relation to Perwass's conic method
 
 Perwass's `ConicIntersect.tex` intersects two conics `A, B` through the

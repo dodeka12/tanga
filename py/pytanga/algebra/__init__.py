@@ -8,6 +8,7 @@ from ._enums import EInv, EProduct
 from ._mv import MV
 from ._mv_utils import MVLike, _as_mv, from_rotor, random_mask, to_rotor
 from ._display_basis import build_display_basis
+from ._reduce import gp, join, meet, op
 
 from ._galgebra_bridge import GalgebraBridge
 
@@ -21,6 +22,10 @@ __all__ = [
     "_as_mv",
     "build_display_basis",
     "from_rotor",
+    "gp",
+    "join",
+    "meet",
+    "op",
     "random_mask",
     "to_rotor",
 ]

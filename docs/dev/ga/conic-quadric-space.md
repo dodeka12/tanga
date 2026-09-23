@@ -28,7 +28,7 @@ other module works with the Euclidean basis `b₁…b₆` / `b₁…b₁₀`.
 
 ## Representation: symmetric matrix ↔ coefficients
 
-`to_coeffs` / `from_coeffs` are exact inverses and fix the coefficient order:
+`_to_coeffs` / `_from_coeffs` are exact inverses and fix the coefficient order:
 
 - conic (3×3): `(a₁₃, a₂₃, (√2/2)a₃₃, (√2/2)a₁₁, (√2/2)a₂₂, a₁₂)`
 - quadric (4×4): `(q₁₄, q₂₄, q₃₄, (√2/2)q₄₄, (√2/2)q₁₁, (√2/2)q₂₂, (√2/2)q₃₃, q₁₂, q₁₃, q₂₃)`
@@ -161,6 +161,25 @@ independent of the OPNS/IPNS flag. Analysis sandwiches the **linear** basis blad
 only (the other factors commute with them), so the rotation matrix — and hence the
 angle and axis — is read off directly. The full derivations live in
 `dev/notes/quadric-rotor-derivation.md` and `dev/notes/quadric-plane-pair-derivation.md`.
+
+## Translation (linear map)
+
+Rotations act as versors (`A ↦ R A R̃`), but the quadric space has **no translator
+versor** — translation of a conic/quadric is an *affine* map on the coefficient
+vector, not an isometry.  `geo(Translator(t))` therefore returns a **linear-map
+`Expression`** for `BasisQ2`/`BasisQ3` (built with
+`pytanga.expression.linear_map`) instead of an MV, applied by contraction:
+
+```python
+geo = Geometry(BasisQ3())
+trans = geo(Translator(Direction(1, -2, 3)))   # a linear-map Expression
+cone = trans.evaluate(cone_at_origin)           # translate the cone
+```
+
+The translation matrix is `coeffs(Hᵀ Q H) = M_t · coeffs(Q)` with `H = [[I, −t],[0,1]]`,
+computed by applying `Q ↦ Hᵀ Q H` to each coefficient basis vector.  This is the
+"algebraic way to specify the apex" of a cone: `q3(base)` gives the cone with apex
+at the origin, and `geo(Translator(apex))` moves it.
 
 ## Visualization
 

@@ -128,6 +128,8 @@ uv run python py/examples/<path>.py
 
 - **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
 
+- **classification** — [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
+
 - **click** — [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
 - **code generation** — [How pytanga builds C++ backends on the fly](binding_demo.md)
@@ -150,13 +152,13 @@ uv run python py/examples/<path>.py
 
 - **composition** — [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md)
 
-- **cone** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+- **cone** — [lift a 2D conic into a 3D cone through an apex](ga/quadric/cone_from_conic.md), [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md), [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
 - **confirm** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 
 - **conformal** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md)
 
-- **conic** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+- **conic** — [lift a 2D conic into a 3D cone through an apex](ga/quadric/cone_from_conic.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md), [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **conic_from_points** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md)
 
@@ -286,6 +288,8 @@ uv run python py/examples/<path>.py
 
 - **fit_view2d** — [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
+- **fitting** — [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md)
+
 - **fixed modulus** — [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
 - **flex** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
@@ -315,6 +319,8 @@ uv run python py/examples/<path>.py
 - **geometric product** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md)
 
 - **geometry** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
+
+- **Geometry** — [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
 - **get_array** — [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md)
 
@@ -352,7 +358,7 @@ uv run python py/examples/<path>.py
 
 - **HTML** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
-- **hyperboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+- **hyperboloid** — [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md)
 
 - **icon** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
@@ -374,7 +380,7 @@ uv run python py/examples/<path>.py
 
 - **interactive** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
-- **intersection** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+- **intersection** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **inv** — [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md)
 
@@ -384,7 +390,7 @@ uv run python py/examples/<path>.py
 
 - **IPNS** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md), [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **join** — [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md)
+- **join** — [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **JSON** — [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md)
 
@@ -409,6 +415,8 @@ uv run python py/examples/<path>.py
 - **least-norm** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
 
 - **least-squares** — [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Best-fit rotor from point correspondences](ga/numerics/solver_rotor_estimation.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
+
+- **lift** — [lift a 2D conic into a 3D cone through an apex](ga/quadric/cone_from_conic.md)
 
 - **light** — [Animate a directional light around a sphere](viz/sdf/light_animation.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
@@ -482,6 +490,8 @@ uv run python py/examples/<path>.py
 
 - **null vector** — [Null / conformal 3D algebra  G(5, 0b10000)](ga/basis/base_n3_demo.md), [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
+- **nullity** — [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md)
+
 - **object model** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
 
 - **offline** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
@@ -500,6 +510,8 @@ uv run python py/examples/<path>.py
 
 - **orthographic** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md)
 
+- **outer product** — [lift a 2D conic into a 3D cone through an apex](ga/quadric/cone_from_conic.md), [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md)
+
 - **overlay** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **override** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
@@ -512,13 +524,13 @@ uv run python py/examples/<path>.py
 
 - **panes** — [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md)
 
-- **paraboloid** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+- **paraboloid** — [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md)
 
 - **parent_id** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **PartialDisk** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
-- **pencil** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+- **pencil** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **pendulum** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
 
@@ -564,7 +576,7 @@ uv run python py/examples/<path>.py
 
 - **points** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
-- **PointSet** — [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md)
+- **PointSet** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md)
 
 - **polarity** — [per-object CSG combine modes](viz/sdf/booleans.md)
 
@@ -582,19 +594,21 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
+- **Q2** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md)
+
 - **Q3** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **quadratic** — [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md)
 
-- **quadric** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
+- **quadric** — [lift a 2D conic into a 3D cone through an apex](ga/quadric/cone_from_conic.md), [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md), [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md), [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [Q3 point tuples (1–7 points) in distinct colors](ga/quadric/point_tuples_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md), [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
-- **Quadric3D** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md)
+- **Quadric3D** — [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md)
 
 - **quadric3d** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md)
 
 - **quadric_from_points** — [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
-- **ray** — [draw arbitrary quadrics straight from their coefficients](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **ray** — [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
 
 - **rc** — [Named GA product functions over variables](ga/expression/named_products.md)
 
@@ -606,7 +620,7 @@ uv run python py/examples/<path>.py
 
 - **redo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
-- **refine** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md)
+- **refine** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md), [reconstruct a quadric from 9 points and ray-render it](ga/quadric/quadric3d_raycast.md), [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
 - **Reflection** — [Euclidean 3D geometry: Points, Planes, Reflections, Rotors](ga/geometry/e3_entities.md)
 
@@ -728,6 +742,8 @@ uv run python py/examples/<path>.py
 
 - **submenu** — [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
+- **SVD** — [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md)
+
 - **sweep** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
 - **switch view** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
@@ -758,6 +774,8 @@ uv run python py/examples/<path>.py
 
 - **tokens** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md)
 
+- **tolerance** — [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
+
 - **toolbar** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **trail** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
@@ -767,6 +785,8 @@ uv run python py/examples/<path>.py
 - **transforms** — [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **Translator** — [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
+
+- **translator** — [lift a 2D conic into a 3D cone through an apex](ga/quadric/cone_from_conic.md), [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md)
 
 - **twist** — [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md)
 

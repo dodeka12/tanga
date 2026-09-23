@@ -176,9 +176,9 @@ class TestSerializeEntities:
     def test_plane_conic_pair(self):  # noqa: ANN201
         import numpy as np
 
-        from pytanga.quadric import Conic, to_coeffs
+        from pytanga.quadric import Conic
 
-        circle = Conic(to_coeffs(np.diag([1.0, 1.0, -1.0])))
+        circle = Conic(np.diag([1.0, 1.0, -1.0]))
         pair = PlaneConicPair(
             PlaneConic(Plane(Point(0, 0, 0), Direction(1, 0, 0)), circle),
             PlaneConic(Plane(Point(0, 0, 0), Direction(0, 1, 0)), circle),
@@ -193,9 +193,9 @@ class TestSerializeEntities:
     def test_plane_conic(self):  # noqa: ANN201
         import numpy as np
 
-        from pytanga.quadric import Conic, to_coeffs
+        from pytanga.quadric import Conic
 
-        circle = Conic(to_coeffs(np.diag([1.0, 1.0, -1.0])))
+        circle = Conic(np.diag([1.0, 1.0, -1.0]))
         pc = PlaneConic(Plane(Point(0, 0, 0), Direction(0, 0, 1)), circle)
         d = _serialize(pc)
         assert d["kind"] == "PlaneConic"
@@ -206,9 +206,9 @@ class TestSerializeEntities:
     def test_plane_conic_line_pair_no_connecting_chord(self):  # noqa: ANN201
         import numpy as np
 
-        from pytanga.quadric import Conic, to_coeffs
+        from pytanga.quadric import Conic
 
-        line_pair = Conic(to_coeffs(np.diag([1.0, -1.0, 0.0])))  # x² − y² = 0
+        line_pair = Conic(np.diag([1.0, -1.0, 0.0]))  # x² − y² = 0
         pc = PlaneConic(Plane(Point(0, 0, 0), Direction(0, 0, 1)), line_pair)
         d = _serialize(pc)
         assert d["kind"] == "PlaneConic"

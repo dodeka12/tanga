@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ._intersection import intersect_quadrics
-from ._mapping import from_coeffs
+from ._intersection import _intersect_quadrics
+from ._mapping import _from_coeffs
 from ._pointset import point_from_embedding, pointset_from_blade
 from .conic import Conic, Quadric3D
 
@@ -34,15 +34,15 @@ def _quadric_intersection_from_blade(mv: MV) -> "PlaneConicPair | Curve":
     """Analyze an IPNS grade-2 blade as the intersection of two quadrics.
 
     The bivector is the pencil ``span{Q1, Q2}``; factor it into two (arbitrary)
-    generators and let :func:`intersect_quadrics` re-derive the degenerate
+    generators and let :func:`_intersect_quadrics` re-derive the degenerate
     members (so the factorization basis does not matter).
     """
     factors = mv.blade_factorize()
     if len(factors) != 2:
         raise ValueError(f"expected a 2-blade, got {len(factors)} factors")
-    q1 = from_coeffs(_coeffs(factors[0], 10))
-    q2 = from_coeffs(_coeffs(factors[1], 10))
-    return intersect_quadrics(q1, q2)
+    q1 = _from_coeffs(_coeffs(factors[0], 10))
+    q2 = _from_coeffs(_coeffs(factors[1], 10))
+    return _intersect_quadrics(q1, q2)
 
 
 def analyze_entity(mv: MV) -> "Entity":

@@ -69,10 +69,10 @@ Run with:  uv run python py/examples/ga/quadric/quadric3d_demo.py
 Keywords: quadric, quadric3d, rotor, slider, dropdown, ellipsoid, join, analyze
 """
 
-import functools
 import math
 
 from typing import Any
+from pytanga.algebra import join
 from pytanga.geometry import Direction, Geometry, Point, Rotor, analyze_operator
 from pytanga.quadric import BasisQ3
 from pytanga.viz import (
@@ -164,7 +164,7 @@ def _join_blade() -> Any:
     resolves both — a grade-8 join is the degenerate case, whose dual grade-2
     pencil is analysed as a quadric intersection (see ``quadric._analysis``).
     """
-    return functools.reduce(lambda a, c: a.join(c), _points())
+    return join(_points())
 
 
 def _rebuild() -> None:

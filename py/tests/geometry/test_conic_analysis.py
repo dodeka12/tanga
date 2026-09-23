@@ -39,8 +39,11 @@ from pytanga.geometry import (
     create,
     refine,
 )
-from pytanga.quadric import BasisQ2, BasisQ3, create_rotor, embed_point, to_coeffs
-from pytanga.quadric._intersection import _plane_frame, intersect_quadrics
+from pytanga.quadric import BasisQ2, BasisQ3
+from pytanga.quadric._create import create_rotor
+from pytanga.quadric._embedding import _embed_point
+from pytanga.quadric._mapping import _to_coeffs
+from pytanga.quadric._intersection import _intersect_quadrics, _plane_frame
 
 
 def _coeff_mv(basis, coeffs):  # noqa: ANN001, ANN202
@@ -49,7 +52,7 @@ def _coeff_mv(basis, coeffs):  # noqa: ANN001, ANN202
 
 def _refine_conic(matrix):  # noqa: ANN001, ANN202
     basis = BasisQ2(opns=False)
-    mv = _coeff_mv(basis, to_coeffs(matrix))
+    mv = _coeff_mv(basis, _to_coeffs(matrix))
     conic = analyze_entity(mv)
     assert isinstance(conic, Conic)
     return refine(conic)
@@ -57,7 +60,7 @@ def _refine_conic(matrix):  # noqa: ANN001, ANN202
 
 def _refine_quadric(matrix):  # noqa: ANN001, ANN202
     basis = BasisQ3(opns=False)
-    mv = _coeff_mv(basis, to_coeffs(matrix))
+    mv = _coeff_mv(basis, _to_coeffs(matrix))
     quadric = analyze_entity(mv)
     assert isinstance(quadric, Quadric3D)
     return refine(quadric)
@@ -66,9 +69,9 @@ def _refine_quadric(matrix):  # noqa: ANN001, ANN202
 class TestAnalyzeConic:
     def test_point_opns(self):  # noqa: ANN201
         b = BasisQ2()  # opns=True
-        from pytanga.quadric import embed_point
+        from pytanga.quadric._embedding import _embed_point
 
-        p = analyze_entity(embed_point(b, 3.0, 4.0))
+        p = analyze_entity(_embed_point(b, 3.0, 4.0))
         assert isinstance(p, Point)
         assert p.x == pytest.approx(3.0)
         assert p.y == pytest.approx(4.0)
@@ -77,9 +80,9 @@ class TestAnalyzeConic:
     def test_conic_ipns(self):  # noqa: ANN201
         b = BasisQ2(opns=False)
         matrix = np.array([[1.0, 0.0, -1.0], [0.0, 1.0, -2.0], [-1.0, -2.0, 1.0]])
-        conic = analyze_entity(_coeff_mv(b, to_coeffs(matrix)))
+        conic = analyze_entity(_coeff_mv(b, _to_coeffs(matrix)))
         assert isinstance(conic, Conic)
-        assert conic.coeffs == pytest.approx(to_coeffs(matrix))
+        assert conic.coeffs == pytest.approx(_to_coeffs(matrix))
 
 
 class TestRefineConic:
@@ -198,7 +201,7 @@ class TestRoundTrip:
     def test_analyze_then_refine(self):  # noqa: ANN201
         basis = BasisQ2(opns=False)
         matrix = np.array([[1.0, 0.0, -1.0], [0.0, 1.0, -2.0], [-1.0, -2.0, 1.0]])
-        mv = _coeff_mv(basis, to_coeffs(matrix))
+        mv = _coeff_mv(basis, _to_coeffs(matrix))
         raw = analyze(mv)
         assert isinstance(raw, Conic)
         specific = refine(raw)
@@ -208,7 +211,7 @@ class TestRoundTrip:
         basis = BasisQ2(opns=False)
         geo = Geometry(basis)
         matrix = np.array([[1.0, 0.0, -1.0], [0.0, 1.0, -2.0], [-1.0, -2.0, 1.0]])
-        mv = _coeff_mv(basis, to_coeffs(matrix))
+        mv = _coeff_mv(basis, _to_coeffs(matrix))
         raw = geo(mv)
         assert isinstance(raw, Conic)
         specific = geo(raw)
@@ -217,12 +220,12 @@ class TestRoundTrip:
 
 def test_quadric_analysis_and_intersection_modules():  # noqa: ANN201
     from pytanga.quadric._analysis import analyze_entity as qanalyze
-    from pytanga.quadric._pointset import two_conic_intersection as qintersect
+    from pytanga.quadric._pointset import _two_conic_intersection as qintersect
 
     basis = BasisQ2(opns=False)
     mv = _coeff_mv(
         basis,
-        to_coeffs(np.array([[1.0, 0.0, -1.0], [0.0, 1.0, -2.0], [-1.0, -2.0, 1.0]])),
+        _to_coeffs(np.array([[1.0, 0.0, -1.0], [0.0, 1.0, -2.0], [-1.0, -2.0, 1.0]])),
     )
     assert isinstance(qanalyze(mv), Conic)
 
@@ -262,7 +265,7 @@ class TestRotorAnalysis:
 
     def test_non_versor_raises(self):  # noqa: ANN201
         basis = BasisQ3(opns=False)
-        q = to_coeffs(np.eye(4))
+        q = _to_coeffs(np.eye(4))
         mv = _coeff_mv(basis, q)  # grade-1 quadric (odd) → not a versor
         with pytest.raises(ValueError):
             analyze_operator(mv)
@@ -303,7 +306,7 @@ class TestPlanePairAnalysis:
         # x=0 and y=0 → Q = p1 p2ᵀ + p2 p1ᵀ (rank 2, intersecting).
         p1 = np.array([1.0, 0.0, 0.0, 0.0])
         p2 = np.array([0.0, 1.0, 0.0, 0.0])
-        q = Quadric3D(to_coeffs(np.outer(p1, p2) + np.outer(p2, p1)))
+        q = Quadric3D(_to_coeffs(np.outer(p1, p2) + np.outer(p2, p1)))
         assert q.kind.value == "plane_pair"
         pair = refine(q)
         assert isinstance(pair, PlanePair)
@@ -317,7 +320,7 @@ class TestPlanePairAnalysis:
         # x=1 and x=-1 → x² − 1 = 0 (rank 2, parallel).
         p3 = np.array([1.0, 0.0, 0.0, -1.0])
         p4 = np.array([1.0, 0.0, 0.0, 1.0])
-        q = Quadric3D(to_coeffs(np.outer(p3, p4) + np.outer(p4, p3)))
+        q = Quadric3D(_to_coeffs(np.outer(p3, p4) + np.outer(p4, p3)))
         assert q.kind.value == "parallel_plane_pair"
         pair = refine(q)
         assert isinstance(pair, ParallelPlanePair)
@@ -327,7 +330,7 @@ class TestPlanePairAnalysis:
     def test_double_plane(self):  # noqa: ANN201
         # x=0 doubled → x² = 0 (rank 1) → a single plane.
         p5 = np.array([1.0, 0.0, 0.0, 0.0])
-        q = Quadric3D(to_coeffs(np.outer(p5, p5)))
+        q = Quadric3D(_to_coeffs(np.outer(p5, p5)))
         assert q.kind.value == "plane"
 
     def test_plane_pair_round_trip(self):  # noqa: ANN201
@@ -376,7 +379,7 @@ class TestQuadricIntersection:
         # x²−y²=0 and y²−z²=0 → the four cube body diagonals.
         Q1 = np.diag([1.0, -1.0, 0.0, 0.0])
         Q2 = np.diag([0.0, 1.0, -1.0, 0.0])
-        result = intersect_quadrics(Q1, Q2)
+        result = _intersect_quadrics(Q1, Q2)
         assert isinstance(result, PlaneConicPair)
         dirs = _body_diagonal_dirs(result)
         assert len(dirs) == 4
@@ -389,7 +392,7 @@ class TestQuadricIntersection:
         # x=0 and y=0 → the z-axis (a single line).
         Q1 = np.diag([1.0, 0.0, 0.0, 0.0])
         Q2 = np.diag([0.0, 1.0, 0.0, 0.0])
-        result = intersect_quadrics(Q1, Q2)
+        result = _intersect_quadrics(Q1, Q2)
         assert isinstance(result, PlaneConicPair)
         for pc in (result.conic1, result.conic2):
             assert pc.conic.kind.value == "line"
@@ -400,7 +403,7 @@ class TestQuadricIntersection:
         Q2 = np.array(
             [[1.0, 0, 0, -2.0], [0, 1.0, 0, 0], [0, 0, 1.0, 0], [-2.0, 0, 0, 0.0]]
         )
-        result = intersect_quadrics(Q1, Q2)
+        result = _intersect_quadrics(Q1, Q2)
         assert isinstance(result, PlaneConicPair)
         assert result.conic1.conic.kind.value == "circle"
         assert abs(result.conic1.plane.normal.x) == pytest.approx(1.0)
@@ -410,7 +413,7 @@ class TestQuadricIntersection:
         Q1 = np.diag([1.0, 1.0, 1.0, -1.0])
         Q2 = np.diag([1.0, 1.0, 1.0, -4.0])
         with pytest.raises(NotImplementedError):
-            intersect_quadrics(Q1, Q2)
+            _intersect_quadrics(Q1, Q2)
 
     def test_intersect_cone_member(self):  # noqa: ANN201
         # A generic pencil has real rank-3 cone members → sampled curve.
@@ -419,7 +422,7 @@ class TestQuadricIntersection:
         Q1 = Q1 + Q1.T
         Q2 = rng.normal(size=(4, 4))
         Q2 = Q2 + Q2.T
-        result = intersect_quadrics(Q1, Q2)
+        result = _intersect_quadrics(Q1, Q2)
         assert isinstance(result, Curve)
         points = [p for path in result.paths for p in path]
         assert len(points) > 0
@@ -432,7 +435,7 @@ class TestQuadricIntersection:
         # Sphere ∩ plane → a planar circle (exact conic), not a sampled curve.
         Q1 = np.diag([1.0, 1.0, 1.0, -1.0])
         Q2 = np.diag([1.0, 0.0, 0.0, 0.0])
-        result = intersect_quadrics(Q1, Q2)
+        result = _intersect_quadrics(Q1, Q2)
         assert isinstance(result, PlaneConicPair)
         assert result.conic1.conic.kind.value == "circle"
 
@@ -441,7 +444,7 @@ class TestQuadricIntersection:
         basis = BasisQ3(opns=False)
         Q1 = np.diag([1.0, -1.0, 0.0, 0.0])
         Q2 = np.diag([0.0, 1.0, -1.0, 0.0])
-        blade = _coeff_mv(basis, to_coeffs(Q1)) ^ _coeff_mv(basis, to_coeffs(Q2))
+        blade = _coeff_mv(basis, _to_coeffs(Q1)) ^ _coeff_mv(basis, _to_coeffs(Q2))
         result = analyze_entity(blade)
         assert isinstance(result, PlaneConicPair)
         dirs = _body_diagonal_dirs(result)
@@ -454,7 +457,7 @@ class TestQuadricIntersection:
         basis = BasisQ3(opns=False)
         Q1 = np.diag([1.0, -1.0, 0.0, 0.0])
         Q2 = np.diag([0.0, 1.0, -1.0, 0.0])
-        blade = _coeff_mv(basis, to_coeffs(Q1)) ^ _coeff_mv(basis, to_coeffs(Q2))
+        blade = _coeff_mv(basis, _to_coeffs(Q1)) ^ _coeff_mv(basis, _to_coeffs(Q2))
         assert isinstance(analyze(blade), PlaneConicPair)
 
     def test_analyze_ipns_grade3_point_tuple(self):  # noqa: ANN201
@@ -466,9 +469,9 @@ class TestQuadricIntersection:
         Q2 = np.diag([0.0, 1.0, -1.0, 0.0])
         Q3 = np.diag([0.0, 0.0, 1.0, -1.0])
         blade = (
-            _coeff_mv(basis, to_coeffs(Q1))
-            ^ _coeff_mv(basis, to_coeffs(Q2))
-            ^ _coeff_mv(basis, to_coeffs(Q3))
+            _coeff_mv(basis, _to_coeffs(Q1))
+            ^ _coeff_mv(basis, _to_coeffs(Q2))
+            ^ _coeff_mv(basis, _to_coeffs(Q3))
         )
         result = analyze_entity(blade)
         assert isinstance(result, PointSet)
@@ -485,7 +488,7 @@ class TestQuadricIntersection:
         basis = BasisQ3(opns=True)
         points = [np.array(c, float) for c in itertools.product((-1.0, 1.0), repeat=3)]
         points.append(np.array([0.0, 0.0, 0.0]))
-        embs = [embed_point(basis, p[0], p[1], p[2]) for p in points]
+        embs = [_embed_point(basis, p[0], p[1], p[2]) for p in points]
         blade = functools.reduce(lambda a, c: a.join(c), embs)
         result = analyze_entity(blade)
         assert isinstance(result, PlaneConicPair)
@@ -502,7 +505,7 @@ class TestQuadricIntersection:
         basis = BasisQ3(opns=True)
         points = [np.array(c, float) for c in itertools.product((-1.0, 1.0), repeat=3)]
         points.append(np.array([0.0, 0.0, 0.0]))
-        embs = [embed_point(basis, p[0], p[1], p[2]) for p in points]
+        embs = [_embed_point(basis, p[0], p[1], p[2]) for p in points]
         blade = functools.reduce(lambda a, c: a.join(c), embs)
         rotor = create_rotor(basis, math.radians(40.0), Direction(0.6, 0.8, 0.0))
         result = analyze_entity(rotor.vp(blade))
@@ -516,7 +519,7 @@ class TestQuadricIntersection:
         basis = BasisQ3(opns=True)
         corners = [np.array(c, float) for c in itertools.product((-0.5, 0.5), repeat=3)]
         points = corners + [np.array([0.2, 0.1, 0.05])]
-        embs = [embed_point(basis, p[0], p[1], p[2]) for p in points]
+        embs = [_embed_point(basis, p[0], p[1], p[2]) for p in points]
         blade = functools.reduce(lambda a, c: a.join(c), embs)
         result = analyze_entity(blade)
         assert isinstance(result, Curve)
