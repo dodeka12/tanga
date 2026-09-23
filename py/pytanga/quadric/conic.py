@@ -14,15 +14,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cached_property
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from ._mapping import from_coeffs
+from ._mapping import _from_coeffs, _to_coeffs
 from .refine import refine_conic, refine_quadric
 
 from pytanga.entity import Direction
 from pytanga.entity import Point
+
+if TYPE_CHECKING:
+    from pytanga.geometry.matrix import Matrix
 
 _TOL = 1e-10
 
@@ -60,41 +63,46 @@ class EQuadricKind(StrEnum):
     imaginary = "imaginary"
 
 
-def _rank(m: np.ndarray) -> int:
-    return int(np.linalg.matrix_rank(m))
+def _rank(m: np.ndarray, tol: float | None = None) -> int:
+    if tol is None:
+        return int(np.linalg.matrix_rank(m))
+    return int(np.linalg.matrix_rank(m, tol=tol))
 
 
-def _inertia(m: np.ndarray) -> tuple[int, int, int]:
+def _inertia(m: np.ndarray, tol: float | None = None) -> tuple[int, int, int]:
     """Return ``(n_pos, n_neg, n_zero)`` — the inertia of a symmetric matrix."""
+    t = _TOL if tol is None else tol
     evals = np.linalg.eigvalsh(np.asarray(m, dtype=float))
     scale = max(1.0, float(np.max(np.abs(evals))))
-    tol = _TOL * scale
-    pos = int(np.sum(evals > tol))
-    neg = int(np.sum(evals < -tol))
+    thresh = t * scale
+    pos = int(np.sum(evals > thresh))
+    neg = int(np.sum(evals < -thresh))
     return pos, neg, len(evals) - pos - neg
 
 
-def _is_isotropic(evals: np.ndarray) -> bool:
+def _is_isotropic(evals: np.ndarray, tol: float | None = None) -> bool:
     """True if all eigenvalues are (numerically) equal."""
+    t = _TOL if tol is None else tol
     evals = np.asarray(evals, dtype=float)
     scale = max(1.0, float(np.max(np.abs(evals))))
-    return float(evals.max() - evals.min()) <= _TOL * scale
+    return float(evals.max() - evals.min()) <= t * scale
 
 
-def _nonzero_evals(m: np.ndarray) -> np.ndarray:
+def _nonzero_evals(m: np.ndarray, tol: float | None = None) -> np.ndarray:
     """Non-zero eigenvalues of a symmetric matrix, ascending."""
+    t = _TOL if tol is None else tol
     evals = np.linalg.eigvalsh(np.asarray(m, dtype=float))
     scale = max(1.0, float(np.max(np.abs(evals))))
-    return evals[np.abs(evals) > _TOL * scale]
+    return evals[np.abs(evals) > t * scale]
 
 
-def _classify_conic(a: np.ndarray) -> EConicKind:
+def _classify_conic(a: np.ndarray, tol: float | None = None) -> EConicKind:
     """Classify a symmetric 3×3 conic matrix via its affine block form."""
     q = a[:2, :2]
     b = a[:2, 2]
     f = a[2, 2]
-    r = _rank(a)
-    rq = _rank(q)
+    r = _rank(a, tol)
+    rq = _rank(q, tol)
 
     if r == 3:  # non-degenerate
         if rq == 1:
@@ -106,7 +114,7 @@ def _classify_conic(a: np.ndarray) -> EConicKind:
             real = fprime < 0 if ev[0] > 0 else fprime > 0
             if not real:
                 return EConicKind.imaginary
-            return EConicKind.circle if _is_isotropic(ev) else EConicKind.ellipse
+            return EConicKind.circle if _is_isotropic(ev, tol) else EConicKind.ellipse
         return EConicKind.hyperbola
 
     if r == 2:
@@ -122,13 +130,13 @@ def _classify_conic(a: np.ndarray) -> EConicKind:
     return EConicKind.imaginary
 
 
-def _classify_quadric(a: np.ndarray) -> EQuadricKind:
+def _classify_quadric(a: np.ndarray, tol: float | None = None) -> EQuadricKind:
     """Classify a symmetric 4×4 quadric matrix via its affine block form."""
     q = a[:3, :3]
     b = a[:3, 3]
     f = a[3, 3]
-    r = _rank(a)
-    rq = _rank(q)
+    r = _rank(a, tol)
+    rq = _rank(q, tol)
 
     if r == 4:  # non-degenerate
         if rq == 3:
@@ -139,13 +147,13 @@ def _classify_quadric(a: np.ndarray) -> EQuadricKind:
                 real = fprime < 0 if ev[0] > 0 else fprime > 0
                 if not real:
                     return EQuadricKind.imaginary
-                if _is_isotropic(ev):
+                if _is_isotropic(ev, tol):
                     return EQuadricKind.sphere
                 return EQuadricKind.ellipsoid
             # indefinite → hyperboloid (1- or 2-sheeted)
             c = np.linalg.solve(q, -b)
             fprime = f + float(b @ c)
-            p, n, _ = _inertia(q)
+            p, n, _ = _inertia(q, tol)
             one_sheet = (fprime < 0) == (p >= n)
             return (
                 EQuadricKind.hyperboloid_1s
@@ -153,7 +161,7 @@ def _classify_quadric(a: np.ndarray) -> EQuadricKind:
                 else EQuadricKind.hyperboloid_2s
             )
         if rq == 2:  # paraboloid
-            nz = _nonzero_evals(q)
+            nz = _nonzero_evals(q, tol)
             if float(np.prod(nz)) > 0:
                 return EQuadricKind.elliptic_paraboloid
             return EQuadricKind.hyperbolic_paraboloid
@@ -161,12 +169,12 @@ def _classify_quadric(a: np.ndarray) -> EQuadricKind:
 
     if r == 3:
         if rq == 3:
-            p, n, _ = _inertia(q)
+            p, n, _ = _inertia(q, tol)
             if p == 3 or n == 3:
                 return EQuadricKind.imaginary  # imaginary cone (single point)
             return EQuadricKind.cone
         if rq == 2:
-            nz = _nonzero_evals(q)
+            nz = _nonzero_evals(q, tol)
             if float(np.prod(nz)) > 0:
                 return EQuadricKind.elliptic_cylinder
             return EQuadricKind.hyperbolic_cylinder
@@ -192,7 +200,7 @@ def _classify_quadric(a: np.ndarray) -> EQuadricKind:
 
 @dataclass(frozen=True)
 class Conic:
-    """A conic (2D quadric) given by its 6-entry coefficient vector.
+    """A conic (2D quadric), from its 6-entry coefficient vector or a symmetric 3×3 matrix.
 
     The coefficients use the ``pytanga.quadric`` ordering
     ``(a₁₃, a₂₃, (√2/2)a₃₃, (√2/2)a₁₁, (√2/2)a₂₂, a₁₂)``.
@@ -200,16 +208,28 @@ class Conic:
 
     coeffs: tuple[float, ...]
 
-    def __init__(self, coeffs: "tuple[float, ...] | np.ndarray") -> None:
-        c = tuple(float(x) for x in coeffs)
-        if len(c) != 6:
-            raise ValueError(f"Conic coeffs must be a 6-tuple, got length {len(c)}")
+    def __init__(self, data: "tuple[float, ...] | np.ndarray | Matrix") -> None:
+        arr = np.asarray(data, dtype=float)
+        if arr.ndim == 2:
+            if arr.shape != (3, 3):
+                raise ValueError(f"Conic matrix must be 3×3, got shape {arr.shape}")
+            c = tuple(float(x) for x in _to_coeffs(arr))
+        else:
+            c = tuple(float(x) for x in arr)
+            if len(c) != 6:
+                raise ValueError(
+                    f"Conic coeffs must be a 6-tuple, got length {len(c)}"
+                )
         object.__setattr__(self, "coeffs", c)
 
     @cached_property
     def matrix(self) -> np.ndarray:
         """The symmetric 3×3 matrix ``A`` with ``xᵀ A x = 0``."""
-        return from_coeffs(self.coeffs)
+        return _from_coeffs(self.coeffs)
+
+    def to_matrix(self) -> np.ndarray:
+        """Return the symmetric 3×3 matrix ``A`` (satisfies ``MatrixProvider``)."""
+        return self.matrix
 
     @cached_property
     def rank(self) -> int:
@@ -258,9 +278,9 @@ class Conic:
         lam = self.eigenvalues[0]
         return float(np.sqrt(max(0.0, -fprime / lam)))
 
-    def refine(self) -> Any:
-        """Refine this conic into its specific 2D entity."""
-        return refine_conic(self)
+    def refine(self, tol: float | None = None) -> Any:
+        """Refine this conic into its specific 2D entity (with optional tolerance)."""
+        return refine_conic(self, tol=tol)
 
     def __repr__(self) -> str:
         return f"Conic({self.coeffs})"
@@ -268,22 +288,32 @@ class Conic:
 
 @dataclass(frozen=True)
 class Quadric3D:
-    """A 3D quadric given by its 10-entry coefficient vector."""
+    """A 3D quadric, from its 10-entry coefficient vector or a symmetric 4×4 matrix."""
 
     coeffs: tuple[float, ...]
 
-    def __init__(self, coeffs: "tuple[float, ...] | np.ndarray") -> None:
-        c = tuple(float(x) for x in coeffs)
-        if len(c) != 10:
-            raise ValueError(
-                f"Quadric3D coeffs must be a 10-tuple, got length {len(c)}"
-            )
+    def __init__(self, data: "tuple[float, ...] | np.ndarray | Matrix") -> None:
+        arr = np.asarray(data, dtype=float)
+        if arr.ndim == 2:
+            if arr.shape != (4, 4):
+                raise ValueError(f"Quadric3D matrix must be 4×4, got shape {arr.shape}")
+            c = tuple(float(x) for x in _to_coeffs(arr))
+        else:
+            c = tuple(float(x) for x in arr)
+            if len(c) != 10:
+                raise ValueError(
+                    f"Quadric3D coeffs must be a 10-tuple, got length {len(c)}"
+                )
         object.__setattr__(self, "coeffs", c)
 
     @cached_property
     def matrix(self) -> np.ndarray:
         """The symmetric 4×4 matrix ``Q`` with ``xᵀ Q x = 0``."""
-        return from_coeffs(self.coeffs)
+        return _from_coeffs(self.coeffs)
+
+    def to_matrix(self) -> np.ndarray:
+        """Return the symmetric 4×4 matrix ``Q`` (satisfies ``MatrixProvider``)."""
+        return self.matrix
 
     @cached_property
     def rank(self) -> int:
@@ -332,9 +362,9 @@ class Quadric3D:
         lam = self.eigenvalues[0]
         return float(np.sqrt(max(0.0, -fprime / lam)))
 
-    def refine(self) -> Any:
-        """Refine this quadric into its specific 3D entity."""
-        return refine_quadric(self)
+    def refine(self, tol: float | None = None) -> Any:
+        """Refine this quadric into its specific 3D entity (with optional tolerance)."""
+        return refine_quadric(self, tol=tol)
 
     def __repr__(self) -> str:
         return f"Quadric3D({self.coeffs})"

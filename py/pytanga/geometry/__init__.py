@@ -30,9 +30,6 @@ from .refine import (
     refine,
     refine_entity,
 )
-from ._pointset import (
-    two_conic_intersection,
-)
 from .random import (
     Constant,
     Distribution,
@@ -61,6 +58,7 @@ from .entities import (
     HDirection,
     HPoint,
     Hyperbola,
+    Hyperboloid,
     ImagCircle,
     ImagPointPair,
     ImagSphere,
@@ -68,6 +66,7 @@ from .entities import (
     LinePair,
     ParallelLinePair,
     Parabola,
+    Paraboloid,
     PartialDisk,
     Plane,
     PlanePair,
@@ -130,6 +129,7 @@ __all__ = [
     "HDirection",
     "HPoint",
     "Hyperbola",
+    "Hyperboloid",
     "ImagCircle",
     "ImagPointPair",
     "ImagSphere",
@@ -137,6 +137,7 @@ __all__ = [
     "LinePair",
     "ParallelLinePair",
     "Parabola",
+    "Paraboloid",
     "PartialDisk",
     "Plane",
     "PlanePair",
@@ -201,6 +202,4 @@ __all__ = [
     "RndMV",
     "RndPoint",
     "Uniform",
-    # Point-set intersection
-    "two_conic_intersection",
 ]

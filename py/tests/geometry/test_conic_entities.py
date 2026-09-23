@@ -21,7 +21,6 @@ from pytanga.geometry import (
     Quadric2D,
     Quadric3D,
 )
-from pytanga.quadric import to_coeffs
 
 
 def _circle_matrix():  # noqa: ANN202
@@ -75,7 +74,7 @@ class TestConic:
         assert "Conic" in repr(Conic((1, 2, 3, 4, 5, 6)))
 
     def test_circle_derived_properties(self):  # noqa: ANN201
-        c = Conic(to_coeffs(_circle_matrix()))
+        c = Conic(_circle_matrix())
         assert c.kind is EConicKind.circle
         assert c.rank == 3
         assert c.signature == (2, 1, 0)
@@ -84,7 +83,7 @@ class TestConic:
         assert c.rho == pytest.approx(2.0)
 
     def test_circle_principal_directions_are_orthonormal(self):  # noqa: ANN201
-        c = Conic(to_coeffs(_circle_matrix()))
+        c = Conic(_circle_matrix())
         d1, d2 = c.principal_directions
         assert d1.mag() == pytest.approx(1.0)
         assert d2.mag() == pytest.approx(1.0)
@@ -100,7 +99,7 @@ class TestQuadric3D:
             Quadric3D((1, 2, 3, 4, 5, 6, 7, 8, 9))
 
     def test_ellipsoid_derived_properties(self):  # noqa: ANN201
-        q = Quadric3D(to_coeffs(_ellipsoid_matrix()))
+        q = Quadric3D(_ellipsoid_matrix())
         assert q.kind is EQuadricKind.ellipsoid
         assert q.rank == 4
         assert q.signature == (3, 1, 0)
@@ -109,7 +108,7 @@ class TestQuadric3D:
         assert q.rho is None
 
     def test_sphere_derived_properties(self):  # noqa: ANN201
-        q = Quadric3D(to_coeffs(_sphere_matrix()))
+        q = Quadric3D(_sphere_matrix())
         assert q.kind is EQuadricKind.sphere
         _assert_point(q.center, 1.0, 2.0, 3.0)
         assert q.rho == pytest.approx(2.0)

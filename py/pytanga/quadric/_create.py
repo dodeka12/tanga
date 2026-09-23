@@ -17,14 +17,16 @@ from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 
-from ._embedding import embed_point
-from ._mapping import to_coeffs
+from pytanga.algebra._mv import MV
+
+from ._embedding import _embed_point
+from ._mapping import _from_coeffs, _to_coeffs
 from .conic import Conic, Quadric3D
 
 if TYPE_CHECKING:
     from pytanga.algebra._algebra import Algebra
-    from pytanga.algebra._mv import MV
     from pytanga.entity import Direction, Point
+    from pytanga.expression import Expression
     from pytanga.geometry.entities import (
         Circle,
         Cone,
@@ -33,9 +35,11 @@ if TYPE_CHECKING:
         Ellipsoid,
         Entity,
         Hyperbola,
+        Hyperboloid,
         Line,
         LinePair,
         Parabola,
+        Paraboloid,
         ParallelLinePair,
         ParallelPlanePair,
         Plane,
@@ -52,9 +56,11 @@ if TYPE_CHECKING:
         Ellipse: type[Ellipse]
         Ellipsoid: type[Ellipsoid]
         Hyperbola: type[Hyperbola]
+        Hyperboloid: type[Hyperboloid]
         Line: type[Line]
         LinePair: type[LinePair]
         Parabola: type[Parabola]
+        Paraboloid: type[Paraboloid]
         ParallelLinePair: type[ParallelLinePair]
         ParallelPlanePair: type[ParallelPlanePair]
         Plane: type[Plane]
@@ -82,14 +88,14 @@ def _coeffs_to_mv(basis: "Algebra", coeffs: "tuple[float, ...]") -> MV:
 
 
 def _matrix_to_mv(basis: "Algebra", matrix: np.ndarray) -> MV:
-    return _coeffs_to_mv(basis, to_coeffs(matrix))
+    return _coeffs_to_mv(basis, _to_coeffs(matrix))
 
 
 def create_point(basis: "Algebra", x: float, y: float, z: float = 0.0) -> MV:
     if basis.dim == 6:
-        mv = embed_point(basis, x, y)
+        mv = _embed_point(basis, x, y)
     else:
-        mv = embed_point(basis, x, y, z)
+        mv = _embed_point(basis, x, y, z)
     if not basis.opns:
         mv = mv.dual()
     return mv
@@ -232,6 +238,62 @@ def create_cone(basis: "Algebra", cone: "Cone") -> MV:
     return _matrix_to_mv(basis, _centered_matrix(q, c, 0.0))
 
 
+def create_hyperboloid(basis: "Algebra", hyperboloid: "Hyperboloid") -> MV:
+    a, b, c = (float(r) for r in hyperboloid.semi_axes)
+    q = np.diag([1.0 / a**2, 1.0 / b**2, -1.0 / c**2])
+    if hyperboloid.sheets == 2:
+        q = -q
+    center = np.array(
+        [hyperboloid.center.x, hyperboloid.center.y, hyperboloid.center.z]
+    )
+    return _matrix_to_mv(basis, _centered_matrix(q, center, -1.0))
+
+
+def create_paraboloid(basis: "Algebra", paraboloid: "Paraboloid") -> MV:
+    a, b = (float(r) for r in paraboloid.semi_axes)
+    sign = -1.0 if paraboloid.is_hyperbolic else 1.0
+    inv_a2 = 1.0 / a**2
+    inv_b2 = sign / b**2
+    vx, vy, vz = paraboloid.vertex.x, paraboloid.vertex.y, paraboloid.vertex.z
+    matrix = np.array(
+        [
+            [inv_a2, 0.0, 0.0, -vx * inv_a2],
+            [0.0, inv_b2, 0.0, -vy * inv_b2],
+            [0.0, 0.0, 0.0, -0.5],
+            [-vx * inv_a2, -vy * inv_b2, -0.5, vx * vx * inv_a2 + vy * vy * inv_b2 + vz],
+        ]
+    )
+    return _matrix_to_mv(basis, matrix)
+
+
+def create_translator(
+    basis: "Algebra", x: float, y: float, z: float = 0.0
+) -> "Expression":
+    """A translation as a linear-map expression (no versor in the quadric space).
+
+    Translation moves a conic (Q2) by ``(x, y)`` or a quadric (Q3) by
+    ``(x, y, z)``.  The quadric space has no translator versor (only the rotation
+    rotor), so the translation is a linear map on the coefficient vector — an
+    :class:`~pytanga.expression.Expression` applied by contraction:
+    ``create_translator(q3, dx, dy, dz)(quadric)``.
+    """
+    from pytanga.blade_mask import BladeMask
+    from pytanga.expression import linear_map
+
+    k = 2 if basis.dim == 6 else 3
+    t = (x, y) if k == 2 else (x, y, z)
+    h = np.eye(k + 1)
+    h[:k, k] = -np.asarray(t, dtype=float)
+    n = basis.dim
+    matrix = np.zeros((n, n))
+    for i in range(n):
+        e = np.zeros(n)
+        e[i] = 1.0
+        matrix[:, i] = _to_coeffs(h.T @ _from_coeffs(e) @ h)
+    mask = BladeMask(basis, grades=[1])
+    return linear_map(matrix, mask, "c", mask)
+
+
 def create_plane(basis: "Algebra", plane: "Plane") -> MV:
     n = np.array([plane.normal.x, plane.normal.y, plane.normal.z])
     n = n / np.linalg.norm(n)
@@ -302,6 +364,10 @@ def create_entity(
         return create_cylinder(basis, entity)
     if isinstance(entity, E.Cone):
         return create_cone(basis, entity)
+    if isinstance(entity, E.Hyperboloid):
+        return create_hyperboloid(basis, entity)
+    if isinstance(entity, E.Paraboloid):
+        return create_paraboloid(basis, entity)
     if isinstance(entity, E.Plane):
         return create_plane(basis, entity)
     if isinstance(entity, E.ParallelPlanePair):

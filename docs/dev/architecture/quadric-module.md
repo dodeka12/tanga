@@ -7,7 +7,11 @@ algebra, and owns all the quadric math: construction from points, MV ↔ entity
 analysis, classification / refinement, entity → MV creation, point recovery, the
 quadric-space rotation rotor, and two-quadric intersection.
 
-It is deliberately a **leaf-ish, numpy-only** package. It imports
+It is deliberately a **leaf-ish** package: most modules are numpy-only.  Its
+public surface is GA-centric — conics/quadrics are built with `geo(...)`, and
+fitting/intersection are expressed with the GA operations (`op`/`join`, `dual`,
+`sp`) — while the expression system (`pytanga.expression` / `pytanga.blade_mask`)
+backs the point-tuple recovery.  It imports
 `pytanga.entity` (`Vec3` / `Point` / `Direction`) directly, and it imports
 `pytanga.geometry.entities` *lazily* so the `quadric ↔ geometry.entities` cycle
 never fires at import time. The cross-package layering is described in
@@ -18,16 +22,15 @@ the module's *internal* structure.
 
 | File | Responsibility |
 | --- | --- |
-| `_basis.py` | `BasisQ2` / `BasisQ3` — Euclidean-rescaled `G(6,0)` / `G(10,0)` algebras |
-| `_embedding.py` | `embed_point` — the `x·xᵀ` point embedding |
-| `_mapping.py` | `to_coeffs` / `from_coeffs` — symmetric-matrix ↔ coefficient-vector |
-| `_build.py` | `conic_from_points` / `quadric_from_points` (+ `_svd`), `line_from_points` |
-| `conic.py` | `Conic` / `Quadric3D` dataclasses, `EConicKind` / `EQuadricKind`, classification |
-| `refine.py` | `refine_conic` / `refine_quadric` — matrix → specific geometry entity |
-| `_create.py` | `create_*` — entity → MV, plus `create_rotor` |
+| `_basis.py` | `BasisQ2` / `BasisQ3` (incl. `BasisQ3(c)` cone lift), `CONE_BLADE_MAP` |
+| `_embedding.py` | `_embed_point` — the `x·xᵀ` point embedding |
+| `_mapping.py` | `_to_coeffs` / `_from_coeffs` — symmetric-matrix ↔ coefficient-vector |
+| `conic.py` | `Conic` / `Quadric3D` dataclasses (matrix- or coeff-vector constructors), `EConicKind` / `EQuadricKind`, classification (tolerance-aware) |
+| `refine.py` | `refine_conic` / `refine_quadric` — matrix → specific geometry entity (optional `tol`) |
+| `_create.py` | `create_*` — entity → MV, plus `create_rotor` / `create_translator` |
 | `_analysis.py` | `analyze_entity` / `analyze_operator` / `analyze_rotor` — MV → entity |
-| `_pointset.py` | `point_from_embedding`, `pointset_from_blade`, `two_conic_intersection` |
-| `_intersection.py` | `intersect_quadrics` — two quadrics → `PlaneConicPair` / `Curve` |
+| `_pointset.py` | `point_from_embedding`, `pointset_from_blade`, `_two_conic_intersection` |
+| `_intersection.py` | `_intersect_quadrics` / `_intersect_three_quadrics` — the pencil backends of `analyze` |
 
 ## Representation and data flow
 
@@ -40,7 +43,7 @@ factors *only* in `_embedding.py` and `_mapping.py`, so the plain `Algebra(6,0)`
 The main pipeline is:
 
 ```
-points ──embed_point──▶ MVs ──join/∧──▶ blade ──analyze_entity──▶ Conic/Quadric3D
+points ──geo(Point)──▶ MVs ──op/join──▶ blade ──analyze──▶ Conic/Quadric3D
                                                                     │
                                             ┌───────────────────────┘
                                             ▼
@@ -50,17 +53,27 @@ points ──embed_point──▶ MVs ──join/∧──▶ blade ──analyz
                        viz serializer ──▶ renderer (curve.js, plane_pair.js, …)
 ```
 
-- **Construction** (`_build.py`): `conic_from_points` / `quadric_from_points`
-  wedge the point embeddings and take the dual; the `_svd` variants take the null
-  vector of the stacked point embeddings instead (more robust to noise).
+- **Construction** (GA): embed the points with `geo(Point(...))`, take their
+  `op`/`join` (the smallest containing blade), and `analyze` it — the dual of the
+  blade is the grade-1 coefficient MV.  The SVD fit is the same incidence
+  expression ``c.sp(p) = 0`` over the embedded points, solved with the expression
+  system's ``lstsq`` (the singular spectrum flags an underdetermined point set).
 - **Analysis** (`_analysis.py`): `analyze_entity` prunes numerical noise, then
   dispatches on algebra dimension (Q2 vs Q3) and blade grade. IPNS input is
   dualized to OPNS first, so a single OPNS dispatch path handles both.
-- **Refine** (`refine.py`, reached via `Conic.refine()` / `Quadric3D.refine()`):
-  classifies the matrix and builds the concrete entity via eigen-decomposition.
+- **Refine** (`refine.py`, reached via `Conic.refine(tol=…)` /
+  `Quadric3D.refine(tol=…)`, and from `Geometry.refine(..., tol=…)`): classifies
+  the matrix — optionally within a *tolerance* so a noisy degenerate quadric can
+  still be recognized as, e.g., a cone — and builds the concrete entity via
+  eigen-decomposition.
 - **Creation** (`_create.py`): inverts the round-trip — `create_circle`,
   `create_ellipse`, `create_cone`, `create_rotor`, … build the coefficient vector
   / MV from an entity. Every entity type here has a matching `refine_*` branch.
+- **Cone lift** (`_basis.py::BasisQ3.__call__`, `_basis.py::CONE_BLADE_MAP`): a
+  base conic (in the plane `z = 1`) is relabeled onto the cone quadric slots via
+  the general `Algebra.embed` / `MV.to_algebra` blade-map primitive (also exposed
+  as `BasisQ3(c)`), then translated to a chosen apex with `geo(Translator(...))`
+  — a rank-3 cone.
 
 ## Classification and refine
 
@@ -84,7 +97,8 @@ share the same "factor a degenerate matrix" idea.
 
 ## Two-quadric intersection
 
-`intersect_quadrics(Q1, Q2)` (`_intersection.py`) is numpy-only (no scipy). It
+`_intersect_quadrics(Q1, Q2)` (`_intersection.py`, the private backend of
+`analyze`) is numpy-only (no scipy). It
 finds the **real degenerate members** of the pencil `span{Q1, Q2}` and returns
 either:
 
@@ -109,9 +123,9 @@ A `k`-point **join** (OPNS blade, grades 2–7 in Q3, 2–4 in Q2) is analyzed a
 intersecting a generic triple of them (`_pointset.py`):
 
 - `k = 2` uses the rank-1 pencil (a binary quadratic); Q2 `k = 3, 4` uses the
-  conic complement + `two_conic_intersection`; Q3 `k = 3..7` uses the quadric
-  complement + `intersect_three_quadrics`.
-- `intersect_three_quadrics(Q1, Q2, Q3)` reduces to `intersect_quadrics(Q1, Q2)`
+  conic complement + `_two_conic_intersection`; Q3 `k = 3..7` uses the quadric
+  complement + `_intersect_three_quadrics`.
+- `_intersect_three_quadrics(Q1, Q2, Q3)` reduces to `_intersect_quadrics(Q1, Q2)`
   and finds `Q3 = 0` along the quartic: exact through a plane-pair member's
   plane-conics, numeric by Newton-refining the cone-sample polyline.  Several
   random triplets are unioned and filtered to the points on *all* complement

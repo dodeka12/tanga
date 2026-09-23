@@ -23,6 +23,7 @@ Keywords: N3, conformal, Rotor, Motor, Inversion, Dilator
 
 import math
 
+from pytanga.algebra import MV
 from pytanga.basis import BasisN3
 from pytanga.geometry import (
     Dilator,
@@ -90,6 +91,7 @@ hr("4. Translator — two einf reflectors, direct coefficient extraction")
 t = Translator(vector=Direction(3, 1, 0))
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 mv_t = geo.create(t)
+assert isinstance(mv_t, MV), "a Translator materialises one MV in N3"
 mv_t.show("Translator by (3, 1, 0)")
 # geo(...) creates for Entity/Operator args; analyzes for MV args
 result = geo.which_operator(mv_t)

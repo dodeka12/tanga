@@ -163,8 +163,35 @@ class Expression:
     # Evaluation
     # ------------------------------------------------------------------
 
-    def __call__(self, **bindings: Any) -> "MV | Expression | list[Any]":
+    def _bind_positional(
+        self, args: tuple[Any, ...], bindings: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Fold a single positional value into *bindings* for a one-variable expression."""
+        if not args:
+            return bindings
+        if len(args) > 1:
+            raise TypeError(
+                f"Expression.__call__ takes at most one positional argument, "
+                f"got {len(args)}"
+            )
+        if len(self._names) != 1:
+            raise TypeError(
+                "a positional argument requires a single-variable expression"
+            )
+        (name,) = self._names
+        if name in bindings:
+            raise TypeError(
+                f"variable {name!r} was bound both positionally and by keyword"
+            )
+        out = dict(bindings)
+        out[name] = args[0]
+        return out
+
+    def __call__(self, *args: Any, **bindings: Any) -> "MV | Expression | list[Any]":
         """Evaluate the expression, binding some or all variables.
+
+        A single positional value may be given when the expression has exactly
+        one variable: ``expr(mv)`` is shorthand for ``expr(**{name: mv})``.
 
         A variable value may be:
 
@@ -190,6 +217,7 @@ class Expression:
         returned (it may carry counting axes).  Otherwise the result is an ``MV``
         (single values) or a nested ``list`` of ``MV`` (batched).
         """
+        bindings = self._bind_positional(args, bindings)
         return self._evaluate(bindings, True)
 
     def compile(self) -> Callable[..., MV]:
@@ -494,12 +522,16 @@ class Expression:
             )
         return result
 
-    def evaluate(self, **bindings: Any) -> MV:
+    def evaluate(self, *args: Any, **bindings: Any) -> MV:
         """Evaluate all variables to a concrete :class:`MV`.
+
+        A single positional value may be given when the expression has exactly
+        one variable.
 
         Raises :class:`ValueError` if the result is still an ``Expression``
         (variables/axes unbound) or a batched ``list``.
         """
+        bindings = self._bind_positional(args, bindings)
         result = self._evaluate(bindings, True)
         if not isinstance(result, MV):
             raise ValueError(
@@ -508,6 +540,14 @@ class Expression:
                 "result (list)."
             )
         return result
+
+    def __matmul__(self, other: Any) -> Any:
+        """``expr @ value`` — apply a single-variable expression to ``value``.
+
+        For a single-variable expression (e.g. a translation linear map ``T``),
+        ``T @ q`` is shorthand for ``T.evaluate(q)``.
+        """
+        return self.evaluate(other)
 
     def _substitute(self, mapping: dict[str, Variable]) -> "Expression":
         """Re-key named variables onto target ``Variable``s (internal).
@@ -898,7 +938,7 @@ class Expression:
         if rhs is None:
             if matrix.shape[0] == 0:
                 raise ValueError("lstsq(): empty linear system")
-            _, _, vt = np.linalg.svd(matrix, full_matrices=False)
+            _, _, vt = np.linalg.svd(matrix, full_matrices=True)
             x = vt[-1]
         else:
             if self._has_counting_axes():
@@ -924,7 +964,9 @@ class Expression:
         ``(values, mvs)`` where *values* is the list of singular values (in
         descending order) and *mvs* is the list of the corresponding
         right-singular vectors, each reconstructed as an ``MV`` over the
-        variable's blade mask.
+        variable's blade mask.  For an underdetermined (wide) system *values*
+        is padded with trailing zeros (so ``len(values) == len(mvs)``) and the
+        trailing *mvs* span the null space.
 
         Raises ``ValueError`` if the expression has no variable, more than one
         variable, or the sole variable occurs more than once.
@@ -934,7 +976,8 @@ class Expression:
         var_mask, matrix = self._variable_matrix()
         if matrix.shape[0] == 0:
             raise ValueError("svd(): empty linear system")
-        _u, s, vt = np.linalg.svd(matrix, full_matrices=False)
+        _u, s, vt = np.linalg.svd(matrix, full_matrices=True)
+        values = cast("list[float]", s.tolist()) + [0.0] * (len(var_mask) - len(s))
         mvs = [
             cast(
                 "MV",
@@ -942,7 +985,7 @@ class Expression:
             )
             for vec in vt
         ]
-        return cast("list[float]", s.tolist()), mvs
+        return values, mvs
 
 
 class AffineExpression:
@@ -1474,7 +1517,7 @@ class AffineExpression:
         if rhs is None:
             if matrix.shape[0] == 0:
                 raise ValueError("lstsq(): empty linear system")
-            _, _, vt = np.linalg.svd(matrix, full_matrices=False)
+            _, _, vt = np.linalg.svd(matrix, full_matrices=True)
             x = vt[-1]
         else:
             if self._has_counting_axes():
@@ -1499,14 +1542,17 @@ class AffineExpression:
         Treats this single-linear-map affine expression as a linear map and
         returns ``(values, mvs)`` — the descending singular values and the
         corresponding right-singular vectors, each reconstructed as an ``MV``
-        over the variable's blade mask.
+        over the variable's blade mask.  For an underdetermined (wide) system
+        *values* is padded with trailing zeros (so ``len(values) == len(mvs)``)
+        and the trailing *mvs* span the null space.
         """
         from pytanga.tensor import MVTensor as _MVTensor
 
         _name, var_mask, matrix = self._variable_matrix()
         if matrix.shape[0] == 0:
             raise ValueError("svd(): empty linear system")
-        _u, s, vt = np.linalg.svd(matrix, full_matrices=False)
+        _u, s, vt = np.linalg.svd(matrix, full_matrices=True)
+        values = cast("list[float]", s.tolist()) + [0.0] * (len(var_mask) - len(s))
         mvs = [
             cast(
                 "MV",
@@ -1514,7 +1560,7 @@ class AffineExpression:
             )
             for vec in vt
         ]
-        return cast("list[float]", s.tolist()), mvs
+        return values, mvs
 
     def inv(self, var_name: str) -> "Expression":
         """Return the inverse linear map as a new expression.
@@ -2196,11 +2242,11 @@ class ScalarExpression(Expression):
 
     __slots__ = ()
 
-    def __call__(self, **bindings: Any) -> Any:
-        return _unwrap_scalar(super().__call__(**bindings))
+    def __call__(self, *args: Any, **bindings: Any) -> Any:
+        return _unwrap_scalar(super().__call__(*args, **bindings))
 
-    def evaluate(self, **bindings: Any) -> Any:
-        result = super().evaluate(**bindings)
+    def evaluate(self, *args: Any, **bindings: Any) -> Any:
+        result = super().evaluate(*args, **bindings)
         if not isinstance(result, MV):
             raise ValueError(
                 "evaluate() expected a fully-bound scalar, but the binding left "
@@ -2215,6 +2261,31 @@ class ScalarExpression(Expression):
         return ScalarExpression(
             self._tensor.mul_scalar(scalar), self._names, self._masks
         )
+
+
+def linear_map(
+    matrix: np.ndarray,
+    out_mask: BladeMask,
+    var_name: str,
+    var_mask: BladeMask,
+) -> Expression:
+    """Build a single-variable linear-map expression from a matrix.
+
+    ``matrix`` has shape ``(len(out_mask), len(var_mask))``.  Contracting the
+    returned expression at ``{var_name: mv}`` (or ``expr(mv)``) applies the
+    linear map to ``mv``'s coefficients over ``var_mask`` and returns the result
+    over ``out_mask``.
+    """
+    data = np.asarray(matrix, dtype=float)
+    if data.shape != (len(out_mask), len(var_mask)):
+        raise ValueError(
+            f"matrix shape {data.shape} does not match masks "
+            f"({len(out_mask)}, {len(var_mask)})"
+        )
+    label = allocate_block()[0]
+    result = MVTensor(data=data, masks=(out_mask, var_mask))
+    labeled = MVLabeledTensor(result, [(OUT_LABEL, "*"), (label, "*")])
+    return Expression(labeled, {var_name: (label,)}, {var_name: var_mask})
 
 
 def _unwrap_scalar(result: Any) -> Any:

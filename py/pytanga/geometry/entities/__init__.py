@@ -39,12 +39,14 @@ from .frustum import Frustum
 from .hdirection import HDirection
 from .hpoint import HPoint
 from .hyperbola import Hyperbola
+from .hyperboloid import Hyperboloid
 from .line import Line
 from .line_pair import LinePair, ParallelLinePair
 from .plane import Plane
 from .plane_conic import Curve, PlaneConic, PlaneConicPair
 from .plane_pair import PlanePair, ParallelPlanePair
 from .parabola import Parabola
+from .paraboloid import Paraboloid
 from pytanga.entity import Point
 from .point_pair import ImagPointPair, PointPair
 from .point_set import PointSet
@@ -80,6 +82,8 @@ Entity = (
     | PlaneConicPair
     | Curve
     | Cone
+    | Hyperboloid
+    | Paraboloid
     | PointSet
 )
 
@@ -101,6 +105,7 @@ __all__ = [
     "HDirection",
     "HPoint",
     "Hyperbola",
+    "Hyperboloid",
     "ImagCircle",
     "ImagPointPair",
     "ImagSphere",
@@ -108,6 +113,7 @@ __all__ = [
     "LinePair",
     "ParallelLinePair",
     "Parabola",
+    "Paraboloid",
     "PartialDisk",
     "Plane",
     "PlanePair",

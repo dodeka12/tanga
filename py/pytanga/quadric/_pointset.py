@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 
-from ._mapping import from_coeffs
+from ._mapping import _from_coeffs
 
 if TYPE_CHECKING:
     from pytanga.algebra._mv import MV
@@ -49,7 +49,7 @@ def _coeffs(mv: MV, dim: int) -> tuple[float, ...]:
 def point_from_embedding(mv: MV, dim: int) -> Point:
     """Recover a finite point from a rank-1 grade-1 embedding MV."""
     E = _entities()
-    matrix = from_coeffs(_coeffs(mv, dim))
+    matrix = _from_coeffs(_coeffs(mv, dim))
     if np.linalg.matrix_rank(matrix) != 1:
         raise ValueError("not a rank-1 point embedding")
     w = matrix[-1, -1]
@@ -118,8 +118,8 @@ def _solve_binary_quadratic(
 
 def _points_from_two_point_join(factors: "list[MV]", dim: int) -> list[Point]:
     """Recover the two points of a 2D pencil (join of two points)."""
-    m1 = from_coeffs(_coeffs(factors[0], dim))
-    m2 = from_coeffs(_coeffs(factors[1], dim))
+    m1 = _from_coeffs(_coeffs(factors[0], dim))
+    m2 = _from_coeffs(_coeffs(factors[1], dim))
     # Rank-1 elements of the pencil α m1 + β m2 are where the top-left 2×2
     # minor vanishes (a binary quadratic in (α, β)).
     a = float(m1[0, 0] * m1[1, 1] - m1[0, 1] * m1[1, 0])
@@ -154,7 +154,7 @@ def _symmetric_basis_3() -> list[np.ndarray]:
 
 def _points_from_join_via_conics(factors: "list[MV]") -> list[Point]:
     """Recover 3 or 4 join points (2D) via the orthogonal conic complement."""
-    ms = [from_coeffs(_coeffs(f, 6)) for f in factors]
+    ms = [_from_coeffs(_coeffs(f, 6)) for f in factors]
     k = len(ms)
     basis = _symmetric_basis_3()
     gram = np.array([[float(np.trace(b @ m)) for m in ms] for b in basis])  # 6×k
@@ -167,7 +167,7 @@ def _points_from_join_via_conics(factors: "list[MV]") -> list[Point]:
     rng = np.random.default_rng(0)
     g1 = sum(rng.normal() * c for c in conics)
     g2 = sum(rng.normal() * c for c in conics)
-    points = list(two_conic_intersection(g1, g2))
+    points = list(_two_conic_intersection(g1, g2))
     for conic in conics:
         points = [p for p in points if abs(_quad_value(conic, p)) < 1e-8]
     return cast("list[Point]", points)
@@ -199,9 +199,9 @@ def _points_from_join_via_quadrics(factors: "list[MV]") -> list[Point]:
     ``dev/theory/quadric-point-tuples.md``).  Several random triplets are tried
     and unioned so a bad quartic sampling in one triplet cannot hide a point.
     """
-    from ._intersection import intersect_three_quadrics
+    from ._intersection import _intersect_three_quadrics
 
-    ms = [from_coeffs(_coeffs(f, 10)) for f in factors]
+    ms = [_from_coeffs(_coeffs(f, 10)) for f in factors]
     k = len(ms)
     basis = _symmetric_basis_4()
     gram = np.array([[float(np.trace(b @ m)) for m in ms] for b in basis])  # 10×k
@@ -214,7 +214,7 @@ def _points_from_join_via_quadrics(factors: "list[MV]") -> list[Point]:
     for _ in range(4):
         g = [sum(rng.normal() * q for q in quadrics) for _ in range(3)]
         try:
-            candidates.extend(intersect_three_quadrics(*g))
+            candidates.extend(_intersect_three_quadrics(*g))
         except NotImplementedError:
             continue
     candidates = _dedupe_3d(candidates)
@@ -293,7 +293,7 @@ def _dedupe(points: list[Point], tol: float = 1e-3) -> list[Point]:
     return out
 
 
-def two_conic_intersection(A: "np.ndarray", B: "np.ndarray") -> PointSet:
+def _two_conic_intersection(A: "np.ndarray", B: "np.ndarray") -> PointSet:
     """Intersect two conic matrices via the thesis pencil method.
 
     ``M = B⁻¹ A``; each real eigenvalue ``λ`` yields the degenerate conic

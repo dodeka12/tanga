@@ -15,12 +15,15 @@ Perwass's projective conic space ``CA{6}`` (and its 3D quadric generalisation
 from __future__ import annotations
 
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pytanga.algebra._algebra import Algebra
+from pytanga.algebra._mv import MV
 
-if TYPE_CHECKING:
-    from pytanga.algebra._mv import MV
+
+# Q2 conic blade ids -> Q3 quadric blade ids for the apex-at-origin cone over a
+# base conic in the plane z = 1 (see dev/theory/quadric-cone-lift-derivation.md).
+CONE_BLADE_MAP: dict[int, int] = {1: 256, 2: 512, 4: 64, 8: 16, 16: 32, 32: 128}
 
 
 class BasisQ2(Algebra):
@@ -96,6 +99,19 @@ class BasisQ3(Algebra):
         self.b9 = mv({256: 1})
         self.b10 = mv({512: 1})
         self.I = mv({self.pseudoscalar_id: 1})
+
+    def __call__(self, coeffs: MV | dict[Any, Any] | str | None = None) -> MV:
+        """Create an MV, or embed a Q2 conic MV as an apex-at-origin cone.
+
+        ``Q3(c)`` with a Q2 (dim-6) conic MV relabels the conic's six grade-1
+        blades onto the cone quadric slots (base conic in the plane ``z = 1``,
+        apex at the origin).  Any other input behaves as :meth:`multivector`.
+        """
+        if isinstance(coeffs, MV):
+            if coeffs.algebra.dim != 6:
+                raise ValueError("BasisQ3(mv) expects a Q2 (dim 6) multivector")
+            return self.embed(coeffs, CONE_BLADE_MAP)
+        return self.multivector(coeffs)
 
     @cached_property
     def _display_basis(self) -> list[tuple[str, MV, MV | None, int | None]]:

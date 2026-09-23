@@ -17,7 +17,7 @@ Keywords: quadric, conic, rotor, conic_from_points, refine, analyze, slider
 import math
 
 from typing import Any
-from pytanga.algebra import MV
+from pytanga.algebra import MV, op
 from pytanga.geometry import Direction, Geometry, Point, Rotor, analyze_operator
 from pytanga.quadric import BasisQ2
 from pytanga.viz import (
@@ -60,7 +60,7 @@ def _rotated_conic() -> Any:
 async def on_drag_a(event: DragEvent, ap: ActSceneObject) -> bool:
     global base_conic
     # The point is dragged: rebuild the base conic and re-apply the rotor.
-    base_conic = p1 ^ p2 ^ p3 ^ p4 ^ geo(ap)
+    base_conic = op([p1, p2, p3, p4, geo(ap)])
     assert conic_viz is not None and rotor_viz is not None
     conic_viz.entity = _rotated_conic()
     # We did not move the point ourselves, so let the default behaviour run.
@@ -81,7 +81,7 @@ async def on_rotation(value: float, _event: ControlEvent) -> None:
 
 ap_a = ActPoint(0.7, 0.7, 0, handler=on_drag_a)
 
-base_conic = p1 ^ p2 ^ p3 ^ p4 ^ geo(ap_a)
+base_conic = op([p1, p2, p3, p4, geo(ap_a)])
 
 viz = Visualizer(title="Tanga — conic through 5 points", space_dim=2)
 for p, c in zip(

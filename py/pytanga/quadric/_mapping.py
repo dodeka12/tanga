@@ -11,7 +11,7 @@ Coefficient ordering (README math, fixed up front):
 3D — symmetric 4×4 ``Q`` → 10 coeffs
     ``(q₁₄, q₂₄, q₃₄, (√2/2)q₄₄, (√2/2)q₁₁, (√2/2)q₂₂, (√2/2)q₃₃, q₁₂, q₁₃, q₂₃)``
 
-``to_coeffs`` and ``from_coeffs`` are exact inverses.
+``_to_coeffs`` and ``_from_coeffs`` are exact inverses.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def _as_matrix(a: "np.ndarray | list[list[float]]", n: int) -> np.ndarray:
     return arr
 
 
-def to_coeffs(a: "np.ndarray | list[list[float]]") -> tuple[float, ...]:
+def _to_coeffs(a: "np.ndarray | list[list[float]]") -> tuple[float, ...]:
     """Map a symmetric 3×3 (conic) or 4×4 (quadric) matrix to coeffs."""
     arr = np.asarray(a, dtype=float)
     if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
@@ -72,7 +72,7 @@ def to_coeffs(a: "np.ndarray | list[list[float]]") -> tuple[float, ...]:
     )
 
 
-def from_coeffs(coeffs: "tuple[float, ...] | np.ndarray | list[float]") -> np.ndarray:
+def _from_coeffs(coeffs: "tuple[float, ...] | np.ndarray | list[float]") -> np.ndarray:
     """Map a 6- or 10-tuple of coeffs back to the symmetric matrix."""
     t = np.asarray(coeffs, dtype=float)
     if t.shape == (6,):

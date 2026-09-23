@@ -117,7 +117,6 @@ class TestConicRenderers:
 import numpy as np
 
 from pytanga.geometry import Conic, Ellipse, Quadric3D
-from pytanga.quadric import to_coeffs
 from pytanga.viz import ConicStyle
 from pytanga.viz._styles import _style_to_output
 from pytanga.viz.scene import _resolve_scene_entity
@@ -127,7 +126,7 @@ class TestConicRefineInResolver:
     def test_resolve_refines_conic_to_ellipse(self):  # noqa: ANN201
         # x²/4 + y² = 1  ->  symmetric matrix diag(1/4, 1, -1).
         matrix = np.diag([1.0 / 4.0, 1.0, -1.0])
-        conic = Conic(to_coeffs(matrix))
+        conic = Conic(matrix)
         resolved = _resolve_scene_entity(conic)
         assert isinstance(resolved, Ellipse)
 
@@ -141,7 +140,7 @@ class TestConicRefineInResolver:
 
         matrix = np.diag([1.0 / 4.0, 1.0, -1.0])
         basis = BasisQ2(opns=False)
-        coeffs = to_coeffs(matrix)
+        coeffs = Conic(matrix).coeffs
         mv = basis.multivector({1 << i: coeffs[i] for i in range(6)})
         resolved = _resolve_scene_entity(mv)
         assert isinstance(resolved, Ellipse)

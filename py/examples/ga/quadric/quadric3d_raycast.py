@@ -4,18 +4,20 @@
 """quadric3d_raycast.py — reconstruct a quadric from 9 points and ray-render it.
 
 Embeds nine points in the 3D projective quadric space, reconstructs the quadric
-through them, and draws the raw ``Quadric3D`` (analytic ray renderer) next to
-its refined ``Ellipsoid`` (standard mesh pipeline).
+through them as the **join** of the point embeddings (``join([...])``), and draws
+the raw ``Quadric3D`` (analytic ray renderer) next to its refined ``Ellipsoid``
+(standard mesh pipeline).
 
 Run with:  uv run python py/examples/ga/quadric/quadric3d_raycast.py
 
-Keywords: quadric, quadric_from_points, ray, refine, analyze
+Keywords: quadric, quadric_from_points, ray, refine, analyze, join
 """
 
 import math
 
-from pytanga.geometry import analyze, refine
-from pytanga.quadric import BasisQ3, quadric_from_points, to_coeffs
+from pytanga.algebra import join
+from pytanga.geometry import Geometry, Point, analyze, refine
+from pytanga.quadric import BasisQ3
 from pytanga.viz import Visualizer
 
 # Nine points on the ellipsoid  x²/4 + y²/9 + z²/16 = 1.
@@ -33,10 +35,8 @@ points = [
     (a / s, -b / s, c / s),
 ]
 
-basis = BasisQ3(opns=False)
-matrix = quadric_from_points(basis, points)
-coeffs = to_coeffs(matrix)
-mv = basis.multivector({1 << i: coeffs[i] for i in range(10)})
+geo = Geometry(BasisQ3())
+mv = join([geo(Point(*p)) for p in points])  # grade-9 quadric blade
 
 raw = analyze(mv)  # raw Quadric3D (rendered via the ray proxy by default)
 specific = refine(raw)  # Ellipsoid (mesh pipeline)
