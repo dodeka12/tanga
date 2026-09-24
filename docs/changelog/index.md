@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.10.0 (2.11.0-rc1)] — 2026-09-24
+- Image transport (codec byte, tiled images, camera streams, JPEG export) · layout reconciliation by stable view id · granular background-image update · entity/control enable-disable-hide · `EImageCodec` enum + `ImageFrameHeader` header parsing
+- Perf: cached blade-name parsing · branch-free `MV` operator dispatch · Bug fixes: SDF `Cylinder` `align_center=0.0` · same-scene pane reuse
+→ [Details](2026/09/24_363124a84.md)
+
 ## [Since 2.9.0 (2.10.0-rc1)] — 2026-09-24
 - GA-only conic/quadric API (`geo(...)` + `op`/`join`/`meet`/`gp`, `dual`, `sp`) · `op`/`join`/`meet`/`gp` sequence products · matrix-accepting `Conic`/`Quadric3D` (`to_matrix()`) · cone lift + `geo(Translator)` linear map · `Hyperboloid`/`Paraboloid` entities · conic/quadric intersection via `analyze` · `@` operator applies a single-variable expression
 - Bug fixes: `Expression.lstsq`/`svd` null-space (`full_matrices=True`)
