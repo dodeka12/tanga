@@ -49,3 +49,18 @@ const {build_done_var} = (async () => {{
         if (entry.layer === 'scene') {mesh_map_var}.set(id, entry.obj);
     }}
 }})();"""
+
+
+def js_image_assets_hydration(assets_expr: str) -> str:
+    """Hydrate ``image-frames.js`` frames from embedded asset data.
+
+    Emits a synchronous loop (run before the scene builds) that decodes each
+    asset's base64 bytes and calls ``storeImageFrame``, so
+    ``createImage``/``createImageBackground`` can claim the frames via
+    ``takeImageFrame``.
+    """
+    return f"""// Hydrate image pixel frames (raw / jpeg) before the scene builds.
+for (const a of ({assets_expr} || [])) {{
+    const bytes = Uint8Array.from(atob(a.data_b64), c => c.charCodeAt(0));
+    storeImageFrame({{ id: a.id, codec: a.codec, bytes }});
+}}"""

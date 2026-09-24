@@ -9,6 +9,11 @@ export class ColorPickerView extends ControlView {
         this.value = value;
     }
 
+    update(node) {
+        this.value = node.value ?? this.value;
+        super.update(node);
+    }
+
     render() {
         return createColorPicker({
             id: this.controlId,

@@ -10,6 +10,12 @@ export class TextFieldView extends ControlView {
         this.placeholder = placeholder;
     }
 
+    update(node) {
+        this.value = node.value ?? this.value;
+        this.placeholder = node.placeholder ?? this.placeholder;
+        super.update(node);
+    }
+
     render() {
         return createTextField({
             id: this.controlId,

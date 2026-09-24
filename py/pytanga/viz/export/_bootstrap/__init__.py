@@ -18,6 +18,7 @@ from pytanga.viz.export._bootstrap._animation import (  # noqa: F401
     js_reconcile_frame,
 )
 from pytanga.viz.export._bootstrap._entities import (  # noqa: F401
+    js_image_assets_hydration,
     js_scene_build,
 )
 from pytanga.viz.export._bootstrap._errors import js_cdn_check_script  # noqa: F401

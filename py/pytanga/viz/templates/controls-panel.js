@@ -51,6 +51,38 @@ export function registerControl(id, entry) {
     _controlRegistry[id] = entry;
 }
 
+/**
+ * Apply a server-driven `control_state` change to a rendered control's DOM.
+ * `enabled=false` greys the control out and disables its inputs; `visible=false`
+ * hides it (`display:none`) without removing it from the layout.
+ */
+export function applyControlStateToElement(wrapper, state) {
+    if (!wrapper) return;
+    if (state.enabled !== undefined) {
+        const enabled = !!state.enabled;
+        wrapper.classList.toggle('tanga-control-disabled', !enabled);
+        wrapper.querySelectorAll('input, select, textarea, button').forEach((el) => {
+            el.disabled = !enabled;
+        });
+    }
+    if (state.visible !== undefined) {
+        wrapper.style.display = state.visible ? '' : 'none';
+    }
+}
+
+/**
+ * Apply a server-driven `control_state` change to a rendered control by id.
+ * No-ops for unknown/unrendered ids.
+ */
+export function applyControlState(id, state) {
+    const entry = _controlRegistry[id];
+    if (!entry || !entry.el) {
+        console.debug('[tanga] control_state for unknown id:', id);
+        return;
+    }
+    applyControlStateToElement(entry.el, state);
+}
+
 // ── Icon rendering ──────────────────────────────────────────
 
 const _iconFontLinks = {

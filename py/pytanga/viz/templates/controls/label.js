@@ -1,6 +1,6 @@
 // Tanga Viewer — the read-only text label DOM factory.
 
-import { registerControl, applyTooltip } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement } from '../controls-panel.js';
 
 export function createLabel(ctrl) {
     const wrapper = document.createElement('div');
@@ -15,9 +15,11 @@ export function createLabel(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'label',
+        el: wrapper,
         apply: (value) => { text.textContent = value == null ? '' : String(value); },
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

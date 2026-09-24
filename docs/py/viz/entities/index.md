@@ -41,6 +41,14 @@ operators, axes/grid, point paths, and the active (interactive) elements.
 | Rectangle2D | Rectangle2DStyle | [ActRectangle2D](active-elements/act-rectangle2d.md) |
 | Frustum | FrustumStyle | [Camera & Controls](../visualizer/camera.md) (viz-only, no MV) |
 
+### Hiding entities
+
+Any entity or group can be hidden/shown at runtime without re-serializing its
+geometry.  Use `viz.set_visible(entity_id, False)` / `viz.hide(entity_id)` (or
+`handle.set_visible` / `handle.hide` on a `VizSceneHandle`), then `viz.flush()`;
+`viz.set_visible(entity_id, True)` shows it again.  A `VizObjectRef` returned by
+`new()` exposes the same toggle as `set_visible(True)` / `set_visible(False)`.
+
 For the underlying geometry data classes, see
 [Entity Data Classes](../../ga/geometry/entities.md) and
 [Operator Data Classes](../../ga/geometry/operators.md). Runnable examples:

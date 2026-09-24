@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import numpy as np
 
@@ -36,6 +36,17 @@ class Algebra:
     #: If True, the user-facing ``meet``/``join`` swap meanings (Gunn/Dorst
     #: convention).  Set by the plane-based PGA bases (BasisPGA2/BasisPGA3).
     _swap_meet_join: bool = False
+
+    #: Branch-free operator implementations, bound in ``__init__`` to either the
+    #: plain (non-modular) or modular variants.  The ``MV`` operator dunders call
+    #: these directly so the per-call ``self._modulus is not None`` check is
+    #: skipped on the hot path.
+    _add_impl: Callable[[MV, MV], MV]
+    _sub_impl: Callable[[MV, MV], MV]
+    _scale_impl: Callable[[MV, float], MV]
+    _gp_impl: Callable[[MV, MV], MV]
+    _op_impl: Callable[[MV, MV], MV]
+    _ip_impl: Callable[[MV, MV], MV]
 
     def __init__(
         self,
@@ -80,11 +91,29 @@ class Algebra:
         self._sig = sig
         self._dtype = dtype
         self._modulus = modulus
+        self._blade_name_cache: dict[str, tuple[int, int]] = {}
         self._print_fmt = print_fmt
         self._precision = precision
         self._mod: AlgebraBinding = get_or_build(dim, sig, dtype, verbose=verbose)
         self._rng = np.random.default_rng(seed)
         self._opns = bool(opns)
+
+        # Bind the branch-free operator implementations once (see
+        # _input/pytanga-mv-operator-dispatch-overhead.md).
+        if modulus is None:
+            self._add_impl = self._add_plain
+            self._sub_impl = self._sub_plain
+            self._scale_impl = self._scale_plain
+            self._gp_impl = self._gp_plain
+            self._op_impl = self._op_plain
+            self._ip_impl = self._ip_plain
+        else:
+            self._add_impl = self._add_modular
+            self._sub_impl = self._sub_modular
+            self._scale_impl = self._scale_modular
+            self._gp_impl = self._gp_modular
+            self._op_impl = self._op_modular
+            self._ip_impl = self._ip_modular
 
     # -----------------------------------------------------------------------
     # Properties
@@ -299,6 +328,57 @@ class Algebra:
         if self._modulus is not None:
             return self.reduce(result, self._modulus)
         return result
+
+    # -----------------------------------------------------------------------
+    # Plain / modular operator implementations (bound once in __init__)
+    # -----------------------------------------------------------------------
+    def _add_plain(self, a: MV, b: MV) -> MV:
+        return MV(self._mod.add(a._impl, b._impl), self)
+
+    def _add_modular(self, a: MV, b: MV) -> MV:
+        modulus = self._modulus
+        assert modulus is not None
+        return self.reduce(MV(self._mod.add(a._impl, b._impl), self), modulus)
+
+    def _sub_plain(self, a: MV, b: MV) -> MV:
+        return MV(self._mod.sub(a._impl, b._impl), self)
+
+    def _sub_modular(self, a: MV, b: MV) -> MV:
+        modulus = self._modulus
+        assert modulus is not None
+        return self.reduce(MV(self._mod.sub(a._impl, b._impl), self), modulus)
+
+    def _scale_plain(self, a: MV, s: float) -> MV:
+        return MV(self._mod.scale(a._impl, s), self)
+
+    def _scale_modular(self, a: MV, s: float) -> MV:
+        modulus = self._modulus
+        assert modulus is not None
+        return self.reduce(MV(self._mod.scale(a._impl, s), self), modulus)
+
+    def _gp_plain(self, a: MV, b: MV) -> MV:
+        return MV(self._mod.gp(a._impl, b._impl), self)
+
+    def _gp_modular(self, a: MV, b: MV) -> MV:
+        modulus = self._modulus
+        assert modulus is not None
+        return self.gp_mod(a, b, modulus)
+
+    def _op_plain(self, a: MV, b: MV) -> MV:
+        return MV(self._mod.op(a._impl, b._impl), self)
+
+    def _op_modular(self, a: MV, b: MV) -> MV:
+        modulus = self._modulus
+        assert modulus is not None
+        return self.op_mod(a, b, modulus)
+
+    def _ip_plain(self, a: MV, b: MV) -> MV:
+        return MV(self._mod.ip(a._impl, b._impl), self)
+
+    def _ip_modular(self, a: MV, b: MV) -> MV:
+        modulus = self._modulus
+        assert modulus is not None
+        return self.ip_mod(a, b, modulus)
 
     def rev(self, a: MV) -> MV:
         """Reverse of a multivector.
@@ -968,9 +1048,14 @@ class Algebra:
             from ._blade_names import _permutation_sign
 
             return result, _permutation_sign(list(key))
+        cached = self._blade_name_cache.get(key)
+        if cached is not None:
+            return cached
         from ._blade_names import blade_id_signed
 
-        return blade_id_signed(key, self._dim, self.blade_names_comma_separated)
+        result = blade_id_signed(key, self._dim, self.blade_names_comma_separated)
+        self._blade_name_cache[key] = result
+        return result
 
     def _resolve_key(self, key: str | int | tuple[int, ...]) -> int:
         """Resolve a blade key to its canonical (unsigned) blade id."""

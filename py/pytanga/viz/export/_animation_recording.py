@@ -50,6 +50,7 @@ class AnimationRecording:
         self._frames: list[list[dict[str, Any]]] = []
         self._cameras: list[dict[str, Any] | None] = []
         self._assets: dict[str, dict[str, Any]] = {}
+        self._frame_assets: list[list[dict[str, str]]] = []
         self._assets_captured = False
 
     def capture_frame(self, include_images: bool = False) -> None:
@@ -72,19 +73,19 @@ class AnimationRecording:
         if include_images or not self._assets_captured:
             self.capture_assets()
             self._assets_captured = True
+        self._frame_assets.append(image_hydration_frames(self._assets))
 
     def capture_assets(self) -> None:
         """Collect image pixel data once (data → base64, url → url)."""
-        from .._nodes import VizImage
-
-        for node in self._scene._dfs_preorder():
-            if isinstance(node, VizImage):
-                for img in node.images:
-                    self._assets[img.id] = self._image_asset(img)
+        self._assets = capture_image_assets(self._scene)
 
     @staticmethod
     def _image_asset(img: Any) -> dict[str, Any]:
-        """Serialize one image layer into the asset store."""
+        """Serialize one image layer into the asset store.
+
+        Eligible images (``uint8``, 1 or 3 channels) are embedded as a JPEG
+        data URL; everything else keeps a raw base64 buffer.
+        """
         asset: dict[str, Any] = {
             "kind": "image",
             "source": img.source,
@@ -95,6 +96,9 @@ class AnimationRecording:
         }
         if img.url is not None:
             asset["url"] = img.url
+        elif img.supports_jpeg:
+            asset["source"] = "url"
+            asset["url"] = img.to_jpeg_data_url()
         else:
             asset["data"] = img.to_base64()
         return asset
@@ -103,6 +107,11 @@ class AnimationRecording:
     def assets(self) -> dict[str, dict[str, Any]]:
         """The id-keyed asset store (images, and future textures)."""
         return dict(self._assets)
+
+    @property
+    def frame_assets(self) -> list[list[dict[str, str]]]:
+        """The per-frame image-hydration lists (index-aligned with ``frames``)."""
+        return list(self._frame_assets)
 
     @property
     def frames(self) -> list[list[dict[str, Any]]]:
@@ -126,6 +135,7 @@ class AnimationRecording:
             "frame_count": len(self._frames),
             "cameras": self._cameras,
             "assets": self._assets,
+            "frame_assets": self._frame_assets,
         }
 
     def to_json(self, *, compress: bool = False) -> str:
@@ -150,3 +160,34 @@ class AnimationRecording:
             return base64.b64encode(compressed).decode("ascii")
 
         return raw_json.decode("utf-8")
+
+
+def capture_image_assets(scene: Any) -> dict[str, dict[str, Any]]:
+    """Capture image pixel assets from a scene's ``VizImage`` nodes."""
+    from .._nodes import VizImage
+
+    assets: dict[str, dict[str, Any]] = {}
+    for node in scene._dfs_preorder():
+        if isinstance(node, VizImage):
+            for img in node.images:
+                assets[img.id] = AnimationRecording._image_asset(img)
+    return assets
+
+
+def image_hydration_frames(assets: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
+    """Convert asset-store entries to frame-hydration records ``{id, codec, data_b64}``.
+
+    JPEG data URLs become ``codec="jpeg"``; raw base64 buffers become
+    ``codec="raw"``; external URLs are skipped (the frontend ``url`` path loads
+    them directly).
+    """
+    frames: list[dict[str, str]] = []
+    for asset_id, asset in assets.items():
+        if asset.get("source") == "url":
+            url = asset.get("url", "")
+            if isinstance(url, str) and url.startswith("data:image/"):
+                _, b64 = url.split(",", 1)
+                frames.append({"id": asset_id, "codec": "jpeg", "data_b64": b64})
+        elif "data" in asset:
+            frames.append({"id": asset_id, "codec": "raw", "data_b64": asset["data"]})
+    return frames

@@ -9,6 +9,11 @@ export class MarkdownView extends ControlView {
         this.value = value;
     }
 
+    update(node) {
+        this.value = node.value ?? this.value;
+        super.update(node);
+    }
+
     render() {
         return createMarkdown({
             id: this.controlId,

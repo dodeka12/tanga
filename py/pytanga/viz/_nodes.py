@@ -221,6 +221,11 @@ class VizNode:
         self.style = _assign_style_field(self.style, "opacity", opacity)
         self.mark("style")
 
+    def set_visible(self, visible: bool) -> None:
+        """Set the node's visibility (marks ``visible``)."""
+        self.visible = bool(visible)
+        self.mark("visible")
+
 
 class VizSceneObject(VizNode):
     """Scene-layer node: entity + resolved style + transform + parent/child."""
@@ -374,6 +379,12 @@ class VizSceneObject(VizNode):
                 "aspect": "content",
                 "value": self._serialize_content(),
             }
+        if aspect == "visible":
+            return {
+                "id": self.id,
+                "aspect": "visible",
+                "value": {"visible": self.visible},
+            }
         raise ValueError(f"Unsupported aspect {aspect!r} for scene node {self.kind}")
 
     # ── Entity / style setters (aspect-correct) ─────────────
@@ -436,22 +447,34 @@ class VizSceneObject(VizNode):
 
         Keeps the node's ``style`` (used for ``style`` patches) and ``_props``
         (used for full re-serialization) in sync, then marks ``style``.
+        ``visible`` is a node-level flag, not a style field: it is applied via
+        :meth:`set_visible` (marks ``visible``) and excluded from ``_props`` and
+        the resolved style.
         """
         if not props:
             return
-        self._props.update(props)
+        if "visible" in props:
+            self.set_visible(props["visible"])
+        self._props.update({k: v for k, v in props.items() if k != "visible"})
+        style_changed = False
         style = props.get("style")
         if style is not None:
             self.style = _merge_style_into(self.style, _style_to_dict(style))
+            style_changed = True
         for key in ("color", "opacity"):
             if key in props:
                 self.style = _assign_style_field(self.style, key, props[key])
+                style_changed = True
         extra = {
-            k: v for k, v in props.items() if k not in ("style", "color", "opacity")
+            k: v
+            for k, v in props.items()
+            if k not in ("style", "color", "opacity", "visible")
         }
         if extra:
             self.style = _merge_style_into(self.style, extra)
-        self.mark("style")
+            style_changed = True
+        if style_changed:
+            self.mark("style")
 
     # ── Transform mutators (aspect-correct) ─────────────────
 
@@ -660,4 +683,10 @@ class VizImage(VizSceneObject):
         """Return a full patch for the image node (no sub-aspect patches)."""
         if aspect == "full":
             return {"id": self.id, "aspect": "full", "value": self.serialize()}
+        if aspect == "visible":
+            return {
+                "id": self.id,
+                "aspect": "visible",
+                "value": {"visible": self.visible},
+            }
         raise ValueError(f"Unsupported aspect {aspect!r} for image node")

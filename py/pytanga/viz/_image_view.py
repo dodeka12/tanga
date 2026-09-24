@@ -138,6 +138,8 @@ class ImageView:
 
     def _serialize_image(self, image: ImageData) -> dict[str, Any]:
         """Serialize one image layer (metadata only — pixels travel as bytes)."""
+        if image.source == "tiled":
+            return image.tiled_meta
         assert image.dtype is not None
         result: dict[str, Any] = {
             "id": image.id,
@@ -388,7 +390,14 @@ class ImageCanvas:
             return
         for img in self._image_view.images:
             if img.data is not None:
-                self._transport.send_bytes(encode_image_frame(img.id, img.data))
+                self._transport.send_bytes(
+                    encode_image_frame(
+                        img.id,
+                        img.data,
+                        codec=img.codec,
+                        jpeg_quality=img.jpeg_quality or 85,
+                    )
+                )
         self._transport.send(
             {
                 "type": "image_update",

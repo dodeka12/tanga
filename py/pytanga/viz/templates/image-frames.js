@@ -23,8 +23,9 @@ export function takeImageFrame(id) {
 }
 
 // Little-endian header after the 4-byte magic `"TGI\0"`:
-//   version u8, type u8, idLen u8, width u32, height u32,
-//   channels u8, dtype u8, dataLen u64  — then id bytes, then raw pixel bytes.
+//   version u8, type u8, idLen u8, [v2: codec u8], width u32, height u32,
+//   channels u8, dtype u8, dataLen u64  — then id bytes, then the payload
+//   (raw pixels, JPEG bytes, or zlib-compressed pixels).
 export function decodeImageFrame(buffer) {
     const dv = new DataView(buffer);
     const magic = String.fromCharCode(
@@ -35,15 +36,30 @@ export function decodeImageFrame(buffer) {
     const version = dv.getUint8(4);
     const type = dv.getUint8(5);
     const idLen = dv.getUint8(6);
-    if (version !== 1) throw new Error('unsupported image frame version');
     if (type !== 1) throw new Error('unexpected image frame type');
-    const width = dv.getUint32(7, true);
-    const height = dv.getUint32(11, true);
-    const channels = dv.getUint8(15);
-    const dtype = dv.getUint8(16);
-    const dataLen = Number(dv.getBigUint64(17, true));
 
-    const idStart = 25;
+    let codec = 'raw';
+    let width, height, channels, dtype, dataLen, idStart;
+    if (version === 1) {
+        width = dv.getUint32(7, true);
+        height = dv.getUint32(11, true);
+        channels = dv.getUint8(15);
+        dtype = dv.getUint8(16);
+        dataLen = Number(dv.getBigUint64(17, true));
+        idStart = 25;
+    } else if (version === 2) {
+        const code = dv.getUint8(7);
+        codec = code === 1 ? 'jpeg' : code === 2 ? 'zlib' : 'raw';
+        width = dv.getUint32(8, true);
+        height = dv.getUint32(12, true);
+        channels = dv.getUint8(16);
+        dtype = dv.getUint8(17);
+        dataLen = Number(dv.getBigUint64(18, true));
+        idStart = 26;
+    } else {
+        throw new Error('unsupported image frame version');
+    }
+
     const id = new TextDecoder().decode(new Uint8Array(buffer, idStart, idLen));
     const dataStart = idStart + idLen;
 
@@ -53,6 +69,7 @@ export function decodeImageFrame(buffer) {
         height,
         channels,
         dtype,
+        codec,
         bytes: new Uint8Array(buffer, dataStart, dataLen),
     };
 }

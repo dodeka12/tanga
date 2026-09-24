@@ -61,6 +61,7 @@ class ControlView(View, Generic[C]):
         self.label = label
         self.tooltip = tooltip
         self._push = None  # callback slot injected at mount (LogView pattern)
+        self._push_state = None  # state callback slot injected at mount
 
     def __getattr__(self, name: str) -> Any:
         ctrl = self.__dict__.get("control")
@@ -78,6 +79,34 @@ class ControlView(View, Generic[C]):
         self.control.set_value(value)
         if self._push is not None:
             self._push(self.id, self.control.get_value())
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Set this control's enabled state and push ``control_state``."""
+        self.control.enabled = bool(enabled)
+        if self._push_state is not None:
+            self._push_state(self.id, {"enabled": self.control.enabled})
+
+    def set_visible(self, visible: bool) -> None:
+        """Set this control's visibility and push ``control_state``."""
+        self.control.visible = bool(visible)
+        if self._push_state is not None:
+            self._push_state(self.id, {"visible": self.control.visible})
+
+    def enable(self) -> None:
+        """Enable this control."""
+        self.set_enabled(True)
+
+    def disable(self) -> None:
+        """Disable (grey out) this control."""
+        self.set_enabled(False)
+
+    def show(self) -> None:
+        """Show this control."""
+        self.set_visible(True)
+
+    def hide(self) -> None:
+        """Hide this control."""
+        self.set_visible(False)
 
     def _serialize(self) -> dict[str, Any]:
         result = super()._serialize()

@@ -25,7 +25,11 @@ Three orthogonal concerns, one model:
 1. **Single global id namespace.** Every control, interactive object, and
    `View` has a globally unique, stable `id` (views auto-generate `v0`… and
    can override it via `id=`); `scene` is a routing hint, not a storage key.
-   Stable ids are what make `viz.remove_view(id)` possible.
+   Stable ids are what make `viz.remove_view(id)` possible, and what the
+   frontend reconciles a `view_layout` re-push on — there is **one** live-view
+   registry (`_viewRegistry`, see
+   [`viz-architecture.md`](viz-architecture.md)) and no parallel id-indexed
+   dicts.
 2. **One `(id, event)` registry.** `ControlHandlerRegistry` keys handlers by
    `(id, event)` — `change`, `click`, `press`, `release`, `cell_change`,
    `row_add`, `column_add`, `row_delete`, `toggle`, `close`, `accept`.  Layout
@@ -351,6 +355,38 @@ message (handled in `viewer.js` next to `view_camera`, dispatched to
 `ThreeJsView.setViewport`), and `set_viewport(scene_name=…)` /
 `VizSceneHandle.set_viewport(…)` re-push the existing `scene_config` with a
 `viewport` field.  See [`viz-architecture.md`](viz-architecture.md).
+
+Background images are swapped the same way:
+`Visualizer.set_background_image(view, image)` sends the new pixel frame (binary)
+followed by a `view_background_image` message (handled in `viewer.js` next to
+`view_camera`/`view_viewport`, dispatched to `ThreeJsView.setBackgroundImage`) —
+no `view_layout` re-push, so the pane's WebGL scene and every other pane are
+untouched.
+
+## Control enable/disable/hide (`control_state`)
+
+Controls carry two runtime state flags on the model — `Control.enabled`
+(rendered but greyed out + non-interactive when `False`) and `Control.visible`
+(`False` hides it without removing it from the layout).  Both are serialized
+only when non-default (`False`), mirroring `tooltip`.
+
+Set them at runtime without re-pushing `view_layout`:
+
+- `ControlView.set_enabled` / `set_visible` (+ `enable`/`disable`/`show`/`hide`
+  sugar) mutate `self.control` and push through the injected `_push_state`
+  callback (injected by `LayoutHost.register`, next to `_push`).
+- `Visualizer.set_control_enabled(cid, bool)` / `set_control_visible(cid, bool)`
+  resolve the control via `resolve_control` (layouts **and** dialogs) and push —
+  so they work for dialog/banner controls too.
+
+The wire message is `{ type: "control_state", id, enabled?, visible? }` (only
+changed fields), pushed by `LayoutHost._push_control_state` and handled in
+`viewer.js` next to `control_update`.  `applyControlState(id, msg)` looks up the
+rendered control in `_controlRegistry` (each factory stores `el: wrapper`) and
+`applyControlStateToElement` toggles the `.tanga-control-disabled` class, the
+native `disabled` attribute on `input/select/textarea/button`, and
+`display:none`.  Disabled grey-out uses the theme tokens
+`--tanga-disabled-opacity` / `--tanga-disabled-fg` (overridable per theme).
 
 ## Follow-ups
 

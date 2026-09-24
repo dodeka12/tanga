@@ -14,6 +14,16 @@ export class ValueEditView extends ControlView {
         this.editable = editable;
     }
 
+    update(node) {
+        this.min = node.min ?? this.min;
+        this.max = node.max ?? this.max;
+        this.step = node.step ?? this.step;
+        this.digits = node.digits ?? this.digits;
+        this.value = node.value ?? this.value;
+        this.editable = node.editable ?? this.editable;
+        super.update(node);
+    }
+
     render() {
         return createValueEdit({
             id: this.controlId,

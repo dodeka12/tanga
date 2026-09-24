@@ -178,6 +178,14 @@ class VizSceneHandle(_JupyterDisplayMixin):
         entity = self._viz._resolve(obj)
         self._scene().update_entity(entity_id, entity)
 
+    def set_visible(self, entity_id: str, visible: bool) -> None:
+        """Show or hide an entity in this scene."""
+        self._scene().set_visible(entity_id, visible)
+
+    def hide(self, entity_id: str) -> None:
+        """Hide an entity in this scene."""
+        self.set_visible(entity_id, False)
+
     def update_label(
         self,
         object_id: str,

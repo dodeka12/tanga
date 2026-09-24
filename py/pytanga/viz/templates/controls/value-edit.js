@@ -1,6 +1,6 @@
 // Tanga Viewer — the numeric stepper DOM factory (input + up/down buttons).
 
-import { registerControl, applyTooltip, sendControlEvent, createIconElement } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement, sendControlEvent, createIconElement } from '../controls-panel.js';
 
 export function createValueEdit(ctrl) {
     const wrapper = document.createElement('div');
@@ -120,12 +120,14 @@ export function createValueEdit(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'value_edit',
+        el: wrapper,
         apply: (v) => {
             value = round(clamp(Number(v)));
             input.value = value.toFixed(digits);
         },
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

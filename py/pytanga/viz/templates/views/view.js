@@ -157,4 +157,6 @@ export class View extends EventTarget {
 
     _onExtentChanged(width, height) {}
     _onMounted() {}
+    /** Refresh fields from a serialized node (no-op for views without state). */
+    update() {}
 }

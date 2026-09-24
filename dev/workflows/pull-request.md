@@ -21,13 +21,15 @@ How to open a pull request for a feature/fix branch.
 
 ### 1. Run the full validation gate
 
-Run the full test suite, the linter, and the type checker, and require all three
-to succeed before doing anything else:
+Run the full test suite, the linter, the type checker, and the JS checks, and
+require all of them to succeed before doing anything else:
 
 ```powershell
 uv run pytest -rs
 uv run ruff check .
 uv run ty check
+node --test 'js/dev/tests/*.test.mjs'
+node js/dev/tests/check-syntax.mjs
 ```
 
 - If any check fails, fix it and re-run. Do **not** open the PR with failing
@@ -35,6 +37,10 @@ uv run ty check
 - `uv run ruff check .` carries the ANN (type-hint coverage) rules; `uv run ty
   check` is the correctness gate (unresolved/unsound types, bad calls, bad
   attributes). Both run over the whole repository, including `py/examples`.
+- The two `node` commands are the **local** JS gate (Node.js is required — see
+  `js/dev/README.md`). They run only on a developer machine, never in GitHub
+  Actions. For frontend/layout changes also run the manual browser smoke:
+  `node js/dev/tests/reconcile-smoke.mjs` (see `js/dev/README.md`).
 - `-rs` prints the reason for every skipped test. **Do not silently ignore
   skipped tests** — confirm each skip is expected. The only expected skips are
   the offline-export tests in `py/tests/viz/test_export_delivery.py` (see the
@@ -51,7 +57,7 @@ installed.
 - CI intentionally skips these tests (no Node.js/esbuild/Playwright toolchain is
   installed in CI).
 - To run them locally, install the dev JS toolchain once (`npm install` in
-  `dev/`, or `npm install esbuild` to install just esbuild), then re-run the
+  `js/dev/`, or `npm install esbuild` to install just esbuild), then re-run the
   suite — the two skips disappear.
 
 ### 2. Create a backup branch

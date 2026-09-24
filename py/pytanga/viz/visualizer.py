@@ -243,6 +243,8 @@ class Visualizer(_JupyterDisplayMixin):
         self._interaction_host = InteractionHost(
             self._transport, self._layout, self._handler_registry
         )
+        self._image_pyramids: dict[str, Any] = {}
+        self._camera_streams: dict[str, Any] = {}
 
         # Inbound routing: a data table on the transport.
         self._register_routes()
@@ -289,6 +291,14 @@ class Visualizer(_JupyterDisplayMixin):
     def remove_view(self, view_id: str, *, scene: str | None = None) -> None:
         """Remove a mounted overlay view by its stable id (see ``viz.add``)."""
         self._layout.remove_view(view_id, scene=scene)
+
+    def set_control_enabled(self, control_id: str, enabled: bool) -> None:
+        """Enable or disable a mounted control by its id (greyed out when disabled)."""
+        self._layout.set_control_enabled(control_id, enabled)
+
+    def set_control_visible(self, control_id: str, visible: bool) -> None:
+        """Show or hide a mounted control by its id (no layout re-push)."""
+        self._layout.set_control_visible(control_id, visible)
 
     def on_client_log(self, handler: Any) -> None:
         """Replace the backend sink for browser ``sendLog`` events.
@@ -781,6 +791,24 @@ class Visualizer(_JupyterDisplayMixin):
         entity: SceneEntity = self._resolve(obj)
         self._layout.scenes[""].update_entity(entity_id, entity)
 
+    def set_visible(
+        self,
+        entity_id: str,
+        visible: bool,
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Show or hide an entity in a scene.
+
+        ``scene_name`` selects a named scene (``""`` = the main scene).  Call
+        :meth:`flush` to push the change to the browser.
+        """
+        self._layout.scenes[scene_name].set_visible(entity_id, visible)
+
+    def hide(self, entity_id: str, *, scene_name: str = "") -> None:
+        """Hide an entity (shorthand for ``set_visible(entity_id, False)``)."""
+        self.set_visible(entity_id, False, scene_name=scene_name)
+
     def update_sdf_group_member(
         self,
         group_id: str,
@@ -1033,6 +1061,54 @@ class Visualizer(_JupyterDisplayMixin):
             asyncio.run_coroutine_threadsafe(self._server.push_raw(data), self._loop)
             return
         self._set_scene_viewport(scene_name, zoom=zoom, pan=pan)
+
+    def set_background_image(self, view: SceneView, image: Any) -> None:
+        """Swap a single pane's ``CameraView.background_image`` at runtime.
+
+        Unlike :meth:`set_layout` (which re-serializes and re-pushes the whole
+        layout tree), this targets one pane — identified by the ``SceneView``
+        instance — and updates only its background image via a granular
+        ``view_background_image`` message plus one binary frame of pixel bytes.
+        The pane's WebGL scene and every other pane are untouched.
+
+        Args:
+            view: The :class:`SceneView` pane to update.  It must be part of a
+                registered layout (see :meth:`set_layout`).
+            image: The new :class:`~pytanga.viz.ImageData`, or ``None`` to clear
+                the background.
+        """
+        self._layout.push_background_image(view, image)
+
+    def register_image_pyramid(self, image_id: str, data: Any, *, tile_size: int = 256) -> Any:
+        """Register a large image as an on-demand tile pyramid.
+
+        Serves the image at ``/image/{image_id}/{level}/{x}/{y}`` so the
+        frontend can fetch only the region and resolution it needs.  Safe to
+        call before or after the server boots.
+        """
+        from ._image_pyramid import ImagePyramid
+
+        pyramid = ImagePyramid(image_id, data, tile_size=tile_size)
+        self._image_pyramids[image_id] = pyramid
+        if self._server is not None:
+            self._server.register_image_pyramid(image_id, pyramid)
+        return pyramid
+
+    def register_camera_stream(self, stream_id: str, *, fps: int = 30) -> Any:
+        """Register an MJPEG camera stream at ``/stream/{stream_id}``.
+
+        Returns a :class:`~pytanga.viz._camera_stream.CameraStream` whose
+        :meth:`~pytanga.viz._camera_stream.CameraStream.publish` accepts a
+        numpy array or :class:`ImageData`.  Safe to call before or after the
+        server boots.
+        """
+        from ._camera_stream import CameraStream
+
+        stream = CameraStream(stream_id, fps=fps)
+        self._camera_streams[stream_id] = stream
+        if self._server is not None:
+            self._server.register_camera_stream(stream_id, stream)
+        return stream
 
     def _set_scene_viewport(
         self,
@@ -1594,6 +1670,10 @@ class Visualizer(_JupyterDisplayMixin):
             port_conflict_mode=self._port_conflict_mode,
             port_conflict_ask=self._port_conflict_ask or self._ask_port_conflict,
         )
+        for image_id, pyramid in self._image_pyramids.items():
+            self._server.register_image_pyramid(image_id, pyramid)
+        for stream_id, stream in self._camera_streams.items():
+            self._server.register_camera_stream(stream_id, stream)
 
         _boot_done = threading.Event()
         _boot_start = time.monotonic()
@@ -2845,14 +2925,20 @@ class Visualizer(_JupyterDisplayMixin):
                 delivery_ref=delivery_ref,
             )
         from pytanga.viz.export._html import render_snapshot
+        from pytanga.viz.export._animation_recording import (
+            capture_image_assets,
+            image_hydration_frames,
+        )
 
         objects = scene.full_state(styles_map=scene.styles.kind)
+        assets = image_hydration_frames(capture_image_assets(scene))
         return render_snapshot(
             objects=objects,
             scene_config=scene.config.to_dict(),
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            assets=assets,
         )
 
     def _open_scene_snapshot(
@@ -2975,8 +3061,13 @@ class Visualizer(_JupyterDisplayMixin):
                 delivery_ref=delivery_ref,
             )
         from pytanga.viz.export._figure_html import render_figure
+        from pytanga.viz.export._animation_recording import (
+            capture_image_assets,
+            image_hydration_frames,
+        )
 
         objects = scene.full_state(styles_map=scene.styles.kind)
+        assets = image_hydration_frames(capture_image_assets(scene))
         return render_figure(
             objects,
             scene.config.to_dict(),
@@ -2985,6 +3076,7 @@ class Visualizer(_JupyterDisplayMixin):
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            assets=assets,
         )
 
     def _export_scene_figure(

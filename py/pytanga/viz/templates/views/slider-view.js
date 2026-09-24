@@ -13,6 +13,15 @@ export class SliderView extends ControlView {
         this.variant = variant;
     }
 
+    update(node) {
+        this.min = node.min ?? this.min;
+        this.max = node.max ?? this.max;
+        this.step = node.step ?? this.step;
+        this.value = node.value ?? this.value;
+        this.variant = node.variant ?? this.variant;
+        super.update(node);
+    }
+
     render() {
         return createSlider({
             id: this.controlId,

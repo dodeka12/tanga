@@ -497,3 +497,28 @@ def test_on_interaction_registers_in_unified_registry():  # noqa: ANN201
 
     viz.on_interaction("obj1", InteractionEventType.CLICK, handler)
     assert viz._handler_registry.get("obj1", "click") is handler
+
+
+class TestEnabled:
+    def test_defaults_enabled(self):  # noqa: ANN201
+        ap, handle = _init_point()
+        assert ap._enabled is True
+        assert handle.configs[-1][1].enabled is True
+
+    def test_disable_re_registers_with_enabled_false(self):  # noqa: ANN201
+        ap, handle = _init_point()
+        n_before = len(handle.configs)
+        ap.disable()
+        assert ap._enabled is False
+        assert len(handle.configs) == n_before + 1
+        assert handle.configs[-1][1].enabled is False
+        # Triggers are retained (only the master switch is off).
+        assert handle.configs[-1][1].triggers
+
+    def test_enable_restores(self):  # noqa: ANN201
+        ap, handle = _init_point()
+        ap.disable()
+        ap.enable()
+        assert ap._enabled is True
+        assert handle.configs[-1][1].enabled is True
+

@@ -68,6 +68,10 @@
     --tanga-warning-fg: #1a1a2e;
     --tanga-warning-button-bg: #1a1a2e;
     --tanga-warning-button-fg: #fff;
+
+    /* Disabled controls (greyed out). */
+    --tanga-disabled-opacity: 0.45;
+    --tanga-disabled-fg: var(--tanga-fg-muted);
 }
 
 body {
@@ -210,5 +214,13 @@ canvas {
     font-weight: 600;
     min-width: 36px;
     text-align: right;
+}
+
+/* A disabled control: greyed out via a theme token (overridable per theme) and
+ * inert to pointer events.  Inputs are also natively `disabled` by the control
+ * factories so they stop emitting events. */
+.tanga-control-disabled {
+    opacity: var(--tanga-disabled-opacity);
+    pointer-events: none;
 }
 

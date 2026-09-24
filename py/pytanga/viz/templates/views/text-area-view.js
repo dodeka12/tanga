@@ -11,6 +11,13 @@ export class TextAreaView extends ControlView {
         this.rows = rows;
     }
 
+    update(node) {
+        this.value = node.value ?? this.value;
+        this.placeholder = node.placeholder ?? this.placeholder;
+        this.rows = node.rows ?? this.rows;
+        super.update(node);
+    }
+
     render() {
         return createTextArea({
             id: this.controlId,

@@ -708,6 +708,18 @@ export class ThreeJsView extends View {
         this._show = show && show.length ? new Set(show) : null;
     }
 
+    /** Refresh this reused pane from a serialized ``scene_view`` node. */
+    updateFromNode(node) {
+        const camView = node.camera_view || {};
+        this.clearOverlays();
+        this.setLock(camView.lock || null);
+        this.setNavigation(camView.navigation || null);
+        this.setControls(camView.controls || null);
+        this.setViewport(camView.viewport || null);
+        this.setBackgroundImage(camView.background_image || null);
+        this.setVisibilityFilter(node.hide || null, node.show || null);
+    }
+
     _isFilteredOut(id) {
         if (this._hide.has(id)) return true;
         return this._show !== null && !this._show.has(id);
@@ -1036,6 +1048,10 @@ export class ThreeJsView extends View {
         }
         if (aspect === 'transform') {
             if (entry.obj) applyTransformToObject(entry.obj, value);
+            return;
+        }
+        if (aspect === 'visible') {
+            if (entry.obj) entry.obj.visible = value.visible !== false;
             return;
         }
         if (aspect === 'style') {

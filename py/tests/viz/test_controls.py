@@ -455,6 +455,23 @@ def test_serialize_control_tooltip_absent_when_empty() -> None:
     assert "tooltip" not in _serialize_one_control(ctrl)
 
 
+def test_serialize_control_enabled_visible_defaults_omitted() -> None:
+    ctrl = Slider(id="s", label="S")
+    result = _serialize_one_control(ctrl)
+    assert "enabled" not in result
+    assert "visible" not in result
+
+
+def test_serialize_control_disabled() -> None:
+    ctrl = Slider(id="s", label="S", enabled=False)
+    assert _serialize_one_control(ctrl)["enabled"] is False
+
+
+def test_serialize_control_hidden() -> None:
+    ctrl = Slider(id="s", label="S", visible=False)
+    assert _serialize_one_control(ctrl)["visible"] is False
+
+
 # ── Test: Table control ──────────────────────────────────────
 
 

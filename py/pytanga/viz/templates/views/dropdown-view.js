@@ -11,6 +11,13 @@ export class DropdownView extends ControlView {
         this.variant = variant;
     }
 
+    update(node) {
+        this.options = node.options ?? this.options;
+        this.value = node.value ?? this.value;
+        this.variant = node.variant ?? this.variant;
+        super.update(node);
+    }
+
     render() {
         return createDropdown({
             id: this.controlId,

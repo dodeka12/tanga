@@ -18,8 +18,20 @@ export class ControlView extends View {
     }
 
     _onMounted() {
+        this.rerender();
+    }
+
+    /** Re-render the control in place (idempotent; safe on re-mount). */
+    rerender() {
         const el = this.render();
-        if (el) this.el.appendChild(el);
+        this.el.replaceChildren(el || []);
+    }
+
+    /** Refresh shared fields from a serialized node (used when a view is reused). */
+    update(node = {}) {
+        this.controlId = node.id ?? this.controlId;
+        this.label = node.label ?? this.label;
+        this.tooltip = node.tooltip ?? this.tooltip;
     }
 
     /** Return the control DOM element (subclass responsibility). */

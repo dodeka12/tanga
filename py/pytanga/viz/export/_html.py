@@ -21,6 +21,7 @@ from pytanga.viz.export._bootstrap import (
     js_apply_camera,
     js_autofit_camera,
     js_coordinate_overlay_setup,
+    js_image_assets_hydration,
     js_tanga_destructure,
     js_render_loop,
     js_resize_handler,
@@ -44,6 +45,7 @@ def render_snapshot(
     theme: str = "dark",
     delivery: DeliveryMode = "cdn",
     delivery_ref: str | None = None,
+    assets: list[dict[str, str]] | None = None,
 ) -> str:
     """Render a self-contained HTML file from the unified scene objects.
 
@@ -51,8 +53,13 @@ def render_snapshot(
     overlay labels in DFS pre-order).  *theme* selects the UI theme whose CSS
     is inlined (default ``"dark"``).  *delivery* selects how the viewer
     runtime is delivered: ``"cdn"`` (default), ``"inline"``, or ``"offline"``.
+    *assets* (optional) is the image-hydration list produced by
+    :func:`~pytanga.viz.export._animation_recording.image_hydration_frames`.
     """
-    scene_json = json.dumps({"objects": objects}, indent=0)
+    payload: dict[str, Any] = {"objects": objects}
+    if assets:
+        payload["image_assets"] = assets
+    scene_json = json.dumps(payload, indent=0)
     config_json = json.dumps(scene_config, indent=0)
 
     html = (_TEMPLATES_DIR / "export_viewer.html").read_text(encoding="utf-8")
@@ -126,6 +133,7 @@ def _build_static_fullpage_adapter(
         "const sceneData = JSON.parse(document.getElementById('tanga-scene-data').textContent);",
         "const sceneConfig = JSON.parse(document.getElementById('tanga-scene-config').textContent);",
         "const objects = sceneData.objects || [];",
+        "const imageAssets = sceneData.image_assets || [];",
         "",
         js_scene_setup(
             bg_color=bg_color,
@@ -163,6 +171,8 @@ def _build_static_fullpage_adapter(
         )
     )
 
+    parts.append("")
+    parts.append(js_image_assets_hydration("imageAssets"))
     parts.append("")
     parts.append(
         js_scene_build(

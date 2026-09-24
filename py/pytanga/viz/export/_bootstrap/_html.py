@@ -117,6 +117,7 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "image-shader.js",
     _RENDERERS_DIR / "image.js",
     _RENDERERS_DIR / "image-background.js",
+    _RENDERERS_DIR / "image-tiles.js",
     _RENDERERS_DIR / "factory.js",
     _RENDERERS_DIR / "sdf" / "lighting.js",
     _RENDERERS_DIR / "sdf" / "glsl.js",

@@ -316,6 +316,11 @@ right = SceneView("world")                        # default camera, shows the fr
 - `hide` / `show` filter which scene entities the pane renders, so e.g. a
   `Frustum` can appear in the overview pane but not the camera pane.
 
+To swap a pane's background image at runtime without re-pushing the layout, use
+`Visualizer.set_background_image(view, image)` — it streams the new pixel bytes
+and updates only that pane. See
+`py/examples/viz/camera/pinhole_calibrated_streaming.py`.
+
 ## Per-Pane Interaction
 
 Pointer interaction (draggable `ActPoint`s, hover, click, scroll) is independent

@@ -12,6 +12,7 @@ optional PIL → numpy conversion (lazy import).
 from __future__ import annotations
 
 import base64
+import io
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any
@@ -20,6 +21,7 @@ import numpy as np
 
 __all__ = [
     "ImageDType",
+    "EImageCodec",
     "ImageData",
     "ImageChannelMode",
     "default_mode",
@@ -77,6 +79,22 @@ class ImageDType(IntEnum):
             ) from exc
 
 
+class EImageCodec(IntEnum):
+    """Wire codecs for the binary image frame (``codec`` byte 0/1/2)."""
+
+    RAW = 0
+    JPEG = 1
+    ZLIB = 2
+
+    @classmethod
+    def from_code(cls, code: int) -> "EImageCodec":
+        """Convert a wire code (0/1/2) back to an enum member."""
+        try:
+            return cls(code)
+        except ValueError as exc:
+            raise ValueError(f"Unknown image codec: {code!r}") from exc
+
+
 class ImageChannelMode(IntEnum):
     """How a 1/3/4-channel image is mapped to display colour (``u_mode``)."""
 
@@ -121,10 +139,27 @@ class ImageData:
     height: int | None = None
     channels: int | None = None
     dtype: ImageDType | None = None
+    codec: EImageCodec | None = None
+    jpeg_quality: int | None = None
+    tiled: Any | None = None
 
     def __post_init__(self) -> None:
+        if self.tiled is not None:
+            if self.data is not None or self.url is not None:
+                raise ValueError(
+                    "ImageData needs exactly one of `data`, `url`, or `tiled`"
+                )
+            pyramid = self.tiled
+            self.width = int(pyramid.data.shape[1])
+            self.height = int(pyramid.data.shape[0])
+            self.channels = int(pyramid.channels)
+            self.dtype = pyramid.dtype
+            return
+
         if (self.data is None) == (self.url is None):
-            raise ValueError("ImageData needs exactly one of `data` or `url`")
+            raise ValueError(
+                "ImageData needs exactly one of `data`, `url`, or `tiled`"
+            )
 
         if self.data is not None:
             self._validate_array()
@@ -179,8 +214,26 @@ class ImageData:
 
     @property
     def source(self) -> str:
-        """``"data"`` when pixel data is embedded, ``"url"`` when loaded."""
+        """``"data"``/``"url"``/``"tiled"`` depending on the backing source."""
+        if self.tiled is not None:
+            return "tiled"
         return "url" if self.url is not None else "data"
+
+    @property
+    def tiled_meta(self) -> dict[str, Any]:
+        """Return the serialized ``source: "tiled"`` metadata (raises if not tiled)."""
+        if self.tiled is None:
+            raise ValueError("ImageData has no tiled source")
+        return self.tiled.meta()
+
+    @property
+    def supports_jpeg(self) -> bool:
+        """``True`` when the image can be lossily encoded as JPEG.
+
+        JPEG is 8-bit and has no alpha, so only ``uint8`` images with 1 or 3
+        channels qualify.  Everything else falls back to a lossless codec.
+        """
+        return self.dtype is ImageDType.UINT8 and self.channels in (1, 3)
 
     def to_bytes(self) -> bytes:
         """Return the C-contiguous pixel buffer (raises for URL images)."""
@@ -191,6 +244,33 @@ class ImageData:
     def to_base64(self) -> str:
         """Return the pixel buffer as base64 (for HTML export embedding)."""
         return base64.b64encode(self.to_bytes()).decode("ascii")
+
+    def to_jpeg_data_url(self, quality: int = 85) -> str:
+        """Return the image as a ``data:image/jpeg;base64,…`` URL (lazy Pillow).
+
+        Only ``uint8`` images with 1 or 3 channels qualify.  Raises
+        :class:`ImportError` when Pillow is unavailable and :class:`ValueError`
+        for other dtypes/channel counts.
+        """
+        if not self.supports_jpeg:
+            raise ValueError(
+                "JPEG export requires a uint8 image with 1 or 3 channels, "
+                f"got dtype={self.dtype!r}, channels={self.channels!r}"
+            )
+        if self.data is None:
+            raise ValueError("URL images have no pixel buffer")
+        try:
+            from PIL import Image
+        except ImportError as exc:
+            raise ImportError(
+                "JPEG encoding requires Pillow; install it (e.g. `pip install pillow`)"
+            ) from exc
+
+        mode = "L" if self.data.ndim == 2 else "RGB"
+        image = Image.fromarray(self.data, mode=mode)
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=quality)
+        return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 def pil_to_numpy(img: Any, *, dtype: str = "uint8") -> np.ndarray:

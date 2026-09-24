@@ -23,6 +23,7 @@ from pytanga.viz.export._bootstrap import (
     js_autofit_camera,
     js_coordinate_overlay_setup,
     js_footer,
+    js_image_assets_hydration,
     js_tanga_destructure,
     js_render_loop,
     js_resize_handler,
@@ -44,10 +45,14 @@ def render_figure(
     theme: str = "dark",
     delivery: DeliveryMode = "cdn",
     delivery_ref: str | None = None,
+    assets: list[dict[str, str]] | None = None,
 ) -> str:
     """Render a figure HTML snippet from the unified scene objects."""
     fig_id = "tanga-fig-" + uuid4().hex[:8]
-    scene_json = json.dumps({"objects": objects}, indent=0)
+    payload: Dict[str, Any] = {"objects": objects}
+    if assets:
+        payload["image_assets"] = assets
+    scene_json = json.dumps(payload, indent=0)
 
     has_underlay = any(o.get("layer") == "underlay" for o in objects)
     has_coord_overlay = has_underlay or any(
@@ -210,6 +215,7 @@ def _build_static_figure_adapter(
         f"const figContainer = document.getElementById('{fig_id}');",
         f"const figData = {scene_json};",
         "const figObjects = figData.objects || [];",
+        "const figImageAssets = figData.image_assets || [];",
         f"const sceneConfig = {json.dumps(scene_config)};",
         "",
         js_scene_setup(
@@ -244,6 +250,8 @@ def _build_static_figure_adapter(
             positioning="absolute",
             show_title=show_title,
         ),
+        "",
+        js_image_assets_hydration("figImageAssets"),
         "",
         js_scene_build(
             objects_expr="figObjects",

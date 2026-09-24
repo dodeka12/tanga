@@ -9,6 +9,7 @@
 | [Controls Add And View](controls_add_and_view.md) | controls, SliderView, CheckboxView, ButtonView, GroupView, scene | Declarative controls drive a sphere |
 | [File Chooser](file_chooser.md) | controls, file chooser, file browser, VisualizerApp | A file chooser with a backend-driven file browser |
 | [Group View Icons](group_view_icons.md) | group view, icon, icon_only, fold, overlay | Group view chrome: leading icon, icon-only, borderless fold |
+| [Hide Sphere](hide_sphere.md) | hide, show, visible, enable, disable, checkbox, slider, split view, sphere | Hide/show a sphere and its controls from a split layout |
 | [Table Data](table_data.md) | controls, table, tabular data, TableView, VisualizerApp | An editable tabular-data control driven by the backend |
 | [Table Editing](table_editing.md) | controls, table, tabular data, TableView, column types, cell editing, keyboard navigation, undo, redo | Editable table: column types, keyboard nav, undo/redo |
 | [Table Enum Columns](table_enum_columns.md) | controls, table, tabular data, TableView, column types, enum, custom enum | A TableView with a column-fed enum and a backend-fed enum |
@@ -18,4 +19,4 @@
 
 ## Keywords
 
-ButtonView · CSV · CheckboxView · GroupView · JSON · SliderView · TableView · VisualizerApp · alignment · anchor · auto-save · button · cell editing · checkbox · column types · control group · controls · css · custom enum · dropdown · enum · file browser · file chooser · fold · group view · icon · icon_only · keyboard navigation · layout · overlay · parent_id · persistence · redo · scene · separator · single scene · slider · split view · table · tabular data · theme · toolbar · undo
+ButtonView · CSV · CheckboxView · GroupView · JSON · SliderView · TableView · VisualizerApp · alignment · anchor · auto-save · button · cell editing · checkbox · column types · control group · controls · css · custom enum · disable · dropdown · enable · enum · file browser · file chooser · fold · group view · hide · icon · icon_only · keyboard navigation · layout · overlay · parent_id · persistence · redo · scene · separator · show · single scene · slider · sphere · split view · table · tabular data · theme · toolbar · undo · visible

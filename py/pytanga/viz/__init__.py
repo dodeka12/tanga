@@ -200,6 +200,7 @@ from .camera import (
     pinhole_camera,
 )
 from .image import (
+    EImageCodec,
     ImageChannelMode,
     ImageData,
     ImageDType,
@@ -330,6 +331,7 @@ __all__ = [
     "get_camera_view3d",
     "HPointStyle",
     "HyperbolaStyle",
+    "EImageCodec",
     "ImageChannelMode",
     "ImageCanvas",
     "ImageData",

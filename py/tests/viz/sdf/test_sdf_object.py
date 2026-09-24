@@ -59,7 +59,21 @@ def test_entity_to_sdf_cylinder_align_zero() -> None:
         )
     )
     # Starts at origin, extends +Y → midpoint at +Y * (length/2).
-    assert node.transform["position"] == [0.0, 0.75, 0.0]
+    assert node.transform["position"] == [0.0, 1.5, 0.0]
+
+
+def test_entity_to_sdf_cylinder_align_quarter() -> None:
+    node = _entity_to_sdf(
+        Cylinder(
+            origin=Point(0.0, 0.0, 0.0),
+            axis=Direction(0.0, 1.0, 0.0),
+            length=4.0,
+            radius=0.35,
+            align_center=0.25,
+        )
+    )
+    # origin sits at 25% along length → midpoint at origin + axis * (length * 0.25).
+    assert node.transform["position"] == [0.0, 1.0, 0.0]
 
 
 def test_entity_to_sdf_line_thickness_from_style() -> None:

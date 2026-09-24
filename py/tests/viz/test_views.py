@@ -598,6 +598,27 @@ def test_view_serialize_matches_control_fields() -> None:
             assert node[key] == val
 
 
+def test_control_view_set_enabled_visible_mutates_and_pushes() -> None:
+    view = SliderView("s1", value=1.0)
+    assert view._push_state is None  # unmounted → no state callback
+
+    pushed: list[tuple[str, dict[str, bool]]] = []
+
+    def _capture(cid: str, state: dict[str, bool]) -> None:
+        pushed.append((cid, state))
+
+    view._push_state = _capture
+    view.set_enabled(False)
+    view.set_visible(False)
+
+    assert view.control.enabled is False
+    assert view.control.visible is False
+    assert pushed == [
+        ("s1", {"enabled": False}),
+        ("s1", {"visible": False}),
+    ]
+
+
 class TestStackView:
     def test_direction_validation(self):  # noqa: ANN201
         with pytest.raises(ValueError, match="direction"):

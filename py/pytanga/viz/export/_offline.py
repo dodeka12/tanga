@@ -81,9 +81,10 @@ def find_esbuild() -> str:
     if env and Path(env).exists():
         return env
 
-    # Dev checkout: esbuild installed under dev/node_modules.
+    # Dev checkout: esbuild installed under js/dev/node_modules.
     repo_dev = (
         Path(__file__).resolve().parents[4]
+        / "js"
         / "dev"
         / "node_modules"
         / "esbuild"
@@ -100,7 +101,7 @@ def find_esbuild() -> str:
 
     raise OfflineToolchainError(
         "delivery='offline' requires esbuild; install it with "
-        "`npm install -g esbuild` (or set TANGA_ESBUILD)."
+        "`cd js/dev && npm install` (or set TANGA_ESBUILD)."
     )
 
 
@@ -157,6 +158,7 @@ def _build_offline_bundle(work: Path, three_dir: Path) -> Path:
 
     entry.write_text(lib, encoding="utf-8")
     cmd = [
+        find_node(),
         find_esbuild(),
         "--bundle",
         "--format=esm",

@@ -9,7 +9,8 @@
 
 import * as THREE from 'three';
 
-import { makeDataTexture } from './image.js';
+import { makeEncodedTexture, makeStreamTexture, makeTiledTexture } from './image.js';
+import { hasImageFrame, takeImageFrame } from '../image-frames.js';
 
 const _BG_VERTEX = /* glsl */ `
 varying vec2 vNdc;
@@ -73,20 +74,31 @@ export function createImageBackground(imageMeta) {
     mesh.renderOrder = -1;
 
     if (img.source === 'url' && img.url) {
-        new THREE.TextureLoader().load(img.url, (tex) => {
-            tex.minFilter = THREE.NearestFilter;
-            tex.magFilter = THREE.NearestFilter;
+        if (img.url.includes('/stream/')) {
+            material.uniforms.uImage.value = makeStreamTexture(img);
+        } else {
+            new THREE.TextureLoader().load(img.url, (tex) => {
+                tex.minFilter = THREE.NearestFilter;
+                tex.magFilter = THREE.NearestFilter;
+                material.uniforms.uImage.value = tex;
+            });
+        }
+    } else if (img.source === 'tiled') {
+        makeTiledTexture(img).then((tex) => {
+            tex.needsUpdate = true;
             material.uniforms.uImage.value = tex;
         });
     } else {
-        const tex = makeDataTexture(img);
-        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 -> bottom
-        // texel), but this NDC background samples with the image's row 0 at the
-        // *top* of the pane (matching the URL path above and the 3D projection).
-        // Flip so data and url backgrounds line up with the rendered overlay.
-        tex.flipY = true;
-        tex.needsUpdate = true;
-        material.uniforms.uImage.value = tex;
+        const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
+        makeEncodedTexture(img, frame).then((tex) => {
+            // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 ->
+            // bottom texel), but this NDC background samples with the image's
+            // row 0 at the *top* of the pane (matching the URL path above and
+            // the 3D projection).  Flip so data and url backgrounds line up.
+            tex.flipY = true;
+            tex.needsUpdate = true;
+            material.uniforms.uImage.value = tex;
+        });
     }
 
     return mesh;

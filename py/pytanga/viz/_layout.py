@@ -825,11 +825,51 @@ class LayoutHostImpl:
                 continue
             image = camera_view.background_image
             if image is not None and image.data is not None:
-                self._background_frames[image.id] = encode_image_frame(image.id, image.data)
+                self._background_frames[image.id] = encode_image_frame(
+                    image.id,
+                    image.data,
+                    codec=image.codec,
+                    jpeg_quality=image.jpeg_quality or 85,
+                )
 
     def background_image_frames(self) -> list[tuple[str, bytes]]:
         """Return ``(id, encoded_frame)`` for every background image (re-sent on connect)."""
         return list(self._background_frames.items())
+
+    def push_background_image(self, view: SceneView, image: Any) -> None:
+        """Swap one pane's ``CameraView.background_image`` in place.
+
+        Sends the pixel bytes (one binary frame) followed by a
+        ``view_background_image`` JSON message, so the frontend rebuilds only
+        that pane's background quad — no ``view_layout`` re-push.  *image* may
+        be ``None`` to clear the background.
+        """
+        from ._image_wire import encode_image_frame
+        from .views import CameraView
+        from .views._helpers import _image_meta
+
+        if not isinstance(view, SceneView):
+            raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
+        if view.camera_view is None:
+            view.camera_view = CameraView(background_image=image)
+        else:
+            view.camera_view.background_image = image
+        if image is not None and image.data is not None:
+            frame = encode_image_frame(
+                image.id,
+                image.data,
+                codec=image.codec,
+                jpeg_quality=image.jpeg_quality or 85,
+            )
+            self._background_frames[image.id] = frame
+            self._transport.send_bytes(frame)
+        self._transport.send(
+            {
+                "type": "view_background_image",
+                "view_id": view.id,
+                "image": _image_meta(image) if image is not None else None,
+            }
+        )
 
     def add_layout(self, root: View, name: str = "") -> str:
         """Register a layout (raise if *name* is already a scene or layout)."""
@@ -848,6 +888,7 @@ class LayoutHostImpl:
         for view in iter_control_views(root):
             view.control.register_handlers(self._transport)
             view._push = self._push_control_update
+            view._push_state = self._push_control_state
             registered.add(view.id)
         for view in iter_log_views(root):
             view._push = self._push_log_update
@@ -934,6 +975,32 @@ class LayoutHostImpl:
         self._transport.send(
             {"type": "control_update", "scene": "", "id": cid, "value": value}
         )
+
+    def _push_control_state(self, cid: str, state: dict[str, Any]) -> None:
+        """Push a lightweight ``control_state`` message for one control."""
+        self._transport.send({"type": "control_state", "id": cid, **state})
+
+    def set_control_enabled(self, cid: str, enabled: bool) -> None:
+        """Set a control's enabled state and push ``control_state``.
+
+        No-ops when *cid* is not a mounted control.
+        """
+        ctrl = self.resolve_control(cid)
+        if ctrl is None:
+            return
+        ctrl.enabled = bool(enabled)
+        self._push_control_state(cid, {"enabled": ctrl.enabled})
+
+    def set_control_visible(self, cid: str, visible: bool) -> None:
+        """Set a control's visibility and push ``control_state``.
+
+        No-ops when *cid* is not a mounted control.
+        """
+        ctrl = self.resolve_control(cid)
+        if ctrl is None:
+            return
+        ctrl.visible = bool(visible)
+        self._push_control_state(cid, {"visible": ctrl.visible})
 
     def _push_log_update(self, view_id: str, action: str, lines: Any = None) -> None:
         """Push a lightweight ``log_update`` message for one ``LogView``."""
