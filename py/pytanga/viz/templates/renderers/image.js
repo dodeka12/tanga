@@ -12,8 +12,8 @@ import { hasImageFrame, takeImageFrame } from '../image-frames.js';
 // dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
 const DTYPE_TYPES = {
     0: { type: THREE.UnsignedByteType, bytesPerElement: 1 },   // uint8
-    1: { type: THREE.UnsignedShortType, bytesPerElement: 2 },  // uint16 (WebGL2 only)
-    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32 (WebGL2 only)
+    1: { type: THREE.FloatType, bytesPerElement: 2 },          // uint16 (widened to float32)
+    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32
 };
 
 // View the raw frame bytes as the dtype's element type.
@@ -23,14 +23,17 @@ function typedArrayFor(dtype, bytes) {
     return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length);
 }
 
-// Expand a 1/3-channel buffer to 4-channel RGBA — the only 8-bit color format
-// three.js r170 uploads to WebGL2 (RGBFormat/LuminanceFormat were removed).
+// Expand a 1/3-channel buffer to 4-channel RGBA.  uint8 stays 8-bit (the only
+// normalized 8-bit color format three.js r170 uploads to WebGL2 —
+// RGBFormat/LuminanceFormat were removed).  uint16 is widened to float32 because
+// three.js `UnsignedShortType` maps to an *integer* texture (RGBA16UI) that a
+// float `sampler2D` cannot sample; float32 is already the right width.  Both
+// non-8-bit paths are lossless for the full 0..65535 range.
 function toRgba(arr, channels) {
-    const TypedArray = arr.constructor;
     const n = arr.length / channels;
-    const rgba = new TypedArray(n * 4);
-    const alpha = arr instanceof Float32Array ? 1.0
-        : arr instanceof Uint16Array ? 0xFFFF : 0xFF;
+    const useFloat = arr instanceof Float32Array || arr instanceof Uint16Array;
+    const rgba = useFloat ? new Float32Array(n * 4) : new Uint8Array(n * 4);
+    const alpha = useFloat ? 1.0 : 0xFF;
     if (channels === 1) {
         for (let i = 0; i < n; i++) {
             const v = arr[i];
