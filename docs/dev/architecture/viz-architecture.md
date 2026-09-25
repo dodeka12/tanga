@@ -79,11 +79,15 @@ inbound dispatch that resolves them.
   the whole layout); `viz.remove_view(id)` removes it via `overlay_remove`.
   Per-scene overlays (`scene=…`) re-sync the layout instead.  Every `View`
   carries a stable `id` (auto `v0`…) so it can be addressed at runtime.
-- **Layout re-push** — the frontend **reuses existing `ThreeJsView` scene
-  panes** (keyed by scene name) across `view_layout` re-pushes, so only the
-  DOM chrome rebuilds and the WebGL scene/camera are never torn down; a scene
-  pane newly introduced by a re-push fetches its state with a
-  `scene_sync_request` round-trip.
+- **Layout re-push** — the frontend **reconciles the whole view tree by stable
+  view id** across `view_layout` re-pushes. A single live-view registry
+  (`_viewRegistry`) reuses each view whose id is unchanged (scene panes keep
+  their WebGL scene/camera; simple controls keep their DOM), and only views that
+  are added or removed are created/torn down. Containers are rebuilt (cheap DOM)
+  and re-attach the reused children in the new order, so reordering a layout
+  re-parents the expensive panes instead of destroying them. A scene pane newly
+  introduced by a re-push fetches its state with a `scene_sync_request`
+  round-trip.
 
 ## Canonical frame + transform placement
 
@@ -196,6 +200,42 @@ Follow the `OverlayContainer` pattern exactly:
 - `Visualizer.add` is **polymorphic**: a `View` -> the default layout overlay,
   everything else -> the main scene.
 
+### Layout reconciliation & runtime updates (frontend)
+
+The frontend has **one live-view registry** and reuses views by their stable
+`id` — do not build a second, parallel structure.
+
+- **One `_viewRegistry`.** `templates/viewer.js` keeps a single
+  `_viewRegistry: Map<view_id, View>` of every live view. `_sceneRoutes`
+  (scene → panes) and `_viewById` (view_id → `ThreeJsView`, the target of the
+  `view_camera`/`view_viewport`/`view_background_image` dispatch) are **derived**
+  routing indexes recomputed from the built tree, not separate registries.
+  `_controlRegistry` (control value/apply, owner-scoped) is a different concern
+  and stays separate — it is not an orphan map.  If you need to look a view up
+  by id at runtime, derive it from the tree/`_viewRegistry`; never add another
+  id-indexed dict.
+- **Reconciliation by id.** `buildViewTree` (`templates/views/build.js`)
+  reuses a live view when `node.id` matches an existing view of the same type,
+  refreshing it via `update(node)` (controls) / `updateFromNode(node)` (scene
+  panes); a new id constructs a new view, and an id no longer present is torn
+  down.  Containers are rebuilt (cheap flexbox DOM) and re-attach the reused
+  children in order — `appendChild` moves the DOM node, so a reordered layout
+  re-parents the expensive WebGL panes instead of recreating them.  The stateful
+  `table`/`file_chooser`/`log` leaves are deliberately recreated (their
+  `destroy()` unregisters file-browser/log state).
+- **Identity = `View.id`.** The serialized `node.id` is the stable key. Reusing
+  the same Python `View` object across `set_layout` keeps the frontend view
+  alive; constructing a new `View` gets a new id, and the old frontend view is
+  replaced.  There is no per-serialization id generator, so never re-key on
+  scene name or positional index.
+- **Granular updates, not a layout re-push.** For a single-value change, send a
+  granular message — `view_camera`, `view_viewport`, `view_background_image`
+  (per-pane, dispatched through `_viewById`), `control_update`/`log_update`
+  (controls/logs), or `scene_update` (entities) — and re-push `view_layout` only
+  for structural layout changes.  A new per-pane runtime knob must follow this
+  pattern (a `view_*` message dispatched through `_viewById`), not a new
+  full-tree channel.
+
 ### File map
 
 | File | Role |
@@ -213,7 +253,9 @@ Follow the `OverlayContainer` pattern exactly:
 | `_scene_handle.py` | `VizSceneHandle` (per-scene proxy) |
 | `image.py` | `ImageData`/`ImageDType`/`ImageChannelMode` value model + `pil_to_numpy` |
 | `_image_view.py` | `ImageView` (plane + textures + shader/uniform state) + `ImageCanvas` (dedicated 2D scene) |
-| `_image_wire.py` | binary image-frame codec (server → client) |
+| `_image_wire.py` | binary image-frame codec (server → client), v2 with a `codec` byte |
+| `_image_pyramid.py` | `ImagePyramid` — on-demand tile pyramid (level/tile geometry + encode + LRU) |
+| `_camera_stream.py` | `CameraStream` — MJPEG publisher (JPEG encode + latest-frame fan-out) |
 | `_scale.py` | `Scale`/`nice_linear_ticks`/`log_ticks` — data↔world + tick math |
 | `_coordinate_system.py` | `CoordinateSystem` plotting helper (axes/grid/overlay/underlay specs) |
 | `templates/nice-ticks.js` | pure tick math port of `_scale.py` (Node-testable) |
@@ -229,10 +271,16 @@ frame** (1 world unit = 1 pixel), an `ImageView` (the plane + textures +
 shader/uniform state), an `ActImagePlane` (interactive plane), and an overlay
 `VizGroup`.  The image is a **new scene-object kind** (`kind == "image"`,
 `VizImage` node in `_nodes.py`), whose pixel bytes travel as **binary WebSocket
-frames** (`_image_wire.py`, `Transport.send_bytes` / `server.push_bytes`);
-uniforms and overlays travel as JSON (`image_update`) and never re-send the
-image.  The export path stores images in an id-keyed **asset store**
-(`AnimationRecording.assets`, `capture_frame(include_images=False)`).
+frames** (`_image_wire.py`, `Transport.send_bytes` / `server.push_bytes`) with a
+versioned **codec** byte (v2): `raw` / `jpeg` / `zlib` — auto-selecting JPEG for
+8-bit 1/3-channel and lossless zlib otherwise, overridable via
+`ImageData(codec=…)`.  Uniforms and overlays travel as JSON (`image_update`) and
+never re-send the image.  Very large images are served as an **HTTP tile
+pyramid** (`_image_pyramid.py`, `/image/{id}/{level}/{x}/{y}`, `source:
+"tiled"`); camera feeds are served as **MJPEG** (`_camera_stream.py`,
+`/stream/{id}`).  The export path stores images in an id-keyed **asset store**
+(`AnimationRecording.assets`, `capture_frame(include_images=False)`), embedding
+8-bit images as JPEG data URLs by default.
 
 The same 2D scene hosts interactive rectangles: `Rectangle2D` (a new viz-only
 entity, `kind == "Rectangle2D"`, rendered by `renderers/rectangle2d.js` as an
@@ -302,9 +350,21 @@ pane through a clean three-layer model — camera data → camera view → pane:
   NDC quad (`renderers/image-background.js`) that letterboxes to match the
   projection (and crops to the viewport window).  Pixel bytes travel on the
   existing binary frame transport (`_image_wire.py` →
-  `LayoutHost.background_image_frames` → re-sent on connect).
+  `LayoutHost.background_image_frames` → re-sent on connect), compressed with
+  the same v2 codec; a `source: "tiled"` background fetches `/image/…` tiles
+  and a `/stream/…` url streams MJPEG.  At runtime
+  `Visualizer.set_background_image(view, image)` sends the new pixel frame
+  followed by a granular `view_background_image` message — no `view_layout`
+  re-push, so other panes are untouched.
 - **Per-pane visibility** — `SceneView(hide=…, show=…)` filters which entities a
   pane builds (each pane has its own object registry, so no scene duplication).
+- **Runtime entity visibility** — `Scene.set_visible` /
+  `Visualizer.set_visible(…, scene_name=…)` / `VizSceneHandle.hide` set a node's
+  `visible` flag and emit a granular `visible` aspect patch on the `object_update`
+  channel (frontend sets `THREE.Object3D.visible`), so toggling visibility never
+  re-serializes geometry/style.  Action objects add
+  `ActSceneObject.set_enabled/enable/disable`, which flips
+  `InteractionConfig.enabled` and re-pushes the existing `interaction` aspect.
 - **Frustum** — `pytanga.geometry.Frustum` (a viz-only entity, no MV) with
   `Frustum.from_camera(camera)` and `FrustumStyle`; serialized to explicit
   corners and rendered by `renderers/frustum.js`.

@@ -10,7 +10,7 @@ import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { applyImageUniforms } from '../renderers/image.js';
-import { createImageBackground, setBackgroundAspect, setBackgroundCrop } from '../renderers/image-background.js';
+import { createImageBackground, setBackgroundAspect, setBackgroundCrop, updateImageBackground } from '../renderers/image-background.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
@@ -689,16 +689,40 @@ export class ThreeJsView extends View {
         this._applyViewport();
     }
 
-    /** Mount (or clear) this pane's full-viewport background image. */
+    /** Mount (or update) this pane's full-viewport background image. */
     setBackgroundImage(imageMeta) {
+        const prev = this._backgroundImage;
         this._backgroundImage = imageMeta || null;
-        if (this._backgroundMesh) {
-            this.scene.remove(this._backgroundMesh);
-            this._backgroundMesh = null;
+
+        // Preserve zoom/pan across a swap of a same-sized image; a size change
+        // (or clearing) re-frames the crop window to the full image.
+        const dimsChanged = !!(prev && imageMeta
+            && (Number(prev.width) !== Number(imageMeta.width)
+                || Number(prev.height) !== Number(imageMeta.height)));
+        if (dimsChanged && this.camera && this.camera.userData._pinhole) {
+            this._viewport = { zoom: 1, pan: [0, 0] };
         }
-        if (this._backgroundImage) {
+
+        if (!this._backgroundImage) {
+            if (this._backgroundMesh) {
+                this.scene.remove(this._backgroundMesh);
+                this._backgroundMesh = null;
+            }
+            return;
+        }
+
+        if (this._backgroundMesh) {
+            // Reuse the existing quad: the new texture replaces the old one
+            // in place (after decoding), so there is no black gap between
+            // frames and the current crop window is retained.
+            updateImageBackground(this._backgroundMesh, this._backgroundImage);
+        } else {
             this._backgroundMesh = createImageBackground(this._backgroundImage);
             this.scene.add(this._backgroundMesh);
+        }
+
+        if (this.camera && this.camera.userData._pinhole) {
+            this._applyPinholeFraming(this._viewport);
         }
     }
 
@@ -706,6 +730,18 @@ export class ThreeJsView extends View {
     setVisibilityFilter(hide, show) {
         this._hide = new Set(hide || []);
         this._show = show && show.length ? new Set(show) : null;
+    }
+
+    /** Refresh this reused pane from a serialized ``scene_view`` node. */
+    updateFromNode(node) {
+        const camView = node.camera_view || {};
+        this.clearOverlays();
+        this.setLock(camView.lock || null);
+        this.setNavigation(camView.navigation || null);
+        this.setControls(camView.controls || null);
+        this.setViewport(camView.viewport || null);
+        this.setBackgroundImage(camView.background_image || null);
+        this.setVisibilityFilter(node.hide || null, node.show || null);
     }
 
     _isFilteredOut(id) {
@@ -1036,6 +1072,10 @@ export class ThreeJsView extends View {
         }
         if (aspect === 'transform') {
             if (entry.obj) applyTransformToObject(entry.obj, value);
+            return;
+        }
+        if (aspect === 'visible') {
+            if (entry.obj) entry.obj.visible = value.visible !== false;
             return;
         }
         if (aspect === 'style') {

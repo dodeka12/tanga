@@ -246,6 +246,32 @@ async function _reconcileFrame(frame) {{
         }}
 
         const prev = mesh.userData._data || {{}};
+        if (ent.kind === 'image') {{
+            // Image pixel content is per-frame: rebuild so the texture
+            // re-uploads from the freshly hydrated frame store.
+            const entry = {registry_var}.get(ent.id);
+            const oldLabels = entry && entry.obj ? (entry.obj.userData._labels || []) : [];
+            removeEntityMesh(entry ? entry.obj : mesh);
+            {mesh_map_var}.delete(ent.id);
+            {registry_var}.delete(ent.id);
+            const merged = {{ ...prev, ...ent }};
+            merged.id = ent.id;
+            const newEntry = await buildSceneObject(merged, {scene_var}, {registry_var});
+            if (newEntry) {{
+                {mesh_map_var}.set(ent.id, newEntry.mesh);
+                newEntry.mesh.userData._data = merged;
+                newEntry.obj.userData._labels = [];
+                for (const lblId of oldLabels) {{
+                    const lbl = {label_objects_map_var}.get(lblId);
+                    if (lbl) {{
+                        newEntry.obj.add(lbl);
+                        newEntry.obj.userData._labels.push(lblId);
+                    }}
+                }}
+                newEntry.mesh.visible = true;
+            }}
+            continue;
+        }}
         if (updateEntityMesh(mesh, ent, prev)) {{
             mesh.userData._data = {{ ...prev, ...ent }};
             mesh.visible = true;
@@ -287,6 +313,12 @@ async function _reconcileFrame(frame) {{
 
 async function _playFrame(n) {{
     if (n >= 0 && n < frames.length) {{
+        // Hydrate this frame's image pixel frames before reconciliation.
+        const frameAssets = (animData.frame_assets && animData.frame_assets[n]) || [];
+        for (const a of frameAssets) {{
+            const bytes = Uint8Array.from(atob(a.data_b64), c => c.charCodeAt(0));
+            storeImageFrame({{ id: a.id, codec: a.codec, bytes }});
+        }}
         await _reconcileFrame(frames[n]);
         if (cameras && cameras[n]) {{
             applyCameraConfig({camera_var}, {controls_var}, cameras[n], {camera_size_w_expr}, {camera_size_h_expr});

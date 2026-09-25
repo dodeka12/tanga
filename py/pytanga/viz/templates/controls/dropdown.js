@@ -1,6 +1,6 @@
 // Tanga Viewer — the dropdown (select) DOM factory.
 
-import { registerControl, applyTooltip, sendControlEvent } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement, sendControlEvent } from '../controls-panel.js';
 
 export function createDropdown(ctrl) {
     const wrapper = document.createElement('div');
@@ -31,9 +31,11 @@ export function createDropdown(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'dropdown',
+        el: wrapper,
         apply: (value) => { select.value = value == null ? '' : String(value); },
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

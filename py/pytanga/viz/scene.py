@@ -741,6 +741,22 @@ class Scene:
         elif obj is None:
             raise KeyError(f"Object {entity_id!r} not found")
 
+    def set_visible(self, object_id: str, visible: bool) -> None:
+        """Set the visibility of an existing scene-layer object.
+
+        Node-only entries (e.g. descendants of a detached subtree) are updated
+        directly; ids present in ``_objects`` keep the legacy bookkeeping too.
+        """
+        obj = self._objects.get(object_id)
+        if obj is not None:
+            obj.dirty = True
+
+        node = self._nodes.get(object_id)
+        if isinstance(node, VizSceneObject):
+            node.set_visible(visible)
+        elif obj is None:
+            raise KeyError(f"Object {object_id!r} not found")
+
     def update_sdf_group_member(
         self,
         object_id: str,
@@ -871,7 +887,7 @@ class Scene:
             dirty_aspects = node.consume_dirty()
             if not dirty_aspects:
                 continue
-            for aspect in ("full", "style", "transform", "content", "interaction"):
+            for aspect in ("full", "style", "transform", "content", "interaction", "visible"):
                 if aspect not in dirty_aspects:
                     continue
                 if aspect == "interaction":

@@ -47,3 +47,15 @@ class TestIntegerAlgebra:
         zero_mv = alg.multivector()  # zero multivector
         with pytest.raises(RuntimeError):
             alg.inv(zero_mv, MODULUS)
+
+
+def test_modular_operators_reduce() -> None:
+    alg = pytanga.Algebra(dim=3, sig=0, dtype="int64", modulus=MODULUS)
+    e1 = alg.multivector({1: 60})
+    e2 = alg.multivector({2: 60})
+    # 60 + 60 = 120 ≡ 19 (mod 101)
+    assert (e1 + e1)["e1"] == 19
+    # 60 * 60 = 3600 ≡ -36 (mod 101, centered)
+    assert (e1 * e1)["s"] == -36
+    # 60e1 ^ 60e2 = 3600 e12 ≡ -36 (mod 101, centered)
+    assert (e1 ^ e2)["e12"] == -36

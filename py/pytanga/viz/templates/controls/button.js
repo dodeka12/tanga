@@ -1,6 +1,6 @@
 // Tanga Viewer — the button DOM factory (icon + label, click-only).
 
-import { applyTooltip, sendControlEvent, createIconElement } from '../controls-panel.js';
+import { applyTooltip, registerControl, applyControlStateToElement, sendControlEvent, createIconElement } from '../controls-panel.js';
 
 export function createButton(ctrl) {
     const wrapper = document.createElement('div');
@@ -32,6 +32,13 @@ export function createButton(ctrl) {
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     applyTooltip(wrapper, ctrl);
+    registerControl(ctrl.id, {
+        owner: ctrl.owner || 'panel',
+        kind: 'button',
+        el: wrapper,
+        apply: () => {},
+    });
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

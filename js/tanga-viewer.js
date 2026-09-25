@@ -2726,8 +2726,8 @@ void main() {
 // dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
 const DTYPE_TYPES = {
     0: { type: THREE.UnsignedByteType, bytesPerElement: 1 },   // uint8
-    1: { type: THREE.UnsignedShortType, bytesPerElement: 2 },  // uint16 (WebGL2 only)
-    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32 (WebGL2 only)
+    1: { type: THREE.FloatType, bytesPerElement: 2 },          // uint16 (widened to float32)
+    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32
 };
 
 // View the raw frame bytes as the dtype's element type.
@@ -2737,14 +2737,17 @@ function typedArrayFor(dtype, bytes) {
     return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length);
 }
 
-// Expand a 1/3-channel buffer to 4-channel RGBA — the only 8-bit color format
-// three.js r170 uploads to WebGL2 (RGBFormat/LuminanceFormat were removed).
+// Expand a 1/3-channel buffer to 4-channel RGBA.  uint8 stays 8-bit (the only
+// normalized 8-bit color format three.js r170 uploads to WebGL2 —
+// RGBFormat/LuminanceFormat were removed).  uint16 is widened to float32 because
+// three.js `UnsignedShortType` maps to an *integer* texture (RGBA16UI) that a
+// float `sampler2D` cannot sample; float32 is already the right width.  Both
+// non-8-bit paths are lossless for the full 0..65535 range.
 function toRgba(arr, channels) {
-    const TypedArray = arr.constructor;
     const n = arr.length / channels;
-    const rgba = new TypedArray(n * 4);
-    const alpha = arr instanceof Float32Array ? 1.0
-        : arr instanceof Uint16Array ? 0xFFFF : 0xFF;
+    const useFloat = arr instanceof Float32Array || arr instanceof Uint16Array;
+    const rgba = useFloat ? new Float32Array(n * 4) : new Uint8Array(n * 4);
+    const alpha = useFloat ? 1.0 : 0xFF;
     if (channels === 1) {
         for (let i = 0; i < n; i++) {
             const v = arr[i];
@@ -2769,16 +2772,16 @@ function emptyTypedArray(dtype, length) {
     return new Uint8Array(length);
 }
 
-function makeDataTexture(img) {
-    const frame = takeImageFrame(img.id);
+function makeDataTexture(img, bytes) {
     const width = img.width;
     const height = img.height;
     const channels = img.channels || 1;
     const dtype = img.dtype ?? 0;
     const spec = DTYPE_TYPES[dtype] ?? DTYPE_TYPES[0];
 
-    const raw = frame
-        ? typedArrayFor(dtype, frame.bytes)
+    const frameBytes = bytes ?? (hasImageFrame(img.id) ? takeImageFrame(img.id).bytes : null);
+    const raw = frameBytes
+        ? typedArrayFor(dtype, frameBytes)
         : emptyTypedArray(dtype, width * height * channels);
     const data = toRgba(raw, channels);
 
@@ -2786,6 +2789,109 @@ function makeDataTexture(img) {
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
     texture.needsUpdate = true;
+    return texture;
+}
+
+// Decode a frame into a texture, dispatching on the frame's `codec`:
+//   'jpeg' → createImageBitmap (GPU decode, RGBA, off-main-thread)
+//   'zlib' → DecompressionStream, then the raw DataTexture path
+//   'raw'  → the raw DataTexture path
+async function makeEncodedTexture(img, frame) {
+    if (frame && frame.codec === 'jpeg') {
+        const blob = new Blob([frame.bytes], { type: 'image/jpeg' });
+        const bitmap = await createImageBitmap(blob);
+        const texture = new THREE.Texture(bitmap);
+        texture.minFilter = THREE.NearestFilter;
+        texture.magFilter = THREE.NearestFilter;
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    let bytes = frame ? frame.bytes : null;
+    if (frame && frame.codec === 'zlib') {
+        const stream = new Blob([frame.bytes]).stream()
+            .pipeThrough(new DecompressionStream('deflate'));
+        bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    return makeDataTexture(img, bytes);
+}
+
+// Compose a tiled image into one texture by fetching the tiles of the
+// best-fitting level (long side ≤ 2048 px) and drawing them to a canvas.
+// The `source === "tiled"` metadata is `{id, width, height, tile_size, levels,
+// dtype, channels}` (see `ImagePyramid.meta`).
+async function makeTiledTexture(img) {
+    const tileSize = img.tile_size || 256;
+    const levels = img.levels || 1;
+
+    let level = 0;
+    while (level + 1 < levels && Math.max(img.width, img.height) / (2 ** (level + 1)) <= 2048) {
+        level++;
+    }
+    const scale = 2 ** level;
+    const levelW = Math.ceil(img.width / scale);
+    const levelH = Math.ceil(img.height / scale);
+    const cols = Math.ceil(levelW / tileSize);
+    const rows = Math.ceil(levelH / tileSize);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = levelW;
+    canvas.height = levelH;
+    const ctx = canvas.getContext('2d');
+    const format = (img.dtype === 0 && (img.channels === 1 || img.channels === 3)) ? 'jpeg' : 'png';
+
+    const jobs = [];
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            jobs.push((async () => {
+                const resp = await fetch(`/image/${img.id}/${level}/${x}/${y}?format=${format}`);
+                if (!resp.ok) return;
+                const bitmap = await createImageBitmap(await resp.blob());
+                ctx.drawImage(bitmap, x * tileSize, y * tileSize);
+                bitmap.close();
+            })());
+        }
+    }
+    await Promise.all(jobs);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+    texture.needsUpdate = true;
+    return texture;
+}
+
+// Stream an MJPEG camera feed (`/stream/{id}`) into a texture via a hidden
+// `<img>` (browsers decode multipart/x-mixed-replace natively) redrawn to a
+// canvas each animation frame.
+function makeStreamTexture(img) {
+    const el = document.createElement('img');
+    el.src = img.url;
+    el.style.display = 'none';
+    document.body.appendChild(el);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width || 1;
+    canvas.height = img.height || 1;
+    const ctx = canvas.getContext('2d');
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+
+    const update = () => {
+        if (el.naturalWidth > 0) {
+            if (canvas.width !== el.naturalWidth || canvas.height !== el.naturalHeight) {
+                canvas.width = el.naturalWidth;
+                canvas.height = el.naturalHeight;
+            }
+            ctx.drawImage(el, 0, 0);
+            texture.needsUpdate = true;
+        }
+        requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
     return texture;
 }
 
@@ -2843,16 +2949,22 @@ async function createImage(ent) {
         const img = images[i];
         const key = `uImage${i}`;
         if (img.source === 'url') {
-            uniforms[key].value = await new Promise((resolve) => {
-                new THREE.TextureLoader().load(
-                    img.url,
-                    (t) => { t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter; resolve(t); },
-                    undefined,
-                    () => resolve(null)
-                );
-            });
+            if (typeof img.url === 'string' && img.url.includes('/stream/')) {
+                uniforms[key].value = makeStreamTexture(img);
+            } else {
+                uniforms[key].value = await new Promise((resolve) => {
+                    new THREE.TextureLoader().load(
+                        img.url,
+                        (t) => { t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter; resolve(t); },
+                        undefined,
+                        () => resolve(null)
+                    );
+                });
+            }
+        } else if (img.source === 'tiled') {
+            uniforms[key].value = await makeTiledTexture(img);
         } else if (hasImageFrame(img.id)) {
-            uniforms[key].value = makeDataTexture(img);
+            uniforms[key].value = await makeEncodedTexture(img, takeImageFrame(img.id));
         }
     }
 
@@ -2923,19 +3035,12 @@ void main() {
     }
 }`;
 
-/**
- * Build a screen-space image background quad.
- *
- * @param {object} imageMeta  the serialized `background_image` metadata dict
- * @returns {THREE.Mesh}
- */
-function createImageBackground(imageMeta) {
-    const geometry = new THREE.PlaneGeometry(2, 2);
+/** Build the shared full-viewport background shader material. */
+function _buildMaterial(imageMeta) {
     const img = imageMeta || {};
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
-
-    const material = new THREE.ShaderMaterial({
+    return new THREE.ShaderMaterial({
         vertexShader: _BG_VERTEX,
         fragmentShader: _BG_FRAGMENT,
         uniforms: {
@@ -2948,29 +3053,85 @@ function createImageBackground(imageMeta) {
         depthTest: false,
         depthWrite: false,
     });
+}
 
+/**
+ * Resolve the texture for a background image, dispatching on its `source`.
+ * Returns a `Promise<THREE.Texture|null>`; `null` means the image could not be
+ * loaded and the previous texture (if any) should remain visible.
+ */
+function _backgroundTexture(img) {
+    if (img.source === 'url' && img.url) {
+        if (img.url.includes('/stream/')) {
+            return Promise.resolve(makeStreamTexture(img));
+        }
+        return new Promise((resolve) => {
+            new THREE.TextureLoader().load(
+                img.url,
+                (tex) => {
+                    tex.minFilter = THREE.NearestFilter;
+                    tex.magFilter = THREE.NearestFilter;
+                    resolve(tex);
+                },
+                undefined,
+                () => resolve(null),
+            );
+        });
+    }
+    if (img.source === 'tiled') {
+        return makeTiledTexture(img);
+    }
+    const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
+    return makeEncodedTexture(img, frame).then((tex) => {
+        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 ->
+        // bottom texel), but this NDC background samples with the image's
+        // row 0 at the *top* of the pane (matching the URL path above and
+        // the 3D projection).  Flip so data and url backgrounds line up.
+        tex.flipY = true;
+        tex.needsUpdate = true;
+        return tex;
+    });
+}
+
+/**
+ * Build a screen-space image background quad.
+ *
+ * @param {object} imageMeta  the serialized `background_image` metadata dict
+ * @returns {THREE.Mesh}
+ */
+function createImageBackground(imageMeta) {
+    const img = imageMeta || {};
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const material = _buildMaterial(img);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = -1;
 
-    if (img.source === 'url' && img.url) {
-        new THREE.TextureLoader().load(img.url, (tex) => {
-            tex.minFilter = THREE.NearestFilter;
-            tex.magFilter = THREE.NearestFilter;
-            material.uniforms.uImage.value = tex;
-        });
-    } else {
-        const tex = makeDataTexture(img);
-        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 -> bottom
-        // texel), but this NDC background samples with the image's row 0 at the
-        // *top* of the pane (matching the URL path above and the 3D projection).
-        // Flip so data and url backgrounds line up with the rendered overlay.
-        tex.flipY = true;
-        tex.needsUpdate = true;
-        material.uniforms.uImage.value = tex;
-    }
+    _backgroundTexture(img).then((tex) => {
+        if (tex) material.uniforms.uImage.value = tex;
+    });
 
     return mesh;
+}
+
+/**
+ * Swap the texture of an existing background quad to a new image, keeping the
+ * previous texture visible until the new one decodes (no black flash), and
+ * leaving the crop (`uCrop`) untouched so a same-size swap preserves zoom/pan.
+ *
+ * @param {THREE.Mesh} mesh
+ * @param {object} imageMeta  the serialized `background_image` metadata dict
+ */
+function updateImageBackground(mesh, imageMeta) {
+    const mat = mesh && mesh.material;
+    if (!mat || !mat.uniforms) return;
+    const img = imageMeta || {};
+    const width = Number(img.width) || 1;
+    const height = Number(img.height) || 1;
+    mat.uniforms.uImageAspect.value = width / height;
+    _backgroundTexture(img).then((tex) => {
+        if (tex) mat.uniforms.uImage.value = tex;
+    });
 }
 
 /**
@@ -3002,6 +3163,50 @@ function setBackgroundCrop(mesh, crop) {
             c.v1 !== undefined ? c.v1 : 1,
         );
     }
+}
+
+// Tanga Viewer — image-pyramid tile math (pure, Node-testable).
+//
+// These helpers compute the tiles of a level that intersect a normalized
+// viewport.  No browser or three.js imports, so `js/dev/tests` can unit-test
+// them directly.
+
+// Grid dimensions of a pyramid level, matching `ImagePyramid.dimensions` /
+// `ImagePyramid.grid` on the backend (double ceil: level dims, then tiles).
+function pyramidGrid(pyramid, level) {
+    const scale = 2 ** level;
+    const levelW = Math.ceil(pyramid.width / scale);
+    const levelH = Math.ceil(pyramid.height / scale);
+    return {
+        cols: Math.ceil(levelW / pyramid.tile_size),
+        rows: Math.ceil(levelH / pyramid.tile_size),
+        width: levelW,
+        height: levelH,
+    };
+}
+
+// Tiles of `level` intersecting a normalized viewport `{u0, v0, u1, v1}`
+// (0..1 image coords, v=0 at the top), expanded by `border` tiles and clamped
+// to the level's grid.  Returns a sorted array of `{ level, x, y }`.
+function visibleTiles(viewport, pyramid, level, border = 0) {
+    const grid = pyramidGrid(pyramid, level);
+    const x0 = Math.max(0, viewport.u0 * grid.width);
+    const y0 = Math.max(0, viewport.v0 * grid.height);
+    const x1 = Math.min(grid.width, viewport.u1 * grid.width);
+    const y1 = Math.min(grid.height, viewport.v1 * grid.height);
+
+    const minX = Math.max(0, Math.floor(x0 / pyramid.tile_size) - border);
+    const maxX = Math.min(grid.cols - 1, Math.floor((x1 - 1) / pyramid.tile_size) + border);
+    const minY = Math.max(0, Math.floor(y0 / pyramid.tile_size) - border);
+    const maxY = Math.min(grid.rows - 1, Math.floor((y1 - 1) / pyramid.tile_size) + border);
+
+    const tiles = [];
+    for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+            tiles.push({ level, x, y });
+        }
+    }
+    return tiles;
 }
 
 // Entity renderer factory — thin dispatcher importing from per-entity
@@ -4700,6 +4905,7 @@ async function buildSceneObject(obj, scene, registry) {
     if (!mesh) return null;
 
     const node = wrapWithNodeTransform(mesh, obj.transform);
+    node.visible = (obj.visible !== false);
     const parent = obj.parent_id ? registry.get(obj.parent_id) : null;
     if (parent && parent.obj) {
         parent.obj.add(node);
@@ -4934,8 +5140,9 @@ function takeImageFrame(id) {
 }
 
 // Little-endian header after the 4-byte magic `"TGI\0"`:
-//   version u8, type u8, idLen u8, width u32, height u32,
-//   channels u8, dtype u8, dataLen u64  — then id bytes, then raw pixel bytes.
+//   version u8, type u8, idLen u8, [v2: codec u8], width u32, height u32,
+//   channels u8, dtype u8, dataLen u64  — then id bytes, then the payload
+//   (raw pixels, JPEG bytes, or zlib-compressed pixels).
 function decodeImageFrame(buffer) {
     const dv = new DataView(buffer);
     const magic = String.fromCharCode(
@@ -4946,15 +5153,30 @@ function decodeImageFrame(buffer) {
     const version = dv.getUint8(4);
     const type = dv.getUint8(5);
     const idLen = dv.getUint8(6);
-    if (version !== 1) throw new Error('unsupported image frame version');
     if (type !== 1) throw new Error('unexpected image frame type');
-    const width = dv.getUint32(7, true);
-    const height = dv.getUint32(11, true);
-    const channels = dv.getUint8(15);
-    const dtype = dv.getUint8(16);
-    const dataLen = Number(dv.getBigUint64(17, true));
 
-    const idStart = 25;
+    let codec = 'raw';
+    let width, height, channels, dtype, dataLen, idStart;
+    if (version === 1) {
+        width = dv.getUint32(7, true);
+        height = dv.getUint32(11, true);
+        channels = dv.getUint8(15);
+        dtype = dv.getUint8(16);
+        dataLen = Number(dv.getBigUint64(17, true));
+        idStart = 25;
+    } else if (version === 2) {
+        const code = dv.getUint8(7);
+        codec = code === 1 ? 'jpeg' : code === 2 ? 'zlib' : 'raw';
+        width = dv.getUint32(8, true);
+        height = dv.getUint32(12, true);
+        channels = dv.getUint8(16);
+        dtype = dv.getUint8(17);
+        dataLen = Number(dv.getBigUint64(18, true));
+        idStart = 26;
+    } else {
+        throw new Error('unsupported image frame version');
+    }
+
     const id = new TextDecoder().decode(new Uint8Array(buffer, idStart, idLen));
     const dataStart = idStart + idLen;
 
@@ -4964,6 +5186,7 @@ function decodeImageFrame(buffer) {
         height,
         channels,
         dtype,
+        codec,
         bytes: new Uint8Array(buffer, dataStart, dataLen),
     };
 }

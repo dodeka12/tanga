@@ -158,6 +158,7 @@ nav:
       - Control Views (xxxView): py/viz/ui/control-views.md
       - Layouts (Split Views & Controls): py/viz/ui/layouts.md
       - Split Views: py/viz/ui/split-views.md
+      - Runtime Updates: py/viz/ui/runtime-updates.md
       - Menus: py/viz/ui/menus.md
       - Dialogs: py/viz/ui/dialogs.md
       - Display Views: py/viz/ui/display-views.md
@@ -170,6 +171,9 @@ nav:
       - Image Canvas: py/viz/image/image-canvas.md
       - Custom Shaders: py/viz/image/custom-shaders.md
       - Interaction: py/viz/image/interaction.md
+      - Image Transport: py/viz/image/image-transport.md
+      - Tiled Images: py/viz/image/tiled-images.md
+      - Image Streams: py/viz/image/image-stream.md
     - Entities & Operators:
       - Overview: py/viz/entities/index.md
       - Entities: py/viz/entities/entities.ipynb
@@ -236,8 +240,10 @@ nav:
       - Contributing: dev/guides/contributing.md
       - C++ coding style: dev/guides/cpp-coding-style-guide.md
       - Python coding style: dev/guides/py-coding-style-guide.md
+      - JS frontend coding style: dev/guides/js-coding-style-guide.md
     - Workflows:
       - Build, test & navigation: dev/workflows/build-test-and-navigation.md
+      - JS frontend testing: dev/workflows/js-frontend-testing.md
       - Precompiled wheels: dev/workflows/precompiled-wheels.md
       - Use-case examples: dev/workflows/use-case-examples.md
       - Version tagging: dev/workflows/version-tagging.md

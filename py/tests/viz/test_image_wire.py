@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from pytanga.viz._image_wire import _MAGIC, decode_image_frame, encode_image_frame
-from pytanga.viz.image import ImageDType
+from pytanga.viz.image import EImageCodec, ImageDType
 
 
 @pytest.mark.parametrize(
@@ -25,7 +25,8 @@ from pytanga.viz.image import ImageDType
 )
 def test_round_trip(dtype: str, shape: tuple[int, ...], channels: int) -> None:
     arr = (np.arange(np.prod(shape), dtype=dtype) % 251).reshape(shape)
-    decoded = decode_image_frame(encode_image_frame("img1", arr))
+    # Use the lossless raw codec so the round-trip is exact for every dtype.
+    decoded = decode_image_frame(encode_image_frame("img1", arr, codec=EImageCodec.RAW))
     assert decoded["id"] == "img1"
     assert decoded["width"] == shape[1]
     assert decoded["height"] == shape[0]

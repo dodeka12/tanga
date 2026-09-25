@@ -155,7 +155,7 @@ def _style_attr(style: SdfStyle | None, kind: str, attr: str, default: float) ->
 def _cylinder_node(entity: Cylinder) -> SdfNode:
     axis = _normalize(_xyz(entity.axis))
     half = float(entity.length) / 2.0
-    offset = half * (0.5 - float(entity.align_center))
+    offset = float(entity.length) * (0.5 - float(entity.align_center))
     midpoint = (
         entity.origin.x + axis[0] * offset,
         entity.origin.y + axis[1] * offset,

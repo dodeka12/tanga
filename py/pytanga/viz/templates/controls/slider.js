@@ -1,6 +1,6 @@
 // Tanga Viewer — the slider DOM factory (range input + value readout).
 
-import { registerControl, applyTooltip, sendControlEvent, throttledSend, throttledFlush } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement, sendControlEvent, throttledSend, throttledFlush } from '../controls-panel.js';
 
 export function createSlider(ctrl) {
     const wrapper = document.createElement('div');
@@ -59,6 +59,7 @@ export function createSlider(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'slider',
+        el: wrapper,
         apply: (value) => {
             const coerced = Number(value);
             input.value = coerced;
@@ -66,6 +67,7 @@ export function createSlider(ctrl) {
         },
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

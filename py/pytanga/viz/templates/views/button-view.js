@@ -11,6 +11,13 @@ export class ButtonView extends ControlView {
         this.variant = variant;
     }
 
+    update(node) {
+        this.icon = node.icon ?? this.icon;
+        this.icon_only = node.icon_only ?? this.icon_only;
+        this.variant = node.variant ?? this.variant;
+        super.update(node);
+    }
+
     render() {
         return createButton({
             id: this.controlId,

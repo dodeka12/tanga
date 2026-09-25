@@ -7,8 +7,9 @@ window.__tanga_ready = true;
 
 import { applyOverlayAnchor } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
+import { collectNodeTypes, planReconciliation } from './views/reconcile.js';
 import { getOverlay } from './overlay.js';
-import { applyControlValue, applyEnumOptions } from './controls-panel.js';
+import { applyControlValue, applyControlState, applyEnumOptions } from './controls-panel.js';
 import { applyMessageUpdate } from './views/message-view.js';
 import { logForwardingEnabled, sendLog, setLogForwarding, setWebSocket as setEventsWebSocket } from './events.js';
 import {
@@ -66,6 +67,7 @@ if (new URLSearchParams(window.location.search).has('log')) {
 let _layoutRoot = null;
 let _sceneRoutes = new Map();  // scene -> {sceneViews, controlViews}
 let _viewById = new Map();     // view_id -> ThreeJsView (per-pane camera)
+let _viewRegistry = new Map(); // view_id -> View (single live-view orphan registry)
 let _globalOverlayViews = [];  // views mounted into the global overlay singleton
 
 // Per-scene browser-side animation stop binding.
@@ -634,6 +636,11 @@ async function handleMessage(msg) {
         if (target) target.setViewport(msg.viewport);
         return;
     }
+    if (msg.type === 'view_background_image') {
+        const target = _viewById.get(msg.view_id);
+        if (target) target.setBackgroundImage(msg.image);
+        return;
+    }
 
     if (msg.type === 'theme_define') {
         const applyThemeBackgrounds = () => {
@@ -656,6 +663,15 @@ async function handleMessage(msg) {
 
     if (msg.type === 'control_update') {
         applyControlValue(msg.id, msg.value);
+        return;
+    }
+
+    if (msg.type === 'control_state') {
+        applyControlState(msg.id, msg);
+        if (msg.visible !== undefined) {
+            const host = _viewRegistry.get(msg.id);
+            if (host && typeof host.setHidden === 'function') host.setHidden(!msg.visible);
+        }
         return;
     }
 
@@ -740,64 +756,51 @@ function _activeSceneView() {
     return null;
 }
 
-function _destroyViewTree(view, skip) {
-    if (!view) return;
-    if (skip && skip.has(view)) return;
-    if (Array.isArray(view.children)) {
-        for (const child of [...view.children]) _destroyViewTree(child, skip);
-    }
-    if (typeof view.destroy === 'function') view.destroy();
-}
-
 function _buildLayout(msg) {
     _log('init', 'view_layout name=' + (msg.name || ''));
 
     // A re-push (had a previous layout) may introduce scene panes the browser
     // hasn't seen yet; those need their state requested from the server.
     const hadLayout = _layoutRoot !== null;
+    const oldRoot = _layoutRoot;
 
-    // Reuse the existing scene panes (keyed by scene name) so a layout re-push
-    // only rebuilds the DOM chrome and never tears down the WebGL scenes.
-    const reuse = new Map();
-    if (_layoutRoot) {
-        for (const [scene, route] of _sceneRoutes) {
-            for (const v of route.sceneViews) {
-                if (!reuse.has(scene)) reuse.set(scene, v);
-            }
-        }
-    }
-    const skip = new Set(reuse.values());
+    // Reconcile against the previous build's live views (the single orphan
+    // registry, keyed by stable view id). The pure planner (views/reconcile.js)
+    // decides, by id + type, which live views to reuse and which are orphaned;
+    // `buildViewTree` then re-parents the reused views and constructs new ones.
+    const reuse = _viewRegistry;
+    _viewRegistry = new Map();
 
-    // Teardown the previous tree (and its global overlay views) so re-pushes
-    // and reconnects don't leak ResizeObservers / DOM nodes — except the scene
-    // panes we are reusing.
-    if (_layoutRoot) {
-        _destroyViewTree(_layoutRoot, skip);
-        _layoutRoot.unmount();
-    }
-    _layoutRoot = null;
-    _sceneRoutes = new Map();
-    _viewById = new Map();
-    const overlay = getOverlay();
-    for (const view of _globalOverlayViews) {
-        overlay.removeChild(view);
-        if (typeof view.destroy === 'function') view.destroy();
-    }
-    _globalOverlayViews = [];
+    const liveTags = new Map();
+    for (const [id, v] of reuse) liveTags.set(id, v.typeTag);
+    const plan = planReconciliation(collectNodeTypes(msg.root), liveTags);
+    const reuseMap = new Map();
+    for (const { id } of plan.reuse) reuseMap.set(id, reuse.get(id));
 
     const newScenes = [];
-    _layoutRoot = buildViewTree(msg.root, ws, reuse, newScenes);
+    _layoutRoot = buildViewTree(msg.root, ws, reuseMap, _viewRegistry, newScenes);
     _layoutRoot.el.style.width = '100%';
     _layoutRoot.el.style.height = '100%';
     _layoutRoot.mount(window._viewerContainer);
     _sceneRoutes = collectSceneRoutes(_layoutRoot);
     _viewById = collectViewByIds(_layoutRoot);
 
-    // Destroy any scene panes that are no longer present in the layout.
-    for (const view of reuse.values()) {
+    // Unmount the previous tree and destroy orphaned views (not reused).
+    if (oldRoot && oldRoot !== _layoutRoot) oldRoot.unmount();
+    for (const id of plan.orphaned) {
+        const view = reuse.get(id);
+        if (!view) continue;
         if (typeof view.destroy === 'function') view.destroy();
         if (typeof view.unmount === 'function') view.unmount();
     }
+
+    // Global overlay views (menus) are transient: tear down the previous set.
+    const overlay = getOverlay();
+    for (const view of _globalOverlayViews) {
+        overlay.removeChild(view);
+        if (typeof view.destroy === 'function') view.destroy();
+    }
+    _globalOverlayViews = [];
 
     // Request state for scene panes newly introduced by this re-push (the
     // `ready` handshake only sent state for scenes present at connect time).

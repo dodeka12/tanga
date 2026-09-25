@@ -71,6 +71,13 @@ The config is sent to the frontend with the next `flush()`. Only meshes
 with an attached `interaction` field in their JSON are picked up by the
 raycaster.
 
+### Disabling an interactive object
+
+`ActSceneObject` exposes a master switch: `ap.disable()` stops all hover/drag/
+click/scroll capture (the config is re-pushed with `enabled=False`), and
+`ap.enable()` restores it — see
+[Active Elements](../entities/active-elements/index.md).
+
 ## Event Dataclasses
 
 All events inherit from `ControlEvent` (which carries `browser_id`); the

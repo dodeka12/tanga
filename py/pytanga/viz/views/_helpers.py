@@ -88,6 +88,8 @@ def _normalize_navigation(navigation: str | Navigation) -> str:
 
 def _image_meta(image: Any) -> dict[str, Any]:
     """Serialize an ``ImageData`` to the ``background_image`` metadata dict."""
+    if image.source == "tiled":
+        return image.tiled_meta
     meta: dict[str, Any] = {
         "id": image.id,
         "width": image.width,

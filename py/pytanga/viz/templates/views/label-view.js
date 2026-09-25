@@ -10,6 +10,12 @@ export class LabelView extends ControlView {
         this.font_size = font_size;
     }
 
+    update(node) {
+        this.value = node.value ?? this.value;
+        this.font_size = node.font_size ?? this.font_size;
+        super.update(node);
+    }
+
     render() {
         return createLabel({
             id: this.controlId,

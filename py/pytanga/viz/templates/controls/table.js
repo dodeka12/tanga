@@ -1,7 +1,7 @@
 // Tanga Viewer — the native table DOM factory (column types, editors, zoom).
 
 import { fitColumnWidths, fitContentColumnWidths, resizeColumnWidths, TABLE_MIN_COLUMN, cellCoordinates, moveCell, sortRows, clamp } from '../table-grid.js';
-import { sendControlEvent, resolveUndoRedoAction, applyTooltip, registerControl, createIconElement } from '../controls-panel.js';
+import { sendControlEvent, resolveUndoRedoAction, applyTooltip, registerControl, applyControlStateToElement, createIconElement } from '../controls-panel.js';
 
 const TABLE_FIT_MAX = 240;
 const TABLE_FIT_PADDING = 32;
@@ -830,6 +830,7 @@ export function createTable(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'table',
+        el: wrapper,
         apply: (value) => {
             if (!value) return;
             columns = (value.columns || []).map(String);
@@ -846,6 +847,7 @@ export function createTable(ctrl) {
         applyEnumOptions,
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo & redo, round-tripped through the
     // backend so Python stays authoritative.  (Phase 4 adds the editor guard.)

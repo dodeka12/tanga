@@ -9,7 +9,8 @@
 
 import * as THREE from 'three';
 
-import { makeDataTexture } from './image.js';
+import { makeEncodedTexture, makeStreamTexture, makeTiledTexture } from './image.js';
+import { hasImageFrame, takeImageFrame } from '../image-frames.js';
 
 const _BG_VERTEX = /* glsl */ `
 varying vec2 vNdc;
@@ -42,19 +43,12 @@ void main() {
     }
 }`;
 
-/**
- * Build a screen-space image background quad.
- *
- * @param {object} imageMeta  the serialized `background_image` metadata dict
- * @returns {THREE.Mesh}
- */
-export function createImageBackground(imageMeta) {
-    const geometry = new THREE.PlaneGeometry(2, 2);
+/** Build the shared full-viewport background shader material. */
+function _buildMaterial(imageMeta) {
     const img = imageMeta || {};
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
-
-    const material = new THREE.ShaderMaterial({
+    return new THREE.ShaderMaterial({
         vertexShader: _BG_VERTEX,
         fragmentShader: _BG_FRAGMENT,
         uniforms: {
@@ -67,29 +61,85 @@ export function createImageBackground(imageMeta) {
         depthTest: false,
         depthWrite: false,
     });
+}
 
+/**
+ * Resolve the texture for a background image, dispatching on its `source`.
+ * Returns a `Promise<THREE.Texture|null>`; `null` means the image could not be
+ * loaded and the previous texture (if any) should remain visible.
+ */
+function _backgroundTexture(img) {
+    if (img.source === 'url' && img.url) {
+        if (img.url.includes('/stream/')) {
+            return Promise.resolve(makeStreamTexture(img));
+        }
+        return new Promise((resolve) => {
+            new THREE.TextureLoader().load(
+                img.url,
+                (tex) => {
+                    tex.minFilter = THREE.NearestFilter;
+                    tex.magFilter = THREE.NearestFilter;
+                    resolve(tex);
+                },
+                undefined,
+                () => resolve(null),
+            );
+        });
+    }
+    if (img.source === 'tiled') {
+        return makeTiledTexture(img);
+    }
+    const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
+    return makeEncodedTexture(img, frame).then((tex) => {
+        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 ->
+        // bottom texel), but this NDC background samples with the image's
+        // row 0 at the *top* of the pane (matching the URL path above and
+        // the 3D projection).  Flip so data and url backgrounds line up.
+        tex.flipY = true;
+        tex.needsUpdate = true;
+        return tex;
+    });
+}
+
+/**
+ * Build a screen-space image background quad.
+ *
+ * @param {object} imageMeta  the serialized `background_image` metadata dict
+ * @returns {THREE.Mesh}
+ */
+export function createImageBackground(imageMeta) {
+    const img = imageMeta || {};
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const material = _buildMaterial(img);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = -1;
 
-    if (img.source === 'url' && img.url) {
-        new THREE.TextureLoader().load(img.url, (tex) => {
-            tex.minFilter = THREE.NearestFilter;
-            tex.magFilter = THREE.NearestFilter;
-            material.uniforms.uImage.value = tex;
-        });
-    } else {
-        const tex = makeDataTexture(img);
-        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 -> bottom
-        // texel), but this NDC background samples with the image's row 0 at the
-        // *top* of the pane (matching the URL path above and the 3D projection).
-        // Flip so data and url backgrounds line up with the rendered overlay.
-        tex.flipY = true;
-        tex.needsUpdate = true;
-        material.uniforms.uImage.value = tex;
-    }
+    _backgroundTexture(img).then((tex) => {
+        if (tex) material.uniforms.uImage.value = tex;
+    });
 
     return mesh;
+}
+
+/**
+ * Swap the texture of an existing background quad to a new image, keeping the
+ * previous texture visible until the new one decodes (no black flash), and
+ * leaving the crop (`uCrop`) untouched so a same-size swap preserves zoom/pan.
+ *
+ * @param {THREE.Mesh} mesh
+ * @param {object} imageMeta  the serialized `background_image` metadata dict
+ */
+export function updateImageBackground(mesh, imageMeta) {
+    const mat = mesh && mesh.material;
+    if (!mat || !mat.uniforms) return;
+    const img = imageMeta || {};
+    const width = Number(img.width) || 1;
+    const height = Number(img.height) || 1;
+    mat.uniforms.uImageAspect.value = width / height;
+    _backgroundTexture(img).then((tex) => {
+        if (tex) mat.uniforms.uImage.value = tex;
+    });
 }
 
 /**

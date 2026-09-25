@@ -28,6 +28,15 @@ applies the `"menu"` variant to its control children automatically
 variant to its eligible control children, so you usually don't pass `variant=`
 by hand.
 
+### Shared state (`enabled`, `visible`)
+
+Every control carries `enabled` and `visible` flags (default `True`).  A disabled
+control is greyed out and non-interactive; a hidden control is removed from view
+but stays in the layout.  Toggle them at runtime via the view (`disable()` /
+`enable()` / `hide()` / `show()`, or `set_enabled()` / `set_visible()`) or via
+`viz.set_control_enabled(id, …)` / `viz.set_control_visible(id, …)` — see
+[Controls](controls.md#enable-disable-hide-a-control).
+
 ## Layout containers
 
 Every view is a `View`. Containers arrange their children; the leaves render

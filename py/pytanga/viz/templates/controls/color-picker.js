@@ -1,6 +1,6 @@
 // Tanga Viewer — the color picker DOM factory.
 
-import { registerControl, applyTooltip, attachDebouncedChange } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement, attachDebouncedChange } from '../controls-panel.js';
 
 export function createColorPicker(ctrl) {
     const wrapper = document.createElement('div');
@@ -21,9 +21,11 @@ export function createColorPicker(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'color',
+        el: wrapper,
         apply: (value) => { input.value = value == null ? '#ffffff' : String(value); },
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

@@ -353,6 +353,8 @@ class VizServer:
         )
         self._theme_callback: ThemeCallback | None = None
         self._theme_static_dirs: dict[str, Path] = {}
+        self._image_pyramids: dict[str, Any] = {}
+        self._camera_streams: dict[str, Any] = {}
         self._push_animation_stop: Callable[[str], Awaitable[None]] | None = None
         self._on_connect: Callable[[str], Awaitable[None]] | None = None
         self._on_disconnect: Callable[[str], Awaitable[None]] | None = None
@@ -813,10 +815,82 @@ class VizServer:
         # specific than the catch-all below, so they win for those paths).
         for prefix, directory in self._theme_static_dirs.items():
             app.router.add_static(f"/themes/{prefix}", directory, show_index=False)
+        # Image pyramid tiles (more specific than the catch-all below).
+        app.router.add_get(
+            "/image/{image_id}/{level}/{x}/{y}", self._image_tile_handler
+        )
+        # MJPEG camera streams (more specific than the catch-all below).
+        app.router.add_get("/stream/{stream_id}", self._camera_stream_handler)
         # Catch-all route: serve static files if they exist, otherwise serve
         # viewer.html (SPA-style scene URL routing).
         app.router.add_get("/{name:.*}", self._catch_all_handler)
         return app
+
+    def register_image_pyramid(self, image_id: str, pyramid: Any) -> None:
+        """Register an image pyramid by id for the ``/image/...`` tile route."""
+        self._image_pyramids[image_id] = pyramid
+
+    async def _image_tile_handler(self, request: web.Request) -> web.StreamResponse:
+        """Serve one encoded image-pyramid tile (``/image/{id}/{level}/{x}/{y}``)."""
+        from ._image_pyramid import FORMAT_CONTENT_TYPE
+
+        image_id = request.match_info["image_id"]
+        pyramid = self._image_pyramids.get(image_id)
+        if pyramid is None:
+            raise web.HTTPBadRequest(text=f"unknown image id: {image_id}")
+
+        try:
+            level = int(request.match_info["level"])
+            x = int(request.match_info["x"])
+            y = int(request.match_info["y"])
+        except ValueError as exc:
+            raise web.HTTPBadRequest(text="level/x/y must be integers") from exc
+
+        format = request.query.get("format", "jpeg")
+        if format not in FORMAT_CONTENT_TYPE:
+            raise web.HTTPBadRequest(text=f"unknown tile format: {format}")
+
+        data = pyramid.get_tile(level, x, y, format)
+        if data is None:
+            raise web.HTTPNotFound(text="tile out of range")
+        return web.Response(
+            body=data,
+            content_type=FORMAT_CONTENT_TYPE[format],
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    def register_camera_stream(self, stream_id: str, stream: Any) -> None:
+        """Register a camera stream by id for the ``/stream/...`` route."""
+        self._camera_streams[stream_id] = stream
+
+    async def _camera_stream_handler(self, request: web.Request) -> web.StreamResponse:
+        """Stream MJPEG frames (``multipart/x-mixed-replace``) for a camera."""
+        stream_id = request.match_info["stream_id"]
+        stream = self._camera_streams.get(stream_id)
+        if stream is None:
+            raise web.HTTPBadRequest(text=f"unknown stream id: {stream_id}")
+
+        response = web.StreamResponse(
+            status=200,
+            reason="OK",
+            headers={"Content-Type": "multipart/x-mixed-replace; boundary=tanga"},
+        )
+        await response.prepare(request)
+        boundary = b"--tanga\r\n"
+        try:
+            while True:
+                frame = stream.latest()
+                if frame is not None:
+                    header = (
+                        b"Content-Type: image/jpeg\r\nContent-Length: "
+                        + str(len(frame)).encode()
+                        + b"\r\n\r\n"
+                    )
+                    await response.write(boundary + header + frame + b"\r\n")
+                await asyncio.sleep(1.0 / stream.fps)
+        except (ConnectionResetError, asyncio.CancelledError):
+            pass
+        return response
 
     def _theme_links_html(self) -> str:
         """Return the active theme's ``<link>`` tags, or an empty string.

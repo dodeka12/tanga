@@ -61,11 +61,11 @@ class MV:
             other = self._alg.multivector({0: other})
         elif not isinstance(other, MV):
             return NotImplemented  # type: ignore[return-value]
-        return self._alg.add(self, other)
+        return self._alg._add_impl(self, other)
 
     def __radd__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
-            return self._alg.add(self._alg.multivector({0: other}), self)
+            return self._alg._add_impl(self._alg.multivector({0: other}), self)
         return NotImplemented  # type: ignore[return-value]
 
     def __sub__(self, other: "MV | int | float") -> "MV":
@@ -73,46 +73,46 @@ class MV:
             other = self._alg.multivector({0: other})
         elif not isinstance(other, MV):
             return NotImplemented  # type: ignore[return-value]
-        return self._alg.sub(self, other)
+        return self._alg._sub_impl(self, other)
 
     def __rsub__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
-            return self._alg.sub(self._alg.multivector({0: other}), self)
+            return self._alg._sub_impl(self._alg.multivector({0: other}), self)
         return NotImplemented  # type: ignore[return-value]
 
     def __mul__(self, other: "MV | int | float") -> "MV":
         if isinstance(other, (int, float)):
-            return self._alg.scale(self, other)
+            return self._alg._scale_impl(self, other)
         if isinstance(other, MV):
-            return self._alg.gp(self, other)
+            return self._alg._gp_impl(self, other)
         return NotImplemented  # type: ignore[return-value]
 
     def __rmul__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
-            return self._alg.scale(self, other)
+            return self._alg._scale_impl(self, other)
         return NotImplemented  # type: ignore[return-value]
 
     def __truediv__(self, other: "MV | int | float") -> "MV":
         if isinstance(other, (int, float)):
-            return self._alg.scale(self, 1.0 / other)
+            return self._alg._scale_impl(self, 1.0 / other)
         if isinstance(other, MV):
-            return self._alg.gp(self, self._alg.inv(other))
+            return self._alg._gp_impl(self, self._alg.inv(other))
         return NotImplemented  # type: ignore[return-value]
 
     def __rtruediv__(self, other: "int | float") -> "MV":
         if isinstance(other, (int, float)):
-            return self._alg.scale(self._alg.inv(self), other)
+            return self._alg._scale_impl(self._alg.inv(self), other)
         return NotImplemented  # type: ignore[return-value]
 
     def __xor__(self, other: "MV") -> "MV":
         if not isinstance(other, MV):
             return NotImplemented  # type: ignore[return-value]
-        return self._alg.op(self, other)
+        return self._alg._op_impl(self, other)
 
     def __or__(self, other: "MV") -> "MV":
         if not isinstance(other, MV):
             return NotImplemented  # type: ignore[return-value]
-        return self._alg.ip(self, other)
+        return self._alg._ip_impl(self, other)
 
     def __invert__(self) -> "MV":
         return self._alg.rev(self)
@@ -220,7 +220,7 @@ class MV:
         """Geometric product self * other  (same as ``self * other``)."""
         if not isinstance(other, MV):
             return _expression_dispatch("gp", self, other)
-        return self._alg.gp(self, other)
+        return self._alg._gp_impl(self, other)
 
     @overload
     def op(self, other: "MV") -> "MV": ...
@@ -230,7 +230,7 @@ class MV:
         """Outer (wedge) product self ∧ other  (same as ``self ^ other``)."""
         if not isinstance(other, MV):
             return _expression_dispatch("op", self, other)
-        return self._alg.op(self, other)
+        return self._alg._op_impl(self, other)
 
     @overload
     def ip(self, other: "MV") -> "MV": ...
@@ -240,7 +240,7 @@ class MV:
         """Inner product (symmetric)  (same as ``self | other``)."""
         if not isinstance(other, MV):
             return _expression_dispatch("ip", self, other)
-        return self._alg.ip(self, other)
+        return self._alg._ip_impl(self, other)
 
     def gp_mod(self, other: "MV", modulus: int) -> "MV":
         """Geometric product with explicit modular congruence reduction."""

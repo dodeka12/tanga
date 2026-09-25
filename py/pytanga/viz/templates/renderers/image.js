@@ -12,8 +12,8 @@ import { hasImageFrame, takeImageFrame } from '../image-frames.js';
 // dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
 const DTYPE_TYPES = {
     0: { type: THREE.UnsignedByteType, bytesPerElement: 1 },   // uint8
-    1: { type: THREE.UnsignedShortType, bytesPerElement: 2 },  // uint16 (WebGL2 only)
-    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32 (WebGL2 only)
+    1: { type: THREE.FloatType, bytesPerElement: 2 },          // uint16 (widened to float32)
+    2: { type: THREE.FloatType, bytesPerElement: 4 },          // float32
 };
 
 // View the raw frame bytes as the dtype's element type.
@@ -23,14 +23,17 @@ function typedArrayFor(dtype, bytes) {
     return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length);
 }
 
-// Expand a 1/3-channel buffer to 4-channel RGBA — the only 8-bit color format
-// three.js r170 uploads to WebGL2 (RGBFormat/LuminanceFormat were removed).
+// Expand a 1/3-channel buffer to 4-channel RGBA.  uint8 stays 8-bit (the only
+// normalized 8-bit color format three.js r170 uploads to WebGL2 —
+// RGBFormat/LuminanceFormat were removed).  uint16 is widened to float32 because
+// three.js `UnsignedShortType` maps to an *integer* texture (RGBA16UI) that a
+// float `sampler2D` cannot sample; float32 is already the right width.  Both
+// non-8-bit paths are lossless for the full 0..65535 range.
 function toRgba(arr, channels) {
-    const TypedArray = arr.constructor;
     const n = arr.length / channels;
-    const rgba = new TypedArray(n * 4);
-    const alpha = arr instanceof Float32Array ? 1.0
-        : arr instanceof Uint16Array ? 0xFFFF : 0xFF;
+    const useFloat = arr instanceof Float32Array || arr instanceof Uint16Array;
+    const rgba = useFloat ? new Float32Array(n * 4) : new Uint8Array(n * 4);
+    const alpha = useFloat ? 1.0 : 0xFF;
     if (channels === 1) {
         for (let i = 0; i < n; i++) {
             const v = arr[i];
@@ -55,16 +58,16 @@ function emptyTypedArray(dtype, length) {
     return new Uint8Array(length);
 }
 
-export function makeDataTexture(img) {
-    const frame = takeImageFrame(img.id);
+export function makeDataTexture(img, bytes) {
     const width = img.width;
     const height = img.height;
     const channels = img.channels || 1;
     const dtype = img.dtype ?? 0;
     const spec = DTYPE_TYPES[dtype] ?? DTYPE_TYPES[0];
 
-    const raw = frame
-        ? typedArrayFor(dtype, frame.bytes)
+    const frameBytes = bytes ?? (hasImageFrame(img.id) ? takeImageFrame(img.id).bytes : null);
+    const raw = frameBytes
+        ? typedArrayFor(dtype, frameBytes)
         : emptyTypedArray(dtype, width * height * channels);
     const data = toRgba(raw, channels);
 
@@ -72,6 +75,109 @@ export function makeDataTexture(img) {
     texture.magFilter = THREE.NearestFilter;
     texture.minFilter = THREE.NearestFilter;
     texture.needsUpdate = true;
+    return texture;
+}
+
+// Decode a frame into a texture, dispatching on the frame's `codec`:
+//   'jpeg' → createImageBitmap (GPU decode, RGBA, off-main-thread)
+//   'zlib' → DecompressionStream, then the raw DataTexture path
+//   'raw'  → the raw DataTexture path
+export async function makeEncodedTexture(img, frame) {
+    if (frame && frame.codec === 'jpeg') {
+        const blob = new Blob([frame.bytes], { type: 'image/jpeg' });
+        const bitmap = await createImageBitmap(blob);
+        const texture = new THREE.Texture(bitmap);
+        texture.minFilter = THREE.NearestFilter;
+        texture.magFilter = THREE.NearestFilter;
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    let bytes = frame ? frame.bytes : null;
+    if (frame && frame.codec === 'zlib') {
+        const stream = new Blob([frame.bytes]).stream()
+            .pipeThrough(new DecompressionStream('deflate'));
+        bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    return makeDataTexture(img, bytes);
+}
+
+// Compose a tiled image into one texture by fetching the tiles of the
+// best-fitting level (long side ≤ 2048 px) and drawing them to a canvas.
+// The `source === "tiled"` metadata is `{id, width, height, tile_size, levels,
+// dtype, channels}` (see `ImagePyramid.meta`).
+export async function makeTiledTexture(img) {
+    const tileSize = img.tile_size || 256;
+    const levels = img.levels || 1;
+
+    let level = 0;
+    while (level + 1 < levels && Math.max(img.width, img.height) / (2 ** (level + 1)) <= 2048) {
+        level++;
+    }
+    const scale = 2 ** level;
+    const levelW = Math.ceil(img.width / scale);
+    const levelH = Math.ceil(img.height / scale);
+    const cols = Math.ceil(levelW / tileSize);
+    const rows = Math.ceil(levelH / tileSize);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = levelW;
+    canvas.height = levelH;
+    const ctx = canvas.getContext('2d');
+    const format = (img.dtype === 0 && (img.channels === 1 || img.channels === 3)) ? 'jpeg' : 'png';
+
+    const jobs = [];
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            jobs.push((async () => {
+                const resp = await fetch(`/image/${img.id}/${level}/${x}/${y}?format=${format}`);
+                if (!resp.ok) return;
+                const bitmap = await createImageBitmap(await resp.blob());
+                ctx.drawImage(bitmap, x * tileSize, y * tileSize);
+                bitmap.close();
+            })());
+        }
+    }
+    await Promise.all(jobs);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+    texture.needsUpdate = true;
+    return texture;
+}
+
+// Stream an MJPEG camera feed (`/stream/{id}`) into a texture via a hidden
+// `<img>` (browsers decode multipart/x-mixed-replace natively) redrawn to a
+// canvas each animation frame.
+export function makeStreamTexture(img) {
+    const el = document.createElement('img');
+    el.src = img.url;
+    el.style.display = 'none';
+    document.body.appendChild(el);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width || 1;
+    canvas.height = img.height || 1;
+    const ctx = canvas.getContext('2d');
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+
+    const update = () => {
+        if (el.naturalWidth > 0) {
+            if (canvas.width !== el.naturalWidth || canvas.height !== el.naturalHeight) {
+                canvas.width = el.naturalWidth;
+                canvas.height = el.naturalHeight;
+            }
+            ctx.drawImage(el, 0, 0);
+            texture.needsUpdate = true;
+        }
+        requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
     return texture;
 }
 
@@ -129,16 +235,22 @@ export async function createImage(ent) {
         const img = images[i];
         const key = `uImage${i}`;
         if (img.source === 'url') {
-            uniforms[key].value = await new Promise((resolve) => {
-                new THREE.TextureLoader().load(
-                    img.url,
-                    (t) => { t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter; resolve(t); },
-                    undefined,
-                    () => resolve(null)
-                );
-            });
+            if (typeof img.url === 'string' && img.url.includes('/stream/')) {
+                uniforms[key].value = makeStreamTexture(img);
+            } else {
+                uniforms[key].value = await new Promise((resolve) => {
+                    new THREE.TextureLoader().load(
+                        img.url,
+                        (t) => { t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter; resolve(t); },
+                        undefined,
+                        () => resolve(null)
+                    );
+                });
+            }
+        } else if (img.source === 'tiled') {
+            uniforms[key].value = await makeTiledTexture(img);
         } else if (hasImageFrame(img.id)) {
-            uniforms[key].value = makeDataTexture(img);
+            uniforms[key].value = await makeEncodedTexture(img, takeImageFrame(img.id));
         }
     }
 

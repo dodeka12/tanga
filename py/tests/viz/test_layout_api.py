@@ -121,6 +121,71 @@ class TestSetValuePush:
         assert view.value == 3.5
 
 
+class TestControlStatePush:
+    @staticmethod
+    def _mount(viz, monkeypatch):  # noqa: ANN001, ANN205
+        server = _FakeServer()
+        monkeypatch.setattr(viz, "_server", server)
+        monkeypatch.setattr(viz, "_loop", object())
+        monkeypatch.setattr(
+            asyncio,
+            "run_coroutine_threadsafe",
+            lambda coro, loop: asyncio.run(coro),
+        )
+        return server
+
+    def test_view_set_enabled_pushes_control_state(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        view = SliderView("radius", value=1.0)
+        viz.set_layout(view)
+        server = self._mount(viz, monkeypatch)
+
+        view.set_enabled(False)
+
+        assert view.control.enabled is False
+        assert json.loads(server.captured[0]) == {
+            "type": "control_state",
+            "id": "radius",
+            "enabled": False,
+        }
+
+    def test_view_set_visible_pushes_control_state(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        view = SliderView("radius", value=1.0)
+        viz.set_layout(view)
+        server = self._mount(viz, monkeypatch)
+
+        view.set_visible(False)
+
+        assert view.control.visible is False
+        assert json.loads(server.captured[0]) == {
+            "type": "control_state",
+            "id": "radius",
+            "visible": False,
+        }
+
+    def test_visualizer_set_control_enabled_visible(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.set_layout(SliderView("radius", value=1.0))
+        server = self._mount(viz, monkeypatch)
+
+        viz.set_control_enabled("radius", False)
+        assert viz._resolve_control("radius").enabled is False
+        viz.set_control_visible("radius", False)
+        assert viz._resolve_control("radius").visible is False
+
+        assert [json.loads(m) for m in server.captured] == [
+            {"type": "control_state", "id": "radius", "enabled": False},
+            {"type": "control_state", "id": "radius", "visible": False},
+        ]
+
+    def test_set_control_enabled_unknown_id_noop(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        server = self._mount(viz, monkeypatch)
+        viz.set_control_enabled("nope", False)
+        assert server.captured == []
+
+
 class TestShowLayout:
     def test_show_layout_registers_and_opens(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)

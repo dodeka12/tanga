@@ -1,6 +1,6 @@
 // Tanga Viewer — the multi-line textarea DOM factory.
 
-import { registerControl, applyTooltip, attachDebouncedChange } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement, attachDebouncedChange } from '../controls-panel.js';
 
 export function createTextArea(ctrl) {
     const wrapper = document.createElement('div');
@@ -22,9 +22,11 @@ export function createTextArea(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'textarea',
+        el: wrapper,
         apply: (value) => { input.value = value == null ? '' : String(value); },
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

@@ -36,18 +36,33 @@ function applySizeSpecs(view, node) {
     view.preferredHeight = node.preferred_height ?? null;
 }
 
-/** Build a `View` tree from a serialized `view_layout` node. */
-export function buildViewTree(node, ws, reuse, newScenes) {
+/** Stamp the view's id + type and record it in the (optional) live registry. */
+function registerView(registry, view, node) {
+    view.viewId = node.id || null;
+    view.typeTag = node.type || null;
+    if (registry) registry.set(node.id, view);
+    return view;
+}
+
+/**
+ * Build (or reconcile) a `View` tree from a serialized `view_layout` node.
+ *
+ * `reuse` is the previous build's live views (keyed by id) — the single orphan
+ * registry.  A view whose id matches an entry is reused in place (re-parented,
+ * fields refreshed via `update`/`updateFromNode`); the entry is removed from
+ * `reuse` so any entries left after the build are orphaned views to destroy.
+ * `registry` collects every live view (reused + new) for the next build.
+ */
+export function buildViewTree(node, ws, reuse, registry, newScenes) {
     if (!node) return new View();
 
     if (node.type === 'split') {
         const split = new SplitView({ orientation: node.orientation, movable: node.movable });
-        split.viewId = node.id;
         applySizeSpecs(split, node);
         const children = node.children || [];
         const sizes = node.sizes || [];
         children.forEach((childNode, i) => {
-            const child = buildViewTree(childNode, ws, reuse, newScenes);
+            const child = buildViewTree(childNode, ws, reuse, registry, newScenes);
             // Initial splitter positions (`sizes`) → the child's preferred size
             // along the split axis.
             const sizeSpec = sizes[i] || null;
@@ -57,7 +72,7 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             }
             split.addChild(child);
         });
-        return split;
+        return registerView(registry, split, node);
     }
 
     if (node.type === 'stack') {
@@ -68,12 +83,11 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             align: node.align,
             justify: node.justify,
         });
-        stack.viewId = node.id;
         applySizeSpecs(stack, node);
         for (const childNode of node.children || []) {
-            stack.addChild(buildViewTree(childNode, ws, reuse, newScenes));
+            stack.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return stack;
+        return registerView(registry, stack, node);
     }
 
     if (node.type === 'group') {
@@ -92,12 +106,11 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             parent_id: node.parent_id,
             id: node.id,
         });
-        group.viewId = node.id;
         applySizeSpecs(group, node);
         for (const childNode of node.children || []) {
-            group.addChild(buildViewTree(childNode, ws, reuse, newScenes));
+            group.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return group;
+        return registerView(registry, group, node);
     }
 
     if (node.type === 'toolbar') {
@@ -108,12 +121,11 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             align: node.align,
             justify: node.justify,
         });
-        toolbar.viewId = node.id;
         applySizeSpecs(toolbar, node);
         for (const childNode of node.children || []) {
-            toolbar.addChild(buildViewTree(childNode, ws, reuse, newScenes));
+            toolbar.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return toolbar;
+        return registerView(registry, toolbar, node);
     }
 
     if (node.type === 'menu') {
@@ -124,48 +136,39 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             direction: node.direction,
             position: node.position,
         });
-        menu.viewId = node.id;
         applySizeSpecs(menu, node);
         for (const childNode of node.children || []) {
-            menu.addChild(buildViewTree(childNode, ws, reuse, newScenes));
+            menu.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return menu;
+        return registerView(registry, menu, node);
     }
 
     if (node.type === 'scene_view') {
         const sceneName = node.scene ?? '';
         const camView = node.camera_view || {};
         const camera = camView.camera || null;
-        const lock = camView.lock || null;
-        const navigation = camView.navigation || null;
-        const controls = camView.controls || null;
-        const viewport = camView.viewport || null;
-        const backgroundImage = camView.background_image || null;
-        let view = (reuse && reuse.get(sceneName)) || null;
-        if (view) {
+        const existing = (reuse && reuse.get(node.id)) || null;
+        let view;
+        if (existing) {
             // Reuse the existing scene pane so its WebGL context, objects and
             // camera survive a layout re-push; only the overlay chrome rebuilds.
-            reuse.delete(sceneName);
-            view.clearOverlays();
-            view.viewId = node.id || null;
-            view.setLock(lock);
-            view.setNavigation(navigation);
-            view.setControls(controls);
-            view.setViewport(viewport);
-            view.setBackgroundImage(backgroundImage);
-            view.setVisibilityFilter(node.hide || null, node.show || null);
-            applySizeSpecs(view, node);
+            view = existing;
+            view.updateFromNode(node);
         } else {
-            view = new ThreeJsView(sceneName, ws, camera, node.id || null, lock, navigation, controls, viewport);
-            view.setBackgroundImage(backgroundImage);
+            view = new ThreeJsView(
+                sceneName, ws, camera, node.id || null,
+                camView.lock || null, camView.navigation || null,
+                camView.controls || null, camView.viewport || null,
+            );
+            view.setBackgroundImage(camView.background_image || null);
             view.setVisibilityFilter(node.hide || null, node.show || null);
-            applySizeSpecs(view, node);
             if (newScenes) newScenes.push(sceneName);
         }
+        applySizeSpecs(view, node);
         for (const childNode of node.children || []) {
-            view.addOverlay(buildViewTree(childNode, ws, reuse, newScenes));
+            view.addOverlay(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return view;
+        return registerView(registry, view, node);
     }
 
     if (node.type === 'log_view') {
@@ -176,68 +179,118 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             show_date: node.show_date ?? false,
             show_utc_offset: node.show_utc_offset ?? false,
         });
-        view.viewId = node.id;
         applySizeSpecs(view, node);
         registerMessageView(view.messageId, view);
-        return view;
+        return registerView(registry, view, node);
     }
 
     let view;
+    const existing = (reuse && reuse.get(node.id)) || null;
     if (node.type === 'slider_view') {
-        view = new SliderView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            min: node.min, max: node.max, step: node.step, value: node.value,
-            variant: node.variant,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new SliderView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                min: node.min, max: node.max, step: node.step, value: node.value,
+                variant: node.variant,
+            });
+        }
     } else if (node.type === 'button_view') {
-        view = new ButtonView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            icon: node.icon, icon_only: node.icon_only,
-            variant: node.variant,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new ButtonView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                icon: node.icon, icon_only: node.icon_only,
+                variant: node.variant,
+            });
+        }
     } else if (node.type === 'dropdown_view') {
-        view = new DropdownView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            options: node.options, value: node.value, variant: node.variant,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new DropdownView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                options: node.options, value: node.value, variant: node.variant,
+            });
+        }
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
             id: node.id, value: node.value, root: node.root, accept: node.accept,
         });
     } else if (node.type === 'text_field_view') {
-        view = new TextFieldView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value, placeholder: node.placeholder,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new TextFieldView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                value: node.value, placeholder: node.placeholder,
+            });
+        }
     } else if (node.type === 'label_view') {
-        view = new LabelView({
-            id: node.id, value: node.value, font_size: node.font_size,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new LabelView({
+                id: node.id, value: node.value, font_size: node.font_size,
+            });
+        }
     } else if (node.type === 'markdown_view') {
-        view = new MarkdownView({
-            id: node.id, value: node.value,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new MarkdownView({
+                id: node.id, value: node.value,
+            });
+        }
     } else if (node.type === 'text_area_view') {
-        view = new TextAreaView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value, placeholder: node.placeholder, rows: node.rows,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new TextAreaView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                value: node.value, placeholder: node.placeholder, rows: node.rows,
+            });
+        }
     } else if (node.type === 'color_picker_view') {
-        view = new ColorPickerView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new ColorPickerView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                value: node.value,
+            });
+        }
     } else if (node.type === 'checkbox_view') {
-        view = new CheckboxView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            value: node.value, variant: node.variant,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new CheckboxView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                value: node.value, variant: node.variant,
+            });
+        }
     } else if (node.type === 'value_edit_view') {
-        view = new ValueEditView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            min: node.min, max: node.max, step: node.step,
-            digits: node.digits, value: node.value, editable: node.editable,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new ValueEditView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                min: node.min, max: node.max, step: node.step,
+                digits: node.digits, value: node.value, editable: node.editable,
+            });
+        }
     } else if (node.type === 'table_view') {
         view = new TableView({
             id: node.id, label: node.label, tooltip: node.tooltip,
@@ -254,18 +307,32 @@ export function buildViewTree(node, ws, reuse, newScenes) {
             sort: node.sort,
         });
     } else if (node.type === 'spacer') {
-        view = new SpacerView();
+        if (existing) {
+            view = existing;
+        } else {
+            view = new SpacerView();
+        }
     } else if (node.type === 'separator') {
-        view = new SeparatorView({
-            orientation: node.orientation,
-            spacing: node.spacing,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new SeparatorView({
+                orientation: node.orientation,
+                spacing: node.spacing,
+            });
+        }
     } else {
         view = new View();
     }
-    view.viewId = node.id;
     applySizeSpecs(view, node);
-    return view;
+    // A control serialized with `visible: false` starts collapsed (the same
+    // `View.setHidden` the runtime `control_state` path uses); non-control nodes
+    // never carry a `visible` field, so this is a no-op for them.
+    if (node.visible !== undefined && typeof view.setHidden === 'function') {
+        view.setHidden(!node.visible);
+    }
+    return registerView(registry, view, node);
 }
 
 /** Walk a built tree and return scene → {sceneViews} (only scenes are routed). */

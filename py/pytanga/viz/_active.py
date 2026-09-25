@@ -234,6 +234,7 @@ class ActSceneObject:
         )
         self._handler_enabled = True
         self._click_enabled = True
+        self._enabled = True
         self._cursor: str | None = cursor
         self._viz_handle: VizSceneHandle | None = None
         self._entity_id: str = ""
@@ -263,6 +264,7 @@ class ActSceneObject:
         if self._viz_handle is None:
             return
         cfg = self.interaction_config
+        cfg.enabled = self._enabled
         self._viz_handle.set_interaction(self._entity_id, cfg)
         self._viz_handle.on_interaction(
             self._entity_id, InteractionEventType.DRAG_MOVE, self._on_drag
@@ -389,6 +391,23 @@ class ActSceneObject:
             self._viz_handle.flush()
 
     # ── Enable / disable individual handlers ───────────────
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable or disable all interaction on this object.
+
+        When disabled the frontend captures no hover/drag/click/scroll events
+        for this object (``InteractionConfig.enabled=False``).
+        """
+        self._enabled = enabled
+        self.refresh_interaction()
+
+    def enable(self) -> None:
+        """Re-enable interaction on this object."""
+        self.set_enabled(True)
+
+    def disable(self) -> None:
+        """Disable interaction on this object."""
+        self.set_enabled(False)
 
     def set_handler_enabled(self, enabled: bool) -> None:
         """Enable or disable the general drag handler (re-registers triggers)."""

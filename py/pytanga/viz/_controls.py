@@ -273,6 +273,14 @@ class Control:
     """The control kind string (``"slider"``, ``"button"``, …).  Declared on the
     base so :meth:`serialize` can read it; every concrete control overrides it."""
 
+    enabled: bool = True
+    """Whether the control is interactive.  ``False`` greys it out (rendered but
+    not responding)."""
+
+    visible: bool = True
+    """Whether the control is rendered at all.  ``False`` hides it without
+    removing it from the layout."""
+
     def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
         """Apply an incoming frontend *event* and return the dispatch to run.
 
@@ -329,6 +337,10 @@ class Control:
         }
         if self.tooltip:
             result["tooltip"] = self.tooltip
+        if not self.enabled:
+            result["enabled"] = False
+        if not self.visible:
+            result["visible"] = False
         result.update(self._fields())
         return result
 

@@ -27,3 +27,17 @@ repos:
         language: system
         pass_filenames: false
         files: ^(py/pytanga/viz/templates/.*\.(js|glsl)|py/pytanga/viz/export/_bootstrap/.*\.py)$
+
+      - id: js-test
+        name: run frontend JS unit tests
+        entry: node --test 'js/dev/tests/*.test.mjs'
+        language: system
+        pass_filenames: false
+        files: ^(py/pytanga/viz/templates/.*\.js|js/dev/.*\.(mjs|js))$
+
+      - id: js-syntax
+        name: check frontend JS syntax
+        entry: node js/dev/tests/check-syntax.mjs
+        language: system
+        pass_filenames: false
+        files: ^(py/pytanga/viz/templates/.*\.js|js/dev/.*\.(mjs|js))$

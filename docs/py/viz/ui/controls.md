@@ -486,6 +486,28 @@ a `control_update`, so the browser reflects the change immediately. `view.contro
 exposes the raw model (`get_value` / `set_value`, and `Table` `undo` / `redo` /
 `clear_history`).
 
+## Enable / disable / hide a control
+
+Every control has an `enabled` and a `visible` flag (both default `True`).  A
+disabled control is greyed out and stops responding; a hidden control is removed
+from view but stays in the layout:
+
+```python
+radius_view.disable()          # grey out
+radius_view.enable()           # re-enable
+radius_view.hide()             # remove from view (no layout re-push)
+radius_view.show()             # show again
+
+# or via the visualizer, by control id (also works for dialog/banner controls):
+viz.set_control_enabled("radius", False)
+viz.set_control_visible("radius", False)
+```
+
+The grey-out styling uses the `--tanga-disabled-opacity` theme token (see
+[Themes](themes.md)).  See
+[Runtime Updates](runtime-updates.md#updating-control-state-enable-disable-hide)
+for the wire behaviour.
+
 ## Example
 
 - `py/examples/viz/ui/controls/all_controls.py` — one of every control kind in

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "09901580c8e30efd0a653b71256763da87183f031235e7d09368d59421a8fd58",
+  "generator_sha256": "3115957bdf9a9c2dcef5150f6bb1b1f98d6bfcf643c2ca2906a1859823f74bd4",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -184,11 +184,15 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image.js",
-      "sha256": "86d08c5946919f8721c7f092d4f73e449875cb89880fe508a72debb0cc39db57"
+      "sha256": "01ce5ce6f3501e3ab3f7c1f3134f51ec7c23f3677f615d20bc77d600df36c6fa"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-background.js",
-      "sha256": "c9a66641df00cf30e9c17d9ce116205a8fbe3d397ea7f938904a10a6fcc03d7e"
+      "sha256": "286ebd7c59a43e4649bf7a19a79605fd838920be52d3c1706abe1c54ef3e2b12"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/image-tiles.js",
+      "sha256": "6ca615037829b1f456cb38b0cd49cb389e1729bfc03ddb5924c01a12eacca330"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
@@ -232,7 +236,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/scene-builder.js",
-      "sha256": "72a363191f1c9924a2a9c8f7185429555690fd039773f5464dd3f0e9ddec1a31"
+      "sha256": "29d4e60fb03ec61c8cc91ea38fd2ead3025b8420e96d58b1699e9754c04b5fca"
     },
     {
       "path": "py/pytanga/viz/templates/fit_camera.js",
@@ -240,7 +244,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/image-frames.js",
-      "sha256": "d9da05e573b189a25a7585bd178983b6f3cbbf52b0cd01ad0138a4ac62755fff"
+      "sha256": "0c278c003ce8e097999a9902429a4f6f731f7f0b3e037f664197b77cd9f62a9c"
     },
     {
       "path": "py/pytanga/viz/templates/sdf/objects/transform.js",
@@ -271,6 +275,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "b0a5722e70ec3f0fd1d7eec7bf6e998c0f38d09cc1c5ef1f35acf41260740828",
-  "bundle_sha256": "1b69521d458aae104c8d514e0089495acc5461892681eced5882cb7856458237"
+  "fingerprint_sha256": "8dc3c620535b554fc297c2affbf5b50057976c5676edf1835925da5338a65330",
+  "bundle_sha256": "f5371691e0c596588c868683ab60c2a2ffb5da3fac0593dd6975bb437b86bcf8"
 }

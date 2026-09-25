@@ -130,6 +130,10 @@ class VizObjectRef:
     def opacity(self, value: Any) -> None:
         self._node.set_opacity(value)
 
+    def set_visible(self, visible: bool) -> None:
+        """Set this object's visibility (marks the ``visible`` aspect)."""
+        self._handle.set_visible(self.id, visible)
+
     @property
     def texture_label(self) -> Any:
         node = self._node

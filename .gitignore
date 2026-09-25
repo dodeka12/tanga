@@ -55,3 +55,6 @@ site/
 .dep-docs/
 .dep-examples/
 .cache/
+
+# JS / Node toolchain (js/dev/)
+node_modules/

@@ -282,6 +282,9 @@
             "Axes Overlay 2D": "py/examples/viz/camera/axes_overlay_2d.md"
           },
           {
+            "Camera Stream": "py/examples/viz/camera/camera_stream.md"
+          },
+          {
             "Fit 2D": "py/examples/viz/camera/fit_2d.md"
           },
           {
@@ -289,6 +292,9 @@
           },
           {
             "Pinhole Calibrated": "py/examples/viz/camera/pinhole_calibrated.md"
+          },
+          {
+            "Pinhole Calibrated Streaming": "py/examples/viz/camera/pinhole_calibrated_streaming.md"
           },
           {
             "Pinhole Camera": "py/examples/viz/camera/pinhole_camera.md"
@@ -338,6 +344,9 @@
             "Animated Camera 3D": "py/examples/viz/export/animated_camera_3d.md"
           },
           {
+            "Animated Image Stream": "py/examples/viz/export/animated_image_stream.md"
+          },
+          {
             "Export Delivery": "py/examples/viz/export/export_delivery.md"
           },
           {
@@ -345,6 +354,9 @@
           },
           {
             "Html Export": "py/examples/viz/export/html_export.md"
+          },
+          {
+            "Image Export": "py/examples/viz/export/image_export.md"
           },
           {
             "Screenshot": "py/examples/viz/export/screenshot.md"
@@ -360,10 +372,19 @@
             "Custom Shader Rgb Rotate": "py/examples/viz/image/custom_shader_rgb_rotate.md"
           },
           {
+            "Huge Image": "py/examples/viz/image/huge_image.md"
+          },
+          {
             "Image Canvas": "py/examples/viz/image/image_canvas.md"
           },
           {
+            "Raw Image": "py/examples/viz/image/raw_image.md"
+          },
+          {
             "Rectangle Labeling": "py/examples/viz/image/rectangle_labeling.md"
+          },
+          {
+            "Standard Image": "py/examples/viz/image/standard_image.md"
           }
         ]
       },
@@ -573,6 +594,9 @@
               },
               {
                 "Group View Icons": "py/examples/viz/ui/controls/group_view_icons.md"
+              },
+              {
+                "Hide Sphere": "py/examples/viz/ui/controls/hide_sphere.md"
               },
               {
                 "Table Data": "py/examples/viz/ui/controls/table_data.md"

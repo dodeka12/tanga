@@ -40,6 +40,7 @@ export async function buildSceneObject(obj, scene, registry) {
     if (!mesh) return null;
 
     const node = wrapWithNodeTransform(mesh, obj.transform);
+    node.visible = (obj.visible !== false);
     const parent = obj.parent_id ? registry.get(obj.parent_id) : null;
     if (parent && parent.obj) {
         parent.obj.add(node);

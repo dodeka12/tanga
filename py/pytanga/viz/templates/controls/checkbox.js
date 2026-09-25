@@ -1,6 +1,6 @@
 // Tanga Viewer — the checkbox DOM factory.
 
-import { registerControl, applyTooltip, sendControlEvent } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement, sendControlEvent } from '../controls-panel.js';
 
 export function createCheckbox(ctrl) {
     const wrapper = document.createElement('div');
@@ -32,9 +32,11 @@ export function createCheckbox(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'checkbox',
+        el: wrapper,
         apply: (value) => { input.checked = !!value; },
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }

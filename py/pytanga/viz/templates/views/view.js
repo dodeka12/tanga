@@ -29,6 +29,7 @@ export class View extends EventTarget {
         this._maxHeight = null;
         this._prefWidth = null;
         this._prefHeight = null;
+        this._hidden = false;
 
         // Measured extent (authoritative: read back from the ResizeObserver).
         this._width = 0;
@@ -105,6 +106,7 @@ export class View extends EventTarget {
     }
 
     minSizePx(axis, available) {
+        if (this._hidden) return 0;
         const s = axis === 'x' ? this._minWidth : this._minHeight;
         return s ? s.resolve(available, 0) : 0;
     }
@@ -113,8 +115,25 @@ export class View extends EventTarget {
         return s ? s.resolve(available, null) : null;
     }
     preferredPx(axis, available) {
+        if (this._hidden) return null;
         const s = axis === 'x' ? this._prefWidth : this._prefHeight;
         return s ? s.resolve(available, null) : null;
+    }
+
+    /**
+     * Collapse (or restore) this view's layout footprint.
+     *
+     * When hidden, the view is removed from flow (`display: none`) and reports a
+     * zero minimum / no preferred size, so enclosing Stack/Split views re-layout
+     * as if it were absent — while keeping its original size constraints intact
+     * for when it is shown again.
+     */
+    setHidden(hidden) {
+        if (this._hidden === hidden) return;
+        this._hidden = hidden;
+        this.el.style.display = hidden ? 'none' : '';
+        this.emit('constraintschange', { fields: ['minWidth', 'minHeight', 'maxWidth', 'maxHeight'] });
+        this.emit('preferredchange', { fields: ['preferredWidth', 'preferredHeight'] });
     }
 
     get fixedX() {
@@ -157,4 +176,6 @@ export class View extends EventTarget {
 
     _onExtentChanged(width, height) {}
     _onMounted() {}
+    /** Refresh fields from a serialized node (no-op for views without state). */
+    update() {}
 }

@@ -24,6 +24,18 @@ All active elements inherit from `ActSceneObject` and share:
 | Self-contained flush | Default handler calls `update()` + `flush()` after moving |
 | Labels | `viz.add(ap, label=...)` creates an attached label, removed together with the entity |
 
+## Enable / Disable
+
+Every active element can be disabled at runtime — it stops responding to
+hover/drag/click/scroll (the interaction config is re-pushed with
+`enabled=False`):
+
+```python
+ap.disable()          # stop interaction
+ap.enable()           # re-enable
+ap.set_enabled(False) # explicit
+```
+
 ## Usage Pattern
 
 ```python

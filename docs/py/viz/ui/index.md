@@ -13,6 +13,7 @@ theming, and the read-only display views.
 | [Control Views (xxxView)](control-views.md) | The declarative `xxxView` layout/control classes and their constructor signatures |
 | [Layouts — Split Views & Controls](layouts.md) | `SplitView`/`SceneView`/`GroupView` panes and control views inside a `VisualizerApp` |
 | [Split Views](split-views.md) | The view hierarchy, `Size` units, splitters, overlays, per-pane cameras |
+| [Runtime Updates](runtime-updates.md) | Update a layout, background image, or image view at runtime without rebuilding the UI |
 | [Menus](menus.md) | `MenuView` — dropdown vs bar, nested sub-menus, global vs per-pane |
 | [Dialogs](dialogs.md) | `show_dialog`, the `Dialog` parameters, `FileChooserDialog` |
 | [Display Views](display-views.md) | `LabelView` / `MarkdownView` / `LogView` read-only content views |

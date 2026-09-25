@@ -1,6 +1,6 @@
 // Tanga Viewer — the read-only rendered-markdown DOM factory (marked + KaTeX).
 
-import { registerControl, applyTooltip } from '../controls-panel.js';
+import { registerControl, applyTooltip, applyControlStateToElement } from '../controls-panel.js';
 import { sendLog } from '../events.js';
 
 function _renderMarkdown(el, text) {
@@ -42,9 +42,11 @@ export function createMarkdown(ctrl) {
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'markdown',
+        el: wrapper,
         apply: (value) => _renderMarkdown(body, value),
     });
     applyTooltip(wrapper, ctrl);
+    applyControlStateToElement(wrapper, ctrl);
 
     return wrapper;
 }
