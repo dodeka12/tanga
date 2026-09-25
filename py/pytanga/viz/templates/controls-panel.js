@@ -63,6 +63,13 @@ export function applyControlStateToElement(wrapper, state) {
         wrapper.classList.toggle('tanga-control-disabled', !enabled);
         wrapper.querySelectorAll('input, select, textarea, button').forEach((el) => {
             el.disabled = !enabled;
+            // Chromium does not fully re-arm a native `<input type="range">`
+            // after `disabled` is cleared: the first thumb drag advances a
+            // single step, then stops until the track is clicked.  Re-insert
+            // the node so the browser rebuilds the slider's drag state.
+            if (enabled && el.type === 'range' && el.parentNode) {
+                el.parentNode.insertBefore(el, el.nextSibling);
+            }
         });
     }
     if (state.visible !== undefined) {
