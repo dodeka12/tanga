@@ -668,6 +668,10 @@ async function handleMessage(msg) {
 
     if (msg.type === 'control_state') {
         applyControlState(msg.id, msg);
+        if (msg.visible !== undefined) {
+            const host = _viewRegistry.get(msg.id);
+            if (host && typeof host.setHidden === 'function') host.setHidden(!msg.visible);
+        }
         return;
     }
 

@@ -326,6 +326,12 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
         view = new View();
     }
     applySizeSpecs(view, node);
+    // A control serialized with `visible: false` starts collapsed (the same
+    // `View.setHidden` the runtime `control_state` path uses); non-control nodes
+    // never carry a `visible` field, so this is a no-op for them.
+    if (node.visible !== undefined && typeof view.setHidden === 'function') {
+        view.setHidden(!node.visible);
+    }
     return registerView(registry, view, node);
 }
 

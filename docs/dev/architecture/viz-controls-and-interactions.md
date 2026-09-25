@@ -385,7 +385,12 @@ changed fields), pushed by `LayoutHost._push_control_state` and handled in
 rendered control in `_controlRegistry` (each factory stores `el: wrapper`) and
 `applyControlStateToElement` toggles the `.tanga-control-disabled` class, the
 native `disabled` attribute on `input/select/textarea/button`, and
-`display:none`.  Disabled grey-out uses the theme tokens
+`display:none`.  For a layout `ControlView`, `visible=false` also collapses the
+hosting view: `viewer.js` looks it up in `_viewRegistry` (the control id doubles
+as the `ControlView`'s stable view id) and calls `View.setHidden(true)`, which
+removes it from flow and reports zero minimum / no preferred size so the
+enclosing Stack/Split views re-layout; the initial `visible:false` is applied the
+same way in `build.js`.  Disabled grey-out uses the theme tokens
 `--tanga-disabled-opacity` / `--tanga-disabled-fg` (overridable per theme).
 
 ## Follow-ups
