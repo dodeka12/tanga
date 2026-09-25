@@ -157,8 +157,10 @@ def _build_offline_bundle(work: Path, three_dir: Path) -> Path:
         return out
 
     entry.write_text(lib, encoding="utf-8")
+    # esbuild ≥ 0.16 ships a native binary (`bin/esbuild`), not a JS script, so it
+    # must be run directly — running the ELF/Mach-O binary through Node.js fails
+    # with a SyntaxError.
     cmd = [
-        find_node(),
         find_esbuild(),
         "--bundle",
         "--format=esm",
