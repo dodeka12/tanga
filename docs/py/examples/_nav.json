@@ -602,6 +602,9 @@
                 "Hide Sphere": "py/examples/viz/ui/controls/hide_sphere.md"
               },
               {
+                "Progress Bar": "py/examples/viz/ui/controls/progress_bar.md"
+              },
+              {
                 "Table Data": "py/examples/viz/ui/controls/table_data.md"
               },
               {

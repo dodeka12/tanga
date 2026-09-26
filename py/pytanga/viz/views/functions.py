@@ -15,6 +15,7 @@ from .._controls import (
     Control,
     Dropdown,
     FileChooser,
+    ProgressBar,
     Slider,
     Table,
     TextArea,
@@ -28,6 +29,7 @@ from .control_views import (
     ColorPickerView,
     DropdownView,
     FileChooserView,
+    ProgressBarView,
     SliderView,
     TableView,
     TextAreaView,
@@ -166,6 +168,16 @@ def control_to_view(ctrl: Control) -> ControlView[Any]:
             on_cell_select=ctrl.on_cell_select,
             on_change=ctrl.on_change,
             on_enum_options=ctrl.on_enum_options,
+        )
+    elif isinstance(ctrl, ProgressBar):
+        view = ProgressBarView(
+            ctrl.id,
+            title=ctrl.title,
+            value=ctrl.value,
+            total=ctrl.total,
+            indeterminate=ctrl.indeterminate,
+            text=ctrl.text,
+            tooltip=ctrl.tooltip,
         )
     else:
         raise TypeError(f"Unknown control kind: {type(ctrl).__name__}")

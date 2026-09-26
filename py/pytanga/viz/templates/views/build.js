@@ -17,6 +17,7 @@ import { TextFieldView } from './text-field-view.js';
 import { MessageView, registerMessageView } from './message-view.js';
 import { LabelView } from './label-view.js';
 import { MarkdownView } from './markdown-view.js';
+import { ProgressBarView } from './progress-bar-view.js';
 import { TextAreaView } from './text-area-view.js';
 import { ColorPickerView } from './color-picker-view.js';
 import { CheckboxView } from './checkbox-view.js';
@@ -249,6 +250,16 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
         } else {
             view = new MarkdownView({
                 id: node.id, value: node.value,
+            });
+        }
+    } else if (node.type === 'progress_bar_view') {
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new ProgressBarView({
+                id: node.id, title: node.title, value: node.value,
+                total: node.total, indeterminate: node.indeterminate, text: node.text,
             });
         }
     } else if (node.type === 'text_area_view') {

@@ -178,6 +178,8 @@ uv run python py/examples/<path>.py
 
 - **contrast** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
+- **control** — [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md)
+
 - **control group** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **control update** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
@@ -226,7 +228,9 @@ uv run python py/examples/<path>.py
 
 - **detached** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
 
-- **dialog** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md)
+- **determinate** — [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md)
+
+- **dialog** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md)
 
 - **Dilator** — [Full conformal (N3) operators: Rotors, Motors, Inversions](ga/geometry/n3_operators.md), [Rotor, Translator, Motor, Dilator visualization](viz/entities/operators.md)
 
@@ -393,6 +397,8 @@ uv run python py/examples/<path>.py
 - **ImageCanvas** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **ImageData** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+
+- **indeterminate** — [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md)
 
 - **initialization** — [The MV class: initialization, operators, and named methods](ga/algebra/mv_demo.md)
 
@@ -627,6 +633,8 @@ uv run python py/examples/<path>.py
 - **product tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **progress** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
+- **progress bar** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md)
 
 - **project_onto** — [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md)
 
@@ -886,7 +894,7 @@ uv run python py/examples/<path>.py
 
 - **Visualizer** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md)
 
-- **VisualizerApp** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md)
+- **VisualizerApp** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md)
 
 - **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 

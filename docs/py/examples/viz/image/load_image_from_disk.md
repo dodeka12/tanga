@@ -1,6 +1,6 @@
 # Open an image from disk via a File → Open… menu
 
-**Keywords:** image · ImageCanvas · menu · FileChooserDialog · split view · PIL · file open · contrast · EXR · HDR · pyramid · tiled · progress
+**Keywords:** image · ImageCanvas · menu · FileChooserDialog · split view · PIL · file open · contrast · EXR · HDR · pyramid · tiled · progress · progress bar · dialog
 
 Shows a red→green→blue placeholder in an `~pytanga.viz.ImageCanvas`
 inside a split-view layout.  A `mode="bar"` `~pytanga.viz.MenuView`
@@ -12,7 +12,9 @@ canvas, while a `~pytanga.viz.LogView` pane reports the path and
 dimensions.
 
 Large images (longer side > 4096 px or > 32 MB) are served automatically as an
-on-demand tile pyramid, and EXR/HDR loads report their progress to the log.
+on-demand tile pyramid.  While an image loads, a non-dismissable dialog shows a
+progress bar — indeterminate for PIL, determinate for EXR/HDR, which also report
+their progress to the log.
 
 Hold `Ctrl` and drag with the left mouse button to adjust the image's
 brightness (vertical) and contrast (horizontal).
@@ -45,14 +47,16 @@ canvas, while a :class:`~pytanga.viz.LogView` pane reports the path and
 dimensions.
 
 Large images (longer side > 4096 px or > 32 MB) are served automatically as an
-on-demand tile pyramid, and EXR/HDR loads report their progress to the log.
+on-demand tile pyramid.  While an image loads, a non-dismissable dialog shows a
+progress bar — indeterminate for PIL, determinate for EXR/HDR, which also report
+their progress to the log.
 
 Hold ``Ctrl`` and drag with the left mouse button to adjust the image's
 brightness (vertical) and contrast (horizontal).
 
 Run with:  uv run python py/examples/viz/image/load_image_from_disk.py
 
-Keywords: image, ImageCanvas, menu, FileChooserDialog, split view, PIL, file open, contrast, EXR, HDR, pyramid, tiled, progress
+Keywords: image, ImageCanvas, menu, FileChooserDialog, split view, PIL, file open, contrast, EXR, HDR, pyramid, tiled, progress, progress bar, dialog
 """
 
 from __future__ import annotations
@@ -74,6 +78,8 @@ from pytanga.viz import (
     MenuView,
     ModifierKey,
     MouseButton,
+    ProgressBarView,
+    Size,
     SplitView,
     StackView,
     Visualizer,
@@ -143,17 +149,44 @@ _dialog_id: str | None = None
 
 async def _on_file(path: str, _event: ControlEvent) -> None:
     loop = asyncio.get_running_loop()
+
+    # A non-dismissable dialog shows a progress bar while the image loads.  It
+    # starts indeterminate (the size isn't known yet) and, for EXR/HDR, switches
+    # to determinate once the reader reports progress fractions.
+    progress = ProgressBarView(
+        "load_progress",
+        title=f"Loading {Path(path).name}…",
+        indeterminate=True,
+        text="Please wait…",
+    )
+    dialog_id = await viz.show_dialog_async(
+        progress,
+        title="Loading image",
+        dismissable=False,
+        width=Size.px(360),
+    )
+
     last_tens = -1
 
     def _report_progress(fraction: float) -> None:
         nonlocal last_tens
         tens = int(fraction * 10)
-        if tens != last_tens:
-            last_tens = tens
-            loop.call_soon_threadsafe(
-                log.log,
-                {"message": f"Loading {path}… {int(fraction * 100)}%", "level": "info"},
-            )
+        if tens == last_tens:
+            return
+        last_tens = tens
+        percent = int(fraction * 100)
+
+        def _apply() -> None:
+            if progress.control.indeterminate:
+                progress.set_indeterminate(False)
+                progress.set_total(100)
+            progress.set_progress(percent, f"{percent}%")
+
+        loop.call_soon_threadsafe(_apply)
+        loop.call_soon_threadsafe(
+            log.log,
+            {"message": f"Loading {path}… {percent}%", "level": "info"},
+        )
 
     try:
         log.log({"message": f"Loading {path}…", "level": "info"})
@@ -172,6 +205,8 @@ async def _on_file(path: str, _event: ControlEvent) -> None:
             )
     except Exception as exc:  # noqa: BLE001 - surface any load failure in the pane
         log.log({"message": f"Failed to load {path}: {exc}", "level": "error"})
+    finally:
+        viz.remove_dialog(dialog_id)
 
 
 async def _on_open(_value: Any, _event: ControlEvent) -> None:
