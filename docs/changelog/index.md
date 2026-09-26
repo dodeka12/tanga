@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Since 2.11.0] — 2026-09-26
+- Themable `ProgressBarView` control (determinate + indeterminate modes, title + status text) · non-dismissable load-progress dialog in `load_image_from_disk.py` · examples + docs
+→ [Details](2026/09/26_f4e0a02c4.md)
+
+## [Since 2.11.0] — 2026-09-26
 - Dependency-free HDR/EXR readers (`read_exr`/`read_hdr`) · `FileChooserDialog` file chooser · automatic image tiling + load progress · fast PIZ decoding (numpy + compiled `binding_piz`) · float32/uint16 tiles stream lossless zlib into a float texture
 - Bug fixes: tiled float PNG crash · pyramid level selection · JPEG orientation · image value-range reset · minification filtering · relative brightness/contrast drag
 → [Details](2026/09/26_f3aaa677b.md)
