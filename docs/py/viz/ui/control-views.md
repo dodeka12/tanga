@@ -3,7 +3,8 @@
 `pytanga.viz` controls are the **declarative `xxxView` classes** — `SliderView`,
 `DropdownView`, `ButtonView`, `FileChooserView`, `TextFieldView`, `TextAreaView`,
 `ColorPickerView`, `CheckboxView`, `ValueEditView`, `TableView`, `LabelView`,
-and `MarkdownView`.  Build a view, place it inside a `GroupView`/`StackView` as
+`MarkdownView`, and `ProgressBarView`.  Build a view, place it inside a
+`GroupView`/`StackView` as
 a pane of a split-view layout (or mount it with `viz.add(view)`), and its value
 flows back through an `on_change`/`on_click` handler (registered automatically
 when the layout is set).
@@ -432,6 +433,34 @@ ValueEditView(
     **kwargs,
 )
 ```
+
+### ProgressBarView
+
+A read-only progress indicator; `_node_type` is `"progress_bar_view"`.  With a
+`total` it shows a determinate bar (`value` / `total`); with
+`indeterminate=True` it animates.  `title` sits above the bar and `text` below
+it.  It carries no `on_change` handler — update it from the
+backend via `set_progress(value, text=None)`, `set_text(text)`,
+`set_total(total)`, `set_indeterminate(on=True)`, `start()` / `stop()` /
+`reset()`, or the generic `view.set_value(...)`.
+
+```python
+ProgressBarView(
+    cid,
+    *,
+    title="",
+    value=0.0,
+    total=0,
+    indeterminate=False,
+    text="",
+    tooltip="",
+    **kwargs,
+)
+```
+
+See [Controls](controls.md#progressbarview) and the
+[`progress_bar.py`](https://github.com/dodeka12/tanga/blob/main/py/examples/viz/ui/controls/progress_bar.py)
+example.
 
 ### TableView
 

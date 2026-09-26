@@ -1731,6 +1731,66 @@ class Markdown(Control):
     value: str = ""
 
 
+@dataclass
+class ProgressBar(Control):
+    """A read-only progress indicator with determinate and indeterminate modes.
+
+    ``indeterminate`` selects the mode: ``True`` renders an animated
+    "something is running" bar; ``False`` renders a determinate bar that fills
+    to ``value / total`` (empty when ``total <= 0``) with a percentage readout.
+    ``title`` is shown above the bar and ``text`` (when non-empty) below it.
+    Updated from the backend via :meth:`set_value` or the
+    :class:`~pytanga.viz.ProgressBarView` push methods.
+    """
+
+    kind: str = "progress"
+
+    def _fields(self) -> dict[str, Any]:
+        return {
+            "title": self.title,
+            "value": self.value,
+            "total": self.total,
+            "indeterminate": self.indeterminate,
+            "text": self.text,
+        }
+
+    def set_value(self, value: Any) -> None:
+        """Set progress from a bare number or a dict of fields.
+
+        A dict may carry any subset of ``title`` / ``value`` / ``total`` /
+        ``indeterminate`` / ``text``; a bare number sets ``value`` only.
+        """
+        if isinstance(value, dict):
+            if "title" in value:
+                self.title = str(value["title"])
+            if "value" in value:
+                self.value = float(value["value"])
+            if "total" in value:
+                self.total = int(value["total"])
+            if "indeterminate" in value:
+                self.indeterminate = bool(value["indeterminate"])
+            if "text" in value:
+                self.text = str(value["text"])
+        else:
+            self.value = float(value)
+
+    def get_value(self) -> dict[str, Any]:
+        """Return the full progress state as a dict for ``control_update``."""
+        return {
+            "title": self.title,
+            "value": self.value,
+            "total": self.total,
+            "indeterminate": self.indeterminate,
+            "text": self.text,
+        }
+
+    title: str = ""
+    value: float = 0.0
+    total: int = 0
+    indeterminate: bool = False
+    text: str = ""
+
+
 # ── ControlHandler registry ─────────────────────────────────────────
 
 

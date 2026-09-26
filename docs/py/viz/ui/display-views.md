@@ -49,3 +49,5 @@ the browser.
 ## See Also
 
 - [Split Views](split-views.md) — placing display views in a layout
+- [Controls](controls.md#progressbarview) — `ProgressBarView`, a read-only
+  determinate/indeterminate progress indicator

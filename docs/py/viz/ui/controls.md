@@ -3,7 +3,8 @@
 `pytanga.viz` controls are **declarative `*View` classes** — `SliderView`,
 `DropdownView`, `ButtonView`, `CheckboxView`, `TextFieldView`, `TextAreaView`,
 `ColorPickerView`, `ValueEditView`, `TableView`, `FileChooserView`,
-`LabelView`, and `MarkdownView`.  There are no `add_*` facade methods: build a
+`LabelView`, `MarkdownView`, and `ProgressBarView`.  There are no `add_*`
+facade methods: build a
 view, give it a unique `id` and an **async** handler, and place it in a
 `GroupView`/`StackView` inside a layout (or mount it with `viz.add(view)`).
 
@@ -421,6 +422,27 @@ Read-only display views: `LabelView("id", value="…", font_size=14)` renders a
 single text line and `MarkdownView("id", value="…")` renders markdown with
 optional KaTeX math.  Both carry a settable `value` (use `view.set_value(...)`).
 See [Control Views](control-views.md) for the full signatures.
+
+## `ProgressBarView`
+
+A read-only progress indicator with two modes.  Give it a `total` and advance
+`value` for a **determinate** bar (filled fraction `value / total` with a
+percent readout); set `indeterminate=True` for an **animated** bar that just
+shows "something is running".  `title` renders above the bar and `text` renders
+a status line below it:
+
+```python
+bar = ProgressBarView("download", title="Downloading…", total=100, text="Idle")
+bar.set_progress(42, "Step 42/100")   # advance + status text
+bar.set_text("Done")
+bar.set_indeterminate(True)           # switch to the animated bar
+```
+
+Update it in place via `set_progress(value, text=None)`, `set_text(text)`,
+`set_total(total)`, `set_indeterminate(on=True)`, `start()` / `stop()` /
+`reset()`, or the generic `view.set_value(...)` (see
+[Control Views](control-views.md#runtime-helpers)).  See
+`py/examples/viz/ui/controls/progress_bar.py`.
 
 ## Grouping (`GroupView`)
 

@@ -21,6 +21,7 @@ _COMPONENTS = [
     "controls/text-area.css",
     "controls/color-picker.css",
     "controls/value-edit.css",
+    "controls/progress-bar.css",
     "controls/file-chooser.css",
     "controls/table.css",
     "views/group-view.css",

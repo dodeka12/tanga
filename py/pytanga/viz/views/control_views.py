@@ -18,6 +18,7 @@ from .._controls import (
     ControlHandler,
     Label,
     Markdown,
+    ProgressBar,
     Slider,
     Table,
     TextArea,
@@ -546,6 +547,97 @@ class MarkdownView(ControlView[Markdown]):
             tooltip=self.tooltip,
             value=value,
         )
+
+
+class ProgressBarView(ControlView[ProgressBar]):
+    """A determinate/indeterminate progress bar control as a view.
+
+    ``indeterminate=True`` renders an animated bar; otherwise the determinate
+    bar fills to ``value / total`` (empty when ``total <= 0``).  ``title`` is
+    shown above the bar and ``text`` (when non-empty) below it.
+    """
+
+    _node_type = "progress_bar_view"
+
+    def __init__(
+        self,
+        cid: str,
+        *,
+        title: str = "",
+        value: float = 0.0,
+        total: int = 0,
+        indeterminate: bool = False,
+        text: str = "",
+        tooltip: str = "",
+        size: SizeSpec = None,
+        preferred_width: SizeSpec = Size.px(220),
+        preferred_height: SizeSpec = None,
+        min_width: SizeSpec = Size.px(160),
+        min_height: SizeSpec = Size.px(40),
+        max_width: SizeSpec = None,
+        max_height: SizeSpec = None,
+    ) -> None:
+        super().__init__(
+            cid,
+            tooltip=tooltip,
+            size=size,
+            preferred_width=preferred_width,
+            preferred_height=preferred_height,
+            min_width=min_width,
+            min_height=min_height,
+            max_width=max_width,
+            max_height=max_height,
+        )
+        self.control = ProgressBar(
+            id=cid,
+            label="",
+            tooltip=self.tooltip,
+            title=title,
+            value=float(value),
+            total=int(total),
+            indeterminate=bool(indeterminate),
+            text=text,
+        )
+
+    def _push_value(self) -> None:
+        """Push the full progress state to the browser (if mounted)."""
+        if self._push is not None:
+            self._push(self.id, self.control.get_value())
+
+    def set_text(self, text: str) -> None:
+        """Set the status line below the bar and push it."""
+        self.control.text = str(text)
+        self._push_value()
+
+    def set_total(self, total: int) -> None:
+        """Set the total step count and push it."""
+        self.control.total = int(total)
+        self._push_value()
+
+    def set_indeterminate(self, on: bool = True) -> None:
+        """Toggle the indeterminate animation and push it."""
+        self.control.indeterminate = bool(on)
+        self._push_value()
+
+    def set_progress(self, value: float, text: str | None = None) -> None:
+        """Set the progress value (and optionally the status text) and push."""
+        self.control.value = float(value)
+        if text is not None:
+            self.control.text = str(text)
+        self._push_value()
+
+    def start(self) -> None:
+        """Switch to the indeterminate animation."""
+        self.set_indeterminate(True)
+
+    def stop(self) -> None:
+        """Stop the indeterminate animation."""
+        self.set_indeterminate(False)
+
+    def reset(self) -> None:
+        """Reset progress to zero and push it."""
+        self.control.value = 0.0
+        self._push_value()
 
 
 class TableView(ControlView[Table]):

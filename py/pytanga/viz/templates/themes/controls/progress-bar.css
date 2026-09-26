@@ -1,0 +1,58 @@
+/* Tanga viewer — progress bar control (determinate + indeterminate). */
+
+.tanga-progress-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tanga-fg-strong);
+    margin-bottom: 4px;
+}
+
+.tanga-progress-track {
+    position: relative;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--tanga-input-bg);
+    border: 1px solid var(--tanga-border-strong);
+    overflow: hidden;
+}
+
+.tanga-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 4px;
+    background: var(--tanga-accent);
+    transition: width 0.2s ease;
+}
+
+/* Indeterminate mode: a 40%-wide bar slides across the track forever. */
+.tanga-progress-indeterminate .tanga-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40%;
+    animation: tanga-progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes tanga-progress-indeterminate {
+    0% {
+        left: -40%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+.tanga-progress-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tanga-accent-soft);
+    text-align: right;
+    margin-top: 2px;
+}
+
+.tanga-progress-text {
+    font-size: 12px;
+    color: var(--tanga-fg-muted);
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+}
