@@ -378,6 +378,9 @@
             "Image Canvas": "py/examples/viz/image/image_canvas.md"
           },
           {
+            "Load Image From Disk": "py/examples/viz/image/load_image_from_disk.md"
+          },
+          {
             "Raw Image": "py/examples/viz/image/raw_image.md"
           },
           {

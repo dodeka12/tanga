@@ -51,6 +51,39 @@ def test_list_directory_root_clamping(tmp_path):  # noqa: ANN001, ANN201
     assert result["error"] is None
 
 
+def test_list_directory_file_filter(tmp_path):  # noqa: ANN001, ANN201
+    (tmp_path / "a.exr").write_text("x")
+    (tmp_path / "b.hdr").write_text("x")
+    (tmp_path / "c.txt").write_text("x")
+    (tmp_path / "d.EXR").write_text("x")
+    (tmp_path / "sub").mkdir()
+
+    result = list_directory(str(tmp_path), file_filter=".exr, .hdr")
+
+    assert [e["name"] for e in result["entries"]] == ["sub", "a.exr", "b.hdr", "d.EXR"]
+
+
+def test_list_directory_file_filter_glob(tmp_path):  # noqa: ANN001, ANN201
+    (tmp_path / "hello_world.png").write_text("x")
+    (tmp_path / "hello_moon.png").write_text("x")
+    (tmp_path / "goodbye.png").write_text("x")
+    (tmp_path / "notes.txt").write_text("x")
+    (tmp_path / "sub").mkdir()
+
+    result = list_directory(str(tmp_path), file_filter="hello_*.png")
+
+    assert [e["name"] for e in result["entries"]] == ["sub", "hello_moon.png", "hello_world.png"]
+
+
+def test_list_directory_folders_only(tmp_path):  # noqa: ANN001, ANN201
+    (tmp_path / "a.txt").write_text("x")
+    (tmp_path / "sub").mkdir()
+
+    result = list_directory(str(tmp_path), folders_only=True)
+
+    assert [e["name"] for e in result["entries"]] == ["sub"]
+
+
 def test_file_chooser_serialization():  # noqa: ANN201
     fc = FileChooser(
         id="fc", label="File", value="/a/b", placeholder="Path…", root="/a"
@@ -62,7 +95,8 @@ def test_file_chooser_serialization():  # noqa: ANN201
         "value": "/a/b",
         "placeholder": "Path…",
         "root": "/a",
-        "accept": "",
+        "file_filter": "",
+        "folders_only": False,
     }
 
 
@@ -195,6 +229,25 @@ async def test_dispatch_file_browser_navigate(tmp_path):  # noqa: ANN001, ANN201
     assert msg["error"] is None
 
 
+@pytest.mark.anyio
+async def test_dispatch_file_browser_navigate_file_filter(tmp_path):  # noqa: ANN001, ANN201
+    viz = _viz()
+    viz._server = _FakeServer()
+    viz.set_layout(FileChooserView("fc", root=str(tmp_path), file_filter=".exr"))
+
+    (tmp_path / "a.exr").write_text("x")
+    (tmp_path / "b.txt").write_text("x")
+    (tmp_path / "sub").mkdir()
+
+    await viz._dispatch_control_event(
+        "file_browser_navigate",
+        {"control_id": "fc", "path": str(tmp_path)},
+    )
+
+    msg = json.loads(viz._server.pushed[0])
+    assert [e["name"] for e in msg["entries"]] == ["sub", "a.exr"]
+
+
 # ── Phase 4 — FileChooserView (layout control view) ─────────
 
 
@@ -210,7 +263,8 @@ def test_file_chooser_view_serialization():  # noqa: ANN201
     assert data["value"] == "/tmp"
     assert data["root"] == "/tmp"
     assert data["placeholder"] == ""
-    assert data["accept"] == ""
+    assert data["file_filter"] == ""
+    assert data["folders_only"] is False
 
 
 def test_file_chooser_dialog_serialization():  # noqa: ANN201
@@ -228,6 +282,7 @@ def test_file_chooser_dialog_serialization():  # noqa: ANN201
     assert content["id"] == "fc"
     assert content["value"] == "/data/file.csv"
     assert content["root"] == "/data"
+    assert content["folders_only"] is False
 
 
 def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):  # noqa: ANN001, ANN201

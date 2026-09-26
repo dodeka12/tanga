@@ -1034,7 +1034,11 @@ class LayoutHostImpl:
         path = payload.get("path") or ""
         ctrl = self.resolve_control(cid) if cid else None
         root = getattr(ctrl, "root", None) if ctrl is not None else None
-        message = list_directory(path, root=root)
+        file_filter = getattr(ctrl, "file_filter", "") or ""
+        folders_only = bool(getattr(ctrl, "folders_only", False))
+        message = list_directory(
+            path, root=root, file_filter=file_filter, folders_only=folders_only
+        )
         message.update({"type": "file_browser_listing", "control_id": cid})
         await self._transport.send_async(message)
 

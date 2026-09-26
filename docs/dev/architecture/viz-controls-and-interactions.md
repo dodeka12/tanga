@@ -220,6 +220,16 @@ Control events (→ `LayoutHost.dispatch_control_event`): `change`, `click`, `pr
 `redo`, `toggle` (group), `close` (banner/editor — `data.value` is the editor's
 text or `null`), `file_browser_navigate`, `file_browser_select`.
 
+**File chooser** (`file_chooser_view` / `FileChooserDialog`) — the backend
+`list_directory` filters non-directory entries by the control's `file_filter`
+(comma/space-separated, case-insensitive extensions and/or full-filename glob
+patterns such as `hello_*.png`) and, when `folders_only=True`, hides files;
+both are resolved from the control in the `file_browser_navigate` handler.  In
+the frontend a single click on a file highlights it and selects it (fills the
+path line), double-click accepts it, and the OK button stays disabled until a
+selection exists.  Directories navigate on a single click, and folder mode adds
+a "Select this folder" action that selects the current directory.
+
 Interaction events (→ `InteractionHost._dispatch_interaction_event`, coalesced):
 `interaction:click`, `interaction:dblclick`, `interaction:drag_start`,
 `interaction:drag_move`, `interaction:drag_end`, `interaction:scroll`.
@@ -319,9 +329,10 @@ hover) or to the gesture (`InteractionConfig.cursor`, shown during the drag);
 `drag_anchor` that returns the ray↔plane hit, so `world_position` *is* the
 pixel coordinate (the canvas scene uses a y-down frame with 1 unit = 1 pixel).
 Mouse handlers modify shader uniforms via `ImageCanvas.set_uniform`, which
-sends an `image_update` JSON message; the pixel data itself travels as **binary
-WebSocket frames** (`_image_wire.py`, `Transport.send_bytes`) and is never
-re-sent on uniform/overlay changes.
+sends an `image_update` JSON message; the pixel data itself travels on the image
+transport described in `viz-architecture.md` (binary `_image_wire.py` frames for
+`source: "data"`, `/image/…` tiles for `"tiled"`, or a runtime-loaded URL) and is
+never re-sent on uniform/overlay changes.
 
 The canvas also supports multiple specific handlers via `DragBinding` /
 `ClickBinding` (a mouse button + optional modifier set; the most specific match

@@ -64,7 +64,9 @@ def test_set_background_image_sends_frame_and_message():  # noqa: ANN201
     viz._layout._transport = fake  # type: ignore[attr-defined]
     view = SceneView("main")
 
-    viz.set_background_image(view, ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    viz.set_background_image(
+        view, ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+    )
 
     # One binary frame (bytes sent before the JSON message) + one JSON message.
     assert len(fake.binary_frames) == 1
@@ -101,9 +103,39 @@ def test_set_background_image_rejects_non_scene_view():  # noqa: ANN201
     viz._layout._transport = _FakeTransport()  # type: ignore[attr-defined]
 
     try:
-        viz.set_background_image(SpacerView(), ImageData("bg", data=np.zeros((2, 2, 3), dtype=np.uint8)))
+        viz.set_background_image(
+            SpacerView(), ImageData("bg", data=np.zeros((2, 2, 3), dtype=np.uint8))
+        )
     except TypeError as exc:
         assert "SceneView" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected TypeError for a non-SceneView")
 
+
+def test_set_background_image_auto_registers_tiled_pyramid():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz._layout._transport = _FakeTransport()  # type: ignore[attr-defined]
+    view = SceneView("main")
+    img = ImageData("bg", data=np.zeros((5000, 100, 3), dtype=np.uint8))  # auto-tiles
+    assert img.source == "tiled"
+
+    viz.set_background_image(view, img)
+
+    assert "bg" in viz._image_pyramids
+    assert viz._image_pyramids["bg"] is img.tiled
+
+
+def test_set_layout_auto_registers_tiled_background():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    viz._layout._transport = _FakeTransport()  # type: ignore[attr-defined]
+    img = ImageData("bg", data=np.zeros((5000, 100, 3), dtype=np.uint8))
+    assert img.source == "tiled"
+
+    viz.set_layout(SceneView("main", camera_view=CameraView(background_image=img)))
+
+    assert "bg" in viz._image_pyramids
+    assert viz._image_pyramids["bg"] is img.tiled

@@ -282,10 +282,12 @@ class Visualizer(_JupyterDisplayMixin):
 
     def set_layout(self, root: Any, name: str = "") -> str:
         """Register (or replace) a layout; register its control handlers."""
+        self._register_background_pyramids(root)
         return self._layout.set_layout(root, name)
 
     def add_layout(self, root: Any, name: str = "") -> str:
         """Register a layout (raise if *name* is taken)."""
+        self._register_background_pyramids(root)
         return self._layout.add_layout(root, name)
 
     def remove_view(self, view_id: str, *, scene: str | None = None) -> None:
@@ -1077,9 +1079,13 @@ class Visualizer(_JupyterDisplayMixin):
             image: The new :class:`~pytanga.viz.ImageData`, or ``None`` to clear
                 the background.
         """
+        if image is not None and image.tiled is not None:
+            self._register_pyramid(image.tiled)
         self._layout.push_background_image(view, image)
 
-    def register_image_pyramid(self, image_id: str, data: Any, *, tile_size: int = 256) -> Any:
+    def register_image_pyramid(
+        self, image_id: str, data: Any, *, tile_size: int = 256
+    ) -> Any:
         """Register a large image as an on-demand tile pyramid.
 
         Serves the image at ``/image/{image_id}/{level}/{x}/{y}`` so the
@@ -1088,11 +1094,31 @@ class Visualizer(_JupyterDisplayMixin):
         """
         from ._image_pyramid import ImagePyramid
 
-        pyramid = ImagePyramid(image_id, data, tile_size=tile_size)
-        self._image_pyramids[image_id] = pyramid
+        return self._register_pyramid(ImagePyramid(image_id, data, tile_size=tile_size))
+
+    def _register_pyramid(self, pyramid: Any) -> Any:
+        """Register an existing :class:`~pytanga.viz._image_pyramid.ImagePyramid`."""
+        self._image_pyramids[pyramid.image_id] = pyramid
         if self._server is not None:
-            self._server.register_image_pyramid(image_id, pyramid)
+            self._server.register_image_pyramid(pyramid.image_id, pyramid)
         return pyramid
+
+    def _register_background_pyramids(self, root: Any) -> None:
+        """Auto-register tiled pyramids behind any ``CameraView.background_image``.
+
+        ``ImageCanvas`` registers its tiled images in ``_sync_image``; the
+        background-image path is driven from ``set_layout``/``add_layout`` (and
+        ``set_background_image`` handles a single pane), so mirror that here.
+        """
+        from .views import iter_scene_views
+
+        for scene_view in iter_scene_views(root):
+            camera_view = scene_view.camera_view
+            if camera_view is None:
+                continue
+            image = camera_view.background_image
+            if image is not None and image.tiled is not None:
+                self._register_pyramid(image.tiled)
 
     def register_camera_stream(self, stream_id: str, *, fps: int = 30) -> Any:
         """Register an MJPEG camera stream at ``/stream/{stream_id}``.

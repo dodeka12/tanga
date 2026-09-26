@@ -16,6 +16,7 @@ import platform
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 
 ALGEBRAS = [
     # (dim, sig, dtype, description)
@@ -37,7 +38,7 @@ def main() -> int:
 
     PRECOMPILED_DIR.mkdir(parents=True, exist_ok=True)
 
-    manifest: dict = {
+    manifest: dict[str, object] = {
         "version": 1,
         "platform": platform.platform(),
         "python_abi": f"cp{sys.version_info.major}{sys.version_info.minor}",
@@ -84,6 +85,9 @@ def main() -> int:
         if not so_copied:
             print(f"  WARNING: extension not found in cache for {mod_name}")
 
+    # --- binding_piz (fixed PIZ decode extension) ---
+    _bundle_piz(cache_mod, manifest)
+
     # Write manifest
     manifest_path = PRECOMPILED_DIR / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
@@ -94,6 +98,29 @@ def main() -> int:
             print(f"  {f.name}")
 
     return 0
+
+
+def _bundle_piz(cache_mod: Any, manifest: dict[str, object]) -> None:
+    """Compile ``binding_piz`` and bundle it into ``precompiled/``."""
+    print("Compiling binding_piz (PIZ decoder)...")
+    from pytanga.codegen._piz_cache import _piz_key, get_or_build_piz
+
+    if get_or_build_piz(verbose=False) is None:
+        print("  WARNING: binding_piz failed to build/load")
+        return
+
+    key = _piz_key()
+    entry = cache_mod.cache_root() / key
+    meta = json.loads((entry / "meta.json").read_text())
+    so_path = entry / meta["so_path"]
+    if not so_path.is_file():
+        print("  WARNING: binding_piz extension not found in cache")
+        return
+
+    dest = PRECOMPILED_DIR / so_path.name
+    shutil.copy2(so_path, dest)
+    manifest["piz"] = {"key": key}
+    print(f"  -> bundled {so_path.name}")
 
 
 def _detect_compiler() -> str:

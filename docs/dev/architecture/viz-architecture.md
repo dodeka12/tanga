@@ -251,7 +251,8 @@ The frontend has **one live-view registry** and reuses views by their stable
 | `_ports.py` | `Transport`/`LayoutHost` protocols + `ServerState` |
 | `_transport.py` | `WebSocketTransport` |
 | `_scene_handle.py` | `VizSceneHandle` (per-scene proxy) |
-| `image.py` | `ImageData`/`ImageDType`/`ImageChannelMode` value model + `pil_to_numpy` |
+| `image.py` | `ImageData`/`ImageDType`/`ImageChannelMode` value model + `pil_to_numpy` + `read_exr`/`read_hdr` re-exports; `ImageData` auto-tiles large arrays (`tile_max_dim`/`tile_max_bytes`) |
+| `_image_io.py` | dependency-free HDR readers — `read_hdr` (Radiance RGBE) and `read_exr` (EXR `NONE`/`RLE`/`ZIPS`/`ZIP`/`PIZ` → `float32`) + `register_loading_progress_handler` / per-call `on_progress`; PIZ decode dispatches to the compiled `binding_piz` extension (via `codegen._piz_cache`) with a numpy fallback |
 | `_image_view.py` | `ImageView` (plane + textures + shader/uniform state) + `ImageCanvas` (dedicated 2D scene) |
 | `_image_wire.py` | binary image-frame codec (server → client), v2 with a `codec` byte |
 | `_image_pyramid.py` | `ImagePyramid` — on-demand tile pyramid (level/tile geometry + encode + LRU) |
@@ -270,15 +271,28 @@ The frontend has **one live-view registry** and reuses views by their stable
 frame** (1 world unit = 1 pixel), an `ImageView` (the plane + textures +
 shader/uniform state), an `ActImagePlane` (interactive plane), and an overlay
 `VizGroup`.  The image is a **new scene-object kind** (`kind == "image"`,
-`VizImage` node in `_nodes.py`), whose pixel bytes travel as **binary WebSocket
-frames** (`_image_wire.py`, `Transport.send_bytes` / `server.push_bytes`) with a
-versioned **codec** byte (v2): `raw` / `jpeg` / `zlib` — auto-selecting JPEG for
-8-bit 1/3-channel and lossless zlib otherwise, overridable via
-`ImageData(codec=…)`.  Uniforms and overlays travel as JSON (`image_update`) and
-never re-send the image.  Very large images are served as an **HTTP tile
-pyramid** (`_image_pyramid.py`, `/image/{id}/{level}/{x}/{y}`, `source:
-"tiled"`); camera feeds are served as **MJPEG** (`_camera_stream.py`,
-`/stream/{id}`).  The export path stores images in an id-keyed **asset store**
+`VizImage` node in `_nodes.py`), whose pixels reach the browser through one of
+three mutually exclusive `ImageData` sources:
+
+- **`source: "data"`** (default) — the pixel buffer travels as **binary
+  WebSocket frames** (`_image_wire.py`, `Transport.send_bytes` /
+  `server.push_bytes`) with a versioned **codec** byte (v2): `raw` / `jpeg` /
+  `zlib` — auto-selecting JPEG for 8-bit 1/3-channel and lossless zlib
+  otherwise, overridable via `ImageData(codec=…)`.
+- **`source: "url"`** — the frontend loads the URL at runtime: an arbitrary URL
+  via `THREE.TextureLoader`, or a **camera feed** (`/stream/{id}`) served as
+  **MJPEG** (`_camera_stream.py`, drawn into a texture by `makeStreamTexture`).
+- **`source: "tiled"`** — an **HTTP tile pyramid** (`_image_pyramid.py`,
+  `/image/{id}/{level}/{x}/{y}`, `format=jpeg|png|raw|zlib`): `uint8` tiles
+  stream as JPEG/PNG (drawn to a canvas) while `float32`/`uint16` tiles stream
+  as lossless zlib-compressed raw, assembled client-side into a float texture so
+  `u_value_min`/`u_value_max` and brightness/contrast use the full dynamic
+  range.  `ImageData` auto-tiles arrays over `tile_max_dim`/`tile_max_bytes`
+  (defaults 4096 px / 32 MB) and `ImageCanvas._sync_image` auto-registers the
+  pyramid with the `Visualizer` (via `_register_pyramid`).
+
+Uniforms and overlays travel as JSON (`image_update`) and never re-send the
+pixels.  The export path stores images in an id-keyed **asset store**
 (`AnimationRecording.assets`, `capture_frame(include_images=False)`), embedding
 8-bit images as JPEG data URLs by default.
 

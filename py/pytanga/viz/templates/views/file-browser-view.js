@@ -5,14 +5,17 @@
 import { View } from './view.js';
 
 export class FileBrowserView extends View {
-    constructor({ controlId, path = '', onNavigate, onSelect, onClose } = {}) {
+    constructor({ controlId, path = '', onNavigate, onSelect, onClose, folders_only = false } = {}) {
         super();
         this.controlId = controlId;
         this.onNavigate = onNavigate;
         this.onSelect = onSelect;
         this.onClose = onClose;
+        this.folders_only = folders_only;
         this._currentPath = path;
         this._parentPath = null;
+        this._selectedPath = null;
+        this._selectedEl = null;
 
         this.el.classList.add('tanga-file-browser');
 
@@ -76,6 +79,14 @@ export class FileBrowserView extends View {
         Object.assign(pathBar.style, { display: 'flex', gap: '8px', alignItems: 'center' });
         pathBar.appendChild(upBtn);
         pathBar.appendChild(this._pathText);
+        if (this.folders_only) {
+            const selectBtn = document.createElement('button');
+            selectBtn.textContent = 'Select this folder';
+            selectBtn.title = 'Accept the current directory';
+            Object.assign(selectBtn.style, { padding: '4px 10px', cursor: 'pointer' });
+            selectBtn.addEventListener('click', () => this._accept(this._currentPath));
+            pathBar.appendChild(selectBtn);
+        }
         this.el.appendChild(pathBar);
 
         // Entry list.
@@ -108,6 +119,20 @@ export class FileBrowserView extends View {
         if (this._parentPath && this.onNavigate) this.onNavigate(this._parentPath);
     }
 
+    _highlight(row, path) {
+        if (this._selectedEl && this._selectedEl !== row) {
+            this._selectedEl.style.background = 'transparent';
+        }
+        this._selectedEl = row;
+        this._selectedPath = path;
+        row.classList.add('selected');
+        row.style.background = 'rgba(255,255,255,0.22)';
+    }
+
+    _accept(path) {
+        if (this.onSelect) this.onSelect(path);
+    }
+
     updateListing(path, entries, error, parent) {
         this._currentPath = path;
         this._parentPath = parent || null;
@@ -129,13 +154,25 @@ export class FileBrowserView extends View {
                 display: 'flex', gap: '6px', alignItems: 'center',
                 padding: '4px 8px', borderRadius: '4px', cursor: 'pointer',
             });
-            row.addEventListener('mouseenter', () => { row.style.background = 'rgba(255,255,255,0.08)'; });
-            row.addEventListener('mouseleave', () => { row.style.background = 'transparent'; });
+            row.addEventListener('mouseenter', () => {
+                if (row !== this._selectedEl) row.style.background = 'rgba(255,255,255,0.08)';
+            });
+            row.addEventListener('mouseleave', () => {
+                if (row !== this._selectedEl) row.style.background = 'transparent';
+            });
             row.addEventListener('click', () => {
                 if (entry.is_dir) {
                     if (this.onNavigate) this.onNavigate(entry.path);
-                } else if (this.onSelect) {
-                    this.onSelect(entry.path);
+                } else {
+                    this._highlight(row, entry.path);
+                }
+            });
+            row.addEventListener('dblclick', () => {
+                if (entry.is_dir) {
+                    if (this.onNavigate) this.onNavigate(entry.path);
+                } else {
+                    this._highlight(row, entry.path);
+                    this._accept(entry.path);
                 }
             });
             this._listEl.appendChild(row);

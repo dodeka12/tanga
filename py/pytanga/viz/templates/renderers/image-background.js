@@ -90,15 +90,10 @@ function _backgroundTexture(img) {
         return makeTiledTexture(img);
     }
     const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
-    return makeEncodedTexture(img, frame).then((tex) => {
-        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 ->
-        // bottom texel), but this NDC background samples with the image's
-        // row 0 at the *top* of the pane (matching the URL path above and
-        // the 3D projection).  Flip so data and url backgrounds line up.
-        tex.flipY = true;
-        tex.needsUpdate = true;
-        return tex;
-    });
+    // `makeEncodedTexture` applies the correct per-codec orientation itself
+    // (JPEG canvas texture and data texture both render row 0 at the top), so
+    // no extra flip is needed here.
+    return makeEncodedTexture(img, frame);
 }
 
 /**

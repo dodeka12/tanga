@@ -123,7 +123,8 @@ def control_to_view(ctrl: Control) -> ControlView[Any]:
             value=ctrl.value,
             placeholder=ctrl.placeholder,
             root=ctrl.root,
-            accept=ctrl.accept,
+            file_filter=ctrl.file_filter,
+            folders_only=ctrl.folders_only,
             on_change=ctrl.on_change,
         )
     elif isinstance(ctrl, ValueEdit):

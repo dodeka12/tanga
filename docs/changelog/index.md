@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.11.0] — 2026-09-26
+- Dependency-free HDR/EXR readers (`read_exr`/`read_hdr`) · `FileChooserDialog` file chooser · automatic image tiling + load progress · fast PIZ decoding (numpy + compiled `binding_piz`) · float32/uint16 tiles stream lossless zlib into a float texture
+- Bug fixes: tiled float PNG crash · pyramid level selection · JPEG orientation · image value-range reset · minification filtering · relative brightness/contrast drag
+→ [Details](2026/09/26_f3aaa677b.md)
+
 ## [Since 2.10.0 (2.11.0-rc1)] — 2026-09-24
 - Image transport (codec byte, tiled images, camera streams, JPEG export) · layout reconciliation by stable view id · granular background-image update · entity/control enable-disable-hide · `EImageCodec` enum + `ImageFrameHeader` header parsing
 - Perf: cached blade-name parsing · branch-free `MV` operator dispatch · Bug fixes: SDF `Cylinder` `align_center=0.0` · same-scene pane reuse

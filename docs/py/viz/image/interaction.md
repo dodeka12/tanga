@@ -45,13 +45,17 @@ canvas = ImageCanvas(
 )
 ```
 
-`event.world_position` is a `Point` in the canvas's pixel frame, so the
-horizontal/vertical position map directly to pixel columns/rows:
+`event.world_position` is a `Point` in the canvas's pixel frame (the cursor's
+absolute pixel column/row), and `event.delta_pixels` is the screen-space change
+since the last event.  To adjust a value by the **drag distance** (e.g.
+brightness/contrast), accumulate the delta onto the current value:
 
 ```python
 async def on_drag(event, canvas):
-    px, py = event.world_position.x, event.world_position.y
-    canvas.set_uniform("u_contrast", 0.5 + 1.5 * px / width)
+    dx, dy = event.delta_pixels
+    u = canvas.image_view.uniforms          # current values
+    canvas.set_uniform("u_contrast", max(0.0, u["u_contrast"] + 0.005 * dx))
+    canvas.set_uniform("u_brightness", u["u_brightness"] + 0.005 * dy)
     return True
 ```
 

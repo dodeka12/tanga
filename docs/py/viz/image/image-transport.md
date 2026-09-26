@@ -38,6 +38,8 @@ exact = ImageData("raw", data=np.zeros((480, 640, 3), dtype=np.uint8), codec=EIm
 - **Standard / camera images** — leave the default; 8-bit images compress to
   JPEG automatically.
 - **Scientific / HDR data** — use `uint16`/`float32` (lossless zlib) or pass
-  `codec=EImageCodec.RAW` for an exact, uncompressed round-trip.
+  `codec=EImageCodec.RAW` for an exact, uncompressed round-trip.  Load EXR and
+  Radiance HDR files directly with `read_exr`/`read_hdr` — see
+  [HDR images](hdr-images.md).
 - **Very large images** — see [Tiled images](tiled-images.md).
 - **Live camera feeds** — see [Image streams](image-stream.md).

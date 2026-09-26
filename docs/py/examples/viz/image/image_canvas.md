@@ -6,8 +6,8 @@ Shows a synthetic RGB gradient in an `~pytanga.viz.ImageCanvas` (a
 dedicated 2D scene with a y-down pixel frame, 1 unit = 1 pixel), draws a
 `~pytanga.geometry.Rectangle2D` overlay (via
 `~pytanga.geometry.Rectangle2D.between`) in pixel coordinates, and binds
-a ctrl+left-drag handler that maps the cursor position to the image's
-brightness/contrast uniforms.
+a ctrl+left-drag handler that adjusts the image's brightness/contrast uniforms
+by the relative drag distance.
 
 The ctrl+left-drag is registered as a `~pytanga.viz.DragBinding` (a
 mouse-button + modifier combination) via the canvas's `drag_handlers` list.
@@ -34,8 +34,8 @@ Shows a synthetic RGB gradient in an :class:`~pytanga.viz.ImageCanvas` (a
 dedicated 2D scene with a y-down pixel frame, 1 unit = 1 pixel), draws a
 :class:`~pytanga.geometry.Rectangle2D` overlay (via
 :meth:`~pytanga.geometry.Rectangle2D.between`) in pixel coordinates, and binds
-a ctrl+left-drag handler that maps the cursor position to the image's
-brightness/contrast uniforms.
+a ctrl+left-drag handler that adjusts the image's brightness/contrast uniforms
+by the relative drag distance.
 
 The ctrl+left-drag is registered as a :class:`~pytanga.viz.DragBinding` (a
 mouse-button + modifier combination) via the canvas's ``drag_handlers`` list.
@@ -84,10 +84,11 @@ def main() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
 
     async def on_drag(event: DragEvent, canvas: ImageCanvas) -> bool:
-        # ctrl+left drag: horizontal position → contrast, vertical → brightness.
-        px, py = event.world_position.x, event.world_position.y
-        canvas.set_uniform("u_contrast", 0.5 + 1.5 * px / width)
-        canvas.set_uniform("u_brightness", (py / height - 0.5) * 2.0)
+        # ctrl+left drag: horizontal movement → contrast, vertical → brightness.
+        dx, dy = event.delta_pixels
+        u = canvas.image_view.uniforms
+        canvas.set_uniform("u_contrast", max(0.0, u["u_contrast"] + 0.005 * dx))
+        canvas.set_uniform("u_brightness", u["u_brightness"] + 0.005 * dy)
         return True
 
     canvas = ImageCanvas(

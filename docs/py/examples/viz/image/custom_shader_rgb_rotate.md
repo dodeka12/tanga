@@ -5,8 +5,8 @@
 Replaces the `~pytanga.viz.ImageCanvas` standard shader with a custom
 fragment shader that rotates each pixel's RGB vector in RGB space around the
 grayscale axis `(1,1,1)/√3`.  A custom `u_angle` uniform drives the
-rotation; a left-drag handler maps the cursor's horizontal position to the
-angle (0..2π).  The shader is registered via
+rotation; a left-drag handler rotates the angle by the horizontal drag
+distance (wrapping at 2π).  The shader is registered via
 `~pytanga.viz.ImageCanvas.register_shader` and the uniform via
 `~pytanga.viz.ImageCanvas.register_uniform`.
 
@@ -31,8 +31,8 @@ uv run python py/examples/viz/image/custom_shader_rgb_rotate.py
 Replaces the :class:`~pytanga.viz.ImageCanvas` standard shader with a custom
 fragment shader that rotates each pixel's RGB vector in RGB space around the
 grayscale axis ``(1,1,1)/√3``.  A custom ``u_angle`` uniform drives the
-rotation; a left-drag handler maps the cursor's horizontal position to the
-angle (0..2π).  The shader is registered via
+rotation; a left-drag handler rotates the angle by the horizontal drag
+distance (wrapping at 2π).  The shader is registered via
 :meth:`~pytanga.viz.ImageCanvas.register_shader` and the uniform via
 :meth:`~pytanga.viz.ImageCanvas.register_uniform`.
 
@@ -96,9 +96,10 @@ def main() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
 
     async def on_drag(event: DragEvent, canvas: ImageCanvas) -> bool:
-        # Horizontal position → rotation angle in [0, 2π].
-        px = event.world_position.x
-        canvas.set_uniform("u_angle", 2.0 * math.pi * px / max(width - 1, 1))
+        # Horizontal movement → rotation angle (relative, wraps at 2π).
+        dx = event.delta_pixels[0]
+        u = canvas.image_view.uniforms
+        canvas.set_uniform("u_angle", (u["u_angle"] + 0.02 * dx) % (2.0 * math.pi))
         return True
 
     canvas = ImageCanvas(

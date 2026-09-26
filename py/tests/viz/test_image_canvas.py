@@ -102,6 +102,26 @@ class TestApi:
         assert shader["fragment"] == "void main() {}"
         assert shader["vertex"] == "vertex"
 
+    def test_set_image_resets_value_range(self) -> None:
+        canvas = ImageCanvas(_viz())
+        canvas.set_image(ImageData("img1", data=np.zeros((4, 4, 3), dtype=np.uint8)))
+        assert canvas.image_view.uniforms["u_value_max"] == 1.0
+        assert canvas.image_view.uniforms["u_mode"] == 1  # RGB
+
+        # Replacing with a different dtype re-derives the normalization range.
+        canvas.set_image(ImageData("img2", data=np.zeros((4, 4), dtype=np.uint16)))
+        assert canvas.image_view.uniforms["u_value_max"] == 65535
+        assert canvas.image_view.uniforms["u_mode"] == 0  # gray
+
+    def test_set_image_auto_registers_tiled_pyramid(self) -> None:
+        viz = _viz()
+        canvas = ImageCanvas(viz)
+        image = ImageData("img1", data=np.zeros((5000, 100, 3), dtype=np.uint8))
+        assert image.source == "tiled"
+        canvas.set_image(image)
+        assert "img1" in viz._image_pyramids
+        assert viz._image_pyramids["img1"] is image.tiled
+
     def test_act_plane(self) -> None:
         canvas = ImageCanvas(_viz())
         from pytanga.viz import ActImagePlane

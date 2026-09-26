@@ -176,6 +176,8 @@ uv run python py/examples/<path>.py
 
 - **contraction** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
+- **contrast** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
 - **control group** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
 - **control update** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
@@ -278,6 +280,8 @@ uv run python py/examples/<path>.py
 
 - **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
+- **EXR** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
 - **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
 - **FigureStyle** — [Presentation figure export with FigureStyle](viz/export/figure.md)
@@ -288,7 +292,9 @@ uv run python py/examples/<path>.py
 
 - **file dialog** — [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
-- **FileChooserDialog** — [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
+- **file open** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
+- **FileChooserDialog** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
 - **FileChooserView** — [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md)
 
@@ -358,6 +364,8 @@ uv run python py/examples/<path>.py
 
 - **Gunn/Dorst** — [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md)
 
+- **HDR** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
 - **heavy work** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
 
 - **hide** — [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
@@ -378,11 +386,11 @@ uv run python py/examples/<path>.py
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
-- **image** — [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+- **image** — [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **image background** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
-- **ImageCanvas** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+- **ImageCanvas** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **ImageData** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
@@ -464,7 +472,7 @@ uv run python py/examples/<path>.py
 
 - **markdown** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **menu** — [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **menu** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **menu bar** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
@@ -508,7 +516,7 @@ uv run python py/examples/<path>.py
 
 - **nesting** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
 
-- **noise** — [Stream a programmatic camera feed at 30 Hz over MJPEG](viz/camera/camera_stream.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md)
+- **noise** — [Export an animated noise image stream](viz/export/animated_image_stream.md)
 
 - **notebook** — [Animation](viz/jupyter/animation.md), [Export](viz/jupyter/export.md), [Interactive Visualizer](viz/jupyter/interactive.md)
 
@@ -568,6 +576,8 @@ uv run python py/examples/<path>.py
 
 - **PGA3** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md), [Gunn/Dorst PGA 3D geometry with plane‑based representation](ga/geometry/pga3_entities.md), [MV input from PGA3 and N3, OPNS vs IPNS](viz/entities/multivector.md)
 
+- **PIL** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
 - **pinhole** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
 - **pixels** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
@@ -616,13 +626,15 @@ uv run python py/examples/<path>.py
 
 - **product tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
+- **progress** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
 - **project_onto** — [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md)
 
 - **projective** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md)
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **pyramid** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md)
+- **pyramid** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
 - **Q2** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md)
 
@@ -752,7 +764,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -801,6 +813,8 @@ uv run python py/examples/<path>.py
 - **theme switching** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **themes** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md)
+
+- **tiled** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
 - **tiles** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md)
 

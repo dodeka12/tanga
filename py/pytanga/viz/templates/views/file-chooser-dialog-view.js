@@ -21,14 +21,20 @@ export class FileChooserDialogView extends DialogView {
         super({ id, title, content, align_x, align_y, dismissable, width, height, ws });
         this._selectedPath = '';
         this._pathEl = null;
+        this._okBtn = null;
     }
 
     _buildContent() {
         super._buildContent();
         if (this._contentView && typeof this._contentView.on === 'function') {
             this._contentView.on('select', (e) => this._onSelect(e.detail && e.detail.path));
+            this._contentView.on('accept', (e) => this._onAccept(e.detail && e.detail.path));
         }
         this._buildFooter();
+        // A pre-set value counts as the current selection.
+        if (this._contentView && this._contentView.value) {
+            this._onSelect(this._contentView.value);
+        }
     }
 
     _buildFooter() {
@@ -46,10 +52,12 @@ export class FileChooserDialogView extends DialogView {
         ok.type = 'button';
         ok.className = 'tanga-action-button';
         ok.textContent = 'OK';
+        ok.disabled = true;
         ok.addEventListener('click', () => {
             sendEvent(this.dialogId, 'accept');
             this._dismiss(false);
         });
+        this._okBtn = ok;
 
         const cancel = document.createElement('button');
         cancel.type = 'button';
@@ -66,5 +74,13 @@ export class FileChooserDialogView extends DialogView {
     _onSelect(path) {
         this._selectedPath = path || '';
         if (this._pathEl) this._pathEl.textContent = this._selectedPath;
+        if (this._okBtn) this._okBtn.disabled = !this._selectedPath;
+    }
+
+    _onAccept(path) {
+        if (path) this._selectedPath = path;
+        if (!this._selectedPath) return;
+        sendEvent(this.dialogId, 'accept');
+        this._dismiss(false);
     }
 }

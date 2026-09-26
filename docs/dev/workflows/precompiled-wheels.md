@@ -9,7 +9,7 @@ and workflows for building, cleaning, and uploading precompiled wheels.
 
 | Script | Purpose |
 |--------|---------|
-| `tools/build-precompiled.py` | Compile the seven common algebra bindings and harvest compiled extension files into `precompiled/` |
+| `tools/build-precompiled.py` | Compile the seven common algebra bindings plus the PIZ decoder (`binding_piz`) and harvest compiled extension files into `precompiled/` |
 | `tools/clean-precompiled.py` | Remove precompiled artifacts to restore a pure Python wheel build |
 | `tools/fix-wheel-tag.py` | Rewrite the wheel filename and metadata with the correct platform tag |
 | `tools/upload-pypi.py` | Inspect a wheel and upload it to PyPI via twine |
@@ -26,7 +26,7 @@ Use this when you want to ship a wheel that works without a C++ compiler.
 # 1. Ensure dev dependencies are installed (includes [compile] extras)
 uv sync --group dev
 
-# 2. Compile and bundle the seven common algebra bindings
+# 2. Compile and bundle the seven common algebra bindings + binding_piz
 uv run python tools/build-precompiled.py
 
 # 3. Build the wheel with correct platform tag (one-step via helper script)
@@ -43,7 +43,8 @@ uv run python tools/upload-pypi.py --check
 for Linux, `cp312-cp312-win_amd64` for Windows)
 with precompiled extension modules for seven bindings (float64 unless noted):
 `(2,0)` E2, `(3,0)` E3/P2, `(4,0)` P3, `(4,8)` N2/PGA2, `(5,16)` N3/PGA3,
-plus `(3,0)` E3 modular (int64) and `(10,0)` G(10,0) sparse (int64).
+plus `(3,0)` E3 modular (int64) and `(10,0)` G(10,0) sparse (int64), and the
+PIZ decoder `binding_piz`.
 
 The helper scripts `tools/build-precompiled-wheel.sh` (Linux/macOS) and
 `tools/build-precompiled-wheel.ps1` (Windows) build to a temp directory,
@@ -62,7 +63,8 @@ ad-hoc builds.
 
 ### What `build-precompiled.py` Does
 
-1. Calls `pytanga.codegen._cache.get_or_build()` for each of the seven bindings.
+1. Calls `pytanga.codegen._cache.get_or_build()` for each of the seven bindings,
+   plus `pytanga.codegen._piz_cache.get_or_build_piz()` for the PIZ decoder.
    This triggers the same JIT compilation pipeline that users would normally
    pay on first import — but once, at build time.
 2. Walks the cache directory (`~/.cache/pytanga/`) to find the compiled
@@ -70,7 +72,8 @@ ad-hoc builds.
 3. Copies each compiled extension into `precompiled/` at the repo root.
 4. Writes `precompiled/manifest.json` recording platform, ABI, compiler info,
    and a **cache key** (SHA-256 hash of all C++ headers and codegen Python
-   files) for each algebra.
+   files) for each algebra, plus a `"piz"` key (SHA-256 of `binding_piz.cpp`
+   + `codegen/CMakeLists.txt`).
 
 The `precompiled/` directory is included in the wheel via hatchling's
 `[tool.hatch.build.targets.wheel.force-include]` in `pyproject.toml`.
@@ -158,7 +161,8 @@ precompiled/                          # ← at repo root, git-ignored except .gi
 ├── binding_dim4_sig8_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim5_sig16_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim3_sig0_int64.cpython-312-x86_64-linux-gnu.so
-└── binding_dim10_sig0_int64.cpython-312-x86_64-linux-gnu.so
+├── binding_dim10_sig0_int64.cpython-312-x86_64-linux-gnu.so
+└── binding_piz.cpython-312-x86_64-linux-gnu.so
 ```
 
 The extension filenames include Python ABI tags (e.g. `.cpython-312-x86_64-linux-gnu.so`
@@ -187,14 +191,19 @@ repo-root `precompiled/` directory (for testing before building the wheel).
       "dtype": "float64",
       "key": "1cbb8d45fab331a3cb84bf02ae01424b1494608970cb58c4577890d298615f9c"
     }
+  },
+  "piz": {
+    "key": "7862cee720130d5da1d4688770aea42e22a03619f52aec1606dc4be00a5a1269"
   }
 }
 ```
 
-The `key` field is the SHA-256 digest from `pytanga.codegen._cache._make_key()`.
-It covers the algebra identity (dim, sig, dtype), all C++ headers under
-`TANGA_SOURCE`, the binding template `_template.cpp`, and all Python files
-in the `codegen/` package.
+The algebra `key` field is the SHA-256 digest from
+`pytanga.codegen._cache._make_key()`. It covers the algebra identity (dim,
+sig, dtype), all C++ headers under `TANGA_SOURCE`, the binding template
+`_template.cpp`, and all Python files in the `codegen/` package. The `piz`
+key is the SHA-256 of `binding_piz.cpp` + `codegen/CMakeLists.txt` (from
+`pytanga.codegen._piz_cache._piz_key()`).
 
 ## Related Files
 

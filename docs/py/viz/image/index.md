@@ -13,6 +13,7 @@ interaction.
 | [Custom Shaders](custom-shaders.md) | `register_shader`/`register_uniform`/`set_uniform`, the GLSL contract |
 | [Interaction](interaction.md) | `DragBinding`/`ClickBinding`, drag/click handlers, cursors, `ActRectangle2D` |
 | [Image transport](image-transport.md) | `codec`/`jpeg_quality`, JPEG vs lossless zlib, when to use which |
+| [HDR images](hdr-images.md) | `read_exr`/`read_hdr`, linear float32, EXR codecs + Radiance RGBE |
 | [Tiled images](tiled-images.md) | `register_image_pyramid`, tile pyramids for very large images |
 | [Image streams](image-stream.md) | `register_camera_stream`, 15–30 Hz MJPEG camera feeds |
 

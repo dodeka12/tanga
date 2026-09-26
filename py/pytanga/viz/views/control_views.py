@@ -205,7 +205,8 @@ class FileChooserView(ControlView[FileChooser]):
         value: str = "",
         placeholder: str = "",
         root: str | None = None,
-        accept: str = "",
+        file_filter: str = "",
+        folders_only: bool = False,
         on_change: ControlHandler | None = None,
         tooltip: str = "",
         size: SizeSpec = None,
@@ -235,7 +236,8 @@ class FileChooserView(ControlView[FileChooser]):
             value=value,
             placeholder=placeholder,
             root=root,
-            accept=accept,
+            file_filter=file_filter,
+            folders_only=folders_only,
             on_change=on_change,
         )
 
