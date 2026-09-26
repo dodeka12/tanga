@@ -8,15 +8,18 @@ import { sendEvent } from '../events.js';
 import { registerFileBrowser, unregisterFileBrowser } from '../file-browser.js';
 
 export class FileChooserView extends ControlView {
-    constructor({ id, value = '', root = null, accept = '' } = {}) {
+    constructor({ id, value = '', root = null, file_filter = '', folders_only = false } = {}) {
         super({ id, label: '', tooltip: '' });
         this.value = value;
         this.root = root;
-        this.accept = accept;
+        this.file_filter = file_filter;
+        this.folders_only = folders_only;
         this._currentPath = value || root || '';
         this._parentPath = null;
         this._pathText = null;
         this._listEl = null;
+        this._selectedPath = null;
+        this._selectedEl = null;
 
         // A directory listing needs more room than a single form control.
         this.minWidth = { value: 220, unit: 'px' };
@@ -66,6 +69,13 @@ export class FileChooserView extends ControlView {
         Object.assign(pathBar.style, { display: 'flex', gap: '8px', alignItems: 'center' });
         pathBar.appendChild(upBtn);
         pathBar.appendChild(this._pathText);
+        if (this.folders_only) {
+            const selectBtn = document.createElement('button');
+            selectBtn.textContent = 'Select this folder';
+            selectBtn.title = 'Accept the current directory';
+            selectBtn.addEventListener('click', () => this._select(this._currentPath));
+            pathBar.appendChild(selectBtn);
+        }
         wrapper.appendChild(pathBar);
 
         // Entry list.
@@ -98,6 +108,26 @@ export class FileChooserView extends ControlView {
         if (this._parentPath) this._navigate(this._parentPath);
     }
 
+    _highlight(row, path) {
+        if (this._selectedEl && this._selectedEl !== row) {
+            this._selectedEl.style.background = 'transparent';
+        }
+        this._selectedEl = row;
+        this._selectedPath = path;
+        row.classList.add('selected');
+        row.style.background = 'rgba(255,255,255,0.22)';
+    }
+
+    _select(path) {
+        sendEvent(this.controlId, 'file_browser_select', { path });
+        this.emit('select', { path });
+    }
+
+    _accept(path) {
+        this._select(path);
+        this.emit('accept', { path });
+    }
+
     updateListing(path, entries, error, parent) {
         this._currentPath = path;
         this._parentPath = parent || null;
@@ -123,14 +153,26 @@ export class FileChooserView extends ControlView {
                 borderRadius: '4px',
                 cursor: 'pointer',
             });
-            row.addEventListener('mouseenter', () => { row.style.background = 'rgba(255,255,255,0.08)'; });
-            row.addEventListener('mouseleave', () => { row.style.background = 'transparent'; });
+            row.addEventListener('mouseenter', () => {
+                if (row !== this._selectedEl) row.style.background = 'rgba(255,255,255,0.08)';
+            });
+            row.addEventListener('mouseleave', () => {
+                if (row !== this._selectedEl) row.style.background = 'transparent';
+            });
             row.addEventListener('click', () => {
                 if (entry.is_dir) {
                     this._navigate(entry.path);
                 } else {
-                    sendEvent(this.controlId, 'file_browser_select', { path: entry.path });
-                    this.emit('select', { path: entry.path });
+                    this._highlight(row, entry.path);
+                    this._select(entry.path);
+                }
+            });
+            row.addEventListener('dblclick', () => {
+                if (entry.is_dir) {
+                    this._navigate(entry.path);
+                } else {
+                    this._highlight(row, entry.path);
+                    this._accept(entry.path);
                 }
             });
             this._listEl.appendChild(row);

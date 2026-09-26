@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import zlib
 from types import SimpleNamespace
 
 import numpy as np
@@ -49,8 +50,39 @@ class TestTiles:
         data = p.get_tile(0, 1, 1, "raw")
         assert data == arr[4:8, 4:8].tobytes()
 
+    @pytest.mark.parametrize("dtype", [np.float32, np.uint16])
+    def test_zlib_tile_round_trips_losslessly(self, dtype: type) -> None:
+        # zlib tiles are the raw source-dtype bytes, losslessly compressed.
+        arr = (np.random.default_rng(1).random((40, 40)) * 65535).astype(dtype)
+        p = ImagePyramid("i", arr, tile_size=32)  # 40×40 → interior + edge tiles
+        for x, y in ((0, 0), (1, 0), (0, 1), (1, 1)):
+            raw = p.get_tile(0, x, y, "raw")
+            data = p.get_tile(0, x, y, "zlib")
+            assert data is not None
+            assert zlib.decompress(data) == raw
+
     def test_png_tile(self) -> None:
         p = ImagePyramid("i", np.zeros((32, 32), dtype=np.uint16), tile_size=16)
+        data = p.get_tile(0, 0, 0, "png")
+        assert data is not None
+        assert data[:8] == b"\x89PNG\r\n\x1a\n"
+
+    @pytest.mark.parametrize("shape", [(32, 32), (32, 32, 1), (32, 32, 3), (32, 32, 4)])
+    def test_png_float32_tile(self, shape: tuple[int, ...]) -> None:
+        # float32 has no PNG mode; it must be normalized to uint8, not crash.
+        arr = np.random.default_rng(0).random(shape).astype(np.float32)
+        p = ImagePyramid("i", arr, tile_size=16)
+        data = p.get_tile(0, 0, 0, "png")
+        assert data is not None
+        assert data[:8] == b"\x89PNG\r\n\x1a\n"
+
+    @pytest.mark.parametrize("channels", [3, 4])
+    def test_png_uint16_multi_channel_tile(self, channels: int) -> None:
+        # Multi-channel uint16 has no PNG mode; normalize to uint8, not crash.
+        arr = (np.random.default_rng(0).random((32, 32, channels)) * 65535).astype(
+            np.uint16
+        )
+        p = ImagePyramid("i", arr, tile_size=16)
         data = p.get_tile(0, 0, 0, "png")
         assert data is not None
         assert data[:8] == b"\x89PNG\r\n\x1a\n"

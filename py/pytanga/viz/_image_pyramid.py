@@ -19,6 +19,7 @@ from typing import Any
 
 import numpy as np
 
+from ._image_wire import encode_zlib_raw
 from .image import ImageDType
 
 #: Tile ``format`` → HTTP ``Content-Type``.
@@ -26,6 +27,7 @@ FORMAT_CONTENT_TYPE: dict[str, str] = {
     "jpeg": "image/jpeg",
     "png": "image/png",
     "raw": "application/octet-stream",
+    "zlib": "application/octet-stream",
 }
 
 
@@ -63,6 +65,15 @@ def _encode_png(tile: np.ndarray) -> bytes:
     except ImportError as exc:
         raise ImportError("PNG tile encoding requires Pillow") from exc
     arr = np.ascontiguousarray(tile)
+
+    # PNG has no float32 or multi-channel uint16 mode, so normalize those to
+    # 8-bit using the default value range (float32 → [0, 1], uint16 → [0, 65535])
+    # — matching `ImageDType.default_value_range` — before encoding.
+    if arr.dtype == np.dtype("float32"):
+        arr = (np.clip(arr, 0.0, 1.0) * 255.0).astype(np.uint8)
+    elif arr.dtype == np.dtype("uint16") and arr.ndim == 3 and arr.shape[2] != 1:
+        arr = (arr.astype(np.float32) * (255.0 / 65535.0)).astype(np.uint8)
+
     if arr.ndim == 2:
         mode = None if arr.dtype == np.dtype("uint16") else "L"
     elif arr.ndim == 3:
@@ -184,6 +195,8 @@ class ImagePyramid:
     def _encode(self, tile: np.ndarray, format: str) -> bytes:
         if format == "raw":
             return np.ascontiguousarray(tile).tobytes()
+        if format == "zlib":
+            return encode_zlib_raw(tile)
         if format == "png":
             return _encode_png(tile)
         return _encode_jpeg(tile)

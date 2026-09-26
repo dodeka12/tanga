@@ -15,7 +15,6 @@ export function buildImageFragment() {
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D uImage0;
-uniform vec2 uImageSize;
 uniform float u_value_min;
 uniform float u_value_max;
 uniform float u_brightness;
@@ -23,36 +22,10 @@ uniform float u_contrast;
 uniform float u_midpoint;
 uniform int u_mode;
 
-vec4 sampleNearest(vec2 px) {
-    vec2 snap = (floor(px) + 0.5) / uImageSize;
-    return texture2D(uImage0, snap);
-}
-
-// Manual 4-tap bilinear in texel space (the texture itself is nearest-filtered).
-vec4 sampleBilinear(vec2 px) {
-    vec2 texel = 1.0 / uImageSize;
-    vec2 uv = px * texel;
-    vec2 st = uv - 0.5 * texel;
-    vec2 f = fract(st * uImageSize);
-    vec2 i = floor(st * uImageSize);
-    vec2 p0 = (i + 0.5) * texel;
-    vec2 p1 = p0 + texel;
-    vec4 s00 = texture2D(uImage0, p0);
-    vec4 s10 = texture2D(uImage0, vec2(p1.x, p0.y));
-    vec4 s01 = texture2D(uImage0, vec2(p0.x, p1.y));
-    vec4 s11 = texture2D(uImage0, p1);
-    return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
-}
-
 void main() {
-    vec2 px = vUv * uImageSize;
-    // Rotation detection: the texture-coordinate screen-space derivatives are
-    // diagonal for an axis-aligned plane (pure zoom/pan); any off-diagonal term
-    // means the plane is rotated and needs anti-aliased (bilinear) sampling.
-    vec2 duvdx = dFdx(vUv);
-    vec2 duvdy = dFdy(vUv);
-    bool rotated = abs(duvdx.y) + abs(duvdy.x) > 1e-4;
-    vec4 tex = rotated ? sampleBilinear(px) : sampleNearest(px);
+    // Hardware sampling: mipmapped textures + linear minification give smooth
+    // downscaling, and NearestFilter magnification keeps hard 1:1 pixels.
+    vec4 tex = texture2D(uImage0, vUv);
 
     vec3 color;
     if (u_mode == 0) {

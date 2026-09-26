@@ -43,8 +43,14 @@ class TestImageDType:
         assert ImageDType.FLOAT32.to_internal_format() == "float32"
 
     def test_from_numpy(self) -> None:
-        assert ImageDType.from_numpy(np.zeros((2, 2), dtype=np.uint16)) is ImageDType.UINT16
-        assert ImageDType.from_numpy(np.zeros((2, 2), dtype=np.float32)) is ImageDType.FLOAT32
+        assert (
+            ImageDType.from_numpy(np.zeros((2, 2), dtype=np.uint16))
+            is ImageDType.UINT16
+        )
+        assert (
+            ImageDType.from_numpy(np.zeros((2, 2), dtype=np.float32))
+            is ImageDType.FLOAT32
+        )
 
     def test_from_numpy_unsupported(self) -> None:
         with pytest.raises(ValueError, match="Unsupported numpy dtype"):
@@ -54,7 +60,11 @@ class TestImageDType:
 class TestHelpers:
     @pytest.mark.parametrize(
         "channels, expected",
-        [(1, ImageChannelMode.GRAY), (3, ImageChannelMode.RGB), (4, ImageChannelMode.RGB)],
+        [
+            (1, ImageChannelMode.GRAY),
+            (3, ImageChannelMode.RGB),
+            (4, ImageChannelMode.RGB),
+        ],
     )
     def test_default_mode(self, channels: int, expected: ImageChannelMode) -> None:
         assert default_mode(channels) == int(expected)
@@ -99,7 +109,9 @@ class TestImageData:
 
     def test_dtype_mismatch(self) -> None:
         with pytest.raises(ValueError, match="does not match"):
-            ImageData("i", data=np.zeros((2, 2), dtype=np.uint8), dtype=ImageDType.UINT16)
+            ImageData(
+                "i", data=np.zeros((2, 2), dtype=np.uint8), dtype=ImageDType.UINT16
+            )
 
     def test_width_mismatch(self) -> None:
         with pytest.raises(ValueError, match="does not match"):
@@ -111,6 +123,33 @@ class TestImageData:
         img = ImageData("i", data=src)
         assert img.data is not None
         assert img.data.flags["C_CONTIGUOUS"]
+
+    def test_auto_tiles_large_by_dim(self) -> None:
+        img = ImageData("i", data=np.zeros((5000, 100, 3), dtype=np.uint8))
+        assert img.source == "tiled"
+        assert img.data is None
+        assert img.tiled is not None
+        assert (img.width, img.height, img.channels) == (100, 5000, 3)
+
+    def test_auto_tiles_large_by_bytes(self) -> None:
+        # 4096 × 4096 × 3 bytes ≈ 48 MB, over the 32 MB default threshold.
+        img = ImageData("i", data=np.zeros((4096, 4096, 3), dtype=np.uint8))
+        assert img.source == "tiled"
+
+    def test_does_not_tile_small(self) -> None:
+        img = ImageData("i", data=np.zeros((512, 512, 3), dtype=np.uint8))
+        assert img.source == "data"
+        assert img.data is not None
+
+    def test_auto_tile_opt_out(self) -> None:
+        img = ImageData(
+            "i",
+            data=np.zeros((5000, 100, 3), dtype=np.uint8),
+            tile_max_dim=None,
+            tile_max_bytes=None,
+        )
+        assert img.source == "data"
+        assert img.data is not None
 
     def test_to_bytes_and_base64(self) -> None:
         import base64
@@ -181,4 +220,3 @@ class TestPilToNumpy:
 
         with pytest.raises(ValueError, match="Unsupported target dtype"):
             pil_to_numpy(Image.new("L", (4, 3)), dtype="int64")
-

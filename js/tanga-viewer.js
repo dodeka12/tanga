@@ -2661,7 +2661,6 @@ function buildImageFragment() {
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D uImage0;
-uniform vec2 uImageSize;
 uniform float u_value_min;
 uniform float u_value_max;
 uniform float u_brightness;
@@ -2669,36 +2668,10 @@ uniform float u_contrast;
 uniform float u_midpoint;
 uniform int u_mode;
 
-vec4 sampleNearest(vec2 px) {
-    vec2 snap = (floor(px) + 0.5) / uImageSize;
-    return texture2D(uImage0, snap);
-}
-
-// Manual 4-tap bilinear in texel space (the texture itself is nearest-filtered).
-vec4 sampleBilinear(vec2 px) {
-    vec2 texel = 1.0 / uImageSize;
-    vec2 uv = px * texel;
-    vec2 st = uv - 0.5 * texel;
-    vec2 f = fract(st * uImageSize);
-    vec2 i = floor(st * uImageSize);
-    vec2 p0 = (i + 0.5) * texel;
-    vec2 p1 = p0 + texel;
-    vec4 s00 = texture2D(uImage0, p0);
-    vec4 s10 = texture2D(uImage0, vec2(p1.x, p0.y));
-    vec4 s01 = texture2D(uImage0, vec2(p0.x, p1.y));
-    vec4 s11 = texture2D(uImage0, p1);
-    return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
-}
-
 void main() {
-    vec2 px = vUv * uImageSize;
-    // Rotation detection: the texture-coordinate screen-space derivatives are
-    // diagonal for an axis-aligned plane (pure zoom/pan); any off-diagonal term
-    // means the plane is rotated and needs anti-aliased (bilinear) sampling.
-    vec2 duvdx = dFdx(vUv);
-    vec2 duvdy = dFdy(vUv);
-    bool rotated = abs(duvdx.y) + abs(duvdy.x) > 1e-4;
-    vec4 tex = rotated ? sampleBilinear(px) : sampleNearest(px);
+    // Hardware sampling: mipmapped textures + linear minification give smooth
+    // downscaling, and NearestFilter magnification keeps hard 1:1 pixels.
+    vec4 tex = texture2D(uImage0, vUv);
 
     vec3 color;
     if (u_mode == 0) {
@@ -2787,7 +2760,19 @@ function makeDataTexture(img, bytes) {
 
     const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, spec.type);
     texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
+    // 8-bit data gets mipmaps + trilinear minification; float (uint16/float32)
+    // data uses bilinear minification (float mipmap generation isn't universal).
+    if (dtype === 0) {
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+    } else {
+        texture.minFilter = THREE.LinearFilter;
+    }
+    // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 -> bottom
+    // texel), but the image plane samples with the image's row 0 at the *top*
+    // of the pane (matching the JPEG / URL / tiled / stream paths, whose
+    // textures default to `flipY = true`).  Flip so every codec lines up.
+    texture.flipY = true;
     texture.needsUpdate = true;
     return texture;
 }
@@ -2800,9 +2785,21 @@ async function makeEncodedTexture(img, frame) {
     if (frame && frame.codec === 'jpeg') {
         const blob = new Blob([frame.bytes], { type: 'image/jpeg' });
         const bitmap = await createImageBitmap(blob);
-        const texture = new THREE.Texture(bitmap);
-        texture.minFilter = THREE.NearestFilter;
+        // Draw through a 2D canvas so the JPEG path shares the orientation and
+        // filtering contract of the tiled/stream/data paths.  `ImageBitmap`
+        // uploads don't honor `flipY` the way raw pixel data does, so a plain
+        // `THREE.Texture(bitmap)` renders vertically flipped.
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.flipY = true;
         texture.magFilter = THREE.NearestFilter;
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.needsUpdate = true;
         return texture;
     }
@@ -2817,18 +2814,64 @@ async function makeEncodedTexture(img, frame) {
     return makeDataTexture(img, bytes);
 }
 
+// Compose a tiled float32/uint16 image into one float DataTexture by fetching
+// the best-fitting level's tiles as zlib-compressed raw pixels, inflating them,
+// expanding to RGBA, and placing them edge-clipped into a single buffer.
+async function makeTiledDataTexture(img) {
+    const tileSize = img.tile_size || 256;
+    const level = bestPyramidLevel(img);
+    const levelW = Math.ceil(img.width / (2 ** level));
+    const levelH = Math.ceil(img.height / (2 ** level));
+    const cols = Math.ceil(levelW / tileSize);
+    const rows = Math.ceil(levelH / tileSize);
+    const channels = img.channels || 1;
+    const dtype = img.dtype ?? 0;
+
+    const data = new Float32Array(levelW * levelH * 4);
+
+    const jobs = [];
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            jobs.push((async () => {
+                const resp = await fetch(`/image/${img.id}/${level}/${x}/${y}?format=zlib`);
+                if (!resp.ok) return;
+                const compressed = new Uint8Array(await resp.arrayBuffer());
+                const stream = new Blob([compressed]).stream()
+                    .pipeThrough(new DecompressionStream('deflate'));
+                const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+                const rgba = toRgba(typedArrayFor(dtype, bytes), channels);
+                const tileW = Math.min(tileSize, levelW - x * tileSize);
+                const tileH = Math.min(tileSize, levelH - y * tileSize);
+                for (let ty = 0; ty < tileH; ty++) {
+                    const src = ty * tileW * 4;
+                    const dst = ((y * tileSize + ty) * levelW + x * tileSize) * 4;
+                    data.set(rgba.subarray(src, src + tileW * 4), dst);
+                }
+            })());
+        }
+    }
+    await Promise.all(jobs);
+
+    const texture = new THREE.DataTexture(data, levelW, levelH, THREE.RGBAFormat, THREE.FloatType);
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.LinearFilter; // no float mipmaps (matches makeDataTexture)
+    texture.flipY = true;
+    texture.needsUpdate = true;
+    return texture;
+}
+
 // Compose a tiled image into one texture by fetching the tiles of the
-// best-fitting level (long side ≤ 2048 px) and drawing them to a canvas.
+// best-fitting level (long side ≤ 2048 px).  uint8 uses JPEG/PNG tiles drawn
+// to a canvas; float32/uint16 use zlib tiles assembled into a float texture.
 // The `source === "tiled"` metadata is `{id, width, height, tile_size, levels,
 // dtype, channels}` (see `ImagePyramid.meta`).
 async function makeTiledTexture(img) {
-    const tileSize = img.tile_size || 256;
-    const levels = img.levels || 1;
-
-    let level = 0;
-    while (level + 1 < levels && Math.max(img.width, img.height) / (2 ** (level + 1)) <= 2048) {
-        level++;
+    if (img.dtype === 1 || img.dtype === 2) {
+        return makeTiledDataTexture(img);
     }
+
+    const tileSize = img.tile_size || 256;
+    const level = bestPyramidLevel(img);
     const scale = 2 ** level;
     const levelW = Math.ceil(img.width / scale);
     const levelH = Math.ceil(img.height / scale);
@@ -2856,7 +2899,8 @@ async function makeTiledTexture(img) {
     await Promise.all(jobs);
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.NearestFilter;
     texture.needsUpdate = true;
     return texture;
@@ -2877,7 +2921,8 @@ function makeStreamTexture(img) {
     const ctx = canvas.getContext('2d');
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.NearestFilter;
 
     const update = () => {
@@ -3082,15 +3127,10 @@ function _backgroundTexture(img) {
         return makeTiledTexture(img);
     }
     const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
-    return makeEncodedTexture(img, frame).then((tex) => {
-        // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 ->
-        // bottom texel), but this NDC background samples with the image's
-        // row 0 at the *top* of the pane (matching the URL path above and
-        // the 3D projection).  Flip so data and url backgrounds line up.
-        tex.flipY = true;
-        tex.needsUpdate = true;
-        return tex;
-    });
+    // `makeEncodedTexture` applies the correct per-codec orientation itself
+    // (JPEG canvas texture and data texture both render row 0 at the top), so
+    // no extra flip is needed here.
+    return makeEncodedTexture(img, frame);
 }
 
 /**
@@ -3185,6 +3225,22 @@ function pyramidGrid(pyramid, level) {
     };
 }
 
+// Pick the finest pyramid level whose long side is <= `maxDim` pixels (the
+// largest dimension of the level's own grid, not the full-resolution source).
+// Level 0 is full resolution; each level halves the dimensions (ceil).
+function bestPyramidLevel(pyramid, maxDim = 2048) {
+    const levels = pyramid.levels || 1;
+    let level = 0;
+    let w = pyramid.width;
+    let h = pyramid.height;
+    while (level + 1 < levels && Math.max(w, h) > maxDim) {
+        level++;
+        w = Math.ceil(w / 2);
+        h = Math.ceil(h / 2);
+    }
+    return level;
+}
+
 // Tiles of `level` intersecting a normalized viewport `{u0, v0, u1, v1}`
 // (0..1 image coords, v=0 at the top), expanded by `border` tiles and clamped
 // to the level's grid.  Returns a sorted array of `{ level, x, y }`.
@@ -3207,6 +3263,21 @@ function visibleTiles(viewport, pyramid, level, border = 0) {
         }
     }
     return tiles;
+}
+
+// Pixel rect (within a level) of one tile, clipped to the level's edge —
+// matching `ImagePyramid._extract_tile` on the backend (edge tiles are
+// clipped to `min(tile_size, level_dim − coord·tile_size)`).
+function tileRect(pyramid, level, x, y) {
+    const grid = pyramidGrid(pyramid, level);
+    const x0 = x * pyramid.tile_size;
+    const y0 = y * pyramid.tile_size;
+    return {
+        x0,
+        y0,
+        w: Math.min(pyramid.tile_size, grid.width - x0),
+        h: Math.min(pyramid.tile_size, grid.height - y0),
+    };
 }
 
 // Entity renderer factory — thin dispatcher importing from per-entity

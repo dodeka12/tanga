@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { tagEntity } from './utils.js';
 import { buildImageFragment, buildImageVertex } from './image-shader.js';
+import { bestPyramidLevel } from './image-tiles.js';
 import { hasImageFrame, takeImageFrame } from '../image-frames.js';
 
 // dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
@@ -73,7 +74,19 @@ export function makeDataTexture(img, bytes) {
 
     const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, spec.type);
     texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
+    // 8-bit data gets mipmaps + trilinear minification; float (uint16/float32)
+    // data uses bilinear minification (float mipmap generation isn't universal).
+    if (dtype === 0) {
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+    } else {
+        texture.minFilter = THREE.LinearFilter;
+    }
+    // `DataTexture` defaults to `flipY = false` (raw bytes, row 0 -> bottom
+    // texel), but the image plane samples with the image's row 0 at the *top*
+    // of the pane (matching the JPEG / URL / tiled / stream paths, whose
+    // textures default to `flipY = true`).  Flip so every codec lines up.
+    texture.flipY = true;
     texture.needsUpdate = true;
     return texture;
 }
@@ -86,9 +99,21 @@ export async function makeEncodedTexture(img, frame) {
     if (frame && frame.codec === 'jpeg') {
         const blob = new Blob([frame.bytes], { type: 'image/jpeg' });
         const bitmap = await createImageBitmap(blob);
-        const texture = new THREE.Texture(bitmap);
-        texture.minFilter = THREE.NearestFilter;
+        // Draw through a 2D canvas so the JPEG path shares the orientation and
+        // filtering contract of the tiled/stream/data paths.  `ImageBitmap`
+        // uploads don't honor `flipY` the way raw pixel data does, so a plain
+        // `THREE.Texture(bitmap)` renders vertically flipped.
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.flipY = true;
         texture.magFilter = THREE.NearestFilter;
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.needsUpdate = true;
         return texture;
     }
@@ -103,18 +128,64 @@ export async function makeEncodedTexture(img, frame) {
     return makeDataTexture(img, bytes);
 }
 
+// Compose a tiled float32/uint16 image into one float DataTexture by fetching
+// the best-fitting level's tiles as zlib-compressed raw pixels, inflating them,
+// expanding to RGBA, and placing them edge-clipped into a single buffer.
+async function makeTiledDataTexture(img) {
+    const tileSize = img.tile_size || 256;
+    const level = bestPyramidLevel(img);
+    const levelW = Math.ceil(img.width / (2 ** level));
+    const levelH = Math.ceil(img.height / (2 ** level));
+    const cols = Math.ceil(levelW / tileSize);
+    const rows = Math.ceil(levelH / tileSize);
+    const channels = img.channels || 1;
+    const dtype = img.dtype ?? 0;
+
+    const data = new Float32Array(levelW * levelH * 4);
+
+    const jobs = [];
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            jobs.push((async () => {
+                const resp = await fetch(`/image/${img.id}/${level}/${x}/${y}?format=zlib`);
+                if (!resp.ok) return;
+                const compressed = new Uint8Array(await resp.arrayBuffer());
+                const stream = new Blob([compressed]).stream()
+                    .pipeThrough(new DecompressionStream('deflate'));
+                const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+                const rgba = toRgba(typedArrayFor(dtype, bytes), channels);
+                const tileW = Math.min(tileSize, levelW - x * tileSize);
+                const tileH = Math.min(tileSize, levelH - y * tileSize);
+                for (let ty = 0; ty < tileH; ty++) {
+                    const src = ty * tileW * 4;
+                    const dst = ((y * tileSize + ty) * levelW + x * tileSize) * 4;
+                    data.set(rgba.subarray(src, src + tileW * 4), dst);
+                }
+            })());
+        }
+    }
+    await Promise.all(jobs);
+
+    const texture = new THREE.DataTexture(data, levelW, levelH, THREE.RGBAFormat, THREE.FloatType);
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.LinearFilter; // no float mipmaps (matches makeDataTexture)
+    texture.flipY = true;
+    texture.needsUpdate = true;
+    return texture;
+}
+
 // Compose a tiled image into one texture by fetching the tiles of the
-// best-fitting level (long side ≤ 2048 px) and drawing them to a canvas.
+// best-fitting level (long side ≤ 2048 px).  uint8 uses JPEG/PNG tiles drawn
+// to a canvas; float32/uint16 use zlib tiles assembled into a float texture.
 // The `source === "tiled"` metadata is `{id, width, height, tile_size, levels,
 // dtype, channels}` (see `ImagePyramid.meta`).
 export async function makeTiledTexture(img) {
-    const tileSize = img.tile_size || 256;
-    const levels = img.levels || 1;
-
-    let level = 0;
-    while (level + 1 < levels && Math.max(img.width, img.height) / (2 ** (level + 1)) <= 2048) {
-        level++;
+    if (img.dtype === 1 || img.dtype === 2) {
+        return makeTiledDataTexture(img);
     }
+
+    const tileSize = img.tile_size || 256;
+    const level = bestPyramidLevel(img);
     const scale = 2 ** level;
     const levelW = Math.ceil(img.width / scale);
     const levelH = Math.ceil(img.height / scale);
@@ -142,7 +213,8 @@ export async function makeTiledTexture(img) {
     await Promise.all(jobs);
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.NearestFilter;
     texture.needsUpdate = true;
     return texture;
@@ -163,7 +235,8 @@ export function makeStreamTexture(img) {
     const ctx = canvas.getContext('2d');
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.NearestFilter;
 
     const update = () => {

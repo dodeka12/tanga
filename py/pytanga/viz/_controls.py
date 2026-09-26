@@ -442,13 +442,15 @@ class FileChooser(Control):
             "value": self.value,
             "placeholder": self.placeholder,
             "root": self.root,
-            "accept": self.accept,
+            "file_filter": self.file_filter,
+            "folders_only": self.folders_only,
         }
 
     value: str = ""
     placeholder: str = ""
     root: str | None = None
-    accept: str = ""
+    file_filter: str = ""
+    folders_only: bool = False
     on_change: ControlHandler | None = None
 
 

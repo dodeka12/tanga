@@ -19,6 +19,8 @@ from typing import Any
 
 import numpy as np
 
+from ._image_io import read_exr, read_hdr, register_loading_progress_handler
+
 __all__ = [
     "ImageDType",
     "EImageCodec",
@@ -27,6 +29,9 @@ __all__ = [
     "default_mode",
     "default_value_range",
     "pil_to_numpy",
+    "read_exr",
+    "read_hdr",
+    "register_loading_progress_handler",
 ]
 
 
@@ -125,11 +130,18 @@ def default_value_range(dtype: ImageDType) -> tuple[float, float]:
 
 @dataclass
 class ImageData:
-    """A single image: a numpy pixel buffer or a URL, with its metadata.
+    """A single image: a numpy pixel buffer, a URL, or an on-demand tile pyramid.
 
     ``data`` and ``url`` are mutually exclusive.  When ``data`` is given,
     ``width``/``height``/``channels``/``dtype`` default to values derived from
     the array; when ``url`` is given they are all required.
+
+    A ``data`` array whose longest side exceeds ``tile_max_dim`` or whose byte
+    size exceeds ``tile_max_bytes`` is automatically converted into a lazily
+    built tile pyramid (``tiled``), so very large images are fetched on demand
+    by the frontend instead of being sent in one frame.  Pass
+    ``tile_max_dim=None`` and ``tile_max_bytes=None`` (or an explicit
+    ``tiled``) to opt out.
     """
 
     id: str
@@ -142,8 +154,13 @@ class ImageData:
     codec: EImageCodec | None = None
     jpeg_quality: int | None = None
     tiled: Any | None = None
+    tile_max_dim: int | None = 4096
+    tile_max_bytes: int | None = 32 * 1024 * 1024
+    tile_size: int = 256
 
     def __post_init__(self) -> None:
+        self._maybe_auto_tile()
+
         if self.tiled is not None:
             if self.data is not None or self.url is not None:
                 raise ValueError(
@@ -157,9 +174,7 @@ class ImageData:
             return
 
         if (self.data is None) == (self.url is None):
-            raise ValueError(
-                "ImageData needs exactly one of `data`, `url`, or `tiled`"
-            )
+            raise ValueError("ImageData needs exactly one of `data`, `url`, or `tiled`")
 
         if self.data is not None:
             self._validate_array()
@@ -168,6 +183,34 @@ class ImageData:
                 "`width`, `height`, `channels`, and `dtype` are required "
                 "when `url` is given instead of `data`"
             )
+
+    def _maybe_auto_tile(self) -> None:
+        """Replace a large pixel buffer with a lazily built tile pyramid.
+
+        Runs only when ``data`` (not an explicit ``tiled``) is provided and its
+        longest side or byte size exceeds the configured thresholds.  The
+        pyramid keeps a reference to the same array, so no pixels are copied
+        until a tile is requested.
+        """
+        if self.data is None or self.tiled is not None:
+            return
+        if self.data.ndim not in (2, 3):
+            return  # invalid array — let _validate_array raise the proper error
+        if self.data.ndim == 3 and self.data.shape[2] not in (1, 3, 4):
+            return  # invalid channel count — let _validate_array raise
+        height, width = self.data.shape[0], self.data.shape[1]
+        if self.tile_max_dim is not None and max(height, width) > self.tile_max_dim:
+            should_tile = True
+        elif self.tile_max_bytes is not None and self.data.nbytes > self.tile_max_bytes:
+            should_tile = True
+        else:
+            should_tile = False
+        if not should_tile:
+            return
+        from ._image_pyramid import ImagePyramid
+
+        self.tiled = ImagePyramid(self.id, self.data, tile_size=self.tile_size)
+        self.data = None
 
     def _validate_array(self) -> None:
         """Derive and check metadata from the pixel buffer (and force C-order)."""
@@ -270,7 +313,9 @@ class ImageData:
         image = Image.fromarray(self.data, mode=mode)
         buffer = io.BytesIO()
         image.save(buffer, format="JPEG", quality=quality)
-        return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+        return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode(
+            "ascii"
+        )
 
 
 def pil_to_numpy(img: Any, *, dtype: str = "uint8") -> np.ndarray:

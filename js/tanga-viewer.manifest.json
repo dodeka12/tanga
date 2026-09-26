@@ -180,19 +180,19 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-shader.js",
-      "sha256": "5c105e4c8e4bf60e3dbf45f1ed63a25885e6597d4861c05f12f50b930a7427a3"
+      "sha256": "0f4f0afb3dab6859373f5064d46d792767f68e3e48b86e93eaccbc3b555a4951"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image.js",
-      "sha256": "01ce5ce6f3501e3ab3f7c1f3134f51ec7c23f3677f615d20bc77d600df36c6fa"
+      "sha256": "51c6deecd963012e0af7c3a6987b3ea241489bd698b5cc82e538715a68e1af4d"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-background.js",
-      "sha256": "286ebd7c59a43e4649bf7a19a79605fd838920be52d3c1706abe1c54ef3e2b12"
+      "sha256": "58de7b4e3e479415df09fd11ad36424df35beb97b770f78bac31283d8baf5110"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-tiles.js",
-      "sha256": "6ca615037829b1f456cb38b0cd49cb389e1729bfc03ddb5924c01a12eacca330"
+      "sha256": "6a93fdcdf622bf56c0ca5a913abd5fe7e884b33843eca6476090dac0313c711a"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
@@ -275,6 +275,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "8dc3c620535b554fc297c2affbf5b50057976c5676edf1835925da5338a65330",
-  "bundle_sha256": "f5371691e0c596588c868683ab60c2a2ffb5da3fac0593dd6975bb437b86bcf8"
+  "fingerprint_sha256": "d48e280002483905f65785083a11e7b9e59d2a84d3c22ceaa0ef5b1d74b3ac14",
+  "bundle_sha256": "b5e9a29b11db778174bec22a17aff27677b62180c6d5540d8938cb706f3db1e3"
 }

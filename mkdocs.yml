@@ -172,6 +172,7 @@ nav:
       - Custom Shaders: py/viz/image/custom-shaders.md
       - Interaction: py/viz/image/interaction.md
       - Image Transport: py/viz/image/image-transport.md
+      - HDR Images: py/viz/image/hdr-images.md
       - Tiled Images: py/viz/image/tiled-images.md
       - Image Streams: py/viz/image/image-stream.md
     - Entities & Operators:

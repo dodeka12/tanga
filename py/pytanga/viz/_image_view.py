@@ -80,7 +80,7 @@ class ImageView:
             self._images.append(image)
         assert image.width is not None and image.height is not None
         self._frame = (image.width, image.height)
-        self._seed_image_defaults(image)
+        self._reset_image_defaults(image)
 
     def add_image(self, image: ImageData) -> None:
         """Append *image* as the next layer (max :data:`MAX_IMAGE_LAYERS`)."""
@@ -93,12 +93,27 @@ class ImageView:
         self._seed_image_defaults(image)
 
     def _seed_image_defaults(self, image: ImageData) -> None:
-        """Seed ``u_mode``/``u_value_min``/``u_value_max`` from the image."""
+        """Seed ``u_mode``/``u_value_min``/``u_value_max`` if not already set."""
         assert image.channels is not None and image.dtype is not None
         self._uniforms.setdefault("u_mode", default_mode(image.channels))
         lo, hi = default_value_range(image.dtype)
         self._uniforms.setdefault("u_value_min", lo)
         self._uniforms.setdefault("u_value_max", hi)
+
+    def _reset_image_defaults(self, image: ImageData) -> None:
+        """Re-derive the value-range/mode defaults from a replacement image.
+
+        Unlike :meth:`_seed_image_defaults`, this *overwrites* the seeded keys so
+        replacing the primary image with a different dtype/channel count updates
+        the normalization range (e.g. uint8 → uint16 changes ``u_value_max`` from
+        ``1.0`` to ``65535``).  Callers that want a custom range set it via
+        :meth:`set_uniform` *after* :meth:`set_image`.
+        """
+        assert image.channels is not None and image.dtype is not None
+        self._uniforms["u_mode"] = default_mode(image.channels)
+        lo, hi = default_value_range(image.dtype)
+        self._uniforms["u_value_min"] = lo
+        self._uniforms["u_value_max"] = hi
 
     # -- uniforms -----------------------------------------------------
 
@@ -379,6 +394,12 @@ class ImageCanvas:
     def _sync_image(self) -> None:
         """Register the image entity and send its pixel bytes + uniforms."""
         from ._image_wire import encode_image_frame
+
+        # Auto-register any tiled pyramids so the /image/... tile route is live
+        # before the frontend tries to fetch its tiles.
+        for img in self._image_view.images:
+            if img.source == "tiled" and img.tiled is not None:
+                self._handle._viz._register_pyramid(img.tiled)
 
         payload = self._image_view._serialize()
         self._handle.scene.upsert_image(
