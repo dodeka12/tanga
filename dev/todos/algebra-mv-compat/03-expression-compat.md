@@ -17,15 +17,15 @@ algebras combine.
 
 ## Steps
 
-- [ ] **3.1 — operand guard (l.1965)**
+- [x] **3.1 — operand guard (l.1965)**
   - `if m_L.algebra is not m_R.algebra:` → `if m_L.algebra != m_R.algebra:`
     (keep the message "expression operands belong to different algebras").
 
-- [ ] **3.2 — `project_onto` guard (l.776)**
+- [x] **3.2 — `project_onto` guard (l.776)**
   - `if target.algebra is not self.algebra:` → `if target.algebra !=
     self.algebra:` (keep the message).
 
-- [ ] **3.3 — Tests**
+- [x] **3.3 — Tests**
   - New `py/tests/expression/test_expression_compat.py` (annotate `-> None`):
     build two expressions from two `BasisN3()` instances with the same
     `BladeMask` and combine them (e.g. `+` and `*`) — no `ValueError`; a

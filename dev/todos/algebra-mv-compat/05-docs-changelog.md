@@ -18,20 +18,20 @@ changelog.
 
 ## Steps
 
-- [ ] **5.1 — Changelog**
+- [x] **5.1 — Changelog**
   - Add a `## New Features` bullet to the branch changelog describing
     cross-instance MV compatibility and the `Algebra.compare`/`__eq__` API
     (follow `dev/workflows/changelog.md` for the file name and
     since-relative title).
 
-- [ ] **5.2 — Docs**
+- [x] **5.2 — Docs**
   - In `docs/py/ga/algebra/algebra.md`, add a short paragraph: `compare()` /
     `__eq__` compare `(dim, sig, dtype, modulus)`; `opns`, `precision`, and
     display settings are excluded; equal-parameter instances are
     interchangeable across `MV`, `BladeMask`, `Expression`, `tensor`, `solver`,
     and `matrix`.
 
-- [ ] **5.3 — Final validation**
+- [x] **5.3 — Final validation**
   - `uv run pytest -q` (full suite), `uv run ty check`, `uv run ruff check .`.
   - Confirm no pre-existing behavior changed beyond the intended
     equal-parameter relaxation.

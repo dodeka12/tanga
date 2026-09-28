@@ -19,7 +19,7 @@ from Phase 1.
 
 ## Steps
 
-- [ ] **2.1 — `_mask.py` checks**
+- [x] **2.1 — `_mask.py` checks**
   - `from_array` (l.185): `elif mv.algebra is not alg:` → `elif mv.algebra !=
     alg:`.
   - blade-diff guard (l.270): `assert mv.algebra is self._alg, …` → `==`.
@@ -28,11 +28,11 @@ from Phase 1.
   - `__eq__` (l.417): `self._alg is other._alg and self._ids == other._ids` →
     `self._alg == other._alg and self._ids == other._ids`.
 
-- [ ] **2.2 — `predict.py` checks**
+- [x] **2.2 — `predict.py` checks**
   - l.43: `assert c_mask.algebra is a_mask.algebra, …` → `==`.
   - l.114: `assert b_mask.algebra is a_mask.algebra, …` → `==`.
 
-- [ ] **2.3 — Tests**
+- [x] **2.3 — Tests**
   - New `py/tests/blade_mask/test_blade_mask_compat.py` (annotate `-> None`):
     - Union/intersection of a `BladeMask(a_basis)` with a mask built from a
       second, equal-parameter basis instance no longer raises and returns the

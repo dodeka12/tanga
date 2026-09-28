@@ -18,7 +18,7 @@ is the fixed contract every later phase builds on.
 
 ## Steps
 
-- [ ] **1.1 — Add the equality methods**
+- [x] **1.1 — Add the equality methods**
   - In `Algebra` (near the `modulus` property, alongside the other properties),
     add three annotated methods:
     - `compare(self, other: "Algebra") -> bool` — return `False` unless
@@ -34,7 +34,7 @@ is the fixed contract every later phase builds on.
   - Follow `docs/dev/architecture/typing-and-annotations.md` (annotate all
     three; no `Any`).
 
-- [ ] **1.2 — Tests**
+- [x] **1.2 — Tests**
   - New `py/tests/algebra/test_algebra_compare.py`, all test functions annotated
     `-> None`:
     - `BasisN3() == BasisN3()` is `True`; `BasisN3() == BasisE3()` is `False`.

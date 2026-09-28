@@ -72,7 +72,7 @@ def product_tensor(
     MVTensor
         Shape ``(|c_mask|, |a_mask|, |b_mask|)`` with +-1/0 entries.
     """
-    assert b_mask.algebra is a_mask.algebra, (
+    assert b_mask.algebra == a_mask.algebra, (
         "b_mask belongs to a different algebra than a_mask"
     )
     alg = a_mask.algebra
@@ -80,7 +80,7 @@ def product_tensor(
     if c_mask is None:
         c_mask = product_blade_mask(a_mask, b_mask, product=product)
 
-    assert c_mask.algebra is alg
+    assert c_mask.algebra == alg
 
     if not a_mask or not b_mask or not c_mask:
         # The C++ tensor builders assume non-empty masks; a genuinely empty
@@ -131,7 +131,7 @@ def product_tensor_rc(
     which is a superset of the right contraction's own support (some output rows
     may therefore be identically zero).
     """
-    assert b_mask.algebra is a_mask.algebra, (
+    assert b_mask.algebra == a_mask.algebra, (
         "b_mask belongs to a different algebra than a_mask"
     )
     alg = a_mask.algebra
@@ -139,7 +139,7 @@ def product_tensor_rc(
     if c_mask is None:
         c_mask = product_blade_mask(a_mask, b_mask, product=EProduct.IP)
 
-    assert c_mask.algebra is alg
+    assert c_mask.algebra == alg
 
     # IP tensor with reversed operand order: masks (c_mask, b_mask, a_mask).
     ip_ba = product_tensor(b_mask, a_mask, c_mask, product=EProduct.IP)

@@ -773,7 +773,7 @@ class Expression:
             raise TypeError(
                 f"project_onto expects MV or BladeMask, got {type(other).__name__}"
             )
-        if target.algebra is not self.algebra:
+        if target.algebra != self.algebra:
             raise ValueError("project_onto: blade set belongs to a different algebra")
         return _restrict_output(self, target)
 
@@ -1962,7 +1962,7 @@ def _resolve_product_operands(
     m_L = _value_mask(Lkind, Lval)
     m_R = _value_mask(Rkind, Rval)
 
-    if m_L.algebra is not m_R.algebra:
+    if m_L.algebra != m_R.algebra:
         raise ValueError("expression operands belong to different algebras")
 
     return Lkind, Lval, Rkind, Rval, m_L, m_R

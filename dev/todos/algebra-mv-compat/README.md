@@ -1,6 +1,6 @@
 # Algebra MV cross-instance compatibility — Overview
 
-**Created:** 2026-09-28 | **Status:** Planned | **Branch:** `feat/algebra-mv-compat`
+**Created:** 2026-09-28 | **Status:** Done | **Branch:** `feat/algebra-mv-compat`
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this

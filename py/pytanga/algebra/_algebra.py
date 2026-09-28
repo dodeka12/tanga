@@ -135,6 +135,32 @@ class Algebra:
         """Modulus stored on this algebra, or None for float algebras."""
         return self._modulus
 
+    def compare(self, other: Algebra) -> bool:
+        """Return ``True`` iff *other* has the same algebra parameters.
+
+        Compares ``(dim, sig, dtype, modulus)`` — the tuple that determines
+        whether two multivectors can be combined.  ``opns``, ``precision``,
+        ``print_fmt``, and the subclass meet/join interpretation
+        (``_swap_meet_join``) are intentionally **not** compared: they are
+        interpretation/display settings and do not affect combinability.
+        """
+        if not isinstance(other, Algebra):
+            return False
+        return (
+            self._dim == other._dim
+            and self._sig == other._sig
+            and self._dtype == other._dtype
+            and self._modulus == other._modulus
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Algebra):
+            return NotImplemented
+        return self.compare(other)
+
+    def __hash__(self) -> int:
+        return hash((self._dim, self._sig, self._dtype, self._modulus))
+
     @property
     def algebra_dim(self) -> int:
         """2 ** dim — total number of basis blades."""
