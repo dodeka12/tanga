@@ -283,11 +283,14 @@ three mutually exclusive `ImageData` sources:
   via `THREE.TextureLoader`, or a **camera feed** (`/stream/{id}`) served as
   **MJPEG** (`_camera_stream.py`, drawn into a texture by `makeStreamTexture`).
 - **`source: "tiled"`** — an **HTTP tile pyramid** (`_image_pyramid.py`,
-  `/image/{id}/{level}/{x}/{y}`, `format=jpeg|png|raw|zlib`): `uint8` tiles
-  stream as JPEG/PNG (drawn to a canvas) while `float32`/`uint16` tiles stream
-  as lossless zlib-compressed raw, assembled client-side into a float texture so
-  `u_value_min`/`u_value_max` and brightness/contrast use the full dynamic
-  range.  `ImageData` auto-tiles arrays over `tile_max_dim`/`tile_max_bytes`
+  `/image/{id}/{version}/{level}/{x}/{y}`, `format=jpeg|png|raw|zlib`): `uint8`
+  tiles stream as JPEG/PNG (drawn to a canvas) while `float32`/`uint16` tiles
+  stream as lossless zlib-compressed raw, assembled client-side into a float
+  texture so `u_value_min`/`u_value_max` and brightness/contrast use the full
+  dynamic range.  `version` is a per-`image_id` counter bumped on each
+  re-registration, so a same-id runtime swap fetches fresh URLs instead of
+  stale browser-cached tiles (the route also serves `Cache-Control: no-store`).
+  `ImageData` auto-tiles arrays over `tile_max_dim`/`tile_max_bytes`
   (defaults 4096 px / 32 MB) and `ImageCanvas._sync_image` auto-registers the
   pyramid with the `Visualizer` (via `_register_pyramid`).
 

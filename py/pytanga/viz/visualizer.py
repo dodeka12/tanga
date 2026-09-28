@@ -244,6 +244,7 @@ class Visualizer(_JupyterDisplayMixin):
             self._transport, self._layout, self._handler_registry
         )
         self._image_pyramids: dict[str, Any] = {}
+        self._image_versions: dict[str, int] = {}
         self._camera_streams: dict[str, Any] = {}
 
         # Inbound routing: a data table on the transport.
@@ -1097,7 +1098,15 @@ class Visualizer(_JupyterDisplayMixin):
         return self._register_pyramid(ImagePyramid(image_id, data, tile_size=tile_size))
 
     def _register_pyramid(self, pyramid: Any) -> Any:
-        """Register an existing :class:`~pytanga.viz._image_pyramid.ImagePyramid`."""
+        """Register an existing :class:`~pytanga.viz._image_pyramid.ImagePyramid`.
+
+        Bumps the per-``image_id`` version stamp so re-registering the same id
+        (e.g. a runtime background-image swap) yields a fresh tile URL and the
+        browser never serves stale cached tiles.
+        """
+        version = self._image_versions.get(pyramid.image_id, 0) + 1
+        self._image_versions[pyramid.image_id] = version
+        pyramid.version = version
         self._image_pyramids[pyramid.image_id] = pyramid
         if self._server is not None:
             self._server.register_image_pyramid(pyramid.image_id, pyramid)

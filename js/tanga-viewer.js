@@ -2833,7 +2833,7 @@ async function makeTiledDataTexture(img) {
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${level}/${x}/${y}?format=zlib`);
+                const resp = await fetch(`/image/${img.id}/${img.version ?? 0}/${level}/${x}/${y}?format=zlib`);
                 if (!resp.ok) return;
                 const compressed = new Uint8Array(await resp.arrayBuffer());
                 const stream = new Blob([compressed]).stream()
@@ -2888,7 +2888,7 @@ async function makeTiledTexture(img) {
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${level}/${x}/${y}?format=${format}`);
+                const resp = await fetch(`/image/${img.id}/${img.version ?? 0}/${level}/${x}/${y}?format=${format}`);
                 if (!resp.ok) return;
                 const bitmap = await createImageBitmap(await resp.blob());
                 ctx.drawImage(bitmap, x * tileSize, y * tileSize);

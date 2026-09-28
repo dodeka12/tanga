@@ -3,7 +3,7 @@
 A very large image (a 360° panorama, whole-slide scan, or big programmatic
 array) is too big to send in one frame.  Instead register it as an
 **on-demand tile pyramid**, and the frontend fetches only the tiles it needs
-from `/image/{id}/{level}/{x}/{y}`.
+from `/image/{id}/{version}/{level}/{x}/{y}`.
 
 ## Register a pyramid
 
@@ -42,6 +42,11 @@ The thresholds are configurable (`tile_max_dim` / `tile_max_bytes`, defaults
 Pass `tile_max_dim=None, tile_max_bytes=None` to opt out.  The explicit
 `register_image_pyramid` call above remains useful when you want a specific
 `image_id` or to pre-register the route yourself.
+
+The tile URL's `version` segment is a per-`image_id` counter that increments
+each time the id is (re)registered, so when you swap an image under a reused id
+(e.g. a runtime `set_background_image`) the browser fetches fresh tiles instead
+of serving stale cached ones.
 
 ## Display formats
 
