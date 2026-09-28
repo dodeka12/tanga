@@ -857,6 +857,95 @@ function createSquarePoint(ent) {
     return mesh;
 }
 
+// CirclePointStyle renderer — a flat circle marker (filled disc or outline
+// ring) instead of a sphere.
+
+const CIRCLE_POINT_SEGMENTS = 64;
+
+function createCirclePoint(ent) {
+    const color = parseColor(ent, '#ffffff');
+    const opacity = styleParam(ent, 'opacity', 1.0);
+    const size = styleParam(ent, 'size', 0.08); // circle radius (world units)
+    const thickness = styleParam(ent, 'thickness', Math.max(size * 0.2, 0.001));
+    const filled = styleParam(ent, 'filled', true);
+    const pos = ent.position || [0, 0, 0];
+
+    let mesh;
+    if (filled) {
+        // Filled disc; its opacity is `fill_opacity` (defaulting to `opacity`).
+        const fillOpacity = styleParam(ent, 'fill_opacity', opacity);
+        mesh = new THREE.Mesh(
+            new THREE.CircleGeometry(size, CIRCLE_POINT_SEGMENTS),
+            makeMaterial(color, fillOpacity, true)
+        );
+        mesh.userData.isFillQuad = true;
+    } else {
+        // Outline ring: a flat annulus whose radial width is `thickness`.
+        const inner = Math.max(size - thickness, 0.0005);
+        mesh = new THREE.Mesh(
+            new THREE.RingGeometry(inner, size, CIRCLE_POINT_SEGMENTS),
+            makeMaterial(color, opacity, true)
+        );
+    }
+
+    mesh.position.set(pos[0], pos[1], pos[2]);
+    tagEntity(mesh, ent);
+    return mesh;
+}
+
+// IconPointStyle renderer — a flat quad textured with an icon glyph (Material
+// Symbols ligature or a unicode symbol) instead of a sphere.
+
+function _iconParts(icon) {
+    const i = icon.indexOf(':');
+    if (i === -1) return { family: 'material', name: icon };
+    return { family: icon.slice(0, i) || 'material', name: icon.slice(i + 1) };
+}
+
+function _makeIconTexture(icon) {
+    // Draw the glyph in white; the mesh material color tints it, so a color
+    // change is applied in place (without re-rendering the canvas).
+    const { family, name } = _iconParts(icon);
+    const font = family === 'uc'
+        ? '48px sans-serif'
+        : '48px "Material Symbols Outlined"';
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, 64, 64);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, 32, 32);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+}
+
+function createIconPoint(ent) {
+    const color = parseColor(ent, '#ffffff');
+    const opacity = styleParam(ent, 'opacity', 1.0);
+    const size = styleParam(ent, 'size', 0.1); // half-extent (world units)
+    const icon = styleParam(ent, 'icon', '');
+    const pos = ent.position || [0, 0, 0];
+
+    const material = makeMaterial(color, opacity, true);
+    if (icon) {
+        const texture = _makeIconTexture(icon);
+        if (texture) {
+            material.map = texture;
+            material.transparent = true;
+            material.depthWrite = false;
+        }
+    }
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), material);
+    mesh.position.set(pos[0], pos[1], pos[2]);
+    tagEntity(mesh, ent);
+    return mesh;
+}
+
 // Direction renderer — rendered as a 3D arrow (cylinder shaft + cone head).
 // Phase 5: Per-entity module.
 
@@ -1418,7 +1507,9 @@ function createDisk(ent) {
     return mesh;
 }
 
-// Ellipse renderer — a 2D ellipse drawn as a screen-space fat line.
+// Ellipse renderer — a 2D ellipse drawn as a screen-space fat line, plus an
+// optional semi-transparent fill disc under the outline (so the body is easy
+// to click/select, like a filled Rectangle2D).
 // Phase 4: Per-entity module.
 
 const ELLIPSE_SEGMENTS = 128;
@@ -1430,6 +1521,21 @@ function createEllipse(ent) {
     const radiusU = Math.max(ent.radiusU || 1.0, 0.001);
     const radiusV = Math.max(ent.radiusV || 0.5, 0.001);
 
+    const group = new THREE.Group();
+
+    // Optional semi-transparent fill disc under the outline.
+    if (styleParam(ent, 'fill', false)) {
+        const fillOpacity = styleParam(ent, 'fill_opacity', 0.2);
+        const fillGeo = new THREE.CircleGeometry(1, ELLIPSE_SEGMENTS);
+        const fill = new THREE.Mesh(fillGeo, makeMaterial(color, fillOpacity, true));
+        // A unit disc scaled to the ellipse radii, in the canonical XY plane.
+        fill.scale.set(radiusU, radiusV, 1);
+        // Mark the fill so style updates apply `fill_opacity` (not the
+        // top-level outline `opacity`) to it.
+        fill.userData.isFillQuad = true;
+        group.add(fill);
+    }
+
     // Canonical: an ellipse in the XY plane at the origin, `radiusU` along +X
     // and `radiusV` along +Y.  Placement (center + normal + dirU/dirV) rides on
     // the node transform.
@@ -1439,9 +1545,9 @@ function createEllipse(ent) {
         points.push(new THREE.Vector3(radiusU * Math.cos(t), radiusV * Math.sin(t), 0));
     }
 
-    const line = makeFatLine(points, color, opacity, thickness);
-    tagEntity(line, ent);
-    return line;
+    group.add(makeFatLine(points, color, opacity, thickness));
+    tagEntity(group, ent);
+    return group;
 }
 
 function updateEllipse(mesh, ent, prev) {
@@ -2983,6 +3089,10 @@ async function createImage(ent) {
         vertexShader: vertex,
         fragmentShader: fragment,
         uniforms,
+        // The image plane is a background: never write depth, so overlay
+        // geometry (points, lines, polygons) drawn at the same z=0 renders on
+        // top instead of z-fighting with the image.
+        depthWrite: false,
     });
 
     const mesh = new THREE.Mesh(geometry, material);
@@ -3298,6 +3408,10 @@ async function createEntityMesh(ent) {
                 mesh = createCrossHairPoint(ent);
             } else if (ent.style?.style_type === 'SquarePointStyle') {
                 mesh = createSquarePoint(ent);
+            } else if (ent.style?.style_type === 'CirclePointStyle') {
+                mesh = createCirclePoint(ent);
+            } else if (ent.style?.style_type === 'IconPointStyle') {
+                mesh = createIconPoint(ent);
             } else {
                 mesh = createPoint(ent);
             }

@@ -54,6 +54,8 @@ class SceneConfig:
     # Scene-wide default viewport (zoom + pan) for panes that do not set their
     # own per-pane ``CameraView.viewport``.
     viewport: ViewportConfig | None = None
+    # Per-scene keyboard shortcuts: list of {"key": str, "modifiers": [str, ...]}.
+    keyboard: list[dict[str, Any]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -83,6 +85,8 @@ class SceneConfig:
             result["cursor"] = self.cursor
         if self.viewport is not None:
             result["viewport"] = self.viewport.to_dict()
+        if self.keyboard:
+            result["keyboard"] = self.keyboard
         return result
 
 

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import singledispatchmethod
@@ -657,12 +658,48 @@ class ScrollEvent(InteractionEvent):
     delta_xy: tuple[float, float] = (0.0, 0.0)  # raw scroll delta
 
 
+@dataclass
+class KeyEvent(ControlEvent):
+    """Fired when the user presses a registered key in a focused pane.
+
+    Not a pointer interaction: it has no ``object_id``/``camera`` — it carries
+    the pressed key, the held modifiers, and the scene it was pressed in.
+    """
+
+    key: str = ""
+    modifiers: frozenset[ModifierKey] = frozenset()
+    scene: str = ""
+
+
+#: Async callback signature for keyboard handlers.
+KeyHandler = Callable[[KeyEvent], Awaitable[None]]
+
+
+@dataclass
+class KeyBinding:
+    """Bind a key (+ optional modifiers) to an async handler."""
+
+    key: str
+    handler: KeyHandler
+    modifiers: frozenset[ModifierKey] = frozenset()
+
+
 # ── Deserialization helpers ────────────────────────────────────
 
 
 def _parse_modifiers(modifiers_list: list[str]) -> frozenset[ModifierKey]:
     """Parse a list of modifier strings from JSON into a frozenset."""
     return frozenset(ModifierKey(m) for m in modifiers_list)
+
+
+def _parse_key_event(data: dict[str, Any]) -> KeyEvent:
+    """Parse a JSON dict into a :class:`KeyEvent`."""
+    return KeyEvent(
+        browser_id=data.get("browser_id"),
+        key=str(data.get("key", "")).lower(),
+        modifiers=_parse_modifiers(data.get("modifiers", [])),
+        scene=str(data.get("scene", "")),
+    )
 
 
 def _parse_camera(data: dict[str, Any]) -> Camera | None:

@@ -139,6 +139,8 @@ export class ThreeJsView extends View {
         this._backgroundMesh = null;
         this._hide = new Set();
         this._show = null;
+        this._keyBindings = [];
+        this._lastCameraKey = null;
 
         this.el.classList.add('tanga-three-view');
         this.el.style.position = 'relative';
@@ -298,6 +300,13 @@ export class ThreeJsView extends View {
             this._bindViewportInput();
             this._interaction = new InteractionController(this.camera, this.renderer.domElement, this.controls, this._ws);
         }
+
+        this.el.tabIndex = 0;
+        // Capture phase: run before the interaction controller's pointerdown
+        // (which calls `stopPropagation()` on drag), so this pane still gains
+        // focus and its keydown listener fires.
+        this.el.addEventListener('pointerdown', () => this.el.focus(), true);
+        this.el.addEventListener('keydown', (e) => this._handleKeyDown(e));
     }
 
     _addDefaultLights() {
@@ -423,6 +432,7 @@ export class ThreeJsView extends View {
 
     _applySceneConfig(config) {
         this.sceneConfig = config;
+        this._keyBindings = config.keyboard || [];
         const spaceDim = config.space_dim || 3;
         // A per-pane camera override (SceneView(scene, camera=…)) wins over the
         // scene's own camera; otherwise fall back to the scene config.
@@ -436,7 +446,14 @@ export class ThreeJsView extends View {
             this.applyThemeBackground();
         }
 
-        this._applyCamera(cameraConfig);
+        // Only re-apply the camera when it actually changed: unrelated
+        // `scene_config` pushes (cursor, title, keyboard) re-send the same
+        // (stale) camera and must not reset the user's pan/zoom.
+        const cameraKey = this._cameraKey(cameraConfig);
+        if (cameraKey !== this._lastCameraKey) {
+            this._lastCameraKey = cameraKey;
+            this._applyCamera(cameraConfig);
+        }
 
         this._reconfigureControls();
         this._interaction.setSpaceDim(spaceDim);
@@ -465,6 +482,11 @@ export class ThreeJsView extends View {
         const bg = getComputedStyle(document.documentElement)
             .getPropertyValue('--tanga-bg').trim();
         this.scene.background = bg ? new THREE.Color(bg) : null;
+    }
+
+    /** Stable string key for a camera config (or '' for none), for change detection. */
+    _cameraKey(cameraConfig) {
+        return cameraConfig ? JSON.stringify(cameraConfig) : '';
     }
 
     /**
@@ -855,6 +877,49 @@ export class ThreeJsView extends View {
     }
 
     // ── per-scene message handling ─────────────────────────────
+
+    // ── per-pane keyboard shortcuts ─────────────────────────
+
+    _handleKeyDown(event) {
+        if (event.repeat) return;
+        const target = event.target;
+        if (target && (
+            target.tagName === 'INPUT'
+            || target.tagName === 'TEXTAREA'
+            || target.isContentEditable
+        )) return;
+        const bindings = this._keyBindings || [];
+        if (!bindings.length) return;
+
+        const held = [];
+        if (event.ctrlKey || event.metaKey) held.push('ctrl');
+        if (event.shiftKey) held.push('shift');
+        if (event.altKey) held.push('alt');
+
+        const key = (event.key || '').toLowerCase();
+        for (const binding of bindings) {
+            if (!binding || !binding.key) continue;
+            if (key !== String(binding.key).toLowerCase()) continue;
+            const required = binding.modifiers || [];
+            let matched = true;
+            for (const mod of required) {
+                if (!held.includes(mod)) { matched = false; break; }
+            }
+            if (!matched) continue;
+            event.preventDefault();
+            if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+                this._ws.send(JSON.stringify({
+                    type: 'interaction:key',
+                    event_type: 'key',
+                    scene: this.sceneName,
+                    key: event.key,
+                    modifiers: held,
+                    browser_id: this._browserId,
+                }));
+            }
+            return;
+        }
+    }
 
     async handleMessage(msg) {
         if (msg.type === 'clear_all') {

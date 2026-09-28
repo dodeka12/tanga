@@ -410,6 +410,16 @@ export class InteractionController {
         for (const [, obj] of this.interactiveObjects) meshes.push(obj.mesh);
         if (meshes.length === 0) return null;
 
+        // Raycast background planes last.  An image plane sits at the same
+        // z = 0 as the shape bodies drawn over it, so an equal-distance raycast
+        // tie would otherwise resolve to the image (first registered) and
+        // shadow the shapes.  Sorting it last lets the overlay entities win.
+        meshes.sort((a, b) => {
+            const aIsImage = !!(a && a.userData && a.userData.kind === 'image');
+            const bIsImage = !!(b && b.userData && b.userData.kind === 'image');
+            return (aIsImage ? 1 : 0) - (bIsImage ? 1 : 0);
+        });
+
         const rect = this.rendererDomElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;

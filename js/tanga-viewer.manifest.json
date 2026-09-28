@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "3115957bdf9a9c2dcef5150f6bb1b1f98d6bfcf643c2ca2906a1859823f74bd4",
+  "generator_sha256": "fe3253d7cc723594503b65357f8e3d3c306630d384a6f8f5a65b5625012adaf9",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -21,6 +21,14 @@
     {
       "path": "py/pytanga/viz/templates/renderers/square_point.js",
       "sha256": "568d6424c81a9acdc7e7db759d2081aaf1a327d8493ba9843cd6dc66952c9bfb"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/circle_point.js",
+      "sha256": "29abc289776d9b785713ac41c1b03cd2dd628eb3ecc0534c36b43c018262d99e"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/icon_point.js",
+      "sha256": "ef8cac439ccae58a870ffd2d8b59e1d2028246ade7ea01661b09fa4023e0fb9f"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/direction.js",
@@ -60,7 +68,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipse.js",
-      "sha256": "9f73e5a0609256400d7f6a8d6d2ccabfd70d827323fa56fc3d00de27989ec629"
+      "sha256": "3fe9a568110b636a5033c959f55c2a55739fdcadfcd05e3b9d9052502229ea30"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipsoid.js",
@@ -184,7 +192,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image.js",
-      "sha256": "924bcca45c858ef9dc95121ff1fe6578f3f42c1b4c58f93fdd9dff65d84b074d"
+      "sha256": "a13fb584863a120d1edccab30b9d4aef7940473356b9a86a6f2060b98280c188"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-background.js",
@@ -196,7 +204,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
-      "sha256": "a4def6a1ece9574179cba0de49035b30f80d222c0f6610c19fdb3be7b124acea"
+      "sha256": "a64f7c35ead1f32b1bcc9b4b9464afb60e0d4e4a053226583cf7621da4f95827"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sdf/lighting.js",
@@ -275,6 +283,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "da15ae4ae17d3f562455a4854b070770c06c93ed911d2b8a83aef7da213ef20a",
-  "bundle_sha256": "b1c38384f6b51c38332e4bde0122581f79d1f739a9b1f3755912ef9a856b8c37"
+  "fingerprint_sha256": "c50a19692ae960eaf3ba59568076b723813159af9790c5aa180f87ca879dad9f",
+  "bundle_sha256": "5c115c39f9a1843b728b3fc80239779ecd71b081f0116b62941532f3ea719cc8"
 }

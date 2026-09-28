@@ -776,13 +776,27 @@ class EllipseStyle(ConicStyle):
     """Visual style for :class:`~pytanga.geometry.Ellipse` (a 2D line ellipse).
 
     ``thickness`` (inherited from :class:`ConicStyle`) is the line width in
-    screen-space pixels.  A line ellipse has no surface, so there are no
-    wireframe parameters.
+    screen-space pixels.  Outline-only by default; set ``fill=True`` to draw a
+    semi-transparent fill disc under the outline (which also makes the ellipse
+    body easy to click/select, like a filled ``Rectangle2D``).
+
+    Attributes:
+        fill: When ``True``, draw a semi-transparent fill disc under the
+            outline (default ``False`` = outline only).
+        fill_opacity: Opacity of the fill disc (0..1).  ``None`` uses the
+            renderer default (a light semi-transparent fill).
     """
+
+    fill: bool = False
+    fill_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
         result["style_type"] = "EllipseStyle"
+        if self.fill:
+            result["fill"] = True
+        if self.fill_opacity is not None:
+            result["fill_opacity"] = self.fill_opacity
         return result
 
 

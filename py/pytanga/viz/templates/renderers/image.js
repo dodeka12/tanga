@@ -297,6 +297,10 @@ export async function createImage(ent) {
         vertexShader: vertex,
         fragmentShader: fragment,
         uniforms,
+        // The image plane is a background: never write depth, so overlay
+        // geometry (points, lines, polygons) drawn at the same z=0 renders on
+        // top instead of z-fighting with the image.
+        depthWrite: false,
     });
 
     const mesh = new THREE.Mesh(geometry, material);

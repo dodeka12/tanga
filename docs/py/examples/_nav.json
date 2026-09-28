@@ -9,6 +9,16 @@
     "Expression Dataarray": "py/examples/expression_dataarray.md"
   },
   {
+    "Apps": [
+      {
+        "Overview": "py/examples/apps/index.md"
+      },
+      {
+        "Image Labeling App": "py/examples/apps/image_labeling_app.md"
+      }
+    ]
+  },
+  {
     "Geometric Algebra": [
       {
         "Overview": "py/examples/ga/index.md"
@@ -382,9 +392,6 @@
           },
           {
             "Raw Image": "py/examples/viz/image/raw_image.md"
-          },
-          {
-            "Rectangle Labeling": "py/examples/viz/image/rectangle_labeling.md"
           },
           {
             "Standard Image": "py/examples/viz/image/standard_image.md"

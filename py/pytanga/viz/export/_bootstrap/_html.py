@@ -75,6 +75,8 @@ _RENDERER_FILES: list[Path] = [
     _RENDERERS_DIR / "point.js",
     _RENDERERS_DIR / "crosshair_point.js",
     _RENDERERS_DIR / "square_point.js",
+    _RENDERERS_DIR / "circle_point.js",
+    _RENDERERS_DIR / "icon_point.js",
     _RENDERERS_DIR / "direction.js",
     _RENDERERS_DIR / "line.js",
     _RENDERERS_DIR / "plane.js",

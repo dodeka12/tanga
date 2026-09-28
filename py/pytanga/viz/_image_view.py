@@ -452,6 +452,14 @@ class ImageCanvas:
         """Enable or disable the image plane's general click handler."""
         self._act_plane.set_click_enabled(enabled)
 
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable or disable all interaction on the image plane.
+
+        ``False`` unregisters the plane entirely, so it no longer raycast-shadows
+        scene entities (e.g. shape bodies being selected).
+        """
+        self._act_plane.set_enabled(enabled)
+
     def refresh_interaction(self) -> None:
         """Re-register the image plane's interaction config.
 
@@ -459,3 +467,7 @@ class ImageCanvas:
         ``enabled`` flag so the new trigger set reaches the frontend.
         """
         self._act_plane.refresh_interaction()
+
+    def on_key(self, key: str, handler: Any, *, modifiers: Any = None) -> None:
+        """Register an async handler for a key press in this canvas's scene."""
+        self._handle.on_key(key, handler, modifiers=modifiers)

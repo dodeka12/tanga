@@ -129,6 +129,17 @@ class TestApi:
         assert isinstance(canvas.act_plane, ActImagePlane)
         assert canvas.act_plane.image_view is canvas.image_view
 
+    def test_click_anchor_keeps_raw_hit(self) -> None:
+        from pytanga.geometry import Direction
+
+        canvas = ImageCanvas(_viz())
+        # The image plane is flat at z=0, so a CLICK's raw raycast hit is
+        # already the correct pixel — click_anchor must not rebase it.
+        assert (
+            canvas.act_plane.click_anchor(Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0))
+            is None
+        )
+
 
 class TestOverlay:
     def test_add_returns_ref_and_clear_removes(self) -> None:

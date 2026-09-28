@@ -61,6 +61,17 @@ class TestInteractionRegistration:
         events = {event for _, event in canvas._transport.registered}
         assert InteractionEventType.DRAG_MOVE.value in events
 
+    def test_set_enabled_toggles_plane(self) -> None:
+        viz, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((4, 6), dtype=np.uint8)))
+        image_id = canvas.image_view.id
+
+        canvas.set_enabled(False)
+        assert canvas.handle.scene._interaction_configs[image_id].enabled is False
+
+        canvas.set_enabled(True)
+        assert canvas.handle.scene._interaction_configs[image_id].enabled is True
+
 
 class TestDragHandler:
     def test_handler_receives_pixel_position_and_sets_uniform(self) -> None:
