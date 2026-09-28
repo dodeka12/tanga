@@ -817,7 +817,7 @@ class VizServer:
             app.router.add_static(f"/themes/{prefix}", directory, show_index=False)
         # Image pyramid tiles (more specific than the catch-all below).
         app.router.add_get(
-            "/image/{image_id}/{level}/{x}/{y}", self._image_tile_handler
+            "/image/{image_id}/{version}/{level}/{x}/{y}", self._image_tile_handler
         )
         # MJPEG camera streams (more specific than the catch-all below).
         app.router.add_get("/stream/{stream_id}", self._camera_stream_handler)
@@ -831,10 +831,18 @@ class VizServer:
         self._image_pyramids[image_id] = pyramid
 
     async def _image_tile_handler(self, request: web.Request) -> web.StreamResponse:
-        """Serve one encoded image-pyramid tile (``/image/{id}/{level}/{x}/{y}``)."""
+        """Serve one encoded image-pyramid tile
+        (``/image/{id}/{version}/{level}/{x}/{y}``).
+
+        The ``version`` segment is a browser cache key (bumped on re-registration
+        of the same id); the handler serves by ``image_id`` and ignores it.
+        """
         from ._image_pyramid import FORMAT_CONTENT_TYPE
 
         image_id = request.match_info["image_id"]
+        # The version is intentionally unused: it only makes the tile URL unique
+        # per registration so the browser never serves a stale cached tile.
+        _version = request.match_info.get("version", "0")
         pyramid = self._image_pyramids.get(image_id)
         if pyramid is None:
             raise web.HTTPBadRequest(text=f"unknown image id: {image_id}")
@@ -856,7 +864,7 @@ class VizServer:
         return web.Response(
             body=data,
             content_type=FORMAT_CONTENT_TYPE[format],
-            headers={"Cache-Control": "public, max-age=3600"},
+            headers={"Cache-Control": "no-store"},
         )
 
     def register_camera_stream(self, stream_id: str, stream: Any) -> None:

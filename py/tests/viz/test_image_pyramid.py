@@ -123,7 +123,19 @@ class TestTiledSerialization:
         assert meta["source"] == "tiled"
         assert meta["tile_size"] == 32
         assert meta["levels"] == p.levels
+        assert meta["version"] == 0
         assert (meta["width"], meta["height"]) == (64, 64)
+
+    def test_register_pyramid_bumps_version(self) -> None:
+        from pytanga.viz import Visualizer
+
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        arr = np.zeros((64, 64, 3), dtype=np.uint8)
+        p1 = viz.register_image_pyramid("n", arr, tile_size=32)
+        p2 = viz.register_image_pyramid("n", arr, tile_size=32)
+        assert p1.version < p2.version
+        assert p1.version == 1
+        assert p2.version == 2
 
     def test_image_data_tiled_conflicts_with_data(self) -> None:
         p = ImagePyramid("n", np.zeros((64, 64), dtype=np.uint8))
@@ -142,18 +154,21 @@ class TestServerRoute:
             "i", ImagePyramid("i", np.zeros((64, 64, 3), dtype=np.uint8), tile_size=32)
         )
         req = SimpleNamespace(
-            match_info={"image_id": "i", "level": "0", "x": "0", "y": "0"}, query={}
+            match_info={"image_id": "i", "version": "0", "level": "0", "x": "0", "y": "0"},
+            query={},
         )
         resp = asyncio.run(server._image_tile_handler(req))  # type: ignore[arg-type]
         assert isinstance(resp, web.Response)
         assert resp.status == 200
         assert resp.content_type == "image/jpeg"
+        assert resp.headers["Cache-Control"] == "no-store"
         assert resp.body[:2] == b"\xff\xd8"
 
     def test_unknown_image_400(self) -> None:
         server = VizServer()
         req = SimpleNamespace(
-            match_info={"image_id": "nope", "level": "0", "x": "0", "y": "0"}, query={}
+            match_info={"image_id": "nope", "version": "0", "level": "0", "x": "0", "y": "0"},
+            query={},
         )
         with pytest.raises(web.HTTPBadRequest):
             asyncio.run(server._image_tile_handler(req))  # type: ignore[arg-type]
@@ -164,7 +179,21 @@ class TestServerRoute:
             "i", ImagePyramid("i", np.zeros((64, 64, 3), dtype=np.uint8), tile_size=32)
         )
         req = SimpleNamespace(
-            match_info={"image_id": "i", "level": "0", "x": "99", "y": "99"}, query={}
+            match_info={"image_id": "i", "version": "0", "level": "0", "x": "99", "y": "99"},
+            query={},
         )
         with pytest.raises(web.HTTPNotFound):
             asyncio.run(server._image_tile_handler(req))  # type: ignore[arg-type]
+
+    def test_nonzero_version_still_serves(self) -> None:
+        server = VizServer()
+        server.register_image_pyramid(
+            "i", ImagePyramid("i", np.zeros((64, 64, 3), dtype=np.uint8), tile_size=32)
+        )
+        req = SimpleNamespace(
+            match_info={"image_id": "i", "version": "7", "level": "0", "x": "0", "y": "0"},
+            query={},
+        )
+        resp = asyncio.run(server._image_tile_handler(req))  # type: ignore[arg-type]
+        assert isinstance(resp, web.Response)
+        assert resp.status == 200

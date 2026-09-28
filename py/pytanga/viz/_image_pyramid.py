@@ -116,6 +116,10 @@ class ImagePyramid:
         self.tile_size = int(tile_size)
         self.dtype = ImageDType.from_numpy(self.data)
         self.channels = 1 if self.data.ndim == 2 else int(self.data.shape[2])
+        #: Version stamp assigned by the ``Visualizer`` on registration; ``0``
+        #: for a standalone pyramid (the tile route serves by id, so this is a
+        #: pure cache key for the browser, not an identity/staleness check).
+        self.version: int = 0
         self._cache: OrderedDict[tuple[int, int, int, str], bytes] = OrderedDict()
         self._lock = threading.Lock()
 
@@ -129,6 +133,7 @@ class ImagePyramid:
             "levels": self.levels,
             "dtype": self.dtype.value,
             "channels": self.channels,
+            "version": self.version,
             "source": "tiled",
         }
 
