@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.12.0] — 2026-09-28
+- Bug fixes: tiled background images no longer show the previous image after a same-id swap (versioned tile URLs + `Cache-Control: no-store`)
+→ [Details](2026/09/28_391364bba.md)
+
 ## [Since 2.11.0] — 2026-09-26
 - Themable `ProgressBarView` control (determinate + indeterminate modes, title + status text) · non-dismissable load-progress dialog in `load_image_from_disk.py` · examples + docs
 → [Details](2026/09/26_f4e0a02c4.md)
