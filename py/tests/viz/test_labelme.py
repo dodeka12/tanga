@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -251,4 +252,24 @@ def test_add_shapes_reports_unknown_shape_type() -> None:
     assert objs == []
     assert len(errors) == 1
     assert "Unknown labelme shape_type" in errors[0]
+
+
+def test_coordinate_precision_rounds() -> None:
+    doc = LabelMeDocument(
+        shapes=[LabelShape(label="a", points=[(1.23456, 2.34567)], shape_type="point")]
+    )
+    precise = LabelMeStore()
+    assert "1.23456" in precise.dumps(doc)
+    rounded = LabelMeStore(coordinate_precision=2)
+    assert "1.23" in rounded.dumps(doc)
+    assert "1.23456" not in rounded.dumps(doc)
+
+
+def test_real_file_round_trip_full_precision() -> None:
+    store = LabelMeStore()
+    path = Path(__file__).parent / "data" / "sample_labelme.json"
+    result = store.load(path)
+    assert result.errors == []
+    doc2 = store.loads(store.dumps(result.document)).document
+    assert doc2 == result.document
 

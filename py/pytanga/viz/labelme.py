@@ -89,9 +89,11 @@ class LabelMeStore:
         *,
         allow_extensions: bool = True,
         mapper: CoordinateMapper | None = None,
+        coordinate_precision: int | None = None,
     ) -> None:
         self._allow_extensions = allow_extensions
         self._mapper: CoordinateMapper = mapper if mapper is not None else PlanarMapper()
+        self._coordinate_precision = coordinate_precision
 
     # ── (De)serialization ─────────────────────────────────
 
@@ -143,14 +145,23 @@ class LabelMeStore:
             fh.write(self.dumps(doc))
 
     def dumps(self, doc: LabelMeDocument) -> str:
-        """Serialize a :class:`LabelMeDocument` to labelme JSON text."""
+        """Serialize a :class:`LabelMeDocument` to labelme JSON text.
+
+        Keys are emitted in labelme's own writer order and coordinates are
+        written at full precision unless ``coordinate_precision`` was set.
+        """
+        precision = self._coordinate_precision
+
+        def _round(v: float) -> float:
+            return round(v, precision) if precision is not None else v
+
         data = {
             "version": doc.version,
             "flags": doc.flags,
             "shapes": [
                 {
                     "label": s.label,
-                    "points": [[round(x, 2), round(y, 2)] for x, y in s.points],
+                    "points": [[_round(x), _round(y)] for x, y in s.points],
                     "group_id": s.group_id,
                     "shape_type": s.shape_type,
                     "flags": s.flags,
@@ -164,7 +175,7 @@ class LabelMeStore:
             "imageHeight": doc.image_height,
             "imageWidth": doc.image_width,
         }
-        return json.dumps(data, indent=2, sort_keys=True)
+        return json.dumps(data, indent=4)
 
     # ── Mapping helpers ────────────────────────────────────
 

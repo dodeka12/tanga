@@ -18,16 +18,16 @@ rounding by default, a fixed key order, and the `mask` field preserved.
 
 ## Steps
 
-- [ ] **5.1 — `coordinate_precision` opt-in**
+- [x] **5.1 — `coordinate_precision` opt-in**
   - `LabelMeStore(coordinate_precision: int | None = None)`; `None` = full
     precision (default), `int` = round to that many decimals.
-- [ ] **5.2 — Key order + indent**
+- [x] **5.2 — Key order + indent**
   - `dumps` uses `indent=4` and the labelme writer's key order (`version, flags,
     shapes, imagePath, imageData, imageHeight, imageWidth`); drop `sort_keys=True`.
-- [ ] **5.3 — `mask` round-trip**
+- [x] **5.3 — `mask` round-trip**
   - Ensure `mask` is written when present and read back (already wired in phase 2;
     verify end-to-end here).
-- [ ] **5.4 — Round-trip test**
+- [x] **5.4 — Round-trip test**
   - `loads(dumps(doc)) == doc` for a synthetic doc plus a bundled real-file fixture
     (add a small, license-clear sample under `py/tests/viz/data/`).
 
