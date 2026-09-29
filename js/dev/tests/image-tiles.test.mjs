@@ -1,23 +1,30 @@
 // Tanga — unit tests for the image-pyramid tile math (node --test).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bestPyramidLevel, pyramidGrid, tileRect, visibleTiles } from '../../../py/pytanga/viz/templates/renderers/image-tiles.js';
+import { levelForScreen, pyramidGrid, tileRect, visibleTiles } from '../../../py/pytanga/viz/templates/renderers/image-tiles.js';
 
 const PYRAMID = { width: 1000, height: 500, tile_size: 256, levels: 11 };
 
-test('bestPyramidLevel keeps a small image at full resolution', () => {
-    assert.equal(bestPyramidLevel(PYRAMID), 0);
+test('levelForScreen keeps a small image at full resolution for a big screen', () => {
+    assert.equal(levelForScreen(PYRAMID, 2000), 0);
 });
 
-test('bestPyramidLevel picks the first level under the max dimension', () => {
-    // 4056 px wide: level 0 = 4056 (> 2048), level 1 = 2028 (<= 2048).
-    assert.equal(bestPyramidLevel({ width: 4056, height: 3040, levels: 13 }), 1);
-    // 8192 px wide: levels 0..1 are > 2048, level 2 = 2048 (<= 2048).
-    assert.equal(bestPyramidLevel({ width: 8192, height: 4096, levels: 14 }), 2);
+test('levelForScreen picks the coarsest level still >= the screen size', () => {
+    // 4056 px wide: screen 2000 → level 1 (2028 >= 2000; level 2 = 1014 < 2000).
+    assert.equal(levelForScreen({ width: 4056, height: 3040, levels: 13 }, 2000), 1);
+    // screen 3000 → only level 0 (4056) is >= 3000.
+    assert.equal(levelForScreen({ width: 4056, height: 3040, levels: 13 }, 3000), 0);
+    // 8192 px wide: screen 3000 → level 1 (4096 >= 3000; level 2 = 2048 < 3000).
+    assert.equal(levelForScreen({ width: 8192, height: 4096, levels: 14 }, 3000), 1);
 });
 
-test('bestPyramidLevel never exceeds the last level', () => {
-    assert.equal(bestPyramidLevel({ width: 100000, height: 1, levels: 3 }), 2);
+test('levelForScreen never exceeds the last level', () => {
+    assert.equal(levelForScreen({ width: 100000, height: 1, levels: 3 }, 1), 2);
+});
+
+test('levelForScreen falls back to full resolution for a non-positive screen', () => {
+    assert.equal(levelForScreen(PYRAMID, 0), 0);
+    assert.equal(levelForScreen(PYRAMID, undefined), 0);
 });
 
 test('pyramidGrid computes level dimensions and tile grid', () => {

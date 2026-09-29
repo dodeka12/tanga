@@ -18,5 +18,8 @@ export function createSquarePoint(ent) {
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
     mesh.position.set(pos[0], pos[1], pos[2]);
     tagEntity(mesh, ent);
+    if (styleParam(ent, 'screen_space', false)) {
+        mesh.userData.isScreenSpace = true;
+    }
     return mesh;
 }

@@ -206,6 +206,7 @@ class ImageCanvas:
         image_id: str | None = None,
         stretch: StretchMode = "fit",
         border_px: float = 0.0,
+        min_zoom: float = 0.25,
         on_drag: Callable[[DragEvent, ImageCanvas], Awaitable[bool]] | None = None,
         on_drag_start: Callable[[DragEvent, ImageCanvas], Awaitable[None]]
         | None = None,
@@ -223,6 +224,9 @@ class ImageCanvas:
         self._image_view = ImageView(self._image_id)
         self._stretch = _validate_stretch(stretch)
         self._border_px = float(border_px)
+        self._min_zoom = float(min_zoom)
+        if self._min_zoom <= 0.0:
+            raise ValueError(f"min_zoom must be positive, got {min_zoom!r}")
 
         self._scene_name = f"imgc{next(_image_canvas_counter)}"
         self._handle = viz.scene(
@@ -388,6 +392,7 @@ class ImageCanvas:
                 ymax=height - 0.5,
                 stretch=self._stretch,
                 border_px=self._border_px,
+                min_zoom=self._min_zoom,
             )
         )
 
@@ -452,6 +457,14 @@ class ImageCanvas:
         """Enable or disable the image plane's general click handler."""
         self._act_plane.set_click_enabled(enabled)
 
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable or disable all interaction on the image plane.
+
+        ``False`` unregisters the plane entirely, so it no longer raycast-shadows
+        scene entities (e.g. shape bodies being selected).
+        """
+        self._act_plane.set_enabled(enabled)
+
     def refresh_interaction(self) -> None:
         """Re-register the image plane's interaction config.
 
@@ -459,3 +472,7 @@ class ImageCanvas:
         ``enabled`` flag so the new trigger set reaches the frontend.
         """
         self._act_plane.refresh_interaction()
+
+    def on_key(self, key: str, handler: Any, *, modifiers: Any = None) -> None:
+        """Register an async handler for a key press in this canvas's scene."""
+        self._handle.on_key(key, handler, modifiers=modifiers)

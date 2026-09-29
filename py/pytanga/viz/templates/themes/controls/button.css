@@ -38,3 +38,16 @@
     font-size: 18px;
 }
 
+/* Selected/active state — highlights a toggle-style button (e.g. an armed
+ * toolbar tool).  Applied to the control wrapper so icon-only buttons (which
+ * are borderless) also get a visible accent background. */
+.tanga-control-selected .tanga-action-button {
+    background: var(--tanga-accent);
+    border-color: var(--tanga-accent);
+    color: #ffffff;
+}
+
+.tanga-control-selected .tanga-action-button:hover {
+    background: var(--tanga-accent);
+}
+

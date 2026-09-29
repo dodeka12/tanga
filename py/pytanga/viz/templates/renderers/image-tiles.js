@@ -18,18 +18,22 @@ export function pyramidGrid(pyramid, level) {
     };
 }
 
-// Pick the finest pyramid level whose long side is <= `maxDim` pixels (the
-// largest dimension of the level's own grid, not the full-resolution source).
-// Level 0 is full resolution; each level halves the dimensions (ceil).
-export function bestPyramidLevel(pyramid, maxDim = 2048) {
+// Pick the pyramid level whose long side best matches a target on-screen
+// resolution `screenLongSide` (device pixels on the image's long side, already
+// including the device-pixel ratio and the current zoom).  Returns the coarsest
+// level whose long side is still >= `screenLongSide`, so the texture is never
+// upscaled on screen.  Level 0 is full resolution; each level halves the
+// dimensions (ceil).  Falls back to level 0 when `screenLongSide` is not a
+// positive number, and clamps to [0, levels-1].
+export function levelForScreen(pyramid, screenLongSide) {
     const levels = pyramid.levels || 1;
+    if (!(Number.isFinite(screenLongSide) && screenLongSide > 0)) return 0;
     let level = 0;
-    let w = pyramid.width;
-    let h = pyramid.height;
-    while (level + 1 < levels && Math.max(w, h) > maxDim) {
+    while (level + 1 < levels) {
+        const nextW = Math.ceil(pyramid.width / (2 ** (level + 1)));
+        const nextH = Math.ceil(pyramid.height / (2 ** (level + 1)));
+        if (Math.max(nextW, nextH) < screenLongSide) break;
         level++;
-        w = Math.ceil(w / 2);
-        h = Math.ceil(h / 2);
     }
     return level;
 }

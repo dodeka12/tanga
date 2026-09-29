@@ -373,8 +373,12 @@ class MyClass extends ViewBase {
 - **Required.** `uv run ty check` (correctness) and `uv run ruff check .`
   (which carries the `ANN` coverage rules) must both pass; they run in
   pre-commit and in the CI `lint` job.
-- Annotate every function, method and dataclass field. `Any` is a deliberate,
-  reviewed exception — not a default.
+- Annotate every function, method and dataclass field.
+- **Avoid `Any`.** Prefer an explicit type, a type union (`A | B`), or a
+  `Protocol` (duck-typed contract).  `Any` is a deliberate, reviewed exception
+  reserved for genuinely dynamic values (untyped C++ binding returns,
+  `**properties` payloads, handler `value` arguments).  `ty` does **not** flag
+  `Any` (`ANN401` is disabled), so this is enforced in review, not by tooling.
 - See [Typing & annotations](../architecture/typing-and-annotations.md) for the
   policy, the patterns to reach for, and the suppression rules.
 

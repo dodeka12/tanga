@@ -7,9 +7,17 @@
 // claims the frame (`takeImageFrame`) and uploads the texture.
 
 const _pending = new Map();
+// image id → list of one-shot consumers invoked when the frame arrives (the
+// image entity was built before its pixel frame — a wire-order race).
+const _pendingConsumers = new Map();
 
 export function storeImageFrame(frame) {
     _pending.set(frame.id, frame);
+    const consumers = _pendingConsumers.get(frame.id);
+    if (consumers) {
+        _pendingConsumers.delete(frame.id);
+        for (const consume of consumers) consume(frame);
+    }
 }
 
 export function hasImageFrame(id) {
@@ -20,6 +28,12 @@ export function takeImageFrame(id) {
     const frame = _pending.get(id);
     if (frame !== undefined) _pending.delete(id);
     return frame;
+}
+
+// Register a one-shot consumer to be invoked when the frame with `id` arrives.
+export function registerImageFrameConsumer(id, consume) {
+    if (!_pendingConsumers.has(id)) _pendingConsumers.set(id, []);
+    _pendingConsumers.get(id).push(consume);
 }
 
 // Little-endian header after the 4-byte magic `"TGI\0"`:

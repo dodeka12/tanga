@@ -9,7 +9,7 @@ from typing import Any
 
 from ._base import View
 from ._enums import EStackAlign, EStackDirection, EStackJustify
-from .._size import SizeSpec
+from .._size import Size, SizeSpec
 
 
 class StackView(View):
@@ -17,6 +17,10 @@ class StackView(View):
 
     Unlike :class:`SplitView`, children flow in normal document order (no
     splitters) and the container sizes to its content along the stack axis.
+
+    Pass ``fill=True`` to make the stack fill the leftover space in its parent
+    flow container — it sets ``preferred_width``/``preferred_height`` to
+    ``fr(1)``, mirroring :class:`SplitView`'s default.
     """
 
     _node_type = "stack"
@@ -30,6 +34,7 @@ class StackView(View):
         gap: int | None = None,
         align: EStackAlign | str = EStackAlign.STRETCH,
         justify: EStackJustify | str = EStackJustify.START,
+        fill: bool = False,
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
@@ -64,6 +69,11 @@ class StackView(View):
             isinstance(gap, bool) or not isinstance(gap, int) or gap < 0
         ):
             raise ValueError(f"gap must be a non-negative int or None, got {gap!r}")
+        if fill:
+            if self.preferred_width is None:
+                self.preferred_width = Size.fr(1)
+            if self.preferred_height is None:
+                self.preferred_height = Size.fr(1)
         self.direction = direction
         self.children = list(children or [])
         self.scrollable = scrollable

@@ -25,6 +25,8 @@ ALGEBRAS = [
     (4, 0, "float64", "P3"),
     (4, 8, "float64", "N2/PGA2"),
     (5, 16, "float64", "N3/PGA3"),
+    (6, 0, "float64", "Q2 (conic)"),
+    (10, 0, "float64", "Q3 (quadric)"),
     (3, 0, "int64", "E3 (modular)"),
     (10, 0, "int64", "Sparse high-dim"),
 ]

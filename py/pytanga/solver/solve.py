@@ -370,9 +370,9 @@ def solve_mod(
             raise ValueError("modulus must be specified")
         modulus = alg.modulus
 
-    if isinstance(a, MV) and a.algebra is not alg:
+    if isinstance(a, MV) and a.algebra != alg:
         raise ValueError("a belongs to a different algebra")
-    if isinstance(c, MV) and c.algebra is not alg:
+    if isinstance(c, MV) and c.algebra != alg:
         raise ValueError("c belongs to a different algebra")
 
     mv_a = _as_mv(alg, a)

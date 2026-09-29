@@ -165,7 +165,7 @@ class TestExpression:
     def test_project_onto_wrong_algebra_raises(self):  # noqa: ANN201
         e = Variable("V1", self.full) * self._mv({"e1": 2.0})
         with pytest.raises(ValueError):
-            e.project_onto(BladeMask(BasisE3(), [1]))
+            e.project_onto(BladeMask(BasisN3(), [1]))
 
     def test_constant_folding(self):  # noqa: ANN201
         v = Variable("V1", self.full)

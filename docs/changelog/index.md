@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.12.1] — 2026-09-29
+- Image labeling app (`ImageLabeler` pane + labelme I/O) · active elements (`ActEllipse`/`ActPolygon`/`ActCircle`/`ActLine`, rectangle rotation) · screen-space point markers · `ImageCanvas.min_zoom` · `StackView(fill=True)` · cross-instance algebra compatibility
+→ [Details](2026/09/29_74bfae43d.md)
+
 ## [Since 2.12.0] — 2026-09-28
 - Bug fixes: tiled background images no longer show the previous image after a same-id swap (versioned tile URLs + `Cache-Control: no-store`)
 → [Details](2026/09/28_391364bba.md)

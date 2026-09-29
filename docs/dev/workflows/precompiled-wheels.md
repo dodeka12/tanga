@@ -9,7 +9,7 @@ and workflows for building, cleaning, and uploading precompiled wheels.
 
 | Script | Purpose |
 |--------|---------|
-| `tools/build-precompiled.py` | Compile the seven common algebra bindings plus the PIZ decoder (`binding_piz`) and harvest compiled extension files into `precompiled/` |
+| `tools/build-precompiled.py` | Compile the nine common algebra bindings plus the PIZ decoder (`binding_piz`) and harvest compiled extension files into `precompiled/` |
 | `tools/clean-precompiled.py` | Remove precompiled artifacts to restore a pure Python wheel build |
 | `tools/fix-wheel-tag.py` | Rewrite the wheel filename and metadata with the correct platform tag |
 | `tools/upload-pypi.py` | Inspect a wheel and upload it to PyPI via twine |
@@ -26,7 +26,7 @@ Use this when you want to ship a wheel that works without a C++ compiler.
 # 1. Ensure dev dependencies are installed (includes [compile] extras)
 uv sync --group dev
 
-# 2. Compile and bundle the seven common algebra bindings + binding_piz
+# 2. Compile and bundle the nine common algebra bindings + binding_piz
 uv run python tools/build-precompiled.py
 
 # 3. Build the wheel with correct platform tag (one-step via helper script)
@@ -41,10 +41,10 @@ uv run python tools/upload-pypi.py --check
 
 **Output:** A platform-specific wheel (e.g. `cp312-cp312-manylinux_2_35_x86_64`
 for Linux, `cp312-cp312-win_amd64` for Windows)
-with precompiled extension modules for seven bindings (float64 unless noted):
+with precompiled extension modules for nine bindings (float64 unless noted):
 `(2,0)` E2, `(3,0)` E3/P2, `(4,0)` P3, `(4,8)` N2/PGA2, `(5,16)` N3/PGA3,
-plus `(3,0)` E3 modular (int64) and `(10,0)` G(10,0) sparse (int64), and the
-PIZ decoder `binding_piz`.
+`(6,0)` Q2, `(10,0)` Q3, plus `(3,0)` E3 modular (int64) and `(10,0)`
+G(10,0) sparse (int64), and the PIZ decoder `binding_piz`.
 
 The helper scripts `tools/build-precompiled-wheel.sh` (Linux/macOS) and
 `tools/build-precompiled-wheel.ps1` (Windows) build to a temp directory,
@@ -63,7 +63,7 @@ ad-hoc builds.
 
 ### What `build-precompiled.py` Does
 
-1. Calls `pytanga.codegen._cache.get_or_build()` for each of the seven bindings,
+1. Calls `pytanga.codegen._cache.get_or_build()` for each of the nine bindings,
    plus `pytanga.codegen._piz_cache.get_or_build_piz()` for the PIZ decoder.
    This triggers the same JIT compilation pipeline that users would normally
    pay on first import — but once, at build time.
@@ -160,6 +160,8 @@ precompiled/                          # ← at repo root, git-ignored except .gi
 ├── binding_dim4_sig0_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim4_sig8_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim5_sig16_float64.cpython-312-x86_64-linux-gnu.so
+├── binding_dim6_sig0_float64.cpython-312-x86_64-linux-gnu.so
+├── binding_dim10_sig0_float64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim3_sig0_int64.cpython-312-x86_64-linux-gnu.so
 ├── binding_dim10_sig0_int64.cpython-312-x86_64-linux-gnu.so
 └── binding_piz.cpython-312-x86_64-linux-gnu.so

@@ -61,6 +61,7 @@ export class InteractionController {
         rendererDomElement.addEventListener('lostpointercapture', () => this._onLostCapture());
         rendererDomElement.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
         rendererDomElement.addEventListener('dblclick', (e) => this._onDblClick(e));
+        rendererDomElement.addEventListener('contextmenu', (e) => this._onContextMenu(e));
     }
 
     setSpaceDim(dim) {
@@ -409,6 +410,16 @@ export class InteractionController {
         const meshes = [];
         for (const [, obj] of this.interactiveObjects) meshes.push(obj.mesh);
         if (meshes.length === 0) return null;
+
+        // Raycast background planes last.  An image plane sits at the same
+        // z = 0 as the shape bodies drawn over it, so an equal-distance raycast
+        // tie would otherwise resolve to the image (first registered) and
+        // shadow the shapes.  Sorting it last lets the overlay entities win.
+        meshes.sort((a, b) => {
+            const aIsImage = !!(a && a.userData && a.userData.kind === 'image');
+            const bIsImage = !!(b && b.userData && b.userData.kind === 'image');
+            return (aIsImage ? 1 : 0) - (bIsImage ? 1 : 0);
+        });
 
         const rect = this.rendererDomElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -760,6 +771,13 @@ export class InteractionController {
             };
             if (this.ws) this.ws.send(JSON.stringify(payload));
         }
+    }
+
+    _onContextMenu(event) {
+        // The viewer canvas has no native context menu, so suppress it outright.
+        // This lets custom right-button actions (e.g. polygon-vertex delete via
+        // Ctrl+right-click / Alt+right-click) run without the browser menu.
+        event.preventDefault();
     }
 
     _onWheel(event) {

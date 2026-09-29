@@ -281,6 +281,10 @@ class Control:
     """Whether the control is rendered at all.  ``False`` hides it without
     removing it from the layout."""
 
+    selected: bool = False
+    """Whether the control renders in its active/selected state.  For a button
+    this highlights it like a toggle button (e.g. an armed toolbar tool)."""
+
     def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
         """Apply an incoming frontend *event* and return the dispatch to run.
 
@@ -341,6 +345,8 @@ class Control:
             result["enabled"] = False
         if not self.visible:
             result["visible"] = False
+        if self.selected:
+            result["selected"] = True
         result.update(self._fields())
         return result
 

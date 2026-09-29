@@ -186,13 +186,17 @@ pip install tanga-py
 ```
 
 No C++ compiler or build tools are needed. pytanga ships precompiled
-bindings for the five most common algebra configurations:
+bindings for the common algebra configurations:
 
 | Algebra | dim | sig | dtype |
 |---------|-----|-----|-------|
-| E3 (Euclidean) | 3 | 0 | float64 |
-| P3 (Projective) | 4 | 0 | float64 |
-| N3 / PGA3 (Conformal/Plane-based) | 5 | 16 | float64 |
+| E2 (Euclidean 2D) | 2 | 0 | float64 |
+| E3 / P2 (Euclidean / Projective) | 3 | 0 | float64 |
+| P3 (Projective 3D) | 4 | 0 | float64 |
+| N2 / PGA2 (Conformal / Plane-based 2D) | 4 | 8 | float64 |
+| N3 / PGA3 (Conformal / Plane-based) | 5 | 16 | float64 |
+| Q2 (Conic) | 6 | 0 | float64 |
+| Q3 (Quadric) | 10 | 0 | float64 |
 | E3 modular (crypto) | 3 | 0 | int64 |
 | Sparse high-dim (crypto) | 10 | 0 | int64 |
 
@@ -209,9 +213,9 @@ This pulls in cmake, ninja, and pybind11 for on-the-fly compilation.
 You also need a C++ compiler — see [Compiler Setup](#compiler-setup).
 
 **Note:** precompiled wheels are available for Linux (x86_64) and Windows
-(win_amd64). If you are on one of these platforms and only need the five
-standard algebra configurations, you do **not** need the `compile` extra
-or a C++ compiler.
+(win_amd64). If you are on one of these platforms and only need the
+standard algebra configurations listed above, you do **not** need the
+`compile` extra or a C++ compiler.
 
 For the example scripts and iterative solvers, add the `examples` extra as
 well:

@@ -627,6 +627,31 @@ class TestStackView:
     def test_allows_empty_children(self):  # noqa: ANN201
         assert StackView("vertical").children == []
 
+    def test_fill_sets_fr_preferred_sizes(self):  # noqa: ANN201
+        # Content-sized by default (hugs content along the stack axis)…
+        assert StackView("vertical").preferred_width is None
+        assert StackView("vertical").preferred_height is None
+
+        # …but `fill=True` opts into filling the leftover space, like SplitView.
+        stack = StackView("vertical", fill=True)
+        assert stack.preferred_width == Size.fr(1)
+        assert stack.preferred_height == Size.fr(1)
+
+    def test_fill_respects_explicit_preferred(self):  # noqa: ANN201
+        stack = StackView(
+            "vertical",
+            fill=True,
+            preferred_width=Size.px(480),
+            preferred_height=Size.px(320),
+        )
+        assert stack.preferred_width == Size.px(480)
+        assert stack.preferred_height == Size.px(320)
+
+    def test_fill_serializes(self):  # noqa: ANN201
+        node = serialize_layout(StackView("vertical", fill=True))["root"]
+        assert node["preferred_width"] == {"value": 1.0, "unit": "fr"}
+        assert node["preferred_height"] == {"value": 1.0, "unit": "fr"}
+
     def test_serialize(self):  # noqa: ANN201
         node = serialize_layout(StackView("horizontal", [SpacerView(), SpacerView()]))[
             "root"
