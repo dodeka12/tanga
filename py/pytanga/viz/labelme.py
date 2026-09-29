@@ -28,6 +28,17 @@ if TYPE_CHECKING:
 
 _ELLIPSE = "ellipse"
 
+#: Minimum point count per shape type; a non-None exact value must match exactly.
+_POINT_COUNTS: dict[str, tuple[int, int | None]] = {
+    "rectangle": (2, None),
+    "circle": (2, None),
+    _ELLIPSE: (3, 3),
+    "polygon": (3, None),
+    "linestrip": (2, None),
+    "line": (2, None),
+    "point": (1, None),
+}
+
 
 @dataclass
 class LabelShape:
@@ -62,6 +73,14 @@ class LabelMeDocument:
     flags: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class LabelMeLoadResult:
+    """A parsed :class:`LabelMeDocument` plus the shapes that were skipped."""
+
+    document: LabelMeDocument
+    errors: list[str]
+
+
 class LabelMeStore:
     """Load/store labelme JSON and map shapes to entities or act composites."""
 
@@ -76,16 +95,22 @@ class LabelMeStore:
 
     # ── (De)serialization ─────────────────────────────────
 
-    def load(self, path: str | os.PathLike[str]) -> LabelMeDocument:
-        """Parse a labelme JSON file into a :class:`LabelMeDocument`."""
+    def load(self, path: str | os.PathLike[str]) -> LabelMeLoadResult:
+        """Parse a labelme JSON file into a :class:`LabelMeLoadResult`."""
         with open(path, encoding="utf-8") as fh:
             return self.loads(fh.read())
 
-    def loads(self, text: str) -> LabelMeDocument:
-        """Parse labelme JSON text into a :class:`LabelMeDocument`."""
+    def loads(self, text: str) -> LabelMeLoadResult:
+        """Parse labelme JSON text into a :class:`LabelMeLoadResult`.
+
+        Malformed shapes (wrong point count) are skipped and reported in
+        ``errors``; the store never raises for a single bad shape.
+        """
         data = json.loads(text)
-        shapes = [
-            LabelShape(
+        shapes: list[LabelShape] = []
+        errors: list[str] = []
+        for i, s in enumerate(data.get("shapes", [])):
+            shape = LabelShape(
                 label=s["label"],
                 points=[(float(x), float(y)) for x, y in s["points"]],
                 shape_type=s["shape_type"],
@@ -94,16 +119,22 @@ class LabelMeStore:
                 flags=dict(s.get("flags", {})),
                 mask=s.get("mask"),
             )
-            for s in data.get("shapes", [])
-        ]
-        return LabelMeDocument(
-            shapes=shapes,
-            image_path=data.get("imagePath", ""),
-            image_height=data.get("imageHeight"),
-            image_width=data.get("imageWidth"),
-            image_data=data.get("imageData"),
-            version=data.get("version", "5.0.1"),
-            flags=dict(data.get("flags", {})),
+            err = self._validate_points(shape)
+            if err is not None:
+                errors.append(f"shape {i} ({shape.label!r}): {err}")
+                continue
+            shapes.append(shape)
+        return LabelMeLoadResult(
+            document=LabelMeDocument(
+                shapes=shapes,
+                image_path=data.get("imagePath", ""),
+                image_height=data.get("imageHeight"),
+                image_width=data.get("imageWidth"),
+                image_data=data.get("imageData"),
+                version=data.get("version", "5.0.1"),
+                flags=dict(data.get("flags", {})),
+            ),
+            errors=errors,
         )
 
     def save(self, doc: LabelMeDocument, path: str | os.PathLike[str]) -> None:
@@ -139,26 +170,42 @@ class LabelMeStore:
 
     def add_shapes(
         self, handle: "VizSceneHandle", doc: LabelMeDocument, *, active: bool = True
-    ) -> list[object]:
+    ) -> tuple[list[object], list[str]]:
         """Add every shape in *doc* to *handle* as a constant or act object.
 
-        Returns the list of added objects (callers can track/select them).
+        Returns ``(added, errors)`` — the added objects plus the shapes that were
+        skipped (reported, never raised).
         """
         added: list[object] = []
-        for shape in doc.shapes:
-            obj = self._act_from_shape(shape) if active else self._entity_from_shape(shape)
+        errors: list[str] = []
+        for i, shape in enumerate(doc.shapes):
+            try:
+                obj = self._act_from_shape(shape) if active else self._entity_from_shape(shape)
+            except ValueError as exc:
+                errors.append(f"shape {i} ({shape.label!r}): {exc}")
+                continue
             handle.add(obj, style=_default_style_for(shape.shape_type))
             added.append(obj)
-        return added
+        return added, errors
 
     def iter_objects(
         self, doc: LabelMeDocument, *, active: bool = True
-    ) -> list[tuple[object, str]]:
-        """Map each shape to an ``(obj, label)`` pair without adding it."""
-        return [
-            (self._act_from_shape(s) if active else self._entity_from_shape(s), s.label)
-            for s in doc.shapes
-        ]
+    ) -> tuple[list[tuple[object, str]], list[str]]:
+        """Map each shape to an ``(obj, label)`` pair without adding it.
+
+        Returns ``(pairs, errors)`` — the mapped pairs plus the shapes that were
+        skipped.
+        """
+        pairs: list[tuple[object, str]] = []
+        errors: list[str] = []
+        for i, s in enumerate(doc.shapes):
+            try:
+                obj = self._act_from_shape(s) if active else self._entity_from_shape(s)
+            except ValueError as exc:
+                errors.append(f"shape {i} ({s.label!r}): {exc}")
+                continue
+            pairs.append((obj, s.label))
+        return pairs, errors
 
     def shapes_from_objects(
         self, objects: list[tuple[object, str]]
@@ -173,7 +220,28 @@ class LabelMeStore:
 
     # ── Entity builders ────────────────────────────────────
 
+    @staticmethod
+    def _validate_points(shape: LabelShape) -> str | None:
+        """Return an error message if *shape* has an invalid point count."""
+        expected_min, expected_exact = _POINT_COUNTS.get(shape.shape_type, (0, None))
+        got = len(shape.points)
+        if expected_exact is not None:
+            if got != expected_exact:
+                return (
+                    f"{shape.shape_type!r} needs exactly {expected_exact} points, "
+                    f"got {got}"
+                )
+            return None
+        if got < expected_min:
+            return (
+                f"{shape.shape_type!r} needs at least {expected_min} points, got {got}"
+            )
+        return None
+
     def _entity_from_shape(self, shape: LabelShape) -> Any:
+        err = self._validate_points(shape)
+        if err is not None:
+            raise ValueError(err)
         pts = [self._mapper.to_world(x, y) for x, y in shape.points]
         st = shape.shape_type
         if st == "rectangle":
@@ -206,6 +274,9 @@ class LabelMeStore:
         )
         from ._interaction import DragMode
 
+        err = self._validate_points(shape)
+        if err is not None:
+            raise ValueError(err)
         pts = [self._mapper.to_world(x, y) for x, y in shape.points]
         st = shape.shape_type
         if st == "rectangle":

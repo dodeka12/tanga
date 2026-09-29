@@ -19,22 +19,22 @@ Malformed shapes are skipped and reported, never crash and never silently drop.
 
 ## Steps
 
-- [ ] **4.1 — `LabelMeLoadResult`**
+- [x] **4.1 — `LabelMeLoadResult`**
   - Add `@dataclass LabelMeLoadResult` with `document: LabelMeDocument` and
     `errors: list[str]`.
-- [ ] **4.2 — `_validate_points`**
+- [x] **4.2 — `_validate_points`**
   - Add `_validate_points(shape, expected_min, expected_exact=None) -> str | None`
     shared by `_entity_from_shape`/`_act_from_shape` (message like
     `"shape 3 ('rear_rim_low'): 'rectangle' needs at least 2 points, got 1"`).
-- [ ] **4.3 — `load`/`loads`**
+- [x] **4.3 — `load`/`loads`**
   - Parse JSON, validate each shape, skip invalid ones, collect errors, return
     `LabelMeLoadResult`. Unknown `shape_type` is reported, not raised.
-- [ ] **4.4 — `add_shapes`/`iter_objects`**
+- [x] **4.4 — `add_shapes`/`iter_objects`**
   - Return `(added, errors)` / `(pairs, errors)`; skip + report construction
     failures.
-- [ ] **4.5 — App**
+- [x] **4.5 — App**
   - Unpack `LabelMeLoadResult`, surface errors (log / print), never crash.
-- [ ] **4.6 — Tests**
+- [x] **4.6 — Tests**
   - A 1-point `"rectangle"` loads with one error and zero shapes; mixed valid +
     invalid files return both; unknown shape type is reported.
 

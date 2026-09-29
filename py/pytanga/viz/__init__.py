@@ -94,7 +94,7 @@ from ._interaction import (
 )
 from ._keys import KeyModifier
 from ._label import Label
-from .labelme import LabelMeDocument, LabelMeStore, LabelShape
+from .labelme import LabelMeDocument, LabelMeLoadResult, LabelMeStore, LabelShape
 from pytanga.geometry.transform import Transform
 from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
@@ -373,6 +373,7 @@ __all__ = [
     "KeyModifier",
     "Label",
     "LabelMeDocument",
+    "LabelMeLoadResult",
     "LabelMeStore",
     "LabelShape",
     "LabelStyle",

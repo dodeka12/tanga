@@ -389,14 +389,19 @@ class ImageLabeler:
             self.clear_shapes()
             self.set_image_file(path)
             return
-        doc = self._store.load(path)
-        self.load_document(doc, path)
+        result = self._store.load(path)
+        for message in result.errors:
+            print(f"labelme: skipped {message}")
+        self.load_document(result.document, path)
 
     def load_document(self, doc: LabelMeDocument, json_path: str = "") -> None:
         """Replace the current shapes with those from *doc* (and its image)."""
         self.clear_shapes()
         self._load_document_image(doc, json_path)
-        for obj, label in self._store.iter_objects(doc, active=True):
+        objs, errors = self._store.iter_objects(doc, active=True)
+        for message in errors:
+            print(f"labelme: skipped {message}")
+        for obj, label in objs:
             self.add_shape(obj, label=label)
 
     def save(self, path: str | os.PathLike[str]) -> None:

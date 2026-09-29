@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import numpy as np
@@ -56,7 +57,7 @@ class TestSerialize:
     def test_round_trip(self) -> None:
         store = LabelMeStore()
         doc = _doc()
-        doc2 = store.loads(store.dumps(doc))
+        doc2 = store.loads(store.dumps(doc)).document
         assert doc2.shapes == doc.shapes
         assert doc2.image_path == doc.image_path
 
@@ -65,7 +66,7 @@ class TestAddShapes:
     def test_active_true(self) -> None:
         store = LabelMeStore()
         handle = _FakeHandle()
-        objs = store.add_shapes(handle, _doc(), active=True)
+        objs = store.add_shapes(handle, _doc(), active=True)[0]
         assert isinstance(objs[0], ActRectangle2D)
         assert isinstance(objs[1], ActCircle)
         assert isinstance(objs[2], ActPolygon)
@@ -77,7 +78,7 @@ class TestAddShapes:
     def test_active_false(self) -> None:
         store = LabelMeStore()
         handle = _FakeHandle()
-        objs = store.add_shapes(handle, _doc(), active=False)
+        objs = store.add_shapes(handle, _doc(), active=False)[0]
         assert isinstance(objs[0], Rectangle2D)
         assert isinstance(objs[1], Circle)
         assert isinstance(objs[3], object)  # linestrip → PointPath (open)
@@ -131,7 +132,7 @@ def test_mask_round_trip() -> None:
     doc = LabelMeDocument(
         shapes=[LabelShape(label="a", points=[(0, 0)], shape_type="point", mask="AAAA")]
     )
-    doc2 = store.loads(store.dumps(doc))
+    doc2 = store.loads(store.dumps(doc)).document
     assert doc2.shapes[0].mask == "AAAA"
 
 
@@ -140,7 +141,7 @@ def test_description_none_preserved() -> None:
     doc = LabelMeDocument(
         shapes=[LabelShape(label="a", points=[(0, 0)], shape_type="point")]
     )
-    doc2 = store.loads(store.dumps(doc))
+    doc2 = store.loads(store.dumps(doc)).document
     assert doc2.shapes[0].description is None
 
 
@@ -172,7 +173,7 @@ def test_default_mapper_round_trips_entities() -> None:
             LabelShape(label="l", points=[(0, 0), (3, 4)], shape_type="line"),
         ]
     )
-    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=False))
+    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=False)[0])
     assert rebuilt[0].points == [(0.0, 0.0), (4.0, 2.0)]
     assert rebuilt[1].points == [(0.0, 0.0), (3.0, 4.0)]
 
@@ -200,11 +201,54 @@ def test_calibrated_mapper_round_trip_point_shapes() -> None:
             LabelShape(label="pt", points=[(320, 240)], shape_type="point"),
         ]
     )
-    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=True))
+    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=True)[0])
     assert [s.shape_type for s in rebuilt] == [s.shape_type for s in doc.shapes]
     for orig, back in zip(doc.shapes, rebuilt):
         assert len(back.points) == len(orig.points)
         for (u0, v0), (u1, v1) in zip(orig.points, back.points):
             assert u0 == pytest.approx(u1, abs=1e-6)
             assert v0 == pytest.approx(v1, abs=1e-6)
+
+
+def test_load_skips_single_point_rectangle() -> None:
+    store = LabelMeStore()
+    text = json.dumps(
+        {
+            "shapes": [
+                {"label": "r", "points": [[1, 1]], "shape_type": "rectangle"},
+            ],
+        }
+    )
+    result = store.loads(text)
+    assert result.document.shapes == []
+    assert len(result.errors) == 1
+    assert "needs at least 2 points" in result.errors[0]
+
+
+def test_load_reports_mixed_valid_invalid() -> None:
+    store = LabelMeStore()
+    text = json.dumps(
+        {
+            "shapes": [
+                {"label": "ok", "points": [[0, 0], [1, 1]], "shape_type": "line"},
+                {"label": "bad", "points": [[1, 1]], "shape_type": "rectangle"},
+            ],
+        }
+    )
+    result = store.loads(text)
+    assert [s.label for s in result.document.shapes] == ["ok"]
+    assert len(result.errors) == 1
+    assert "bad" in result.errors[0]
+
+
+def test_add_shapes_reports_unknown_shape_type() -> None:
+    store = LabelMeStore()
+    handle = _FakeHandle()
+    doc = LabelMeDocument(
+        shapes=[LabelShape(label="x", points=[(0, 0)], shape_type="blob")]
+    )
+    objs, errors = store.add_shapes(handle, doc, active=False)
+    assert objs == []
+    assert len(errors) == 1
+    assert "Unknown labelme shape_type" in errors[0]
 
