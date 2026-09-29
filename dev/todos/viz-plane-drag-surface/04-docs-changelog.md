@@ -18,14 +18,14 @@ changelog.
 
 ## Steps
 
-- [ ] **4.1 — Developer docs**
+- [x] **4.1 — Developer docs**
   - In `viz-controls-and-interactions.md`, note that `ActImagePlane` is now
     mapper-aware (plane from a `CoordinateMapper`, `VIEW_PLANE` drag) and the
     `entity` is pluggable (image vs. transparent hit plane).
-- [ ] **4.2 — Changelog**
+- [x] **4.2 — Changelog**
   - Write `docs/changelog/2026/09/29_feat-plane-drag-surface.md` per
     `dev/workflows/changelog.md` (New Features; no breaking change expected).
-- [ ] **4.3 — Full validation**
+- [x] **4.3 — Full validation**
   - `uv run pytest -rs`, `uv run ruff check .`, `uv run ty check`,
     `node --test 'js/dev/tests/*.test.mjs'`, `node js/dev/tests/check-syntax.mjs`,
     `uv run mkdocs build --strict`.

@@ -340,6 +340,14 @@ wins, falling back to the general `on_drag`/`on_click`), and lets you rebind the
 camera navigation (pan/dolly/rotate) per scene through a `controls` mapping
 (`SceneConfig.controls`, applied by `configureControls` in `view_mode.js`).
 
+`ActImagePlane` is plane-aware: it accepts a `CoordinateMapper` (default
+`PlanarMapper`, the flat pixel plane) and computes its `drag_anchor` as a generic
+ray↔`mapper.plane()` intersection, with `drag_mode=VIEW_PLANE` (⟂ camera view at
+the anchor depth).  Its rendered `entity` is pluggable — `ImageCanvas` passes the
+`ImageView`, while a calibrated scene passes a transparent hit `Plane` at the
+mapper's depth (the `CameraView.background_image` stays the visual).  See
+`calibrated_labeling_app.py` for drag-to-draw on a calibrated plane.
+
 ## Coordinate frame overlay/underlay
 
 `CoordinateSystem(display_mode="overlay")` (see
