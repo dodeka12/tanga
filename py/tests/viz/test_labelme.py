@@ -119,3 +119,40 @@ class TestExtensions:
         ellipse = Ellipse(center=Point(1, 2, 0), radius_u=2.0, radius_v=2.0)
         shapes = store.shapes_from_objects([(ellipse, "x")])
         assert shapes[0].shape_type == "circle"
+
+
+def test_mask_round_trip() -> None:
+    store = LabelMeStore()
+    doc = LabelMeDocument(
+        shapes=[LabelShape(label="a", points=[(0, 0)], shape_type="point", mask="AAAA")]
+    )
+    doc2 = store.loads(store.dumps(doc))
+    assert doc2.shapes[0].mask == "AAAA"
+
+
+def test_description_none_preserved() -> None:
+    store = LabelMeStore()
+    doc = LabelMeDocument(
+        shapes=[LabelShape(label="a", points=[(0, 0)], shape_type="point")]
+    )
+    doc2 = store.loads(store.dumps(doc))
+    assert doc2.shapes[0].description is None
+
+
+def test_style_act_not_serialized() -> None:
+    store = LabelMeStore()
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="a",
+                points=[(0, 0)],
+                shape_type="point",
+                style=object(),
+                act=object(),
+            )
+        ]
+    )
+    text = store.dumps(doc)
+    assert '"style"' not in text
+    assert '"act"' not in text
+

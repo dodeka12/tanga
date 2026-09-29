@@ -19,18 +19,18 @@ optional `points`/`shape_type`, `description: str | None`), and round-trip the
 
 ## Steps
 
-- [ ] **2.1 — Extend `LabelShape`**
+- [x] **2.1 — Extend `LabelShape`**
   - Add `mask: str | None = None`, `style: ObjVizStyle | None = None`,
     `act: Any = field(default=None, repr=False, compare=False)`; make `points`/
     `shape_type` optional (default empty); change `description` to `str | None`
     (default `None`, no `""` coercion).
-- [ ] **2.2 — Round-trip `mask` + preserve `None` description**
+- [x] **2.2 — Round-trip `mask` + preserve `None` description**
   - `loads` reads `mask` and keeps `description` as `None` when absent; `dumps`
     writes `mask` when present (and omits `None` description, as labelme does).
-- [ ] **2.3 — Refactor `ImageLabeler`**
+- [x] **2.3 — Refactor `ImageLabeler`**
   - Delete `LabeledShape`; keep `list[LabelShape]` with `act`/`style`/`label`
     populated; adapt `as_pair` to a `LabelShape`-based export path.
-- [ ] **2.4 — Tests**
+- [x] **2.4 — Tests**
   - `mask` round-trips through `loads`/`dumps`; `description` `None` survives;
     `style`/`act` never appear in `dumps` output.
 

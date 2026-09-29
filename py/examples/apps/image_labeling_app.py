@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import argparse
 import os
-from dataclasses import dataclass, replace
-from typing import Any, Callable
+from dataclasses import replace
+from typing import Any, Callable, cast
 
 import numpy as np
 from pytanga.viz import (
@@ -50,6 +50,7 @@ from pytanga.viz import (
     ImageData,
     LabelMeDocument,
     LabelMeStore,
+    LabelShape,
     LineStyle,
     MenuView,
     MouseButton,
@@ -80,33 +81,12 @@ def _gradient(width: int, height: int) -> np.ndarray:
     return np.stack([r, g, b], axis=-1)
 
 
-@dataclass
-class LabeledShape:
-    """One labeled entity: the interactive object, its base style, and its label.
-
-    ``ImageLabeler`` keeps its shapes as a list of these.  ``act`` is the live
-    :class:`~pytanga.viz.ActSceneObject` (used to select/remove it), ``style`` is
-    its base style (used to toggle the selected highlight), and ``label`` is the
-    labelme class name.  :meth:`as_pair` returns the ``(object, label)`` pair that
-    :meth:`~pytanga.viz.LabelMeStore.shapes_from_objects` consumes, so exporting a
-    :class:`~pytanga.viz.LabelMeDocument` is a one-liner.
-    """
-
-    act: Any
-    style: Any
-    label: str = _DEFAULT_LABEL
-
-    def as_pair(self) -> tuple[Any, str]:
-        """Return the ``(object, label)`` pair ``LabelMeStore`` consumes."""
-        return self.act, self.label
-
-
 class ImageLabeler:
     """A reusable image-labeling pane: a toolbar over an image canvas, plus the
     shape/selection state.
 
     Owns an :class:`~pytanga.viz.ImageCanvas`, the drawing-tool toolbar, and the
-    list of :class:`LabeledShape` entries.  :attr:`view` is a
+    list of :class:`~pytanga.viz.LabelShape` entries.  :attr:`view` is a
     :class:`~pytanga.viz.StackView` (toolbar above the canvas) to drop straight
     into any layout or ``SplitView`` pane::
 
@@ -139,7 +119,7 @@ class ImageLabeler:
         self._on_select = on_select
 
         self.mode: str | None = None
-        self.shapes: list[LabeledShape] = []
+        self.shapes: list[LabelShape] = []
         self.selected: Any = None
         self._store = LabelMeStore()
 
@@ -301,7 +281,7 @@ class ImageLabeler:
             if shape.act is act:
                 self._canvas.handle.update_style(
                     shape.act.entity_id,
-                    replace(shape.style, color=self.selected_color),
+                    replace(cast(Any, shape.style), color=self.selected_color),
                 )
                 break
         self._canvas.handle.flush()
@@ -314,7 +294,9 @@ class ImageLabeler:
         self._set_extra_handles(act, False)
         for shape in self.shapes:
             if shape.act is act:
-                self._canvas.handle.update_style(shape.act.entity_id, shape.style)
+                self._canvas.handle.update_style(
+                    shape.act.entity_id, cast(Any, shape.style)
+                )
                 break
         self._canvas.handle.flush()
         self.selected = None
@@ -381,7 +363,7 @@ class ImageLabeler:
         self._canvas.handle.add(act, style=style)
         self._set_extra_handles(act, False)
         self.shapes.append(
-            LabeledShape(
+            LabelShape(
                 act=act,
                 style=style,
                 label=label if label is not None else self.default_label,
@@ -424,7 +406,9 @@ class ImageLabeler:
     def to_document(self, *, image_path: str = "") -> LabelMeDocument:
         """Export the current shapes as a :class:`~pytanga.viz.LabelMeDocument`."""
         return LabelMeDocument(
-            shapes=self._store.shapes_from_objects([s.as_pair() for s in self.shapes]),
+            shapes=self._store.shapes_from_objects(
+                [(s.act, s.label) for s in self.shapes]
+            ),
             image_path=image_path,
         )
 

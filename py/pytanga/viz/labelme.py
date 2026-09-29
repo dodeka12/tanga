@@ -29,14 +29,22 @@ _ELLIPSE = "ellipse"
 
 @dataclass
 class LabelShape:
-    """One annotated shape (labelme ``shapes[]`` entry)."""
+    """One annotated shape (labelme ``shapes[]`` entry).
+
+    ``mask`` / ``description`` are round-tripped verbatim from labelme JSON.
+    ``style`` / ``act`` are in-memory back-references used by an editor (e.g.
+    ``ImageLabeler``) and are never (de)serialized — labelme has no such concept.
+    """
 
     label: str
-    points: list[tuple[float, float]]
-    shape_type: str
+    points: list[tuple[float, float]] = field(default_factory=list)
+    shape_type: str = ""
     group_id: int | None = None
-    description: str = ""
+    description: str | None = None
     flags: dict[str, Any] = field(default_factory=dict)
+    mask: str | None = None
+    style: ObjVizStyle | None = None
+    act: Any = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -74,8 +82,9 @@ class LabelMeStore:
                 points=[(float(x), float(y)) for x, y in s["points"]],
                 shape_type=s["shape_type"],
                 group_id=s.get("group_id"),
-                description=s.get("description", ""),
+                description=s.get("description"),
                 flags=dict(s.get("flags", {})),
+                mask=s.get("mask"),
             )
             for s in data.get("shapes", [])
         ]
@@ -106,7 +115,8 @@ class LabelMeStore:
                     "group_id": s.group_id,
                     "shape_type": s.shape_type,
                     "flags": s.flags,
-                    "description": s.description,
+                    **({"description": s.description} if s.description is not None else {}),
+                    **({"mask": s.mask} if s.mask is not None else {}),
                 }
                 for s in doc.shapes
             ],
