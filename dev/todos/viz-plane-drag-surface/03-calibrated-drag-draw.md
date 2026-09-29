@@ -18,19 +18,19 @@ shape classes.
 
 ## Steps
 
-- [ ] **3.1 — Hit plane**
+- [x] **3.1 — Hit plane**
   - Add a transparent raycastable `Plane` geometry at the annotation `depth` as
     the calibrated drag surface's entity (the `CameraView.background_image`
     remains the visual).
-- [ ] **3.2 — Drag surface**
+- [x] **3.2 — Drag surface**
   - Construct the mapper-aware `ActImagePlane` (no `ImageView`, `mapper=
     CalibratedPlaneMapper(...)`, `entity=<hit plane>`) and register it with the
     world scene.
-- [ ] **3.3 — Toolbar + DragPreview**
+- [x] **3.3 — Toolbar + DragPreview**
   - Reuse the `ImageLabeler` toolbar/`DragPreview` pattern, driving `begin`/
     `update`/`finalize` from the plane's drag events (`on_drag_start`/`on_drag`/
     `on_drag_end`), with shapes added to the shared `"world"` scene.
-- [ ] **3.4 — Test**
+- [x] **3.4 — Test**
   - `test_calibrated_labeling_example.py`: assert the app still loads labels and
     builds the two-pane layout; assert the hit plane sits at the mapper's `depth`
     on the optical axis.
