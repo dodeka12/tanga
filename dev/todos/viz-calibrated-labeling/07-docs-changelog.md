@@ -18,17 +18,17 @@ docs, and add the branch changelog.
 
 ## Steps
 
-- [ ] **7.1 — Developer docs**
+- [x] **7.1 — Developer docs**
   - In `viz-architecture.md` (camera section), add a short paragraph on the
     `CoordinateMapper` protocol + `PlanarMapper`/`CalibratedPlaneMapper` and how
     `LabelMeStore(mapper=…)` uses it.
-- [ ] **7.2 — Example docs**
+- [x] **7.2 — Example docs**
   - `uv run python tools/generate-example-docs.py` (commits the new example page).
-- [ ] **7.3 — Changelog**
+- [x] **7.3 — Changelog**
   - Write `docs/changelog/2026/09/29_feat-calibrated-labeling.md` per
     `dev/workflows/changelog.md`, with a "Breaking" section (loader return types,
     `dumps` formatting).
-- [ ] **7.4 — Full validation**
+- [x] **7.4 — Full validation**
   - `uv run pytest -rs`, `uv run ruff check .`, `uv run ty check`,
     `node --test 'js/dev/tests/*.test.mjs'`, `node js/dev/tests/check-syntax.mjs`,
     `uv run mkdocs build --strict`.

@@ -1,6 +1,6 @@
 # Calibrated Labeling — Overview
 
-**Created:** 2026-09-29 | **Status:** In progress | **Branch:** `feat/calibrated-labeling`
+**Created:** 2026-09-29 | **Status:** Done | **Branch:** `feat/calibrated-labeling`
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this

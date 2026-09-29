@@ -385,6 +385,16 @@ pane through a clean three-layer model — camera data → camera view → pane:
 - **Frustum** — `pytanga.geometry.Frustum` (a viz-only entity, no MV) with
   `Frustum.from_camera(camera)` and `FrustumStyle`; serialized to explicit
   corners and rendered by `renderers/frustum.js`.
+- **`CoordinateMapper`** — a pixel↔world mapping protocol (`to_world(u, v) →
+  Point`, `to_pixel(point) → (u, v)`) in `pytanga.viz.camera`, with a
+  `PlanarMapper` (identity: `Point(u, v, 0)`) and a `CalibratedPlaneMapper`
+  (pinhole ray ∩ a plane ⟂ the optical axis at a fixed `depth`).
+  `LabelMeStore(mapper=…)` threads it through every pixel↔world call site so the
+  labelme loader/saver is coordinate-system-agnostic — the default `PlanarMapper`
+  preserves the historical "pixel == world XY" behavior, while
+  `CalibratedPlaneMapper` lets labelme shapes round-trip through a calibrated 3D
+  scene.  The single fixed `depth` is a display/editing approximation, not a true
+  reprojection of arbitrary 3D geometry.
 
 ### Test commands
 
