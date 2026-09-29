@@ -7,7 +7,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from pytanga.geometry import Circle, Ellipse, Line, Point, Rectangle2D
+import numpy as np
+import pytest
+
+from pytanga.geometry import Circle, Ellipse, Line, Matrix, OpenCVFrame, Point, Rectangle2D
 from pytanga.viz import (
     ActCircle,
     ActEllipse,
@@ -15,6 +18,8 @@ from pytanga.viz import (
     ActPoint,
     ActPolygon,
     ActRectangle2D,
+    CalibratedPlaneMapper,
+    CameraCalibration,
     LabelMeDocument,
     LabelMeStore,
     LabelShape,
@@ -155,4 +160,51 @@ def test_style_act_not_serialized() -> None:
     text = store.dumps(doc)
     assert '"style"' not in text
     assert '"act"' not in text
+
+
+def test_default_mapper_round_trips_entities() -> None:
+    # The default PlanarMapper must preserve the pre-mapper behavior exactly
+    # (pixel == world XY): even size-based shapes round-trip.
+    store = LabelMeStore()
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(label="r", points=[(0, 0), (4, 2)], shape_type="rectangle"),
+            LabelShape(label="l", points=[(0, 0), (3, 4)], shape_type="line"),
+        ]
+    )
+    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=False))
+    assert rebuilt[0].points == [(0.0, 0.0), (4.0, 2.0)]
+    assert rebuilt[1].points == [(0.0, 0.0), (3.0, 4.0)]
+
+
+def test_calibrated_mapper_round_trip_point_shapes() -> None:
+    # Point-based shapes (line/polygon/point) store their vertices directly, so
+    # a calibrated mapper round-trips them exactly.
+    calib = CameraCalibration(
+        K=Matrix([[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]]),
+        R=Matrix(np.eye(3)),
+        t=[0.0, 0.0, 0.0],
+        image_size=(640, 480),
+        frame=OpenCVFrame(),
+        units=1.0,
+    )
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(calib, depth=1.0))
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(label="l", points=[(50, 50), (400, 300)], shape_type="line"),
+            LabelShape(
+                label="poly",
+                points=[(100, 100), (300, 100), (300, 300)],
+                shape_type="polygon",
+            ),
+            LabelShape(label="pt", points=[(320, 240)], shape_type="point"),
+        ]
+    )
+    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=True))
+    assert [s.shape_type for s in rebuilt] == [s.shape_type for s in doc.shapes]
+    for orig, back in zip(doc.shapes, rebuilt):
+        assert len(back.points) == len(orig.points)
+        for (u0, v0), (u1, v1) in zip(orig.points, back.points):
+            assert u0 == pytest.approx(u1, abs=1e-6)
+            assert v0 == pytest.approx(v1, abs=1e-6)
 

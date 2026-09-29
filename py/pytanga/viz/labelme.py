@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING, Any
 
 from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2D
 
+from .camera import CoordinateMapper, PlanarMapper
+
 if TYPE_CHECKING:
     from ._active import ActSceneObject
     from ._scene_handle import VizSceneHandle
@@ -63,8 +65,14 @@ class LabelMeDocument:
 class LabelMeStore:
     """Load/store labelme JSON and map shapes to entities or act composites."""
 
-    def __init__(self, *, allow_extensions: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        allow_extensions: bool = True,
+        mapper: CoordinateMapper | None = None,
+    ) -> None:
         self._allow_extensions = allow_extensions
+        self._mapper: CoordinateMapper = mapper if mapper is not None else PlanarMapper()
 
     # ── (De)serialization ─────────────────────────────────
 
@@ -166,7 +174,7 @@ class LabelMeStore:
     # ── Entity builders ────────────────────────────────────
 
     def _entity_from_shape(self, shape: LabelShape) -> Any:
-        pts = [Point(x, y, 0.0) for x, y in shape.points]
+        pts = [self._mapper.to_world(x, y) for x, y in shape.points]
         st = shape.shape_type
         if st == "rectangle":
             return Rectangle2D.between(pts[0], pts[1])
@@ -198,7 +206,7 @@ class LabelMeStore:
         )
         from ._interaction import DragMode
 
-        pts = [Point(x, y, 0.0) for x, y in shape.points]
+        pts = [self._mapper.to_world(x, y) for x, y in shape.points]
         st = shape.shape_type
         if st == "rectangle":
             return ActRectangle2D.create_from_points(pts[0], pts[1])
@@ -221,13 +229,13 @@ class LabelMeStore:
         if st == "line":
             return ActLine.create_from_points(pts[0], pts[1])
         if st == "point":
-            return ActPoint(pts[0], drag_mode=DragMode.XY_PLANE)
+            return ActPoint(pts[0], drag_mode=DragMode.VIEW_PLANE)
         raise ValueError(f"Unknown labelme shape_type: {st!r}")
 
     @staticmethod
     def _ellipse_entity(center: Point, rim_u: Point, rim_v: Point) -> Ellipse:
-        du = Direction(rim_u.x - center.x, rim_u.y - center.y, 0.0)
-        dv = Direction(rim_v.x - center.x, rim_v.y - center.y, 0.0)
+        du = Direction(rim_u.x - center.x, rim_u.y - center.y, rim_u.z - center.z)
+        dv = Direction(rim_v.x - center.x, rim_v.y - center.y, rim_v.z - center.z)
         return Ellipse(
             center=center,
             radius_u=du.mag(),
@@ -255,8 +263,20 @@ class LabelMeStore:
                 return LabelShape(
                     label=label,
                     points=[
-                        (rect.center.x - hw, rect.center.y - hh),
-                        (rect.center.x + hw, rect.center.y + hh),
+                        self._mapper.to_pixel(
+                            Point(
+                                rect.center.x - hw,
+                                rect.center.y - hh,
+                                rect.center.z,
+                            )
+                        ),
+                        self._mapper.to_pixel(
+                            Point(
+                                rect.center.x + hw,
+                                rect.center.y + hh,
+                                rect.center.z,
+                            )
+                        ),
                     ],
                     shape_type="rectangle",
                 )
@@ -266,8 +286,14 @@ class LabelMeStore:
             return LabelShape(
                 label=label,
                 points=[
-                    (circle.center.x, circle.center.y),
-                    (circle.center.x + circle.radius, circle.center.y),
+                    self._mapper.to_pixel(circle.center),
+                    self._mapper.to_pixel(
+                        Point(
+                            circle.center.x + circle.radius,
+                            circle.center.y,
+                            circle.center.z,
+                        )
+                    ),
                 ],
                 shape_type="circle",
             )
@@ -276,19 +302,26 @@ class LabelMeStore:
         if isinstance(obj, ActPolygon):
             return LabelShape(
                 label=label,
-                points=[(p.x, p.y) for p in obj.points],
+                points=[self._mapper.to_pixel(p) for p in obj.points],
                 shape_type="polygon" if obj.closed else "linestrip",
             )
         if isinstance(obj, (ActLine, Line)):
             line = obj.line if isinstance(obj, ActLine) else obj
             return LabelShape(
                 label=label,
-                points=[(line.start.x, line.start.y), (line.end.x, line.end.y)],
+                points=[
+                    self._mapper.to_pixel(line.start),
+                    self._mapper.to_pixel(line.end),
+                ],
                 shape_type="line",
             )
         if isinstance(obj, (ActPoint, Point)):
             p = obj.point if isinstance(obj, ActPoint) else obj
-            return LabelShape(label=label, points=[(p.x, p.y)], shape_type="point")
+            return LabelShape(
+                label=label,
+                points=[self._mapper.to_pixel(p)],
+                shape_type="point",
+            )
         return None
 
     def _shape_from_ellipse(self, obj: Any, label: str) -> LabelShape | None:
@@ -301,8 +334,14 @@ class LabelMeStore:
                 return LabelShape(
                     label=label,
                     points=[
-                        (ellipse.center.x, ellipse.center.y),
-                        (ellipse.center.x + ellipse.radius_u, ellipse.center.y),
+                        self._mapper.to_pixel(ellipse.center),
+                        self._mapper.to_pixel(
+                            Point(
+                                ellipse.center.x + ellipse.radius_u,
+                                ellipse.center.y,
+                                ellipse.center.z,
+                            )
+                        ),
                     ],
                     shape_type="circle",
                 )
@@ -310,40 +349,60 @@ class LabelMeStore:
         return LabelShape(
             label=label,
             points=[
-                (ellipse.center.x, ellipse.center.y),
-                (ellipse.center.x + du.x * ellipse.radius_u,
-                 ellipse.center.y + du.y * ellipse.radius_u),
-                (ellipse.center.x + dv.x * ellipse.radius_v,
-                 ellipse.center.y + dv.y * ellipse.radius_v),
+                self._mapper.to_pixel(ellipse.center),
+                self._mapper.to_pixel(
+                    Point(
+                        ellipse.center.x + du.x * ellipse.radius_u,
+                        ellipse.center.y + du.y * ellipse.radius_u,
+                        ellipse.center.z + du.z * ellipse.radius_u,
+                    )
+                ),
+                self._mapper.to_pixel(
+                    Point(
+                        ellipse.center.x + dv.x * ellipse.radius_v,
+                        ellipse.center.y + dv.y * ellipse.radius_v,
+                        ellipse.center.z + dv.z * ellipse.radius_v,
+                    )
+                ),
             ],
             shape_type=_ELLIPSE,
         )
 
-    @staticmethod
-    def _polygon_from_corners(rect: Rectangle2D, label: str) -> LabelShape:
-        cx, cy = rect.center.x, rect.center.y
+    def _polygon_from_corners(self, rect: Rectangle2D, label: str) -> LabelShape:
+        cx, cy, cz = rect.center.x, rect.center.y, rect.center.z
         hw, hh = rect.size[0] / 2.0, rect.size[1] / 2.0
         cos_a, sin_a = math.cos(rect.angle), math.sin(rect.angle)
         ux, uy = cos_a, sin_a
         vx, vy = -sin_a, cos_a
         corners = [
-            (cx - hw * ux - hh * vx, cy - hw * uy - hh * vy),
-            (cx + hw * ux - hh * vx, cy + hw * uy - hh * vy),
-            (cx + hw * ux + hh * vx, cy + hw * uy + hh * vy),
-            (cx - hw * ux + hh * vx, cy - hw * uy + hh * vy),
+            self._mapper.to_pixel(
+                Point(cx - hw * ux - hh * vx, cy - hw * uy - hh * vy, cz)
+            ),
+            self._mapper.to_pixel(
+                Point(cx + hw * ux - hh * vx, cy + hw * uy - hh * vy, cz)
+            ),
+            self._mapper.to_pixel(
+                Point(cx + hw * ux + hh * vx, cy + hw * uy + hh * vy, cz)
+            ),
+            self._mapper.to_pixel(
+                Point(cx - hw * ux + hh * vx, cy - hw * uy + hh * vy, cz)
+            ),
         ]
         return LabelShape(label=label, points=corners, shape_type="polygon")
 
-    @staticmethod
-    def _polygon_from_ellipse(ellipse: Ellipse, label: str) -> LabelShape:
+    def _polygon_from_ellipse(self, ellipse: Ellipse, label: str) -> LabelShape:
         n = 32
         du, dv = _ellipse_axes(ellipse)
         points = [
-            (
-                ellipse.center.x + du.x * ellipse.radius_u * math.cos(t)
-                + dv.x * ellipse.radius_v * math.sin(t),
-                ellipse.center.y + du.y * ellipse.radius_u * math.cos(t)
-                + dv.y * ellipse.radius_v * math.sin(t),
+            self._mapper.to_pixel(
+                Point(
+                    ellipse.center.x + du.x * ellipse.radius_u * math.cos(t)
+                    + dv.x * ellipse.radius_v * math.sin(t),
+                    ellipse.center.y + du.y * ellipse.radius_u * math.cos(t)
+                    + dv.y * ellipse.radius_v * math.sin(t),
+                    ellipse.center.z + du.z * ellipse.radius_u * math.cos(t)
+                    + dv.z * ellipse.radius_v * math.sin(t),
+                )
             )
             for t in (2.0 * math.pi * i / n for i in range(n))
         ]
