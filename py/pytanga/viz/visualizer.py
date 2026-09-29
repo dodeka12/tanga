@@ -381,6 +381,26 @@ class Visualizer(_JupyterDisplayMixin):
         """Set the interaction configuration for an entity."""
         self._interaction_host.set_interaction(object_id, config, scene_name=scene_name)
 
+    def on_key(
+        self,
+        key: str,
+        handler: InteractionHandler,
+        *,
+        modifiers: list[Any] | None = None,
+        scene_name: str = "",
+    ) -> None:
+        """Register an async handler for a key press in this scene.
+
+        The key list is synced onto :attr:`SceneConfig.keyboard` and pushed via
+        ``scene_config`` so the frontend knows which keys to forward.
+        """
+        self._interaction_host.on_key(
+            key, handler, modifiers=modifiers, scene_name=scene_name
+        )
+        scene = self._layout.scene(scene_name)
+        scene.config.keyboard = self._interaction_host.keyboard(scene_name)
+        self._push_scene_config(scene_name)
+
     # ── Internal forwarders (tests / VizSceneHandle) ───────
 
     @property

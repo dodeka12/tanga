@@ -67,7 +67,7 @@ class MVProductMatrix:
                 f"data.shape={self.data.shape} does not match "
                 f"N x |c_mask|={nc} x |b_mask|={nb}"
             )
-        if self.b_mask.algebra is not self.c_mask.algebra:
+        if self.b_mask.algebra != self.c_mask.algebra:
             raise ValueError("b_mask and c_mask belong to different algebras")
 
     @property

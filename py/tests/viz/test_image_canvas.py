@@ -46,6 +46,18 @@ class TestCamera:
         cam = canvas.handle.scene.config.camera
         assert (cam.xmin, cam.xmax, cam.ymin, cam.ymax) == (-0.5, 19.5, -0.5, 9.5)
         assert cam.stretch == "fit"
+        assert cam.min_zoom == 0.25
+
+    def test_fit_to_image_custom_min_zoom(self) -> None:
+        canvas = ImageCanvas(_viz(), min_zoom=0.5)
+        canvas.set_image(ImageData("img1", data=np.zeros((10, 20), dtype=np.uint8)))
+        assert canvas.handle.scene.config.camera.min_zoom == 0.5
+
+    def test_min_zoom_must_be_positive(self) -> None:
+        with pytest.raises(ValueError):
+            ImageCanvas(_viz(), min_zoom=0.0)
+        with pytest.raises(ValueError):
+            ImageCanvas(_viz(), min_zoom=-1.0)
 
     def test_fit_to_image_before_image_is_noop(self) -> None:
         canvas = ImageCanvas(_viz())
@@ -128,6 +140,17 @@ class TestApi:
 
         assert isinstance(canvas.act_plane, ActImagePlane)
         assert canvas.act_plane.image_view is canvas.image_view
+
+    def test_click_anchor_keeps_raw_hit(self) -> None:
+        from pytanga.geometry import Direction
+
+        canvas = ImageCanvas(_viz())
+        # The image plane is flat at z=0, so a CLICK's raw raycast hit is
+        # already the correct pixel — click_anchor must not rebase it.
+        assert (
+            canvas.act_plane.click_anchor(Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0))
+            is None
+        )
 
 
 class TestOverlay:

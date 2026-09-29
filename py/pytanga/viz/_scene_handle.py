@@ -587,6 +587,16 @@ class VizSceneHandle(_JupyterDisplayMixin):
         """Register an async handler for interaction events on an entity."""
         self._viz.on_interaction(object_id, event_type, handler, scene_name=self._name)
 
+    def on_key(
+        self,
+        key: str,
+        handler: InteractionHandler,
+        *,
+        modifiers: Any = None,
+    ) -> None:
+        """Register an async handler for a key press in this scene."""
+        self._viz.on_key(key, handler, modifiers=modifiers, scene_name=self._name)
+
     # ── Navigation ───────────────────────────────────────────
 
     def navigate_to(self, scene_name: str) -> None:

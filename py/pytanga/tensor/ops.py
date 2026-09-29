@@ -36,7 +36,7 @@ def _check_masks_compatible(mask_a: BladeMask | None, mask_b: BladeMask | None) 
         return True
     if mask_a is None or mask_b is None:
         return False
-    return (mask_a.algebra is mask_b.algebra) and (mask_a.ids == mask_b.ids)
+    return (mask_a.algebra == mask_b.algebra) and (mask_a.ids == mask_b.ids)
 
 
 def contract(subscripts: str, *tensors: MVTensor, **kwargs: Any) -> MVTensor:

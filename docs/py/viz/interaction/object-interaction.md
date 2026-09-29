@@ -246,6 +246,34 @@ viz.on_interaction(pid, InteractionEventType.DRAG_MOVE, on_drag)
 viz.run()
 ```
 
+## Keyboard Shortcuts
+
+In addition to pointer interaction, a scene can register **keyboard shortcuts**
+that fire an async handler when a key is pressed in a focused pane.  They reuse
+the same `(id, event)` registry and interaction dispatch — key handlers are
+stored under `(key:{scene}:{key}, "key")` and the per-scene key list rides on
+`SceneConfig.keyboard`.
+
+```python
+from pytanga.viz import KeyEvent, Visualizer
+
+viz = Visualizer()
+
+async def on_delete(event: KeyEvent):
+    print("Delete pressed in", event.scene)
+
+viz.on_key("Delete", on_delete)
+viz.on_key("Backspace", on_delete)
+```
+
+`on_key(key, handler, *, modifiers=None, scene_name="")` is available on
+`Visualizer`, `VizSceneHandle`, and `ImageCanvas`.  `modifiers` is an iterable of
+`ModifierKey` members (or matching strings).  Keys are matched
+case-insensitively and the most-specific binding (most required modifiers) wins.
+
+The handler receives a `KeyEvent` (`key`, `modifiers`, `scene`, `browser_id`).
+It is not a pointer interaction — there is no `object_id`/`camera`.
+
 ## See Also
 
 - [Active Elements](../entities/active-elements/index.md) — simplified high-level API for common interactive objects

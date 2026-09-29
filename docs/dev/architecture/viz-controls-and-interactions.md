@@ -404,6 +404,30 @@ enclosing Stack/Split views re-layout; the initial `visible:false` is applied th
 same way in `build.js`.  Disabled grey-out uses the theme tokens
 `--tanga-disabled-opacity` / `--tanga-disabled-fg` (overridable per theme).
 
+## Keyboard shortcuts (per-scene, per-pane focus)
+
+Scene-level keyboard shortcuts use the same `(id, event)` registry and the
+interaction dispatch path, but are **not** pointer interactions:
+
+- `Visualizer.on_key(key, handler, *, modifiers=None, scene_name="")` (and the
+  `VizSceneHandle` / `ImageCanvas` wrappers) stores a `KeyBinding` in
+  `InteractionHost._key_bindings` and registers a dispatcher under
+  `(key:{scene}:{key}, "key")` with `origin=INTERACTION`.
+- The per-scene key list is synced onto `SceneConfig.keyboard`
+  (`[{"key": …, "modifiers": […]}, …]`) and pushed via the existing
+  `scene_config` message.
+- The frontend attaches a per-pane `keydown` listener to each `ThreeJsView`
+  pane's DOM element (per-pane focus: the pane gets `tabIndex = 0` and is
+  focused on `pointerdown`).  On a registered key it sends
+  `{ type: "interaction:key", event_type: "key", scene, key, modifiers,
+     browser_id }`.
+- `InteractionHost._dispatch_interaction_event` special-cases
+  `interaction:key`, builds a `KeyEvent` (derived from `ControlEvent`, not
+  `InteractionEvent`), and dispatches the most-specific matching binding.
+
+Editable targets (`INPUT`/`TEXTAREA`/`contentEditable`) and auto-repeat are
+ignored so shortcuts don't hijack typing.
+
 ## Follow-ups
 
 - **Fold `interaction.js` onto `sendEvent`** — the interactive-object frontend

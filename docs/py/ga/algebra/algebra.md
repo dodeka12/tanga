@@ -57,6 +57,20 @@ These properties give read-only access to the algebra's configuration:
 | `rng` | `random.Random` | Random number generator seeded from construction argument |
 | `print_fmt` | `str` | Python format spec for coefficient display (default `'.4g'`) |
 
+## Algebra equality
+
+Two `Algebra` instances are considered equal when they share the same
+`(dim, sig, dtype, modulus)` parameters.  `compare()` is the explicit
+predicate; `__eq__` / `__hash__` make `==`, `in`, and dict/set keys work
+naturally.  `opns`, `precision`, and display settings (`print_fmt`) are
+excluded from the comparison, since they do not affect whether two
+multivectors can be combined.
+
+Equal-parameter instances are interchangeable across `MV`, `BladeMask`,
+`Expression`, `tensor`, `solver`, and `matrix`: a multivector or mask built
+from one instance combines freely with one built from a second, equal
+instance.
+
 ## Creating Multivectors
 
 Calling an `Algebra` instance (or equivalently `alg.multivector(...)`) creates

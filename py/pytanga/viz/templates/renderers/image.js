@@ -7,8 +7,8 @@
 import * as THREE from 'three';
 import { tagEntity } from './utils.js';
 import { buildImageFragment, buildImageVertex } from './image-shader.js';
-import { bestPyramidLevel } from './image-tiles.js';
-import { hasImageFrame, takeImageFrame } from '../image-frames.js';
+import { levelForScreen } from './image-tiles.js';
+import { hasImageFrame, registerImageFrameConsumer, takeImageFrame } from '../image-frames.js';
 
 // dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
 const DTYPE_TYPES = {
@@ -128,12 +128,11 @@ export async function makeEncodedTexture(img, frame) {
     return makeDataTexture(img, bytes);
 }
 
-// Compose a tiled float32/uint16 image into one float DataTexture by fetching
-// the best-fitting level's tiles as zlib-compressed raw pixels, inflating them,
+// Compose a tiled float32/uint16 image at `level` into one float DataTexture by
+// fetching that level's tiles as zlib-compressed raw pixels, inflating them,
 // expanding to RGBA, and placing them edge-clipped into a single buffer.
-async function makeTiledDataTexture(img) {
+async function makeTiledDataTexture(img, level) {
     const tileSize = img.tile_size || 256;
-    const level = bestPyramidLevel(img);
     const levelW = Math.ceil(img.width / (2 ** level));
     const levelH = Math.ceil(img.height / (2 ** level));
     const cols = Math.ceil(levelW / tileSize);
@@ -174,18 +173,12 @@ async function makeTiledDataTexture(img) {
     return texture;
 }
 
-// Compose a tiled image into one texture by fetching the tiles of the
-// best-fitting level (long side ≤ 2048 px).  uint8 uses JPEG/PNG tiles drawn
-// to a canvas; float32/uint16 use zlib tiles assembled into a float texture.
+// Compose a tiled uint8 image at `level` into one canvas texture by fetching
+// that level's JPEG/PNG tiles and drawing them edge-clipped into a canvas.
 // The `source === "tiled"` metadata is `{id, width, height, tile_size, levels,
 // dtype, channels}` (see `ImagePyramid.meta`).
-export async function makeTiledTexture(img) {
-    if (img.dtype === 1 || img.dtype === 2) {
-        return makeTiledDataTexture(img);
-    }
-
+async function makeTiledCanvasTexture(img, level) {
     const tileSize = img.tile_size || 256;
-    const level = bestPyramidLevel(img);
     const scale = 2 ** level;
     const levelW = Math.ceil(img.width / scale);
     const levelH = Math.ceil(img.height / scale);
@@ -218,6 +211,23 @@ export async function makeTiledTexture(img) {
     texture.magFilter = THREE.NearestFilter;
     texture.needsUpdate = true;
     return texture;
+}
+
+// Build a tiled image at `level`, dispatching uint8 to the canvas path and
+// float32/uint16 to the float DataTexture path.
+function buildTiledTextureAtLevel(img, level) {
+    return (img.dtype === 1 || img.dtype === 2)
+        ? makeTiledDataTexture(img, level)
+        : makeTiledCanvasTexture(img, level);
+}
+
+// Compose a tiled image into one texture at the level matching the on-screen
+// resolution `maxDim` (device pixels on the image's long side, already
+// including the device-pixel ratio and current zoom).
+export async function makeTiledTexture(img, maxDim) {
+    // 2048 is the fallback budget for callers without a live viewport (e.g. a
+    // `background_image`); the image entity passes the real on-screen size.
+    return buildTiledTextureAtLevel(img, levelForScreen(img, maxDim ?? 2048));
 }
 
 // Stream an MJPEG camera feed (`/stream/{id}`) into a texture via a hidden
@@ -282,7 +292,7 @@ function buildUniforms(ent) {
     return uniforms;
 }
 
-export async function createImage(ent) {
+export async function createImage(ent, opts) {
     const frame = ent.frame || {};
     const width = frame.width || 1;
     const height = frame.height || 1;
@@ -297,12 +307,20 @@ export async function createImage(ent) {
         vertexShader: vertex,
         fragmentShader: fragment,
         uniforms,
+        // The image plane is a background: never write depth, so overlay
+        // geometry (points, lines, polygons) drawn at the same z=0 renders on
+        // top instead of z-fighting with the image.
+        depthWrite: false,
     });
+    // Tiled layers re-resolve their pyramid level when the view zooms; keep the
+    // per-layer state on the material so `updateImageLod` can swap them.
+    material.userData._tiledLayers = [];
 
     const mesh = new THREE.Mesh(geometry, material);
     // Centre the plane on the pixel extent [−0.5, W−0.5] × [−0.5, H−0.5].
     mesh.position.set(width / 2 - 0.5, height / 2 - 0.5, 0);
 
+    const maxDim = opts?.maxDim;
     const images = ent.images || [];
     for (let i = 0; i < images.length && i < 4; i++) {
         const img = images[i];
@@ -321,14 +339,61 @@ export async function createImage(ent) {
                 });
             }
         } else if (img.source === 'tiled') {
-            uniforms[key].value = await makeTiledTexture(img);
+            const level = levelForScreen(img, maxDim ?? 2048);
+            uniforms[key].value = await buildTiledTextureAtLevel(img, level);
+            material.userData._tiledLayers.push({ img, index: i, level });
         } else if (hasImageFrame(img.id)) {
             uniforms[key].value = await makeEncodedTexture(img, takeImageFrame(img.id));
+        } else {
+            // The pixel frame hasn't arrived yet (it races the entity JSON over
+            // the wire); upload the texture once it lands instead of leaving
+            // `uImage0` null (which renders black).
+            registerImageFrameConsumer(img.id, (frame) => {
+                makeEncodedTexture(img, frame).then((tex) => {
+                    uniforms[key].value = tex;
+                });
+            });
         }
     }
 
     tagEntity(mesh, ent);
     return mesh;
+}
+
+// Re-resolve tiled image layers for a new on-screen resolution `maxDim`
+// (device pixels on the image's long side).  When a layer's target level
+// changes, fetch that level's tiles and swap the texture in place (disposing
+// the previous one).  Returns true when at least one layer was swapped.
+export async function updateImageLod(mesh, maxDim) {
+    const material = mesh && mesh.material;
+    const layers = material && material.userData && material.userData._tiledLayers;
+    if (!layers || layers.length === 0) return false;
+    let changed = false;
+    for (const layer of layers) {
+        const level = levelForScreen(layer.img, maxDim);
+        if (level === layer.level) {
+            // Already showing the right level; cancel any in-flight fetch for a
+            // now-outdated level so it cannot overwrite the correct texture.
+            if (layer.pendingLevel != null) layer.pendingLevel = null;
+            continue;
+        }
+        if (level === layer.pendingLevel) continue;
+        layer.pendingLevel = level;
+        const tex = await buildTiledTextureAtLevel(layer.img, level);
+        if (layer.pendingLevel !== level) {
+            // A newer zoom request superseded this fetch.
+            if (tex.dispose) tex.dispose();
+            continue;
+        }
+        layer.pendingLevel = null;
+        const key = `uImage${layer.index}`;
+        const old = material.uniforms[key].value;
+        material.uniforms[key].value = tex;
+        layer.level = level;
+        if (old && old.dispose) old.dispose();
+        changed = true;
+    }
+    return changed;
 }
 
 export function updateImage(mesh, ent, prev) {

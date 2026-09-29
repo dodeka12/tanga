@@ -208,3 +208,40 @@ def test_clamp_ortho_view_derives_min_zoom_for_overflow() -> None:
     assert out[0] == pytest.approx(0.5)
     assert out[1] == pytest.approx(0.24)
     assert out[2] == pytest.approx(1.0)
+
+
+def test_screen_world_scale() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available")
+    program = r"""
+    import { screenWorldScale } from './py/pytanga/viz/templates/camera-fit.js';
+    const ortho = screenWorldScale(
+        { isOrthographicCamera: true, top: 5, bottom: -5, zoom: 2 },
+        1000, { x: 0, y: 0, z: 0 }
+    );
+    const persp = screenWorldScale(
+        { isOrthographicCamera: false, fov: 90, position: { x: 0, y: 0, z: 0 } },
+        1000, { x: 0, y: 0, z: 10 }
+    );
+    const degenerate = screenWorldScale(
+        { isOrthographicCamera: true, top: 0, bottom: 0, zoom: 1 },
+        1000, { x: 0, y: 0, z: 0 }
+    );
+    console.log(JSON.stringify({ ortho, persp, degenerate }));
+    """
+    proc = subprocess.run(
+        [node, "--input-type=module", "-e", program],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    # ortho: (5 - (-5)) / (1000 * 2) = 0.005.
+    assert out["ortho"] == pytest.approx(0.005)
+    # perspective: 2 * 10 * tan(90/2 deg) / 1000 = 20 / 1000 = 0.02.
+    assert out["persp"] == pytest.approx(0.02)
+    # degenerate frustum span falls back to 1.
+    assert out["degenerate"] == 1

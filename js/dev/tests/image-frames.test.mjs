@@ -1,7 +1,7 @@
 // Tanga — unit tests for the binary image-frame decoder (node --test).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
+import { decodeImageFrame, hasImageFrame, registerImageFrameConsumer, storeImageFrame, takeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
 
 // Build a little-endian frame by hand (magic "TGI\0" + header + id + payload).
 function buildFrame({ version = 2, codec = 0, width = 2, height = 3, channels = 1, dtype = 0, id = 'img1', payload = new Uint8Array([1, 2, 3, 4, 5, 6]) }) {
@@ -77,4 +77,25 @@ test('v1 frame still decodes as codec raw', () => {
 
 test('unsupported version throws', () => {
     assert.throws(() => decodeImageFrame(buildFrame({ version: 9 })), /unsupported image frame version/);
+});
+
+test('storeImageFrame / hasImageFrame / takeImageFrame round-trip', () => {
+    const frame = { id: 'rt1', width: 2, height: 3, channels: 3, dtype: 0, codec: 'jpeg', bytes: new Uint8Array([1, 2, 3]) };
+    assert.equal(hasImageFrame('rt1'), false);
+    storeImageFrame(frame);
+    assert.equal(hasImageFrame('rt1'), true);
+    assert.equal(takeImageFrame('rt1'), frame);
+    assert.equal(hasImageFrame('rt1'), false);
+});
+
+test('registerImageFrameConsumer is invoked once when the frame arrives', () => {
+    const frame = { id: 'late1', width: 1, height: 1, channels: 3, dtype: 0, codec: 'jpeg', bytes: new Uint8Array([9]) };
+    const received = [];
+    registerImageFrameConsumer('late1', (f) => received.push(f));
+    storeImageFrame(frame);
+    assert.deepEqual(received, [frame]);
+    // one-shot: a subsequent frame with the same id does not re-invoke.
+    storeImageFrame({ ...frame, bytes: new Uint8Array([8]) });
+    assert.equal(received.length, 1);
+    takeImageFrame('late1');
 });

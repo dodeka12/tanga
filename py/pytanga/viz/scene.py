@@ -54,6 +54,8 @@ class SceneConfig:
     # Scene-wide default viewport (zoom + pan) for panes that do not set their
     # own per-pane ``CameraView.viewport``.
     viewport: ViewportConfig | None = None
+    # Per-scene keyboard shortcuts: list of {"key": str, "modifiers": [str, ...]}.
+    keyboard: list[dict[str, Any]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -83,6 +85,8 @@ class SceneConfig:
             result["cursor"] = self.cursor
         if self.viewport is not None:
             result["viewport"] = self.viewport.to_dict()
+        if self.keyboard:
+            result["keyboard"] = self.keyboard
         return result
 
 
@@ -452,8 +456,11 @@ class Scene:
                     properties["color"] = normalized
             if opacity is not None:
                 properties["opacity"] = float(opacity)
+            body_style = getattr(obj, "body_style", None)
             if style is not None:
                 properties["style"] = style
+            elif body_style is not None:
+                properties["style"] = body_style
             eid = self.add(obj.entity, entity_id=entity_id, **properties)
             obj._init(VizSceneHandle(self._host, self.name), eid)
             self._host._act_objects[eid] = obj

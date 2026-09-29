@@ -26,6 +26,17 @@ function createLineCircle(ent) {
     const thickness = styleParam(ent, 'thickness', 1.0);
     const radius = Math.max(ent.radius || 1.0, 0.001);
 
+    const group = new THREE.Group();
+
+    // Optional semi-transparent fill disc under the outline.
+    if (styleParam(ent, 'fill', false)) {
+        const fillOpacity = styleParam(ent, 'fill_opacity', 0.2);
+        const fillGeo = new THREE.CircleGeometry(radius, CIRCLE_SEGMENTS);
+        const fill = new THREE.Mesh(fillGeo, makeMaterial(color, fillOpacity, true));
+        fill.userData.isFillQuad = true;
+        group.add(fill);
+    }
+
     // Canonical: a circle in the XY plane centered at the origin.
     const points = [];
     for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
@@ -33,9 +44,9 @@ function createLineCircle(ent) {
         points.push(new THREE.Vector3(radius * Math.cos(t), radius * Math.sin(t), 0));
     }
 
-    const line = makeFatLine(points, color, opacity, thickness);
-    tagEntity(line, ent);
-    return line;
+    group.add(makeFatLine(points, color, opacity, thickness));
+    tagEntity(group, ent);
+    return group;
 }
 
 

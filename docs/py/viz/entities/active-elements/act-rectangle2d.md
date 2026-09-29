@@ -63,6 +63,7 @@ ActRectangle2D(
     on_corner_drag: Callable[[int, DragEvent, ActRectangle2D], Awaitable[bool]] | None = None,
     on_translate: Callable[[DragEvent, ActRectangle2D], Awaitable[bool]] | None = None,
     on_change: Callable[[Rectangle2D], None] | None = None,
+    on_click: ActClickHandler | None = None,
 )
 ```
 
@@ -76,6 +77,7 @@ ActRectangle2D(
 | `on_corner_drag` | `Callable \| None` | `None` | Overrides the corner-resize behaviour; return `True` to fully handle |
 | `on_translate` | `Callable \| None` | `None` | Overrides the translation behaviour; return `True` to fully handle |
 | `on_change` | `Callable \| None` | `None` | Fired after any geometry change with the new `Rectangle2D` |
+| `on_click` | `ActClickHandler \| None` | `None` | Fired when the body is clicked; providing it makes the body clickable (selectable) |
 
 ## Properties
 
@@ -116,7 +118,7 @@ def on_rect(rect):  # called with the ActRectangle2D after the drag
     print(f"drawn: {rect.rectangle}")
 ```
 
-See [`rectangle_labeling.py`](../../../examples/viz/image/rectangle_labeling.md)
+See [`image_labeling_app.py`](../../../examples/apps/image_labeling_app.md)
 for the full flow.
 
 ## See Also

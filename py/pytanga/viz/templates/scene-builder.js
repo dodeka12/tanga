@@ -35,8 +35,8 @@ export function wrapWithNodeTransform(mesh, transform) {
 
 // Build a scene-layer object: mesh → node transform wrap → parent under
 // `parent_id` (or the scene) → register.  Returns the registry entry or null.
-export async function buildSceneObject(obj, scene, registry) {
-    const mesh = await createEntityMesh(obj);
+export async function buildSceneObject(obj, scene, registry, view) {
+    const mesh = await createEntityMesh(obj, view);
     if (!mesh) return null;
 
     const node = wrapWithNodeTransform(mesh, obj.transform);
