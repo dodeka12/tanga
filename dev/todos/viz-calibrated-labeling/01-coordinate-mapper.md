@@ -18,22 +18,22 @@ Add the pixel↔world `CoordinateMapper` protocol and two implementations
 
 ## Steps
 
-- [ ] **1.1 — `CoordinateMapper` protocol**
+- [x] **1.1 — `CoordinateMapper` protocol**
   - Add `class CoordinateMapper(Protocol)` with `to_world(u, v) -> Point` and
     `to_pixel(point) -> tuple[float, float]` in `camera.py`.
-- [ ] **1.2 — `PlanarMapper` (default)**
+- [x] **1.2 — `PlanarMapper` (default)**
   - `to_world(u, v)` returns `Point(u, v, 0.0)`; `to_pixel(p)` returns `(p.x, p.y)`.
-- [ ] **1.3 — `CalibratedPlaneMapper`**
+- [x] **1.3 — `CalibratedPlaneMapper`**
   - `__init__(camera: CameraCalibration, depth: float)`.
   - `to_world(u, v)`: unproject `(u, v)` through `camera.K` to a camera-frame ray,
     intersect with the plane ⟂ the optical axis at `depth` (metres), map to world
     via `camera.camera_to_world()`.
   - `to_pixel(p)`: exact inverse via `world_to_camera()` + `K`.
   - Document the single-fixed-`depth` approximation in the docstring.
-- [ ] **1.4 — Export**
+- [x] **1.4 — Export**
   - Export `CoordinateMapper`, `PlanarMapper`, `CalibratedPlaneMapper` from
     `pytanga.viz` (`__init__.py` import + `__all__`).
-- [ ] **1.5 — Tests**
+- [x] **1.5 — Tests**
   - `to_pixel(to_world(u, v)) == (u, v)` for both mappers over a grid.
   - `PlanarMapper` is identity (`to_world(u, v) == Point(u, v, 0.0)`).
   - `CalibratedPlaneMapper`: the principal point maps to a point at `depth` on the
