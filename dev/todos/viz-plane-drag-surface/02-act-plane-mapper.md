@@ -18,19 +18,19 @@ mapper's plane, and decouple its rendered entity so a non-image hit plane works.
 
 ## Steps
 
-- [ ] **2.1 — `mapper` + `entity` parameters**
+- [x] **2.1 — `mapper` + `entity` parameters**
   - `ActImagePlane(image_view: ImageView | None = None, *, mapper=None,
     entity=None, ...)`; `mapper` defaults to `PlanarMapper()`; `entity` defaults
     to `image_view`.
-- [ ] **2.2 — Generic `drag_anchor`**
+- [x] **2.2 — Generic `drag_anchor`**
   - Replace the `z = 0` intersection with a ray↔`mapper.plane()` intersection:
     `t = (point − ray_origin)·n / (ray_dir·n)`, then `ray_origin + t·ray_dir`.
-- [ ] **2.3 — `interaction_config` uses `VIEW_PLANE`**
+- [x] **2.3 — `interaction_config` uses `VIEW_PLANE`**
   - Swap both `DragMode.XY_PLANE` literals for `DragMode.VIEW_PLANE`.
-- [ ] **2.4 — Entity decoupling**
+- [x] **2.4 — Entity decoupling**
   - The `entity` property returns `image_view` (flat) or the provided hit-plane
     entity (calibrated). `ImageCanvas` keeps passing the `ImageView`.
-- [ ] **2.5 — Tests**
+- [x] **2.5 — Tests**
   - Flat regression: existing `ImageCanvas`/`ImageLabeler` drag tests still pass.
   - Unit: `drag_anchor` for a `CalibratedPlaneMapper` returns the plane point on
     the optical axis at `depth` (mirror the mapper round-trip tests).

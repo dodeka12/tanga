@@ -7,9 +7,14 @@ from __future__ import annotations
 
 import asyncio
 
-from pytanga.geometry import Direction, Point
+import numpy as np
+import pytest
+
+from pytanga.geometry import Direction, Matrix, OpenCVFrame, Point
 from pytanga.viz import (
     ActImagePlane,
+    CalibratedPlaneMapper,
+    CameraCalibration,
     ClickBinding,
     ClickEvent,
     DragBinding,
@@ -63,7 +68,7 @@ class TestInteractionConfig:
         trigger = cfg.triggers[0]
         assert trigger.event_type is InteractionEventType.DRAG
         assert trigger.mouse_button is None
-        assert trigger.drag_mode is DragMode.XY_PLANE
+        assert trigger.drag_mode is DragMode.VIEW_PLANE
 
     def test_drag_bindings_produce_specific_triggers(self) -> None:
         async def on_drag(event, ap):  # noqa: ANN001, ANN202
@@ -207,3 +212,26 @@ class TestEntity:
         ap = ActImagePlane(view)
         assert ap.entity is view
         assert ap.image_view is view
+
+
+def _calibration() -> CameraCalibration:
+    return CameraCalibration(
+        K=Matrix([[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]]),
+        R=Matrix(np.eye(3)),
+        t=[0.0, 0.0, 0.0],
+        image_size=(640, 480),
+        frame=OpenCVFrame(),
+        units=1.0,
+    )
+
+
+def test_calibrated_drag_anchor_returns_plane_point() -> None:
+    calib = _calibration()
+    mapper = CalibratedPlaneMapper(calib, depth=0.5)
+    plane = ActImagePlane(mapper=mapper)
+    point, normal = mapper.plane()
+    center = calib.camera_center()
+    anchor = plane.drag_anchor(Point(center[0], center[1], center[2]), normal)
+    assert anchor.x == pytest.approx(point.x, abs=1e-9)
+    assert anchor.y == pytest.approx(point.y, abs=1e-9)
+    assert anchor.z == pytest.approx(point.z, abs=1e-9)

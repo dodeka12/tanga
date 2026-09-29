@@ -40,6 +40,7 @@ from ._interaction import (
     ModifierKey,
     MouseButton,
 )
+from .camera import CoordinateMapper, PlanarMapper
 
 if TYPE_CHECKING:
     from ._image_view import ImageView
@@ -715,8 +716,10 @@ class ActImagePlane(ActSceneObject):
 
     def __init__(
         self,
-        image_view: ImageView,
+        image_view: ImageView | None = None,
         *,
+        mapper: CoordinateMapper | None = None,
+        entity: Any | None = None,
         handler: ActHandler | None = None,
         on_drag_start: ActEventHandler | None = None,
         on_drag_end: ActEventHandler | None = None,
@@ -735,18 +738,20 @@ class ActImagePlane(ActSceneObject):
             cursor=cursor,
         )
         self._image_view = image_view
+        self._entity: Any = entity if entity is not None else image_view
+        self._mapper: CoordinateMapper = mapper if mapper is not None else PlanarMapper()
 
     # ── Properties ─────────────────────────────────────────
 
     @property
-    def image_view(self) -> ImageView:
-        """The underlying :class:`~pytanga.viz.ImageView`."""
+    def image_view(self) -> ImageView | None:
+        """The underlying :class:`~pytanga.viz.ImageView` (or ``None``)."""
         return self._image_view
 
     @property
-    def entity(self) -> ImageView:
-        """The rendered image-plane entity (an ``ImageView``)."""
-        return self._image_view
+    def entity(self) -> Any:
+        """The rendered entity (an ``ImageView`` or a transparent hit plane)."""
+        return self._entity
 
     @property
     def interaction_config(self) -> InteractionConfig:
@@ -767,7 +772,7 @@ class ActImagePlane(ActSceneObject):
                     event_type=InteractionEventType.DRAG,
                     mouse_button=binding.button,
                     modifiers=binding.modifiers,
-                    drag_mode=DragMode.XY_PLANE,
+                    drag_mode=DragMode.VIEW_PLANE,
                 )
             )
         if self._handler_enabled and (
@@ -781,7 +786,7 @@ class ActImagePlane(ActSceneObject):
                 InteractionTrigger(
                     event_type=InteractionEventType.DRAG,
                     mouse_button=None,
-                    drag_mode=DragMode.XY_PLANE,
+                    drag_mode=DragMode.VIEW_PLANE,
                 )
             )
         for binding in self._click_bindings:
@@ -824,19 +829,30 @@ class ActImagePlane(ActSceneObject):
         """The image plane is fixed — no movement."""
 
     def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
-        """Return the ray ↔ ``z = 0`` (image plane) intersection.
-
-        The result is in world coordinates, which are the image's pixel
-        coordinates (``x`` right, ``y`` down) in the dedicated 2D scene.
-        """
-        denom = ray_direction.z
-        if denom == 0.0:
-            return Point(ray_origin.x, ray_origin.y, 0.0)
-        t = -ray_origin.z / denom
+        """Return the picking ray ↔ mapper plane intersection (world coords)."""
+        point, normal = self._mapper.plane()
+        denom = ray_direction.dot(normal)
+        if abs(denom) < 1e-12:
+            # Ray parallel to the plane: project the origin onto the plane.
+            d = (
+                (ray_origin.x - point.x) * normal.x
+                + (ray_origin.y - point.y) * normal.y
+                + (ray_origin.z - point.z) * normal.z
+            )
+            return Point(
+                ray_origin.x - d * normal.x,
+                ray_origin.y - d * normal.y,
+                ray_origin.z - d * normal.z,
+            )
+        t = (
+            (point.x - ray_origin.x) * normal.x
+            + (point.y - ray_origin.y) * normal.y
+            + (point.z - ray_origin.z) * normal.z
+        ) / denom
         return Point(
             ray_origin.x + t * ray_direction.x,
             ray_origin.y + t * ray_direction.y,
-            0.0,
+            ray_origin.z + t * ray_direction.z,
         )
 
     def click_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point | None:
