@@ -17,14 +17,14 @@ a drag surface can recover the geometric plane (point + normal) from any mapper.
 
 ## Steps
 
-- [ ] **1.1 — `plane()` on the protocol**
+- [x] **1.1 — `plane()` on the protocol**
   - Add `def plane(self) -> tuple[Point, Direction]` to `CoordinateMapper`.
-- [ ] **1.2 — `PlanarMapper.plane()`**
+- [x] **1.2 — `PlanarMapper.plane()`**
   - Return `(Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0))`.
-- [ ] **1.3 — `CalibratedPlaneMapper.plane()`**
+- [x] **1.3 — `CalibratedPlaneMapper.plane()`**
   - `point = self.to_world(self._cx, self._cy)`; normal = normalized
     `point - camera_center()` (the optical axis). Return `(point, normal)`.
-- [ ] **1.4 — Tests**
+- [x] **1.4 — Tests**
   - `PlanarMapper.plane()` is the `z = 0` plane with `+z` normal.
   - `CalibratedPlaneMapper.plane()`: the point is `depth` from the camera center,
     and the normal is a unit vector along the camera→point direction.

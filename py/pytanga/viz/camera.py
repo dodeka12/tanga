@@ -24,7 +24,7 @@ from typing import Any, Literal, Protocol, cast
 
 import numpy as np
 
-from pytanga.geometry import Point
+from pytanga.geometry import Direction, Point
 from pytanga.geometry.frame import CoordinateFrame, OpenCVFrame
 from pytanga.geometry.matrix import Matrix
 
@@ -632,6 +632,9 @@ class CoordinateMapper(Protocol):
     def to_pixel(self, point: Point) -> tuple[float, float]:
         """Map a world point to pixel ``(u, v)``."""
 
+    def plane(self) -> tuple[Point, Direction]:
+        """Return ``(point_on_plane, unit_normal)`` in world coordinates."""
+
 
 class PlanarMapper:
     """Identity mapper: pixel ``(u, v)`` maps to ``Point(u, v, 0.0)``.
@@ -645,6 +648,9 @@ class PlanarMapper:
 
     def to_pixel(self, point: Point) -> tuple[float, float]:
         return (point.x, point.y)
+
+    def plane(self) -> tuple[Point, Direction]:
+        return Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0)
 
 
 class CalibratedPlaneMapper:
@@ -687,3 +693,14 @@ class CalibratedPlaneMapper:
         u = self._fx * float(p_cam[0]) / zc + self._cx
         v = self._fy * float(p_cam[1]) / zc + self._cy
         return (u, v)
+
+    def plane(self) -> tuple[Point, Direction]:
+        """The principal point at ``depth``, and the optical-axis direction."""
+        point = self.to_world(self._cx, self._cy)
+        center = self._camera.camera_center()
+        normal = Direction(
+            point.x - center[0],
+            point.y - center[1],
+            point.z - center[2],
+        ).normalized()
+        return point, normal

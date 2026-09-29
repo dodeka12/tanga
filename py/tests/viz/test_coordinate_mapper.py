@@ -50,3 +50,22 @@ def test_calibrated_mapper_principal_point_at_depth() -> None:
     dist = float(np.linalg.norm(np.asarray([p.x, p.y, p.z]) - center))
     assert dist == pytest.approx(0.5)
 
+
+def test_planar_mapper_plane() -> None:
+    point, normal = PlanarMapper().plane()
+    assert (point.x, point.y, point.z) == (0.0, 0.0, 0.0)
+    assert (normal.x, normal.y, normal.z) == (0.0, 0.0, 1.0)
+
+
+def test_calibrated_mapper_plane() -> None:
+    calib = _calibration()
+    mapper = CalibratedPlaneMapper(calib, depth=0.5)
+    point, normal = mapper.plane()
+    center = np.asarray(calib.camera_center())
+    vec = np.asarray([point.x, point.y, point.z]) - center
+    n = np.asarray([normal.x, normal.y, normal.z])
+    assert float(np.linalg.norm(vec)) == pytest.approx(0.5)
+    assert float(np.linalg.norm(n)) == pytest.approx(1.0)
+    # The normal points from the camera center toward the plane point.
+    assert float(np.dot(vec, n)) == pytest.approx(0.5)
+

@@ -1,6 +1,6 @@
 # Plane Drag Surface — Overview
 
-**Created:** 2026-09-29 | **Status:** Planned | **Branch:** `feat/plane-drag-surface`
+**Created:** 2026-09-29 | **Status:** In progress | **Branch:** `feat/plane-drag-surface`
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this
