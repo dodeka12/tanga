@@ -68,7 +68,6 @@ function _makeIconTexture(icon) {
     return texture;
 }
 
-
 export function createIconPoint(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 1.0);
