@@ -182,7 +182,7 @@ from ._styles import (
     VizStyle,
     WireframeDashPattern,
 )
-from ._surface import InteractionSurface
+from ._surface import CalibratedSurface, InteractionSurface
 from ._themes import (
     copy_theme,
     default_theme,
@@ -286,6 +286,7 @@ __all__ = [
     "Button",
     "ButtonView",
     "CalibratedPlaneMapper",
+    "CalibratedSurface",
     "Camera",
     "CameraAction",
     "CameraCalibration",

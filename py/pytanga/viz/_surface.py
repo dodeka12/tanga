@@ -32,12 +32,13 @@ from ._interaction import (
     InteractionEventType,
     InteractionTrigger,
 )
-from .camera import CoordinateMapper
+from .camera import CalibratedPlaneMapper, CoordinateMapper
 
 if TYPE_CHECKING:
+    from .camera import CameraCalibration
     from .visualizer import Visualizer
 
-__all__ = ["InteractionSurface"]
+__all__ = ["InteractionSurface", "CalibratedSurface"]
 
 _surface_counter = count(0)
 
@@ -332,3 +333,31 @@ class InteractionSurface:
                 "surface": self.serialize(),
             }
         )
+
+
+def CalibratedSurface(
+    camera: CameraCalibration,
+    depth: float,
+    *,
+    id: str | None = None,
+    on_drag_start: SurfaceEventHandler | None = None,
+    on_drag: SurfaceDragHandler | None = None,
+    on_drag_end: SurfaceEventHandler | None = None,
+    on_click: SurfaceClickHandler | None = None,
+    cursor: str | None = None,
+) -> InteractionSurface:
+    """Build an :class:`InteractionSurface` on the ⟂-optical-axis plane.
+
+    Convenience for the calibrated ``CameraView.background_image`` case: the
+    mapper is a :class:`~pytanga.viz.CalibratedPlaneMapper`, whose plane is the
+    principal point at ``depth`` with the optical axis as its normal.
+    """
+    return InteractionSurface(
+        CalibratedPlaneMapper(camera, depth),
+        id=id,
+        on_drag_start=on_drag_start,
+        on_drag=on_drag,
+        on_drag_end=on_drag_end,
+        on_click=on_click,
+        cursor=cursor,
+    )

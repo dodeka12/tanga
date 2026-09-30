@@ -20,17 +20,17 @@ Add the calibrated backing: an `InteractionSurface` bound to a `SceneView` whose
 
 ## Steps
 
-- [ ] **3.1 — `CalibratedSurface` helper**
+- [x] **3.1 — `CalibratedSurface` helper**
   - `InteractionSurface(mapper=CalibratedPlaneMapper(camera, depth))` plus a
     convenience `CalibratedSurface(camera, depth, on_drag=…)`.
-- [ ] **3.2 — Bind to a `CameraView` pane**
+- [x] **3.2 — Bind to a `CameraView` pane**
   - `SceneView("world", camera_view=CameraView(cam, navigation="2d",
     background_image=…), surface=surface)` — the background image is the visual;
     the surface is the ⟂-optical-axis plane at `depth`.
-- [ ] **3.3 — `read_only` world pane**
+- [x] **3.3 — `read_only` world pane**
   - The world pane is `SceneView("world", read_only=True)` so it orbits/zooms but
     neither labels nor edits `Act` shapes.
-- [ ] **3.4 — Tests**
+- [x] **3.4 — Tests**
   - Unit: the surface serializes the mapper plane; `read_only` serializes into
     the `scene_view` node.
 
