@@ -15,6 +15,7 @@ from pytanga.viz import (
     InteractionEventType,
     InteractionSurface,
     PlanarMapper,
+    SceneView,
 )
 
 
@@ -69,6 +70,21 @@ class TestAnchors:
         surface = _surface()
         anchor = surface.click_anchor(Point(2.0, 3.0, 5.0), Direction(0.0, 0.0, -1.0))
         assert anchor == Point(2.0, 3.0, 0.0)
+
+
+class TestSceneViewSurface:
+    def test_scene_view_serializes_surface_and_read_only(self) -> None:
+        surface = _surface(on_drag=_noop_drag)
+        view = SceneView("world", surface=surface, read_only=True)
+        data = view._serialize()
+        assert data["surface"]["id"] == surface.id
+        assert data["surface"]["normal"] == [0.0, 0.0, 1.0]
+        assert data["read_only"] is True
+
+    def test_scene_view_omits_surface_and_read_only_by_default(self) -> None:
+        data = SceneView("world")._serialize()
+        assert "surface" not in data
+        assert "read_only" not in data
 
 
 class TestBinding:

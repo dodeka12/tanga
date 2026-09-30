@@ -15,6 +15,7 @@ from ._helpers import (
     _scene_view_counter,
 )
 from .._size import SizeSpec
+from .._surface import InteractionSurface
 from ..camera import (
     CameraAction,
     CameraConfig,
@@ -51,6 +52,12 @@ class SceneView(View):
 
     ``hide`` / ``show`` are optional sets of scene-entity ids that filter which
     entities this pane renders (``hide`` removes, ``show`` is a whitelist).
+
+    ``surface`` is an optional :class:`~pytanga.viz.InteractionSurface` bound to
+    this pane — a per-pane interaction plane (no scene entity) that emits
+    pointer/drag events resolved against its mapper's plane.  ``read_only``
+    suppresses all interaction on the pane (surface and ``Act*`` object
+    editing) while leaving navigation (orbit/pan/zoom) working.
     """
 
     _node_type = "scene_view"
@@ -68,6 +75,8 @@ class SceneView(View):
         overlay: list[View] | None = None,
         hide: set[str] | None = None,
         show: set[str] | None = None,
+        surface: InteractionSurface | None = None,
+        read_only: bool = False,
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
@@ -112,6 +121,8 @@ class SceneView(View):
         self.overlay = list(overlay or [])
         self.hide = _normalize_id_set(hide)
         self.show = _normalize_id_set(show)
+        self.surface = surface
+        self.read_only = bool(read_only)
 
     def _serialize(self) -> dict[str, Any]:
         result = super()._serialize()
@@ -123,6 +134,10 @@ class SceneView(View):
             result["hide"] = sorted(self.hide)
         if self.show:
             result["show"] = sorted(self.show)
+        if self.surface is not None:
+            result["surface"] = self.surface.serialize()
+        if self.read_only:
+            result["read_only"] = True
         if self.overlay:
             result["children"] = [child._serialize() for child in self.overlay]
         return result

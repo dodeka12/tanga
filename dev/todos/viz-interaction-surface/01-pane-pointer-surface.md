@@ -27,7 +27,7 @@ world positions on the plane.  Add `read_only` to suppress interaction per pane.
   - A `mapper: CoordinateMapper` + `on_drag_start`/`on_drag`/`on_drag_end`/
     `on_click` handlers; `serialize()` returns `{"point": …, "normal": …}` from
     `mapper.plane()` plus a stable surface id.
-- [ ] **1.2 — `SceneView.surface` + `SceneView.read_only`**
+- [x] **1.2 — `SceneView.surface` + `SceneView.read_only`**
   - Accept `surface=` and `read_only=`; serialize `"surface"` and `"read_only"`
     into the `scene_view` node; register the surface's handlers in the `(id,
     event)` registry (`origin=INTERACTION`).
