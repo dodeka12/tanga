@@ -51,10 +51,8 @@ def _canvas(**kwargs: Any) -> tuple[Visualizer, ImageCanvas, _FakeTransport]:
     return viz, canvas, fake
 
 
-def _drag_triggers(viz: Visualizer, canvas: ImageCanvas) -> list[Any]:
-    cfg = viz._interaction_host._interaction_configs[canvas.scene_name][
-        canvas.image_view.id
-    ]
+def _drag_triggers(canvas: ImageCanvas) -> list[Any]:
+    cfg = canvas.surface._interaction_config()
     return [t for t in cfg.triggers if t.event_type is InteractionEventType.DRAG]
 
 
@@ -64,28 +62,28 @@ class TestBindingEnabled:
 
     def test_binding_registered_disabled_has_no_trigger(self) -> None:
         binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
-        viz, canvas, _ = _canvas(drag_handlers=[binding])
-        assert _drag_triggers(viz, canvas) == []
+        _, canvas, _ = _canvas(drag_handlers=[binding])
+        assert _drag_triggers(canvas) == []
 
     def test_binding_enable_adds_trigger(self) -> None:
         binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
-        viz, canvas, _ = _canvas(drag_handlers=[binding])
+        _, canvas, _ = _canvas(drag_handlers=[binding])
 
         binding.enabled = True
         canvas.refresh_interaction()
 
-        triggers = _drag_triggers(viz, canvas)
+        triggers = _drag_triggers(canvas)
         assert len(triggers) == 1
         assert triggers[0].mouse_button is MouseButton.LEFT
 
     def test_binding_disable_removes_trigger(self) -> None:
         binding = DragBinding(MouseButton.LEFT, self._on_drag)
-        viz, canvas, _ = _canvas(drag_handlers=[binding])
-        assert len(_drag_triggers(viz, canvas)) == 1
+        _, canvas, _ = _canvas(drag_handlers=[binding])
+        assert len(_drag_triggers(canvas)) == 1
 
         binding.enabled = False
         canvas.refresh_interaction()
-        assert _drag_triggers(viz, canvas) == []
+        assert _drag_triggers(canvas) == []
 
 
 class TestHandlerEnabled:
@@ -93,14 +91,14 @@ class TestHandlerEnabled:
         return True
 
     def test_general_handler_toggle(self) -> None:
-        viz, canvas, _ = _canvas(on_drag=self._on_drag)
-        assert len(_drag_triggers(viz, canvas)) == 1
+        _, canvas, _ = _canvas(on_drag=self._on_drag)
+        assert len(_drag_triggers(canvas)) == 1
 
         canvas.set_handler_enabled(False)
-        assert _drag_triggers(viz, canvas) == []
+        assert _drag_triggers(canvas) == []
 
         canvas.set_handler_enabled(True)
-        assert len(_drag_triggers(viz, canvas)) == 1
+        assert len(_drag_triggers(canvas)) == 1
 
 
 class TestCursor:
@@ -116,7 +114,7 @@ class TestCursor:
         canvas.set_cursor("crosshair")
         assert canvas.handle.scene.config.to_dict()["cursor"] == "crosshair"
 
-    def test_canvas_cursor_forwarded_to_plane_hover(self) -> None:
+    def test_canvas_cursor_forwarded_to_surface_hover(self) -> None:
         cursor = "crosshair"
         _, canvas, _ = _canvas(cursor=cursor)
-        assert canvas.act_plane.interaction_config.hover_cursor == "crosshair"
+        assert canvas.surface._interaction_config().hover_cursor == "crosshair"

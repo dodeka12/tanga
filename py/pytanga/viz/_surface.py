@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from pytanga.geometry import Direction, Point
 
+from ._active import ClickBinding, DragBinding
 from ._interaction import (
     ClickEvent,
     DragEvent,
@@ -30,7 +31,6 @@ from ._interaction import (
     InteractionConfig,
     InteractionEventType,
     InteractionTrigger,
-    MouseButton,
 )
 from .camera import CoordinateMapper
 
@@ -108,6 +108,9 @@ class InteractionSurface:
         on_drag: SurfaceDragHandler | None = None,
         on_drag_end: SurfaceEventHandler | None = None,
         on_click: SurfaceClickHandler | None = None,
+        drag_bindings: list[DragBinding[InteractionSurface]] | None = None,
+        click_bindings: list[ClickBinding[InteractionSurface]] | None = None,
+        cursor: str | None = None,
     ) -> None:
         self.id = id if id is not None else f"surface{next(_surface_counter)}"
         self.mapper = mapper
@@ -115,7 +118,18 @@ class InteractionSurface:
         self._on_drag = on_drag
         self._on_drag_end = on_drag_end
         self._on_click = on_click
+        self._drag_bindings: list[DragBinding[InteractionSurface]] = list(
+            drag_bindings or ()
+        )
+        self._click_bindings: list[ClickBinding[InteractionSurface]] = list(
+            click_bindings or ()
+        )
+        self._cursor = cursor
+        self._enabled = True
+        self._handler_enabled = True
+        self._click_enabled = True
         self._viz: Visualizer | None = None
+        self._view_id: str | None = None
 
     # ── Wire description ──────────────────────────────────────
 
@@ -130,28 +144,61 @@ class InteractionSurface:
         }
 
     def _interaction_config(self) -> InteractionConfig:
-        """The trigger set for this surface (left-button drag + click)."""
+        """The trigger set (bindings + general handlers + cursor).
+
+        Mirrors :meth:`~pytanga.viz.ActImagePlane.interaction_config`: each
+        enabled drag/click binding yields a trigger for its button + modifiers,
+        and a general handler (with no bindings) adds a catch-all trigger.
+        """
         triggers: list[InteractionTrigger] = []
-        if (
+        for binding in self._drag_bindings:
+            if not binding.enabled:
+                continue
+            triggers.append(
+                InteractionTrigger(
+                    event_type=InteractionEventType.DRAG,
+                    mouse_button=binding.button,
+                    modifiers=binding.modifiers,
+                    drag_mode=DragMode.VIEW_PLANE,
+                )
+            )
+        if self._handler_enabled and (
             self._on_drag is not None
-            or self._on_drag_start is not None
-            or self._on_drag_end is not None
+            or (
+                (self._on_drag_start is not None or self._on_drag_end is not None)
+                and not self._drag_bindings
+            )
         ):
             triggers.append(
                 InteractionTrigger(
                     event_type=InteractionEventType.DRAG,
-                    mouse_button=MouseButton.LEFT,
+                    mouse_button=None,
                     drag_mode=DragMode.VIEW_PLANE,
                 )
             )
-        if self._on_click is not None:
+        for binding in self._click_bindings:
+            if not binding.enabled:
+                continue
             triggers.append(
                 InteractionTrigger(
                     event_type=InteractionEventType.CLICK,
-                    mouse_button=MouseButton.LEFT,
+                    mouse_button=binding.button,
+                    modifiers=binding.modifiers,
                 )
             )
-        return InteractionConfig(enabled=True, triggers=triggers, throttle_ms=40)
+        if self._click_enabled and self._on_click is not None:
+            triggers.append(
+                InteractionTrigger(
+                    event_type=InteractionEventType.CLICK,
+                    mouse_button=None,
+                )
+            )
+        return InteractionConfig(
+            enabled=self._enabled,
+            triggers=triggers,
+            throttle_ms=40,
+            hover_cursor=self._cursor,
+        )
 
     # ── Anchor resolution (mirrors ActSceneObject) ────────────
 
@@ -166,16 +213,20 @@ class InteractionSurface:
 
     # ── Binding (called by Visualizer when the layout is pushed) ──
 
-    def _bind(self, viz: Visualizer) -> None:
+    def _bind(self, viz: Visualizer, view_id: str | None = None) -> None:
         """Register handlers + the surface itself with the visualizer (idempotent)."""
         if self._viz is viz:
+            if view_id is not None:
+                self._view_id = view_id
             return
         self._viz = viz
+        self._view_id = view_id
         viz._act_objects[self.id] = self  # noqa: SLF001
         if (
             self._on_drag is not None
             or self._on_drag_start is not None
             or self._on_drag_end is not None
+            or self._drag_bindings
         ):
             viz.on_interaction(
                 self.id, InteractionEventType.DRAG_MOVE, self._dispatch_drag
@@ -188,10 +239,44 @@ class InteractionSurface:
             viz.on_interaction(
                 self.id, InteractionEventType.DRAG_END, self._dispatch_drag_end
             )
-        if self._on_click is not None:
+        if self._on_click is not None or self._click_bindings:
             viz.on_interaction(
                 self.id, InteractionEventType.CLICK, self._dispatch_click
             )
+
+    # ── Handler resolution (mirrors ActSceneObject) ───────────
+
+    def _resolve_drag_handler(self, event: DragEvent) -> SurfaceDragHandler | None:
+        """Return the most specific matching drag binding, else the general handler."""
+        best: SurfaceDragHandler | None = self._on_drag if self._handler_enabled else None
+        best_mods = -1
+        for binding in self._drag_bindings:
+            if not binding.enabled:
+                continue
+            if binding.button is not event.mouse_button:
+                continue
+            if not binding.modifiers <= event.modifiers:
+                continue
+            if len(binding.modifiers) > best_mods:
+                best = binding.handler
+                best_mods = len(binding.modifiers)
+        return best
+
+    def _resolve_click_handler(self, event: ClickEvent) -> SurfaceClickHandler | None:
+        """Return the most specific matching click binding, else the general handler."""
+        best: SurfaceClickHandler | None = self._on_click if self._click_enabled else None
+        best_mods = -1
+        for binding in self._click_bindings:
+            if not binding.enabled:
+                continue
+            if binding.button is not event.mouse_button:
+                continue
+            if not binding.modifiers <= event.modifiers:
+                continue
+            if len(binding.modifiers) > best_mods:
+                best = binding.handler
+                best_mods = len(binding.modifiers)
+        return best
 
     # ── Dispatch wrappers (registered as single-arg async handlers) ──
 
@@ -200,13 +285,50 @@ class InteractionSurface:
             await self._on_drag_start(event, self)
 
     async def _dispatch_drag(self, event: DragEvent) -> None:
-        if self._on_drag is not None:
-            await self._on_drag(event, self)
+        handler = self._resolve_drag_handler(event)
+        if handler is not None:
+            await handler(event, self)
 
     async def _dispatch_drag_end(self, event: DragEvent) -> None:
         if self._on_drag_end is not None:
             await self._on_drag_end(event, self)
 
     async def _dispatch_click(self, event: ClickEvent) -> None:
-        if self._on_click is not None:
-            await self._on_click(event, self)
+        handler = self._resolve_click_handler(event)
+        if handler is not None:
+            await handler(event, self)
+
+    # ── Enable / disable ──────────────────────────────────────
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable or disable all interaction on the surface."""
+        self._enabled = enabled
+        self.refresh_interaction()
+
+    def set_handler_enabled(self, enabled: bool) -> None:
+        """Enable or disable the general drag handler (re-pushes triggers)."""
+        self._handler_enabled = enabled
+        self.refresh_interaction()
+
+    def set_click_enabled(self, enabled: bool) -> None:
+        """Enable or disable the general click handler (re-pushes triggers)."""
+        self._click_enabled = enabled
+        self.refresh_interaction()
+
+    def refresh_interaction(self) -> None:
+        """Re-push the surface's interaction config to the bound pane."""
+        self._push_surface()
+
+    def _push_surface(self) -> None:
+        if self._viz is None or self._view_id is None:
+            return
+        transport = getattr(self._viz, "_transport", None)
+        if transport is None:
+            return
+        transport.send(
+            {
+                "type": "view_surface",
+                "view_id": self._view_id,
+                "surface": self.serialize(),
+            }
+        )

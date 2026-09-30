@@ -428,6 +428,7 @@ export class InteractionController {
 
     _getSurfaceHit(event) {
         if (!this._surface) return null;
+        if (!this._surface.interaction || !this._surface.interaction.enabled) return null;
         const s = this._surface;
         const rect = this.rendererDomElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;

@@ -19,16 +19,19 @@ calibrated case.  The `ImageView` stays as the visual only.
 
 ## Steps
 
-- [ ] **2.1 — Surface-backed drag in `ImageCanvas`**
+- [x] **2.1 — Surface-backed drag in `ImageCanvas`**
   - Build an `InteractionSurface(PlanarMapper(), on_drag_start=…, on_drag=…,
     on_drag_end=…, on_click=…)` and route the existing `ImageCanvas` drag/click
     callbacks through it, instead of the `ActImagePlane` entity.
-- [ ] **2.2 — Keep the `ImageView` visual**
+- [x] **2.2 — Keep the `ImageView` visual**
   - `ImageView` remains the rendered image; it is no longer the hit surface.
-- [ ] **2.3 — Backward compatibility**
-  - Preserve the public `ImageCanvas(...)` constructor signature and behavior;
-    existing callers (image-labeling app, tests) must not change.
-- [ ] **2.4 — Tests**
+- [x] **2.3 — Full refactor (no backward compatibility)**
+  - Per user decision: the `act_plane` property and the entity-based registration
+    are removed; `ImageCanvas.surface` replaces them.  The public `ImageCanvas(...)`
+    constructor signature is preserved; the affected `test_image_canvas*` tests
+    are updated to the surface wiring (`ActImagePlane` itself stays as a
+    standalone, tested class).
+- [x] **2.4 — Tests**
   - Full `py/tests/viz` still passes; manual smoke: `uv run python
     py/examples/apps/image_labeling_app.py` still pan/zooms/draws.
 

@@ -307,7 +307,7 @@ class Visualizer(_JupyterDisplayMixin):
         for scene_view in iter_scene_views(root):
             surface = getattr(scene_view, "surface", None)
             if surface is not None:
-                surface._bind(self)  # noqa: SLF001
+                surface._bind(self, scene_view.id)  # noqa: SLF001
 
     def remove_view(self, view_id: str, *, scene: str | None = None) -> None:
         """Remove a mounted overlay view by its stable id (see ``viz.add``)."""
