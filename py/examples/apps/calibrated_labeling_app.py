@@ -34,32 +34,18 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from pytanga.geometry import Frustum, Matrix, OpenCVFrame, Plane
+from pytanga.geometry import Frustum, Matrix, OpenCVFrame
 from pytanga.viz import (
-    ActCircle,
-    ActImagePlane,
-    ActLine,
-    ActRectangle2D,
-    ButtonView,
     CalibratedPlaneMapper,
     CameraCalibration,
     CameraConfig3d,
     CameraView,
-    CircleStyle,
-    DragBinding,
-    DragPreview,
     GroupView,
     ImageData,
     LabelMeStore,
     LabelView,
-    LineStyle,
-    MouseButton,
-    Rectangle2DStyle,
     SceneView,
-    Size,
     SplitView,
-    StackView,
-    ToolbarView,
     ViewportConfig,
     Visualizer,
 )
@@ -136,91 +122,6 @@ def _overview_camera(points: np.ndarray, *, fov: float = 50.0) -> CameraConfig3d
     )
 
 
-def _style_for(mode: str, fill: str) -> Any:
-    if mode == "rect":
-        return Rectangle2DStyle(color=fill, fill=True, fill_opacity=0.15)
-    if mode == "circle":
-        return CircleStyle(color=fill, thickness=2, fill=True, fill_opacity=0.15)
-    return LineStyle(color=fill, thickness=2)
-
-
-class _CalibratedLabeler:
-    """Drag-to-draw on the calibrated plane, adding shapes to the world scene."""
-
-    _FACTORIES = {
-        "rect": ActRectangle2D,
-        "circle": ActCircle,
-        "line": ActLine,
-    }
-
-    def __init__(
-        self, world: Any, mapper: CalibratedPlaneMapper, *, fill: str = "#ff4444"
-    ) -> None:
-        self._world = world
-        self._mode: str | None = None
-        self._styles: dict[str, Any] = {}
-        self._previews: dict[str, DragPreview] = {}
-        for mode, factory in self._FACTORIES.items():
-            style = _style_for(mode, fill)
-            self._styles[mode] = style
-            self._previews[mode] = DragPreview(world, factory=factory, style=style)
-
-        plane_point, plane_normal = mapper.plane()
-        self._act_plane = ActImagePlane(
-            mapper=mapper,
-            entity=Plane(point=plane_point, normal=plane_normal),
-            on_drag_start=self._on_drag_start,
-            on_drag_end=self._on_drag_end,
-            drag_bindings=[DragBinding(MouseButton.LEFT, self._on_drag)],
-        )
-
-    def register(self) -> None:
-        self._world.add(self._act_plane, opacity=0.0)
-
-    def set_mode(self, mode: str | None) -> None:
-        self._mode = mode
-
-    def toolbar(self) -> ToolbarView:
-        def _button(cid: str, icon: str, tip: str) -> ButtonView:
-            async def on_click(_value: Any, _event: Any) -> None:
-                self.set_mode(cid if self._mode != cid else None)
-
-            return ButtonView(
-                cid, icon=icon, icon_only=True, tooltip=tip, on_click=on_click
-            )
-
-        return ToolbarView(
-            [
-                _button("rect", "material:crop_square", "Add rectangle"),
-                _button("circle", "material:circle", "Add circle"),
-                _button("line", "material:diagonal_line", "Add line"),
-            ],
-            border=False,
-        )
-
-    async def _on_drag_start(self, event: Any, _plane: Any) -> None:
-        preview = self._previews.get(self._mode or "")
-        if preview is not None:
-            preview.begin(event.world_position)
-
-    async def _on_drag(self, event: Any, _plane: Any) -> bool:
-        preview = self._previews.get(self._mode or "")
-        if preview is None:
-            return False
-        if preview.anchor is None:
-            preview.begin(event.world_position)
-        preview.update(event.world_position)
-        return True
-
-    async def _on_drag_end(self, event: Any, _plane: Any) -> None:
-        preview = self._previews.get(self._mode or "")
-        if preview is None or preview.anchor is None:
-            return
-        act = preview.finalize(event.world_position)
-        self._world.add(act, style=self._styles[self._mode or ""])
-        self._world.flush()
-
-
 def main() -> None:
     data, background = _load_calibration()
     width, height = int(data["width"]), int(data["height"])
@@ -235,8 +136,7 @@ def main() -> None:
     )
     cam = calib.to_pinhole_camera()
 
-    mapper = CalibratedPlaneMapper(calib, _DEPTH)
-    store = LabelMeStore(mapper=mapper)
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(calib, _DEPTH))
 
     viz = Visualizer(
         title="Tanga — Calibrated Labeling (T-LESS)",
@@ -256,9 +156,6 @@ def main() -> None:
     frustum_ref = world.new(frustum, color="#ffcc44")
 
     overview_cam = _overview_camera(_frustum_corners(frustum))
-
-    labeler = _CalibratedLabeler(world, mapper)
-    labeler.register()
 
     left = SceneView(
         "world",
@@ -282,9 +179,7 @@ def main() -> None:
         ],
     )
 
-    left.preferred_height = Size.fr(1)
-    left_pane = StackView("vertical", [labeler.toolbar(), left], fill=True)
-    viz.show(layout=SplitView("horizontal", [left_pane, right]))
+    viz.show(layout=SplitView("horizontal", [left, right]))
     viz.wait()
 
 

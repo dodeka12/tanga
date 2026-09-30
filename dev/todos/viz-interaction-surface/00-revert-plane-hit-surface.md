@@ -20,13 +20,13 @@ label-loading baseline before the surface work starts.
 
 ## Steps
 
-- [ ] **0.1 — Remove the `Plane` hit surface + drag-to-draw**
+- [x] **0.1 — Remove the `Plane` hit surface + drag-to-draw**
   - Delete `_CalibratedLabeler`, `_style_for`, and the `Plane`/`ActImagePlane`/
     toolbar/`DragPreview` wiring from `calibrated_labeling_app.py`.
-- [ ] **0.2 — Restore the two-pane baseline**
+- [x] **0.2 — Restore the two-pane baseline**
   - Back to `SplitView("horizontal", [left, right])` with no toolbar/surface; keep
     the `CalibratedPlaneMapper` + `LabelMeStore` label loading and the frustum.
-- [ ] **0.3 — Tests + docs**
+- [x] **0.3 — Tests + docs**
   - Keep the data-validation tests green (drop the phase-3-only import test if it
     no longer applies); regenerate example docs.
 

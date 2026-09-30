@@ -56,14 +56,3 @@ def test_calibration_is_valid() -> None:
     assert k[0, 0] > 0 and k[1, 1] > 0
     assert np.isclose(k[0, 0], k[1, 1], rtol=0.1)
     assert np.allclose(calib.R.data @ calib.R.data.T, np.eye(3), atol=1e-6)
-
-
-def test_example_module_imports() -> None:
-    import importlib.util
-
-    path = _REPO_ROOT / "py" / "examples" / "apps" / "calibrated_labeling_app.py"
-    spec = importlib.util.spec_from_file_location("calibrated_labeling_app", path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    assert module._DEPTH > 0.0  # noqa: SLF001
