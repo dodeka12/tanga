@@ -16,6 +16,7 @@ from pytanga.viz import (
     InteractionSurface,
     PlanarMapper,
     SceneView,
+    Visualizer,
 )
 
 
@@ -33,6 +34,30 @@ class _FakeViz:
         scene_name: str = "",
     ) -> None:
         self.registered.append((object_id, event_type, handler))
+
+
+class _FakeTransport:
+    def __init__(self) -> None:
+        self.registered: list[tuple[str, str]] = []
+
+    def send(self, message: dict) -> None:  # noqa: ARG002
+        pass
+
+    def send_bytes(self, payload: bytes) -> None:  # noqa: ARG002
+        pass
+
+    def unregister(self, control_id: str) -> None:  # noqa: ARG002
+        pass
+
+    def register(
+        self,
+        object_id: str,
+        handler: object,  # noqa: ARG002
+        *,
+        event: str = "change",
+        origin: object = None,  # noqa: ARG002
+    ) -> None:
+        self.registered.append((object_id, event))
 
 
 def _surface(**kwargs: Any) -> InteractionSurface:
@@ -122,6 +147,23 @@ class TestBinding:
         asyncio.run(surface._dispatch_click(event))  # noqa: SLF001
         assert holder["event"] is event
         assert holder["surface"] is surface
+
+
+class TestVisualizerBinding:
+    def test_bind_surfaces_binds_scene_view_surface(self) -> None:
+        viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
+        fake = _FakeTransport()
+        viz._transport = fake  # type: ignore[attr-defined]
+        viz._interaction_host._transport = fake  # type: ignore[attr-defined]
+
+        surface = _surface(on_drag=_noop_drag)
+        view = SceneView("", surface=surface)
+
+        viz._bind_surfaces(view)  # noqa: SLF001
+
+        assert viz._act_objects[surface.id] is surface
+        events = {event for oid, event in fake.registered if oid == surface.id}
+        assert events == {"drag_move"}
 
 
 async def _noop_drag(event: DragEvent, surface: InteractionSurface) -> bool:

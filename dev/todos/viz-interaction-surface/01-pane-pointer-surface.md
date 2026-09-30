@@ -31,16 +31,16 @@ world positions on the plane.  Add `read_only` to suppress interaction per pane.
   - Accept `surface=` and `read_only=`; serialize `"surface"` and `"read_only"`
     into the `scene_view` node; register the surface's handlers in the `(id,
     event)` registry (`origin=INTERACTION`).
-- [ ] **1.3 — Frontend: emit surface pointer events on empty space**
+- [x] **1.3 — Frontend: emit surface pointer events on empty space**
   - In `interaction.js`, when `_getInteractiveHit` finds no entity but the pane
     has a surface, start a surface drag/click (reuse the existing ray↔plane
     intersection with the surface's `{point, normal}`) and send the same
     `interaction:drag_start/drag_move/drag_end/click` messages with the surface
     id and the pane camera.
-- [ ] **1.4 — Frontend: `read_only` pane**
+- [x] **1.4 — Frontend: `read_only` pane**
   - When `read_only`, do not emit surface events and do not raycast `Act` objects
     (navigation/OrbitControls still work).
-- [ ] **1.5 — Python dispatch + tests**
+- [x] **1.5 — Python dispatch + tests**
   - Route surface pointer events to the registered handlers (world position via
     `mapper.plane()` ray intersection).  Unit-test `InteractionSurface.serialize`
     and the ray↔plane resolution without a browser.
