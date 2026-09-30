@@ -459,7 +459,7 @@ class ImageLabeler:
         """Replace the current shapes with those from *doc* (and its image)."""
         self.clear_shapes()
         self._load_document_image(doc, json_path)
-        objs, errors = self._store.iter_objects(doc, active=False)
+        objs, errors = self._store.iter_objects(doc)
         for message in errors:
             print(f"labelme: skipped {message}")
         for entity, label in objs:

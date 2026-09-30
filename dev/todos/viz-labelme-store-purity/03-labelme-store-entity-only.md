@@ -16,17 +16,17 @@ Remove the act path from `LabelMeStore` so it only maps JSON ↔ plain geometry.
 
 ## Steps
 
-- [ ] **3.1 — Delete `_act_from_shape` and the `active=` parameter**
+- [x] **3.1 — Delete `_act_from_shape` and the `active=` parameter**
   - `iter_objects(doc)`, `add_shapes(handle, doc)`, `shapes_from_objects(objects)`
     drop `active` and always call `_entity_from_shape`.
-- [ ] **3.2 — Remove act branches from `_shape_from_object` / `_shape_from_ellipse`**
-  - Change `isinstance(obj, (ActRectangle2D, Rectangle2D))` → `isinstance(obj,
-    Rectangle2D)` (etc.); drop the `act`-typed imports and `obj.rectangle if …`
-    coercions (obj is always the plain entity).
-- [ ] **3.3 — Update `test_labelme.py`**
-  - Replace `active=True`/`active=False` usages with the entity-only API;
-    delete act-specific assertions; add one test asserting the store never
-    returns an `Act*` instance.
+- [x] **3.2 — Remove act branches from `_shape_from_object` / `_shape_from_ellipse`**
+  - `isinstance(obj, (ActX, EntityX))` → `isinstance(obj, EntityX)`; added a
+    `PointPath` branch (closed detected via first==last point); dropped the
+    `Act*` imports.
+- [x] **3.3 — Update `test_labelme.py`**
+  - Entity-only `TestAddShapes` (incl. `test_never_returns_acts`),
+    `test_shapes_from_objects` on plain entities, `active=` removed from the
+    round-trip tests.
 
 ## Validation
 

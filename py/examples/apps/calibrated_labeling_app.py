@@ -420,7 +420,7 @@ def main() -> None:
     result = store.load(_LABELS_PATH)
     for message in result.errors:
         print(f"labelme: skipped {message}")
-    pairs, errors = store.iter_objects(result.document, active=False)
+    pairs, errors = store.iter_objects(result.document)
     for message in errors:
         print(f"labelme: skipped {message}")
     for entity, _label in pairs:

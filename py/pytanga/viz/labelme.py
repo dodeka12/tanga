@@ -4,9 +4,11 @@
 """Labelme (https://github.com/wkentaro/labelme) JSON load/store + scene mapping.
 
 Loads/stores the labelme annotation format in dataclasses and maps every shape
-type to a constant geometry entity or an active composite via
-:meth:`LabelMeStore.add_shapes`.  The non-standard ``ellipse`` shape type is an
-extension gated by ``allow_extensions``.
+type to a plain geometry entity (``Point``, ``Line``, ``Circle``, ``Ellipse``,
+``Rectangle2D``, ``PointPath``) via :meth:`LabelMeStore.add_shapes`.  The store
+is data-only: it never creates :class:`~pytanga.viz.ActSceneObject` composites
+(the labeling apps wrap the entities into interactive acts).  The non-standard
+``ellipse`` shape type is an extension gated by ``allow_extensions``.
 """
 
 from __future__ import annotations
@@ -22,7 +24,6 @@ from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2
 from .camera import CoordinateMapper, PlanarMapper
 
 if TYPE_CHECKING:
-    from ._active import ActSceneObject
     from ._scene_handle import VizSceneHandle
     from ._styles import ObjVizStyle
 
@@ -180,9 +181,9 @@ class LabelMeStore:
     # ── Mapping helpers ────────────────────────────────────
 
     def add_shapes(
-        self, handle: "VizSceneHandle", doc: LabelMeDocument, *, active: bool = True
+        self, handle: "VizSceneHandle", doc: LabelMeDocument
     ) -> tuple[list[object], list[str]]:
-        """Add every shape in *doc* to *handle* as a constant or act object.
+        """Add every shape in *doc* to *handle* as a constant geometry entity.
 
         Returns ``(added, errors)`` — the added objects plus the shapes that were
         skipped (reported, never raised).
@@ -191,7 +192,7 @@ class LabelMeStore:
         errors: list[str] = []
         for i, shape in enumerate(doc.shapes):
             try:
-                obj = self._act_from_shape(shape) if active else self._entity_from_shape(shape)
+                obj = self._entity_from_shape(shape)
             except ValueError as exc:
                 errors.append(f"shape {i} ({shape.label!r}): {exc}")
                 continue
@@ -200,9 +201,9 @@ class LabelMeStore:
         return added, errors
 
     def iter_objects(
-        self, doc: LabelMeDocument, *, active: bool = True
+        self, doc: LabelMeDocument
     ) -> tuple[list[tuple[object, str]], list[str]]:
-        """Map each shape to an ``(obj, label)`` pair without adding it.
+        """Map each shape to an ``(entity, label)`` pair without adding it.
 
         Returns ``(pairs, errors)`` — the mapped pairs plus the shapes that were
         skipped.
@@ -211,7 +212,7 @@ class LabelMeStore:
         errors: list[str] = []
         for i, s in enumerate(doc.shapes):
             try:
-                obj = self._act_from_shape(s) if active else self._entity_from_shape(s)
+                obj = self._entity_from_shape(s)
             except ValueError as exc:
                 errors.append(f"shape {i} ({s.label!r}): {exc}")
                 continue
@@ -221,7 +222,7 @@ class LabelMeStore:
     def shapes_from_objects(
         self, objects: list[tuple[object, str]]
     ) -> list[LabelShape]:
-        """Map ``(act-or-entity, label)`` pairs to :class:`LabelShape` entries."""
+        """Map ``(entity, label)`` pairs to :class:`LabelShape` entries."""
         result: list[LabelShape] = []
         for obj, label in objects:
             shape = self._shape_from_object(obj, label)
@@ -274,46 +275,6 @@ class LabelMeStore:
             return pts[0]
         raise ValueError(f"Unknown labelme shape_type: {st!r}")
 
-    def _act_from_shape(self, shape: LabelShape) -> "ActSceneObject":
-        from ._active import (
-            ActCircle,
-            ActEllipse,
-            ActLine,
-            ActPoint,
-            ActPolygon,
-            ActRectangle2D,
-        )
-        from ._interaction import DragMode
-
-        err = self._validate_points(shape)
-        if err is not None:
-            raise ValueError(err)
-        pts = [self._mapper.to_world(x, y) for x, y in shape.points]
-        st = shape.shape_type
-        if st == "rectangle":
-            return ActRectangle2D.create_from_points(pts[0], pts[1])
-        if st == "circle":
-            return ActCircle.create_from_points(pts[0], pts[1])
-        if st == _ELLIPSE:
-            ellipse = self._ellipse_entity(pts[0], pts[1], pts[2])
-            du, _dv = _ellipse_axes(ellipse)
-            angle = math.atan2(du.y, du.x)
-            return ActEllipse(
-                center=ellipse.center,
-                radius_u=ellipse.radius_u,
-                radius_v=ellipse.radius_v,
-                angle=angle,
-            )
-        if st == "polygon":
-            return ActPolygon(pts, closed=True)
-        if st == "linestrip":
-            return ActPolygon(pts, closed=False)
-        if st == "line":
-            return ActLine.create_from_points(pts[0], pts[1])
-        if st == "point":
-            return ActPoint(pts[0], drag_mode=DragMode.VIEW_PLANE)
-        raise ValueError(f"Unknown labelme shape_type: {st!r}")
-
     @staticmethod
     def _ellipse_entity(center: Point, rim_u: Point, rim_v: Point) -> Ellipse:
         du = Direction(rim_u.x - center.x, rim_u.y - center.y, rim_u.z - center.z)
@@ -329,17 +290,10 @@ class LabelMeStore:
     # ── Inverse (object → shape) ───────────────────────────
 
     def _shape_from_object(self, obj: Any, label: str) -> LabelShape | None:
-        from ._active import (
-            ActCircle,
-            ActEllipse,
-            ActLine,
-            ActPoint,
-            ActPolygon,
-            ActRectangle2D,
-        )
+        from ._point_path import PointPath
 
-        if isinstance(obj, (ActRectangle2D, Rectangle2D)):
-            rect = obj.rectangle if isinstance(obj, ActRectangle2D) else obj
+        if isinstance(obj, Rectangle2D):
+            rect = obj
             if abs(rect.angle) < 1e-9:
                 hw, hh = rect.size[0] / 2.0, rect.size[1] / 2.0
                 return LabelShape(
@@ -363,8 +317,8 @@ class LabelMeStore:
                     shape_type="rectangle",
                 )
             return self._polygon_from_corners(rect, label)
-        if isinstance(obj, (ActCircle, Circle)):
-            circle = obj.circle if isinstance(obj, ActCircle) else obj
+        if isinstance(obj, Circle):
+            circle = obj
             return LabelShape(
                 label=label,
                 points=[
@@ -379,16 +333,20 @@ class LabelMeStore:
                 ],
                 shape_type="circle",
             )
-        if isinstance(obj, (ActEllipse, Ellipse)):
+        if isinstance(obj, Ellipse):
             return self._shape_from_ellipse(obj, label)
-        if isinstance(obj, ActPolygon):
+        if isinstance(obj, PointPath):
+            pts = obj.points
+            closed = len(pts) > 1 and pts[0] == pts[-1]
+            if closed:
+                pts = pts[:-1]
             return LabelShape(
                 label=label,
-                points=[self._mapper.to_pixel(p) for p in obj.points],
-                shape_type="polygon" if obj.closed else "linestrip",
+                points=[self._mapper.to_pixel(Point(x, y, z)) for x, y, z in pts],
+                shape_type="polygon" if closed else "linestrip",
             )
-        if isinstance(obj, (ActLine, Line)):
-            line = obj.line if isinstance(obj, ActLine) else obj
+        if isinstance(obj, Line):
+            line = obj
             return LabelShape(
                 label=label,
                 points=[
@@ -397,8 +355,8 @@ class LabelMeStore:
                 ],
                 shape_type="line",
             )
-        if isinstance(obj, (ActPoint, Point)):
-            p = obj.point if isinstance(obj, ActPoint) else obj
+        if isinstance(obj, Point):
+            p = obj
             return LabelShape(
                 label=label,
                 points=[self._mapper.to_pixel(p)],
@@ -407,9 +365,7 @@ class LabelMeStore:
         return None
 
     def _shape_from_ellipse(self, obj: Any, label: str) -> LabelShape | None:
-        from ._active import ActEllipse
-
-        ellipse = obj.ellipse if isinstance(obj, ActEllipse) else obj
+        ellipse = obj
         du, dv = _ellipse_axes(ellipse)
         if not self._allow_extensions:
             if abs(ellipse.radius_u - ellipse.radius_v) < 1e-6:

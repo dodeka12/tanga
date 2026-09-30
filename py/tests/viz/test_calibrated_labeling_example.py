@@ -59,7 +59,7 @@ def test_labels_load_and_map_without_errors() -> None:
     result = store.load(_DATA_DIR / "labels.json")
     assert result.errors == []
     assert len(result.document.shapes) >= 1
-    pairs, errors = store.iter_objects(result.document, active=True)
+    pairs, errors = store.iter_objects(result.document)
     assert errors == []
     assert len(pairs) == len(result.document.shapes)
 

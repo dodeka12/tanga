@@ -14,17 +14,13 @@ import pytest
 
 from pytanga.geometry import Circle, Ellipse, Line, Matrix, OpenCVFrame, Point, Rectangle2D
 from pytanga.viz import (
-    ActCircle,
-    ActEllipse,
-    ActLine,
-    ActPoint,
-    ActPolygon,
-    ActRectangle2D,
+    ActSceneObject,
     CalibratedPlaneMapper,
     CameraCalibration,
     LabelMeDocument,
     LabelMeStore,
     LabelShape,
+    PointPath,
 )
 
 
@@ -64,27 +60,23 @@ class TestSerialize:
 
 
 class TestAddShapes:
-    def test_active_true(self) -> None:
+    def test_returns_entities(self) -> None:
         store = LabelMeStore()
         handle = _FakeHandle()
-        objs = store.add_shapes(handle, _doc(), active=True)[0]
-        assert isinstance(objs[0], ActRectangle2D)
-        assert isinstance(objs[1], ActCircle)
-        assert isinstance(objs[2], ActPolygon)
-        assert isinstance(objs[3], ActPolygon)  # linestrip → open ActPolygon
-        assert isinstance(objs[4], ActLine)
-        assert isinstance(objs[5], ActPoint)
-        assert len(handle.added) == 6
-
-    def test_active_false(self) -> None:
-        store = LabelMeStore()
-        handle = _FakeHandle()
-        objs = store.add_shapes(handle, _doc(), active=False)[0]
+        objs = store.add_shapes(handle, _doc())[0]
         assert isinstance(objs[0], Rectangle2D)
         assert isinstance(objs[1], Circle)
-        assert isinstance(objs[3], object)  # linestrip → PointPath (open)
+        assert isinstance(objs[2], PointPath)  # polygon → closed path
+        assert isinstance(objs[3], PointPath)  # linestrip → open path
         assert isinstance(objs[4], Line)
         assert isinstance(objs[5], Point)
+        assert len(handle.added) == 6
+
+    def test_never_returns_acts(self) -> None:
+        store = LabelMeStore()
+        handle = _FakeHandle()
+        objs = store.add_shapes(handle, _doc())[0]
+        assert all(not isinstance(obj, ActSceneObject) for obj in objs)
 
 
 class TestInverse:
@@ -92,10 +84,10 @@ class TestInverse:
         store = LabelMeStore()
         shapes = store.shapes_from_objects(
             [
-                (ActRectangle2D(center=Point(2, 1, 0), size=(4, 2)), "r"),
-                (ActCircle(center=Point(1, 1, 0), radius=2.0), "c"),
-                (ActLine(Point(0, 0, 0), Point(3, 4, 0)), "l"),
-                (ActPoint(Point(5, 5, 0)), "p"),
+                (Rectangle2D(center=Point(2, 1, 0), size=(4, 2)), "r"),
+                (Circle(center=Point(1, 1, 0), radius=2.0), "c"),
+                (Line.from_points(Point(0, 0, 0), Point(3, 4, 0)), "l"),
+                (Point(5, 5, 0), "p"),
             ]
         )
         assert shapes[0].shape_type == "rectangle"
@@ -174,7 +166,7 @@ def test_default_mapper_round_trips_entities() -> None:
             LabelShape(label="l", points=[(0, 0), (3, 4)], shape_type="line"),
         ]
     )
-    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=False)[0])
+    rebuilt = store.shapes_from_objects(store.iter_objects(doc)[0])
     assert rebuilt[0].points == [(0.0, 0.0), (4.0, 2.0)]
     assert rebuilt[1].points == [(0.0, 0.0), (3.0, 4.0)]
 
@@ -202,7 +194,7 @@ def test_calibrated_mapper_round_trip_point_shapes() -> None:
             LabelShape(label="pt", points=[(320, 240)], shape_type="point"),
         ]
     )
-    rebuilt = store.shapes_from_objects(store.iter_objects(doc, active=True)[0])
+    rebuilt = store.shapes_from_objects(store.iter_objects(doc)[0])
     assert [s.shape_type for s in rebuilt] == [s.shape_type for s in doc.shapes]
     for orig, back in zip(doc.shapes, rebuilt):
         assert len(back.points) == len(orig.points)
@@ -248,7 +240,7 @@ def test_add_shapes_reports_unknown_shape_type() -> None:
     doc = LabelMeDocument(
         shapes=[LabelShape(label="x", points=[(0, 0)], shape_type="blob")]
     )
-    objs, errors = store.add_shapes(handle, doc, active=False)
+    objs, errors = store.add_shapes(handle, doc)
     assert objs == []
     assert len(errors) == 1
     assert "Unknown labelme shape_type" in errors[0]
