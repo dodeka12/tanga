@@ -18,16 +18,16 @@ scaling work in the background view?" question).
 
 ## Steps
 
-- [ ] **4.1 — Compute scale from the actual projection**
+- [x] **4.1 — Compute scale from the actual projection**
   - `screenWorldScale` uses `camera.fov` for perspective cameras; the off-center
     pinhole (`makePerspective(left,right,top,bottom,…)`) never updates `fov`, so
     the scale is wrong.  Compute world-units-per-pixel from the actual frustum
-    (top/bottom span at the marker's distance) instead — e.g. retain the pinhole
-    framing bounds in `camera.userData._pinhole` and use them.
-- [ ] **4.2 — Verify**
-  - `uv run pytest py/tests/viz/test_camera_fit_math.py -q` and manual smoke:
-    screen-space markers keep a constant on-screen size under zoom in the
-    calibrated pane.
+    (top/bottom span at the marker's distance) instead — retain the pinhole
+    framing bounds in `camera.userData._pinholeFrustum` and use them.
+- [x] **4.2 — Verify**
+  - `uv run pytest py/tests/viz/test_camera_fit_math.py -q` (added a pinhole-frustum
+    case).  Manual smoke: screen-space markers keep a constant on-screen size
+    under zoom in the calibrated pane.  (Manual browser smoke — pending.)
 
 ## Validation
 

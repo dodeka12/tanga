@@ -41,6 +41,9 @@ export function applyPinhole(camera, p, aspect, crop) {
     camera.projectionMatrix.makePerspective(f.left, f.right, f.top, f.bottom, f.near, f.far);
     camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
     camera.userData._pinholeCrop = f.crop;
+    // Retain the off-center frustum bounds so screen-space sizing
+    // (`screenWorldScale`) can use the real frustum instead of the stale `fov`.
+    camera.userData._pinholeFrustum = { top: f.top, bottom: f.bottom, near: f.near };
 }
 
 /**

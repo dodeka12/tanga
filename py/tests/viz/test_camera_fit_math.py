@@ -245,3 +245,34 @@ def test_screen_world_scale() -> None:
     assert out["persp"] == pytest.approx(0.02)
     # degenerate frustum span falls back to 1.
     assert out["degenerate"] == 1
+
+
+def test_screen_world_scale_pinhole_frustum() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available")
+    program = r"""
+    import { screenWorldScale } from './py/pytanga/viz/templates/camera-fit.js';
+    // Off-center pinhole: the retained frustum span replaces the stale `fov`.
+    const pinhole = screenWorldScale(
+        {
+            isOrthographicCamera: false,
+            fov: 50,  // stale — must be ignored when _pinholeFrustum is present
+            position: { x: 0, y: 0, z: 0 },
+            userData: { _pinholeFrustum: { top: 5, bottom: -5, near: 1 } },
+        },
+        1000, { x: 0, y: 0, z: 10 }
+    );
+    console.log(JSON.stringify({ pinhole }));
+    """
+    proc = subprocess.run(
+        [node, "--input-type=module", "-e", program],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    # worldHeight at dist 10 = (5 - (-5)) / 1 * 10 = 100; scale = 100 / 1000 = 0.1.
+    assert out["pinhole"] == pytest.approx(0.1)
