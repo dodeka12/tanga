@@ -182,6 +182,7 @@ from ._styles import (
     VizStyle,
     WireframeDashPattern,
 )
+from ._surface import InteractionSurface
 from ._themes import (
     copy_theme,
     default_theme,
@@ -365,6 +366,7 @@ __all__ = [
     "InteractionEvent",
     "InteractionEventType",
     "InteractionHandler",
+    "InteractionSurface",
     "InteractionHandlerRegistry",
     "InteractionTrigger",
     "InversionStyle",

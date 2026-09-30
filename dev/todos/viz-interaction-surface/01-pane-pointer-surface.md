@@ -23,7 +23,7 @@ world positions on the plane.  Add `read_only` to suppress interaction per pane.
 
 ## Steps
 
-- [ ] **1.1 — `InteractionSurface` class**
+- [x] **1.1 — `InteractionSurface` class**
   - A `mapper: CoordinateMapper` + `on_drag_start`/`on_drag`/`on_drag_end`/
     `on_click` handlers; `serialize()` returns `{"point": …, "normal": …}` from
     `mapper.plane()` plus a stable surface id.
