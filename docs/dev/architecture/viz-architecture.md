@@ -269,10 +269,10 @@ The frontend has **one live-view registry** and reuses views by their stable
 `ImageCanvas` (in `_image_view.py`) is a user-facing helper analogous to
 `CoordinateSystem`: it owns a **dedicated 2D scene** with a **y-down pixel
 frame** (1 world unit = 1 pixel), an `ImageView` (the plane + textures +
-shader/uniform state), an `ActImagePlane` (interactive plane), and an overlay
-`VizGroup`.  The image is a **new scene-object kind** (`kind == "image"`,
-`VizImage` node in `_nodes.py`), whose pixels reach the browser through one of
-three mutually exclusive `ImageData` sources:
+shader/uniform state), an `InteractionSurface` (a per-pane `z = 0` interaction
+plane), and an overlay `VizGroup`.  The image is a **new scene-object kind**
+(`kind == "image"`, `VizImage` node in `_nodes.py`), whose pixels reach the
+browser through one of three mutually exclusive `ImageData` sources:
 
 - **`source: "data"`** (default) — the pixel buffer travels as **binary
   WebSocket frames** (`_image_wire.py`, `Transport.send_bytes` /

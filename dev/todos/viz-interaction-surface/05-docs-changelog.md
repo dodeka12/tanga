@@ -17,14 +17,14 @@ Document the interaction-surface architecture and add the branch changelog.
 
 ## Steps
 
-- [ ] **5.1 — Developer docs**
+- [x] **5.1 — Developer docs**
   - Replace the "Image canvas" section's `ActImagePlane` description with the
     pane/surface/visual model; document `SceneView.surface` + `read_only` and the
     per-pane surface pointer events.
-- [ ] **5.2 — Changelog**
+- [x] **5.2 — Changelog**
   - Write `docs/changelog/2026/09/29_feat-interaction-surface.md` (New Features +
     a note that the calibrated drag-to-draw is fixed).
-- [ ] **5.3 — Full validation**
+- [x] **5.3 — Full validation**
   - `uv run pytest -rs`, `uv run ruff check .`, `uv run ty check`,
     `node --test 'js/dev/tests/*.test.mjs'`, `node js/dev/tests/check-syntax.mjs`,
     `uv run mkdocs build --strict`.
