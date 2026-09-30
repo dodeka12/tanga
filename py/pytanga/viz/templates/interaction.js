@@ -37,6 +37,11 @@ export class InteractionController {
         this.mouse = new THREE.Vector2();
         this.spaceDim = 3;  // set via setSpaceDim() from three-view.js
 
+        // Per-pane interaction surface ({ id, point, normal, interaction }) and
+        // a read-only flag that suppresses all interaction (surface + entities).
+        this._surface = null;
+        this._readOnly = false;
+
         // Throttling state: "objectId:eventType" → { lastSent, pendingTimer, pendingData }
         this._throttles = new Map();
 
@@ -79,6 +84,14 @@ export class InteractionController {
     setSceneCursor(cursor) {
         this._sceneCursor = cursor || null;
         this.rendererDomElement.style.cursor = this._sceneCursor || '';
+    }
+
+    setSurface(surface) {
+        this._surface = surface || null;
+    }
+
+    setReadOnly(readOnly) {
+        this._readOnly = !!readOnly;
     }
 
     registerInteractive(objectId, mesh, config) {
@@ -372,9 +385,9 @@ export class InteractionController {
     // ── Trigger Matching ─────────────────────────────────────────
 
     _findMatchingTriggers(objectId, eventType, button, modifiers) {
-        const obj = this.interactiveObjects.get(objectId);
-        if (!obj) return [];
-        return obj.config.triggers.filter(t => {
+        const config = this._getObjectConfig(objectId);
+        if (!config) return [];
+        return config.triggers.filter(t => {
             if (t.event_type !== eventType) return false;
             if (t.mouse_button != null && t.mouse_button !== button) return false;
             const reqMods = t.modifiers || [];
@@ -402,6 +415,37 @@ export class InteractionController {
             case 2: return 'right';
             default: return 'left';
         }
+    }
+
+    // ── Surface + hit resolution ────────────────────────────────
+
+    _getObjectConfig(objectId) {
+        const obj = this.interactiveObjects.get(objectId);
+        if (obj) return obj.config;
+        if (this._surface && this._surface.id === objectId) return this._surface.interaction;
+        return null;
+    }
+
+    _getSurfaceHit(event) {
+        if (!this._surface) return null;
+        const s = this._surface;
+        const rect = this.rendererDomElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+            new THREE.Vector3(s.normal[0], s.normal[1], s.normal[2]),
+            new THREE.Vector3(s.point[0], s.point[1], s.point[2]),
+        );
+        const target = new THREE.Vector3();
+        const hitPoint = this.raycaster.ray.intersectPlane(plane, target);
+        if (!hitPoint) return null;
+        return { objectId: s.id, intersect: { point: hitPoint, face: null } };
+    }
+
+    _getHit(event) {
+        if (this._readOnly) return null;
+        return this._getInteractiveHit(event) || this._getSurfaceHit(event);
     }
 
     // ── Raycasting ───────────────────────────────────────────────
@@ -450,9 +494,9 @@ export class InteractionController {
     // ── Throttling ───────────────────────────────────────────────
 
     _throttledSend(objectId, eventType, buildPayload) {
-        const obj = this.interactiveObjects.get(objectId);
-        if (!obj || !this.ws) return;
-        const throttleMs = obj.config.throttle_ms || 0;
+        const config = this._getObjectConfig(objectId);
+        if (!config || !this.ws) return;
+        const throttleMs = config.throttle_ms || 0;
         const key = objectId + ':' + eventType;
 
         if (throttleMs <= 0) { this.ws.send(JSON.stringify(buildPayload())); return; }
@@ -488,7 +532,7 @@ export class InteractionController {
     // ── Pointer Event Handlers ───────────────────────────────────
 
     _onPointerDown(event) {
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         if (!hit) return;
 
         const modifiers = this._getActiveModifiers(event);
@@ -530,9 +574,9 @@ export class InteractionController {
                 unsentPixelDelta: new THREE.Vector2(),
             };
             this._dragStarted = false;
-            const hitObj = this.interactiveObjects.get(hit.objectId);
-            if (hitObj && hitObj.config && hitObj.config.cursor) {
-                this.rendererDomElement.style.cursor = hitObj.config.cursor;
+            const hitConfig = this._getObjectConfig(hit.objectId);
+            if (hitConfig && hitConfig.cursor) {
+                this.rendererDomElement.style.cursor = hitConfig.cursor;
             }
             this.rendererDomElement.setPointerCapture(event.pointerId);
             if (this.controls) this.controls.enabled = false;
@@ -643,7 +687,7 @@ export class InteractionController {
             return;
         }
 
-        const hit = this._getInteractiveHit(event);
+        const hit = this._readOnly ? null : this._getInteractiveHit(event);
         const newHoveredId = hit ? hit.objectId : null;
 
         if (newHoveredId !== this._hoveredObjectId) {
@@ -708,7 +752,7 @@ export class InteractionController {
             }
         }
 
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         const objectId = hit ? hit.objectId : null;
         if (objectId) {
             const state = this._clickState.get(objectId);
@@ -749,7 +793,7 @@ export class InteractionController {
     // ── Dblclick / wheel / capture / cancel ──────────────────────
 
     _onDblClick(event) {
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         if (!hit) return;
         const button = this._mouseButtonFromEvent(event);
         const modifiers = this._getActiveModifiers(event);
@@ -781,7 +825,7 @@ export class InteractionController {
     }
 
     _onWheel(event) {
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         if (!hit) return;
         const modifiers = this._getActiveModifiers(event);
         const triggers = this._findMatchingTriggers(hit.objectId, 'scroll', null, modifiers);

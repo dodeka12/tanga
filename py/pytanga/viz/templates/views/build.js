@@ -163,6 +163,8 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             );
             view.setBackgroundImage(camView.background_image || null);
             view.setVisibilityFilter(node.hide || null, node.show || null);
+            view.setSurface(node.surface || null);
+            view.setReadOnly(!!node.read_only);
             if (newScenes) newScenes.push(sceneName);
         }
         applySizeSpecs(view, node);

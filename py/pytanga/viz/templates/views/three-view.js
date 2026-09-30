@@ -139,6 +139,8 @@ export class ThreeJsView extends View {
         this._backgroundMesh = null;
         this._hide = new Set();
         this._show = null;
+        this._readOnly = false;
+        this._surface = null;
         this._keyBindings = [];
         this._lastCameraKey = null;
 
@@ -814,6 +816,18 @@ export class ThreeJsView extends View {
         this._show = show && show.length ? new Set(show) : null;
     }
 
+    /** Set this pane's interaction surface (per-pane ``surface``). */
+    setSurface(surface) {
+        this._surface = surface || null;
+        if (this._interaction) this._interaction.setSurface(this._surface);
+    }
+
+    /** Set this pane's read-only flag (per-pane ``read_only``). */
+    setReadOnly(readOnly) {
+        this._readOnly = !!readOnly;
+        if (this._interaction) this._interaction.setReadOnly(this._readOnly);
+    }
+
     /** Refresh this reused pane from a serialized ``scene_view`` node. */
     updateFromNode(node) {
         const camView = node.camera_view || {};
@@ -824,6 +838,8 @@ export class ThreeJsView extends View {
         this.setViewport(camView.viewport || null);
         this.setBackgroundImage(camView.background_image || null);
         this.setVisibilityFilter(node.hide || null, node.show || null);
+        this.setSurface(node.surface || null);
+        this.setReadOnly(!!node.read_only);
     }
 
     _isFilteredOut(id) {
