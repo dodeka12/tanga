@@ -416,6 +416,8 @@ uv run python py/examples/<path>.py
 
 - **interaction** — [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
+- **InteractionSurface** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
+
 - **interactive** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
 - **intersection** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md), [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)

@@ -19,18 +19,18 @@ removing the failed `Plane` hit-surface hack.
 
 ## Steps
 
-- [ ] **4.1 — Surface-backed labeler**
+- [x] **4.1 — Surface-backed labeler**
   - Replace `_CalibratedLabeler`'s `Plane` hit-surface + `ActImagePlane` with an
     `InteractionSurface(CalibratedPlaneMapper(...))`; keep the toolbar +
     `DragPreview` pattern.
-- [ ] **4.2 — Two panes**
+- [x] **4.2 — Two panes**
   - Left: `SceneView("world", camera_view=CameraView(cam, navigation="2d",
     background_image=…), surface=surface)`; right: `SceneView("world", read_only=True,
     camera_view=CameraView(overview_cam))`.
-- [ ] **4.3 — Point style size**
+- [x] **4.3 — Point style size**
   - Give the loaded `ActPoint` marker a screen-space (or smaller) style so it is
     not oversized in the calibrated scene.
-- [ ] **4.4 — Tests + docs**
+- [x] **4.4 — Tests + docs**
   - Keep the data-validation/import tests green; regenerate example docs.
 
 ## Validation

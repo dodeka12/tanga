@@ -344,6 +344,8 @@ def CalibratedSurface(
     on_drag: SurfaceDragHandler | None = None,
     on_drag_end: SurfaceEventHandler | None = None,
     on_click: SurfaceClickHandler | None = None,
+    drag_bindings: list[DragBinding[InteractionSurface]] | None = None,
+    click_bindings: list[ClickBinding[InteractionSurface]] | None = None,
     cursor: str | None = None,
 ) -> InteractionSurface:
     """Build an :class:`InteractionSurface` on the ⟂-optical-axis plane.
@@ -359,5 +361,7 @@ def CalibratedSurface(
         on_drag=on_drag,
         on_drag_end=on_drag_end,
         on_click=on_click,
+        drag_bindings=drag_bindings,
+        click_bindings=click_bindings,
         cursor=cursor,
     )
