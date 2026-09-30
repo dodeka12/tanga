@@ -18,19 +18,16 @@ Phase 3 removes the flag).
 
 ## Steps
 
-- [ ] **2.1 — ImageLabeler `_act_from_entity`**
-  - Map `Rectangle2D`→`ActRectangle2D`, `Ellipse`→`ActEllipse`, `Circle`→`ActCircle`,
-    `Line`→`ActLine`, `PointPath`→`ActPolygon`, `Point`→`ActPoint`, adding
-    `on_click=self._make_select_handler()` (+ polygon `handle_style`/`end_handle_style`).
-- [ ] **2.2 — ImageLabeler load/save switch**
+- [x] **2.1 — ImageLabeler `_act_from_entity`**
+  - Maps `Rectangle2D`→`ActRectangle2D`, `Ellipse`→`ActEllipse`, `Circle`→`ActCircle`,
+    `Line`→`ActLine`, `PointPath`→`ActPolygon`, `Point`→`ActPoint` (with `on_click`,
+    handle styles).
+- [x] **2.2 — ImageLabeler load/save switch**
   - `load_document`: `iter_objects(doc, active=False)` → `_act_from_entity` →
-    `add_shape(act, label)`.
-  - `to_document`: pass `(s.act.entity, s.label)` to `shapes_from_objects`.
-- [ ] **2.3 — CalibratedLabeler `_act_from_entity` + load switch**
-  - Add `_act_from_entity(entity)` (with `on_click=select`); `add_loaded_shape`
-    takes an entity and calls it; `_loaded_style` checks plain geometry
-    (`Point`, `Rectangle2D`, `Circle`, `Ellipse`, `PointPath`, `Line`).
-  - `main()`: `iter_objects(result.document, active=False)`.
+    `add_shape(act, label)`; `to_document` passes `(s.act.entity, s.label)`.
+- [x] **2.3 — CalibratedLabeler `_act_from_entity` + load switch**
+  - Added `_act_from_entity(entity)`; `add_loaded_shape` takes an entity;
+    `_loaded_style` checks plain geometry; `main()` uses `active=False`.
 
 ## Validation
 

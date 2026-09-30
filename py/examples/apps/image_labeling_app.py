@@ -25,10 +25,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import math
 from dataclasses import replace
 from typing import Any, Callable, cast
 
 import numpy as np
+from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2D
 from pytanga.viz import (
     ActCircle,
     ActEllipse,
@@ -54,6 +56,7 @@ from pytanga.viz import (
     LineStyle,
     MenuView,
     MouseButton,
+    PointPath,
     PointPathStyle,
     Rectangle2DStyle,
     Size,
@@ -365,6 +368,44 @@ class ImageLabeler:
 
     # ── Shapes ──────────────────────────────────────────────
 
+    def _act_from_entity(self, entity: Any) -> Any:
+        """Wrap a plain labelme entity in an interactive act (click-to-select)."""
+        select = self._make_select_handler()
+        handle = {"on_click": select, "handle_style": self._handle_style}
+        if isinstance(entity, Rectangle2D):
+            return ActRectangle2D(
+                center=entity.center, size=entity.size, angle=entity.angle, **handle
+            )
+        if isinstance(entity, Ellipse):
+            du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
+            angle = math.atan2(du.y, du.x)
+            return ActEllipse(
+                center=entity.center,
+                radius_u=entity.radius_u,
+                radius_v=entity.radius_v,
+                angle=angle,
+                **handle,
+            )
+        if isinstance(entity, Circle):
+            return ActCircle(center=entity.center, radius=entity.radius, **handle)
+        if isinstance(entity, Line):
+            return ActLine(start=entity.start, end=entity.end, **handle)
+        if isinstance(entity, PointPath):
+            pts = [Point(x, y, z) for x, y, z in entity.points]
+            closed = len(pts) > 1 and pts[0] == pts[-1]
+            if closed:
+                pts = pts[:-1]
+            return ActPolygon(
+                pts,
+                closed=closed,
+                on_click=select,
+                handle_style=self._vertex_style,
+                end_handle_style=self._end_handle_style,
+            )
+        if isinstance(entity, Point):
+            return ActPoint(entity, on_click=select)
+        raise TypeError(f"unsupported labelme entity: {type(entity).__name__}")
+
     def _apply_size_limits(self, act: Any) -> None:
         """Clamp resize to the app's pixel-derived limits (half-extent)."""
         act.set_pixel_scale(self._pixel_scale)
@@ -418,11 +459,11 @@ class ImageLabeler:
         """Replace the current shapes with those from *doc* (and its image)."""
         self.clear_shapes()
         self._load_document_image(doc, json_path)
-        objs, errors = self._store.iter_objects(doc, active=True)
+        objs, errors = self._store.iter_objects(doc, active=False)
         for message in errors:
             print(f"labelme: skipped {message}")
-        for obj, label in objs:
-            self.add_shape(obj, label=label)
+        for entity, label in objs:
+            self.add_shape(self._act_from_entity(entity), label=label)
 
     def save(self, path: str | os.PathLike[str]) -> None:
         """Write the current shapes to *path* as labelme JSON."""
@@ -432,7 +473,7 @@ class ImageLabeler:
         """Export the current shapes as a :class:`~pytanga.viz.LabelMeDocument`."""
         return LabelMeDocument(
             shapes=self._store.shapes_from_objects(
-                [(s.act, s.label) for s in self.shapes]
+                [(s.act.entity, s.label) for s in self.shapes]
             ),
             image_path=image_path,
         )

@@ -37,7 +37,17 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from pytanga.geometry import Frustum, Matrix, OpenCVFrame
+from pytanga.geometry import (
+    Circle,
+    Direction,
+    Ellipse,
+    Frustum,
+    Line,
+    Matrix,
+    OpenCVFrame,
+    Point,
+    Rectangle2D,
+)
 from pytanga.viz import (
     ActCircle,
     ActEllipse,
@@ -64,6 +74,7 @@ from pytanga.viz import (
     LabelView,
     LineStyle,
     MouseButton,
+    PointPath,
     PointPathStyle,
     Rectangle2DStyle,
     SceneView,
@@ -163,16 +174,16 @@ def _style_for(mode: str, fill: str) -> Any:
 
 
 def _loaded_style(obj: Any) -> Any:
-    """The style for a loaded labelme shape (points are screen-space markers)."""
-    if isinstance(obj, ActPoint):
+    """The style for a loaded labelme entity (points are screen-space markers)."""
+    if isinstance(obj, Point):
         return SquarePointStyle(size=6.0, thickness=2, screen_space=True)
-    if isinstance(obj, ActRectangle2D):
+    if isinstance(obj, Rectangle2D):
         return Rectangle2DStyle(fill=True, fill_opacity=0.15)
-    if isinstance(obj, ActEllipse):
+    if isinstance(obj, Ellipse):
         return EllipseStyle(fill=True, fill_opacity=0.15)
-    if isinstance(obj, ActCircle):
+    if isinstance(obj, Circle):
         return CircleStyle(thickness=2, fill=True, fill_opacity=0.15)
-    if isinstance(obj, ActPolygon):
+    if isinstance(obj, PointPath):
         return PointPathStyle(line_thickness=2)
     return LineStyle(thickness=2)
 
@@ -345,10 +356,40 @@ class _CalibratedLabeler:
         self._set_extra_handles(act, False)
         self._world.flush()
 
-    def add_loaded_shape(self, act: Any) -> None:
-        """Add a loaded labelme shape: style it and wire click-to-select."""
-        self._add_shape(act, _loaded_style(act))
-        act.set_on_click(self._make_select_handler())
+    def _act_from_entity(self, entity: Any) -> Any:
+        """Wrap a plain labelme entity in an interactive act (click-to-select)."""
+        select = self._make_select_handler()
+        if isinstance(entity, Point):
+            return ActPoint(entity, drag_mode=DragMode.VIEW_PLANE, on_click=select)
+        if isinstance(entity, Line):
+            return ActLine(start=entity.start, end=entity.end, on_click=select)
+        if isinstance(entity, Circle):
+            return ActCircle(center=entity.center, radius=entity.radius, on_click=select)
+        if isinstance(entity, Rectangle2D):
+            return ActRectangle2D(
+                center=entity.center, size=entity.size, angle=entity.angle, on_click=select
+            )
+        if isinstance(entity, Ellipse):
+            du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
+            angle = math.atan2(du.y, du.x)
+            return ActEllipse(
+                center=entity.center,
+                radius_u=entity.radius_u,
+                radius_v=entity.radius_v,
+                angle=angle,
+                on_click=select,
+            )
+        if isinstance(entity, PointPath):
+            pts = [Point(x, y, z) for x, y, z in entity.points]
+            closed = len(pts) > 1 and pts[0] == pts[-1]
+            if closed:
+                pts = pts[:-1]
+            return ActPolygon(pts, closed=closed, on_click=select)
+        raise TypeError(f"unsupported labelme entity: {type(entity).__name__}")
+
+    def add_loaded_shape(self, entity: Any) -> None:
+        """Add a loaded labelme entity: wrap it in an act, style it, wire select."""
+        self._add_shape(self._act_from_entity(entity), _loaded_style(entity))
 
 
 def main() -> None:
@@ -379,11 +420,11 @@ def main() -> None:
     result = store.load(_LABELS_PATH)
     for message in result.errors:
         print(f"labelme: skipped {message}")
-    pairs, errors = store.iter_objects(result.document, active=True)
+    pairs, errors = store.iter_objects(result.document, active=False)
     for message in errors:
         print(f"labelme: skipped {message}")
-    for obj, _label in pairs:
-        labeler.add_loaded_shape(obj)
+    for entity, _label in pairs:
+        labeler.add_loaded_shape(entity)
 
     frustum = Frustum.from_camera(cam, near=0.05, far=0.7)
     frustum_ref = world.new(frustum, color="#ffcc44")
