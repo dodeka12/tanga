@@ -17,14 +17,14 @@ changelog.
 
 ## Steps
 
-- [ ] **4.1 — Update `viz-architecture.md`**
-  - The `CoordinateMapper`/`LabelMeStore` text now says `LabelMeStore` maps
-    labelme ↔ plain geometry, and the label apps own act creation.
-- [ ] **4.2 — Append the branch changelog**
-  - Add a `Refactor` bullet: `LabelMeStore` is entity-only; the label apps wrap
-    entities into acts.  Add a `Bug Fixes` bullet for the `pixel_scale` base move.
-- [ ] **4.3 — Full validation**
-  - Run the full suite + docs build.
+- [x] **4.1 — Update `viz-architecture.md`**
+  - The `CoordinateMapper` bullet now says `LabelMeStore` is a pure data store
+    (plain geometry in/out) and the label apps own act creation.
+- [x] **4.2 — Append the branch changelog**
+  - Added `Refactor` bullets for the entity-only `LabelMeStore` and the
+    `pixel_scale`-on-`ActSceneObject` move.
+- [x] **4.3 — Full validation**
+  - `pytest -q` (3708 passed, 1 skipped) + `mkdocs build --strict` (clean).
 
 ## Validation
 

@@ -1,6 +1,6 @@
 # LabelMeStore purity + pixel-scale on the base — Overview
 
-**Created:** 2026-09-30 | **Status:** In progress | **Branch:** `feat/calibrated-pane-interaction`
+**Created:** 2026-09-30 | **Status:** Done | **Branch:** `feat/calibrated-pane-interaction`
 
 ## Goal
 

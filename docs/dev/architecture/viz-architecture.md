@@ -398,8 +398,13 @@ pane through a clean three-layer model — camera data → camera view → pane:
   labelme loader/saver is coordinate-system-agnostic — the default `PlanarMapper`
   preserves the historical "pixel == world XY" behavior, while
   `CalibratedPlaneMapper` lets labelme shapes round-trip through a calibrated 3D
-  scene.  The single fixed `depth` is a display/editing approximation, not a true
-  reprojection of arbitrary 3D geometry.
+  scene.  `LabelMeStore` is a **pure data store**: `iter_objects(doc)` and
+  `add_shapes(handle, doc)` return/emit plain geometry (`Point`, `Line`,
+  `Circle`, `Ellipse`, `Rectangle2D`, `PointPath`), never interactive
+  `ActSceneObject` composites — the label apps wrap those entities into acts
+  via their own `_act_from_entity`.  The single fixed `depth` is a
+  display/editing approximation, not a true reprojection of arbitrary 3D
+  geometry.
 
 ### Test commands
 

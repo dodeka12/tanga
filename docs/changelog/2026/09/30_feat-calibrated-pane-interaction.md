@@ -29,3 +29,13 @@
 - **`CoordinateMapper.world_units_per_pixel()`** — the image-pixel↔world size
   scale now lives on the mapper (`PlanarMapper` → 1.0, `CalibratedPlaneMapper`
   → `depth/fx`), replacing the ad-hoc `depth/fx` literals in the label apps.
+- **`LabelMeStore` is a pure data store** — it no longer creates
+  `ActSceneObject` composites (`_act_from_shape` and the `active=` flag are
+  gone); `iter_objects(doc)` / `add_shapes(handle, doc)` map JSON ↔ plain
+  geometry (`Point`, `Line`, `Circle`, `Ellipse`, `Rectangle2D`, `PointPath`),
+  and the label apps wrap those entities into interactive acts via their own
+  `_act_from_entity`.
+- **`pixel_scale` on the base** — `_pixel_scale`/`set_pixel_scale` moved from
+  `_ActWithHandles` to `ActSceneObject` (every act, including `ActPoint`, now
+  carries the world-units-per-pixel scale), removing the `hasattr` guard in the
+  label apps.
