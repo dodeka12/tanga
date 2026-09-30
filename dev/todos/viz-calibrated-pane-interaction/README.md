@@ -1,6 +1,6 @@
 # Calibrated Pane Interaction — Overview
 
-**Created:** 2026-09-30 | **Status:** Planned | **Branch:** `feat/calibrated-pane-interaction`
+**Created:** 2026-09-30 | **Status:** In progress | **Branch:** `feat/calibrated-pane-interaction`
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this
