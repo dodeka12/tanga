@@ -24,8 +24,8 @@ Keywords: image, labeling, labelme, app, ActRectangle2D, ActCircle, ActLine, Dra
 from __future__ import annotations
 
 import argparse
-import os
 import math
+import os
 from dataclasses import replace
 from typing import Any, Callable, cast
 

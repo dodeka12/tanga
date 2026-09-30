@@ -10,6 +10,26 @@ function _iconParts(icon) {
     return { family: icon.slice(0, i) || 'material', name: icon.slice(i + 1) };
 }
 
+const _iconFontLinks = {
+    material: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
+};
+
+function _ensureIconFont(family, onReady) {
+    const href = _iconFontLinks[family];
+    if (!href) return;
+    const id = 'tanga-icon-font-' + family;
+    if (document.getElementById(id)) {
+        if (onReady) onReady();
+        return;
+    }
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = href;
+    if (onReady) link.onload = onReady;
+    document.head.appendChild(link);
+}
+
 function _makeIconTexture(icon) {
     // Draw the glyph in white; the mesh material color tints it, so a color
     // change is applied in place (without re-rendering the canvas).
@@ -21,16 +41,33 @@ function _makeIconTexture(icon) {
     canvas.width = canvas.height = 64;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    ctx.clearRect(0, 0, 64, 64);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(name, 32, 32);
     const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
+
+    const draw = () => {
+        ctx.clearRect(0, 0, 64, 64);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(name, 32, 32);
+        texture.needsUpdate = true;
+    };
+    draw();
+
+    if (family === 'material') {
+        // The ligature font loads asynchronously; the first draw above may
+        // have rendered the raw ligature name with a fallback font.  Redraw
+        // once the font is available so the icon shows as a glyph, not text.
+        const redraw = () => {
+            if (document.fonts && document.fonts.load) {
+                document.fonts.load(font).then(draw).catch(() => {});
+            }
+        };
+        _ensureIconFont(family, redraw);
+    }
     return texture;
 }
+
 
 export function createIconPoint(ent) {
     const color = parseColor(ent, '#ffffff');

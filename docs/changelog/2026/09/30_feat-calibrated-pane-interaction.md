@@ -11,6 +11,10 @@
 - **Screen-space point markers** — circle/icon point markers no longer apply a
   pixel-unit `size·0.1` z-lift, which had displaced them off the image plane
   onto the camera plane.
+- **Icon handle glyphs** — translate/rotate (and other icon-point) handles now
+  wait for the Material Symbols ligature font to finish loading before drawing
+  their canvas texture, so they render as move/rotate glyphs instead of the raw
+  ligature text (`open_with`, `rotate_right`).
 - **Zoom-correct drag scale** — pixel→world drag deltas now use the pinhole
   frustum (`screenWorldScale`) instead of the stale `camera.fov`.
 - **Toolbar mode highlight** — the calibrated app's toolbar reflects the active
