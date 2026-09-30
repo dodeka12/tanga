@@ -10,7 +10,7 @@ import math
 from typing import Any
 
 from pytanga.geometry import Direction, Point, Rectangle2D
-from pytanga.viz import ActRectangle2D, DragEvent, InteractionEventType
+from pytanga.viz import ActPoint, ActRectangle2D, DragEvent, InteractionEventType
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -334,4 +334,21 @@ class TestHandleVisibility:
         rect, _ = _rect()
         rect.set_translate_handle_visible(False)
         assert rect._translate_handle._enabled is False
+
+
+class TestPixelScale:
+    def test_act_point_has_set_pixel_scale(self) -> None:
+        ap = ActPoint(0, 0)
+        assert ap._pixel_scale == 1.0
+        ap.set_pixel_scale(0.5)
+        assert ap._pixel_scale == 0.5
+
+    def test_rectangle_uses_pixel_scale_for_rotate_offset(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(0.0, 0.0, 0.0), size=(0.01, 0.01))
+        rect._init(handle, "r1")
+        rect.set_pixel_scale(1.0)
+        offset = rect._rotate_handle_position()
+        # offset >= 2 * handle_size * pixel_scale keeps the icon off the corner.
+        assert offset.x >= 2.0 * 6.0 * 1.0
 

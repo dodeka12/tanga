@@ -330,8 +330,7 @@ class _CalibratedLabeler:
 
     def _apply_size_limits(self, act: Any) -> None:
         """Clamp resize to the app's pixel-derived limits (half-extent)."""
-        if hasattr(act, "set_pixel_scale"):
-            act.set_pixel_scale(self._pixel_scale)
+        act.set_pixel_scale(self._pixel_scale)
         if isinstance(act, ActRectangle2D):
             act.set_size_limits(
                 None if self._min_half is None else 2.0 * self._min_half,

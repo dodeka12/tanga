@@ -248,6 +248,7 @@ class ActSceneObject:
         self._body_style: Any = style
         self._viz_handle: VizSceneHandle | None = None
         self._entity_id: str = ""
+        self._pixel_scale: float = 1.0
 
     # ── Initialization (called by Visualizer) ──────────────
 
@@ -462,6 +463,10 @@ class ActSceneObject:
         """
         self._on_click = on_click
         self.refresh_interaction()
+
+    def set_pixel_scale(self, pixel_scale: float) -> None:
+        """Set the world-units-per-image-pixel scale of this object's scene."""
+        self._pixel_scale = float(pixel_scale)
 
     def refresh_interaction(self) -> None:
         """Re-register this object's interaction config and flush it.
@@ -907,7 +912,6 @@ class _ActWithHandles(ActSceneObject):
         self._translate_handle_style = translate_handle_style
         self._rotate_handle_style = rotate_handle_style
         self._act_style = act_style
-        self._pixel_scale = 1.0
 
     def _spawn_handle(self, handle: ActPoint, *, style: Any = None) -> str:
         """Add a child handle to the scene and record its entity id."""
@@ -935,10 +939,6 @@ class _ActWithHandles(ActSceneObject):
     def _handle_world_size(self) -> float:
         """The handle size in world units (screen px × pixel scale)."""
         return self._handle_size() * self._pixel_scale
-
-    def set_pixel_scale(self, pixel_scale: float) -> None:
-        """Set the world-units-per-image-pixel scale used for handle distances."""
-        self._pixel_scale = float(pixel_scale)
 
     def _resolve_translate_handle_style(self) -> PointStyle:
         """The translate handle style (a screen-space move glyph, twice the control-point size)."""
