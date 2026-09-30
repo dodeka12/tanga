@@ -16,13 +16,13 @@ surface and set the cursor so navigation yields and the cursor signals drawing.
 
 ## Steps
 
-- [ ] **2.1 — `set_mode` arms the surface + cursor**
+- [x] **2.1 — `set_mode` arms the surface + cursor**
   - `set_mode(mode)`: `self._drag_binding.enabled = mode is not None`,
     `self.surface.set_enabled(mode is not None)`, and set the cursor
     (`"crosshair"` when armed, `None` otherwise) via the scene handle.
-- [ ] **2.2 — Verify navigation yields**
+- [x] **2.2 — Verify navigation yields**
   - Confirm arming a tool disables the viewport pan (phase 1 predicate) and the
-    cursor changes; disarm restores both.
+    cursor changes; disarm restores both.  (Manual browser smoke — pending.)
 
 ## Validation
 

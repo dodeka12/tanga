@@ -235,6 +235,7 @@ class _CalibratedLabeler:
         self._mode = mode
         self._drag_binding.enabled = mode is not None
         self.surface.set_enabled(mode is not None)
+        self._world.set_cursor("crosshair" if mode is not None else None)
 
     def toolbar(self) -> ToolbarView:
         def _button(cid: str, icon: str, tip: str) -> ButtonView:
