@@ -94,6 +94,19 @@ export class InteractionController {
         this._readOnly = !!readOnly;
     }
 
+    hasArmedSurface() {
+        // A surface with an enabled drag trigger is "armed" for drawing; a draw
+        // drag conflicts with the pane's pan gesture, so navigation must yield.
+        const s = this._surface;
+        if (!s || !s.interaction || !s.interaction.enabled) return false;
+        const triggers = s.interaction.triggers || [];
+        return triggers.some((t) => t.event_type === 'drag');
+    }
+
+    isDragActive() {
+        return !!this._activeDrag;
+    }
+
     registerInteractive(objectId, mesh, config) {
         if (!config || !config.enabled) return;
         this.interactiveObjects.set(objectId, { mesh, config });

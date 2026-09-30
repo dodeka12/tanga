@@ -17,14 +17,15 @@ viewport-crop pan yield to it, so a draw-drag no longer also pans the background
 
 ## Steps
 
-- [ ] **1.1 — `InteractionController.hasArmedSurface()` / `isDragActive()`**
+- [x] **1.1 — `InteractionController.hasArmedSurface()` / `isDragActive()`**
   - `hasArmedSurface()` returns true when `this._surface` has
-    `interaction.enabled` and at least one drag/click trigger.
+    `interaction.enabled` and at least one drag trigger (the drag — not click —
+    is what conflicts with the pan gesture).
   - `isDragActive()` returns `!!this._activeDrag`.
-- [ ] **1.2 — Viewport pan yields**
+- [x] **1.2 — Viewport pan yields**
   - In `three-view.js` `_onViewportPointerDown` / `_onViewportPointerMove`, skip
     when `this._interaction` reports `hasArmedSurface() || isDragActive()`.
-  - Also gate pan on the pan mouse button(s) rather than any pointerdown.
+  - Also gate pan on the pan mouse button(s) (left/right) rather than any pointerdown.
 
 ## Validation
 
