@@ -31,8 +31,9 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from PIL import Image
@@ -210,6 +211,8 @@ class _CalibratedLabeler:
         self._world = world
         self._mode: str | None = None
         self.selected: Any = None
+        self.shapes: list[tuple[Any, Any]] = []  # (act, body_style)
+        self.selected_color = "#ffff44"
         self._styles: dict[str, Any] = {}
         self._previews: dict[str, DragPreview] = {}
 
@@ -250,6 +253,10 @@ class _CalibratedLabeler:
             on_click=self._on_click,
             drag_bindings=[self._drag_binding],
         )
+
+        world.on_key("Delete", self._on_delete)
+        world.on_key("Backspace", self._on_delete)
+        world.on_key("Escape", self._on_escape)
 
     def set_mode(self, mode: str | None) -> None:
         self._mode = mode
@@ -324,12 +331,41 @@ class _CalibratedLabeler:
         self._deselect()
         self.selected = act
         self._set_extra_handles(act, True)
+        self._set_selected_style(act, True)
 
     def _deselect(self) -> None:
         if self.selected is None:
             return
+        self._set_selected_style(self.selected, False)
         self._set_extra_handles(self.selected, False)
         self.selected = None
+
+    def _set_selected_style(self, act: Any, selected: bool) -> None:
+        """Recolor the body (yellow) on selection and restore it on deselect."""
+        for shape_act, style in self.shapes:
+            if shape_act is act:
+                new_style = (
+                    replace(cast(Any, style), color=self.selected_color)
+                    if selected
+                    else style
+                )
+                self._world.update_style(shape_act.entity_id, new_style)
+                break
+        self._world.flush()
+
+    async def _on_delete(self, _event: Any) -> None:
+        if self.selected is None:
+            return
+        act = self.selected
+        self.selected = None
+        self.shapes = [(a, s) for a, s in self.shapes if a is not act]
+        act.remove()
+        self._world.flush()
+
+    async def _on_escape(self, _event: Any) -> None:
+        self._deselect()
+        for preview in self._previews.values():
+            preview.discard()
 
     @staticmethod
     def _set_extra_handles(act: Any, visible: bool) -> None:
@@ -354,6 +390,7 @@ class _CalibratedLabeler:
         self._world.add(act, style=style)
         self._apply_size_limits(act)
         self._set_extra_handles(act, False)
+        self.shapes.append((act, style))
         self._world.flush()
 
     def _act_from_entity(self, entity: Any) -> Any:

@@ -21,8 +21,8 @@ export function createEllipse(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const radiusU = Math.max(ent.radiusU || 1.0, 0.001);
-    const radiusV = Math.max(ent.radiusV || 0.5, 0.001);
+    const radiusU = Math.max(ent.radiusU ?? 1.0, 0.001);
+    const radiusV = Math.max(ent.radiusV ?? 0.5, 0.001);
 
     const group = new THREE.Group();
 

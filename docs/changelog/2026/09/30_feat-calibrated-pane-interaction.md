@@ -4,8 +4,10 @@
 - **Calibrated image labeling** — `calibrated_labeling_app.py` now supports
   drag-to-draw rectangle, circle, line, ellipse, and polygon, plus
   click-to-place point, on a calibrated pinhole-camera pane.
-- **Shape selection** — clicking a shape reveals its translate/rotate handles;
-  clicking elsewhere hides them (mirroring the image labeler).
+- **Shape selection** — clicking a shape reveals its translate/rotate handles and
+  recolors it yellow; clicking elsewhere hides the handles and restores the
+  color.  Delete/Backspace removes the selected shape and Escape deselects
+  (mirroring the image labeler).
 
 ## Bug Fixes
 - **Screen-space point markers** — circle/icon point markers no longer apply a
@@ -28,6 +30,9 @@
   no longer snap together at calibrated scales.
 - **Hidden handles are inert** — hiding the translate/rotate handle also
   disables its interaction.
+- **Ellipse degenerate radius** — the ellipse renderer no longer treats a zero
+  radius as "unset" (which had rendered a huge default ellipse at the start of
+  a drag); a zero radius now clamps to the minimum.
 
 ## Refactor
 - **`CoordinateMapper.world_units_per_pixel()`** — the image-pixel↔world size
