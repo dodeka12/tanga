@@ -262,3 +262,76 @@ class TestBehaviour:
         )
         assert rect.entity.center == Point(2.0, 1.0, 0.0)
         assert rect.entity.size == (4.0, 2.0)
+
+
+class TestPlaneZ:
+    """Handles stay on the body's plane (z), not snapping to z=0."""
+
+    def test_handles_preserve_plane_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(5.0, 5.0, -0.6), size=(10.0, 4.0))
+        rect._init(handle, "r1")
+        for h in rect._corner_handles:
+            assert h.point.z == -0.6
+        assert rect._translate_handle.point.z == -0.6
+        assert rect._rotate_handle.point.z == -0.6
+
+    def test_resize_corner_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(5.0, 5.0, -0.6), size=(10.0, 4.0))
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_corner_drag(
+                0, DragEvent(world_position=Point(0.0, 0.0, -0.6))
+            )
+        )
+        assert rect.entity.center.z == -0.6
+
+    def test_translate_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(5.0, 5.0, -0.6), size=(10.0, 4.0))
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
+        )
+        assert rect.entity.center == Point(6.0, 6.0, -0.6)
+
+
+
+class TestLimits:
+    """Resize clamps: explicit min/max, and fp-precision when ``None``."""
+
+    def test_max_size_caps(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(0.0, 0.0, 0.0), size=(1.0, 1.0), max_size=2.0)
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_corner_drag(
+                0, DragEvent(world_position=Point(5.0, 5.0, 0.0))
+            )
+        )
+        assert rect.entity.size == (2.0, 2.0)
+
+
+
+
+class TestCreateClamp:
+    def test_create_from_points_clamps_to_min_size(self) -> None:
+        rect = ActRectangle2D.create_from_points(
+            Point(0.0, 0.0, 0.0), Point(0.001, 0.0001, 0.0), min_size=0.5
+        )
+        assert rect.entity.size == (0.5, 0.5)
+
+
+
+class TestHandleVisibility:
+    def test_hidden_rotate_handle_is_disabled(self) -> None:
+        rect, _ = _rect()
+        rect.set_rotate_handle_visible(False)
+        assert rect._rotate_handle._enabled is False
+
+    def test_hidden_translate_handle_is_disabled(self) -> None:
+        rect, _ = _rect()
+        rect.set_translate_handle_visible(False)
+        assert rect._translate_handle._enabled is False
+

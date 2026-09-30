@@ -12,7 +12,13 @@ import numpy as np
 import pytest
 
 from pytanga.geometry import Matrix, OpenCVFrame
-from pytanga.viz import CalibratedPlaneMapper, CameraCalibration, LabelMeStore
+from pytanga.viz import (
+    CalibratedPlaneMapper,
+    CameraCalibration,
+    LabelMeStore,
+    PlanarMapper,
+    Visualizer,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DATA_DIR = _REPO_ROOT / "py" / "examples" / "viz" / "camera" / "data" / "tless"
@@ -37,6 +43,15 @@ def test_mapper_round_trips_principal_point() -> None:
     u, v = mapper.to_pixel(mapper.to_world(cx, cy))
     assert u == pytest.approx(cx, abs=1e-6)
     assert v == pytest.approx(cy, abs=1e-6)
+
+
+def test_mapper_world_units_per_pixel() -> None:
+    assert PlanarMapper().world_units_per_pixel() == 1.0
+    calib = _calibration()
+    mapper = CalibratedPlaneMapper(calib, depth=0.6)
+    assert mapper.world_units_per_pixel() == pytest.approx(
+        0.6 / calib.K.data[0, 0]
+    )
 
 
 def test_labels_load_and_map_without_errors() -> None:
@@ -69,3 +84,19 @@ def test_example_module_imports() -> None:
     spec.loader.exec_module(module)
     assert module._DEPTH > 0  # noqa: SLF001
     assert module._CalibratedLabeler is not None  # noqa: SLF001
+
+
+def test_labeler_pixel_scale_from_mapper() -> None:
+    """The calibrated labeler derives `pixel_scale` from the mapper (depth/fx)."""
+    import importlib.util
+
+    path = _REPO_ROOT / "py" / "examples" / "apps" / "calibrated_labeling_app.py"
+    spec = importlib.util.spec_from_file_location("calibrated_labeling_app", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    calib = _calibration()
+    viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
+    world = viz.scene("world")
+    labeler = module._CalibratedLabeler(world, calib, 0.6)  # noqa: SLF001
+    assert labeler._pixel_scale == pytest.approx(0.6 / calib.K.data[0, 0])  # noqa: SLF001

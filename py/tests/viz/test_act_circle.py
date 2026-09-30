@@ -114,3 +114,56 @@ class TestBehaviour:
         )
         assert circle.entity.radius == 5.0
         assert circle.entity.center == Point(0.0, 0.0, 0.0)
+
+
+class TestPlaneZ:
+    """Handles stay on the body's plane (z), not snapping to z=0."""
+
+    def test_handles_preserve_plane_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(center=Point(5.0, 5.0, -0.6), radius=3.0)
+        circle._init(handle, "c1")
+        assert circle._radius_handle.point.z == -0.6
+        assert circle._translate_handle.point.z == -0.6
+
+    def test_translate_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(center=Point(5.0, 5.0, -0.6), radius=3.0)
+        circle._init(handle, "c1")
+        asyncio.run(
+            circle._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
+        )
+        assert circle.entity.center == Point(6.0, 6.0, -0.6)
+
+
+
+class TestLimits:
+    """Resize clamps: explicit min/max, and fp-precision when ``None``."""
+
+    def test_no_default_floor_when_min_none(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(center=Point(0.0, 0.0, 0.0), radius=0.02)
+        circle._init(handle, "c1")
+        asyncio.run(
+            circle._dispatch_radius_drag(DragEvent(world_position=Point(0.001, 0.0, 0.0)))
+        )
+        assert circle.radius == 0.001  # not clamped to the old 0.05 default
+
+    def test_min_radius_clamps(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(center=Point(0.0, 0.0, 0.0), radius=1.0, min_radius=0.5)
+        circle._init(handle, "c1")
+        asyncio.run(
+            circle._dispatch_radius_drag(DragEvent(world_position=Point(0.1, 0.0, 0.0)))
+        )
+        assert circle.radius == 0.5
+
+    def test_max_radius_caps(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(center=Point(0.0, 0.0, 0.0), radius=1.0, max_radius=2.0)
+        circle._init(handle, "c1")
+        asyncio.run(
+            circle._dispatch_radius_drag(DragEvent(world_position=Point(5.0, 0.0, 0.0)))
+        )
+        assert circle.radius == 2.0
+

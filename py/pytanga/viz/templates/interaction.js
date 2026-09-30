@@ -18,6 +18,7 @@
 // in a split view.
 
 import * as THREE from 'three';
+import { screenWorldScale } from '../camera-fit.js';
 
 // Double-click timeout (ms)
 const DBLCLICK_TIMEOUT = 300;
@@ -327,22 +328,13 @@ export class InteractionController {
 
     _computeScreenPlaneVectors(intersectPoint) {
         // Compute world-space vectors corresponding to +1 pixel in
-        // screen X and screen Y.  Perspective cameras scale by the vertical
-        // FOV at the intersection depth; orthographic cameras (2D) use the
-        // frustum height divided by OrbitControls' `camera.zoom`, which scales
-        // the effective frustum without changing top/bottom (camera.fov is
-        // undefined there).
-        const dist = intersectPoint.distanceTo(this.camera.position);
+        // screen X and screen Y.  The pixel→world factor must match the
+        // actual camera projection: `screenWorldScale` handles orthographic
+        // (frustum height / zoom) and perspective (FOV at the intersection
+        // depth), including the off-center pinhole camera whose stale `fov`
+        // would otherwise give a zoom-independent scale.
         const viewportHeight = this.rendererDomElement.clientHeight;
-
-        let scale;
-        if (this.camera.isOrthographicCamera) {
-            const frustumHeight = this.camera.top - this.camera.bottom;
-            scale = frustumHeight / (viewportHeight * this.camera.zoom);
-        } else {
-            const vFov = THREE.MathUtils.degToRad(this.camera.fov || 50);
-            scale = 2 * dist * Math.tan(vFov / 2) / viewportHeight;
-        }
+        const scale = screenWorldScale(this.camera, viewportHeight, intersectPoint);
 
         const right = new THREE.Vector3();
         const up = new THREE.Vector3();
@@ -354,6 +346,7 @@ export class InteractionController {
         const screenDx = right.clone().multiplyScalar(scale);
         const screenDy = up.clone().multiplyScalar(-scale);  // screen -Y → world
 
+        const dist = intersectPoint.distanceTo(this.camera.position);
         return { screenDx, screenDy, dist };
     }
 

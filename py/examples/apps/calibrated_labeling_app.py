@@ -40,8 +40,10 @@ from PIL import Image
 from pytanga.geometry import Frustum, Matrix, OpenCVFrame
 from pytanga.viz import (
     ActCircle,
+    ActEllipse,
     ActLine,
     ActPoint,
+    ActPolygon,
     ActRectangle2D,
     ButtonView,
     CalibratedPlaneMapper,
@@ -49,20 +51,25 @@ from pytanga.viz import (
     CameraCalibration,
     CameraConfig3d,
     CameraView,
+    CirclePointStyle,
     CircleStyle,
+    Color,
     DragBinding,
+    DragMode,
     DragPreview,
+    EllipseStyle,
     GroupView,
     ImageData,
     LabelMeStore,
     LabelView,
     LineStyle,
     MouseButton,
-    PointStyle,
+    PointPathStyle,
     Rectangle2DStyle,
     SceneView,
     Size,
     SplitView,
+    SquarePointStyle,
     StackView,
     ToolbarView,
     ViewportConfig,
@@ -144,29 +151,41 @@ def _overview_camera(points: np.ndarray, *, fov: float = 50.0) -> CameraConfig3d
 def _style_for(mode: str, fill: str) -> Any:
     if mode == "rect":
         return Rectangle2DStyle(color=fill, fill=True, fill_opacity=0.15)
+    if mode == "ellipse":
+        return EllipseStyle(color=fill, fill=True, fill_opacity=0.15)
     if mode == "circle":
         return CircleStyle(color=fill, thickness=2, fill=True, fill_opacity=0.15)
+    if mode == "polygon":
+        return PointPathStyle(color=fill, line_thickness=2)
+    if mode == "point":
+        return SquarePointStyle(color=fill, size=6.0, thickness=2, screen_space=True)
     return LineStyle(color=fill, thickness=2)
 
 
 def _loaded_style(obj: Any) -> Any:
     """The style for a loaded labelme shape (points are screen-space markers)."""
     if isinstance(obj, ActPoint):
-        return PointStyle(size=8.0, screen_space=True)
+        return SquarePointStyle(size=6.0, thickness=2, screen_space=True)
     if isinstance(obj, ActRectangle2D):
-        return Rectangle2DStyle()
+        return Rectangle2DStyle(fill=True, fill_opacity=0.15)
+    if isinstance(obj, ActEllipse):
+        return EllipseStyle(fill=True, fill_opacity=0.15)
     if isinstance(obj, ActCircle):
-        return CircleStyle()
-    return LineStyle()
+        return CircleStyle(thickness=2, fill=True, fill_opacity=0.15)
+    if isinstance(obj, ActPolygon):
+        return PointPathStyle(line_thickness=2)
+    return LineStyle(thickness=2)
 
 
 class _CalibratedLabeler:
-    """Drag-to-draw on the calibrated plane, adding shapes to the world scene."""
+    """Draw/select shapes on the calibrated plane, adding them to the world scene."""
 
     _FACTORIES = {
         "rect": ActRectangle2D,
+        "ellipse": ActEllipse,
         "circle": ActCircle,
         "line": ActLine,
+        "polygon": ActPolygon,
     }
 
     def __init__(
@@ -179,27 +198,56 @@ class _CalibratedLabeler:
     ) -> None:
         self._world = world
         self._mode: str | None = None
+        self.selected: Any = None
         self._styles: dict[str, Any] = {}
         self._previews: dict[str, DragPreview] = {}
+
+        # World units per image pixel, from the mapper (single source).
+        self._pixel_scale = CalibratedPlaneMapper(calib, depth).world_units_per_pixel()
+        # 0.5 image px minimum half-extent, in world units.
+        self._min_half = 0.5 * self._pixel_scale
+        self._max_half: float | None = None
+
+        select = self._make_select_handler()
+        vertex_style = CirclePointStyle(
+            color=Color.RED, size=6.0, thickness=2.0, screen_space=True
+        )
+        end_style = CirclePointStyle(
+            color=Color.GREEN, size=6.0, thickness=2.0, screen_space=True
+        )
         for mode, factory in self._FACTORIES.items():
             style = _style_for(mode, fill)
             self._styles[mode] = style
-            self._previews[mode] = DragPreview(world, factory=factory, style=style)
+            kwargs = {"on_click": select}
+            if mode == "polygon":
+                kwargs["handle_style"] = vertex_style
+                kwargs["end_handle_style"] = end_style
+            self._previews[mode] = DragPreview(
+                world,
+                factory=factory,
+                style=style,
+                factory_kwargs=kwargs,
+            )
 
         self._drag_binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
+        self._tool_buttons: dict[str, ButtonView] = {}
         self.surface = CalibratedSurface(
             calib,
             depth,
             on_drag_start=self._on_drag_start,
             on_drag_end=self._on_drag_end,
+            on_click=self._on_click,
             drag_bindings=[self._drag_binding],
         )
 
     def set_mode(self, mode: str | None) -> None:
         self._mode = mode
-        self._drag_binding.enabled = mode is not None
+        self._drag_binding.enabled = mode is not None and mode != "point"
         self.surface.set_enabled(mode is not None)
+        self.surface.set_click_enabled(mode == "point")
         self._world.set_cursor("crosshair" if mode is not None else None)
+        for cid, button in self._tool_buttons.items():
+            button.set_selected(cid == mode)
 
     def toolbar(self) -> ToolbarView:
         def _button(cid: str, icon: str, tip: str) -> ButtonView:
@@ -210,14 +258,15 @@ class _CalibratedLabeler:
                 cid, icon=icon, icon_only=True, tooltip=tip, on_click=on_click
             )
 
-        return ToolbarView(
-            [
-                _button("rect", "material:crop_square", "Add rectangle"),
-                _button("circle", "material:circle", "Add circle"),
-                _button("line", "material:diagonal_line", "Add line"),
-            ],
-            border=False,
-        )
+        self._tool_buttons = {
+            "rect": _button("rect", "material:crop_square", "Add rectangle"),
+            "ellipse": _button("ellipse", "material:app_badging", "Add ellipse"),
+            "circle": _button("circle", "material:circle", "Add circle"),
+            "line": _button("line", "material:diagonal_line", "Add line"),
+            "polygon": _button("polygon", "material:gesture", "Add polygon"),
+            "point": _button("point", "material:place", "Add point (click)"),
+        }
+        return ToolbarView(list(self._tool_buttons.values()), border=False)
 
     async def _on_drag_start(self, event: Any, _surface: Any) -> None:
         preview = self._previews.get(self._mode or "")
@@ -238,8 +287,69 @@ class _CalibratedLabeler:
         if preview is None or preview.anchor is None:
             return
         act = preview.finalize(event.world_position)
-        self._world.add(act, style=self._styles[self._mode or ""])
+        self._add_shape(act, self._styles[self._mode or ""])
+
+    async def _on_click(self, event: Any, _surface: Any) -> None:
+        if self._mode != "point":
+            return
+        act = ActPoint(
+            event.world_position,
+            drag_mode=DragMode.VIEW_PLANE,
+            on_click=self._make_select_handler(),
+        )
+        self._add_shape(act, self._styles["point"])
+
+    # ── Shape management / selection ────────────────────────
+
+    def _make_select_handler(self) -> Any:
+        async def on_click(_event: Any, act: Any) -> None:
+            self._select(act)
+
+        return on_click
+
+    def _select(self, act: Any) -> None:
+        if self.selected is act:
+            return
+        self._deselect()
+        self.selected = act
+        self._set_extra_handles(act, True)
+
+    def _deselect(self) -> None:
+        if self.selected is None:
+            return
+        self._set_extra_handles(self.selected, False)
+        self.selected = None
+
+    @staticmethod
+    def _set_extra_handles(act: Any, visible: bool) -> None:
+        """Toggle the optional translate/rotate handles on a composite shape."""
+        if hasattr(act, "set_translate_handle_visible"):
+            act.set_translate_handle_visible(visible)
+        if hasattr(act, "set_rotate_handle_visible"):
+            act.set_rotate_handle_visible(visible)
+
+    def _apply_size_limits(self, act: Any) -> None:
+        """Clamp resize to the app's pixel-derived limits (half-extent)."""
+        if hasattr(act, "set_pixel_scale"):
+            act.set_pixel_scale(self._pixel_scale)
+        if isinstance(act, ActRectangle2D):
+            act.set_size_limits(
+                None if self._min_half is None else 2.0 * self._min_half,
+                None if self._max_half is None else 2.0 * self._max_half,
+            )
+        elif isinstance(act, (ActCircle, ActEllipse)):
+            act.set_radius_limits(self._min_half, self._max_half)
+
+    def _add_shape(self, act: Any, style: Any) -> None:
+        self._world.add(act, style=style)
+        self._apply_size_limits(act)
+        self._set_extra_handles(act, False)
         self._world.flush()
+
+    def add_loaded_shape(self, act: Any) -> None:
+        """Add a loaded labelme shape: style it and wire click-to-select."""
+        self._add_shape(act, _loaded_style(act))
+        act.set_on_click(self._make_select_handler())
 
 
 def main() -> None:
@@ -265,6 +375,8 @@ def main() -> None:
     )
     world = viz.scene("world")
 
+    labeler = _CalibratedLabeler(world, calib, _DEPTH)
+
     result = store.load(_LABELS_PATH)
     for message in result.errors:
         print(f"labelme: skipped {message}")
@@ -272,14 +384,12 @@ def main() -> None:
     for message in errors:
         print(f"labelme: skipped {message}")
     for obj, _label in pairs:
-        world.add(obj, style=_loaded_style(obj))
+        labeler.add_loaded_shape(obj)
 
     frustum = Frustum.from_camera(cam, near=0.05, far=0.7)
     frustum_ref = world.new(frustum, color="#ffcc44")
 
     overview_cam = _overview_camera(_frustum_corners(frustum))
-
-    labeler = _CalibratedLabeler(world, calib, _DEPTH)
 
     left = SceneView(
         "world",

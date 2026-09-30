@@ -134,6 +134,11 @@ class ImageLabeler:
             color=Color.GREEN, size=6.0, thickness=2.0, screen_space=True
         )
 
+        # Resize clamp, expressed as a half-extent in canvas pixels (the 2D
+        # canvas maps 1 world unit = 1 pixel).  ``None`` max = unbounded.
+        self._min_half_px: float | None = 0.5
+        self._max_half_px: float | None = None
+
         self._drag_binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
         self._canvas = ImageCanvas(
             viz,
@@ -147,6 +152,9 @@ class ImageLabeler:
         self._canvas.on_key("Delete", self._on_delete)
         self._canvas.on_key("Backspace", self._on_delete)
         self._canvas.on_key("Escape", self._on_escape)
+
+        # World units per image pixel (identity for the 2D canvas).
+        self._pixel_scale = self._canvas.surface.mapper.world_units_per_pixel()
 
         self._tool_buttons = self._build_tool_buttons()
         self._previews = self._build_previews()
@@ -357,10 +365,23 @@ class ImageLabeler:
 
     # ── Shapes ──────────────────────────────────────────────
 
+    def _apply_size_limits(self, act: Any) -> None:
+        """Clamp resize to the app's pixel-derived limits (half-extent)."""
+        if hasattr(act, "set_pixel_scale"):
+            act.set_pixel_scale(self._pixel_scale)
+        if isinstance(act, ActRectangle2D):
+            act.set_size_limits(
+                None if self._min_half_px is None else 2.0 * self._min_half_px,
+                None if self._max_half_px is None else 2.0 * self._max_half_px,
+            )
+        elif isinstance(act, (ActCircle, ActEllipse)):
+            act.set_radius_limits(self._min_half_px, self._max_half_px)
+
     def add_shape(self, act: Any, label: str | None = None) -> None:
         """Register *act* as a labeled shape, styled for its type."""
         style = self._style_for_act(act)
         self._canvas.handle.add(act, style=style)
+        self._apply_size_limits(act)
         self._set_extra_handles(act, False)
         self.shapes.append(
             LabelShape(

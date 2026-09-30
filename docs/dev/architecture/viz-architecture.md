@@ -388,7 +388,12 @@ pane through a clean three-layer model — camera data → camera view → pane:
 - **`CoordinateMapper`** — a pixel↔world mapping protocol (`to_world(u, v) →
   Point`, `to_pixel(point) → (u, v)`) in `pytanga.viz.camera`, with a
   `PlanarMapper` (identity: `Point(u, v, 0)`) and a `CalibratedPlaneMapper`
-  (pinhole ray ∩ a plane ⟂ the optical axis at a fixed `depth`).
+  (pinhole ray ∩ a plane ⟂ the optical axis at a fixed `depth`).  It maps
+  *image* pixels only — screen-pixel sizing lives on the frontend in
+  `screenWorldScale` (`camera-fit.js`).  `world_units_per_pixel()` returns the
+  world size of one image pixel at the plane (`1.0` for `PlanarMapper`,
+  `depth / fx` for `CalibratedPlaneMapper`), used for scale-dependent distances
+  (min radius/size, auto-close tolerance, rotate-handle offset).
   `LabelMeStore(mapper=…)` threads it through every pixel↔world call site so the
   labelme loader/saver is coordinate-system-agnostic — the default `PlanarMapper`
   preserves the historical "pixel == world XY" behavior, while

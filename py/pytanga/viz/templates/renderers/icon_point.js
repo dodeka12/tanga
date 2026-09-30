@@ -36,6 +36,7 @@ export function createIconPoint(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 1.0);
     const size = styleParam(ent, 'size', 0.1); // half-extent (world units)
+    const screenSpace = styleParam(ent, 'screen_space', false);
     const icon = styleParam(ent, 'icon', '');
     const pos = ent.position || [0, 0, 0];
 
@@ -51,10 +52,14 @@ export function createIconPoint(ent) {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), material);
     // Lift the flat quad slightly above the xy-plane so it renders and
     // raycasts above coplanar bodies at z = 0 (e.g. a rectangle fill)
-    // instead of being occluded by them.
-    mesh.position.set(pos[0], pos[1], pos[2] + size * 0.1);
+    // instead of being occluded by them.  `size` is in world units for
+    // world-space markers, but in screen PIXELS for screen-space markers
+    // (rescaled later by `_updateScreenSpaceMarkers`), so the lift must use a
+    // tiny world-unit offset in that case rather than `size * 0.1`.
+    const lift = screenSpace ? 1e-3 : size * 0.1;
+    mesh.position.set(pos[0], pos[1], pos[2] + lift);
     tagEntity(mesh, ent);
-    if (styleParam(ent, 'screen_space', false)) {
+    if (screenSpace) {
         mesh.userData.isScreenSpace = true;
     }
     return mesh;

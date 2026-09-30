@@ -22,6 +22,7 @@ Usage::
 from __future__ import annotations
 
 import math
+import sys
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
@@ -41,6 +42,10 @@ from ._interaction import (
     MouseButton,
 )
 from .camera import CoordinateMapper, PlanarMapper
+
+#: Floating-point floor used when a size/radius limit is left at ``None`` —
+#: effectively "no practical minimum", guarding only against degenerate zero.
+_FLOAT_EPS = sys.float_info.epsilon
 
 if TYPE_CHECKING:
     from ._image_view import ImageView
@@ -446,6 +451,16 @@ class ActSceneObject:
     def set_click_enabled(self, enabled: bool) -> None:
         """Enable or disable the general click handler (re-registers triggers)."""
         self._click_enabled = enabled
+        self.refresh_interaction()
+
+    def set_on_click(self, on_click: ActClickHandler | None) -> None:
+        """Set (or clear) the body's click handler and re-register it.
+
+        Lets a host (e.g. a labeling app) make an already-added composite
+        selectable after construction, without the composite itself knowing
+        about selection.
+        """
+        self._on_click = on_click
         self.refresh_interaction()
 
     def refresh_interaction(self) -> None:
@@ -892,6 +907,7 @@ class _ActWithHandles(ActSceneObject):
         self._translate_handle_style = translate_handle_style
         self._rotate_handle_style = rotate_handle_style
         self._act_style = act_style
+        self._pixel_scale = 1.0
 
     def _spawn_handle(self, handle: ActPoint, *, style: Any = None) -> str:
         """Add a child handle to the scene and record its entity id."""
@@ -915,6 +931,14 @@ class _ActWithHandles(ActSceneObject):
         if style is None or style.size is None:
             return 6.0
         return style.size
+
+    def _handle_world_size(self) -> float:
+        """The handle size in world units (screen px × pixel scale)."""
+        return self._handle_size() * self._pixel_scale
+
+    def set_pixel_scale(self, pixel_scale: float) -> None:
+        """Set the world-units-per-image-pixel scale used for handle distances."""
+        self._pixel_scale = float(pixel_scale)
 
     def _resolve_translate_handle_style(self) -> PointStyle:
         """The translate handle style (a screen-space move glyph, twice the control-point size)."""
@@ -960,6 +984,7 @@ class _ActWithHandles(ActSceneObject):
         handle = getattr(self, "_translate_handle", None)
         if handle is not None and handle.entity_id and self._viz_handle is not None:
             self._viz_handle.set_visible(handle.entity_id, visible)
+            handle.set_enabled(visible)
             self.flush()
 
     def set_rotate_handle_visible(self, visible: bool) -> None:
@@ -967,6 +992,7 @@ class _ActWithHandles(ActSceneObject):
         handle = getattr(self, "_rotate_handle", None)
         if handle is not None and handle.entity_id and self._viz_handle is not None:
             self._viz_handle.set_visible(handle.entity_id, visible)
+            handle.set_enabled(visible)
             self.flush()
 
     def _remove_handles(self) -> None:
@@ -1008,7 +1034,9 @@ class ActRectangle2D(_ActWithHandles):
         size: Full ``(width, height)`` (default ``(1, 1)``).
         angle: In-plane rotation in radians (default ``0.0`` = axis-aligned).
         min_size: Minimum width/height during corner resize (default ``None`` =
-            no clamp).
+            floating-point precision).  Pass an explicit world-unit value to clamp.
+        max_size: Maximum width/height during corner resize (default ``None`` =
+            unbounded).
         show_translate_handle: Add a centre translation handle (default ``True``).
         show_rotate_handle: Add a rim rotation handle (default ``True``).
         handle_style: Marker style for the corner handles (default a circle marker).
@@ -1038,6 +1066,7 @@ class ActRectangle2D(_ActWithHandles):
         *,
         angle: float = 0.0,
         min_size: float | None = None,
+        max_size: float | None = None,
         show_translate_handle: bool = True,
         show_rotate_handle: bool = True,
         handle_style: PointStyle | None = None,
@@ -1065,6 +1094,7 @@ class ActRectangle2D(_ActWithHandles):
         self._rect = Rectangle2D(center=center, size=size, angle=angle)
         self._angle = float(angle)
         self._min_size = min_size
+        self._max_size = max_size
         self._show_translate_handle = show_translate_handle
         self._show_rotate_handle = show_rotate_handle
         self._on_corner_drag = on_corner_drag
@@ -1127,22 +1157,27 @@ class ActRectangle2D(_ActWithHandles):
 
     def _corners(self) -> list[Point]:
         cx, cy = self._rect.center.x, self._rect.center.y
+        cz = self._rect.center.z
         hw, hh = self._rect.size[0] / 2.0, self._rect.size[1] / 2.0
         ux, uy = math.cos(self._angle), math.sin(self._angle)
         vx, vy = -math.sin(self._angle), math.cos(self._angle)
         return [
-            Point(cx - hw * ux - hh * vx, cy - hw * uy - hh * vy, 0.0),
-            Point(cx + hw * ux - hh * vx, cy + hw * uy - hh * vy, 0.0),
-            Point(cx + hw * ux + hh * vx, cy + hw * uy + hh * vy, 0.0),
-            Point(cx - hw * ux + hh * vx, cy - hw * uy + hh * vy, 0.0),
+            Point(cx - hw * ux - hh * vx, cy - hw * uy - hh * vy, cz),
+            Point(cx + hw * ux - hh * vx, cy + hw * uy - hh * vy, cz),
+            Point(cx + hw * ux + hh * vx, cy + hw * uy + hh * vy, cz),
+            Point(cx - hw * ux + hh * vx, cy - hw * uy + hh * vy, cz),
         ]
 
     def _rotate_handle_position(self) -> Point:
         hw, hh = self._rect.size[0] / 2.0, self._rect.size[1] / 2.0
-        offset = 0.25 * max(hw, hh, 0.5)
+        offset = max(0.25 * max(hw, hh), 2.0 * self._handle_world_size())
         d = self._dir_u()
         r = hw + offset
-        return Point(self._rect.center.x + r * d.x, self._rect.center.y + r * d.y, 0.0)
+        return Point(
+            self._rect.center.x + r * d.x,
+            self._rect.center.y + r * d.y,
+            self._rect.center.z,
+        )
 
     def _spawn_handles(self) -> None:
         if self._viz_handle is None:
@@ -1229,27 +1264,41 @@ class ActRectangle2D(_ActWithHandles):
     def _resize_corner(self, index: int, pos: Point) -> None:
         corners = self._corners()
         opposite = corners[(index + 2) % 4]
-        center = Point((pos.x + opposite.x) / 2.0, (pos.y + opposite.y) / 2.0, 0.0)
+        center = Point(
+            (pos.x + opposite.x) / 2.0,
+            (pos.y + opposite.y) / 2.0,
+            self._rect.center.z,
+        )
         dx = pos.x - center.x
         dy = pos.y - center.y
         ux, uy = math.cos(self._angle), math.sin(self._angle)
         vx, vy = -math.sin(self._angle), math.cos(self._angle)
         hw = abs(dx * ux + dy * uy)
         hh = abs(dx * vx + dy * vy)
-        if self._min_size is not None:
-            half = self._min_size / 2.0
-            hw = max(hw, half)
-            hh = max(hh, half)
+        half_floor = (self._min_size if self._min_size is not None else _FLOAT_EPS) / 2.0
+        hw = max(hw, half_floor)
+        hh = max(hh, half_floor)
+        if self._max_size is not None:
+            half_cap = self._max_size / 2.0
+            hw = min(hw, half_cap)
+            hh = min(hh, half_cap)
         self._rect = Rectangle2D(
             center=center, size=(2.0 * hw, 2.0 * hh), angle=self._angle
         )
         self._commit()
 
+    def set_size_limits(
+        self, min_size: float | None, max_size: float | None
+    ) -> None:
+        """Set the resize clamp (world units; ``None`` = floating-point min / unbounded max)."""
+        self._min_size = None if min_size is None else float(min_size)
+        self._max_size = None if max_size is None else float(max_size)
+
     def _translate_by(self, delta: Direction) -> None:
         center = Point(
             self._rect.center.x + delta.x,
             self._rect.center.y + delta.y,
-            0.0,
+            self._rect.center.z,
         )
         self._rect = Rectangle2D(center=center, size=self._rect.size, angle=self._angle)
         self._commit()
@@ -1304,7 +1353,12 @@ class ActRectangle2D(_ActWithHandles):
     ) -> "ActRectangle2D":
         """Build a rectangle from two opposite corners."""
         rect = Rectangle2D.between(a, b)
-        return cls(center=rect.center, size=rect.size, **kwargs)
+        size = list(rect.size)
+        min_s = kwargs.get("min_size")
+        if min_s is not None:
+            size[0] = max(size[0], float(min_s))
+            size[1] = max(size[1], float(min_s))
+        return cls(center=rect.center, size=size, **kwargs)
 
 
 # ── ActEllipse ───────────────────────────────────────────────
@@ -1353,6 +1407,7 @@ class ActEllipse(_ActWithHandles):
         translate_handle_style: PointStyle | None = None,
         rotate_handle_style: PointStyle | None = None,
         min_radius: float | None = None,
+        max_radius: float | None = None,
         act_style: ActPointStyle | None = None,
         style: Any = None,
         on_radius_drag: Callable[[int, DragEvent, "ActEllipse"], Awaitable[bool]]
@@ -1376,6 +1431,7 @@ class ActEllipse(_ActWithHandles):
         self._radius_v = float(radius_v)
         self._angle = float(angle)
         self._min_radius = min_radius
+        self._max_radius = max_radius
         self._show_translate_handle = show_translate_handle
         self._show_rotate_handle = show_rotate_handle
         self._on_radius_drag = on_radius_drag
@@ -1451,13 +1507,16 @@ class ActEllipse(_ActWithHandles):
             d, r = self._dir_u(), self._radius_u
         else:
             d, r = self._dir_v(), self._radius_v
-        return Point(self._center.x + r * d.x, self._center.y + r * d.y, 0.0)
+        return Point(self._center.x + r * d.x, self._center.y + r * d.y, self._center.z)
 
     def _rotate_handle_position(self) -> Point:
-        offset = 0.25 * max(self._radius_u, self._radius_v, 0.5)
+        offset = max(
+            0.25 * max(self._radius_u, self._radius_v),
+            2.0 * self._handle_world_size(),
+        )
         d = self._dir_u()
         r = self._radius_u + offset
-        return Point(self._center.x + r * d.x, self._center.y + r * d.y, 0.0)
+        return Point(self._center.x + r * d.x, self._center.y + r * d.y, self._center.z)
 
     def _spawn_handles(self) -> None:
         if self._viz_handle is None:
@@ -1543,18 +1602,28 @@ class ActEllipse(_ActWithHandles):
 
     def _resize_radius(self, index: int, pos: Point) -> None:
         dx, dy = pos.x - self._center.x, pos.y - self._center.y
-        floor = self._min_radius if self._min_radius is not None else 0.05
+        d = self._dir_u() if index == 0 else self._dir_v()
+        value = dx * d.x + dy * d.y
+        floor = self._min_radius if self._min_radius is not None else _FLOAT_EPS
+        value = max(floor, value)
+        if self._max_radius is not None:
+            value = min(self._max_radius, value)
         if index == 0:
-            d = self._dir_u()
-            self._radius_u = max(floor, dx * d.x + dy * d.y)
+            self._radius_u = value
         else:
-            d = self._dir_v()
-            self._radius_v = max(floor, dx * d.x + dy * d.y)
+            self._radius_v = value
         self._commit()
+
+    def set_radius_limits(
+        self, min_radius: float | None, max_radius: float | None
+    ) -> None:
+        """Set the resize clamp (world units; ``None`` = floating-point min / unbounded max)."""
+        self._min_radius = None if min_radius is None else float(min_radius)
+        self._max_radius = None if max_radius is None else float(max_radius)
 
     def _translate_by(self, delta: Direction) -> None:
         self._center = Point(
-            self._center.x + delta.x, self._center.y + delta.y, 0.0
+            self._center.x + delta.x, self._center.y + delta.y, self._center.z
         )
         self._commit()
 
@@ -1598,9 +1667,13 @@ class ActEllipse(_ActWithHandles):
     @classmethod
     def create_from_points(cls, a: Point, b: Point, **kwargs: Any) -> "ActEllipse":
         """Build an axis-aligned ellipse from two opposite corners."""
-        center = Point((a.x + b.x) / 2.0, (a.y + b.y) / 2.0, 0.0)
+        center = Point((a.x + b.x) / 2.0, (a.y + b.y) / 2.0, (a.z + b.z) / 2.0)
         radius_u = abs(b.x - a.x) / 2.0
         radius_v = abs(b.y - a.y) / 2.0
+        min_r = kwargs.get("min_radius")
+        if min_r is not None:
+            radius_u = max(radius_u, float(min_r))
+            radius_v = max(radius_v, float(min_r))
         return cls(center=center, radius_u=radius_u, radius_v=radius_v, **kwargs)
 
 
@@ -1616,7 +1689,9 @@ class ActCircle(_ActWithHandles):
     Args:
         center: Center of the circle (default ``(0, 0, 0)``).
         radius: Circle radius (default ``1.0``).
-        min_radius: Minimum radius during resize (default ``None`` = ``0.05``).
+        min_radius: Minimum radius during resize (default ``None`` =
+            floating-point precision).  Pass an explicit world-unit value to clamp.
+        max_radius: Maximum radius during resize (default ``None`` = unbounded).
         show_translate_handle: Add a centre translation handle (default ``True``).
         handle_style: Marker style for the radius handle (default a circle marker).
         translate_handle_style: Marker style for the translation handle (default
@@ -1640,6 +1715,7 @@ class ActCircle(_ActWithHandles):
         radius: float = 1.0,
         *,
         min_radius: float | None = None,
+        max_radius: float | None = None,
         show_translate_handle: bool = True,
         handle_style: PointStyle | None = None,
         translate_handle_style: PointStyle | None = None,
@@ -1662,6 +1738,7 @@ class ActCircle(_ActWithHandles):
         self._center = Point(0.0, 0.0, 0.0) if center is None else center
         self._radius = float(radius)
         self._min_radius = min_radius
+        self._max_radius = max_radius
         self._show_translate_handle = show_translate_handle
         self._on_radius_drag = on_radius_drag
         self._on_translate = on_translate
@@ -1718,7 +1795,7 @@ class ActCircle(_ActWithHandles):
         return Circle(center=self._center, radius=self._radius)
 
     def _radius_handle_position(self) -> Point:
-        return Point(self._center.x + self._radius, self._center.y, 0.0)
+        return Point(self._center.x + self._radius, self._center.y, self._center.z)
 
     def _spawn_handles(self) -> None:
         if self._viz_handle is None:
@@ -1781,13 +1858,24 @@ class ActCircle(_ActWithHandles):
     def _resize_radius(self, pos: Point) -> None:
         dx = pos.x - self._center.x
         dy = pos.y - self._center.y
-        floor = self._min_radius if self._min_radius is not None else 0.05
-        self._radius = max(floor, math.hypot(dx, dy))
+        radius = math.hypot(dx, dy)
+        floor = self._min_radius if self._min_radius is not None else _FLOAT_EPS
+        radius = max(floor, radius)
+        if self._max_radius is not None:
+            radius = min(self._max_radius, radius)
+        self._radius = radius
         self._commit()
+
+    def set_radius_limits(
+        self, min_radius: float | None, max_radius: float | None
+    ) -> None:
+        """Set the resize clamp (world units; ``None`` = floating-point min / unbounded max)."""
+        self._min_radius = None if min_radius is None else float(min_radius)
+        self._max_radius = None if max_radius is None else float(max_radius)
 
     def _translate_by(self, delta: Direction) -> None:
         self._center = Point(
-            self._center.x + delta.x, self._center.y + delta.y, 0.0
+            self._center.x + delta.x, self._center.y + delta.y, self._center.z
         )
         self._commit()
 
@@ -1824,6 +1912,9 @@ class ActCircle(_ActWithHandles):
     def create_from_points(cls, a: Point, b: Point, **kwargs: Any) -> "ActCircle":
         """Build a circle from a center point and a rim point."""
         radius = math.hypot(b.x - a.x, b.y - a.y)
+        min_r = kwargs.get("min_radius")
+        if min_r is not None:
+            radius = max(radius, float(min_r))
         return cls(center=a, radius=radius, **kwargs)
 
 
@@ -1965,7 +2056,7 @@ class ActPolygon(_ActWithHandles):
         return Point(
             sum(p.x for p in self._points) / n,
             sum(p.y for p in self._points) / n,
-            0.0,
+            sum(p.z for p in self._points) / n,
         )
 
     def _is_endpoint(self, index: int) -> bool:
@@ -2006,14 +2097,11 @@ class ActPolygon(_ActWithHandles):
         """The auto-close distance (world units).
 
         An explicit ``close_tolerance`` wins; otherwise it is derived from the
-        handle ``size`` (the full handle width = ``2 * size``).
+        handle size (the full handle width = ``2 * size``).
         """
         if self._close_tolerance is not None:
             return float(self._close_tolerance)
-        size = getattr(self._handle_style, "size", None)
-        if size is None or float(size) <= 0.0:
-            size = 2.0  # fallback half-extent
-        return 2.0 * float(size)
+        return 2.0 * self._handle_world_size()
 
     def _spawn_handles(self) -> None:
         if self._viz_handle is None:
@@ -2122,7 +2210,7 @@ class ActPolygon(_ActWithHandles):
     # ── Default geometry mutations ─────────────────────────
 
     def _move_vertex(self, index: int, pos: Point) -> None:
-        self._points[index] = Point(pos.x, pos.y, 0.0)
+        self._points[index] = Point(pos.x, pos.y, pos.z)
         if self._maybe_auto_close(index):
             return  # the endpoints fused: the polygon is now closed
         self._commit()
@@ -2134,7 +2222,7 @@ class ActPolygon(_ActWithHandles):
         end, so an in-flight Ctrl+drag isn't cancelled by removing the handle
         being dragged.
         """
-        p = Point(pos.x, pos.y, 0.0)
+        p = Point(pos.x, pos.y, pos.z)
         # The start vertex is the one exception to the insert-after rule: a
         # Ctrl+drag on it prepends so the new point becomes the new start.
         new_index = 0 if index == 0 else index + 1
@@ -2144,7 +2232,7 @@ class ActPolygon(_ActWithHandles):
 
     def _set_vertex_body(self, index: int, pos: Point) -> None:
         """Move a vertex and update the body without refreshing handles."""
-        self._points[index] = Point(pos.x, pos.y, 0.0)
+        self._points[index] = Point(pos.x, pos.y, pos.z)
         self._update_body()
 
     def _finish_vertex_drag(self) -> None:
@@ -2172,7 +2260,7 @@ class ActPolygon(_ActWithHandles):
 
     def _translate_by(self, delta: Direction) -> None:
         self._points = [
-            Point(p.x + delta.x, p.y + delta.y, 0.0) for p in self._points
+            Point(p.x + delta.x, p.y + delta.y, p.z) for p in self._points
         ]
         self._commit()
 
@@ -2217,7 +2305,7 @@ class ActPolygon(_ActWithHandles):
         """Build a 2-vertex open polygon from two anchor points."""
         kwargs.setdefault("closed", False)
         kwargs.setdefault("auto_close", True)
-        return cls([Point(a.x, a.y, 0.0), Point(b.x, b.y, 0.0)], **kwargs)
+        return cls([Point(a.x, a.y, a.z), Point(b.x, b.y, b.z)], **kwargs)
 
 
 # ── ActLine ──────────────────────────────────────────────────
@@ -2339,7 +2427,7 @@ class ActLine(_ActWithHandles):
         return Point(
             (self._start.x + self._end.x) / 2.0,
             (self._start.y + self._end.y) / 2.0,
-            0.0,
+            (self._start.z + self._end.z) / 2.0,
         )
 
     def _spawn_handles(self) -> None:
@@ -2401,7 +2489,7 @@ class ActLine(_ActWithHandles):
     # ── Default geometry mutations ─────────────────────────
 
     def _move_endpoint(self, index: int, pos: Point) -> None:
-        p = Point(pos.x, pos.y, 0.0)
+        p = Point(pos.x, pos.y, pos.z)
         if index == 0:
             self._start = p
         else:
@@ -2409,8 +2497,8 @@ class ActLine(_ActWithHandles):
         self._commit()
 
     def _translate_by(self, delta: Direction) -> None:
-        self._start = Point(self._start.x + delta.x, self._start.y + delta.y, 0.0)
-        self._end = Point(self._end.x + delta.x, self._end.y + delta.y, 0.0)
+        self._start = Point(self._start.x + delta.x, self._start.y + delta.y, self._start.z)
+        self._end = Point(self._end.x + delta.x, self._end.y + delta.y, self._end.z)
         self._commit()
 
     def _commit(self) -> None:

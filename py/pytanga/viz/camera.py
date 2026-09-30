@@ -635,6 +635,9 @@ class CoordinateMapper(Protocol):
     def plane(self) -> tuple[Point, Direction]:
         """Return ``(point_on_plane, unit_normal)`` in world coordinates."""
 
+    def world_units_per_pixel(self) -> float:
+        """Return the world size of one image pixel at the annotation plane."""
+
 
 class PlanarMapper:
     """Identity mapper: pixel ``(u, v)`` maps to ``Point(u, v, 0.0)``.
@@ -651,6 +654,9 @@ class PlanarMapper:
 
     def plane(self) -> tuple[Point, Direction]:
         return Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0)
+
+    def world_units_per_pixel(self) -> float:
+        return 1.0
 
 
 class CalibratedPlaneMapper:
@@ -704,3 +710,7 @@ class CalibratedPlaneMapper:
             point.z - center[2],
         ).normalized()
         return point, normal
+
+    def world_units_per_pixel(self) -> float:
+        """The world size of one image pixel at the plane (≈ ``depth / fx``)."""
+        return self._depth / self._fx
