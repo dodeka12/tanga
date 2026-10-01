@@ -2780,7 +2780,9 @@ class Visualizer(_JupyterDisplayMixin):
 
     async def _on_dialog_accept(self, msg_type: str, payload: dict[str, Any]) -> None:
         target = payload.get("id") or payload.get("control_id")
-        await self._layout.overlay._on_dialog_accept(target, self._event_for(payload))
+        await self._layout.overlay._on_dialog_accept(
+            target, self._event_for(payload), value=payload.get("value")
+        )
 
     async def _on_control_event(self, msg_type: str, payload: dict[str, Any]) -> None:
         await self._layout.dispatch_control_event(msg_type, payload)

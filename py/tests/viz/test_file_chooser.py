@@ -385,6 +385,26 @@ async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch): 
     assert removed == [(did, None)]
 
 
+@pytest.mark.anyio
+async def test_dispatch_dialog_accept_explicit_value(monkeypatch):  # noqa: ANN001, ANN201
+    from pytanga.viz import FileChooserDialog
+
+    viz = _viz()
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_dialog_remove", lambda i, s: None
+    )
+    accepted: list = []
+
+    async def _on_accept(path, event):  # noqa: ANN001, ANN202
+        accepted.append(path)
+
+    did = viz.show_dialog(FileChooserDialog("fc", on_accept=_on_accept))
+    await viz._dispatch_control_event("accept", {"id": did, "value": "/typed.json"})
+
+    assert accepted == ["/typed.json"]
+
+
 def test_set_layout_registers_file_chooser_handler():  # noqa: ANN201
     from pytanga.viz.views import FileChooserView
 

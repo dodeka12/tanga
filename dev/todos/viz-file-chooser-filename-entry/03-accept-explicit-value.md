@@ -13,13 +13,13 @@ reaches `on_accept` without relying solely on `ctrl.get_value()`.
 
 ## Steps
 
-- [ ] **3.1 — `visualizer._on_dialog_accept`**
+- [x] **3.1 — `visualizer._on_dialog_accept`**
   - Pass `payload.get("value")` through to
     `self._layout.overlay._on_dialog_accept(target, event, value=...)`.
-- [ ] **3.2 — `_on_dialog_accept(target, event, value=None)`**
+- [x] **3.2 — `_on_dialog_accept(target, event, value=None)`**
   - Accept an optional `value`; when it is not `None`, use it instead of
     resolving `ctrl.get_value()` from `dialog.control_id` (keep the fallback).
-- [ ] **3.3 — Test**
+- [x] **3.3 — Test**
   - Add a test that dispatching `accept` with `{"id": did, "value": "/typed.json"}`
     reaches `on_accept` with `"/typed.json"`, and that omitting `value` still
     falls back to the control value (existing behavior).

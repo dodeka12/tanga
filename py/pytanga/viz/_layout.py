@@ -636,16 +636,22 @@ class OverlayContainer:
             lambda: self._push_dialog_clear_async(scene_name)
         )
 
-    async def _on_dialog_accept(self, target: str | None, event: Any) -> None:
-        """Handle an ``accept`` event: fire ``on_accept`` and remove the dialog."""
+    async def _on_dialog_accept(
+        self, target: str | None, event: Any, value: Any = None
+    ) -> None:
+        """Handle an ``accept`` event: fire ``on_accept`` and remove the dialog.
+
+        *value* is the explicit accepted value sent by the frontend (e.g. a typed
+        file path); when ``None`` it falls back to the dialog content control's
+        current value.
+        """
         if target is None:
             return
         found = self._find_dialog(target)
         if found is None:
             return
         dialog, scene_name = found
-        value = None
-        if dialog.control_id:
+        if value is None and dialog.control_id:
             ctrl = self._layout.resolve_control(dialog.control_id)
             if ctrl is not None:
                 value = ctrl.get_value()
