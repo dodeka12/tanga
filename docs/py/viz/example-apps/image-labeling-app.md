@@ -24,6 +24,9 @@ Pass a `.json` path to load an existing labelme file, or a plain image
   deselects and cancels an in-progress draw.
 - **labelme I/O** — a File menu (Open…/Save/Save As…/Exit) and a command-line
   argument load/save labelme JSON (shapes plus an embedded or referenced image).
+  Open… and the command-line path require an existing file; Save As… opens a
+  save-mode dialog where you can type a new filename (`.json` is appended when
+  none is given).
 
 ## Architecture
 
@@ -53,7 +56,7 @@ The reusable logic lives in `ImageLabeler`, a self-contained pane that the thin
 | `LabelMeStore` / `LabelMeDocument` | labelme JSON load/save |
 | `CirclePointStyle` (screen-space) / `SquarePointStyle` | handle and point markers |
 | `Rectangle2DStyle` / `EllipseStyle` / `CircleStyle` / `LineStyle` / `PointPathStyle` | per-shape styles |
-| `FileChooserDialog` | Open / Save As dialogs |
+| `FileChooserDialog` | Open / Save As dialogs (editable filename + `existing_only` save mode) |
 | `StackView(fill=True)` | make the labeler pane fill the available space |
 
 The shape handles use `CirclePointStyle(size=…, screen_space=True)`, so they stay

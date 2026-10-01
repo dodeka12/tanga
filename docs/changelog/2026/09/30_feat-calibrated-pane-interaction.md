@@ -13,6 +13,11 @@
   unset, the frontend derives them from the camera's initial distance to its
   target, so small (e.g. metre-scale) scenes can zoom in instead of being
   clamped by the old fixed `minDistance = 1`.
+- **File-chooser filename entry + save mode** — the `FileChooserDialog` footer
+  is now an editable filename field: typing it filters the selected folder's
+  listing with a case-insensitive glob, and a new `existing_only` flag (default
+  true) turns off the must-exist requirement for Save As… (which appends `.json`
+  to a filename with no extension).
 
 ## Bug Fixes
 - **Screen-space point markers** — circle/icon point markers no longer apply a

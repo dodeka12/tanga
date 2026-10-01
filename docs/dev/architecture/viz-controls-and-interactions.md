@@ -231,12 +231,18 @@ text or `null`), `file_browser_navigate`, `file_browser_select`.
 **File chooser** (`file_chooser_view` / `FileChooserDialog`) — the backend
 `list_directory` filters non-directory entries by the control's `file_filter`
 (comma/space-separated, case-insensitive extensions and/or full-filename glob
-patterns such as `hello_*.png`) and, when `folders_only=True`, hides files;
-both are resolved from the control in the `file_browser_navigate` handler.  In
-the frontend a single click on a file highlights it and selects it (fills the
-path line), double-click accepts it, and the OK button stays disabled until a
-selection exists.  Directories navigate on a single click, and folder mode adds
-a "Select this folder" action that selects the current directory.
+patterns such as `hello_*.png`) plus an optional `pattern` (a single
+case-insensitive glob) forwarded from the `file_browser_navigate` payload, and,
+when `folders_only=True`, hides files; both are resolved from the control in the
+`file_browser_navigate` handler.  The dialog footer is an editable filename
+field plus a directory label: typing drives the `pattern` glob filter over the
+selected folder.  A single click on a file highlights it and selects it (fills
+the filename field); double-click accepts it.  The OK button stays disabled
+until the filename is non-empty and, when `existing_only=True` (the default),
+matches a listed file; `existing_only=False` is save mode and accepts names that
+do not exist yet.  OK fires `accept` carrying the full path as its `value`.
+Directories navigate on a single click, and folder mode adds a "Select this
+folder" action that selects the current directory.
 
 Interaction events (→ `InteractionHost._dispatch_interaction_event`, coalesced):
 `interaction:click`, `interaction:dblclick`, `interaction:drag_start`,

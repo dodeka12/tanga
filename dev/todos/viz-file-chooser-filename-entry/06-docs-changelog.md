@@ -13,18 +13,18 @@ Document the new file-chooser behavior and record the change in the changelog.
 
 ## Steps
 
-- [ ] **6.1 — Architecture doc**
+- [x] **6.1 — Architecture doc**
   - Update the **File chooser** paragraph to state: the dialog footer is an
     editable filename field; the typed filename is used as a case-insensitive
     glob (`pattern`) filter over the selected folder; `existing_only` (default
     true) controls whether a non-existent filename may be accepted; OK sends the
     full path as the `accept` `value`.
-- [ ] **6.2 — Example docs**
+- [x] **6.2 — Example docs**
   - In `image-labeling-app.md`, note Save As… allows a new filename (`.json`
     appended when missing) and Open… requires an existing file.
-- [ ] **6.3 — Regenerate example docs**
+- [x] **6.3 — Regenerate example docs**
   - Run `uv run python tools/generate-example-docs.py` and `--check`.
-- [ ] **6.4 — Changelog**
+- [x] **6.4 — Changelog**
   - Append a `## New Features` bullet (and any `## Bug Fixes`) to the branch
     changelog following `dev/workflows/changelog.md`; do not renumber or invent
     a version (title stays `# Changes since version 2.12.1`).
@@ -42,6 +42,10 @@ uv run python tools/generate-example-docs.py --check && uv run mkdocs build --st
 - `docs/py/viz/example-apps/image-labeling-app.md` is hand-written (referenced
   from `mkdocs.yml`); `docs/py/examples/apps/image_labeling_app.md` is generated
   from the `.py`.
+- `mkdocs build --strict` passes.  `generate-example-docs.py --check` still
+  reports **pre-existing** drift for `apps/calibrated_labeling_app.md` (the
+  branch edited that example's `.py` without regenerating its doc); it is
+  unrelated to this phase and left out of the commit.
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this

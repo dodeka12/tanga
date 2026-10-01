@@ -1,6 +1,6 @@
 # File Chooser Filename Entry + Save Mode — Overview
 
-**Created:** 2026-10-01 | **Status:** In progress | **Branch:** `feat/calibrated-pane-interaction`
+**Created:** 2026-10-01 | **Status:** Done | **Branch:** `feat/calibrated-pane-interaction`
 
 ## Goal
 
