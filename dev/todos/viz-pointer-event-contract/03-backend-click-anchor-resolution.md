@@ -19,21 +19,19 @@ Change `_resolve_click_anchor` to use `event.ray_origin`/`event.ray_direction`
 
 ## Steps
 
-- [ ] **3.1 — Use the event ray in `_resolve_click_anchor`**
-  - Replace the `event.camera.pixel_ray(...)` call with
-    `ray_origin, ray_direction = event.ray_origin, event.ray_direction`.
-  - Keep the `NotImplementedError` guard and the `anchor is None` guard, and
-    keep overwriting `event.world_position = anchor` (the ideal-anchor behavior
-    must stay).
-- [ ] **3.2 — Update `test_click_handler_receives_ideal_anchor`**
-  - Add `ray_origin`/`ray_direction` to the click payload (mirroring the new
-    frontend), since the handler now reads the event ray.  `ActPoint.click_anchor`
-    ignores the ray, so the expected `Point(0, 2, 0)` is unchanged.
-- [ ] **3.3 — Add a surface regression test**
-  - In `test_interaction_surface.py`, dispatch a `click` on a `PlanarMapper`
-    surface with a ray `origin=(2,3,5), direction=(0,0,-1)` plus a deliberately
-    wrong `screen_position`, and assert the handler observes `Point(2,3,0)` (the
-    ray↔plane hit from the **event** ray, not `pixel_ray`).
+- [x] **3.1 — Use the event ray in `_resolve_click_anchor`**
+  - Replaced `event.camera.pixel_ray(screen_position)` with
+    `event.ray_origin` / `event.ray_direction`; dropped the `camera is None`
+    guard; kept the `NotImplementedError` + `anchor is None` guards and the
+    `event.world_position = anchor` overwrite.
+- [x] **3.2 — Update `test_click_handler_receives_ideal_anchor`**
+  - Added `ray_origin`/`ray_direction` to the click payload; the expected
+    `Point(0, 2, 0)` is unchanged (`ActPoint.click_anchor` ignores the ray).
+- [x] **3.3 — Add a surface regression test**
+  - `TestClickAnchorResolution.test_surface_click_resolves_from_event_ray`
+    dispatches a click whose event ray hits z=0 at `(2,3,0)` with a decoy
+    `screen_position`; asserts the handler observes `Point(2,3,0)` (the event
+    ray, not `pixel_ray`).
 
 ## Validation
 

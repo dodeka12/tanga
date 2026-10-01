@@ -166,6 +166,67 @@ class TestVisualizerBinding:
         assert events == {"drag_move"}
 
 
+class TestClickAnchorResolution:
+    _IDENTITY = [
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    ]
+
+    def test_surface_click_resolves_from_event_ray(self) -> None:
+        class _RecordingServer:
+            def __init__(self) -> None:
+                self.sent = []
+
+            async def push_raw_to_browser(self, browser_id, data):  # noqa: ANN001, ANN202
+                self.sent.append((browser_id, data))
+
+        async def _run():  # noqa: ANN202
+            viz = Visualizer(add_default_axes=False, add_default_grid=False)
+            viz._server = _RecordingServer()
+
+            received: list[Point] = []
+
+            async def on_click(event, surface):  # noqa: ANN001, ANN202
+                received.append(event.world_position)
+
+            surface = InteractionSurface(PlanarMapper(), on_click=on_click)
+            surface._bind(viz)  # noqa: SLF001
+
+            # The event ray hits the z=0 plane at (2, 3, 0).  The pre-fix
+            # `pixel_ray(screen_position)` reconstruction would instead resolve
+            # to (0, 0, 0) from the identity camera — the event ray must win.
+            await viz._dispatch_interaction_event(
+                "interaction:click",
+                {
+                    "type": "interaction:click",
+                    "event_type": "click",
+                    "object_id": surface.id,
+                    "browser_id": "b1",
+                    "screen_position": [400.0, 300.0],
+                    "world_position": [0.0, 0.0, 0.15],
+                    "world_normal": [0.0, 0.0, 1.0],
+                    "ray_origin": [2.0, 3.0, 5.0],
+                    "ray_direction": [0.0, 0.0, -1.0],
+                    "camera": {
+                        "view": TestClickAnchorResolution._IDENTITY,
+                        "view_inv": TestClickAnchorResolution._IDENTITY,
+                        "proj": TestClickAnchorResolution._IDENTITY,
+                        "proj_inv": TestClickAnchorResolution._IDENTITY,
+                        "viewport_width": 800,
+                        "viewport_height": 600,
+                        "space_dim": 3,
+                    },
+                },
+            )
+
+            await asyncio.sleep(0)
+            assert received == [Point(2.0, 3.0, 0.0)]
+
+        asyncio.run(_run())
+
+
 async def _noop_drag(event: DragEvent, surface: InteractionSurface) -> bool:
     return True
 
