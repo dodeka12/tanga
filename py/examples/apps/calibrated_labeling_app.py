@@ -242,6 +242,8 @@ class _CalibratedLabeler:
                 style=style,
                 factory_kwargs=kwargs,
             )
+        # "point" is click-to-place (no DragPreview), but still needs a style.
+        self._styles["point"] = _style_for("point", fill)
 
         self._drag_binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
         self._tool_buttons: dict[str, ButtonView] = {}
