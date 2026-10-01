@@ -669,11 +669,18 @@ class ImageLabelingApp(VisualizerApp):
 
     async def _show_save_dialog(self) -> None:
         async def _on_file(path: str, _event: ControlEvent) -> None:
+            if os.path.splitext(path)[1] == "":
+                path += ".json"
             self._file_path = path
             self._save()
 
         await self.viz.show_dialog_async(
-            FileChooserDialog("save_file", on_accept=_on_file),
+            FileChooserDialog(
+                "save_file",
+                on_accept=_on_file,
+                existing_only=False,
+                file_filter=".json",
+            ),
             title="Save labelme JSON",
         )
 
