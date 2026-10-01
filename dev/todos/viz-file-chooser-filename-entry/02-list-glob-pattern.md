@@ -13,14 +13,14 @@ from the `file_browser_navigate` handler.
 
 ## Steps
 
-- [ ] **2.1 — `list_directory(pattern=…)`**
+- [x] **2.1 — `list_directory(pattern=…)`**
   - Add `pattern: str = ""`; when non-empty, additionally skip non-directory
     entries where `fnmatch.fnmatchcase(name.lower(), pattern.lower())` is false
     (after the existing `file_filter` check).  Update the docstring.
-- [ ] **2.2 — Forward `pattern` from the navigate handler**
+- [x] **2.2 — Forward `pattern` from the navigate handler**
   - In `_handle_file_browser_navigate`, read `payload.get("pattern", "")` and
     pass it to `list_directory`.
-- [ ] **2.3 — Tests**
+- [x] **2.3 — Tests**
   - Add `test_list_directory_pattern` (a literal filename glob and a `*` glob,
     case-insensitive), plus a dispatch test that a navigate payload carrying
     `pattern` narrows the pushed listing.

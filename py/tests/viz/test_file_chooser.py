@@ -84,6 +84,26 @@ def test_list_directory_folders_only(tmp_path):  # noqa: ANN001, ANN201
     assert [e["name"] for e in result["entries"]] == ["sub"]
 
 
+def test_list_directory_pattern(tmp_path):  # noqa: ANN001, ANN201
+    (tmp_path / "hello_world.png").write_text("x")
+    (tmp_path / "hello_moon.png").write_text("x")
+    (tmp_path / "goodbye.png").write_text("x")
+    (tmp_path / "sub").mkdir()
+
+    globbed = list_directory(str(tmp_path), pattern="hello_*.png")
+    assert [e["name"] for e in globbed["entries"]] == [
+        "sub",
+        "hello_moon.png",
+        "hello_world.png",
+    ]
+
+    literal = list_directory(str(tmp_path), pattern="goodbye.png")
+    assert [e["name"] for e in literal["entries"]] == ["sub", "goodbye.png"]
+
+    insensitive = list_directory(str(tmp_path), pattern="GOODBYE.PNG")
+    assert [e["name"] for e in insensitive["entries"]] == ["sub", "goodbye.png"]
+
+
 def test_file_chooser_serialization():  # noqa: ANN201
     fc = FileChooser(
         id="fc", label="File", value="/a/b", placeholder="Path…", root="/a"
@@ -247,6 +267,25 @@ async def test_dispatch_file_browser_navigate_file_filter(tmp_path):  # noqa: AN
 
     msg = json.loads(viz._server.pushed[0])
     assert [e["name"] for e in msg["entries"]] == ["sub", "a.exr"]
+
+
+@pytest.mark.anyio
+async def test_dispatch_file_browser_navigate_pattern(tmp_path):  # noqa: ANN001, ANN201
+    viz = _viz()
+    viz._server = _FakeServer()
+    viz.set_layout(FileChooserView("fc", root=str(tmp_path)))
+
+    (tmp_path / "a.json").write_text("x")
+    (tmp_path / "b.json").write_text("x")
+    (tmp_path / "c.txt").write_text("x")
+
+    await viz._dispatch_control_event(
+        "file_browser_navigate",
+        {"control_id": "fc", "path": str(tmp_path), "pattern": "*.json"},
+    )
+
+    msg = json.loads(viz._server.pushed[0])
+    assert [e["name"] for e in msg["entries"]] == ["a.json", "b.json"]
 
 
 # ── Phase 4 — FileChooserView (layout control view) ─────────
