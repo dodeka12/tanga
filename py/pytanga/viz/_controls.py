@@ -450,6 +450,7 @@ class FileChooser(Control):
             "root": self.root,
             "file_filter": self.file_filter,
             "folders_only": self.folders_only,
+            "existing_only": self.existing_only,
         }
 
     value: str = ""
@@ -457,6 +458,7 @@ class FileChooser(Control):
     root: str | None = None
     file_filter: str = ""
     folders_only: bool = False
+    existing_only: bool = True
     on_change: ControlHandler | None = None
 
 

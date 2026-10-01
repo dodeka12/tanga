@@ -97,6 +97,7 @@ def test_file_chooser_serialization():  # noqa: ANN201
         "root": "/a",
         "file_filter": "",
         "folders_only": False,
+        "existing_only": True,
     }
 
 
@@ -265,6 +266,7 @@ def test_file_chooser_view_serialization():  # noqa: ANN201
     assert data["placeholder"] == ""
     assert data["file_filter"] == ""
     assert data["folders_only"] is False
+    assert data["existing_only"] is True
 
 
 def test_file_chooser_dialog_serialization():  # noqa: ANN201
@@ -283,6 +285,21 @@ def test_file_chooser_dialog_serialization():  # noqa: ANN201
     assert content["value"] == "/data/file.csv"
     assert content["root"] == "/data"
     assert content["folders_only"] is False
+    assert content["existing_only"] is True
+
+
+def test_file_chooser_existing_only_serialization():  # noqa: ANN201
+    fc = FileChooser(id="fc", existing_only=False)
+    assert _serialize_one_control(fc)["existing_only"] is False
+
+
+def test_file_chooser_dialog_existing_only_false_serialization():  # noqa: ANN201
+    from pytanga.viz import FileChooserDialog
+    from pytanga.viz._dialog import serialize_dialog
+
+    dlg = FileChooserDialog("fc", existing_only=False)
+    msg = serialize_dialog(dlg.build_dialog("d1"))
+    assert msg["content"]["existing_only"] is False
 
 
 def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):  # noqa: ANN001, ANN201

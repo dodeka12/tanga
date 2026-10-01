@@ -80,6 +80,7 @@ class FileChooserDialog:
         root: str | None = None,
         file_filter: str = "",
         folders_only: bool = False,
+        existing_only: bool = True,
         on_accept: ControlHandler | None = None,
         on_close: ControlHandler | None = None,
         align_x: float = 0.5,
@@ -94,6 +95,7 @@ class FileChooserDialog:
         self.root = root
         self.file_filter = file_filter
         self.folders_only = folders_only
+        self.existing_only = existing_only
         self.on_accept = on_accept
         self.on_close = on_close
         self.align_x = align_x
@@ -112,6 +114,7 @@ class FileChooserDialog:
                 root=self.root,
                 file_filter=self.file_filter,
                 folders_only=self.folders_only,
+                existing_only=self.existing_only,
             ),
             title=self.title,
             align_x=self.align_x,

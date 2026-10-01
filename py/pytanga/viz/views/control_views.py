@@ -208,6 +208,7 @@ class FileChooserView(ControlView[FileChooser]):
         root: str | None = None,
         file_filter: str = "",
         folders_only: bool = False,
+        existing_only: bool = True,
         on_change: ControlHandler | None = None,
         tooltip: str = "",
         size: SizeSpec = None,
@@ -239,6 +240,7 @@ class FileChooserView(ControlView[FileChooser]):
             root=root,
             file_filter=file_filter,
             folders_only=folders_only,
+            existing_only=existing_only,
             on_change=on_change,
         )
 
