@@ -33,6 +33,10 @@
 - **Ellipse degenerate radius** — the ellipse renderer no longer treats a zero
   radius as "unset" (which had rendered a huge default ellipse at the start of
   a drag); a zero radius now clamps to the minimum.
+- **Click-created point offset** — click events now carry the picking ray and
+  `screen_position` in a common canvas-local pixel frame, and the backend
+  resolves the click anchor from that ray (instead of `pixel_ray`), so a
+  click-to-place point lands exactly under the cursor, like drag-created shapes.
 
 ## Refactor
 - **`CoordinateMapper.world_units_per_pixel()`** — the image-pixel↔world size

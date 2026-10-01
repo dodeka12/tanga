@@ -97,12 +97,20 @@ completely (including the flush)", `False` lets the default behaviour run
 ControlEvent                      # shared base: browser_id (+ future fields)
 └── InteractionEvent              # + object_id, event_type, camera
     ├── ClickEvent                # + mouse_button, modifiers, screen_position,
-    │                               world_position, world_normal
+    │                               world_position, world_normal, ray_origin,
+    │                               ray_direction
     ├── DragEvent                 # + screen_position, delta_pixels, world_position,
     │                               world_delta, drag_mode, ray_origin,
     │                               ray_direction, delta_transform
     └── ScrollEvent               # + screen_position, scroll_delta
 ```
+
+`screen_position` is in **canvas-local** pixels (`clientX - rect.left`,
+`clientY - rect.top` — top-left origin of the renderer canvas) for every
+pointer event; relative fields (`delta_pixels`, `world_delta`) are
+frame-independent deltas.  Click and drag_start carry the same position fields
+(`screen_position`, `world_position`, `ray_origin`/`ray_direction`, `camera`),
+so both resolve their ideal anchor from the picking ray the same way.
 
 Two consequences worth knowing when writing a handler:
 
@@ -348,9 +356,11 @@ Three orthogonal concerns:
 The surface resolves pointer→world on the **backend**: the frontend emits
 `interaction:drag_*`/`click` events for the pane's *empty space* (intersecting
 the mouse ray with the surface's serialized `{point, normal}` in
-`interaction.js` `_getSurfaceHit`), and the backend rebases onto
+`interaction.js` `_getSurfaceHit`), each carrying the picking
+`ray_origin`/`ray_direction`, and the backend rebases onto
 `surface.drag_anchor`/`click_anchor` (a generic ray↔`mapper.plane()`
-intersection) via the same `_act_objects` lookup as `Act` entities.  The surface
+intersection) from that ray — no `pixel_ray` reconstruction — via the same
+`_act_objects` lookup as `Act` entities.  The surface
 serializes as a `surface` field on the `scene_view` node
 (`{id, point, normal, interaction}`); runtime toggles re-push a `view_surface`
 message (handled in `viewer.js` next to `view_background_image`).

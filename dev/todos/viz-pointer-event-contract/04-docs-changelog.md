@@ -17,17 +17,14 @@ the branch changelog.
 
 ## Steps
 
-- [ ] **4.1 — Update the event hierarchy in `viz-controls-and-interactions.md`**
-  - Add `ray_origin`/`ray_direction` to the `ClickEvent` line and note that
-    `screen_position` is canvas-local for all pointer events.
-- [ ] **4.2 — Update the surface paragraph**
-  - Clarify that the frontend sends the picking ray on click/drag_start and the
-    backend rebases via `click_anchor`/`drag_anchor` using that ray (no
-    `pixel_ray` reconstruction).
-- [ ] **4.3 — Append the changelog**
-  - Add a `Bug Fixes` bullet: click-created points now resolve their anchor from
-    the frontend's picking ray in a common canvas-local pixel frame (fixes the
-    point appearing offset from the cursor).
+- [x] **4.1 — Update the event hierarchy in `viz-controls-and-interactions.md`**
+  - Added `ray_origin`/`ray_direction` to the `ClickEvent` line and documented
+    `screen_position` as canvas-local for all pointer events.
+- [x] **4.2 — Update the surface paragraph**
+  - Noted the frontend sends the picking ray on click/drag_start and the backend
+    rebases via `click_anchor`/`drag_anchor` from that ray (no `pixel_ray`).
+- [x] **4.3 — Append the changelog**
+  - Added a `Bug Fixes` bullet for the click-created point offset.
 
 ## Validation
 
