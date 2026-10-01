@@ -371,10 +371,13 @@ class ImageLabeler:
     def _act_from_entity(self, entity: Any) -> Any:
         """Wrap a plain labelme entity in an interactive act (click-to-select)."""
         select = self._make_select_handler()
-        handle = {"on_click": select, "handle_style": self._handle_style}
         if isinstance(entity, Rectangle2D):
             return ActRectangle2D(
-                center=entity.center, size=entity.size, angle=entity.angle, **handle
+                center=entity.center,
+                size=entity.size,
+                angle=entity.angle,
+                on_click=select,
+                handle_style=self._handle_style,
             )
         if isinstance(entity, Ellipse):
             du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
@@ -384,12 +387,23 @@ class ImageLabeler:
                 radius_u=entity.radius_u,
                 radius_v=entity.radius_v,
                 angle=angle,
-                **handle,
+                on_click=select,
+                handle_style=self._handle_style,
             )
         if isinstance(entity, Circle):
-            return ActCircle(center=entity.center, radius=entity.radius, **handle)
+            return ActCircle(
+                center=entity.center,
+                radius=entity.radius,
+                on_click=select,
+                handle_style=self._handle_style,
+            )
         if isinstance(entity, Line):
-            return ActLine(start=entity.start, end=entity.end, **handle)
+            return ActLine(
+                start=entity.start,
+                end=entity.end,
+                on_click=select,
+                handle_style=self._handle_style,
+            )
         if isinstance(entity, PointPath):
             pts = [Point(x, y, z) for x, y, z in entity.points]
             closed = len(pts) > 1 and pts[0] == pts[-1]

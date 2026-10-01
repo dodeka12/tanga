@@ -33,7 +33,7 @@ import json
 import math
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 from PIL import Image
@@ -347,7 +347,7 @@ class _CalibratedLabeler:
         for shape_act, style in self.shapes:
             if shape_act is act:
                 new_style = (
-                    replace(cast(Any, style), color=self.selected_color)
+                    replace(style, color=self.selected_color)
                     if selected
                     else style
                 )

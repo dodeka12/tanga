@@ -1353,11 +1353,10 @@ class ActRectangle2D(_ActWithHandles):
     ) -> "ActRectangle2D":
         """Build a rectangle from two opposite corners."""
         rect = Rectangle2D.between(a, b)
-        size = list(rect.size)
+        size = rect.size
         min_s = kwargs.get("min_size")
         if min_s is not None:
-            size[0] = max(size[0], float(min_s))
-            size[1] = max(size[1], float(min_s))
+            size = (max(size[0], float(min_s)), max(size[1], float(min_s)))
         return cls(center=rect.center, size=size, **kwargs)
 
 
