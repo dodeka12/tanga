@@ -269,10 +269,10 @@ The frontend has **one live-view registry** and reuses views by their stable
 `ImageCanvas` (in `_image_view.py`) is a user-facing helper analogous to
 `CoordinateSystem`: it owns a **dedicated 2D scene** with a **y-down pixel
 frame** (1 world unit = 1 pixel), an `ImageView` (the plane + textures +
-shader/uniform state), an `ActImagePlane` (interactive plane), and an overlay
-`VizGroup`.  The image is a **new scene-object kind** (`kind == "image"`,
-`VizImage` node in `_nodes.py`), whose pixels reach the browser through one of
-three mutually exclusive `ImageData` sources:
+shader/uniform state), an `InteractionSurface` (a per-pane `z = 0` interaction
+plane), and an overlay `VizGroup`.  The image is a **new scene-object kind**
+(`kind == "image"`, `VizImage` node in `_nodes.py`), whose pixels reach the
+browser through one of three mutually exclusive `ImageData` sources:
 
 - **`source: "data"`** (default) — the pixel buffer travels as **binary
   WebSocket frames** (`_image_wire.py`, `Transport.send_bytes` /
@@ -385,6 +385,26 @@ pane through a clean three-layer model — camera data → camera view → pane:
 - **Frustum** — `pytanga.geometry.Frustum` (a viz-only entity, no MV) with
   `Frustum.from_camera(camera)` and `FrustumStyle`; serialized to explicit
   corners and rendered by `renderers/frustum.js`.
+- **`CoordinateMapper`** — a pixel↔world mapping protocol (`to_world(u, v) →
+  Point`, `to_pixel(point) → (u, v)`) in `pytanga.viz.camera`, with a
+  `PlanarMapper` (identity: `Point(u, v, 0)`) and a `CalibratedPlaneMapper`
+  (pinhole ray ∩ a plane ⟂ the optical axis at a fixed `depth`).  It maps
+  *image* pixels only — screen-pixel sizing lives on the frontend in
+  `screenWorldScale` (`camera-fit.js`).  `world_units_per_pixel()` returns the
+  world size of one image pixel at the plane (`1.0` for `PlanarMapper`,
+  `depth / fx` for `CalibratedPlaneMapper`), used for scale-dependent distances
+  (min radius/size, auto-close tolerance, rotate-handle offset).
+  `LabelMeStore(mapper=…)` threads it through every pixel↔world call site so the
+  labelme loader/saver is coordinate-system-agnostic — the default `PlanarMapper`
+  preserves the historical "pixel == world XY" behavior, while
+  `CalibratedPlaneMapper` lets labelme shapes round-trip through a calibrated 3D
+  scene.  `LabelMeStore` is a **pure data store**: `iter_objects(doc)` and
+  `add_shapes(handle, doc)` return/emit plain geometry (`Point`, `Line`,
+  `Circle`, `Ellipse`, `Rectangle2D`, `PointPath`), never interactive
+  `ActSceneObject` composites — the label apps wrap those entities into acts
+  via their own `_act_from_entity`.  The single fixed `depth` is a
+  display/editing approximation, not a true reprojection of arbitrary 3D
+  geometry.
 
 ### Test commands
 

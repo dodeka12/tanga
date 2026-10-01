@@ -247,7 +247,6 @@ export function screenWorldScale(camera, viewportPx, worldPos) {
         if (!(span > 0)) return 1;
         return span / (vp * zoom);
     }
-    const fov = Number(camera && camera.fov) || 50;
     const p = worldPos || {};
     const c = (camera && camera.position) || {};
     const dx = Number(p.x || 0) - Number(c.x || 0);
@@ -255,6 +254,15 @@ export function screenWorldScale(camera, viewportPx, worldPos) {
     const dz = Number(p.z || 0) - Number(c.z || 0);
     const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (!(dist > 0)) return 1;
+    // Off-center pinhole: `camera.fov` is stale (the off-center `makePerspective`
+    // never updates it), so use the retained frustum span when available.
+    const frustum = camera && camera.userData && camera.userData._pinholeFrustum;
+    if (frustum && Number(frustum.near) > 0) {
+        const span = Number(frustum.top) - Number(frustum.bottom);
+        const worldHeight = (span / Number(frustum.near)) * dist;
+        return worldHeight / vp;
+    }
+    const fov = Number(camera && camera.fov) || 50;
     const worldHeight = 2 * dist * Math.tan((fov * Math.PI) / 360);
     return worldHeight / vp;
 }

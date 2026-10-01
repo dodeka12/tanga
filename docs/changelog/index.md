@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.13.0] — 2026-10-01
+- Calibrated image labeling (drag-to-draw + click-to-place on a calibrated pane) · `CoordinateMapper` (planar + calibrated) · per-pane `InteractionSurface` + `CalibratedSurface` · plane-aware `ActImagePlane` · file-chooser filename entry + save mode · 3D orbit zoom limits · shape selection
+- Breaking: `LabelMeStore` loader returns `(result, errors)` · `ImageCanvas.act_plane` → `ImageCanvas.surface`
+→ [Details](2026/10/01_22aaa4746.md)
+
 ## [Since 2.12.1] — 2026-09-29
 - Image labeling app (`ImageLabeler` pane + labelme I/O) · active elements (`ActEllipse`/`ActPolygon`/`ActCircle`/`ActLine`, rectangle rotation) · screen-space point markers · `ImageCanvas.min_zoom` · `StackView(fill=True)` · cross-instance algebra compatibility
 → [Details](2026/09/29_74bfae43d.md)

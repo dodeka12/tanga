@@ -1,0 +1,25 @@
+{
+    "version": "5.0.1",
+    "flags": {},
+    "shapes": [
+        {
+            "label": "car",
+            "points": [[123.456, 78.901], [456.789, 234.567]],
+            "group_id": null,
+            "shape_type": "rectangle",
+            "flags": {},
+            "description": "left rear wheel"
+        },
+        {
+            "label": "wheel",
+            "points": [[200.5, 150.25], [220.75, 150.25]],
+            "group_id": null,
+            "shape_type": "circle",
+            "flags": {}
+        }
+    ],
+    "imagePath": "img.png",
+    "imageData": null,
+    "imageHeight": 480,
+    "imageWidth": 640
+}

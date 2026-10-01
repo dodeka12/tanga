@@ -54,11 +54,13 @@ Keywords: image, labeling, labelme, app, ActRectangle2D, ActCircle, ActLine, Dra
 from __future__ import annotations
 
 import argparse
+import math
 import os
-from dataclasses import dataclass, replace
-from typing import Any, Callable
+from dataclasses import replace
+from typing import Any, Callable, cast
 
 import numpy as np
+from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2D
 from pytanga.viz import (
     ActCircle,
     ActEllipse,
@@ -80,9 +82,11 @@ from pytanga.viz import (
     ImageData,
     LabelMeDocument,
     LabelMeStore,
+    LabelShape,
     LineStyle,
     MenuView,
     MouseButton,
+    PointPath,
     PointPathStyle,
     Rectangle2DStyle,
     Size,
@@ -110,33 +114,12 @@ def _gradient(width: int, height: int) -> np.ndarray:
     return np.stack([r, g, b], axis=-1)
 
 
-@dataclass
-class LabeledShape:
-    """One labeled entity: the interactive object, its base style, and its label.
-
-    ``ImageLabeler`` keeps its shapes as a list of these.  ``act`` is the live
-    :class:`~pytanga.viz.ActSceneObject` (used to select/remove it), ``style`` is
-    its base style (used to toggle the selected highlight), and ``label`` is the
-    labelme class name.  :meth:`as_pair` returns the ``(object, label)`` pair that
-    :meth:`~pytanga.viz.LabelMeStore.shapes_from_objects` consumes, so exporting a
-    :class:`~pytanga.viz.LabelMeDocument` is a one-liner.
-    """
-
-    act: Any
-    style: Any
-    label: str = _DEFAULT_LABEL
-
-    def as_pair(self) -> tuple[Any, str]:
-        """Return the ``(object, label)`` pair ``LabelMeStore`` consumes."""
-        return self.act, self.label
-
-
 class ImageLabeler:
     """A reusable image-labeling pane: a toolbar over an image canvas, plus the
     shape/selection state.
 
     Owns an :class:`~pytanga.viz.ImageCanvas`, the drawing-tool toolbar, and the
-    list of :class:`LabeledShape` entries.  :attr:`view` is a
+    list of :class:`~pytanga.viz.LabelShape` entries.  :attr:`view` is a
     :class:`~pytanga.viz.StackView` (toolbar above the canvas) to drop straight
     into any layout or ``SplitView`` pane::
 
@@ -169,7 +152,7 @@ class ImageLabeler:
         self._on_select = on_select
 
         self.mode: str | None = None
-        self.shapes: list[LabeledShape] = []
+        self.shapes: list[LabelShape] = []
         self.selected: Any = None
         self._store = LabelMeStore()
 
@@ -184,6 +167,11 @@ class ImageLabeler:
             color=Color.GREEN, size=6.0, thickness=2.0, screen_space=True
         )
 
+        # Resize clamp, expressed as a half-extent in canvas pixels (the 2D
+        # canvas maps 1 world unit = 1 pixel).  ``None`` max = unbounded.
+        self._min_half_px: float | None = 0.5
+        self._max_half_px: float | None = None
+
         self._drag_binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
         self._canvas = ImageCanvas(
             viz,
@@ -197,6 +185,9 @@ class ImageLabeler:
         self._canvas.on_key("Delete", self._on_delete)
         self._canvas.on_key("Backspace", self._on_delete)
         self._canvas.on_key("Escape", self._on_escape)
+
+        # World units per image pixel (identity for the 2D canvas).
+        self._pixel_scale = self._canvas.surface.mapper.world_units_per_pixel()
 
         self._tool_buttons = self._build_tool_buttons()
         self._previews = self._build_previews()
@@ -331,7 +322,7 @@ class ImageLabeler:
             if shape.act is act:
                 self._canvas.handle.update_style(
                     shape.act.entity_id,
-                    replace(shape.style, color=self.selected_color),
+                    replace(cast(Any, shape.style), color=self.selected_color),
                 )
                 break
         self._canvas.handle.flush()
@@ -344,7 +335,9 @@ class ImageLabeler:
         self._set_extra_handles(act, False)
         for shape in self.shapes:
             if shape.act is act:
-                self._canvas.handle.update_style(shape.act.entity_id, shape.style)
+                self._canvas.handle.update_style(
+                    shape.act.entity_id, cast(Any, shape.style)
+                )
                 break
         self._canvas.handle.flush()
         self.selected = None
@@ -405,13 +398,77 @@ class ImageLabeler:
 
     # ── Shapes ──────────────────────────────────────────────
 
+    def _act_from_entity(self, entity: Any) -> Any:
+        """Wrap a plain labelme entity in an interactive act (click-to-select)."""
+        select = self._make_select_handler()
+        if isinstance(entity, Rectangle2D):
+            return ActRectangle2D(
+                center=entity.center,
+                size=entity.size,
+                angle=entity.angle,
+                on_click=select,
+                handle_style=self._handle_style,
+            )
+        if isinstance(entity, Ellipse):
+            du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
+            angle = math.atan2(du.y, du.x)
+            return ActEllipse(
+                center=entity.center,
+                radius_u=entity.radius_u,
+                radius_v=entity.radius_v,
+                angle=angle,
+                on_click=select,
+                handle_style=self._handle_style,
+            )
+        if isinstance(entity, Circle):
+            return ActCircle(
+                center=entity.center,
+                radius=entity.radius,
+                on_click=select,
+                handle_style=self._handle_style,
+            )
+        if isinstance(entity, Line):
+            return ActLine(
+                start=entity.start,
+                end=entity.end,
+                on_click=select,
+                handle_style=self._handle_style,
+            )
+        if isinstance(entity, PointPath):
+            pts = [Point(x, y, z) for x, y, z in entity.points]
+            closed = len(pts) > 1 and pts[0] == pts[-1]
+            if closed:
+                pts = pts[:-1]
+            return ActPolygon(
+                pts,
+                closed=closed,
+                on_click=select,
+                handle_style=self._vertex_style,
+                end_handle_style=self._end_handle_style,
+            )
+        if isinstance(entity, Point):
+            return ActPoint(entity, on_click=select)
+        raise TypeError(f"unsupported labelme entity: {type(entity).__name__}")
+
+    def _apply_size_limits(self, act: Any) -> None:
+        """Clamp resize to the app's pixel-derived limits (half-extent)."""
+        act.set_pixel_scale(self._pixel_scale)
+        if isinstance(act, ActRectangle2D):
+            act.set_size_limits(
+                None if self._min_half_px is None else 2.0 * self._min_half_px,
+                None if self._max_half_px is None else 2.0 * self._max_half_px,
+            )
+        elif isinstance(act, (ActCircle, ActEllipse)):
+            act.set_radius_limits(self._min_half_px, self._max_half_px)
+
     def add_shape(self, act: Any, label: str | None = None) -> None:
         """Register *act* as a labeled shape, styled for its type."""
         style = self._style_for_act(act)
         self._canvas.handle.add(act, style=style)
+        self._apply_size_limits(act)
         self._set_extra_handles(act, False)
         self.shapes.append(
-            LabeledShape(
+            LabelShape(
                 act=act,
                 style=style,
                 label=label if label is not None else self.default_label,
@@ -437,15 +494,20 @@ class ImageLabeler:
             self.clear_shapes()
             self.set_image_file(path)
             return
-        doc = self._store.load(path)
-        self.load_document(doc, path)
+        result = self._store.load(path)
+        for message in result.errors:
+            print(f"labelme: skipped {message}")
+        self.load_document(result.document, path)
 
     def load_document(self, doc: LabelMeDocument, json_path: str = "") -> None:
         """Replace the current shapes with those from *doc* (and its image)."""
         self.clear_shapes()
         self._load_document_image(doc, json_path)
-        for obj, label in self._store.iter_objects(doc, active=True):
-            self.add_shape(obj, label=label)
+        objs, errors = self._store.iter_objects(doc)
+        for message in errors:
+            print(f"labelme: skipped {message}")
+        for entity, label in objs:
+            self.add_shape(self._act_from_entity(entity), label=label)
 
     def save(self, path: str | os.PathLike[str]) -> None:
         """Write the current shapes to *path* as labelme JSON."""
@@ -454,7 +516,9 @@ class ImageLabeler:
     def to_document(self, *, image_path: str = "") -> LabelMeDocument:
         """Export the current shapes as a :class:`~pytanga.viz.LabelMeDocument`."""
         return LabelMeDocument(
-            shapes=self._store.shapes_from_objects([s.as_pair() for s in self.shapes]),
+            shapes=self._store.shapes_from_objects(
+                [(s.act.entity, s.label) for s in self.shapes]
+            ),
             image_path=image_path,
         )
 
@@ -649,11 +713,18 @@ class ImageLabelingApp(VisualizerApp):
 
     async def _show_save_dialog(self) -> None:
         async def _on_file(path: str, _event: ControlEvent) -> None:
+            if os.path.splitext(path)[1] == "":
+                path += ".json"
             self._file_path = path
             self._save()
 
         await self.viz.show_dialog_async(
-            FileChooserDialog("save_file", on_accept=_on_file),
+            FileChooserDialog(
+                "save_file",
+                on_accept=_on_file,
+                existing_only=False,
+                file_filter=".json",
+            ),
             title="Save labelme JSON",
         )
 

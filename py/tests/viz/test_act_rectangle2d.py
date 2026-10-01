@@ -10,7 +10,7 @@ import math
 from typing import Any
 
 from pytanga.geometry import Direction, Point, Rectangle2D
-from pytanga.viz import ActRectangle2D, DragEvent, InteractionEventType
+from pytanga.viz import ActPoint, ActRectangle2D, DragEvent, InteractionEventType
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -262,3 +262,93 @@ class TestBehaviour:
         )
         assert rect.entity.center == Point(2.0, 1.0, 0.0)
         assert rect.entity.size == (4.0, 2.0)
+
+
+class TestPlaneZ:
+    """Handles stay on the body's plane (z), not snapping to z=0."""
+
+    def test_handles_preserve_plane_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(5.0, 5.0, -0.6), size=(10.0, 4.0))
+        rect._init(handle, "r1")
+        for h in rect._corner_handles:
+            assert h.point.z == -0.6
+        assert rect._translate_handle.point.z == -0.6
+        assert rect._rotate_handle.point.z == -0.6
+
+    def test_resize_corner_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(5.0, 5.0, -0.6), size=(10.0, 4.0))
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_corner_drag(
+                0, DragEvent(world_position=Point(0.0, 0.0, -0.6))
+            )
+        )
+        assert rect.entity.center.z == -0.6
+
+    def test_translate_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(5.0, 5.0, -0.6), size=(10.0, 4.0))
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
+        )
+        assert rect.entity.center == Point(6.0, 6.0, -0.6)
+
+
+
+class TestLimits:
+    """Resize clamps: explicit min/max, and fp-precision when ``None``."""
+
+    def test_max_size_caps(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(0.0, 0.0, 0.0), size=(1.0, 1.0), max_size=2.0)
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_corner_drag(
+                0, DragEvent(world_position=Point(5.0, 5.0, 0.0))
+            )
+        )
+        assert rect.entity.size == (2.0, 2.0)
+
+
+
+
+class TestCreateClamp:
+    def test_create_from_points_clamps_to_min_size(self) -> None:
+        rect = ActRectangle2D.create_from_points(
+            Point(0.0, 0.0, 0.0), Point(0.001, 0.0001, 0.0), min_size=0.5
+        )
+        assert rect.entity.size == (0.5, 0.5)
+
+
+
+class TestHandleVisibility:
+    def test_hidden_rotate_handle_is_disabled(self) -> None:
+        rect, _ = _rect()
+        rect.set_rotate_handle_visible(False)
+        assert rect._rotate_handle._enabled is False
+
+    def test_hidden_translate_handle_is_disabled(self) -> None:
+        rect, _ = _rect()
+        rect.set_translate_handle_visible(False)
+        assert rect._translate_handle._enabled is False
+
+
+class TestPixelScale:
+    def test_act_point_has_set_pixel_scale(self) -> None:
+        ap = ActPoint(0, 0)
+        assert ap._pixel_scale == 1.0
+        ap.set_pixel_scale(0.5)
+        assert ap._pixel_scale == 0.5
+
+    def test_rectangle_uses_pixel_scale_for_rotate_offset(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(0.0, 0.0, 0.0), size=(0.01, 0.01))
+        rect._init(handle, "r1")
+        rect.set_pixel_scale(1.0)
+        offset = rect._rotate_handle_position()
+        # offset >= 2 * handle_size * pixel_scale keeps the icon off the corner.
+        assert offset.x >= 2.0 * 6.0 * 1.0
+

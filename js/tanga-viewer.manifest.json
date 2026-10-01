@@ -24,11 +24,11 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/circle_point.js",
-      "sha256": "fa17c116118392902c5ab6bf881f3807d83eafd2b69c1ce1d88f953b4773ce9d"
+      "sha256": "55c60712771fb8337084fb7fea63085dd2f71c130d142000551e1cf9a9c02022"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/icon_point.js",
-      "sha256": "493fc1ff129048f634e2f51e07220ce89a24c49e8ed54c947e3e51eeb8506c06"
+      "sha256": "1f45df235bff13cbcb7781f45868d82162fd84d33566fb925bc3f126c25d6bde"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/direction.js",
@@ -68,7 +68,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipse.js",
-      "sha256": "3fe9a568110b636a5033c959f55c2a55739fdcadfcd05e3b9d9052502229ea30"
+      "sha256": "956c377c34a8745cd8ae98ffa2b5b543f741b9cb0c314acfdee5300a1d1b22b5"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipsoid.js",
@@ -240,7 +240,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/camera-fit.js",
-      "sha256": "1cecc5326671d0f3bbccd635b264231b9bda368c891671590c5ad145f29ba556"
+      "sha256": "521bff78569bcf99a8f5251a2029d413cce6218a243a8c8ba531a79287f5ea09"
     },
     {
       "path": "py/pytanga/viz/templates/scene-builder.js",
@@ -283,6 +283,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "d1f00db26ab19c12d70b87728b034bef81977f35149bb20aff167664651353ac",
-  "bundle_sha256": "35b8bcf4c38c2f789f2cbb0ba9d8f1e6930e98fe2feae9776680e596294970ba"
+  "fingerprint_sha256": "0fe392e53e988ebaa7c7b3c29086dab58ad16164290d5b61e03d7d553643fdd9",
+  "bundle_sha256": "301819b996618ce26198b618e2ff1c993fe1cbe8657bfdfd07ab369949d40707"
 }

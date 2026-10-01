@@ -317,13 +317,8 @@ class InteractionHost(OverlayHost):
         act = self._act_objects.get(event.object_id)
         if act is None:
             return
-        if event.camera is None:
-            return
         try:
-            ray_origin, ray_direction = event.camera.pixel_ray(
-                event.screen_position[0], event.screen_position[1]
-            )
-            anchor = act.click_anchor(ray_origin, ray_direction)
+            anchor = act.click_anchor(event.ray_origin, event.ray_direction)
         except NotImplementedError:
             return
         if anchor is None:

@@ -8,6 +8,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import pytest
+
 from pytanga.geometry import Direction, Point
 from pytanga.viz import ActPolygon, DragEvent, SquarePointStyle
 from pytanga.viz._act_style import ActPointStyle
@@ -338,3 +340,39 @@ class TestBehaviour:
         assert poly._closed is False
         assert poly._auto_close is True
         assert poly.points == [Point(0.0, 0.0, 0.0), Point(4.0, 2.0, 0.0)]
+
+
+class TestPlaneZ:
+    """Handles stay on the body's plane (z), not snapping to z=0."""
+
+    def test_handles_preserve_plane_z(self) -> None:
+        points = [Point(0.0, 0.0, -0.6), Point(1.0, 0.0, -0.6), Point(1.0, 1.0, -0.6)]
+        handle = _FakeHandle(space_dim=3)
+        poly = ActPolygon(points)
+        poly._init(handle, "p1")
+        for h in poly._vertex_handles:
+            assert h.point.z == -0.6
+        assert poly._translate_handle.point.z == -0.6
+
+    def test_translate_preserves_z(self) -> None:
+        points = [Point(0.0, 0.0, -0.6), Point(1.0, 0.0, -0.6), Point(1.0, 1.0, -0.6)]
+        handle = _FakeHandle(space_dim=3)
+        poly = ActPolygon(points)
+        poly._init(handle, "p1")
+        asyncio.run(
+            poly._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
+        )
+        assert all(p.z == -0.6 for p in poly._points)
+        assert poly._points[0] == Point(1.0, 1.0, -0.6)
+
+
+class TestCloseTolerance:
+    def test_tolerance_uses_pixel_scale(self) -> None:
+        points = [Point(0.0, 0.0, 0.0), Point(1.0, 0.0, 0.0), Point(1.0, 1.0, 0.0)]
+        handle = _FakeHandle(space_dim=3)
+        poly = ActPolygon(points)
+        poly._init(handle, "p1")
+        assert poly._effective_close_tolerance() == pytest.approx(12.0)
+        poly.set_pixel_scale(1e-3)
+        assert poly._effective_close_tolerance() == pytest.approx(0.012)
+

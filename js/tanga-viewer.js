@@ -872,6 +872,7 @@ function createCirclePoint(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 1.0);
     const size = styleParam(ent, 'size', 0.08); // circle radius (world units)
+    const screenSpace = styleParam(ent, 'screen_space', false);
     const thickness = styleParam(ent, 'thickness', Math.max(size * 0.2, 0.001));
     const filled = styleParam(ent, 'filled', true);
     const pos = ent.position || [0, 0, 0];
@@ -896,10 +897,14 @@ function createCirclePoint(ent) {
 
     // Lift the flat marker slightly above the xy-plane so it renders and
     // raycasts above coplanar bodies at z = 0 (e.g. an image or a rectangle
-    // fill) instead of z-fighting with them.
-    mesh.position.set(pos[0], pos[1], pos[2] + size * 0.1);
+    // fill) instead of z-fighting with them.  `size` is in world units for
+    // world-space markers, but in screen PIXELS for screen-space markers
+    // (rescaled later by `_updateScreenSpaceMarkers`), so the lift must use a
+    // tiny world-unit offset in that case rather than `size * 0.1`.
+    const lift = screenSpace ? 1e-3 : size * 0.1;
+    mesh.position.set(pos[0], pos[1], pos[2] + lift);
     tagEntity(mesh, ent);
-    if (styleParam(ent, 'screen_space', false)) {
+    if (screenSpace) {
         mesh.userData.isScreenSpace = true;
     }
     return mesh;
@@ -914,6 +919,26 @@ function _iconParts(icon) {
     return { family: icon.slice(0, i) || 'material', name: icon.slice(i + 1) };
 }
 
+const _iconFontLinks = {
+    material: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
+};
+
+function _ensureIconFont(family, onReady) {
+    const href = _iconFontLinks[family];
+    if (!href) return;
+    const id = 'tanga-icon-font-' + family;
+    if (document.getElementById(id)) {
+        if (onReady) onReady();
+        return;
+    }
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = href;
+    if (onReady) link.onload = onReady;
+    document.head.appendChild(link);
+}
+
 function _makeIconTexture(icon) {
     // Draw the glyph in white; the mesh material color tints it, so a color
     // change is applied in place (without re-rendering the canvas).
@@ -925,14 +950,30 @@ function _makeIconTexture(icon) {
     canvas.width = canvas.height = 64;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    ctx.clearRect(0, 0, 64, 64);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(name, 32, 32);
     const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
+
+    const draw = () => {
+        ctx.clearRect(0, 0, 64, 64);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(name, 32, 32);
+        texture.needsUpdate = true;
+    };
+    draw();
+
+    if (family === 'material') {
+        // The ligature font loads asynchronously; the first draw above may
+        // have rendered the raw ligature name with a fallback font.  Redraw
+        // once the font is available so the icon shows as a glyph, not text.
+        const redraw = () => {
+            if (document.fonts && document.fonts.load) {
+                document.fonts.load(font).then(draw).catch(() => {});
+            }
+        };
+        _ensureIconFont(family, redraw);
+    }
     return texture;
 }
 
@@ -940,6 +981,7 @@ function createIconPoint(ent) {
     const color = parseColor(ent, '#ffffff');
     const opacity = styleParam(ent, 'opacity', 1.0);
     const size = styleParam(ent, 'size', 0.1); // half-extent (world units)
+    const screenSpace = styleParam(ent, 'screen_space', false);
     const icon = styleParam(ent, 'icon', '');
     const pos = ent.position || [0, 0, 0];
 
@@ -955,10 +997,14 @@ function createIconPoint(ent) {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), material);
     // Lift the flat quad slightly above the xy-plane so it renders and
     // raycasts above coplanar bodies at z = 0 (e.g. a rectangle fill)
-    // instead of being occluded by them.
-    mesh.position.set(pos[0], pos[1], pos[2] + size * 0.1);
+    // instead of being occluded by them.  `size` is in world units for
+    // world-space markers, but in screen PIXELS for screen-space markers
+    // (rescaled later by `_updateScreenSpaceMarkers`), so the lift must use a
+    // tiny world-unit offset in that case rather than `size * 0.1`.
+    const lift = screenSpace ? 1e-3 : size * 0.1;
+    mesh.position.set(pos[0], pos[1], pos[2] + lift);
     tagEntity(mesh, ent);
-    if (styleParam(ent, 'screen_space', false)) {
+    if (screenSpace) {
         mesh.userData.isScreenSpace = true;
     }
     return mesh;
@@ -1547,8 +1593,8 @@ function createEllipse(ent) {
     const color = parseColor(ent, '#ff44ff');
     const opacity = styleParam(ent, 'opacity', 0.9);
     const thickness = styleParam(ent, 'thickness', 1.0);
-    const radiusU = Math.max(ent.radiusU || 1.0, 0.001);
-    const radiusV = Math.max(ent.radiusV || 0.5, 0.001);
+    const radiusU = Math.max(ent.radiusU ?? 1.0, 0.001);
+    const radiusV = Math.max(ent.radiusV ?? 0.5, 0.001);
 
     const group = new THREE.Group();
 
@@ -5169,7 +5215,6 @@ function screenWorldScale(camera, viewportPx, worldPos) {
         if (!(span > 0)) return 1;
         return span / (vp * zoom);
     }
-    const fov = Number(camera && camera.fov) || 50;
     const p = worldPos || {};
     const c = (camera && camera.position) || {};
     const dx = Number(p.x || 0) - Number(c.x || 0);
@@ -5177,6 +5222,15 @@ function screenWorldScale(camera, viewportPx, worldPos) {
     const dz = Number(p.z || 0) - Number(c.z || 0);
     const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (!(dist > 0)) return 1;
+    // Off-center pinhole: `camera.fov` is stale (the off-center `makePerspective`
+    // never updates it), so use the retained frustum span when available.
+    const frustum = camera && camera.userData && camera.userData._pinholeFrustum;
+    if (frustum && Number(frustum.near) > 0) {
+        const span = Number(frustum.top) - Number(frustum.bottom);
+        const worldHeight = (span / Number(frustum.near)) * dist;
+        return worldHeight / vp;
+    }
+    const fov = Number(camera && camera.fov) || 50;
     const worldHeight = 2 * dist * Math.tan((fov * Math.PI) / 360);
     return worldHeight / vp;
 }

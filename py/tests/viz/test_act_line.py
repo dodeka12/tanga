@@ -112,3 +112,37 @@ class TestBehaviour:
         assert line.start == Point(0.0, 0.0, 0.0)
         assert line.end == Point(4.0, 3.0, 0.0)
         assert line.entity.length == 5.0  # |(4, 3)| = 5
+
+
+class TestPlaneZ:
+    """Handles stay on the body's plane (z), not snapping to z=0."""
+
+    def test_handles_preserve_plane_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        line = ActLine(start=Point(0.0, 0.0, -0.6), end=Point(2.0, 0.0, -0.6))
+        line._init(handle, "l1")
+        for h in line._endpoint_handles:
+            assert h.point.z == -0.6
+        assert line._translate_handle.point.z == -0.6
+
+    def test_endpoint_drag_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        line = ActLine(start=Point(0.0, 0.0, -0.6), end=Point(2.0, 0.0, -0.6))
+        line._init(handle, "l1")
+        asyncio.run(
+            line._dispatch_endpoint_drag(
+                1, DragEvent(world_position=Point(3.0, 1.0, -0.6))
+            )
+        )
+        assert line.end == Point(3.0, 1.0, -0.6)
+
+    def test_translate_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        line = ActLine(start=Point(0.0, 0.0, -0.6), end=Point(2.0, 0.0, -0.6))
+        line._init(handle, "l1")
+        asyncio.run(
+            line._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
+        )
+        assert line.start == Point(1.0, 1.0, -0.6)
+        assert line.end == Point(3.0, 1.0, -0.6)
+

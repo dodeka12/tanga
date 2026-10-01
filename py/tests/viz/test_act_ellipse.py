@@ -152,3 +152,82 @@ class TestBehaviour:
         )
         assert len(seen) == 1
         assert seen[0].center.x == 6.0
+
+
+class TestPlaneZ:
+    """Handles stay on the body's plane (z), not snapping to z=0."""
+
+    def test_handles_preserve_plane_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(5.0, 5.0, -0.6), radius_u=10.0, radius_v=4.0
+        )
+        ellipse._init(handle, "e1")
+        for h in ellipse._radius_handles:
+            assert h.point.z == -0.6
+        assert ellipse._translate_handle.point.z == -0.6
+        assert ellipse._rotate_handle.point.z == -0.6
+
+    def test_translate_preserves_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(5.0, 5.0, -0.6), radius_u=10.0, radius_v=4.0
+        )
+        ellipse._init(handle, "e1")
+        asyncio.run(
+            ellipse._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
+        )
+        assert ellipse.entity.center == Point(6.0, 6.0, -0.6)
+
+
+
+class TestLimits:
+    """Resize clamps: explicit min/max, and fp-precision when ``None``."""
+
+    def test_no_default_floor_when_min_none(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(center=Point(0.0, 0.0, 0.0), radius_u=0.02, radius_v=0.02)
+        ellipse._init(handle, "e1")
+        asyncio.run(
+            ellipse._dispatch_radius_drag(
+                0, DragEvent(world_position=Point(0.001, 0.0, 0.0))
+            )
+        )
+        assert ellipse.ellipse.radius_u == 0.001
+
+    def test_min_radius_clamps(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(0.0, 0.0, 0.0), radius_u=1.0, radius_v=1.0, min_radius=0.5
+        )
+        ellipse._init(handle, "e1")
+        asyncio.run(
+            ellipse._dispatch_radius_drag(
+                0, DragEvent(world_position=Point(0.1, 0.0, 0.0))
+            )
+        )
+        assert ellipse.ellipse.radius_u == 0.5
+
+    def test_max_radius_caps(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(0.0, 0.0, 0.0), radius_u=1.0, radius_v=1.0, max_radius=2.0
+        )
+        ellipse._init(handle, "e1")
+        asyncio.run(
+            ellipse._dispatch_radius_drag(
+                0, DragEvent(world_position=Point(5.0, 0.0, 0.0))
+            )
+        )
+        assert ellipse.ellipse.radius_u == 2.0
+
+
+
+class TestCreateClamp:
+    def test_create_from_points_clamps_to_min_radius(self) -> None:
+        ellipse = ActEllipse.create_from_points(
+            Point(0.0, 0.0, 0.0), Point(0.001, 0.0001, 0.0), min_radius=0.5
+        )
+        assert ellipse.ellipse.radius_u == 0.5
+        assert ellipse.ellipse.radius_v == 0.5
+

@@ -14,6 +14,9 @@
         "Overview": "py/examples/apps/index.md"
       },
       {
+        "Calibrated Labeling App": "py/examples/apps/calibrated_labeling_app.md"
+      },
+      {
         "Image Labeling App": "py/examples/apps/image_labeling_app.md"
       }
     ]

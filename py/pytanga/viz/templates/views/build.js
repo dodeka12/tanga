@@ -163,6 +163,8 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             );
             view.setBackgroundImage(camView.background_image || null);
             view.setVisibilityFilter(node.hide || null, node.show || null);
+            view.setSurface(node.surface || null);
+            view.setReadOnly(!!node.read_only);
             if (newScenes) newScenes.push(sceneName);
         }
         applySizeSpecs(view, node);
@@ -222,7 +224,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
             id: node.id, value: node.value, root: node.root, file_filter: node.file_filter,
-            folders_only: node.folders_only,
+            folders_only: node.folders_only, existing_only: node.existing_only,
         });
     } else if (node.type === 'text_field_view') {
         if (existing) {

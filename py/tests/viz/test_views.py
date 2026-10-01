@@ -122,6 +122,30 @@ class TestSceneView:
         assert node["camera_view"]["camera"]["position"] == [1.0, 2.0, 3.0]
         assert node["camera_view"]["camera"]["target"] == [0.0, 0.0, 0.0]
 
+    def test_camera_min_max_distance_serialize(self):  # noqa: ANN201
+        from pytanga.viz.camera import CameraConfig3d
+
+        node = serialize_layout(
+            SceneView(
+                "main",
+                camera=CameraConfig3d(
+                    position=(1, 2, 3),
+                    target=(0, 0, 0),
+                    min_distance=0.1,
+                    max_distance=10.0,
+                ),
+            )
+        )["root"]
+        cam = node["camera_view"]["camera"]
+        assert cam["min_distance"] == 0.1
+        assert cam["max_distance"] == 10.0
+
+    def test_camera_min_distance_gt_max_raises(self):  # noqa: ANN201
+        from pytanga.viz.camera import CameraConfig3d
+
+        with pytest.raises(ValueError, match="min_distance"):
+            CameraConfig3d(min_distance=10.0, max_distance=1.0)
+
     def test_camera_normalizes_view_config(self):  # noqa: ANN201
         from pytanga.viz.camera import View3dConfig
 

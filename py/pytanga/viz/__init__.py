@@ -94,7 +94,7 @@ from ._interaction import (
 )
 from ._keys import KeyModifier
 from ._label import Label
-from .labelme import LabelMeDocument, LabelMeStore, LabelShape
+from .labelme import LabelMeDocument, LabelMeLoadResult, LabelMeStore, LabelShape
 from pytanga.geometry.transform import Transform
 from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
@@ -182,6 +182,7 @@ from ._styles import (
     VizStyle,
     WireframeDashPattern,
 )
+from ._surface import CalibratedSurface, InteractionSurface
 from ._themes import (
     copy_theme,
     default_theme,
@@ -194,14 +195,17 @@ from ._themes import (
 from ._types import SceneEntity, VizInputType
 from ._viz_styles import VizStyles
 from .camera import (
+    CalibratedPlaneMapper,
     CameraAction,
     CameraCalibration,
     CameraConfig,
     CameraConfig2d,
     CameraConfig3d,
     CameraLock,
+    CoordinateMapper,
     Navigation,
     PinholeCamera,
+    PlanarMapper,
     View2DConfig,
     View3dConfig,
     ViewportConfig,
@@ -281,6 +285,8 @@ __all__ = [
     "BoxStyle",
     "Button",
     "ButtonView",
+    "CalibratedPlaneMapper",
+    "CalibratedSurface",
     "Camera",
     "CameraAction",
     "CameraCalibration",
@@ -295,6 +301,7 @@ __all__ = [
     "ColorPicker",
     "ColorPickerView",
     "ColumnType",
+    "CoordinateMapper",
     "CoordinateSystem",
     "ClickBinding",
     "ClickEvent",
@@ -360,6 +367,7 @@ __all__ = [
     "InteractionEvent",
     "InteractionEventType",
     "InteractionHandler",
+    "InteractionSurface",
     "InteractionHandlerRegistry",
     "InteractionTrigger",
     "InversionStyle",
@@ -368,6 +376,7 @@ __all__ = [
     "KeyModifier",
     "Label",
     "LabelMeDocument",
+    "LabelMeLoadResult",
     "LabelMeStore",
     "LabelShape",
     "LabelStyle",
@@ -389,6 +398,7 @@ __all__ = [
     "PartialDiskStyle",
     "PinholeCamera",
     "pinhole_camera",
+    "PlanarMapper",
     "PlaneConicPairStyle",
     "PlaneConicStyle",
     "PlanePairStyle",

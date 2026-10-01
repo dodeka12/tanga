@@ -470,6 +470,8 @@ class TestClickHandler:
                     "screen_position": [400.0, 300.0],
                     "world_position": [0.0, 2.0, 0.15],
                     "world_normal": [0.0, 0.0, 1.0],
+                    "ray_origin": [9.0, 9.0, 9.0],
+                    "ray_direction": [0.0, 0.0, 1.0],
                     "camera": {
                         "view": TestClickHandler._IDENTITY,
                         "view_inv": TestClickHandler._IDENTITY,

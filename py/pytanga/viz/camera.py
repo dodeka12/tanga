@@ -20,10 +20,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, fields
 from enum import StrEnum
-from typing import Any, Literal, cast
+from typing import Any, Literal, Protocol, cast
 
 import numpy as np
 
+from pytanga.geometry import Direction, Point
 from pytanga.geometry.frame import CoordinateFrame, OpenCVFrame
 from pytanga.geometry.matrix import Matrix
 
@@ -236,12 +237,29 @@ class CameraConfig3d(CameraConfig):
     ``position`` / ``target`` / ``up`` (shared with :class:`CameraConfig`),
     plus the vertical ``fov`` and ``near`` / ``far`` clipping distances.
     Any field left ``None`` is auto-computed by the frontend.
+
+    ``min_distance`` / ``max_distance`` bound the orbit dolly (camera distance
+    from ``target``, world units).  When ``None`` the frontend derives them from
+    the camera's initial distance to the target.
     """
 
     type: Literal["3d"] = "3d"
 
     fov: float = 50.0  # vertical field of view in degrees
     up: tuple[float, float, float] | None = None  # camera up / orbit axis
+    min_distance: float | None = None  # orbit min zoom-in distance (world units)
+    max_distance: float | None = None  # orbit max zoom-out distance (world units)
+
+    def __post_init__(self) -> None:
+        if (
+            self.min_distance is not None
+            and self.max_distance is not None
+            and self.min_distance > self.max_distance
+        ):
+            raise ValueError(
+                f"min_distance must be <= max_distance, "
+                f"got {self.min_distance!r} > {self.max_distance!r}"
+            )
 
 
 #: Valid ``PinholeCamera.fit`` values.
@@ -614,3 +632,102 @@ class CameraCalibration:
             far=far,
             fit=fit,
         )
+
+
+class CoordinateMapper(Protocol):
+    """Map between 2D pixel coordinates and 3D world points.
+
+    A mapper decouples :mod:`pytanga.viz.labelme` (which stores 2D labelme
+    ``points``) from the assumption that "pixel == world XY, z = 0".  A mapper
+    tells the store how to turn each pixel into a world point on load and how to
+    turn a world point back into a pixel on save.
+    """
+
+    def to_world(self, u: float, v: float) -> Point:
+        """Map pixel ``(u, v)`` to a world point."""
+
+    def to_pixel(self, point: Point) -> tuple[float, float]:
+        """Map a world point to pixel ``(u, v)``."""
+
+    def plane(self) -> tuple[Point, Direction]:
+        """Return ``(point_on_plane, unit_normal)`` in world coordinates."""
+
+    def world_units_per_pixel(self) -> float:
+        """Return the world size of one image pixel at the annotation plane."""
+
+
+class PlanarMapper:
+    """Identity mapper: pixel ``(u, v)`` maps to ``Point(u, v, 0.0)``.
+
+    This is the historical :mod:`pytanga.viz.labelme` behavior (shapes on the
+    ``z = 0`` plane in pixel units) and is the default when no mapper is given.
+    """
+
+    def to_world(self, u: float, v: float) -> Point:
+        return Point(u, v, 0.0)
+
+    def to_pixel(self, point: Point) -> tuple[float, float]:
+        return (point.x, point.y)
+
+    def plane(self) -> tuple[Point, Direction]:
+        return Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0)
+
+    def world_units_per_pixel(self) -> float:
+        return 1.0
+
+
+class CalibratedPlaneMapper:
+    """Map pixels to points on a plane perpendicular to the optical axis.
+
+    Given a :class:`CameraCalibration` and a plane at ``depth`` world units from
+    the camera (perpendicular to the optical axis), :meth:`to_world` casts the
+    ray through pixel ``(u, v)`` and returns its intersection with that plane;
+    :meth:`to_pixel` is the exact inverse (standard pinhole projection).
+
+    .. note::
+
+       ``depth`` is a single fixed plane, so this is only geometrically exact
+       for annotations that truly lie on one flat plane at that distance — a
+       display/editing approximation, not a true reprojection of arbitrarily
+       positioned 3D geometry.
+    """
+
+    def __init__(self, camera: CameraCalibration, depth: float) -> None:
+        self._camera = camera
+        self._depth = float(depth)
+        k = camera.K.data
+        self._fx = float(k[0, 0])
+        self._fy = float(k[1, 1])
+        self._cx = float(k[0, 2])
+        self._cy = float(k[1, 2])
+        self._c2w = camera.camera_to_world().data
+        self._w2c = camera.world_to_camera().data
+
+    def to_world(self, u: float, v: float) -> Point:
+        xc = (float(u) - self._cx) / self._fx
+        yc = (float(v) - self._cy) / self._fy
+        p_cam = np.array([xc * self._depth, yc * self._depth, self._depth, 1.0])
+        p_world = self._c2w @ p_cam
+        return Point(float(p_world[0]), float(p_world[1]), float(p_world[2]))
+
+    def to_pixel(self, point: Point) -> tuple[float, float]:
+        p_cam = self._w2c @ np.array([point.x, point.y, point.z, 1.0])
+        zc = float(p_cam[2])
+        u = self._fx * float(p_cam[0]) / zc + self._cx
+        v = self._fy * float(p_cam[1]) / zc + self._cy
+        return (u, v)
+
+    def plane(self) -> tuple[Point, Direction]:
+        """The principal point at ``depth``, and the optical-axis direction."""
+        point = self.to_world(self._cx, self._cy)
+        center = self._camera.camera_center()
+        normal = Direction(
+            point.x - center[0],
+            point.y - center[1],
+            point.z - center[2],
+        ).normalized()
+        return point, normal
+
+    def world_units_per_pixel(self) -> float:
+        """The world size of one image pixel at the plane (≈ ``depth / fx``)."""
+        return self._depth / self._fx

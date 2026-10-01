@@ -66,7 +66,7 @@ class TestCamera:
 
 
 class TestHandlers:
-    def test_drag_handlers_forwarded_to_plane(self) -> None:
+    def test_drag_handlers_forwarded_to_surface(self) -> None:
         from pytanga.viz import DragBinding, DragEvent, ModifierKey, MouseButton
 
         async def on_drag(event: DragEvent, canvas: ImageCanvas) -> bool:
@@ -76,12 +76,12 @@ class TestHandlers:
             _viz(),
             drag_handlers=[DragBinding(MouseButton.RIGHT, on_drag, ModifierKey.CTRL)],
         )
-        bindings = canvas.act_plane._drag_bindings
+        bindings = canvas.surface._drag_bindings
         assert len(bindings) == 1
         assert bindings[0].button is MouseButton.RIGHT
         assert bindings[0].modifiers == frozenset({ModifierKey.CTRL})
 
-    def test_click_handlers_forwarded_to_plane(self) -> None:
+    def test_click_handlers_forwarded_to_surface(self) -> None:
         from pytanga.viz import ClickBinding, ClickEvent, MouseButton
 
         async def on_click(event: ClickEvent, canvas: ImageCanvas) -> None:
@@ -91,7 +91,7 @@ class TestHandlers:
             _viz(),
             click_handlers=[ClickBinding(MouseButton.LEFT, on_click)],
         )
-        bindings = canvas.act_plane._click_bindings
+        bindings = canvas.surface._click_bindings
         assert len(bindings) == 1
         assert bindings[0].button is MouseButton.LEFT
         assert bindings[0].modifiers == frozenset()
@@ -134,23 +134,22 @@ class TestApi:
         assert "img1" in viz._image_pyramids
         assert viz._image_pyramids["img1"] is image.tiled
 
-    def test_act_plane(self) -> None:
+    def test_surface(self) -> None:
         canvas = ImageCanvas(_viz())
-        from pytanga.viz import ActImagePlane
+        from pytanga.viz import InteractionSurface
 
-        assert isinstance(canvas.act_plane, ActImagePlane)
-        assert canvas.act_plane.image_view is canvas.image_view
+        assert isinstance(canvas.surface, InteractionSurface)
+        assert canvas.surface.mapper is not None
 
-    def test_click_anchor_keeps_raw_hit(self) -> None:
+    def test_click_anchor_intersects_plane(self) -> None:
         from pytanga.geometry import Direction
 
         canvas = ImageCanvas(_viz())
-        # The image plane is flat at z=0, so a CLICK's raw raycast hit is
-        # already the correct pixel — click_anchor must not rebase it.
-        assert (
-            canvas.act_plane.click_anchor(Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0))
-            is None
-        )
+        # The image plane is flat at z=0, so a CLICK resolves to the ray↔plane
+        # intersection (there is no raycastable mesh to keep the raw hit).
+        assert canvas.surface.click_anchor(
+            Point(2.0, 3.0, 5.0), Direction(0.0, 0.0, -1.0)
+        ) == Point(2.0, 3.0, 0.0)
 
 
 class TestOverlay:
