@@ -224,7 +224,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
     } else if (node.type === 'file_chooser_view') {
         view = new FileChooserView({
             id: node.id, value: node.value, root: node.root, file_filter: node.file_filter,
-            folders_only: node.folders_only,
+            folders_only: node.folders_only, existing_only: node.existing_only,
         });
     } else if (node.type === 'text_field_view') {
         if (existing) {

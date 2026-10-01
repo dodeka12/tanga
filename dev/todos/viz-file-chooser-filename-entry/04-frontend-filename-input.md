@@ -14,14 +14,14 @@ accept.
 
 ## Steps
 
-- [ ] **4.1 — `FileChooserView`: pattern + navigate event**
+- [x] **4.1 — `FileChooserView`: pattern + navigate event**
   - Accept `existing_only` in the constructor (mirror `folders_only`).
   - Store `_pattern = ""`; make `_navigate(path)` send
     `{ path, pattern: this._pattern }`; add a public `filter(pattern)` that sets
     `_pattern` and re-navigates to `_currentPath`.
   - In `updateListing`, emit `this.emit("navigate", { path, files })` where
     `files` = non-directory entry names.
-- [ ] **4.2 — `FileChooserDialogView`: filename input**
+- [x] **4.2 — `FileChooserDialogView`: filename input**
   - Read `existing_only` from `this.contentNode.existing_only ?? true`.
   - Replace `_pathEl` (`div`) with a filename `<input type="text">` plus a
     directory label; keep `_selectedPath` handling.
@@ -32,7 +32,7 @@ accept.
     mode → `_filename` non-empty.
   - OK / double-click accept → `sendEvent(this.dialogId, "accept",
     { value: <full path> })` (join `_directory` + `_filename`).
-- [ ] **4.3 — `build.js`**
+- [x] **4.3 — `build.js`**
   - Pass `existing_only: node.existing_only` into `new FileChooserView(...)`.
 
 ## Validation

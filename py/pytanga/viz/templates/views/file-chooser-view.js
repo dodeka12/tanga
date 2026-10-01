@@ -8,18 +8,20 @@ import { sendEvent } from '../events.js';
 import { registerFileBrowser, unregisterFileBrowser } from '../file-browser.js';
 
 export class FileChooserView extends ControlView {
-    constructor({ id, value = '', root = null, file_filter = '', folders_only = false } = {}) {
+    constructor({ id, value = '', root = null, file_filter = '', folders_only = false, existing_only = true } = {}) {
         super({ id, label: '', tooltip: '' });
         this.value = value;
         this.root = root;
         this.file_filter = file_filter;
         this.folders_only = folders_only;
+        this.existing_only = existing_only;
         this._currentPath = value || root || '';
         this._parentPath = null;
         this._pathText = null;
         this._listEl = null;
         this._selectedPath = null;
         this._selectedEl = null;
+        this._pattern = '';
 
         // A directory listing needs more room than a single form control.
         this.minWidth = { value: 220, unit: 'px' };
@@ -101,7 +103,15 @@ export class FileChooserView extends ControlView {
     }
 
     _navigate(path) {
-        sendEvent(this.controlId, 'file_browser_navigate', { path });
+        sendEvent(this.controlId, 'file_browser_navigate', {
+            path,
+            pattern: this._pattern,
+        });
+    }
+
+    filter(pattern) {
+        this._pattern = pattern || '';
+        this._navigate(this._currentPath);
     }
 
     _up() {
@@ -132,6 +142,8 @@ export class FileChooserView extends ControlView {
         this._currentPath = path;
         this._parentPath = parent || null;
         this._pathText.textContent = path;
+        const files = (entries || []).filter((e) => !e.is_dir).map((e) => e.name);
+        this.emit('navigate', { path, files });
         this._listEl.innerHTML = '';
 
         if (error) {
