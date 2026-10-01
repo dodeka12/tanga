@@ -17,19 +17,16 @@ drag_start carry the same position fields in the same frame.
 
 ## Steps
 
-- [ ] **1.1 — Add a canvas-local pixel helper**
-  - Add `_toLocal(evt)` returning `[evt.clientX - rect.left, evt.clientY - rect.top]`
-    using `this.rendererDomElement.getBoundingClientRect()` (same `rect` the
-    raycaster already uses).
-- [ ] **1.2 — Send `screen_position` in canvas-local coords**
-  - In every payload builder (`drag_move`/`drag_start`, `drag_end`, `click`,
-    `dblclick`, `contextmenu`) replace `[event.clientX, event.clientY]` with the
-    helper.  Leave `delta_pixels` (relative) unchanged.
-- [ ] **1.3 — Send `ray_origin`/`ray_direction` on click and dblclick**
-  - After `_getHit` (which sets `this.raycaster.ray`), add
-    `ray_origin: [ray.origin.x, ray.origin.y, ray.origin.z]` and
-    `ray_direction: [ray.direction.x, ray.direction.y, ray.direction.z]` to the
-    `interaction:click` and `interaction:dblclick` payloads.
+- [x] **1.1 — Add a canvas-local pixel helper**
+  - Added `_localPosition(clientX, clientY)` returning `[clientX - rect.left,
+    clientY - rect.top]` from `rendererDomElement.getBoundingClientRect()`.
+- [x] **1.2 — Send `screen_position` in canvas-local coords**
+  - Replaced raw `[clientX, clientY]` (and `[lastPos.x, lastPos.y]`) with the
+    helper in every payload builder (drag, drag_end, anchor-pending drag_move,
+    click, dblclick, scroll, cancel-drag).  `delta_pixels` untouched.
+- [x] **1.3 — Send `ray_origin`/`ray_direction` on click and dblclick**
+  - Added the raycaster ray to the `interaction:click` and `interaction:dblclick`
+    payloads (mirroring `drag_start`).
 
 ## Validation
 

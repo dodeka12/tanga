@@ -167,7 +167,10 @@ export class InteractionController {
             object_id: this._activeDrag.objectId,
             mouse_button: this._activeDrag.button,
             modifiers: Array.from(this._activeDrag.modifiers),
-            screen_position: [this._activeDrag.lastPos.x, this._activeDrag.lastPos.y],
+            screen_position: this._localPosition(
+                this._activeDrag.lastPos.x,
+                this._activeDrag.lastPos.y
+            ),
             delta_pixels: [
                 this._activeDrag.pendingPixelDelta.x,
                 this._activeDrag.pendingPixelDelta.y,
@@ -432,6 +435,13 @@ export class InteractionController {
         return null;
     }
 
+    // Client → canvas-local pixel coordinates (the common frame every payload
+    // sends for `screen_position`).
+    _localPosition(clientX, clientY) {
+        const rect = this.rendererDomElement.getBoundingClientRect();
+        return [clientX - rect.left, clientY - rect.top];
+    }
+
     _getSurfaceHit(event) {
         if (!this._surface) return null;
         if (!this._surface.interaction || !this._surface.interaction.enabled) return null;
@@ -653,7 +663,7 @@ export class InteractionController {
                 object_id: this._activeDrag.objectId,
                 mouse_button: this._activeDrag.button,
                 modifiers: Array.from(this._activeDrag.modifiers),
-                screen_position: [event.clientX, event.clientY],
+                screen_position: this._localPosition(event.clientX, event.clientY),
                 world_position: [worldPos.x, worldPos.y, worldPos.z],
                 drag_mode: dragMode,
             };
@@ -734,7 +744,7 @@ export class InteractionController {
                     object_id: this._activeDrag.objectId,
                     mouse_button: this._activeDrag.button,
                     modifiers: Array.from(this._activeDrag.modifiers),
-                    screen_position: [event.clientX, event.clientY],
+                    screen_position: this._localPosition(event.clientX, event.clientY),
                     delta_pixels: [
                         event.clientX - this._activeDrag.startPos.x,
                         event.clientY - this._activeDrag.startPos.y,
@@ -783,9 +793,19 @@ export class InteractionController {
                             object_id: objectId,
                             mouse_button: button,
                             modifiers: Array.from(modifiers),
-                            screen_position: [event.clientX, event.clientY],
+                            screen_position: this._localPosition(event.clientX, event.clientY),
                             world_position: [wp.x, wp.y, wp.z],
                             world_normal: [normal.x, normal.y, normal.z],
+                            ray_origin: [
+                                this.raycaster.ray.origin.x,
+                                this.raycaster.ray.origin.y,
+                                this.raycaster.ray.origin.z,
+                            ],
+                            ray_direction: [
+                                this.raycaster.ray.direction.x,
+                                this.raycaster.ray.direction.y,
+                                this.raycaster.ray.direction.z,
+                            ],
                             ...this._getCameraPayload(wp),
                         };
                         if (this.ws) this.ws.send(JSON.stringify(payload));
@@ -815,9 +835,19 @@ export class InteractionController {
                 object_id: hit.objectId,
                 mouse_button: button,
                 modifiers: Array.from(modifiers),
-                screen_position: [event.clientX, event.clientY],
+                screen_position: this._localPosition(event.clientX, event.clientY),
                 world_position: [wp.x, wp.y, wp.z],
                 world_normal: [normal.x, normal.y, normal.z],
+                ray_origin: [
+                    this.raycaster.ray.origin.x,
+                    this.raycaster.ray.origin.y,
+                    this.raycaster.ray.origin.z,
+                ],
+                ray_direction: [
+                    this.raycaster.ray.direction.x,
+                    this.raycaster.ray.direction.y,
+                    this.raycaster.ray.direction.z,
+                ],
                 ...this._getCameraPayload(wp),
             };
             if (this.ws) this.ws.send(JSON.stringify(payload));
@@ -844,7 +874,7 @@ export class InteractionController {
                 event_type: 'scroll',
                 object_id: hit.objectId,
                 modifiers: Array.from(modifiers),
-                screen_position: [event.clientX, event.clientY],
+                screen_position: this._localPosition(event.clientX, event.clientY),
                 delta_xy: [event.deltaX, event.deltaY],
                 ...this._getCameraPayload(wp),
             });
@@ -863,7 +893,10 @@ export class InteractionController {
                     object_id: this._activeDrag.objectId,
                     mouse_button: this._activeDrag.button,
                     modifiers: Array.from(this._activeDrag.modifiers),
-                    screen_position: [this._activeDrag.lastPos.x, this._activeDrag.lastPos.y],
+                    screen_position: this._localPosition(
+                        this._activeDrag.lastPos.x,
+                        this._activeDrag.lastPos.y
+                    ),
                     delta_pixels: [0, 0],
                     world_position: [0, 0, 0],
                     world_delta: [0, 0, 0],
