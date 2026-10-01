@@ -148,6 +148,16 @@ export function switchToCamera(camera, controls, spaceDim, cameraConfig, viewWid
             cam.lookAt(cc.target[0], cc.target[1], cc.target[2]);
             controls.target.set(cc.target[0], cc.target[1], cc.target[2]);
         }
+
+        // Orbit dolly limits.  Explicit `min_distance`/`max_distance` win;
+        // otherwise derive them from the camera's initial distance to the
+        // target, so the framing distance stays reachable (and scenes smaller
+        // than one world unit can still zoom in).
+        const finiteOr = (v, fallback) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
+        const dist = cam.position.distanceTo(controls.target);
+        controls.minDistance = finiteOr(cc.min_distance, dist * 0.1);
+        controls.maxDistance = finiteOr(cc.max_distance, dist * 20);
+
         cam.updateProjectionMatrix();
         controls.update();
         return cam;

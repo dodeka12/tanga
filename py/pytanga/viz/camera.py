@@ -237,12 +237,29 @@ class CameraConfig3d(CameraConfig):
     ``position`` / ``target`` / ``up`` (shared with :class:`CameraConfig`),
     plus the vertical ``fov`` and ``near`` / ``far`` clipping distances.
     Any field left ``None`` is auto-computed by the frontend.
+
+    ``min_distance`` / ``max_distance`` bound the orbit dolly (camera distance
+    from ``target``, world units).  When ``None`` the frontend derives them from
+    the camera's initial distance to the target.
     """
 
     type: Literal["3d"] = "3d"
 
     fov: float = 50.0  # vertical field of view in degrees
     up: tuple[float, float, float] | None = None  # camera up / orbit axis
+    min_distance: float | None = None  # orbit min zoom-in distance (world units)
+    max_distance: float | None = None  # orbit max zoom-out distance (world units)
+
+    def __post_init__(self) -> None:
+        if (
+            self.min_distance is not None
+            and self.max_distance is not None
+            and self.min_distance > self.max_distance
+        ):
+            raise ValueError(
+                f"min_distance must be <= max_distance, "
+                f"got {self.min_distance!r} > {self.max_distance!r}"
+            )
 
 
 #: Valid ``PinholeCamera.fit`` values.

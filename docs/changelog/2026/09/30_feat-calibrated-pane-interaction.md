@@ -8,6 +8,11 @@
   recolors it yellow; clicking elsewhere hides the handles and restores the
   color.  Delete/Backspace removes the selected shape and Escape deselects
   (mirroring the image labeler).
+- **3D orbit zoom limits** — `CameraConfig3d` gains optional
+  `min_distance`/`max_distance` (world units) bounding the orbit dolly; when
+  unset, the frontend derives them from the camera's initial distance to its
+  target, so small (e.g. metre-scale) scenes can zoom in instead of being
+  clamped by the old fixed `minDistance = 1`.
 
 ## Bug Fixes
 - **Screen-space point markers** — circle/icon point markers no longer apply a
