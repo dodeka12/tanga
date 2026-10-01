@@ -17,15 +17,11 @@ the frontend's ray.
 
 ## Steps
 
-- [ ] **2.1 — Add `ray_origin`/`ray_direction` to `ClickEvent`**
-  - Add `ray_origin: Point = field(default_factory=Point)` and
-    `ray_direction: Direction = field(default_factory=Direction)` (mirror
-    `DragEvent`), documented as the picking ray through the pointer.
-- [ ] **2.2 — Parse them in `_parse_event` (CLICK/DBLCLICK branch)**
-  - Read `data.get("ray_origin", [0.0, 0.0, 0.0])` /
-    `data.get("ray_direction", [0.0, 0.0, 0.0])` and pass
-    `ray_origin=Point(...)`, `ray_direction=Direction(...)` into the
-    `ClickEvent`.
+- [x] **2.1 — Add `ray_origin`/`ray_direction` to `ClickEvent`**
+  - Added `ray_origin: Point` / `ray_direction: Direction` (default `Point(0,0,0)`
+    / `Direction(0,0,0)`), documented as the picking ray.
+- [x] **2.2 — Parse them in `_parse_event` (CLICK/DBLCLICK branch)**
+  - Read `ray_origin` / `ray_direction` and pass them into `ClickEvent`.
 
 ## Validation
 

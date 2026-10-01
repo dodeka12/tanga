@@ -609,7 +609,9 @@ class ClickEvent(InteractionEvent):
     """Fired when the user clicks or double-clicks an interactive object.
 
     ``event_type`` will be :attr:`~InteractionEventType.CLICK` or
-    :attr:`~InteractionEventType.DBLCLICK`.
+    :attr:`~InteractionEventType.DBLCLICK`.  ``ray_origin`` / ``ray_direction``
+    are the picking ray through the pointer (the same fields ``DragEvent``
+    carries), so the backend can resolve the ideal anchor the same way.
     """
 
     mouse_button: MouseButton = MouseButton.LEFT
@@ -617,6 +619,8 @@ class ClickEvent(InteractionEvent):
     screen_position: tuple[float, float] = (0.0, 0.0)
     world_position: Point = field(default_factory=Point)
     world_normal: Direction = field(default_factory=Direction)
+    ray_origin: Point = field(default_factory=Point)
+    ray_direction: Direction = field(default_factory=Direction)
 
 
 @dataclass
@@ -738,6 +742,8 @@ def _parse_event(data: dict[str, Any]) -> InteractionEvent:
     if event_type in (InteractionEventType.CLICK, InteractionEventType.DBLCLICK):
         wp = data.get("world_position", [0.0, 0.0, 0.0])
         wn = data.get("world_normal", [0.0, 0.0, 0.0])
+        ro = data.get("ray_origin", [0.0, 0.0, 0.0])
+        rd = data.get("ray_direction", [0.0, 0.0, 0.0])
         return ClickEvent(
             browser_id=browser_id,
             camera=camera,
@@ -748,6 +754,8 @@ def _parse_event(data: dict[str, Any]) -> InteractionEvent:
             screen_position=tuple(data.get("screen_position", [0.0, 0.0])),
             world_position=Point(float(wp[0]), float(wp[1]), float(wp[2])),
             world_normal=Direction(float(wn[0]), float(wn[1]), float(wn[2])),
+            ray_origin=Point(float(ro[0]), float(ro[1]), float(ro[2])),
+            ray_direction=Direction(float(rd[0]), float(rd[1]), float(rd[2])),
         )
 
     if event_type in (
