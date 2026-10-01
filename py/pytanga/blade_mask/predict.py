@@ -40,7 +40,7 @@ def inverse_blade_mask(
     API symmetry with ``product_blade_mask`` and for future products whose
     mask may depend on direction.
     """
-    assert c_mask.algebra is a_mask.algebra, (
+    assert c_mask.algebra == a_mask.algebra, (
         "c_mask belongs to a different algebra than a_mask"
     )
     alg = a_mask.algebra
@@ -111,7 +111,7 @@ def product_blade_mask(
     BladeMask
         c_mask — the blade mask of the result C.
     """
-    assert b_mask.algebra is a_mask.algebra, (
+    assert b_mask.algebra == a_mask.algebra, (
         "b_mask belongs to a different algebra than a_mask"
     )
     alg = a_mask.algebra

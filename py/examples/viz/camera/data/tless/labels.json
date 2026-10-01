@@ -1,0 +1,38 @@
+{
+    "version": "5.0.1",
+    "flags": {},
+    "shapes": [
+        {
+            "label": "object",
+            "points": [[100.0, 80.0], [350.0, 320.0]],
+            "group_id": null,
+            "shape_type": "rectangle",
+            "flags": {}
+        },
+        {
+            "label": "wheel",
+            "points": [[200.0, 160.0], [250.0, 160.0]],
+            "group_id": null,
+            "shape_type": "circle",
+            "flags": {}
+        },
+        {
+            "label": "edge",
+            "points": [[80.0, 100.0], [220.0, 300.0]],
+            "group_id": null,
+            "shape_type": "line",
+            "flags": {}
+        },
+        {
+            "label": "marker",
+            "points": [[300.0, 250.0]],
+            "group_id": null,
+            "shape_type": "point",
+            "flags": {}
+        }
+    ],
+    "imagePath": "image.png",
+    "imageData": null,
+    "imageHeight": 400,
+    "imageWidth": 400
+}

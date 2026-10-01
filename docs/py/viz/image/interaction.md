@@ -1,9 +1,9 @@
 # Image Interaction
 
 `ImageCanvas` exposes pointer interaction through drag and click bindings.  The
-canvas wraps its interactive image plane (`ActImagePlane`), so the second
-argument to every handler is the `ImageCanvas` itself, and `event.world_position`
-is in **pixel coordinates** (y-down).
+canvas wraps its `InteractionSurface` (a per-pane interaction plane), so the
+second argument to every handler is the `ImageCanvas` itself, and
+`event.world_position` is in **pixel coordinates** (y-down).
 
 ## Bindings
 
@@ -69,7 +69,7 @@ async def on_drag(event, canvas):
   after mutating a `DragBinding.enabled` / `ClickBinding.enabled` flag so the new
   trigger set reaches the frontend.
 
-The interactive plane is reachable via `canvas.act_plane`.
+The interactive surface is reachable via `canvas.surface`.
 
 ## Example — armed drag-to-draw rectangles
 

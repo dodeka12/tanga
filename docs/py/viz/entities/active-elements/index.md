@@ -10,6 +10,10 @@ They simplify the common case of "add a draggable X to the scene."
 |-------|--------|-------------|------|
 | `ActPoint` | Draggable `Point` | Left-drag on four constraint planes | [ActPoint](act-point.md) |
 | `ActRectangle2D` | `Rectangle2D` body + square `ActPoint` handles | Corner handles resize, centre handle translates | [ActRectangle2D](act-rectangle2d.md) |
+| `ActEllipse` | `Ellipse` body + square `ActPoint` handles | Radius handles resize, centre translates, rim handle rotates | [ActEllipse](act-ellipse.md) |
+| `ActCircle` | `Circle` body + circle `ActPoint` handles | Radius handle resizes, centre handle translates | [ActCircle](act-circle.md) |
+| `ActLine` | `Line` body + endpoint `ActPoint` handles | Endpoints move, midpoint translates | [ActLine](act-line.md) |
+| `ActPolygon` | `PointPath` body + per-vertex `ActPoint` handles | Vertex handles reshape, Ctrl+drag inserts, Ctrl+right-click deletes | [ActPolygon](act-polygon.md) |
 
 ## Common Behaviour
 

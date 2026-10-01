@@ -38,5 +38,8 @@ export function createCrossHairPoint(ent) {
 
     group.position.set(pos[0], pos[1], pos[2]);
     tagEntity(group, ent);
+    if (styleParam(ent, 'screen_space', false)) {
+        group.userData.isScreenSpace = true;
+    }
     return group;
 }

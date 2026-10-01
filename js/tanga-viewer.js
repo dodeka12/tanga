@@ -834,6 +834,9 @@ function createCrossHairPoint(ent) {
 
     group.position.set(pos[0], pos[1], pos[2]);
     tagEntity(group, ent);
+    if (styleParam(ent, 'screen_space', false)) {
+        group.userData.isScreenSpace = true;
+    }
     return group;
 }
 
@@ -854,6 +857,110 @@ function createSquarePoint(ent) {
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
     mesh.position.set(pos[0], pos[1], pos[2]);
     tagEntity(mesh, ent);
+    if (styleParam(ent, 'screen_space', false)) {
+        mesh.userData.isScreenSpace = true;
+    }
+    return mesh;
+}
+
+// CirclePointStyle renderer — a flat circle marker (filled disc or outline
+// ring) instead of a sphere.
+
+const CIRCLE_POINT_SEGMENTS = 64;
+
+function createCirclePoint(ent) {
+    const color = parseColor(ent, '#ffffff');
+    const opacity = styleParam(ent, 'opacity', 1.0);
+    const size = styleParam(ent, 'size', 0.08); // circle radius (world units)
+    const thickness = styleParam(ent, 'thickness', Math.max(size * 0.2, 0.001));
+    const filled = styleParam(ent, 'filled', true);
+    const pos = ent.position || [0, 0, 0];
+
+    let mesh;
+    if (filled) {
+        // Filled disc; its opacity is `fill_opacity` (defaulting to `opacity`).
+        const fillOpacity = styleParam(ent, 'fill_opacity', opacity);
+        mesh = new THREE.Mesh(
+            new THREE.CircleGeometry(size, CIRCLE_POINT_SEGMENTS),
+            makeMaterial(color, fillOpacity, true)
+        );
+        mesh.userData.isFillQuad = true;
+    } else {
+        // Outline ring: a flat annulus whose radial width is `thickness`.
+        const inner = Math.max(size - thickness, 0.0005);
+        mesh = new THREE.Mesh(
+            new THREE.RingGeometry(inner, size, CIRCLE_POINT_SEGMENTS),
+            makeMaterial(color, opacity, true)
+        );
+    }
+
+    // Lift the flat marker slightly above the xy-plane so it renders and
+    // raycasts above coplanar bodies at z = 0 (e.g. an image or a rectangle
+    // fill) instead of z-fighting with them.
+    mesh.position.set(pos[0], pos[1], pos[2] + size * 0.1);
+    tagEntity(mesh, ent);
+    if (styleParam(ent, 'screen_space', false)) {
+        mesh.userData.isScreenSpace = true;
+    }
+    return mesh;
+}
+
+// IconPointStyle renderer — a flat quad textured with an icon glyph (Material
+// Symbols ligature or a unicode symbol) instead of a sphere.
+
+function _iconParts(icon) {
+    const i = icon.indexOf(':');
+    if (i === -1) return { family: 'material', name: icon };
+    return { family: icon.slice(0, i) || 'material', name: icon.slice(i + 1) };
+}
+
+function _makeIconTexture(icon) {
+    // Draw the glyph in white; the mesh material color tints it, so a color
+    // change is applied in place (without re-rendering the canvas).
+    const { family, name } = _iconParts(icon);
+    const font = family === 'uc'
+        ? '48px sans-serif'
+        : '48px "Material Symbols Outlined"';
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, 64, 64);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, 32, 32);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+}
+
+function createIconPoint(ent) {
+    const color = parseColor(ent, '#ffffff');
+    const opacity = styleParam(ent, 'opacity', 1.0);
+    const size = styleParam(ent, 'size', 0.1); // half-extent (world units)
+    const icon = styleParam(ent, 'icon', '');
+    const pos = ent.position || [0, 0, 0];
+
+    const material = makeMaterial(color, opacity, true);
+    if (icon) {
+        const texture = _makeIconTexture(icon);
+        if (texture) {
+            material.map = texture;
+            material.transparent = true;
+            material.depthWrite = false;
+        }
+    }
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), material);
+    // Lift the flat quad slightly above the xy-plane so it renders and
+    // raycasts above coplanar bodies at z = 0 (e.g. a rectangle fill)
+    // instead of being occluded by them.
+    mesh.position.set(pos[0], pos[1], pos[2] + size * 0.1);
+    tagEntity(mesh, ent);
+    if (styleParam(ent, 'screen_space', false)) {
+        mesh.userData.isScreenSpace = true;
+    }
     return mesh;
 }
 
@@ -1180,6 +1287,17 @@ function createLineCircle(ent) {
     const thickness = styleParam(ent, 'thickness', 1.0);
     const radius = Math.max(ent.radius || 1.0, 0.001);
 
+    const group = new THREE.Group();
+
+    // Optional semi-transparent fill disc under the outline.
+    if (styleParam(ent, 'fill', false)) {
+        const fillOpacity = styleParam(ent, 'fill_opacity', 0.2);
+        const fillGeo = new THREE.CircleGeometry(radius, CIRCLE_SEGMENTS);
+        const fill = new THREE.Mesh(fillGeo, makeMaterial(color, fillOpacity, true));
+        fill.userData.isFillQuad = true;
+        group.add(fill);
+    }
+
     // Canonical: a circle in the XY plane centered at the origin.
     const points = [];
     for (let i = 0; i <= CIRCLE_SEGMENTS; i++) {
@@ -1187,9 +1305,9 @@ function createLineCircle(ent) {
         points.push(new THREE.Vector3(radius * Math.cos(t), radius * Math.sin(t), 0));
     }
 
-    const line = makeFatLine(points, color, opacity, thickness);
-    tagEntity(line, ent);
-    return line;
+    group.add(makeFatLine(points, color, opacity, thickness));
+    tagEntity(group, ent);
+    return group;
 }
 
 function createCircle(ent) {
@@ -1418,7 +1536,9 @@ function createDisk(ent) {
     return mesh;
 }
 
-// Ellipse renderer — a 2D ellipse drawn as a screen-space fat line.
+// Ellipse renderer — a 2D ellipse drawn as a screen-space fat line, plus an
+// optional semi-transparent fill disc under the outline (so the body is easy
+// to click/select, like a filled Rectangle2D).
 // Phase 4: Per-entity module.
 
 const ELLIPSE_SEGMENTS = 128;
@@ -1430,6 +1550,21 @@ function createEllipse(ent) {
     const radiusU = Math.max(ent.radiusU || 1.0, 0.001);
     const radiusV = Math.max(ent.radiusV || 0.5, 0.001);
 
+    const group = new THREE.Group();
+
+    // Optional semi-transparent fill disc under the outline.
+    if (styleParam(ent, 'fill', false)) {
+        const fillOpacity = styleParam(ent, 'fill_opacity', 0.2);
+        const fillGeo = new THREE.CircleGeometry(1, ELLIPSE_SEGMENTS);
+        const fill = new THREE.Mesh(fillGeo, makeMaterial(color, fillOpacity, true));
+        // A unit disc scaled to the ellipse radii, in the canonical XY plane.
+        fill.scale.set(radiusU, radiusV, 1);
+        // Mark the fill so style updates apply `fill_opacity` (not the
+        // top-level outline `opacity`) to it.
+        fill.userData.isFillQuad = true;
+        group.add(fill);
+    }
+
     // Canonical: an ellipse in the XY plane at the origin, `radiusU` along +X
     // and `radiusV` along +Y.  Placement (center + normal + dirU/dirV) rides on
     // the node transform.
@@ -1439,9 +1574,9 @@ function createEllipse(ent) {
         points.push(new THREE.Vector3(radiusU * Math.cos(t), radiusV * Math.sin(t), 0));
     }
 
-    const line = makeFatLine(points, color, opacity, thickness);
-    tagEntity(line, ent);
-    return line;
+    group.add(makeFatLine(points, color, opacity, thickness));
+    tagEntity(group, ent);
+    return group;
 }
 
 function updateEllipse(mesh, ent, prev) {
@@ -2814,12 +2949,11 @@ async function makeEncodedTexture(img, frame) {
     return makeDataTexture(img, bytes);
 }
 
-// Compose a tiled float32/uint16 image into one float DataTexture by fetching
-// the best-fitting level's tiles as zlib-compressed raw pixels, inflating them,
+// Compose a tiled float32/uint16 image at `level` into one float DataTexture by
+// fetching that level's tiles as zlib-compressed raw pixels, inflating them,
 // expanding to RGBA, and placing them edge-clipped into a single buffer.
-async function makeTiledDataTexture(img) {
+async function makeTiledDataTexture(img, level) {
     const tileSize = img.tile_size || 256;
-    const level = bestPyramidLevel(img);
     const levelW = Math.ceil(img.width / (2 ** level));
     const levelH = Math.ceil(img.height / (2 ** level));
     const cols = Math.ceil(levelW / tileSize);
@@ -2860,18 +2994,12 @@ async function makeTiledDataTexture(img) {
     return texture;
 }
 
-// Compose a tiled image into one texture by fetching the tiles of the
-// best-fitting level (long side ≤ 2048 px).  uint8 uses JPEG/PNG tiles drawn
-// to a canvas; float32/uint16 use zlib tiles assembled into a float texture.
+// Compose a tiled uint8 image at `level` into one canvas texture by fetching
+// that level's JPEG/PNG tiles and drawing them edge-clipped into a canvas.
 // The `source === "tiled"` metadata is `{id, width, height, tile_size, levels,
 // dtype, channels}` (see `ImagePyramid.meta`).
-async function makeTiledTexture(img) {
-    if (img.dtype === 1 || img.dtype === 2) {
-        return makeTiledDataTexture(img);
-    }
-
+async function makeTiledCanvasTexture(img, level) {
     const tileSize = img.tile_size || 256;
-    const level = bestPyramidLevel(img);
     const scale = 2 ** level;
     const levelW = Math.ceil(img.width / scale);
     const levelH = Math.ceil(img.height / scale);
@@ -2904,6 +3032,23 @@ async function makeTiledTexture(img) {
     texture.magFilter = THREE.NearestFilter;
     texture.needsUpdate = true;
     return texture;
+}
+
+// Build a tiled image at `level`, dispatching uint8 to the canvas path and
+// float32/uint16 to the float DataTexture path.
+function buildTiledTextureAtLevel(img, level) {
+    return (img.dtype === 1 || img.dtype === 2)
+        ? makeTiledDataTexture(img, level)
+        : makeTiledCanvasTexture(img, level);
+}
+
+// Compose a tiled image into one texture at the level matching the on-screen
+// resolution `maxDim` (device pixels on the image's long side, already
+// including the device-pixel ratio and current zoom).
+async function makeTiledTexture(img, maxDim) {
+    // 2048 is the fallback budget for callers without a live viewport (e.g. a
+    // `background_image`); the image entity passes the real on-screen size.
+    return buildTiledTextureAtLevel(img, levelForScreen(img, maxDim ?? 2048));
 }
 
 // Stream an MJPEG camera feed (`/stream/{id}`) into a texture via a hidden
@@ -2968,7 +3113,7 @@ function buildUniforms(ent) {
     return uniforms;
 }
 
-async function createImage(ent) {
+async function createImage(ent, opts) {
     const frame = ent.frame || {};
     const width = frame.width || 1;
     const height = frame.height || 1;
@@ -2983,12 +3128,20 @@ async function createImage(ent) {
         vertexShader: vertex,
         fragmentShader: fragment,
         uniforms,
+        // The image plane is a background: never write depth, so overlay
+        // geometry (points, lines, polygons) drawn at the same z=0 renders on
+        // top instead of z-fighting with the image.
+        depthWrite: false,
     });
+    // Tiled layers re-resolve their pyramid level when the view zooms; keep the
+    // per-layer state on the material so `updateImageLod` can swap them.
+    material.userData._tiledLayers = [];
 
     const mesh = new THREE.Mesh(geometry, material);
     // Centre the plane on the pixel extent [−0.5, W−0.5] × [−0.5, H−0.5].
     mesh.position.set(width / 2 - 0.5, height / 2 - 0.5, 0);
 
+    const maxDim = opts?.maxDim;
     const images = ent.images || [];
     for (let i = 0; i < images.length && i < 4; i++) {
         const img = images[i];
@@ -3007,14 +3160,61 @@ async function createImage(ent) {
                 });
             }
         } else if (img.source === 'tiled') {
-            uniforms[key].value = await makeTiledTexture(img);
+            const level = levelForScreen(img, maxDim ?? 2048);
+            uniforms[key].value = await buildTiledTextureAtLevel(img, level);
+            material.userData._tiledLayers.push({ img, index: i, level });
         } else if (hasImageFrame(img.id)) {
             uniforms[key].value = await makeEncodedTexture(img, takeImageFrame(img.id));
+        } else {
+            // The pixel frame hasn't arrived yet (it races the entity JSON over
+            // the wire); upload the texture once it lands instead of leaving
+            // `uImage0` null (which renders black).
+            registerImageFrameConsumer(img.id, (frame) => {
+                makeEncodedTexture(img, frame).then((tex) => {
+                    uniforms[key].value = tex;
+                });
+            });
         }
     }
 
     tagEntity(mesh, ent);
     return mesh;
+}
+
+// Re-resolve tiled image layers for a new on-screen resolution `maxDim`
+// (device pixels on the image's long side).  When a layer's target level
+// changes, fetch that level's tiles and swap the texture in place (disposing
+// the previous one).  Returns true when at least one layer was swapped.
+async function updateImageLod(mesh, maxDim) {
+    const material = mesh && mesh.material;
+    const layers = material && material.userData && material.userData._tiledLayers;
+    if (!layers || layers.length === 0) return false;
+    let changed = false;
+    for (const layer of layers) {
+        const level = levelForScreen(layer.img, maxDim);
+        if (level === layer.level) {
+            // Already showing the right level; cancel any in-flight fetch for a
+            // now-outdated level so it cannot overwrite the correct texture.
+            if (layer.pendingLevel != null) layer.pendingLevel = null;
+            continue;
+        }
+        if (level === layer.pendingLevel) continue;
+        layer.pendingLevel = level;
+        const tex = await buildTiledTextureAtLevel(layer.img, level);
+        if (layer.pendingLevel !== level) {
+            // A newer zoom request superseded this fetch.
+            if (tex.dispose) tex.dispose();
+            continue;
+        }
+        layer.pendingLevel = null;
+        const key = `uImage${layer.index}`;
+        const old = material.uniforms[key].value;
+        material.uniforms[key].value = tex;
+        layer.level = level;
+        if (old && old.dispose) old.dispose();
+        changed = true;
+    }
+    return changed;
 }
 
 function updateImage(mesh, ent, prev) {
@@ -3225,18 +3425,22 @@ function pyramidGrid(pyramid, level) {
     };
 }
 
-// Pick the finest pyramid level whose long side is <= `maxDim` pixels (the
-// largest dimension of the level's own grid, not the full-resolution source).
-// Level 0 is full resolution; each level halves the dimensions (ceil).
-function bestPyramidLevel(pyramid, maxDim = 2048) {
+// Pick the pyramid level whose long side best matches a target on-screen
+// resolution `screenLongSide` (device pixels on the image's long side, already
+// including the device-pixel ratio and the current zoom).  Returns the coarsest
+// level whose long side is still >= `screenLongSide`, so the texture is never
+// upscaled on screen.  Level 0 is full resolution; each level halves the
+// dimensions (ceil).  Falls back to level 0 when `screenLongSide` is not a
+// positive number, and clamps to [0, levels-1].
+function levelForScreen(pyramid, screenLongSide) {
     const levels = pyramid.levels || 1;
+    if (!(Number.isFinite(screenLongSide) && screenLongSide > 0)) return 0;
     let level = 0;
-    let w = pyramid.width;
-    let h = pyramid.height;
-    while (level + 1 < levels && Math.max(w, h) > maxDim) {
+    while (level + 1 < levels) {
+        const nextW = Math.ceil(pyramid.width / (2 ** (level + 1)));
+        const nextH = Math.ceil(pyramid.height / (2 ** (level + 1)));
+        if (Math.max(nextW, nextH) < screenLongSide) break;
         level++;
-        w = Math.ceil(w / 2);
-        h = Math.ceil(h / 2);
     }
     return level;
 }
@@ -3287,7 +3491,7 @@ function tileRect(pyramid, level, x, y) {
  * Create a Three.js Object3D for a given entity JSON dict.
  * Dispatches to the appropriate per-entity renderer.
  */
-async function createEntityMesh(ent) {
+async function createEntityMesh(ent, opts) {
     let mesh;
 
     switch (ent.kind) {
@@ -3298,6 +3502,10 @@ async function createEntityMesh(ent) {
                 mesh = createCrossHairPoint(ent);
             } else if (ent.style?.style_type === 'SquarePointStyle') {
                 mesh = createSquarePoint(ent);
+            } else if (ent.style?.style_type === 'CirclePointStyle') {
+                mesh = createCirclePoint(ent);
+            } else if (ent.style?.style_type === 'IconPointStyle') {
+                mesh = createIconPoint(ent);
             } else {
                 mesh = createPoint(ent);
             }
@@ -3417,7 +3625,7 @@ async function createEntityMesh(ent) {
             break;
 
         case 'image':
-            mesh = await createImage(ent);
+            mesh = await createImage(ent, opts);
             break;
 
         case 'Hyperbola':
@@ -4939,6 +5147,40 @@ function _containMinZoom(camera, v2d) {
     return Math.min(1.0, Math.min(spanX / extX, spanY / extY));
 }
 
+/**
+ * World-units-per-CSS-pixel at `worldPos` — the scale factor to apply to a
+ * screen-space marker mesh so its geometry (built with `size` in world units
+ * standing for the target CSS-pixel size) renders at that many CSS pixels.
+ *
+ * - ortho: `(top - bottom) / (viewportPx · zoom)` (uniform across the frustum).
+ * - perspective: `2 · dist · tan(fov / 2) / viewportPx` (per-marker distance).
+ *
+ * @param {object} camera  { isOrthographicCamera, top, bottom, zoom, fov,
+ *                           position: {x, y, z} }
+ * @param {number} viewportPx  viewport height in CSS pixels.
+ * @param {object} worldPos  {x, y, z} world position of the marker.
+ * @returns {number}  positive world-units-per-CSS-pixel scale (1 for degenerate).
+ */
+function screenWorldScale(camera, viewportPx, worldPos) {
+    const vp = Math.max(1, Number(viewportPx) || 1);
+    if (camera && camera.isOrthographicCamera) {
+        const span = Number(camera.top) - Number(camera.bottom);
+        const zoom = Number(camera.zoom) || 1;
+        if (!(span > 0)) return 1;
+        return span / (vp * zoom);
+    }
+    const fov = Number(camera && camera.fov) || 50;
+    const p = worldPos || {};
+    const c = (camera && camera.position) || {};
+    const dx = Number(p.x || 0) - Number(c.x || 0);
+    const dy = Number(p.y || 0) - Number(c.y || 0);
+    const dz = Number(p.z || 0) - Number(c.z || 0);
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (!(dist > 0)) return 1;
+    const worldHeight = 2 * dist * Math.tan((fov * Math.PI) / 360);
+    return worldHeight / vp;
+}
+
 // Tanga 3D Viewer — Shared scene-graph construction (live viewer + HTML export).
 // Entity node construction (transform wrap + `parent_id` parenting) and
 // overlay/label creation, shared by `viewer.js` and the export bootstrap so a
@@ -4971,8 +5213,8 @@ function wrapWithNodeTransform(mesh, transform) {
 
 // Build a scene-layer object: mesh → node transform wrap → parent under
 // `parent_id` (or the scene) → register.  Returns the registry entry or null.
-async function buildSceneObject(obj, scene, registry) {
-    const mesh = await createEntityMesh(obj);
+async function buildSceneObject(obj, scene, registry, view) {
+    const mesh = await createEntityMesh(obj, view);
     if (!mesh) return null;
 
     const node = wrapWithNodeTransform(mesh, obj.transform);
@@ -5195,9 +5437,17 @@ function fitCamera(sceneObjects, camera, controls, spaceDim, width, height) {
 // claims the frame (`takeImageFrame`) and uploads the texture.
 
 const _pending = new Map();
+// image id → list of one-shot consumers invoked when the frame arrives (the
+// image entity was built before its pixel frame — a wire-order race).
+const _pendingConsumers = new Map();
 
 function storeImageFrame(frame) {
     _pending.set(frame.id, frame);
+    const consumers = _pendingConsumers.get(frame.id);
+    if (consumers) {
+        _pendingConsumers.delete(frame.id);
+        for (const consume of consumers) consume(frame);
+    }
 }
 
 function hasImageFrame(id) {
@@ -5208,6 +5458,12 @@ function takeImageFrame(id) {
     const frame = _pending.get(id);
     if (frame !== undefined) _pending.delete(id);
     return frame;
+}
+
+// Register a one-shot consumer to be invoked when the frame with `id` arrives.
+function registerImageFrameConsumer(id, consume) {
+    if (!_pendingConsumers.has(id)) _pendingConsumers.set(id, []);
+    _pendingConsumers.get(id).push(consume);
 }
 
 // Little-endian header after the 4-byte magic `"TGI\0"`:

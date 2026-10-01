@@ -92,6 +92,12 @@ class ControlView(View, Generic[C]):
         if self._push_state is not None:
             self._push_state(self.id, {"visible": self.control.visible})
 
+    def set_selected(self, selected: bool) -> None:
+        """Set this control's active/selected state and push ``control_state``."""
+        self.control.selected = bool(selected)
+        if self._push_state is not None:
+            self._push_state(self.id, {"selected": self.control.selected})
+
     def enable(self) -> None:
         """Enable this control."""
         self.set_enabled(True)

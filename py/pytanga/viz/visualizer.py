@@ -284,12 +284,30 @@ class Visualizer(_JupyterDisplayMixin):
     def set_layout(self, root: Any, name: str = "") -> str:
         """Register (or replace) a layout; register its control handlers."""
         self._register_background_pyramids(root)
-        return self._layout.set_layout(root, name)
+        result = self._layout.set_layout(root, name)
+        self._bind_surfaces(root)
+        return result
 
     def add_layout(self, root: Any, name: str = "") -> str:
         """Register a layout (raise if *name* is taken)."""
         self._register_background_pyramids(root)
-        return self._layout.add_layout(root, name)
+        result = self._layout.add_layout(root, name)
+        self._bind_surfaces(root)
+        return result
+
+    def _bind_surfaces(self, root: Any) -> None:
+        """Bind every ``SceneView.surface`` in *root* to this visualizer.
+
+        Called after a layout is pushed so the surface registers its pointer
+        handlers (in the shared ``(id, event)`` registry) and becomes resolvable
+        for drag/click anchors via :attr:`_act_objects`.
+        """
+        from .views import iter_scene_views
+
+        for scene_view in iter_scene_views(root):
+            surface = getattr(scene_view, "surface", None)
+            if surface is not None:
+                surface._bind(self, scene_view.id)  # noqa: SLF001
 
     def remove_view(self, view_id: str, *, scene: str | None = None) -> None:
         """Remove a mounted overlay view by its stable id (see ``viz.add``)."""
@@ -380,6 +398,26 @@ class Visualizer(_JupyterDisplayMixin):
     ) -> None:
         """Set the interaction configuration for an entity."""
         self._interaction_host.set_interaction(object_id, config, scene_name=scene_name)
+
+    def on_key(
+        self,
+        key: str,
+        handler: InteractionHandler,
+        *,
+        modifiers: list[Any] | None = None,
+        scene_name: str = "",
+    ) -> None:
+        """Register an async handler for a key press in this scene.
+
+        The key list is synced onto :attr:`SceneConfig.keyboard` and pushed via
+        ``scene_config`` so the frontend knows which keys to forward.
+        """
+        self._interaction_host.on_key(
+            key, handler, modifiers=modifiers, scene_name=scene_name
+        )
+        scene = self._layout.scene(scene_name)
+        scene.config.keyboard = self._interaction_host.keyboard(scene_name)
+        self._push_scene_config(scene_name)
 
     # ── Internal forwarders (tests / VizSceneHandle) ───────
 
@@ -2742,7 +2780,9 @@ class Visualizer(_JupyterDisplayMixin):
 
     async def _on_dialog_accept(self, msg_type: str, payload: dict[str, Any]) -> None:
         target = payload.get("id") or payload.get("control_id")
-        await self._layout.overlay._on_dialog_accept(target, self._event_for(payload))
+        await self._layout.overlay._on_dialog_accept(
+            target, self._event_for(payload), value=payload.get("value")
+        )
 
     async def _on_control_event(self, msg_type: str, payload: dict[str, Any]) -> None:
         await self._layout.dispatch_control_event(msg_type, payload)

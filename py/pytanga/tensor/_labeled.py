@@ -357,7 +357,7 @@ class MVLabeledTensor:
             s_mask = self.tensor.masks[s_ax]
             v_mask = value.tensor.masks[v_ax]
             if s_mask is not None and v_mask is not None:
-                if s_mask.algebra is not v_mask.algebra:
+                if s_mask.algebra != v_mask.algebra:
                     raise ValueError(f"label '{name}': algebra mismatch")
                 if s_mask.ids != v_mask.ids:
                     raise ValueError(f"label '{name}': mask ids differ")
@@ -700,7 +700,7 @@ def _add_or_sub(
         mask_a = a.tensor.masks[ax_a]
         mask_b = b.tensor.masks[ax_b]
         if mask_a is not None and mask_b is not None:
-            if mask_a.algebra is not mask_b.algebra:
+            if mask_a.algebra != mask_b.algebra:
                 raise ValueError(f"label '{name}': algebra mismatch in +/−")
             if mask_a.ids != mask_b.ids:
                 raise ValueError(f"label '{name}': mask ids differ in +/−")

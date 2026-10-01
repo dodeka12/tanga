@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import singledispatchmethod
@@ -608,7 +609,9 @@ class ClickEvent(InteractionEvent):
     """Fired when the user clicks or double-clicks an interactive object.
 
     ``event_type`` will be :attr:`~InteractionEventType.CLICK` or
-    :attr:`~InteractionEventType.DBLCLICK`.
+    :attr:`~InteractionEventType.DBLCLICK`.  ``ray_origin`` / ``ray_direction``
+    are the picking ray through the pointer (the same fields ``DragEvent``
+    carries), so the backend can resolve the ideal anchor the same way.
     """
 
     mouse_button: MouseButton = MouseButton.LEFT
@@ -616,6 +619,8 @@ class ClickEvent(InteractionEvent):
     screen_position: tuple[float, float] = (0.0, 0.0)
     world_position: Point = field(default_factory=Point)
     world_normal: Direction = field(default_factory=Direction)
+    ray_origin: Point = field(default_factory=Point)
+    ray_direction: Direction = field(default_factory=Direction)
 
 
 @dataclass
@@ -657,12 +662,48 @@ class ScrollEvent(InteractionEvent):
     delta_xy: tuple[float, float] = (0.0, 0.0)  # raw scroll delta
 
 
+@dataclass
+class KeyEvent(ControlEvent):
+    """Fired when the user presses a registered key in a focused pane.
+
+    Not a pointer interaction: it has no ``object_id``/``camera`` — it carries
+    the pressed key, the held modifiers, and the scene it was pressed in.
+    """
+
+    key: str = ""
+    modifiers: frozenset[ModifierKey] = frozenset()
+    scene: str = ""
+
+
+#: Async callback signature for keyboard handlers.
+KeyHandler = Callable[[KeyEvent], Awaitable[None]]
+
+
+@dataclass
+class KeyBinding:
+    """Bind a key (+ optional modifiers) to an async handler."""
+
+    key: str
+    handler: KeyHandler
+    modifiers: frozenset[ModifierKey] = frozenset()
+
+
 # ── Deserialization helpers ────────────────────────────────────
 
 
 def _parse_modifiers(modifiers_list: list[str]) -> frozenset[ModifierKey]:
     """Parse a list of modifier strings from JSON into a frozenset."""
     return frozenset(ModifierKey(m) for m in modifiers_list)
+
+
+def _parse_key_event(data: dict[str, Any]) -> KeyEvent:
+    """Parse a JSON dict into a :class:`KeyEvent`."""
+    return KeyEvent(
+        browser_id=data.get("browser_id"),
+        key=str(data.get("key", "")).lower(),
+        modifiers=_parse_modifiers(data.get("modifiers", [])),
+        scene=str(data.get("scene", "")),
+    )
 
 
 def _parse_camera(data: dict[str, Any]) -> Camera | None:
@@ -701,6 +742,8 @@ def _parse_event(data: dict[str, Any]) -> InteractionEvent:
     if event_type in (InteractionEventType.CLICK, InteractionEventType.DBLCLICK):
         wp = data.get("world_position", [0.0, 0.0, 0.0])
         wn = data.get("world_normal", [0.0, 0.0, 0.0])
+        ro = data.get("ray_origin", [0.0, 0.0, 0.0])
+        rd = data.get("ray_direction", [0.0, 0.0, 0.0])
         return ClickEvent(
             browser_id=browser_id,
             camera=camera,
@@ -711,6 +754,8 @@ def _parse_event(data: dict[str, Any]) -> InteractionEvent:
             screen_position=tuple(data.get("screen_position", [0.0, 0.0])),
             world_position=Point(float(wp[0]), float(wp[1]), float(wp[2])),
             world_normal=Direction(float(wn[0]), float(wn[1]), float(wn[2])),
+            ray_origin=Point(float(ro[0]), float(ro[1]), float(ro[2])),
+            ray_direction=Direction(float(rd[0]), float(rd[1]), float(rd[2])),
         )
 
     if event_type in (

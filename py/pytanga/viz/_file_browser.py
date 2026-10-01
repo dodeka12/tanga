@@ -23,6 +23,7 @@ def list_directory(
     show_hidden: bool = False,
     file_filter: str = "",
     folders_only: bool = False,
+    pattern: str = "",
 ) -> dict[str, Any]:
     """List the directory at *path* for the file browser.
 
@@ -34,6 +35,8 @@ def list_directory(
     case-insensitive list of extensions (``.png``/``png``) and/or full-filename
     glob patterns (``hello_*.png``, ``*.exr``); empty = all files.
     *folders_only* drops files entirely, leaving only directories.
+    *pattern* is a single case-insensitive glob (``fnmatch``) additionally
+    applied to non-directory entries; empty = no extra filter.
 
     When *root* is given, the resolved directory is clamped to it (the browser
     cannot navigate above the root).  Otherwise the home directory is used as
@@ -73,6 +76,12 @@ def list_directory(
                 if folders_only and not is_dir:
                     continue
                 if not is_dir and tokens and not _matches_file(child.name, tokens):
+                    continue
+                if (
+                    not is_dir
+                    and pattern
+                    and not fnmatch.fnmatchcase(child.name.lower(), pattern.lower())
+                ):
                     continue
                 entries.append(
                     {

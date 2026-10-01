@@ -10,6 +10,7 @@ from typing import Any
 
 from ._base import VizStyle
 from ._entity_styles import PointStyle
+from .._icons import Icon
 
 
 @dataclass
@@ -223,4 +224,51 @@ class SquarePointStyle(PointStyle):
         result["style_type"] = "SquarePointStyle"
         if self.thickness is not None:
             result["thickness"] = self.thickness
+        return result
+
+
+@dataclass
+class CirclePointStyle(PointStyle):
+    """Extended point style — renders a flat circle marker instead of a sphere.
+
+    Inherits ``color``, ``opacity``, and ``size`` from ``PointStyle``.  ``size``
+    is the circle's radius (world units); ``thickness`` is the slab depth along
+    ``+z`` (≈0 for a flat marker facing the xy-plane); ``filled`` draws a filled
+    disc (using ``fill_opacity``, defaulting to ``opacity``) instead of an
+    outline ring.
+    """
+
+    thickness: float | None = None
+    filled: bool | None = None
+    fill_opacity: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "CirclePointStyle"
+        if self.thickness is not None:
+            result["thickness"] = self.thickness
+        if self.filled is not None:
+            result["filled"] = self.filled
+        if self.fill_opacity is not None:
+            result["fill_opacity"] = self.fill_opacity
+        return result
+
+
+@dataclass
+class IconPointStyle(PointStyle):
+    """Extended point style — renders a flat icon glyph marker instead of a sphere.
+
+    Inherits ``color``, ``opacity``, and ``size`` from ``PointStyle``.  ``size``
+    is the glyph's half-extent (world units); ``icon`` is an icon id
+    (``family:name``, e.g. ``material:open_with``) drawn as a canvas-textured
+    quad.
+    """
+
+    icon: Icon | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result = super().to_dict()
+        result["style_type"] = "IconPointStyle"
+        if self.icon is not None:
+            result["icon"] = self.icon
         return result

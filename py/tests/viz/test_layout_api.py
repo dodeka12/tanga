@@ -164,6 +164,21 @@ class TestControlStatePush:
             "visible": False,
         }
 
+    def test_view_set_selected_pushes_control_state(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        view = ButtonView("tool", icon="material:circle")
+        viz.set_layout(view)
+        server = self._mount(viz, monkeypatch)
+
+        view.set_selected(True)
+
+        assert view.control.selected is True
+        assert json.loads(server.captured[0]) == {
+            "type": "control_state",
+            "id": "tool",
+            "selected": True,
+        }
+
     def test_visualizer_set_control_enabled_visible(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(SliderView("radius", value=1.0))

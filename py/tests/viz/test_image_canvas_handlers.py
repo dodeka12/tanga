@@ -52,14 +52,26 @@ def _canvas(on_drag: Any = None) -> tuple[Visualizer, ImageCanvas]:
 
 
 class TestInteractionRegistration:
-    def test_plane_registered_interactive(self) -> None:
-        viz, canvas = _canvas()
+    def test_surface_registered(self) -> None:
+        async def on_drag(event: DragEvent, canvas: ImageCanvas) -> bool:
+            return True
+
+        viz, canvas = _canvas(on_drag=on_drag)
         canvas.set_image(ImageData("img1", data=np.zeros((4, 6), dtype=np.uint8)))
-        image_id = canvas.image_view.id
-        assert viz._act_objects[image_id] is canvas.act_plane
-        assert image_id in canvas.handle.scene._interaction_configs
+        viz._bind_surfaces(canvas.scene_view())  # noqa: SLF001
+        assert viz._act_objects[canvas.surface.id] is canvas.surface
         events = {event for _, event in canvas._transport.registered}
         assert InteractionEventType.DRAG_MOVE.value in events
+
+    def test_set_enabled_toggles_surface(self) -> None:
+        viz, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((4, 6), dtype=np.uint8)))
+
+        canvas.set_enabled(False)
+        assert canvas.surface._interaction_config().enabled is False
+
+        canvas.set_enabled(True)
+        assert canvas.surface._interaction_config().enabled is True
 
 
 class TestDragHandler:
@@ -75,7 +87,9 @@ class TestDragHandler:
         canvas.set_image(ImageData("img1", data=np.zeros((10, 20), dtype=np.uint8)))
 
         asyncio.run(
-            canvas.act_plane._on_drag(DragEvent(world_position=Point(7.0, 3.0, 0.0)))
+            canvas.surface._dispatch_drag(
+                DragEvent(world_position=Point(7.0, 3.0, 0.0))
+            )
         )
 
         assert holder["pos"] == (7.0, 3.0)

@@ -182,7 +182,7 @@ class BladeMask:
 
             if alg is None:
                 alg = mv.algebra
-            elif mv.algebra is not alg:
+            elif mv.algebra != alg:
                 raise ValueError(
                     "All MVs in from_array must belong to the same algebra"
                 )
@@ -267,7 +267,7 @@ class BladeMask:
         attaching the display basis.  The result is in ascending blade-id
         order (matching ``BladeMask(mv).ids``).
         """
-        assert mv.algebra is self._alg, (
+        assert mv.algebra == self._alg, (
             "Cannot diff a BladeMask and an MV from different algebras"
         )
         raw = self._ids_from_mv(mv, only_nonzero=True)
@@ -349,7 +349,7 @@ class BladeMask:
         deduplicated union of the two direction sets (by name).  Otherwise the
         result is a plain raw-id union with the default display basis (if any).
         """
-        assert other._alg is self._alg, (
+        assert other._alg == self._alg, (
             "Cannot union BladeMasks from different algebras"
         )
         if self._basis is not None and other._basis is not None:
@@ -377,7 +377,7 @@ class BladeMask:
         aligned: ``discard_basis=True`` falls back to the raw-id intersection,
         otherwise a ``ValueError`` is raised.
         """
-        assert other._alg is self._alg, (
+        assert other._alg == self._alg, (
             "Cannot intersect BladeMasks from different algebras"
         )
         if self._basis is not None and other._basis is not None:
@@ -414,7 +414,7 @@ class BladeMask:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, BladeMask):
             return NotImplemented
-        return self._alg is other._alg and self._ids == other._ids
+        return self._alg == other._alg and self._ids == other._ids
 
     def __repr__(self) -> str:
         return f"BladeMask({self.names()})"

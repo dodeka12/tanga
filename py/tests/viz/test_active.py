@@ -10,11 +10,12 @@ import pytest
 
 from pytanga.geometry import Direction, Point
 from pytanga.viz._act_style import ActPointStyle
-from pytanga.viz._active import ActPoint
+from pytanga.viz._active import ActPoint, ClickBinding, DragBinding
 from pytanga.viz._interaction import (
     DragEvent,
     DragMode,
     InteractionEventType,
+    ModifierKey,
     MouseButton,
 )
 from pytanga.viz import SliderView
@@ -469,6 +470,8 @@ class TestClickHandler:
                     "screen_position": [400.0, 300.0],
                     "world_position": [0.0, 2.0, 0.15],
                     "world_normal": [0.0, 0.0, 1.0],
+                    "ray_origin": [9.0, 9.0, 9.0],
+                    "ray_direction": [0.0, 0.0, 1.0],
                     "camera": {
                         "view": TestClickHandler._IDENTITY,
                         "view_inv": TestClickHandler._IDENTITY,
@@ -487,6 +490,55 @@ class TestClickHandler:
             assert received == [Point(0, 2, 0)]
 
         asyncio.run(_run())
+
+
+class TestBindings:
+    def test_drag_binding_adds_trigger_with_modifiers(self):  # noqa: ANN201
+        async def on_drag(event, act):  # noqa: ANN001, ANN202
+            return True
+
+        ap = ActPoint(
+            Point(0, 2, 0),
+            drag_bindings=[DragBinding(MouseButton.LEFT, on_drag, ModifierKey.CTRL)],
+        )
+        cfg = ap.interaction_config
+        drag_triggers = [
+            t for t in cfg.triggers if t.event_type == InteractionEventType.DRAG
+        ]
+        assert any(
+            t.mouse_button == MouseButton.LEFT
+            and t.modifiers == frozenset({ModifierKey.CTRL})
+            for t in drag_triggers
+        )
+
+    def test_click_binding_adds_trigger_with_button_and_modifiers(self):  # noqa: ANN201
+        async def on_click(event, act):  # noqa: ANN001, ANN202
+            pass
+
+        ap = ActPoint(
+            Point(0, 2, 0),
+            click_bindings=[
+                ClickBinding(MouseButton.RIGHT, on_click, ModifierKey.CTRL)
+            ],
+        )
+        cfg = ap.interaction_config
+        click_triggers = [
+            t for t in cfg.triggers if t.event_type == InteractionEventType.CLICK
+        ]
+        assert any(
+            t.mouse_button == MouseButton.RIGHT
+            and t.modifiers == frozenset({ModifierKey.CTRL})
+            for t in click_triggers
+        )
+
+    def test_no_bindings_has_no_binding_triggers(self):  # noqa: ANN201
+        ap = ActPoint(Point(0, 2, 0))
+        cfg = ap.interaction_config
+        # A plain ActPoint registers only the standard drag triggers (no CLICK
+        # trigger and no button-specific binding triggers).
+        assert all(
+            t.event_type != InteractionEventType.CLICK for t in cfg.triggers
+        )
 
 
 def test_on_interaction_registers_in_unified_registry():  # noqa: ANN201

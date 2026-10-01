@@ -114,7 +114,7 @@ viz.add(Point(1, 2, 3), color="#ff0", opacity=0.8, style=PointStyle(size=0.2))
 
 | Style | For | Fields |
 |-------|-----|--------|
-| `PointStyle` | `Point` | `color`, `opacity`, `size` |
+| `PointStyle` | `Point` | `color`, `opacity`, `size`, `screen_space` |
 | `DirectionStyle` | `Direction` | `color`, `opacity`, `length` |
 | `HPointStyle` | `HPoint` | `color`, `opacity`, `size` |
 | `PointPairStyle` | `PointPair`, `ImagPointPair` | `color`, `opacity`, `point_size`, `line_thickness`, `wireframe`, `wireframe_dash`, `wireframe_color`, `wireframe_opacity` |
@@ -255,6 +255,12 @@ viz.add(Point(5, 0, 0), style=CrossHairPointStyle(
 This is the reference pattern for future extended styles — inherit from the
 base `*Style`, add new fields (all defaulting to `None`), override `to_dict()`,
 and add a new JS renderer module dispatched on the `style_type` string.
+
+All point-marker styles (`PointStyle` and its `SquarePointStyle`,
+`CirclePointStyle`, `IconPointStyle`, `CrossHairPointStyle` subclasses) accept a
+`screen_space` flag.  When `screen_space=True`, `size` (and `thickness` /
+`arm_thickness`) are interpreted as **CSS pixels** and the marker is rescaled
+every frame so it stays a constant on-screen size regardless of zoom.
 
 ## Texture Label Style — `TextureLabelStyle`
 

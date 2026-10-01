@@ -24,6 +24,7 @@ class PointStyle(VizStyle):
     color: str | None = None
     opacity: float | None = None
     size: float | None = None
+    screen_space: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "PointStyle"}
@@ -33,6 +34,8 @@ class PointStyle(VizStyle):
             result["opacity"] = self.opacity
         if self.size is not None:
             result["size"] = self.size
+        if self.screen_space:
+            result["screen_space"] = True
         return result
 
 
@@ -387,12 +390,22 @@ class CircleStyle(VizStyle):
     (screen-space fat) line.
 
     ``thickness`` is the line width in screen-space pixels (same parameter name
-    as :class:`LineStyle`).
+    as :class:`LineStyle`).  Outline-only by default; set ``fill=True`` to draw
+    a semi-transparent fill disc under the outline (which also makes the circle
+    body easy to click/select, like a filled ``Rectangle2D``).
+
+    Attributes:
+        fill: When ``True``, draw a semi-transparent fill disc under the
+            outline (default ``False`` = outline only).
+        fill_opacity: Opacity of the fill disc (0..1).  ``None`` uses the
+            renderer default (a light semi-transparent fill).
     """
 
     color: str | None = None
     opacity: float | None = None
     thickness: float | None = None
+    fill: bool = False
+    fill_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "CircleStyle"}
@@ -402,6 +415,10 @@ class CircleStyle(VizStyle):
             result["opacity"] = self.opacity
         if self.thickness is not None:
             result["thickness"] = self.thickness
+        if self.fill:
+            result["fill"] = True
+        if self.fill_opacity is not None:
+            result["fill_opacity"] = self.fill_opacity
         return result
 
 
@@ -776,13 +793,27 @@ class EllipseStyle(ConicStyle):
     """Visual style for :class:`~pytanga.geometry.Ellipse` (a 2D line ellipse).
 
     ``thickness`` (inherited from :class:`ConicStyle`) is the line width in
-    screen-space pixels.  A line ellipse has no surface, so there are no
-    wireframe parameters.
+    screen-space pixels.  Outline-only by default; set ``fill=True`` to draw a
+    semi-transparent fill disc under the outline (which also makes the ellipse
+    body easy to click/select, like a filled ``Rectangle2D``).
+
+    Attributes:
+        fill: When ``True``, draw a semi-transparent fill disc under the
+            outline (default ``False`` = outline only).
+        fill_opacity: Opacity of the fill disc (0..1).  ``None`` uses the
+            renderer default (a light semi-transparent fill).
     """
+
+    fill: bool = False
+    fill_opacity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
         result["style_type"] = "EllipseStyle"
+        if self.fill:
+            result["fill"] = True
+        if self.fill_opacity is not None:
+            result["fill_opacity"] = self.fill_opacity
         return result
 
 

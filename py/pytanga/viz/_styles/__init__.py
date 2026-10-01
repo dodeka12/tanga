@@ -107,9 +107,11 @@ from ._entity_styles import (
     SphereStyle,
 )
 from ._operator_styles import (
+    CirclePointStyle,
     CrossHairPointStyle,
     DilatorStyle,
     GeneralRotorStyle,
+    IconPointStyle,
     InversionStyle,
     MotorStyle,
     ReflectionLineStyle,
@@ -197,7 +199,9 @@ ObjVizStyle: TypeAlias = Union[
     DilatorStyle,
     MotorStyle,
     GeneralRotorStyle,
+    CirclePointStyle,
     CrossHairPointStyle,
+    IconPointStyle,
     SquarePointStyle,
     PointPathStyle,
     GridStyle,

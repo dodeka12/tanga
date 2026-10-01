@@ -224,3 +224,45 @@ function _containMinZoom(camera, v2d) {
     if (!(extX > 0) || !(extY > 0) || !(spanX > 0) || !(spanY > 0)) return 1.0;
     return Math.min(1.0, Math.min(spanX / extX, spanY / extY));
 }
+
+/**
+ * World-units-per-CSS-pixel at `worldPos` — the scale factor to apply to a
+ * screen-space marker mesh so its geometry (built with `size` in world units
+ * standing for the target CSS-pixel size) renders at that many CSS pixels.
+ *
+ * - ortho: `(top - bottom) / (viewportPx · zoom)` (uniform across the frustum).
+ * - perspective: `2 · dist · tan(fov / 2) / viewportPx` (per-marker distance).
+ *
+ * @param {object} camera  { isOrthographicCamera, top, bottom, zoom, fov,
+ *                           position: {x, y, z} }
+ * @param {number} viewportPx  viewport height in CSS pixels.
+ * @param {object} worldPos  {x, y, z} world position of the marker.
+ * @returns {number}  positive world-units-per-CSS-pixel scale (1 for degenerate).
+ */
+export function screenWorldScale(camera, viewportPx, worldPos) {
+    const vp = Math.max(1, Number(viewportPx) || 1);
+    if (camera && camera.isOrthographicCamera) {
+        const span = Number(camera.top) - Number(camera.bottom);
+        const zoom = Number(camera.zoom) || 1;
+        if (!(span > 0)) return 1;
+        return span / (vp * zoom);
+    }
+    const p = worldPos || {};
+    const c = (camera && camera.position) || {};
+    const dx = Number(p.x || 0) - Number(c.x || 0);
+    const dy = Number(p.y || 0) - Number(c.y || 0);
+    const dz = Number(p.z || 0) - Number(c.z || 0);
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (!(dist > 0)) return 1;
+    // Off-center pinhole: `camera.fov` is stale (the off-center `makePerspective`
+    // never updates it), so use the retained frustum span when available.
+    const frustum = camera && camera.userData && camera.userData._pinholeFrustum;
+    if (frustum && Number(frustum.near) > 0) {
+        const span = Number(frustum.top) - Number(frustum.bottom);
+        const worldHeight = (span / Number(frustum.near)) * dist;
+        return worldHeight / vp;
+    }
+    const fov = Number(camera && camera.fov) || 50;
+    const worldHeight = 2 * dist * Math.tan((fov * Math.PI) / 360);
+    return worldHeight / vp;
+}

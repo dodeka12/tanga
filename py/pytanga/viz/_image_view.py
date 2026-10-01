@@ -13,22 +13,27 @@ from __future__ import annotations
 from itertools import count
 from typing import TYPE_CHECKING, Any, cast
 
-from .camera import CameraAction, StretchMode, View2DConfig, _validate_stretch
+from .camera import (
+    CameraAction,
+    PlanarMapper,
+    StretchMode,
+    View2DConfig,
+    _validate_stretch,
+)
 from .image import ImageData, default_mode, default_value_range
 from ._interaction import MouseButton
+from ._surface import InteractionSurface
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from ._active import (
-        ActClickHandler,
-        ActEventHandler,
-        ActHandler,
-        ActSceneObject,
-        ClickBinding,
-        DragBinding,
-    )
+    from ._active import ClickBinding, DragBinding
     from ._interaction import ClickEvent, DragEvent
+    from ._surface import (
+        SurfaceClickHandler,
+        SurfaceDragHandler,
+        SurfaceEventHandler,
+    )
 
 __all__ = ["ImageView", "ImageCanvas"]
 
@@ -195,8 +200,9 @@ class ImageCanvas:
     """User-facing helper for displaying images (analogous to ``CoordinateSystem``).
 
     Owns a dedicated 2D scene with a y-down pixel frame, an :class:`ImageView`
-    (plane + textures + shader/uniform state), an :class:`ActImagePlane` for
-    interaction, and an overlay group for drawing in pixel coordinates.
+    (plane + textures + shader/uniform state), an :class:`InteractionSurface`
+    (a per-pane ``z = 0`` interaction plane) for drag/click, and an overlay
+    group for drawing in pixel coordinates.
     """
 
     def __init__(
@@ -206,6 +212,7 @@ class ImageCanvas:
         image_id: str | None = None,
         stretch: StretchMode = "fit",
         border_px: float = 0.0,
+        min_zoom: float = 0.25,
         on_drag: Callable[[DragEvent, ImageCanvas], Awaitable[bool]] | None = None,
         on_drag_start: Callable[[DragEvent, ImageCanvas], Awaitable[None]]
         | None = None,
@@ -223,6 +230,9 @@ class ImageCanvas:
         self._image_view = ImageView(self._image_id)
         self._stretch = _validate_stretch(stretch)
         self._border_px = float(border_px)
+        self._min_zoom = float(min_zoom)
+        if self._min_zoom <= 0.0:
+            raise ValueError(f"min_zoom must be positive, got {min_zoom!r}")
 
         self._scene_name = f"imgc{next(_image_canvas_counter)}"
         self._handle = viz.scene(
@@ -234,18 +244,16 @@ class ImageCanvas:
         self._overlay = self._handle.add_group(f"{self._scene_name}_overlay")
         self._overlay_refs: list[Any] = []
 
-        from ._active import ActImagePlane
-
         # Wrap handlers in-place so the user's own binding objects are shared
-        # with the plane — mutating ``binding.enabled`` later toggles its trigger.
+        # with the surface — mutating ``binding.enabled`` later toggles its trigger.
         for binding in drag_handlers or []:
             binding.handler = cast(Any, self._bind_drag(binding.handler))
         for binding in click_handlers or []:
             binding.handler = cast(Any, self._bind_click(binding.handler))
 
-        self._act_plane = ActImagePlane(
-            self._image_view,
-            handler=self._bind_drag(on_drag) if on_drag is not None else None,
+        self._surface = InteractionSurface(
+            PlanarMapper(),
+            on_drag=self._bind_drag(on_drag) if on_drag is not None else None,
             on_drag_start=(
                 self._bind_event(on_drag_start) if on_drag_start is not None else None
             ),
@@ -254,40 +262,39 @@ class ImageCanvas:
             ),
             on_click=self._bind_click(on_click) if on_click is not None else None,
             drag_bindings=cast(
-                "list[DragBinding[ActSceneObject]]", list(drag_handlers or [])
+                "list[DragBinding[InteractionSurface]]", list(drag_handlers or [])
             ),
             click_bindings=cast(
-                "list[ClickBinding[ActSceneObject]]", list(click_handlers or [])
+                "list[ClickBinding[InteractionSurface]]", list(click_handlers or [])
             ),
             cursor=cursor,
         )
-        self._interaction_registered = False
 
     # -- handler wrapping -----------------------------------------
-    # Handlers are registered with the ActImagePlane, which passes its own
+    # Handlers are registered with the InteractionSurface, which passes its own
     # instance as the second argument.  We wrap the user's handlers so that
     # second argument is this ImageCanvas instead.
 
     def _bind_drag(
         self, handler: Callable[[DragEvent, ImageCanvas], Awaitable[bool]]
-    ) -> ActHandler:
-        async def wrapped(event: DragEvent, _plane: ActSceneObject) -> bool:
+    ) -> SurfaceDragHandler:
+        async def wrapped(event: DragEvent, _surface: InteractionSurface) -> bool:
             return await handler(event, self)
 
         return wrapped
 
     def _bind_click(
         self, handler: Callable[[ClickEvent, ImageCanvas], Awaitable[None]]
-    ) -> ActClickHandler:
-        async def wrapped(event: ClickEvent, _plane: ActSceneObject) -> None:
+    ) -> SurfaceClickHandler:
+        async def wrapped(event: ClickEvent, _surface: InteractionSurface) -> None:
             await handler(event, self)
 
         return wrapped
 
     def _bind_event(
         self, handler: Callable[[DragEvent, ImageCanvas], Awaitable[None]]
-    ) -> ActEventHandler:
-        async def wrapped(event: DragEvent, _plane: ActSceneObject) -> None:
+    ) -> SurfaceEventHandler:
+        async def wrapped(event: DragEvent, _surface: InteractionSurface) -> None:
             await handler(event, self)
 
         return wrapped
@@ -353,9 +360,9 @@ class ImageCanvas:
     # -- interaction ----------------------------------------------
 
     @property
-    def act_plane(self) -> Any:
-        """The interactive image plane (:class:`~pytanga.viz.ActImagePlane`)."""
-        return self._act_plane
+    def surface(self) -> InteractionSurface:
+        """The :class:`~pytanga.viz.InteractionSurface` for the image plane."""
+        return self._surface
 
     # -- scene ----------------------------------------------------
 
@@ -370,10 +377,14 @@ class ImageCanvas:
         return self._handle
 
     def scene_view(self) -> Any:
-        """A :class:`~pytanga.viz.SceneView` pane for the dedicated scene."""
+        """A :class:`~pytanga.viz.SceneView` pane for the dedicated scene.
+
+        The pane carries this canvas's :class:`~pytanga.viz.InteractionSurface`,
+        so pointer events on the pane are resolved against the image plane.
+        """
         from .views import SceneView
 
-        return SceneView(self._scene_name)
+        return SceneView(self._scene_name, surface=self._surface)
 
     def fit_to_image(self) -> None:
         """Frame the 2D camera on the image's pixel extent."""
@@ -388,6 +399,7 @@ class ImageCanvas:
                 ymax=height - 0.5,
                 stretch=self._stretch,
                 border_px=self._border_px,
+                min_zoom=self._min_zoom,
             )
         )
 
@@ -405,7 +417,6 @@ class ImageCanvas:
         self._handle.scene.upsert_image(
             self._image_view.id, payload, images=self._image_view.images
         )
-        self._register_interaction()
 
         if self._transport is None:
             return
@@ -429,15 +440,6 @@ class ImageCanvas:
         )
         self._handle.flush()
 
-    def _register_interaction(self) -> None:
-        """Register the image plane as interactive (idempotent)."""
-        if self._interaction_registered:
-            return
-        image_id = self._image_view.id
-        self._act_plane._init(self._handle, image_id)
-        self._handle._viz._act_objects[image_id] = self._act_plane
-        self._interaction_registered = True
-
     # -- interaction toggles / cursor -------------------------
 
     def set_cursor(self, cursor: str | None) -> None:
@@ -446,16 +448,24 @@ class ImageCanvas:
 
     def set_handler_enabled(self, enabled: bool) -> None:
         """Enable or disable the image plane's general drag handler."""
-        self._act_plane.set_handler_enabled(enabled)
+        self._surface.set_handler_enabled(enabled)
 
     def set_click_enabled(self, enabled: bool) -> None:
         """Enable or disable the image plane's general click handler."""
-        self._act_plane.set_click_enabled(enabled)
+        self._surface.set_click_enabled(enabled)
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable or disable all interaction on the image plane."""
+        self._surface.set_enabled(enabled)
 
     def refresh_interaction(self) -> None:
-        """Re-register the image plane's interaction config.
+        """Re-push the image plane's interaction config.
 
         Call after mutating a :class:`DragBinding` / :class:`ClickBinding`
         ``enabled`` flag so the new trigger set reaches the frontend.
         """
-        self._act_plane.refresh_interaction()
+        self._surface.refresh_interaction()
+
+    def on_key(self, key: str, handler: Any, *, modifiers: Any = None) -> None:
+        """Register an async handler for a key press in this canvas's scene."""
+        self._handle.on_key(key, handler, modifiers=modifiers)

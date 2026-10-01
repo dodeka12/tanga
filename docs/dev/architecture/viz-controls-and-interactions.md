@@ -97,12 +97,20 @@ completely (including the flush)", `False` lets the default behaviour run
 ControlEvent                      # shared base: browser_id (+ future fields)
 └── InteractionEvent              # + object_id, event_type, camera
     ├── ClickEvent                # + mouse_button, modifiers, screen_position,
-    │                               world_position, world_normal
+    │                               world_position, world_normal, ray_origin,
+    │                               ray_direction
     ├── DragEvent                 # + screen_position, delta_pixels, world_position,
     │                               world_delta, drag_mode, ray_origin,
     │                               ray_direction, delta_transform
     └── ScrollEvent               # + screen_position, scroll_delta
 ```
+
+`screen_position` is in **canvas-local** pixels (`clientX - rect.left`,
+`clientY - rect.top` — top-left origin of the renderer canvas) for every
+pointer event; relative fields (`delta_pixels`, `world_delta`) are
+frame-independent deltas.  Click and drag_start carry the same position fields
+(`screen_position`, `world_position`, `ray_origin`/`ray_direction`, `camera`),
+so both resolve their ideal anchor from the picking ray the same way.
 
 Two consequences worth knowing when writing a handler:
 
@@ -223,12 +231,18 @@ text or `null`), `file_browser_navigate`, `file_browser_select`.
 **File chooser** (`file_chooser_view` / `FileChooserDialog`) — the backend
 `list_directory` filters non-directory entries by the control's `file_filter`
 (comma/space-separated, case-insensitive extensions and/or full-filename glob
-patterns such as `hello_*.png`) and, when `folders_only=True`, hides files;
-both are resolved from the control in the `file_browser_navigate` handler.  In
-the frontend a single click on a file highlights it and selects it (fills the
-path line), double-click accepts it, and the OK button stays disabled until a
-selection exists.  Directories navigate on a single click, and folder mode adds
-a "Select this folder" action that selects the current directory.
+patterns such as `hello_*.png`) plus an optional `pattern` (a single
+case-insensitive glob) forwarded from the `file_browser_navigate` payload, and,
+when `folders_only=True`, hides files; both are resolved from the control in the
+`file_browser_navigate` handler.  The dialog footer is an editable filename
+field plus a directory label: typing drives the `pattern` glob filter over the
+selected folder.  A single click on a file highlights it and selects it (fills
+the filename field); double-click accepts it.  The OK button stays disabled
+until the filename is non-empty and, when `existing_only=True` (the default),
+matches a listed file; `existing_only=False` is save mode and accepts names that
+do not exist yet.  OK fires `accept` carrying the full path as its `value`.
+Directories navigate on a single click, and folder mode adds a "Select this
+folder" action that selects the current directory.
 
 Interaction events (→ `InteractionHost._dispatch_interaction_event`, coalesced):
 `interaction:click`, `interaction:dblclick`, `interaction:drag_start`,
@@ -321,24 +335,49 @@ hover) or to the gesture (`InteractionConfig.cursor`, shown during the drag);
 `Visualizer.set_cursor()`/`VizSceneHandle.set_cursor()` set a per-scene override
 (via the ``scene_config`` message) for mode switches.
 
-## Image canvas
+## Interaction surface
 
-`ImageCanvas` (`_image_view.py`) displays images on an interactive
-`ActImagePlane` (`_active.py`).  The plane reuses the standard
-`ActSceneObject` contract — `set_interaction` + `on_interaction` + a
-`drag_anchor` that returns the ray↔plane hit, so `world_position` *is* the
-pixel coordinate (the canvas scene uses a y-down frame with 1 unit = 1 pixel).
-Mouse handlers modify shader uniforms via `ImageCanvas.set_uniform`, which
-sends an `image_update` JSON message; the pixel data itself travels on the image
-transport described in `viz-architecture.md` (binary `_image_wire.py` frames for
-`source: "data"`, `/image/…` tiles for `"tiled"`, or a runtime-loaded URL) and is
-never re-sent on uniform/overlay changes.
+Pointer/drag interaction for images (and any flat plane in a pane) is provided
+by an `InteractionSurface` (`_surface.py`) — a **per-pane** interaction plane
+with **no scene entity**.  It is the shared primitive behind both the flat
+`ImageCanvas` (a `PlanarMapper`, the `z = 0` pixel plane) and a calibrated
+`CameraView.background_image` (a `CalibratedPlaneMapper`, the ⟂-optical-axis
+plane at a fixed `depth`).
 
-The canvas also supports multiple specific handlers via `DragBinding` /
-`ClickBinding` (a mouse button + optional modifier set; the most specific match
-wins, falling back to the general `on_drag`/`on_click`), and lets you rebind the
-camera navigation (pan/dolly/rotate) per scene through a `controls` mapping
-(`SceneConfig.controls`, applied by `configureControls` in `view_mode.js`).
+Three orthogonal concerns:
+
+- **pane** — a `SceneView` (its `CameraView` supplies the camera, `navigation`,
+  and optional `background_image`).  `SceneView(surface=…)` binds an
+  `InteractionSurface` to the pane, and `SceneView(read_only=True)` suppresses
+  all interaction on the pane (surface **and** `Act*` object editing) while
+  leaving navigation (orbit/pan/zoom) working.
+- **surface** — the `InteractionSurface`: a `CoordinateMapper` (which defines
+  the plane via `plane()` and the pixel↔world mapping) plus pane-level
+  `on_drag_start`/`on_drag`/`on_drag_end`/`on_click` handlers and the same
+  `DragBinding`/`ClickBinding` + cursor + enable/disable API as an
+  `ActSceneObject`.
+- **visual** — the image, an orthogonal rendering detail: `ImageView` (flat
+  `ImageCanvas`) or `CameraView.background_image` (calibrated).
+
+The surface resolves pointer→world on the **backend**: the frontend emits
+`interaction:drag_*`/`click` events for the pane's *empty space* (intersecting
+the mouse ray with the surface's serialized `{point, normal}` in
+`interaction.js` `_getSurfaceHit`), each carrying the picking
+`ray_origin`/`ray_direction`, and the backend rebases onto
+`surface.drag_anchor`/`click_anchor` (a generic ray↔`mapper.plane()`
+intersection) from that ray — no `pixel_ray` reconstruction — via the same
+`_act_objects` lookup as `Act` entities.  The surface
+serializes as a `surface` field on the `scene_view` node
+(`{id, point, normal, interaction}`); runtime toggles re-push a `view_surface`
+message (handled in `viewer.js` next to `view_background_image`).
+
+`ImageCanvas` (`_image_view.py`) owns a dedicated 2D scene with a y-down pixel
+frame (1 unit = 1 pixel) and wraps an `InteractionSurface(PlanarMapper())` — the
+`ImageView` stays the visual only.  Mouse handlers modify shader uniforms via
+`ImageCanvas.set_uniform` (an `image_update` JSON message); pixel data travels
+on the image transport described in `viz-architecture.md`.  The
+`calibrated_labeling_app.py` example binds a `CalibratedSurface` to the
+`2d`-navigation background pane and marks the overview pane `read_only`.
 
 ## Coordinate frame overlay/underlay
 
@@ -403,6 +442,30 @@ removes it from flow and reports zero minimum / no preferred size so the
 enclosing Stack/Split views re-layout; the initial `visible:false` is applied the
 same way in `build.js`.  Disabled grey-out uses the theme tokens
 `--tanga-disabled-opacity` / `--tanga-disabled-fg` (overridable per theme).
+
+## Keyboard shortcuts (per-scene, per-pane focus)
+
+Scene-level keyboard shortcuts use the same `(id, event)` registry and the
+interaction dispatch path, but are **not** pointer interactions:
+
+- `Visualizer.on_key(key, handler, *, modifiers=None, scene_name="")` (and the
+  `VizSceneHandle` / `ImageCanvas` wrappers) stores a `KeyBinding` in
+  `InteractionHost._key_bindings` and registers a dispatcher under
+  `(key:{scene}:{key}, "key")` with `origin=INTERACTION`.
+- The per-scene key list is synced onto `SceneConfig.keyboard`
+  (`[{"key": …, "modifiers": […]}, …]`) and pushed via the existing
+  `scene_config` message.
+- The frontend attaches a per-pane `keydown` listener to each `ThreeJsView`
+  pane's DOM element (per-pane focus: the pane gets `tabIndex = 0` and is
+  focused on `pointerdown`).  On a registered key it sends
+  `{ type: "interaction:key", event_type: "key", scene, key, modifiers,
+     browser_id }`.
+- `InteractionHost._dispatch_interaction_event` special-cases
+  `interaction:key`, builds a `KeyEvent` (derived from `ControlEvent`, not
+  `InteractionEvent`), and dispatches the most-specific matching binding.
+
+Editable targets (`INPUT`/`TEXTAREA`/`contentEditable`) and auto-repeat are
+ignored so shortcuts don't hijack typing.
 
 ## Follow-ups
 

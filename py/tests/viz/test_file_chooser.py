@@ -84,6 +84,26 @@ def test_list_directory_folders_only(tmp_path):  # noqa: ANN001, ANN201
     assert [e["name"] for e in result["entries"]] == ["sub"]
 
 
+def test_list_directory_pattern(tmp_path):  # noqa: ANN001, ANN201
+    (tmp_path / "hello_world.png").write_text("x")
+    (tmp_path / "hello_moon.png").write_text("x")
+    (tmp_path / "goodbye.png").write_text("x")
+    (tmp_path / "sub").mkdir()
+
+    globbed = list_directory(str(tmp_path), pattern="hello_*.png")
+    assert [e["name"] for e in globbed["entries"]] == [
+        "sub",
+        "hello_moon.png",
+        "hello_world.png",
+    ]
+
+    literal = list_directory(str(tmp_path), pattern="goodbye.png")
+    assert [e["name"] for e in literal["entries"]] == ["sub", "goodbye.png"]
+
+    insensitive = list_directory(str(tmp_path), pattern="GOODBYE.PNG")
+    assert [e["name"] for e in insensitive["entries"]] == ["sub", "goodbye.png"]
+
+
 def test_file_chooser_serialization():  # noqa: ANN201
     fc = FileChooser(
         id="fc", label="File", value="/a/b", placeholder="Path…", root="/a"
@@ -97,6 +117,7 @@ def test_file_chooser_serialization():  # noqa: ANN201
         "root": "/a",
         "file_filter": "",
         "folders_only": False,
+        "existing_only": True,
     }
 
 
@@ -248,6 +269,25 @@ async def test_dispatch_file_browser_navigate_file_filter(tmp_path):  # noqa: AN
     assert [e["name"] for e in msg["entries"]] == ["sub", "a.exr"]
 
 
+@pytest.mark.anyio
+async def test_dispatch_file_browser_navigate_pattern(tmp_path):  # noqa: ANN001, ANN201
+    viz = _viz()
+    viz._server = _FakeServer()
+    viz.set_layout(FileChooserView("fc", root=str(tmp_path)))
+
+    (tmp_path / "a.json").write_text("x")
+    (tmp_path / "b.json").write_text("x")
+    (tmp_path / "c.txt").write_text("x")
+
+    await viz._dispatch_control_event(
+        "file_browser_navigate",
+        {"control_id": "fc", "path": str(tmp_path), "pattern": "*.json"},
+    )
+
+    msg = json.loads(viz._server.pushed[0])
+    assert [e["name"] for e in msg["entries"]] == ["a.json", "b.json"]
+
+
 # ── Phase 4 — FileChooserView (layout control view) ─────────
 
 
@@ -265,6 +305,7 @@ def test_file_chooser_view_serialization():  # noqa: ANN201
     assert data["placeholder"] == ""
     assert data["file_filter"] == ""
     assert data["folders_only"] is False
+    assert data["existing_only"] is True
 
 
 def test_file_chooser_dialog_serialization():  # noqa: ANN201
@@ -283,6 +324,21 @@ def test_file_chooser_dialog_serialization():  # noqa: ANN201
     assert content["value"] == "/data/file.csv"
     assert content["root"] == "/data"
     assert content["folders_only"] is False
+    assert content["existing_only"] is True
+
+
+def test_file_chooser_existing_only_serialization():  # noqa: ANN201
+    fc = FileChooser(id="fc", existing_only=False)
+    assert _serialize_one_control(fc)["existing_only"] is False
+
+
+def test_file_chooser_dialog_existing_only_false_serialization():  # noqa: ANN201
+    from pytanga.viz import FileChooserDialog
+    from pytanga.viz._dialog import serialize_dialog
+
+    dlg = FileChooserDialog("fc", existing_only=False)
+    msg = serialize_dialog(dlg.build_dialog("d1"))
+    assert msg["content"]["existing_only"] is False
 
 
 def test_show_dialog_accepts_file_chooser_dialog(monkeypatch):  # noqa: ANN001, ANN201
@@ -327,6 +383,26 @@ async def test_dispatch_dialog_accept_fires_on_accept_and_removes(monkeypatch): 
     assert accepted == ["/x.csv"]
     assert did not in viz._dialogs[None]
     assert removed == [(did, None)]
+
+
+@pytest.mark.anyio
+async def test_dispatch_dialog_accept_explicit_value(monkeypatch):  # noqa: ANN001, ANN201
+    from pytanga.viz import FileChooserDialog
+
+    viz = _viz()
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
+    monkeypatch.setattr(
+        viz._layout.overlay, "_push_dialog_remove", lambda i, s: None
+    )
+    accepted: list = []
+
+    async def _on_accept(path, event):  # noqa: ANN001, ANN202
+        accepted.append(path)
+
+    did = viz.show_dialog(FileChooserDialog("fc", on_accept=_on_accept))
+    await viz._dispatch_control_event("accept", {"id": did, "value": "/typed.json"})
+
+    assert accepted == ["/typed.json"]
 
 
 def test_set_layout_registers_file_chooser_handler():  # noqa: ANN201

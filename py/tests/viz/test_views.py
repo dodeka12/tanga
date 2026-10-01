@@ -122,6 +122,30 @@ class TestSceneView:
         assert node["camera_view"]["camera"]["position"] == [1.0, 2.0, 3.0]
         assert node["camera_view"]["camera"]["target"] == [0.0, 0.0, 0.0]
 
+    def test_camera_min_max_distance_serialize(self):  # noqa: ANN201
+        from pytanga.viz.camera import CameraConfig3d
+
+        node = serialize_layout(
+            SceneView(
+                "main",
+                camera=CameraConfig3d(
+                    position=(1, 2, 3),
+                    target=(0, 0, 0),
+                    min_distance=0.1,
+                    max_distance=10.0,
+                ),
+            )
+        )["root"]
+        cam = node["camera_view"]["camera"]
+        assert cam["min_distance"] == 0.1
+        assert cam["max_distance"] == 10.0
+
+    def test_camera_min_distance_gt_max_raises(self):  # noqa: ANN201
+        from pytanga.viz.camera import CameraConfig3d
+
+        with pytest.raises(ValueError, match="min_distance"):
+            CameraConfig3d(min_distance=10.0, max_distance=1.0)
+
     def test_camera_normalizes_view_config(self):  # noqa: ANN201
         from pytanga.viz.camera import View3dConfig
 
@@ -626,6 +650,31 @@ class TestStackView:
 
     def test_allows_empty_children(self):  # noqa: ANN201
         assert StackView("vertical").children == []
+
+    def test_fill_sets_fr_preferred_sizes(self):  # noqa: ANN201
+        # Content-sized by default (hugs content along the stack axis)…
+        assert StackView("vertical").preferred_width is None
+        assert StackView("vertical").preferred_height is None
+
+        # …but `fill=True` opts into filling the leftover space, like SplitView.
+        stack = StackView("vertical", fill=True)
+        assert stack.preferred_width == Size.fr(1)
+        assert stack.preferred_height == Size.fr(1)
+
+    def test_fill_respects_explicit_preferred(self):  # noqa: ANN201
+        stack = StackView(
+            "vertical",
+            fill=True,
+            preferred_width=Size.px(480),
+            preferred_height=Size.px(320),
+        )
+        assert stack.preferred_width == Size.px(480)
+        assert stack.preferred_height == Size.px(320)
+
+    def test_fill_serializes(self):  # noqa: ANN201
+        node = serialize_layout(StackView("vertical", fill=True))["root"]
+        assert node["preferred_width"] == {"value": 1.0, "unit": "fr"}
+        assert node["preferred_height"] == {"value": 1.0, "unit": "fr"}
 
     def test_serialize(self):  # noqa: ANN201
         node = serialize_layout(StackView("horizontal", [SpacerView(), SpacerView()]))[

@@ -16,9 +16,13 @@ uv run python py/examples/<path>.py
 
 - **A X = B** — [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md)
 
+- **ActCircle** — [Label images in the labelme JSON format](apps/image_labeling_app.md)
+
+- **ActLine** — [Label images in the labelme JSON format](apps/image_labeling_app.md)
+
 - **ActPoint** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md)
 
-- **ActRectangle2D** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
+- **ActRectangle2D** — [Label images in the labelme JSON format](apps/image_labeling_app.md)
 
 - **affine** — [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md)
 
@@ -56,7 +60,7 @@ uv run python py/examples/<path>.py
 
 - **annotations** — [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md)
 
-- **app** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md)
+- **app** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md)
 
 - **Arc** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
@@ -112,9 +116,11 @@ uv run python py/examples/<path>.py
 
 - **cache** — [How pytanga builds C++ backends on the fly](binding_demo.md)
 
-- **calibration** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
+- **CalibratedPlaneMapper** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
 
-- **camera** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [Stream a programmatic camera feed at 30 Hz over MJPEG](viz/camera/camera_stream.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
+- **calibration** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
+
+- **camera** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [Stream a programmatic camera feed at 30 Hz over MJPEG](viz/camera/camera_stream.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
 - **capped cone** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
 
@@ -200,8 +206,6 @@ uv run python py/examples/<path>.py
 
 - **Ctrl+C** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
-- **cursor** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
-
 - **curve** — [intersect two 3D quadrics (Perwass pencil)](ga/quadric/quadric_intersection_demo.md)
 
 - **custom enum** — [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
@@ -246,7 +250,9 @@ uv run python py/examples/<path>.py
 
 - **double pendulum** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
+- **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
+
+- **DragPreview** — [Label images in the labelme JSON format](apps/image_labeling_app.md)
 
 - **dropdown** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
@@ -320,7 +326,7 @@ uv run python py/examples/<path>.py
 
 - **frame streaming** — [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
 
-- **frustum** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
+- **frustum** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
 - **G(3,0)** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md)
 
@@ -386,13 +392,15 @@ uv run python py/examples/<path>.py
 
 - **hyperboloid** — [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md)
 
-- **icon** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+- **icon** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
-- **image** — [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+- **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **image background** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
+
+- **image labeling** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
 
 - **ImageCanvas** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
@@ -407,6 +415,8 @@ uv run python py/examples/<path>.py
 - **integer** — [Integer GA with two different moduli (NTRU style)](ga/algebra/modulus_algebra_multi.md), [Integer GA with a single modulus (Path C)](ga/algebra/modulus_algebra_single.md)
 
 - **interaction** — [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
+
+- **InteractionSurface** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
 
 - **interactive** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
@@ -435,6 +445,10 @@ uv run python py/examples/<path>.py
 - **keyframe** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
 - **label** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
+
+- **labeling** — [Label images in the labelme JSON format](apps/image_labeling_app.md)
+
+- **labelme** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Label images in the labelme JSON format](apps/image_labeling_app.md)
 
 - **labels** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
@@ -478,7 +492,7 @@ uv run python py/examples/<path>.py
 
 - **markdown** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **menu** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **menu** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **menu bar** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
@@ -584,7 +598,7 @@ uv run python py/examples/<path>.py
 
 - **PIL** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
-- **pinhole** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
+- **pinhole** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
 - **pixels** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
@@ -664,7 +678,7 @@ uv run python py/examples/<path>.py
 
 - **re-run** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
-- **rectangle** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md)
+- **rectangle** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
 - **Rectangle2D** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
@@ -772,7 +786,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -836,7 +850,7 @@ uv run python py/examples/<path>.py
 
 - **tolerance** — [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
-- **toolbar** — [Add and drag rectangles on an image via a toolbar](viz/image/rectangle_labeling.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+- **toolbar** — [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **trail** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
 

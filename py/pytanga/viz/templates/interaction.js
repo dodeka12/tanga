@@ -18,6 +18,7 @@
 // in a split view.
 
 import * as THREE from 'three';
+import { screenWorldScale } from '../camera-fit.js';
 
 // Double-click timeout (ms)
 const DBLCLICK_TIMEOUT = 300;
@@ -36,6 +37,11 @@ export class InteractionController {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.spaceDim = 3;  // set via setSpaceDim() from three-view.js
+
+        // Per-pane interaction surface ({ id, point, normal, interaction }) and
+        // a read-only flag that suppresses all interaction (surface + entities).
+        this._surface = null;
+        this._readOnly = false;
 
         // Throttling state: "objectId:eventType" → { lastSent, pendingTimer, pendingData }
         this._throttles = new Map();
@@ -61,6 +67,7 @@ export class InteractionController {
         rendererDomElement.addEventListener('lostpointercapture', () => this._onLostCapture());
         rendererDomElement.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
         rendererDomElement.addEventListener('dblclick', (e) => this._onDblClick(e));
+        rendererDomElement.addEventListener('contextmenu', (e) => this._onContextMenu(e));
     }
 
     setSpaceDim(dim) {
@@ -78,6 +85,27 @@ export class InteractionController {
     setSceneCursor(cursor) {
         this._sceneCursor = cursor || null;
         this.rendererDomElement.style.cursor = this._sceneCursor || '';
+    }
+
+    setSurface(surface) {
+        this._surface = surface || null;
+    }
+
+    setReadOnly(readOnly) {
+        this._readOnly = !!readOnly;
+    }
+
+    hasArmedSurface() {
+        // A surface with an enabled drag trigger is "armed" for drawing; a draw
+        // drag conflicts with the pane's pan gesture, so navigation must yield.
+        const s = this._surface;
+        if (!s || !s.interaction || !s.interaction.enabled) return false;
+        const triggers = s.interaction.triggers || [];
+        return triggers.some((t) => t.event_type === 'drag');
+    }
+
+    isDragActive() {
+        return !!this._activeDrag;
     }
 
     registerInteractive(objectId, mesh, config) {
@@ -139,7 +167,10 @@ export class InteractionController {
             object_id: this._activeDrag.objectId,
             mouse_button: this._activeDrag.button,
             modifiers: Array.from(this._activeDrag.modifiers),
-            screen_position: [this._activeDrag.lastPos.x, this._activeDrag.lastPos.y],
+            screen_position: this._localPosition(
+                this._activeDrag.lastPos.x,
+                this._activeDrag.lastPos.y
+            ),
             delta_pixels: [
                 this._activeDrag.pendingPixelDelta.x,
                 this._activeDrag.pendingPixelDelta.y,
@@ -300,22 +331,13 @@ export class InteractionController {
 
     _computeScreenPlaneVectors(intersectPoint) {
         // Compute world-space vectors corresponding to +1 pixel in
-        // screen X and screen Y.  Perspective cameras scale by the vertical
-        // FOV at the intersection depth; orthographic cameras (2D) use the
-        // frustum height divided by OrbitControls' `camera.zoom`, which scales
-        // the effective frustum without changing top/bottom (camera.fov is
-        // undefined there).
-        const dist = intersectPoint.distanceTo(this.camera.position);
+        // screen X and screen Y.  The pixel→world factor must match the
+        // actual camera projection: `screenWorldScale` handles orthographic
+        // (frustum height / zoom) and perspective (FOV at the intersection
+        // depth), including the off-center pinhole camera whose stale `fov`
+        // would otherwise give a zoom-independent scale.
         const viewportHeight = this.rendererDomElement.clientHeight;
-
-        let scale;
-        if (this.camera.isOrthographicCamera) {
-            const frustumHeight = this.camera.top - this.camera.bottom;
-            scale = frustumHeight / (viewportHeight * this.camera.zoom);
-        } else {
-            const vFov = THREE.MathUtils.degToRad(this.camera.fov || 50);
-            scale = 2 * dist * Math.tan(vFov / 2) / viewportHeight;
-        }
+        const scale = screenWorldScale(this.camera, viewportHeight, intersectPoint);
 
         const right = new THREE.Vector3();
         const up = new THREE.Vector3();
@@ -327,6 +349,7 @@ export class InteractionController {
         const screenDx = right.clone().multiplyScalar(scale);
         const screenDy = up.clone().multiplyScalar(-scale);  // screen -Y → world
 
+        const dist = intersectPoint.distanceTo(this.camera.position);
         return { screenDx, screenDy, dist };
     }
 
@@ -371,9 +394,9 @@ export class InteractionController {
     // ── Trigger Matching ─────────────────────────────────────────
 
     _findMatchingTriggers(objectId, eventType, button, modifiers) {
-        const obj = this.interactiveObjects.get(objectId);
-        if (!obj) return [];
-        return obj.config.triggers.filter(t => {
+        const config = this._getObjectConfig(objectId);
+        if (!config) return [];
+        return config.triggers.filter(t => {
             if (t.event_type !== eventType) return false;
             if (t.mouse_button != null && t.mouse_button !== button) return false;
             const reqMods = t.modifiers || [];
@@ -403,12 +426,61 @@ export class InteractionController {
         }
     }
 
+    // ── Surface + hit resolution ────────────────────────────────
+
+    _getObjectConfig(objectId) {
+        const obj = this.interactiveObjects.get(objectId);
+        if (obj) return obj.config;
+        if (this._surface && this._surface.id === objectId) return this._surface.interaction;
+        return null;
+    }
+
+    // Client → canvas-local pixel coordinates (the common frame every payload
+    // sends for `screen_position`).
+    _localPosition(clientX, clientY) {
+        const rect = this.rendererDomElement.getBoundingClientRect();
+        return [clientX - rect.left, clientY - rect.top];
+    }
+
+    _getSurfaceHit(event) {
+        if (!this._surface) return null;
+        if (!this._surface.interaction || !this._surface.interaction.enabled) return null;
+        const s = this._surface;
+        const rect = this.rendererDomElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+            new THREE.Vector3(s.normal[0], s.normal[1], s.normal[2]),
+            new THREE.Vector3(s.point[0], s.point[1], s.point[2]),
+        );
+        const target = new THREE.Vector3();
+        const hitPoint = this.raycaster.ray.intersectPlane(plane, target);
+        if (!hitPoint) return null;
+        return { objectId: s.id, intersect: { point: hitPoint, face: null } };
+    }
+
+    _getHit(event) {
+        if (this._readOnly) return null;
+        return this._getInteractiveHit(event) || this._getSurfaceHit(event);
+    }
+
     // ── Raycasting ───────────────────────────────────────────────
 
     _getInteractiveHit(event) {
         const meshes = [];
         for (const [, obj] of this.interactiveObjects) meshes.push(obj.mesh);
         if (meshes.length === 0) return null;
+
+        // Raycast background planes last.  An image plane sits at the same
+        // z = 0 as the shape bodies drawn over it, so an equal-distance raycast
+        // tie would otherwise resolve to the image (first registered) and
+        // shadow the shapes.  Sorting it last lets the overlay entities win.
+        meshes.sort((a, b) => {
+            const aIsImage = !!(a && a.userData && a.userData.kind === 'image');
+            const bIsImage = !!(b && b.userData && b.userData.kind === 'image');
+            return (aIsImage ? 1 : 0) - (bIsImage ? 1 : 0);
+        });
 
         const rect = this.rendererDomElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -439,9 +511,9 @@ export class InteractionController {
     // ── Throttling ───────────────────────────────────────────────
 
     _throttledSend(objectId, eventType, buildPayload) {
-        const obj = this.interactiveObjects.get(objectId);
-        if (!obj || !this.ws) return;
-        const throttleMs = obj.config.throttle_ms || 0;
+        const config = this._getObjectConfig(objectId);
+        if (!config || !this.ws) return;
+        const throttleMs = config.throttle_ms || 0;
         const key = objectId + ':' + eventType;
 
         if (throttleMs <= 0) { this.ws.send(JSON.stringify(buildPayload())); return; }
@@ -477,7 +549,7 @@ export class InteractionController {
     // ── Pointer Event Handlers ───────────────────────────────────
 
     _onPointerDown(event) {
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         if (!hit) return;
 
         const modifiers = this._getActiveModifiers(event);
@@ -519,9 +591,9 @@ export class InteractionController {
                 unsentPixelDelta: new THREE.Vector2(),
             };
             this._dragStarted = false;
-            const hitObj = this.interactiveObjects.get(hit.objectId);
-            if (hitObj && hitObj.config && hitObj.config.cursor) {
-                this.rendererDomElement.style.cursor = hitObj.config.cursor;
+            const hitConfig = this._getObjectConfig(hit.objectId);
+            if (hitConfig && hitConfig.cursor) {
+                this.rendererDomElement.style.cursor = hitConfig.cursor;
             }
             this.rendererDomElement.setPointerCapture(event.pointerId);
             if (this.controls) this.controls.enabled = false;
@@ -591,7 +663,7 @@ export class InteractionController {
                 object_id: this._activeDrag.objectId,
                 mouse_button: this._activeDrag.button,
                 modifiers: Array.from(this._activeDrag.modifiers),
-                screen_position: [event.clientX, event.clientY],
+                screen_position: this._localPosition(event.clientX, event.clientY),
                 world_position: [worldPos.x, worldPos.y, worldPos.z],
                 drag_mode: dragMode,
             };
@@ -632,7 +704,7 @@ export class InteractionController {
             return;
         }
 
-        const hit = this._getInteractiveHit(event);
+        const hit = this._readOnly ? null : this._getInteractiveHit(event);
         const newHoveredId = hit ? hit.objectId : null;
 
         if (newHoveredId !== this._hoveredObjectId) {
@@ -672,7 +744,7 @@ export class InteractionController {
                     object_id: this._activeDrag.objectId,
                     mouse_button: this._activeDrag.button,
                     modifiers: Array.from(this._activeDrag.modifiers),
-                    screen_position: [event.clientX, event.clientY],
+                    screen_position: this._localPosition(event.clientX, event.clientY),
                     delta_pixels: [
                         event.clientX - this._activeDrag.startPos.x,
                         event.clientY - this._activeDrag.startPos.y,
@@ -697,7 +769,7 @@ export class InteractionController {
             }
         }
 
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         const objectId = hit ? hit.objectId : null;
         if (objectId) {
             const state = this._clickState.get(objectId);
@@ -721,9 +793,19 @@ export class InteractionController {
                             object_id: objectId,
                             mouse_button: button,
                             modifiers: Array.from(modifiers),
-                            screen_position: [event.clientX, event.clientY],
+                            screen_position: this._localPosition(event.clientX, event.clientY),
                             world_position: [wp.x, wp.y, wp.z],
                             world_normal: [normal.x, normal.y, normal.z],
+                            ray_origin: [
+                                this.raycaster.ray.origin.x,
+                                this.raycaster.ray.origin.y,
+                                this.raycaster.ray.origin.z,
+                            ],
+                            ray_direction: [
+                                this.raycaster.ray.direction.x,
+                                this.raycaster.ray.direction.y,
+                                this.raycaster.ray.direction.z,
+                            ],
                             ...this._getCameraPayload(wp),
                         };
                         if (this.ws) this.ws.send(JSON.stringify(payload));
@@ -738,7 +820,7 @@ export class InteractionController {
     // ── Dblclick / wheel / capture / cancel ──────────────────────
 
     _onDblClick(event) {
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         if (!hit) return;
         const button = this._mouseButtonFromEvent(event);
         const modifiers = this._getActiveModifiers(event);
@@ -753,17 +835,34 @@ export class InteractionController {
                 object_id: hit.objectId,
                 mouse_button: button,
                 modifiers: Array.from(modifiers),
-                screen_position: [event.clientX, event.clientY],
+                screen_position: this._localPosition(event.clientX, event.clientY),
                 world_position: [wp.x, wp.y, wp.z],
                 world_normal: [normal.x, normal.y, normal.z],
+                ray_origin: [
+                    this.raycaster.ray.origin.x,
+                    this.raycaster.ray.origin.y,
+                    this.raycaster.ray.origin.z,
+                ],
+                ray_direction: [
+                    this.raycaster.ray.direction.x,
+                    this.raycaster.ray.direction.y,
+                    this.raycaster.ray.direction.z,
+                ],
                 ...this._getCameraPayload(wp),
             };
             if (this.ws) this.ws.send(JSON.stringify(payload));
         }
     }
 
+    _onContextMenu(event) {
+        // The viewer canvas has no native context menu, so suppress it outright.
+        // This lets custom right-button actions (e.g. polygon-vertex delete via
+        // Ctrl+right-click / Alt+right-click) run without the browser menu.
+        event.preventDefault();
+    }
+
     _onWheel(event) {
-        const hit = this._getInteractiveHit(event);
+        const hit = this._getHit(event);
         if (!hit) return;
         const modifiers = this._getActiveModifiers(event);
         const triggers = this._findMatchingTriggers(hit.objectId, 'scroll', null, modifiers);
@@ -775,7 +874,7 @@ export class InteractionController {
                 event_type: 'scroll',
                 object_id: hit.objectId,
                 modifiers: Array.from(modifiers),
-                screen_position: [event.clientX, event.clientY],
+                screen_position: this._localPosition(event.clientX, event.clientY),
                 delta_xy: [event.deltaX, event.deltaY],
                 ...this._getCameraPayload(wp),
             });
@@ -794,7 +893,10 @@ export class InteractionController {
                     object_id: this._activeDrag.objectId,
                     mouse_button: this._activeDrag.button,
                     modifiers: Array.from(this._activeDrag.modifiers),
-                    screen_position: [this._activeDrag.lastPos.x, this._activeDrag.lastPos.y],
+                    screen_position: this._localPosition(
+                        this._activeDrag.lastPos.x,
+                        this._activeDrag.lastPos.y
+                    ),
                     delta_pixels: [0, 0],
                     world_position: [0, 0, 0],
                     world_delta: [0, 0, 0],

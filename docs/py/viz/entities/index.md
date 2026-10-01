@@ -14,12 +14,13 @@ operators, axes/grid, point paths, and the active (interactive) elements.
 | [Axes & Grid](axes-grid.md) | `Axes2D`/`Axes3D`, custom `Axis`, and `Grid` |
 | [PointPath](point-path.md) | Trail/curve rendering with `PointPath` and `PointPathStyle` |
 | [Active Elements](active-elements/index.md) | High-level interactive entities (`ActPoint`) |
+| [labelme](labelme.md) | Load/save labelme JSON and map shapes to entities or active composites |
 
 ## Quick reference
 
 | Entity / Operator | Style class | Documented in |
 |-------------------|-------------|---------------|
-| Point | PointStyle / CrossHairPointStyle / SquarePointStyle | [Entities](entities.ipynb) |
+| Point | PointStyle / CrossHairPointStyle / SquarePointStyle / CirclePointStyle / IconPointStyle | [Entities](entities.ipynb) |
 | Direction | DirectionStyle | [Entities](entities.ipynb) |
 | HPoint | HPointStyle | [Entities](entities.ipynb) |
 | PointPair / ImagPointPair | PointPairStyle | [Entities](entities.ipynb) |

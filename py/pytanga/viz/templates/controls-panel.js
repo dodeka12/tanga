@@ -75,6 +75,9 @@ export function applyControlStateToElement(wrapper, state) {
     if (state.visible !== undefined) {
         wrapper.style.display = state.visible ? '' : 'none';
     }
+    if (state.selected !== undefined) {
+        wrapper.classList.toggle('tanga-control-selected', !!state.selected);
+    }
 }
 
 /**

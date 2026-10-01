@@ -46,6 +46,18 @@ class TestCamera:
         cam = canvas.handle.scene.config.camera
         assert (cam.xmin, cam.xmax, cam.ymin, cam.ymax) == (-0.5, 19.5, -0.5, 9.5)
         assert cam.stretch == "fit"
+        assert cam.min_zoom == 0.25
+
+    def test_fit_to_image_custom_min_zoom(self) -> None:
+        canvas = ImageCanvas(_viz(), min_zoom=0.5)
+        canvas.set_image(ImageData("img1", data=np.zeros((10, 20), dtype=np.uint8)))
+        assert canvas.handle.scene.config.camera.min_zoom == 0.5
+
+    def test_min_zoom_must_be_positive(self) -> None:
+        with pytest.raises(ValueError):
+            ImageCanvas(_viz(), min_zoom=0.0)
+        with pytest.raises(ValueError):
+            ImageCanvas(_viz(), min_zoom=-1.0)
 
     def test_fit_to_image_before_image_is_noop(self) -> None:
         canvas = ImageCanvas(_viz())
@@ -54,7 +66,7 @@ class TestCamera:
 
 
 class TestHandlers:
-    def test_drag_handlers_forwarded_to_plane(self) -> None:
+    def test_drag_handlers_forwarded_to_surface(self) -> None:
         from pytanga.viz import DragBinding, DragEvent, ModifierKey, MouseButton
 
         async def on_drag(event: DragEvent, canvas: ImageCanvas) -> bool:
@@ -64,12 +76,12 @@ class TestHandlers:
             _viz(),
             drag_handlers=[DragBinding(MouseButton.RIGHT, on_drag, ModifierKey.CTRL)],
         )
-        bindings = canvas.act_plane._drag_bindings
+        bindings = canvas.surface._drag_bindings
         assert len(bindings) == 1
         assert bindings[0].button is MouseButton.RIGHT
         assert bindings[0].modifiers == frozenset({ModifierKey.CTRL})
 
-    def test_click_handlers_forwarded_to_plane(self) -> None:
+    def test_click_handlers_forwarded_to_surface(self) -> None:
         from pytanga.viz import ClickBinding, ClickEvent, MouseButton
 
         async def on_click(event: ClickEvent, canvas: ImageCanvas) -> None:
@@ -79,7 +91,7 @@ class TestHandlers:
             _viz(),
             click_handlers=[ClickBinding(MouseButton.LEFT, on_click)],
         )
-        bindings = canvas.act_plane._click_bindings
+        bindings = canvas.surface._click_bindings
         assert len(bindings) == 1
         assert bindings[0].button is MouseButton.LEFT
         assert bindings[0].modifiers == frozenset()
@@ -122,12 +134,22 @@ class TestApi:
         assert "img1" in viz._image_pyramids
         assert viz._image_pyramids["img1"] is image.tiled
 
-    def test_act_plane(self) -> None:
+    def test_surface(self) -> None:
         canvas = ImageCanvas(_viz())
-        from pytanga.viz import ActImagePlane
+        from pytanga.viz import InteractionSurface
 
-        assert isinstance(canvas.act_plane, ActImagePlane)
-        assert canvas.act_plane.image_view is canvas.image_view
+        assert isinstance(canvas.surface, InteractionSurface)
+        assert canvas.surface.mapper is not None
+
+    def test_click_anchor_intersects_plane(self) -> None:
+        from pytanga.geometry import Direction
+
+        canvas = ImageCanvas(_viz())
+        # The image plane is flat at z=0, so a CLICK resolves to the ray↔plane
+        # intersection (there is no raycastable mesh to keep the raw hit).
+        assert canvas.surface.click_anchor(
+            Point(2.0, 3.0, 5.0), Direction(0.0, 0.0, -1.0)
+        ) == Point(2.0, 3.0, 0.0)
 
 
 class TestOverlay:

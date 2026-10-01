@@ -179,6 +179,8 @@ class InteractionHost(OverlayHost):
         self._interaction_registry = InteractionHandlerRegistry(registry)
         self._interaction_configs: dict[str, dict[str, Any]] = {}
         self._act_objects: dict[str, Any] = {}
+        # scene → key → list of KeyBinding (keyboard-shortcut handlers).
+        self._key_bindings: dict[str, dict[str, list[Any]]] = {}
 
     def set_interaction(
         self,
@@ -209,6 +211,73 @@ class InteractionHost(OverlayHost):
             event=event_type.value,
             origin=HandlerOrigin.INTERACTION,
         )
+
+    def on_key(
+        self,
+        key: str,
+        handler: Any,
+        *,
+        modifiers: Sequence[Any] | None = None,
+        scene_name: str = "",
+    ) -> None:
+        """Register an async handler for a key press in this scene."""
+        key = key.lower()
+        from ._controls import HandlerOrigin
+        from ._interaction import KeyBinding, ModifierKey
+
+        mods = frozenset(
+            m if isinstance(m, ModifierKey) else ModifierKey(str(m).lower())
+            for m in (modifiers or ())
+        )
+        binding = KeyBinding(key=key, handler=handler, modifiers=mods)
+        self._key_bindings.setdefault(scene_name, {}).setdefault(key, []).append(
+            binding
+        )
+
+        async def dispatcher(event: Any) -> None:
+            await self._dispatch_key_event(scene_name, key, event)
+
+        self._transport.register(
+            f"key:{scene_name}:{key}",
+            dispatcher,
+            event="key",
+            origin=HandlerOrigin.INTERACTION,
+        )
+
+    def keyboard(self, scene_name: str) -> list[dict[str, Any]]:
+        """The wire-format keyboard list for *scene_name* (deduplicated)."""
+        result: list[dict[str, Any]] = []
+        seen: set[tuple[str, tuple[str, ...]]] = set()
+        for key, bindings in self._key_bindings.get(scene_name, {}).items():
+            for binding in bindings:
+                mods = tuple(sorted(m.value for m in binding.modifiers))
+                if (key, mods) in seen:
+                    continue
+                seen.add((key, mods))
+                result.append({"key": key, "modifiers": list(mods)})
+        return result
+
+    async def _dispatch_key_event(self, scene: str, key: str, event: Any) -> None:
+        """Run the most-specific matching key binding for *event*."""
+        bindings = self._key_bindings.get(scene, {}).get(key, [])
+        best: Any = None
+        for binding in bindings:
+            if binding.modifiers <= event.modifiers:
+                if best is None or len(binding.modifiers) > len(best.modifiers):
+                    best = binding
+        if best is not None:
+            await best.handler(event)
+
+    async def _dispatch_key(self, data: dict[str, Any]) -> None:
+        """Parse + dispatch an incoming ``interaction:key`` event."""
+        from ._interaction import _parse_key_event
+
+        event = _parse_key_event(data)
+        handler = self._registry.get_interaction(
+            f"key:{event.scene}:{event.key}", "key"
+        )
+        if handler is not None:
+            await handler(event)
 
     async def _send_drag_anchor(self, event: Any) -> None:
         """Resolve the ideal drag anchor and rebase the event on it."""
@@ -248,14 +317,11 @@ class InteractionHost(OverlayHost):
         act = self._act_objects.get(event.object_id)
         if act is None:
             return
-        if event.camera is None:
-            return
         try:
-            ray_origin, ray_direction = event.camera.pixel_ray(
-                event.screen_position[0], event.screen_position[1]
-            )
-            anchor = act.drag_anchor(ray_origin, ray_direction)
+            anchor = act.click_anchor(event.ray_origin, event.ray_direction)
         except NotImplementedError:
+            return
+        if anchor is None:
             return
         event.world_position = anchor
 
@@ -263,6 +329,9 @@ class InteractionHost(OverlayHost):
         self, msg_type: str, data: dict[str, Any]
     ) -> None:
         """Parse + dispatch an incoming interaction event."""
+        if msg_type == "interaction:key":
+            await self._dispatch_key(data)
+            return
         from ._interaction import _parse_event
 
         try:

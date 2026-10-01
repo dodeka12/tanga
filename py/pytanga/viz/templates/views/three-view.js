@@ -9,7 +9,7 @@ import { View } from './view.js';
 import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
-import { applyImageUniforms } from '../renderers/image.js';
+import { applyImageUniforms, updateImageLod } from '../renderers/image.js';
 import { createImageBackground, setBackgroundAspect, setBackgroundCrop, updateImageBackground } from '../renderers/image-background.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
@@ -20,7 +20,7 @@ import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '
 import { InteractionController } from '../interaction.js';
 import { AxesOverlay } from '../axes-overlay.js';
 import { GridUnderlay } from '../grid-underlay.js';
-import { clampOrthoView } from '../camera-fit.js';
+import { clampOrthoView, screenWorldScale } from '../camera-fit.js';
 
 // ── WebGL1 SDF fallback warning banner ──────────────────────
 // SDF proxies need GLSL3 + `gl_FragDepth` (WebGL2). On WebGL1 those objects
@@ -139,6 +139,10 @@ export class ThreeJsView extends View {
         this._backgroundMesh = null;
         this._hide = new Set();
         this._show = null;
+        this._readOnly = false;
+        this._surface = null;
+        this._keyBindings = [];
+        this._lastCameraKey = null;
 
         this.el.classList.add('tanga-three-view');
         this.el.style.position = 'relative';
@@ -298,6 +302,13 @@ export class ThreeJsView extends View {
             this._bindViewportInput();
             this._interaction = new InteractionController(this.camera, this.renderer.domElement, this.controls, this._ws);
         }
+
+        this.el.tabIndex = 0;
+        // Capture phase: run before the interaction controller's pointerdown
+        // (which calls `stopPropagation()` on drag), so this pane still gains
+        // focus and its keydown listener fires.
+        this.el.addEventListener('pointerdown', () => this.el.focus(), true);
+        this.el.addEventListener('keydown', (e) => this._handleKeyDown(e));
     }
 
     _addDefaultLights() {
@@ -360,6 +371,8 @@ export class ThreeJsView extends View {
         if (!this.renderer || !this.camera) return;
         if (this.controls) this.controls.update();
         clampOrthoView(this.camera, this.controls);
+        this._updateImageLod();
+        this._updateScreenSpaceMarkers();
         updateTweens(this.sceneObjects);
         const width = this.width || window.innerWidth;
         const height = this.height || window.innerHeight;
@@ -385,6 +398,59 @@ export class ThreeJsView extends View {
             x: c.position.x,
             y: c.position.y,
         };
+    }
+
+    // Device-pixel size of an image's long side on screen, derived from the 2D
+    // ortho frustum + viewport + device-pixel ratio + zoom.  Returns null when
+    // the camera is not an orthographic 2D camera yet.
+    _imageScreenLongSide(frame) {
+        if (!this.camera || !this.camera.isOrthographicCamera || !this.renderer) return null;
+        const width = this.width || window.innerWidth;
+        const height = this.height || window.innerHeight;
+        const dpr = this.renderer.getPixelRatio();
+        const zoom = this.camera.zoom || 1;
+        const fw = (frame && frame.width) ? frame.width : 1;
+        const fh = (frame && frame.height) ? frame.height : 1;
+        const worldW = Math.max(1e-9, this.camera.right - this.camera.left);
+        const worldH = Math.max(1e-9, this.camera.top - this.camera.bottom);
+        const sx = (dpr * width) / worldW;
+        const sy = (dpr * height) / worldH;
+        return Math.max(fw * sx, fh * sy) * zoom;
+    }
+
+    // Re-resolve tiled image pyramid levels to match the current zoom/viewport.
+    _updateImageLod() {
+        if (!this.camera || !this.renderer) return;
+        for (const entry of this.sceneObjects.values()) {
+            if (!entry || entry.data?.kind !== 'image' || !entry.mesh) continue;
+            const images = entry.data.images || [];
+            if (!images.some((img) => img.source === 'tiled')) continue;
+            const maxDim = this._imageScreenLongSide(entry.data.frame);
+            if (maxDim == null) continue;
+            updateImageLod(entry.mesh, maxDim);
+        }
+    }
+
+    // Keep screen-space point markers at a constant on-screen size.  Iterate the
+    // view's entities, find marker meshes tagged `userData.isScreenSpace`, and
+    // set their scale to world-units-per-CSS-pixel via the shared camera helper.
+    _updateScreenSpaceMarkers() {
+        if (!this.camera || !this.renderer) return;
+        const height = this.height || window.innerHeight;
+        const viewportPx = Math.max(1, height);
+        const billboard = !this.camera.isOrthographicCamera;
+        const worldPos = new THREE.Vector3();
+        for (const entry of this.sceneObjects.values()) {
+            const mesh = entry && entry.mesh;
+            if (!mesh || !mesh.userData || !mesh.userData.isScreenSpace) continue;
+            mesh.getWorldPosition(worldPos);
+            mesh.scale.setScalar(screenWorldScale(this.camera, viewportPx, worldPos));
+            // Flat square/circle/icon billboards face the camera in perspective;
+            // the crosshair is a 3D Group and keeps its world orientation.
+            if (billboard && mesh.isMesh) {
+                mesh.quaternion.copy(this.camera.quaternion);
+            }
+        }
     }
 
     clearAll() {
@@ -423,6 +489,7 @@ export class ThreeJsView extends View {
 
     _applySceneConfig(config) {
         this.sceneConfig = config;
+        this._keyBindings = config.keyboard || [];
         const spaceDim = config.space_dim || 3;
         // A per-pane camera override (SceneView(scene, camera=…)) wins over the
         // scene's own camera; otherwise fall back to the scene config.
@@ -436,7 +503,14 @@ export class ThreeJsView extends View {
             this.applyThemeBackground();
         }
 
-        this._applyCamera(cameraConfig);
+        // Only re-apply the camera when it actually changed: unrelated
+        // `scene_config` pushes (cursor, title, keyboard) re-send the same
+        // (stale) camera and must not reset the user's pan/zoom.
+        const cameraKey = this._cameraKey(cameraConfig);
+        if (cameraKey !== this._lastCameraKey) {
+            this._lastCameraKey = cameraKey;
+            this._applyCamera(cameraConfig);
+        }
 
         this._reconfigureControls();
         this._interaction.setSpaceDim(spaceDim);
@@ -465,6 +539,11 @@ export class ThreeJsView extends View {
         const bg = getComputedStyle(document.documentElement)
             .getPropertyValue('--tanga-bg').trim();
         this.scene.background = bg ? new THREE.Color(bg) : null;
+    }
+
+    /** Stable string key for a camera config (or '' for none), for change detection. */
+    _cameraKey(cameraConfig) {
+        return cameraConfig ? JSON.stringify(cameraConfig) : '';
     }
 
     /**
@@ -557,6 +636,11 @@ export class ThreeJsView extends View {
             this._applyPinholeFraming(vp);
             return;
         }
+        // The zoom/pan viewport crop only applies to the calibrated "2d"
+        // navigation mode.  In the default orbit mode OrbitControls own the
+        // camera, so this must not touch `camera.zoom` — resetting it here (on
+        // every scene_config push via `resize()`) would undo the user's pan/zoom.
+        if (this._navigation !== '2d') return;
         if (!vp) {
             this.camera.zoom = 1;
             this.camera.clearViewOffset();
@@ -618,6 +702,14 @@ export class ThreeJsView extends View {
         return this._navigation === '2d' && !!this.camera && !!this.camera.userData._pinhole;
     }
 
+    /** True when an interaction drag is armed or in progress (navigation yields). */
+    _interactionActive() {
+        return (
+            !!this._interaction
+            && (this._interaction.hasArmedSurface() || this._interaction.isDragActive())
+        );
+    }
+
     /** Pointer position in pane-NDC: x right=+1, y bottom=+1 (image v-down). */
     _screenNdc(e) {
         const rect = this.renderer.domElement.getBoundingClientRect();
@@ -636,6 +728,9 @@ export class ThreeJsView extends View {
 
     _onViewportPointerDown(e) {
         if (!this._viewportInputEnabled()) return;
+        if (this._interactionActive()) return;
+        // Pan on the pan mouse buttons (left / right), matching the nav-2d mapping.
+        if (e.button !== 0 && e.button !== 2) return;
         const [nx, ny] = this._screenNdc(e);
         this._viewportDrag = { nx, ny, pointerId: e.pointerId };
         this.renderer.domElement.setPointerCapture(e.pointerId);
@@ -643,6 +738,11 @@ export class ThreeJsView extends View {
 
     _onViewportPointerMove(e) {
         if (!this._viewportDrag || e.pointerId !== this._viewportDrag.pointerId) return;
+        if (this._interactionActive()) {
+            // An interaction drag started mid-pan — stop the pan.
+            this._viewportDrag = null;
+            return;
+        }
         const [nx, ny] = this._screenNdc(e);
         const dnx = nx - this._viewportDrag.nx;
         const dny = ny - this._viewportDrag.ny;
@@ -732,6 +832,18 @@ export class ThreeJsView extends View {
         this._show = show && show.length ? new Set(show) : null;
     }
 
+    /** Set this pane's interaction surface (per-pane ``surface``). */
+    setSurface(surface) {
+        this._surface = surface || null;
+        if (this._interaction) this._interaction.setSurface(this._surface);
+    }
+
+    /** Set this pane's read-only flag (per-pane ``read_only``). */
+    setReadOnly(readOnly) {
+        this._readOnly = !!readOnly;
+        if (this._interaction) this._interaction.setReadOnly(this._readOnly);
+    }
+
     /** Refresh this reused pane from a serialized ``scene_view`` node. */
     updateFromNode(node) {
         const camView = node.camera_view || {};
@@ -742,6 +854,8 @@ export class ThreeJsView extends View {
         this.setViewport(camView.viewport || null);
         this.setBackgroundImage(camView.background_image || null);
         this.setVisibilityFilter(node.hide || null, node.show || null);
+        this.setSurface(node.surface || null);
+        this.setReadOnly(!!node.read_only);
     }
 
     _isFilteredOut(id) {
@@ -856,6 +970,49 @@ export class ThreeJsView extends View {
 
     // ── per-scene message handling ─────────────────────────────
 
+    // ── per-pane keyboard shortcuts ─────────────────────────
+
+    _handleKeyDown(event) {
+        if (event.repeat) return;
+        const target = event.target;
+        if (target && (
+            target.tagName === 'INPUT'
+            || target.tagName === 'TEXTAREA'
+            || target.isContentEditable
+        )) return;
+        const bindings = this._keyBindings || [];
+        if (!bindings.length) return;
+
+        const held = [];
+        if (event.ctrlKey || event.metaKey) held.push('ctrl');
+        if (event.shiftKey) held.push('shift');
+        if (event.altKey) held.push('alt');
+
+        const key = (event.key || '').toLowerCase();
+        for (const binding of bindings) {
+            if (!binding || !binding.key) continue;
+            if (key !== String(binding.key).toLowerCase()) continue;
+            const required = binding.modifiers || [];
+            let matched = true;
+            for (const mod of required) {
+                if (!held.includes(mod)) { matched = false; break; }
+            }
+            if (!matched) continue;
+            event.preventDefault();
+            if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+                this._ws.send(JSON.stringify({
+                    type: 'interaction:key',
+                    event_type: 'key',
+                    scene: this.sceneName,
+                    key: event.key,
+                    modifiers: held,
+                    browser_id: this._browserId,
+                }));
+            }
+            return;
+        }
+    }
+
     async handleMessage(msg) {
         if (msg.type === 'clear_all') {
             this.clearAll();
@@ -957,7 +1114,7 @@ export class ThreeJsView extends View {
                 _showSdfWebGL2Warning();
                 return;
             }
-            const entry = await buildSceneObject(msg, this.scene, this.sceneObjects);
+            const entry = await buildSceneObject(msg, this.scene, this.sceneObjects, { maxDim: this._imageScreenLongSide(msg.frame) });
             if (entry && entry.obj) {
                 this._attachPendingGroups(msg.id, entry.obj);
             }
@@ -1082,6 +1239,16 @@ export class ThreeJsView extends View {
             if (value.style && entry.obj) {
                 const prev = entry.data || {};
                 const merged = { ...prev, style: { ...(prev.style || {}), ...value.style } };
+                // A full serialization mirrors color/opacity to the top level,
+                // but a style patch only carries `style`.  Rebuild-prone kinds
+                // (PointPath) read the top-level `color` via parseColor, so
+                // mirror it back here to keep `merged` consistent.
+                if (merged.style && merged.style.color !== undefined) {
+                    merged.color = merged.style.color;
+                }
+                if (merged.style && merged.style.opacity !== undefined) {
+                    merged.opacity = merged.style.opacity;
+                }
                 if (entityRequiresRebuild(merged, prev)) {
                     await this._updateEntityContent(id, merged);
                 } else {
@@ -1102,7 +1269,7 @@ export class ThreeJsView extends View {
             return;
         }
 
-        const newMesh = await createEntityMesh({ ...prev, ...content });
+        const newMesh = await createEntityMesh({ ...prev, ...content }, { maxDim: this._imageScreenLongSide(prev.frame || content.frame) });
         if (!newMesh) return;
 
         if (entry.obj === entry.mesh) {

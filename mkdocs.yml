@@ -152,6 +152,9 @@ nav:
       - Overview: py/viz/app/index.md
       - Quickstart: py/viz/app/app.md
       - Handlers & Lifecycle: py/viz/app/handlers.md
+    - Example Apps:
+      - Overview: py/viz/example-apps/index.md
+      - Image Labeling: py/viz/example-apps/image-labeling-app.md
     - UI & Controls:
       - Overview: py/viz/ui/index.md
       - Controls: py/viz/ui/controls.md

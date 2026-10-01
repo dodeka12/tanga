@@ -5,6 +5,8 @@ import { sendLog } from '../events.js';
 import { createPoint } from './point.js';
 import { createCrossHairPoint } from './crosshair_point.js';
 import { createSquarePoint } from './square_point.js';
+import { createCirclePoint } from './circle_point.js';
+import { createIconPoint } from './icon_point.js';
 import { createDirection, updateDirection } from './direction.js';
 import { createLine, updateLine } from './line.js';
 import { createPlane } from './plane.js';
@@ -53,7 +55,7 @@ import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
  * Create a Three.js Object3D for a given entity JSON dict.
  * Dispatches to the appropriate per-entity renderer.
  */
-export async function createEntityMesh(ent) {
+export async function createEntityMesh(ent, opts) {
     let mesh;
 
     switch (ent.kind) {
@@ -64,6 +66,10 @@ export async function createEntityMesh(ent) {
                 mesh = createCrossHairPoint(ent);
             } else if (ent.style?.style_type === 'SquarePointStyle') {
                 mesh = createSquarePoint(ent);
+            } else if (ent.style?.style_type === 'CirclePointStyle') {
+                mesh = createCirclePoint(ent);
+            } else if (ent.style?.style_type === 'IconPointStyle') {
+                mesh = createIconPoint(ent);
             } else {
                 mesh = createPoint(ent);
             }
@@ -183,7 +189,7 @@ export async function createEntityMesh(ent) {
             break;
 
         case 'image':
-            mesh = await createImage(ent);
+            mesh = await createImage(ent, opts);
             break;
 
         case 'Hyperbola':

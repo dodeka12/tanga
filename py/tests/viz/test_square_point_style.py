@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from pytanga.geometry import Point
-from pytanga.viz import SquarePointStyle
+from pytanga.viz import CrossHairPointStyle, SquarePointStyle
 from pytanga.viz.serializer import serialize_entity
 
 
@@ -34,3 +34,19 @@ def test_square_point_style_round_trips_through_point_entity() -> None:
     assert result["style"]["style_type"] == "SquarePointStyle"
     assert result["style"]["size"] == 4.0
     assert result["style"]["thickness"] == 0.5
+
+
+def test_square_point_style_screen_space() -> None:
+    assert SquarePointStyle(size=4.0, screen_space=True).to_dict() == {
+        "style_type": "SquarePointStyle",
+        "size": 4.0,
+        "screen_space": True,
+    }
+
+
+def test_crosshair_point_style_screen_space() -> None:
+    assert CrossHairPointStyle(size=4.0, screen_space=True).to_dict() == {
+        "style_type": "CrossHairPointStyle",
+        "size": 4.0,
+        "screen_space": True,
+    }

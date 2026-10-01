@@ -24,11 +24,15 @@ Usage::
 
 from ._act_style import ActObjectStyle, ActPointStyle
 from ._active import (
+    ActCircle,
     ActClickHandler,
+    ActEllipse,
     ActEventHandler,
     ActHandler,
     ActImagePlane,
+    ActLine,
     ActPoint,
+    ActPolygon,
     ActRectangle2D,
     ActSceneObject,
     ClickBinding,
@@ -68,6 +72,7 @@ from ._controls import (
 )
 from ._coordinate_system import CoordinateSystem, fit_view2d
 from ._dialog import Dialog, FileChooserDialog
+from ._draw_preview import DragPreview, ShapeFromPoints
 from ._figure import FigureConfig
 from ._icons import EIconMaterial, EIconUC
 from ._image_view import ImageCanvas, ImageView
@@ -81,12 +86,15 @@ from ._interaction import (
     InteractionEventType,
     InteractionHandlerRegistry,
     InteractionTrigger,
+    KeyBinding,
+    KeyEvent,
     ModifierKey,
     MouseButton,
     ScrollEvent,
 )
 from ._keys import KeyModifier
 from ._label import Label
+from .labelme import LabelMeDocument, LabelMeLoadResult, LabelMeStore, LabelShape
 from pytanga.geometry.transform import Transform
 from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
 from ._object_ref import VizObjectRef
@@ -103,6 +111,7 @@ from ._styles import (
     Axes3DStyle,
     AxisStyle,
     BoxStyle,
+    CirclePointStyle,
     CircleStyle,
     ConeStyle,
     ConicStyle,
@@ -124,6 +133,7 @@ from ._styles import (
     GridStyle,
     HPointStyle,
     HyperbolaStyle,
+    IconPointStyle,
     InversionStyle,
     LabelStyle,
     LinePairStyle,
@@ -172,6 +182,7 @@ from ._styles import (
     VizStyle,
     WireframeDashPattern,
 )
+from ._surface import CalibratedSurface, InteractionSurface
 from ._themes import (
     copy_theme,
     default_theme,
@@ -184,14 +195,17 @@ from ._themes import (
 from ._types import SceneEntity, VizInputType
 from ._viz_styles import VizStyles
 from .camera import (
+    CalibratedPlaneMapper,
     CameraAction,
     CameraCalibration,
     CameraConfig,
     CameraConfig2d,
     CameraConfig3d,
     CameraLock,
+    CoordinateMapper,
     Navigation,
     PinholeCamera,
+    PlanarMapper,
     View2DConfig,
     View3dConfig,
     ViewportConfig,
@@ -245,13 +259,17 @@ from .views import (
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
+    "ActCircle",
     "ActClickHandler",
+    "ActEllipse",
     "ActEventHandler",
     "ActHandler",
     "ActImagePlane",
+    "ActLine",
     "ActObjectStyle",
     "ActPoint",
     "ActPointStyle",
+    "ActPolygon",
     "ActRectangle2D",
     "ActSceneObject",
     "AnimStyle",
@@ -267,6 +285,8 @@ __all__ = [
     "BoxStyle",
     "Button",
     "ButtonView",
+    "CalibratedPlaneMapper",
+    "CalibratedSurface",
     "Camera",
     "CameraAction",
     "CameraCalibration",
@@ -281,6 +301,7 @@ __all__ = [
     "ColorPicker",
     "ColorPickerView",
     "ColumnType",
+    "CoordinateMapper",
     "CoordinateSystem",
     "ClickBinding",
     "ClickEvent",
@@ -294,7 +315,9 @@ __all__ = [
     "ControlView",
     "GroupView",
     "MenuView",
+    "CirclePointStyle",
     "CrossHairPointStyle",
+    "IconPointStyle",
     "CylinderCircleStyle",
     "CylinderLineStyle",
     "CylinderStyle",
@@ -307,6 +330,7 @@ __all__ = [
     "DragBinding",
     "DragEvent",
     "DragMode",
+    "DragPreview",
     "Dropdown",
     "DropdownView",
     "EAnchor",
@@ -343,11 +367,18 @@ __all__ = [
     "InteractionEvent",
     "InteractionEventType",
     "InteractionHandler",
+    "InteractionSurface",
     "InteractionHandlerRegistry",
     "InteractionTrigger",
     "InversionStyle",
+    "KeyBinding",
+    "KeyEvent",
     "KeyModifier",
     "Label",
+    "LabelMeDocument",
+    "LabelMeLoadResult",
+    "LabelMeStore",
+    "LabelShape",
     "LabelStyle",
     "LabelView",
     "LinePairStyle",
@@ -367,6 +398,7 @@ __all__ = [
     "PartialDiskStyle",
     "PinholeCamera",
     "pinhole_camera",
+    "PlanarMapper",
     "PlaneConicPairStyle",
     "PlaneConicStyle",
     "PlanePairStyle",
@@ -408,6 +440,7 @@ __all__ = [
     "SdfRegularPolygonStyle",
     "SdfSphereStyle",
     "SdfStyle",
+    "ShapeFromPoints",
     "Size",
     "SizeSpec",
     "Slider",
