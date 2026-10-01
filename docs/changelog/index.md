@@ -1,8 +1,9 @@
 # Changelog
 
-## [Since 2.12.1] — 2026-09-29
-- Image labeling app (`ImageLabeler` pane + labelme I/O) · active elements (`ActEllipse`/`ActPolygon`/`ActCircle`/`ActLine`, rectangle rotation) · screen-space point markers · `ImageCanvas.min_zoom` · `StackView(fill=True)` · cross-instance algebra compatibility
-→ [Details](2026/09/29_74bfae43d.md)
+## [Since 2.12.1] — 2026-10-01
+- Calibrated + image labeling apps (labelme I/O) · active elements (`ActEllipse`/`ActPolygon`/`ActCircle`/`ActLine`, rectangle rotation, per-role handle styles) · per-pane `InteractionSurface` + `CalibratedSurface` · `CoordinateMapper` (planar + calibrated) · screen-space point markers · file-chooser filename entry + save mode · 3D orbit zoom limits · cross-instance algebra compatibility
+- Breaking: `LabelMeStore` loader returns `(result, errors)` · `ImageCanvas.act_plane` → `ImageCanvas.surface`
+→ [Details](2026/10/01_ddb80a288.md)
 
 ## [Since 2.12.0] — 2026-09-28
 - Bug fixes: tiled background images no longer show the previous image after a same-id swap (versioned tile URLs + `Cache-Control: no-store`)
