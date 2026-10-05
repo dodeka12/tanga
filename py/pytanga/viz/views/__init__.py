@@ -49,6 +49,7 @@ from .toolbar_view import ToolbarView
 from .functions import (
     control_to_view,
     iter_control_views,
+    iter_group_views,
     iter_log_views,
     iter_scene_names,
     iter_scene_views,
@@ -88,6 +89,7 @@ __all__ = [
     "View",
     "control_to_view",
     "iter_control_views",
+    "iter_group_views",
     "iter_log_views",
     "iter_scene_names",
     "iter_scene_views",

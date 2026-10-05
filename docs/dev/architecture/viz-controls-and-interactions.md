@@ -29,7 +29,12 @@ Three orthogonal concerns, one model:
    frontend reconciles a `view_layout` re-push on — there is **one** live-view
    registry (`_viewRegistry`, see
    [`viz-architecture.md`](viz-architecture.md)) and no parallel id-indexed
-   dicts.
+   dicts.  The reconcile allow-list preserves every content view by id (scene
+   panes, controls, `log_view`, `file_chooser_view`, `table_view`,
+   `progress_bar_view`, and `group`); only `split`/`stack`/`toolbar`/`menu` are
+   rebuilt.  Registry-backed views (`MessageView` → `_messageViews`,
+   `FileChooserView` → `fileBrowser._views`) only forget their entry in
+   `destroy()` when it still points at them.
 2. **One `(id, event)` registry.** `ControlHandlerRegistry` keys handlers by
    `(id, event)` — `change`, `click`, `press`, `release`, `cell_change`,
    `row_add`, `column_add`, `row_delete`, `toggle`, `close`, `accept`.  Layout
@@ -193,7 +198,10 @@ The layout tree is the single render path for **every** page:
 - `GroupView` is a titled `StackView` with an optional leading `icon`,
   `icon_only` mode, and a borderless fold button — the control-group container.
 - `MenuView` is a hamburger `dropdown` or a permanent `bar` of options
-  (`EControlVariant.MENU` flattens its control children).
+  (`EControlVariant.MENU` flattens its control children).  Choosing an option
+  auto-closes the menu tree: a button `click` or a dropdown `change` closes it
+  (walking `_parentMenu` up to the root), while checkboxes and sliders stay
+  open.
 
 Controls are added declaratively — build the `*View` and either pass it to
 `set_layout` (or `viz.add(view)`, which mounts it in the default layout's
@@ -442,6 +450,27 @@ removes it from flow and reports zero minimum / no preferred size so the
 enclosing Stack/Split views re-layout; the initial `visible:false` is applied the
 same way in `build.js`.  Disabled grey-out uses the theme tokens
 `--tanga-disabled-opacity` / `--tanga-disabled-fg` (overridable per theme).
+
+A numeric **range** can also change at runtime through the same `control_state`
+seam.  `SliderView` / `ValueEditView` expose `set_min` / `set_max` / `set_step` /
+`set_range`, and `Visualizer.set_control_range(cid, *, min, max, step)` resolves
+the control, clamps its current value into the new `[min, max]`, and pushes the
+changed `min`/`max`/`step` fields (plus a `control_update` when the value was
+clamped).  On the frontend, `applyControlStateToElement` writes `min`/`max`/`step`
+onto the slider's native `<input type="range">` (the browser re-clamps the
+thumb), and `value-edit.js` re-clamps its closure-captured bounds via a per-entry
+`applyState`.
+
+A **group collapse** can also change through the same `control_state` seam and
+is user-reportable.  `GroupView.set_collapsed(collapsed)` mutates
+`self.collapsed` and pushes `{"collapsed": bool}`; the frontend resolves the
+group in `_viewRegistry` (not `_controlRegistry`) and calls
+`GroupView.setCollapsed(...)`.  The user's toggle reports back through the
+existing `control:group_toggle` route: the frontend click handler sends
+`sendControlEvent('control:group_toggle', groupId, collapsed)`, and
+`dispatch_control_event` sets `group.collapsed` (via `resolve_group`) then fires
+`on_toggle` (`(id, "toggle")`), registered by `LayoutHost.register` when
+`GroupView.on_toggle` is set.
 
 ## Keyboard shortcuts (per-scene, per-pane focus)
 

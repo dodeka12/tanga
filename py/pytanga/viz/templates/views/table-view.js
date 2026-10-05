@@ -92,4 +92,21 @@ export class TableView extends ControlView {
             },
         });
     }
+
+    update(node) {
+        this.columns = node.columns ?? this.columns;
+        this.rows = node.rows ?? this.rows;
+        this.allow_add_rows = node.allow_add_rows ?? this.allow_add_rows;
+        this.allow_add_columns = node.allow_add_columns ?? this.allow_add_columns;
+        this.allow_delete_rows = node.allow_delete_rows ?? this.allow_delete_rows;
+        this.show_column_titles = node.show_column_titles ?? this.show_column_titles;
+        this.show_row_numbers = node.show_row_numbers ?? this.show_row_numbers;
+        this.allow_delete_columns = node.allow_delete_columns ?? this.allow_delete_columns;
+        this.sortable = node.sortable ?? this.sortable;
+        this.column_types = node.column_types ?? this.column_types;
+        this.column_widths = node.column_widths ?? this.column_widths;
+        this.row_height = node.row_height ?? this.row_height;
+        this.sort = node.sort ?? this.sort;
+        super.update(node);
+    }
 }

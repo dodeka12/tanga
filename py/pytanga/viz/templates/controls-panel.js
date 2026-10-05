@@ -78,6 +78,18 @@ export function applyControlStateToElement(wrapper, state) {
     if (state.selected !== undefined) {
         wrapper.classList.toggle('tanga-control-selected', !!state.selected);
     }
+    if (state.min !== undefined || state.max !== undefined || state.step !== undefined) {
+        const range = wrapper.querySelector('input[type="range"]');
+        if (range) {
+            if (state.min !== undefined) range.min = String(state.min);
+            if (state.max !== undefined) range.max = String(state.max);
+            if (state.step !== undefined) range.step = String(state.step);
+            // The browser auto-clamps `range.value` when min/max change; sync
+            // the readout so it matches.
+            const readout = wrapper.querySelector('.tanga-value');
+            if (readout) readout.textContent = range.value;
+        }
+    }
 }
 
 /**
@@ -90,7 +102,11 @@ export function applyControlState(id, state) {
         console.debug('[tanga] control_state for unknown id:', id);
         return;
     }
-    applyControlStateToElement(entry.el, state);
+    if (typeof entry.applyState === 'function') {
+        entry.applyState(state);
+    } else {
+        applyControlStateToElement(entry.el, state);
+    }
 }
 
 // ── Icon rendering ──────────────────────────────────────────

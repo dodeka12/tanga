@@ -34,14 +34,49 @@ test('container is never reused (rebuilt) → created + old orphaned', () => {
     assert.deepEqual(plan.orphaned, ['v0']);
 });
 
-test('non-reusable leaf (table_view) → created + old orphaned', () => {
+test('group reused on id-stable re-push', () => {
+    const plan = planReconciliation([N('g1', 'group')], new Map([['g1', 'group']]));
+    assert.deepEqual(ids(plan.reuse), ['g1']);
+    assert.deepEqual(ids(plan.create), []);
+    assert.deepEqual(plan.orphaned, []);
+});
+
+test('other containers (stack, toolbar, menu) still rebuilt', () => {
+    for (const type of ['stack', 'toolbar', 'menu']) {
+        const plan = planReconciliation([N('v0', type)], new Map([['v0', type]]));
+        assert.deepEqual(ids(plan.reuse), [], `${type} should not reuse`);
+        assert.deepEqual(ids(plan.create), ['v0'], `${type} should create`);
+        assert.deepEqual(plan.orphaned, ['v0'], `${type} should orphan`);
+    }
+});
+
+test('stateful leaf (table_view) reused on id-stable re-push', () => {
     const plan = planReconciliation(
         [N('t1', 'table_view')],
         new Map([['t1', 'table_view']]),
     );
-    assert.deepEqual(ids(plan.reuse), []);
-    assert.deepEqual(ids(plan.create), ['t1']);
-    assert.deepEqual(plan.orphaned, ['t1']);
+    assert.deepEqual(ids(plan.reuse), ['t1']);
+    assert.deepEqual(ids(plan.create), []);
+    assert.deepEqual(plan.orphaned, []);
+});
+
+test('stateful leaves (log_view, file_chooser_view, progress_bar_view) reused', () => {
+    for (const type of ['log_view', 'file_chooser_view', 'progress_bar_view']) {
+        const plan = planReconciliation(
+            [N('x1', type)],
+            new Map([['x1', type]]),
+        );
+        assert.deepEqual(ids(plan.reuse), ['x1'], `${type} should reuse`);
+        assert.deepEqual(ids(plan.create), [], `${type} should not create`);
+        assert.deepEqual(plan.orphaned, [], `${type} should not orphan`);
+    }
+});
+
+test('stateful leaf removed → orphaned', () => {
+    for (const type of ['log_view', 'file_chooser_view', 'table_view', 'progress_bar_view']) {
+        const plan = planReconciliation([], new Map([['x1', type]]));
+        assert.deepEqual(plan.orphaned, ['x1'], `${type} should be orphaned`);
+    }
 });
 
 test('reordered same-scene panes → both reused (order-independent)', () => {

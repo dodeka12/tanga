@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.14.0] — 2026-10-05
+- Preserve stateful views on layout re-push (`log_view`/`file_chooser_view`/`table_view`/`progress_bar_view`/`group`) · `GroupView.on_toggle`/`set_collapsed` backend sync · runtime slider/value-edit range · menu auto-close
+- Bug fixes: `LogView` keeps receiving updates after a stable-id re-push · offline export on Windows
+→ [Details](2026/10/05_bdf6fe7f4.md)
+
 ## [Since 2.13.0] — 2026-10-01
 - Calibrated image labeling (drag-to-draw + click-to-place on a calibrated pane) · `CoordinateMapper` (planar + calibrated) · per-pane `InteractionSurface` + `CalibratedSurface` · plane-aware `ActImagePlane` · file-chooser filename entry + save mode · 3D orbit zoom limits · shape selection
 - Breaking: `LabelMeStore` loader returns `(result, errors)` · `ImageCanvas.act_plane` → `ImageCanvas.surface`

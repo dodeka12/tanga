@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from .._controls import (
+    _apply_range,
     Button,
     Checkbox,
     ColorPicker,
@@ -83,6 +84,37 @@ class SliderView(ControlView[Slider]):
             on_press=on_press,
             on_release=on_release,
         )
+
+    def set_min(self, value: float) -> None:
+        """Set the slider's minimum bound and push it (clamping the value)."""
+        self.set_range(min=value)
+
+    def set_max(self, value: float) -> None:
+        """Set the slider's maximum bound and push it (clamping the value)."""
+        self.set_range(max=value)
+
+    def set_step(self, value: float) -> None:
+        """Set the slider's step and push it."""
+        self.set_range(step=value)
+
+    def set_range(
+        self,
+        min: float | None = None,
+        max: float | None = None,
+        step: float | None = None,
+    ) -> None:
+        """Change the slider's bounds/step at runtime and push them.
+
+        The current value is clamped into the new ``[min, max]``; when it is
+        clamped, the new value is also re-pushed via ``control_update``.
+        """
+        changed, value_clamped = _apply_range(
+            self.control, min=min, max=max, step=step
+        )
+        if changed and self._push_state is not None:
+            self._push_state(self.id, changed)
+        if value_clamped and self._push is not None:
+            self._push(self.id, self.control.value)
 
 
 class ButtonView(ControlView[Button]):
@@ -471,6 +503,37 @@ class ValueEditView(ControlView[ValueEdit]):
             editable=editable,
             on_change=on_change,
         )
+
+    def set_min(self, value: float) -> None:
+        """Set the stepper's minimum bound and push it (clamping the value)."""
+        self.set_range(min=value)
+
+    def set_max(self, value: float) -> None:
+        """Set the stepper's maximum bound and push it (clamping the value)."""
+        self.set_range(max=value)
+
+    def set_step(self, value: float) -> None:
+        """Set the stepper's step and push it."""
+        self.set_range(step=value)
+
+    def set_range(
+        self,
+        min: float | None = None,
+        max: float | None = None,
+        step: float | None = None,
+    ) -> None:
+        """Change the stepper's bounds/step at runtime and push them.
+
+        The current value is clamped into the new ``[min, max]``; when it is
+        clamped, the new value is also re-pushed via ``control_update``.
+        """
+        changed, value_clamped = _apply_range(
+            self.control, min=min, max=max, step=step
+        )
+        if changed and self._push_state is not None:
+            self._push_state(self.id, changed)
+        if value_clamped and self._push is not None:
+            self._push(self.id, self.control.value)
 
 
 class LabelView(ControlView[Label]):

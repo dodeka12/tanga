@@ -81,13 +81,16 @@ inbound dispatch that resolves them.
   carries a stable `id` (auto `v0`…) so it can be addressed at runtime.
 - **Layout re-push** — the frontend **reconciles the whole view tree by stable
   view id** across `view_layout` re-pushes. A single live-view registry
-  (`_viewRegistry`) reuses each view whose id is unchanged (scene panes keep
-  their WebGL scene/camera; simple controls keep their DOM), and only views that
-  are added or removed are created/torn down. Containers are rebuilt (cheap DOM)
-  and re-attach the reused children in the new order, so reordering a layout
-  re-parents the expensive panes instead of destroying them. A scene pane newly
-  introduced by a re-push fetches its state with a `scene_sync_request`
-  round-trip.
+  (`_viewRegistry`) reuses each view whose id is unchanged: scene panes keep
+  their WebGL scene/camera; simple controls keep their DOM; and the stateful
+  content views (`log_view`, `file_chooser_view`, `table_view`,
+  `progress_bar_view`, `group`) keep their runtime registries and content. Only
+  the pure-layout containers (`split`/`stack`/`toolbar`/`menu`) are rebuilt
+  (cheap DOM) and re-attach the reused children in the new order, so reordering
+  a layout re-parents the expensive panes instead of destroying them. A registry-
+  backed view only forgets its runtime-registry entry in `destroy()` when it
+  still points at that view. A scene pane newly introduced by a re-push fetches
+  its state with a `scene_sync_request` round-trip.
 
 ## Canonical frame + transform placement
 

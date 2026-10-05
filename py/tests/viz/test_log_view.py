@@ -204,6 +204,26 @@ def test_set_layout_injects_push_and_log_pushes_log_update(monkeypatch) -> None:
     assert "time" in msg["lines"][0]
 
 
+def test_log_still_pushes_after_re_push(monkeypatch) -> None:  # noqa: ANN001
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    log_view = LogView(id="log0")
+    viz.set_layout(log_view)
+    # Re-push the same layout (same stable id) while the server is still unbound,
+    # then bind a fake server and log.
+    viz.set_layout(log_view)
+    server = _FakeServer()
+    _patch_push(viz, server, monkeypatch)
+
+    log_view.log("after")
+
+    log_msgs = [m for m in _messages(server) if m.get("type") == "log_update"]
+    assert len(log_msgs) == 1
+    msg = log_msgs[0]
+    assert msg["id"] == "log0"
+    assert msg["action"] == "append"
+    assert msg["lines"][0]["message"] == "after"
+
+
 def test_clear_pushes_log_update(monkeypatch) -> None:  # noqa: ANN001
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     log_view = LogView(id="log0")

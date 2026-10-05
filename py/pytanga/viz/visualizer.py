@@ -321,6 +321,22 @@ class Visualizer(_JupyterDisplayMixin):
         """Show or hide a mounted control by its id (no layout re-push)."""
         self._layout.set_control_visible(control_id, visible)
 
+    def set_control_range(
+        self,
+        control_id: str,
+        *,
+        min: float | None = None,
+        max: float | None = None,
+        step: float | None = None,
+    ) -> None:
+        """Change a mounted slider/value-edit's numeric range at runtime.
+
+        No layout re-push: the changed bounds are sent as ``control_state`` and,
+        if the current value is clamped into the new range, as
+        ``control_update``.
+        """
+        self._layout.set_control_range(control_id, min=min, max=max, step=step)
+
     def on_client_log(self, handler: Any) -> None:
         """Replace the backend sink for browser ``sendLog`` events.
 

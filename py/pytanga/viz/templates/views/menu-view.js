@@ -52,6 +52,22 @@ export class MenuView extends StackView {
         };
         document.addEventListener('pointerdown', this._onGlobalPointerDown);
         document.addEventListener('keydown', this._onGlobalKeyDown);
+
+        // Close the whole menu tree when an option is chosen (button click or
+        // dropdown change).  Sub-menu triggers and sliders stay open.
+        this._onOptionActivate = (e) => {
+            const target = e.target;
+            if (!target || typeof target.closest !== 'function') return;
+            if (target.closest('.tanga-menu-trigger')) return;
+            if (target.closest('input[type="range"]')) return;
+            if (e.type === 'click' && target.closest('.tanga-action-button')) {
+                this._closeTree();
+            } else if (e.type === 'change' && target.closest('select')) {
+                this._closeTree();
+            }
+        };
+        this.el.addEventListener('click', this._onOptionActivate);
+        this.el.addEventListener('change', this._onOptionActivate);
     }
 
     _buildDropdown() {
@@ -146,6 +162,12 @@ export class MenuView extends StackView {
         for (const sub of this._subMenus) sub.close();
     }
 
+    _closeTree() {
+        let root = this;
+        while (root._parentMenu) root = root._parentMenu;
+        root.close();
+    }
+
     toggle() {
         if (this._open) this.close();
         else this.open();
@@ -187,6 +209,8 @@ export class MenuView extends StackView {
     destroy() {
         document.removeEventListener('pointerdown', this._onGlobalPointerDown);
         document.removeEventListener('keydown', this._onGlobalKeyDown);
+        this.el.removeEventListener('click', this._onOptionActivate);
+        this.el.removeEventListener('change', this._onOptionActivate);
         super.destroy();
     }
 }

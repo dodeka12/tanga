@@ -42,12 +42,27 @@ export class MessageView extends View {
         this.initialLines = lines || [];
         this.showDate = show_date;
         this.showUtcOffset = show_utc_offset;
+        this._initialized = false;
         this.el.classList.add('tanga-message-view');
         this.el.style.overflow = 'auto';
     }
 
     _onMounted() {
+        if (this._initialized) return;
+        this._initialized = true;
         for (const line of this.initialLines) this._appendRow(line);
+    }
+
+    /** Refresh config fields from a serialized node (reuse); keep live rows. */
+    update(node) {
+        this.maxHistory = node.max_history ?? this.maxHistory;
+        this.showDate = node.show_date ?? this.showDate;
+        this.showUtcOffset = node.show_utc_offset ?? this.showUtcOffset;
+        if (this.maxHistory != null) {
+            while (this.el.children.length > this.maxHistory) {
+                this.el.removeChild(this.el.children[0]);
+            }
+        }
     }
 
     /** Column 2 text: `message` if present, else JSON of the non-`time` keys. */
@@ -146,7 +161,9 @@ export class MessageView extends View {
     }
 
     destroy() {
-        if (this.messageId != null) forgetMessageView(this.messageId);
+        if (this.messageId != null && _messageViews.get(this.messageId) === this) {
+            forgetMessageView(this.messageId);
+        }
         super.destroy();
     }
 }

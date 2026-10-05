@@ -92,21 +92,29 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
     }
 
     if (node.type === 'group') {
-        const group = new GroupView({
-            title: node.title,
-            direction: node.direction,
-            position: node.position,
-            collapsed: node.collapsed,
-            scrollable: node.scrollable,
-            gap: node.gap,
-            align: node.align,
-            justify: node.justify,
-            icon: node.icon,
-            icon_only: node.icon_only,
-            tooltip: node.tooltip,
-            parent_id: node.parent_id,
-            id: node.id,
-        });
+        const existing = (reuse && reuse.get(node.id)) || null;
+        let group;
+        if (existing) {
+            for (const child of [...existing.children]) existing.removeChild(child);
+            existing.update(node);
+            group = existing;
+        } else {
+            group = new GroupView({
+                title: node.title,
+                direction: node.direction,
+                position: node.position,
+                collapsed: node.collapsed,
+                scrollable: node.scrollable,
+                gap: node.gap,
+                align: node.align,
+                justify: node.justify,
+                icon: node.icon,
+                icon_only: node.icon_only,
+                tooltip: node.tooltip,
+                parent_id: node.parent_id,
+                id: node.id,
+            });
+        }
         applySizeSpecs(group, node);
         for (const childNode of node.children || []) {
             group.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
@@ -175,15 +183,22 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
     }
 
     if (node.type === 'log_view') {
-        const view = new MessageView({
-            id: node.id,
-            max_history: node.max_history ?? null,
-            lines: node.lines || [],
-            show_date: node.show_date ?? false,
-            show_utc_offset: node.show_utc_offset ?? false,
-        });
+        const existing = (reuse && reuse.get(node.id)) || null;
+        let view;
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new MessageView({
+                id: node.id,
+                max_history: node.max_history ?? null,
+                lines: node.lines || [],
+                show_date: node.show_date ?? false,
+                show_utc_offset: node.show_utc_offset ?? false,
+            });
+            registerMessageView(view.messageId, view);
+        }
         applySizeSpecs(view, node);
-        registerMessageView(view.messageId, view);
         return registerView(registry, view, node);
     }
 
@@ -222,10 +237,15 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             });
         }
     } else if (node.type === 'file_chooser_view') {
-        view = new FileChooserView({
-            id: node.id, value: node.value, root: node.root, file_filter: node.file_filter,
-            folders_only: node.folders_only, existing_only: node.existing_only,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new FileChooserView({
+                id: node.id, value: node.value, root: node.root, file_filter: node.file_filter,
+                folders_only: node.folders_only, existing_only: node.existing_only,
+            });
+        }
     } else if (node.type === 'text_field_view') {
         if (existing) {
             existing.update(node);
@@ -306,20 +326,25 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             });
         }
     } else if (node.type === 'table_view') {
-        view = new TableView({
-            id: node.id, label: node.label, tooltip: node.tooltip,
-            columns: node.columns, rows: node.rows,
-            allow_add_rows: node.allow_add_rows, allow_add_columns: node.allow_add_columns,
-            allow_delete_rows: node.allow_delete_rows,
-            show_column_titles: node.show_column_titles,
-            show_row_numbers: node.show_row_numbers,
-            allow_delete_columns: node.allow_delete_columns,
-            sortable: node.sortable,
-            column_types: node.column_types,
-            column_widths: node.column_widths,
-            row_height: node.row_height,
-            sort: node.sort,
-        });
+        if (existing) {
+            existing.update(node);
+            view = existing;
+        } else {
+            view = new TableView({
+                id: node.id, label: node.label, tooltip: node.tooltip,
+                columns: node.columns, rows: node.rows,
+                allow_add_rows: node.allow_add_rows, allow_add_columns: node.allow_add_columns,
+                allow_delete_rows: node.allow_delete_rows,
+                show_column_titles: node.show_column_titles,
+                show_row_numbers: node.show_row_numbers,
+                allow_delete_columns: node.allow_delete_columns,
+                sortable: node.sortable,
+                column_types: node.column_types,
+                column_widths: node.column_widths,
+                row_height: node.row_height,
+                sort: node.sort,
+            });
+        }
     } else if (node.type === 'spacer') {
         if (existing) {
             view = existing;
