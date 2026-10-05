@@ -886,9 +886,10 @@ class LayoutHostImpl:
     def register(self, root: View) -> set[str]:
         """Register handlers + inject push callbacks for *root*'s subtree.
 
-        Returns the set of control-view ids (for unregistration on replacement).
+        Returns the set of control/group view ids (for unregistration on
+        replacement).
         """
-        from .views import iter_control_views, iter_log_views
+        from .views import iter_control_views, iter_group_views, iter_log_views
 
         registered: set[str] = set()
         for view in iter_control_views(root):
@@ -898,6 +899,11 @@ class LayoutHostImpl:
             registered.add(view.id)
         for view in iter_log_views(root):
             view._push = self._push_log_update
+        for view in iter_group_views(root):
+            view._push_state = self._push_control_state
+            registered.add(view.id)
+            if view.on_toggle is not None:
+                self._transport.register(view.id, view.on_toggle, event="toggle")
         return registered
 
     def resolve_control(self, cid: str) -> Any | None:
@@ -915,6 +921,21 @@ class LayoutHostImpl:
                         return view.control
         return None
 
+    def resolve_group(self, cid: str) -> Any | None:
+        """Return the ``GroupView`` with id *cid* (layouts + dialogs), or ``None``."""
+        from .views import iter_group_views
+
+        for layout in self._layouts.values():
+            for view in iter_group_views(layout.base):
+                if view.id == cid:
+                    return view
+        for scoped in self._overlay._dialogs.values():
+            for dialog in scoped.values():
+                for view in iter_group_views(dialog.content):
+                    if view.id == cid:
+                        return view
+        return None
+
     async def dispatch_control_event(
         self, msg_type: str, payload: dict[str, Any]
     ) -> None:
@@ -930,6 +951,9 @@ class LayoutHostImpl:
             return
         if msg_type == "control:group_toggle":
             cid = payload.get("control_id")
+            group = self.resolve_group(cid) if cid else None
+            if group is not None:
+                group.collapsed = bool(payload.get("value"))
             await self._fire(cid, "toggle", payload.get("value"), event)
             return
         if not msg_type.startswith("control:"):
@@ -1007,6 +1031,32 @@ class LayoutHostImpl:
             return
         ctrl.visible = bool(visible)
         self._push_control_state(cid, {"visible": ctrl.visible})
+
+    def set_control_range(
+        self,
+        cid: str,
+        *,
+        min: float | None = None,
+        max: float | None = None,
+        step: float | None = None,
+    ) -> None:
+        """Change a control's numeric range and push ``control_state``.
+
+        Resolves a mounted ``Slider``/``ValueEdit`` control; no-op when *cid* is
+        unknown or the control has no numeric range.  The current value is
+        clamped into the new ``[min, max]`` and re-pushed via ``control_update``
+        when it changes.
+        """
+        from ._controls import Slider, ValueEdit, _apply_range
+
+        ctrl = self.resolve_control(cid)
+        if not isinstance(ctrl, (Slider, ValueEdit)):
+            return
+        changed, value_clamped = _apply_range(ctrl, min=min, max=max, step=step)
+        if changed:
+            self._push_control_state(cid, changed)
+        if value_clamped:
+            self._push_control_update(cid, ctrl.value)
 
     def _push_log_update(self, view_id: str, action: str, lines: Any = None) -> None:
         """Push a lightweight ``log_update`` message for one ``LogView``."""

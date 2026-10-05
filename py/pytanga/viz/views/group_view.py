@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from .._anchor import EAnchor
+from .._controls import ControlHandler
 from ._base import View
 from ._enums import EStackAlign, EStackDirection, EStackJustify
 from .._icons import Icon
@@ -41,6 +42,7 @@ class GroupView(StackView):
         icon_only: bool = False,
         tooltip: str = "",
         parent_id: str | None = None,
+        on_toggle: ControlHandler | None = None,
         fill: bool = False,
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
@@ -73,6 +75,14 @@ class GroupView(StackView):
         self.icon_only = icon_only
         self.tooltip = tooltip
         self.parent_id = parent_id
+        self.on_toggle = on_toggle
+        self._push_state = None  # callback slot injected at mount
+
+    def set_collapsed(self, collapsed: bool) -> None:
+        """Collapse/expand this group and push ``control_state`` (if mounted)."""
+        self.collapsed = bool(collapsed)
+        if self._push_state is not None:
+            self._push_state(self.id, {"collapsed": self.collapsed})
 
     def _serialize(self) -> dict[str, Any]:
         result = super()._serialize()

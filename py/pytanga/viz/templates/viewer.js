@@ -677,6 +677,10 @@ async function handleMessage(msg) {
             const host = _viewRegistry.get(msg.id);
             if (host && typeof host.setHidden === 'function') host.setHidden(!msg.visible);
         }
+        if (msg.collapsed !== undefined) {
+            const group = _viewRegistry.get(msg.id);
+            if (group && typeof group.setCollapsed === 'function') group.setCollapsed(!!msg.collapsed);
+        }
         return;
     }
 

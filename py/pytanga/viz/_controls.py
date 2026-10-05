@@ -1952,3 +1952,39 @@ def set_control_value(ctrl: Control, value: Any) -> None:
     :meth:`Control.set_value`.
     """
     ctrl.set_value(value)
+
+
+def _apply_range(
+    ctrl: Slider | ValueEdit,
+    *,
+    min: float | None = None,
+    max: float | None = None,
+    step: float | None = None,
+) -> tuple[dict[str, float], bool]:
+    """Mutate a slider/value-edit's numeric range in place and clamp its value.
+
+    Returns ``(changed, value_clamped)``: *changed* maps the mutated field names
+    to their new values, and *value_clamped* is ``True`` when the control's
+    ``value`` was moved inside the new ``[min, max]``.
+    """
+    changed: dict[str, float] = {}
+    if min is not None:
+        ctrl.min = float(min)
+        changed["min"] = ctrl.min
+    if max is not None:
+        ctrl.max = float(max)
+        changed["max"] = ctrl.max
+    if step is not None:
+        ctrl.step = float(step)
+        changed["step"] = ctrl.step
+    lo, hi = ctrl.min, ctrl.max
+    if lo > hi:
+        lo, hi = hi, lo
+    value_clamped = False
+    if ctrl.value < lo:
+        ctrl.value = lo
+        value_clamped = True
+    elif ctrl.value > hi:
+        ctrl.value = hi
+        value_clamped = True
+    return changed, value_clamped

@@ -10,9 +10,9 @@ export function createValueEdit(ctrl) {
     label.textContent = ctrl.label || ctrl.id;
     wrapper.appendChild(label);
 
-    const min = ctrl.min !== undefined ? ctrl.min : 0;
-    const max = ctrl.max !== undefined ? ctrl.max : 1;
-    const step = ctrl.step !== undefined ? ctrl.step : 0.1;
+    let min = ctrl.min !== undefined ? ctrl.min : 0;
+    let max = ctrl.max !== undefined ? ctrl.max : 1;
+    let step = ctrl.step !== undefined ? ctrl.step : 0.1;
     const digits = ctrl.digits !== undefined ? ctrl.digits : 2;
     const editable = ctrl.editable !== false;
 
@@ -124,6 +124,14 @@ export function createValueEdit(ctrl) {
         apply: (v) => {
             value = round(clamp(Number(v)));
             input.value = value.toFixed(digits);
+        },
+        applyState: (state) => {
+            if (state.min !== undefined) min = Number(state.min);
+            if (state.max !== undefined) max = Number(state.max);
+            if (state.step !== undefined) step = Number(state.step);
+            value = round(clamp(value));
+            input.value = value.toFixed(digits);
+            applyControlStateToElement(wrapper, state);
         },
     });
     applyTooltip(wrapper, ctrl);

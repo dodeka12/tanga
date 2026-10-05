@@ -214,6 +214,33 @@ class TestGroupView:
         assert g.collapsed is False
         assert g.children == []
 
+    def test_set_collapsed_mutates_and_pushes(self):  # noqa: ANN201
+        g = GroupView("Actions")
+        assert g._push_state is None  # unmounted → no state callback
+
+        pushed: list[tuple[str, dict[str, bool]]] = []
+
+        def _capture(cid: str, state: dict[str, bool]) -> None:
+            pushed.append((cid, state))
+
+        g._push_state = _capture
+        g.set_collapsed(True)
+
+        assert g.collapsed is True
+        assert pushed == [(g.id, {"collapsed": True})]
+
+    def test_set_collapsed_unmounted_only_mutates(self):  # noqa: ANN201
+        g = GroupView("Actions")
+        g.set_collapsed(True)
+        assert g.collapsed is True  # no _push_state → no push, no raise
+
+    def test_on_toggle_stored(self):  # noqa: ANN201
+        async def _on_toggle(value, event):  # noqa: ANN001, ANN202
+            pass
+
+        g = GroupView("Actions", on_toggle=_on_toggle)
+        assert g.on_toggle is _on_toggle
+
     def test_children_and_options(self):  # noqa: ANN201
         g = GroupView(
             "Actions",
@@ -641,6 +668,77 @@ def test_control_view_set_enabled_visible_mutates_and_pushes() -> None:
         ("s1", {"enabled": False}),
         ("s1", {"visible": False}),
     ]
+
+
+def test_slider_view_set_range_mutates_and_pushes() -> None:
+    view = SliderView("s1", min=0.0, max=10.0, step=1.0, value=5.0)
+    assert view._push_state is None
+
+    states: list[tuple[str, dict[str, float]]] = []
+    updates: list[tuple[str, float]] = []
+
+    def _capture_state(cid: str, state: dict[str, float]) -> None:
+        states.append((cid, state))
+
+    def _capture_update(cid: str, value: float) -> None:
+        updates.append((cid, value))
+
+    view._push_state = _capture_state
+    view._push = _capture_update
+
+    view.set_range(min=2.0, max=8.0, step=0.5)
+
+    assert view.control.min == 2.0
+    assert view.control.max == 8.0
+    assert view.control.step == 0.5
+    assert view.control.value == 5.0  # in range, unchanged
+    assert states == [("s1", {"min": 2.0, "max": 8.0, "step": 0.5})]
+    assert updates == []
+
+
+def test_slider_view_set_range_clamps_value() -> None:
+    view = SliderView("s1", min=0.0, max=10.0, value=9.0)
+    states: list[tuple[str, dict[str, float]]] = []
+    updates: list[tuple[str, float]] = []
+
+    def _capture_state(cid: str, state: dict[str, float]) -> None:
+        states.append((cid, state))
+
+    def _capture_update(cid: str, value: float) -> None:
+        updates.append((cid, value))
+
+    view._push_state = _capture_state
+    view._push = _capture_update
+
+    view.set_range(max=5.0)
+
+    assert view.control.max == 5.0
+    assert view.control.value == 5.0  # clamped from 9.0
+    assert states == [("s1", {"max": 5.0})]
+    assert updates == [("s1", 5.0)]
+
+
+def test_value_edit_view_set_range_mutates_and_clamps() -> None:
+    view = ValueEditView("v1", min=0.0, max=10.0, step=1.0, value=7.0)
+    states: list[tuple[str, dict[str, float]]] = []
+    updates: list[tuple[str, float]] = []
+
+    def _capture_state(cid: str, state: dict[str, float]) -> None:
+        states.append((cid, state))
+
+    def _capture_update(cid: str, value: float) -> None:
+        updates.append((cid, value))
+
+    view._push_state = _capture_state
+    view._push = _capture_update
+
+    view.set_range(min=1.0, max=6.0)
+
+    assert view.control.min == 1.0
+    assert view.control.max == 6.0
+    assert view.control.value == 6.0  # clamped from 7.0
+    assert states == [("v1", {"min": 1.0, "max": 6.0})]
+    assert updates == [("v1", 6.0)]
 
 
 class TestStackView:

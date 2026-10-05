@@ -5,8 +5,8 @@
 
 /**
  * Node types whose live view is reused across a `view_layout` re-push.
- * Everything else (containers, `log_view`, `file_chooser_view`, `table_view`,
- * unknown types) is rebuilt each time and its old view orphaned.
+ * Only the pure-layout containers (`split`, `stack`, `toolbar`, `menu`) and
+ * unknown types are rebuilt each time and their old view orphaned.
  */
 export const REUSABLE_TYPES = new Set([
     'scene_view',
@@ -22,6 +22,11 @@ export const REUSABLE_TYPES = new Set([
     'value_edit_view',
     'spacer',
     'separator',
+    'group',
+    'log_view',
+    'file_chooser_view',
+    'table_view',
+    'progress_bar_view',
 ]);
 
 /**

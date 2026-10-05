@@ -36,6 +36,7 @@ from .control_views import (
     TextFieldView,
     ValueEditView,
 )
+from .group_view import GroupView
 from .log_view import LogView
 from .scene_view import SceneView
 
@@ -260,6 +261,20 @@ def iter_log_views(root: View) -> Iterator[LogView]:
 
     def _visit(view: View) -> Iterator[LogView]:
         if isinstance(view, LogView):
+            yield view
+        for child in getattr(view, "children", None) or ():
+            yield from _visit(child)
+        for child in getattr(view, "overlay", None) or ():
+            yield from _visit(child)
+
+    yield from _visit(root)
+
+
+def iter_group_views(root: View) -> Iterator[GroupView]:
+    """Yield every :class:`GroupView` in the tree (DFS order)."""
+
+    def _visit(view: View) -> Iterator[GroupView]:
+        if isinstance(view, GroupView):
             yield view
         for child in getattr(view, "children", None) or ():
             yield from _visit(child)

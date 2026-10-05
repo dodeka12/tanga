@@ -5,7 +5,7 @@
 
 import { ControlView } from './control-view.js';
 import { sendEvent } from '../events.js';
-import { registerFileBrowser, unregisterFileBrowser } from '../file-browser.js';
+import { registerFileBrowser, unregisterFileBrowserIfCurrent } from '../file-browser.js';
 
 export class FileChooserView extends ControlView {
     constructor({ id, value = '', root = null, file_filter = '', folders_only = false, existing_only = true } = {}) {
@@ -191,8 +191,22 @@ export class FileChooserView extends ControlView {
         }
     }
 
+    update(node) {
+        const valueChanged = node.value !== undefined && node.value !== this.value;
+        const rootChanged = node.root !== undefined && node.root !== this.root;
+        this.value = node.value ?? this.value;
+        this.root = node.root ?? this.root;
+        this.file_filter = node.file_filter ?? this.file_filter;
+        this.folders_only = node.folders_only ?? this.folders_only;
+        this.existing_only = node.existing_only ?? this.existing_only;
+        if (valueChanged || rootChanged) {
+            this._currentPath = this.value || this.root || '';
+        }
+        super.update(node);
+    }
+
     destroy() {
-        unregisterFileBrowser(this.controlId);
+        unregisterFileBrowserIfCurrent(this.controlId, this);
         super.destroy();
     }
 }

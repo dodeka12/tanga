@@ -6,7 +6,7 @@ import { Size } from './size.js';
 import { View } from './view.js';
 import { StackView } from './stack-view.js';
 import { stackMainAxis, stackMinSize, stackPreferredSize } from './stack-size.js';
-import { createIconElement } from '../controls-panel.js';
+import { createIconElement, sendControlEvent } from '../controls-panel.js';
 
 // Fallback vertical chrome (border-box px) used when the rendered DOM can't be
 // measured (fake DOM in tests, or before the first layout).  Derived from
@@ -94,25 +94,9 @@ export class GroupView extends StackView {
             alignItems: 'center',
             gap: '6px',
         });
-
-        if (this.icon) {
-            const icon = createIconElement(this.icon);
-            icon.classList.add('tanga-group-icon');
-            titleWrap.appendChild(icon);
-        }
-
-        if (!this.icon_only) {
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'tanga-group-title';
-            titleSpan.textContent = this.title || 'Controls';
-            titleWrap.appendChild(titleSpan);
-        }
-
+        this._titleWrap = titleWrap;
+        this._renderTitle();
         this._header.appendChild(titleWrap);
-
-        if (this.tooltip) {
-            titleWrap.title = this.tooltip;
-        }
 
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'tanga-group-toggle';
@@ -122,6 +106,7 @@ export class GroupView extends StackView {
 
         toggleBtn.addEventListener('click', () => {
             this.setCollapsed(!this.collapsed);
+            sendControlEvent('control:group_toggle', this.groupId, this.collapsed);
         });
         this._header.appendChild(toggleBtn);
         this.el.appendChild(this._header);
@@ -141,6 +126,45 @@ export class GroupView extends StackView {
                 this._invalidateChrome();
             });
             this._headerResizeObserver.observe(this._header);
+        }
+    }
+
+    _renderTitle() {
+        const wrap = this._titleWrap;
+        if (!wrap) return;
+        wrap.replaceChildren();
+        if (this.icon) {
+            const icon = createIconElement(this.icon);
+            icon.classList.add('tanga-group-icon');
+            wrap.appendChild(icon);
+        }
+        if (!this.icon_only) {
+            const span = document.createElement('span');
+            span.className = 'tanga-group-title';
+            span.textContent = this.title || 'Controls';
+            wrap.appendChild(span);
+        }
+        wrap.title = this.tooltip || '';
+    }
+
+    update(node) {
+        this.title = node.title ?? this.title;
+        this.position = node.position ?? this.position;
+        this.direction = node.direction ?? this.direction;
+        this.scrollable = node.scrollable ?? this.scrollable;
+        this.gap = node.gap ?? this.gap;
+        this.align = node.align ?? this.align;
+        this.justify = node.justify ?? this.justify;
+        this.icon = node.icon ?? this.icon;
+        this.icon_only = node.icon_only ?? this.icon_only;
+        this.tooltip = node.tooltip ?? this.tooltip;
+        this.parent_id = node.parent_id ?? this.parent_id;
+        this.groupId = node.id ?? this.groupId;
+        this._applyFlex();
+        this._applyScroll();
+        this._renderTitle();
+        if (node.collapsed !== undefined) {
+            this.setCollapsed(!!node.collapsed);
         }
     }
 

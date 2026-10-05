@@ -28,6 +28,11 @@ export class FileBrowserManager {
         this._views.delete(controlId);
     }
 
+    unregisterIfCurrent(controlId, view) {
+        if (this._views.get(controlId) !== view) return;
+        this._views.delete(controlId);
+    }
+
     openModal(controlId, path) {
         this.closeModal();
         const view = new FileBrowserView({
@@ -85,6 +90,10 @@ export function registerFileBrowser(controlId, view) {
 
 export function unregisterFileBrowser(controlId) {
     fileBrowser.unregister(controlId);
+}
+
+export function unregisterFileBrowserIfCurrent(controlId, view) {
+    fileBrowser.unregisterIfCurrent(controlId, view);
 }
 
 export function handleFileBrowserShow(msg) {

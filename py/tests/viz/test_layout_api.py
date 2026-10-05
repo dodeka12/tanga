@@ -80,12 +80,44 @@ class TestControlHandlerRegistration:
         viz.set_layout(GroupView("g", [ButtonView("b1")]))
         assert viz._handler_registry.get("b1") is None
 
+    def test_group_on_toggle_handler_registered(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        group = GroupView("g", on_toggle=self._noop)
+        viz.set_layout(group)
+        assert viz._handler_registry.get(group.id, "toggle") is self._noop
+
+    def test_group_no_on_toggle_not_registered(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        group = GroupView("g")
+        viz.set_layout(group)
+        assert viz._handler_registry.get(group.id, "toggle") is None
+
     def test_overwrite_removes_stale_handler(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         viz.set_layout(GroupView("g", [ButtonView("b1", on_click=self._noop)]))
         assert viz._handler_registry.get("b1", "click") is self._noop
         viz.set_layout(SplitView("horizontal", [SceneView("a"), SceneView("b")]))
         assert viz._handler_registry.get("b1") is None
+
+
+class TestGroupToggleDispatch:
+    @pytest.mark.anyio
+    async def test_dispatch_updates_collapsed_and_fires(self) -> None:
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        calls: list[bool] = []
+
+        async def _on_toggle(value, event):  # noqa: ANN001, ANN202
+            calls.append(value)
+
+        group = GroupView("g", on_toggle=_on_toggle)
+        viz.set_layout(group)
+
+        await viz._dispatch_control_event(
+            "control:group_toggle", {"control_id": group.id, "value": True}
+        )
+
+        assert group.collapsed is True
+        assert calls == [True]
 
 
 class TestSetValuePush:
@@ -198,6 +230,35 @@ class TestControlStatePush:
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         server = self._mount(viz, monkeypatch)
         viz.set_control_enabled("nope", False)
+        assert server.captured == []
+
+    def test_set_control_range_mutates_and_pushes(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        viz.set_layout(SliderView("radius", min=0.0, max=10.0, value=9.0))
+        server = self._mount(viz, monkeypatch)
+
+        viz.set_control_range("radius", min=1.0, max=5.0, step=0.5)
+
+        ctrl = viz._resolve_control("radius")
+        assert ctrl.min == 1.0
+        assert ctrl.max == 5.0
+        assert ctrl.step == 0.5
+        assert ctrl.value == 5.0  # clamped from 9.0
+        assert [json.loads(m) for m in server.captured] == [
+            {
+                "type": "control_state",
+                "id": "radius",
+                "min": 1.0,
+                "max": 5.0,
+                "step": 0.5,
+            },
+            {"type": "control_update", "scene": "", "id": "radius", "value": 5.0},
+        ]
+
+    def test_set_control_range_unknown_id_noop(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        server = self._mount(viz, monkeypatch)
+        viz.set_control_range("nope", min=1.0)
         assert server.captured == []
 
 
