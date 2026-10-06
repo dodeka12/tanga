@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.15.0] — 2026-10-06
+- `image_codec` export option (JPEG/zlib/raw, auto-select) · animated + static HTML image export fixes · offline export works on Linux
+- Bug fixes: `storeImageFrame`/`applyOrthoFrustum` bridge · compressed-animation decompression race · node-transform on in-place reconcile
+→ [Details](2026/10/06_0833142bb.md)
+
 ## [Since 2.14.0] — 2026-10-05
 - Preserve stateful views on layout re-push (`log_view`/`file_chooser_view`/`table_view`/`progress_bar_view`/`group`) · `GroupView.on_toggle`/`set_collapsed` backend sync · runtime slider/value-edit range · menu auto-close
 - Bug fixes: `LogView` keeps receiving updates after a stable-id re-push · offline export on Windows
