@@ -300,7 +300,13 @@ browser through one of three mutually exclusive `ImageData` sources:
 Uniforms and overlays travel as JSON (`image_update`) and never re-send the
 pixels.  The export path stores images in an id-keyed **asset store**
 (`AnimationRecording.assets`, `capture_frame(include_images=False)`), embedding
-8-bit images as JPEG data URLs by default.
+8-bit images as JPEG data URLs by default.  At export, the bootstrap hydrates
+those pixel frames through the `window.__tanga` frame-store API
+(`storeImageFrame` / `takeImageFrame` / `hasImageFrame` /
+`registerImageFrameConsumer`, from `templates/image-frames.js`); compressed
+(`compress=True`) animation data is gzip-decompressed into a
+`window.__tangaAnimReady` promise that the bootstrap top-level-awaits before
+reading `window.__TANGA_ANIMATION__`.
 
 The same 2D scene hosts interactive rectangles: `Rectangle2D` (a new viz-only
 entity, `kind == "Rectangle2D"`, rendered by `renderers/rectangle2d.js` as an

@@ -105,6 +105,20 @@ def find_esbuild() -> str:
     )
 
 
+def _esbuild_cmd() -> list[str]:
+    """Return the argv to run esbuild.
+
+    On Windows the npm ``bin/esbuild`` is a JS launcher that spawns the
+    platform-native ``@esbuild/<platform>/esbuild`` binary, so it must be run
+    through Node.js.  On Unix it is a hardlink to the native binary, which
+    must be run directly (running an ELF/Mach-O binary through Node fails).
+    """
+    esbuild = find_esbuild()
+    if os.name == "nt":
+        return [find_node(), esbuild]
+    return [esbuild]
+
+
 def _download(url: str, dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     req = urllib.request.Request(url, headers={"User-Agent": "tanga-offline"})
@@ -157,13 +171,7 @@ def _build_offline_bundle(work: Path, three_dir: Path) -> Path:
         return out
 
     entry.write_text(lib, encoding="utf-8")
-    # esbuild ≥ 0.28 ships `bin/esbuild` as a Node.js launcher (a JS script that
-    # spawns the platform-native `@esbuild/<platform>/esbuild` binary), not a
-    # native executable. Run it through Node.js so it works on Windows (a bare
-    # `subprocess.run` of the JS file fails with WinError 193) and Unix alike.
-    cmd = [
-        find_node(),
-        find_esbuild(),
+    cmd = _esbuild_cmd() + [
         "--bundle",
         "--format=esm",
         "--alias:three=./three/build/three.module.js",
