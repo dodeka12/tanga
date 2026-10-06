@@ -11,8 +11,9 @@ _GET_ANIM_DATA_JS = """function _getAnimData() {
 }"""
 
 _ANIMATION_DECOMPRESS_JS = r"""<script type="module">
-// Decompress gzip-compressed animation data at page load
-(async () => {
+// Decompress gzip-compressed animation data at page load; expose the promise
+// so the export bootstrap can await it before reading the data.
+window.__tangaAnimReady = (async () => {
     const el = document.getElementById('tanga-anim-data');
     if (!el) return;
     const b64 = el.textContent.trim();
@@ -171,9 +172,11 @@ def js_animation_data_init(fps: int, extra_map_vars: str = "") -> str:
 
     Returns:
         JS code string extracting ``animData``, ``fps``, ``frames``,
-        and ``figMeshMap``.
+        and ``figMeshMap``.  Awaits ``window.__tangaAnimReady`` first so
+        compressed data is fully decoded before it is read.
     """
-    return f"""const animData = _getAnimData();
+    return f"""await window.__tangaAnimReady;
+const animData = _getAnimData();
 const fps = animData.fps || {fps};
 const frames = animData.frames || [];
 const cameras = animData.cameras || [];
@@ -275,6 +278,11 @@ async function _reconcileFrame(frame) {{
         if (updateEntityMesh(mesh, ent, prev)) {{
             mesh.userData._data = {{ ...prev, ...ent }};
             mesh.visible = true;
+            // Transform placement rides on the wrapper node (`entry.obj`), so an
+            // in-place content update must re-apply it — mirroring the live
+            // viewer's dedicated `transform` aspect handling.
+            const entry = {registry_var}.get(ent.id);
+            if (entry && entry.obj) applyTransformToObject(entry.obj, ent.transform);
         }} else {{
             const entry = {registry_var}.get(ent.id);
             const oldLabels = entry && entry.obj ? (entry.obj.userData._labels || []) : [];

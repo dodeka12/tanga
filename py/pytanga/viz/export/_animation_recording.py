@@ -16,7 +16,9 @@ import gzip
 import json
 from typing import TYPE_CHECKING, Any
 
+from .._image_wire import _resolve_codec, encode_zlib_raw
 from .._style_dict import StylesMap
+from ..image import EImageCodec
 
 if TYPE_CHECKING:
     from pytanga.viz.scene import Scene
@@ -44,9 +46,11 @@ class AnimationRecording:
         self,
         scene: Scene,
         styles_map: StylesMap | None = None,
+        codec: EImageCodec | None = None,
     ) -> None:
         self._scene = scene
         self._styles_map = styles_map or {}
+        self._codec = codec
         self._frames: list[list[dict[str, Any]]] = []
         self._cameras: list[dict[str, Any] | None] = []
         self._assets: dict[str, dict[str, Any]] = {}
@@ -77,14 +81,18 @@ class AnimationRecording:
 
     def capture_assets(self) -> None:
         """Collect image pixel data once (data → base64, url → url)."""
-        self._assets = capture_image_assets(self._scene)
+        self._assets = capture_image_assets(self._scene, self._codec)
 
     @staticmethod
-    def _image_asset(img: Any) -> dict[str, Any]:
+    def _image_asset(
+        img: Any,
+        codec: EImageCodec | None = None,
+    ) -> dict[str, Any]:
         """Serialize one image layer into the asset store.
 
-        Eligible images (``uint8``, 1 or 3 channels) are embedded as a JPEG
-        data URL; everything else keeps a raw base64 buffer.
+        The effective codec is resolved as: *codec* (explicit) → ``img.codec``
+        (per-image hint) → auto (JPEG for uint8 1/3-channel, lossless zlib
+        otherwise).  JPEG honors ``img.jpeg_quality``.
         """
         asset: dict[str, Any] = {
             "kind": "image",
@@ -96,10 +104,28 @@ class AnimationRecording:
         }
         if img.url is not None:
             asset["url"] = img.url
-        elif img.supports_jpeg:
+            return asset
+
+        effective = codec if codec is not None else img.codec
+        resolved = _resolve_codec(img.data, effective)
+        if resolved is EImageCodec.JPEG:
+            if not img.supports_jpeg:
+                raise ValueError(
+                    "image_codec='jpeg' requires a uint8 image with 1 or 3 "
+                    f"channels, got dtype={img.dtype!r}, "
+                    f"channels={img.channels!r}"
+                )
             asset["source"] = "url"
-            asset["url"] = img.to_jpeg_data_url()
-        else:
+            asset["url"] = img.to_jpeg_data_url(quality=img.jpeg_quality or 85)
+        elif resolved is EImageCodec.ZLIB:
+            asset["source"] = "data"
+            asset["codec"] = "zlib"
+            asset["data"] = base64.b64encode(
+                encode_zlib_raw(img.data)
+            ).decode("ascii")
+        else:  # RAW
+            asset["source"] = "data"
+            asset["codec"] = "raw"
             asset["data"] = img.to_base64()
         return asset
 
@@ -162,7 +188,10 @@ class AnimationRecording:
         return raw_json.decode("utf-8")
 
 
-def capture_image_assets(scene: Any) -> dict[str, dict[str, Any]]:
+def capture_image_assets(
+    scene: Any,
+    codec: EImageCodec | None = None,
+) -> dict[str, dict[str, Any]]:
     """Capture image pixel assets from a scene's ``VizImage`` nodes."""
     from .._nodes import VizImage
 
@@ -170,16 +199,16 @@ def capture_image_assets(scene: Any) -> dict[str, dict[str, Any]]:
     for node in scene._dfs_preorder():
         if isinstance(node, VizImage):
             for img in node.images:
-                assets[img.id] = AnimationRecording._image_asset(img)
+                assets[img.id] = AnimationRecording._image_asset(img, codec)
     return assets
 
 
 def image_hydration_frames(assets: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
     """Convert asset-store entries to frame-hydration records ``{id, codec, data_b64}``.
 
-    JPEG data URLs become ``codec="jpeg"``; raw base64 buffers become
-    ``codec="raw"``; external URLs are skipped (the frontend ``url`` path loads
-    them directly).
+    JPEG data URLs become ``codec="jpeg"``; zlib/raw buffers carry the
+    asset's ``codec`` (``"zlib"``/``"raw"``); external URLs are skipped (the
+    frontend ``url`` path loads them directly).
     """
     frames: list[dict[str, str]] = []
     for asset_id, asset in assets.items():
@@ -189,5 +218,11 @@ def image_hydration_frames(assets: dict[str, dict[str, Any]]) -> list[dict[str, 
                 _, b64 = url.split(",", 1)
                 frames.append({"id": asset_id, "codec": "jpeg", "data_b64": b64})
         elif "data" in asset:
-            frames.append({"id": asset_id, "codec": "raw", "data_b64": asset["data"]})
+            frames.append(
+                {
+                    "id": asset_id,
+                    "codec": asset.get("codec", "raw"),
+                    "data_b64": asset["data"],
+                }
+            )
     return frames

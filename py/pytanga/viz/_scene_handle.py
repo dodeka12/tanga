@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from ._styles import AnnotationStyle, LabelStyle, ObjVizStyle, TextureLabelStyle
     from ._viz_styles import VizStyles
     from .export._cdn import DeliveryMode
+    from .image import EImageCodec
     from .visualizer import Visualizer
 
 from ._jupyter import _JupyterDisplayMixin
@@ -731,6 +732,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> None:
         """Export this scene as a self-contained HTML file."""
         self._viz._export_scene_snapshot(
@@ -742,6 +744,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            image_codec=image_codec,
         )
 
     def open_snapshot(self) -> None:
@@ -759,6 +762,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> Any:
         """Export this scene as an HTML snippet (or return the string)."""
         return self._viz._export_scene_figure(
@@ -771,12 +775,15 @@ class VizSceneHandle(_JupyterDisplayMixin):
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            image_codec=image_codec,
         )
 
     def export_glb(self, path: Any, *, overwrite: bool = False) -> None:
         """Export this scene as a glTF 2.0 binary (``.glb``) file."""
         self._viz._export_scene_glb(self._name, path, overwrite=overwrite)
 
-    def start_animation_recording(self) -> Any:
+    def start_animation_recording(self, image_codec: EImageCodec | None = None) -> Any:
         """Begin recording entity state for animated export (this scene)."""
-        return self._viz._start_scene_animation_recording(self._name)
+        return self._viz._start_scene_animation_recording(
+            self._name, image_codec=image_codec
+        )

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from ._viz_styles import VizStyles
     from .views import View
     from .export._cdn import DeliveryMode
+    from .image import EImageCodec
 
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
@@ -2998,6 +2999,7 @@ class Visualizer(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> str:
         theme = theme or self._theme
         scene = self._layout.scenes[scene_name]
@@ -3022,7 +3024,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
 
         objects = scene.full_state(styles_map=scene.styles.kind)
-        assets = image_hydration_frames(capture_image_assets(scene))
+        assets = image_hydration_frames(capture_image_assets(scene, image_codec))
         return render_snapshot(
             objects=objects,
             scene_config=scene.config.to_dict(),
@@ -3062,6 +3064,7 @@ class Visualizer(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> None:
         from pathlib import Path
 
@@ -3072,6 +3075,7 @@ class Visualizer(_JupyterDisplayMixin):
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            image_codec=image_codec,
         )
         p = Path(path).expanduser()
         if not p.suffix:
@@ -3092,6 +3096,7 @@ class Visualizer(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> None:
         """Export the current scene as a self-contained HTML file.
 
@@ -3110,6 +3115,7 @@ class Visualizer(_JupyterDisplayMixin):
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            image_codec=image_codec,
         )
 
     def open_snapshot(self) -> None:
@@ -3126,6 +3132,7 @@ class Visualizer(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> str:
         from pytanga.viz._figure import FigureConfig
         from pytanga.viz._styles import FigureStyle
@@ -3182,6 +3189,7 @@ class Visualizer(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> str | None:
         from pathlib import Path
 
@@ -3193,6 +3201,7 @@ class Visualizer(_JupyterDisplayMixin):
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            image_codec=image_codec,
         )
         if path is None:
             return html
@@ -3217,6 +3226,7 @@ class Visualizer(_JupyterDisplayMixin):
         theme: str | None = None,
         delivery: DeliveryMode = "cdn",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> str | None:
         """Export the current scene as an HTML snippet (or return the string).
 
@@ -3236,6 +3246,7 @@ class Visualizer(_JupyterDisplayMixin):
             theme=theme,
             delivery=delivery,
             delivery_ref=delivery_ref,
+            image_codec=image_codec,
         )
 
     def _export_scene_glb(
@@ -3262,15 +3273,23 @@ class Visualizer(_JupyterDisplayMixin):
         """Export the current scene as a glTF 2.0 binary (``.glb``) file."""
         self._export_scene_glb("", path, overwrite=overwrite)
 
-    def _start_scene_animation_recording(self, scene_name: str) -> Any:
+    def _start_scene_animation_recording(
+        self,
+        scene_name: str,
+        image_codec: EImageCodec | None = None,
+    ) -> Any:
         from pytanga.viz.export._animation_recording import AnimationRecording
 
         scene = self._layout.scenes[scene_name]
-        return AnimationRecording(scene, styles_map=scene.styles.kind)
+        return AnimationRecording(
+            scene,
+            styles_map=scene.styles.kind,
+            codec=image_codec,
+        )
 
-    def start_animation_recording(self) -> Any:
+    def start_animation_recording(self, image_codec: EImageCodec | None = None) -> Any:
         """Begin recording entity state for animated export (main scene)."""
-        return self._start_scene_animation_recording("")
+        return self._start_scene_animation_recording("", image_codec=image_codec)
 
     def display_snapshot(
         self,
@@ -3280,6 +3299,7 @@ class Visualizer(_JupyterDisplayMixin):
         scene_name: str = "",
         delivery: DeliveryMode = "inline",
         delivery_ref: str | None = None,
+        image_codec: EImageCodec | None = None,
     ) -> Any:
         """Display a scene as standalone HTML (no server required).
 
@@ -3293,7 +3313,10 @@ class Visualizer(_JupyterDisplayMixin):
         pass ``delivery="offline"`` for a fully self-contained document.
         """
         html = self._render_snapshot_html(
-            scene_name, delivery=delivery, delivery_ref=delivery_ref
+            scene_name,
+            delivery=delivery,
+            delivery_ref=delivery_ref,
+            image_codec=image_codec,
         )
 
         if self._jupyter:

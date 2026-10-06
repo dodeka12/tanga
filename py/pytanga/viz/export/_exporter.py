@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytanga.viz.export._animation_recording import AnimationRecording
+    from pytanga.viz.image import EImageCodec
     from pytanga.viz.visualizer import Visualizer
 
 from pytanga.viz._figure import FigureConfig
@@ -433,7 +434,9 @@ class SceneExporter:
 
     # ── Animated export ────────────────────────────────────
 
-    def start_animation_recording(self) -> AnimationRecording:
+    def start_animation_recording(
+        self, image_codec: EImageCodec | None = None
+    ) -> AnimationRecording:
         """Begin recording entity state for animated HTML export.
 
         Returns an ``AnimationRecording`` context object.  Call
@@ -455,6 +458,7 @@ class SceneExporter:
         return AnimationRecording(
             self._viz._scene,
             styles_map=self._viz.styles.kind,
+            codec=image_codec,
         )
 
     def export_animated_figure(
