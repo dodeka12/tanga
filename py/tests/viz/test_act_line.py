@@ -9,7 +9,7 @@ import asyncio
 from typing import Any
 
 from pytanga.geometry import Direction, Line, Point
-from pytanga.viz import ActLine, DragEvent
+from pytanga.viz import ActLine, DragEvent, ModifierKey
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -35,6 +35,7 @@ class _FakeHandle:
         self.styles = _FakeStyles()
         self.scene = _FakeScene(space_dim)
         self.added: list[tuple[str, object]] = []
+        self.visibility: list[tuple[str, bool]] = []
         self._counter = 0
 
     def add(self, obj: Any, *, style: Any = None, **kwargs: Any) -> str:
@@ -60,6 +61,9 @@ class _FakeHandle:
 
     def remove(self, object_id: str) -> None:
         pass
+
+    def set_visible(self, object_id: str, visible: bool) -> None:
+        self.visibility.append((object_id, visible))
 
 
 def _line(**kwargs: Any) -> tuple[ActLine, _FakeHandle]:
@@ -145,4 +149,26 @@ class TestPlaneZ:
         )
         assert line.start == Point(1.0, 1.0, -0.6)
         assert line.end == Point(3.0, 1.0, -0.6)
+
+
+class TestHandleControls:
+    def test_set_handles_enabled_disables_all(self) -> None:
+        line, handle = _line()
+        line.set_handles_enabled(False)
+        assert all(h._enabled is False for h in line._all_handles())
+
+    def test_set_handles_visible_hides_and_disables_all(self) -> None:
+        line, handle = _line()
+        line.set_handles_visible(False)
+        for h in line._all_handles():
+            assert (h.entity_id, False) in handle.visibility
+            assert h._enabled is False
+
+    def test_set_drag_modifiers_gates_all(self) -> None:
+        line, handle = _line()
+        line.set_drag_modifiers(ModifierKey.SHIFT)
+        assert all(
+            h._required_drag_modifiers == frozenset({ModifierKey.SHIFT})
+            for h in line._all_handles()
+        )
 

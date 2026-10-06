@@ -418,7 +418,7 @@ class ActSceneObject:
     def remove(self) -> None:
         """Remove this object's body entity from the scene.
 
-        Composites (:class:`_ActWithHandles`) override this to also remove their
+        Composites (:class:`ActiveObject`) override this to also remove their
         handle entities; a bare :class:`ActSceneObject` (e.g. :class:`ActPoint`)
         only has the body to remove.
         """
@@ -483,7 +483,187 @@ class ActSceneObject:
 # ── ActPoint ───────────────────────────────────────────────────
 
 
-class ActPoint(ActSceneObject):
+class ActiveObject(ActSceneObject):
+    """Base for active objects with control points (``ActPoint`` handles).
+
+    A composite (rectangle/ellipse/circle/polygon/line) is a visual-only body
+    plus child ``ActPoint`` handles; a bare :class:`ActPoint` is its own single
+    control point.  Owns the shared handle bookkeeping — the ``_handle_ids``
+    list, the ``_spawn_handle`` helper, ``_all_handles``, and ``remove()`` — so
+    subclasses only implement their specific geometry and handle-refresh logic.
+    """
+
+    def __init__(
+        self,
+        *,
+        on_click: ActClickHandler | None = None,
+        handler: ActHandler | None = None,
+        on_drag_start: ActEventHandler | None = None,
+        on_drag_end: ActEventHandler | None = None,
+        drag_bindings: list[DragBinding[ActSceneObject]] | None = None,
+        click_bindings: list[ClickBinding[ActSceneObject]] | None = None,
+        cursor: str | None = None,
+        style: Any = None,
+        handle_style: PointStyle | None = None,
+        translate_handle_style: PointStyle | None = None,
+        rotate_handle_style: PointStyle | None = None,
+        act_style: ActPointStyle | None = None,
+    ) -> None:
+        super().__init__(
+            handler=handler,
+            on_drag_start=on_drag_start,
+            on_drag_end=on_drag_end,
+            on_click=on_click,
+            drag_bindings=drag_bindings,
+            click_bindings=click_bindings,
+            cursor=cursor,
+            style=style,
+        )
+        self._handle_ids: list[str] = []
+        self._handle_style = handle_style
+        self._translate_handle_style = translate_handle_style
+        self._rotate_handle_style = rotate_handle_style
+        self._act_style = act_style
+
+    def _spawn_handle(self, handle: ActPoint, *, style: Any = None) -> str:
+        """Add a child handle to the scene and record its entity id."""
+        assert self._viz_handle is not None, "spawn_handle called before _init"
+        eid = self._viz_handle.add(handle, style=style)
+        self._handle_ids.append(eid)
+        return eid
+
+    def _resolve_handle_style(self) -> PointStyle:
+        """The vertex/corner/radius handle style (a screen-space ``CirclePointStyle`` by default)."""
+        from ._styles._operator_styles import CirclePointStyle
+
+        style = self._handle_style
+        if style is not None:
+            return style
+        return CirclePointStyle(size=6.0, screen_space=True)
+
+    def _handle_size(self) -> float:
+        """Effective control-point size in screen px (default 6.0)."""
+        style = self._handle_style
+        if style is None or style.size is None:
+            return 6.0
+        return style.size
+
+    def _handle_world_size(self) -> float:
+        """The handle size in world units (screen px × pixel scale)."""
+        return self._handle_size() * self._pixel_scale
+
+    def _resolve_translate_handle_style(self) -> PointStyle:
+        """The translate handle style (a screen-space move glyph, twice the control-point size)."""
+        from ._styles._operator_styles import IconPointStyle
+
+        style = self._translate_handle_style
+        if style is not None:
+            return style
+        return IconPointStyle(
+            icon="material:open_with",
+            size=self._handle_size() * 2,
+            screen_space=True,
+        )
+
+    def _resolve_rotate_handle_style(self) -> PointStyle:
+        """The rotate handle style (a screen-space rotate glyph, twice the control-point size)."""
+        from ._styles._operator_styles import IconPointStyle
+
+        style = self._rotate_handle_style
+        if style is not None:
+            return style
+        return IconPointStyle(
+            icon="material:rotate_right",
+            size=self._handle_size() * 2,
+            screen_space=True,
+        )
+
+    def _handle_click_handler(self) -> ActClickHandler:
+        """Route a handle click to the body's ``on_click`` with the parent Act.
+
+        Lets a single click on any control point select the parent object, the
+        same as clicking the body.
+        """
+
+        async def on_click(event: ClickEvent, _handle: ActSceneObject) -> None:
+            if self._on_click is not None:
+                await self._on_click(event, self)
+
+        return on_click
+
+    def _reshape_handles(self) -> list[ActPoint]:
+        """The primary resize/reshape handles (subclass hook)."""
+        return []
+
+    def _all_handles(self) -> list[ActPoint]:
+        """Every spawned handle: reshape plus optional translate/rotate."""
+        handles = list(self._reshape_handles())
+        for name in ("_translate_handle", "_rotate_handle"):
+            handle = getattr(self, name, None)
+            if handle is not None:
+                handles.append(handle)
+        return handles
+
+    def set_translate_handle_visible(self, visible: bool) -> None:
+        """Show or hide the translation handle (no-op if it was never spawned)."""
+        handle = getattr(self, "_translate_handle", None)
+        if handle is not None and handle.entity_id and self._viz_handle is not None:
+            self._viz_handle.set_visible(handle.entity_id, visible)
+            handle.set_enabled(visible)
+            self.flush()
+
+    def set_rotate_handle_visible(self, visible: bool) -> None:
+        """Show or hide the rotation handle (no-op if it was never spawned)."""
+        handle = getattr(self, "_rotate_handle", None)
+        if handle is not None and handle.entity_id and self._viz_handle is not None:
+            self._viz_handle.set_visible(handle.entity_id, visible)
+            handle.set_enabled(visible)
+            self.flush()
+
+    def set_handles_enabled(self, enabled: bool = True) -> None:
+        """Enable/disable interaction on every handle (control point)."""
+        for handle in self._all_handles():
+            handle.set_handles_enabled(enabled)
+
+    def set_handles_visible(self, visible: bool) -> None:
+        """Show or hide every handle (hiding also disables interaction)."""
+        for handle in self._all_handles():
+            if handle.entity_id and self._viz_handle is not None:
+                self._viz_handle.set_visible(handle.entity_id, visible)
+                handle.set_enabled(visible)
+        self.flush()
+
+    def set_drag_modifiers(self, *modifiers: ModifierKey) -> None:
+        """Require these modifier keys (all held) to drag every handle."""
+        for handle in self._all_handles():
+            handle.set_drag_modifiers(*modifiers)
+
+    def _remove_handles(self) -> None:
+        if self._viz_handle is None:
+            return
+        for eid in self._handle_ids:
+            self._viz_handle.remove(eid)
+        self._handle_ids.clear()
+
+    def _on_remove(self) -> None:
+        """Hook for subclasses to clear their own handle references."""
+
+    def remove(self) -> None:
+        """Remove the body and all handle entities."""
+        if self._viz_handle is None:
+            return
+        self._remove_handles()
+        self._on_remove()
+        self._viz_handle.remove(self._entity_id)
+
+    def clear(self) -> None:
+        """Alias for :meth:`remove`."""
+        self.remove()
+
+
+
+
+class ActPoint(ActiveObject):
     """An interactive draggable point.
 
     Creates a :class:`Point` entity whose left-button drag can be constrained
@@ -553,6 +733,7 @@ class ActPoint(ActSceneObject):
         *,
         drag_mode: DragMode | None = None,
         act_style: ActPointStyle | None = None,
+        handle_style: PointStyle | None = None,
         style: Any = None,
         handler: ActHandler | None = None,
         on_drag_start: ActEventHandler | None = None,
@@ -571,14 +752,16 @@ class ActPoint(ActSceneObject):
             click_bindings=click_bindings,
             cursor=cursor,
             style=style,
+            handle_style=handle_style,
+            act_style=act_style,
         )
         if isinstance(x, Point):
             self._point = x
         else:
             self._point = Point(float(x), float(y), float(z))
         self._drag_mode = drag_mode
-        self._act_style = act_style
         self._resolved_style: ActPointStyle | None = None
+        self._required_drag_modifiers: frozenset[ModifierKey] = frozenset()
 
     # ── Init (called by Visualizer) ────────────────────────
 
@@ -629,6 +812,7 @@ class ActPoint(ActSceneObject):
                 InteractionTrigger(
                     event_type=InteractionEventType.DRAG,
                     mouse_button=MouseButton.LEFT,
+                    modifiers=self._required_drag_modifiers,
                     drag_mode=mode,
                 )
             ]
@@ -712,6 +896,32 @@ class ActPoint(ActSceneObject):
         """
         self._move_to(pos)
         self.update()
+
+    def set_drag_modifiers(self, *modifiers: ModifierKey) -> None:
+        """Require these modifier keys (all must be held) to drag this point.
+
+        Called with no arguments, restores unmodified dragging (the default).
+        Only affects the default (non-binding) drag trigger(s).
+        """
+        self._required_drag_modifiers = frozenset(modifiers)
+        self.refresh_interaction()
+
+    def set_handles_enabled(self, enabled: bool = True) -> None:
+        """Enable/disable this point and swap its active/content rendering style.
+
+        While enabled the point renders with ``handle_style`` (the active
+        control-point appearance); while disabled it renders with ``style`` (the
+        content ``Point`` appearance) and stays visible.
+        """
+        self.set_enabled(enabled)
+        if self._handle_style is not None:
+            style = self._handle_style if enabled else self._body_style
+            if self._viz_handle is not None and self._entity_id:
+                self._viz_handle.update_style(self._entity_id, style)
+
+    def _reshape_handles(self) -> list[ActPoint]:
+        """The point's single control point is itself."""
+        return [self]
 
     def drag_anchor(self, ray_origin: Point, ray_direction: Direction) -> Point:
         """Return the ideal anchor — the point's centre (the ray is ignored)."""
@@ -888,140 +1098,10 @@ class ActImagePlane(ActSceneObject):
 # ── Composite base ───────────────────────────────────────────────
 
 
-class _ActWithHandles(ActSceneObject):
-    """Base for composite actives: a visual-only body plus ``ActPoint`` handles.
-
-    Owns the shared handle bookkeeping — the ``_handle_ids`` list, the
-    ``_spawn_handle`` helper, and ``remove()`` — so composites only implement
-    their specific geometry and handle-refresh logic.
-    """
-
-    def __init__(
-        self,
-        *,
-        on_click: ActClickHandler | None = None,
-        handle_style: PointStyle | None = None,
-        translate_handle_style: PointStyle | None = None,
-        rotate_handle_style: PointStyle | None = None,
-        act_style: ActPointStyle | None = None,
-        style: Any = None,
-    ) -> None:
-        super().__init__(on_click=on_click, style=style)
-        self._handle_ids: list[str] = []
-        self._handle_style = handle_style
-        self._translate_handle_style = translate_handle_style
-        self._rotate_handle_style = rotate_handle_style
-        self._act_style = act_style
-
-    def _spawn_handle(self, handle: ActPoint, *, style: Any = None) -> str:
-        """Add a child handle to the scene and record its entity id."""
-        assert self._viz_handle is not None, "spawn_handle called before _init"
-        eid = self._viz_handle.add(handle, style=style)
-        self._handle_ids.append(eid)
-        return eid
-
-    def _resolve_handle_style(self) -> PointStyle:
-        """The vertex/corner/radius handle style (a screen-space ``CirclePointStyle`` by default)."""
-        from ._styles._operator_styles import CirclePointStyle
-
-        style = self._handle_style
-        if style is not None:
-            return style
-        return CirclePointStyle(size=6.0, screen_space=True)
-
-    def _handle_size(self) -> float:
-        """Effective control-point size in screen px (default 6.0)."""
-        style = self._handle_style
-        if style is None or style.size is None:
-            return 6.0
-        return style.size
-
-    def _handle_world_size(self) -> float:
-        """The handle size in world units (screen px × pixel scale)."""
-        return self._handle_size() * self._pixel_scale
-
-    def _resolve_translate_handle_style(self) -> PointStyle:
-        """The translate handle style (a screen-space move glyph, twice the control-point size)."""
-        from ._styles._operator_styles import IconPointStyle
-
-        style = self._translate_handle_style
-        if style is not None:
-            return style
-        return IconPointStyle(
-            icon="material:open_with",
-            size=self._handle_size() * 2,
-            screen_space=True,
-        )
-
-    def _resolve_rotate_handle_style(self) -> PointStyle:
-        """The rotate handle style (a screen-space rotate glyph, twice the control-point size)."""
-        from ._styles._operator_styles import IconPointStyle
-
-        style = self._rotate_handle_style
-        if style is not None:
-            return style
-        return IconPointStyle(
-            icon="material:rotate_right",
-            size=self._handle_size() * 2,
-            screen_space=True,
-        )
-
-    def _handle_click_handler(self) -> ActClickHandler:
-        """Route a handle click to the body's ``on_click`` with the parent Act.
-
-        Lets a single click on any control point select the parent object, the
-        same as clicking the body.
-        """
-
-        async def on_click(event: ClickEvent, _handle: ActSceneObject) -> None:
-            if self._on_click is not None:
-                await self._on_click(event, self)
-
-        return on_click
-
-    def set_translate_handle_visible(self, visible: bool) -> None:
-        """Show or hide the translation handle (no-op if it was never spawned)."""
-        handle = getattr(self, "_translate_handle", None)
-        if handle is not None and handle.entity_id and self._viz_handle is not None:
-            self._viz_handle.set_visible(handle.entity_id, visible)
-            handle.set_enabled(visible)
-            self.flush()
-
-    def set_rotate_handle_visible(self, visible: bool) -> None:
-        """Show or hide the rotation handle (no-op if it was never spawned)."""
-        handle = getattr(self, "_rotate_handle", None)
-        if handle is not None and handle.entity_id and self._viz_handle is not None:
-            self._viz_handle.set_visible(handle.entity_id, visible)
-            handle.set_enabled(visible)
-            self.flush()
-
-    def _remove_handles(self) -> None:
-        if self._viz_handle is None:
-            return
-        for eid in self._handle_ids:
-            self._viz_handle.remove(eid)
-        self._handle_ids.clear()
-
-    def _on_remove(self) -> None:
-        """Hook for subclasses to clear their own handle references."""
-
-    def remove(self) -> None:
-        """Remove the body and all handle entities."""
-        if self._viz_handle is None:
-            return
-        self._remove_handles()
-        self._on_remove()
-        self._viz_handle.remove(self._entity_id)
-
-    def clear(self) -> None:
-        """Alias for :meth:`remove`."""
-        self.remove()
-
-
 # ── ActRectangle2D ───────────────────────────────────────────────
 
 
-class ActRectangle2D(_ActWithHandles):
+class ActRectangle2D(ActiveObject):
     """An interactive rectangle with corner, translation, and rotation handles.
 
     The body is a visual-only :class:`~pytanga.geometry.Rectangle2D`; all
@@ -1169,8 +1249,8 @@ class ActRectangle2D(_ActWithHandles):
         ]
 
     def _rotate_handle_position(self) -> Point:
-        hw, hh = self._rect.size[0] / 2.0, self._rect.size[1] / 2.0
-        offset = max(0.25 * max(hw, hh), 2.0 * self._handle_world_size())
+        hw = self._rect.size[0] / 2.0
+        offset = 2.0 * self._handle_world_size()
         d = self._dir_u()
         r = hw + offset
         return Point(
@@ -1341,6 +1421,10 @@ class ActRectangle2D(_ActWithHandles):
 
     # ── Removal ────────────────────────────────────────────
 
+    def _reshape_handles(self) -> list[ActPoint]:
+        """The four corner handles."""
+        return self._corner_handles
+
     def _on_remove(self) -> None:
         """Clear this composite's own handle references."""
         self._corner_handles.clear()
@@ -1363,7 +1447,7 @@ class ActRectangle2D(_ActWithHandles):
 # ── ActEllipse ───────────────────────────────────────────────
 
 
-class ActEllipse(_ActWithHandles):
+class ActEllipse(ActiveObject):
     """An interactive ellipse with radius, translate, and rotate handles.
 
     The body is a visual-only :class:`~pytanga.geometry.Ellipse`; all
@@ -1509,10 +1593,7 @@ class ActEllipse(_ActWithHandles):
         return Point(self._center.x + r * d.x, self._center.y + r * d.y, self._center.z)
 
     def _rotate_handle_position(self) -> Point:
-        offset = max(
-            0.25 * max(self._radius_u, self._radius_v),
-            2.0 * self._handle_world_size(),
-        )
+        offset = 2.0 * self._handle_world_size()
         d = self._dir_u()
         r = self._radius_u + offset
         return Point(self._center.x + r * d.x, self._center.y + r * d.y, self._center.z)
@@ -1657,6 +1738,10 @@ class ActEllipse(_ActWithHandles):
 
     # ── Removal ────────────────────────────────────────────
 
+    def _reshape_handles(self) -> list[ActPoint]:
+        """The two radius handles."""
+        return self._radius_handles
+
     def _on_remove(self) -> None:
         """Clear this composite's own handle references."""
         self._radius_handles.clear()
@@ -1679,7 +1764,7 @@ class ActEllipse(_ActWithHandles):
 # ── ActCircle ─────────────────────────────────────────────────
 
 
-class ActCircle(_ActWithHandles):
+class ActCircle(ActiveObject):
     """An interactive circle with center translate and radius handles.
 
     The body is a visual-only :class:`~pytanga.geometry.Circle`; interaction
@@ -1902,6 +1987,10 @@ class ActCircle(_ActWithHandles):
 
     # ── Removal ────────────────────────────────────────────
 
+    def _reshape_handles(self) -> list[ActPoint]:
+        """The single radius handle."""
+        return [] if self._radius_handle is None else [self._radius_handle]
+
     def _on_remove(self) -> None:
         """Clear this composite's own handle references."""
         self._radius_handle = None
@@ -1920,7 +2009,7 @@ class ActCircle(_ActWithHandles):
 # ── ActPolygon ───────────────────────────────────────────────
 
 
-class ActPolygon(_ActWithHandles):
+class ActPolygon(ActiveObject):
     """An editable open/closed polygon rendered as a ``PointPath``.
 
     The body is a visual-only :class:`~pytanga.viz.PointPath`; all interaction
@@ -2294,6 +2383,10 @@ class ActPolygon(_ActWithHandles):
 
     # ── Removal ────────────────────────────────────────────
 
+    def _reshape_handles(self) -> list[ActPoint]:
+        """The vertex handles."""
+        return self._vertex_handles
+
     def _on_remove(self) -> None:
         """Clear this composite's own handle references."""
         self._vertex_handles.clear()
@@ -2310,7 +2403,7 @@ class ActPolygon(_ActWithHandles):
 # ── ActLine ──────────────────────────────────────────────────
 
 
-class ActLine(_ActWithHandles):
+class ActLine(ActiveObject):
     """An interactive 2-point line segment rendered as a ``Line``.
 
     The body is a visual-only :class:`~pytanga.geometry.Line` (via
@@ -2524,6 +2617,10 @@ class ActLine(_ActWithHandles):
         return self._midpoint()
 
     # ── Removal ────────────────────────────────────────────
+
+    def _reshape_handles(self) -> list[ActPoint]:
+        """The two endpoint handles."""
+        return self._endpoint_handles
 
     def _on_remove(self) -> None:
         """Clear this composite's own handle references."""

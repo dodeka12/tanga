@@ -24,6 +24,7 @@ Usage::
 
 from ._act_style import ActObjectStyle, ActPointStyle
 from ._active import (
+    ActiveObject,
     ActCircle,
     ActClickHandler,
     ActEllipse,
@@ -259,6 +260,7 @@ from .views import (
 from .visualizer import Timeline, Visualizer
 
 __all__ = [
+    "ActiveObject",
     "ActCircle",
     "ActClickHandler",
     "ActEllipse",

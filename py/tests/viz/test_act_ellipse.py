@@ -10,7 +10,7 @@ import math
 from typing import Any
 
 from pytanga.geometry import Direction, Ellipse, Point
-from pytanga.viz import ActEllipse, DragEvent
+from pytanga.viz import ActEllipse, DragEvent, ModifierKey
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -38,6 +38,7 @@ class _FakeHandle:
         self.added: list[tuple[str, object]] = []
         self.updates: list[tuple[str, object]] = []
         self.removed: list[str] = []
+        self.visibility: list[tuple[str, bool]] = []
         self.flushes = 0
         self._counter = 0
 
@@ -64,6 +65,9 @@ class _FakeHandle:
 
     def remove(self, object_id: str) -> None:
         self.removed.append(object_id)
+
+    def set_visible(self, object_id: str, visible: bool) -> None:
+        self.visibility.append((object_id, visible))
 
 
 def _ellipse(**kwargs: Any) -> tuple[ActEllipse, _FakeHandle]:
@@ -230,4 +234,41 @@ class TestCreateClamp:
         )
         assert ellipse.ellipse.radius_u == 0.5
         assert ellipse.ellipse.radius_v == 0.5
+
+
+class TestHandleControls:
+    def test_set_handles_enabled_disables_all(self) -> None:
+        ellipse, handle = _ellipse()
+        ellipse.set_handles_enabled(False)
+        assert all(h._enabled is False for h in ellipse._all_handles())
+
+    def test_set_handles_visible_hides_and_disables_all(self) -> None:
+        ellipse, handle = _ellipse()
+        ellipse.set_handles_visible(False)
+        for h in ellipse._all_handles():
+            assert (h.entity_id, False) in handle.visibility
+            assert h._enabled is False
+
+    def test_set_drag_modifiers_gates_all(self) -> None:
+        ellipse, handle = _ellipse()
+        ellipse.set_drag_modifiers(ModifierKey.SHIFT)
+        assert all(
+            h._required_drag_modifiers == frozenset({ModifierKey.SHIFT})
+            for h in ellipse._all_handles()
+        )
+
+
+class TestRotateHandleOffset:
+    def test_rotate_handle_independent_of_perpendicular_axis(self) -> None:
+        handle = _FakeHandle(space_dim=2)
+        ellipse = ActEllipse(
+            center=Point(0.0, 0.0, 0.0), radius_u=10.0, radius_v=100.0
+        )
+        ellipse._init(handle, "e1")
+        before = ellipse._rotate_handle_position()
+
+        ellipse._radius_v = 200.0
+        after = ellipse._rotate_handle_position()
+
+        assert (after.x, after.y, after.z) == (before.x, before.y, before.z)
 

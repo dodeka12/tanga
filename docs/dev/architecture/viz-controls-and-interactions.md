@@ -346,6 +346,32 @@ hover) or to the gesture (`InteractionConfig.cursor`, shown during the drag);
 `Visualizer.set_cursor()`/`VizSceneHandle.set_cursor()` set a per-scene override
 (via the ``scene_config`` message) for mode switches.
 
+### Active object handle controls
+
+Every active object — a bare `ActPoint` and each composite (`ActRectangle2D`,
+`ActEllipse`, `ActCircle`, `ActLine`, `ActPolygon`) — is an `ActiveObject` (the
+shared base, formerly `_ActWithHandles`) with the same public handle API:
+
+- `set_handles_enabled(enabled)` — enable/disable dragging of the control
+  point(s).  A composite's handles are its child `ActPoint` markers; a bare
+  `ActPoint` is its own control point (`_reshape_handles() == [self]`).
+- `set_handles_visible(visible)` — show/hide the control point(s) (hiding also
+  disables interaction, mirroring `set_translate_handle_visible` /
+  `set_rotate_handle_visible`).
+- `set_drag_modifiers(*modifiers)` — require `ModifierKey` values (e.g. `SHIFT`)
+  to drag, reusing the `DragBinding`-style modifier matching already in the
+  frontend.
+
+A bare `ActPoint` has two rendering styles: `handle_style` (the active/draggable
+control-point appearance, e.g. a square marker) and `style` (the content `Point`
+appearance, e.g. a round marker).  `set_handles_enabled(False)` swaps to the
+content style while keeping the point visible; `set_handles_visible(False)`
+hides it.
+
+This lets a host (e.g. a labeling app) gate editing by type: show the control
+points of every entity of the active tool's type, and keep a bare point visible
+but inert outside point mode.
+
 ## Interaction surface
 
 Pointer/drag interaction for images (and any flat plane in a pane) is provided
@@ -389,6 +415,16 @@ frame (1 unit = 1 pixel) and wraps an `InteractionSurface(PlanarMapper())` — t
 on the image transport described in `viz-architecture.md`.  The
 `calibrated_labeling_app.py` example binds a `CalibratedSurface` to the
 `2d`-navigation background pane and marks the overview pane `read_only`.
+
+A surface registers the **button + modifier** combinations it reacts to via its
+drag triggers (each `DragBinding(button, handler, *modifiers)` becomes a drag
+`InteractionTrigger`).  Navigation yields to the surface only for those combos:
+the per-pane `InteractionController.surfaceClaimsPointer(event)` matches the
+event's button **and** held modifiers against the surface's drag triggers (a
+trigger without `mouse_button`/`modifiers` matches any button/modifier).  Every
+other combo passes through to navigation — pan/rotate/zoom — so, for example, a
+left-only draw binding leaves right-button panning free, and a `Shift`-gated
+binding leaves the plain button free.
 
 ## Coordinate frame overlay/underlay
 

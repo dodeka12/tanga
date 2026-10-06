@@ -10,7 +10,13 @@ import math
 from typing import Any
 
 from pytanga.geometry import Direction, Point, Rectangle2D
-from pytanga.viz import ActPoint, ActRectangle2D, DragEvent, InteractionEventType
+from pytanga.viz import (
+    ActPoint,
+    ActRectangle2D,
+    DragEvent,
+    InteractionEventType,
+    ModifierKey,
+)
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -351,4 +357,39 @@ class TestPixelScale:
         offset = rect._rotate_handle_position()
         # offset >= 2 * handle_size * pixel_scale keeps the icon off the corner.
         assert offset.x >= 2.0 * 6.0 * 1.0
+
+
+class TestHandleControls:
+    def test_set_handles_enabled_disables_all(self) -> None:
+        rect, handle = _rect()
+        rect.set_handles_enabled(False)
+        assert all(h._enabled is False for h in rect._all_handles())
+
+    def test_set_handles_visible_hides_and_disables_all(self) -> None:
+        rect, handle = _rect()
+        rect.set_handles_visible(False)
+        for h in rect._all_handles():
+            assert (h.entity_id, False) in handle.visibility
+            assert h._enabled is False
+
+    def test_set_drag_modifiers_gates_all(self) -> None:
+        rect, handle = _rect()
+        rect.set_drag_modifiers(ModifierKey.SHIFT)
+        assert all(
+            h._required_drag_modifiers == frozenset({ModifierKey.SHIFT})
+            for h in rect._all_handles()
+        )
+
+
+class TestRotateHandleOffset:
+    def test_rotate_handle_independent_of_perpendicular_axis(self) -> None:
+        handle = _FakeHandle(space_dim=2)
+        rect = ActRectangle2D(center=Point(0.0, 0.0, 0.0), size=(2.0, 200.0))
+        rect._init(handle, "r1")
+        before = rect._rotate_handle_position()
+
+        rect._rect = Rectangle2D(center=Point(0.0, 0.0, 0.0), size=(2.0, 400.0))
+        after = rect._rotate_handle_position()
+
+        assert (after.x, after.y, after.z) == (before.x, before.y, before.z)
 

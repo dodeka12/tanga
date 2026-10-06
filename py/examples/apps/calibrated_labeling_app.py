@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +49,7 @@ from pytanga.geometry import (
     Rectangle2D,
 )
 from pytanga.viz import (
+    ActiveObject,
     ActCircle,
     ActEllipse,
     ActLine,
@@ -268,6 +268,8 @@ class _CalibratedLabeler:
         self._world.set_cursor("crosshair" if mode is not None else None)
         for cid, button in self._tool_buttons.items():
             button.set_selected(cid == mode)
+        self._deselect()
+        self._sync_handles()
 
     def toolbar(self) -> ToolbarView:
         def _button(cid: str, icon: str, tip: str) -> ButtonView:
@@ -306,8 +308,13 @@ class _CalibratedLabeler:
         preview = self._previews.get(self._mode or "")
         if preview is None or preview.anchor is None:
             return
+        if math.hypot(*event.delta_pixels) < 3.0:
+            # A click (negligible movement) must not create a shape.
+            preview.discard()
+            return
         act = preview.finalize(event.world_position)
         self._add_shape(act, self._styles[self._mode or ""])
+        self._select(act)
 
     async def _on_click(self, event: Any, _surface: Any) -> None:
         if self._mode != "point":
@@ -318,6 +325,7 @@ class _CalibratedLabeler:
             on_click=self._make_select_handler(),
         )
         self._add_shape(act, self._styles["point"])
+        self._select(act)
 
     # ── Shape management / selection ────────────────────────
 
@@ -332,26 +340,20 @@ class _CalibratedLabeler:
             return
         self._deselect()
         self.selected = act
-        self._set_extra_handles(act, True)
         self._set_selected_style(act, True)
 
     def _deselect(self) -> None:
         if self.selected is None:
             return
         self._set_selected_style(self.selected, False)
-        self._set_extra_handles(self.selected, False)
         self.selected = None
 
     def _set_selected_style(self, act: Any, selected: bool) -> None:
         """Recolor the body (yellow) on selection and restore it on deselect."""
         for shape_act, style in self.shapes:
             if shape_act is act:
-                new_style = (
-                    replace(style, color=self.selected_color)
-                    if selected
-                    else style
-                )
-                self._world.update_style(shape_act.entity_id, new_style)
+                color = self.selected_color if selected else (style.color or "#ffffff")
+                self._world.update(shape_act.entity_id, color=color)
                 break
         self._world.flush()
 
@@ -369,13 +371,17 @@ class _CalibratedLabeler:
         for preview in self._previews.values():
             preview.discard()
 
-    @staticmethod
-    def _set_extra_handles(act: Any, visible: bool) -> None:
-        """Toggle the optional translate/rotate handles on a composite shape."""
-        if hasattr(act, "set_translate_handle_visible"):
-            act.set_translate_handle_visible(visible)
-        if hasattr(act, "set_rotate_handle_visible"):
-            act.set_rotate_handle_visible(visible)
+    def _sync_handles(self) -> None:
+        """Show control points for every entity of the active edit type."""
+        active_type = self._FACTORIES.get(self._mode or "")
+        for act, _style in self.shapes:
+            if isinstance(act, ActPoint):
+                # A bare point stays visible; it is only draggable in point mode.
+                act.set_handles_enabled(self._mode == "point")
+            elif isinstance(act, ActiveObject):
+                act.set_handles_visible(
+                    active_type is not None and isinstance(act, active_type)
+                )
 
     def _apply_size_limits(self, act: Any) -> None:
         """Clamp resize to the app's pixel-derived limits (half-extent)."""
@@ -389,10 +395,10 @@ class _CalibratedLabeler:
             act.set_radius_limits(self._min_half, self._max_half)
 
     def _add_shape(self, act: Any, style: Any) -> None:
-        self._world.add(act, style=style)
         self._apply_size_limits(act)
-        self._set_extra_handles(act, False)
+        self._world.add(act, style=style)
         self.shapes.append((act, style))
+        self._sync_handles()
         self._world.flush()
 
     def _act_from_entity(self, entity: Any) -> Any:

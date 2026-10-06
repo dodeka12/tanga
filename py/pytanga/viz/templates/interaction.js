@@ -95,13 +95,17 @@ export class InteractionController {
         this._readOnly = !!readOnly;
     }
 
-    hasArmedSurface() {
-        // A surface with an enabled drag trigger is "armed" for drawing; a draw
-        // drag conflicts with the pane's pan gesture, so navigation must yield.
+    surfaceClaimsPointer(event) {
+        // Does the pane's surface claim this pointer event for a drag?  A
+        // surface registers its button/modifier combos via drag triggers; a
+        // trigger without `mouse_button` (or `modifiers`) matches any button
+        // (or modifier).  Everything not claimed here passes through to the
+        // pane's navigation (pan/rotate/zoom).
         const s = this._surface;
         if (!s || !s.interaction || !s.interaction.enabled) return false;
-        const triggers = s.interaction.triggers || [];
-        return triggers.some((t) => t.event_type === 'drag');
+        const button = this._mouseButtonFromEvent(event);
+        const modifiers = this._getActiveModifiers(event);
+        return this._findMatchingTriggers(s.id, 'drag', button, modifiers).length > 0;
     }
 
     isDragActive() {
@@ -610,13 +614,19 @@ export class InteractionController {
 
     _pixelToWorldDelta(dx, dy, screenDx, screenDy, dragMode) {
         const axisDelta = this._axisMappedDelta(dx, dy, screenDx, screenDy, dragMode);
-        if (axisDelta) {
-            return axisDelta;
+        const delta = axisDelta
+            || this._projectToPlane(
+                new THREE.Vector3()
+                    .addScaledVector(screenDx, dx)
+                    .addScaledVector(screenDy, dy),
+                dragMode
+            );
+        // A degenerate screen→world scale (e.g. an unlaid-out canvas) can yield a
+        // non-finite world delta; drop it so a click never jumps the endpoint off.
+        if (!Number.isFinite(delta.x) || !Number.isFinite(delta.y) || !Number.isFinite(delta.z)) {
+            return new THREE.Vector3();
         }
-        const rawDelta = new THREE.Vector3()
-            .addScaledVector(screenDx, dx)
-            .addScaledVector(screenDy, dy);
-        return this._projectToPlane(rawDelta, dragMode);
+        return delta;
     }
 
     _onPointerMove(event) {
